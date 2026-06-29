@@ -1,6 +1,6 @@
 import { Platform, type StyleProp, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
-import Svg, { Path } from 'react-native-svg'
+import Svg, { Circle, Path } from 'react-native-svg'
 
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import BelarusOutlineIcon from './BelarusOutlineIcon'
@@ -75,9 +75,9 @@ export default function NavigationIcon({
     )
   }
 
-  if (name === 'coin-flip') {
+  if (name === 'dice') {
     return (
-      <CoinFlipIcon
+      <DiceIcon
         color={color}
         size={size}
         strokeWidth={strokeWidth}
@@ -287,8 +287,8 @@ function QuestRouteIcon({
   )
 }
 
-// «Случайный маршрут» = подбросить монетку: монета подлетает над раскрытой ладонью.
-function CoinFlipIcon({
+// «Случайный маршрут» = игральная кость: универсальный знак «рандом».
+function DiceIcon({
   color,
   size,
   strokeWidth,
@@ -305,45 +305,19 @@ function CoinFlipIcon({
       style={style as any}
       {...getIconAccessibilityProps()}
     >
-      {/* монетка в воздухе */}
+      {/* корпус кости */}
       <Path
-        d="M12 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+        d="M7 3.5h10A3.5 3.5 0 0 1 20.5 7v10a3.5 3.5 0 0 1-3.5 3.5H7A3.5 3.5 0 0 1 3.5 17V7A3.5 3.5 0 0 1 7 3.5Z"
         stroke={color}
         strokeWidth={strokeWidth}
-        strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <Path
-        d="M12 3.6v2.8M10.6 5h2.8"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* траектория подброса */}
-      <Path
-        d="M9 11.4 12 10l3 1.4"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeDasharray="0.5 2.6"
-      />
-      {/* раскрытая ладонь */}
-      <Path
-        d="M5 14.4c0 3.7 2.6 6.1 7 6.1s7-2.4 7-6.1"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M4.6 14.4h14.8"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      {/* грань «5» */}
+      <Circle cx="8.4" cy="8.4" r="1.15" fill={color} />
+      <Circle cx="15.6" cy="8.4" r="1.15" fill={color} />
+      <Circle cx="12" cy="12" r="1.15" fill={color} />
+      <Circle cx="8.4" cy="15.6" r="1.15" fill={color} />
+      <Circle cx="15.6" cy="15.6" r="1.15" fill={color} />
     </Svg>
   )
 }

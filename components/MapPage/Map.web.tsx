@@ -107,6 +107,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const {
     travel = { data: [] },
     coordinates,
+    // Intentionally NOT defaulted to false: `undefined` means "origin unknown",
+    // letting useMapUserLocation fall back to legacy Minsk coordinate-matching.
+    // Only an explicit true/false from the controller overrides that.
+    coordinatesAreFallback,
     routePoints,
     fullRouteCoords,
     onMapClick,
@@ -222,6 +226,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const { centerOnUserLocation, userLocationLatLng } = useMapUserLocation({
     coordinates,
+    coordinatesAreFallback,
     mapRef,
     onUserLocationChange,
     isFallbackMinskCenter,

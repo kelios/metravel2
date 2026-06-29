@@ -72,7 +72,7 @@ export function useMapScreenController() {
   }, []);
 
   // Coordinates
-  const { coordinates, error: geoError } = useMapCoordinates();
+  const { coordinates, coordinatesAreFallback, error: geoError } = useMapCoordinates();
 
   // Actual current user location reported by the map implementation (web Leaflet).
   // This should be the primary source for radius-mode queries.
@@ -600,11 +600,22 @@ export function useMapScreenController() {
     return { latitude: source.latitude, longitude: source.longitude };
   }, [coordinates, queryCoordinates]);
 
+  // The panel center is a non-user fallback only when it resolves to the raw
+  // default center: there is no explicit anchor (search-area / URL pin / real
+  // user location) AND the geolocation coordinates themselves are the default.
+  // In that case the map must not draw a real "you are here" marker even though
+  // the default center sits in Minsk.
+  const mapPanelCoordinatesAreFallback = useMemo(() => {
+    const hasExplicitAnchor = !!(searchAreaCenter || urlCoordinates || userLocation);
+    return !hasExplicitAnchor && coordinatesAreFallback;
+  }, [searchAreaCenter, urlCoordinates, userLocation, coordinatesAreFallback]);
+
   // Map panel props
   const mapPanelProps = useMemo(
     () => ({
       travelsData,
       coordinates: mapPanelCoordinates,
+      coordinatesAreFallback: mapPanelCoordinatesAreFallback,
       routePoints,
       fullRouteCoords,
       mode,
@@ -631,6 +642,7 @@ export function useMapScreenController() {
     [
       travelsData,
       mapPanelCoordinates,
+      mapPanelCoordinatesAreFallback,
       routePoints,
       fullRouteCoords,
       mode,

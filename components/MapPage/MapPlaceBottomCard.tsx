@@ -296,7 +296,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
         onPress={handleClose}
         style={styles.nativeBackdrop}
       />
-      <View style={[styles.nativePanel, { maxHeight: nativeSheetMaxHeight, marginBottom: bottomChromeInset }]}>
+      <View style={[styles.nativePanel, { maxHeight: nativeSheetMaxHeight, marginBottom: nativePanelMargin }]}>
         <View style={styles.nativeHandleRow} {...(nativeSwipeHandlers ?? {})}>
           <View style={styles.grabber} />
           <Pressable

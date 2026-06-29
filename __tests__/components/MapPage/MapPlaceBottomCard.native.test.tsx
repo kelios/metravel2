@@ -100,7 +100,8 @@ describe('MapPlaceBottomCard native layout', () => {
     )[0]
     const panelStyle = StyleSheet.flatten(panel.props.style)
     expect(panelStyle.maxHeight).toBe(728)
-    expect(panelStyle.marginBottom).toBe(80)
+    // Panel sits flush on the dock: bottomChromeInset(80) − DOCK_BREATHING_GAP(16) = 64.
+    expect(panelStyle.marginBottom).toBe(64)
 
     // Hero height = max(180, min(round(844*0.46)=388, 728-380=348)) = 348
     // (taller now that the «Статус поездки» row is gone → lower content reserve).

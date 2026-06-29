@@ -8,5 +8,5 @@ export type CustomNavigationIconName =
   | 'map-fold'
   | 'quest-map-person'
   | 'quest-route'
-  | 'coin-flip'
+  | 'dice'
 export type NavigationIconName = FeatherIconName | CustomNavigationIconName

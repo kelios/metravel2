@@ -8,6 +8,13 @@ import type { Point, TransportMode, MapMode, Coordinates } from '@/components/ma
 export interface MapProps {
   travel?: { data?: Point[] };
   coordinates: Coordinates;
+  /**
+   * True when `coordinates` is the non-user DEFAULT center (no real geolocation,
+   * no cache, no explicit anchor). When true the web map skips deriving a real
+   * "you are here" position from `coordinates`. Explicit origin flag — replaces
+   * Minsk coordinate-matching so a user near Minsk is still treated as real.
+   */
+  coordinatesAreFallback?: boolean;
   userLocation?: Coordinates | null;
   routePoints: [number, number][];
   fullRouteCoords?: [number, number][];

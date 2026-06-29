@@ -8,6 +8,14 @@ export interface Coordinates {
   longitude: number;
 }
 
+/**
+ * Where the current coordinates came from. Used downstream to decide whether to
+ * draw the real "you are here" marker and center-on-self: a fallback/default
+ * center must NOT masquerade as a real user position even if it happens to sit
+ * near Minsk. This replaces brittle coordinate-matching (isFallbackMinskCenter).
+ */
+export type CoordinatesSource = 'geolocation' | 'cache' | 'default';
+
 export const DEFAULT_COORDINATES: Coordinates = { latitude: 53.9006, longitude: 27.559 };
 const WEB_LAST_COORDS_KEY = 'metravel:lastKnownCoords';
 const NATIVE_LOCATION_TIMEOUT_MS = 12000;
@@ -79,13 +87,35 @@ export function useMapCoordinates() {
     })() : null;
     return cached ?? DEFAULT_COORDINATES;
   });
+  // Origin of the current coordinates. Cache is treated as a real (prior) user
+  // position so the map can immediately center on it without flicker; only the
+  // hard DEFAULT center is a non-user fallback.
+  const [coordinatesSource, setCoordinatesSource] = useState<CoordinatesSource>(() => {
+    if (Platform.OS !== 'web') return 'default';
+    if (typeof window === 'undefined') return 'default';
+    try {
+      const raw = window.localStorage.getItem(WEB_LAST_COORDS_KEY);
+      if (!raw) return 'default';
+      const parsed = JSON.parse(raw) as Partial<Coordinates>;
+      return isValidCoordinate(Number(parsed?.latitude), Number(parsed?.longitude))
+        ? 'cache'
+        : 'default';
+    } catch {
+      return 'default';
+    }
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const requestWebLocation = useCallback(async (signal?: AbortSignal) => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       const cached = readWebCachedCoordinates();
-      if (cached) setCoordinates(cached);
+      if (cached) {
+        setCoordinates(cached);
+        setCoordinatesSource('cache');
+      } else {
+        setCoordinatesSource('default');
+      }
       setIsLoading(false);
       return;
     }
@@ -105,6 +135,7 @@ export function useMapCoordinates() {
         if (isValidCoordinate(latitude, longitude)) {
           const next = { latitude, longitude };
           setCoordinates(next);
+          setCoordinatesSource('geolocation');
           try {
             if (typeof window !== 'undefined') {
               window.localStorage.setItem(WEB_LAST_COORDS_KEY, JSON.stringify(next));
@@ -124,8 +155,10 @@ export function useMapCoordinates() {
         const cached = readWebCachedCoordinates();
         if (cached) {
           setCoordinates(cached);
+          setCoordinatesSource('cache');
         } else {
           setCoordinates(DEFAULT_COORDINATES);
+          setCoordinatesSource('default');
         }
         resolve();
       };
@@ -162,6 +195,7 @@ export function useMapCoordinates() {
           step: 'getLocation',
         });
         setCoordinates(DEFAULT_COORDINATES);
+        setCoordinatesSource('default');
         setIsLoading(false);
         return;
       }
@@ -179,6 +213,7 @@ export function useMapCoordinates() {
 
       if (isValidCoordinate(latitude, longitude)) {
         setCoordinates({ latitude, longitude });
+        setCoordinatesSource('geolocation');
       } else {
         logMessage('[map] Invalid coordinates from location service', 'warning', {
           scope: 'map',
@@ -186,6 +221,7 @@ export function useMapCoordinates() {
           coords: location.coords,
         });
         setCoordinates(DEFAULT_COORDINATES);
+        setCoordinatesSource('default');
       }
     } catch (err) {
       if (signal?.aborted) return;
@@ -200,6 +236,7 @@ export function useMapCoordinates() {
       }
       setError('Не удалось определить местоположение');
       setCoordinates(DEFAULT_COORDINATES);
+      setCoordinatesSource('default');
     } finally {
       if (!signal?.aborted) {
         setIsLoading(false);
@@ -219,6 +256,9 @@ export function useMapCoordinates() {
   const updateCoordinates = useCallback((lat: number, lng: number) => {
     if (isValidCoordinate(lat, lng)) {
       setCoordinates({ latitude: lat, longitude: lng });
+      // An explicit programmatic pin is a deliberate position choice, not a
+      // silent default — treat it as a real location for marker/centering.
+      setCoordinatesSource('geolocation');
     } else {
       logMessage('[map] Attempted to set invalid coordinates', 'warning', {
         scope: 'map',
@@ -228,11 +268,18 @@ export function useMapCoordinates() {
     }
   }, []);
 
+  // True only when the current coordinates are the hard DEFAULT center (no real
+  // geolocation and no cached prior position). Downstream uses this to avoid a
+  // false "you are here" marker / center-on-self at the default location.
+  const coordinatesAreFallback = coordinatesSource === 'default';
+
   return useMemo(() => ({
     coordinates,
+    coordinatesSource,
+    coordinatesAreFallback,
     isLoading,
     error,
     updateCoordinates,
     refreshLocation: requestLocation,
-  }), [coordinates, isLoading, error, updateCoordinates, requestLocation]);
+  }), [coordinates, coordinatesSource, coordinatesAreFallback, isLoading, error, updateCoordinates, requestLocation]);
 }

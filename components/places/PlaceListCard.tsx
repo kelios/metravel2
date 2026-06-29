@@ -54,6 +54,16 @@ type Props = {
   compact?: boolean;
   titleLayout?: 'overlay' | 'content';
   titleNumberOfLines?: number;
+  /**
+   * Travel-points list card: mirror the redesigned map-popup arrangement so the
+   * «Точки» tab and the map marker popup read identically. When set, the
+   * favorite/trip-status stack moves to the photo TOP-LEFT corner (popup parity),
+   * the «Поделиться» action surfaces as a small ➤ icon in the title row, and the
+   * save action renders as a labeled tile inside the «Действия с точкой» row.
+   * Opt-in: the /places catalog and map search/recommendations cards (which also
+   * use this component) keep their existing layout when the prop is absent.
+   */
+  popupAligned?: boolean;
   relatedTravelUrl?: string | null;
   relatedTravelCountry?: string | null;
   relatedTravelCity?: string | null;
@@ -223,6 +233,7 @@ const PlaceListCard: React.FC<Props> = ({
   compact = false,
   titleLayout = 'overlay',
   titleNumberOfLines = 2,
+  popupAligned = false,
   relatedTravelUrl,
   relatedTravelCountry,
   relatedTravelCity,
@@ -245,8 +256,13 @@ const PlaceListCard: React.FC<Props> = ({
   // overflow menu, so the action row can never balloon into a long horizontal
   // strip on some cards and a short one on others.
   const overlayAddInline = isCompactActionCard && addButtonPlacement === 'row';
+  // Popup parity: «Поделиться» surfaces as a small ➤ icon in the title row, so it
+  // is removed from the overflow «Навигация и действия» sheet (a share action is
+  // not a map-app) and the save action renders as a labeled tile in the row.
+  const showTitleShare = popupAligned && hasCoord && !!onShare;
+  const showSaveTile = popupAligned && !!onAddPoint;
   const shareOverflowAction: ActionChip | null =
-    isCompactActionCard && hasCoord && onShare
+    isCompactActionCard && !showTitleShare && hasCoord && onShare
       ? {
           key: 'share',
           label: 'Telegram',
@@ -257,12 +273,19 @@ const PlaceListCard: React.FC<Props> = ({
         }
       : null;
   const visibleMapActions = isCompactActionCard ? [] : mapActions;
-  const visibleInlineActions = isCompactActionCard ? [] : inlineActions;
+  // Popup parity: «Страница» (article) stays a visible tile in the action row
+  // (its own affordance, like the popup) instead of folding into the navigation
+  // sheet; only the map-app actions collapse into «Навигация и действия».
+  const visibleInlineActions = isCompactActionCard
+    ? popupAligned
+      ? inlineActions
+      : []
+    : inlineActions;
   const overflowActions = isCompactActionCard
     ? [
         ...(shareOverflowAction ? [shareOverflowAction] : []),
         ...mapActions,
-        ...inlineActions,
+        ...(popupAligned ? [] : inlineActions),
       ]
     : [];
   const showShareChip = !isCompactActionCard && hasCoord && !!onShare;
@@ -271,6 +294,7 @@ const PlaceListCard: React.FC<Props> = ({
   const hasActionRow = showActionRow && (
     (hasCoord && !!onCopyCoord) ||
     showShareChip ||
+    showSaveTile ||
     visibleMapActions.length > 0 ||
     visibleInlineActions.length > 0 ||
     overflowActions.length > 0 ||
@@ -278,7 +302,13 @@ const PlaceListCard: React.FC<Props> = ({
   );
   const openOverflowMenu = useCallback(() => setOverflowVisible(true), []);
   const closeOverflowMenu = useCallback(() => setOverflowVisible(false), []);
-  const showInlineRelatedTravelActions = !!relatedTravelUrl && showTitleInContent;
+  // Popup parity: in the popup-aligned points card the favorite + trip-status are
+  // compact icons stacked in the photo TOP-LEFT corner (RelatedTravelActionStack
+  // overlay variant), NOT a labeled «Статус поездки» row with a full-width
+  // «Был/Хочу/Планирую» pill below the title. So the inline status section is
+  // disabled here and the stack is routed into `leftTopSlot` instead.
+  const showInlineRelatedTravelActions =
+    !popupAligned && !!relatedTravelUrl && showTitleInContent;
   const overflowActionLabel = mapActions.length > 0 ? 'Навигация' : 'Ещё';
   const overflowActionTitle = mapActions.length > 0 ? 'Навигация и действия' : 'Ещё действия';
   // Top-right overlay holds the two primary affordances (♥ favorite + ＋ save)
@@ -360,7 +390,7 @@ const PlaceListCard: React.FC<Props> = ({
 
   const relatedTravelActions =
     quickActionButtons.length > 0 || favoriteAffordance || overlayAddButton ? (
-      <View style={styles.fallbackActionStack}>
+      <View style={[styles.fallbackActionStack, popupAligned && styles.fallbackActionStackStart]}>
         {quickActionButtons}
         {favoriteAffordance}
         {overlayAddButton}
@@ -382,8 +412,9 @@ const PlaceListCard: React.FC<Props> = ({
       heroTitleOverlay={!showTitleInContent}
       webHoverScale={false}
       webTouchAction={webTouchAction}
-      rightTopSlot={relatedTravelActions}
-      rightTopSlotScrim
+      leftTopSlot={popupAligned ? relatedTravelActions : undefined}
+      rightTopSlot={popupAligned ? undefined : relatedTravelActions}
+      rightTopSlotScrim={!popupAligned}
       mediaPlaceholderSlot={
         <View style={styles.mediaPlaceholder}>
           <Feather name="map-pin" size={26} color={colors.textMuted} />
@@ -403,9 +434,32 @@ const PlaceListCard: React.FC<Props> = ({
                   </Text>
                 </View>
               )}
-              <Text style={styles.titleText} numberOfLines={titleNumberOfLines}>
-                {title}
-              </Text>
+              {showTitleShare && onShare ? (
+                <View style={styles.titleShareRow}>
+                  <Text
+                    style={[styles.titleText, styles.titleTextFlex]}
+                    numberOfLines={titleNumberOfLines}
+                  >
+                    {title}
+                  </Text>
+                  <CardActionPressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Поделиться в Telegram"
+                    onPress={() => void onShare()}
+                    title="Поделиться в Telegram"
+                    style={({ pressed }) => [
+                      styles.titleShareButton,
+                      pressed && styles.iconBtnPressed,
+                    ]}
+                  >
+                    <Feather name="send" size={18} color={colors.primary} />
+                  </CardActionPressable>
+                </View>
+              ) : (
+                <Text style={styles.titleText} numberOfLines={titleNumberOfLines}>
+                  {title}
+                </Text>
+              )}
             </View>
           )}
 
@@ -479,6 +533,24 @@ const PlaceListCard: React.FC<Props> = ({
                   title={action.title ?? action.label}
                 />
               ))}
+
+              {showSaveTile && onAddPoint && (
+                <LabeledActionChip
+                  accessibilityLabel={addLabel}
+                  accessibilityState={{ disabled: addDisabled || isAdding, busy: isAdding }}
+                  disabled={addDisabled || isAdding}
+                  icon={isAdding ? undefined : 'bookmark'}
+                  iconColor={colors.textMuted}
+                  label={addLabel}
+                  onPress={() => void onAddPoint()}
+                  styles={styles}
+                  title={addLabel}
+                >
+                  {isAdding ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : null}
+                </LabeledActionChip>
+              )}
 
               {overflowActions.length > 0 && (
                 isCompactActionCard ? (
@@ -556,7 +628,7 @@ const PlaceListCard: React.FC<Props> = ({
             </View>
           )}
 
-          {showAddButton && addButtonPlacement === 'button' && onAddPoint && (
+          {showAddButton && addButtonPlacement === 'button' && !showSaveTile && onAddPoint && (
             <CardActionPressable
               onPress={() => void onAddPoint()}
               disabled={addDisabled || isAdding}
@@ -644,6 +716,21 @@ const createStyles = (
       fontWeight: '800',
       letterSpacing: compact ? -0.3 : -0.45,
       color: colors.text,
+    },
+    titleShareRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
+    },
+    titleTextFlex: {
+      flex: 1,
+    },
+    titleShareButton: {
+      flexShrink: 0,
+      padding: 6,
+      marginTop: -2,
+      borderRadius: 999,
+      ...Platform.select({ web: { cursor: 'pointer' as any } }),
     },
     metaRow: {
       flexDirection: 'row',
@@ -735,6 +822,11 @@ const createStyles = (
       flexDirection: 'column',
       alignItems: 'flex-end',
       gap: 6,
+    },
+    // Popup-aligned points card: hero TOP-LEFT corner stack (♥ + compact status),
+    // matching the map popup — left-aligned instead of the default right corner.
+    fallbackActionStackStart: {
+      alignItems: 'flex-start',
     },
     fallbackFavButton: {
       alignSelf: 'flex-start',

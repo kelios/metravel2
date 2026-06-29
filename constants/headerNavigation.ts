@@ -16,7 +16,7 @@ export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
   { path: '/map', label: 'Карта', icon: 'map', priority: 'primary' },
   { path: '/places', label: 'Места', icon: 'map-pin', priority: 'primary' },
   { path: '/trips', label: 'Попутчики', icon: 'users', priority: 'primary' },
-  { path: '/roulette', label: 'Случайный маршрут', icon: 'coin-flip', priority: 'primary' },
+  { path: '/roulette', label: 'Случайный маршрут', icon: 'dice', priority: 'primary' },
   { path: '/quests', label: 'Квесты', icon: 'quest-route', priority: 'primary' },
   { path: 'https://metravel.by/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi', label: 'Travel-блогеры Беларуси', icon: 'users', priority: 'secondary', external: true },
 ];

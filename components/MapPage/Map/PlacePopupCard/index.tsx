@@ -495,7 +495,6 @@ const PlacePopupCard: React.FC<Props> = ({
 
             {useNavSheet ? <View style={styles.blockDivider} /> : null}
             <View style={styles.actionGroup}>
-              <Text style={styles.actionGroupLabel}>Действия с точкой</Text>
               <View style={styles.iconActionRow}>
                 {renderFallbackPrimaryAction && primaryAction && (
                   <CardActionPressable

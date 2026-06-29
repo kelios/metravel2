@@ -72,7 +72,9 @@ describe('MapLogicComponent radius fitBounds', () => {
 
     await act(async () => {});
 
-    expect(mockLeaflet.latLng).toHaveBeenCalledWith(53.9, 27.5667);
+    // With no travel points, radius mode fits to the circle bounds around the
+    // circle center (computed via computeCircleBounds -> L.latLng on the circle's
+    // SW/NE corners), never to the unrelated userLocation (1,2).
     expect(mockLeaflet.latLng).not.toHaveBeenCalledWith(1, 2);
     expect(fitBounds).toHaveBeenCalledWith(
       'padded-bounds',
@@ -84,13 +86,18 @@ describe('MapLogicComponent radius fitBounds', () => {
     );
   });
 
-  it('falls back to fitting all points when radius filter keeps too few points', async () => {
+  it('never fits wider than the radius circle even when far points exist', async () => {
+    // New contract (radius default UX): with a valid circle, the auto-fit view is
+    // ALWAYS the circle around the user (optionally tightened to in-radius points),
+    // never widened to far-away points outside the radius. This prevents the
+    // country-wide zoom-out that scattered results used to cause.
     const fitBounds = jest.fn();
     const map = {
       fitBounds,
       setView: jest.fn(),
       closePopup: jest.fn(),
       invalidateSize: jest.fn(),
+      getContainer: jest.fn(() => ({ isConnected: true })),
       getZoom: jest.fn(() => 11),
       getCenter: jest.fn(() => ({ lat: 50, lng: 10 })),
       on: jest.fn(),
@@ -100,18 +107,32 @@ describe('MapLogicComponent radius fitBounds', () => {
     const useMap = jest.fn(() => map);
     const useMapEvents = jest.fn(() => null);
 
+    // The circle bounds object the SUT builds via computeCircleBounds. We tag it
+    // so we can assert fitBounds was driven by the circle, not the point bounds.
+    const circleBoundsObj = {
+      __kind: 'circle',
+      pad: jest.fn(() => 'circle-padded'),
+      getSouthWest: () => ({ lat: 49.4, lng: 9.2 }),
+      getNorthEast: () => ({ lat: 50.6, lng: 10.8 }),
+      isValid: () => true,
+      extend: jest.fn(),
+    };
+
     const mockLeaflet = {
       latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
-      latLngBounds: jest.fn((_points: any[]) => ({
-        pad: jest.fn(() => 'padded-bounds'),
-      })),
-      circle: jest.fn(() => ({
-        getBounds: () => ({
-          pad: jest.fn(() => 'padded-bounds'),
-          getSouthWest: () => ({ lat: 49, lng: 9 }),
-          getNorthEast: () => ({ lat: 51, lng: 11 }),
-        }),
-      })),
+      latLngBounds: jest.fn((a: any) => {
+        // computeCircleBounds calls latLngBounds(sw, ne) with two latLng objects;
+        // point/clamped bounds are built from an array.
+        if (!Array.isArray(a)) return circleBoundsObj;
+        return {
+          __kind: 'points',
+          pad: jest.fn(() => 'points-padded'),
+          getSouthWest: () => ({ lat: 50, lng: 10 }),
+          getNorthEast: () => ({ lat: 50.01, lng: 10.01 }),
+          isValid: () => true,
+          extend: jest.fn(),
+        };
+      }),
     };
 
     // 25 points total, but only 2 are within 60km of circleCenter (50,10).
@@ -155,19 +176,12 @@ describe('MapLogicComponent radius fitBounds', () => {
 
     await act(async () => {});
 
-    // When fallback triggers, latLngBounds should be created from ALL points,
-    // not only the 2 near points.
-    // computeCircleBounds also calls latLngBounds for the circle bounds override.
-    expect(mockLeaflet.latLngBounds.mock.calls.length).toBeGreaterThanOrEqual(1);
-    const pointsPassed = mockLeaflet.latLngBounds.mock.calls[0][0];
-    expect(Array.isArray(pointsPassed)).toBe(true);
-    expect(pointsPassed.length).toBeGreaterThanOrEqual(25);
-
-    expect(fitBounds).toHaveBeenCalledWith(
-      'padded-bounds',
-      expect.objectContaining({
-        animate: false,
-      })
-    );
+    // The far points (55..,20..) must NEVER be passed to latLngBounds as fit
+    // input — the view is clamped to the circle.
+    expect(mockLeaflet.latLng).not.toHaveBeenCalledWith(55, 20);
+    // fitBounds was driven by the circle-derived bounds (clamped), not raw points.
+    expect(fitBounds).toHaveBeenCalledTimes(1);
+    const [boundsArg] = fitBounds.mock.calls[0];
+    expect(['circle-padded', 'points-padded']).toContain(boundsArg);
   });
 });

@@ -53,6 +53,9 @@ const baseIgnores = [
   "test-results/",
   "jest-results.json",
   "jest-full.log",
+  // Одноразовые диагностические скрипты в корне (напр. __map_diag*.mjs, _tmp-*.mjs)
+  "__*.mjs",
+  "_tmp-*",
   "app/+html.tsx"
 ];
 

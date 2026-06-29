@@ -32,7 +32,7 @@ export default function BelarusOutlineIcon({
       {...accessibilityProps}
     >
       <Path
-        d="M6 7.1 8.5 5.3l3.2.2 2.2-1.1 2.3.8 1.1 1.6 3.1.6-1.6 2 2 1.5-2.2 1.5.5 2.3-2.8.6-1.7 2.4-2.6-1.2-2.3 1.4-2.1-1.7-2.9.1 1.1-2.5-2.1-1.7 2.4-1.6L6 7.1Z"
+        d="M4.6 8.3 7.2 5.6l3 1 3-1.9 2.6 1.4 3.6.8-.5 2.8 1.4 2.4-2.1 1.9.6 2.7-3.1 1.8-2.7-1.1-2.6 1.6-2.9-1.4-2.9.7-1.7-2.6 1.4-2.7-2.7-1.9Z"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"

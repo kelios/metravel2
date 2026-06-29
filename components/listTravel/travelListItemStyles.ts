@@ -371,6 +371,25 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       flexShrink: 0,
     },
 
+    // Оверлей просмотров на фото (mobile web + native): тёмная пилюля в углу,
+    // читаемая поверх любого кадра. На мобильном inline-просмотры в мета-ряд не
+    // влезают (compactMeta), поэтому показываем счётчик прямо на изображении.
+    viewsOverlayBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 3,
+      paddingHorizontal: 7,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+    },
+    viewsOverlayText: {
+      color: '#fff',
+      fontSize: META_TEXT_FONT_SIZE,
+      lineHeight: META_TEXT_LINE_HEIGHT,
+      fontWeight: '600',
+    },
+
     metaBoxViewsChip: {
       // Убираем чип-стиль, оставляем inline
     },

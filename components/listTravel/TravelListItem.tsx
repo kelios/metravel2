@@ -495,6 +495,18 @@ function TravelListItem({
     )
   }
 
+  // На мобильном (web) и на native просмотры не влезают в мета-ряд (compactMeta),
+  // поэтому показываем счётчик прямо на фото — тёмная пилюля в нижнем углу.
+  const showViewsOverlay = (isMobile || !IS_WEB) && views > 0 && !selectable
+  const viewsOverlaySlot = showViewsOverlay ? (
+    <View style={styles.viewsOverlayBadge} testID="views-overlay" pointerEvents="none">
+      <Feather name="eye" size={VIEW_ICON_SIZE + 2} color="#fff" />
+      <Text style={styles.viewsOverlayText} numberOfLines={1}>
+        {viewsFormatted}
+      </Text>
+    </View>
+  ) : null
+
   const nativeActionBar =
     !IS_WEB && !selectable ? (
       <View style={styles.nativeActionBar}>
@@ -605,6 +617,7 @@ function TravelListItem({
       insetMedia={false}
       leftTopSlot={leftTopSlot}
       rightTopSlot={IS_WEB && !selectable ? rightTopSlot : null}
+      bottomRightSlot={viewsOverlaySlot}
       containerOverlaySlot={selectableOverlay}
       contentSlot={contentSlot}
       webHoverScale={!isMobile && IS_WEB}

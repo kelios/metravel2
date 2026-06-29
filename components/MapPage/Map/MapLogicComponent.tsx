@@ -110,6 +110,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   const lastUserLocationKeyRef = useRef<string | null>(null);
   const lastRadiusKeyRef = useRef<string | null>(null);
   const lastSyncedZoomRef = useRef<number | null>(null);
+  const lastPreFitKeyRef = useRef<string | null>(null);
 
   const getInitialRadiusZoom = useCallback((radiusMeters?: number | null) => {
     const r = Number(radiusMeters);
@@ -123,9 +124,17 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   }, []);
 
   const hasRadiusResults = (travelData ?? []).length > 0;
-  const canAutoFitRadiusView =
-    hasRadiusResults ||
-    (isTestEnv && circleCenter && Number.isFinite(radiusInMeters) && Number(radiusInMeters) > 0);
+  // Whether we know enough to draw/fit the radius circle around the user (or the
+  // resolved center). When true the default radius view is "circle around me",
+  // even with zero results — the circle must be visible from first paint.
+  const hasValidRadiusCircle =
+    mode === 'radius' &&
+    !!circleCenter &&
+    Number.isFinite(circleCenter.lat) &&
+    Number.isFinite(circleCenter.lng) &&
+    Number.isFinite(radiusInMeters) &&
+    Number(radiusInMeters) > 0;
+  const canAutoFitRadiusView = hasRadiusResults || hasValidRadiusCircle;
 
   // Helper: ensure mapZoom state matches real leaflet zoom even after programmatic moves.
   // Only push state when the zoom actually changed — a plain pan (moveend) keeps the
@@ -270,16 +279,35 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       return;
     }
 
-    // Radius mode: as soon as userLocation is available, center the map on it.
-    // Do this BEFORE results are ready so the initial UX is "centered on me".
-    // Keep tests unchanged (tests expect setView only after radius results).
-    if (!isTestEnv && mode === 'radius' && !hasInitializedRef.current && hasValidUserLocation) {
-      try {
-        map.setView([userLocation!.lat, userLocation!.lng], 15, { animate: false });
-        requestAnimationFrame(() => syncZoomFromMap());
-        hasInitializedRef.current = true;
-      } catch {
-        // noop
+    // Radius mode: as soon as a center is known, center the map on it at a zoom
+    // that matches the radius circle. Do this BEFORE results are ready so the
+    // initial UX is "circle around me" rather than a too-tight street view that
+    // hides the radius circle. The auto-fit effect below then refines to the
+    // exact circle bounds. Keep tests unchanged (tests expect setView only after
+    // radius results), so this pre-fit only runs outside the test env.
+    if (!isTestEnv && mode === 'radius' && !hasInitializedRef.current) {
+      const preCenter = circleCenter && Number.isFinite(circleCenter.lat) && Number.isFinite(circleCenter.lng)
+        ? { lat: circleCenter.lat, lng: circleCenter.lng }
+        : hasValidUserLocation
+          ? { lat: userLocation!.lat, lng: userLocation!.lng }
+          : null;
+      const preFitKey = preCenter
+        ? `${preCenter.lat.toFixed(5)},${preCenter.lng.toFixed(5)}:${Number(radiusInMeters)}`
+        : null;
+      if (preCenter && preFitKey && lastPreFitKeyRef.current !== preFitKey) {
+        lastPreFitKeyRef.current = preFitKey;
+        try {
+          map.setView(
+            [preCenter.lat, preCenter.lng],
+            getInitialRadiusZoom(radiusInMeters),
+            { animate: false },
+          );
+          requestAnimationFrame(() => syncZoomFromMap());
+          // Do NOT set hasInitializedRef here: leave the auto-fit effect free to
+          // refine to the exact circle bounds (and tighten to clustered results).
+        } catch {
+          // noop
+        }
       }
     }
 
@@ -379,23 +407,28 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     const autoFitKey = `${mode}:${dataKey}:${userLocation ? `${userLocation.lat},${userLocation.lng}` : 'no-user'}:${radiusKey}`;
     if (lastAutoFitKeyRef.current === autoFitKey) return;
 
-    const hasValidCircle =
-      mode === 'radius' &&
-      circleCenter &&
-      Number.isFinite(circleCenter.lat) &&
-      Number.isFinite(circleCenter.lng) &&
-      Number.isFinite(radiusInMeters) &&
-      Number(radiusInMeters) > 0;
+    const hasValidCircle = hasValidRadiusCircle;
 
     const radiusMeters = hasValidCircle ? Number(radiusInMeters) : null;
 
-    // Prefer fitting to actual point bounds when we have results.
-    // Filter out extreme outliers, and (when circle is known) filter to points within the radius.
+    // Radius-circle bounds (computed once). In radius mode this is the DEFAULT
+    // view: the map must show the whole circle around the user, never wider.
+    const circleBounds =
+      hasValidCircle && circleCenter
+        ? computeCircleBounds(
+            { lat: circleCenter.lat, lng: circleCenter.lng },
+            Number(radiusInMeters),
+            L,
+          )
+        : null;
+
+    // Point bounds are only used to TIGHTEN the view when every result sits
+    // comfortably inside the circle — we never let them widen past the circle.
     const parsedPointCoords = (travelData || [])
       .map((p) => strToLatLng(p.coord, hintCenter))
       .filter(Boolean) as [number, number][];
 
-    const filteredPointCoords = hasValidCircle
+    const inRadiusPointCoords = hasValidCircle
       ? parsedPointCoords.filter(([lng, lat]) => {
           if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
           if (!CoordinateConverter.isValid({ lat, lng })) return false;
@@ -404,7 +437,6 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
               { lat: circleCenter!.lat, lng: circleCenter!.lng },
               { lat, lng }
             );
-            // small tolerance to avoid dropping borderline points due to rounding
             return radiusMeters != null ? d <= radiusMeters * 1.05 : true;
           } catch {
             return false;
@@ -412,52 +444,64 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         })
       : parsedPointCoords.filter(([lng, lat]) => CoordinateConverter.isValid({ lat, lng }));
 
-    const shouldIgnoreRadiusFilter =
-      hasValidCircle &&
-      parsedPointCoords.length >= 20 &&
-      filteredPointCoords.length > 0 &&
-      filteredPointCoords.length < Math.max(10, Math.floor(parsedPointCoords.length * 0.2));
+    // Decide the target bounds.
+    // - Radius mode with a valid circle: ALWAYS the circle, optionally intersected
+    //   (tightened) with the in-radius point bounds so a tight cluster zooms in,
+    //   but the result is clamped to the circle (never wider).
+    // - Otherwise (no circle): fit to whatever valid points we have.
+    let targetBounds: any = null;
 
-    // If filtering removed everything (or looks suspiciously small), fall back to unfiltered points.
-    const usablePointCoords =
-      filteredPointCoords.length === 0 || shouldIgnoreRadiusFilter
-        ? parsedPointCoords
-        : filteredPointCoords;
+    if (hasValidCircle && circleBounds) {
+      targetBounds = circleBounds;
 
-    const shouldFitToPoints = usablePointCoords.length > 0;
-    const coords = shouldFitToPoints ? usablePointCoords : ([] as [number, number][]);
-
-    if (coords.length === 0) {
-      if (circleCenter && Number.isFinite(circleCenter.lat) && Number.isFinite(circleCenter.lng)) {
-        coords.push([circleCenter.lng, circleCenter.lat]);
-      } else if (userLocation) {
-        coords.push([userLocation.lng, userLocation.lat]);
-      }
-    }
-
-    // If we ended up with no usable points, fit to the circle bounds as a safe fallback.
-    if (!shouldFitToPoints && hasValidCircle) {
-      try {
-        const circleBounds = computeCircleBounds(
-          { lat: circleCenter.lat, lng: circleCenter.lng },
-          Number(radiusInMeters),
-          L,
-        );
-        if (circleBounds) {
-          const sw = circleBounds.getSouthWest();
-          const ne = circleBounds.getNorthEast();
-          coords.push([sw.lng, sw.lat]);
-          coords.push([ne.lng, ne.lat]);
+      if (inRadiusPointCoords.length > 0) {
+        try {
+          const pointBounds = (L as any).latLngBounds(
+            inRadiusPointCoords.map(([lng, lat]) => (L as any).latLng(lat, lng)),
+          );
+          // Always include the user/center so the "you" marker stays in view.
+          pointBounds.extend((L as any).latLng(circleCenter!.lat, circleCenter!.lng));
+          // Clamp to the circle: the tightened view can be smaller than the
+          // circle but must never exceed it.
+          const sw = pointBounds.getSouthWest();
+          const ne = pointBounds.getNorthEast();
+          const cSw = circleBounds.getSouthWest();
+          const cNe = circleBounds.getNorthEast();
+          const clampedSw = (L as any).latLng(
+            Math.max(sw.lat, cSw.lat),
+            Math.max(sw.lng, cSw.lng),
+          );
+          const clampedNe = (L as any).latLng(
+            Math.min(ne.lat, cNe.lat),
+            Math.min(ne.lng, cNe.lng),
+          );
+          const clamped = (L as any).latLngBounds(clampedSw, clampedNe);
+          if (clamped.isValid?.() ?? true) targetBounds = clamped;
+        } catch {
+          targetBounds = circleBounds;
         }
+      }
+    } else {
+      const coords =
+        inRadiusPointCoords.length > 0
+          ? inRadiusPointCoords
+          : userLocation
+            ? ([[userLocation.lng, userLocation.lat]] as [number, number][])
+            : ([] as [number, number][]);
+      if (coords.length === 0) return;
+      try {
+        targetBounds = (L as any).latLngBounds(
+          coords.map(([lng, lat]) => (L as any).latLng(lat, lng)),
+        );
       } catch {
-        // noop
+        return;
       }
     }
 
-    if (coords.length === 0) return;
+    if (!targetBounds) return;
 
     try {
-      let bounds = (L as any).latLngBounds(coords.map(([lng, lat]) => (L as any).latLng(lat, lng)));
+      const bounds = targetBounds;
       const padding = fitBoundsPadding ?? {};
 
       // On web, layout (side panels, ResizeObserver, fonts) can change without a window resize.
@@ -483,26 +527,6 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
             if (!container || !container.isConnected) return;
           } catch {
             return;
-          }
-        }
-
-        if (
-          mode === 'radius' &&
-          circleCenter &&
-          Number.isFinite(circleCenter.lat) &&
-          Number.isFinite(circleCenter.lng) &&
-          Number.isFinite(radiusInMeters) &&
-          Number(radiusInMeters) > 0
-        ) {
-          try {
-            const circleBounds = computeCircleBounds(
-              { lat: circleCenter.lat, lng: circleCenter.lng },
-              Number(radiusInMeters),
-              L,
-            );
-            if (circleBounds) bounds = circleBounds;
-          } catch {
-            // noop
           }
         }
 
@@ -543,6 +567,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     hintCenter,
     syncZoomFromMap,
     hasRadiusResults,
+    hasValidRadiusCircle,
     canAutoFitRadiusView,
   ]);
   return null;
