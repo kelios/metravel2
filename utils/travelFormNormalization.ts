@@ -9,6 +9,29 @@ export const DRAFT_PLACEHOLDER_PREFIX = '__draft_placeholder__';
 // Live prod `travel_address.address` column is varchar(100); cap point addresses
 // to fit it (see normalizeMarkersForSave). Load-bearing under a backend bug.
 const MAX_POINT_ADDRESS_LENGTH = 100;
+
+// Backend stores the point image in a Django ImageField whose column is
+// varchar(100). On upsert it only strips the `/address-image/` prefix
+// (`_normalize_coordinate_image`); any other URL (e.g. the travel cover on
+// `/travel-image/`) is stored verbatim, so a long URL overflows the column and
+// the WHOLE upsert crashes with a DataError ("данные не соответствуют
+// ограничениям базы данных"), losing the save. Predict the backend-stored
+// length and drop the image rather than send an overflowing value.
+const MAX_POINT_IMAGE_STORED_LENGTH = 100;
+const ADDRESS_IMAGE_MARKER = '/address-image/';
+
+function predictBackendStoredImageLength(url: string): number {
+    const path = url.replace(/[?#].*$/, '');
+    const idx = path.indexOf(ADDRESS_IMAGE_MARKER);
+    if (idx !== -1) return path.length - (idx + ADDRESS_IMAGE_MARKER.length);
+    if (url.startsWith('address-image/')) return url.length - 'address-image/'.length;
+    return url.length;
+}
+
+/** True when the backend can store `url` as a point image without overflowing the column. */
+export function isStorablePointImage(url: string): boolean {
+    return predictBackendStoredImageLength(url) <= MAX_POINT_IMAGE_STORED_LENGTH;
+}
 const DRAFT_NAME_PREFIX = `${DRAFT_PLACEHOLDER_PREFIX}name__`;
 
 export function getDraftNamePlaceholder(): string {
@@ -347,13 +370,22 @@ export function normalizeMarkersForSave(markers: any[], fallbackImageUrl?: strin
             normalized.id = id;
         }
 
-        // Preserve marker image when it is already a valid server URL.
-        if (imageValue && imageValue.length > 0 && !isLocalPreviewUrl(imageValue)) {
+        // Preserve marker image when it is already a valid server URL — but only
+        // if the backend can store it without overflowing the varchar(100) column
+        // (see isStorablePointImage). A persisted `/travel-image/` cover URL is
+        // long and non-normalizable → would crash the whole upsert.
+        if (
+            imageValue &&
+            imageValue.length > 0 &&
+            !isLocalPreviewUrl(imageValue) &&
+            isStorablePointImage(imageValue)
+        ) {
             normalized.image = imageValue;
-        } else if (normalizedFallbackImage) {
-            // Backend requires coordsMeTravel[].image for some serializers even for new points.
-            // We send a serializer-compatible fallback here, but merge logic must preserve
-            // the local blob preview after save until the actual point-photo upload succeeds.
+        } else if (normalizedFallbackImage && isStorablePointImage(normalizedFallbackImage)) {
+            // image is optional in the upsert serializer; we still pass a
+            // serializer-compatible fallback when it fits the column. Merge logic
+            // must preserve the local blob preview after save until the actual
+            // point-photo upload succeeds.
             normalized.image = normalizedFallbackImage;
         }
 

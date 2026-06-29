@@ -349,6 +349,24 @@ describe('travelFormNormalization', () => {
       expect(result[0].image).toBe('https://cdn.com/fallback.jpg');
     });
 
+    it('drops a long /travel-image/ cover URL that would overflow the image column', () => {
+      // Reproduces travel 225 upsert crash: the persisted point image was the
+      // travel cover thumb (/travel-image/, 104 chars). Backend stores it verbatim
+      // (only /address-image/ is stripped) → varchar(100) DataError on the whole save.
+      const coverUrl =
+        'https://metravel.by/travel-image/1322/conversions/CBhZRPPUEEgoHhl688XKiKDYpQMmdbKIfURYGH8P-thumb_200.jpg';
+      expect(coverUrl.length).toBeGreaterThan(100);
+      const result = normalizeMarkersForSave([{ id: null, lat: 50, lng: 30, image: coverUrl }], coverUrl);
+      expect(result[0].image).toBeUndefined();
+    });
+
+    it('keeps an /address-image/ URL (backend strips prefix, fits the column)', () => {
+      const addressImageUrl =
+        'https://metravel.by/address-image/15730/conversions/1bd51dd2ad0b4be9a412168e97269354.webp';
+      const result = normalizeMarkersForSave([{ id: 7, lat: 50, lng: 30, image: addressImageUrl }]);
+      expect(result[0].image).toBe(addressImageUrl);
+    });
+
     it('caps long point address to 100 chars (prod varchar(100) guard)', () => {
       const longAddress = 'Музей центральной части города '.repeat(10).trim();
       expect(longAddress.length).toBeGreaterThan(100);
