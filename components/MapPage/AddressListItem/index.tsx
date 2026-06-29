@@ -7,10 +7,14 @@ import {
   openExternal,
 } from '@/hooks/useAddressListItemActions'
 import {
+  buildAppleMapsUrl,
+  buildOpenStreetMapUrl,
   buildOrganicMapsUrl,
   buildWazeUrl,
+  buildYandexMapsUrl,
   buildYandexNaviUrl,
 } from '@/components/MapPage/Map/mapLinks'
+import { NAVIGATION_ACTION_LABELS } from '@/components/navigation/navigationActionMeta'
 
 import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
 
@@ -133,6 +137,67 @@ const AddressListItem: React.FC<Props> = ({
   }, [coord])
 
   const isNativeMobile = !isWebPlatform() && isMobile
+
+  // Native nav-apps set, identical to the map popup + travel-points «Навигация и
+  // действия» sheet (Google / Apple / Organic / Waze / Яндекс Карты / Яндекс Нави
+  // / OSM). On native `webMapActions` is empty by design, so without this the
+  // popup-aligned card had no «Навигация» tile. PlaceListCard folds these
+  // `mapActions` into the shared ActionListSheet on the compact/popup-aligned card.
+  const nativeMapActions = useMemo(() => {
+    if (!coord || isWebPlatform()) return []
+    return [
+      {
+        key: 'google',
+        label: NAVIGATION_ACTION_LABELS.google,
+        icon: 'map-pin' as const,
+        onPress: () => openExternal(buildMapUrl(coord)),
+        title: 'Открыть в Google Maps',
+      },
+      {
+        key: 'apple',
+        label: NAVIGATION_ACTION_LABELS.apple,
+        icon: 'map' as const,
+        onPress: () => openExternal(buildAppleMapsUrl(coord)),
+        title: 'Открыть в Apple Maps',
+      },
+      {
+        key: 'organic',
+        label: NAVIGATION_ACTION_LABELS.organic,
+        icon: 'compass' as const,
+        onPress: () => openExternal(buildOrganicMapsUrl(coord)),
+        title: 'Открыть в Organic Maps',
+      },
+      {
+        key: 'waze',
+        label: NAVIGATION_ACTION_LABELS.waze,
+        icon: 'navigation' as const,
+        onPress: () => openExternal(buildWazeUrl(coord)),
+        title: 'Проложить маршрут в Waze',
+      },
+      {
+        key: 'yandex-maps',
+        label: NAVIGATION_ACTION_LABELS['yandex-maps'],
+        icon: 'map' as const,
+        onPress: () => openExternal(buildYandexMapsUrl(coord)),
+        title: 'Открыть в Яндекс Картах',
+      },
+      {
+        key: 'yandex',
+        label: NAVIGATION_ACTION_LABELS.yandex,
+        icon: 'navigation-2' as const,
+        onPress: () => openExternal(buildYandexNaviUrl(coord)),
+        title: 'Проложить маршрут в Яндекс Навигаторе',
+      },
+      {
+        key: 'osm',
+        label: NAVIGATION_ACTION_LABELS.osm,
+        icon: 'map' as const,
+        onPress: () => openExternal(buildOpenStreetMapUrl(coord)),
+        title: 'Открыть в OpenStreetMap',
+      },
+    ]
+  }, [coord])
+
   const routeAction = useMemo(
     () =>
       isNativeMobile && onBuildRoute
@@ -183,7 +248,7 @@ const AddressListItem: React.FC<Props> = ({
       onPress={onPress}
       transportMode={transportMode}
       distanceInfo={distanceInfo}
-      webMapActions={webMapActions}
+      webMapActions={isWebPlatform() ? webMapActions : nativeMapActions}
       inlineActions={inlineActions}
       handleMainPress={handleMainPress}
       openArticle={openArticle}

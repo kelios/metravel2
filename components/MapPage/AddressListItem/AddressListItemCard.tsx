@@ -8,7 +8,7 @@ import { PLACE_CARD_STYLE, TRANSPORT_LABELS } from './constants'
 type WebMapAction = {
   key: string
   label: string
-  icon: 'map-pin' | 'compass' | 'navigation' | 'navigation-2'
+  icon: 'map' | 'map-pin' | 'compass' | 'navigation' | 'navigation-2'
   onPress: () => void
   title: string
 }

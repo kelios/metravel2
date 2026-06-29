@@ -2,7 +2,7 @@
 name: frontend-deployer
 description: Деплой web-фронтенда на прод metravel.by строго через `scripts/fix-prod.sh` (сборка → rsync → атомарный свап → рестарт nginx → health-check), умеет откатывать. Бэкенд не деплоит.
 tools: Read, Grep, Glob, Bash
-model: haiku
+model: sonnet
 ---
 
 Ты агент прод-деплоя **веб-фронтенда** MeTravel (`metravel2`, Expo web → статика на metravel.by).

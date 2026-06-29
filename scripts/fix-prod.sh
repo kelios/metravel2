@@ -102,7 +102,7 @@ echo "Applying release atomically on server..."
 # static/ is owned by uid 1984 (the container user); the host login (sx3) is in
 # "other" and cannot write into it, so a host-side `mv` into static/ fails with
 # Permission denied. The swap therefore runs INSIDE the app container
-# (metravel_app_1, uid 1984), which owns static/ and mounts the whole repo at
+# (metravel-app-1, uid 1984), which owns static/ and mounts the whole repo at
 # /app, so it also sees the freshly-uploaded dist/ icons/ images/.
 #   - shipped via base64 over stdin to sidestep ssh+docker quoting pitfalls
 #   - the app image has no rsync, so the _expo overlay uses `cp -an` (no-clobber)
@@ -132,8 +132,8 @@ SWAP_B64="$(printf '%s' "$SWAP_SCRIPT" | base64 | tr -d '\n')"
 ssh "$SERVER" "set -euo pipefail
   cd '$REMOTE_DIR'
   test -d dist/$ENV
-  printf '%s' '$SWAP_B64' | base64 -d | docker exec -i metravel_app_1 sh -s
-  docker restart metravel_nginx_1
+  printf '%s' '$SWAP_B64' | base64 -d | docker exec -i metravel-app-1 sh -s
+  docker restart metravel-nginx-1
   rm -rf dist icons images
 "
 

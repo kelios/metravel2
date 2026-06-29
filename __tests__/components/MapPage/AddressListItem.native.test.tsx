@@ -88,10 +88,14 @@ describe('AddressListItem (native list card)', () => {
 
     const routeActions = getAllByLabelText('Построить маршрут сюда');
     expect(routeActions).toHaveLength(1);
+    // Nav apps are folded into the «Навигация и действия» sheet, not inline.
     expect(queryByLabelText('Открыть в Google Maps')).toBeNull();
     expect(queryByLabelText('Открыть в Organic Maps')).toBeNull();
     expect(queryByLabelText('Проложить маршрут в Waze')).toBeNull();
     expect(queryByLabelText('Проложить маршрут в Яндекс.Навигаторе')).toBeNull();
+
+    // …but the «Навигация» tile is present so the user can open that full list.
+    expect(getAllByLabelText('Навигация и действия').length).toBeGreaterThan(0);
 
     fireEvent.press(routeActions[0]);
     expect(onBuildRoute).toHaveBeenCalledTimes(1);
