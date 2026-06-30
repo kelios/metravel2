@@ -73,7 +73,7 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(heroBackdrop?.tagName).toBe('DIV')
     expect(heroBackdropSegments.length).toBeGreaterThan(1)
     expect(lcpImg?.getAttribute('src')).toContain('w=1280')
-    expect(backdropUrl).toContain('w=64')
+    expect(backdropUrl).toContain('w=96')
     expect(backdropUrl).toContain('q=40')
     expect(backdropUrl).not.toContain(lcpImg?.getAttribute('src') || '')
     expect(heroBackdropLayer?.style.opacity).toBe('1')
@@ -108,10 +108,10 @@ describe('TravelDetailsContainer performance (web)', () => {
 
     const lcpImg = container.querySelector('img[data-lcp]') as HTMLImageElement | null
     expect(lcpImg).toBeTruthy()
-    expect(lcpImg?.getAttribute('src')).toContain('w=720')
+    expect(lcpImg?.getAttribute('src')).toContain('w=800')
     expect(lcpImg?.getAttribute('src')).not.toContain('dpr=')
     expect(lcpImg?.getAttribute('srcset')).toContain('w=640')
-    expect(lcpImg?.getAttribute('srcset')).toContain('w=720')
+    expect(lcpImg?.getAttribute('srcset')).toContain('w=800')
     expect(lcpImg?.getAttribute('srcset')).not.toContain('dpr=')
   })
 

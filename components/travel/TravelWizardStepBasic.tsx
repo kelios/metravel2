@@ -174,7 +174,7 @@ function TravelWizardStepBasic({
       });
 
       setTimeout(() => {
-        router.push(buildQuickDraftRoute(savedTravel));
+        router.push(buildQuickDraftRoute(savedTravel ?? null));
       }, redirectDelayMs);
     } catch (error) {
       if (!hasToastBeenShown(error)) {

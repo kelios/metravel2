@@ -224,7 +224,7 @@ function QuestFullMap({
               provider.label + '</button>';
           }).join('');
           return '<div style="margin-top:8px;font-size:12px;font-weight:700;color:' + theme.text +
-            '">Открыть точку в картах</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-width:220px">' +
+            '">Довести меня</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-width:220px">' +
             buttons + '</div>';
         }
 

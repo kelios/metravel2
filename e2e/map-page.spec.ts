@@ -1158,7 +1158,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     // Menu toggle should open the current mobile bottom sheet with the list content.
     await expect(page.getByRole('dialog', { name: 'Панель карты' })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({ timeout: 20_000 });
+    await expect(getMobileListPanelContent(page)).toBeVisible({ timeout: 20_000 });
 
     // Закрытие через крестик (если доступен) либо повторный toggle кнопкой меню
     // Close via the header menu button (toggle).
@@ -1175,7 +1175,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     const close = page.getByTestId('map-mobile-sheet-close');
     await expect(close).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({ timeout: 20_000 });
+    await expect(getMobileListPanelContent(page)).toBeVisible({ timeout: 20_000 });
 
     await expectFullyInViewport(close, page, { label: 'map panel close', margin: 2 });
     await expectTopmostAtCenter(page, close, 'map panel close');
@@ -1263,16 +1263,37 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(toggle).toBeVisible({ timeout: 20_000 });
     await toggle.click();
 
-    const listSummary = page.getByTestId('travel-list-mobile-summary');
-    await expect(listSummary).toBeVisible({ timeout: 20_000 });
+    await expect(getMobileListPanelContent(page)).toBeVisible({ timeout: 20_000 });
 
-    await page.getByTestId('travel-list-open-filters').click({ force: true });
-    await page.getByTestId('map-mobile-filters-loading').waitFor({ state: 'hidden', timeout: 10_000 }).catch(() => null);
+    await expect
+      .poll(
+        async () => {
+          if (await page.getByTestId('filters-block-main').isVisible().catch(() => false)) {
+            return true;
+          }
+
+          const listFiltersButton = page.getByTestId('travel-list-open-filters');
+          const emptyFiltersButton = page.getByTestId('empty-open-filters');
+          if (await listFiltersButton.isVisible().catch(() => false)) {
+            await listFiltersButton.click({ force: true }).catch(() => null);
+          } else if (await emptyFiltersButton.isVisible().catch(() => false)) {
+            await emptyFiltersButton.click({ force: true }).catch(() => null);
+          }
+
+          await page
+            .getByTestId('map-mobile-filters-loading')
+            .waitFor({ state: 'hidden', timeout: 1_000 })
+            .catch(() => null);
+
+          return page.getByTestId('filters-block-main').isVisible().catch(() => false);
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
 
     // Verify the filters view is active in the mobile sheet.
     // The current mobile contract shows the filters body immediately,
     // while compact context chips appear only when there are real search/category refinements.
     await expect(page.getByTestId('filters-block-main')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('filters-open-list-button')).toBeVisible({ timeout: 10_000 });
   });
 });

@@ -126,6 +126,13 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     if (!stillExists) setSelectedPoint(null)
   }, [safeTravelData, selectedPoint])
 
+  useEffect(() => {
+    const coord = String(highlightedPoint?.coord ?? '').trim()
+    if (!coord) return
+    const point = safeTravelData.find((item) => item.coord === coord)
+    if (point) setSelectedPoint(point)
+  }, [highlightedPoint?.coord, safeTravelData])
+
   const mapHeight = height || (compact ? 400 : 600)
   const mapBorderRadius = compact ? 12 : 16
   const loaderOverlay = useMemo(() => withAlpha(colors.surface, 0.8), [colors.surface])

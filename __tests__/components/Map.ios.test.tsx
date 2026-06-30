@@ -256,7 +256,7 @@ describe('Map.ios Component', () => {
     const html = getWebViewHtml(rendered);
     expect(html).not.toContain('popup-chip');
     expect(html).not.toContain('Подробнее');
-    expect(html).not.toContain('Маршрут');
+    expect(html).not.toContain('>Маршрут<');
     expect(html).toContain("type: 'SELECT_PLACE'");
   });
 

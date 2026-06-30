@@ -13,6 +13,7 @@ const QUEST_DETAIL_URL_RE = /\/quests\/[^/]+\/[^/?#]+/
 // flake on data availability.
 const QUEST_FALLBACK_RE =
   /ошибка|Internal Server Error|Failed to load quests|не удалось загрузить|квесты не найдены|нет квестов|Нет квестов|0 квестов|Выберите город/i
+const RESOURCE_500_RE = /Failed to load resource: the server responded with a status of 500/i
 
 const waitForQuestCatalogReady = async (page: Page) =>
   Promise.any([
@@ -72,6 +73,7 @@ test.describe('Quests list -> detail', () => {
 
     // Open a quest detail if any quest exists; otherwise assert the fallback is shown.
     const card = await getFirstQuestCard(page)
+    let backendFallbackVisible = false
     if (card) {
       await Promise.all([
         page.waitForURL(QUEST_DETAIL_URL_RE, { timeout: WAIT_MS }),
@@ -86,10 +88,14 @@ test.describe('Quests list -> detail', () => {
       await expectNoHorizontalScroll(page)
     } else {
       await expect(page.getByText(QUEST_FALLBACK_RE).first()).toBeVisible({ timeout: WAIT_MS })
+      backendFallbackVisible = true
     }
 
     const unexpectedPageErrors = pageErrors.filter((message) => !isRecoverableReactHydrationError(message))
+    const unexpectedConsoleErrors = backendFallbackVisible
+      ? consoleErrors.filter((message) => !RESOURCE_500_RE.test(message))
+      : consoleErrors
     expect(unexpectedPageErrors, `page errors: ${pageErrors.join('\n')}`).toHaveLength(0)
-    expect(consoleErrors, `console errors: ${consoleErrors.join('\n')}`).toHaveLength(0)
+    expect(unexpectedConsoleErrors, `console errors: ${consoleErrors.join('\n')}`).toHaveLength(0)
   })
 })

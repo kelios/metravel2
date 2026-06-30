@@ -212,7 +212,7 @@ function TravelWizardStepRoute({
       quickDraftTimeoutRef.current = setTimeout(() => {
         quickDraftTimeoutRef.current = null
         if (!isMountedRef.current) return
-        router.push(buildQuickDraftRoute(savedTravel))
+        router.push(buildQuickDraftRoute(savedTravel ?? null))
       }, 250)
     } catch (error) {
       if (!hasToastBeenShown(error)) {

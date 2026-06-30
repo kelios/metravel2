@@ -11,6 +11,16 @@ const CALENDAR_URL = '/calendar';
 async function setupFakeAuth(page: import('@playwright/test').Page) {
   await ensureAuthedStorageFallback(page);
   await mockFakeAuthApis(page);
+  await page.route('**/api/user/*/travel-statuses/**', (route) => {
+    if (route.request().method() === 'GET') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ results: [], count: 0 }),
+      });
+    }
+    return route.continue();
+  });
 }
 
 // Helper: mock travels API; календарь больше не должен автоматически подмешивать авторские маршруты.
@@ -451,4 +461,3 @@ test.describe('Calendar @smoke', () => {
     expect(critical, `Console errors on /calendar: ${critical.join('\n')}`).toHaveLength(0);
   });
 });
-

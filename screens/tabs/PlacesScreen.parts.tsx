@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   ActivityIndicator,
+  Pressable,
   type StyleProp,
   Text,
   View,
@@ -26,6 +27,7 @@ import { type CatalogPlace } from '@/utils/placesCatalog'
 import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
 
 import { type PlacesStyles } from './PlacesScreen.styles'
+import { PRESSED_OPACITY } from './PlacesScreen.helpers'
 
 export const PlaceCard = React.memo(function PlaceCard({
   place,

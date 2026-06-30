@@ -41,12 +41,13 @@ async function getFirstGroupFilterCheckbox(page: any) {
   for (let i = 0; i < count; i++) {
     const option = checkboxes.nth(i);
     const label = String((await option.getAttribute('aria-label')) || '');
-    if (!/Только на модерации/i.test(label)) {
+    const isVisible = await option.isVisible().catch(() => false);
+    if (isVisible && !/Только на модерации/i.test(label)) {
       return option;
     }
   }
 
-  return checkboxes.first();
+  return null;
 }
 
 function getFilterGroupToggle(page: any) {
@@ -193,8 +194,7 @@ async function expandAnyFilterGroup(page: any): Promise<boolean> {
     await groupHeader.click();
     await page.waitForTimeout(400);
 
-    const checkboxCount = await page.getByRole('checkbox').count();
-    if (checkboxCount > 0) return true;
+    if (await getFirstGroupFilterCheckbox(page)) return true;
 
     await recoverListLoadError(page);
 
@@ -204,7 +204,7 @@ async function expandAnyFilterGroup(page: any): Promise<boolean> {
       await page.waitForTimeout(400);
     }
 
-    if ((await page.getByRole('checkbox').count()) > 0) {
+    if (await getFirstGroupFilterCheckbox(page)) {
       return true;
     }
 
@@ -232,6 +232,9 @@ async function getVisibleFilterCheckbox(page: any): Promise<any | null> {
     .poll(async () => page.getByRole('checkbox').count(), { timeout: FILTER_TIMEOUT_MS })
     .toBeGreaterThan(0);
   const option = await getFirstGroupFilterCheckbox(page);
+  if (!option) {
+    return null;
+  }
   await expect(option).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
   return option;
 }

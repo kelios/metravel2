@@ -604,10 +604,13 @@ function QuestFullMap({
                                         <Text style={[styles.popupCoords, { marginTop: 6 }]}>
                                             {gp.titles.join(', ')}
                                         </Text>
-                                        <Text style={styles.popupNavLabel}>Открыть точку в картах</Text>
+                                        <Text style={styles.popupNavLabel}>Довести меня</Text>
                                         <View style={styles.popupNavGrid}>
                                             {QUEST_NAV_PROVIDERS.map(provider => {
                                                 const visual = getNavigationActionVisual(provider.kind, colors);
+                                                const label = provider.app === 'yandex'
+                                                    ? 'Яндекс'
+                                                    : NAVIGATION_ACTION_LABELS[provider.kind];
                                                 return (
                                                     <TouchableOpacity
                                                         key={provider.app}
@@ -625,7 +628,7 @@ function QuestFullMap({
                                                             <Feather name={visual.icon} size={13} color={visual.iconColor} />
                                                         </View>
                                                         <Text style={styles.popupNavChipText} numberOfLines={1}>
-                                                            {NAVIGATION_ACTION_LABELS[provider.kind]}
+                                                            {label}
                                                         </Text>
                                                     </TouchableOpacity>
                                                 );

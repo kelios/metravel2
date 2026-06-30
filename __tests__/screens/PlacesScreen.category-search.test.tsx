@@ -129,11 +129,11 @@ describe('PlacesScreen category search', () => {
   })
 
   it('opens selected place on map and exposes navigator actions on the card', async () => {
-    const { findByLabelText, findByTestId } = render(<PlacesScreen />, {
+    const { findAllByLabelText, findByTestId } = render(<PlacesScreen />, {
       wrapper: createQueryWrapper().Wrapper,
     })
 
-    fireEvent.press(await findByLabelText('Открыть Парковка у озера на карте'))
+    fireEvent.press(await findByTestId('places-card-place-1'))
 
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/map',
@@ -151,9 +151,11 @@ describe('PlacesScreen category search', () => {
       },
     })
 
-    fireEvent.press(await findByTestId('place-navigation-place-1-toggle'))
-    fireEvent.press(await findByLabelText('Открыть точку в Organic Maps'))
+    const organicButtons = await findAllByLabelText('Открыть точку в Organic Maps')
+    fireEvent.press(organicButtons[0])
 
-    expect(openExternalUrlInNewTab).toHaveBeenCalledWith('https://omaps.app/53.9,27.56')
+    expect(openExternalUrlInNewTab).toHaveBeenCalledWith(
+      'https://omaps.app/map?v=1&ll=53.9,27.56&n=%D0%9F%D0%B0%D1%80%D0%BA%D0%BE%D0%B2%D0%BA%D0%B0%20%D1%83%20%D0%BE%D0%B7%D0%B5%D1%80%D0%B0',
+    )
   })
 })

@@ -141,9 +141,12 @@ describe('PointCard', () => {
     render(<PointCard point={mockPoint} />);
 
     expect(screen.getByText('Google')).toBeTruthy();
+    expect(screen.getByText('Apple')).toBeTruthy();
     expect(screen.getByText('Organic')).toBeTruthy();
     expect(screen.getByText('Waze')).toBeTruthy();
-    expect(screen.getByText('Яндекс')).toBeTruthy();
+    expect(screen.getByText('Яндекс Карты')).toBeTruthy();
+    expect(screen.getByText('Яндекс Нави')).toBeTruthy();
+    expect(screen.getByText('OSM')).toBeTruthy();
     expect(screen.getByText('Telegram')).toBeTruthy();
 
     (require('react-native').Platform as any).OS = originalPlatform;

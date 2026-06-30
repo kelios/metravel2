@@ -311,8 +311,8 @@ describe('HomeHero Component', () => {
 
       expect(preloadUrl).toBeTruthy()
       expect(preloadUrl).toContain('w=480')
-      expect(preloadUrl).toContain('h=360')
-      expect(preloadUrl).toContain('q=75')
+      expect(preloadUrl).toContain('h=480')
+      expect(preloadUrl).toContain('q=80')
       expect(preloadUrl).toContain('fit=contain')
     })
 

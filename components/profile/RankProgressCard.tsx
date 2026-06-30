@@ -23,9 +23,9 @@ function RankProgressCard({ rank, onPress, testID }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
 
-  if (!rank) return null
-
-  const explainer = rank.isMaxLevel
+  const explainer = !rank
+    ? 'Загружаем XP, уровень и значки.'
+    : rank.isMaxLevel
     ? 'Вы достигли максимального уровня — открыты все привилегии.'
     : rank.nextLevelMinPoints != null
       ? `Зарабатывайте XP за маршруты, отзывы и активность, чтобы открыть уровень «${rank.nextLevelTitle ?? ''}».`
@@ -36,7 +36,7 @@ function RankProgressCard({ rank, onPress, testID }: Props) {
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : 'summary'}
-      accessibilityLabel={`Ранг: уровень ${rank.level}, ${rank.title}`}
+      accessibilityLabel={rank ? `Ранг: уровень ${rank.level}, ${rank.title}` : 'Ранг загружается'}
       accessibilityHint={onPress ? 'Открыть детали наград и ранга' : undefined}
       style={({ pressed }) => [
         styles.card,
@@ -58,7 +58,17 @@ function RankProgressCard({ rank, onPress, testID }: Props) {
         ) : null}
       </View>
 
-      <RankBar rank={rank} />
+      {rank ? (
+        <RankBar rank={rank} />
+      ) : (
+        <View style={styles.loadingRank} testID="rank-progress-card-loading">
+          <View style={styles.loadingBadge} />
+          <View style={styles.loadingBody}>
+            <View style={styles.loadingLineWide} />
+            <View style={styles.loadingLineShort} />
+          </View>
+        </View>
+      )}
 
       <Text style={styles.explainer}>{explainer}</Text>
     </Pressable>
@@ -94,6 +104,33 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       fontWeight: '700',
       color: colors.primary,
+    },
+    loadingRank: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    loadingBadge: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.backgroundTertiary,
+    },
+    loadingBody: {
+      flex: 1,
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    loadingLineWide: {
+      width: '58%',
+      height: 12,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.backgroundTertiary,
+    },
+    loadingLineShort: {
+      width: '36%',
+      height: 10,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.backgroundTertiary,
     },
     explainer: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,

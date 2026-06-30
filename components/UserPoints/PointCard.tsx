@@ -11,7 +11,15 @@ import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import OpenInMapsSheet, { type OpenInMapsAction } from '@/components/navigation/OpenInMapsSheet';
 import { showToast } from '@/utils/toast';
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
-import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildWazeUrl, buildYandexNaviUrl } from '@/components/MapPage/Map/mapLinks';
+import {
+  buildAppleMapsUrl,
+  buildGoogleMapsUrl,
+  buildOpenStreetMapUrl,
+  buildOrganicMapsUrl,
+  buildWazeUrl,
+  buildYandexMapsUrl,
+  buildYandexNaviUrl,
+} from '@/components/MapPage/Map/mapLinks';
 import {
   getNavigationActionVisual,
   NAVIGATION_ACTION_LABELS,
@@ -249,18 +257,21 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
 
     const google = buildGoogleMapsUrl(coordsText);
+    const apple = buildAppleMapsUrl(coordsText);
     const organic = buildOrganicMapsUrl(coordsText);
     const waze = buildWazeUrl(coordsText);
+    const yandexMaps = buildYandexMapsUrl(coordsText);
     const yandexNavi = buildYandexNaviUrl(coordsText);
+    const osm = buildOpenStreetMapUrl(coordsText);
 
     return {
       google,
+      apple,
       organic,
       waze,
-      yandexMaps: `https://yandex.ru/maps/?pt=${encodeURIComponent(`${lng},${lat}`)}&z=16&l=map`,
+      yandexMaps,
       yandexNavi,
-      osm: `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(lat))}&mlon=${encodeURIComponent(String(lng))}#map=16/${encodeURIComponent(String(lat))}/${encodeURIComponent(String(lng))}`,
-      apple: `https://maps.apple.com/?q=${encodeURIComponent(`${lat},${lng}`)}`,
+      osm,
     };
   }, [coordsText, hasCoords, point.latitude, point.longitude]);
 
@@ -288,15 +299,17 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Google Maps', 'Organic Maps', 'Waze', 'Яндекс.Навигатор', 'OpenStreetMap', 'Отмена'],
-          cancelButtonIndex: 5,
+          options: ['Google Maps', 'Apple Maps', 'Organic Maps', 'Waze', 'Яндекс Карты', 'Яндекс.Навигатор', 'OpenStreetMap', 'Отмена'],
+          cancelButtonIndex: 7,
         },
         (buttonIndex) => {
           if (buttonIndex === 0) void openExternalLink(mapUrls.google);
-          if (buttonIndex === 1) void openExternalLink(mapUrls.organic);
-          if (buttonIndex === 2) void openExternalLink(mapUrls.waze);
-          if (buttonIndex === 3) void openExternalLink(mapUrls.yandexNavi);
-          if (buttonIndex === 4) void openExternalLink(mapUrls.osm);
+          if (buttonIndex === 1) void openExternalLink(mapUrls.apple);
+          if (buttonIndex === 2) void openExternalLink(mapUrls.organic);
+          if (buttonIndex === 3) void openExternalLink(mapUrls.waze);
+          if (buttonIndex === 4) void openExternalLink(mapUrls.yandexMaps);
+          if (buttonIndex === 5) void openExternalLink(mapUrls.yandexNavi);
+          if (buttonIndex === 6) void openExternalLink(mapUrls.osm);
         }
       );
       return;
@@ -318,6 +331,12 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         onPress: () => void openExternalLink(mapUrls.google),
       },
       {
+        key: 'apple',
+        label: 'Apple Maps',
+        accessibilityLabel: 'Открыть в Apple Maps',
+        onPress: () => void openExternalLink(mapUrls.apple),
+      },
+      {
         key: 'organic',
         label: 'Organic Maps',
         accessibilityLabel: 'Открыть в Organic Maps',
@@ -328,6 +347,12 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         label: 'Waze',
         accessibilityLabel: 'Проложить маршрут в Waze',
         onPress: () => void openExternalLink(mapUrls.waze),
+      },
+      {
+        key: 'yandex-maps',
+        label: 'Яндекс Карты',
+        accessibilityLabel: 'Открыть в Яндекс Картах',
+        onPress: () => void openExternalLink(mapUrls.yandexMaps),
       },
       {
         key: 'yandex',
@@ -392,6 +417,14 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
             title: 'Открыть в Google Maps',
           },
           {
+            key: 'apple',
+            accessibilityLabel: 'Открыть в Apple Maps',
+            label: NAVIGATION_ACTION_LABELS.apple,
+            ...getNavigationActionVisual('apple', colors),
+            onActivate: () => void openExternalLink(mapUrls.apple),
+            title: 'Открыть в Apple Maps',
+          },
+          {
             key: 'organic',
             accessibilityLabel: 'Открыть в Organic Maps',
             label: NAVIGATION_ACTION_LABELS.organic,
@@ -408,12 +441,28 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
             title: 'Проложить маршрут в Waze',
           },
           {
+            key: 'yandex-maps',
+            accessibilityLabel: 'Открыть в Яндекс Картах',
+            label: NAVIGATION_ACTION_LABELS['yandex-maps'],
+            ...getNavigationActionVisual('yandex-maps', colors),
+            onActivate: () => void openExternalLink(mapUrls.yandexMaps),
+            title: 'Открыть в Яндекс Картах',
+          },
+          {
             key: 'yandex',
             accessibilityLabel: 'Проложить маршрут в Яндекс Навигаторе',
             label: NAVIGATION_ACTION_LABELS.yandex,
             ...getNavigationActionVisual('yandex', colors),
             onActivate: () => void openExternalLink(mapUrls.yandexNavi),
             title: 'Проложить маршрут в Яндекс Навигаторе',
+          },
+          {
+            key: 'osm',
+            accessibilityLabel: 'Открыть в OpenStreetMap',
+            label: NAVIGATION_ACTION_LABELS.osm,
+            ...getNavigationActionVisual('osm', colors),
+            onActivate: () => void openExternalLink(mapUrls.osm),
+            title: 'Открыть в OpenStreetMap',
           },
           {
             key: 'telegram',

@@ -260,7 +260,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
     const mockCreatePoint = require('@/api/userPoints').userPointsApi.createPoint as jest.Mock;
     mockCreatePoint.mockClear();
 
-    const { getByLabelText, getAllByLabelText } = render(
+    const { getAllByLabelText } = render(
       <PointList points={[basePoint as any]} baseUrl="https://example.com/travel-page" travelName="T" />
     );
 
