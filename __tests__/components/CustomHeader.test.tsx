@@ -102,14 +102,14 @@ describe('CustomHeader', () => {
         it('renders desktop navigation by default', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
-            expect(utils.getByLabelText('Идеи поездок')).toBeTruthy();
+            expect(utils.getByLabelText('Маршруты')).toBeTruthy();
         });
 
         it('shows navigation items on desktop', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
             
-            expect(utils.getByLabelText('Идеи поездок')).toBeTruthy();
+            expect(utils.getByLabelText('Маршруты')).toBeTruthy();
             expect(utils.getByLabelText('Беларусь')).toBeTruthy();
             expect(utils.getByLabelText('Карта')).toBeTruthy();
             expect(utils.getByLabelText('Попутчики')).toBeTruthy();
@@ -147,7 +147,7 @@ describe('CustomHeader', () => {
             (usePathname as jest.Mock).mockReturnValue('/travels/some-travel');
             const utils = renderHeader();
             
-            const homeItem = utils.getByLabelText('Идеи поездок');
+            const homeItem = utils.getByLabelText('Маршруты');
             expect(homeItem.props.accessibilityState?.selected).toBe(false);
         });
 
@@ -231,7 +231,7 @@ describe('CustomHeader', () => {
             try {
                 (usePathname as jest.Mock).mockReturnValue('/');
                 const utils = renderHeader();
-                expect(utils.queryByLabelText('Идеи поездок')).toBeNull();
+                expect(utils.queryByLabelText('Маршруты')).toBeNull();
             } finally {
                 headerNavigationModule.PRIMARY_HEADER_NAV_ITEMS = originalPrimary;
             }

@@ -11,7 +11,7 @@ export interface HeaderNavItem {
 }
 
 export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
-  { path: '/search', label: 'Идеи поездок', icon: 'compass', priority: 'primary' },
+  { path: '/search', label: 'Маршруты', icon: 'route-walk', priority: 'primary' },
   { path: '/travelsby', label: 'Беларусь', icon: 'belarus-outline', priority: 'primary' },
   { path: '/map', label: 'Карта', icon: 'map', priority: 'primary' },
   { path: '/places', label: 'Места', icon: 'map-pin', priority: 'primary' },

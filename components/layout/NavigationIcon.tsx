@@ -194,9 +194,9 @@ function MapPinFrameIcon({
   )
 }
 
-// Квест = цель/чек-поинт на карте: маркер-пин с флажком-вымпелом.
-// Отличается от «Маршрутов» (точка→точка) и от простого пина «Мест».
-// Единый знак для нижнего дока, шапки и промо-блоков.
+// Квест = флаг-чек-поинт на древке: чистый, читаемый знак на мелком размере.
+// Отличается от «Маршрутов» (точка→точка) и от простого пина «Мест»;
+// совпадает с «flag»-мотивом бейджей квестов. Единый знак для дока, шапки и промо.
 function QuestMarkerFlagIcon({
   color,
   size,
@@ -214,27 +214,19 @@ function QuestMarkerFlagIcon({
       style={style as any}
       {...getIconAccessibilityProps()}
     >
-      {/* маркер-пин */}
+      {/* древко */}
       <Path
-        d="M12 2.6a5.6 5.6 0 0 0-5.6 5.6c0 4.1 5.6 11.2 5.6 11.2s5.6-7.1 5.6-11.2A5.6 5.6 0 0 0 12 2.6Z"
+        d="M7 21V3.2"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
-      {/* флажок-вымпел внутри пина */}
+      {/* флаг-вымпел */}
       <Path
-        d="M10.1 5.3v6.1"
+        d="M7 4 16.4 6.8 7 9.6Z"
+        fill={color}
         stroke={color}
         strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M10.1 5.5 14 6.8l-3.9 1.3"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </Svg>
