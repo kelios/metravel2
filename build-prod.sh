@@ -92,21 +92,43 @@ deploy_prod() {
     mkdir -p static
     rm -rf static/dist.new
     mv dist/$ENV static/dist.new
-    mv static/dist static/dist.old || true
+    ts=\$(date +%Y%m%d%H%M%S)
+    stale_old=static/dist.old
+    if [ -e \"\$stale_old\" ]; then
+      stale_target=\"static/dist.old.stale-\$ts\"
+      i=0
+      while [ -e \"\$stale_target\" ]; do
+        i=\$((i + 1))
+        stale_target=\"static/dist.old.stale-\$ts-\$i\"
+      done
+      if mv \"\$stale_old\" \"\$stale_target\" 2>/dev/null; then
+        echo \"⚠️ Moved stale \$stale_old to \$stale_target\"
+      else
+        echo \"⚠️ Cannot move stale \$stale_old; using timestamped rollback directory\"
+      fi
+    fi
+
+    rollback_dir=static/dist.old
+    if [ -e \"\$rollback_dir\" ]; then
+      rollback_dir=\"static/dist.old-\$ts\"
+    fi
+    if [ -d static/dist ]; then
+      mv static/dist \"\$rollback_dir\"
+    fi
     # Keep previous hashed Expo static assets for a short overlap window.
     # This prevents "Requiring unknown module" crashes for active browser tabs
     # that still execute older runtime chunks during a fresh deploy.
-    if [ -d static/dist.old/_expo/static ]; then
+    if [ -d \"\$rollback_dir/_expo/static\" ]; then
       mkdir -p static/dist.new/_expo/static
       # IMPORTANT: never overwrite new build artifacts with old ones.
       # We only backfill files that are missing in the new build so existing
       # tabs can finish loading legacy chunks while fresh navigations keep
       # using the current release.
-      rsync -a --ignore-existing static/dist.old/_expo/static/ static/dist.new/_expo/static/
+      rsync -a --ignore-existing \"\$rollback_dir/_expo/static/\" static/dist.new/_expo/static/
     fi
     # HTML shell still switches atomically to the new build below.
     mv static/dist.new static/dist
-    rm -rf static/dist.old
+    rm -rf \"\$rollback_dir\" || echo \"⚠️ Could not remove \$rollback_dir; cleanup requires server permissions\"
     if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
       docker compose -f docker-compose-prod.app.yaml restart app nginx
     else
