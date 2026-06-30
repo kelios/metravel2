@@ -3,7 +3,7 @@
 // рендер — WorldChoroplethMap (T3). Флаг-маркеры (T4) и тап-инфо (T6) — отдельные тикеты.
 
 import { useCallback, useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader'
@@ -34,7 +34,7 @@ const formatCountriesLabel = (count: number) => {
   return `${count} стран`
 }
 
-const _formatRoutesLabel = (count: number) => {
+const formatRoutesLabel = (count: number) => {
   const mod10 = count % 10
   const mod100 = count % 100
   if (mod10 === 1 && mod100 !== 11) return `${count} маршрут`

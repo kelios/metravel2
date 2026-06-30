@@ -2,7 +2,7 @@ import { test, expect } from './fixtures'
 import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
 
-// [FE-634] T5/T7 — вкладка профиля «Карта»: scratch-карта мира.
+// [FE-634] T5/T6/T7 — вкладка профиля «Карта»: scratch-карта + флажки + тап→инфо.
 const COUNTRY_PROGRESS = {
   total_count: 234, visited_count: 3, remaining_count: 231,
   countries: [
@@ -13,7 +13,7 @@ const COUNTRY_PROGRESS = {
   ],
 }
 
-test('profile «Карта»: scratch-карта рендерится, посещённые отличаются от серых', async ({ page }) => {
+test('profile «Карта»: карта + флажки + тап по стране', async ({ page }) => {
   page.on('pageerror', (e) => console.log('PAGEERR:', e.message))
   await ensureAuthedStorageFallback(page)
   await page.route('**/api/**', (route) => {
@@ -31,8 +31,9 @@ test('profile «Карта»: scratch-карта рендерится, посе�
   await tab.waitFor({ state: 'visible', timeout: 30000 })
   await tab.click()
   await expect(page.getByText('Карта мира', { exact: true }).first()).toBeVisible({ timeout: 15000 })
-
   await page.waitForFunction(() => document.querySelectorAll('svg path').length >= 150, undefined, { timeout: 20000 })
+
+  // T3: посещённые отличаются заливкой.
   const stats = await page.evaluate(() => {
     const wp = Array.from(document.querySelectorAll('svg path')).filter((p) => (p.getAttribute('d') || '').length > 200)
     const fc: Record<string, number> = {}
@@ -44,4 +45,27 @@ test('profile «Карта»: scratch-карта рендерится, посе�
   expect(stats.count).toBeGreaterThan(140)
   expect(stats.distinctFills).toBeGreaterThanOrEqual(2)
   expect(stats.visitedPathCount).toBeGreaterThanOrEqual(3)
+
+  // T4: флаг-маркеры на посещённых (эмодзи-флаги BY/FR/JP).
+  const flagCount = await page.evaluate(() => {
+    const re = /[\u{1F1E6}-\u{1F1FF}]/u
+    return Array.from(document.querySelectorAll('*'))
+      .filter((el) => el.children.length === 0 && re.test(el.textContent || '')).length
+  })
+  console.log('FLAGS', flagCount)
+  expect(flagCount).toBeGreaterThanOrEqual(3)
+
+  // T6: тап по посещённой стране → инфо-карточка.
+  const clicked = await page.evaluate(() => {
+    const wp = Array.from(document.querySelectorAll('svg path')).filter((p) => (p.getAttribute('d') || '').length > 200)
+    const fc: Record<string, Element[]> = {}
+    for (const p of wp) { const f = p.getAttribute('fill') || ''; (fc[f] = fc[f] || []).push(p) }
+    const minority = Object.values(fc).sort((a, b) => a.length - b.length)[0]
+    const el = minority && minority[0]
+    if (!el) return false
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    return true
+  })
+  expect(clicked).toBe(true)
+  await expect(page.locator('[aria-label="Закрыть"]').first()).toBeVisible({ timeout: 5000 })
 })
