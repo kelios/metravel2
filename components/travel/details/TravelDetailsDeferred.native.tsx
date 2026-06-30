@@ -69,6 +69,8 @@ export const TravelDeferredSections: React.FC<{
     shouldLoadSidebar,
   } = useTravelDeferredSectionsModel({
     travelId: travel?.id,
+    scrollY,
+    viewportHeight,
   })
 
   const shouldLoadMapSection = shouldLoadMap || shouldForceLoadMapSection(forceOpenKey)

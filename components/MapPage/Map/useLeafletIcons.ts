@@ -2,7 +2,11 @@
 import { useMemo } from 'react'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
-import { buildBirdMarkerHtml, buildMapPinHtml } from './mapMarkerStyles'
+import {
+  buildBirdMarkerHtml,
+  buildMapPinHtml,
+  buildUserLocationHtml,
+} from './mapMarkerStyles'
 
 export const useLeafletIcons = (L: any) => {
   return useMemo(() => {
@@ -31,11 +35,24 @@ export const useLeafletIcons = (L: any) => {
       })
     }
 
+    const makeUserLocationPin = () => {
+      const html = buildUserLocationHtml(DESIGN_TOKENS.colors.accent)
+      return L.divIcon({
+        className: 'metravel-pin-marker metravel-pin-marker-user',
+        html,
+        iconSize: [30, 30],
+        // Centered anchor: a GPS "you are here" dot is centered on the fix,
+        // not bottom-anchored like a teardrop POI pin.
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -16],
+      })
+    }
+
     return {
       meTravel: makeBirdPin(),
       start: makeDivPin(DESIGN_TOKENS.colors.success),
       end: makeDivPin(DESIGN_TOKENS.colors.dangerDark),
-      userLocation: makeDivPin(DESIGN_TOKENS.colors.accent),
+      userLocation: makeUserLocationPin(),
     }
   }, [L])
 }

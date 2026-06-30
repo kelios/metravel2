@@ -531,7 +531,11 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         }
 
         const maxZoom = mode === 'radius' ? 16 : undefined;
-        const padFactor = mode === 'radius' ? 0.0 : 0.12;
+        // Radius mode: a small uniform pad gives the circle breathing room so it
+        // never touches the map edges. It only zooms out slightly around the same
+        // center (the user marker stays centered) — it does NOT widen the target
+        // to far-away points, so the "never wider than the circle" contract holds.
+        const padFactor = mode === 'radius' ? 0.1 : 0.12;
         try {
           map.fitBounds(bounds.pad(padFactor), { animate: false, maxZoom, ...padding } as any);
         } catch {

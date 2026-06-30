@@ -9,22 +9,28 @@ import {
   useWindowDimensions,
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+import * as Clipboard from 'expo-clipboard'
 
 import {
   buildAppleMapsUrl,
   buildGoogleMapsUrl,
   buildOpenStreetMapUrl,
   buildOrganicMapsUrl,
+  buildTelegramShareUrl,
   buildWazeUrl,
   buildYandexMapsUrl,
   buildYandexNaviUrl,
 } from '@/components/MapPage/Map/mapLinks'
 import PlaceListCard from '@/components/places/PlaceListCard'
-import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
+import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle'
 import { type ThemedColors } from '@/hooks/useTheme'
+import { useAuthStore } from '@/stores/authStore'
+import { PointStatus } from '@/types/userPoints'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { type CatalogPlace } from '@/utils/placesCatalog'
 import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
+import { showToast } from '@/utils/toast'
 
 import { type PlacesStyles } from './PlacesScreen.styles'
 import { PRESSED_OPACITY } from './PlacesScreen.helpers'
@@ -124,6 +130,107 @@ export const PlaceCard = React.memo(function PlaceCard({
     ]
   }, [place.coord, place.title])
 
+  // ─── Popup-parity actions (mirror the map PlacePopupCard) ───
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const authReady = useAuthStore((s) => s.authReady)
+
+  const normalizedCoord = React.useMemo(() => {
+    const parts = String(place.coord ?? '')
+      .replace(/;/g, ',')
+      .split(',')
+      .map((v) => v.trim())
+    if (parts.length < 2) return null
+    const lat = Number(parts[0])
+    const lng = Number(parts[1])
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    return { lat, lng }
+  }, [place.coord])
+
+  const { isSaved, removeSaved, createPoint } = useSavedPointToggle({
+    coord: normalizedCoord,
+    enabled: isAuthenticated,
+  })
+  const [isAdding, setIsAdding] = React.useState(false)
+
+  const handleCopyCoord = React.useCallback(async () => {
+    const coord = String(place.coord ?? '').trim()
+    if (!coord) return
+    try {
+      await Clipboard.setStringAsync(coord)
+      void showToast({ type: 'success', text1: 'Координаты скопированы', position: 'bottom' })
+    } catch {
+      void showToast({ type: 'error', text1: 'Не удалось скопировать координаты', position: 'bottom' })
+    }
+  }, [place.coord])
+
+  const handleShare = React.useCallback(() => {
+    const coord = String(place.coord ?? '').trim()
+    if (!coord) return
+    const url = buildTelegramShareUrl(coord)
+    if (!url) return
+    void openExternalUrlInNewTab(url)
+  }, [place.coord])
+
+  const handleAddPoint = React.useCallback(async () => {
+    if (!authReady) return
+    if (!isAuthenticated) {
+      void showToast({ type: 'info', text1: 'Войдите, чтобы сохранить точку', position: 'bottom' })
+      return
+    }
+    if (isAdding || !normalizedCoord) return
+
+    // #334 toggle parity: a second tap on an already-saved point removes it.
+    if (isSaved) {
+      setIsAdding(true)
+      try {
+        await removeSaved()
+        void showToast({ type: 'success', text1: 'Точка убрана из моих точек', position: 'bottom' })
+      } catch {
+        void showToast({ type: 'error', text1: 'Не удалось убрать точку', position: 'bottom' })
+      } finally {
+        setIsAdding(false)
+      }
+      return
+    }
+
+    const categoryName = place.category || undefined
+    const payload: Record<string, unknown> = {
+      name: place.address || place.title || 'Точка',
+      address: place.address,
+      latitude: normalizedCoord.lat,
+      longitude: normalizedCoord.lng,
+      color: DESIGN_COLORS.travelPoint,
+      status: PointStatus.PLANNING,
+      category: categoryName,
+      categoryName,
+    }
+    const photo = place.travelImageThumbUrl || imageUrl
+    if (photo) payload.photo = photo
+
+    setIsAdding(true)
+    try {
+      await createPoint(payload)
+      void showToast({ type: 'success', text1: 'Точка добавлена в мои точки', position: 'bottom' })
+    } catch {
+      void showToast({ type: 'error', text1: 'Не удалось сохранить точку', position: 'bottom' })
+    } finally {
+      setIsAdding(false)
+    }
+  }, [
+    authReady,
+    isAuthenticated,
+    isAdding,
+    isSaved,
+    normalizedCoord,
+    removeSaved,
+    createPoint,
+    place.address,
+    place.title,
+    place.category,
+    place.travelImageThumbUrl,
+    imageUrl,
+  ])
+
   // The grid sizing (flexBasis/min/maxWidth) MUST live on this outer wrapper —
   // it is the direct flex child of `cardsGrid`. UnifiedTravelCard always renders
   // its own `CardWrapper` View around the styled container, so passing the grid
@@ -158,12 +265,18 @@ export const PlaceCard = React.memo(function PlaceCard({
               ]
             : []
         }
-        imageHeight={isMobileCard ? 260 : 400}
+        onCopyCoord={normalizedCoord ? handleCopyCoord : undefined}
+        onShare={normalizedCoord ? handleShare : undefined}
+        onAddPoint={normalizedCoord ? handleAddPoint : undefined}
+        addLabel={isSaved ? 'В точках' : 'Мои точки'}
+        addDisabled={!authReady || !normalizedCoord || isAdding}
+        isAdding={isAdding}
+        imageHeight={isMobileCard ? 240 : 280}
         width={compactCardWidth}
-        compact={isMobileCard}
+        compact
+        popupAligned
         titleLayout="content"
         titleNumberOfLines={2}
-        showAddButton={false}
         style={styles.cardFill}
         testID={`places-card-${place.id}`}
       />

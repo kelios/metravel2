@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Modal, StyleSheet, View } from 'react-native'
 import { WebView } from 'react-native-webview'
 
@@ -65,11 +65,14 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   showRouteLine = false,
   routeLineCoords: routeLineCoordsProp,
   routeLines: routeLinesProp,
+  resizeTrigger,
 }) => {
   const colors = useThemedColors()
   const insets = useSafeAreaInsets()
   const [isLoading, setIsLoading] = useState(true)
   const [selectedPoint, setSelectedPoint] = useState<NativePoint | null>(null)
+  const webViewRef = useRef<WebView>(null)
+  const mapReadyRef = useRef(false)
 
   const safeTravelData = useMemo<NativePoint[]>(() => {
     if (!Array.isArray(travelData)) return []
@@ -184,7 +187,9 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         const points = ${points};
         const routes = ${routes};
         const highlightCoord = ${highlightCoord};
+        const initialZoom = ${initialZoom};
         const bounds = L.latLngBounds();
+        let boundsPointCount = 0;
 
         function sendOpenUrl(rawUrl) {
           try {
@@ -218,7 +223,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           if (!route || !Array.isArray(route.coords) || route.coords.length < 2) return;
           const latlngs = route.coords.map(function(c) { return [c[0], c[1]]; });
           L.polyline(latlngs, { color: route.color || '${routeColor}', weight: 4, opacity: 0.85 }).addTo(map);
-          latlngs.forEach(function(ll) { bounds.extend(ll); });
+          latlngs.forEach(function(ll) { bounds.extend(ll); boundsPointCount++; });
         });
 
         const markerIcon = L.icon({
@@ -251,19 +256,60 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             marker.setZIndexOffset(1000);
           }
           bounds.extend([lat, lng]);
+          boundsPointCount++;
         });
 
-        if (bounds.isValid()) {
-          map.fitBounds(bounds.pad(0.15), { padding: [40, 40], maxZoom: 15 });
+        // Подгоняем карту под все точки/линии маршрута. invalidateSize ПЕРЕД fitBounds —
+        // иначе на первом кадре/при раскрытии секции контейнер ещё нулевого размера и
+        // zoom считается неверно (часть маркеров уходит за край экрана).
+        function fitMap(animate) {
+          try {
+            map.invalidateSize(false);
+          } catch (e) {}
+          if (highlightedMarker) {
+            try {
+              map.setView(highlightedMarker.getLatLng(), 14, { animate: !!animate });
+              return;
+            } catch (e) {}
+          }
+          if (boundsPointCount === 1) {
+            // Одиночная точка: fitBounds дал бы нулевую рамку — центрируем с разумным зумом.
+            try {
+              map.setView(bounds.getCenter(), initialZoom, { animate: !!animate });
+              return;
+            } catch (e) {}
+          }
+          if (bounds.isValid()) {
+            try {
+              map.fitBounds(bounds.pad(0.15), { padding: [40, 40], maxZoom: 15, animate: !!animate });
+            } catch (e) {}
+          }
         }
 
-        if (highlightedMarker) {
-          setTimeout(function() {
-            try {
-              map.setView(highlightedMarker.getLatLng(), 14, { animate: true });
-            } catch {}
-          }, 300);
+        // whenReady гарантирует, что Leaflet знает размер контейнера. rAF + повтор через 250ms —
+        // подстраховка для медленного Android WebView, где первый кадр приходит с размером 0.
+        map.whenReady(function() {
+          if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(function() { fitMap(false); });
+          } else {
+            fitMap(false);
+          }
+          setTimeout(function() { fitMap(false); }, 250);
+        });
+
+        // Повторный fit по запросу из RN (раскрытие ToggleableMap / resize контейнера).
+        function handleResizeMessage(event) {
+          try {
+            var data = event && event.data;
+            if (typeof data !== 'string') return;
+            var parsed = JSON.parse(data);
+            if (parsed && parsed.type === 'RESIZE') {
+              fitMap(true);
+            }
+          } catch (e) {}
         }
+        document.addEventListener('message', handleResizeMessage);
+        window.addEventListener('message', handleResizeMessage);
       </script>
     </body>
     </html>
@@ -284,6 +330,21 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     [mapHeight, mapBorderRadius],
   )
 
+  // При смене html (новые данные) WebView перезагружается — сбрасываем флаг готовности.
+  useEffect(() => {
+    mapReadyRef.current = false
+  }, [htmlContent])
+
+  // При изменении resizeTrigger (раскрытие ToggleableMap / resize) просим WebView
+  // пересчитать размер карты и заново подогнать рамку под все точки.
+  useEffect(() => {
+    if (resizeTrigger === undefined) return
+    if (!mapReadyRef.current) return
+    webViewRef.current?.injectJavaScript(
+      "(function(){try{window.dispatchEvent(new MessageEvent('message',{data:JSON.stringify({type:'RESIZE'})}));}catch(e){}})();true;",
+    )
+  }, [resizeTrigger])
+
   if (!hasRenderableMapData) {
     return (
       <View style={[styles.container, containerStyle, styles.centered, { backgroundColor: colors.backgroundSecondary }]}>
@@ -300,12 +361,16 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         </View>
       )}
       <WebView
+        ref={webViewRef}
         source={{ html: htmlContent }}
         style={styles.webview}
         javaScriptEnabled
         domStorageEnabled
         startInLoadingState
-        onLoadEnd={() => setIsLoading(false)}
+        onLoadEnd={() => {
+          mapReadyRef.current = true
+          setIsLoading(false)
+        }}
         onMessage={async (event) => {
           const raw = String(event?.nativeEvent?.data ?? '')
           if (!raw) return
@@ -332,7 +397,6 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           }
         }}
         scrollEnabled
-        pinchZoomEnabled
       />
       <Modal
         visible={Boolean(selectedPoint)}

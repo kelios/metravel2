@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { InteractionManager, Platform } from 'react-native'
+import { Animated, InteractionManager, Platform } from 'react-native'
 
 import { useTdTrace } from '@/hooks/useTdTrace'
 
@@ -133,18 +133,46 @@ export const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
   },
 } as const
 
+// Native-only staging knobs. On web, loading is driven by browser idle +
+// IntersectionObserver (untouched below). On native there is no IntersectionObserver
+// over the ScrollView, so heavy sections are revealed by scroll depth instead.
+
+// Cheap below-fold sections: enabled shortly after interactions, no scroll needed.
+const NATIVE_EAGER_SECTIONS: TravelDeferredSectionKey[] = ['author', 'rating']
+
+// Heavy sections (Leaflet WebView map, Near/Popular API lists + cards, comments,
+// footer) stay unmounted until the user scrolls toward them, revealed in document
+// order so the first frame paints only the hero + description.
+const NATIVE_SCROLL_GATED_SECTIONS: TravelDeferredSectionKey[] = [
+  'map',
+  'sidebar',
+  'comments',
+  'footer',
+]
+
+// Reveal the first heavy section once the user scrolls a little; each subsequent
+// section unlocks after roughly another viewport of scrolling (lookahead so a
+// section is mounted before it reaches the fold).
+const NATIVE_SCROLL_GATE_INITIAL = 240
+const NATIVE_SCROLL_GATE_STEP_MIN = 480
+
 type UseTravelDeferredSectionsModelArgs = {
   travelId?: number
+  scrollY?: Animated.Value
+  viewportHeight?: number
 }
 
 export function useTravelDeferredSectionsModel({
   travelId,
+  scrollY,
+  viewportHeight = 0,
 }: UseTravelDeferredSectionsModelArgs) {
   // On web the heavy travel tree (incl. the Leaflet map) must not mount in the same
   // synchronous commit as an SPA navigation, or the main thread freezes and the skeleton
   // overlay stays up (white screen). Start `false` on web and flip to `true` on browser idle,
   // and reset to `false` during render whenever travelId changes so a cached SPA swap behaves
-  // like a fresh mount. Native keeps its eager `true` + InteractionManager behaviour below.
+  // like a fresh mount. Native flips `true` after interactions (below) but no longer mounts
+  // every section eagerly — heavy sections are scroll-gated.
   const [canRenderHeavy, setCanRenderHeavy] = useState(Platform.OS !== 'web')
   const [prevTravelId, setPrevTravelId] = useState(travelId)
   if (travelId !== prevTravelId) {
@@ -152,8 +180,12 @@ export function useTravelDeferredSectionsModel({
     if (Platform.OS === 'web') setCanRenderHeavy(false)
   }
   const tdTrace = useTdTrace()
+  // Native no longer mounts every heavy section on the first frame: start all
+  // sections unloaded and reveal them in stages (see native effects below) so the
+  // hero + description paint first and the Leaflet WebView map / related lists do
+  // not block the initial commit.
   const [loadedSections, setLoadedSections] = useState<TravelDeferredLoadState>(() =>
-    createLoadState(Platform.OS !== 'web'),
+    createLoadState(false),
   )
   const [sectionElements, setSectionElements] = useState<TravelDeferredElementState>(() =>
     createElementState(),
@@ -195,7 +227,10 @@ export function useTravelDeferredSectionsModel({
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
-      setLoadedSections(createLoadState(canRenderHeavy))
+      // Native: reset to fully unloaded so a reused hook instance (SPA-style travel
+      // swap) behaves like a fresh mount and re-stages from scratch.
+      tracedSectionsRef.current.clear()
+      setLoadedSections(createLoadState(false))
       return
     }
     if (!canRenderHeavy) {
@@ -203,6 +238,38 @@ export function useTravelDeferredSectionsModel({
       setLoadedSections(createLoadState(false))
     }
   }, [canRenderHeavy, travelId])
+
+  // Native stage 1: once interactions settle, reveal the cheap below-fold sections
+  // (author, rating) without requiring a scroll.
+  useEffect(() => {
+    if (Platform.OS === 'web') return
+    if (!canRenderHeavy) return
+    NATIVE_EAGER_SECTIONS.forEach((sectionKey) => markSectionLoaded(sectionKey))
+  }, [canRenderHeavy, markSectionLoaded])
+
+  // Native stage 2: mount heavy scroll-gated sections (map WebView, related lists,
+  // comments, footer) progressively as scroll depth increases. Without a scroll
+  // source, fall back to loading them so content is never stranded.
+  useEffect(() => {
+    if (Platform.OS === 'web') return
+    if (!canRenderHeavy) return
+    if (!scrollY) {
+      NATIVE_SCROLL_GATED_SECTIONS.forEach((sectionKey) => markSectionLoaded(sectionKey))
+      return
+    }
+
+    const step = Math.max(NATIVE_SCROLL_GATE_STEP_MIN, viewportHeight * 0.75)
+    const evaluate = (offsetY: number) => {
+      NATIVE_SCROLL_GATED_SECTIONS.forEach((sectionKey, index) => {
+        const threshold = NATIVE_SCROLL_GATE_INITIAL + index * step
+        if (offsetY >= threshold) markSectionLoaded(sectionKey)
+      })
+    }
+
+    evaluate((scrollY as unknown as { __getValue?: () => number }).__getValue?.() ?? 0)
+    const id = scrollY.addListener(({ value }) => evaluate(value))
+    return () => scrollY.removeListener(id)
+  }, [canRenderHeavy, markSectionLoaded, scrollY, viewportHeight])
 
   useEffect(() => {
     if (Platform.OS !== 'web') return

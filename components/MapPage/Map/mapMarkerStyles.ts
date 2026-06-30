@@ -239,6 +239,78 @@ export const buildMapPinHtml = (accentColor: string) => {
   `
 }
 
+export const buildUserLocationHtml = (accentColor: string) => {
+  const accent = sanitizeCssValue(
+    accentColor,
+    String(DESIGN_TOKENS.colors.accent),
+  )
+  const surface = sanitizeCssValue(
+    String(DESIGN_TOKENS.colors.surface),
+    '#ffffff',
+  )
+
+  // "You are here" GPS dot — distinct from POI teardrop pins: a centered core
+  // dot with a white ring and an expanding pulse halo. Transparency comes from
+  // element `opacity` (accent is a CSS var() on web, so alpha-hex can't append).
+  return `
+    <div style="
+      position: relative;
+      width: 30px;
+      height: 30px;
+      box-sizing: border-box;
+      pointer-events: none;
+      user-select: none;
+    ">
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 26px;
+        height: 26px;
+        margin-left: -13px;
+        margin-top: -13px;
+        border-radius: 999px;
+        background: ${accent};
+        opacity: 0.45;
+        transform: scale(0.6);
+        animation: metravelUserPulse 2.4s ease-out infinite;
+        box-sizing: border-box;
+      "></div>
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 22px;
+        height: 22px;
+        margin-left: -11px;
+        margin-top: -11px;
+        border-radius: 999px;
+        background: ${accent};
+        opacity: 0.16;
+        box-sizing: border-box;
+      "></div>
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 16px;
+        height: 16px;
+        margin-left: -8px;
+        margin-top: -8px;
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 34% 30%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 42%),
+          ${accent};
+        border: 3px solid ${surface};
+        box-shadow:
+          0 2px 6px rgba(30, 20, 10, 0.32),
+          0 1px 2px rgba(30, 20, 10, 0.25);
+        box-sizing: border-box;
+      "></div>
+    </div>
+  `
+}
+
 export const buildClusterIconHtml = ({
   count,
   thumbUrl: _thumbUrl,

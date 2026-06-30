@@ -552,20 +552,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     })
   }, [circleCenter, coordinates, mode, radius, safeCenter])
 
-  const fitBoundsPadding = useMemo(
-    () =>
-      mode === 'radius'
-        ? {
-            paddingTopLeft: [16, 80] as [number, number],
-            paddingBottomRight: [16, 80] as [number, number],
-          }
-        : {
-            paddingTopLeft: [24, 140] as [number, number],
-            paddingBottomRight: [360, 220] as [number, number],
-          },
-    [mode],
-  )
-
   const noPointsAlongRoute =
     mode === 'route' && Array.isArray(routePoints) && routePoints.length >= 2 && travelData.length === 0
 
@@ -581,6 +567,49 @@ const MapPageComponent: React.FC<Props> = (props) => {
     canRenderMap,
     setShowInitialLoader,
   })
+
+  // Radius default view = the whole circle around the user, with breathing room.
+  // On desktop the left panel is a flex SIBLING of the map (it shrinks the map
+  // host, never overlays it), so the circle bounds are already inside the visible
+  // pane — we only add symmetric air. On mobile the map is full-bleed and the
+  // bottom sheet overlays the lower part of the map, so we reserve its current
+  // height (popupBottomOffset, ~120px collapsed) at the bottom so the circle is
+  // never hidden behind the sheet. The user marker (circle center) always stays
+  // in view because the bounds always contain it.
+  const fitBoundsPadding = useMemo(() => {
+    if (mode !== 'radius') {
+      return {
+        paddingTopLeft: [24, 140] as [number, number],
+        paddingBottomRight: [360, 220] as [number, number],
+      }
+    }
+
+    const isCompact =
+      mapPaneWidth > 0
+        ? mapPaneWidth <= COMPACT_POPUP_MAX_WIDTH
+        : (getViewportWidth() ?? 0) <= COMPACT_POPUP_MAX_WIDTH
+
+    // Horizontal/top air is symmetric; the circle sits inside the visible pane.
+    const AIR = 24
+
+    if (isCompact) {
+      // Mobile: reserve the bottom-sheet height so the lower arc of the circle
+      // clears the sheet, plus a little air. Top gets room for the floating
+      // controls row.
+      const bottomReserve = Math.max(popupBottomOffset, 96) + AIR
+      return {
+        paddingTopLeft: [AIR, 72] as [number, number],
+        paddingBottomRight: [AIR, bottomReserve] as [number, number],
+      }
+    }
+
+    // Desktop: panel already excluded from the pane — just symmetric air so the
+    // circle never touches the map edges.
+    return {
+      paddingTopLeft: [AIR, AIR + 56] as [number, number],
+      paddingBottomRight: [AIR, AIR + 24] as [number, number],
+    }
+  }, [mode, mapPaneWidth, popupBottomOffset])
 
   const useCompactPopupLayout = useMemo(() => {
     if (mapPaneWidth > 0) return mapPaneWidth <= COMPACT_POPUP_MAX_WIDTH

@@ -189,7 +189,10 @@ function MapFoldIcon({
   )
 }
 
-function QuestSearchIcon({
+// Квест = цель/чек-поинт на карте: маркер-пин с флажком-вымпелом.
+// Отличается от «Маршрутов» (точка→точка) и от простого пина «Мест».
+// Единый знак для нижнего дока, шапки и промо-блоков.
+function QuestMarkerFlagIcon({
   color,
   size,
   strokeWidth,
@@ -206,29 +209,24 @@ function QuestSearchIcon({
       style={style as any}
       {...getIconAccessibilityProps()}
     >
+      {/* маркер-пин */}
       <Path
-        d="M10.3 15.2a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"
+        d="M12 2.6a5.6 5.6 0 0 0-5.6 5.6c0 4.1 5.6 11.2 5.6 11.2s5.6-7.1 5.6-11.2A5.6 5.6 0 0 0 12 2.6Z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* флажок-вымпел внутри пина */}
+      <Path
+        d="M10.1 5.3v6.1"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
-        d="m14 14 5 5"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M8.1 10.7c1.2-1.5 2.8-1.5 4.4 0"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M8.1 8.3h.01M12.5 12.9h.01"
+        d="M10.1 5.5 14 6.8l-3.9 1.3"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
@@ -238,53 +236,20 @@ function QuestSearchIcon({
   )
 }
 
-function QuestRouteIcon({
-  color,
-  size,
-  strokeWidth,
-  style,
-}: Required<Pick<NavigationIconProps, 'color' | 'size' | 'strokeWidth'>> & {
-  style?: StyleProp<ViewStyle>
-}) {
-  return (
-    <Svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      style={style as any}
-      {...getIconAccessibilityProps()}
-    >
-      <Path
-        d="M12 11.2a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M6.7 20.2c.5-3.4 2.3-5.1 5.3-5.1s4.8 1.7 5.3 5.1"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M5.2 13.4 9 12l3.7 1.4 4.1-1.6v5.8l-4.1 1.6L9 17.8l-3.8 1.4v-5.8Z"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M18.6 4.4c0-1.1.8-1.9 2-1.9s2 .7 2 1.8c0 1.5-1.6 1.7-1.6 2.8M21 9.2h.01"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  )
+function QuestSearchIcon(
+  props: Required<Pick<NavigationIconProps, 'color' | 'size' | 'strokeWidth'>> & {
+    style?: StyleProp<ViewStyle>
+  },
+) {
+  return <QuestMarkerFlagIcon {...props} />
+}
+
+function QuestRouteIcon(
+  props: Required<Pick<NavigationIconProps, 'color' | 'size' | 'strokeWidth'>> & {
+    style?: StyleProp<ViewStyle>
+  },
+) {
+  return <QuestMarkerFlagIcon {...props} />
 }
 
 // «Случайный маршрут» = игральная кость: универсальный знак «рандом».
