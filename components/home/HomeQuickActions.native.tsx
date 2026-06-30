@@ -23,7 +23,7 @@ const ACTIONS: QuickAction[] = [
   { key: 'map', label: 'Карта', icon: 'map', route: '/map' },
   { key: 'places', label: 'Места', icon: 'map-pin', route: '/places' },
   { key: 'quests', label: 'Квесты', icon: 'quest-route', route: '/quests' },
-  { key: 'roulette', label: 'Случайный маршрут', icon: 'shuffle', route: '/roulette' },
+  { key: 'roulette', label: 'Случайный маршрут', icon: 'dice', route: '/roulette' },
 ]
 
 function HomeQuickActions() {

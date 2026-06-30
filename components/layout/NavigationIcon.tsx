@@ -1,6 +1,6 @@
 import { Platform, type StyleProp, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
-import Svg, { Circle, Path } from 'react-native-svg'
+import Svg, { Circle, Path, Rect } from 'react-native-svg'
 
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import BelarusOutlineIcon from './BelarusOutlineIcon'
@@ -55,7 +55,7 @@ export default function NavigationIcon({
 
   if (name === 'map-fold') {
     return (
-      <MapFoldIcon
+      <MapPinFrameIcon
         color={color}
         size={size}
         strokeWidth={strokeWidth}
@@ -115,29 +115,33 @@ function RouteWalkIcon({
       style={style as any}
       {...getIconAccessibilityProps()}
     >
+      {/* голова */}
+      <Circle cx="13.5" cy="4.6" r="1.9" stroke={color} strokeWidth={strokeWidth} />
+      {/* корпус + ноги */}
       <Path
-        d="M6 18.3a2.1 2.1 0 1 0 0-4.2 2.1 2.1 0 0 0 0 4.2Z"
+        d="M13.5 7.2 12 13l-2.4 4.6"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
-        d="M17.2 4.1a3.2 3.2 0 0 0-3.2 3.2c0 2.8 3.2 6.3 3.2 6.3s3.2-3.5 3.2-6.3a3.2 3.2 0 0 0-3.2-3.2Z"
+        d="M12 13l2.6 3.4"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* руки */}
+      <Path
+        d="M13.5 9 16.6 10.8"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
-        d="M17.2 7.3h.01"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M7.9 15.7c2.9-.5 3.2-3.2 5.2-3.7 1-.3 1.8.1 2.6.8"
+        d="M13.5 9 10.6 11"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
@@ -147,7 +151,9 @@ function RouteWalkIcon({
   )
 }
 
-function MapFoldIcon({
+// «Карта» = пин-локация внутри рамки карты. Пин в рамке отличается от
+// свободного пина «Мест» (Feather map-pin) и пина-с-флажком «Квестов».
+function MapPinFrameIcon({
   color,
   size,
   strokeWidth,
@@ -164,27 +170,26 @@ function MapFoldIcon({
       style={style as any}
       {...getIconAccessibilityProps()}
     >
+      {/* рамка карты */}
+      <Rect
+        x="4"
+        y="4"
+        width="16"
+        height="16"
+        rx="3"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinejoin="round"
+      />
+      {/* пин-локация */}
       <Path
-        d="M4.3 6.6 8.8 4.8l6.4 1.8 4.5-1.8v12.6l-4.5 1.8-6.4-1.8-4.5 1.8V6.6Z"
+        d="M12 8.4a2.5 2.5 0 0 0-2.5 2.5c0 1.8 2.5 4.1 2.5 4.1s2.5-2.3 2.5-4.1A2.5 2.5 0 0 0 12 8.4Z"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <Path
-        d="M8.8 4.8v12.6M15.2 6.6v12.6"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M6.9 12.9c1.7-.9 3.3-.9 5 0 1.7.9 3.3.9 5 0"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <Circle cx="12" cy="10.9" r="0.85" stroke={color} strokeWidth={strokeWidth} />
     </Svg>
   )
 }

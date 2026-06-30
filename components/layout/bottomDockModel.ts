@@ -42,7 +42,7 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
       { key: 'places', label: 'Места', accessibilityLabel: 'Места', route: '/places', iconName: 'map-pin' },
       { key: 'trips', label: 'Попутчики', accessibilityLabel: 'Попутчики', route: '/trips', iconName: 'users' },
       { key: 'articles', label: 'Статьи', accessibilityLabel: 'Статьи', route: '/articles', iconName: 'file-text' },
-      { key: 'roulette', label: 'Случайный маршрут', accessibilityLabel: 'Случайный маршрут', route: '/roulette', iconName: 'shuffle' },
+      { key: 'roulette', label: 'Случайный маршрут', accessibilityLabel: 'Случайный маршрут', route: '/roulette', iconName: 'dice' },
       { key: 'history', label: 'История просмотров', accessibilityLabel: 'История просмотров', route: '/history', iconName: 'clock' },
       { key: 'travel-new', label: 'Создать маршрут', accessibilityLabel: 'Создать маршрут', route: '/travel/new', iconName: 'plus-circle' },
       { key: 'export', label: 'Книга путешествий', accessibilityLabel: 'Книга путешествий', route: '/export', iconName: 'book-open' },
