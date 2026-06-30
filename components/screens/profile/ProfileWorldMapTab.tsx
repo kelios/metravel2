@@ -10,14 +10,14 @@ import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
-import { useThemedColors } from '@/hooks/useTheme'
+import { useTheme, useThemedColors } from '@/hooks/useTheme'
 import { useVisitedCountries } from '@/hooks/useVisitedCountries'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 import type { Travel } from '@/types/types'
 
 import { WorldChoroplethMap } from './worldMap/WorldChoroplethMap'
 import { WorldMapFlags } from './worldMap/WorldMapFlags'
-import { getCountryGeometry } from './worldMap/worldGeometry'
+import { getCountryGeometry, getWorldMapUnvisitedFill } from './worldMap/worldGeometry'
 
 interface ProfileWorldMapTabProps {
   userId: string | number | null | undefined
@@ -49,6 +49,7 @@ export function ProfileWorldMapTab({
   onBackToOverview,
 }: ProfileWorldMapTabProps) {
   const colors = useThemedColors()
+  const { isDark } = useTheme()
   const { isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhone || isLargePhone
 
@@ -242,7 +243,7 @@ export function ProfileWorldMapTab({
             </Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: colors.surfaceMuted, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]} />
+            <View style={[styles.legendSwatch, { backgroundColor: getWorldMapUnvisitedFill(isDark), borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]} />
             <Text style={styles.legendText}>Не посещено</Text>
           </View>
         </View>

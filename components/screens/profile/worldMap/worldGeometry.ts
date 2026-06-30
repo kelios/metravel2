@@ -24,6 +24,12 @@ export const WORLD_MAP_VIEWBOX = '0 0 1000 500'
 export const WORLD_MAP_WIDTH = 1000
 export const WORLD_MAP_HEIGHT = 500
 
+// Заливка непосещённой суши. Токен surfaceMuted в светлой теме — near-white фрост
+// (rgba(255,255,255,0.75)) и сливается с белым фоном карты, поэтому для scratch-эффекта
+// нужен явный средне-серый, читаемый в обеих темах (нет подходящего токена в палитре).
+export const getWorldMapUnvisitedFill = (isDark: boolean): string =>
+  isDark ? '#3a3a3a' : '#dce1e6'
+
 const worldCountryGeometry = rawGeometry as Record<string, WorldCountryGeometry>
 
 /** Все ISO alpha-2 коды, для которых есть полигон. */

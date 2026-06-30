@@ -8,10 +8,11 @@ import React, { useMemo } from 'react'
 import { StyleProp, View, ViewStyle } from 'react-native'
 import Svg, { G, Path } from 'react-native-svg'
 
-import { useThemedColors } from '@/hooks/useTheme'
+import { useTheme, useThemedColors } from '@/hooks/useTheme'
 
 import {
   WORLD_MAP_VIEWBOX,
+  getWorldMapUnvisitedFill,
   worldCountryCodes,
   worldCountryGeometry,
 } from './worldGeometry'
@@ -36,6 +37,8 @@ function WorldChoroplethMapComponent({
   style,
 }: WorldChoroplethMapProps) {
   const colors = useThemedColors()
+  const { isDark } = useTheme()
+  const unvisitedFill = getWorldMapUnvisitedFill(isDark)
 
   // react-native-svg типизирует onPress пересечением (event => object) & (event => void).
   // Наш void-обработчик валиден в рантайме, но не проходит по второй ветви типа — кастуем.
@@ -51,10 +54,11 @@ function WorldChoroplethMapComponent({
           ? colors.primaryDark
           : visited
             ? colors.primary
-            : colors.surfaceMuted
+            : unvisitedFill
         return (
           <Path
             key={code}
+            id={`wc-${code}`}
             d={geom.d}
             fill={fill}
             stroke={colors.background}
@@ -73,7 +77,7 @@ function WorldChoroplethMapComponent({
       onCountryPress,
       colors.primary,
       colors.primaryDark,
-      colors.surfaceMuted,
+      unvisitedFill,
       colors.background,
     ]
   )
