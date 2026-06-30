@@ -52,6 +52,17 @@ export type ProfileCountryStats = {
   totalCount: number
 }
 
+export type VisitedCountryMeta = {
+  visitedTravelsCount: number
+  firstVisitedDate: string | null
+  name: string
+}
+
+export type VisitedCountryIndex = {
+  visitedCodes: Set<string>
+  byCode: Map<string, VisitedCountryMeta>
+}
+
 export type ProfileCountryApplicationRow = {
   id: string
   name: string
@@ -730,6 +741,40 @@ const formatVisitCount = (count: number) => {
   if (mod10 === 1 && mod100 !== 11) return `${count} раз`
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} раза`
   return `${count} раз`
+}
+
+export const buildVisitedCountryIndex = (rows: ProfileCountryRow[]): VisitedCountryIndex => {
+  const visitedCodes = new Set<string>()
+  const byCode = new Map<string, VisitedCountryMeta>()
+
+  rows.forEach((row) => {
+    if (!row.visited) return
+    const code = typeof row.code === 'string' ? row.code.trim().toUpperCase() : ''
+    if (!code) return
+
+    visitedCodes.add(code)
+
+    const existing = byCode.get(code)
+    const visitedTravelsCount = Math.max(
+      existing?.visitedTravelsCount ?? 0,
+      row.visitedTravelsCount ?? 0,
+    )
+    const firstVisitedDate = pickEarlierDate(
+      existing?.firstVisitedDate ?? null,
+      row.firstVisitedDate ?? null,
+    )
+    const name = existing?.name || row.name || code
+
+    byCode.set(code, { visitedTravelsCount, firstVisitedDate, name })
+  })
+
+  return { visitedCodes, byCode }
+}
+
+const pickEarlierDate = (a: string | null, b: string | null): string | null => {
+  if (!a) return b
+  if (!b) return a
+  return a <= b ? a : b
 }
 
 export const buildCountryApplicationRows = (

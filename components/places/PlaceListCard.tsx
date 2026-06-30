@@ -243,8 +243,8 @@ const PlaceListCard: React.FC<Props> = ({
   const colors = useThemedColors();
   const showTitleInContent = titleLayout === 'content';
   const styles = useMemo(
-    () => createStyles(colors, compact, showTitleInContent),
-    [colors, compact, showTitleInContent],
+    () => createStyles(colors, compact, showTitleInContent, popupAligned),
+    [colors, compact, showTitleInContent, popupAligned],
   );
   const [overflowVisible, setOverflowVisible] = useState(false);
 
@@ -699,6 +699,7 @@ const createStyles = (
   colors: ReturnType<typeof useThemedColors>,
   compact: boolean,
   showTitleInContent: boolean,
+  popupAligned: boolean,
 ) => {
   // Modern compact spacing scale (4pt grid).
   const padX = compact ? 12 : showTitleInContent ? 16 : 14
@@ -833,7 +834,9 @@ const createStyles = (
     },
     actionsRow: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
+      // Popup-aligned: keep all tiles on ONE row spanning the full width (flex:1
+      // chips shrink to fit) so labels are not pushed to a second line.
+      flexWrap: popupAligned ? 'nowrap' : 'wrap',
       alignItems: 'flex-start',
       gap: compact ? 6 : 8,
       marginTop: 2,
@@ -888,12 +891,19 @@ const createStyles = (
       opacity: 0.45,
     },
     // Vertical icon+label action tile.
+    // Popup-aligned mode: tiles distribute evenly across the FULL card width
+    // (`flex:1, minWidth:0`) so 4 tiles each get ~¼ of the row and the labels
+    // («Сохранить» / «Навигация») have room and never truncate. Non-popupAligned
+    // (e.g. /places inline map-app chips) keep the fixed 56/62px width so many
+    // inline chips don't squash.
     mapActionChip: {
       alignItems: 'center',
       justifyContent: 'flex-start',
-      width: compact ? 56 : 62,
+      ...(popupAligned
+        ? { flex: 1, minWidth: 0 }
+        : { width: compact ? 56 : 62 }),
       minHeight: compact ? 54 : 60,
-      paddingHorizontal: 2,
+      paddingHorizontal: popupAligned ? 4 : 2,
       paddingVertical: compact ? 4 : 5,
       borderRadius: 14,
       gap: 5,
@@ -915,7 +925,9 @@ const createStyles = (
       fontWeight: '600',
       color: colors.textMuted,
       textAlign: 'center',
-      maxWidth: compact ? 56 : 62,
+      // Popup-aligned tiles span the full card width, so the label uses the whole
+      // tile (no cap → no «…» truncation). Non-popupAligned keeps the fixed cap.
+      ...(popupAligned ? { alignSelf: 'stretch' } : { maxWidth: compact ? 56 : 62 }),
     },
     // Primary-soft filled "add" button (modern).
     addButton: {
