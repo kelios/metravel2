@@ -1,23 +1,34 @@
 // [FE-634] T5 — Вкладка профиля «Карта»: scratch-карта мира.
 // Серая заливка = не посещено, акцент = посещено. Данные — useVisitedCountries (T2),
-// рендер — WorldChoroplethMap (T3). Флаг-маркеры (T4) и тап-инфо (T6) — отдельные тикеты.
+// рендер — WorldChoroplethMap (T3). Флаг-маркеры (T4) и тап-инфо (T6).
+// [FE-635-T2] Зум/пан карты (жесты + кнопки +/−/сброс).
+// [FE-635-T3] Клик по стране → список маршрутов пользователя в стране.
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+import { useRouter } from 'expo-router'
 
 import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader'
+import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useMapZoomPan } from '@/hooks/useMapZoomPan'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useTheme, useThemedColors } from '@/hooks/useTheme'
 import { useVisitedCountries } from '@/hooks/useVisitedCountries'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 import type { Travel } from '@/types/types'
 
+import { buildTravelsByCountryCode } from './profileCountries'
 import { WorldChoroplethMap } from './worldMap/WorldChoroplethMap'
 import { WorldMapFlags } from './worldMap/WorldMapFlags'
-import { getCountryGeometry, getWorldMapUnvisitedFill } from './worldMap/worldGeometry'
+import {
+  WORLD_MAP_HEIGHT,
+  WORLD_MAP_WIDTH,
+  getCountryGeometry,
+  getWorldMapUnvisitedFill,
+} from './worldMap/worldGeometry'
 
 interface ProfileWorldMapTabProps {
   userId: string | number | null | undefined
@@ -52,12 +63,22 @@ export function ProfileWorldMapTab({
   const { isDark } = useTheme()
   const { isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhone || isLargePhone
+  const router = useRouter()
 
   const { visitedCodes, byCode, visitedCount, remainingCount, totalCount, isLoading } =
     useVisitedCountries({ userId, travels, personalTravelStatusEntries })
 
+  const zoom = useMapZoomPan({ contentWidth: WORLD_MAP_WIDTH, contentHeight: WORLD_MAP_HEIGHT })
+  const { reset } = zoom
+
+  useEffect(() => {
+    reset(false)
+  }, [reset])
+
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
   const handleCountryPress = useCallback((code: string) => setSelectedCode(code), [])
+
+  const travelsByCountry = useMemo(() => buildTravelsByCountryCode(travels), [travels])
 
   const selected = useMemo(() => {
     if (!selectedCode) return null
@@ -69,8 +90,16 @@ export function ProfileWorldMapTab({
       visited: visitedCodes.has(selectedCode),
       visitedTravelsCount: meta?.visitedTravelsCount ?? 0,
       firstVisitedDate: meta?.firstVisitedDate ?? null,
+      travels: travelsByCountry.get(selectedCode) ?? [],
     }
-  }, [selectedCode, byCode, visitedCodes])
+  }, [selectedCode, byCode, visitedCodes, travelsByCountry])
+
+  const openTravel = useCallback(
+    (url: string) => {
+      if (url) router.push(url as never)
+    },
+    [router],
+  )
 
   const styles = useMemo(
     () =>
@@ -111,6 +140,25 @@ export function ProfileWorldMapTab({
           borderRadius: DESIGN_TOKENS.radii.md,
           overflow: 'hidden',
           backgroundColor: colors.background,
+        },
+        zoomControls: {
+          position: 'absolute',
+          right: DESIGN_TOKENS.spacing.sm,
+          bottom: DESIGN_TOKENS.spacing.sm,
+          flexDirection: 'column',
+          gap: 6,
+        },
+        zoomButton: {
+          width: isMobile ? 34 : 38,
+          height: isMobile ? 34 : 38,
+          borderRadius: DESIGN_TOKENS.radii.md,
+          // frost: статичный surfaceMuted на мобильном (без живого blur — правило перфа).
+          backgroundColor: colors.surfaceMuted,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.border,
+          alignItems: 'center',
+          justifyContent: 'center',
+          ...Platform.select({ web: { cursor: 'pointer' } as object, default: {} }),
         },
         legendRow: {
           flexDirection: 'row',
@@ -161,9 +209,35 @@ export function ProfileWorldMapTab({
           fontSize: DESIGN_TOKENS.typography.sizes.sm,
           color: colors.textSecondary,
         },
+        travelsList: {
+          marginTop: DESIGN_TOKENS.spacing.sm,
+          gap: DESIGN_TOKENS.spacing.sm,
+        },
+        travelCard: {
+          backgroundColor: colors.surface,
+          borderRadius: DESIGN_TOKENS.radii.md,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.border,
+          overflow: 'hidden',
+          ...Platform.select({ web: { cursor: 'pointer' } as object, default: {} }),
+        },
+        travelTitle: {
+          paddingVertical: DESIGN_TOKENS.spacing.sm,
+          paddingHorizontal: DESIGN_TOKENS.spacing.md,
+          fontSize: DESIGN_TOKENS.typography.sizes.sm,
+          fontWeight: DESIGN_TOKENS.typography.weights.semibold as '600',
+          color: colors.text,
+        },
+        emptyTravels: {
+          marginTop: DESIGN_TOKENS.spacing.xs,
+          fontSize: DESIGN_TOKENS.typography.sizes.sm,
+          color: colors.textSecondary,
+        },
       }),
     [colors, isMobile]
   )
+
+  const travelCardHeight = isMobile ? 120 : 150
 
   return (
     <View>
@@ -193,13 +267,43 @@ export function ProfileWorldMapTab({
           {isLoading ? (
             <SkeletonLoader width="100%" height={isMobile ? 180 : 320} borderRadius={DESIGN_TOKENS.radii.md} />
           ) : (
-            <WorldChoroplethMap
-              visitedCodes={visitedCodes}
-              selectedCode={selectedCode}
-              onCountryPress={handleCountryPress}
-            >
-              <WorldMapFlags visitedCodes={visitedCodes} size={isMobile ? 13 : 16} />
-            </WorldChoroplethMap>
+            <>
+              <WorldChoroplethMap
+                visitedCodes={visitedCodes}
+                selectedCode={selectedCode}
+                onCountryPress={handleCountryPress}
+                zoom={zoom}
+              >
+                <WorldMapFlags visitedCodes={visitedCodes} size={isMobile ? 13 : 16} zoom={zoom} />
+              </WorldChoroplethMap>
+
+              <View style={styles.zoomControls}>
+                <Pressable
+                  onPress={() => zoom.zoomByCentered(1.5)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Приблизить карту"
+                  style={styles.zoomButton}
+                >
+                  <Feather name="plus" size={18} color={colors.text} />
+                </Pressable>
+                <Pressable
+                  onPress={() => zoom.zoomByCentered(1 / 1.5)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Отдалить карту"
+                  style={styles.zoomButton}
+                >
+                  <Feather name="minus" size={18} color={colors.text} />
+                </Pressable>
+                <Pressable
+                  onPress={() => zoom.reset()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Сбросить масштаб карты"
+                  style={styles.zoomButton}
+                >
+                  <Feather name="maximize" size={16} color={colors.text} />
+                </Pressable>
+              </View>
+            </>
           )}
         </View>
 
@@ -231,6 +335,34 @@ export function ProfileWorldMapTab({
               </Text>
             ) : (
               <Text style={styles.infoMeta}>Ещё не посещено</Text>
+            )}
+
+            {selected.travels.length > 0 ? (
+              <View style={styles.travelsList}>
+                {selected.travels.map((travel) => (
+                  <Pressable
+                    key={travel.id}
+                    onPress={() => openTravel(travel.url)}
+                    accessibilityRole="link"
+                    accessibilityLabel={travel.name}
+                    style={styles.travelCard}
+                  >
+                    <ImageCardMedia
+                      src={travel.travel_image_thumb_small_url || travel.travel_image_thumb_url}
+                      alt={travel.name}
+                      height={travelCardHeight}
+                      width="100%"
+                      fit="contain"
+                      blurBackground
+                    />
+                    <Text style={styles.travelTitle} numberOfLines={2}>
+                      {travel.name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.emptyTravels}>Нет маршрутов в этой стране</Text>
             )}
           </View>
         ) : null}

@@ -485,6 +485,30 @@ export const getTravelCountryDescriptors = (travel: Travel): CountryDescriptor[]
   return descriptors
 }
 
+// [FE-635-T3] Группировка маршрутов пользователя по ISO alpha-2 стране.
+// Переиспользует нормализацию descriptor.code (resolveCountryCode под капотом
+// getTravelCountryDescriptors). Ключ — UPPERCASE ISO. Один travel может попасть
+// в несколько стран (мультистрановой), дубль внутри страны исключается по id.
+export const buildTravelsByCountryCode = (travels: Travel[]): Map<string, Travel[]> => {
+  const byCode = new Map<string, Travel[]>()
+
+  travels.forEach((travel) => {
+    const codes = new Set<string>()
+    getTravelCountryDescriptors(travel).forEach((descriptor) => {
+      const code = typeof descriptor.code === 'string' ? descriptor.code.trim().toUpperCase() : ''
+      if (/^[A-Z]{2}$/.test(code)) codes.add(code)
+    })
+
+    codes.forEach((code) => {
+      const list = byCode.get(code) ?? []
+      if (!list.some((existing) => existing.id === travel.id)) list.push(travel)
+      byCode.set(code, list)
+    })
+  })
+
+  return byCode
+}
+
 const descriptorKey = (descriptor: CountryDescriptor) =>
   descriptor.code
     ? `code:${descriptor.code}`

@@ -4,11 +4,22 @@
 // а SVG использует preserveAspectRatio по умолчанию (meet) без леттербоксинга,
 // поэтому процент центроида = процент пикселя. pointerEvents='none' — тапы проходят
 // сквозь флажки к путям карты (T6). Флаг = эмодзи из ISO; XK/невалидные → код-пилюля.
+// [FE-635-T2] При зуме оверлей трансформируется синхронно с SVG-<G> (px-space:
+// scale viewBox→px = ширина/1000), а каждый маркер counter-scale (1/scale), чтобы
+// флажки не раздувались.
 
-import React, { useMemo } from 'react'
-import { StyleSheet, Text, View, type DimensionValue } from 'react-native'
+import React, { useCallback, useMemo } from 'react'
+import {
+  StyleSheet,
+  Text,
+  View,
+  type DimensionValue,
+  type LayoutChangeEvent,
+} from 'react-native'
+import Animated, { useAnimatedStyle } from 'react-native-reanimated'
 
 import { useThemedColors } from '@/hooks/useTheme'
+import type { MapZoomPanControls } from '@/hooks/useMapZoomPan'
 
 import {
   WORLD_MAP_HEIGHT,
@@ -33,10 +44,21 @@ export interface WorldMapFlagsProps {
   visitedCodes: ReadonlySet<string>
   /** Размер флажка в px (по умолчанию 16). */
   size?: number
+  /** Зум/пан-контроллер (T2): оверлей следует за картой. */
+  zoom?: MapZoomPanControls
 }
 
-function WorldMapFlagsComponent({ visitedCodes, size = 16 }: WorldMapFlagsProps) {
+function WorldMapFlagsComponent({ visitedCodes, size = 16, zoom }: WorldMapFlagsProps) {
   const colors = useThemedColors()
+  const widthRef = React.useRef(WORLD_MAP_WIDTH)
+  const [, forceTick] = React.useState(0)
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width
+    if (w > 0 && Math.abs(w - widthRef.current) > 0.5) {
+      widthRef.current = w
+      forceTick((t) => t + 1)
+    }
+  }, [])
 
   const markers = useMemo(() => {
     const list: { code: string; left: DimensionValue; top: DimensionValue; emoji: string | null }[] = []
@@ -53,10 +75,29 @@ function WorldMapFlagsComponent({ visitedCodes, size = 16 }: WorldMapFlagsProps)
     return list
   }, [visitedCodes])
 
+  // Оверлей-трансформ в px: viewBox-translate * k (k = ширина/1000), origin top-left.
+  const overlayStyle = useAnimatedStyle(() => {
+    if (!zoom) return {}
+    const k = widthRef.current / WORLD_MAP_WIDTH
+    return {
+      transform: [
+        { translateX: zoom.translateX.value * k },
+        { translateY: zoom.translateY.value * k },
+        { scale: zoom.scale.value },
+      ],
+    }
+  })
+
+  // Counter-scale маркеров: 1/scale, чтобы флажки не раздувались.
+  const markerCounterStyle = useAnimatedStyle(() => {
+    if (!zoom) return {}
+    return { transform: [{ scale: 1 / zoom.scale.value }] }
+  })
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        overlay: { ...StyleSheet.absoluteFillObject },
+        overlay: { ...StyleSheet.absoluteFillObject, transformOrigin: 'top left' },
         marker: {
           position: 'absolute',
           width: size,
@@ -85,9 +126,12 @@ function WorldMapFlagsComponent({ visitedCodes, size = 16 }: WorldMapFlagsProps)
   )
 
   return (
-    <View style={styles.overlay} pointerEvents="none">
+    <Animated.View style={[styles.overlay, overlayStyle]} pointerEvents="none" onLayout={onLayout}>
       {markers.map((m) => (
-        <View key={m.code} style={[styles.marker, { left: m.left, top: m.top }]}>
+        <Animated.View
+          key={m.code}
+          style={[styles.marker, { left: m.left, top: m.top }, markerCounterStyle]}
+        >
           {m.emoji ? (
             <Text style={styles.emoji}>{m.emoji}</Text>
           ) : (
@@ -95,9 +139,9 @@ function WorldMapFlagsComponent({ visitedCodes, size = 16 }: WorldMapFlagsProps)
               <Text style={styles.pillText}>{m.code}</Text>
             </View>
           )}
-        </View>
+        </Animated.View>
       ))}
-    </View>
+    </Animated.View>
   )
 }
 
