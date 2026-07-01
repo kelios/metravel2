@@ -32,7 +32,9 @@ describe('buildBirdMarkerHtml', () => {
     expect(html).toContain('transform: rotate(-45deg);')
     expect(html).toContain(String(DESIGN_TOKENS.colors.brand))
     expect(html).toContain(String(DESIGN_TOKENS.colors.brandLight))
-    expect(html).toContain('/assets/icons/logo_yellow_60x60.png')
-    expect(html).toContain('object-fit: contain;')
+    // FE-ICN-B: маркер несёт векторную бренд-птицу инлайн-SVG
+    // (заменил растровый logo_yellow_60x60.png — мягкий на retina).
+    expect(html).toContain('<svg')
+    expect(html).toContain('viewBox="0 0 100 100"')
   })
 })

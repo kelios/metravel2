@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Pressable, StyleSheet, Animated, Platform } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useBreakpoints } from '@/hooks/useResponsive'
 import { globalFocusStyles } from '@/styles/globalFocus' // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 interface ScrollToTopButtonProps {
@@ -25,6 +26,8 @@ function ScrollToTopButton({
   bottomOffset = 0,
 }: ScrollToTopButtonProps) {
   const colors = useThemedColors()
+  const { isPhone, isLargePhone } = useBreakpoints()
+  const isMobile = isPhone || isLargePhone
   const shouldUseNativeDriver = false
   const styles = useMemo(
     () =>
@@ -32,7 +35,9 @@ function ScrollToTopButton({
         container: {
           position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute',
           bottom: (Platform.select({ web: 96, default: 80 }) ?? 80) + bottomOffset,
-          right: Platform.select({ web: 24, default: 16 }),
+          // Парити mobile web ↔ Android: на телефоне обе платформы 16px от края;
+          // десктоп-web сохраняет более широкий отступ.
+          right: isMobile ? 16 : 24,
           zIndex: 1000,
         },
         button: {
@@ -58,7 +63,7 @@ function ScrollToTopButton({
               : colors.shadows.medium),
         },
       }),
-    [colors, bottomOffset],
+    [colors, bottomOffset, isMobile],
   )
   const [isVisible, setIsVisible] = useState(false)
   const fadeAnim = useRef(new Animated.Value(0)).current

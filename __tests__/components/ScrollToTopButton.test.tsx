@@ -3,6 +3,13 @@ import { render, fireEvent, act } from '@testing-library/react-native';
 import ScrollToTopButton from '@/components/ui/ScrollToTopButton';
 import { Animated, Platform } from 'react-native';
 
+// Mock responsive hook: component reads useBreakpoints for the right-offset parity
+// (mobile web == Android phone). Without this, useResponsive subscribes to
+// window resize which is unavailable in the RN test env.
+jest.mock('@/hooks/useResponsive', () => ({
+  useBreakpoints: () => ({ isPhone: true, isLargePhone: false, isTablet: false, isDesktop: false }),
+}));
+
 // Mock Feather icons
 jest.mock('@expo/vector-icons', () => ({
   Feather: ({ name, ...props }: any) => {

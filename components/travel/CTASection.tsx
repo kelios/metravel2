@@ -84,7 +84,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
       width: '100%',
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.sm,
-      padding: Platform.select({ default: DESIGN_TOKENS.spacing.lg, web: DESIGN_TOKENS.spacing.xl }),
+      padding: isMobile ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
       borderWidth: 1,
       borderColor: colors.borderStrong,
       borderStyle: 'solid',
@@ -107,7 +107,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
       gap: DESIGN_TOKENS.spacing.md,
     },
     textSection: {
-      marginBottom: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: 2 }),
+      marginBottom: isMobile ? DESIGN_TOKENS.spacing.xs : 2,
     },
     title: {
       fontSize: 18,
@@ -168,7 +168,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
     buttonLabelMobile: {
       fontSize: 14,
     },
-  }), [colors]);
+  }), [colors, isMobile]);
 
 
   // Не показываем если пользователь не авторизован (или показываем с призывом зарегистрироваться)

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform, Image }
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { TravelComment } from '../../types/comments';
@@ -22,7 +23,8 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
   const { userId, isSuperuser, isAuthenticated } = useAuth();
   const { requireAuth } = useRequireAuth({ intent: 'comment' });
   const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isMobile } = useResponsive();
+  const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
   const [showActions, setShowActions] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
@@ -229,20 +231,20 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
 
 export const CommentItem = React.memo(CommentItemComponent);
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create<Record<string, any>>({
+const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) => StyleSheet.create<Record<string, any>>({
   wrapper: {
     marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   container: {
     backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.md,
-    padding: Platform.select({ default: DESIGN_TOKENS.spacing.md, web: 18 }),
+    padding: isMobile ? DESIGN_TOKENS.spacing.md : 18,
     marginBottom: DESIGN_TOKENS.spacing.xs,
     borderWidth: 1,
     borderColor: colors.borderLight,
   },
   nested: {
-    marginLeft: Platform.select({ default: 40, web: 48 }),
+    marginLeft: isMobile ? 40 : 48,
     backgroundColor: colors.backgroundSecondary,
     borderLeftWidth: 3,
     borderLeftColor: colors.primaryAlpha40,

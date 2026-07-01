@@ -283,7 +283,9 @@ function UnifiedTravelCard({
         imageContainer: {
           width: '100%',
           // CARD-01: Используем единый токен высоты изображения вместо hardcoded
-          height: isWeb ? DESIGN_TOKENS.cardImageHeights.medium : DESIGN_TOKENS.cardImageHeights.medium - 20,
+          // Парити mobile web ↔ Android: одинаковая высота фото на обеих платформах
+          // (раньше native был на 20px ниже без обоснования).
+          height: DESIGN_TOKENS.cardImageHeights.medium,
           position: 'relative',
           // Native Fabric: an ExpoImage child with contentFit reports an intrinsic
           // aspect ratio that can override this fixed height; clip + flexShrink:0

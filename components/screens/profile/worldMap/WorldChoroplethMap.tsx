@@ -7,7 +7,7 @@
 
 import React, { useCallback, useMemo } from 'react'
 import { Platform, StyleProp, View, ViewStyle, type LayoutChangeEvent } from 'react-native'
-import { GestureDetector, Gesture } from 'react-native-gesture-handler'
+import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler'
 import Animated, { useAnimatedProps, runOnJS } from 'react-native-reanimated'
 import Svg, { G, Path } from 'react-native-svg'
 
@@ -137,27 +137,35 @@ function WorldChoroplethMapComponent({
   // Web: колесо → зум к курсору; pointer-drag → пан (порог 5px держит тап по стране).
   const dragRef = React.useRef({ x: 0, y: 0, active: false, moved: false })
 
+  // Web-only: колесо. React вешает `wheel` как passive-listener на корень,
+  // поэтому preventDefault() в React-onWheel игнорируется → страница скроллится
+  // ПОВЕРХ зума. Вешаем нативный listener с { passive: false } прямо на DOM-узел.
+  const containerRef = React.useRef<View | null>(null)
+  const zoomRef = React.useRef(zoom)
+  zoomRef.current = zoom
+  React.useEffect(() => {
+    if (Platform.OS !== 'web' || !zoom) return
+    const node = containerRef.current as unknown as HTMLElement | null
+    if (!node || typeof node.addEventListener !== 'function') return
+    const onWheel = (e: WheelEvent) => {
+      const z = zoomRef.current
+      if (!z) return
+      e.preventDefault()
+      const rect = node.getBoundingClientRect()
+      if (!rect || rect.width <= 0) return
+      const k = WORLD_MAP_WIDTH / rect.width
+      const fx = ((e.clientX - rect.left) * k - z.translateX.value) / z.scale.value
+      const fy = ((e.clientY - rect.top) * k - z.translateY.value) / z.scale.value
+      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15
+      z.zoomAtPoint(factor, fx, fy, false)
+    }
+    node.addEventListener('wheel', onWheel, { passive: false })
+    return () => node.removeEventListener('wheel', onWheel)
+  }, [zoom])
+
   const webProps =
     Platform.OS === 'web' && zoom
       ? {
-          onWheel: (e: {
-            deltaY: number
-            currentTarget: unknown
-            clientX: number
-            clientY: number
-            preventDefault?: () => void
-          }) => {
-            e.preventDefault?.()
-            const rect = (
-              e.currentTarget as { getBoundingClientRect?: () => { left: number; top: number; width: number } }
-            ).getBoundingClientRect?.()
-            if (!rect || rect.width <= 0) return
-            const k = WORLD_MAP_WIDTH / rect.width
-            const fx = ((e.clientX - rect.left) * k - zoom.translateX.value) / zoom.scale.value
-            const fy = ((e.clientY - rect.top) * k - zoom.translateY.value) / zoom.scale.value
-            const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15
-            zoom.zoomAtPoint(factor, fx, fy, false)
-          },
           onPointerDown: (e: { clientX: number; clientY: number }) => {
             dragRef.current = { x: e.clientX, y: e.clientY, active: true, moved: false }
           },
@@ -188,6 +196,7 @@ function WorldChoroplethMapComponent({
 
   const map = (
     <View
+      ref={containerRef}
       style={[{ width: '100%', aspectRatio: WORLD_MAP_WIDTH / WORLD_MAP_HEIGHT }, style]}
       onLayout={onLayout}
       // RN Web пробрасывает DOM-обработчики на <div>; типы RN View их не знают.
@@ -205,7 +214,16 @@ function WorldChoroplethMapComponent({
   )
 
   if (gesture) {
-    return <GestureDetector gesture={gesture}>{map}</GestureDetector>
+    // GestureDetector требует GestureHandlerRootView выше по дереву. Глобального
+    // root в app/_layout.tsx НЕТ (заменён на обычный View из-за краша dev-client,
+    // см. RootContainerView) — поэтому, как MapScreenShell/questWizardStepCard,
+    // оборачиваем локально. Без него на Android GestureDetector роняет рендер.
+    // gesture !== undefined только на native (web-ветка выше возвращает undefined).
+    return (
+      <GestureHandlerRootView style={{ width: '100%' }}>
+        <GestureDetector gesture={gesture}>{map}</GestureDetector>
+      </GestureHandlerRootView>
+    )
   }
   return map
 }

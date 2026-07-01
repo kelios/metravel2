@@ -29,10 +29,8 @@ export const sanitizeCssValue = (value: string | undefined, fallback = '') => {
   return sanitized || fallback
 }
 
-// Векторная бренд-птица MeTravel как инлайн-SVG для Leaflet divIcon.
-// Геометрия/палитра синхронизированы с components/layout/BirdLogoIcon.tsx
-// (viewBox 0 0 100 100, бренд-цвета фиксированы). Резкость на любом DPI —
-// заменяет мягкий на retina растр logo_yellow_60x60.png.
+// Векторная бренд-птица MeTravel как инлайн-SVG для Leaflet divIcon
+// (viewBox 0 0 100 100, бренд-цвета фиксированы). Резкость на любом DPI.
 const BIRD_BODY = '#f5842c'
 const BIRD_OUTLINE = '#e07020'
 const BIRD_BEAK = '#f7a24f'

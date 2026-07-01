@@ -4,17 +4,16 @@ import {
 } from '@/components/layout/bottomDockModel'
 
 describe('bottomDockModel', () => {
-  it('exposes public trips in the mobile more menu', () => {
+  it('does not expose public trips in the mobile more menu (feature hidden)', () => {
     const primaryItems = BOTTOM_DOCK_MORE_MENU_SECTIONS.find((section) => section.key === 'primary')?.items ?? []
 
+    // «Попутчики» (public trips) намеренно скрыты из меню дока.
+    expect(primaryItems.some((item) => item.key === 'trips')).toBe(false)
+    // остальные пункты меню остаются на месте
     expect(primaryItems).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          key: 'trips',
-          label: 'Попутчики',
-          route: '/trips',
-          iconName: 'users',
-        }),
+        expect.objectContaining({ key: 'places', route: '/places' }),
+        expect.objectContaining({ key: 'articles', route: '/articles' }),
       ]),
     )
   })

@@ -85,6 +85,52 @@ test('T2: зум кнопками и колесом меняет transform <g>, 
   expect(resetScale ? Number(resetScale[1]) : 1).toBeLessThanOrEqual(1.01)
 })
 
+test('wheel над картой зумит и гасит дефолт (страница не скроллит)', async ({ page }) => {
+  await openMapTab(page)
+
+  const getScale = () =>
+    page.evaluate(() => {
+      const gs = Array.from(document.querySelectorAll('svg g'))
+      const mine = gs.find((el) => /scale\([0-9.]+\)\s*$/.test(el.getAttribute('transform') || ''))
+      const m = /scale\(([0-9.]+)\)/.exec(mine?.getAttribute('transform') || '')
+      return m ? Number(m[1]) : 1
+    })
+
+  // Дождаться реальной раскладки карты (в headless слой может стартовать
+  // схлопнутым ~18px до settle — тогда effect-listener ещё не привязан).
+  await page.waitForFunction(
+    () => (document.querySelector('svg')?.getBoundingClientRect().width ?? 0) > 200,
+    undefined,
+    { timeout: 15000 }
+  )
+
+  const before = await getScale()
+
+  // Реальный wheel над картой: должен быть перехвачен нативным listener
+  // ({ passive: false }) → defaultPrevented === true (страница не скроллится),
+  // и scale <g> должен вырасти (zoom in при deltaY < 0).
+  const defaultPrevented = await page.evaluate(() => {
+    const svg = document.querySelector('svg')
+    if (!svg) return null
+    const r = svg.getBoundingClientRect()
+    const ev = new WheelEvent('wheel', {
+      bubbles: true,
+      cancelable: true,
+      deltaY: -120,
+      clientX: r.left + r.width / 2,
+      clientY: r.top + r.height / 2,
+    })
+    svg.dispatchEvent(ev)
+    return ev.defaultPrevented
+  })
+
+  expect(defaultPrevented).toBe(true)
+  await page.waitForTimeout(300)
+  const after = await getScale()
+  console.log('WHEEL scale', before, '->', after)
+  expect(after).toBeGreaterThan(before)
+})
+
 test('T3: клик по стране с маршрутами показывает мини-карточку со ссылкой', async ({ page }) => {
   await openMapTab(page)
 

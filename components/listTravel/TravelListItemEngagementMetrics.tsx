@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import type { TravelEngagementStats } from '@/utils/travelEngagementStats'
 
-const ENGAGEMENT_ICON_SIZE = Platform.OS === 'web' ? 14 : 13
+const ENGAGEMENT_ICON_SIZE = 14
 const IS_WEB = Platform.OS === 'web' || typeof document !== 'undefined'
 
 const ENGAGEMENT_METRICS: Array<{

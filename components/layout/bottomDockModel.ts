@@ -40,7 +40,6 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
     items: [
       { key: 'search', label: 'Беларусь', accessibilityLabel: 'Беларусь', route: '/travelsby', iconName: 'belarus-outline' },
       { key: 'places', label: 'Места', accessibilityLabel: 'Места', route: '/places', iconName: 'map-pin' },
-      { key: 'trips', label: 'Попутчики', accessibilityLabel: 'Попутчики', route: '/trips', iconName: 'users' },
       { key: 'articles', label: 'Статьи', accessibilityLabel: 'Статьи', route: '/articles', iconName: 'file-text' },
       { key: 'roulette', label: 'Случайный маршрут', accessibilityLabel: 'Случайный маршрут', route: '/roulette', iconName: 'dice' },
       { key: 'history', label: 'История просмотров', accessibilityLabel: 'История просмотров', route: '/history', iconName: 'clock' },

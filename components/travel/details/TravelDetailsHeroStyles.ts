@@ -83,18 +83,9 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
     quickJumpChip: {
       flexDirection: 'row',
       alignItems: 'center',
-      minHeight: Platform.select({
-        default: 44,
-        web: 44,
-      }),
-      paddingVertical: Platform.select({
-        default: 10,
-        web: 8,
-      }),
-      paddingHorizontal: Platform.select({
-        default: 16,
-        web: 16,
-      }),
+      minHeight: 44,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
       borderRadius: DESIGN_TOKENS.radii.sm,
       borderWidth: 1,
       borderColor: colors.borderLight,

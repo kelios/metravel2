@@ -254,7 +254,7 @@ const getStyles = (colors: ThemedColors) =>
       // (colors.border сливался с белым фоном на Android).
       backgroundColor: colors.borderStrong,
       width: 40,
-      height: 5,
+      height: 4,
       borderRadius: 3,
     },
     header: {
@@ -262,8 +262,8 @@ const getStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 16,
-      paddingTop: 4,
-      paddingBottom: 4,
+      paddingTop: 8,
+      paddingBottom: 8,
       borderBottomWidth: 1,
       borderBottomColor: colors.borderLight,
     },
