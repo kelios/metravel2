@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native'
+import { fireEvent, render, within } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 import { createQueryWrapper } from '../helpers/testQueryClient'
 import PlacesScreen from '@/screens/tabs/PlacesScreen'
@@ -133,7 +133,8 @@ describe('PlacesScreen category search', () => {
       wrapper: createQueryWrapper().Wrapper,
     })
 
-    fireEvent.press(await findByTestId('places-card-place-1'))
+    const placeCard = await findByTestId('places-card-place-1')
+    fireEvent.press(placeCard)
 
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/map',
@@ -150,6 +151,10 @@ describe('PlacesScreen category search', () => {
         placeImageUrl: '',
       },
     })
+
+    // На компактной карточке navigator-действия живут за overflow-шитом
+    // «Навигация и действия» — открываем его для этой карточки перед проверкой.
+    fireEvent.press(within(placeCard).getByLabelText('Навигация и действия'))
 
     const organicButtons = await findAllByLabelText('Открыть точку в Organic Maps')
     fireEvent.press(organicButtons[0])
