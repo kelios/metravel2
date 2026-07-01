@@ -8,6 +8,7 @@ import { isValidCoordinate } from '@/utils/coordinateValidator'
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
 import { LAYOUT } from '@/constants/layout'
 import { createMapPopupComponent } from './Map/createMapPopupComponent'
+import { useUserLocationSignal } from './Map/userLocationSignal'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { resolveRoutingApiKey } from '@/utils/routingApiKey'
@@ -629,12 +630,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
     popupBottomOffset,
   })
 
-  // Keep PopupComponent identity stable across GPS updates: read userLocation via ref
-  // to avoid unmount/remount that would wipe internal popup state (fullscreen viewer, etc).
-  const userLocationLatLngRef = useRef(userLocationLatLng)
-  useEffect(() => {
-    userLocationLatLngRef.current = userLocationLatLng
-  }, [userLocationLatLng])
+  // Keep PopupComponent identity stable across GPS updates: precise coords via the
+  // signal's `.current` (no per-tick re-render → no unmount/remount that would wipe
+  // internal popup state like the fullscreen viewer). The signal ALSO exposes a
+  // coarse `hasLocation()` boolean the popup subscribes to, so «Маршрут» + distance
+  // chip appear the moment the first fix arrives (null→present), not only after an
+  // unrelated re-render.
+  const userLocationSignal = useUserLocationSignal(userLocationLatLng)
 
   const PopupComponent = useMemo(() => {
     if (!rl) return null
@@ -649,12 +651,12 @@ const MapPageComponent: React.FC<Props> = (props) => {
       popupSplit: !useCompactPopupLayout,
       fullscreenTopInset: LAYOUT.headerHeight,
       fullscreenBottomInset: LAYOUT.tabBarHeight,
-      userLocationRef: userLocationLatLngRef,
+      userLocationSignal,
       invalidateUserPoints: () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })
       },
     })
-  }, [colors, queryClient, rl, themeContextValue, useCompactPopupLayout])
+  }, [colors, queryClient, rl, themeContextValue, useCompactPopupLayout, userLocationSignal])
 
   const shouldShowLoadingOverlay = IS_WEB
     ? !!leafletError || !canRenderMap

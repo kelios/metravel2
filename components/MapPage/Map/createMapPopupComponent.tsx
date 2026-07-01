@@ -27,6 +27,7 @@ import { ThemeContext, type ThemeContextType, type ThemedColors } from '@/hooks/
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { osrmRoute } from '@/api/external/osrm';
 import { buildPlaceTitleParts, stripCountryFromCategoryString } from './placeTitle';
+import { useHasUserLocation, type UserLocationSignal } from './userLocationSignal';
 
 interface CreatePopupComponentArgs {
   userLocation?: { lat: number; lng: number } | null;
@@ -38,6 +39,16 @@ interface CreatePopupComponentArgs {
    * which would reset internal state (e.g. fullscreen image viewer visibility).
    */
   userLocationRef?: React.MutableRefObject<{ lat: number; lng: number } | null | undefined>;
+  /**
+   * Subscribe-able location signal. Carries the SAME live coordinates as
+   * `userLocationRef` (precise coords still read via `.current` at route-build
+   * time, no per-tick render), plus a coarse `hasLocation()` boolean the popup
+   * subscribes to. That boolean flips exactly once on the first fix (null→present),
+   * which is what makes the «Маршрут» button + distance chip appear immediately —
+   * without a re-render storm on every subsequent GPS update. Supersedes
+   * `userLocationRef` when provided.
+   */
+  userLocationSignal?: UserLocationSignal;
   compactLayout?: boolean;
   fullscreenOnMobile?: boolean;
   /** Web mobile bottom-sheet split: fixed hero photo + scrollable caption/actions. */
@@ -62,6 +73,7 @@ interface CreatePopupComponentArgs {
 export const createMapPopupComponent = ({
   userLocation,
   userLocationRef,
+  userLocationSignal,
   compactLayout = false,
   fullscreenOnMobile = false,
   bottomSheetSplit = false,
@@ -84,9 +96,17 @@ export const createMapPopupComponent = ({
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const authReady = useAuthStore((s) => s.authReady);
 
-    // Prefer the live ref value when provided (ref keeps the factory identity
-    // stable across GPS updates); fall back to the static closure value.
-    const liveUserLocation = userLocationRef?.current ?? userLocation;
+    // Subscribe to the coarse «есть ли локация» boolean so the popup re-renders
+    // exactly once when the first fix arrives (null→present) — this is what makes
+    // «Маршрут» + distance chip appear without any external state update. Precise
+    // coordinates are still read from the signal/ref on each render (and at
+    // route-build time), so frequent GPS ticks never re-render the popup.
+    const hasLiveLocation = useHasUserLocation(userLocationSignal);
+
+    // Prefer the live signal/ref value when provided (both keep the factory
+    // identity stable across GPS updates); fall back to the static closure value.
+    const liveUserLocation =
+      userLocationSignal?.current ?? userLocationRef?.current ?? userLocation;
     const userLat = liveUserLocation?.lat;
     const userLng = liveUserLocation?.lng;
 
@@ -285,7 +305,15 @@ export const createMapPopupComponent = ({
       [rawCategoryName, point.address],
     );
     const popupTitle = useMemo(() => buildPlaceTitleParts(point), [point]);
-    const canBuildRoute = normalizedCoord != null && typeof userLat === 'number' && typeof userLng === 'number';
+    // Gate on the reactive `hasLiveLocation` (flips once on the first fix) so the
+    // button appears immediately when GPS arrives. When a signal is provided its
+    // boolean is the source of truth; otherwise fall back to the raw coords read
+    // (ref/closure path used by the native legacy caller). handleBuildRoute
+    // re-validates finite coords from the ref before actually building the route.
+    const hasUserLocation = userLocationSignal
+      ? hasLiveLocation
+      : typeof userLat === 'number' && typeof userLng === 'number';
+    const canBuildRoute = normalizedCoord != null && hasUserLocation;
 
     const handleBuildRoute = useCallback(() => {
       if (

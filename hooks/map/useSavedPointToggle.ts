@@ -26,6 +26,10 @@ import type { ImportedPoint } from '@/types/userPoints';
 
 const COORD_EPSILON = 1e-5; // ~1.1 m по широте — достаточно для матча «та же точка»
 
+// Синтетический id для оптимистичной точки в кэше `userPointsAll`, пока сервер не
+// вернул реальную запись. Отрицательный, чтобы не столкнуться с реальными id.
+const OPTIMISTIC_POINT_ID = -1;
+
 function readPointsFromUnknown(data: unknown): ImportedPoint[] {
   if (Array.isArray(data)) return data as ImportedPoint[];
   return [];
@@ -79,9 +83,21 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
 
   const removeSaved = useCallback(async () => {
     if (!savedPoint) return;
-    await userPointsApi.deletePoint(savedPoint.id);
+    const key = queryKeys.userPointsAll();
+    const targetId = savedPoint.id;
+    // Оптимистично убираем точку из кэша, чтобы `isSaved` (и иконка ✓→＋)
+    // переключились сразу, не дожидаясь рефетча всей коллекции.
+    queryClient.setQueryData<ImportedPoint[]>(key, (old) =>
+      readPointsFromUnknown(old).filter((p) => p.id !== targetId),
+    );
+    try {
+      await userPointsApi.deletePoint(targetId);
+    } catch (e) {
+      invalidate(); // запрос упал — синхронизируем кэш с сервером (точка вернётся)
+      throw e;
+    }
     invalidate();
-  }, [invalidate, savedPoint]);
+  }, [invalidate, queryClient, savedPoint]);
 
   const createPoint = useCallback(
     async (payload: Partial<ImportedPoint>) => {
@@ -91,10 +107,31 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
         invalidate();
         return;
       }
-      await userPointsApi.createPoint(payload);
+      const key = queryKeys.userPointsAll();
+      // Оптимистично добавляем синтетическую точку (матчится по координатам в
+      // `findSavedPointByCoord`), чтобы иконка ＋→✓ переключилась мгновенно.
+      const optimistic = { ...(payload as ImportedPoint), id: OPTIMISTIC_POINT_ID };
+      queryClient.setQueryData<ImportedPoint[]>(key, (old) => [
+        ...readPointsFromUnknown(old),
+        optimistic,
+      ]);
+      let created: ImportedPoint;
+      try {
+        created = await userPointsApi.createPoint(payload);
+      } catch (e) {
+        // Откат: убираем оптимистичную точку.
+        queryClient.setQueryData<ImportedPoint[]>(key, (old) =>
+          readPointsFromUnknown(old).filter((p) => p.id !== OPTIMISTIC_POINT_ID),
+        );
+        throw e;
+      }
+      // Заменяем оптимистичную запись реальной (с серверным id), затем рефетч.
+      queryClient.setQueryData<ImportedPoint[]>(key, (old) =>
+        readPointsFromUnknown(old).map((p) => (p.id === OPTIMISTIC_POINT_ID ? created : p)),
+      );
       invalidate();
     },
-    [invalidate, savedPoint],
+    [invalidate, queryClient, savedPoint],
   );
 
   return {

@@ -16,6 +16,7 @@ import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaI
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { queryKeys } from '@/api/queryKeys'
 import { createMapPopupComponent } from './Map/createMapPopupComponent'
+import { useUserLocationSignal } from './Map/userLocationSignal'
 import type { Point } from './Map/types'
 
 const IS_WEB = Platform.OS === 'web'
@@ -68,14 +69,14 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   const isFullscreenWeb = IS_WEB && viewportWidth <= 560
   const styles = useMemo(() => getStyles(colors), [colors])
 
-  // createMapPopupComponent reads userLocation from a ref so the factory identity
-  // stays stable across GPS updates (no remount → no lost state).
-  const userLocationRef = useRef<{ lat: number; lng: number } | null>(null)
-  useEffect(() => {
-    userLocationRef.current = userLocation
-      ? { lat: userLocation.latitude, lng: userLocation.longitude }
-      : null
-  }, [userLocation])
+  // createMapPopupComponent reads userLocation from a subscribe-able signal: precise
+  // coordinates via `.current` (no re-render per GPS tick — factory identity stays
+  // stable, no remount → no lost state), plus a coarse `hasLocation()` boolean the
+  // popup subscribes to so «Маршрут» + distance chip appear the moment the first fix
+  // arrives (null→present), instead of only after an unrelated re-render (#…).
+  const userLocationSignal = useUserLocationSignal(
+    userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null,
+  )
 
   const topChromeInset = Math.max(0, topInset || 0)
   const bottomChromeInset = (bottomInset || 0) + (insets?.bottom ?? 0)
@@ -115,12 +116,12 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
         // #FIX-3 — Telegram is a share action, not a map-app: surface it as the
         // title-row share icon and drop it from the «Навигация и действия» sheet.
         shareInActionRow: true,
-        userLocationRef,
+        userLocationSignal,
         invalidateUserPoints: () => {
           void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })
         },
       }),
-    [colors, themeContextValue, queryClient, isFullscreenWeb, nativeHeroHeight],
+    [colors, themeContextValue, queryClient, isFullscreenWeb, nativeHeroHeight, userLocationSignal],
   )
 
   // On the mobile sheet the close button wires BOTH RN-Web `onPress` and a native
