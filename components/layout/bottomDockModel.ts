@@ -44,7 +44,7 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
       { key: 'roulette', label: 'Случайный маршрут', accessibilityLabel: 'Случайный маршрут', route: '/roulette', iconName: 'dice' },
       { key: 'history', label: 'История просмотров', accessibilityLabel: 'История просмотров', route: '/history', iconName: 'clock' },
       { key: 'travel-new', label: 'Создать маршрут', accessibilityLabel: 'Создать маршрут', route: '/travel/new', iconName: 'plus-circle' },
-      { key: 'export', label: 'Книга путешествий', accessibilityLabel: 'Книга путешествий', route: '/export', iconName: 'book-open' },
+      // Экспорт в PDF («Книга путешествий») — только десктоп; в мобильном доке пункт убран.
       { key: 'profile', label: 'Профиль', accessibilityLabel: 'Профиль', route: '/profile', iconName: 'user' },
     ],
   },

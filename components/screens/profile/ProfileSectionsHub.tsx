@@ -77,12 +77,19 @@ const BASE_ITEMS: HubItem[] = [
 export function ProfileSectionsHub({ userId }: ProfileSectionsHubProps) {
   const colors = useThemedColors()
   const router = useRouter()
-  const { isDesktop } = useResponsive()
+  const { isDesktop, isMobile, isHydrated } = useResponsive()
+
+  // Экспорт в PDF скрыт в мобильной версии сайта (фича только для десктопа).
+  // Гейт по isHydrated, чтобы на десктопе не мигала плитка и не было hydration mismatch:
+  // до гидрации (SSR + первый клиентский рендер) плитка есть, скрываем её только после
+  // гидрации и только на мобильном.
+  const hideExport = isHydrated && isMobile
 
   const items = useMemo<HubItem[]>(() => {
-    if (userId === undefined || userId === null || `${userId}`.length === 0) return BASE_ITEMS
+    const base = hideExport ? BASE_ITEMS.filter((item) => item.key !== 'export') : BASE_ITEMS
+    if (userId === undefined || userId === null || `${userId}`.length === 0) return base
     return [
-      ...BASE_ITEMS,
+      ...base,
       {
         key: 'public-profile',
         title: 'Мой публичный профиль',
@@ -91,7 +98,7 @@ export function ProfileSectionsHub({ userId }: ProfileSectionsHubProps) {
         route: `/user/${userId}`,
       },
     ]
-  }, [userId])
+  }, [userId, hideExport])
 
   const styles = useMemo(() => getStyles(colors), [colors])
   const itemWidth = isDesktop ? '31.5%' : '48%'

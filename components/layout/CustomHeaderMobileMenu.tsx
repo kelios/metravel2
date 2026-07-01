@@ -92,13 +92,6 @@ export default function CustomHeaderMobileMenu({
   const panelRef = useRef<any>(null);
   useFocusTrap(panelRef as any, { enabled: visible && Platform.OS === 'web' });
 
-  const exportMenuItem: MenuActionItem = {
-    key: 'export',
-    label: 'Экспорт в PDF',
-    icon: 'file-text',
-    onPress: () => onUserAction('/export'),
-  }
-
   const accountItems: MenuActionItem[] = !isAuthenticated
     ? [
         {
@@ -152,8 +145,8 @@ export default function CustomHeaderMobileMenu({
           iconSlotStyle: { position: 'relative' },
           trailingNode: <UnreadBadge count={unreadCount} />,
         },
-        // #495: PDF book export is web-only (usePdfExportRuntime blocks native) — hide its entry on native.
-        ...(Platform.OS === 'web' ? [exportMenuItem] : []),
+        // Экспорт в PDF («Книга путешествий») скрыт в мобильной версии сайта —
+        // фича доступна только на десктопе (см. AccountMenu). На мобильном пункт убран.
         {
           key: 'logout',
           label: 'Выход',
