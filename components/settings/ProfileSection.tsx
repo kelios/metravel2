@@ -237,12 +237,14 @@ export default function ProfileSection({
 
             <Text style={styles.subsectionTitle}>Telegram</Text>
             <View style={styles.field}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                <View style={{ gap: 2 }}>
                     <Text style={styles.fieldLabel}>Username в Telegram</Text>
                     {telegramVerified ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Feather name="check-circle" size={14} color={colors.success} />
-                            <Text style={[styles.settingMeta, { color: colors.success }]}>верифицирован</Text>
+                            <Text style={[styles.settingMeta, { color: colors.success, marginLeft: 4 }]}>
+                                верифицирован
+                            </Text>
                         </View>
                     ) : (
                         <Text style={styles.settingMeta}>не подтверждён</Text>
