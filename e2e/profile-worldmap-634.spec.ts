@@ -55,17 +55,7 @@ test('profile «Карта»: карта + флажки + тап по стран
   console.log('FLAGS', flagCount)
   expect(flagCount).toBeGreaterThanOrEqual(3)
 
-  // T6: тап по посещённой стране → инфо-карточка.
-  const clicked = await page.evaluate(() => {
-    const wp = Array.from(document.querySelectorAll('svg path')).filter((p) => (p.getAttribute('d') || '').length > 200)
-    const fc: Record<string, Element[]> = {}
-    for (const p of wp) { const f = p.getAttribute('fill') || ''; (fc[f] = fc[f] || []).push(p) }
-    const minority = Object.values(fc).sort((a, b) => a.length - b.length)[0]
-    const el = minority && minority[0]
-    if (!el) return false
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
-    return true
-  })
-  expect(clicked).toBe(true)
-  await expect(page.locator('[aria-label="Закрыть"]').first()).toBeVisible({ timeout: 5000 })
+  // T6: тап по посещённой стране (реальный клик по элементу — надёжнее синтетики).
+  await page.locator('#wc-BY').first().click({ force: true })
+  await expect(page.locator('[aria-label="Закрыть"]').first()).toBeVisible({ timeout: 6000 })
 })

@@ -35,10 +35,17 @@ export const getWorldMapUnvisitedFill = (isDark: boolean): string =>
 
 const worldCountryGeometry = rawGeometry as Record<string, WorldCountryGeometry>
 
-/** Все ISO alpha-2 коды, для которых есть полигон. */
-export const worldCountryCodes = Object.keys(worldCountryGeometry)
+/**
+ * ISO alpha-2 коды с ПОЛИГОНОМ (d != '') — для отрисовки хорплета.
+ * Микрогосударства/острова без полигона в 110m (VA, MU, SG, MC, MT, …) хранятся
+ * как центроид-only записи (d='') и сюда НЕ входят, но getCountryGeometry их
+ * возвращает — чтобы флаг-маркер (WorldMapFlags) показывался и для них.
+ */
+export const worldCountryCodes = Object.keys(worldCountryGeometry).filter(
+  (code) => worldCountryGeometry[code].d.length > 0
+)
 
-/** Геометрия страны по ISO alpha-2 (регистр не важен). undefined, если полигона нет. */
+/** Геометрия/центроид страны по ISO alpha-2 (регистр не важен). undefined, если кода нет. */
 export const getCountryGeometry = (
   code: string | null | undefined
 ): WorldCountryGeometry | undefined => {

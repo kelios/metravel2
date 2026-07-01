@@ -4,14 +4,14 @@
 // [FE-635-T2] Зум/пан карты (жесты + кнопки +/−/сброс).
 // [FE-635-T3] Клик по стране → список маршрутов пользователя в стране.
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
 
 import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader'
-import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
+import { CountryTravelsPanel } from './CountryTravelsPanel'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useMapZoomPan } from '@/hooks/useMapZoomPan'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -61,9 +61,9 @@ export function ProfileWorldMapTab({
 }: ProfileWorldMapTabProps) {
   const colors = useThemedColors()
   const { isDark } = useTheme()
-  const { isPhone, isLargePhone } = useResponsive()
-  const isMobile = isPhone || isLargePhone
+  const { isMobile } = useResponsive()
   const router = useRouter()
+  const infoCardRef = useRef<View>(null)
 
   const { visitedCodes, byCode, visitedCount, remainingCount, totalCount, isLoading } =
     useVisitedCountries({ userId, travels, personalTravelStatusEntries })
@@ -77,6 +77,17 @@ export function ProfileWorldMapTab({
 
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
   const handleCountryPress = useCallback((code: string) => setSelectedCode(code), [])
+
+  // Клик по стране должен давать явный отклик: проскроллить инфо-панель в вид.
+  useEffect(() => {
+    if (!selectedCode) return
+    const node = infoCardRef.current as unknown as {
+      scrollIntoView?: (opts: { behavior: 'smooth'; block: 'nearest' }) => void
+    } | null
+    if (Platform.OS === 'web' && node?.scrollIntoView) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [selectedCode])
 
   const travelsByCountry = useMemo(() => buildTravelsByCountryCode(travels), [travels])
 
@@ -140,6 +151,11 @@ export function ProfileWorldMapTab({
           borderRadius: DESIGN_TOKENS.radii.md,
           overflow: 'hidden',
           backgroundColor: colors.background,
+          // На desktop карта иначе ~640–880px высотой и инфо-панель уходит под
+          // сгиб. Ограничиваем высоту, чтобы клик по стране давал видимый отклик.
+          alignSelf: 'center',
+          width: '100%',
+          ...(isMobile ? {} : { maxWidth: 920 }),
         },
         zoomControls: {
           position: 'absolute',
@@ -183,11 +199,15 @@ export function ProfileWorldMapTab({
         infoCard: {
           backgroundColor: colors.surfaceMuted,
           borderRadius: DESIGN_TOKENS.radii.md,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: colors.border,
+          borderWidth: 1,
+          borderColor: colors.primary,
           paddingVertical: DESIGN_TOKENS.spacing.sm,
           paddingHorizontal: DESIGN_TOKENS.spacing.md,
           gap: 4,
+          ...Platform.select({
+            web: { boxShadow: DESIGN_TOKENS.shadows.card } as object,
+            default: {},
+          }),
         },
         infoTitleRow: {
           flexDirection: 'row',
@@ -211,22 +231,6 @@ export function ProfileWorldMapTab({
         },
         travelsList: {
           marginTop: DESIGN_TOKENS.spacing.sm,
-          gap: DESIGN_TOKENS.spacing.sm,
-        },
-        travelCard: {
-          backgroundColor: colors.surface,
-          borderRadius: DESIGN_TOKENS.radii.md,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: colors.border,
-          overflow: 'hidden',
-          ...Platform.select({ web: { cursor: 'pointer' } as object, default: {} }),
-        },
-        travelTitle: {
-          paddingVertical: DESIGN_TOKENS.spacing.sm,
-          paddingHorizontal: DESIGN_TOKENS.spacing.md,
-          fontSize: DESIGN_TOKENS.typography.sizes.sm,
-          fontWeight: DESIGN_TOKENS.typography.weights.semibold as '600',
-          color: colors.text,
         },
         emptyTravels: {
           marginTop: DESIGN_TOKENS.spacing.xs,
@@ -236,8 +240,6 @@ export function ProfileWorldMapTab({
       }),
     [colors, isMobile]
   )
-
-  const travelCardHeight = isMobile ? 120 : 150
 
   return (
     <View>
@@ -308,7 +310,7 @@ export function ProfileWorldMapTab({
         </View>
 
         {selected ? (
-          <View style={styles.infoCard}>
+          <View ref={infoCardRef} style={styles.infoCard}>
             <View style={styles.infoTitleRow}>
               <Text style={styles.infoName} numberOfLines={1}>
                 {selected.name}
@@ -339,27 +341,12 @@ export function ProfileWorldMapTab({
 
             {selected.travels.length > 0 ? (
               <View style={styles.travelsList}>
-                {selected.travels.map((travel) => (
-                  <Pressable
-                    key={travel.id}
-                    onPress={() => openTravel(travel.url)}
-                    accessibilityRole="link"
-                    accessibilityLabel={travel.name}
-                    style={styles.travelCard}
-                  >
-                    <ImageCardMedia
-                      src={travel.travel_image_thumb_small_url || travel.travel_image_thumb_url}
-                      alt={travel.name}
-                      height={travelCardHeight}
-                      width="100%"
-                      fit="contain"
-                      blurBackground
-                    />
-                    <Text style={styles.travelTitle} numberOfLines={2}>
-                      {travel.name}
-                    </Text>
-                  </Pressable>
-                ))}
+                <CountryTravelsPanel
+                  travels={selected.travels}
+                  isMobile={isMobile}
+                  onOpenTravel={openTravel}
+                  onShowAll={onBackToOverview}
+                />
               </View>
             ) : (
               <Text style={styles.emptyTravels}>Нет маршрутов в этой стране</Text>
