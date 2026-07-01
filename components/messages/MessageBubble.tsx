@@ -101,7 +101,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
             <View style={styles.systemContainer}>
                 <View style={[styles.systemBubble, { backgroundColor: colors.backgroundSecondary }]}>
                     <Text style={[styles.systemText, { color: colors.textSecondary }]}>
-                        {message.text}
+                        {message.text + ' '}
                     </Text>
                     {!!formattedTime && (
                         <Text style={[styles.timeText, styles.systemTimeText, { color: colors.textMuted }]}>
@@ -115,6 +115,9 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
 
     const bubbleContent = (
         <>
+            {/* Хвостовой пробел обязателен: RN New Architecture на Android меряет ширину текста
+                на ~1 глиф короче отрисовки и обрезает последний символ у ужатого под текст баббла.
+                Невидимый пробел поглощает обрезку. НЕ удалять (то же — на кнопках действий ниже). */}
             <Text
                 style={[
                     styles.messageText,
@@ -122,7 +125,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
                 ]}
                 selectable
             >
-                {message.text}
+                {message.text + ' '}
             </Text>
             {!!formattedTime && (
                 <Text
@@ -164,7 +167,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
                         accessibilityLabel="Удалить сообщение"
                     >
                         <Feather name="trash-2" size={14} color={colors.textSecondary} />
-                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>Удалить</Text>
+                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>{'Удалить '}</Text>
                     </Pressable>
                 </View>
             )}
@@ -177,7 +180,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
                         accessibilityLabel="Подтвердить удаление сообщения"
                     >
                         <Feather name="trash-2" size={14} color={colors.textInverse} />
-                        <Text style={[styles.deleteActionText, { color: colors.textInverse }]}>Удалить</Text>
+                        <Text style={[styles.deleteActionText, { color: colors.textInverse }]}>{'Удалить '}</Text>
                     </Pressable>
                     <Pressable
                         onPress={handleCancelDelete}
@@ -185,7 +188,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
                         accessibilityRole="button"
                         accessibilityLabel="Отмена удаления сообщения"
                     >
-                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>Отмена</Text>
+                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>{'Отмена '}</Text>
                     </Pressable>
                 </View>
             )}
@@ -198,7 +201,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
                         accessibilityLabel="Копировать текст"
                     >
                         <Feather name="copy" size={14} color={colors.textSecondary} />
-                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>Копировать</Text>
+                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>{'Копировать '}</Text>
                     </Pressable>
                     {onDelete && (
                         <Pressable
@@ -208,7 +211,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
                             accessibilityLabel="Удалить сообщение"
                         >
                             <Feather name="trash-2" size={14} color={colors.textSecondary} />
-                            <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>Удалить</Text>
+                            <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>{'Удалить '}</Text>
                         </Pressable>
                     )}
                 </View>
