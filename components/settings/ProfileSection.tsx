@@ -237,7 +237,7 @@ export default function ProfileSection({
 
             <Text style={styles.subsectionTitle}>Telegram</Text>
             <View style={styles.field}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                     <Text style={styles.fieldLabel}>Username в Telegram</Text>
                     {telegramVerified ? (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>

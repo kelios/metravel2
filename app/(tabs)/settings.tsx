@@ -282,24 +282,26 @@ export default function SettingsScreen() {
             )}
             <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.scrollContent}>
                 <View style={styles.pageContainer}>
-                    <View style={styles.header}>
-                        <View style={styles.headerRow}>
-                            <View style={styles.headerTitleBlock}>
-                                {/* На native заголовок «Настройки» уже есть в шапке экрана — не дублируем */}
-                                {Platform.OS === 'web' && <Text style={styles.title}>Настройки</Text>}
+                    {/* На native заголовок «Настройки» и кнопка «Назад» уже есть в нативной шапке экрана — не дублируем */}
+                    {Platform.OS === 'web' && (
+                        <View style={styles.header}>
+                            <View style={styles.headerRow}>
+                                <View style={styles.headerTitleBlock}>
+                                    <Text style={styles.title}>Настройки</Text>
+                                </View>
+                                <Pressable
+                                    style={[styles.backToProfileButton, globalFocusStyles.focusable]}
+                                    onPress={handleBackToProfile}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Назад"
+                                    {...Platform.select({ web: { cursor: 'pointer' } })}
+                                >
+                                    <Feather name="arrow-left" size={16} color={colors.primary} />
+                                    <Text style={styles.backToProfileButtonText}>Назад</Text>
+                                </Pressable>
                             </View>
-                            <Pressable
-                                style={[styles.backToProfileButton, globalFocusStyles.focusable]}
-                                onPress={handleBackToProfile}
-                                accessibilityRole="button"
-                                accessibilityLabel="Назад"
-                                {...Platform.select({ web: { cursor: 'pointer' } })}
-                            >
-                                <Feather name="arrow-left" size={16} color={colors.primary} />
-                                <Text style={styles.backToProfileButtonText}>Назад</Text>
-                            </Pressable>
                         </View>
-                    </View>
+                    )}
 
                     <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Профиль</Text>
