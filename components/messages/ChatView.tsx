@@ -153,7 +153,7 @@ function ChatView({
     ? 0
     : !IS_IOS && keyboardHeight > 0
       ? keyboardHeight + DESIGN_TOKENS.spacing.xs
-      : DOCK_CONTENT_HEIGHT + insets.bottom
+      : DOCK_CONTENT_HEIGHT + insets.bottom + DESIGN_TOKENS.spacing.sm
 
   const [text, setText] = useState('')
   const lastSentAtRef = useRef(0)
