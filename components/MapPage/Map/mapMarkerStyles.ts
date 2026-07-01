@@ -29,6 +29,27 @@ export const sanitizeCssValue = (value: string | undefined, fallback = '') => {
   return sanitized || fallback
 }
 
+// Векторная бренд-птица MeTravel как инлайн-SVG для Leaflet divIcon.
+// Геометрия/палитра синхронизированы с components/layout/BirdLogoIcon.tsx
+// (viewBox 0 0 100 100, бренд-цвета фиксированы). Резкость на любом DPI —
+// заменяет мягкий на retina растр logo_yellow_60x60.png.
+const BIRD_BODY = '#f5842c'
+const BIRD_OUTLINE = '#e07020'
+const BIRD_BEAK = '#f7a24f'
+const BIRD_WING = '#c86a1e'
+const BIRD_EYE = '#2f2a26'
+
+export const buildBirdLogoSvg = (size: number) => `
+  <svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <path d="M74 42 92 40 76 55 Z" fill="${BIRD_BODY}" stroke="${BIRD_OUTLINE}" stroke-width="2" stroke-linejoin="round"/>
+    <ellipse cx="46" cy="52" rx="35" ry="33" fill="${BIRD_BODY}" stroke="${BIRD_OUTLINE}" stroke-width="2.4"/>
+    <path d="M13 43 2 47 13 50 Z" fill="${BIRD_BEAK}" stroke="${BIRD_OUTLINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M39 46 Q61 51 56 76 Q44 68 39 46 Z" fill="none" stroke="${BIRD_WING}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="30" cy="39" r="3.7" fill="${BIRD_EYE}"/>
+    <circle cx="31.2" cy="37.9" r="1.1" fill="#ffffff"/>
+  </svg>
+`
+
 export const getClusterMetrics = (count: number): ClusterMetrics => {
   if (count >= 200) return { size: 68, fontSize: 20 }
   if (count >= 50) return { size: 62, fontSize: 19 }
@@ -134,22 +155,17 @@ export const buildBirdMarkerHtml = () => {
           inset 0 1px 1px rgba(255,255,255,0.82);
         box-sizing: border-box;
       "></div>
-      <img
-        src="/assets/icons/logo_yellow_60x60.png"
-        alt=""
-        draggable="false"
-        style="
-          position: absolute;
-          left: 50%;
-          top: 14px;
-          width: 26px;
-          height: 26px;
-          margin-left: -13px;
-          display: block;
-          object-fit: contain;
-          filter: drop-shadow(0 1px 1px rgba(0,0,0,0.16));
-        "
-      />
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 14px;
+        width: 26px;
+        height: 26px;
+        margin-left: -13px;
+        display: block;
+        filter: drop-shadow(0 1px 1px rgba(0,0,0,0.16));
+        box-sizing: border-box;
+      ">${buildBirdLogoSvg(26)}</div>
     </div>
   `
 }
