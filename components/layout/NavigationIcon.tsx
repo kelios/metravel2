@@ -115,33 +115,27 @@ function RouteWalkIcon({
       style={style as any}
       {...getIconAccessibilityProps()}
     >
-      {/* голова */}
-      <Circle cx="13.5" cy="4.6" r="1.9" stroke={color} strokeWidth={strokeWidth} />
-      {/* корпус + ноги */}
+      {/* голова — залита, чтобы читалась на 22px */}
+      <Circle cx="12" cy="4.3" r="2.1" fill={color} />
+      {/* корпус → передняя нога (шаг), один контур */}
       <Path
-        d="M13.5 7.2 12 13l-2.4 4.6"
+        d="M12 6.6 11 12.6 14.4 19.6"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+      {/* задняя нога */}
       <Path
-        d="M12 13l2.6 3.4"
+        d="M11 12.6 8.2 19.6"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* руки */}
+      {/* руки — единый мах через грудь (передняя→грудь→задняя) */}
       <Path
-        d="M13.5 9 16.6 10.8"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M13.5 9 10.6 11"
+        d="M15 11 11.6 8.6 8.4 10.2"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"

@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
-import { Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
+import React, { useMemo } from 'react';
+import { Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import BirdLogoIcon from './BirdLogoIcon';
 
 type LogoProps = {
     isCompact?: boolean;
@@ -16,31 +17,16 @@ export default React.memo(function Logo({
 }: LogoProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => getStyles(colors), [colors]);
-    const [logoLoadFailed, setLogoLoadFailed] = useState(false);
-    const primarySource =
-        Platform.OS === 'web'
-            ? ({ uri: '/assets/icons/logo_yellow_60x60.png' } as const)
-            : require('../../assets/icons/logo_yellow_60x60.png');
-    const fallbackSource =
-        Platform.OS === 'web'
-            ? ({ uri: '/assets/icons/logo_yellow.png' } as const)
-            : require('../../assets/icons/logo_yellow_60x60.png');
 
     return (
         <TouchableOpacity
             onPress={() => router.push('/')}
             style={styles.logoContainer}
             accessibilityRole="link"
+            accessibilityLabel="MeTravel логотип"
             accessibilityHint="Перейти на главную страницу"
         >
-            <Image
-                source={logoLoadFailed ? fallbackSource : primarySource}
-                style={[styles.logo, isCompact && styles.logoCompact]}
-                resizeMode="contain"
-                onError={() => setLogoLoadFailed(true)}
-                accessibilityLabel="MeTravel логотип"
-                alt="MeTravel логотип"
-            />
+            <BirdLogoIcon size={isCompact ? 26 : 32} />
             {showWordmark && (
                 <Text style={styles.logoTextRow}>
                     <Text style={styles.logoTextMe}>Me</Text><Text style={styles.logoTextTravel}>Travel</Text>
@@ -59,28 +45,17 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
         minHeight: 44,
         flexShrink: 0,
     },
-    logo: { 
-        width: 32, 
-        height: 32,
-        ...Platform.select({
-            web: { objectFit: 'contain' } as any,
-        }),
-    },
-    logoCompact: {
-        width: 26, 
-        height: 26,
-    },
-    logoTextMe: { 
+    logoTextMe: {
         color: colors.primaryText,
         fontSize: 18,
         fontWeight: '600',
     },
-    logoTextTravel: { 
+    logoTextTravel: {
         color: colors.success,
         fontSize: 18,
         fontWeight: '600',
     },
-    logoTextRow: { 
+    logoTextRow: {
         marginLeft: 8,
     },
 });
