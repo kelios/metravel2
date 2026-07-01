@@ -29,7 +29,13 @@ export const getHeaderActivePath = (pathname: string) => {
   return match ?? pathname
 }
 
-// Top-level tabs where HeaderContextBar renders no visible content (JSON-LD only).
+// Страницы, где HeaderContextBar свёрнут до JSON-LD (нет видимого бара):
+//  1) верхняя навигация — её идентичность уже есть в основном меню (desktop) / доке (mobile);
+//  2) кабинетные экраны с собственной шапкой (ProfileCollectionHeader: заголовок + «Назад»)
+//     — глобальный контекст-бар/крошки дублировали бы её.
+// Кабинетные без своей шапки (/settings, /messages, /subscriptions, /export, …) и
+// информационные/правовые (/about, /terms, …) страницы тут СПЕЦИАЛЬНО отсутствуют —
+// на них показываются хлебные крошки (см. useBreadcrumbModel).
 // Keep in sync with HeaderContextBar.tsx render branches.
 const TOP_LEVEL_PATHS_NO_CONTEXT_BAR = new Set<string>([
   '/',
@@ -42,16 +48,8 @@ const TOP_LEVEL_PATHS_NO_CONTEXT_BAR = new Set<string>([
   '/quests',
   '/favorites',
   '/history',
-  '/settings',
-  '/messages',
-  '/subscriptions',
-  '/about',
-  '/privacy',
-  '/cookies',
-  '/terms',
-  '/disclaimer',
-  '/community-rules',
-  '/trip-rules',
+  '/calendar',
+  '/userpoints',
 ])
 
 export const shouldShowHeaderContextBar = (pathname: string, isMobile: boolean) => {

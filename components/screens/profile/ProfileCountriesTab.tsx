@@ -33,14 +33,6 @@ interface ProfileCountriesTabProps {
   onBackToOverview: () => void
 }
 
-const formatCountryCount = (count: number) => {
-  const mod10 = count % 10
-  const mod100 = count % 100
-  if (mod10 === 1 && mod100 !== 11) return `${count} страна`
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} страны`
-  return `${count} стран`
-}
-
 const formatVisitCount = (count: number) => {
   const mod10 = count % 10
   const mod100 = count % 100
@@ -158,32 +150,23 @@ export function ProfileCountriesTab({
     <View style={styles.wrap}>
       <ProfileSectionHeader
         title="Страны"
-        subtitle="Ваш личный прогресс по странам из маршрутов и отметок «Был здесь»"
+        subtitle="Ваш прогресс по посещённым странам"
         onBack={onBackToOverview}
         backLabel="Обзор"
       />
 
       <View style={styles.summaryCard}>
-        <View style={styles.summaryHeader}>
-          <View style={styles.summaryIcon}>
-            <Feather name="flag" size={18} color={colors.primary} />
-          </View>
-          <View style={styles.summaryCopy}>
-            <Text style={styles.summaryTitle}>Карта стран</Text>
-            <Text style={styles.summaryText}>
-              Посетили {formatCountryCount(stats.visitedCount)}. Осталось {formatCountryCount(stats.remainingCount)}.
-            </Text>
-          </View>
-        </View>
-
         <View style={styles.metricsRow}>
           <CountryMetric label="Посетили" value={stats.visitedCount} tone="success" />
           <CountryMetric label="Осталось" value={stats.remainingCount} tone="muted" />
-          <CountryMetric label="Всего" value={stats.totalCount} tone="primary" />
+          <CountryMetric label="Всего" value={stats.totalCount} tone="neutral" />
         </View>
 
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+        <View style={styles.progressRow}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+          </View>
+          <Text style={styles.progressPercent}>{progressPercent}%</Text>
         </View>
 
         {showTravelsSyncing || (shouldLoadFallbackCatalog && countriesLoading) || showPartialCatalogWarning ? (
@@ -195,10 +178,10 @@ export function ProfileCountriesTab({
             )}
             <Text style={styles.noticeText}>
               {showTravelsSyncing
-                ? `Догружаем маршруты: ${loadedTravelsCount} из ${totalTravelsCount}`
+                ? `Загружаем маршруты: ${loadedTravelsCount} из ${totalTravelsCount}`
                 : shouldLoadFallbackCatalog && countriesLoading
-                  ? 'Загружаем резервный каталог стран'
-                  : 'API прогресса стран недоступен, показываем резервный расчёт'}
+                  ? 'Загружаем список стран'
+                  : 'Не удалось обновить данные, показываем сохранённые'}
             </Text>
           </View>
         ) : null}
@@ -214,7 +197,7 @@ export function ProfileCountriesTab({
         <View style={styles.emptyCard}>
           <Feather name="alert-circle" size={18} color={colors.warning} />
           <Text style={styles.emptyTitle}>Не удалось загрузить страны</Text>
-          <Text style={styles.emptyText}>Откройте вкладку позже: профиль сохранит прогресс, когда каталог снова будет доступен.</Text>
+          <Text style={styles.emptyText}>Попробуйте открыть вкладку позже — ваш прогресс сохранится.</Text>
         </View>
       ) : (
         <>
@@ -237,13 +220,13 @@ export function ProfileCountriesTab({
   }: {
     label: string
     value: number
-    tone: 'success' | 'primary' | 'muted'
+    tone: 'success' | 'neutral' | 'muted'
   }) {
     const toneColor =
       tone === 'success'
         ? colors.success
-        : tone === 'primary'
-          ? colors.primary
+        : tone === 'neutral'
+          ? colors.text
           : colors.textMuted
 
     return (
@@ -280,58 +263,42 @@ export function ProfileCountriesTab({
   function ApplicationTravelHistorySummary({ rows }: { rows: ProfileCountryApplicationRow[] }) {
     return (
       <View style={styles.applicationCard}>
-        <View style={styles.applicationHeader}>
-          <View style={styles.applicationTitleRow}>
-            <Feather name="clipboard" size={16} color={colors.primary} />
-            <Text style={styles.applicationTitle}>Сводка для анкеты</Text>
-          </View>
-          <Text style={styles.applicationSubtitle}>
-            Черновик по загруженным маршрутам: страны, количество посещений и даты, которые уже есть в данных.
-          </Text>
+        <View style={styles.applicationTitleRow}>
+          <Feather name="bar-chart-2" size={16} color={colors.primary} />
+          <Text style={styles.applicationTitle}>Статистика по странам</Text>
         </View>
 
         {rows.length === 0 ? (
           <View style={styles.applicationEmpty}>
             <Feather name="info" size={16} color={colors.textMuted} />
             <Text style={styles.applicationMutedText}>
-              Посещённых стран пока нет. Когда появятся маршруты или отметки «Был здесь», здесь соберётся список для анкет.
+              Посещённых стран пока нет. Когда появятся маршруты или отметки «Был здесь», здесь появится статистика по странам.
             </Text>
           </View>
         ) : (
           <View style={styles.applicationList}>
             {rows.map((row) => (
               <View key={row.id} style={styles.applicationRow}>
-                <View style={styles.applicationRowHeader}>
-                  <View style={styles.applicationCountryTitleWrap}>
-                    <Text style={styles.applicationCountryTitle} numberOfLines={2}>
-                      {row.name}
-                    </Text>
-                    {row.code ? (
-                      <Text style={styles.applicationCountryCode}>{row.code}</Text>
-                    ) : null}
-                  </View>
-                  <View style={styles.applicationCountBadge}>
-                    <Text style={styles.applicationCountText}>{formatVisitCount(row.visitCount)}</Text>
-                  </View>
+                <View style={styles.applicationCountryTitleWrap}>
+                  <Text style={styles.applicationCountryTitle} numberOfLines={1}>
+                    {row.name}
+                  </Text>
+                  {row.code ? (
+                    <Text style={styles.applicationCountryCode}>{row.code}</Text>
+                  ) : null}
                 </View>
-
-                <Text selectable style={styles.applicationCopyLine}>
-                  {row.summaryText}
-                </Text>
-
-                <Text style={styles.applicationMutedText}>
-                  {row.firstKnownDateLabel
-                    ? 'Показываем первую известную дату поездки.'
-                    : 'Даты посещения пока не указаны в загруженных маршрутах.'}
-                </Text>
+                {row.firstKnownDateLabel ? (
+                  <Text style={styles.applicationDateText} numberOfLines={1}>
+                    {row.firstKnownDateLabel}
+                  </Text>
+                ) : null}
+                <View style={styles.applicationCountBadge}>
+                  <Text style={styles.applicationCountText}>{formatVisitCount(row.visitCount)}</Text>
+                </View>
               </View>
             ))}
           </View>
         )}
-
-        <Text style={styles.applicationDisclaimer}>
-          Перед подачей сверяйте сводку с паспортом и билетами: это помощник по вашим данным, а не юридическая проверка.
-        </Text>
       </View>
     )
   }
@@ -342,10 +309,10 @@ export function ProfileCountriesTab({
         <View style={styles.mapHeader}>
           <View style={styles.mapTitleRow}>
             <Feather name="map" size={16} color={colors.primary} />
-            <Text style={styles.mapTitle}>Карта по зонам</Text>
+            <Text style={styles.mapTitle}>Прогресс по регионам</Text>
           </View>
           <Text style={styles.mapSubtitle}>
-            Зелёные флажки уже закрыты, серые зоны ещё ждут маршрута.
+            Зелёным — где уже были, серым — куда ещё предстоит.
           </Text>
         </View>
         <View style={styles.mapGrid}>
@@ -418,19 +385,12 @@ export function ProfileCountriesTab({
         accessibilityLabel={`${country.name}: ${country.visited ? 'посещена' : 'не посещена'}`}
       >
         <CountryFlagBadge country={country} />
-        <View style={styles.countryCopy}>
-          <Text
-            style={[styles.countryName, country.visited ? null : styles.countryNameMuted]}
-            numberOfLines={2}
-          >
-            {country.name}
-          </Text>
-          {country.code ? (
-            <Text style={[styles.countryCode, country.visited ? null : styles.countryNameMuted]}>
-              Код страны: {country.code}
-            </Text>
-          ) : null}
-        </View>
+        <Text
+          style={[styles.countryName, country.visited ? null : styles.countryNameMuted]}
+          numberOfLines={1}
+        >
+          {country.name}
+        </Text>
         <Feather
           name={country.visited ? 'check-circle' : 'circle'}
           size={16}
@@ -444,45 +404,17 @@ export function ProfileCountriesTab({
 const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boolean) =>
   StyleSheet.create({
     wrap: {
-      gap: DESIGN_TOKENS.spacing.md,
+      gap: DESIGN_TOKENS.spacing.sm,
       paddingBottom: DESIGN_TOKENS.spacing.md,
     },
     summaryCard: {
       marginHorizontal: DESIGN_TOKENS.spacing.md,
-      padding: DESIGN_TOKENS.spacing.md,
+      padding: DESIGN_TOKENS.spacing.sm,
       borderRadius: DESIGN_TOKENS.radii.lg,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      gap: DESIGN_TOKENS.spacing.md,
-    },
-    summaryHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
       gap: DESIGN_TOKENS.spacing.sm,
-    },
-    summaryIcon: {
-      width: 42,
-      height: 42,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.primarySoft,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    summaryCopy: {
-      flex: 1,
-      minWidth: 0,
-      gap: 2,
-    },
-    summaryTitle: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
-      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
-      color: colors.text,
-    },
-    summaryText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      lineHeight: 20,
-      color: colors.textMuted,
     },
     metricsRow: {
       flexDirection: 'row',
@@ -491,18 +423,21 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
     },
     metric: {
       flexGrow: 1,
-      flexBasis: isCompact ? 92 : 140,
-      paddingVertical: 10,
+      flexBasis: isCompact ? 80 : 120,
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 7,
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.backgroundSecondary,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      gap: 2,
     },
     metricValue: {
-      fontSize: 22,
-      lineHeight: 26,
+      fontSize: 18,
+      lineHeight: 22,
       fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
     },
     metricLabel: {
@@ -510,7 +445,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       color: colors.textMuted,
       fontWeight: DESIGN_TOKENS.typography.weights.medium as never,
     },
+    progressRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
     progressTrack: {
+      flex: 1,
       height: 8,
       borderRadius: DESIGN_TOKENS.radii.pill,
       overflow: 'hidden',
@@ -520,6 +461,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       height: '100%',
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.success,
+    },
+    progressPercent: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
+      color: colors.success,
+      minWidth: 34,
+      textAlign: 'right',
     },
     noticeRow: {
       flexDirection: 'row',
@@ -559,15 +507,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
     },
     applicationCard: {
       marginHorizontal: DESIGN_TOKENS.spacing.md,
-      padding: DESIGN_TOKENS.spacing.md,
+      padding: DESIGN_TOKENS.spacing.sm,
       borderRadius: DESIGN_TOKENS.radii.lg,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      gap: DESIGN_TOKENS.spacing.md,
-    },
-    applicationHeader: {
-      gap: 4,
+      gap: DESIGN_TOKENS.spacing.sm,
     },
     applicationTitleRow: {
       flexDirection: 'row',
@@ -578,11 +523,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       fontSize: DESIGN_TOKENS.typography.sizes.md,
       fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
       color: colors.text,
-    },
-    applicationSubtitle: {
-      fontSize: DESIGN_TOKENS.typography.sizes.xs,
-      lineHeight: 18,
-      color: colors.textMuted,
     },
     applicationEmpty: {
       flexDirection: 'row',
@@ -595,19 +535,22 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       borderColor: colors.borderLight,
     },
     applicationList: {
-      gap: DESIGN_TOKENS.spacing.sm,
-    },
-    applicationRow: {
-      paddingTop: DESIGN_TOKENS.spacing.sm,
-      borderTopWidth: 1,
-      borderTopColor: colors.borderLight,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: DESIGN_TOKENS.spacing.xs,
     },
-    applicationRowHeader: {
+    applicationRow: {
+      flexGrow: 1,
+      flexBasis: isCompact ? '100%' : 240,
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: DESIGN_TOKENS.spacing.sm,
+      gap: DESIGN_TOKENS.spacing.xs,
+      paddingVertical: 7,
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.backgroundSecondary,
     },
     applicationCountryTitleWrap: {
       flex: 1,
@@ -615,6 +558,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       flexDirection: 'row',
       alignItems: 'center',
       gap: DESIGN_TOKENS.spacing.xs,
+    },
+    applicationDateText: {
+      fontSize: 11,
+      lineHeight: 14,
+      color: colors.textMuted,
     },
     applicationCountryTitle: {
       flexShrink: 1,
@@ -645,11 +593,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
       color: colors.primary,
     },
-    applicationCopyLine: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      lineHeight: 20,
-      color: colors.text,
-    },
     applicationMutedText: {
       flex: 1,
       minWidth: 0,
@@ -657,19 +600,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       lineHeight: 18,
       color: colors.textMuted,
     },
-    applicationDisclaimer: {
-      fontSize: DESIGN_TOKENS.typography.sizes.xs,
-      lineHeight: 18,
-      color: colors.textMuted,
-    },
     mapCard: {
       marginHorizontal: DESIGN_TOKENS.spacing.md,
-      padding: DESIGN_TOKENS.spacing.md,
+      padding: DESIGN_TOKENS.spacing.sm,
       borderRadius: DESIGN_TOKENS.radii.lg,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      gap: DESIGN_TOKENS.spacing.md,
+      gap: DESIGN_TOKENS.spacing.sm,
     },
     mapHeader: {
       gap: 4,
@@ -798,12 +736,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
     },
     countryTile: {
       flexGrow: 1,
-      flexBasis: isCompact ? '100%' : 190,
-      minHeight: 54,
+      flexBasis: isCompact ? '48%' : 170,
       flexDirection: 'row',
       alignItems: 'center',
       gap: DESIGN_TOKENS.spacing.xs,
-      paddingVertical: 10,
+      paddingVertical: 6,
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       borderRadius: DESIGN_TOKENS.radii.md,
       borderWidth: 1,
@@ -855,12 +792,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
     flagBadgeTextMuted: {
       color: colors.textMuted,
     },
-    countryCopy: {
+    countryName: {
       flex: 1,
       minWidth: 0,
-      gap: 2,
-    },
-    countryName: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       lineHeight: 18,
       color: colors.text,
@@ -868,12 +802,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
     },
     countryNameMuted: {
       color: colors.textMuted,
-    },
-    countryCode: {
-      fontSize: 10,
-      lineHeight: 12,
-      color: colors.textMuted,
-      fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
-      letterSpacing: 0,
     },
   })

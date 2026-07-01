@@ -81,10 +81,50 @@ const pageTranslations: Record<string, string> = {
   disclaimer: 'Отказ от ответственности',
   'community-rules': 'Правила сообщества',
   'trip-rules': 'Правила участия в поездках',
+  'security-journal': 'Журнал безопасности',
+  'privacy-settings': 'Настройки приватности',
   trips: 'Поездки',
   plan: 'Планирование',
   create: 'Новая поездка',
 };
+
+const PROFILE_CRUMB: BreadcrumbModelItem = { label: 'Профиль', path: '/profile' };
+const SETTINGS_CRUMB: BreadcrumbModelItem = { label: 'Настройки', path: '/settings' };
+
+// Одноуровневые страницы личного кабинета БЕЗ собственной шапки — крошки строятся
+// через «Профиль» (при необходимости — ещё и через «Настройки»).
+// Экраны с собственной шапкой (ProfileCollectionHeader): /favorites, /history,
+// /calendar, /userpoints — здесь НЕ перечислены, чтобы не было двойной шапки
+// (их бар подавляется в customHeaderModel.TOP_LEVEL_PATHS_NO_CONTEXT_BAR).
+const CABINET_ROUTE_CRUMBS: Record<string, BreadcrumbModelItem[]> = {
+  '/profile': [PROFILE_CRUMB],
+  '/settings': [PROFILE_CRUMB, SETTINGS_CRUMB],
+  '/messages': [PROFILE_CRUMB, { label: 'Сообщения', path: '/messages' }],
+  '/subscriptions': [PROFILE_CRUMB, { label: 'Подписки', path: '/subscriptions' }],
+  '/export': [PROFILE_CRUMB, { label: 'Экспорт', path: '/export' }],
+  '/security-journal': [
+    PROFILE_CRUMB,
+    SETTINGS_CRUMB,
+    { label: 'Журнал безопасности', path: '/security-journal' },
+  ],
+  '/privacy-settings': [
+    PROFILE_CRUMB,
+    SETTINGS_CRUMB,
+    { label: 'Настройки приватности', path: '/privacy-settings' },
+  ],
+};
+
+// Информационные/правовые одноуровневые страницы — одна крошка под «Главная».
+const INFO_ROUTES = new Set<string>([
+  '/about',
+  '/contact',
+  '/privacy',
+  '/terms',
+  '/cookies',
+  '/disclaimer',
+  '/community-rules',
+  '/trip-rules',
+]);
 
 function normalizePathname(pathname: string | null | undefined) {
   if (!pathname) return '/';
@@ -305,47 +345,39 @@ export function useBreadcrumbModel(): BreadcrumbModel {
 
     const parts = p.split('/').filter(Boolean);
 
-    // ✅ показываем breadcrumbs на ключевых одноуровневых страницах (личный кабинет)
-    // Требование: вложенность через Профиль
-    const cabinetSingleLevelRoutes = new Set([
-      '/profile',
-      '/settings',
-      '/messages',
-      '/subscriptions',
-      '/favorites',
-      '/history',
-    ]);
-
-    const getCabinetCrumbsForSingleLevelRoute = (route: string): BreadcrumbModelItem[] => {
-      if (route === '/profile') return [{ label: 'Профиль', path: '/profile' }];
-
-      const pageLabel = getRootTitle(route);
-      return [
-        { label: 'Профиль', path: '/profile' },
-        { label: pageLabel, path: route },
-      ];
-    };
-
     if (parts.length === 1) {
       const pageContextTitle = getRootTitle(p);
 
-      // По умолчанию одноуровневые страницы не показывают breadcrumbs.
-      // Но для личного кабинета и связанных разделов нужен явный контекст.
-      if (cabinetSingleLevelRoutes.has(p)) {
-        const items = getCabinetCrumbsForSingleLevelRoute(p);
-        const currentLabel = items[items.length - 1]?.label || pageContextTitle;
-        const backToPath = items.length >= 2 ? items[items.length - 2].path : '/';
+      // Личный кабинет: вложенность через «Профиль» (при необходимости — «Настройки»).
+      const cabinetCrumbs = CABINET_ROUTE_CRUMBS[p];
+      if (cabinetCrumbs) {
+        const currentLabel = cabinetCrumbs[cabinetCrumbs.length - 1]?.label || pageContextTitle;
+        const backToPath = cabinetCrumbs.length >= 2 ? cabinetCrumbs[cabinetCrumbs.length - 2].path : '/';
 
         return {
-          items,
-          depth: items.length + 1,
+          items: cabinetCrumbs,
+          depth: cabinetCrumbs.length + 1,
           currentTitle: currentLabel,
-          pageContextTitle: items.length >= 2 ? 'Профиль' : getRootTitle('/'),
+          pageContextTitle: cabinetCrumbs.length >= 2 ? cabinetCrumbs[0].label : getRootTitle('/'),
           backToPath,
           showBreadcrumbs: true,
         };
       }
 
+      // Информационные/правовые страницы: одна крошка под «Главная».
+      if (INFO_ROUTES.has(p)) {
+        const items: BreadcrumbModelItem[] = [{ label: pageContextTitle, path: p }];
+        return {
+          items,
+          depth: items.length + 1,
+          currentTitle: pageContextTitle,
+          pageContextTitle: 'Главная',
+          backToPath: '/',
+          showBreadcrumbs: true,
+        };
+      }
+
+      // По умолчанию одноуровневые страницы (топ-навигация) не показывают breadcrumbs.
       return {
         items: [],
         depth: 1,

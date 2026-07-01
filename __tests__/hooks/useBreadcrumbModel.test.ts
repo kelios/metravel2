@@ -165,6 +165,89 @@ describe('useBreadcrumbModel', () => {
     expect(result.current.currentTitle).toBe(expectedTitle);
   });
 
+  it('builds nested breadcrumbs for export under profile', async () => {
+    usePathname.mockReturnValue('/export');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy();
+    });
+
+    expect(result.current.showBreadcrumbs).toBe(true);
+    expect(result.current.backToPath).toBe('/profile');
+    expect(result.current.items).toEqual([
+      { label: 'Профиль', path: '/profile' },
+      { label: 'Экспорт', path: '/export' },
+    ]);
+    expect(result.current.currentTitle).toBe('Экспорт');
+  });
+
+  it('does not build a breadcrumb trail for self-headed cabinet pages', async () => {
+    // /favorites, /history, /calendar, /userpoints render their own
+    // ProfileCollectionHeader — the model must not add a redundant trail.
+    for (const path of ['/favorites', '/history', '/calendar', '/userpoints']) {
+      usePathname.mockReturnValue(path);
+      useLocalSearchParams.mockReturnValue({});
+      const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+      await waitFor(() => expect(result.current).toBeTruthy());
+      expect(result.current.showBreadcrumbs).toBe(false);
+      expect(result.current.items).toEqual([]);
+    }
+  });
+
+  it('builds three-level breadcrumbs for security-journal under profile › settings', async () => {
+    usePathname.mockReturnValue('/security-journal');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy();
+    });
+
+    expect(result.current.showBreadcrumbs).toBe(true);
+    expect(result.current.backToPath).toBe('/settings');
+    expect(result.current.items).toEqual([
+      { label: 'Профиль', path: '/profile' },
+      { label: 'Настройки', path: '/settings' },
+      { label: 'Журнал безопасности', path: '/security-journal' },
+    ]);
+    expect(result.current.currentTitle).toBe('Журнал безопасности');
+  });
+
+  it('builds a single breadcrumb under home for info pages', async () => {
+    usePathname.mockReturnValue('/about');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy();
+    });
+
+    expect(result.current.showBreadcrumbs).toBe(true);
+    expect(result.current.pageContextTitle).toBe('Главная');
+    expect(result.current.backToPath).toBe('/');
+    expect(result.current.items).toEqual([{ label: 'О сайте', path: '/about' }]);
+  });
+
+  it('does not show breadcrumbs on top-level navigation pages', async () => {
+    usePathname.mockReturnValue('/map');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy();
+    });
+
+    expect(result.current.showBreadcrumbs).toBe(false);
+    expect(result.current.items).toEqual([]);
+    expect(result.current.currentTitle).toBe('Карта');
+  });
+
   it('exports default hook alias for module interop stability', () => {
     const mod = require('@/hooks/useBreadcrumbModel');
     expect(mod.default).toBe(mod.useBreadcrumbModel);

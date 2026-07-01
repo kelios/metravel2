@@ -389,17 +389,17 @@ describe('ProfileScreen', () => {
       },
     ];
 
-    const { findByLabelText, findByText, getAllByText } = renderProfile();
+    const { findByLabelText, findByText, findAllByText, getAllByText } = renderProfile();
 
     fireEvent.press(await findByLabelText('Страны профиля'));
 
-    expect(await findByText('Карта стран')).toBeTruthy();
-    expect(await findByText('Сводка для анкеты')).toBeTruthy();
-    expect(await findByText('Польша (PL); 2 раза; первая известная дата: 12 мая 2024')).toBeTruthy();
-    expect(getAllByText('Показываем первую известную дату поездки.').length).toBeGreaterThan(0);
-    expect(await findByText('Карта по зонам')).toBeTruthy();
+    expect((await findAllByText('Посетили')).length).toBeGreaterThan(0);
+    expect(await findByText('Статистика по странам')).toBeTruthy();
+    expect((await findAllByText('12 мая 2024')).length).toBeGreaterThan(0);
+    expect(getAllByText('2 раза').length).toBeGreaterThan(0);
+    expect(await findByText('Прогресс по регионам')).toBeTruthy();
     expect(getAllByText('Европа').length).toBeGreaterThan(0);
-    expect(await findByText('Посетили 3 страны. Осталось 1 страна.')).toBeTruthy();
+    expect(await findByText('75%')).toBeTruthy();
     expect(await findByLabelText('Польша: посещена')).toBeTruthy();
     expect(await findByLabelText('Литва: посещена')).toBeTruthy();
     expect(await findByLabelText('Беларусь: посещена')).toBeTruthy();

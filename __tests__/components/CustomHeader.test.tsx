@@ -112,8 +112,10 @@ describe('CustomHeader', () => {
             expect(utils.getByLabelText('Маршруты')).toBeTruthy();
             expect(utils.getByLabelText('Беларусь')).toBeTruthy();
             expect(utils.getByLabelText('Карта')).toBeTruthy();
-            expect(utils.getByLabelText('Попутчики')).toBeTruthy();
+            expect(utils.getByLabelText('Места')).toBeTruthy();
+            expect(utils.getByLabelText('Случайный маршрут')).toBeTruthy();
             expect(utils.getByLabelText('Квесты')).toBeTruthy();
+            expect(utils.queryByLabelText('Попутчики')).toBeNull();
         });
 
         it('highlights active navigation item', () => {
@@ -134,13 +136,13 @@ describe('CustomHeader', () => {
             expect(mockPush).toHaveBeenCalledWith('/map');
         });
 
-        it('navigates to public trips from desktop navigation', () => {
+        it('navigates to places from desktop navigation', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
 
-            fireEvent.press(utils.getByLabelText('Попутчики'));
+            fireEvent.press(utils.getByLabelText('Места'));
 
-            expect(mockPush).toHaveBeenCalledWith('/trips');
+            expect(mockPush).toHaveBeenCalledWith('/places');
         });
 
         it('does not highlight ideas navigation item on travel details routes', () => {
@@ -159,12 +161,12 @@ describe('CustomHeader', () => {
             expect(questsItem.props.accessibilityState?.selected).toBe(true);
         });
 
-        it('correctly identifies active path for public trip routes', () => {
-            (usePathname as jest.Mock).mockReturnValue('/trips/42');
+        it('correctly identifies active path for roulette routes', () => {
+            (usePathname as jest.Mock).mockReturnValue('/roulette');
             const utils = renderHeader();
 
-            const tripsItem = utils.getByLabelText('Попутчики');
-            expect(tripsItem.props.accessibilityState?.selected).toBe(true);
+            const rouletteItem = utils.getByLabelText('Случайный маршрут');
+            expect(rouletteItem.props.accessibilityState?.selected).toBe(true);
         });
 
         it('does not render mobile burger button on desktop', () => {

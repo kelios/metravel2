@@ -8,6 +8,7 @@ import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader';
 import AwardsHub from '@/components/achievements/AwardsHub';
 import GamificationOnboarding from '@/components/achievements/GamificationOnboarding';
 import PlaceFirstBadgesSection from '@/components/achievements/PlaceFirstBadgesSection';
+import { ProfileSectionsHub } from '@/components/screens/profile/ProfileSectionsHub';
 import { useMyAchievements } from '@/hooks/useAchievementsApi';
 import { useSeedGamificationFromAchievements } from '@/hooks/useGamification';
 
@@ -15,6 +16,7 @@ interface ProfileOverviewTabProps {
   userProp: { name: string; email: string; avatar?: string | null };
   profile: Parameters<typeof ProfileCompleteness>[0]['profile'];
   travelsCount: number;
+  userId?: string | number | null;
   onCreateRoute: () => void;
   onStartQuest: () => void;
 }
@@ -23,6 +25,7 @@ export function ProfileOverviewTab({
   userProp,
   profile,
   travelsCount,
+  userId,
   onCreateRoute,
   onStartQuest,
 }: ProfileOverviewTabProps) {
@@ -70,6 +73,7 @@ export function ProfileOverviewTab({
         subtitle="Заполните профиль, чтобы открыть больше возможностей"
       />
       <ProfileCompleteness user={userProp} profile={profile} travelsCount={travelsCount} />
+      <ProfileSectionsHub userId={userId} />
     </View>
   );
 }

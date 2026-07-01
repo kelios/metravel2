@@ -618,6 +618,7 @@ export default function ProfileScreen() {
         userProp={userProp}
         profile={profile}
         travelsCount={stats.travelsCount}
+        userId={userId}
         onCreateRoute={handleCreateFirstRoute}
         onStartQuest={handleStartFirstQuest}
       />
@@ -626,6 +627,7 @@ export default function ProfileScreen() {
       userProp,
       profile,
       stats.travelsCount,
+      userId,
       handleCreateFirstRoute,
       handleStartFirstQuest,
     ]
