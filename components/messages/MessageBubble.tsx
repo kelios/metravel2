@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable, Alert, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -16,6 +16,8 @@ interface MessageBubbleProps {
 function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const { width: windowWidth } = useWindowDimensions();
+    const bubbleMaxWidth = Math.round(windowWidth * 0.75);
     const [showActions, setShowActions] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -136,20 +138,23 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
     );
 
     return (
-        <View style={[styles.container, isOwn ? styles.containerOwn : styles.containerOther]}>
-            <Pressable
-                testID="message-bubble-pressable"
-                onLongPress={handleLongPress}
-                delayLongPress={400}
-                style={[
-                    styles.bubble,
-                    isOwn
-                        ? [styles.bubbleOwn, { backgroundColor: colors.primary }]
-                        : [styles.bubbleOther, { backgroundColor: colors.surface, borderColor: colors.borderLight }],
-                ]}
-            >
-                {bubbleContent}
-            </Pressable>
+        <View style={styles.container}>
+            <View style={isOwn ? styles.bubbleRowOwn : styles.bubbleRowOther}>
+                <Pressable
+                    testID="message-bubble-pressable"
+                    onLongPress={handleLongPress}
+                    delayLongPress={400}
+                    style={[
+                        styles.bubble,
+                        { maxWidth: bubbleMaxWidth },
+                        isOwn
+                            ? [styles.bubbleOwn, { backgroundColor: colors.primary, borderColor: colors.primary }]
+                            : [styles.bubbleOther, { backgroundColor: colors.surface, borderColor: colors.borderLight }],
+                    ]}
+                >
+                    {bubbleContent}
+                </Pressable>
+            </View>
             {onDelete && !showDeleteConfirm && (
                 <View style={styles.inlineActionRow}>
                     <Pressable
@@ -218,20 +223,22 @@ const createStyles = (_colors: ThemedColors) =>
             paddingHorizontal: DESIGN_TOKENS.spacing.md,
             marginBottom: DESIGN_TOKENS.spacing.sm,
         },
-        containerOwn: {
-            alignItems: 'flex-end',
+        bubbleRowOwn: {
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
         },
-        containerOther: {
-            alignItems: 'flex-start',
+        bubbleRowOther: {
+            flexDirection: 'row',
+            justifyContent: 'flex-start',
         },
         bubble: {
-            maxWidth: '75%' as any,
             paddingHorizontal: DESIGN_TOKENS.spacing.md,
             paddingVertical: DESIGN_TOKENS.spacing.sm,
             borderRadius: DESIGN_TOKENS.radii.lg,
         },
         bubbleOwn: {
             borderBottomRightRadius: 4,
+            borderWidth: 1,
         },
         bubbleOther: {
             borderBottomLeftRadius: 4,
@@ -240,6 +247,8 @@ const createStyles = (_colors: ThemedColors) =>
         messageText: {
             fontSize: 15,
             lineHeight: 21,
+            // Android/Fabric обрезает последний глиф, когда баббл ужимается ровно под ширину текста
+            paddingRight: 4,
             ...(Platform.OS === 'web' ? { wordBreak: 'break-word' as any } : {}),
         },
         timeText: {
@@ -298,6 +307,8 @@ const createStyles = (_colors: ThemedColors) =>
         },
         deleteActionText: {
             fontSize: 12,
+            // Android/Fabric обрезает последний глиф при точной ширине текста — буфер справа
+            paddingRight: 3,
         },
     });
 
