@@ -12,6 +12,8 @@ type ClusterIconHtmlOptions = {
   accentDarkColor?: string
   softGlowColor?: string
   textColor?: string
+  /** Dark theme: recolor the white sticker rings/halo to a dark surface tone. */
+  isDark?: boolean
 }
 
 const DEFAULT_MARKER_TEXT = String(DESIGN_TOKENS.colors.textOnPrimary)
@@ -332,6 +334,7 @@ export const buildClusterIconHtml = ({
   accentDarkColor,
   softGlowColor,
   textColor,
+  isDark = false,
 }: ClusterIconHtmlOptions) => {
   const safeCount = Number.isFinite(count) && count > 0 ? Math.floor(count) : 1
   const label = safeCount > 999 ? '999+' : String(safeCount)
@@ -350,6 +353,19 @@ export const buildClusterIconHtml = ({
     softGlowColor || DEFAULT_MARKER_SOFT,
     'rgba(122,157,143,0.35)',
   )
+
+  // Sticker "halo" is a white ring/disc in light theme; on a dark map that
+  // reads as a jarring white blob. In dark theme swap the white surface for a
+  // dark surface tone (matches --color-surface ≈ #2a2a2a) with a faint light
+  // rim, so the accent core still reads but the halo blends with the map.
+  const ringStrong = isDark ? 'rgba(42,42,44,0.95)' : 'rgba(255,255,255,0.96)'
+  const ringMed = isDark ? 'rgba(42,42,44,0.9)' : 'rgba(255,255,255,0.92)'
+  const orbitBorder = isDark ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.88)'
+  const orbitFill = isDark ? 'rgba(26,28,32,0.4)' : 'rgba(255,255,255,0.32)'
+  const gloss = isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.45)'
+  const textShadow = isDark
+    ? '0 1px 2px rgba(0,0,0,0.55)'
+    : '0 1px 2px rgba(0,0,0,0.18)'
 
   const haloSize = metrics.size + 18
   const innerSize = metrics.size - 14
@@ -388,8 +404,8 @@ export const buildClusterIconHtml = ({
           margin-left: -${orbitSize / 2}px;
           margin-top: -${orbitSize / 2}px;
           border-radius: 999px;
-          border: 2px solid rgba(255,255,255,0.88);
-          background: rgba(255,255,255,0.32);
+          border: 2px solid ${orbitBorder};
+          background: ${orbitFill};
           box-shadow: 0 8px 18px rgba(30, 50, 40, 0.18);
           box-sizing: border-box;
         "></div>
@@ -401,7 +417,7 @@ export const buildClusterIconHtml = ({
           height: 10px;
           border-radius: 999px;
           background: ${accent};
-          border: 2px solid rgba(255,255,255,0.92);
+          border: 2px solid ${ringMed};
           box-shadow: 0 3px 8px rgba(30, 50, 40, 0.16);
           box-sizing: border-box;
         "></div>
@@ -413,7 +429,7 @@ export const buildClusterIconHtml = ({
           height: 12px;
           border-radius: 999px;
           background: ${accentDark};
-          border: 2px solid rgba(255,255,255,0.92);
+          border: 2px solid ${ringMed};
           box-shadow: 0 3px 8px rgba(30, 50, 40, 0.16);
           box-sizing: border-box;
         "></div>
@@ -429,7 +445,7 @@ export const buildClusterIconHtml = ({
           background:
             radial-gradient(circle at 32% 24%, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0) 38%),
             linear-gradient(145deg, ${accent} 0%, ${accentDark} 100%);
-          border: 3px solid rgba(255,255,255,0.96);
+          border: 3px solid ${ringStrong};
           box-shadow:
             0 12px 24px rgba(30, 50, 40, 0.3),
             inset 0 1px 2px rgba(255,255,255,0.4);
@@ -444,7 +460,7 @@ export const buildClusterIconHtml = ({
           margin-left: -${innerSize / 2}px;
           margin-top: -${metrics.size / 2 - 6}px;
           border-radius: 999px;
-          background: linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 100%);
+          background: linear-gradient(180deg, ${gloss} 0%, rgba(255,255,255,0) 100%);
           filter: blur(0.6px);
           box-sizing: border-box;
         "></div>
@@ -458,7 +474,7 @@ export const buildClusterIconHtml = ({
           font-weight: 800;
           font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           letter-spacing: 0;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.18);
+          text-shadow: ${textShadow};
           display: flex;
           align-items: center;
           justify-content: center;

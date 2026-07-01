@@ -1,7 +1,7 @@
 // components/MapPage/map/ClusterLayer.tsx
 import React, { useMemo, useCallback } from 'react'
 import { View, Text } from 'react-native'
-import { useThemedColors } from '@/hooks/useTheme'
+import { useThemedColors, useTheme } from '@/hooks/useTheme'
 import { strToLatLng } from './utils'
 import type { Point, ClusterData } from './types'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -59,6 +59,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   useMap: useMapHook,
 }) => {
   const colors = useThemedColors()
+  const { isDark } = useTheme()
 
   const safeClusters = useMemo(() => {
     return Array.isArray(clusters) ? clusters : []
@@ -74,6 +75,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
         count,
         accentColor: String(DESIGN_TOKENS.colors.primary),
         textColor: String(DESIGN_TOKENS.colors.textOnPrimary),
+        isDark,
       })
       cache.set(
         count,
@@ -87,7 +89,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
     })
 
     return cache
-  }, [L])
+  }, [L, isDark])
 
   const clusterIcon = useCallback(
     (count: number, thumbUrl?: string) => {
@@ -107,6 +109,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
         thumbUrl,
         accentColor: String(DESIGN_TOKENS.colors.primary),
         textColor: String(DESIGN_TOKENS.colors.textOnPrimary),
+        isDark,
       })
 
       return leaflet.divIcon({
@@ -116,7 +119,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
         iconAnchor: [metrics.size / 2, metrics.size / 2],
       })
     },
-    [L, clusterIconsCache],
+    [L, clusterIconsCache, isDark],
   )
 
   const handleMarkerClick = useCallback(

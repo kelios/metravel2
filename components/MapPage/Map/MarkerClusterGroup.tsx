@@ -14,6 +14,7 @@ import {
   getClusterZoomFitBoundsOptions,
 } from './clusterFitBounds'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useTheme } from '@/hooks/useTheme'
 
 import { buildClusterIconHtml } from './mapMarkerStyles'
 
@@ -234,6 +235,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
   hintCenter,
 }) => {
   const map = useMap()
+  const { isDark } = useTheme()
   const clusterGroupRef = useRef<any>(null)
   const markerMapRef = useRef<Map<string, { coord: string; marker: any }>>(new Map())
   const [openPopups, setOpenPopups] = useState<Map<string, OpenPopupEntry>>(
@@ -292,6 +294,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
         accentDarkColor: String(DESIGN_TOKENS.colors.primaryDark),
         softGlowColor: String(DESIGN_TOKENS.colors.primaryAlpha30),
         textColor: String(DESIGN_TOKENS.colors.textOnDark),
+        isDark,
       })
 
       return L.divIcon({
@@ -301,7 +304,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
         iconAnchor: [metrics.size / 2, metrics.size / 2],
       })
     }
-  }, [L])
+  }, [L, isDark])
 
   // Create cluster group once
   useEffect(() => {

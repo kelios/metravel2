@@ -504,6 +504,18 @@ const createStyles = (
     right: 0,
     width: "100%",
     zIndex: 890,
+    // Opaque page-colored backing behind the frost panel. The dock wrapper has
+    // rounded top corners + overflow:hidden, so its corner triangles are
+    // transparent; without this, bright content scrolling behind the fixed bar
+    // bled through those corners as light "white corners" in dark theme.
+    // Backing with `background` makes the corners blend into the page instead.
+    // Web: the wrapper is `position: fixed` (removed from flow), so this
+    // container collapses to 0px and its bg would paint nothing — pin it to the
+    // dock height so the backing actually sits behind the wrapper's corners.
+    backgroundColor: colors.background,
+    ...Platform.select({
+      web: { height: MOBILE_DOCK_HEIGHT_WEB } as any,
+    }),
   },
   containerOpen: {
     zIndex: 11000,

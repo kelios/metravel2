@@ -7,7 +7,6 @@ import type { Travel } from '@/types/types'
 import OptimizedFavoriteButton from '@/components/travel/OptimizedFavoriteButton'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers'
-import { shareTravel } from '@/utils/shareTravel'
 import { routes } from '@/utils/routes'
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
 import { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia'
@@ -218,14 +217,6 @@ function TravelListItem({
     },
     [authorUserId],
   )
-
-  const handleShare = useCallback(() => {
-    shareTravel({
-      id: slug?.trim() || String(id),
-      title,
-      description: countries[0] || undefined,
-    })
-  }, [slug, id, title, countries])
 
   const handleSelectableWebActivate = useCallback(
     (event: any, source: 'click' | 'touch' | 'key' = 'click') => {
@@ -507,60 +498,7 @@ function TravelListItem({
     </View>
   ) : null
 
-  const nativeActionBar =
-    !IS_WEB && !selectable ? (
-      <View style={styles.nativeActionBar}>
-        <View style={styles.nativeActionBarLeft}>
-          <OptimizedFavoriteButton
-            id={id}
-            type="travel"
-            title={title}
-            imageUrl={thumbUrl}
-            url={travelUrl}
-            country={countries[0]}
-            size={22}
-          />
-          <TravelStatusButton
-            travelId={id}
-            travelTitle={title}
-            travelUrl={travelUrl}
-            travelImageUrl={thumbUrl}
-            travelCountry={countries[0]}
-            travelYear={travel.year}
-            travelMonthName={travel.monthName}
-            compact
-          />
-          <CardActionPressable
-            accessibilityLabel="Поделиться"
-            title="Поделиться"
-            onPress={handleShare}
-            style={styles.nativeActionBtn}
-          >
-            <Feather name="share" size={22} color={colors.text} />
-          </CardActionPressable>
-        </View>
-        <CardActionPressable
-          accessibilityLabel="Открыть на весь экран"
-          title="Открыть"
-          onPress={handlePress}
-          style={styles.nativeActionBtn}
-        >
-          <Feather name="maximize-2" size={22} color={colors.text} />
-        </CardActionPressable>
-      </View>
-    ) : null
-
-  const nativeTitle = !IS_WEB ? (
-    <Text style={styles.nativeCardTitle} numberOfLines={2}>
-      {title}
-    </Text>
-  ) : null
-
-  const contentSlot = nativeActionBar || nativeTitle || hasContentInfo ? (
-    <>
-      {nativeActionBar}
-      {nativeTitle}
-      {hasContentInfo ? (
+  const contentSlot = hasContentInfo ? (
     <View style={styles.metaRow}>
       <View style={styles.metaInfoTopRow}>{topRowItems}</View>
       <View style={styles.metaBadgesRow}>
@@ -585,8 +523,6 @@ function TravelListItem({
         )}
       </View>
     </View>
-      ) : null}
-    </>
   ) : null
 
   const cardStyle = [
@@ -609,14 +545,14 @@ function TravelListItem({
       width={IS_WEB ? undefined : cardWidth}
       mediaFit="contain"
       visualVariant={visualVariant === 'home-featured' ? 'featured' : 'default'}
-      heroTitleOverlay={IS_WEB}
+      heroTitleOverlay
       testID={cardTestId}
       style={cardStyle}
       imageHeight={typeof imageHeight === 'number' ? imageHeight : TRAVEL_CARD_IMAGE_HEIGHT}
       contentPosition="belowMedia"
       insetMedia={false}
       leftTopSlot={leftTopSlot}
-      rightTopSlot={IS_WEB && !selectable ? rightTopSlot : null}
+      rightTopSlot={!selectable ? rightTopSlot : null}
       bottomRightSlot={viewsOverlaySlot}
       containerOverlaySlot={selectableOverlay}
       contentSlot={contentSlot}
