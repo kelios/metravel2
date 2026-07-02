@@ -3,6 +3,7 @@ import React, {
     useCallback,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from 'react';
 import {
@@ -36,6 +37,7 @@ import {
 } from './questWizardHelpers';
 import { exportQuestOfflineMap, getQuestOfflineMapPoints, openQuestOfflineMapInApp } from './questOfflineMapExport';
 
+import { queueAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestWizardResponsiveModel } from './hooks/useQuestWizardResponsiveModel';
 import { createQuestWizardStyles } from './questWizardStyles';
@@ -171,8 +173,12 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         setAnswers(prev => ({ ...prev, [currentStep.id]: answer }));
         setAttempts(prev => ({ ...prev, [currentStep.id]: 0 }));
         setHints(prev => ({ ...prev, [currentStep.id]: false }));
+        queueAnalyticsEvent('quest_point_done', {
+            quest_id: questId,
+            step_index: steps.findIndex(step => step.id === currentStep.id),
+        });
         advanceToNextStep();
-    }, [advanceToNextStep, currentStep, setAnswers, setAttempts, setHints]);
+    }, [advanceToNextStep, currentStep, questId, setAnswers, setAttempts, setHints, steps]);
 
     const handleCurrentStepWrongAttempt = useCallback(() => {
         if (!currentStep) return;
@@ -218,6 +224,25 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
             console.error('Error resetting progress:', e);
         }
     }, [resetProgress]);
+
+    const questStartTrackedRef = useRef(false);
+    useEffect(() => {
+        if (questStartTrackedRef.current) return;
+        const isRealStep = !!currentStep && currentStep.id !== intro?.id;
+        if (!isRealStep) return;
+        questStartTrackedRef.current = true;
+        queueAnalyticsEvent('quest_start', {
+            quest_id: questId,
+            city: cityId,
+        });
+    }, [cityId, currentStep, intro?.id, questId]);
+
+    const questFinishTrackedRef = useRef(false);
+    useEffect(() => {
+        if (!allCompleted || questFinishTrackedRef.current) return;
+        questFinishTrackedRef.current = true;
+        queueAnalyticsEvent('quest_finish', { quest_id: questId });
+    }, [allCompleted, questId]);
 
     useEffect(() => {
         if (allCompleted) { setShowFinaleOnly(true); setUnlockedIndex(allSteps.length - 1); }

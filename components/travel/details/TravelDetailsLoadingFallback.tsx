@@ -1,13 +1,17 @@
-import { View, useWindowDimensions } from 'react-native'
+import { View } from 'react-native'
 
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { METRICS } from '@/constants/layout'
+import { useResponsive } from '@/hooks/useResponsive'
 
 const ROOT_TEST_ID = 'travel-details-loading'
 
 export default function TravelDetailsLoadingFallback() {
-  const { width, height } = useWindowDimensions()
+  // useResponsive is hydration-safe (width=0 during SSR/first client render, matching
+  // the width-0 SSG snapshot) → avoids React #418 on /travels/<slug> (project_travel_hydration_418).
+  // At width=0, isMobile is true → neutral mobile branch.
+  const { width, height } = useResponsive()
   const isMobile = width < METRICS.breakpoints.tablet
   const isTablet = width >= METRICS.breakpoints.tablet && width < METRICS.breakpoints.desktop
   const isDesktop = width >= METRICS.breakpoints.desktop

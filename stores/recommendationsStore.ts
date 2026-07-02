@@ -51,7 +51,7 @@ interface RecommendationsState {
 
     getRecommendations: (favorites: FavoriteItem[], viewHistory: { country?: string; city?: string }[], auth: { isAuthenticated: boolean; userId: string | null }) => FavoriteItem[];
     loadServerCached: (userId: string | null) => Promise<void>;
-    refreshFromServer: (userId: string | null) => Promise<void>;
+    refreshFromServer: (userId: string | null) => Promise<boolean>;
     ensureServerData: (userId: string | null) => Promise<void>;
     resetFetchState: (userId: string | null) => void;
 }
@@ -86,7 +86,7 @@ export const useRecommendationsStore = create<RecommendationsState>((set, get) =
     },
 
     refreshFromServer: async (userId) => {
-        if (!userId) return;
+        if (!userId) return false;
         try {
             const { fetchUserRecommendedTravels } = await getUserApi();
             const recDto = await fetchUserRecommendedTravels(userId);
@@ -106,17 +106,25 @@ export const useRecommendationsStore = create<RecommendationsState>((set, get) =
                 return { recommended: userRecommended };
             });
             await AsyncStorage.setItem(`${SERVER_RECOMMENDATIONS_CACHE_KEY}_${userId}`, JSON.stringify(userRecommended));
+            return true;
         } catch (error) {
             devError('Ошибка обновления рекомендаций с сервера:', error);
+            return false;
         }
     },
 
     ensureServerData: async (userId) => {
         if (!userId) return;
         const state = get();
-        if (state._fetched && state._userId === userId) return;
-        set({ _fetched: true, _userId: userId });
-        await get().refreshFromServer(userId);
+        if (state._userId !== userId) {
+            set({ _fetched: false, _userId: userId });
+        }
+        if (get()._fetched) return;
+        // Mark as fetched only after a successful refresh, otherwise a failed
+        // network call (common on native cold start) would permanently block
+        // retries and leave the recommendations shelf empty despite real data.
+        const ok = await get().refreshFromServer(userId);
+        if (ok) set({ _fetched: true, _userId: userId });
     },
 
     resetFetchState: (userId) => {

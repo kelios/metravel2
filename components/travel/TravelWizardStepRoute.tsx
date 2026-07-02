@@ -55,7 +55,6 @@ import type { TravelWizardStepRouteProps } from './stepRoute/types'
 function TravelWizardStepRoute({
   currentStep,
   totalSteps,
-  formData,
   markers,
   setMarkers,
   categoryTravelAddress,
@@ -152,12 +151,16 @@ function TravelWizardStepRoute({
   const saveRoute = useCallback(async (updatedMarkers: MarkerData[], countryIds = selectedCountryIds) => {
     if (!onManualSave) return
 
+    // Override сужен до реально изменяемых этим путём полей (маршрут/страны). Остальные
+    // поля (текст/фото и т.п.) НЕ спредим из prop formData: отложенный scheduleAddPointSave
+    // (800ms) иначе персистил бы устаревший снапшот и мог затереть свежую правку текста.
+    // handleManualSave домержит недостающие поля из живого formDataRef
+    // (mergeOverridePreservingUserInput).
     await onManualSave({
-      ...formData,
       countries: toStringIds(countryIds),
       coordsMeTravel: updatedMarkers,
-    })
-  }, [formData, onManualSave, selectedCountryIds])
+    } as TravelFormData)
+  }, [onManualSave, selectedCountryIds])
 
   // Добавление точки (поиск/клик по карте/ручной ввод) должно сохраняться сразу,
   // а не ждать 5-сек автосейв: при перезагрузке страницы в это окно свежая точка

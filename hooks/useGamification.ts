@@ -20,7 +20,7 @@ import {
   type GamificationProgress,
   type PlaceFirstBadge,
 } from '@/api/gamification';
-import { ApiError } from '@/api/client';
+import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 import { trackPathChosen } from '@/utils/gamificationAnalytics';
@@ -32,7 +32,7 @@ const isAuthError = (error: unknown): boolean =>
   error instanceof ApiError && (error.status === 401 || error.status === 403);
 
 const retry = (failureCount: number, error: unknown): boolean =>
-  !isAuthError(error) && failureCount < 2;
+  !isAuthError(error) && !isTimeoutError(error) && failureCount < 2;
 
 const hasId = (userId: string | number | null | undefined): boolean =>
   userId != null && userId !== '';

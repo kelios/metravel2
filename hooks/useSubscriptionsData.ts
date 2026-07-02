@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { fetchMySubscriptions, fetchMySubscribers, unsubscribeFromUser, type UserProfileDto } from '@/api/user';
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries';
-import { ApiError } from '@/api/client';
+import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
 import { confirmAction } from '@/utils/confirmAction';
 import { normalizeTravelPreview, type TravelPreview } from '@/utils/subscriptionsHelpers';
@@ -41,6 +41,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   const retryFn = useCallback(
     (failureCount: number, error: Error) => {
       if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return false;
+      if (isTimeoutError(error)) return false;
       return failureCount < 2;
     },
     []

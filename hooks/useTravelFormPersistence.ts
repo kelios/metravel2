@@ -148,6 +148,22 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   // пересоздавался на каждый тик статуса автосейва.
   const autosaveCancelPendingRef = useRef<(() => void) | null>(null);
 
+  // Хвостовой сейв: если во время in-flight ручного сохранения приходит ещё один
+  // вызов с dataOverride, мы дедуплицируем (возвращаем текущий промис), но НЕ теряем
+  // override — запоминаем последний и один раз прогоняем его после завершения текущего.
+  // Сценарий: правка categories точки B во время сейва точки A на опубликованном travel
+  // (автосейв выключен) — без этого override B молча терялся.
+  const queuedManualSaveRef = useRef<{
+    dataOverride?: TravelFormData;
+    options?: { intent?: 'save' | 'publish' };
+  } | null>(null);
+  const handleManualSaveRef = useRef<
+    ((
+      dataOverride?: TravelFormData,
+      options?: { intent?: 'save' | 'publish' },
+    ) => Promise<TravelFormData | void>) | null
+  >(null);
+
   const captureTextBaseline = useCallback((data: TravelFormData) => {
     serverTextBaselineRef.current = {
       description: data.description ?? '',
@@ -507,6 +523,11 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     options?: { intent?: 'save' | 'publish' },
   ) => {
     if (manualSavePromiseRef.current) {
+      // Сейв уже идёт: дедуплицируем, но не теряем override второго вызова —
+      // ставим его в хвост (последний побеждает), он прогонится после текущего.
+      if (dataOverride) {
+        queuedManualSaveRef.current = { dataOverride, options };
+      }
       return manualSavePromiseRef.current;
     }
 
@@ -601,6 +622,16 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         manualSavePromiseRef.current = null;
         manualSaveInFlightRef.current = false;
         setIsManualSaveInFlight(false);
+
+        // Хвостовой сейв: если во время этого сейва пришёл новый override, прогоняем
+        // его один раз теперь, когда in-flight-refs сброшены (иначе бы снова дедупнулся).
+        const queued = queuedManualSaveRef.current;
+        if (queued) {
+          queuedManualSaveRef.current = null;
+          if (mountedRef.current) {
+            void handleManualSaveRef.current?.(queued.dataOverride, queued.options);
+          }
+        }
       }
     })();
 
@@ -613,12 +644,17 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     formDataRef,
     manualSaveInFlightRef,
     manualSavePromiseRef,
+    mountedRef,
     saveAbortControllerRef,
     setIsManualSaveInFlight,
     suppressAutosaveErrorToastRef,
     serverTextBaselineRef,
     stableTravelId,
   ]);
+
+  // Стабильная ссылка на последнюю версию handleManualSave — чтобы хвостовой сейв
+  // (queuedManualSaveRef) в finally не замыкал устаревшую копию колбэка.
+  handleManualSaveRef.current = handleManualSave;
 
   // ✅ FIX: Выносим updateBaseline в ref чтобы избежать stale closure
   useEffect(() => {

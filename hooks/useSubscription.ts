@@ -7,7 +7,7 @@ import {
     unsubscribeFromUser,
     type UserProfileDto,
 } from '@/api/user';
-import { ApiError } from '@/api/client';
+import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
 import { showToast } from '@/utils/toast';
 
@@ -42,6 +42,7 @@ export function useSubscription(targetUserId: string | number | null | undefined
             if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
                 return false;
             }
+            if (isTimeoutError(error)) return false;
             return failureCount < 2;
         },
     });

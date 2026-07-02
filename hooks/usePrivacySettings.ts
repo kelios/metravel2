@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
-import { ApiError } from '@/api/client';
+import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
 import { showToast } from '@/utils/toast';
 import {
@@ -32,6 +32,7 @@ export function usePrivacySettings() {
             if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
                 return false;
             }
+            if (isTimeoutError(error)) return false;
             return failureCount < 2;
         },
     });

@@ -186,9 +186,12 @@ function useBaseTravelData(
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey });
-    await refetch();
-    setIsRefreshing(false);
+    try {
+      await queryClient.invalidateQueries({ queryKey });
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [queryClient, queryKey, refetch]);
 
   return {

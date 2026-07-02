@@ -124,6 +124,7 @@ export default function Login() {
             showMsg('');
             const ok = await login(values.email.trim(), values.password);
             if (ok) {
+                sendAnalyticsEvent('login_success', { method: 'email', intent: String(intent || '') });
                 if (intent) {
                     sendAnalyticsEvent('AuthSuccess', { source: String(intent || 'unknown'), intent });
                 }
@@ -149,6 +150,7 @@ export default function Login() {
             showMsg('');
             const ok = await loginWithGoogle(credential);
             if (ok) {
+                sendAnalyticsEvent('login_success', { method: 'google', intent: String(intent || '') });
                 if (intent) {
                     sendAnalyticsEvent('AuthSuccess', { source: 'google', intent });
                 }

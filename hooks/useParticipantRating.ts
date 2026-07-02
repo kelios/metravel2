@@ -11,7 +11,7 @@ import {
   type ParticipantRating,
   type SubmitParticipantRatingInput,
 } from '@/api/participantRating'
-import { ApiError } from '@/api/client'
+import { ApiError, isTimeoutError } from '@/api/client'
 import { queryKeys } from '@/api/queryKeys'
 
 const isAuthError = (error: unknown): boolean =>
@@ -26,7 +26,7 @@ export function useMyParticipantRating(
     queryFn: () => getMyParticipantRating(tripId as number, userId as number),
     enabled: tripId != null && userId != null,
     staleTime: 5 * 60 * 1000,
-    retry: (failureCount, error) => !isAuthError(error) && failureCount < 2,
+    retry: (failureCount, error) => !isAuthError(error) && !isTimeoutError(error) && failureCount < 2,
   })
 }
 

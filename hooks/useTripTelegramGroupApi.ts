@@ -12,7 +12,7 @@ import {
   type TripInviteLink,
   type TripTelegramGroup,
 } from '@/api/tripTelegramGroup';
-import { ApiError } from '@/api/client';
+import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 
 const STALE_TIME = 5 * 60 * 1000;
@@ -21,7 +21,7 @@ const isAuthError = (error: unknown): boolean =>
   error instanceof ApiError && (error.status === 401 || error.status === 403);
 
 const retry = (failureCount: number, error: unknown): boolean =>
-  !isAuthError(error) && failureCount < 2;
+  !isAuthError(error) && !isTimeoutError(error) && failureCount < 2;
 
 /** Состояние Telegram-группы поездки. */
 export function useTripTelegramGroup(tripId: number | null | undefined) {

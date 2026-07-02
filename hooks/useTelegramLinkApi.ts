@@ -14,7 +14,7 @@ import {
   type TelegramLink,
   type UpdateTelegramLinkInput,
 } from '@/api/telegramLink';
-import { ApiError } from '@/api/client';
+import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -24,7 +24,7 @@ const isAuthError = (error: unknown): boolean =>
   error instanceof ApiError && (error.status === 401 || error.status === 403);
 
 const retry = (failureCount: number, error: unknown): boolean =>
-  !isAuthError(error) && failureCount < 2;
+  !isAuthError(error) && !isTimeoutError(error) && failureCount < 2;
 
 /** Текущая привязка Telegram (только для авторизованного). */
 export function useMyTelegramLink() {

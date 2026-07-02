@@ -22,7 +22,7 @@ import {
   type TripApplication,
   type TripNotification,
 } from '@/api/publicTrips';
-import { ApiError } from '@/api/client';
+import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 import {
@@ -36,7 +36,7 @@ const isAuthError = (error: unknown): boolean =>
   error instanceof ApiError && (error.status === 401 || error.status === 403);
 
 const retry = (failureCount: number, error: unknown): boolean =>
-  !isAuthError(error) && failureCount < 2;
+  !isAuthError(error) && !isTimeoutError(error) && failureCount < 2;
 
 /** Каталог публичных поездок с фильтрами (#411). */
 export function usePublicTrips(filters?: PublicTripsFilters) {

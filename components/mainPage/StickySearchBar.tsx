@@ -79,6 +79,14 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
     minHeight: 0,
+    // Мобильный GPU: живой backdrop-blur запрещён — статичный фрост (правило CLAUDE.md)
+    backgroundColor: colors.surfaceMuted,
+    ...Platform.select({
+      web: {
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+      } as any,
+    }),
   },
   inner: {
     width: '100%',

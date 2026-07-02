@@ -8,6 +8,7 @@ import {
   type ViewHistoryItem,
 } from '@/context/FavoritesContext';
 import { useFavoritesStore } from '@/stores/favoritesStore';
+import { queueAnalyticsEvent } from '@/utils/analytics';
 import { useViewHistoryStore } from '@/stores/viewHistoryStore';
 import { useRecommendationsStore } from '@/stores/recommendationsStore';
 
@@ -50,7 +51,14 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, userId]);
 
   const addFavorite = useCallback(
-    (item: Omit<FavoriteItem, 'addedAt'>) => useFavoritesStore.getState().addFavorite(item, auth),
+    (item: Omit<FavoriteItem, 'addedAt'>) => {
+      queueAnalyticsEvent('favorite_add', {
+        item_type: item.type,
+        item_id: String(item.id),
+        auth_state: auth.isAuthenticated ? 'authenticated' : 'guest',
+      });
+      return useFavoritesStore.getState().addFavorite(item, auth);
+    },
     [auth]
   );
 
