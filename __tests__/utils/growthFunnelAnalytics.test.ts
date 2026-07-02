@@ -4,9 +4,11 @@ import {
   trackArticleEditorAutosaveSucceeded,
   trackContentCreateCtaClicked,
   trackRegistrationFailed,
+  trackRegistrationSucceeded,
   trackRegistrationViewed,
   trackRouteCreateDraftSaved,
   trackRouteCreatePublishBlocked,
+  trackRouteCreatePublishSucceeded,
 } from '@/utils/growthFunnelAnalytics';
 
 jest.mock('@/utils/analytics', () => ({
@@ -35,6 +37,58 @@ describe('growthFunnelAnalytics', () => {
         source: 'registration',
         intent: 'create-travel',
         redirect: '/travel/new',
+      },
+    );
+  });
+
+  it('keeps activation goal ids aligned with the Metrika task contract', () => {
+    expect([
+      GROWTH_FUNNEL_EVENTS.registrationSuccess,
+      'login_success',
+      'quest_start',
+      'quest_point_done',
+      'quest_finish',
+      'favorite_add',
+      GROWTH_FUNNEL_EVENTS.routeCreatePublishSuccess,
+      'cta_register_click',
+    ]).toEqual([
+      'registration_complete',
+      'login_success',
+      'quest_start',
+      'quest_point_done',
+      'quest_finish',
+      'favorite_add',
+      'travel_publish',
+      'cta_register_click',
+    ]);
+  });
+
+  it('emits contract registration and publish goal ids', () => {
+    trackRegistrationSucceeded({ source: 'registration', method: 'email' });
+    trackRouteCreatePublishSucceeded({
+      travelId: '42',
+      step: 6,
+      checklistCompletedCount: 5,
+      checklistTotalCount: 5,
+    });
+
+    expect(mockedQueueAnalyticsEvent).toHaveBeenNthCalledWith(
+      1,
+      'registration_complete',
+      {
+        source: 'registration',
+        method: 'email',
+      },
+    );
+    expect(mockedQueueAnalyticsEvent).toHaveBeenNthCalledWith(
+      2,
+      'travel_publish',
+      {
+        content_type: 'route',
+        travel_id: '42',
+        step: 6,
+        checklist_completed_count: 5,
+        checklist_total_count: 5,
       },
     );
   });

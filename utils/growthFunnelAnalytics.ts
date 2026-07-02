@@ -3,7 +3,7 @@ import { queueAnalyticsEvent } from '@/utils/analytics';
 export const GROWTH_FUNNEL_EVENTS = {
   registrationView: 'registration_view',
   registrationSubmit: 'registration_submit',
-  registrationSuccess: 'registration_success',
+  registrationSuccess: 'registration_complete',
   registrationError: 'registration_error',
   contentCreateCtaClick: 'content_create_cta_click',
   contentCreateAuthGateView: 'content_create_auth_gate_view',
@@ -12,7 +12,7 @@ export const GROWTH_FUNNEL_EVENTS = {
   routeCreateDraftError: 'route_create_draft_error',
   routeCreatePublishAttempt: 'route_create_publish_attempt',
   routeCreatePublishBlocked: 'route_create_publish_blocked',
-  routeCreatePublishSuccess: 'route_create_publish_success',
+  routeCreatePublishSuccess: 'travel_publish',
   routeCreatePublishError: 'route_create_publish_error',
   articleEditorView: 'article_editor_view',
   articleEditorAutosaveSuccess: 'article_editor_autosave_success',

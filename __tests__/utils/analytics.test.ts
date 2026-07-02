@@ -152,6 +152,50 @@ describe('utils/analytics', () => {
     expect(ym).toHaveBeenCalledWith(62803912, 'reachGoal', 'Goal__CTA_click___hero', {})
   })
 
+  it('sends every activation funnel goal id to Yandex Metrika reachGoal on web', async () => {
+    jest.doMock('react-native', () => ({
+      Platform: { OS: 'web' },
+    }))
+
+    jest.doMock('@react-native-async-storage/async-storage', () => ({
+      __esModule: true,
+      default: { getItem: jest.fn(), setItem: jest.fn() },
+    }))
+
+    const ym = jest.fn()
+    ;(global as any).window = {
+      ym,
+      localStorage: {
+        getItem: jest.fn(() => JSON.stringify({ necessary: true, analytics: true })),
+      },
+      __metravelMetrikaId: 62803912,
+      __metravelMetrikaReady: true,
+    }
+
+    const { sendAnalyticsEvent } = require('@/utils/analytics')
+    const activationGoals = [
+      'registration_complete',
+      'login_success',
+      'quest_start',
+      'quest_point_done',
+      'quest_finish',
+      'favorite_add',
+      'travel_publish',
+      'cta_register_click',
+    ]
+
+    for (const goal of activationGoals) {
+      await sendAnalyticsEvent(goal, { source: 'activation_test' })
+    }
+
+    expect(ym.mock.calls.map((call) => call[2])).toEqual(activationGoals)
+    for (const goal of activationGoals) {
+      expect(ym).toHaveBeenCalledWith(62803912, 'reachGoal', goal, {
+        source: 'activation_test',
+      })
+    }
+  })
+
   it('queues early web events until analytics providers become ready', async () => {
     jest.doMock('react-native', () => ({
       Platform: { OS: 'web' },
