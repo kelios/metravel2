@@ -1245,7 +1245,7 @@ function injectTravelQuestPromoSection(baseHtml, matches) {
     '</style>',
   ].join('');
   const section = [
-    `<section data-ssg-travel-quest-promo="true" aria-label="${escapeAttr(heading)}" style="box-sizing:border-box;max-width:840px;margin:24px auto;padding:20px 18px;font:16px/1.55 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--color-text,#22332c);background:var(--color-surface,#fff);border:1px solid var(--color-border,rgba(0,0,0,.12));border-radius:8px">`,
+    `<section data-ssg-travel-quest-promo="true" aria-label="${escapeAttr(heading)}" style="position:relative;z-index:2;box-sizing:border-box;max-width:840px;margin:24px auto;padding:20px 18px;font:16px/1.55 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--color-text,#22332c);background:var(--color-surface,#fff);border:1px solid var(--color-border,rgba(0,0,0,.12));border-radius:8px">`,
     `<h2 style="margin:0 0 8px;font:800 26px/1.2 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;letter-spacing:0;color:var(--color-text,#22332c)">${escapeAttr(heading)}</h2>`,
     `<p style="margin:0 0 14px;color:var(--color-text-muted,rgba(34,51,44,.72))">${escapeAttr(subtitle)}</p>`,
     `<div style="display:grid;gap:12px">${cards}</div>`,
@@ -1253,8 +1253,12 @@ function injectTravelQuestPromoSection(baseHtml, matches) {
   ].join('');
 
   const insertion = `${styleTag}\n${section}\n`;
+  const skeletonTitleRegex = /(<div\s+class="ssg-travel-h1"[^>]*>[\s\S]*?<\/div>)/i;
+  if (skeletonTitleRegex.test(html)) {
+    return html.replace(skeletonTitleRegex, `$1\n${insertion}`);
+  }
   if (/<div\s+id="root"[^>]*>/i.test(html)) {
-    return html.replace(/<div(\s+id="root"[^>]*)>/i, `<div$1>${insertion}`);
+    return html.replace(/<div(\s+id="root"[^>]*)>/i, `${insertion}<div$1>`);
   }
   return html.replace('</body>', `${insertion}</body>`);
 }
