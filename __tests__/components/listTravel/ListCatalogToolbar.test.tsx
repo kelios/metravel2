@@ -1,7 +1,5 @@
 import React from 'react'
 import { render } from '@testing-library/react-native'
-import { StyleSheet } from 'react-native'
-
 import ListCatalogToolbar from '@/components/listTravel/ListCatalogToolbar'
 
 let mockViewportWidth = 390
@@ -43,8 +41,8 @@ describe('ListCatalogToolbar', () => {
     mockViewportWidth = 390
   })
 
-  it('uses two-row compact layout on mobile web so sort chips do not crowd density controls', () => {
-    const { getByTestId, getByLabelText } = render(
+  it('keeps compact mobile web toolbar lean by dropping inline sort chips', () => {
+    const { getByTestId, queryByLabelText, queryByTestId } = render(
       <ListCatalogToolbar
         sortOptions={[
           { id: 'newest', name: 'Новые' },
@@ -60,11 +58,9 @@ describe('ListCatalogToolbar', () => {
       />,
     )
 
-    const sortScrollStyle = StyleSheet.flatten(getByLabelText('Сортировка списка').props.style)
-
     expect(getByTestId('toolbar-results-count')).toBeTruthy()
     expect(getByTestId('density-comfortable')).toBeTruthy()
-    expect(sortScrollStyle.width).toBe('100%')
-    expect(sortScrollStyle.minWidth).toBe('100%')
+    expect(queryByLabelText('Сортировка списка')).toBeNull()
+    expect(queryByTestId('sort-chip-newest')).toBeNull()
   })
 })
