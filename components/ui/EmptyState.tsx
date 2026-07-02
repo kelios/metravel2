@@ -35,7 +35,7 @@ function EmptyState({
   description,
   action,
   secondaryAction,
-  iconSize = 96, // ✅ ДИЗАЙН: Увеличен размер иконки
+  iconSize,
   iconColor,
   variant = 'default',
   suggestions = [],
@@ -56,10 +56,13 @@ function EmptyState({
 
   const variantColorScheme = variantColors[variant] || variantColors.default;
   const finalIconColor = iconColor ?? variantColorScheme.icon;
+  // Компакт на мобильном (web и native одинаково — паритет): иначе иконка+отступы
+  // выталкивают кнопку-действие за первый экран 390×844.
+  const finalIconSize = iconSize ?? (isMobile ? 64 : 96);
   return (
     <View style={styles.container}>
       <View style={[styles.iconContainer, { backgroundColor: variantColorScheme.bg }]}>
-        <Feather name={icon as any} size={iconSize} color={finalIconColor} />
+        <Feather name={icon as any} size={finalIconSize} color={finalIconColor} />
       </View>
       <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       <Text style={[styles.description, { color: colors.textMuted }]}>{description}</Text>
@@ -134,23 +137,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Platform.select({
-      default: 32, // Mobile: 32px
-      web: 48, // Desktop: 48px
-    }),
-    minHeight: Platform.select({
-      default: 300, // Mobile: 300px
-      web: 400, // Desktop: 400px
-    }),
+    // isMobile, а не Platform.select: mobile web должен совпадать с устройством,
+    // десктопные паддинги на 390px выталкивают действие за фолд.
+    padding: isMobile ? 24 : Platform.select({ default: 32, web: 48 }),
+    minHeight: isMobile ? 260 : Platform.select({ default: 300, web: 400 }),
   },
   iconContainer: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
+    width: isMobile ? 88 : 128,
+    height: isMobile ? 88 : 128,
+    borderRadius: isMobile ? 44 : 64,
     backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: isMobile ? 20 : 28,
     ...Platform.select({
       web: {
         boxShadow: `0 4px 12px ${colors.primaryAlpha30}`,
@@ -164,10 +163,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
     }),
   },
   title: {
-    fontSize: Platform.select({
-      default: 24,
-      web: 28,
-    }),
+    fontSize: isMobile ? 22 : Platform.select({ default: 24, web: 28 }),
     fontWeight: '800',
     // Serif — только desktop web; на мобильном web системный sans, как на устройстве.
     fontFamily: Platform.select({ web: isMobile ? undefined : 'Georgia, serif', default: undefined }),
@@ -186,7 +182,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
       default: 22, // Mobile: 22px
       web: 24, // Desktop: 24px
     }),
-    marginBottom: 32, // ✅ ДИЗАЙН: Увеличен отступ
+    marginBottom: isMobile ? 24 : 32,
     maxWidth: Platform.select({
       default: 320, // Mobile: 320px
       web: 400, // Desktop: 400px

@@ -22,7 +22,6 @@ interface ProfileSectionProps {
     styles: Styles;
     colors: Colors;
     isWeb: boolean;
-    username?: string | null;
     profile: { avatar?: string | null } | null | undefined;
     profileLoading: boolean;
     loadProfile: () => void;
@@ -73,7 +72,6 @@ export default function ProfileSection({
     styles,
     colors,
     isWeb,
-    username,
     profile,
     profileLoading,
     loadProfile,
@@ -124,7 +122,7 @@ export default function ProfileSection({
             <View style={styles.profileHeaderRow}>
                 <View style={styles.profileAvatar}>
                     {profile?.avatar && !settingsAvatarError ? (
-                        <Image source={{ uri: optimizeImageUrl(profile.avatar, { width: 72, height: 72, quality: 70, format: 'auto', fit: 'cover' }) ?? profile.avatar }} style={styles.profileAvatarImage} onError={() => setSettingsAvatarError(true)} />
+                        <Image source={{ uri: optimizeImageUrl(profile.avatar, { width: 72, height: 72, quality: 70, format: 'auto', fit: 'cover' }) ?? profile.avatar }} style={styles.profileAvatarImage} resizeMode="cover" onError={() => setSettingsAvatarError(true)} />
                     ) : (
                         <Feather name="user" size={18} color={colors.primary} />
                     )}
@@ -168,7 +166,7 @@ export default function ProfileSection({
                         value={lastName}
                         onChangeText={setLastName}
                         style={styles.input}
-                        placeholder={username || 'Введите фамилию'}
+                        placeholder="Введите фамилию"
                         placeholderTextColor={colors.textMuted}
                     />
                 </View>
@@ -363,7 +361,7 @@ export default function ProfileSection({
                     <View style={styles.avatarPickerRow}>
                         <View style={styles.avatarPreview}>
                             {avatarPreviewUrl ? (
-                                <Image source={{ uri: avatarPreviewUrl }} style={styles.avatarPreviewImage} />
+                                <Image source={{ uri: avatarPreviewUrl }} style={styles.avatarPreviewImage} resizeMode="cover" />
                             ) : (
                                 <Feather name="image" size={18} color={colors.textMuted} />
                             )}

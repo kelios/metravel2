@@ -113,7 +113,6 @@ export const createSettingsStyles = (colors: ReturnType<typeof useThemedColors>)
     profileAvatarImage: {
       width: '100%',
       height: '100%',
-      resizeMode: 'cover',
     },
     refreshButton: {
       width: 36,
@@ -294,7 +293,6 @@ export const createSettingsStyles = (colors: ReturnType<typeof useThemedColors>)
     avatarPreviewImage: {
       width: '100%',
       height: '100%',
-      resizeMode: 'cover',
     },
     avatarPickerButtons: {
       gap: 10,
@@ -332,14 +330,16 @@ export const createSettingsStyles = (colors: ReturnType<typeof useThemedColors>)
       fontWeight: '700',
       color: colors.danger,
     },
+    // Необратимое действие не должно быть самой заметной кнопкой экрана —
+    // тот же outline-стиль, что у остальных danger-кнопок (Выйти, Очистить…).
     deleteAccountButton: {
       borderColor: colors.danger,
-      backgroundColor: colors.danger,
+      backgroundColor: colors.surface,
     },
     deleteAccountButtonText: {
       fontSize: 14,
       fontWeight: '700',
-      color: colors.textOnPrimary,
+      color: colors.danger,
     },
     headerRow: {
       flexDirection: 'row',

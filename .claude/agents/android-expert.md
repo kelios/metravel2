@@ -10,7 +10,7 @@ model: opus
 ## Зона ответственности
 
 - Platform-ветвление: файлы `*.native.tsx`, `*.android.tsx`, `*.ios.tsx`, `*.web.tsx` и `Platform.OS`-ветки в общих компонентах.
-- Карта на native: `components/MapPage/Map.android.tsx`, `Map.ios.tsx` (WebView + Leaflet/OSM), `Map.tsx` (диспетчер). На web — `Map.web.tsx`. **Не смешивай импорты**: `leaflet`/`react-leaflet` не должны попадать в native-файлы, `react-native-maps` — в web.
+- Карта на native: `components/MapPage/Map.android.tsx`, `Map.ios.tsx` (WebView + Leaflet/OSM), `Map.tsx` (диспетчер). На web — `Map.web.tsx`. **Не смешивай импорты**: `leaflet`/`react-leaflet` не должны попадать в native-файлы, `react-native-maps` — в web. **Паритет карты web↔native — load-bearing:** окружение карты и карточка места (`MapMobileLayout`, `MapMobileTopOverlay`, `MapBottomSheet`, `MapPlaceBottomCard`/`PlacePopupCard`) — общие компоненты, native меняет только движок/инсеты/тени. При правке карты/карточки свери контракт `docs/features/map.md` §Mobile parity contract на обеих платформах и device-verify (`adb exec-out screencap`), что native показывает ту же карточку/тулбар/навигацию, что мобильный web; глубже — `map-expert` и skill `metravel-design-audit`.
 - Expo-модули: `expo-location`, `expo-image-picker` / `react-native-image-picker`, `expo-secure-store` (`utils/secureStorage.ts`), `expo-notifications`, `expo-local-authentication`, `expo-sharing`, `expo-web-browser`.
 - Push: `hooks/usePushNotifications.native.ts`, `hooks/usePushNotifications.web.ts` (stub), `services/notifications.ts` (регистрация токена, каналы Android, deep-link routing).
 - Навигация: `app/_layout.tsx`, `app/(tabs)/_layout.tsx` — таб-бар на native. Следи, чтобы web-only экраны (`cookies`, `privacy`, `metravel`) не попадали в native-навигацию.

@@ -22,12 +22,18 @@ import {
   resolveHeaderContextBarIsMobile,
 } from './headerContextBarModel';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
+import { BOTTOM_DOCK_ITEM_DEFS } from './bottomDockModel';
 
 // Top-level tab routes that already show their identity in the bottom dock — for those we
 // suppress the mobile context bar to avoid stealing 52px of vertical space for a redundant
-// "back to /" affordance.
+// "back to /" affordance. `/profile` есть только в нижнем доке (не в HEADER_NAV_ITEMS),
+// поэтому маршруты дока добавляем явно.
 const TOP_LEVEL_TAB_PATHS = new Set<string>(
-  ['/'].concat(HEADER_NAV_ITEMS.filter((item) => !item.external).map((item) => item.path)),
+  ['/']
+    .concat(HEADER_NAV_ITEMS.filter((item) => !item.external).map((item) => item.path))
+    .concat(
+      BOTTOM_DOCK_ITEM_DEFS.filter((item) => !item.isMore).map((item) => String(item.route)),
+    ),
 );
 
 const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;

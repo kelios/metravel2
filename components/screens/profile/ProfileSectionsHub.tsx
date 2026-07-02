@@ -101,7 +101,9 @@ export function ProfileSectionsHub({ userId }: ProfileSectionsHubProps) {
   }, [userId, hideExport])
 
   const styles = useMemo(() => getStyles(colors), [colors])
-  const itemWidth = isDesktop ? '31.5%' : '48%'
+  // На телефоне (~390px) две колонки обрезают подписи («Мои поезд…», «Кто видит кон…») —
+  // раскладываем плитки в одну колонку; гейт по isHydrated тот же, что у hideExport.
+  const itemWidth = isDesktop ? '31.5%' : isHydrated && isMobile ? '100%' : '48%'
 
   return (
     <View>
@@ -128,10 +130,10 @@ export function ProfileSectionsHub({ userId }: ProfileSectionsHubProps) {
               <Feather name={item.icon} size={16} color={colors.primary} />
             </View>
             <View style={styles.textWrap}>
-              <Text style={styles.title} numberOfLines={1}>
+              <Text style={styles.title} numberOfLines={2}>
                 {item.title}
               </Text>
-              <Text style={styles.subtitle} numberOfLines={1}>
+              <Text style={styles.subtitle} numberOfLines={2}>
                 {item.subtitle}
               </Text>
             </View>

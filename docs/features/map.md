@@ -76,6 +76,23 @@
   the map only. It must not auto-open the popup; only a direct marker tap opens
   the fullscreen point card.
 
+### Как держим и проверяем паритет
+
+Паритет держится **общими компонентами**, а не совпадающими по случайности реализациями:
+окружение карты и карточка места — `MapMobileLayout`, `MapMobileTopOverlay`,
+`MapBottomSheet`, `MapPlaceBottomCard`, `PlacePopupCard` (через `createMapPopupComponent`) —
+рендерятся и на web, и на native; платформенные файлы (`Map.web.tsx` vs
+`Map.ios.tsx`/`Map.android.tsx`) меняют только движок, инсеты под dock/tab-bar/safe-area
+и тени. Новый `.web`/`.native`-форк вёрстки/порядка действий/пропорций = нарушение паритета.
+
+Проверяется при любой правке этих компонентов:
+- **web** — вживую в браузере на mobile ≤560px (`preview_start` + скрин карточки места и
+  тулбара, light+dark);
+- **native** — device-verify (`adb exec-out screencap` на Android / iOS-симулятор); нет
+  устройства → `verify pending` с указанием, что именно свериться;
+- **сквозной кросс-платформенный** визуальный аудит — skill `metravel-design-audit`
+  (ось «устройство-эталон»); владелец карты — агент `map-expert`, native — `android-expert`/`ios-expert`.
+
 ## Данные
 
 ### React Query (`api/map.ts`, 541 LOC)

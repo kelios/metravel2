@@ -13,6 +13,7 @@ import { confirmAction } from '@/utils/confirmAction';
 import { deleteCurrentUserAccount } from '@/api/user';
 import { ApiError } from '@/api/client';
 import { useSettingsProfileForm } from '@/hooks/useSettingsProfileForm';
+import { useResponsive } from '@/hooks/useResponsive';
 import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
@@ -45,6 +46,10 @@ export default function SettingsScreen() {
     const isFocused = useIsFocused();
     const { isAuthenticated, authReady, logout, username, userId } = useAuth();
     const isWeb = Platform.OS === 'web';
+    const { isMobile, isHydrated } = useResponsive();
+    // На мобильном web стики-бар (HeaderContextBar) уже показывает «← Настройки» —
+    // страничный заголовок с кнопкой «Назад» дублировал бы его; оставляем только desktop.
+    const showPageHeader = isWeb && !(isHydrated && isMobile);
     const favoritesContext = useFavorites();
     const { theme, setTheme } = useTheme();
     const colors = useThemedColors();
@@ -282,8 +287,9 @@ export default function SettingsScreen() {
             )}
             <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.scrollContent}>
                 <View style={styles.pageContainer}>
-                    {/* На native заголовок «Настройки» и кнопка «Назад» уже есть в нативной шапке экрана — не дублируем */}
-                    {Platform.OS === 'web' && (
+                    {/* На native заголовок «Настройки» и кнопка «Назад» уже есть в нативной шапке экрана,
+                        на мобильном web — в стики-баре HeaderContextBar; не дублируем */}
+                    {showPageHeader && (
                         <View style={styles.header}>
                             <View style={styles.headerRow}>
                                 <View style={styles.headerTitleBlock}>
@@ -310,7 +316,6 @@ export default function SettingsScreen() {
                         styles={styles}
                         colors={colors}
                         isWeb={isWeb}
-                        username={username}
                         profile={profile}
                         profileLoading={profileLoading}
                         loadProfile={loadProfile}

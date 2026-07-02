@@ -13,7 +13,13 @@ skill `android-native-audit` (семантические).
 - Mobile UX parity is mandatory: mobile web, Android and iOS should present the
   same layout and interaction model. Use platform files for technical
   incompatibilities, not for alternate visual hierarchy, action order, or tap
-  semantics.
+  semantics. Держится это **общими компонентами**, а не совпадением реализаций:
+  расхождение лечится общим компонентом/хуком, платформенный файл меняет только
+  движок/инсеты/тени. Проверяется не автогвардом, а глазами при правке — web в
+  браузере (mobile) + native device-verify; сквозной аудит — skill
+  `metravel-design-audit` (ось «устройство-эталон»). Контракт карты/карточки места
+  (эталон структуры и порядка действий) — `docs/features/map.md` §Mobile parity
+  contract; владелец — агент `map-expert`.
 - Если платформы несовместимы — **не перекраивать общий компонент условиями**,
   а разводить по файлам: `Component.web.tsx` + `Component.native.tsx`
   (или `.android.tsx`/`.ios.tsx`) — Metro сам выберет нужный. Примеры в репо:

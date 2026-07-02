@@ -17,8 +17,16 @@ model: opus
 ## Кросс-платформенность
 
 - Web: Leaflet 1.9 + react-leaflet. Файлы `*.web.tsx`.
-- Native: `react-native-maps` + Apple Maps. Файлы `*.native.tsx` или без суффикса.
-- Всегда проверяй оба бандла. Не импортируй Leaflet в native-файлы, RN Maps — в web.
+- Native: WebView + Leaflet (`Map.ios.tsx`/`Map.android.tsx`). Файлы `*.native.tsx` или без суффикса.
+- Всегда проверяй оба бандла. Не импортируй Leaflet в web-специфичный react-leaflet-путь в native-файлы, RN Maps — в web.
+
+## Паритет карты web↔native — load-bearing (контракт `docs/features/map.md` §Mobile parity contract)
+
+Мобильный web и native (iOS/Android) обязаны показывать **один и тот же визуальный и интеракционный контракт** карты и карточки места: структура карточки, порядок действий, пропорции фото (hero ~70%), tap-семантика, набор навигации (Google/Apple/Organic/Waze/Яндекс Карты/Яндекс Нави/OSM), «Был/Хочу/Планирую». Держится это тем, что окружение карты и карточка — **общие компоненты** (`MapMobileLayout`, `MapMobileTopOverlay`, `MapBottomSheet`, `MapPlaceBottomCard`, `PlacePopupCard` через `createMapPopupComponent`), а платформенные файлы меняют только движок/инсеты/тени.
+
+- **Не форкать структуру.** Расхождение web↔native лечится общим компонентом; платформенный `.web`/`.native`-файл или `Platform.OS`-гейт — только для технического расхождения (движок Leaflet DOM vs WebView, safe-area инсеты, тени), НЕ для другой вёрстки/порядка кнопок/пропорций/поведения.
+- **При правке любого из:** `MapPlaceBottomCard`, `PlacePopupCard`, `createMapPopupComponent`, `MapMobileLayout`, `MapMobileTopOverlay`, `MapBottomSheet` — обязательно свери, что контракт `map.md` §Mobile parity contract не нарушен на ОБЕИХ платформах, и что общий компонент остался общим (не появился новый `.web`/`.native`-форк вёрстки).
+- **Как проверяю:** web — вживую в браузере (mobile ≤560px: `preview_start` + screenshot карточки места и тулбара, light+dark). Native — device-verify через dev-client (`adb exec-out screencap` на Android / симулятор iOS); если устройства нет — `verify pending: сверить карту/карточку на native-устройстве` с явным указанием, что именно свериться (та же карточка, те же кнопки). Сквозной кросс-платформенный визуальный аудит — skill `metravel-design-audit` (у него есть ось «устройство-эталон»).
 
 ## Крупные файлы (нужен split)
 
