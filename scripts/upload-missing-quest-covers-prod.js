@@ -49,6 +49,9 @@ const QUEST_COVERS = [
   { quest_id: 'poznan-goats', assetsDir: 'poznanGoats', cover: 'cover.png' },
   { quest_id: 'torun-copernicus', assetsDir: 'torunCopernicus', cover: 'cover.png' },
   { quest_id: 'lublin-old-town', assetsDir: 'lublinOldTown', cover: 'cover.png' },
+  { quest_id: 'bialystok-zamenhof', assetsDir: 'bialystokZamenhof', cover: 'cover.png' },
+  { quest_id: 'kaunas-capital', assetsDir: 'kaunasCapital', cover: 'cover.png' },
+  { quest_id: 'pinsk-polesie', assetsDir: 'pinskPolesie', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {

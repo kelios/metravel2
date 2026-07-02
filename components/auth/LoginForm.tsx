@@ -60,7 +60,7 @@ export default function Login() {
 
     /* ---------- helpers ---------- */
     const router = useRouter();
-    const { login, loginWithGoogle, sendPassword } = useAuth();
+    const { login, loginWithGoogle, sendPassword, isAuthenticated } = useAuth();
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
 
     const isFocused = useIsFocused();
@@ -90,6 +90,22 @@ export default function Login() {
         if (!intent) return;
         sendAnalyticsEvent('AuthViewed', { source: String(intent || 'unknown'), intent });
     }, [intent, isFocused]);
+
+    // Native fix (#670): /login is a tab route, so on native the screen stays
+    // MOUNTED after a successful login navigates away (router.replace never
+    // unmounts a tab screen). The `submitted`/`googleBusy` latches — which are
+    // set on success and intentionally never reset (they rely on unmount) — then
+    // stay `true`. After logout the user returns to the same mounted instance and
+    // every auth button is permanently disabled/loading ("Подождите…"), and the
+    // Google handler early-returns on `submitted`. Clear the latches whenever the
+    // screen regains focus while unauthenticated, so a second login can proceed.
+    // On web this is a harmless no-op: the component remounts fresh on navigation.
+    React.useEffect(() => {
+        if (isFocused && !isAuthenticated) {
+            setSubmitted(false);
+            setGoogleBusy(false);
+        }
+    }, [isFocused, isAuthenticated]);
 
     /* ---------- actions ---------- */
     const handleResetPassword = async (email: string) => {

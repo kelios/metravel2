@@ -142,12 +142,13 @@ const createStyles = (colors: ThemedColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
+      flexShrink: 0,
     },
     chipActive: {
       borderColor: colors.primary,
       backgroundColor: colors.surfaceMuted,
     },
-    chipText: { fontSize: 13, color: colors.textSecondary },
+    chipText: { fontSize: 13, color: colors.textSecondary, flexShrink: 0 },
     chipTextActive: { color: colors.primaryText, fontWeight: '600' },
     input: {
       borderWidth: 1,

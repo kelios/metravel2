@@ -23,7 +23,8 @@ Read first:
 
 ## Rules
 
-- Board is the source of truth for new FE/BE/backend/Android QA work.
+- Board is the source of truth for frontend and backend work.
+- Use only `area=front` or `area=back` in the active workflow. Android/iOS/native app bugs are frontend tasks (`area=front`) with platform context in the title/description; backend/API/server tasks are `area=back`.
 - Every new `area=front` or `area=back` task needs active sprint, Task Contract, dependencies/blockers, validation, and Done gate.
 - Human work and agent work must be separate tasks linked by `blocked_by_id`, `depends_on_ids`, or `related_to_ids`.
 - If board tools return HTTP 401, refresh the staff token through `.env.e2e` following `docs/TASK_BOARD_MCP.md`; never print token values.

@@ -325,6 +325,11 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         containerOverlaySlot={overlaySlot}
         leftTopSlot={selectionBadge}
         rightTopSlot={cornerActions}
+        // Весь контент уже лежит оверлеем на фото (photoOverlay). contentSlot
+        // должен быть не-null (иначе UnifiedTravelCard рендерит свой дефолтный
+        // блок "заголовок + Локация уточняется" под фото, UnifiedTravelCard.tsx:659-684) —
+        // передаём пустой узел, чтобы явно ничего не показывать.
+        contentSlot={<></>}
         contentContainerStyle={styles.contentContainer}
         style={[
           styles.container,

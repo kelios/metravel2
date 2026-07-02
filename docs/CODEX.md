@@ -256,7 +256,7 @@ deploys with `tar+ssh`, performs an atomic server swap, verifies health, and rol
 - Tests: `__tests__/` for Jest, `e2e/` for Playwright.
 - Governance scripts: `scripts/`, command details in `docs/TESTING.md`.
 - Feature maps: `docs/features/`.
-- Task board: `docs/TASK_BOARD_MCP.md`; новые FE/BE/backend и Android QA задачи создавай на общем MCP task board через `ticket-board` в текущем active sprint. При `401` обновляй staff token через `.env.e2e`; `tasks/README.md` и `tasks/000-template.md` остаются только fallback/migration форматом, не основным workflow.
+- Task board: `docs/TASK_BOARD_MCP.md`; новые задачи создавай на общем MCP task board через `ticket-board` в текущем active sprint только с `area=front` или `area=back`. Android/iOS/native app bugs относятся к `area=front` с платформенным префиксом/контекстом в title/description; backend/API/server задачи относятся к `area=back`. При `401` обновляй staff token через `.env.e2e`; `tasks/README.md` и `tasks/000-template.md` остаются только fallback/migration форматом, не основным workflow.
 
 ## Кодировка документации
 

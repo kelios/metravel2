@@ -285,6 +285,49 @@ describe('Login Component', () => {
     });
   });
 
+  describe('Native re-login after logout (#670)', () => {
+    // On native, /login is a tab route that stays MOUNTED after a successful
+    // login navigates away, so the `submitted` latch (set on success, never
+    // reset) leaves every auth button permanently disabled/loading. When the
+    // user logs out and returns to the same mounted screen, the login screen
+    // must re-enable itself once auth state is unauthenticated + focused.
+    it('re-enables the login button after logout returns to the mounted screen', async () => {
+      const mockLogin = jest.fn().mockResolvedValue(true);
+      const authValue: Record<string, unknown> = {
+        login: mockLogin,
+        sendPassword: jest.fn().mockResolvedValue('ok'),
+        loginWithGoogle: jest.fn().mockResolvedValue(true),
+        isAuthenticated: false,
+        username: '',
+        userId: null,
+        isSuperuser: false,
+      };
+      (useAuth as jest.Mock).mockImplementation(() => authValue);
+
+      const { getByPlaceholderText, findByPlaceholderText, getByText, rerender } =
+        render(<Login />);
+      await findByPlaceholderText('Email', undefined, { timeout: 10000 });
+
+      // 1) Successful login latches `submitted` -> button shows "Подождите…".
+      fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
+      fireEvent.changeText(getByPlaceholderText('Пароль'), 'password123');
+      fireEvent.press(getByText('Войти'));
+      await waitFor(() => expect(mockLogin).toHaveBeenCalled());
+      await waitFor(() => expect(getByText('Подождите…')).toBeTruthy());
+
+      // 2) Emulate the auth-state transition across logout: the screen stays
+      //    mounted (native tab), auth flips authenticated -> unauthenticated.
+      authValue.isAuthenticated = true;
+      rerender(<Login />);
+      authValue.isAuthenticated = false;
+      rerender(<Login />);
+
+      // 3) The focus/unauth effect must clear the `submitted` latch so a
+      //    second login can proceed — button is back to "Войти", not stuck.
+      await waitFor(() => expect(getByText('Войти')).toBeTruthy());
+    });
+  });
+
   describe('Password Reset Flow', () => {
     it('should show error for invalid email when resetting password', async () => {
       const mockSendPassword = jest.fn();

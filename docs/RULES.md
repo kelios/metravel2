@@ -79,8 +79,9 @@ npm run test:run
   - if a temporary debug file already appeared in the root or in git, remove it in the same task instead of leaving it behind.
 - Task board tracking (mandatory):
   - frontend, backend, and cross-functional work items must be created on the shared MCP task board through `ticket-board`; see `docs/TASK_BOARD_MCP.md`;
+  - task `area` is only `front` or `back` for active workflow: Android/iOS/native app bugs are `area=front` with `[AND-...]`/`[IOS-...]` context in the title/description; use `area=back` only for backend/API/server work;
   - every `area=front` or `area=back` board task must include the required Task Contract, sprint, dependencies, blockers, validation, and Done gate;
-  - every new board task, including Android/native QA bugs, must be assigned to the current active sprint unless `docs/TASK_BOARD_MCP.md` defines a more specific active sprint rule for that area;
+  - every new board task, including Android/native QA bugs filed as `area=front`, must be assigned to the current active sprint unless `docs/TASK_BOARD_MCP.md` defines a more specific active sprint rule;
   - do not create new local `tasks/*.md` task files as the normal workflow; local task files are only a temporary fallback/migration draft when the board is unavailable, and must be imported/synced to the board before handoff;
   - do not create ad-hoc backend task notes outside the board workflow.
 - For performance checks (Lighthouse), run against a production web export:
