@@ -18,12 +18,10 @@ describe('QuestsContentPanel', () => {
         contentTitleBlock: {},
         contentTitle: {},
         contentCount: {},
-        mapBreadcrumbs: {},
-        mapBackBtn: {},
-        mapBackBtnText: {},
-        mapBreadcrumbText: {},
-        mobileFilterBtn: {},
-        mobileFilterBtnText: {},
+        headerToggleRow: {},
+        headerIconBtn: {},
+        headerIconBtnActive: {},
+        headerIconBtnDisabled: {},
         contentBody: {},
         contentBodyMap: {},
         nearbyCtaBlock: {},
@@ -251,13 +249,15 @@ describe('QuestsContentPanel', () => {
         );
     });
 
-    it('shows a mobile map breadcrumb back to the quest list', () => {
+    it('keeps the same header toggle row visible in map mode so the user can switch back to the list', () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
         const LazyQuestMap = jest.fn(() => null);
         const onToggleViewMode = jest.fn();
+        const onOpenFilterDrawer = jest.fn();
+        const onShowNearby = jest.fn();
 
-        const { getByTestId, getByText } = render(
+        const { getByTestId, getByLabelText } = render(
             <QuestsContentPanel
                 styles={styles}
                 colors={colors}
@@ -287,8 +287,8 @@ describe('QuestsContentPanel', () => {
                 radiiLg={24}
                 LazyQuestMap={LazyQuestMap}
                 isMobile
-                onShowNearby={() => {}}
-                onOpenFilterDrawer={() => {}}
+                onShowNearby={onShowNearby}
+                onOpenFilterDrawer={onOpenFilterDrawer}
                 onToggleViewMode={onToggleViewMode}
                 onMapUserLocationChange={() => {}}
                 onMapMove={() => {}}
@@ -296,12 +296,14 @@ describe('QuestsContentPanel', () => {
             />
         );
 
-        expect(getByTestId('quests-map-breadcrumbs')).toBeTruthy();
-        expect(getByText('К списку')).toBeTruthy();
-        expect(getByText('Карта')).toBeTruthy();
-
-        fireEvent.press(getByTestId('quests-map-back-to-list'));
-
+        // Same three icon controls as list mode: toggle view, pick city, show nearby.
+        fireEvent.press(getByTestId('quests-toggle-view-mode'));
         expect(onToggleViewMode).toHaveBeenCalledTimes(1);
+
+        fireEvent.press(getByLabelText('Выбрать город'));
+        expect(onOpenFilterDrawer).toHaveBeenCalledTimes(1);
+
+        fireEvent.press(getByTestId('quests-show-nearby'));
+        expect(onShowNearby).toHaveBeenCalledTimes(1);
     });
 });

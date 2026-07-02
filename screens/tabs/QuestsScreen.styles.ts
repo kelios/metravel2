@@ -450,19 +450,16 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             flex: 1,
             minWidth: 0,
         },
-        mapBreadcrumbs: {
+        headerToggleRow: {
             flexDirection: 'row',
-            alignItems: 'center',
             gap: spacing.xs,
-            marginBottom: spacing.xs,
+            flexShrink: 0,
         },
-        mapBackBtn: {
-            flexDirection: 'row',
+        headerIconBtn: {
             alignItems: 'center',
-            gap: spacing.xxs,
-            minHeight: 36,
-            paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xxs,
+            justifyContent: 'center',
+            width: DESIGN_TOKENS.touchTarget.minHeight,
+            height: DESIGN_TOKENS.touchTarget.minHeight,
             borderRadius: CONTROL_RADIUS,
             backgroundColor: colors.backgroundSecondary,
             borderWidth: 1,
@@ -474,15 +471,12 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                 } as any,
             }),
         },
-        mapBackBtnText: {
-            color: colors.text,
-            fontSize: typography.sizes.xs,
-            fontWeight: '800',
+        headerIconBtnActive: {
+            backgroundColor: colors.brand,
+            borderColor: colors.brand,
         },
-        mapBreadcrumbText: {
-            color: colors.textMuted,
-            fontSize: typography.sizes.xs,
-            fontWeight: '700',
+        headerIconBtnDisabled: {
+            opacity: 0.6,
         },
         contentCount: {
             color: colors.textMuted,
@@ -936,6 +930,9 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             minHeight: 44,
             minWidth: 168,
             justifyContent: 'center',
+        },
+        questCardReviewsChipNativeInline: {
+            minHeight: 44,
         },
         questCardReviewsInline: {
             zIndex: 30,

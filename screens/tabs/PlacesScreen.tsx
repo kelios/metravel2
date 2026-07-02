@@ -1,6 +1,5 @@
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import {
-  FlatList,
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -321,31 +320,12 @@ export default function PlacesScreen() {
         ? 'empty'
         : 'list'
 
-  // Native + compact gets a sticky compact filter bar (search + Категории + Сбросить)
-  // pinned above the scroll area, so filters never scroll out of reach. The full
-  // stacked topBar (title/hint/search/country) is suppressed in pageChrome on this
-  // path to avoid duplicating the search/filter controls. Web/desktop is untouched.
-  const nativeCompact = Platform.OS !== 'web' && isCompact
-  const useVirtualList = nativeCompact && resultsStatus === 'list'
-
-  const renderVirtualCard = useCallback(
-    ({ item, index }: { item: CatalogPlace; index: number }) => (
-      <View style={styles.virtualCardItem}>
-        <PlaceCard
-          place={item}
-          styles={styles}
-          colors={colors}
-          onOpenMap={openOnMap}
-          onOpenTravel={openTravel}
-          containerStyle={styles.virtualCard}
-          priority={index < 2}
-        />
-      </View>
-    ),
-    [styles, colors, openOnMap, openTravel],
-  )
-
-  const keyExtractor = useCallback((item: CatalogPlace) => item.id, [])
+  // Compact "app" chrome — a sticky compact filter bar (search + Категории + страна
+  // + Сбросить) pinned above a single scrolling column of cards. Used on every mobile
+  // width, web and native alike, so /places renders identically across platforms; the
+  // full stacked topBar/sidebar is desktop-only. Both platforms share one ScrollView
+  // path (no native FlatList) to guarantee the same layout and scroll behaviour.
+  const mobileCompact = isCompact
 
   const loadMoreBlock = hasMorePlaces ? (
     <View style={styles.loadMoreFooter}>
@@ -426,7 +406,7 @@ export default function PlacesScreen() {
 
   const pageChrome = (
     <>
-        {nativeCompact ? null : (
+        {mobileCompact ? null : (
         <View style={styles.topBar} onLayout={handleTopBarLayout}>
           <View style={styles.topBarMeta}>
             <View style={styles.heroTitleRow}>
@@ -531,42 +511,9 @@ export default function PlacesScreen() {
 
         {/* ─── Main layout ─── */}
         <View style={styles.layout}>
-          {/* Sidebar / collapsible filter. On native compact this lives in the
-              sticky fixed bar instead, so the in-flow mobileFilterBar is omitted. */}
-          {isCompact && !nativeCompact ? (
-            <View style={styles.mobileFilterBar}>
-              <Pressable
-                onPress={() => setFiltersOpen((v) => !v)}
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.mobileFilterToggle, pressed && PRESSED_OPACITY]}
-              >
-                <Feather name="sliders" size={16} color={selectedCategoryCount > 0 ? colors.primary : colors.text} />
-                <Text style={[styles.mobileFilterToggleText, selectedCategoryCount > 0 && styles.mobileFilterToggleTextActive]}>
-                  Категории
-                </Text>
-                {selectedCategoryCount > 0 ? (
-                  <View style={styles.filterBadge}>
-                    <Text style={styles.filterBadgeText}>{selectedCategoryCount}</Text>
-                  </View>
-                ) : null}
-                <Feather
-                  name={filtersOpen ? 'chevron-up' : 'chevron-down'}
-                  size={16}
-                  color={colors.textMuted}
-                />
-              </Pressable>
-              {hasActiveFilters ? (
-                <Pressable
-                  onPress={resetAll}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [styles.resetBtn, pressed && PRESSED_OPACITY]}
-                >
-                  <Text style={styles.resetBtnText}>Сбросить</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ) : null}
-
+          {/* Sidebar / collapsible filter. On mobile (compact) the search + category
+              toggle live in the sticky compact bar above the scroll area, so the
+              category list only expands here when the user opens the filter. */}
           {(!isCompact || filtersOpen) ? (
             <View
               style={[
@@ -742,17 +689,17 @@ export default function PlacesScreen() {
               ) : null}
             </View>
 
-            {useVirtualList ? null : resultsContent}
+            {resultsContent}
           </View>
         </View>
     </>
   )
 
-  // Native compact: compact sticky bar pinned above the scroll area so search +
-  // category filter are always reachable. Kept ≤~20% of the viewport: single
-  // search row + a filter/reset row, no large title (the big resultsTitle stays
-  // in the scrollable pageChrome).
-  const compactFixedBar = nativeCompact ? (
+  // Mobile compact sticky bar pinned above the scroll area so search + category
+  // filter are always reachable. Kept ≤~20% of the viewport: single search row +
+  // a filter/reset row, no large title (the big resultsTitle stays in the
+  // scrollable pageChrome). Shared by web + native for parity.
+  const compactFixedBar = mobileCompact ? (
     <View style={styles.compactBar}>
       <View style={styles.searchBox}>
         <Feather name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
@@ -896,40 +843,16 @@ export default function PlacesScreen() {
         ? React.createElement('h1', { style: styles.srOnly as any }, seoHeading)
         : null}
       {compactFixedBar}
-      {useVirtualList ? (
-        <FlatList
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          data={visiblePlaces}
-          keyExtractor={keyExtractor}
-          renderItem={renderVirtualCard}
-          ListHeaderComponent={pageChrome}
-          ListFooterComponent={
-            <>
-              {loadMoreBlock}
-              <ContributionBanner variant="places" />
-            </>
-          }
-          onEndReached={loadMorePlaces}
-          onEndReachedThreshold={0.6}
-          keyboardShouldPersistTaps="handled"
-          removeClippedSubviews
-          initialNumToRender={8}
-          maxToRenderPerBatch={8}
-          windowSize={9}
-        />
-      ) : (
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          onScroll={handleScroll}
-          scrollEventThrottle={180}
-        >
-          {pageChrome}
-          <ContributionBanner variant="places" />
-        </ScrollView>
-      )}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        onScroll={handleScroll}
+        scrollEventThrottle={180}
+      >
+        {pageChrome}
+        <ContributionBanner variant="places" />
+      </ScrollView>
     </View>
   )
 }

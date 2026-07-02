@@ -166,8 +166,11 @@ export default function QuestCard({
                     </View>
                 )}
 
-                {!isPhone && isPioneerQuest && !quest.isCompletedByMe && (
-                    <View style={[styles.questCardCompletedBadge, distanceText ? { top: 44 } : null]}>
+                {isPioneerQuest && !quest.isCompletedByMe && (
+                    <View
+                        style={[styles.questCardCompletedBadge, distanceText ? { top: 44 } : null]}
+                        testID={`quest-card-pioneer-${quest.id}`}
+                    >
                         <Feather name="flag" size={12} color={colors.textOnDark} />
                         <Text style={styles.questCardCompletedText}>Ещё никто не проходил</Text>
                     </View>
@@ -270,7 +273,7 @@ export default function QuestCard({
                                 style={[
                                     styles.questCardDetailsItem,
                                     styles.questCardReviewsInline,
-                                    Platform.OS !== 'web' && styles.questCardReviewsChipNative,
+                                    Platform.OS !== 'web' && styles.questCardReviewsChipNativeInline,
                                 ]}
                                 accessibilityRole="button"
                                 accessibilityLabel={`Посмотреть отзывы: ${reviewsLabel}`}
@@ -279,9 +282,7 @@ export default function QuestCard({
                                 hitSlop={6}
                             >
                                 <Feather name="message-circle" size={13} color={colors.textMuted} />
-                                <Text style={styles.questCardDetailsText}>
-                                    Посмотреть отзывы ({quest.ratingCount})
-                                </Text>
+                                <Text style={styles.questCardDetailsText}>{quest.ratingCount}</Text>
                             </Pressable>
                         )}
                         {quest.completionsCount > 0 && (
@@ -290,19 +291,10 @@ export default function QuestCard({
                                 testID={`quest-card-completions-${quest.id}`}
                             >
                                 <Feather name="check-circle" size={13} color={colors.textMuted} />
-                                <Text style={styles.questCardDetailsText}>
-                                    {quest.completionsCount} {pluralizeRu(quest.completionsCount, 'прохождение', 'прохождения', 'прохождений')}
-                                </Text>
+                                <Text style={styles.questCardDetailsText}>{quest.completionsCount}</Text>
                             </View>
                         )}
                     </View>
-
-                    {isPioneerQuest && (
-                        <View style={styles.questCardPioneerBadge} testID={`quest-card-pioneer-${quest.id}`}>
-                            <Feather name="flag" size={13} color={colors.brandDark} />
-                            <Text style={styles.questCardPioneerBadgeText}>Вы будете первооткрывателем</Text>
-                        </View>
-                    )}
                 </View>
             )}
 

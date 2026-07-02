@@ -4,7 +4,9 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { type ThemedColors } from '@/hooks/useTheme'
 
 export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean) => {
-  const nativeCompact = Platform.OS !== 'web' && isCompact
+  // Compact "app" layout applies to every mobile width (web + native) so /places
+  // looks identical across platforms.
+  const mobileCompact = isCompact
   return StyleSheet.create({
   screen: {
     flex: 1,
@@ -349,7 +351,7 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     flexDirection: isCompact ? 'column' : 'row',
     alignItems: 'flex-start',
     gap: 0,
-    marginTop: nativeCompact ? 0 : DESIGN_TOKENS.spacing.md,
+    marginTop: mobileCompact ? 0 : DESIGN_TOKENS.spacing.md,
   },
 
   // ─── Native compact sticky bar ───
@@ -523,12 +525,16 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
 
   // ─── Main / Results ───
   main: {
-    flex: 1,
+    // Desktop: fill the row next to the sidebar. Mobile: the column lives inside a
+    // vertical ScrollView whose content height is unbounded — `flex: 1` there resolves
+    // its basis against that undefined height and collapses the results to zero on
+    // native (empty, non-scrolling list). Content-size it instead.
+    flex: isCompact ? undefined : 1,
     minWidth: 0,
     width: isCompact ? '100%' : undefined,
-    gap: nativeCompact ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg,
+    gap: mobileCompact ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg,
     paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.xl,
-    paddingTop: nativeCompact ? DESIGN_TOKENS.spacing.sm : DESIGN_TOKENS.spacing.xl,
+    paddingTop: mobileCompact ? DESIGN_TOKENS.spacing.sm : DESIGN_TOKENS.spacing.xl,
     paddingBottom: DESIGN_TOKENS.spacing.xl,
   },
   resultsHeader: {
@@ -544,7 +550,7 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   },
   resultsTitle: {
     color: colors.text,
-    ...(nativeCompact
+    ...(mobileCompact
       ? DESIGN_TOKENS.typography.scale.h3
       : DESIGN_TOKENS.typography.scale.h1),
   },

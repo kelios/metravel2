@@ -87,24 +87,6 @@ export default function QuestsContentPanel({
         <>
             <View style={styles.contentHeader}>
                 <View style={styles.contentTitleBlock}>
-                    {isMobile && viewMode === 'map' && (
-                        <View style={styles.mapBreadcrumbs} testID="quests-map-breadcrumbs">
-                            <Pressable
-                                style={styles.mapBackBtn}
-                                onPress={onToggleViewMode}
-                                accessibilityRole="button"
-                                accessibilityLabel="Вернуться к списку квестов"
-                                testID="quests-map-back-to-list"
-                            >
-                                <Feather name="arrow-left" size={15} color={colors.text} />
-                                <Text style={styles.mapBackBtnText}>К списку</Text>
-                            </Pressable>
-                            <Feather name="chevron-right" size={14} color={colors.textMuted} />
-                            <Text style={styles.mapBreadcrumbText} numberOfLines={1}>
-                                Карта
-                            </Text>
-                        </View>
-                    )}
                     <Text style={styles.contentTitle} numberOfLines={2}>
                         {selectedCityId === nearbyId
                             ? (isMapAreaActive ? 'Квесты в этой области' : userLoc ? 'Квесты поблизости' : 'Все квесты')
@@ -112,53 +94,51 @@ export default function QuestsContentPanel({
                     </Text>
                     {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
                 </View>
-                {isMobile && viewMode !== 'map' && (
-                    <View style={{ flexDirection: 'row', gap: 8, flexShrink: 0 }}>
+                {isMobile && (
+                    <View style={styles.headerToggleRow}>
                         <Pressable
-                            style={styles.mobileFilterBtn}
+                            style={[styles.headerIconBtn, viewMode === 'map' && styles.headerIconBtnActive]}
                             onPress={onToggleViewMode}
                             accessibilityRole="button"
-                            accessibilityLabel="Показать на карте"
+                            accessibilityLabel={viewMode === 'map' ? 'Показать список квестов' : 'Показать квесты на карте'}
+                            testID="quests-toggle-view-mode"
                         >
-                            <Feather name="map" size={16} color={colors.text} />
-                            <Text style={styles.mobileFilterBtnText}>Карта</Text>
+                            <Feather
+                                name={viewMode === 'map' ? 'list' : 'map'}
+                                size={17}
+                                color={viewMode === 'map' ? colors.textOnPrimary : colors.text}
+                            />
                         </Pressable>
                         <Pressable
-                            style={styles.mobileFilterBtn}
+                            style={styles.headerIconBtn}
                             onPress={onOpenFilterDrawer}
                             accessibilityRole="button"
                             accessibilityLabel="Выбрать город"
                         >
-                            <Feather name="filter" size={16} color={colors.text} />
-                            <Text style={styles.mobileFilterBtnText}>Город</Text>
+                            <Feather name="filter" size={17} color={colors.text} />
+                        </Pressable>
+                        <Pressable
+                            style={[styles.headerIconBtn, geoRequesting && styles.headerIconBtnDisabled]}
+                            onPress={onShowNearby}
+                            disabled={geoRequesting}
+                            accessibilityRole="button"
+                            accessibilityLabel={geoRequesting ? 'Ищем квесты рядом со мной' : 'Показать квесты рядом со мной'}
+                            testID="quests-show-nearby"
+                        >
+                            <Feather name="navigation" size={17} color={colors.text} />
                         </Pressable>
                     </View>
                 )}
             </View>
 
             <View style={[styles.contentBody, viewMode === 'map' && isMobile && styles.contentBodyMap]}>
-                {isMobile && (
+                {isMobile && geoMessage ? (
                     <View style={styles.nearbyCtaBlock}>
-                        <Pressable
-                            style={[styles.showNearbyBtn, geoRequesting && styles.showNearbyBtnDisabled]}
-                            onPress={onShowNearby}
-                            disabled={geoRequesting}
-                            accessibilityRole="button"
-                            accessibilityLabel="Показать квесты рядом со мной"
-                            testID="quests-show-nearby"
-                        >
-                            <Feather name="navigation" size={16} color={colors.textOnPrimary} />
-                            <Text style={styles.showNearbyBtnText}>
-                                {geoRequesting ? 'Ищем рядом…' : 'Показать рядом со мной'}
-                            </Text>
-                        </Pressable>
-                        {geoMessage ? (
-                            <Text style={styles.geoMessageText} testID="quests-geo-message">
-                                {geoMessage}
-                            </Text>
-                        ) : null}
+                        <Text style={styles.geoMessageText} testID="quests-geo-message">
+                            {geoMessage}
+                        </Text>
                     </View>
-                )}
+                ) : null}
 
                 {viewMode === 'map' ? (
                     <View style={styles.mapSection}>
