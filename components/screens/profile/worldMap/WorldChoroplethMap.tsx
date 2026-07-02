@@ -176,10 +176,53 @@ function WorldChoroplethMapComponent({
     pointerId: number
     currentTarget: unknown
   }
+  type WebClickEvent = {
+    clientX: number
+    clientY: number
+    target: unknown
+    currentTarget: unknown
+  }
   const setCursor = useCallback((value: 'grab' | 'grabbing') => {
     const node = containerRef.current as unknown as HTMLElement | null
     if (node?.style) node.style.cursor = value
   }, [])
+  const selectCountryAtClientPoint = useCallback(
+    (clientX: number, clientY: number, currentTarget: unknown) => {
+      if (!onCountryPress) return
+      const node = currentTarget as HTMLElement | null
+      const svg = node?.querySelector?.('svg')
+      if (!svg || typeof svg.createSVGPoint !== 'function') return
+
+      const screenPoint = svg.createSVGPoint()
+      screenPoint.x = clientX
+      screenPoint.y = clientY
+
+      let bestCode: string | null = null
+      let bestArea = Number.POSITIVE_INFINITY
+      const paths = Array.from(svg.querySelectorAll<SVGGraphicsElement>('path[id^="wc-"]'))
+      for (const path of paths) {
+        const matrix = path.getScreenCTM()
+        if (!matrix) continue
+        const localPoint = screenPoint.matrixTransform(matrix.inverse())
+        const box = path.getBBox()
+        const contains =
+          localPoint.x >= box.x &&
+          localPoint.x <= box.x + box.width &&
+          localPoint.y >= box.y &&
+          localPoint.y <= box.y + box.height
+        if (!contains) continue
+
+        const area = box.width * box.height
+        if (area < bestArea) {
+          bestArea = area
+          bestCode = path.id.replace(/^wc-/, '')
+        }
+      }
+
+      if (bestCode) onCountryPress(bestCode)
+    },
+    [onCountryPress]
+  )
   const endPointer = useCallback(
     (pointerId: number) => {
       const pts = pointersRef.current
@@ -257,6 +300,13 @@ function WorldChoroplethMapComponent({
           onPointerUp: (e: WebPointerEvent) => endPointer(e.pointerId),
           onPointerCancel: (e: WebPointerEvent) => endPointer(e.pointerId),
           onPointerLeave: (e: WebPointerEvent) => endPointer(e.pointerId),
+          onClick: (e: WebClickEvent) => {
+            if (dragRef.current.moved) return
+            const target = e.target as Element | null
+            const targetId = target?.id ?? ''
+            if (targetId.startsWith('wc-')) return
+            selectCountryAtClientPoint(e.clientX, e.clientY, e.currentTarget)
+          },
         }
       : null
 
