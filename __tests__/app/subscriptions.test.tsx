@@ -42,6 +42,7 @@ jest.mock('@/utils/toast', () => ({
 jest.mock('expo-router', () => ({
     useRouter: mockUseRouter,
     usePathname: mockUsePathname,
+    useLocalSearchParams: jest.fn(() => ({})),
 }));
 
 import SubscriptionsScreen from '@/app/(tabs)/subscriptions';

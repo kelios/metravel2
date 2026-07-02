@@ -136,14 +136,11 @@ export default function QuestCard({
                         alt={quest.title}
                         width={cardWidth}
                         height={cardHeight}
-                        fit="contain"
-                        blurBackground
-                        allowCriticalWebBlur
+                        fit="cover"
+                        blurBackground={false}
                         style={StyleSheet.absoluteFill}
                         loading="eager"
                         priority="low"
-                        revealOnLoadOnly
-                        optimizeWeb={false}
                         onLoad={handleImageLoad}
                         showImmediately={imageLoaded}
                     />

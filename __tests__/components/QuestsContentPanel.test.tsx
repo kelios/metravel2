@@ -15,8 +15,13 @@ describe('QuestsContentPanel', () => {
     const styles = {
         content: {},
         contentHeader: {},
+        contentTitleBlock: {},
         contentTitle: {},
         contentCount: {},
+        mapBreadcrumbs: {},
+        mapBackBtn: {},
+        mapBackBtnText: {},
+        mapBreadcrumbText: {},
         mobileFilterBtn: {},
         mobileFilterBtnText: {},
         contentBody: {},
@@ -244,5 +249,59 @@ describe('QuestsContentPanel', () => {
             }),
             undefined,
         );
+    });
+
+    it('shows a mobile map breadcrumb back to the quest list', () => {
+        mockIsMobile = true;
+        (Platform as { OS: string }).OS = 'web';
+        const LazyQuestMap = jest.fn(() => null);
+        const onToggleViewMode = jest.fn();
+
+        const { getByTestId, getByText } = render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="map"
+                selectedCityId="warsaw"
+                selectedCityName="Warsaw"
+                nearbyId="__nearby__"
+                nearbyRadiusKm={15}
+                questsAll={[]}
+                questCardWidth={320}
+                mapPoints={[
+                    {
+                        id: 'warsaw-quest',
+                        coord: '52.23,21.01',
+                        address: 'Warsaw',
+                        travelImageThumbUrl: '',
+                        categoryName: 'Квест',
+                    },
+                ]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={LazyQuestMap}
+                isMobile
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={onToggleViewMode}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />
+        );
+
+        expect(getByTestId('quests-map-breadcrumbs')).toBeTruthy();
+        expect(getByText('К списку')).toBeTruthy();
+        expect(getByText('Карта')).toBeTruthy();
+
+        fireEvent.press(getByTestId('quests-map-back-to-list'));
+
+        expect(onToggleViewMode).toHaveBeenCalledTimes(1);
     });
 });

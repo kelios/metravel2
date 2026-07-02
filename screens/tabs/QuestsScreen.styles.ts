@@ -450,6 +450,40 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             flex: 1,
             minWidth: 0,
         },
+        mapBreadcrumbs: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            marginBottom: spacing.xs,
+        },
+        mapBackBtn: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xxs,
+            minHeight: 36,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xxs,
+            borderRadius: CONTROL_RADIUS,
+            backgroundColor: colors.backgroundSecondary,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            ...Platform.select({
+                web: {
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease, border-color 0.2s ease',
+                } as any,
+            }),
+        },
+        mapBackBtnText: {
+            color: colors.text,
+            fontSize: typography.sizes.xs,
+            fontWeight: '800',
+        },
+        mapBreadcrumbText: {
+            color: colors.textMuted,
+            fontSize: typography.sizes.xs,
+            fontWeight: '700',
+        },
         contentCount: {
             color: colors.textMuted,
             fontSize: typography.sizes.sm,

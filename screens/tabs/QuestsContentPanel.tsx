@@ -87,6 +87,24 @@ export default function QuestsContentPanel({
         <>
             <View style={styles.contentHeader}>
                 <View style={styles.contentTitleBlock}>
+                    {isMobile && viewMode === 'map' && (
+                        <View style={styles.mapBreadcrumbs} testID="quests-map-breadcrumbs">
+                            <Pressable
+                                style={styles.mapBackBtn}
+                                onPress={onToggleViewMode}
+                                accessibilityRole="button"
+                                accessibilityLabel="Вернуться к списку квестов"
+                                testID="quests-map-back-to-list"
+                            >
+                                <Feather name="arrow-left" size={15} color={colors.text} />
+                                <Text style={styles.mapBackBtnText}>К списку</Text>
+                            </Pressable>
+                            <Feather name="chevron-right" size={14} color={colors.textMuted} />
+                            <Text style={styles.mapBreadcrumbText} numberOfLines={1}>
+                                Карта
+                            </Text>
+                        </View>
+                    )}
                     <Text style={styles.contentTitle} numberOfLines={2}>
                         {selectedCityId === nearbyId
                             ? (isMapAreaActive ? 'Квесты в этой области' : userLoc ? 'Квесты поблизости' : 'Все квесты')

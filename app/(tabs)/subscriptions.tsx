@@ -1,10 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, Pressable, Platform,
   ScrollView, ActivityIndicator, TextInput, type TextStyle, type ViewStyle,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSubscriptionsData, type SubscriptionTab } from '@/hooks/useSubscriptionsData';
@@ -33,12 +33,18 @@ export default function SubscriptionsScreen() {
   // сбрасывает Tab-навигатор на главную. Хук гейтит по Platform.OS === 'android'.
   useAndroidBackHandler();
   const router = useRouter();
+  const params = useLocalSearchParams<{ tab?: string }>();
   const pushRoute = useCallback((href: string) => { router.push(href as Href); }, [router]);
   useResponsive();
   const colors = useThemedColors();
   const styles = useMemo(() => createPageStyles(colors), [colors]);
-  const [activeTab, setActiveTab] = useState<SubscriptionTab>('subscriptions');
+  const initialTab: SubscriptionTab = params.tab === 'subscribers' ? 'subscribers' : 'subscriptions';
+  const [activeTab, setActiveTab] = useState<SubscriptionTab>(initialTab);
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    setActiveTab(params.tab === 'subscribers' ? 'subscribers' : 'subscriptions');
+  }, [params.tab]);
 
   const {
     isAuthenticated, authReady,

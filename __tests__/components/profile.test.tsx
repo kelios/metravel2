@@ -29,6 +29,7 @@ jest.mock('@/hooks/useAchievementsApi', () => ({
 
 jest.mock('expo-router', () => ({
   useRouter: mockUseRouter,
+  useLocalSearchParams: jest.fn().mockReturnValue({}),
   usePathname: jest.fn().mockReturnValue('/profile'),
   useIsFocused: jest.fn().mockReturnValue(true),
 }));
@@ -295,17 +296,17 @@ describe('ProfileScreen', () => {
     const { findByText, findByLabelText, findAllByLabelText, findAllByText, getByLabelText, getAllByLabelText, queryByText } = renderProfile();
 
     expect(await findByText('Test User')).toBeTruthy();
-    expect(await findByText('user@example.com')).toBeTruthy();
-
-    // Вкладка "Обзор" (по умолчанию): быстрые действия + пилюли + кнопка edit
+    // Компактная шапка: быстрые действия + кнопка edit, без email и сегмента-счётчиков.
     expect(await findByText('Чаты')).toBeTruthy();
-    expect(await findByText('Подписки')).toBeTruthy(); // пилюля-счётчик
     expect(await findByLabelText('Меню профиля')).toBeTruthy();
     expect(await findByText('Календарь')).toBeTruthy();
+    expect(queryByText('user@example.com')).toBeNull();
 
     // Счётчики во вкладках
     await waitFor(() => {
       expect(getByLabelText('Мои маршруты: 3')).toBeTruthy();
+      expect(getByLabelText('Подписчики')).toBeTruthy();
+      expect(getByLabelText('Подписки')).toBeTruthy();
       expect(getByLabelText('Сохранённое: 2')).toBeTruthy();
       expect(getByLabelText('Недавно смотрел: 5')).toBeTruthy();
     });

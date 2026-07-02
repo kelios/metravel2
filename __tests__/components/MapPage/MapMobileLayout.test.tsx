@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react
 import { StyleSheet, View } from 'react-native'
 
 import { MapMobileLayout } from '@/components/MapPage/MapMobileLayout'
+import { getSearchAreaButtonBottom } from '@/components/MapPage/MapMobileLayout.styles'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useRouteStore } from '@/stores/routeStore'
 
@@ -241,6 +242,14 @@ describe('MapMobileLayout', () => {
     })
 
     expect(screen.queryByTestId('map-search-this-area')).toBeNull()
+  })
+
+  it('keeps the web search-this-area button close to the mobile footer dock', () => {
+    expect(getSearchAreaButtonBottom(true, true)).toBe(
+      'calc(16px + env(safe-area-inset-bottom))',
+    )
+    expect(getSearchAreaButtonBottom(false, true)).toBe(96)
+    expect(getSearchAreaButtonBottom(false, false)).toBe(104)
   })
 
   describe('route building toolbar (#597)', () => {

@@ -23,7 +23,6 @@ import {
   ProfileHeaderQuickActions,
   type ProfileHeaderActionKey,
 } from './ProfileHeaderQuickActions';
-import { ProfileStatSegment, type ProfileStatSegmentItem } from './ProfileStatSegment';
 
 interface ProfileHeaderRank {
   level: number;
@@ -35,7 +34,6 @@ interface ProfileHeaderProps {
   profile?: UserProfileDto | null;
   rank?: ProfileHeaderRank | null;
   unreadMessagesCount?: number;
-  statItems: ProfileStatSegmentItem[];
   onEdit: () => void;
   onLogout: () => void;
   onAvatarUpload: () => void;
@@ -79,7 +77,6 @@ export function ProfileHeader({
   profile,
   rank,
   unreadMessagesCount = 0,
-  statItems,
   onEdit,
   onLogout,
   onAvatarUpload,
@@ -118,7 +115,7 @@ export function ProfileHeader({
   );
 
   const rankLabel = useMemo(
-    () => (rank ? `Ур. ${rank.level} · ${rank.title}` : null),
+    () => (rank ? `Уровень ${rank.level}: ${rank.title}` : null),
     [rank]
   );
 
@@ -226,12 +223,18 @@ export function ProfileHeader({
           alignItems: 'center',
           justifyContent: 'center',
         },
-        // Info column (name + status + email)
+        // Info column (name + compact meta)
         infoColumn: {
           flex: 1,
           minWidth: 0,
           paddingTop: AVATAR_SIZE / 2 + AVATAR_BORDER,
           gap: 3,
+        },
+        nameRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: DESIGN_TOKENS.spacing.xxs,
         },
         userName: {
           ...DESIGN_TOKENS.typography.scale.h2,
@@ -247,8 +250,8 @@ export function ProfileHeader({
           flexDirection: 'row',
           alignItems: 'center',
           gap: 4,
-          paddingHorizontal: 8,
-          paddingVertical: 3,
+          paddingHorizontal: 7,
+          paddingVertical: 4,
           borderRadius: DESIGN_TOKENS.radii.pill,
           backgroundColor: colors.accentSoft,
           ...Platform.select({
@@ -261,41 +264,19 @@ export function ProfileHeader({
           fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
           color: colors.text,
         },
-        userEmail: {
-          fontSize: DESIGN_TOKENS.typography.sizes.sm,
-          color: colors.textMuted,
-        },
-        // Social links
-        socialsRow: {
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: DESIGN_TOKENS.spacing.xs,
-          marginTop: DESIGN_TOKENS.spacing.sm,
-          paddingHorizontal: DESIGN_TOKENS.spacing.md,
-        },
-        socialChip: {
-          flexDirection: 'row',
+        socialIcon: {
+          width: 28,
+          height: 28,
+          borderRadius: 14,
           alignItems: 'center',
-          gap: 5,
-          paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-          paddingVertical: 7,
-          borderRadius: DESIGN_TOKENS.radii.pill,
+          justifyContent: 'center',
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: colors.border,
-          minHeight: DESIGN_TOKENS.touchTarget.minHeight - 4,
           ...Platform.select({
             web: { cursor: 'pointer' } as any,
             default: {},
           }),
-        },
-        socialChipText: {
-          color: colors.textSecondary,
-          fontSize: DESIGN_TOKENS.typography.sizes.xs,
-          fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-        },
-        segmentSpacer: {
-          height: DESIGN_TOKENS.spacing.md,
         },
       }),
     [colors]
@@ -364,14 +345,10 @@ export function ProfileHeader({
         </Pressable>
 
         <View style={styles.infoColumn}>
-          <Text style={styles.userName} numberOfLines={2}>
-            {user.name || 'Пользователь'}
-          </Text>
-          <View style={styles.statusRow}>
-            <VerifiedBadge
-              isVerified={profile?.is_verified}
-              organizerStatus={profile?.organizer_status ?? null}
-            />
+          <View style={styles.nameRow}>
+            <Text style={styles.userName} numberOfLines={2}>
+              {user.name || 'Пользователь'}
+            </Text>
             {rankLabel ? (
               <Pressable
                 onPress={onRankPress}
@@ -387,50 +364,39 @@ export function ProfileHeader({
               >
                 <Feather name="award" size={12} color={colors.primary} />
                 <Text style={styles.rankChipText} numberOfLines={1}>
-                  {rankLabel}
+                  Ур. {rank?.level}
                 </Text>
               </Pressable>
             ) : null}
+            {socialLinks.map((link) => (
+              <Pressable
+                key={link.key}
+                style={({ pressed }) => [
+                  styles.socialIcon,
+                  globalFocusStyles.focusable,
+                  { opacity: pressed ? 0.75 : 1 },
+                ]}
+                onPress={() => openExternalUrl(String(link.url))}
+                accessibilityRole="link"
+                accessibilityLabel={`Открыть ${SOCIAL_LABELS[link.key] ?? link.label}`}
+                accessibilityHint={`Откроется внешняя ссылка на ${SOCIAL_LABELS[link.key] ?? link.label}`}
+              >
+                <Feather
+                  name={SOCIAL_ICONS[link.key] || 'link'}
+                  size={14}
+                  color={colors.primary}
+                />
+              </Pressable>
+            ))}
           </View>
-          {!!user.email && (
-            <Text style={styles.userEmail} numberOfLines={1}>
-              {user.email}
-            </Text>
-          )}
+          <View style={styles.statusRow}>
+            <VerifiedBadge
+              isVerified={profile?.is_verified}
+              organizerStatus={profile?.organizer_status ?? null}
+            />
+          </View>
         </View>
       </View>
-
-      {/* Social Links */}
-      {socialLinks.length > 0 && (
-        <View style={styles.socialsRow}>
-          {socialLinks.map((link) => (
-            <Pressable
-              key={link.key}
-              style={({ pressed }) => [
-                styles.socialChip,
-                globalFocusStyles.focusable,
-                { opacity: pressed ? 0.75 : 1 },
-              ]}
-              onPress={() => openExternalUrl(String(link.url))}
-              accessibilityRole="link"
-              accessibilityLabel={`Открыть ${SOCIAL_LABELS[link.key] ?? link.label}`}
-              accessibilityHint={`Откроется внешняя ссылка на ${SOCIAL_LABELS[link.key] ?? link.label}`}
-            >
-              <Feather
-                name={SOCIAL_ICONS[link.key] || 'link'}
-                size={13}
-                color={colors.primary}
-              />
-              <Text style={styles.socialChipText}>
-                {SOCIAL_LABELS[link.key] ?? link.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
-
-      <View style={styles.segmentSpacer} />
-      <ProfileStatSegment items={statItems} />
       <ProfileHeaderQuickActions
         onPress={onQuickAction}
         unreadMessagesCount={unreadMessagesCount}

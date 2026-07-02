@@ -1,7 +1,6 @@
 import { View } from 'react-native';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
-import type { ProfileStatSegmentItem } from '@/components/profile/ProfileStatSegment';
 import type { ProfileHeaderActionKey } from '@/components/profile/ProfileHeaderQuickActions';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import Button from '@/components/ui/Button';
@@ -20,7 +19,6 @@ interface ProfileHeaderSectionProps {
   handleLogout: () => void;
   pickAndUpload: () => void;
   avatarUploading: boolean;
-  statItems: ProfileStatSegmentItem[];
   handleHeaderAction: (key: ProfileHeaderActionKey) => void;
   onRankPress?: () => void;
   activeTab: ProfileTabKey;
@@ -41,7 +39,6 @@ export function ProfileHeaderSection({
   handleLogout,
   pickAndUpload,
   avatarUploading,
-  statItems,
   handleHeaderAction,
   onRankPress,
   activeTab,
@@ -65,10 +62,6 @@ export function ProfileHeaderSection({
               <SkeletonLoader width={200} height={14} borderRadius={4} />
             </View>
           </View>
-          {/* Stat segment row */}
-          <View style={styles.skeletonStatsRow}>
-            <SkeletonLoader width="100%" height={50} borderRadius={16} />
-          </View>
           {/* Quick actions row */}
           <View style={styles.skeletonStatsRow}>
             <SkeletonLoader width="100%" height={56} borderRadius={12} />
@@ -85,7 +78,6 @@ export function ProfileHeaderSection({
             profile={profile}
             rank={rank}
             unreadMessagesCount={unreadMessagesCount}
-            statItems={statItems}
             onEdit={handleEdit}
             onLogout={handleLogout}
             onQuickAction={handleHeaderAction}

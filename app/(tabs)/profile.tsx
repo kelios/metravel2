@@ -31,7 +31,6 @@ import { ProfileStatsTab } from '@/components/screens/profile/ProfileStatsTab';
 import { ProfileCountriesTab } from '@/components/screens/profile/ProfileCountriesTab';
 import { ProfileWorldMapTab } from '@/components/screens/profile/ProfileWorldMapTab';
 import { ProfileTravelGrid } from '@/components/screens/profile/ProfileTravelGrid';
-import { type ProfileStatSegmentItem } from '@/components/profile/ProfileStatSegment';
 import { type ProfileHeaderActionKey } from '@/components/profile/ProfileHeaderQuickActions';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useMyAchievements } from '@/hooks/useAchievementsApi';
@@ -388,9 +387,17 @@ export default function ProfileScreen() {
   }, []);
 
   const handleProfileTabChange = useCallback((tab: ProfileTabKey) => {
+    if (tab === 'subscribers') {
+      router.push('/subscriptions?tab=subscribers' as any);
+      return;
+    }
+    if (tab === 'subscriptions') {
+      router.push('/subscriptions?tab=subscriptions' as any);
+      return;
+    }
     setActiveTravelMetric(null);
     setActiveTab(tab);
-  }, []);
+  }, [router]);
 
   const emptyStateProps = useMemo(() => {
     if (activeTravelMetric) {
@@ -510,10 +517,20 @@ export default function ProfileScreen() {
   );
 
   const tabCounts = useMemo(() => ({
+    overview: badgesCount,
     travels: stats.travelsCount,
+    subscribers: subscribersCount,
+    subscriptions: subscriptionsCount,
     favorites: stats.favoritesCount,
     history: stats.viewsCount,
-  }), [stats.travelsCount, stats.favoritesCount, stats.viewsCount]);
+  }), [
+    badgesCount,
+    stats.travelsCount,
+    subscribersCount,
+    subscriptionsCount,
+    stats.favoritesCount,
+    stats.viewsCount,
+  ]);
 
   const userProp = useMemo(() => ({
     name: displayName,
@@ -537,37 +554,6 @@ export default function ProfileScreen() {
     router.push('/quests' as any)
   }, [router])
 
-  const statItems = useMemo<ProfileStatSegmentItem[]>(() => [
-    {
-      key: 'travels',
-      label: 'Маршруты',
-      value: stats.travelsCount,
-      onPress: () => handleProfileTabChange('travels'),
-      accessibilityHint: 'Показать ваши опубликованные маршруты',
-    },
-    {
-      key: 'subscribers',
-      label: 'Подписчики',
-      value: subscribersCount,
-      onPress: () => router.push('/subscriptions'),
-      accessibilityHint: 'Перейти к подписчикам',
-    },
-    {
-      key: 'subscriptions',
-      label: 'Подписки',
-      value: subscriptionsCount,
-      onPress: () => router.push('/subscriptions'),
-      accessibilityHint: 'Перейти к подпискам',
-    },
-    {
-      key: 'achievements',
-      label: 'Значки',
-      value: badgesCount,
-      onPress: () => handleProfileTabChange('overview'),
-      accessibilityHint: 'Открыть обзор с достижениями',
-    },
-  ], [stats.travelsCount, subscribersCount, subscriptionsCount, badgesCount, handleProfileTabChange, router]);
-
   const Header = useMemo(
     () => (
       <ProfileHeaderSection
@@ -581,7 +567,6 @@ export default function ProfileScreen() {
         handleLogout={handleLogout}
         pickAndUpload={pickAndUpload}
         avatarUploading={avatarUploading}
-        statItems={statItems}
         handleHeaderAction={handleHeaderAction}
         onRankPress={() => handleProfileTabChange('overview')}
         activeTab={activeTab}
@@ -602,7 +587,6 @@ export default function ProfileScreen() {
       handleLogout,
       pickAndUpload,
       avatarUploading,
-      statItems,
       handleHeaderAction,
       tabCounts,
       activeTab,

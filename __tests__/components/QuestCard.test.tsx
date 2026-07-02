@@ -112,13 +112,10 @@ describe('QuestCard', () => {
                 src: 'https://cdn.example.com/quest.jpg',
                 width: 340,
                 height: 238,
-                fit: 'contain',
-                blurBackground: true,
-                allowCriticalWebBlur: true,
-                revealOnLoadOnly: true,
+                fit: 'cover',
+                blurBackground: false,
                 loading: 'eager',
                 priority: 'low',
-                optimizeWeb: false,
             }),
         );
         expect(getByTestId('quest-card-pioneer-krakow-dragon')).toBeTruthy();

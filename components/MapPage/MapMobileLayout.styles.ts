@@ -4,6 +4,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 const MOBILE_WEB_BOTTOM_CHROME_GAP = 28
+const MOBILE_WEB_SEARCH_AREA_BOTTOM = 16
 const CONTROL_RADIUS = 12
 
 type MapMobileLayoutStyleOptions = {
@@ -11,6 +12,13 @@ type MapMobileLayoutStyleOptions = {
   compactSheetActions: boolean
   stackSheetToolbar: boolean
   isSheetPreview: boolean
+}
+
+export function getSearchAreaButtonBottom(isWeb: boolean, isNarrow: boolean) {
+  if (isWeb) {
+    return `calc(${MOBILE_WEB_SEARCH_AREA_BOTTOM}px + env(safe-area-inset-bottom))`
+  }
+  return isNarrow ? 96 : 104
 }
 
 export const getMapMobileLayoutStyles = (
@@ -438,11 +446,7 @@ export const getMapMobileLayoutStyles = (
     searchAreaButton: {
       position: 'absolute' as const,
       alignSelf: 'center' as const,
-      bottom: Platform.OS === 'web'
-        ? (`calc(${options.isNarrow ? 96 : 104}px + env(safe-area-inset-bottom))` as any)
-        : options.isNarrow
-          ? 96
-          : 104,
+      bottom: getSearchAreaButtonBottom(Platform.OS === 'web', options.isNarrow) as any,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
