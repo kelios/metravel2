@@ -175,7 +175,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
                 <View style={styles.actionsRow}>
                     <Pressable
                         onPress={handleConfirmDelete}
-                        style={[styles.actionButton, { backgroundColor: DESIGN_TOKENS.colors.error, borderColor: DESIGN_TOKENS.colors.error }]}
+                        style={[styles.actionButton, { backgroundColor: colors.danger, borderColor: colors.danger }]}
                         accessibilityRole="button"
                         accessibilityLabel="Подтвердить удаление сообщения"
                     >

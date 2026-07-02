@@ -218,7 +218,7 @@ function ThreadList({
                     <View style={styles.deleteConfirmRow}>
                         <Pressable
                             onPress={() => handleConfirmDelete(item.id)}
-                            style={[styles.deleteConfirmButton, { backgroundColor: DESIGN_TOKENS.colors.error }]}
+                            style={[styles.deleteConfirmButton, { backgroundColor: colors.danger }]}
                             accessibilityRole="button"
                             accessibilityLabel="Подтвердить удаление диалога"
                         >

@@ -227,7 +227,7 @@ export default function RouletteScreen() {
 
   return (
     <View style={styles.root}>
-      {Platform.OS === 'web' && (
+      {Platform.OS === 'web' && !isMobile && (
         <Image source={MAP_BACKGROUND} style={styles.rootBackgroundImage} resizeMode="cover" />
       )}
       {Platform.OS === 'web' && isMounted && isFocused && (
@@ -258,7 +258,7 @@ export default function RouletteScreen() {
 
         <View style={[styles.main, isMobile && styles.mainMobile]}>
           <View style={[styles.heroRow, isMobile && styles.heroRowMobile]}>
-            <View style={styles.heroTextBlock}>
+            <View style={[styles.heroTextBlock, isMobile && styles.heroTextBlockMobile]}>
               <Text style={styles.heroTitle}>Не знаешь, куда поехать?</Text>
               <Text style={styles.heroSubtitle}>
                 {isMobile

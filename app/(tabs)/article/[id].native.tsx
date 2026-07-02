@@ -181,8 +181,10 @@ export default function ArticleDetails() {
                         onPress: (_event: any, href: string) => handleRichTextLinkPress(href),
                       },
                     }}
+                    baseStyle={{ color: colors.text }}
                     tagsStyles={{
                       p: { marginTop: 15, marginBottom: 0 },
+                      a: { color: colors.primary },
                       iframe: {
                         height: 1500,
                         width: 680,

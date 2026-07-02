@@ -155,7 +155,7 @@ export function SafeHtml({ html, style, className, testID }: SafeHtmlProps) {
     // В данном случае используем простой текст, так как полный HTML рендеринг требует WebView
     return (
         <View style={[styles.container, style]} testID={testID}>
-            <Text style={styles.text}>
+            <Text style={[styles.text, { color: colors.text }]}>
                 {/* Удаляем HTML теги для простого отображения в React Native */}
                 {sanitized.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()}
             </Text>

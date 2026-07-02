@@ -71,6 +71,14 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     flex: 1,
     maxWidth: 480,
   },
+  // В мобильной колонке (heroRowMobile) flex:1 с flexBasis:0 схлопывает блок
+  // в нулевую высоту на native (Yoga), хотя web его растягивает по контенту
+  heroTextBlockMobile: {
+    flex: 0,
+    flexBasis: 'auto',
+    alignSelf: 'stretch',
+    maxWidth: '100%',
+  },
   heroTitle: {
     fontSize: 20,
     fontWeight: '700',

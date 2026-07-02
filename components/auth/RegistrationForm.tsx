@@ -32,6 +32,7 @@ import {
     trackRegistrationViewed,
 } from '@/utils/growthFunnelAnalytics';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/context/AuthContext';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import { webTouchScrollStyle } from '@/utils';
@@ -58,6 +59,7 @@ export default function RegisterForm() {
     const router = useRouter();
     const { loginWithGoogle } = useAuth();
     const colors = useThemedColors();
+    const { isMobile } = useResponsive();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const pathname = usePathname();
@@ -220,7 +222,7 @@ export default function RegisterForm() {
                 style={{ flex: 1, backgroundColor: colors.backgroundSecondary }}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
-                {Platform.OS === 'web' && (
+                {Platform.OS === 'web' && !isMobile && (
                     <Image
                         source={require('../../assets/travel/roulette-map-bg.jpg')}
                         style={styles.mapBackground}

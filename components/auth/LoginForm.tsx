@@ -25,6 +25,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import { webTouchScrollStyle } from '@/utils';
 
@@ -67,6 +68,7 @@ export default function Login() {
     const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo');
     const canonical = buildCanonicalUrl(pathname || '/login');
     const colors = useThemedColors();
+    const { isMobile } = useResponsive();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const showMsg = (text: string, error = false) => {
@@ -203,7 +205,7 @@ export default function Login() {
                 style={styles.container}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
-                {Platform.OS === 'web' && (
+                {Platform.OS === 'web' && !isMobile && (
                     <Image
                         source={require('../../assets/travel/roulette-map-bg.jpg')}
                         style={styles.mapBackground}

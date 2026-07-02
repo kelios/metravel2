@@ -57,7 +57,7 @@ export default function ExportScreen() {
       <ResponsiveContainer maxWidth="lg" padding>
         <EmptyState
           icon="lock"
-          title="Войдите, чтобы собрать PDF-книгу"
+          title="Войдите, чтобы собрать PDF‑книгу"
           description="Экспорт в PDF доступен после авторизации."
           action={{
             label: 'Войти',
@@ -78,8 +78,8 @@ export default function ExportScreen() {
       <ResponsiveContainer maxWidth="lg" padding>
         <EmptyState
           icon="file-text"
-          title="Чтобы собрать PDF-книгу, добавьте хотя бы одно путешествие"
-          description="Добавьте первое путешествие - и сможете собрать книгу и сохранить ее в PDF."
+          title="Чтобы собрать PDF‑книгу, добавьте хотя бы одно путешествие"
+          description="Добавьте первое путешествие — и сможете собрать книгу и сохранить её в PDF."
           action={{
             label: 'Добавить путешествие',
             onPress: () => router.push('/travel/new' as any),

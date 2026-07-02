@@ -1,7 +1,6 @@
 import React, { lazy, memo } from 'react'
 
 import QuestFullMapLazy from '@/components/quests/QuestFullMapLazy'
-import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 export const BelkrajWidgetLazy = lazy(() => import('@/components/belkraj/BelkrajWidget'))
 
@@ -75,7 +74,7 @@ export const QuestWebVideo = memo(function QuestWebVideo({
       width: '100%',
       height: '100%',
       objectFit: 'contain',
-      backgroundColor: DESIGN_TOKENS.colors.text,
+      backgroundColor: '#000',
     },
     onError: () => {
       onError()
