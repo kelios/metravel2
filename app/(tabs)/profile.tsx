@@ -31,6 +31,7 @@ import { ProfileStatsTab } from '@/components/screens/profile/ProfileStatsTab';
 import { ProfileCountriesTab } from '@/components/screens/profile/ProfileCountriesTab';
 import { ProfileWorldMapTab } from '@/components/screens/profile/ProfileWorldMapTab';
 import { ProfileTravelGrid } from '@/components/screens/profile/ProfileTravelGrid';
+import SubscriptionsTabContent from '@/components/subscriptions/SubscriptionsTabContent';
 import { type ProfileHeaderActionKey } from '@/components/profile/ProfileHeaderQuickActions';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useMyAchievements } from '@/hooks/useAchievementsApi';
@@ -117,7 +118,15 @@ export default function ProfileScreen() {
     [myAchievements?.rank],
   );
   const { count: unreadMessagesCount } = useUnreadCount(isAuthenticated);
-  const { subscriptions, subscribers } = useSubscriptionsData();
+  const {
+    subscriptions,
+    subscribers,
+    authors,
+    subscriptionsLoading,
+    subscribersLoading,
+    getFullName,
+    handleUnsubscribe,
+  } = useSubscriptionsData({ includeAuthorTravels: activeTab === 'subscriptions' });
   const subscriptionsCount = subscriptions.length;
   const subscribersCount = subscribers.length;
   const [activeTravelMetric, setActiveTravelMetric] = useState<ProfileTravelEngagementMetricKey | null>(null);
@@ -387,17 +396,9 @@ export default function ProfileScreen() {
   }, []);
 
   const handleProfileTabChange = useCallback((tab: ProfileTabKey) => {
-    if (tab === 'subscribers') {
-      router.push('/subscriptions?tab=subscribers' as any);
-      return;
-    }
-    if (tab === 'subscriptions') {
-      router.push('/subscriptions?tab=subscriptions' as any);
-      return;
-    }
     setActiveTravelMetric(null);
     setActiveTab(tab);
-  }, [router]);
+  }, []);
 
   const emptyStateProps = useMemo(() => {
     if (activeTravelMetric) {
@@ -554,6 +555,22 @@ export default function ProfileScreen() {
     router.push('/quests' as any)
   }, [router])
 
+  const handleMessageUser = useCallback((messageUserId: number) => {
+    router.push(`/messages?userId=${encodeURIComponent(messageUserId)}` as any)
+  }, [router])
+
+  const handleOpenSubscribedTravel = useCallback((url: string) => {
+    router.push(url as any)
+  }, [router])
+
+  const handleOpenSubscribedProfile = useCallback((profileUserId: number) => {
+    router.push(`/user/${profileUserId}` as any)
+  }, [router])
+
+  const handleFindTravels = useCallback(() => {
+    router.push('/search' as any)
+  }, [router])
+
   const Header = useMemo(
     () => (
       <ProfileHeaderSection
@@ -684,11 +701,47 @@ export default function ProfileScreen() {
     [userId, profileTravels, personalTravelStatusEntries, handleProfileTabChange]
   );
 
+  const subscriptionsContent = useMemo(() => {
+    if (activeTab !== 'subscriptions' && activeTab !== 'subscribers') return null;
+
+    return (
+      <SubscriptionsTabContent
+        activeTab={activeTab}
+        showTabBar={false}
+        subscriptions={subscriptions}
+        subscribers={subscribers}
+        authors={authors}
+        subscriptionsLoading={subscriptionsLoading}
+        subscribersLoading={subscribersLoading}
+        getFullName={getFullName}
+        handleUnsubscribe={handleUnsubscribe}
+        onMessage={handleMessageUser}
+        onOpenTravel={handleOpenSubscribedTravel}
+        onOpenProfile={handleOpenSubscribedProfile}
+        onFindTravels={handleFindTravels}
+      />
+    );
+  }, [
+    activeTab,
+    authors,
+    getFullName,
+    handleFindTravels,
+    handleMessageUser,
+    handleOpenSubscribedProfile,
+    handleOpenSubscribedTravel,
+    handleUnsubscribe,
+    subscribers,
+    subscribersLoading,
+    subscriptions,
+    subscriptionsLoading,
+  ]);
+
   const isOverview = activeTab === 'overview';
   const isStats = activeTab === 'stats';
   const isCountries = activeTab === 'countries';
   const isWorldmap = activeTab === 'worldmap';
-  const isSectionTab = isOverview || isStats || isCountries || isWorldmap;
+  const isSubscriptionsSection = activeTab === 'subscriptions' || activeTab === 'subscribers';
+  const isSectionTab = isOverview || isStats || isCountries || isWorldmap || isSubscriptionsSection;
 
   const ListHeader = useMemo(
     () => (
@@ -698,9 +751,21 @@ export default function ProfileScreen() {
         {isStats ? statsContent : null}
         {isCountries ? countriesContent : null}
         {isWorldmap ? worldmapContent : null}
+        {subscriptionsContent}
       </>
     ),
-    [Header, countriesContent, worldmapContent, isCountries, isWorldmap, isOverview, isStats, overviewContent, statsContent],
+    [
+      Header,
+      countriesContent,
+      worldmapContent,
+      isCountries,
+      isWorldmap,
+      isOverview,
+      isStats,
+      overviewContent,
+      statsContent,
+      subscriptionsContent,
+    ],
   );
 
   const renderItem = useCallback(({ item, index }: { item: Travel; index: number }) => (

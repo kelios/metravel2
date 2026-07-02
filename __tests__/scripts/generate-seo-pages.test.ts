@@ -19,6 +19,10 @@ const {
   injectTravelHeroPreload,
   injectTravelBootstrapData,
   injectHiddenH1,
+  injectQuestIntroSection,
+  buildQuestPromoCatalog,
+  findTravelQuestPromoMatches,
+  injectTravelQuestPromoSection,
   injectJsonLd,
   buildTravelArticleJsonLd,
   normalizeSlug,
@@ -645,6 +649,112 @@ describe('travel SSR SEO helpers', () => {
     expect((second.match(/data-seo-jsonld="travel-article"/g) || []).length).toBe(1)
     expect(second).toContain('"headline":"Two"')
     expect(second).not.toContain('"headline":"One"')
+  })
+
+  it('matches nearby quests from travel coordinates and injects a crawlable travel promo', () => {
+    const catalog = buildQuestPromoCatalog(
+      [
+        {
+          quest_id: 'krakow-dragon',
+          city_id: '1',
+          title: 'Тайна Краковского дракона',
+          city_name: 'Краков',
+          cover_url: '/media/quests/krakow/cover.png',
+          points: 9,
+          duration_min: 120,
+        },
+      ],
+      new Map([
+        [
+          'krakow-dragon',
+          {
+            city: { id: 1, name: 'Краков', lat: 50.0614, lng: 19.9366, country_code: 'pl' },
+            steps: [{ location: 'Rynek Główny' }],
+          },
+        ],
+      ]),
+    )
+
+    const matches = findTravelQuestPromoMatches(
+      {
+        name: 'Краков на выходные',
+        countryName: 'Польша',
+        countryCode: 'pl',
+        travelAddress: [{ coord: '50.0615,19.9370' }],
+      },
+      catalog,
+      6,
+    )
+    const first = injectTravelQuestPromoSection(MINIMAL_BASE, matches)
+    const second = injectTravelQuestPromoSection(first, matches)
+
+    expect(matches).toHaveLength(1)
+    expect(matches[0].quest.route.path).toBe('/quests/1/krakow-dragon')
+    expect((second.match(/<section[^>]*data-ssg-travel-quest-promo="true"/g) || []).length).toBe(1)
+    expect((second.match(/<style[^>]*data-ssg-travel-quest-promo-style="true"/g) || []).length).toBe(1)
+    expect(second).toContain('Квест по этому городу')
+    expect(second).toContain('href="/quests/1/krakow-dragon"')
+    expect(second).toContain('Тайна Краковского дракона')
+    expect(second).toContain('https://metravel.by/media/quests/krakow/cover.png')
+    expect(second).toContain('9 точек')
+    expect(second).toContain('примерно 2 ч')
+    expect(second).toContain('html.rnw-styles-ready [data-ssg-travel-quest-promo="true"]')
+  })
+
+  it('does not inject a travel quest promo when no city or nearby match exists', () => {
+    const catalog = buildQuestPromoCatalog(
+      [{ quest_id: 'krakow-dragon', city_id: '1', title: 'Квест', city_name: 'Краков' }],
+      new Map([['krakow-dragon', { city: { id: 1, name: 'Краков', lat: 50.0614, lng: 19.9366, country_code: 'pl' } }]]),
+    )
+    const matches = findTravelQuestPromoMatches(
+      { countryName: 'Франция', countryCode: 'fr', travelAddress: [{ coord: '48.8582,2.2945' }] },
+      catalog,
+    )
+    const html = injectTravelQuestPromoSection(MINIMAL_BASE, matches)
+
+    expect(matches).toHaveLength(0)
+    expect(html).not.toContain('data-ssg-travel-quest-promo="true"')
+    expect(html).not.toContain('/quests/1/krakow-dragon')
+  })
+
+  it('injectQuestIntroSection adds crawlable visible quest intro and replaces it on repeat', () => {
+    const quest = {
+      title: 'Краковский дракон',
+      city_name: 'Краков',
+      points: '7',
+      duration_min: 90,
+    }
+    const bundle = {
+      intro: JSON.stringify({ location: 'Вавельский холм' }),
+      steps: JSON.stringify([{ location: 'Вавельский холм' }]),
+    }
+
+    const first = injectQuestIntroSection(MINIMAL_BASE, {
+      title: quest.title,
+      description: 'Пеший квест по Кракову с легендами и заданиями.',
+      quest,
+      bundle,
+    })
+    const second = injectQuestIntroSection(first, {
+      title: quest.title,
+      description: 'Обновлённое описание квеста.',
+      quest,
+      bundle,
+    })
+
+    expect((second.match(/<section[^>]*data-ssg-quest-intro="true"/g) || []).length).toBe(1)
+    expect((second.match(/<style[^>]*data-ssg-quest-intro-style="true"/g) || []).length).toBe(1)
+    expect(second).toContain('<h1 style=')
+    expect(second).toContain('Краковский дракон')
+    expect(second).toContain('Город: Краков')
+    expect(second).toContain('Маршрут: 7 точек')
+    expect(second).toContain('Время: примерно 1 ч 30 мин')
+    expect(second).toContain('Старт: Вавельский холм')
+    expect(second).toContain('Обновлённое описание квеста.')
+    expect(second).not.toContain('Пеший квест по Кракову с легендами и заданиями.')
+    expect(second).toContain('html.rnw-styles-ready [data-ssg-quest-intro="true"]')
+    expect(second).toContain("'Segoe UI'")
+    expect(second).not.toContain('system-ui,-apple-system,"Segoe UI"')
   })
 })
 

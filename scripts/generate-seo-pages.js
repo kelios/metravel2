@@ -609,6 +609,21 @@ function extractCollectionItems(result) {
   return [];
 }
 
+async function fetchQuestCatalog() {
+  const quests = [];
+  let nextUrl = `${API_BASE}/api/quests/`;
+  let page = 1;
+  while (nextUrl && page <= 50) {
+    console.log(`  📡 Fetching quests page ${page}...`);
+    const result = await fetchJson(nextUrl);
+    const items = extractCollectionItems(result).filter((q) => questRouteKey(q));
+    quests.push(...items);
+    nextUrl = (result && typeof result === 'object' && (result.next_page_url || result.next)) || null;
+    page++;
+  }
+  return quests;
+}
+
 function normalizeApiEndpoint(endpoint) {
   const raw = String(endpoint || '').trim();
   if (!raw) return '';
@@ -1004,7 +1019,7 @@ function questRouteKey(quest) {
 
 function buildQuestSeoDescription(quest) {
   const title = String(quest?.title || 'Городской квест').trim();
-  const city = String(quest?.city_name || quest?.cityName || '').trim();
+  const city = String(quest?.city_name || quest?.cityName || quest?.city?.name || '').trim();
   const points = Number(quest?.points) || 0;
   const durationMin = Number(quest?.duration_min) || 0;
 
@@ -1019,6 +1034,362 @@ function buildQuestSeoDescription(quest) {
   }
   parts.push('загадки, легенды и финал — прямо со смартфона');
   return clampDescriptionForAttr(parts.join(' · '));
+}
+
+function normalizeLocationText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[.,;:!?'„""–—-]/g, '')
+    .replace(/ё/g, 'е')
+    .trim();
+}
+
+function parseCoordPair(value) {
+  if (!value || typeof value !== 'string') return null;
+  const [latS, lngS] = value.split(',').map((part) => part.trim());
+  const lat = Number(latS);
+  const lng = Number(lngS);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
+}
+
+function extractTravelCoordsForQuestPromo(travel) {
+  const coords = [];
+  const pushCoord = (latValue, lngValue) => {
+    const lat = Number(latValue);
+    const lng = Number(lngValue);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) coords.push({ lat, lng });
+  };
+
+  if (Array.isArray(travel?.travelAddress)) {
+    for (const item of travel.travelAddress) {
+      const parsed = parseCoordPair(typeof item === 'string' ? item : item?.coord || item?.coords);
+      if (parsed) coords.push(parsed);
+      else if (item && typeof item === 'object') pushCoord(item.lat ?? item.latitude, item.lng ?? item.lon ?? item.longitude);
+    }
+  }
+
+  if (Array.isArray(travel?.coordsMeTravelArr)) {
+    for (const raw of travel.coordsMeTravelArr) {
+      const parsed = parseCoordPair(raw);
+      if (parsed) coords.push(parsed);
+    }
+  }
+
+  if (Array.isArray(travel?.coordsMeTravel)) {
+    for (const item of travel.coordsMeTravel) {
+      if (item && typeof item === 'object') pushCoord(item.lat ?? item.latitude, item.lng ?? item.lon ?? item.longitude);
+    }
+  }
+
+  pushCoord(travel?.lat ?? travel?.latitude, travel?.lng ?? travel?.lon ?? travel?.longitude);
+
+  const seen = new Set();
+  return coords.filter((coord) => {
+    const key = `${coord.lat.toFixed(6)},${coord.lng.toFixed(6)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function haversineKm(aLat, aLng, bLat, bLng) {
+  const toRad = (degrees) => (degrees * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const lat1 = toRad(aLat);
+  const lat2 = toRad(bLat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function minDistanceKm(coords, lat, lng) {
+  if (!Array.isArray(coords) || !coords.length || !Number.isFinite(lat) || !Number.isFinite(lng)) return Infinity;
+  return coords.reduce((min, coord) => {
+    if (!Number.isFinite(coord.lat) || !Number.isFinite(coord.lng)) return min;
+    return Math.min(min, haversineKm(coord.lat, coord.lng, lat, lng));
+  }, Infinity);
+}
+
+function buildQuestPromoMeta(quest, bundle) {
+  const route = questRouteKey(quest) || questRouteKey({
+    quest_id: bundle?.quest_id || bundle?.id,
+    city_id: bundle?.city?.id,
+  });
+  if (!route) return null;
+
+  const city = bundle?.city || quest?.city || {};
+  const lat = Number(city.lat ?? quest?.lat ?? quest?.latitude);
+  const lng = Number(city.lng ?? city.lon ?? city.longitude ?? quest?.lng ?? quest?.lon ?? quest?.longitude);
+  const cover = String(quest?.cover_url || quest?.coverUrl || bundle?.cover_url || bundle?.coverUrl || '').trim();
+  const countryCode = String(city.country_code || city.countryCode || quest?.country_code || quest?.countryCode || '').trim().toLowerCase();
+  const title = String(quest?.title || bundle?.title || 'Городской квест').trim();
+
+  return {
+    ...quest,
+    route,
+    title,
+    cityName: String(quest?.city_name || quest?.cityName || city.name || '').trim(),
+    countryName: String(quest?.country_name || quest?.countryName || city.country_name || city.countryName || '').trim(),
+    countryCode,
+    lat,
+    lng,
+    points: Number(quest?.points) || getQuestSteps(bundle).length || 0,
+    durationMin: Number(quest?.duration_min ?? quest?.durationMin ?? bundle?.duration_min) || 0,
+    cover,
+  };
+}
+
+function buildQuestPromoCatalog(quests, questBundleMap) {
+  return (Array.isArray(quests) ? quests : [])
+    .map((quest) => {
+      const route = questRouteKey(quest);
+      return buildQuestPromoMeta(quest, route ? questBundleMap.get(route.questId) : null);
+    })
+    .filter(Boolean);
+}
+
+function findTravelQuestPromoMatches(travel, questCatalog, limit = 6) {
+  if (!Array.isArray(questCatalog) || !questCatalog.length) return [];
+
+  const coords = extractTravelCoordsForQuestPromo(travel);
+  const qCity = normalizeLocationText(travel?.cityName || travel?.city_name || travel?.city?.name);
+  const qCountry = normalizeLocationText(travel?.countryName || travel?.country_name);
+  const qCode = String(travel?.countryCode || travel?.country_code || '').toLowerCase().trim();
+  const matches = [];
+
+  for (const quest of questCatalog) {
+    const cCity = normalizeLocationText(quest.cityName);
+    const cCountry = normalizeLocationText(quest.countryName);
+    const cCode = String(quest.countryCode || '').toLowerCase().trim();
+
+    if (qCode && cCode && qCode !== cCode) continue;
+    if ((!qCode || !cCode) && qCountry && cCountry && qCountry !== cCountry) {
+      const near = minDistanceKm(coords, quest.lat, quest.lng) < 15;
+      if (!near) continue;
+    }
+
+    let score = 0;
+    if (qCity && cCity) {
+      if (qCity === cCity) score += 100;
+      else if (cCity.includes(qCity) || qCity.includes(cCity)) score += 55;
+    }
+
+    const distanceKm = minDistanceKm(coords, quest.lat, quest.lng);
+    if (distanceKm < 8) score += 60;
+    else if (distanceKm < 20) score += 40;
+    else if (distanceKm < 50) score += 40;
+
+    if ((qCountry && cCountry && qCountry === cCountry) || (qCode && cCode && qCode === cCode)) score += 15;
+    if (score < 55) continue;
+
+    matches.push({ quest, score, distanceKm });
+  }
+
+  matches.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.distanceKm - b.distanceKm;
+  });
+
+  return matches.slice(0, Math.max(1, limit));
+}
+
+function formatQuestPromoPoints(points) {
+  const total = Number(points) || 0;
+  return total > 0 ? `${total} ${pluralizeRu(total, 'точка', 'точки', 'точек')}` : '';
+}
+
+function buildQuestPromoCardHtml(match) {
+  const quest = match.quest;
+  const duration = formatQuestDuration(quest.durationMin);
+  const points = formatQuestPromoPoints(quest.points);
+  const meta = [quest.cityName, points, duration ? `примерно ${duration}` : '']
+    .filter(Boolean)
+    .map((item) => `<span style="display:inline-flex;align-items:center;min-width:0">${escapeAttr(item)}</span>`)
+    .join('<span aria-hidden="true" style="opacity:.55">·</span>');
+  const cover = quest.cover ? toAbsoluteUrl(quest.cover) : '';
+  const image = cover
+    ? `<span role="img" aria-label="${escapeAttr(`Обложка квеста ${quest.title}`)}" style="width:88px;height:88px;border-radius:8px;background-color:var(--color-surface-muted,rgba(0,0,0,.06));background-image:url('${escapeAttr(cover)}');background-size:cover;background-position:center;flex:0 0 auto"></span>`
+    : '';
+
+  return [
+    `<a href="${escapeAttr(quest.route.path)}" style="display:flex;gap:14px;align-items:center;text-decoration:none;color:inherit;border:1px solid var(--color-border,rgba(0,0,0,.12));border-radius:8px;padding:10px;background:var(--color-surface,#fff)">`,
+    image,
+    '<span style="display:flex;flex-direction:column;gap:6px;min-width:0">',
+    `<span style="font-size:13px;font-weight:800;color:var(--color-text-muted,rgba(34,51,44,.72))">${escapeAttr(match.distanceKm < 8 ? 'В этом городе' : 'Квест рядом')}</span>`,
+    `<strong style="font-size:18px;line-height:1.25;color:var(--color-text,#22332c)">${escapeAttr(quest.title)}</strong>`,
+    meta ? `<span style="display:flex;flex-wrap:wrap;gap:6px 8px;font-size:14px;color:var(--color-text-muted,rgba(34,51,44,.72))">${meta}</span>` : '',
+    '</span>',
+    '</a>',
+  ].join('');
+}
+
+function injectTravelQuestPromoSection(baseHtml, matches) {
+  let html = baseHtml.replace(/<style[^>]*data-ssg-travel-quest-promo-style="true"[^>]*>[\s\S]*?<\/style>\n?/i, '');
+  html = html.replace(/<section[^>]*data-ssg-travel-quest-promo="true"[^>]*>[\s\S]*?<\/section>\n?/i, '');
+  if (!Array.isArray(matches) || !matches.length) return html;
+
+  const hasSameCityMatch = matches.some((match) => Number.isFinite(match.distanceKm) && match.distanceKm < 8);
+  const heading = matches.length === 1
+    ? (hasSameCityMatch ? 'Квест по этому городу' : 'Квест рядом')
+    : (hasSameCityMatch ? 'Квесты по этому городу и рядом' : 'Квесты рядом');
+  const subtitle = matches.length === 1
+    ? 'Пройдите пешком по легендам и загадкам — прямо со смартфона.'
+    : 'Пешие маршруты с легендами и загадками — выберите подходящий.';
+  const cards = matches.map(buildQuestPromoCardHtml).join('');
+  const styleTag = [
+    '<style data-ssg-travel-quest-promo-style="true">',
+    'html.rnw-styles-ready [data-ssg-travel-quest-promo="true"]{display:none!important}',
+    '@media(max-width:640px){[data-ssg-travel-quest-promo="true"]{margin:12px;padding:16px 14px}[data-ssg-travel-quest-promo="true"] h2{font-size:22px!important}[data-ssg-travel-quest-promo="true"] [role="img"]{width:72px!important;height:72px!important}}',
+    '</style>',
+  ].join('');
+  const section = [
+    `<section data-ssg-travel-quest-promo="true" aria-label="${escapeAttr(heading)}" style="box-sizing:border-box;max-width:840px;margin:24px auto;padding:20px 18px;font:16px/1.55 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--color-text,#22332c);background:var(--color-surface,#fff);border:1px solid var(--color-border,rgba(0,0,0,.12));border-radius:8px">`,
+    `<h2 style="margin:0 0 8px;font:800 26px/1.2 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;letter-spacing:0;color:var(--color-text,#22332c)">${escapeAttr(heading)}</h2>`,
+    `<p style="margin:0 0 14px;color:var(--color-text-muted,rgba(34,51,44,.72))">${escapeAttr(subtitle)}</p>`,
+    `<div style="display:grid;gap:12px">${cards}</div>`,
+    '</section>',
+  ].join('');
+
+  const insertion = `${styleTag}\n${section}\n`;
+  if (/<div\s+id="root"[^>]*>/i.test(html)) {
+    return html.replace(/<div(\s+id="root"[^>]*)>/i, `<div$1>${insertion}`);
+  }
+  return html.replace('</body>', `${insertion}</body>`);
+}
+
+function parseQuestJsonField(value, fallback) {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object') return value;
+  if (typeof value !== 'string' || !value.trim()) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function getQuestSteps(bundle) {
+  const parsed = parseQuestJsonField(bundle?.steps, []);
+  return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+}
+
+function getQuestIntro(bundle) {
+  const parsed = parseQuestJsonField(bundle?.intro, null);
+  return parsed && typeof parsed === 'object' ? parsed : null;
+}
+
+function formatQuestDuration(durationMin) {
+  const total = Number(durationMin) || 0;
+  if (total <= 0) return '';
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  if (hours > 0 && mins > 0) return `${hours} ч ${mins} мин`;
+  if (hours > 0) return `${hours} ч`;
+  return `${mins} мин`;
+}
+
+function buildQuestIntroSectionModel(quest, bundle) {
+  const steps = getQuestSteps(bundle);
+  const intro = getQuestIntro(bundle);
+  const city = String(
+    quest?.city_name ||
+    quest?.cityName ||
+    bundle?.city?.name ||
+    ''
+  ).trim();
+  const points = Number(quest?.points) || steps.length || 0;
+  const durationLabel = formatQuestDuration(quest?.duration_min ?? quest?.durationMin ?? bundle?.duration_min);
+  const startLocation = String(
+    intro?.location ||
+    steps[0]?.location ||
+    city ||
+    ''
+  ).trim();
+
+  const facts = [];
+  if (city) facts.push(`Город: ${city}`);
+  if (points > 0) facts.push(`Маршрут: ${points} ${pluralizeRu(points, 'точка', 'точки', 'точек')}`);
+  if (durationLabel) facts.push(`Время: примерно ${durationLabel}`);
+  if (startLocation) facts.push(`Старт: ${startLocation}`);
+
+  return { city, points, durationLabel, startLocation, facts };
+}
+
+function injectQuestIntroSection(baseHtml, { title, description, quest, bundle }) {
+  const cleanTitle = String(title || quest?.title || 'Городской квест').replace(/\s+\|\s*Metravel$/i, '').trim();
+  const cleanDescription = String(description || buildQuestSeoDescription(quest)).trim();
+  const model = buildQuestIntroSectionModel(quest, bundle);
+  const lead = cleanDescription || (
+    model.city
+      ? `${cleanTitle} — пеший квест по городу ${model.city}.`
+      : `${cleanTitle} — пеший городской квест.`
+  );
+  const facts = model.facts
+    .map((fact) => `<li style="margin:0;padding:0">${escapeAttr(fact)}</li>`)
+    .join('');
+
+  const sectionStyle = [
+    'box-sizing:border-box',
+    'max-width:840px',
+    'margin:24px auto',
+    'padding:20px 18px',
+    "font:16px/1.55 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif",
+    'color:var(--color-text,#22332c)',
+    'background:var(--color-surface,#ffffff)',
+    'border:1px solid var(--color-border,#dbe7df)',
+    'border-radius:8px',
+  ].join(';');
+  const kickerStyle = [
+    'margin:0 0 6px',
+    'font-size:13px',
+    'font-weight:800',
+    'letter-spacing:0',
+    'color:var(--color-text-muted,#5f756c)',
+  ].join(';');
+  const titleStyle = [
+    'margin:0 0 10px',
+    "font:800 28px/1.2 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif",
+    'letter-spacing:0',
+    'color:var(--color-text,#22332c)',
+  ].join(';');
+  const textStyle = 'margin:0 0 14px;color:var(--color-text,#22332c)';
+  const listStyle = [
+    'display:grid',
+    'grid-template-columns:repeat(auto-fit,minmax(180px,1fr))',
+    'gap:8px 14px',
+    'margin:0',
+    'padding:0',
+    'list-style:none',
+    'color:var(--color-text-muted,#5f756c)',
+    'font-size:14px',
+  ].join(';');
+
+  const styleTag = [
+    '<style data-ssg-quest-intro-style="true">',
+    'html.rnw-styles-ready [data-ssg-quest-intro="true"]{display:none!important}',
+    '@media(max-width:640px){[data-ssg-quest-intro="true"]{margin:12px;padding:16px 14px}[data-ssg-quest-intro="true"] h1{font-size:23px!important}}',
+    '</style>',
+  ].join('');
+  const section = [
+    `<section data-ssg-quest-intro="true" aria-label="Описание городского квеста" style="${sectionStyle}">`,
+    `<p style="${kickerStyle}">Городской квест Metravel</p>`,
+    `<h1 style="${titleStyle}">${escapeAttr(cleanTitle)}</h1>`,
+    `<p style="${textStyle}">${escapeAttr(lead)}</p>`,
+    facts ? `<ul style="${listStyle}">${facts}</ul>` : '',
+    '</section>',
+  ].join('');
+
+  let html = baseHtml.replace(/<style[^>]*data-ssg-quest-intro-style="true"[^>]*>[\s\S]*?<\/style>\n?/i, '');
+  html = html.replace(/<section[^>]*data-ssg-quest-intro="true"[^>]*>[\s\S]*?<\/section>\n?/i, '');
+  html = html.replace('</head>', `${styleTag}\n</head>`);
+
+  if (/<body([^>]*)>/i.test(html)) {
+    return html.replace(/<body([^>]*)>/i, `<body$1>${section}`);
+  }
+
+  return `${section}${html}`;
 }
 
 function pluralizeRu(n, one, few, many) {
@@ -1047,7 +1418,7 @@ function buildQuestJsonLd({ title, description, canonical, image, quest }) {
     },
   };
   if (image) payload.image = [image];
-  const city = String(quest?.city_name || quest?.cityName || '').trim();
+  const city = String(quest?.city_name || quest?.cityName || quest?.city?.name || '').trim();
   if (city) {
     payload.location = { '@type': 'City', name: city };
   }
@@ -1420,6 +1791,43 @@ async function main() {
     console.log(`  ✅ ${page.route}${(page.route === '/' || page.route === '/search') ? ' (with SSG skeleton)' : ''}`);
   }
 
+  // --- 1b. Quest catalog ---
+  // Travel SSG needs the quest catalog before travel pages are written so city
+  // articles can include crawlable "quest for this city" links in the HTML.
+  console.log('\n🧩 Fetching quests from API...');
+  let quests = [];
+  const questBundleMap = new Map();
+  let questPromoCatalog = [];
+  try {
+    quests = await fetchQuestCatalog();
+    console.log(`  📦 Got ${quests.length} quests`);
+
+    if (quests.length > 0) {
+      console.log(`  📥 Fetching quest details for location matching (concurrency: 8)...`);
+      const bundles = await batchAsync(quests, 8, async (quest, i) => {
+        const route = questRouteKey(quest);
+        if (!route) return null;
+        if ((i + 1) % 20 === 0 || i === quests.length - 1) {
+          console.log(`  📡 Fetched ${i + 1}/${quests.length} quest details...`);
+        }
+        try {
+          return await fetchJson(`${API_BASE}/api/quests/by-quest-id/${encodeURIComponent(route.questId)}/`);
+        } catch (err) {
+          console.warn(`  ⚠️  Quest bundle not available for ${route.questId}: ${err.message}`);
+          return null;
+        }
+      });
+      quests.forEach((quest, i) => {
+        const route = questRouteKey(quest);
+        if (route && bundles[i]) questBundleMap.set(route.questId, bundles[i]);
+      });
+      questPromoCatalog = buildQuestPromoCatalog(quests, questBundleMap);
+    }
+  } catch (err) {
+    console.error('❌ Failed to fetch quests:', err.message);
+    console.error('   Quest pages and travel quest promos will not be generated.');
+  }
+
   // --- 2. Travel pages ---
   console.log('\n🌍 Fetching travels from API...');
   let travels = [];
@@ -1487,6 +1895,7 @@ async function main() {
     let skipped = 0;
     let emptyNameCount = 0;
     let withBodyCount = 0;
+    let withQuestPromoCount = 0;
 
     for (const travel of travels) {
       const slug = travel.slug || '';
@@ -1564,6 +1973,8 @@ async function main() {
         gallery: Array.isArray(detail.gallery) ? detail.gallery : travel.gallery,
         description: detail.description || travel.description || '',
       };
+      const questMatches = findTravelQuestPromoMatches(bootstrapTravel, questPromoCatalog, 6);
+      if (questMatches.length > 0) withQuestPromoCount++;
       const htmlWithTravelBootstrap = injectTravelBootstrapData(
         htmlWithTravelPreload,
         bootstrapTravel,
@@ -1582,7 +1993,8 @@ async function main() {
           related: pickRelatedTravels(travel, relatedIndex, 6),
         }
       );
-      const finalTravelHtml = injectHiddenH1(htmlWithSkeleton, name || routeKey);
+      const htmlWithQuestPromo = injectTravelQuestPromoSection(htmlWithSkeleton, questMatches);
+      const finalTravelHtml = injectHiddenH1(htmlWithQuestPromo, name || routeKey);
 
       // Write both explicit-file and directory-index variants.
       // NOTE: we intentionally avoid writing an extensionless file because
@@ -1596,6 +2008,7 @@ async function main() {
     totalPages += generated;
     console.log(`  ✅ Generated: ${generated}, Skipped: ${skipped}`);
     console.log(`  📝 With crawlable body text: ${withBodyCount}/${generated}`);
+    console.log(`  🧩 With SSG quest promo: ${withQuestPromoCount}/${generated}`);
     if (emptyNameCount > 0) {
       // FE-IDX-2: a page with an empty name falls back to the generic
       // "Путешествие | Metravel" title — surface it instead of failing silently.
@@ -1607,25 +2020,6 @@ async function main() {
   }
 
   // --- 2b. Quest pages ---
-  console.log('\n🧩 Fetching quests from API...');
-  let quests = [];
-  try {
-    let nextUrl = `${API_BASE}/api/quests/`;
-    let page = 1;
-    while (nextUrl && page <= 50) {
-      console.log(`  📡 Fetching quests page ${page}...`);
-      const result = await fetchJson(nextUrl);
-      const items = extractCollectionItems(result).filter((q) => questRouteKey(q));
-      quests = quests.concat(items);
-      nextUrl = (result && typeof result === 'object' && (result.next_page_url || result.next)) || null;
-      page++;
-    }
-    console.log(`  📦 Got ${quests.length} quests`);
-  } catch (err) {
-    console.error('❌ Failed to fetch quests:', err.message);
-    console.error('   Quest pages will not be generated.');
-  }
-
   if (quests.length > 0) {
     const questTemplatePath = path.join(DIST_DIR, 'quests', '[city]', '[questId].html');
     const questBaseHtml = fs.existsSync(questTemplatePath)
@@ -1644,6 +2038,7 @@ async function main() {
       const canonical = `${SITE_URL}${route.path}`;
       const cover = String(quest.cover_url || quest.coverUrl || '').trim();
       const image = cover ? toAbsoluteUrl(cover) : OG_IMAGE;
+      const questBundle = questBundleMap.get(route.questId) || null;
 
       let html = injectMeta(questBaseHtml, {
         title,
@@ -1665,8 +2060,8 @@ async function main() {
         ],
       });
 
-      html = injectJsonLd(html, buildQuestJsonLd({ title, description, canonical, image, quest }), 'quest');
-      html = injectHiddenH1(html, name);
+      html = injectJsonLd(html, buildQuestJsonLd({ title, description, canonical, image, quest: questBundle || quest }), 'quest');
+      html = injectQuestIntroSection(html, { title: name, description, quest, bundle: questBundle });
 
       writeFileSafe(path.join(DIST_DIR, 'quests', route.cityId, `${route.questId}.html`), html);
       writeFileSafe(path.join(DIST_DIR, 'quests', route.cityId, route.questId, 'index.html'), html);
@@ -1864,6 +2259,10 @@ if (typeof module !== 'undefined' && module.exports) {
     questRouteKey,
     buildQuestSeoDescription,
     buildQuestJsonLd,
+    buildQuestPromoCatalog,
+    findTravelQuestPromoMatches,
+    injectTravelQuestPromoSection,
+    injectQuestIntroSection,
     injectQuestLinksIndex,
     patchNoindexFallbackTemplate,
   };

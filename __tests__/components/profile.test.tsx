@@ -12,6 +12,10 @@ import {
   createFavoritesValue,
   createHistoryItem,
 } from '../helpers/mockContextValues';
+import {
+  SUBSCRIBER_FIXTURE,
+  SUBSCRIPTION_AUTHOR_FIXTURE,
+} from '../fixtures/travelFixtures';
 
 jest.mock('@/context/AuthContext');
 
@@ -46,6 +50,10 @@ jest.mock('@/api/user', () => ({
   uploadUserProfileAvatarFile: jest.fn(),
   fetchUserTravelStatuses: jest.fn().mockResolvedValue([]),
   fetchUserCountryProgress: mockFetchUserCountryProgress,
+  fetchMySubscriptions: jest.fn().mockResolvedValue([]),
+  fetchMySubscribers: jest.fn().mockResolvedValue([]),
+  subscribeToUser: jest.fn().mockResolvedValue(null),
+  unsubscribeFromUser: jest.fn().mockResolvedValue(null),
   normalizeAvatar: (raw: unknown) => {
     const str = String(raw ?? '').trim();
     if (!str) return null;
@@ -143,8 +151,10 @@ jest.mock('expo-image-picker', () => ({
 
 // Профиль тянет подписки и непрочитанные сообщения через React Query — мокаем,
 // чтобы не требовать сетевых queryFn в тесте.
+const mockUseSubscriptionsData = jest.fn();
+
 jest.mock('@/hooks/useSubscriptionsData', () => ({
-  useSubscriptionsData: () => ({ subscriptions: [], subscribers: [], isLoading: false }),
+  useSubscriptionsData: (...args: unknown[]) => mockUseSubscriptionsData(...args),
 }));
 
 jest.mock('@/hooks/useMessages', () => ({
@@ -218,6 +228,15 @@ describe('ProfileScreen', () => {
     resetExpoRouterMocks();
     resetTravelsApiMocks();
     mockFetchMyTravels.mockResolvedValue(require('../fixtures/travelFixtures').MY_TRAVELS_FIXTURE);
+    mockUseSubscriptionsData.mockReturnValue({
+      subscriptions: [],
+      subscribers: [],
+      authors: [],
+      subscriptionsLoading: false,
+      subscribersLoading: false,
+      getFullName: jest.fn(() => ''),
+      handleUnsubscribe: jest.fn(),
+    });
     mockFetchAllCountries.mockResolvedValue([
       { country_id: '1', title_ru: 'Польша', title_en: 'Poland', country_code: 'PL' },
       { country_id: '2', title_ru: 'Литва', title_en: 'Lithuania', country_code: 'LT' },
@@ -365,6 +384,39 @@ describe('ProfileScreen', () => {
 
     fireEvent.press(getByLabelText('Недавно смотрел: 1'));
     expect(await findByLabelText(/History 1/)).toBeTruthy();
+  });
+
+  it('opens subscriptions and subscribers inside the profile tab area', async () => {
+    setupAuth({ isAuthenticated: true });
+    setupFavorites(0, 0);
+    mockUseSubscriptionsData.mockImplementation((options?: { includeAuthorTravels?: boolean }) => ({
+      subscriptions: [SUBSCRIPTION_AUTHOR_FIXTURE],
+      subscribers: [SUBSCRIBER_FIXTURE],
+      authors: options?.includeAuthorTravels
+        ? [{
+            profile: SUBSCRIPTION_AUTHOR_FIXTURE,
+            travels: [],
+            travelsTotal: 0,
+            isLoadingTravels: false,
+          }]
+        : [],
+      subscriptionsLoading: false,
+      subscribersLoading: false,
+      getFullName: (profile: typeof SUBSCRIPTION_AUTHOR_FIXTURE) => (
+        `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim().toLowerCase()
+      ),
+      handleUnsubscribe: jest.fn(),
+    }));
+
+    const { findByLabelText, findByText } = renderProfile();
+
+    fireEvent.press(await findByLabelText('Подписки: 1'));
+    expect(await findByText('Иван Петров')).toBeTruthy();
+    expect(await findByText('1 автор')).toBeTruthy();
+
+    fireEvent.press(await findByLabelText('Подписчики: 1'));
+    expect(await findByText('Мария Сидорова')).toBeTruthy();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it('shows countries progress with visited and remaining countries', async () => {
