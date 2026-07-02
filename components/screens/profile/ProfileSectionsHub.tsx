@@ -102,8 +102,8 @@ export function ProfileSectionsHub({ userId }: ProfileSectionsHubProps) {
 
   const styles = useMemo(() => getStyles(colors), [colors])
   // На телефоне (~390px) две колонки обрезают подписи («Мои поезд…», «Кто видит кон…») —
-  // раскладываем плитки в одну колонку; гейт по isHydrated тот же, что у hideExport.
-  const itemWidth = isDesktop ? '31.5%' : isHydrated && isMobile ? '100%' : '48%'
+  // раскладываем плитки в одну колонку; тот же гейт мобильной раскладки, что у hideExport.
+  const itemWidth = isDesktop ? '31.5%' : hideExport ? '100%' : '48%'
 
   return (
     <View>

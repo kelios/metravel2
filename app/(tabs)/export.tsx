@@ -71,9 +71,12 @@ export default function ExportScreen() {
 
     useEffect(() => {
         if (!isFocused) return;
+        // На мобильной вебе рендерится заглушка «только на десктопе», а не empty‑state —
+        // не засоряем воронку ExportEmptyStateShown.
+        if (isMobileWebExport) return;
         if (!shouldShowEmptyState) return;
         sendAnalyticsEvent('ExportEmptyStateShown');
-    }, [isFocused, shouldShowEmptyState]);
+    }, [isFocused, shouldShowEmptyState, isMobileWebExport]);
 
     return (
         <>

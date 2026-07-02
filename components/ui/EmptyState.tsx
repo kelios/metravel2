@@ -42,8 +42,11 @@ function EmptyState({
   examples = [],
 }: EmptyStateProps) {
   const colors = useThemedColors();
-  const { isMobile } = useResponsive();
-  const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
+  const { isMobile, isHydrated } = useResponsive();
+  // До гидрации web считает себя мобильным (width=0). Гейтим по isHydrated, чтобы
+  // на десктопе размеры иконки/отступов не «мигали» (64→96) после гидрации.
+  const isMobileLayout = isHydrated && isMobile;
+  const styles = useMemo(() => createStyles(colors, isMobileLayout), [colors, isMobileLayout]);
 
   // ✅ УЛУЧШЕНИЕ: Разные цвета для разных вариантов
   const variantColors = {
@@ -58,7 +61,7 @@ function EmptyState({
   const finalIconColor = iconColor ?? variantColorScheme.icon;
   // Компакт на мобильном (web и native одинаково — паритет): иначе иконка+отступы
   // выталкивают кнопку-действие за первый экран 390×844.
-  const finalIconSize = iconSize ?? (isMobile ? 64 : 96);
+  const finalIconSize = iconSize ?? (isMobileLayout ? 64 : 96);
   return (
     <View style={styles.container}>
       <View style={[styles.iconContainer, { backgroundColor: variantColorScheme.bg }]}>

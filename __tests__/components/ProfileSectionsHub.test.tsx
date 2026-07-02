@@ -19,7 +19,10 @@ jest.mock('expo-router', () => ({
 
 jest.mock('@expo/vector-icons/Feather', () => 'Feather')
 
-jest.mock('@/components/profile/ProfileSectionHeader', () => 'ProfileSectionHeader')
+jest.mock(
+  '@/components/profile/ProfileSectionHeader',
+  () => 'ProfileSectionHeader',
+)
 
 describe('ProfileSectionsHub — экспорт в PDF на мобильном', () => {
   it('скрывает «Экспорт в PDF» в мобильной версии сайта', () => {
