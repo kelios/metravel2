@@ -207,6 +207,14 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       minWidth: 0,
     },
 
+    cardContentContainer: {
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      paddingTop: Platform.OS === 'web' ? 9 : 10,
+      paddingBottom: Platform.OS === 'web' ? 11 : 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+    },
+
     // Современная типографика
     title: {
       fontSize: DESIGN_TOKENS.typography.sizes.lg,
@@ -219,16 +227,16 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     contentStack: {
       width: '100%',
       minWidth: 0,
-      gap: Platform.OS === 'web' ? 2 : 1,
+      gap: Platform.OS === 'web' ? 4 : 3,
     },
 
     titleInline: {
       fontSize: Platform.OS === 'web'
-        ? DESIGN_TOKENS.typography.scale.body.fontSize
-        : DESIGN_TOKENS.typography.sizes.md,
+        ? DESIGN_TOKENS.typography.sizes.md
+        : DESIGN_TOKENS.typography.sizes.sm,
       lineHeight: Platform.OS === 'web'
-        ? DESIGN_TOKENS.typography.scale.body.lineHeight
-        : 20,
+        ? 20
+        : 19,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
       color: colors.text,
       width: '100%',
@@ -242,23 +250,30 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       flexShrink: 1,
       minWidth: 0,
       gap: 0,
+      overflow: 'hidden',
     },
 
     // Компактная мета-информация — одна строка
     metaRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 6,
+      justifyContent: 'flex-start',
+      columnGap: 6,
+      rowGap: Platform.OS === 'web' ? 2 : 3,
       minHeight: Platform.OS === 'web' ? 18 : 20,
+      paddingTop: 1,
     },
 
     // Правая часть: рейтинг + бейджи
     metaBadgesRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      flexWrap: 'wrap',
       gap: 4,
       flexShrink: 0,
+      maxWidth: '100%',
+      minWidth: 0,
       paddingTop: Platform.OS === 'web' ? 1 : 0,
     },
 
@@ -350,17 +365,8 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       flexShrink: 0,
     },
 
-    // Просмотры — без чипа, просто текст
-    metaBoxViews: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-      flexShrink: 0,
-    },
-
     // Оверлей просмотров на фото (mobile web + native): тёмная пилюля в углу,
-    // читаемая поверх любого кадра. На мобильном inline-просмотры в мета-ряд не
-    // влезают (compactMeta), поэтому показываем счётчик прямо на изображении.
+    // читаемая поверх любого кадра.
     viewsOverlayBadge: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -377,58 +383,12 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       fontWeight: '600',
     },
 
-    metaBoxViewsChip: {
-      // Убираем чип-стиль, оставляем inline
-    },
-
-    metaBoxRatingChip: {
-      marginLeft: 6,
-      backgroundColor: Platform.OS === 'web'
-        ? 'rgba(232, 168, 56, 0.08)'
-        : colors.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: Platform.OS === 'web'
-        ? 'rgba(232, 168, 56, 0.2)'
-        : colors.borderLight,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      paddingVertical: 4,
-      paddingHorizontal: 10,
-      ...(Platform.OS === 'web'
-        ? {
-            boxShadow: '0 1px 2px rgba(232, 168, 56, 0.12)',
-          } as any
-        : {}),
-    },
-
     metaTxt: {
       fontSize: META_TEXT_FONT_SIZE,
       color: colors.textSecondary,
       fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
       lineHeight: META_TEXT_LINE_HEIGHT,
       minWidth: 0,
-    },
-
-    // Текст просмотров
-    metaTxtViews: {
-      fontSize: META_TEXT_FONT_SIZE,
-      color: colors.textSecondary,
-      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-      lineHeight: META_TEXT_LINE_HEIGHT,
-    },
-
-    metaYear: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-      flexShrink: 0,
-    },
-
-    metaYearText: {
-      fontSize: META_TEXT_FONT_SIZE,
-      lineHeight: META_TEXT_LINE_HEIGHT,
-      color: colors.textMuted,
-      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-      fontVariant: ['tabular-nums'] as any,
     },
 
     // Inline теги стран (без pill-фона)

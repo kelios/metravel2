@@ -279,10 +279,6 @@ function TravelListItem({
 
   const hasAuthorMeta = !hideAuthor && authorDisplayName !== ''
   const hasRating = travel.rating != null && travel.rating > 0
-  const travelYear = useMemo(() => {
-    const raw = Number(String(travel.year ?? '').trim())
-    return Number.isFinite(raw) && raw > 1900 && raw < 2200 ? raw : null
-  }, [travel.year])
   const selectableWebHandlers = useMemo(() => {
     if (!IS_WEB || !selectable) return EMPTY_STYLE as any
     return {
@@ -398,11 +394,12 @@ function TravelListItem({
     </View>
   ) : null
 
-  // On narrow 2-col cards (mobile) the top meta row only has room for the country.
-  // Author and inline views are dropped here — both are surfaced lower in
-  // metaBadgesRow / the engagement metrics row, so they'd just duplicate and
-  // squeeze the country down to garbage like ".:.." / "Авст.…".
-  const compactMeta = isMobile
+  // On narrow cards the meta row only has room for the country and compact badges.
+  // Author is lower-priority in grid cards, while views always live on the media
+  // overlay so text groups never collide in the card footer.
+  const compactMeta =
+    isMobile ||
+    (IS_WEB && typeof cardWidth === 'number' && cardWidth < 420)
 
   const topRowItems: React.ReactNode[] = []
   if (countries.length > 0) {
@@ -464,23 +461,8 @@ function TravelListItem({
       ),
     )
   }
-  if (!compactMeta && views > 0) {
-    if (countries.length > 0 || hasAuthorMeta) {
-      topRowItems.push(<View key="views-dot" style={styles.metaDot} />)
-    }
-    topRowItems.push(
-      <View key="views" style={styles.metaBoxViews} testID="views-meta">
-        <Feather name="eye" size={VIEW_ICON_SIZE} color={colors.textMuted} />
-        <Text style={styles.metaTxtViews} numberOfLines={1}>
-          {viewsFormatted}
-        </Text>
-      </View>,
-    )
-  }
-
-  // На мобильном (web) и на native просмотры не влезают в мета-ряд (compactMeta),
-  // поэтому показываем счётчик прямо на фото — тёмная пилюля в нижнем углу.
-  const showViewsOverlay = (isMobile || !IS_WEB) && views > 0 && !selectable
+  // Views are shown directly on the media for both web and native cards.
+  const showViewsOverlay = views > 0 && !selectable
   const viewsOverlaySlot = showViewsOverlay ? (
     <View style={styles.viewsOverlayBadge} testID="views-overlay" pointerEvents="none">
       <Feather name="eye" size={VIEW_ICON_SIZE + 2} color="#fff" />
@@ -492,7 +474,6 @@ function TravelListItem({
 
   const hasSecondaryMeta =
     topRowItems.length > 0 ||
-    travelYear != null ||
     hasEngagementStats ||
     hasRating
 
@@ -500,12 +481,6 @@ function TravelListItem({
     <View style={styles.metaRow}>
       <View style={styles.inlineMetaGroup}>{topRowItems}</View>
       <View style={styles.metaBadgesRow}>
-        {travelYear != null && (
-          <View style={styles.metaYear} testID="year-meta">
-            <Feather name="calendar" size={VIEW_ICON_SIZE} color={colors.textMuted} />
-            <Text style={styles.metaYearText}>{travelYear}</Text>
-          </View>
-        )}
         {hasEngagementStats && (
           <TravelListItemEngagementMetrics
             engagementStats={engagementStats}
@@ -525,7 +500,7 @@ function TravelListItem({
 
   const contentSlot = (
     <View style={styles.contentStack}>
-      <Text style={styles.titleInline} numberOfLines={1} ellipsizeMode="tail">
+      <Text style={styles.titleInline} numberOfLines={2} ellipsizeMode="tail">
         {title}
       </Text>
       {secondaryMetaSlot}
@@ -552,10 +527,12 @@ function TravelListItem({
       width={IS_WEB ? undefined : cardWidth}
       mediaFit="contain"
       visualVariant={visualVariant === 'home-featured' ? 'featured' : 'default'}
+      heroTitleOverlay={false}
       testID={cardTestId}
       style={cardStyle}
       imageHeight={typeof imageHeight === 'number' ? imageHeight : TRAVEL_CARD_IMAGE_HEIGHT}
       contentPosition="belowMedia"
+      contentContainerStyle={styles.cardContentContainer}
       insetMedia={false}
       leftTopSlot={leftTopSlot}
       rightTopSlot={!selectable ? rightTopSlot : null}

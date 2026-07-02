@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StyleSheet } from 'react-native';
+import type { ComponentProps } from 'react';
 import { AuthProvider } from '@/context/AuthContext';
 import { FavoritesProvider } from '@/context/FavoritesProvider';
 import TravelListItem from '@/components/listTravel/TravelListItem';
@@ -61,7 +62,10 @@ const createTestClient = () =>
     },
   });
 
-const renderItem = (overrides: Partial<Travel> = {}, props: Partial<{ hideAuthor: boolean }> = {}) => {
+const renderItem = (
+  overrides: Partial<Travel> = {},
+  props: Partial<Omit<ComponentProps<typeof TravelListItem>, 'travel'>> = {},
+) => {
   const queryClient = createTestClient();
   const travel: Travel = { ...baseTravel, ...overrides } as any;
 
@@ -88,12 +92,13 @@ describe('TravelListItem content & metadata', () => {
     expect(getByText('Test travel')).toBeTruthy();
   });
 
-  it('renders the travel title below the image as a separate one-line title', () => {
-    const { getByText } = renderItem();
+  it('renders the travel title below the image as a separate two-line title', () => {
+    const { getAllByText, getByText } = renderItem();
     const titleElement = getByText('Test travel');
 
     expect(titleElement).toBeTruthy();
-    expect(titleElement.props.numberOfLines).toBe(1);
+    expect(getAllByText('Test travel')).toHaveLength(1);
+    expect(titleElement.props.numberOfLines).toBe(2);
     expect(titleElement.props.ellipsizeMode).toBe('tail');
     expect(StyleSheet.flatten(titleElement.props.style)?.color).not.toBe('#ffffff');
   });
@@ -104,10 +109,11 @@ describe('TravelListItem content & metadata', () => {
   });
 
   it('renders the separate title line even when image URL is missing (draft-like)', () => {
-    const { getByText } = renderItem({ travel_image_thumb_url: '' } as any);
+    const { getAllByText, getByText } = renderItem({ travel_image_thumb_url: '' } as any);
     const titleElement = getByText('Test travel');
     expect(titleElement).toBeTruthy();
-    expect(titleElement.props.numberOfLines).toBe(1);
+    expect(getAllByText('Test travel')).toHaveLength(1);
+    expect(titleElement.props.numberOfLines).toBe(2);
     expect(StyleSheet.flatten(titleElement.props.style)?.color).not.toBe('#ffffff');
   });
 
@@ -121,12 +127,41 @@ describe('TravelListItem content & metadata', () => {
   it('renders views meta when views are zero (shows 0)', () => {
     const { queryByTestId, queryByText } = renderItem({ countUnicIpView: '0' } as any);
     expect(queryByTestId('views-meta')).toBeNull();
+    expect(queryByTestId('views-overlay')).toBeNull();
     expect(queryByText('0')).toBeNull();
   });
 
-  it('renders views meta when views are greater than zero', () => {
-    const { getByTestId } = renderItem({ countUnicIpView: '10' } as any);
-    expect(getByTestId('views-meta')).toBeTruthy();
+  it('renders views on the media overlay when views are greater than zero', () => {
+    const { getByTestId, queryByTestId } = renderItem({ countUnicIpView: '10' } as any);
+    expect(queryByTestId('views-meta')).toBeNull();
+    expect(getByTestId('views-overlay')).toBeTruthy();
+  });
+
+  it('keeps views out of the meta row on narrow desktop grid cards', () => {
+    const { getByTestId, queryByTestId, queryByText } = renderItem(
+      {
+        countryName: 'Беларусь',
+        countUnicIpView: '43',
+        userName: 'Long Author Name',
+        year: '2024',
+        rating: 5,
+      } as any,
+      {
+        cardWidth: 360,
+        viewportWidth: 1600,
+      },
+    );
+
+    expect(queryByTestId('views-meta')).toBeNull();
+    expect(getByTestId('views-overlay')).toBeTruthy();
+    expect(queryByText('Long Author Name')).toBeNull();
+  });
+
+  it('does not render the year on the travel card', () => {
+    const { queryByTestId, queryByText } = renderItem({ year: '2024' } as any);
+
+    expect(queryByTestId('year-meta')).toBeNull();
+    expect(queryByText('2024')).toBeNull();
   });
 
   it('renders engagement metrics on the travel card when stats exist', () => {
@@ -199,7 +234,7 @@ describe('TravelListItem content & metadata', () => {
 
     it('renders content area when views exist', () => {
       const { getByTestId } = renderItem({ countUnicIpView: '10' } as any);
-      expect(getByTestId('views-meta')).toBeTruthy();
+      expect(getByTestId('views-overlay')).toBeTruthy();
     });
 
     it('does not render content area when no information exists', () => {
@@ -231,8 +266,8 @@ describe('TravelListItem content & metadata', () => {
       
       // Автор должен быть, остальное - нет
       expect(getByText('John Doe')).toBeTruthy();
-      // views-meta показывается всегда когда есть контентная область (даже с 0 просмотров)
-      expect(queryByTestId('views-meta')).toBeNull(); // Should exist when content area is shown
+      expect(queryByTestId('views-meta')).toBeNull();
+      expect(queryByTestId('views-overlay')).toBeNull();
       expect(queryByText('trending-up')).toBeNull();
       expect(queryByText('star')).toBeNull();
       expect(queryByText('Россия')).toBeNull(); // Базовая страна отсутствует
