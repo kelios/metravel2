@@ -229,11 +229,13 @@ const PlacePopupCard: React.FC<Props> = ({
     setFullscreenVisible(false);
   }, []);
 
-  // Native bottom-card opens navigation in a separate ActionListSheet modal so the
-  // remaining card content (status / point actions) stays visible without scrolling.
-  // Web (desktop Leaflet popup + mobile web sheet) keeps the inline expandable grid.
-  const useNativeBottomCard = isBottomCardLayout && Platform.OS !== 'web';
-  const useNavSheet = useNativeBottomCard;
+  // Bottom-card chrome (mobile web sheet + native bottom card share ONE contract, per
+  // docs/features/map.md §Mobile parity contract): navigation opens in a separate
+  // ActionListSheet modal, ♥ + trip status live in the hero corner, the save chip
+  // reads «Сохранить/Сохранено», and a divider precedes the action row. The desktop
+  // Leaflet popup (isBottomCardLayout === false) keeps its own inline layout untouched.
+  const useBottomCardChrome = isBottomCardLayout;
+  const useNavSheet = useBottomCardChrome;
 
   const toggleNav = useCallback(() => {
     if (useNavSheet) {
@@ -297,10 +299,10 @@ const PlacePopupCard: React.FC<Props> = ({
       : primaryAction?.label;
 
   // #FIX-3 — «Мои точки» is an ambiguous noun (reads as "view", but the chip ADDS the
-  // point). On the native bottom card show the verb «Сохранить» / «Сохранено» (the
-  // bookmark/✓ icon already conveys save vs saved). Keeps the #334 add/un-save toggle.
-  // Web (desktop popup + mobile-web) keeps the existing `compactLabel`.
-  const saveChipLabel = useNativeBottomCard ? (isSaved ? 'Сохранено' : 'Сохранить') : compactLabel;
+  // point). On the bottom card (mobile web + native) show the verb «Сохранить» /
+  // «Сохранено» (the bookmark/✓ icon already conveys save vs saved). Keeps the #334
+  // add/un-save toggle. Desktop Leaflet popup keeps the existing `compactLabel`.
+  const saveChipLabel = useBottomCardChrome ? (isSaved ? 'Сохранено' : 'Сохранить') : compactLabel;
 
   // #FIX-3 — «Поделиться» is a share action surfaced as a small right-aligned icon in
   // the title row on the native bottom card (NOT in the action row, which must stay at
@@ -411,13 +413,13 @@ const PlacePopupCard: React.FC<Props> = ({
     title,
   ]);
 
-  // Native bottom card only: ♥ favorite AND the compact trip-status icon both live in
-  // the hero photo top-LEFT corner (a vertical stack — `RelatedTravelActionStack`'s
+  // Bottom card (mobile web + native): ♥ favorite AND the compact trip-status icon both
+  // live in the hero photo top-LEFT corner (a vertical stack — `RelatedTravelActionStack`'s
   // default `overlay` variant renders both as compact icon circles, column gap 6),
   // away from the ✕ (top-right) and ⤢ expand (bottom-right). This frees the whole
   // «Статус поездки» row (no more full-width «Был/Хочу/Планирую» text pill).
   const heroActionOverlay = useMemo(() => {
-    if (!useNativeBottomCard || !relatedTravelUrl) return null;
+    if (!useBottomCardChrome || !relatedTravelUrl) return null;
     return (
       <View style={styles.heroFavoriteOverlay} pointerEvents="box-none">
         <RelatedTravelActionStack
@@ -437,7 +439,7 @@ const PlacePopupCard: React.FC<Props> = ({
     relatedTravelUrl,
     styles.heroFavoriteOverlay,
     title,
-    useNativeBottomCard,
+    useBottomCardChrome,
   ]);
 
   const footerSlot = useMemo(() => (
@@ -480,19 +482,11 @@ const PlacePopupCard: React.FC<Props> = ({
           </CardActionPressable>
         ) : (
           <>
-            {/* Native bottom card: ♥ + compact status icon live in the hero corner
-                (heroActionOverlay), so the dedicated «Статус поездки» row is dropped
-                entirely — reclaiming a full row of height. Web (mobile-web inline)
-                keeps the inline status stack here. */}
-            {isBottomCardLayout && !useNativeBottomCard && relatedTravelActionStack ? (
-              <View style={styles.actionGroup}>
-                <Text style={styles.actionGroupLabel}>Статус поездки</Text>
-                <View style={styles.relatedTravelInlineSection}>
-                  {relatedTravelActionStack}
-                </View>
-              </View>
-            ) : null}
-
+            {/* Bottom card (mobile web + native): ♥ + compact trip-status icon live in
+                the hero corner (heroActionOverlay), so the dedicated «Статус поездки»
+                row is dropped entirely — reclaiming a full row of height. Only the
+                desktop Leaflet popup keeps its own inline status placement (handled by
+                relatedTravelOverlays, not here). */}
             {useNavSheet ? <View style={styles.blockDivider} /> : null}
             <View style={styles.actionGroup}>
               <View style={styles.iconActionRow}>
@@ -685,14 +679,12 @@ const PlacePopupCard: React.FC<Props> = ({
     primaryAction,
     primaryIconActionLabel,
     primaryActionOverride,
-    relatedTravelActionStack,
     renderFallbackPrimaryAction,
     saveActionVisual,
     showNavGrid,
     showNavToggle,
     styles,
     toggleNav,
-    useNativeBottomCard,
     colors.textOnDark,
     colors.textOnPrimary,
   ]);
@@ -845,6 +837,7 @@ const PlacePopupCard: React.FC<Props> = ({
           <View style={styles.splitHero}>
             {relatedTravelOverlays}
             {heroImage}
+            {heroActionOverlay}
           </View>
           <View
             style={styles.splitScroll}

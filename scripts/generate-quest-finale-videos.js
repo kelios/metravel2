@@ -69,6 +69,9 @@ const QUESTS = [
     { questId: 'krakow-podgorze', dir: 'krakowPodgorze', city: 'Краков', mood: 'city', finaleId: 30 },
     { questId: 'krakow-nowahuta', dir: 'krakowNowaHuta', city: 'Краков', mood: 'city', finaleId: 31 },
     { questId: 'minsk-cipher', dir: 'minskCipher', city: 'Минск', mood: 'city', finaleId: 32 },
+    { questId: 'bialystok-zamenhof', dir: 'bialystokZamenhof', city: 'Белосток', mood: 'city', finaleId: 35 },
+    { questId: 'kaunas-capital', dir: 'kaunasCapital', city: 'Каунас', mood: 'city', finaleId: 36 },
+    { questId: 'pinsk-polesie', dir: 'pinskPolesie', city: 'Пинск', mood: 'city', finaleId: 37 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

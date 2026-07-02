@@ -262,7 +262,10 @@ function TripCreateForm({ onCreated }: Props) {
                 size={13}
                 color={active ? colors.primary : colors.textSecondary}
               />
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>
+              <Text
+                numberOfLines={1}
+                style={[styles.chipText, active && styles.chipTextActive]}
+              >
                 {TRANSPORT_LABEL[option]}
               </Text>
             </Pressable>
@@ -281,7 +284,10 @@ function TripCreateForm({ onCreated }: Props) {
               style={[styles.chip, active && styles.chipActive]}
               testID={`trip-create-visibility-${option}`}
             >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>
+              <Text
+                numberOfLines={1}
+                style={[styles.chipText, active && styles.chipTextActive]}
+              >
                 {VISIBILITY_LABEL[option]}
               </Text>
             </Pressable>

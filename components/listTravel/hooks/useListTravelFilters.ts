@@ -112,6 +112,22 @@ export function useListTravelFilters({
     setFilter(initialFilter ?? INITIAL_FILTER);
   }, [initialFilter]);
 
+  // Когда категория приходит как имя (deep-link по чипу категории со страницы
+  // путешествия), после загрузки опций фильтров переписываем имя→числовой id прямо
+  // в состоянии: тогда корректно работает и API-запрос, и активный чип фильтра
+  // (getOptionName ищет по id), и его удаление.
+  useEffect(() => {
+    const textualCategories = extractCategoryNames(filter.categories);
+    if (!textualCategories.length || !options?.categories?.length) return;
+
+    const mappedCategoryIds = mapCategoryNamesToIds(textualCategories, options.categories);
+    if (!mappedCategoryIds.length) return;
+
+    const numericIds = extractNumericCategoryIds(filter.categories);
+    const merged = Array.from(new Set<number>([...numericIds, ...mappedCategoryIds]));
+    setFilter((prev) => ({ ...prev, categories: merged }));
+  }, [filter.categories, options?.categories]);
+
   const filterForQuery = useMemo(() => {
     const textualCategories = extractCategoryNames(filter.categories);
     if (!textualCategories.length) {

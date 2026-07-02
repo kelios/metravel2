@@ -62,6 +62,7 @@ function CommunityRoutesCatalog({ initialTransport }: Props) {
           testID="community-filter-transport-all"
         >
           <Text
+            numberOfLines={1}
             style={[styles.chipText, transport === null && styles.chipTextActive]}
           >
             Все
@@ -81,7 +82,10 @@ function CommunityRoutesCatalog({ initialTransport }: Props) {
                 size={13}
                 color={active ? colors.primary : colors.textSecondary}
               />
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>
+              <Text
+                numberOfLines={1}
+                style={[styles.chipText, active && styles.chipTextActive]}
+              >
                 {TRANSPORT_LABEL[option]}
               </Text>
             </Pressable>

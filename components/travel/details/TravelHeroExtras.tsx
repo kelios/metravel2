@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import { View } from 'react-native'
+import { useRouter } from 'expo-router'
 
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import type { Travel } from '@/types/types'
@@ -20,6 +21,10 @@ export const TravelHeroExtras: React.FC<{
 }> = ({ travel, isMobile, sectionLinks, onQuickJump, activeKey, suppressQuickJumps }) => {
   const styles = useTravelDetailsHeroStyles()
   const { quickJumpLinks, showQuickJumps } = useTravelHeroExtrasModel(sectionLinks)
+  const router = useRouter()
+  const handleCategoryPress = useCallback((category: string) => {
+    router.push({ pathname: '/travelsby', params: { categories: category } })
+  }, [router])
 
   return (
     <>
@@ -33,7 +38,7 @@ export const TravelHeroExtras: React.FC<{
           styles.quickFactsContainer,
         ]}
       >
-        <QuickFacts travel={travel} />
+        <QuickFacts travel={travel} onCategoryPress={handleCategoryPress} />
         <TravelStatusButton
           travelId={travel.id}
           travelTitle={travel.name}

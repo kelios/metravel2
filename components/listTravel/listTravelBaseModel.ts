@@ -274,7 +274,17 @@ export function buildListTravelInitialFilter(params: SearchParams) {
     params.categoryTravelAddress ?? params.category_travel_address ?? params.category__travel__address,
   )
 
-  if (categories) filter.categories = categories.split(',').map(Number).filter(Boolean)
+  if (categories) {
+    // Категории в deep-link могут прийти как числовые id (?categories=1,5) или как
+    // имя (?categories=Горы) — тап по чипу категории на странице путешествия ведёт
+    // сюда по имени. Числовые токены оставляем числами, нечисловые — как имя-строку;
+    // useListTravelFilters домапит имя→id, когда загрузятся опции фильтров.
+    filter.categories = categories
+      .split(',')
+      .map((token) => token.trim())
+      .filter(Boolean)
+      .map((token) => (/^\d+$/.test(token) ? Number(token) : token))
+  }
   if (overNightsStay) filter.over_nights_stay = overNightsStay.split(',').map(Number).filter(Boolean)
   if (categoryTravelAddress) {
     filter.categoryTravelAddress = categoryTravelAddress.split(',').map(Number).filter(Boolean)
