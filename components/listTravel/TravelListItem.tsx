@@ -283,14 +283,6 @@ function TravelListItem({
     const raw = Number(String(travel.year ?? '').trim())
     return Number.isFinite(raw) && raw > 1900 && raw < 2200 ? raw : null
   }, [travel.year])
-  const hasContentInfo =
-    hasAuthorMeta ||
-    countries.length > 0 ||
-    views > 0 ||
-    hasRating ||
-    travelYear != null ||
-    hasEngagementStats
-
   const selectableWebHandlers = useMemo(() => {
     if (!IS_WEB || !selectable) return EMPTY_STYLE as any
     return {
@@ -498,9 +490,15 @@ function TravelListItem({
     </View>
   ) : null
 
-  const contentSlot = hasContentInfo ? (
+  const hasSecondaryMeta =
+    topRowItems.length > 0 ||
+    travelYear != null ||
+    hasEngagementStats ||
+    hasRating
+
+  const secondaryMetaSlot = hasSecondaryMeta ? (
     <View style={styles.metaRow}>
-      <View style={styles.metaInfoTopRow}>{topRowItems}</View>
+      <View style={styles.inlineMetaGroup}>{topRowItems}</View>
       <View style={styles.metaBadgesRow}>
         {travelYear != null && (
           <View style={styles.metaYear} testID="year-meta">
@@ -525,6 +523,15 @@ function TravelListItem({
     </View>
   ) : null
 
+  const contentSlot = (
+    <View style={styles.contentStack}>
+      <Text style={styles.titleInline} numberOfLines={1} ellipsizeMode="tail">
+        {title}
+      </Text>
+      {secondaryMetaSlot}
+    </View>
+  )
+
   const cardStyle = [
     styles.card,
     visualVariant === 'home-featured' && styles.cardHomeFeatured,
@@ -545,7 +552,6 @@ function TravelListItem({
       width={IS_WEB ? undefined : cardWidth}
       mediaFit="contain"
       visualVariant={visualVariant === 'home-featured' ? 'featured' : 'default'}
-      heroTitleOverlay
       testID={cardTestId}
       style={cardStyle}
       imageHeight={typeof imageHeight === 'number' ? imageHeight : TRAVEL_CARD_IMAGE_HEIGHT}

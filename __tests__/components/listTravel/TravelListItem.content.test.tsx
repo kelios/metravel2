@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { StyleSheet } from 'react-native';
 import { AuthProvider } from '@/context/AuthContext';
 import { FavoritesProvider } from '@/context/FavoritesProvider';
 import TravelListItem from '@/components/listTravel/TravelListItem';
@@ -87,20 +88,14 @@ describe('TravelListItem content & metadata', () => {
     expect(getByText('Test travel')).toBeTruthy();
   });
 
-  it('renders the travel title as overlay on image', () => {
+  it('renders the travel title below the image as a separate one-line title', () => {
     const { getByText } = renderItem();
     const titleElement = getByText('Test travel');
-    
-    // Check that the title element exists
+
     expect(titleElement).toBeTruthy();
-    
-    // With heroTitleOverlay=true, the title should be rendered as white text on image
-    // This is a regression test to ensure title appears on image
-    expect(titleElement.props.style).toEqual(
-      expect.objectContaining({
-        color: '#ffffff' // White text for overlay on image
-      })
-    );
+    expect(titleElement.props.numberOfLines).toBe(1);
+    expect(titleElement.props.ellipsizeMode).toBe('tail');
+    expect(StyleSheet.flatten(titleElement.props.style)?.color).not.toBe('#ffffff');
   });
 
   it('renders image stub when image URL is missing', () => {
@@ -108,15 +103,12 @@ describe('TravelListItem content & metadata', () => {
     expect(getByTestId('image-stub')).toBeTruthy();
   });
 
-  it('renders the travel title overlay even when image URL is missing (draft-like)', () => {
+  it('renders the separate title line even when image URL is missing (draft-like)', () => {
     const { getByText } = renderItem({ travel_image_thumb_url: '' } as any);
     const titleElement = getByText('Test travel');
     expect(titleElement).toBeTruthy();
-    expect(titleElement.props.style).toEqual(
-      expect.objectContaining({
-        color: '#ffffff',
-      }),
-    );
+    expect(titleElement.props.numberOfLines).toBe(1);
+    expect(StyleSheet.flatten(titleElement.props.style)?.color).not.toBe('#ffffff');
   });
 
   it('renders image stub when image URL is from watermark domain', () => {

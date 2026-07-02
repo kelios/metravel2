@@ -216,24 +216,41 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       marginBottom: 0,
     },
 
+    contentStack: {
+      width: '100%',
+      minWidth: 0,
+      gap: Platform.OS === 'web' ? 2 : 1,
+    },
+
+    titleInline: {
+      fontSize: Platform.OS === 'web'
+        ? DESIGN_TOKENS.typography.scale.body.fontSize
+        : DESIGN_TOKENS.typography.sizes.md,
+      lineHeight: Platform.OS === 'web'
+        ? DESIGN_TOKENS.typography.scale.body.lineHeight
+        : 20,
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+      color: colors.text,
+      width: '100%',
+      minWidth: 0,
+    },
+
+    inlineMetaGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      flexShrink: 1,
+      minWidth: 0,
+      gap: 0,
+    },
+
     // Компактная мета-информация — одна строка
     metaRow: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      alignItems: 'center',
       justifyContent: 'space-between',
       gap: 6,
       minHeight: Platform.OS === 'web' ? 18 : 20,
-    },
-
-    // Левая часть: страна · автор · просмотры
-    metaInfoTopRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'flex-start',
-      minWidth: 0,
-      flex: 1,
-      gap: 0,
-      flexWrap: 'nowrap',
     },
 
     // Правая часть: рейтинг + бейджи
