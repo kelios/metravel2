@@ -6,6 +6,7 @@ import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -19,7 +20,10 @@ const radii = DESIGN_TOKENS.radii;
 function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
   const router = useRouter();
   const colors = useThemedColors();
+  const { isMobile } = useResponsive();
   const isWeb = Platform.OS === 'web';
+  // Serif — только desktop web; mobile web = системный sans, как на устройстве.
+  const isDesktopWeb = isWeb && !isMobile;
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -42,7 +46,7 @@ function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
       fontSize: 24,
       fontWeight: '700',
       color: colors.textOnPrimary,
-      ...(isWeb ? ({ fontFamily: 'Georgia, serif' } as any) : null),
+      ...(isDesktopWeb ? ({ fontFamily: 'Georgia, serif' } as any) : null),
     },
     subtitle: {
       fontSize: 15,
@@ -115,7 +119,7 @@ function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
       fontWeight: '600',
       color: colors.primaryText,
     },
-  }), [colors, isWeb]);
+  }), [colors, isWeb, isDesktopWeb]);
 
   if (compact) {
     return (

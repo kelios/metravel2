@@ -6,6 +6,7 @@ import { memo, useMemo } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useWeatherWidgetModel } from './hooks/useWeatherWidgetModel';
 
 // ✅ УЛУЧШЕНИЕ: Импорт CSS для предотвращения проблем с текстом на hover
@@ -21,7 +22,8 @@ type Props = {
 
 function WeatherWidget({ points, countryName, onSettled }: Props) {
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
-    const styles = useMemo(() => createStyles(colors), [colors]);
+    const { isMobile } = useResponsive();
+    const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
     const { forecast, locationLabel, status } = useWeatherWidgetModel({
         points,
         countryName,
@@ -100,7 +102,7 @@ function formatDateShort(dateStr: string): string {
     return date.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric' });
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) => StyleSheet.create({
     // ✅ РЕДИЗАЙН: Компактный wrapper
     wrapper: {
         width: '100%',
@@ -128,7 +130,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         ...(Platform.OS === 'web' ? {
             cursor: 'default',
             textDecorationLine: 'none',
-            fontFamily: 'Georgia',
+            // Serif — только desktop web; mobile web = системный sans, как на устройстве.
+            fontFamily: isMobile ? undefined : 'Georgia',
         } as any : {}),
     },
     forecastContainer: {

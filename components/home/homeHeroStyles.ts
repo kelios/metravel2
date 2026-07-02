@@ -110,30 +110,35 @@ export const createHomeHeroStyles = ({
   const warmBgSoft = hasBookLayout
     ? DESIGN_TOKENS.colors.bookPageSurfaceMuted
     : colors.backgroundSecondary
+  // Не-книжная ветка — themed-цвета (colors.*), а не статичные DESIGN_TOKENS:
+  // на native статичные токены не переключаются в тёмной теме (web делает это
+  // через CSS-переменные), из-за чего mobile web и устройство выглядели по-разному.
   const cardSurface = hasBookLayout
     ? DESIGN_TOKENS.colors.bookPageSurface
-    : DESIGN_TOKENS.colors.surface
+    : colors.surface
   const warmBorder = hasBookLayout
     ? DESIGN_TOKENS.colors.bookPageBorder
-    : DESIGN_TOKENS.colors.borderAccent
+    : colors.borderAccent
   const warmShadow = 'rgba(58, 58, 58, 0.12)'
   const warmGold = hasBookLayout
     ? DESIGN_TOKENS.colors.bookPageGold
-    : DESIGN_TOKENS.colors.warningAlpha40
+    : colors.warningAlpha40
   const inkStrong = hasBookLayout
     ? DESIGN_TOKENS.colors.bookPageText
-    : DESIGN_TOKENS.colors.text
+    : colors.text
   const inkMuted = hasBookLayout
     ? DESIGN_TOKENS.colors.bookPageTextMuted
-    : DESIGN_TOKENS.colors.textMuted
+    : colors.textMuted
   const inkSubtle = hasBookLayout
     ? DESIGN_TOKENS.colors.bookPageTextSubtle
-    : DESIGN_TOKENS.colors.textSubtle
-  const serif = 'Georgia, "Times New Roman", serif'
+    : colors.textSubtle
   const sansSerif =
     '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif'
-  const editorialSerif = 'Baskerville, Georgia, "Times New Roman", serif'
-  const editorialCaps = 'Baskerville, Georgia, "Times New Roman", serif'
+  // Паритет mobile web ↔ устройство: на native serif не применяется (системный sans),
+  // поэтому на мобильном web тоже sans; serif — только desktop.
+  const serif = isMobile ? sansSerif : 'Georgia, "Times New Roman", serif'
+  const editorialSerif = isMobile ? sansSerif : 'Baskerville, Georgia, "Times New Roman", serif'
+  const editorialCaps = editorialSerif
 
   const ctx: HeroStyleContext = {
     colors,

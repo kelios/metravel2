@@ -72,3 +72,12 @@ description: >-
   RN-Web скроллит внутренний контейнер, прод-only роут, dev-SSR крашит) — исчерпай альтернативный путь
   до блокера: локальная prod-сборка + статик с прод-API (`Prod Static`/`Dist Prod`), Playwright/e2e,
   device-verify. `verify pending` — только перепробовав все пути. См. docs/RULES.md → «Always self-verify».
+- **Паритет mobile web ↔ устройство (эталон — устройство):** каждый проверяемый экран
+  сравнивай не только 390px vs 1280px, но и mobile web vs native-приложение на
+  устройстве/эмуляторе (`adb exec-out screencap -p > screen.png`; dev-client сидит на том же
+  Metro — HMR обновляет обе стороны). Типовые источники расхождений: web-only serif-шрифты
+  (Georgia/Baskerville — только desktop, на mobile системный sans), hover-only элементы
+  (на телефоне hover нет — элемент должен быть виден всегда, как на устройстве),
+  `Platform.OS === 'web'`-ветвления, скрывающие контент, и статичные `DESIGN_TOKENS.colors.*`
+  на native (не темнеют в dark — использовать `useThemedColors()`). Расхождение = находка
+  P2 минимум; фиксить в сторону устройства. Скрины обеих платформ — в отчёт.

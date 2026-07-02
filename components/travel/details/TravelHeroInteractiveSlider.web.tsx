@@ -46,7 +46,8 @@ export default function TravelHeroInteractiveSlider({
         images={galleryImages as any}
         showArrows
         controlsVisible={controlsVisible}
-        hideArrowsOnMobile={false}
+        // Паритет с устройством: на mobile навигация — свайп + точки, стрелки только desktop.
+        hideArrowsOnMobile
         showDots={isMobile}
         autoPlay={false}
         preloadCount={preloadCount}

@@ -26,6 +26,19 @@
       "autoPort": false
     },
     {
+      "name": "Expo Web 8087",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "expo",
+        "start",
+        "--web",
+        "--port",
+        "8087"
+      ],
+      "port": 8087,
+      "autoPort": false
+    },
+    {
       "name": "Expo Web 8082",
       "runtimeExecutable": "npx",
       "runtimeArgs": [

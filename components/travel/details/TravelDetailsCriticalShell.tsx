@@ -34,6 +34,12 @@ import TravelHeroStickyNavNative from './TravelHeroStickyNavNative';
 // (hero, sub-nav, content).
 const STICKY_NAV_INDICES = [1];
 
+// Serif — только desktop web; mobile web = системный sans, как на устройстве.
+const MOBILE_WEB_SANS_FONT = {
+  fontFamily:
+    '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif',
+} as const;
+
 const WEB_SR_ONLY_HEADING_STYLE = {
   position: 'absolute',
   width: 1,
@@ -182,8 +188,12 @@ export default function TravelDetailsCriticalShell({
   );
 
   const contentWrapperStyle = useMemo(
-    () => [styles.contentWrapper, { paddingHorizontal: contentHorizontalPadding }],
-    [styles.contentWrapper, contentHorizontalPadding]
+    () => [
+      styles.contentWrapper,
+      { paddingHorizontal: contentHorizontalPadding },
+      Platform.OS === 'web' && isMobile ? (MOBILE_WEB_SANS_FONT as any) : null,
+    ],
+    [styles.contentWrapper, contentHorizontalPadding, isMobile]
   );
 
   // Native (iOS/Android) has no `position: sticky`; the sub-nav is pinned via the

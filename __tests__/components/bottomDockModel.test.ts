@@ -9,6 +9,8 @@ describe('bottomDockModel', () => {
 
     // «Попутчики» (public trips) намеренно скрыты из меню дока.
     expect(primaryItems.some((item) => item.key === 'trips')).toBe(false)
+    // Экспорт в PDF («Книга путешествий») скрыт в мобильной версии сайта.
+    expect(primaryItems.some((item) => item.key === 'export' || item.route === '/export')).toBe(false)
     // остальные пункты меню остаются на месте
     expect(primaryItems).toEqual(
       expect.arrayContaining([

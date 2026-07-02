@@ -55,8 +55,9 @@ export default function QuestCard({
             : `${quest._distanceKm.toFixed(1)} км`
         : null;
     const isPioneerQuest = (quest.completionsCount ?? 0) <= 0;
-    const hasReviews = quest.ratingCount > 0;
-    const showReviewsAction = Platform.OS !== 'web' || hasReviews;
+    // Паритет с native: на устройстве чип «Посмотреть отзывы (0)» виден всегда —
+    // web (включая mobile web) ведёт себя так же.
+    const showReviewsAction = true;
     const reviewsLabel = quest.ratingCount > 0
         ? `${quest.ratingCount} ${pluralizeRu(quest.ratingCount, 'отзыв', 'отзыва', 'отзывов')}`
         : '0 отзывов';
@@ -185,7 +186,8 @@ export default function QuestCard({
                 <View
                     style={[
                         styles.questCardPlayIcon,
-                        isHovered && styles.questCardPlayIconVisible,
+                        // На телефоне hover нет (mobile web) — кнопка видна всегда, как на устройстве.
+                        (isHovered || isPhone) && styles.questCardPlayIconVisible,
                         { pointerEvents: 'none' },
                     ]}
                 >

@@ -17,6 +17,13 @@ interface ListCatalogToolbarProps {
   onDensityChange: (density: ListDensity) => void
   /** Hide the density toggle on single-column layouts where it would force a 2-col grid. */
   showDensityToggle?: boolean
+  /**
+   * Explicit override for the sort chips. Even when true, the chips are dropped in the compact
+   * (native / narrow-web) layout where they'd take a full extra row — on mobile sorting lives inside
+   * the filters sheet (SortDropdown) instead, keeping the pinned header within the 20% budget. Same
+   * `filter.sort` state, so nothing is lost. Desktop (row layout) keeps the inline chips.
+   */
+  showSort?: boolean
   contentPadding?: number
   /**
    * On mobile the results count is surfaced inline here (leading the sort row) instead of in a
@@ -45,6 +52,7 @@ function ListCatalogToolbar({
   contentPadding = 0,
   resultsCount,
   showResultsCount = false,
+  showSort = true,
 }: ListCatalogToolbarProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
@@ -54,8 +62,13 @@ function ListCatalogToolbar({
   const countVisible = showResultsCount && typeof resultsCount === 'number'
   const isNative = Platform.OS !== 'web'
   const isCompactWeb = Platform.OS === 'web' && viewportWidth > 0 && viewportWidth < 600
+  const compactLayout = isNative || isCompactWeb
+  // Sort chips are dropped in the compact layout (all phones + narrow web) — they'd wrap onto their
+  // own full-width row and blow the 20% header budget. Sorting stays reachable in the filters sheet.
+  const sortEnabled = showSort && !compactLayout
+  const sortVisible = sortEnabled && sortOptions.length > 0
 
-  if (!sortOptions.length && !showDensityToggle && !countVisible) return null
+  if (!sortVisible && !showDensityToggle && !countVisible) return null
 
   const countNode = countVisible ? (
     <Text style={styles.countText} numberOfLines={1} testID="toolbar-results-count">
@@ -63,7 +76,7 @@ function ListCatalogToolbar({
     </Text>
   ) : null
 
-  const sortNode = sortOptions.length > 0 ? (
+  const sortNode = !sortEnabled ? null : sortOptions.length > 0 ? (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}

@@ -117,7 +117,12 @@ function getLeafletOverridesCSS(): string {
     // тон карты, а не серо-белая «шахматка» контейнера. В тёмной теме оставляем
     // backgroundTertiary — он совпадает с инвертированными (тёмными) тайлами ниже.
     'html:not([data-theme="dark"]) .leaflet-container{background-color:#e8ebe4!important}',
-    'html[data-theme="dark"] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.85)}',
+    // Инверсия тайлов в тёмной теме — только desktop (≥768px): на устройстве
+    // (native WebView-карта) тайлы всегда светлые, mobile web выглядит так же.
+    '@media (min-width: 768px){html[data-theme="dark"] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.85)}}',
+    // На мобильном в тёмной теме фон контейнера под светлые тайлы, чтобы в зазорах
+    // при зуме не мигал тёмный фон.
+    '@media (max-width: 767.98px){html[data-theme="dark"] .leaflet-container{background-color:#e8ebe4!important}}',
     '.leaflet-container .leaflet-tile-pane img,.leaflet-container img.leaflet-tile,.leaflet-container .leaflet-tile{max-width:none!important;max-height:none!important;object-fit:none!important;image-rendering:auto!important}',
     '.leaflet-container img.leaflet-marker-icon,.leaflet-container img.leaflet-marker-shadow{max-width:none!important;max-height:none!important;object-fit:none!important}',
     '.leaflet-container svg{max-width:none!important;max-height:none!important}',

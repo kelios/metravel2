@@ -28,9 +28,15 @@
 
 /* Ensure consistent font rendering */
 [data-weather-title] {
-  font-family: Georgia, serif !important;
   text-decoration: none !important;
   -webkit-text-decoration: none !important;
+}
+
+/* Serif — только desktop web; mobile web = системный sans, как на устройстве. */
+@media (min-width: 768px) {
+  [data-weather-title] {
+    font-family: Georgia, serif !important;
+  }
 }
 
 [data-weather-title]:hover {

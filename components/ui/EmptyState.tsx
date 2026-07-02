@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import Button from '@/components/ui/Button';
@@ -41,7 +42,8 @@ function EmptyState({
   examples = [],
 }: EmptyStateProps) {
   const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isMobile } = useResponsive();
+  const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
 
   // ✅ УЛУЧШЕНИЕ: Разные цвета для разных вариантов
   const variantColors = {
@@ -127,7 +129,7 @@ function EmptyState({
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -167,7 +169,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: 28,
     }),
     fontWeight: '800',
-    fontFamily: Platform.select({ web: 'Georgia, serif', default: undefined }),
+    // Serif — только desktop web; на мобильном web системный sans, как на устройстве.
+    fontFamily: Platform.select({ web: isMobile ? undefined : 'Georgia, serif', default: undefined }),
     marginTop: 8,
     marginBottom: 16,
     textAlign: 'center',

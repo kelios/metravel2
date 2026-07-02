@@ -115,7 +115,8 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
       color: colors.text,
       marginBottom: DESIGN_TOKENS.spacing.xs,
       letterSpacing: 0,
-      ...(Platform.OS === 'web'
+      // Serif — только desktop web; mobile web = системный sans, как на устройстве.
+      ...(Platform.OS === 'web' && !isMobile
         ? ({
             fontFamily: JOURNAL_FONT_FAMILY,
             fontStyle: 'italic',
