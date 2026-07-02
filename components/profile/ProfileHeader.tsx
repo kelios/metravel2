@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
@@ -57,7 +58,9 @@ const SOCIAL_ICONS: Record<string, React.ComponentProps<typeof Feather>['name']>
 };
 
 const AVATAR_SIZE = 84;
-const COVER_HEIGHT = 90;
+// Баннер выше на мобильном/desktop, чтобы вместить ряд быстрых действий как
+// оверлей у нижней кромки, не затеняя основной кадр фото (доминанта — фото).
+const COVER_HEIGHT = 132;
 const AVATAR_BORDER = 3;
 
 // Дефолтный бандл-арт обложки (горы+озеро+хайкер). Metro отдаёт jpg и на web,
@@ -85,6 +88,7 @@ export function ProfileHeader({
   avatarUploading = false,
 }: ProfileHeaderProps) {
   const colors = useThemedColors();
+  const { isMobile } = useResponsive();
   const [defaultCoverFailed, setDefaultCoverFailed] = useState(false);
 
   const coverPhoto = useMemo(
@@ -158,6 +162,15 @@ export function ProfileHeader({
           flexDirection: 'row',
           alignItems: 'center',
           gap: DESIGN_TOKENS.spacing.xxs,
+        },
+        // Ряд быстрых действий как оверлей у нижней кромки баннера. Левый отступ
+        // резервирует место под аватар, который наезжает на баннер снизу-слева.
+        overlayActions: {
+          position: 'absolute',
+          left: DESIGN_TOKENS.spacing.md,
+          right: DESIGN_TOKENS.spacing.md,
+          bottom: DESIGN_TOKENS.spacing.xs,
+          paddingLeft: AVATAR_SIZE + AVATAR_BORDER * 2 + DESIGN_TOKENS.spacing.sm,
         },
         menuChip: {
           backgroundColor: colors.surfaceMuted,
@@ -315,6 +328,17 @@ export function ProfileHeader({
             <ProfileMenu onLogout={onLogout} onSettings={onEdit} />
           </View>
         </View>
+        {/* Быстрые действия встроены в нижнюю кромку баннера как оверлей поверх
+            фото. На мобильном — компактные icon-only чипы, чтобы шапка не
+            раздувалась (правило «Шапка ≤20% экрана»). */}
+        <View style={styles.overlayActions}>
+          <ProfileHeaderQuickActions
+            onPress={onQuickAction}
+            unreadMessagesCount={unreadMessagesCount}
+            overlay
+            compact={isMobile}
+          />
+        </View>
       </View>
 
       {/* Identity: avatar left, info right */}
@@ -397,10 +421,6 @@ export function ProfileHeader({
           </View>
         </View>
       </View>
-      <ProfileHeaderQuickActions
-        onPress={onQuickAction}
-        unreadMessagesCount={unreadMessagesCount}
-      />
     </View>
   );
 }

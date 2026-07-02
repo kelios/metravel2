@@ -51,8 +51,8 @@ export function ProfileHeaderSection({
     <View style={[styles.headerComponent, styles.fullRow]}>
       {profileLoading ? (
         <View style={styles.skeletonWrap}>
-          {/* Cover skeleton — matches compact gradient hero (90px) */}
-          <SkeletonLoader width="100%" height={90} borderRadius={0} />
+          {/* Cover skeleton — matches photo banner hero with inline quick actions (132px) */}
+          <SkeletonLoader width="100%" height={132} borderRadius={0} />
           {/* Identity row: avatar left (84 + 3*2 ring), name+status right */}
           <View style={styles.skeletonIdentityRow}>
             <SkeletonLoader width={90} height={90} borderRadius={45} />

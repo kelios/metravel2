@@ -116,6 +116,26 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
       transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
     } as any) : null),
   },
+  // Standalone (NOT merged with `searchBox`): the shared `searchBox` carries
+  // `flex: 1` for the desktop topBar row, and inside the compact column that
+  // shorthand resolves its basis against the vertical main axis and collapses the
+  // field to 0 on native — and it survives a sub-property override in a merged
+  // array. This copy owns its own visual props with no flex, so it keeps its 46px
+  // height and full width in the compact bar.
+  compactSearchBox: {
+    width: '100%',
+    height: 46,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    ...(Platform.OS === 'web' ? ({
+      boxShadow: DESIGN_TOKENS.shadows.light,
+    } as any) : null),
+  },
   searchIcon: {
     marginRight: DESIGN_TOKENS.spacing.sm,
   },
@@ -593,9 +613,14 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
       },
   // The card fills its grid-item wrapper (`card`); the wrapper owns the column
   // sizing so the card itself must not re-declare a basis/max-width.
+  // Desktop grid cells get a definite height from the row's `alignItems: 'stretch'`,
+  // so the card fills it with `height: '100%'`. In the compact single column the
+  // wrapper is content-height, and on native Yoga a `height: '100%'` there resolves
+  // against the unbounded ScrollView height — inflating the first card to thousands
+  // of px and pushing the rest off-screen. Compact cards must size to their content.
   cardFill: {
     width: '100%',
-    height: '100%',
+    height: isCompact ? undefined : '100%',
   },
   cardInner: {
     backgroundColor: colors.surface,

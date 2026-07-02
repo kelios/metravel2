@@ -296,10 +296,11 @@ describe('ProfileScreen', () => {
     const { findByText, findByLabelText, findAllByLabelText, findAllByText, getByLabelText, getAllByLabelText, queryByText } = renderProfile();
 
     expect(await findByText('Test User')).toBeTruthy();
-    // Компактная шапка: быстрые действия + кнопка edit, без email и сегмента-счётчиков.
-    expect(await findByText('Чаты')).toBeTruthy();
+    // Компактная шапка: быстрые действия — icon-only чипы поверх баннера,
+    // подпись живёт в accessibilityLabel (правило «шапка ≤20% на мобильном»).
+    expect(await findByLabelText('Чаты')).toBeTruthy();
     expect(await findByLabelText('Меню профиля')).toBeTruthy();
-    expect(await findByText('Календарь')).toBeTruthy();
+    expect(await findByLabelText('Календарь')).toBeTruthy();
     expect(queryByText('user@example.com')).toBeNull();
 
     // Счётчики во вкладках

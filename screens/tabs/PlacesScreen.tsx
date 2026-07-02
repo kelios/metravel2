@@ -701,7 +701,7 @@ export default function PlacesScreen() {
   // scrollable pageChrome). Shared by web + native for parity.
   const compactFixedBar = mobileCompact ? (
     <View style={styles.compactBar}>
-      <View style={styles.searchBox}>
+      <View style={styles.compactSearchBox}>
         <Feather name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
         <TextInput
           value={query}

@@ -10,36 +10,52 @@ export type ProfileHeaderActionKey = 'messages' | 'userpoints' | 'calendar' | 'n
 export interface ProfileHeaderQuickActionsProps {
   onPress: (key: ProfileHeaderActionKey) => void;
   unreadMessagesCount?: number;
+  /** Рендер поверх фото-обложки: frost-подложка под чипами для контраста. */
+  overlay?: boolean;
+  /** Компактный режим для мобильного оверлея: icon-only, подпись — в a11y-label. */
+  compact?: boolean;
 }
+
+// Семантический тон на каждое действие — разбивает монотонный «весь зелёный»
+// верх: коммуникация → info, гео → primary, время → warning, создание → brand.
+type QuickActionTone = 'info' | 'primary' | 'warning' | 'brand';
 
 const ITEMS: Array<{
   key: ProfileHeaderActionKey;
   label: string;
   icon: React.ComponentProps<typeof Feather>['name'];
+  tone: QuickActionTone;
+  /** Главный CTA — заливается брендом, остальные утилитарны/вторичны. */
+  primaryCta?: boolean;
   accessibilityHint: string;
 }> = [
   {
     key: 'messages',
     label: 'Чаты',
     icon: 'message-circle',
+    tone: 'info',
     accessibilityHint: 'Перейти к сообщениям и диалогам',
   },
   {
     key: 'userpoints',
     label: 'Мои точки',
     icon: 'map-pin',
+    tone: 'primary',
     accessibilityHint: 'Перейти к сохранённым точкам на карте',
   },
   {
     key: 'calendar',
     label: 'Календарь',
     icon: 'calendar',
+    tone: 'warning',
     accessibilityHint: 'Перейти к календарю путешествий',
   },
   {
     key: 'newTravel',
     label: 'Маршрут',
-    icon: 'plus-circle',
+    icon: 'plus',
+    tone: 'brand',
+    primaryCta: true,
     accessibilityHint: 'Создать новый маршрут',
   },
 ];
@@ -47,30 +63,64 @@ const ITEMS: Array<{
 export function ProfileHeaderQuickActions({
   onPress,
   unreadMessagesCount = 0,
+  overlay = false,
+  compact = false,
 }: ProfileHeaderQuickActionsProps) {
   const colors = useThemedColors();
+
+  const toneColors = useMemo<Record<QuickActionTone, { fg: string; soft: string }>>(
+    () => ({
+      info: { fg: colors.info, soft: colors.infoSoft },
+      primary: { fg: colors.primary, soft: colors.primarySoft },
+      warning: { fg: colors.warning, soft: colors.warningSoft },
+      brand: { fg: colors.brand, soft: colors.brandSoft },
+    }),
+    [colors]
+  );
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         row: {
           flexDirection: 'row',
-          gap: DESIGN_TOKENS.spacing.xs,
-          paddingHorizontal: DESIGN_TOKENS.spacing.md,
-          marginBottom: DESIGN_TOKENS.spacing.sm,
+          gap: overlay ? DESIGN_TOKENS.spacing.xxs : DESIGN_TOKENS.spacing.xs,
+          paddingHorizontal: overlay ? 0 : DESIGN_TOKENS.spacing.md,
+          marginBottom: overlay ? 0 : DESIGN_TOKENS.spacing.sm,
+          // На desktop-оверлее чипы не растягиваем на всю ширину баннера (иначе
+          // они перекрывают кадр) — ряд прижат вправо, чипы по контенту, фото
+          // остаётся доминантой. На mobile — компактный ряд icon-only на всю зону.
+          ...(overlay && !compact ? { alignSelf: 'flex-end' as const } : {}),
+          ...(overlay
+            ? {
+                borderRadius: DESIGN_TOKENS.radii.pill,
+                padding: 4,
+                // Frost-подложка под чипами: контраст поверх любого фото-кадра,
+                // но кадр остаётся видимым (узкая полоса у нижней кромки).
+                backgroundColor: colors.surfaceMuted,
+                // Живой blur только на desktop web; на мобильном статичный frost
+                // (surfaceMuted) — правило перф-барьеров CLAUDE.md.
+                ...Platform.select({
+                  web: !compact ? ({ backdropFilter: 'blur(8px)' } as any) : {},
+                  default: {},
+                }),
+              }
+            : {}),
         },
         action: {
-          flex: 1,
+          // Desktop-оверлей: чипы по контенту (горизонтальный layout icon+label),
+          // компактные; mobile/legacy — равные колонки (flex:1, icon над label).
+          ...(overlay && !compact
+            ? { flexDirection: 'row' as const, paddingHorizontal: 14 }
+            : { flex: 1, paddingHorizontal: 2 }),
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 4,
-          paddingVertical: 8,
-          paddingHorizontal: 2,
-          borderRadius: DESIGN_TOKENS.radii.md,
+          gap: compact ? 0 : overlay ? 6 : 4,
+          paddingVertical: compact ? 6 : overlay ? 7 : 8,
+          borderRadius: overlay ? DESIGN_TOKENS.radii.pill : DESIGN_TOKENS.radii.md,
           backgroundColor: colors.surface,
-          borderWidth: 1,
+          borderWidth: overlay ? 0 : 1,
           borderColor: colors.borderLight,
-          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+          minHeight: compact ? 40 : overlay ? 40 : DESIGN_TOKENS.touchTarget.minHeight,
           position: 'relative',
           ...Platform.select({
             web: { cursor: 'pointer' } as any,
@@ -82,10 +132,9 @@ export function ProfileHeaderQuickActions({
           borderColor: colors.primary,
         },
         iconWrap: {
-          width: 30,
-          height: 30,
-          borderRadius: 15,
-          backgroundColor: colors.primarySoft,
+          width: compact ? 26 : 30,
+          height: compact ? 26 : 30,
+          borderRadius: compact ? 13 : 15,
           alignItems: 'center',
           justifyContent: 'center',
         },
@@ -115,13 +164,17 @@ export function ProfileHeaderQuickActions({
           color: colors.textOnDark,
         },
       }),
-    [colors]
+    [colors, overlay, compact]
   );
 
   return (
     <View style={styles.row} accessibilityRole="menu">
       {ITEMS.map((item) => {
         const showBadge = item.key === 'messages' && unreadMessagesCount > 0;
+        const tone = toneColors[item.tone];
+        const isCta = !!item.primaryCta;
+        // Главный CTA («Маршрут») — брендовая заливка чипа и белая иконка;
+        // остальные — цветная иконка на своей мягкой tone-подложке.
         return (
           <Pressable
             key={item.key}
@@ -133,16 +186,31 @@ export function ProfileHeaderQuickActions({
             accessibilityHint={item.accessibilityHint}
             style={({ pressed }) => [
               styles.action,
+              isCta && { backgroundColor: colors.brand, borderColor: colors.brand },
               globalFocusStyles.focusable,
               pressed && styles.actionPressed,
             ]}
           >
-            <View style={styles.iconWrap}>
-              <Feather name={item.icon} size={15} color={colors.primary} />
+            <View
+              style={[
+                styles.iconWrap,
+                { backgroundColor: isCta ? colors.brandAlpha30 : tone.soft },
+              ]}
+            >
+              <Feather
+                name={item.icon}
+                size={15}
+                color={isCta ? colors.textOnPrimary : tone.fg}
+              />
             </View>
-            <Text style={styles.label} numberOfLines={1}>
-              {item.label}
-            </Text>
+            {compact ? null : (
+              <Text
+                style={[styles.label, isCta && { color: colors.textOnPrimary }]}
+                numberOfLines={1}
+              >
+                {item.label}
+              </Text>
+            )}
             {showBadge ? (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>

@@ -140,7 +140,12 @@ ssh "$SERVER" "set -euo pipefail
   # container restart) and keep setgid; children (Django collectstatic output)
   # are left untouched. Idempotent — a no-op when ownership is already correct.
   # Remove once the backend entrypoint owns this (#653 permanent fix, verified).
-  docker exec -u 0 metravel-app-1 sh -c 'chown 1984:1000 /app/static && chmod 2775 /app/static'
+  # Same root step also force-removes stale swap dirs (dist.new/dist.old): a
+  # prior interrupted or manual deploy can leave dist.old owned by another uid
+  # (1000) that the container user cannot unlink, so the in-container swap's
+  # 'rm -rf dist.old' silently fails and the next 'mv dist dist.old' nests
+  # inside the leftover dir instead of replacing it (past manual-recovery need).
+  docker exec -u 0 metravel-app-1 sh -c 'chown 1984:1000 /app/static && chmod 2775 /app/static && rm -rf /app/static/dist.new /app/static/dist.old'
   printf '%s' '$SWAP_B64' | base64 -d | docker exec -i metravel-app-1 sh -s
   docker restart metravel-nginx-1
   rm -rf dist icons images
