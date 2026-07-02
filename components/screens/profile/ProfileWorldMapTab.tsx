@@ -165,8 +165,8 @@ export function ProfileWorldMapTab({
           gap: 6,
         },
         zoomButton: {
-          width: isMobile ? 34 : 38,
-          height: isMobile ? 34 : 38,
+          width: isMobile ? 44 : 38,
+          height: isMobile ? 44 : 38,
           borderRadius: DESIGN_TOKENS.radii.md,
           // frost: статичный surfaceMuted на мобильном (без живого blur — правило перфа).
           backgroundColor: colors.surfaceMuted,
@@ -175,6 +175,11 @@ export function ProfileWorldMapTab({
           alignItems: 'center',
           justifyContent: 'center',
           ...Platform.select({ web: { cursor: 'pointer' } as object, default: {} }),
+        },
+        hint: {
+          fontSize: DESIGN_TOKENS.typography.sizes.xs,
+          color: colors.textSecondary,
+          textAlign: 'center',
         },
         legendRow: {
           flexDirection: 'row',
@@ -284,6 +289,7 @@ export function ProfileWorldMapTab({
                   onPress={() => zoom.zoomByCentered(1.5)}
                   accessibilityRole="button"
                   accessibilityLabel="Приблизить карту"
+                  hitSlop={6}
                   style={styles.zoomButton}
                 >
                   <Feather name="plus" size={18} color={colors.text} />
@@ -292,6 +298,7 @@ export function ProfileWorldMapTab({
                   onPress={() => zoom.zoomByCentered(1 / 1.5)}
                   accessibilityRole="button"
                   accessibilityLabel="Отдалить карту"
+                  hitSlop={6}
                   style={styles.zoomButton}
                 >
                   <Feather name="minus" size={18} color={colors.text} />
@@ -300,6 +307,7 @@ export function ProfileWorldMapTab({
                   onPress={() => zoom.reset()}
                   accessibilityRole="button"
                   accessibilityLabel="Сбросить масштаб карты"
+                  hitSlop={6}
                   style={styles.zoomButton}
                 >
                   <Feather name="maximize" size={16} color={colors.text} />
@@ -308,6 +316,14 @@ export function ProfileWorldMapTab({
             </>
           )}
         </View>
+
+        {!isLoading ? (
+          <Text style={styles.hint}>
+            {isMobile
+              ? 'Двумя пальцами — масштаб, перетаскивание — сдвиг, тап по стране — детали'
+              : 'Колесо — масштаб, перетаскивание — сдвиг, клик по стране — детали'}
+          </Text>
+        ) : null}
 
         {selected ? (
           <View ref={infoCardRef} style={styles.infoCard}>

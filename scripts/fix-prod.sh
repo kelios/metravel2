@@ -132,6 +132,15 @@ SWAP_B64="$(printf '%s' "$SWAP_SCRIPT" | base64 | tr -d '\n')"
 ssh "$SERVER" "set -euo pipefail
   cd '$REMOTE_DIR'
   test -d dist/$ENV
+  # Self-heal static/ ownership drift before the swap (recurring infra bug,
+  # board #653). The swap below runs as the container user (uid 1984); if an
+  # out-of-band op left the TOP static/ dir owned by the host user (1000), uid
+  # 1984 falls into 'other' (no write) and the swap dies creating dist.new with
+  # 'Permission denied'. Normalize the top dir only (root via docker exec, no
+  # container restart) and keep setgid; children (Django collectstatic output)
+  # are left untouched. Idempotent — a no-op when ownership is already correct.
+  # Remove once the backend entrypoint owns this (#653 permanent fix, verified).
+  docker exec -u 0 metravel-app-1 sh -c 'chown 1984:1000 /app/static && chmod 2775 /app/static'
   printf '%s' '$SWAP_B64' | base64 -d | docker exec -i metravel-app-1 sh -s
   docker restart metravel-nginx-1
   rm -rf dist icons images

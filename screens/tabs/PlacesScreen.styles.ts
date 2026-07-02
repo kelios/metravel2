@@ -561,35 +561,36 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   },
 
   // ─── Cards grid ───
+  // Mobile (compact) is a single column: a plain vertical stack. The row+wrap grid
+  // is desktop-only — on native Yoga a wrapping row of `flexBasis: '100%'` items
+  // mislays out (only the first card is visible above a tall empty gap), so compact
+  // must be `flexDirection: 'column'`.
   cardsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: isCompact ? 'column' : 'row',
+    flexWrap: isCompact ? 'nowrap' : 'wrap',
     gap: DESIGN_TOKENS.spacing.md,
     alignItems: 'stretch',
   },
-  virtualCardItem: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    paddingBottom: DESIGN_TOKENS.spacing.md,
-  },
-  // In the native virtual list each card is the only child of a column-direction
-  // wrapper, so the grid `card` style (flexBasis '100%' + flexShrink 1, sized for
-  // a row-wrap grid) resolves its basis against the main axis = height and
-  // collapses the card to zero height. Reset the flex to a plain full-width block.
-  virtualCard: {
-    width: '100%',
-    flexGrow: 0,
-    flexShrink: 0,
-    flexBasis: 'auto',
-  },
 
   // ─── Card ───
-  card: {
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: isCompact ? '100%' : isWide ? '30%' : '46%',
-    minWidth: isCompact ? undefined : isWide ? 280 : 260,
-    maxWidth: isCompact ? '100%' : isWide ? '33.333%' : '50%',
-  },
+  // In the compact column each card is a full-width block. A percentage `flexBasis`
+  // here would resolve against the column main axis (height) and collapse the card,
+  // so compact uses an explicit width with no flex basis. Desktop keeps the grid
+  // column sizing (basis/min/max) for the row-wrap layout.
+  card: isCompact
+    ? {
+        width: '100%',
+        flexGrow: 0,
+        flexShrink: 0,
+        flexBasis: 'auto',
+      }
+    : {
+        flexGrow: 1,
+        flexShrink: 1,
+        flexBasis: isWide ? '30%' : '46%',
+        minWidth: isWide ? 280 : 260,
+        maxWidth: isWide ? '33.333%' : '50%',
+      },
   // The card fills its grid-item wrapper (`card`); the wrapper owns the column
   // sizing so the card itself must not re-declare a basis/max-width.
   cardFill: {
