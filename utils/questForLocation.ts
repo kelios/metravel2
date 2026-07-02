@@ -11,6 +11,20 @@ export type LocationQuery = {
   coords?: Array<{ lat: number; lng: number }>
 }
 
+type TravelCoordInput =
+  | string
+  | {
+      coord?: string | null
+      coords?: string | null
+      lat?: number | string | null
+      latitude?: number | string | null
+      lng?: number | string | null
+      lon?: number | string | null
+      longitude?: number | string | null
+    }
+  | null
+  | undefined
+
 const EARTH_R = 6371 // км
 
 function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
@@ -77,7 +91,7 @@ export function findQuestForLocation(
     const dist = minDistanceKm(query.coords, quest.lat, quest.lng)
     if (dist < 8) score += 60
     else if (dist < 20) score += 40
-    else if (dist < 50) score += 20
+    else if (dist < 50) score += 40
 
     if ((qCountry && cCountry && qCountry === cCountry) || (qCode && cCode && qCode === cCode)) {
       score += 15
@@ -140,7 +154,7 @@ export function findQuestsNearLocation(
     const dist = minDistanceKm(query.coords, quest.lat, quest.lng)
     if (dist < 8) score += 60
     else if (dist < 20) score += 40
-    else if (dist < 50) score += 20
+    else if (dist < 50) score += 40
 
     if ((qCountry && cCountry && qCountry === cCountry) || (qCode && cCode && qCode === cCode)) {
       score += 15
@@ -165,17 +179,34 @@ export function findQuestsNearLocation(
 
 /** Парсит координаты точек travel (coord: "lat,lng") в массив {lat,lng}. */
 export function parseTravelCoords(
-  points: Array<{ coord?: string | null } | null | undefined> | undefined | null,
+  points: TravelCoordInput[] | undefined | null,
 ): Array<{ lat: number; lng: number }> {
   if (!Array.isArray(points)) return []
   const out: Array<{ lat: number; lng: number }> = []
   for (const p of points) {
-    const raw = p?.coord
-    if (!raw || typeof raw !== 'string') continue
-    const [latS, lngS] = raw.split(',').map((s) => s.trim())
-    const lat = Number(latS)
-    const lng = Number(lngS)
-    if (Number.isFinite(lat) && Number.isFinite(lng)) out.push({ lat, lng })
+    if (!p) continue
+
+    const raw = typeof p === 'string' ? p : p.coord ?? p.coords
+    if (raw && typeof raw === 'string') {
+      const [latS, lngS] = raw.split(',').map((s) => s.trim())
+      const lat = Number(latS)
+      const lng = Number(lngS)
+      if (Number.isFinite(lat) && Number.isFinite(lng)) out.push({ lat, lng })
+      continue
+    }
+
+    if (typeof p !== 'string') {
+      const lat = Number(p.lat ?? p.latitude)
+      const lng = Number(p.lng ?? p.lon ?? p.longitude)
+      if (Number.isFinite(lat) && Number.isFinite(lng)) out.push({ lat, lng })
+    }
   }
-  return out
+
+  const seen = new Set<string>()
+  return out.filter((coord) => {
+    const key = `${coord.lat.toFixed(6)},${coord.lng.toFixed(6)}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }

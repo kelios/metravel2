@@ -10,6 +10,15 @@ import type { Travel } from '@/types/types'
 const CARD_LIST_STYLE = { marginTop: 12, gap: 12 } as const
 const MAX_QUESTS = 6
 
+type TravelWithExtraCoords = Travel & {
+  coordsMeTravelArr?: string[]
+  lat?: number | string | null
+  latitude?: number | string | null
+  lng?: number | string | null
+  lon?: number | string | null
+  longitude?: number | string | null
+}
+
 function buildEyebrow(distanceKm: number, cityName?: string): string | undefined {
   if (Number.isFinite(distanceKm) && distanceKm < SAME_CITY_THRESHOLD_KM) return 'В этом городе'
   if (Number.isFinite(distanceKm) && distanceKm < NEARBY_QUEST_THRESHOLD_KM) {
@@ -24,16 +33,26 @@ export const QuestForCitySection: React.FC<{
   styles: any
 }> = ({ travel, styles }) => {
   const query = useMemo<LocationQuery>(() => {
-    const coordPoints = (travel.travelAddress ?? []).map((item) =>
-      typeof item === 'string' ? { coord: item } : { coord: item?.coords },
-    )
+    const travelWithExtraCoords = travel as TravelWithExtraCoords
+    const coordPoints = [
+      ...(travel.travelAddress ?? []),
+      ...(travel.coordsMeTravel ?? []),
+      ...(travelWithExtraCoords.coordsMeTravelArr ?? []),
+      {
+        lat: travelWithExtraCoords.lat ?? travelWithExtraCoords.latitude,
+        lng:
+          travelWithExtraCoords.lng ??
+          travelWithExtraCoords.lon ??
+          travelWithExtraCoords.longitude,
+      },
+    ]
     return {
       cityName: travel.cityName,
       countryName: travel.countryName,
       countryCode: travel.countryCode,
       coords: parseTravelCoords(coordPoints),
     }
-  }, [travel.cityName, travel.countryName, travel.countryCode, travel.travelAddress])
+  }, [travel])
 
   const { matches } = useQuestsForLocation(query, { limit: MAX_QUESTS })
 

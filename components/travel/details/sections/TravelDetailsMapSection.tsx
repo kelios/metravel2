@@ -11,7 +11,6 @@ import { useTravelDetailsMapSectionContentModel } from '../hooks/useTravelDetail
 import { useTravelDetailsMapSectionModel } from '../hooks/useTravelDetailsMapSectionModel'
 import AffiliateSection from './AffiliateSection'
 import ExcursionsSection from './ExcursionsSection'
-import QuestForCitySection from './QuestForCitySection'
 import TravelRegisterCtaSection from './TravelRegisterCtaSection'
 import TravelRouteMapBlock from './TravelRouteMapBlock'
 import TravelWeatherBlock from './TravelWeatherBlock'
@@ -85,8 +84,6 @@ export const TravelDetailsMapSection: React.FC<{
         styles={styles}
         shouldForceRenderExcursions={shouldForceRenderExcursions}
       />
-
-      <QuestForCitySection travel={travel} styles={styles} />
 
       <AffiliateSection travel={travel} styles={styles} />
 

@@ -11,6 +11,7 @@ import TravelDescription from '@/components/travel/TravelDescription'
 import { safeGetYoutubeId } from '@/utils/travelMedia'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
 import { LazyYouTube } from './LazyYouTubeSection'
+import QuestForCitySection from './QuestForCitySection'
 
 const LazyYouTubeSection = React.lazy(() =>
   Promise.resolve(import('./LazyYouTubeSection')).then((module) => ({ default: module.LazyYouTube })),
@@ -116,6 +117,8 @@ export const TravelDetailsContentSection: React.FC<{
           </CollapsibleSection>
         </View>
       )}
+
+      <QuestForCitySection travel={travel} styles={styles} />
 
       {travel.youtube_link && safeGetYoutubeId(travel.youtube_link) && (
         <View
