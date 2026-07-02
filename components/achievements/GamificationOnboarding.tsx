@@ -111,7 +111,7 @@ function Step({
   const styles = getStyles(colors);
   return (
     <View style={styles.step}>
-      <Feather name={icon} size={15} color={colors.primary} />
+      <Feather name={icon} size={15} color={colors.primaryDark} />
       <Text style={styles.stepText}>{text}</Text>
     </View>
   );

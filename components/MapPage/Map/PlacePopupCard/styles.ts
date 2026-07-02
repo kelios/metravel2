@@ -690,7 +690,7 @@ export const getStyles = (
     saveFullBtnText: {
       fontSize: fs.small + 1,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.primaryText,
     },
   });
 };

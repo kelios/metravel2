@@ -93,7 +93,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: 'transparent',
   },
   secondaryButtonText: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontSize: 16,
     fontWeight: '600',
   },

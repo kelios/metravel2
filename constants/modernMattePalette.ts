@@ -32,7 +32,8 @@ export const MODERN_MATTE_PALETTE = {
   bookPageTextSubtle: '#8a7d70',
   bookPageBorder: 'rgba(120, 96, 62, 0.18)',
   bookPageGold: 'rgba(180, 150, 80, 0.35)',
-  
+  bookPageAccent: '#b35900', // Тёмно-оранжевый акцент на кремовой странице (WCAG AA large ≥4.6:1)
+
   // ==========================================
   // ТЕКСТ (высококонтрастный, но мягкий)
   // ==========================================
@@ -219,6 +220,7 @@ export const MODERN_MATTE_PALETTE_DARK = {
   bookPageTextSubtle: '#8a7d70',
   bookPageBorder: 'rgba(120, 96, 62, 0.18)',
   bookPageGold: 'rgba(180, 150, 80, 0.35)',
+  bookPageAccent: '#b35900', // Страница книги всегда светлая — акцент не темизируется
 
   // ==========================================
   // ТЕКСТ (высококонтрастный, мягкий)

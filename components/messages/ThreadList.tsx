@@ -257,7 +257,7 @@ function ThreadList({
                 <View style={[styles.newConversationIcon, { backgroundColor: colors.primary }]}>
                     <Feather name="edit" size={18} color={colors.textInverse} />
                 </View>
-                <Text style={[styles.newConversationText, { color: colors.primary }]}>Новый диалог</Text>
+                <Text style={[styles.newConversationText, { color: colors.primaryText }]}>Новый диалог</Text>
             </Pressable>
         );
     }, [onNewConversation, colors, styles]);
@@ -284,7 +284,7 @@ function ThreadList({
     if (loading && threads.length === 0) {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color={colors.primary} />
+                <ActivityIndicator size="large" color={colors.primaryDark} />
             </View>
         );
     }

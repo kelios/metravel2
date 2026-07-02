@@ -127,7 +127,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
               accessibilityLabel="Редактировать комментарий"
               testID="comment-actions-edit"
             >
-              <Feather name="edit-2" size={18} color={colors.primary} />
+              <Feather name="edit-2" size={18} color={colors.primaryDark} />
               <Text style={styles.actionLabel}>Изменить</Text>
             </Pressable>
           )}
@@ -277,7 +277,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
     borderRadius: 18,
   },
   avatarText: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontSize: 14,
     fontWeight: DESIGN_TOKENS.typography.weights.bold,
   },
@@ -338,7 +338,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
     }),
   },
   actionLabel: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontSize: 13,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold,
   },

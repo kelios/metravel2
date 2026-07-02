@@ -2,7 +2,6 @@ import React, { useCallback } from 'react'
 import Feather from '@expo/vector-icons/Feather'
 import { Pressable, Text, View } from 'react-native'
 
-import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { TravelComment } from '@/types/comments'
 
 import { CommentItem } from './CommentItem'
@@ -17,6 +16,8 @@ type CommentThreadProps = {
   onToggleThread: (commentId: number) => void
   colors: {
     primary: string
+    primaryDark: string
+    textMuted: string
   }
   styles: Record<string, any>
 }
@@ -43,7 +44,7 @@ function CommentThreadComponent({
             <Feather
               name="corner-down-right"
               size={16}
-              color={DESIGN_TOKENS.colors.textMuted}
+              color={colors.textMuted}
             />
             <Text style={styles.parentChainLabel}>
               Контекст ветки обсуждения
@@ -61,7 +62,7 @@ function CommentThreadComponent({
         </View>
       )
     },
-    [getParentChain, onEdit, onReply, styles],
+    [colors.textMuted, getParentChain, onEdit, onReply, styles],
   )
 
   const threadReplies = replies[comment.id] ?? []
@@ -82,7 +83,7 @@ function CommentThreadComponent({
             <Feather
               name={isExpanded ? 'chevron-up' : 'chevron-down'}
               size={20}
-              color={colors.primary}
+              color={colors.primaryDark}
             />
             <Text style={styles.toggleThreadText}>
               {isExpanded

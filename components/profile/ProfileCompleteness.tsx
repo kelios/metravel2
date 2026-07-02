@@ -182,7 +182,7 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View style={styles.iconDot}>
-            <Feather name="trending-up" size={14} color={colors.primary} />
+            <Feather name="trending-up" size={14} color={colors.primaryDark} />
           </View>
           <Text style={styles.title}>
             {nextStep ? `Добавьте ${nextStep.label.toLowerCase()}` : 'Заполните профиль'}

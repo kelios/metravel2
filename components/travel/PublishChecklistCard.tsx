@@ -116,7 +116,7 @@ const PublishChecklistCard: React.FC<PublishChecklistCardProps> = ({
 
       <View style={[styles.checklistSection, styles.checklistSectionRecommended]}>
         <View style={styles.sectionHeaderRow}>
-          <Feather name="info" size={16} color={colors.primary} />
+          <Feather name="info" size={16} color={colors.primaryDark} />
           <Text style={styles.sectionHeaderText}>Рекомендуем заполнить</Text>
         </View>
         {recommendedChecklist.map((item) => {

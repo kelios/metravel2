@@ -75,14 +75,23 @@ jest.mock('@/context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
 }))
 
-const mockRecordGuestQuestPreview = jest.fn(async () => undefined)
-
-jest.mock('@/utils/guestTrialState', () => ({
-  recordGuestQuestPreview: (...args: any[]) => mockRecordGuestQuestPreview(...args),
-}))
+const mockQuestWizard = jest.fn(() => null)
 
 jest.mock('@/components/quests/QuestWizard', () => ({
-  QuestWizard: () => null,
+  QuestWizard: (props: any) => mockQuestWizard(props),
+}))
+
+const mockUseGuestQuestFlow = jest.fn(() => ({
+  guestInitial: null,
+  guestReady: true,
+  guestFreeSteps: 2,
+  persistGuestProgress: jest.fn(),
+  goToLogin: jest.fn(),
+  goToRegister: jest.fn(),
+}))
+
+jest.mock('@/components/quests/useGuestQuestFlow', () => ({
+  useGuestQuestFlow: (...args: any[]) => mockUseGuestQuestFlow(...args),
 }))
 
 jest.mock('@/components/quests/TravelsForQuestSection', () => ({
@@ -124,7 +133,16 @@ describe('Quest screen title sync', () => {
       saveProgress: jest.fn(),
       resetProgress: jest.fn(),
     })
-    mockRecordGuestQuestPreview.mockClear()
+    mockQuestWizard.mockClear()
+    mockUseGuestQuestFlow.mockClear()
+    mockUseGuestQuestFlow.mockReturnValue({
+      guestInitial: null,
+      guestReady: true,
+      guestFreeSteps: 2,
+      persistGuestProgress: jest.fn(),
+      goToLogin: jest.fn(),
+      goToRegister: jest.fn(),
+    })
     document.title = 'Energylandia - польский Диснейленд.'
     document.head.innerHTML = [
       '<meta name="description" content="old desc">',
@@ -174,7 +192,7 @@ describe('Quest screen title sync', () => {
     expect(mockUseQuestProgressSync).toHaveBeenCalledWith(undefined, false)
   })
 
-  it('shows the first quest step preview to logged-out users without loading progress', async () => {
+  it('renders the quest wizard in guest mode for logged-out users without loading server progress', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false })
     mockUseQuestBundle.mockReturnValue({
       bundle: {
@@ -203,19 +221,20 @@ describe('Quest screen title sync', () => {
     })
     const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
 
-    const { getByTestId, getByText } = render(<QuestScreen />)
+    render(<QuestScreen />)
 
-    expect(getByTestId('guest-quest-first-step-preview')).toBeTruthy()
-    expect(getByText('Площадь у реки')).toBeTruthy()
-    expect(getByText('Найдите знак на ограде.')).toBeTruthy()
-    expect(mockUseQuestProgressSync).toHaveBeenCalledWith('minsk-cmok', false)
     await act(async () => {
       await Promise.resolve()
     })
-    expect(mockRecordGuestQuestPreview).toHaveBeenCalledWith({
-      questId: 'minsk-cmok',
-      cityId: '4',
-      stepId: 'step-1',
-    })
+
+    // Гость не грузит серверный прогресс (второй аргумент false).
+    expect(mockUseQuestProgressSync).toHaveBeenCalledWith('minsk-cmok', false)
+    // Визард смонтирован в гостевом режиме, а не login-wall preview.
+    expect(mockQuestWizard).toHaveBeenCalled()
+    const wizardProps = mockQuestWizard.mock.calls[0][0] as any
+    expect(wizardProps.guestMode).toBe(true)
+    expect(wizardProps.storageKey).toBe('guest_minsk-cmok')
+    expect(typeof wizardProps.onGuestLogin).toBe('function')
+    expect(typeof wizardProps.onGuestRegister).toBe('function')
   })
 })

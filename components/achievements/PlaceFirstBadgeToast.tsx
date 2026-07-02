@@ -130,7 +130,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
     title: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
       letterSpacing: 0.3,
     },
     name: {

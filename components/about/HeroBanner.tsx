@@ -26,7 +26,7 @@ export const HeroBanner: React.FC<Props> = ({ isWide }) => {
     <View style={styles.wrap}>
       <View style={styles.copy}>
         <View style={styles.kickerRow}>
-          <Feather name="compass" size={14} color={colors.primary} />
+          <Feather name="compass" size={14} color={colors.primaryDark} />
           <Text style={styles.kicker}>MeTravel.by</Text>
         </View>
         <Text style={styles.title}>Путешествия, которые хочется повторить</Text>
@@ -69,7 +69,7 @@ export const HeroBanner: React.FC<Props> = ({ isWide }) => {
               globalFocusStyles.focusable,
             ]}
           >
-            <Feather name="map" size={16} color={colors.primary} />
+            <Feather name="map" size={16} color={colors.primaryDark} />
             <Text style={styles.ctaSecondaryText}>Открыть карту</Text>
           </Pressable>
         </View>

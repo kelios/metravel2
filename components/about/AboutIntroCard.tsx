@@ -69,7 +69,7 @@ export const AboutIntroCard: React.FC<Props> = ({
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         style={({ pressed }) => [styles.emailButton, pressed && styles.emailButtonPressed]}
       >
-        <Feather name="mail" size={18} color={colors.primary} />
+        <Feather name="mail" size={18} color={colors.primaryDark} />
         <Text style={styles.emailText}>{email}</Text>
       </Pressable>
 
@@ -86,7 +86,7 @@ export const AboutIntroCard: React.FC<Props> = ({
               globalFocusStyles.focusable,
             ]}
           >
-            <Feather name="music" size={18} color={colors.primary} />
+            <Feather name="music" size={18} color={colors.primaryDark} />
           </Pressable>
           <Pressable
             onPress={() => onOpenUrl(socialLinks.instagram)}
@@ -99,7 +99,7 @@ export const AboutIntroCard: React.FC<Props> = ({
               globalFocusStyles.focusable,
             ]}
           >
-            <Feather name="instagram" size={18} color={colors.primary} />
+            <Feather name="instagram" size={18} color={colors.primaryDark} />
           </Pressable>
           <Pressable
             onPress={() => onOpenUrl(socialLinks.youtube)}
@@ -112,7 +112,7 @@ export const AboutIntroCard: React.FC<Props> = ({
               globalFocusStyles.focusable,
             ]}
           >
-            <Feather name="youtube" size={18} color={colors.primary} />
+            <Feather name="youtube" size={18} color={colors.primaryDark} />
           </Pressable>
         </View>
 

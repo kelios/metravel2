@@ -145,7 +145,7 @@ function HomeFAQSection() {
             <Feather
               name="help-circle"
               size={14}
-              color={colors.primary}
+              color={colors.primaryDark}
               {...({ 'aria-hidden': true, focusable: false } as any)}
             />
             <Text style={styles.eyebrowText}>FAQ</Text>
@@ -290,7 +290,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
       letterSpacing: 0.9,
       color: colors.textSubtle,
     },
-    questionOpen: { color: colors.primary },
+    questionOpen: { color: colors.primaryText },
     toggleWrap: {
       width: 32,
       height: 32,

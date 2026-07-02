@@ -36,7 +36,7 @@ function VerifiedBadge({
         accessibilityLabel="Проверенный участник"
         testID={testID ?? 'verified-badge'}
       >
-        <Feather name="check-circle" size={14} color={colors.primary} />
+        <Feather name="check-circle" size={14} color={colors.primaryDark} />
       </View>
     )
   }
@@ -49,7 +49,7 @@ function VerifiedBadge({
           accessibilityRole="image"
           accessibilityLabel="Проверенный участник"
         >
-          <Feather name="check-circle" size={13} color={colors.primary} />
+          <Feather name="check-circle" size={13} color={colors.primaryDark} />
           <Text style={styles.verifiedText}>Проверенный</Text>
         </View>
       ) : null}
@@ -83,7 +83,7 @@ const getStyles = (colors: ThemedColors) =>
       borderWidth: 1,
       borderColor: colors.primary,
     },
-    verifiedText: { fontSize: 12, fontWeight: '700', color: colors.primary },
+    verifiedText: { fontSize: 12, fontWeight: '700', color: colors.primaryText },
     organizerChip: {
       flexDirection: 'row',
       alignItems: 'center',

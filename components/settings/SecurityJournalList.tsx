@@ -43,7 +43,7 @@ export default function SecurityJournalList() {
     if (isLoading) {
         return (
             <View style={styles.loadingBox}>
-                <ActivityIndicator size="small" color={colors.primary} />
+                <ActivityIndicator size="small" color={colors.primaryDark} />
             </View>
         );
     }
@@ -66,7 +66,7 @@ export default function SecurityJournalList() {
                 return (
                     <View key={String(entry.id)} style={styles.row}>
                         <View style={styles.rowIcon}>
-                            <Feather name={meta.icon} size={16} color={colors.primary} />
+                            <Feather name={meta.icon} size={16} color={colors.primaryDark} />
                         </View>
                         <View style={styles.rowText}>
                             <Text style={styles.rowTitle}>{meta.label}</Text>
@@ -87,7 +87,7 @@ export default function SecurityJournalList() {
                     {...Platform.select({ web: { cursor: 'pointer' } })}
                 >
                     {isFetchingNextPage ? (
-                        <ActivityIndicator size="small" color={colors.primary} />
+                        <ActivityIndicator size="small" color={colors.primaryDark} />
                     ) : (
                         <Text style={styles.loadMoreText}>Показать ещё</Text>
                     )}
@@ -132,5 +132,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
             backgroundColor: colors.surface,
             minHeight: 44,
         },
-        loadMoreText: { fontSize: 14, fontWeight: '600', color: colors.primary },
+        loadMoreText: { fontSize: 14, fontWeight: '600', color: colors.primaryText },
     });

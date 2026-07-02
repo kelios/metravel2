@@ -95,7 +95,7 @@ function CharacterProfileCard({ userId, bare = false, testID, style }: Props) {
                     <InventoryLineIcon
                       icon={detailIcon(d.slug)}
                       size={16}
-                      color={colors.primary}
+                      color={colors.primaryDark}
                     />
                   ) : (
                     <Feather name="lock" size={14} color={colors.textMuted} />

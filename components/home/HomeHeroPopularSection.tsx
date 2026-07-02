@@ -219,7 +219,7 @@ export default function HomeHeroPopularSection({
             accessibilityLabel="Смотреть все популярные маршруты"
           >
             <Text style={styles.popularSeeAllText}>Все</Text>
-            <Feather name="arrow-right" size={14} color={colors.primary} />
+            <Feather name="arrow-right" size={14} color={colors.primaryDark} />
           </Pressable>
         )}
       </View>

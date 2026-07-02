@@ -29,7 +29,7 @@ export default function DataOwnershipSection() {
         <View style={styles.card}>
             <View style={styles.cardRow}>
                 <View style={styles.cardIcon}>
-                    <Feather name="download-cloud" size={18} color={colors.primary} />
+                    <Feather name="download-cloud" size={18} color={colors.primaryDark} />
                 </View>
                 <View style={styles.cardText}>
                     <Text style={styles.cardTitle}>Мои данные</Text>
@@ -45,7 +45,7 @@ export default function DataOwnershipSection() {
                 variant="secondary"
                 fullWidth
                 size="md"
-                icon={<Feather name="download" size={16} color={colors.primary} />}
+                icon={<Feather name="download" size={16} color={colors.primaryDark} />}
             />
 
             <View style={styles.divider} />

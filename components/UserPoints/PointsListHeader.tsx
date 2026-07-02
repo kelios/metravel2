@@ -310,7 +310,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     fontWeight: '700' as any,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
-    color: colors.primary,
+    color: colors.primaryText,
   },
   summaryTitle: {
     fontSize: 18,

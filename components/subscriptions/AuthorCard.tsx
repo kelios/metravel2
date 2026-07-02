@@ -86,7 +86,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
             ) : initials ? (
               <Text style={styles.avatarInitials}>{initials}</Text>
             ) : (
-              <Feather name="user" size={20} color={colors.primary} />
+              <Feather name="user" size={20} color={colors.primaryDark} />
             )}
           </View>
           <View style={styles.authorTextBlock}>
@@ -105,7 +105,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
             accessibilityLabel={`Написать ${fullName}`}
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
-            <Feather name="mail" size={16} color={colors.primary} />
+            <Feather name="mail" size={16} color={colors.primaryDark} />
           </Pressable>
           <Pressable
             style={[styles.actionButtonDanger, globalFocusStyles.focusable]}
@@ -165,7 +165,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
               accessibilityLabel="Показать все путешествия"
               {...Platform.select({ web: { cursor: 'pointer' } })}
             >
-              <Feather name="arrow-right" size={24} color={colors.primary} />
+              <Feather name="arrow-right" size={24} color={colors.primaryDark} />
               <Text style={styles.showMoreText}>Ещё {hiddenTravelsCount}</Text>
             </Pressable>
           )}
@@ -205,7 +205,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
     },
     avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
     avatarInitials: {
-      fontSize: 16, fontWeight: '700' as const, color: colors.primary, letterSpacing: 0.5,
+      fontSize: 16, fontWeight: '700' as const, color: colors.primaryText, letterSpacing: 0.5,
     },
     authorTextBlock: { flex: 1, minWidth: 0 },
     authorName: { fontSize: isCompact ? 15 : 16, fontWeight: '700', color: colors.text },
@@ -244,7 +244,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       alignItems: 'center', justifyContent: 'center', gap: 8,
       ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
     },
-    showMoreText: { fontSize: 13, fontWeight: '600', color: colors.primary },
+    showMoreText: { fontSize: 13, fontWeight: '600', color: colors.primaryText },
   });
 
 export default React.memo(AuthorCard);

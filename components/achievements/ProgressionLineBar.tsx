@@ -145,7 +145,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
     value: {
       fontSize: DESIGN_TOKENS.typography.sizes.md,
       fontWeight: '800',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     valueLabel: {
       fontSize: 10,

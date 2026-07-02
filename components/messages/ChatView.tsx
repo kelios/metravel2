@@ -241,7 +241,7 @@ function ChatView({
 
       {loading && messages.length === 0 ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primaryDark} />
         </View>
       ) : (
         <FlatList
@@ -339,7 +339,7 @@ function ChatHeader({
           {otherUserAvatar ? (
             <Image source={{ uri: optimizeImageUrl(otherUserAvatar, { width: 72, height: 72, quality: 70, format: 'auto', fit: 'cover' }) ?? otherUserAvatar }} style={styles.headerAvatarImage} />
           ) : (
-            <Feather name="user" size={18} color={colors.primary} />
+            <Feather name="user" size={18} color={colors.primaryDark} />
           )}
         </View>
         <Text style={styles.headerTitle} numberOfLines={1}>

@@ -127,7 +127,7 @@ export function ProfileSectionsHub({ userId }: ProfileSectionsHubProps) {
             ]}
           >
             <View style={styles.iconPill}>
-              <Feather name={item.icon} size={16} color={colors.primary} />
+              <Feather name={item.icon} size={16} color={colors.primaryDark} />
             </View>
             <View style={styles.textWrap}>
               <Text style={styles.title} numberOfLines={2}>

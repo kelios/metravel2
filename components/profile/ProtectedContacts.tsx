@@ -118,10 +118,10 @@ export default function ProtectedContacts({
                     {...Platform.select({ web: { cursor: 'pointer' } })}
                 >
                     {requesting ? (
-                        <ActivityIndicator size="small" color={colors.primary} />
+                        <ActivityIndicator size="small" color={colors.primaryDark} />
                     ) : (
                         <>
-                            <Feather name="user-plus" size={16} color={colors.primary} />
+                            <Feather name="user-plus" size={16} color={colors.primaryDark} />
                             <Text style={styles.requestButtonText}>Запросить контакты</Text>
                         </>
                     )}
@@ -147,7 +147,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
             borderColor: colors.border,
             backgroundColor: colors.surface,
         },
-        socialChipText: { fontSize: 13, fontWeight: '600', color: colors.primary },
+        socialChipText: { fontSize: 13, fontWeight: '600', color: colors.primaryText },
         gateCard: {
             gap: 8,
             padding: 12,
@@ -173,7 +173,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
             minHeight: 40,
             alignSelf: 'flex-start',
         },
-        requestButtonText: { fontSize: 14, fontWeight: '600', color: colors.primary },
+        requestButtonText: { fontSize: 14, fontWeight: '600', color: colors.primaryText },
         pendingBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
         pendingText: { fontSize: 13, fontWeight: '600', color: colors.warning },
     });

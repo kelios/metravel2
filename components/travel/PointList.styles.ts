@@ -158,7 +158,7 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
   previewFooterText: {
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.primaryText,
   },
   listContent: {
     paddingBottom: DESIGN_TOKENS.spacing.xxl,
@@ -540,7 +540,7 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     borderColor: colors.primaryAlpha30,
   },
   cardInfoActionText: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontSize: 13,
     fontWeight: '800',
     letterSpacing: 0,
@@ -628,7 +628,7 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     color: colors.textMuted,
   },
   viewModeBtnTextActive: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: '600',
   },
   verticalListWrap: {
@@ -824,7 +824,7 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
   listRowAddBtnText: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.primaryText,
   },
   globalFocusStyle: globalFocusStyles.focusable,
 });

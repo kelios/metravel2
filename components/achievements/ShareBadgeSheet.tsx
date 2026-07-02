@@ -255,7 +255,7 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
       label: 'Ещё…',
       icon: 'share-2',
       onPress: handleNativeShare,
-      color: colors.primary,
+      color: colors.primaryText,
     });
   }
 
@@ -288,7 +288,7 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
 
           {status === 'loading' ? (
             <View style={styles.statusRow}>
-              <ActivityIndicator color={colors.primary} />
+              <ActivityIndicator color={colors.primaryDark} />
               <Text style={styles.statusText}>Готовим карточку…</Text>
             </View>
           ) : null}
@@ -298,7 +298,7 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
               <Feather name="alert-triangle" size={16} color={colors.warning ?? colors.textMuted} />
               <Text style={styles.statusText}>Не удалось создать карточку</Text>
               <Pressable onPress={loadCard} accessibilityRole="button" accessibilityLabel="Повторить">
-                <Text style={[styles.statusText, { color: colors.primary, fontWeight: '700' }]}>
+                <Text style={[styles.statusText, { color: colors.primaryText, fontWeight: '700' }]}>
                   Повторить
                 </Text>
               </Pressable>

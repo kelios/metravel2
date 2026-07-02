@@ -309,7 +309,7 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
     popularSeeAllText: {
       fontSize: 12,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
       ...Platform.select({ web: { fontFamily: sansSerif } as any }),
     },
     popularPreviewRow: {

@@ -103,7 +103,7 @@ export const CategoriesShowcase: React.FC<Props> = ({ isWide }) => {
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
-        <Text style={[styles.eyebrow, { color: colors.primary }]}>Что вы найдёте на сайте</Text>
+        <Text style={[styles.eyebrow, { color: colors.primaryText }]}>Что вы найдёте на сайте</Text>
         <Text style={[styles.title, { color: colors.text }]}>Идеи для любого настроения</Text>
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
           Десятки реальных путешествий — от тихих озёр до городских прогулок. Нажмите на карточку, чтобы открыть подборку
@@ -129,13 +129,13 @@ export const CategoriesShowcase: React.FC<Props> = ({ isWide }) => {
             >
               <View style={styles.card}>
                 <View style={styles.iconBadge}>
-                  <Feather name={cat.icon} size={20} color={colors.primary} />
+                  <Feather name={cat.icon} size={20} color={colors.primaryDark} />
                 </View>
                 <Text style={styles.cardTitle}>{cat.title}</Text>
                 <Text style={styles.cardDesc}>{cat.desc}</Text>
                 <View style={styles.cardCta}>
                   <Text style={styles.cardCtaText}>Смотреть</Text>
-                  <Feather name="arrow-right" size={12} color={colors.primary} />
+                  <Feather name="arrow-right" size={12} color={colors.primaryDark} />
                 </View>
               </View>
             </Pressable>

@@ -190,7 +190,7 @@ function UserSafetyMenu({
                 <Text style={styles.sectionLabel}>Причина</Text>
                 {reasonsQuery.isLoading ? (
                   <View style={styles.loading}>
-                    <ActivityIndicator color={colors.primary} />
+                    <ActivityIndicator color={colors.primaryDark} />
                   </View>
                 ) : (
                   reasons.map((r) => {
@@ -305,7 +305,7 @@ const getStyles = (colors: ThemedColors) =>
     },
     menuRowText: { fontSize: 15, fontWeight: '600', color: colors.text },
     menuRowTextMuted: { color: colors.textMuted },
-    menuRowTextPrimary: { color: colors.primary },
+    menuRowTextPrimary: { color: colors.primaryText },
     hint: { fontSize: 12, color: colors.textMuted, lineHeight: 16, marginTop: 4 },
     sectionLabel: {
       fontSize: 13,
@@ -328,7 +328,7 @@ const getStyles = (colors: ThemedColors) =>
     },
     reasonRowSelected: { borderColor: colors.primary, backgroundColor: colors.surfaceMuted },
     reasonText: { fontSize: 14, color: colors.text },
-    reasonTextSelected: { color: colors.primary, fontWeight: '600' },
+    reasonTextSelected: { color: colors.primaryText, fontWeight: '600' },
     commentInput: {
       borderWidth: 1,
       borderColor: colors.border,

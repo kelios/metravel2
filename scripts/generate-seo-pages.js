@@ -1263,6 +1263,35 @@ function injectTravelQuestPromoSection(baseHtml, matches) {
   return html.replace('</body>', `${insertion}</body>`);
 }
 
+function injectTravelRegisterCtaSection(baseHtml) {
+  let html = baseHtml.replace(/<style[^>]*data-ssg-register-cta-style="true"[^>]*>[\s\S]*?<\/style>\n?/i, '');
+  html = html.replace(/<section[^>]*data-ssg-register-cta="true"[^>]*>[\s\S]*?<\/section>\n?/i, '');
+
+  const heading = 'Сохраняй маршруты и любимые места';
+  const subtitle = 'Бесплатный аккаунт: собирай избранное, планируй поездки и синхронизируй их на всех устройствах.';
+  const cta = 'Создать бесплатный аккаунт';
+
+  const styleTag = [
+    '<style data-ssg-register-cta-style="true">',
+    'html.rnw-styles-ready [data-ssg-register-cta="true"]{display:none!important}',
+    '@media(max-width:640px){[data-ssg-register-cta="true"]{margin:12px;padding:16px 14px}[data-ssg-register-cta="true"] h2{font-size:19px!important}}',
+    '</style>',
+  ].join('');
+  const section = [
+    `<section data-ssg-register-cta="true" aria-label="${escapeAttr(heading)}" style="position:relative;z-index:2;box-sizing:border-box;max-width:840px;margin:24px auto;padding:18px;font:16px/1.55 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--color-text,#22332c);background:var(--color-surface,#fff);border:1px solid var(--color-border,rgba(0,0,0,.12));border-radius:8px">`,
+    `<h2 style="margin:0 0 6px;font:800 21px/1.25 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--color-text,#22332c)">${escapeAttr(heading)}</h2>`,
+    `<p style="margin:0 0 14px;color:var(--color-text-muted,rgba(34,51,44,.72))">${escapeAttr(subtitle)}</p>`,
+    `<a href="/registration" style="display:inline-block;padding:11px 20px;border-radius:8px;background:var(--color-primary,#ff7043);color:#fff;font-weight:700;text-decoration:none">${escapeAttr(cta)}</a>`,
+    '</section>',
+  ].join('');
+
+  const insertion = `${styleTag}\n${section}\n`;
+  if (/<div\s+id="root"[^>]*>/i.test(html)) {
+    return html.replace(/<div(\s+id="root"[^>]*)>/i, `${insertion}<div$1>`);
+  }
+  return html.replace('</body>', `${insertion}</body>`);
+}
+
 function parseQuestJsonField(value, fallback) {
   if (Array.isArray(value)) return value;
   if (value && typeof value === 'object') return value;
@@ -1998,7 +2027,8 @@ async function main() {
         }
       );
       const htmlWithQuestPromo = injectTravelQuestPromoSection(htmlWithSkeleton, questMatches);
-      const finalTravelHtml = injectHiddenH1(htmlWithQuestPromo, name || routeKey);
+      const htmlWithRegisterCta = injectTravelRegisterCtaSection(htmlWithQuestPromo);
+      const finalTravelHtml = injectHiddenH1(htmlWithRegisterCta, name || routeKey);
 
       // Write both explicit-file and directory-index variants.
       // NOTE: we intentionally avoid writing an extensionless file because
@@ -2266,6 +2296,7 @@ if (typeof module !== 'undefined' && module.exports) {
     buildQuestPromoCatalog,
     findTravelQuestPromoMatches,
     injectTravelQuestPromoSection,
+    injectTravelRegisterCtaSection,
     injectQuestIntroSection,
     injectQuestLinksIndex,
     patchNoindexFallbackTemplate,

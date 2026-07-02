@@ -99,7 +99,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     title: {
       fontSize: DESIGN_TOKENS.typography.sizes.lg,
       fontWeight: '900',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     subtitle: {
       marginTop: 2,

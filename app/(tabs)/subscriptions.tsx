@@ -67,7 +67,7 @@ export default function SubscriptionsScreen() {
           accessibilityLabel="Назад"
           {...Platform.select({ web: { cursor: 'pointer' } })}
         >
-          <Feather name="arrow-left" size={16} color={colors.primary} />
+          <Feather name="arrow-left" size={16} color={colors.primaryDark} />
           <Text style={styles.backToProfileButtonText}>Назад</Text>
         </Pressable>
       </View>
@@ -156,5 +156,5 @@ const createPageStyles = (colors: ReturnType<typeof useThemedColors>) =>
       paddingHorizontal: 12, paddingVertical: 10, borderRadius: DESIGN_TOKENS.radii.md,
       borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface, minHeight: 40,
     },
-    backToProfileButtonText: { fontSize: 14, fontWeight: '600', color: colors.primary },
+    backToProfileButtonText: { fontSize: 14, fontWeight: '600', color: colors.primaryText },
   });

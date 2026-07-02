@@ -250,7 +250,7 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
     titleAccent: {
       fontSize: isMobile ? 26 : 38,
       fontWeight: '800',
-      color: colors.primary,
+      color: colors.primaryText,
       textAlign: 'center',
       letterSpacing: -1.1,
       lineHeight: isMobile ? 32 : 46,

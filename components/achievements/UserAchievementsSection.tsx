@@ -32,7 +32,7 @@ function UserAchievementsSection({ userId, testID, style }: Props) {
   if (isLoading || !data) {
     return (
       <View style={[styles.card, style]} testID={testID}>
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.primaryDark} />
       </View>
     );
   }

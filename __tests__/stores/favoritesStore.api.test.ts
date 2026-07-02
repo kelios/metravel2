@@ -108,6 +108,30 @@ describe('favoritesStore server favorite API', () => {
         expect(useFavoritesStore.getState().isFavorite(514, 'travel')).toBe(true);
     });
 
+    it('stores web guest favorites locally without protected server calls', async () => {
+        (Platform as any).OS = 'web';
+
+        await useFavoritesStore.getState().addFavorite(
+            {
+                id: 514,
+                type: 'travel',
+                title: 'Random travel',
+                url: '/travels/random-travel',
+                imageUrl: 'https://metravel.by/media/random.jpg',
+                country: 'Польша',
+            },
+            { isAuthenticated: false, userId: null },
+        );
+
+        expect(markTravelAsFavorite).not.toHaveBeenCalled();
+        expect(fetchUserFavoriteTravels).not.toHaveBeenCalled();
+        expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+            'metravel_favorites',
+            expect.stringContaining('Random travel'),
+        );
+        expect(useFavoritesStore.getState().isFavorite(514, 'travel')).toBe(true);
+    });
+
     it('removes Android guest favorites locally without protected server calls', async () => {
         (Platform as any).OS = 'android';
         useFavoritesStore.setState({

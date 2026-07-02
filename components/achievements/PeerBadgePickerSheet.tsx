@@ -72,7 +72,7 @@ function PeerBadgePickerSheet({
 
           {isLoading ? (
             <View style={styles.loading}>
-              <ActivityIndicator color={colors.primary} />
+              <ActivityIndicator color={colors.primaryDark} />
             </View>
           ) : options.length === 0 ? (
             <View style={styles.emptyState}>
@@ -202,7 +202,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: colors.surface,
     },
     toggleOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-    toggleText: { fontSize: DESIGN_TOKENS.typography.sizes.xs, fontWeight: '700', color: colors.primary },
+    toggleText: { fontSize: DESIGN_TOKENS.typography.sizes.xs, fontWeight: '700', color: colors.primaryText },
     toggleTextOn: { color: colors.textOnPrimary },
     footerSpace: { height: DESIGN_TOKENS.spacing.xxl },
   });

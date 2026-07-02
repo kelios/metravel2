@@ -319,7 +319,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
     if (isLoading) {
       return (
         <View style={styles.loadingContainer} onLayout={onLayout}>
-          <ActivityIndicator size="large" color={colors.primary} accessibilityLabel="Загрузка популярных маршрутов" />
+          <ActivityIndicator size="large" color={colors.primaryDark} accessibilityLabel="Загрузка популярных маршрутов" />
           <Text style={styles.loadingText}>Загрузка популярных маршрутов…</Text>
         </View>
       );
@@ -353,7 +353,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
                 opacity: pressed ? 0.7 : 1,
               })}
             >
-              <Text style={{ color: colors.primary, fontWeight: '600' }}>Повторить</Text>
+              <Text style={{ color: colors.primaryText, fontWeight: '600' }}>Повторить</Text>
             </Pressable>
           )}
         </View>

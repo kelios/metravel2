@@ -795,7 +795,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <View style={styles.centered}>
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={colors.primaryDark} />
         </View>
       </SafeAreaView>
     );
@@ -865,7 +865,7 @@ export default function ProfileScreen() {
           )}
           {activeTab === 'travels' && travelsLoadingMore ? (
             <View style={styles.footerLoader}>
-              <ActivityIndicator color={colors.primary} />
+              <ActivityIndicator color={colors.primaryDark} />
             </View>
           ) : null}
         </ScrollView>
@@ -892,7 +892,7 @@ export default function ProfileScreen() {
           ListFooterComponent={
             activeTab === 'travels' && travelsLoadingMore ? (
               <View style={styles.footerLoader}>
-                <ActivityIndicator color={colors.primary} />
+                <ActivityIndicator color={colors.primaryDark} />
               </View>
             ) : null
           }

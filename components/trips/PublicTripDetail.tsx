@@ -53,7 +53,7 @@ function PublicTripDetail({ tripId }: Props) {
   if (isLoading) {
     return (
       <View style={styles.center} testID="trip-detail-loading">
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.primaryDark} />
       </View>
     );
   }

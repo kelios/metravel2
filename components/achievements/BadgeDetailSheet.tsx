@@ -224,7 +224,7 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
                 </View>
               ) : null}
               <View style={styles.chip}>
-                <Feather name="star" size={12} color={colors.primary} />
+                <Feather name="star" size={12} color={colors.primaryDark} />
                 <Text style={styles.chipText}>{badge.points} XP</Text>
               </View>
             </View>

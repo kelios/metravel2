@@ -100,7 +100,7 @@ function CommunityRoutesCatalog({ initialTransport }: Props) {
 
       {isLoading ? (
         <ActivityIndicator
-          color={colors.primary}
+          color={colors.primaryDark}
           style={styles.loader}
           testID="community-routes-loading"
         />
@@ -148,7 +148,7 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surfaceMuted,
     },
     chipText: { fontSize: 13, color: colors.textSecondary },
-    chipTextActive: { color: colors.primary, fontWeight: '600' },
+    chipTextActive: { color: colors.primaryText, fontWeight: '600' },
     input: {
       borderWidth: 1,
       borderColor: colors.border,

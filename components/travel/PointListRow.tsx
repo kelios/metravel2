@@ -26,6 +26,7 @@ type PointListRowProps = {
   categoryLabel?: string;
   colors: {
     primary: string;
+    primaryDark: string;
     textMuted: string;
   };
   imageUrl?: string;
@@ -177,10 +178,10 @@ const PointListRow = React.memo(function PointListRow({
               ]}
             >
               {addButtonLoading ? (
-                <ActivityIndicator size="small" color={colors.primary} />
+                <ActivityIndicator size="small" color={colors.primaryDark} />
               ) : (
                 <>
-                  <Feather name="map-pin" size={13} color={colors.primary} />
+                  <Feather name="map-pin" size={13} color={colors.primaryDark} />
                   <Text style={styles.listRowAddBtnText}>Мои точки</Text>
                 </>
               )}

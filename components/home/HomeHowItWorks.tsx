@@ -86,7 +86,7 @@ function StepCard({
             <Feather
               name={step.icon as any}
               size={20}
-              color={colors.primary}
+              color={colors.primaryDark}
               {...({ 'aria-hidden': true, focusable: false } as any)}
             />
           </View>
@@ -109,7 +109,7 @@ function StepCard({
           <Feather
             name="arrow-right"
             size={13}
-            color={colors.primary}
+            color={colors.primaryDark}
             {...({ 'aria-hidden': true, focusable: false } as any)}
           />
         </View>
@@ -168,7 +168,7 @@ function HomeHowItWorks() {
             <Feather
               name="book-open"
               size={14}
-              color={colors.primary}
+              color={colors.primaryDark}
               {...({ 'aria-hidden': true, focusable: false } as any)}
             />
             <Text style={styles.eyebrowText}>Как это работает</Text>
@@ -388,7 +388,7 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
     },
     stepFooter: { marginTop: 'auto', paddingTop: 4 },
     stepAction: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
-    stepActionText: { fontSize: 13, fontWeight: '600', color: colors.primary },
+    stepActionText: { fontSize: 13, fontWeight: '600', color: colors.primaryText },
     connector: {
       justifyContent: 'center',
       alignItems: 'center',

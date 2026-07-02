@@ -156,7 +156,7 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     fallbackNoticeActionText: {
-      color: colors.primary,
+      color: colors.primaryText,
       fontSize: 13,
       fontWeight: '600',
     },

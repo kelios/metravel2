@@ -94,9 +94,11 @@ describe('TravelHeroFavoriteToggle', () => {
     expect(getByText('В избранном')).toBeTruthy()
   })
 
-  it('requires auth when user is not authenticated', () => {
+  it('saves web guest favorite locally without requiring auth', async () => {
+    Platform.OS = 'web' as any
     useAuth.mockReturnValue({ isAuthenticated: false })
     mockIsFavorite.mockReturnValue(false)
+    mockAddFavorite.mockResolvedValue(undefined)
 
     const { getByLabelText } = render(
       <TravelHeroFavoriteToggle
@@ -107,9 +109,26 @@ describe('TravelHeroFavoriteToggle', () => {
 
     fireEvent.press(getByLabelText('Добавить в избранное'))
 
-    expect(mockRequireAuth).toHaveBeenCalled()
-    expect(mockAddFavorite).not.toHaveBeenCalled()
+    await waitFor(() => {
+      expect(mockAddFavorite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 3,
+          type: 'travel',
+          title: 'Auth travel',
+          url: '/travels/auth',
+        })
+      )
+    })
+
+    expect(mockRequireAuth).not.toHaveBeenCalled()
     expect(mockRemoveFavorite).not.toHaveBeenCalled()
+    expect(showToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'success',
+        text1: 'Сохранено на этом устройстве',
+        text2: 'Войдите, чтобы синхронизировать избранное.',
+      })
+    )
   })
 
   it('saves Android guest favorite locally instead of requiring auth', async () => {

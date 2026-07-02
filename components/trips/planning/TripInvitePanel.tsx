@@ -67,7 +67,7 @@ function TripInvitePanel({ trip }: Props) {
 
       <Text style={styles.label}>Подписчики</Text>
       {subscribersLoading ? (
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.primaryDark} />
       ) : subscribers.length ? (
         <>
           <View style={styles.chips}>
@@ -142,7 +142,7 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surfaceMuted,
     },
     chipText: { fontSize: 13, color: colors.textSecondary },
-    chipTextActive: { color: colors.primary, fontWeight: '600' },
+    chipTextActive: { color: colors.primaryText, fontWeight: '600' },
     success: { fontSize: 13, fontWeight: '600', color: colors.success },
     url: { fontSize: 13, color: colors.textMuted },
   });

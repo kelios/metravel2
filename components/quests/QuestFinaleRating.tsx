@@ -97,7 +97,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     changeButtonText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.primaryText,
     },
   })
 

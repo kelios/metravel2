@@ -133,7 +133,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   buttonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.primaryText,
   },
   helperText: {
     marginTop: DESIGN_TOKENS.spacing.sm,

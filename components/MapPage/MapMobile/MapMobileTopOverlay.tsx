@@ -165,7 +165,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         hitSlop={6}
         style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
       >
-        <Feather name="crosshair" size={20} color={colors.primary} />
+        <Feather name="crosshair" size={20} color={colors.primaryDark} />
       </Pressable>
 
       <View style={styles.toolbarStack} pointerEvents="box-none">
@@ -349,7 +349,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           pointerEvents="none"
           testID="map-mobile-route-hint"
         >
-          <Feather name="map-pin" size={13} color={colors.primary} />
+          <Feather name="map-pin" size={13} color={colors.primaryDark} />
           <RNText style={styles.routeHintText} numberOfLines={2}>
             Коснитесь карты: 1-я точка — старт, 2-я — финиш
           </RNText>

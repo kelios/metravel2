@@ -437,10 +437,10 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surfaceMuted,
     },
     chipText: { fontSize: 13, color: colors.textSecondary },
-    chipTextActive: { color: colors.primary, fontWeight: '600' },
+    chipTextActive: { color: colors.primaryText, fontWeight: '600' },
     hint: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
     error: { color: colors.danger, fontSize: 13, fontWeight: '600' },
-    link: { color: colors.primary, fontWeight: '600' },
+    link: { color: colors.primaryText, fontWeight: '600' },
   });
 
 export default React.memo(TripCreateForm);

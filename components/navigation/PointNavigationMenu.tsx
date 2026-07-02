@@ -104,7 +104,7 @@ export default function PointNavigationMenu({
         testID={`${testIDPrefix}-toggle`}
         style={({ pressed }) => [styles.toggle, pressed && PRESSED_OPACITY]}
       >
-        <Feather name="navigation" size={15} color={colors.primary} />
+        <Feather name="navigation" size={15} color={colors.primaryDark} />
         <Text style={styles.toggleText} numberOfLines={1}>{label}</Text>
         <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={15} color={colors.textMuted} />
       </Pressable>

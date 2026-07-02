@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Platform, Share, ActionSheetIOS, useWindowDimensions } from 'react-native';
+import { View, Text, Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import type { ImportedPoint } from '@/types/userPoints';
@@ -8,22 +8,8 @@ import { createStyles } from './PointCard.styles';
 import IconButton from '@/components/ui/IconButton';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
-import OpenInMapsSheet, { type OpenInMapsAction } from '@/components/navigation/OpenInMapsSheet';
+import PointNavigationMenu from '@/components/navigation/PointNavigationMenu';
 import { showToast } from '@/utils/toast';
-import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
-import {
-  buildAppleMapsUrl,
-  buildGoogleMapsUrl,
-  buildOpenStreetMapUrl,
-  buildOrganicMapsUrl,
-  buildWazeUrl,
-  buildYandexMapsUrl,
-  buildYandexNaviUrl,
-} from '@/components/MapPage/Map/mapLinks';
-import {
-  getNavigationActionVisual,
-  NAVIGATION_ACTION_LABELS,
-} from '@/components/navigation/navigationActionMeta';
 
 // Точки, импортированные через обратный геокодинг, иногда приходят с name,
 // равным полному адресу Nominatim ("3, Рыночная площадь, Old Town, Краков, ...").
@@ -79,7 +65,6 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   const colors = useThemedColors();
   const { width: viewportWidth } = useWindowDimensions();
   const isNarrowLayout = viewportWidth <= 430;
-  const [showOpenInMapsSheet, setShowOpenInMapsSheet] = React.useState(false);
   const isSitePoint = React.useMemo(() => {
     const tags = (point as any)?.tags;
     return Boolean(String(tags?.travelUrl ?? '').trim() || String(tags?.articleUrl ?? '').trim());
@@ -169,64 +154,12 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   }, [point]);
 
   const showActions = !selectionMode && (typeof onEdit === 'function' || typeof onDelete === 'function');
+  const navTestIdPrefix = React.useMemo(
+    () => `userpoints-point-navigation-${coordsText.replace(/[^a-zA-Z0-9_-]+/g, '-')}`,
+    [coordsText],
+  );
 
-  const ActionButton = ({
-    label,
-    icon,
-    onActivate,
-  }: {
-    label: string;
-    icon: React.ComponentProps<typeof Feather>['name'];
-    onActivate?: () => void;
-  }) => {
-    return (
-      <CardActionPressable
-        style={styles.webActionButton}
-        accessibilityLabel={label}
-        onPress={onActivate}
-        title={label}
-      >
-        <Feather name={icon} size={14} color={colors.text} />
-      </CardActionPressable>
-    );
-  };
-
-  const ActionChip = ({
-    accessibilityLabel,
-    icon,
-    iconColor,
-    label,
-    onActivate,
-    tintBg,
-    title,
-  }: {
-    accessibilityLabel: string;
-    icon: React.ComponentProps<typeof Feather>['name'];
-    iconColor: string;
-    label: string;
-    onActivate: () => void;
-    tintBg: string;
-    title: string;
-  }) => {
-    return (
-      <CardActionPressable
-        accessibilityLabel={accessibilityLabel}
-        onPress={onActivate}
-        title={title}
-        style={({ pressed }) => [
-          styles.quickActionChip,
-          pressed ? styles.quickActionChipPressed : null,
-        ]}
-      >
-        <View style={[styles.quickActionIconBubble, { backgroundColor: tintBg }]}>
-          <Feather name={icon} size={16} color={iconColor} />
-        </View>
-        <Text style={styles.quickActionLabel} numberOfLines={1}>
-          {label}
-        </Text>
-      </CardActionPressable>
-    );
-  };
+  const secondaryLabel = displaySubtitle || (!isSitePoint && countryLabel ? countryLabel : '');
 
   const copyCoords = React.useCallback(async () => {
     if (!hasCoords) return;
@@ -250,242 +183,6 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     }
   }, [coordsText, hasCoords]);
 
-  const mapUrls = React.useMemo(() => {
-    if (!hasCoords) return null;
-    const lat = Number(point.latitude);
-    const lng = Number(point.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-
-    const google = buildGoogleMapsUrl(coordsText);
-    const apple = buildAppleMapsUrl(coordsText);
-    const organic = buildOrganicMapsUrl(coordsText);
-    const waze = buildWazeUrl(coordsText);
-    const yandexMaps = buildYandexMapsUrl(coordsText);
-    const yandexNavi = buildYandexNaviUrl(coordsText);
-    const osm = buildOpenStreetMapUrl(coordsText);
-
-    return {
-      google,
-      apple,
-      organic,
-      waze,
-      yandexMaps,
-      yandexNavi,
-      osm,
-    };
-  }, [coordsText, hasCoords, point.latitude, point.longitude]);
-
-  const openExternalLink = React.useCallback(async (url: string) => {
-    try {
-      if (Platform.OS === 'web') {
-        await openExternalUrlInNewTab(url);
-        return;
-      }
-
-      await openExternalUrl(url);
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const openInMaps = React.useCallback(async () => {
-    if (!mapUrls) return;
-
-    if (Platform.OS === 'web') {
-      await openExternalLink(mapUrls.google);
-      return;
-    }
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Google Maps', 'Apple Maps', 'Organic Maps', 'Waze', 'Яндекс Карты', 'Яндекс.Навигатор', 'OpenStreetMap', 'Отмена'],
-          cancelButtonIndex: 7,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 0) void openExternalLink(mapUrls.google);
-          if (buttonIndex === 1) void openExternalLink(mapUrls.apple);
-          if (buttonIndex === 2) void openExternalLink(mapUrls.organic);
-          if (buttonIndex === 3) void openExternalLink(mapUrls.waze);
-          if (buttonIndex === 4) void openExternalLink(mapUrls.yandexMaps);
-          if (buttonIndex === 5) void openExternalLink(mapUrls.yandexNavi);
-          if (buttonIndex === 6) void openExternalLink(mapUrls.osm);
-        }
-      );
-      return;
-    }
-
-    // Android: системный Alert надёжно держит только 3 кнопки — 6 пунктов
-    // обрезались (кривая вёрстка, пропадала «Отмена», #547). Открываем
-    // управляемый bottom-sheet с явной кнопкой закрытия и safe-area.
-    setShowOpenInMapsSheet(true);
-  }, [mapUrls, openExternalLink]);
-
-  const openInMapsActions = React.useMemo<OpenInMapsAction[]>(() => {
-    if (!mapUrls) return [];
-    return [
-      {
-        key: 'google',
-        label: 'Google Maps',
-        accessibilityLabel: 'Открыть в Google Maps',
-        onPress: () => void openExternalLink(mapUrls.google),
-      },
-      {
-        key: 'apple',
-        label: 'Apple Maps',
-        accessibilityLabel: 'Открыть в Apple Maps',
-        onPress: () => void openExternalLink(mapUrls.apple),
-      },
-      {
-        key: 'organic',
-        label: 'Organic Maps',
-        accessibilityLabel: 'Открыть в Organic Maps',
-        onPress: () => void openExternalLink(mapUrls.organic),
-      },
-      {
-        key: 'waze',
-        label: 'Waze',
-        accessibilityLabel: 'Проложить маршрут в Waze',
-        onPress: () => void openExternalLink(mapUrls.waze),
-      },
-      {
-        key: 'yandex-maps',
-        label: 'Яндекс Карты',
-        accessibilityLabel: 'Открыть в Яндекс Картах',
-        onPress: () => void openExternalLink(mapUrls.yandexMaps),
-      },
-      {
-        key: 'yandex',
-        label: 'Яндекс.Навигатор',
-        accessibilityLabel: 'Проложить маршрут в Яндекс Навигаторе',
-        onPress: () => void openExternalLink(mapUrls.yandexNavi),
-      },
-      {
-        key: 'osm',
-        label: 'OpenStreetMap',
-        accessibilityLabel: 'Открыть в OpenStreetMap',
-        onPress: () => void openExternalLink(mapUrls.osm),
-      },
-    ];
-  }, [mapUrls, openExternalLink]);
-
-  const shareToTelegram = React.useCallback(async () => {
-    if (!hasCoords) return;
-
-    const text = String(point?.name ?? '') || coordsText;
-    const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
-    const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
-
-    try {
-      if (Platform.OS === 'web') {
-        await openExternalUrlInNewTab(tg);
-        return;
-      }
-
-      // Try native share first; fall back to opening Telegram share URL.
-      try {
-        await Share.share({ message: `${text}\n${url}` });
-        return;
-      } catch {
-        // noop
-      }
-
-      await openExternalUrl(tg);
-    } catch {
-      // ignore
-    }
-  }, [coordsText, hasCoords, point?.name]);
-
-  const webQuickActions = React.useMemo<Array<{
-    key: string;
-    accessibilityLabel: string;
-    label: string;
-    icon: React.ComponentProps<typeof Feather>['name'];
-    iconColor: string;
-    tintBg: string;
-    onActivate: () => void;
-    title: string;
-  }>>(
-    () => (mapUrls
-      ? [
-          {
-            key: 'google',
-            accessibilityLabel: 'Открыть в Google Maps',
-            label: NAVIGATION_ACTION_LABELS.google,
-            ...getNavigationActionVisual('google', colors),
-            onActivate: () => void openExternalLink(mapUrls.google),
-            title: 'Открыть в Google Maps',
-          },
-          {
-            key: 'apple',
-            accessibilityLabel: 'Открыть в Apple Maps',
-            label: NAVIGATION_ACTION_LABELS.apple,
-            ...getNavigationActionVisual('apple', colors),
-            onActivate: () => void openExternalLink(mapUrls.apple),
-            title: 'Открыть в Apple Maps',
-          },
-          {
-            key: 'organic',
-            accessibilityLabel: 'Открыть в Organic Maps',
-            label: NAVIGATION_ACTION_LABELS.organic,
-            ...getNavigationActionVisual('organic', colors),
-            onActivate: () => void openExternalLink(mapUrls.organic),
-            title: 'Открыть в Organic Maps',
-          },
-          {
-            key: 'waze',
-            accessibilityLabel: 'Проложить маршрут в Waze',
-            label: NAVIGATION_ACTION_LABELS.waze,
-            ...getNavigationActionVisual('waze', colors),
-            onActivate: () => void openExternalLink(mapUrls.waze),
-            title: 'Проложить маршрут в Waze',
-          },
-          {
-            key: 'yandex-maps',
-            accessibilityLabel: 'Открыть в Яндекс Картах',
-            label: NAVIGATION_ACTION_LABELS['yandex-maps'],
-            ...getNavigationActionVisual('yandex-maps', colors),
-            onActivate: () => void openExternalLink(mapUrls.yandexMaps),
-            title: 'Открыть в Яндекс Картах',
-          },
-          {
-            key: 'yandex',
-            accessibilityLabel: 'Проложить маршрут в Яндекс Навигаторе',
-            label: NAVIGATION_ACTION_LABELS.yandex,
-            ...getNavigationActionVisual('yandex', colors),
-            onActivate: () => void openExternalLink(mapUrls.yandexNavi),
-            title: 'Проложить маршрут в Яндекс Навигаторе',
-          },
-          {
-            key: 'osm',
-            accessibilityLabel: 'Открыть в OpenStreetMap',
-            label: NAVIGATION_ACTION_LABELS.osm,
-            ...getNavigationActionVisual('osm', colors),
-            onActivate: () => void openExternalLink(mapUrls.osm),
-            title: 'Открыть в OpenStreetMap',
-          },
-          {
-            key: 'telegram',
-            accessibilityLabel: 'Поделиться в Telegram',
-            label: NAVIGATION_ACTION_LABELS.telegram,
-            ...getNavigationActionVisual('telegram', colors),
-            onActivate: () => void shareToTelegram(),
-            title: 'Поделиться в Telegram',
-          },
-        ]
-      : []),
-    [
-      colors,
-      mapUrls,
-      openExternalLink,
-      shareToTelegram,
-    ]
-  );
-
-  const actionsHoverStyle = Platform.OS === 'web' ? {
-    opacity: 1,
-  } : {};
-
   const handleCardPress = React.useCallback(() => {
     if (selectionMode) {
       onToggleSelect?.(point);
@@ -494,28 +191,168 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     onPress?.(point);
   }, [onPress, onToggleSelect, point, selectionMode]);
 
-  const mediaOverlay = (
-    <>
-      <View testID="color-indicator" style={[styles.colorIndicator, { backgroundColor: markerColor }]} />
+  const driveInfoNode =
+    active && !selectionMode && driveInfo?.status === 'ok' ? (
+      <Text numberOfLines={1}>
+        На машине: {driveInfo.distanceKm} км · ~{driveInfo.durationMin} мин
+      </Text>
+    ) : active && !selectionMode && driveInfo?.status === 'loading' ? (
+      <Text numberOfLines={1}>Считаю маршрут…</Text>
+    ) : null;
+
+  // ── Overlay corner controls (select checkbox / edit-delete) over the photo ──
+  const selectionBadge = selectionMode ? (
+    <View
+      style={[
+        styles.selectionBadge,
+        selected ? styles.selectionBadgeSelected : styles.selectionBadgeUnselected,
+      ]}
+    >
+      <Feather
+        name={selected ? 'check-circle' : 'circle'}
+        size={18}
+        color={selected ? colors.textOnPrimary : colors.textOnDark}
+      />
+    </View>
+  ) : null;
+
+  const cornerActions = showActions ? (
+    <View style={styles.cornerActionsRow}>
+      {typeof onEdit === 'function' ? (
+        <CardActionPressable
+          style={styles.cornerActionBtn}
+          accessibilityLabel="Редактировать"
+          title="Редактировать"
+          onPress={() => onEdit(point)}
+        >
+          <Feather name="edit-2" size={16} color={colors.textOnDark} />
+        </CardActionPressable>
+      ) : null}
+      {typeof onDelete === 'function' ? (
+        <CardActionPressable
+          style={styles.cornerActionBtn}
+          accessibilityLabel="Удалить"
+          title="Удалить"
+          onPress={() => onDelete(point)}
+        >
+          <Feather name="trash-2" size={16} color={colors.textOnDark} />
+        </CardActionPressable>
+      ) : null}
+    </View>
+  ) : null;
+
+  // ── Photo-dominant bottom scrim overlay (parity with travel/PointCard) ──
+  const photoOverlay = (
+    <View style={styles.overlayBottom} pointerEvents="box-none">
+      <Text
+        style={[styles.overlayTitle, showActions && styles.overlayTitleWithActions]}
+        numberOfLines={2}
+      >
+        {displayName}
+      </Text>
+
+      {secondaryLabel ? (
+        <Text style={styles.overlaySubtitle} numberOfLines={1}>
+          {secondaryLabel}
+        </Text>
+      ) : null}
+
+      {hasCoords ? (
+        <View style={styles.overlayCoordRow}>
+          <Feather name="map-pin" size={14} color={colors.textOnDark} />
+          <Text style={styles.overlayCoordText} numberOfLines={1}>
+            {coordsText}
+          </Text>
+          <CardActionPressable
+            style={styles.overlayCoordCopyBtn}
+            accessibilityLabel="Копировать координаты"
+            title="Копировать координаты"
+            onPress={() => void copyCoords()}
+          >
+            <Feather name="copy" size={15} color={colors.textOnDark} />
+          </CardActionPressable>
+        </View>
+      ) : null}
+
+      {hasCoords ? (
+        <View style={styles.overlayNavigationMenu}>
+          <PointNavigationMenu
+            coord={coordsText}
+            label="Открыть в навигаторе"
+            testIDPrefix={navTestIdPrefix}
+          />
+        </View>
+      ) : null}
+
       {categoryLabel ? (
-        <View style={styles.imageOverlay}>
-          <View style={styles.imageBadge}>
-            <Text style={styles.imageBadgeText}>{categoryLabel}</Text>
+        <View style={styles.overlayCategoryRow}>
+          <View style={styles.overlayCategoryChip}>
+            <Text style={styles.overlayCategoryText} numberOfLines={1}>
+              {categoryLabel}
+            </Text>
           </View>
         </View>
       ) : null}
+
+      {driveInfoNode ? (
+        <View style={styles.overlayDriveInfo}>
+          <Text style={styles.overlayDriveInfoText} numberOfLines={1}>
+            {driveInfoNode.props.children}
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const overlaySlot = (
+    <>
+      <View testID="color-indicator" style={[styles.colorIndicator, { backgroundColor: markerColor }]} />
+      {photoOverlay}
     </>
   );
 
-  const contentSlot = (
-    <View
-      style={[
-        styles.content,
-        selectionMode ? styles.contentSelectionMode : null,
-      ]}
-    >
+  const overlayImageHeight = layout === 'grid' ? 240 : 220;
+
+  if (photoUrl) {
+    return (
+      <UnifiedTravelCard
+        testID={point?.id != null ? `userpoints-point-card-${String(point.id)}` : undefined}
+        title={point.name}
+        imageUrl={photoUrl}
+        onPress={handleCardPress}
+        imageHeight={overlayImageHeight}
+        mediaFit="contain"
+        containerOverlaySlot={overlaySlot}
+        leftTopSlot={selectionBadge}
+        rightTopSlot={cornerActions}
+        contentContainerStyle={styles.contentContainer}
+        style={[
+          styles.container,
+          layout === 'grid' ? styles.containerGrid : null,
+          compact ? styles.containerCompact : null,
+          active ? styles.containerActive : null,
+        ]}
+        mediaProps={{
+          blurBackground: true,
+          blurRadius: 16,
+          allowCriticalWebBlur: true,
+        }}
+        webHoverScale={false}
+      />
+    );
+  }
+
+  // ── No-photo fallback: overlay-on-photo needs a photo, so points without one
+  // fall back to a compact content-below card (inline meta stays readable). ──
+  const noPhotoContent = (
+    <View style={[styles.content, selectionMode ? styles.contentSelectionMode : null]}>
       {selectionMode ? (
-        <View style={[styles.selectionBadge, selected ? styles.selectionBadgeSelected : styles.selectionBadgeUnselected]}>
+        <View
+          style={[
+            styles.noPhotoSelectionBadge,
+            selected ? styles.selectionBadgeSelected : null,
+          ]}
+        >
           <Feather
             name={selected ? 'check-circle' : 'circle'}
             size={18}
@@ -524,9 +361,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         </View>
       ) : null}
 
-      {/* Без фото категорию/цвет показываем инлайн темо-зависимым чипом —
-          вместо нечитаемой пилюли поверх пустого изображения. */}
-      {!photoUrl && (categoryLabel || (point.color && String(point.color).trim())) ? (
+      {(categoryLabel || (point.color && String(point.color).trim())) ? (
         <View style={styles.noPhotoMetaRow}>
           <View testID="color-indicator" style={[styles.noPhotoColorDot, { backgroundColor: markerColor }]} />
           {categoryLabel ? (
@@ -545,10 +380,17 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         </View>
 
         {showActions ? (
-          <View style={[styles.headerActions, isNarrowLayout ? styles.headerActionsNarrow : null, actionsHoverStyle]}>
+          <View style={[styles.headerActions, isNarrowLayout ? styles.headerActionsNarrow : null]}>
             {typeof onEdit === 'function' ? (
               Platform.OS === 'web' ? (
-                <ActionButton label="Редактировать" icon="edit-2" onActivate={() => onEdit(point)} />
+                <CardActionPressable
+                  style={styles.webActionButton}
+                  accessibilityLabel="Редактировать"
+                  title="Редактировать"
+                  onPress={() => onEdit(point)}
+                >
+                  <Feather name="edit-2" size={14} color={colors.text} />
+                </CardActionPressable>
               ) : (
                 <IconButton
                   icon={<Feather name="edit-2" size={16} color={colors.text} />}
@@ -558,10 +400,16 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
                 />
               )
             ) : null}
-
             {typeof onDelete === 'function' ? (
               Platform.OS === 'web' ? (
-                <ActionButton label="Удалить" icon="trash-2" onActivate={() => onDelete(point)} />
+                <CardActionPressable
+                  style={styles.webActionButton}
+                  accessibilityLabel="Удалить"
+                  title="Удалить"
+                  onPress={() => onDelete(point)}
+                >
+                  <Feather name="trash-2" size={14} color={colors.text} />
+                </CardActionPressable>
               ) : (
                 <IconButton
                   icon={<Feather name="trash-2" size={16} color={colors.text} />}
@@ -575,110 +423,65 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         ) : null}
       </View>
 
-      {displaySubtitle ? (
+      {secondaryLabel ? (
         <Text style={styles.address} numberOfLines={1}>
-          {displaySubtitle}
-        </Text>
-      ) : !isSitePoint && countryLabel ? (
-        <Text style={styles.address} numberOfLines={1}>
-          {countryLabel}
+          {secondaryLabel}
         </Text>
       ) : null}
-      
-      {point.description && (
+
+      {point.description ? (
         <Text style={styles.description} numberOfLines={2}>
           {point.description}
         </Text>
-      )}
+      ) : null}
 
       {hasCoords ? (
-        Platform.OS === 'web' ? (
-          <View style={styles.coordsBlock}>
-            <View style={[styles.coordsSurface, isNarrowLayout ? styles.coordsSurfaceNarrow : null]}>
-              <Feather name="map-pin" size={14} color={colors.textMuted} />
-              <Text style={styles.coordsText} numberOfLines={isNarrowLayout ? 2 : 1}>
-                {coordsText}
-              </Text>
-              <ActionButton label="Копировать координаты" icon="copy" onActivate={copyCoords} />
-            </View>
-            <View style={styles.quickActionsGrid}>
-              {webQuickActions.map((action) => (
-                <ActionChip
-                  key={action.key}
-                  accessibilityLabel={action.accessibilityLabel}
-                  icon={action.icon}
-                  iconColor={action.iconColor}
-                  label={action.label}
-                  onActivate={action.onActivate}
-                  tintBg={action.tintBg}
-                  title={action.title}
-                />
-              ))}
-            </View>
-          </View>
-        ) : (
-          <View style={styles.coordsRow}>
-            <Text style={styles.coordsText} numberOfLines={isNarrowLayout ? 2 : 1}>
-              {coordsText}
-            </Text>
-            <View style={[styles.coordsActionsRow as any, isNarrowLayout ? styles.coordsActionsRowNarrow : null]}>
-              <IconButton
-                icon={<Feather name="copy" size={14} color={colors.textMuted} />}
-                label="Копировать координаты"
-                onPress={() => void copyCoords()}
-                size="sm"
-              />
-              <IconButton
-                icon={<Feather name="send" size={14} color={colors.textMuted} />}
-                label="Поделиться в Telegram"
-                onPress={() => void shareToTelegram()}
-                size="sm"
-              />
-              {mapUrls ? (
-                <IconButton
-                  icon={<Feather name="map-pin" size={14} color={colors.textMuted} />}
-                  label="Открыть в картах"
-                  onPress={() => void openInMaps()}
-                  size="sm"
-                />
-              ) : null}
-            </View>
-          </View>
-        )
-      ) : null}
-      
-      {typeof point.rating === 'number' && Number.isFinite(point.rating) && (
-        <Text style={styles.rating}>
-          {point.rating.toFixed(1)}
-        </Text>
-      )}
-
-      {active && !selectionMode && driveInfo?.status === 'ok' ? (
-        <View style={styles.driveInfoRow}>
-          <Text style={styles.driveInfoText}>
-            На машине: {driveInfo.distanceKm} км · ~{driveInfo.durationMin} мин
+        <View style={styles.coordsRow}>
+          <Text style={styles.coordsText} numberOfLines={isNarrowLayout ? 2 : 1}>
+            {coordsText}
           </Text>
+          <View style={[styles.coordsActionsRow, isNarrowLayout ? styles.coordsActionsRowNarrow : null]}>
+            <IconButton
+              icon={<Feather name="copy" size={14} color={colors.textMuted} />}
+              label="Копировать координаты"
+              onPress={() => void copyCoords()}
+              size="sm"
+            />
+          </View>
         </View>
-      ) : active && !selectionMode && driveInfo?.status === 'loading' ? (
+      ) : null}
+
+      {hasCoords ? (
+        <View style={styles.noPhotoNavigationMenu}>
+          <PointNavigationMenu
+            coord={coordsText}
+            label="Открыть в навигаторе"
+            testIDPrefix={navTestIdPrefix}
+          />
+        </View>
+      ) : null}
+
+      {typeof point.rating === 'number' && Number.isFinite(point.rating) ? (
+        <Text style={styles.rating}>{point.rating.toFixed(1)}</Text>
+      ) : null}
+
+      {driveInfoNode ? (
         <View style={styles.driveInfoRow}>
-          <Text style={styles.driveInfoText}>Считаю маршрут…</Text>
+          <Text style={styles.driveInfoText}>{driveInfoNode.props.children}</Text>
         </View>
       ) : null}
     </View>
   );
 
   return (
-    <>
     <UnifiedTravelCard
       testID={point?.id != null ? `userpoints-point-card-${String(point.id)}` : undefined}
       title={point.name}
-      imageUrl={photoUrl}
+      imageUrl={null}
       onPress={handleCardPress}
-      // Без фото не резервируем пустую область изображения (imageHeight 0 скрывает её).
-      imageHeight={photoUrl ? (layout === 'grid' ? 160 : 140) : 0}
+      imageHeight={0}
       mediaFit="contain"
-      contentSlot={contentSlot}
-      containerOverlaySlot={photoUrl ? mediaOverlay : undefined}
+      contentSlot={noPhotoContent}
       contentContainerStyle={styles.contentContainer}
       style={[
         styles.container,
@@ -686,20 +489,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         compact ? styles.containerCompact : null,
         active ? styles.containerActive : null,
       ]}
-      mediaProps={{
-        blurBackground: !!photoUrl,
-        blurRadius: 16,
-        allowCriticalWebBlur: true,
-      }}
       webHoverScale={false}
     />
-    {Platform.OS === 'android' ? (
-      <OpenInMapsSheet
-        visible={showOpenInMapsSheet}
-        actions={openInMapsActions}
-        onClose={() => setShowOpenInMapsSheet(false)}
-      />
-    ) : null}
-    </>
   );
 });

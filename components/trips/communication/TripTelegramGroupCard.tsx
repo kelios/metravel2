@@ -55,7 +55,7 @@ export function TripTelegramGroupCard({ tripId, isOwner }: Props) {
   if (isLoading) {
     return (
       <View style={styles.card} testID="trip-telegram-loading">
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.primaryDark} />
       </View>
     );
   }
@@ -68,7 +68,7 @@ export function TripTelegramGroupCard({ tripId, isOwner }: Props) {
     return (
       <View style={styles.card} testID="trip-telegram-card">
         <View style={styles.header}>
-          <Feather name="send" size={16} color={colors.primary} />
+          <Feather name="send" size={16} color={colors.primaryDark} />
           <Text style={styles.title}>Telegram-группа поездки</Text>
         </View>
         <Text style={styles.hint}>
@@ -90,7 +90,7 @@ export function TripTelegramGroupCard({ tripId, isOwner }: Props) {
   return (
     <View style={styles.card} testID="trip-telegram-card">
       <View style={styles.header}>
-        <Feather name="send" size={16} color={colors.primary} />
+        <Feather name="send" size={16} color={colors.primaryDark} />
         <Text style={styles.title}>Telegram-группа поездки</Text>
       </View>
       <Text style={styles.hint}>
@@ -111,7 +111,7 @@ export function TripTelegramGroupCard({ tripId, isOwner }: Props) {
             label="Открыть группу"
             variant="outline"
             onPress={handleOpenGroup}
-            icon={<Feather name="external-link" size={15} color={colors.primary} />}
+            icon={<Feather name="external-link" size={15} color={colors.primaryDark} />}
             fullWidth
             testID="trip-telegram-open"
           />

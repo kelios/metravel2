@@ -80,7 +80,7 @@ export default function AccountConfirmation() {
             <View style={styles.contentContainer}>
                 <Card style={styles.card}>
                     {loading ? (
-                        <ActivityIndicator size="large" color={colors.primary} />
+                        <ActivityIndicator size="large" color={colors.primaryDark} />
                     ) : error ? (
                         <View>
                             <Text style={styles.errorText}>{error}</Text>

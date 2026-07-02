@@ -51,7 +51,7 @@ function ApplicationRow({
         <View style={styles.badgeRow}>
           {applicant.badges.map((b) => (
             <View key={b} style={styles.badgePill}>
-              <Feather name="award" size={11} color={colors.primary} />
+              <Feather name="award" size={11} color={colors.primaryDark} />
               <Text style={styles.badgePillText}>{b}</Text>
             </View>
           ))}
@@ -70,7 +70,7 @@ function ApplicationRow({
                 accessibilityRole="link"
                 style={styles.linkChip}
               >
-                <Feather name="link" size={11} color={colors.primary} />
+                <Feather name="link" size={11} color={colors.primaryDark} />
                 <Text style={styles.linkChipText} numberOfLines={1}>
                   {url.replace(/^https?:\/\//, '')}
                 </Text>
@@ -109,7 +109,7 @@ function ApplicationRow({
             label="Вопрос"
             size="sm"
             variant="ghost"
-            icon={<Feather name="message-circle" size={14} color={colors.primary} />}
+            icon={<Feather name="message-circle" size={14} color={colors.primaryDark} />}
             onPress={() => setAskOpen((v) => !v)}
             testID={`trip-application-${application.id}-ask`}
           />
@@ -144,7 +144,7 @@ function OrganizerApplicationsPanel({ tripId }: Props) {
   if (isLoading) {
     return (
       <View style={styles.center} testID="trip-applications-loading">
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.primaryDark} />
       </View>
     );
   }
@@ -223,7 +223,7 @@ const createStyles = (colors: ThemedColors) =>
       borderWidth: 1,
       borderColor: colors.border,
     },
-    linkChipText: { fontSize: 12, color: colors.primary, flexShrink: 1 },
+    linkChipText: { fontSize: 12, color: colors.primaryText, flexShrink: 1 },
     unverifiedNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
     unverifiedNoteText: { flex: 1, fontSize: 11, lineHeight: 15, color: colors.textMuted },
     actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },

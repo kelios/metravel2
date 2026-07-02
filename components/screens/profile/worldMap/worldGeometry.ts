@@ -27,8 +27,8 @@ export const WORLD_MAP_VIEWBOX = `0 0 ${WORLD_MAP_WIDTH} ${WORLD_MAP_HEIGHT}`
 /** Соотношение сторон карты (W/H) — для aspectRatio контейнера, чтобы совпадало с viewBox. */
 export const WORLD_MAP_ASPECT = WORLD_MAP_WIDTH / WORLD_MAP_HEIGHT
 
-// Заливка непосещённой суши. Токен surfaceMuted в светлой теме — near-white фрост
-// (rgba(255,255,255,0.75)) и сливается с белым фоном карты, поэтому для scratch-эффекта
+// Заливка непосещённой суши. Токен surfaceMuted в светлой теме — near-white frost
+// surface token и сливается с белым фоном карты, поэтому для scratch-эффекта
 // нужен явный средне-серый, читаемый в обеих темах (нет подходящего токена в палитре).
 export const getWorldMapUnvisitedFill = (isDark: boolean): string =>
   isDark ? '#3a3a3a' : '#dce1e6'

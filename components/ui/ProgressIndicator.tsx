@@ -103,7 +103,7 @@ function ProgressIndicator({
         {/* Индикатор загрузки */}
         <ActivityIndicator 
           size={size === 'small' ? 'small' : 'large'} 
-          color={colors.primary}
+          color={colors.primaryDark}
           style={styles.spinner}
         />
 

@@ -429,7 +429,7 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
     letterSpacing: 0,
   },
   quickFiltersTitleAccent: {
-    color: colors.primary,
+    color: colors.primaryText,
   },
   quickFiltersSubtitle: { color: colors.textMuted, fontSize: isMobile ? 14 : 16, lineHeight: isMobile ? 21 : 24, maxWidth: 640, letterSpacing: 0 },
 

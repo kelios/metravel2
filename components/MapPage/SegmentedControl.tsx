@@ -243,7 +243,7 @@ const getStyles = (
     fontWeight: '700',
   },
   segmentTextHover: {
-    color: colors.primary,
+    color: colors.primaryText,
   },
   badge: {
     backgroundColor: tone === 'subtle' ? colors.surface : colors.surfaceLight,

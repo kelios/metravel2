@@ -76,7 +76,7 @@ export const TravelDetailsSidebarSection: React.FC<{
         {...(Platform.OS === 'web' ? { 'data-section-key': 'near' } : {})}
       >
         <View style={styles.sectionHeaderRow}>
-          <Feather name="map-pin" size={18} color={colors.primary} />
+          <Feather name="map-pin" size={18} color={colors.primaryDark} />
           <Text
             style={styles.sectionHeaderText}
             accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
@@ -124,7 +124,7 @@ export const TravelDetailsSidebarSection: React.FC<{
         {...(Platform.OS === 'web' ? { 'data-section-key': 'popular' } : {})}
       >
         <View style={styles.sectionHeaderRow}>
-          <Feather name="trending-up" size={18} color={colors.primary} />
+          <Feather name="trending-up" size={18} color={colors.primaryDark} />
           <Text
             style={styles.sectionHeaderText}
             accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}

@@ -73,7 +73,7 @@ function RareAwardCard({ award, ownerName, shareable = true, testID, style }: Pr
           accessibilityLabel={`Поделиться наградой «${award.title}»`}
           testID={testID ? `${testID}-share` : undefined}
         >
-          <Feather name="share-2" size={16} color={colors.primary} />
+          <Feather name="share-2" size={16} color={colors.primaryDark} />
         </Pressable>
       ) : null}
 

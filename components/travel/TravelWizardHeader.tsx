@@ -374,7 +374,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                                     accessibilityState={{ selected: step === currentStep, disabled: !onStepSelect }}
                                 >
                                     {step < currentStep ? (
-                                        <Feather name="check" size={12} color={colors.primary} />
+                                        <Feather name="check" size={12} color={colors.primaryDark} />
                                     ) : (
                                         <Text style={[styles.milestoneInlineNumber, step === currentStep && styles.milestoneInlineNumberActive]}>
                                             {step}

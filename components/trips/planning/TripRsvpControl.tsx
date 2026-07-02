@@ -89,7 +89,7 @@ const createStyles = (colors: ThemedColors) =>
     },
     chipDisabled: { opacity: 0.5 },
     chipText: { fontSize: 13, color: colors.textSecondary },
-    chipTextActive: { color: colors.primary, fontWeight: '600' },
+    chipTextActive: { color: colors.primaryText, fontWeight: '600' },
     error: { color: colors.danger, fontSize: 13, fontWeight: '600' },
   });
 

@@ -127,7 +127,7 @@ export const createCommentsSectionStyles = (colors: ThemedColors) =>
       borderColor: colors.borderLight,
     },
     threadControlText: {
-      color: colors.primary,
+      color: colors.primaryText,
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: DESIGN_TOKENS.typography.weights.medium,
     },
@@ -199,7 +199,7 @@ export const createCommentsSectionStyles = (colors: ThemedColors) =>
       backgroundColor: colors.border,
     },
     toggleThreadText: {
-      color: colors.primary,
+      color: colors.primaryText,
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: DESIGN_TOKENS.typography.weights.medium,
     },

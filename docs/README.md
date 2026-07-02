@@ -14,6 +14,7 @@ See `INDEX.md` for full docs map.
 - `ARCHITECTURE.md` — архитектура проекта, карта frontend-функциональности и обзор backend API-интеграции
 - `RULES.md` — development and UI rules (incl. external-link policy)
 - `DEVELOPMENT.md` — local setup and dev workflow
+- `DESIGN_SYSTEM.md` — design-token decisions and palette roles
 - `TESTING.md` — Jest + Playwright + CI quality gate
 - `MANUAL_TEST_CASES.md` — ручные web/mobile/Android тест-кейсы, включая Android USB/dev-client smoke
 - `RELEASE.md` — release/deploy checklist

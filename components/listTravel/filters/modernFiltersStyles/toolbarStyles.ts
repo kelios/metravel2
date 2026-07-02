@@ -38,7 +38,7 @@ export const createToolbarStyles = (ctx: StylesCtx) => {
     },
     toggleAllButtonText: {
       fontSize: typography.sizes.xs,
-      color: colors.primary,
+      color: colors.primaryText,
       fontWeight: typography.weights.semibold as any,
     },
     clearButton: {

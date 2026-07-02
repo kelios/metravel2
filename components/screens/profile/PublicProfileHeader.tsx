@@ -142,7 +142,7 @@ export function PublicProfileHeader({
             accessibilityLabel={`Написать ${fullName || 'пользователю'}`}
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
-            <Feather name="mail" size={16} color={colors.primary} />
+            <Feather name="mail" size={16} color={colors.primaryDark} />
             <Text style={styles.secondaryButtonText}>Написать</Text>
           </Pressable>
         ) : null}
@@ -263,7 +263,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     avatarPlaceholder: {
       fontSize: 36,
       fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-      color: colors.primary,
+      color: colors.primaryText,
     },
     identity: {
       alignItems: 'center',
@@ -317,7 +317,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       minHeight: DESIGN_TOKENS.touchTarget.minHeight,
     },
     secondaryButtonText: {
-      color: colors.primary,
+      color: colors.primaryText,
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     },

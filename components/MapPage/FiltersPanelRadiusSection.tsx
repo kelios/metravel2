@@ -160,7 +160,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
 
       <View style={styles.lightStepBlock}>
         <View style={styles.lightStepHeader}>
-          <Feather name="map-pin" size={16} color={colors.primary} />
+          <Feather name="map-pin" size={16} color={colors.primaryDark} />
           <Text style={styles.lightStepTitle}>Что посмотреть</Text>
           {selectedCategoriesCount > 0 && (
             <Text style={styles.lightStepBadge}>{selectedCategoriesCount}</Text>
@@ -214,7 +214,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                 <Feather
                   name={categoriesExpanded ? 'chevron-up' : 'chevron-down'}
                   size={14}
-                  color={colors.primary}
+                  color={colors.primaryDark}
                 />
                 <Text style={styles.categoriesToggleText}>
                   {categoriesExpanded

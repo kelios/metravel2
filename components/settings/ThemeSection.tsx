@@ -27,7 +27,7 @@ export default function ThemeSection({ styles, colors, theme, setTheme, themeOpt
         <View style={styles.card}>
             <View style={styles.cardRow}>
                 <View style={styles.cardIcon}>
-                    <Feather name="sun" size={18} color={colors.primary} />
+                    <Feather name="sun" size={18} color={colors.primaryDark} />
                 </View>
                 <View style={styles.cardText}>
                     <Text style={styles.cardTitle}>Тема оформления</Text>
@@ -57,14 +57,14 @@ export default function ThemeSection({ styles, colors, theme, setTheme, themeOpt
                             {...Platform.select({ web: { cursor: 'pointer' } })}
                         >
                             <View style={[styles.themeOptionIcon, isSelected && styles.themeOptionIconActive]}>
-                                <Feather name={option.icon} size={16} color={colors.primary} />
+                                <Feather name={option.icon} size={16} color={colors.primaryDark} />
                             </View>
                             <View style={styles.themeOptionText}>
                                 <Text style={styles.themeOptionTitle}>{option.label}</Text>
                                 <Text style={styles.themeOptionDescription}>{option.description}</Text>
                             </View>
                             {isSelected ? (
-                                <Feather name="check" size={16} color={colors.primary} />
+                                <Feather name="check" size={16} color={colors.primaryDark} />
                             ) : null}
                         </Pressable>
                     );

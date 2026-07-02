@@ -163,7 +163,7 @@ export default function TabOneScreen() {
             )}
             {isFetching && (
               <View style={styles.loadingOverlay}>
-                <ActivityIndicator size="small" color={colors.primary} />
+                <ActivityIndicator size="small" color={colors.primaryDark} />
               </View>
             )}
             {Platform.OS === 'web' ? (

@@ -93,7 +93,7 @@ export function ContactRequestsInbox() {
         {uri ? (
           <Image source={{ uri }} style={styles.avatarImage} />
         ) : (
-          <Feather name="user" size={18} color={colors.primary} />
+          <Feather name="user" size={18} color={colors.primaryDark} />
         )}
       </View>
     )
@@ -103,7 +103,7 @@ export function ContactRequestsInbox() {
     return (
       <View style={styles.card}>
         <View style={styles.loader}>
-          <ActivityIndicator size="small" color={colors.primary} />
+          <ActivityIndicator size="small" color={colors.primaryDark} />
         </View>
       </View>
     )
@@ -114,7 +114,7 @@ export function ContactRequestsInbox() {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Feather name="user-check" size={18} color={colors.primary} />
+        <Feather name="user-check" size={18} color={colors.primaryDark} />
         <Text style={styles.title}>Заявки на контакты</Text>
       </View>
 

@@ -84,11 +84,11 @@ function createStyles(colors: ThemedColors) {
     title: {
       fontSize: 18,
       fontWeight: '800',
-      color: colors.text ?? '#1a1a1a',
+      color: colors.text,
     },
     subtitle: {
       fontSize: 13,
-      color: colors.textMuted ?? '#6b7280',
+      color: colors.textMuted,
     },
     grid: {
       flexDirection: 'row',
@@ -104,7 +104,7 @@ function createStyles(colors: ThemedColors) {
     },
     card: {
       height: '100%',
-      backgroundColor: colors.surface ?? '#fff',
+      backgroundColor: colors.surface,
     },
   })
 }

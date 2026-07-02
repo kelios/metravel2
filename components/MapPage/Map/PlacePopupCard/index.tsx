@@ -324,7 +324,7 @@ const PlacePopupCard: React.FC<Props> = ({
             enableWebClickFallback
             style={({ pressed }) => [styles.titleShareBtn, pressed && styles.iconActionBtnPressed]}
           >
-            <Feather name="send" size={18} color={colors.primary} />
+            <Feather name="send" size={18} color={colors.primaryDark} />
           </CardActionPressable>
         ) : null}
       </View>
@@ -371,7 +371,7 @@ const PlacePopupCard: React.FC<Props> = ({
     displaySubtitle,
     bp,
     categoryLabel,
-    colors.primary,
+    colors.primaryDark,
     colors.textMuted,
     drivingText,
     hasDrivingInfo,
@@ -541,7 +541,7 @@ const PlacePopupCard: React.FC<Props> = ({
                   style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
                 >
                   <View style={styles.iconActionBubble}>
-                    <Feather name="book-open" size={19} color={colors.primary} />
+                    <Feather name="book-open" size={19} color={colors.primaryDark} />
                   </View>
                   <View style={styles.iconActionLabelRow}>
                     <Text style={styles.iconActionLabel} numberOfLines={1}>Страница</Text>
@@ -663,7 +663,7 @@ const PlacePopupCard: React.FC<Props> = ({
     addDisabled,
     addTooltip,
     articleHref,
-    colors.primary,
+    colors.primaryDark,
     colors.text,
     colors.textMuted,
     compactLabel,

@@ -41,7 +41,7 @@ export const StatsBanner: React.FC<Props> = ({ isWide }) => {
           ]}
         >
           <View style={styles.iconBadge}>
-            <Feather name={item.icon} size={19} color={colors.primary} />
+            <Feather name={item.icon} size={19} color={colors.primaryDark} />
           </View>
           <Text style={styles.value}>{item.value}</Text>
           <Text style={styles.label}>{item.label}</Text>

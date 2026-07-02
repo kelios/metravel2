@@ -113,7 +113,7 @@ export function QuestForCityCard({
               <React.Fragment key={chip.key}>
                 {i > 0 && <View style={styles.dot} />}
                 <View style={styles.chip}>
-                  <Feather name={chip.icon} size={13} color={colors.textMuted ?? '#6b7280'} />
+                  <Feather name={chip.icon} size={13} color={colors.textMuted} />
                   <Text style={styles.chipText} numberOfLines={1}>
                     {chip.label}
                   </Text>
@@ -125,7 +125,7 @@ export function QuestForCityCard({
       </View>
 
       <View style={styles.arrow}>
-        <Feather name="arrow-right" size={18} color={colors.primary ?? '#f5842c'} />
+        <Feather name="arrow-right" size={18} color={colors.primary} />
       </View>
     </Pressable>
   )
@@ -140,9 +140,9 @@ function createStyles(colors: ThemedColors) {
       gap: 14,
       borderRadius: 18,
       overflow: 'hidden',
-      backgroundColor: colors.surface ?? '#fff',
+      backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: colors.border ?? 'rgba(0,0,0,0.07)',
+      borderColor: colors.border,
       ...(Platform.OS === 'web'
         ? {
             cursor: 'pointer',
@@ -151,7 +151,7 @@ function createStyles(colors: ThemedColors) {
         : null),
     },
     cardHover: {
-      borderColor: colors.primaryAlpha30 ?? 'rgba(245,132,44,0.30)',
+      borderColor: colors.primaryAlpha30,
       ...Platform.select({
         web: {
           boxShadow: '0 10px 28px rgba(15, 23, 42, 0.12)',
@@ -165,7 +165,7 @@ function createStyles(colors: ThemedColors) {
       flexShrink: 0,
       borderRadius: 12,
       overflow: 'hidden',
-      backgroundColor: colors.surfaceMuted ?? colors.border ?? 'rgba(0,0,0,0.06)',
+      backgroundColor: colors.surfaceMuted,
     },
     image: { width: '100%', height: '100%' },
     body: {
@@ -179,12 +179,12 @@ function createStyles(colors: ThemedColors) {
       fontWeight: '700',
       letterSpacing: 0.6,
       textTransform: 'uppercase',
-      color: colors.textMuted ?? '#6b7280',
+      color: colors.textMuted,
     },
     title: {
       fontSize: 18,
       fontWeight: '700',
-      color: colors.text ?? '#1a1a1a',
+      color: colors.text,
       lineHeight: 23,
     },
     chipRow: {
@@ -202,13 +202,13 @@ function createStyles(colors: ThemedColors) {
     chipText: {
       fontSize: 13,
       fontWeight: '500',
-      color: colors.textMuted ?? '#6b7280',
+      color: colors.textMuted,
     },
     dot: {
       width: 3,
       height: 3,
       borderRadius: 999,
-      backgroundColor: colors.textMuted ?? '#9ca3af',
+      backgroundColor: colors.textMuted,
       opacity: 0.6,
     },
     arrow: {
@@ -218,7 +218,7 @@ function createStyles(colors: ThemedColors) {
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.primarySoft ?? 'rgba(245,132,44,0.10)',
+      backgroundColor: colors.primarySoft,
     },
   })
 }

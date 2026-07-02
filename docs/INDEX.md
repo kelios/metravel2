@@ -9,6 +9,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/RULES.md` — mandatory project rules and policies
 - `docs/README.md` — project docs quick start + API reference
 - `docs/DEVELOPMENT.md` — local setup and day-to-day workflow
+- `docs/DESIGN_SYSTEM.md` — design-token decisions, including the orange accent roles
 - `docs/TESTING.md` — Jest + Playwright (E2E) + CI quality gate
 - `docs/MANUAL_TEST_CASES.md` — manual QA matrix and Android USB/dev-client smoke cases
 - `docs/RELEASE.md` — release/deploy flow

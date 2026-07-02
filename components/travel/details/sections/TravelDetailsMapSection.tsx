@@ -12,6 +12,7 @@ import { useTravelDetailsMapSectionModel } from '../hooks/useTravelDetailsMapSec
 import AffiliateSection from './AffiliateSection'
 import ExcursionsSection from './ExcursionsSection'
 import QuestForCitySection from './QuestForCitySection'
+import TravelRegisterCtaSection from './TravelRegisterCtaSection'
 import TravelRouteMapBlock from './TravelRouteMapBlock'
 import TravelWeatherBlock from './TravelWeatherBlock'
 import TravelPointsBlock from './TravelPointsBlock'
@@ -128,6 +129,8 @@ export const TravelDetailsMapSection: React.FC<{
         styles={styles}
         travel={travel}
       />
+
+      <TravelRegisterCtaSection />
 
     </>
   )

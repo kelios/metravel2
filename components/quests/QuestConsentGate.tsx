@@ -134,7 +134,7 @@ const createStyles = (colors: Colors) =>
       gap: 8,
     },
     link: {
-      color: colors.primary,
+      color: colors.primaryText,
       fontSize: 13,
       fontWeight: '600',
     },

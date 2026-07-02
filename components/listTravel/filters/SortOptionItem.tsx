@@ -83,7 +83,7 @@ const SortOptionItem = memo(({
       </Text>
       {isSelected && (
         <View style={styles.sortCheckIcon}>
-          <Feather name="check" size={16} color={colors.primary} />
+          <Feather name="check" size={16} color={colors.primaryDark} />
         </View>
       )}
     </Pressable>

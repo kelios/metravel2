@@ -266,7 +266,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
           <View style={[styles.headerLeft, useStackedHeader && styles.headerLeftStacked]}>
             {Platform.OS !== 'web' && (
               <>
-                <Feather name="filter" size={16} color={colors.primary} />
+                <Feather name="filter" size={16} color={colors.primaryDark} />
                 <Text style={styles.headerTitle}>Фильтры</Text>
               </>
             )}
@@ -337,7 +337,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 <Feather
                   name={areAllGroupsExpanded ? 'chevrons-up' : 'chevrons-down'}
                   size={16}
-                  color={colors.primary}
+                  color={colors.primaryDark}
                 />
                 {showToggleAllLabel && (
                   <Text style={styles.toggleAllButtonText} numberOfLines={1}>

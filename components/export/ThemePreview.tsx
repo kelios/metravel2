@@ -723,7 +723,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     marginBottom: 14,
   },
   paywallIconGlyph: {
-    color: colors.primary,
+    color: colors.primaryText,
   },
   paywallTitle: {
     fontSize: 18,

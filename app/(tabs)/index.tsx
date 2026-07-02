@@ -206,7 +206,7 @@ const SlowLoadHint = React.memo<{ colors: ReturnType<typeof useThemedColors> }>(
   return (
     <View style={slowLoadStyles.wrap} pointerEvents="none">
       <View style={[slowLoadStyles.pill, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <ActivityIndicator size="small" color={colors.primary} />
+        <ActivityIndicator size="small" color={colors.primaryDark} />
         <Text style={[slowLoadStyles.text, { color: colors.textMuted }]}>Загружаем…</Text>
       </View>
     </View>

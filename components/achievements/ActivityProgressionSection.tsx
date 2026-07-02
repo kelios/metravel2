@@ -93,9 +93,9 @@ function ActivityProgressionSection({
               pressed && { opacity: 0.78 },
             ]}
           >
-            <Feather name="award" size={14} color={colors.primary} />
+            <Feather name="award" size={14} color={colors.primaryDark} />
             <Text style={styles.awardsButtonText}>Награды</Text>
-            <Feather name="chevron-right" size={14} color={colors.primary} />
+            <Feather name="chevron-right" size={14} color={colors.primaryDark} />
           </Pressable>
         ) : null}
       </View>
@@ -153,7 +153,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
     awardsButtonText: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     lines: { gap: DESIGN_TOKENS.spacing.md },
   })

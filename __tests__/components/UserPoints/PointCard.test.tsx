@@ -10,12 +10,14 @@ jest.mock('expo-clipboard', () => ({
 
 jest.mock('@/components/ui/UnifiedTravelCard', () => ({
   __esModule: true,
-  default: ({ contentSlot, containerOverlaySlot, testID, imageHeight }: any) => {
+  default: ({ contentSlot, containerOverlaySlot, leftTopSlot, rightTopSlot, testID, imageHeight }: any) => {
     const React = require('react');
     const { View, Text } = require('react-native');
     return (
       <View testID={testID ?? 'mock-unified-travel-card'}>
         <Text testID="media-image-height">{String(imageHeight)}</Text>
+        {leftTopSlot}
+        {rightTopSlot}
         {containerOverlaySlot}
         {contentSlot}
       </View>
@@ -134,11 +136,14 @@ describe('PointCard', () => {
     (require('react-native').Platform as any).OS = originalPlatform;
   });
 
-  it('should render popup-like quick action chips on web', () => {
-    const originalPlatform = require('react-native').Platform.OS;
-    (require('react-native').Platform as any).OS = 'web';
-
+  it('should render a collapsed navigation menu and expand it to map chips', () => {
     render(<PointCard point={mockPoint} />);
+
+    // Меню навигаторов свёрнуто по умолчанию — виден только тумблер.
+    expect(screen.getByText('Открыть в навигаторе')).toBeTruthy();
+    expect(screen.queryByText('Google')).toBeNull();
+
+    fireEvent.press(screen.getByText('Открыть в навигаторе'));
 
     expect(screen.getByText('Google')).toBeTruthy();
     expect(screen.getByText('Apple')).toBeTruthy();
@@ -147,9 +152,6 @@ describe('PointCard', () => {
     expect(screen.getByText('Яндекс Карты')).toBeTruthy();
     expect(screen.getByText('Яндекс Нави')).toBeTruthy();
     expect(screen.getByText('OSM')).toBeTruthy();
-    expect(screen.getByText('Telegram')).toBeTruthy();
-
-    (require('react-native').Platform as any).OS = originalPlatform;
   });
 
   it('should render rating when provided', () => {
@@ -186,7 +188,7 @@ describe('PointCard', () => {
   it('should render the image area when point has a photo', () => {
     const pointWithPhoto = { ...mockPoint, photo: 'https://example.com/p.jpg' } as any;
     render(<PointCard point={pointWithPhoto} />);
-    expect(screen.getByTestId('media-image-height').props.children).toBe('140');
+    expect(screen.getByTestId('media-image-height').props.children).toBe('220');
   });
 
   it('should display correct color indicator', () => {

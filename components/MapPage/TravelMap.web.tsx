@@ -21,7 +21,6 @@ import {
   getPopupSize,
   ignoreTravelMapRuntimeError,
 } from './Map/travelMapGeometry'
-import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { LAYOUT } from '@/constants/layout'
 import { normalizePoint } from '@/components/map-core/types'
 import { queryKeys } from '@/api/queryKeys'
@@ -457,8 +456,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const mapHeight = height || (compact ? 400 : 600)
   const mapBorderRadius = compact ? 12 : 16
   const mapContainerStyle = useMemo(
-    () => ({ height: mapHeight, borderRadius: mapBorderRadius }),
-    [mapBorderRadius, mapHeight],
+    () => ({ height: mapHeight, borderRadius: mapBorderRadius, backgroundColor: colors.backgroundSecondary }),
+    [colors.backgroundSecondary, mapBorderRadius, mapHeight],
   )
 
   const handleMarkerInstance = useCallback((coord: any, marker: any) => {
@@ -473,7 +472,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   if (!leafletReady || leafletLoading) {
     return (
       <View style={[styles.mapContainer, mapContainerStyle, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={colors.primaryDark} />
       </View>
     )
   }
@@ -602,7 +601,6 @@ const styles: any = {
     width: '100%',
     overflow: IS_WEB ? 'visible' : 'hidden',
     position: 'relative',
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },
   loadingContainer: { alignItems: 'center', justifyContent: 'center' },
   emptyContainer: { alignItems: 'center', justifyContent: 'center' },

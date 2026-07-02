@@ -91,13 +91,13 @@ function ParticipantRatingRow({ tripId, participant, colors, styles }: RowProps)
           accessibilityRole="button"
           accessibilityLabel={`Сохранить отзыв об участнике ${participant.name}`}
         >
-          <Feather name="save" size={14} color={colors.primary} />
+          <Feather name="save" size={14} color={colors.primaryDark} />
           <Text style={styles.saveReviewText}>Сохранить отзыв</Text>
         </Pressable>
       ) : null}
       {currentRating && !reviewDirty ? (
         <View style={styles.savedRow}>
-          <Feather name="check" size={14} color={colors.primary} />
+          <Feather name="check" size={14} color={colors.primaryDark} />
           <Text style={styles.savedText}>Оценка сохранена</Text>
         </View>
       ) : null}
@@ -131,7 +131,7 @@ function TripRatingPanel({ trip }: Props) {
   return (
     <View style={styles.wrap} testID="trip-rating-panel">
       <View style={styles.headRow}>
-        <Feather name="star" size={18} color={colors.primary} />
+        <Feather name="star" size={18} color={colors.primaryDark} />
         <Text style={styles.heading}>Оцените попутчиков</Text>
       </View>
       <Text style={styles.subhead}>
@@ -169,7 +169,7 @@ const createStyles = (colors: ThemedColors) =>
     organizerTag: {
       fontSize: 11,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
       backgroundColor: colors.primarySoft,
       paddingHorizontal: 8,
       paddingVertical: 2,
@@ -190,7 +190,7 @@ const createStyles = (colors: ThemedColors) =>
       ...Platform.select({ web: { outlineWidth: 0 as unknown as number } }),
     },
     saveReview: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
-    saveReviewText: { fontSize: 13, fontWeight: '700', color: colors.primary },
+    saveReviewText: { fontSize: 13, fontWeight: '700', color: colors.primaryText },
     savedRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     savedText: { fontSize: 12, color: colors.textMuted },
   })

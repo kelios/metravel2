@@ -115,7 +115,7 @@ function AchievementsSection({ bare = false, testID, style }: Props) {
             style={styles.allBtn}
           >
             <Text style={styles.allBtnText}>Все</Text>
-            <Feather name="chevron-right" size={16} color={colors.primary} />
+            <Feather name="chevron-right" size={16} color={colors.primaryDark} />
           </Pressable>
         ) : null}
       </View>
@@ -149,7 +149,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
     allBtnText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     rank: { marginBottom: DESIGN_TOKENS.spacing.xxs },
     medalsRow: {

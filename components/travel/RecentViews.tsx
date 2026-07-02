@@ -122,7 +122,7 @@ function RecentViews({
     seeAllText: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     compactContainer: {
       padding: spacing.sm,
@@ -232,7 +232,7 @@ function RecentViews({
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Feather name="clock" size={16} color={colors.primary} />
+          <Feather name="clock" size={16} color={colors.primaryDark} />
           <Text style={styles.title}>Недавние просмотры</Text>
         </View>
         <View style={styles.headerActions}>
@@ -243,7 +243,7 @@ function RecentViews({
             accessibilityRole="link"
           >
             <Text style={styles.seeAllText}>Все</Text>
-            <Feather name="arrow-right" size={14} color={colors.primary} />
+            <Feather name="arrow-right" size={14} color={colors.primaryDark} />
           </Pressable>
           <Pressable
             onPress={handleClear}

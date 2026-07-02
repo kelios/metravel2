@@ -48,7 +48,7 @@ function RouteSummaryBar({ summary }: Props) {
       {chips.map((chip) => (
         <View key={chip.label} style={styles.chip}>
           <View style={styles.chipValueRow}>
-            <Feather name={chip.icon as never} size={14} color={colors.primary} />
+            <Feather name={chip.icon as never} size={14} color={colors.primaryDark} />
             <Text style={styles.chipValue}>{chip.value}</Text>
           </View>
           <Text style={styles.chipLabel}>{chip.label}</Text>

@@ -223,7 +223,7 @@ export function ProfileHeader({
         avatarPlaceholder: {
           fontSize: 28,
           fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-          color: colors.primary,
+          color: colors.primaryText,
           letterSpacing: 0,
         },
         cameraOverlay: {
@@ -386,7 +386,7 @@ export function ProfileHeader({
                   globalFocusStyles.focusable,
                 ]}
               >
-                <Feather name="award" size={12} color={colors.primary} />
+                <Feather name="award" size={12} color={colors.primaryDark} />
                 <Text style={styles.rankChipText} numberOfLines={1}>
                   Ур. {rank?.level}
                 </Text>
@@ -408,7 +408,7 @@ export function ProfileHeader({
                 <Feather
                   name={SOCIAL_ICONS[link.key] || 'link'}
                   size={14}
-                  color={colors.primary}
+                  color={colors.primaryDark}
                 />
               </Pressable>
             ))}

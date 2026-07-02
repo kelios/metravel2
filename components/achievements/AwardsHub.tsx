@@ -55,7 +55,7 @@ function AwardsHub({ testID, style, requestedTab }: Props) {
   return (
     <View style={[styles.card, style]} testID={testID ?? 'awards-hub'}>
       <View style={styles.header}>
-        <Feather name="award" size={18} color={colors.primary} />
+        <Feather name="award" size={18} color={colors.primaryDark} />
         <Text style={styles.title} numberOfLines={1}>
           Награды
         </Text>

@@ -135,7 +135,7 @@ export function PersonalStatusSummary({
           ...Platform.select({ web: { cursor: 'pointer' } as any, default: {} }),
         },
         ctaText: {
-          color: colors.primary,
+          color: colors.primaryText,
           fontSize: 13,
           fontWeight: '700',
         },
@@ -188,7 +188,7 @@ export function PersonalStatusSummary({
           accessibilityRole="button"
           accessibilityLabel="Открыть календарь"
         >
-          <Feather name="calendar" size={14} color={colors.primary} />
+          <Feather name="calendar" size={14} color={colors.primaryDark} />
           <Text style={styles.ctaText}>Открыть календарь</Text>
         </Pressable>
       </View>

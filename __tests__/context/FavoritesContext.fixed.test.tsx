@@ -5,7 +5,6 @@ import React from 'react'
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native'
 import { View, Text, Pressable } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import Toast from 'react-native-toast-message'
 import { useFavorites } from '@/context/FavoritesContext'
 import { FavoritesProvider } from '@/context/FavoritesProvider'
 import { AuthProvider } from '@/context/AuthContext'
@@ -97,6 +96,10 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
     // Override Platform.OS for this test
     const { Platform } = require('react-native')
     Platform.OS = 'web'
+
+    // Reset the shared Zustand store between tests (module singleton persists)
+    const { useFavoritesStore } = require('@/stores/favoritesStore')
+    useFavoritesStore.setState({ favorites: [], _inFlight: new Set(), _fetched: false, _userId: null })
   })
 
   it('should add favorite locally without server sync', async () => {
@@ -122,11 +125,11 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
     })
 
     await waitFor(() => {
-      expect(getByTestId('error').props.children).toBe('AUTH_REQUIRED')
+      expect(getByTestId('favorites-count').props.children).toBe(1)
     })
 
-    expect(mockAsyncStorage.setItem).not.toHaveBeenCalled()
-    expect(Toast.show).not.toHaveBeenCalled()
+    expect(getByTestId('error').props.children).toBe('')
+    expect(mockAsyncStorage.setItem).toHaveBeenCalled()
   })
 
   it('should remove favorite locally without server sync', async () => {
@@ -165,11 +168,10 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
     })
 
     await waitFor(() => {
-      expect(getByTestId('error').props.children).toBe('AUTH_REQUIRED')
+      expect(getByTestId('favorites-count').props.children).toBe(0)
     })
 
-    expect(mockAsyncStorage.setItem).not.toHaveBeenCalled()
-    expect(Toast.show).not.toHaveBeenCalled()
+    expect(getByTestId('error').props.children).toBe('')
   })
 
   it('should handle invalid favorite IDs gracefully', async () => {
@@ -204,8 +206,8 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
     )
 
     await waitFor(() => {
-      expect(getByTestId('invalid-test').props.children).toBe(0)
-      expect(getByTestId('invalid-error').props.children).toBe('AUTH_REQUIRED')
+      expect(getByTestId('invalid-test').props.children).toBe(1)
+      expect(getByTestId('invalid-error').props.children).toBe('')
     })
   })
 })

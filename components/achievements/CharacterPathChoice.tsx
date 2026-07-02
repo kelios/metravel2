@@ -35,7 +35,7 @@ function CharacterPathChoice({ options, testID, style }: Props) {
   return (
     <View style={[styles.wrap, style]} testID={testID}>
       <View style={styles.titleRow}>
-        <Feather name="git-branch" size={15} color={colors.primary} />
+        <Feather name="git-branch" size={15} color={colors.primaryDark} />
         <Text style={styles.title}>Выберите путь развития</Text>
       </View>
 
@@ -59,7 +59,7 @@ function CharacterPathChoice({ options, testID, style }: Props) {
               <Feather
                 name={pending ? 'loader' : 'chevron-right'}
                 size={18}
-                color={colors.primary}
+                color={colors.primaryDark}
               />
             </Pressable>
           );

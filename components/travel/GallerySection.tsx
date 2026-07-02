@@ -36,7 +36,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({ images, travelId, onCha
     if (isLoading) {
         return (
             <View style={styles.galleryContainer}>
-                <ActivityIndicator size="large" color={colors.primary} accessibilityLabel="Загрузка галереи" />
+                <ActivityIndicator size="large" color={colors.primaryDark} accessibilityLabel="Загрузка галереи" />
                 <Text style={styles.loadingText}>
                     Загрузка галереи…
                 </Text>

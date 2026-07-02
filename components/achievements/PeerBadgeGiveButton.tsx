@@ -47,7 +47,7 @@ function PeerBadgeGiveButton({
         accessibilityLabel={text}
         testID={testID}
       >
-        <Feather name="award" size={16} color={colors.primary} />
+        <Feather name="award" size={16} color={colors.primaryDark} />
         <Text style={styles.label}>{text}</Text>
       </Pressable>
 
@@ -75,7 +75,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderRadius: 12,
       backgroundColor: colors.primarySoft,
     },
-    label: { color: colors.primary, fontSize: 14, fontWeight: '700' },
+    label: { color: colors.primaryText, fontSize: 14, fontWeight: '700' },
   });
 
 export default memo(PeerBadgeGiveButton);

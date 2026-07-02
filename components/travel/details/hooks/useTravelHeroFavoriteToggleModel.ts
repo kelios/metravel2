@@ -1,9 +1,7 @@
 import { useCallback, useState } from 'react'
-import { Platform } from 'react-native'
 
 import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
-import { useRequireAuth } from '@/hooks/useRequireAuth'
 import type { Travel } from '@/types/types'
 import { showToast } from '@/utils/toast'
 import { buildTravelPath } from '@/utils/travelSeo'
@@ -16,7 +14,6 @@ export function useTravelHeroFavoriteToggleModel({
   travel: Travel
 }) {
   const { isAuthenticated } = useAuth()
-  const { requireAuth } = useRequireAuth({ intent: 'favorite' })
   const { addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites()
   const [isPending, setIsPending] = useState(false)
 
@@ -29,12 +26,7 @@ export function useTravelHeroFavoriteToggleModel({
       : 'Добавить в избранное'
 
   const handleFavoriteToggle = useCallback(async () => {
-    const isAndroidGuest = Platform.OS === 'android' && !isAuthenticated
-
-    if (!isAuthenticated && !isAndroidGuest) {
-      requireAuth()
-      return
-    }
+    const isGuest = !isAuthenticated
 
     if (isPending) return
     setIsPending(true)
@@ -43,8 +35,8 @@ export function useTravelHeroFavoriteToggleModel({
       if (isFavorite) {
         await removeFavorite(travel.id, 'travel')
         showToast({
-          type: isAndroidGuest ? 'info' : 'success',
-          text1: isAndroidGuest ? 'Удалено с этого устройства' : 'Удалено из избранного',
+          type: isGuest ? 'info' : 'success',
+          text1: isGuest ? 'Удалено с этого устройства' : 'Удалено из избранного',
           visibilityTime: 2000,
         })
         return
@@ -62,9 +54,9 @@ export function useTravelHeroFavoriteToggleModel({
       })
       showToast({
         type: 'success',
-        text1: isAndroidGuest ? 'Сохранено на этом устройстве' : 'Добавлено в избранное',
-        text2: isAndroidGuest ? 'Войдите, чтобы синхронизировать избранное.' : undefined,
-        visibilityTime: isAndroidGuest ? 3500 : 2000,
+        text1: isGuest ? 'Сохранено на этом устройстве' : 'Добавлено в избранное',
+        text2: isGuest ? 'Войдите, чтобы синхронизировать избранное.' : undefined,
+        visibilityTime: isGuest ? 3500 : 2000,
       })
     } catch {
       showToast({
@@ -75,7 +67,7 @@ export function useTravelHeroFavoriteToggleModel({
     } finally {
       setIsPending(false)
     }
-  }, [addFavorite, isAuthenticated, isFavorite, isPending, removeFavorite, requireAuth, travel])
+  }, [addFavorite, isAuthenticated, isFavorite, isPending, removeFavorite, travel])
 
   return {
     favoriteButtonA11yLabel,

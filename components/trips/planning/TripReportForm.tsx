@@ -52,7 +52,7 @@ function TripReportForm({ trip }: Props) {
     return (
       <View style={styles.wrap} testID="trip-report-form">
         <View style={styles.publishedHead}>
-          <Feather name="check-circle" size={18} color={colors.primary} />
+          <Feather name="check-circle" size={18} color={colors.primaryDark} />
           <Text style={styles.heading}>Отчёт опубликован</Text>
         </View>
         {report.summary ? (
@@ -127,7 +127,7 @@ function TripReportForm({ trip }: Props) {
         testID="trip-report-publish-toggle"
       >
         {publishToCommunity ? (
-          <Feather name="check" size={16} color={colors.primary} />
+          <Feather name="check" size={16} color={colors.primaryDark} />
         ) : null}
         <Text style={[styles.toggleText, publishToCommunity && styles.toggleTextActive]}>
           Опубликовать маршрут в каталог сообщества
@@ -200,7 +200,7 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surfaceMuted,
     },
     toggleText: { flex: 1, fontSize: 14, color: colors.textSecondary },
-    toggleTextActive: { color: colors.primary, fontWeight: '600' },
+    toggleTextActive: { color: colors.primaryText, fontWeight: '600' },
     note: { fontSize: 13, color: colors.text, fontWeight: '600' },
     hint: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
     error: { color: colors.danger, fontSize: 13, fontWeight: '600' },

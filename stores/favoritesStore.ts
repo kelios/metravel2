@@ -1,10 +1,8 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 import { devError } from '@/utils/logger';
 import { safeJsonParseString } from '@/utils/safeJsonParse';
 import { cleanupInvalidFavorites, isValidFavoriteId } from '@/utils/favoritesCleanup';
-import { showToast } from '@/utils/toast';
 import { markTravelAsFavorite, unmarkTravelAsFavorite } from '@/api/travelsFavorites';
 import { clearUserFavorites, fetchUserFavoriteTravels } from '@/api/user';
 import { getGuestFavoritesStorageKey } from '@/utils/guestTrialState';
@@ -88,12 +86,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
         return get().favorites.some((f) => f.id === id && f.type === type);
     },
 
-    addFavorite: async (item, { isAuthenticated, userId }) => {
-        const isAndroidGuest = Platform.OS === 'android' && !isAuthenticated && !userId;
-        if (!isAuthenticated && !isAndroidGuest) {
-            throw new Error('AUTH_REQUIRED');
-        }
-
+    addFavorite: async (item, { userId }) => {
         const inflightKey = `${item.type}:${String(item.id)}`;
         if (inFlightKeys.has(inflightKey)) return;
 
@@ -146,27 +139,15 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             const key = getGuestFavoritesStorageKey(userId);
             await AsyncStorage.setItem(key, JSON.stringify(newFavorites));
             set({ favorites: newFavorites });
-
-            if (Platform.OS === 'web') {
-                await showToast({ type: 'success', text1: 'Добавлено в избранное', text2: 'Сохранено на этом устройстве' });
-            }
         } catch (error) {
             console.error('Ошибка добавления в избранное:', error);
-            if (Platform.OS === 'web') {
-                await showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось добавить в избранное' });
-            }
             throw error;
         } finally {
             inFlightKeys.delete(inflightKey);
         }
     },
 
-    removeFavorite: async (id, type = 'travel', { isAuthenticated, userId }) => {
-        const isAndroidGuest = Platform.OS === 'android' && !isAuthenticated && !userId;
-        if (!isAuthenticated && !isAndroidGuest) {
-            throw new Error('AUTH_REQUIRED');
-        }
-
+    removeFavorite: async (id, type = 'travel', { userId }) => {
         const inflightKey = `${type}:${String(id)}`;
         if (inFlightKeys.has(inflightKey)) return;
 
@@ -208,10 +189,6 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             const newFavorites = get().favorites.filter((f) => !(f.id === id && f.type === type));
             await AsyncStorage.setItem(key, JSON.stringify(newFavorites));
             set((s) => ({ favorites: s.favorites.filter((f) => !(f.id === id && f.type === type)) }));
-
-            if (Platform.OS === 'web') {
-                await showToast({ type: 'info', text1: 'Удалено из избранного', text2: 'Удалено с этого устройства' });
-            }
         } catch (error) {
             console.error('Ошибка удаления из избранного:', error);
             throw error;

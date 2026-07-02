@@ -27,7 +27,7 @@ export default function AccountSection({
         <View style={styles.card}>
             <View style={styles.cardRow}>
                 <View style={styles.cardIcon}>
-                    <Feather name="user" size={18} color={colors.primary} />
+                    <Feather name="user" size={18} color={colors.primaryDark} />
                 </View>
                 <View style={styles.cardText}>
                     <Text style={styles.cardTitle}>{username || 'Пользователь'}</Text>

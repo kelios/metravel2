@@ -732,7 +732,7 @@ function StickySearchBar({
           )}
           {showPendingState && (
             <View style={styles.inlineIconSlot} testID="search-pending-indicator">
-              <ActivityIndicator size="small" color={colors.primary} accessibilityLabel="Ищем маршруты" />
+              <ActivityIndicator size="small" color={colors.primaryDark} accessibilityLabel="Ищем маршруты" />
             </View>
           )}
           {!isMobile && Platform.OS === 'web' && (
@@ -755,7 +755,7 @@ function StickySearchBar({
             >
               {showPendingState ? (
                 <View style={styles.pendingStatusRow} testID="search-pending-status">
-                  <ActivityIndicator size="small" color={colors.primary} accessibilityLabel="Ищем маршруты" />
+                  <ActivityIndicator size="small" color={colors.primaryDark} accessibilityLabel="Ищем маршруты" />
                   <Text style={styles.pendingStatusText}>Ищем...</Text>
                 </View>
               ) : (

@@ -437,13 +437,13 @@ export default function TravelStatusButton({
                       <Feather name={opt.icon} size={20} color={isActive ? colors.primary : colors.textMuted} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.optionLabel, isActive && { color: colors.primary }]}>
+                      <Text style={[styles.optionLabel, isActive && { color: colors.primaryText }]}>
                         {opt.label}
                       </Text>
                       <Text style={styles.optionHint}>{opt.hint}</Text>
                     </View>
                     {isActive && (
-                      <Feather name="check" size={18} color={colors.primary} style={styles.optionCheck} />
+                      <Feather name="check" size={18} color={colors.primaryDark} style={styles.optionCheck} />
                     )}
                   </Pressable>
                 )

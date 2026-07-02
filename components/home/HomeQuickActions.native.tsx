@@ -48,7 +48,7 @@ function HomeQuickActions() {
           accessibilityRole="button"
           accessibilityLabel={action.label}
         >
-          <NavigationIcon name={action.icon} size={16} color={colors.primary} />
+          <NavigationIcon name={action.icon} size={16} color={colors.primaryDark} />
           <Text style={styles.chipText} numberOfLines={1}>
             {action.label}
           </Text>

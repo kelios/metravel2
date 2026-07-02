@@ -21,7 +21,7 @@ export default function BiometricSection({ styles, colors, biometric }: Biometri
             <View style={styles.settingRow}>
                 <View style={styles.settingTextBlock}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Feather name="lock" size={16} color={colors.primary} />
+                        <Feather name="lock" size={16} color={colors.primaryDark} />
                         <Text style={styles.settingTitle}>Вход по биометрии</Text>
                     </View>
                     <Text style={styles.settingMeta}>

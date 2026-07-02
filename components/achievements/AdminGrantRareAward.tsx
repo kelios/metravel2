@@ -85,7 +85,7 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
         accessibilityLabel="Выдать редкую награду"
         testID={testID}
       >
-        <Feather name="star" size={16} color={colors.primary} />
+        <Feather name="star" size={16} color={colors.primaryDark} />
         <Text style={styles.buttonLabel}>Выдать редкую награду</Text>
       </Pressable>
 
@@ -116,7 +116,7 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
               </View>
             ) : isLoading || !catalog ? (
               <View style={styles.loading}>
-                <ActivityIndicator color={colors.primary} />
+                <ActivityIndicator color={colors.primaryDark} />
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -201,7 +201,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderRadius: 12,
       backgroundColor: colors.primarySoft,
     },
-    buttonLabel: { color: colors.primary, fontSize: 14, fontWeight: '700' },
+    buttonLabel: { color: colors.primaryText, fontSize: 14, fontWeight: '700' },
     backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
     sheet: {
       backgroundColor: colors.background,

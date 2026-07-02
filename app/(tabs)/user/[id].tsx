@@ -178,7 +178,7 @@ export default function PublicUserProfileScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <View style={styles.loader}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primaryDark} />
         </View>
       </SafeAreaView>
     );
@@ -201,7 +201,7 @@ export default function PublicUserProfileScreen() {
             accessibilityLabel="Назад"
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
-            <Feather name="arrow-left" size={16} color={colors.primary} />
+            <Feather name="arrow-left" size={16} color={colors.primaryDark} />
             <Text style={styles.backButtonText}>Назад</Text>
           </Pressable>
         </View>
@@ -322,6 +322,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     backButtonText: {
       fontSize: 14,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
     },
   });

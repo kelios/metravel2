@@ -61,7 +61,7 @@ export function DraftRecoveryDialog({
           accessibilityLabel="Найден локальный черновик"
         >
           <View style={styles.iconContainer}>
-            <Feather name="edit-3" size={30} color={colors.primary} />
+            <Feather name="edit-3" size={30} color={colors.primaryDark} />
           </View>
 
           <Text style={styles.title}>Есть несохранённые изменения</Text>
@@ -71,7 +71,7 @@ export function DraftRecoveryDialog({
           </Text>
 
           <View style={styles.note}>
-            <Feather name="info" size={16} color={colors.primary} />
+            <Feather name="info" size={16} color={colors.primaryDark} />
             <Text style={styles.noteText}>
               Если путешествие уже сохранили, выбирайте сохранённую версию.
             </Text>

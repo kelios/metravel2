@@ -45,18 +45,168 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     borderColor: 'rgba(255,255,255,0.9)',
     ...(Platform.OS === 'web' ? ({ boxShadow: colors.boxShadows.light } as any) : null),
   },
-  photoWrap: {
-    width: '100%',
-    height: 140,
-    position: 'relative',
-  },
-  photoWrapGrid: {
-    width: '100%',
-    height: 160,
-  },
   contentContainer: {
     padding: 0,
   },
+
+  // ── Photo-dominant overlay (parity with components/travel/PointCard.tsx) ──
+  // Bottom scrim overlay that sits over the photo: title + coords + category +
+  // navigation menu + drive info. Solid dark scrim (no live backdrop-filter on
+  // mobile) keeps text legible without killing GPU on scroll.
+  overlayBottom: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 12,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    flexDirection: 'column',
+    gap: DESIGN_TOKENS.spacing.xs,
+    ...(Platform.OS === 'web'
+      ? ({
+          backgroundImage:
+            'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.12) 88%, rgba(0,0,0,0) 100%)',
+        } as any)
+      : { backgroundColor: 'rgba(0,0,0,0.5)' }),
+  },
+  overlayTitle: {
+    color: colors.textOnDark,
+    fontSize: 16,
+    fontWeight: '700' as any,
+    lineHeight: 21,
+    letterSpacing: -0.3,
+    ...(Platform.OS === 'web'
+      ? ({ textShadow: '0 1px 8px rgba(0,0,0,0.5)' } as any)
+      : {
+          textShadowColor: 'rgba(0,0,0,0.5)',
+          textShadowOffset: { width: 0, height: 1 },
+          textShadowRadius: 6,
+        }),
+  },
+  overlayTitleWithActions: {
+    paddingRight: 84,
+  },
+  overlaySubtitle: {
+    color: colors.textOnDark,
+    fontSize: 12.5,
+    lineHeight: 17,
+    opacity: 0.92,
+  },
+  overlayCoordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: colors.overlayLight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderLight,
+  },
+  overlayCoordText: {
+    flexShrink: 1,
+    color: colors.textOnDark,
+    fontSize: 12,
+    fontWeight: '500' as any,
+    fontFamily: Platform.select({
+      web: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+      default: undefined,
+    }),
+    letterSpacing: 0.2,
+  },
+  overlayCoordCopyBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.overlayLight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderLight,
+  },
+  overlayNavigationMenu: {
+    alignSelf: 'stretch',
+    marginTop: DESIGN_TOKENS.spacing.xxs,
+  },
+  overlayCategoryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DESIGN_TOKENS.spacing.xs,
+    marginTop: DESIGN_TOKENS.spacing.xxs,
+  },
+  overlayCategoryChip: {
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: colors.overlayLight,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  overlayCategoryText: {
+    color: colors.textOnDark,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontWeight: '500' as any,
+  },
+  overlayDriveInfo: {
+    alignSelf: 'flex-start',
+    marginTop: DESIGN_TOKENS.spacing.xxs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: colors.overlayLight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderLight,
+  },
+  overlayDriveInfoText: {
+    color: colors.textOnDark,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontWeight: '600' as any,
+  },
+
+  // Corner action icons over the photo (edit/delete) — narrow zone, top-right.
+  cornerActionsRow: {
+    flexDirection: 'row',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  cornerActionBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.overlayLight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderLight,
+    ...(Platform.OS === 'web'
+      ? ({
+          backdropFilter: 'blur(8px)',
+          cursor: 'pointer',
+          transition: 'transform 120ms ease',
+        } as any)
+      : null),
+  },
+  // Selection checkbox — top-right corner over the photo.
+  selectionBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  selectionBadgeSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  selectionBadgeUnselected: {
+    backgroundColor: colors.overlayLight,
+    borderColor: 'rgba(255,255,255,0.6)',
+  },
+
+  // ── No-photo fallback (content-below, inline meta) ──
   content: {
     flex: 1,
     padding: DESIGN_TOKENS.spacing.md,
@@ -64,6 +214,20 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
   },
   contentSelectionMode: {
     paddingRight: DESIGN_TOKENS.spacing.md + 40,
+  },
+  noPhotoSelectionBadge: {
+    position: 'absolute',
+    top: DESIGN_TOKENS.spacing.sm,
+    right: DESIGN_TOKENS.spacing.sm,
+    width: 32,
+    height: 32,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    zIndex: 3,
   },
   headerRow: {
     flexDirection: 'row',
@@ -88,10 +252,6 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     flexDirection: 'row',
     gap: 4,
     flexShrink: 0,
-    ...(Platform.OS === 'web' ? ({
-      opacity: 0,
-      transition: 'opacity 150ms ease',
-    } as any) : null),
   },
   headerActionsNarrow: {
     width: '100%',
@@ -109,25 +269,6 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
       transition: 'background-color 150ms ease, transform 100ms ease',
     } as any) : null),
   },
-  selectionBadge: {
-    position: 'absolute',
-    top: DESIGN_TOKENS.spacing.sm,
-    right: DESIGN_TOKENS.spacing.sm,
-    width: 32,
-    height: 32,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  selectionBadgeSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  selectionBadgeUnselected: {
-    backgroundColor: colors.surface,
-  },
   name: {
     fontSize: 17,
     fontWeight: '600' as any,
@@ -140,12 +281,6 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     color: colors.textMuted,
     marginBottom: 6,
     lineHeight: 18,
-  },
-  metadata: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 8,
   },
   noPhotoMetaRow: {
     flexDirection: 'row',
@@ -188,26 +323,13 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     borderTopColor: colors.borderLight,
     gap: 8,
   },
-  coordsBlock: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    gap: 6,
-  },
-  coordsSurface: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: DESIGN_TOKENS.radii.sm,
-    backgroundColor: colors.backgroundSecondary,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  coordsSurfaceNarrow: {
-    alignItems: 'flex-start',
+  coordsText: {
+    fontSize: 12,
+    fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
+    color: colors.textMuted,
+    flex: 1,
+    minWidth: 0,
+    opacity: 0.8,
   },
   coordsActionsRow: {
     flexDirection: 'row',
@@ -220,60 +342,13 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     width: '100%',
     justifyContent: 'flex-end',
   },
-  coordsText: {
-    fontSize: 12,
-    fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
-    color: colors.textMuted,
-    flex: 1,
-    minWidth: 0,
-    opacity: 0.8,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  quickActionChip: {
-    minWidth: 78,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderRadius: DESIGN_TOKENS.radii.sm,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    ...(Platform.OS === 'web' ? ({
-      cursor: 'pointer',
-      transition: 'transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease',
-      boxShadow: colors.boxShadows.light,
-    } as any) : null),
-  },
-  quickActionChipPressed: {
-    backgroundColor: colors.backgroundSecondary,
-    ...(Platform.OS === 'web' ? ({
-      transform: 'translateY(1px)',
-      boxShadow: 'none',
-    } as any) : null),
-  },
-  quickActionIconBubble: {
-    width: 36,
-    height: 36,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickActionLabel: {
-    fontSize: 12,
-    lineHeight: 14,
-    color: colors.text,
-    fontWeight: '600' as any,
-    textAlign: 'center',
+  noPhotoNavigationMenu: {
+    marginTop: 8,
   },
   rating: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: colors.textMuted,
+    marginTop: 6,
   },
   driveInfoRow: {
     marginTop: 10,
@@ -291,34 +366,11 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     fontWeight: '500' as any,
     color: colors.primaryDark,
   },
-  // Image overlay for category badge
-  imageOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    paddingVertical: 8,
-    ...(Platform.OS === 'web' ? ({
-      backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%)',
-    } as any) : {
-      backgroundColor: 'rgba(0,0,0,0.3)',
-    }),
-  },
-  imageBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    ...(Platform.OS === 'web' ? ({
-      backdropFilter: 'blur(8px)',
-    } as any) : null),
-  },
+
+  // No-photo inline category chip (kept for readability without an image).
   imageBadgeText: {
     fontSize: 11,
     fontWeight: '600' as any,
-    // Пилюля всегда белая — текст всегда тёмный, иначе в тёмной теме белое-на-белом
     color: DESIGN_COLORS.criticalTextLight,
     letterSpacing: 0.3,
   },

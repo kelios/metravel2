@@ -316,7 +316,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   linkText: {
     fontSize: 13,
-    color: colors.primary,
+    color: colors.primaryText,
     textDecorationLine: 'underline',
   },
 });

@@ -147,7 +147,7 @@ const MapContainer = memo(({
   }
 
   return (
-    <React.Suspense fallback={<ActivityIndicator size="small" color={colors.primary} accessibilityLabel="Загрузка карты" />}>
+    <React.Suspense fallback={<ActivityIndicator size="small" color={colors.primaryDark} accessibilityLabel="Загрузка карты" />}>
       <MapComponent
         travelData={points}
         compact
@@ -729,7 +729,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         {isLoading && travelsNear.length === 0 && (
           <View style={styles.loadingOverlay}>
             <View style={styles.loadingContent}>
-              <ActivityIndicator size="large" color={colors.primary} accessibilityLabel="Поиск мест рядом" />
+              <ActivityIndicator size="large" color={colors.primaryDark} accessibilityLabel="Поиск мест рядом" />
               <Text style={styles.loadingText}>Ищем интересные места рядом...</Text>
             </View>
           </View>

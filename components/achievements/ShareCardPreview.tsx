@@ -84,7 +84,7 @@ function ShareCardPreview({ subject, testID, style }: Props) {
       </View>
 
       <View style={styles.brandRow}>
-        <Feather name="map-pin" size={12} color={colors.primary} />
+        <Feather name="map-pin" size={12} color={colors.primaryDark} />
         <Text style={styles.brand}>metravel.by</Text>
         <Text style={styles.cta}>Собери свою коллекцию</Text>
       </View>
@@ -194,7 +194,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
     brand: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       fontWeight: '800',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     cta: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,

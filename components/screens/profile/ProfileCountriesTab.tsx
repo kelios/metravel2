@@ -172,7 +172,7 @@ export function ProfileCountriesTab({
         {showTravelsSyncing || (shouldLoadFallbackCatalog && countriesLoading) || showPartialCatalogWarning ? (
           <View style={styles.noticeRow}>
             {(shouldLoadFallbackCatalog && countriesLoading) || showTravelsSyncing ? (
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color={colors.primaryDark} />
             ) : (
               <Feather name="alert-circle" size={14} color={colors.warning} />
             )}
@@ -264,7 +264,7 @@ export function ProfileCountriesTab({
     return (
       <View style={styles.applicationCard}>
         <View style={styles.applicationTitleRow}>
-          <Feather name="bar-chart-2" size={16} color={colors.primary} />
+          <Feather name="bar-chart-2" size={16} color={colors.primaryDark} />
           <Text style={styles.applicationTitle}>Статистика по странам</Text>
         </View>
 
@@ -308,7 +308,7 @@ export function ProfileCountriesTab({
       <View style={styles.mapCard}>
         <View style={styles.mapHeader}>
           <View style={styles.mapTitleRow}>
-            <Feather name="map" size={16} color={colors.primary} />
+            <Feather name="map" size={16} color={colors.primaryDark} />
             <Text style={styles.mapTitle}>Прогресс по регионам</Text>
           </View>
           <Text style={styles.mapSubtitle}>
@@ -591,7 +591,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       lineHeight: 16,
       fontWeight: DESIGN_TOKENS.typography.weights.bold as never,
-      color: colors.primary,
+      color: colors.primaryText,
     },
     applicationMutedText: {
       flex: 1,

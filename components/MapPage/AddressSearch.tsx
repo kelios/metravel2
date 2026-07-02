@@ -221,7 +221,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
         />
 
         {loading && (
-          <ActivityIndicator size="small" color={colors.primary} style={styles.loader} />
+          <ActivityIndicator size="small" color={colors.primaryDark} style={styles.loader} />
         )}
 
         {query.length > 0 && !loading && (
@@ -254,7 +254,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
                 accessibilityRole={Platform.OS === 'web' ? ('option' as any) : 'button'}
                 accessibilityLabel={item.display_name}
               >
-                <MapIcon name="place" size={18} color={colors.primary} />
+                <MapIcon name="place" size={18} color={colors.primaryDark} />
                 <Text style={styles.resultText} numberOfLines={2}>
                   {item.display_name}
                 </Text>
@@ -277,7 +277,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Повторить поиск"
           >
-            <MapIcon name="refresh" size={14} color={colors.primary} />
+            <MapIcon name="refresh" size={14} color={colors.primaryDark} />
             <Text style={styles.retryText}>Повторить</Text>
           </Pressable>
         </View>
@@ -383,7 +383,7 @@ const getStyles = (colors: ThemedColors, dense: boolean) =>
       backgroundColor: colors.primarySoft,
     },
     retryButtonPressed: { opacity: 0.7 },
-    retryText: { fontSize: 12, fontWeight: '600', color: colors.primary },
+    retryText: { fontSize: 12, fontWeight: '600', color: colors.primaryText },
     minCharsHint: {
       fontSize: 11,
       color: colors.textMuted,

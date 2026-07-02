@@ -62,7 +62,7 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
             ) : initials ? (
               <Text style={styles.avatarInitials}>{initials}</Text>
             ) : (
-              <Feather name="user" size={20} color={colors.primary} />
+              <Feather name="user" size={20} color={colors.primaryDark} />
             )}
           </View>
           <Text style={styles.name} numberOfLines={1}>{fullName}</Text>
@@ -77,7 +77,7 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
             accessibilityLabel={`Написать ${fullName}`}
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
-            <Feather name="mail" size={16} color={colors.primary} />
+            <Feather name="mail" size={16} color={colors.primaryDark} />
           </Pressable>
         </View>
       </View>
@@ -129,7 +129,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     avatarInitials: {
       fontSize: 14,
       fontWeight: '700' as const,
-      color: colors.primary,
+      color: colors.primaryText,
       letterSpacing: 0.5,
     },
     name: {

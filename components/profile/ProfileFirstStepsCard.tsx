@@ -35,7 +35,7 @@ function ProfileFirstStepsCard({
   return (
     <View style={styles.card} testID={testID ?? 'profile-first-steps-card'}>
       <View style={styles.iconWrap}>
-        <Feather name="compass" size={18} color={colors.primary} />
+        <Feather name="compass" size={18} color={colors.primaryDark} />
       </View>
       <View style={styles.content}>
         <Text style={styles.title}>С чего начать</Text>
@@ -56,7 +56,7 @@ function ProfileFirstStepsCard({
             onPress={onStartQuest}
             variant="outline"
             size="sm"
-            icon={<Feather name="flag" size={15} color={colors.primary} />}
+            icon={<Feather name="flag" size={15} color={colors.primaryDark} />}
             accessibilityLabel="Начать первый квест"
           />
         </View>

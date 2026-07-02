@@ -152,8 +152,8 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                         accessibilityRole="button"
                         accessibilityLabel="Развернуть подборку месяца"
                     >
-                        <Feather name="chevron-down" size={20} color={colors.primary} />
-                        <Text style={[styles.expandButtonText, { color: colors.primary }]}>Подборка месяца</Text>
+                        <Feather name="chevron-down" size={20} color={colors.primaryDark} />
+                        <Text style={[styles.expandButtonText, { color: colors.primaryText }]}>Подборка месяца</Text>
                     </Pressable>
                 </View>
             );
@@ -166,7 +166,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                 <>
                     <View style={styles.header}>
                         <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
-                            <Feather name="star" size={20} color={colors.primary} />
+                            <Feather name="star" size={20} color={colors.primaryDark} />
                         </View>
                         <View style={styles.titleContainer}>
                             <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
@@ -179,8 +179,8 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                             accessibilityRole="link"
                             accessibilityLabel="Смотреть все маршруты"
                         >
-                            <Text style={[styles.seeAllText, { color: colors.primary }]}>Все</Text>
-                            <Feather name="arrow-right" size={14} color={colors.primary} />
+                            <Text style={[styles.seeAllText, { color: colors.primaryText }]}>Все</Text>
+                            <Feather name="arrow-right" size={14} color={colors.primaryDark} />
                         </Pressable>
                     </View>
                     <Text style={[styles.subtitle, { color: colors.textMuted }]}>Самые популярные маршруты этого месяца</Text>

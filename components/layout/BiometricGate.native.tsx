@@ -62,14 +62,14 @@ export default function BiometricGate() {
   return (
     <View style={styles.overlay} pointerEvents="auto">
       <View style={styles.card}>
-        <Feather name="lock" size={48} color={colors.primary} />
+        <Feather name="lock" size={48} color={colors.primaryDark} />
         <Text style={styles.title}>MeTravel заблокирован</Text>
         <Text style={styles.subtitle}>
           Подтвердите вход с помощью биометрии, чтобы продолжить.
         </Text>
 
         {isPrompting ? (
-          <ActivityIndicator color={colors.primary} style={styles.spinner} />
+          <ActivityIndicator color={colors.primaryDark} style={styles.spinner} />
         ) : (
           <Pressable style={styles.primaryButton} onPress={() => void runAuth()}>
             <Feather name="unlock" size={18} color={colors.textOnPrimary} />

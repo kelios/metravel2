@@ -130,7 +130,7 @@ export default function ArticleDetails() {
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <Stack.Screen options={{ headerTitle: 'Статья', headerBackVisible: false }} />
         <ArticleBackButton colors={colors} onPress={handleBack} styles={styles} />
-        <ActivityIndicator style={styles.loader} color={colors.primary} />
+        <ActivityIndicator style={styles.loader} color={colors.primaryDark} />
       </SafeAreaView>
     )
   }
@@ -184,7 +184,7 @@ export default function ArticleDetails() {
                     baseStyle={{ color: colors.text }}
                     tagsStyles={{
                       p: { marginTop: 15, marginBottom: 0 },
-                      a: { color: colors.primary },
+                      a: { color: colors.primaryText },
                       iframe: {
                         height: 1500,
                         width: 680,

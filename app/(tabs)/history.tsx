@@ -310,7 +310,7 @@ export default function HistoryScreen() {
                 <View style={styles.summaryCard}>
                     <View style={styles.summaryHeader}>
                         <View style={styles.summaryIcon}>
-                            <Feather name="clock" size={20} color={colors.primary} />
+                            <Feather name="clock" size={20} color={colors.primaryDark} />
                         </View>
 
                         <View style={styles.summaryCopy}>
@@ -324,7 +324,7 @@ export default function HistoryScreen() {
 
                     <View style={styles.summaryMetaRow}>
                         <View style={styles.summaryMetaPill}>
-                            <Feather name="layers" size={16} color={colors.primary} />
+                            <Feather name="layers" size={16} color={colors.primaryDark} />
                             <Text style={styles.summaryMetaText}>
                                 {data.length} {pluralizeRu(data.length, 'элемент', 'элемента', 'элементов')} в истории
                             </Text>
@@ -332,7 +332,7 @@ export default function HistoryScreen() {
 
                         {latestHistoryTitle ? (
                             <View style={styles.summaryMetaPill}>
-                                <Feather name="arrow-up-right" size={16} color={colors.primary} />
+                                <Feather name="arrow-up-right" size={16} color={colors.primaryDark} />
                                 <Text style={styles.summaryMetaText} numberOfLines={1}>
                                     Последнее: {latestHistoryTitle}
                                 </Text>
@@ -359,7 +359,7 @@ export default function HistoryScreen() {
                 </View>
             </View>
         ),
-        [colors.primary, data.length, latestHistoryTitle, router, styles]
+        [colors.primaryDark, data.length, latestHistoryTitle, router, styles]
     );
 
     const isLoading = !authReady || (isInitialSyncing && data.length === 0);

@@ -107,7 +107,7 @@ export default function ProfileCollectionHeader({
         backToProfileButtonText: {
           fontSize: 14,
           fontWeight: '600',
-          color: colors.primary,
+          color: colors.primaryText,
         },
       }),
     [colors, dense, stackOnPhone]
@@ -129,7 +129,7 @@ export default function ProfileCollectionHeader({
             accessibilityLabel={backAccessibilityLabel}
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
-            <Feather name="arrow-left" size={16} color={colors.primary} />
+            <Feather name="arrow-left" size={16} color={colors.primaryDark} />
             <Text style={styles.backToProfileButtonText}>Назад</Text>
           </Pressable>
 

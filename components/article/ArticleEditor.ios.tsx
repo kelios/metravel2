@@ -312,7 +312,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
           />
           {variant === 'default' && (
             <UiIconButton
-              icon={isUploading ? <ActivityIndicator size="small" color={colors.primary} /> : <Feather name="image" size={20} color={isReady ? colors.text : colors.textMuted} />}
+              icon={isUploading ? <ActivityIndicator size="small" color={colors.primaryDark} /> : <Feather name="image" size={20} color={isReady ? colors.text : colors.textMuted} />}
               onPress={handleImagePick}
               label="Добавить изображение"
               disabled={!isReady || isUploading}
@@ -345,7 +345,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
           startInLoadingState={true}
           renderLoading={() => (
             <View style={[styles.loading, { backgroundColor: colors.surface }]}>
-              <ActivityIndicator size="large" color={colors.primary} />
+              <ActivityIndicator size="large" color={colors.primaryDark} />
               <Text style={[styles.loadingText, { color: colors.textMuted }]}>Загрузка редактора...</Text>
             </View>
           )}

@@ -185,6 +185,10 @@ export const DESIGN_TOKENS = {
       MODERN_MATTE_PALETTE.bookPageBorder,
     ),
     bookPageGold: colorVar('bookPageGold', MODERN_MATTE_PALETTE.bookPageGold),
+    bookPageAccent: colorVar(
+      'bookPageAccent',
+      MODERN_MATTE_PALETTE.bookPageAccent,
+    ),
     card: colorVar('card', MODERN_MATTE_PALETTE.surface),
     cardMuted: colorVar('cardMuted', MODERN_MATTE_PALETTE.backgroundSecondary),
     dockBackground: colorVar(

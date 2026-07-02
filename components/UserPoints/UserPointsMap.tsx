@@ -367,7 +367,7 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
   if (!mods?.MapContainer) {
     return (
       <View style={[styles.container, height ? { height } : null, loadingStyles.loadingWrap]}>
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.primaryDark} />
         <Text style={loadingStyles.loadingText}>Загрузка карты…</Text>
       </View>
     );

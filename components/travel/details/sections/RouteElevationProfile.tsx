@@ -155,9 +155,9 @@ export default function RouteElevationProfile({
             disabled={isDownloadPending}
           >
             {isDownloadPending ? (
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color={colors.primaryDark} />
             ) : (
-              <Feather name="download" size={14} color={colors.primary} />
+              <Feather name="download" size={14} color={colors.primaryDark} />
             )}
             <Text style={styles.downloadBtnText}>
               {isDownloadPending ? 'Скачивание…' : 'GPX'}

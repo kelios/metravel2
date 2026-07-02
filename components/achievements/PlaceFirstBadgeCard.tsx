@@ -83,7 +83,7 @@ function PlaceFirstBadgeCard({ item, testID, style }: Props) {
       <BadgeMedal badge={badge} size={64} earned />
       <View style={styles.body}>
         <View style={styles.statusRow}>
-          <Feather name="award" size={13} color={colors.primary} />
+          <Feather name="award" size={13} color={colors.primaryDark} />
           <Text style={styles.status}>{item.authorStatus} места</Text>
         </View>
         <Text style={styles.placeName} numberOfLines={2}>
@@ -124,7 +124,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
     status: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
       letterSpacing: 0.2,
     },
     placeName: {

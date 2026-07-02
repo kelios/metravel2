@@ -15,6 +15,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface FullscreenGalleryProps {
   visible: boolean;
@@ -38,6 +39,7 @@ export default function FullscreenGallery({
   initialIndex = 0,
   onClose,
 }: FullscreenGalleryProps) {
+  const colors = useThemedColors();
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const flatListRef = useRef<FlatList<GalleryImage>>(null);
@@ -176,7 +178,7 @@ export default function FullscreenGallery({
       supportedOrientations={['portrait', 'landscape']}
     >
       <StatusBar hidden animated />
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.overlay }]}>
         {/* Image gallery */}
         <FlatList
           ref={flatListRef}
@@ -204,13 +206,13 @@ export default function FullscreenGallery({
           accessibilityLabel="Закрыть галерею"
           hitSlop={12}
         >
-          <Feather name="x" size={24} color={DESIGN_TOKENS.colors.textOnDark} />
+          <Feather name="x" size={24} color={colors.textOnDark} />
         </Pressable>
 
         {/* Counter (bottom-center) */}
         {images.length > 1 && (
           <View style={[styles.counter, { bottom: insets.bottom + 16 }]}>
-            <Text style={styles.counterText}>
+            <Text style={[styles.counterText, { color: colors.textOnDark }]}>
               {currentIndex + 1} / {images.length}
             </Text>
           </View>
@@ -223,7 +225,6 @@ export default function FullscreenGallery({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.overlay,
   },
   slideContainer: {
     width: SCREEN_WIDTH,
@@ -256,7 +257,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   counterText: {
-    color: DESIGN_TOKENS.colors.textOnDark,
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: 0.5,

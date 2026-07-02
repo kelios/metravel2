@@ -435,7 +435,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
                 pressed && styles.sheetListFiltersButtonPressed,
               ]}
             >
-              <Feather name="sliders" size={18} color={colors.primary} />
+              <Feather name="sliders" size={18} color={colors.primaryDark} />
             </Pressable>
           </View>
         ) : showSheetHeader ? (

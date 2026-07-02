@@ -25,6 +25,7 @@ import {
     QuestNativeAffiliateSection,
 } from './questWizardSections';
 import { QuestStepCard } from './questWizardStepCard';
+import QuestGuestGate from './QuestGuestGate';
 import { useQuestWizardProgress } from './useQuestWizardProgress';
 import { useQuestReminder } from './useQuestReminder';
 import { useQuestGeofence } from './useQuestGeofence';
@@ -78,6 +79,16 @@ export type QuestWizardProps = {
     cityId?: string;
     /** Числовой PK квеста (для отзыва после прохождения) */
     questNumericId?: number;
+    /** Гостевой режим: первые N точек доступны без логина, дальше — мягкий гейт */
+    guestMode?: boolean;
+    /** Сколько «настоящих» точек (без intro) гость проходит до гейта */
+    guestFreeSteps?: number;
+    /** Гость дошёл до гейта (для аналитики quest_guest_gate_view) */
+    onGuestGate?: (passedCount: number) => void;
+    /** Гость нажал «Войти» в гейте */
+    onGuestLogin?: () => void;
+    /** Гость нажал «Зарегистрироваться» в гейте */
+    onGuestRegister?: () => void;
 };
 
 // ===================== ТЕМА =====================
@@ -89,7 +100,7 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, ratingSlot, completionSlot, pioneerSlot, questId, cityId, questNumericId }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, ratingSlot, completionSlot, pioneerSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
     const wizardModel = useQuestWizardResponsiveModel();
@@ -145,6 +156,16 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     const [showFinaleOnly, setShowFinaleOnly] = useState(false);
     const [desktopNavExpanded, setDesktopNavExpanded] = useState(false);
+    const [guestGateDismissed, setGuestGateDismissed] = useState(false);
+
+    // Гость прошёл лимит бесплатных точек. Гейт показываем, только когда игрок
+    // упирается в следующую (ещё не отвеченную) точку сверх лимита — уже
+    // пройденные точки остаются доступны (мягкий гейт, не форсит выход).
+    const guestAnsweredCount = completedSteps.length;
+    const guestReachedLimit = guestMode && guestAnsweredCount >= guestFreeSteps;
+    const currentStepAnswered = !!(allSteps[currentIndex] && answers[allSteps[currentIndex].id]);
+    const guestGateActive =
+        guestReachedLimit && !guestGateDismissed && !showFinaleOnly && !currentStepAnswered;
 
     const currentStep = allSteps[currentIndex];
 
@@ -244,6 +265,25 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         queueAnalyticsEvent('quest_finish', { quest_id: questId });
     }, [allCompleted, questId]);
 
+    const guestGateTrackedRef = useRef(false);
+    useEffect(() => {
+        if (!guestGateActive || guestGateTrackedRef.current) return;
+        guestGateTrackedRef.current = true;
+        queueAnalyticsEvent('quest_guest_gate_view', {
+            quest_id: questId,
+            city: cityId,
+            passed_count: guestAnsweredCount,
+        });
+        onGuestGate?.(guestAnsweredCount);
+    }, [cityId, guestAnsweredCount, guestGateActive, onGuestGate, questId]);
+
+    const handleGuestGateDismiss = useCallback(() => {
+        setGuestGateDismissed(true);
+        // Возвращаем игрока к последней пройденной точке — пройденное доступно.
+        const lastAnsweredIndex = Math.max(0, unlockedIndex);
+        setCurrentIndex(lastAnsweredIndex);
+    }, [setCurrentIndex, unlockedIndex]);
+
     useEffect(() => {
         if (allCompleted) { setShowFinaleOnly(true); setUnlockedIndex(allSteps.length - 1); }
     }, [allCompleted, allSteps.length, setUnlockedIndex]);
@@ -301,8 +341,19 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
             {/* Левая колонка: шаги + карта + финал */}
             <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageMain : undefined}>
-                {/* Шаги/карты — скрываем, если показываем только финал */}
-                {(!showFinaleOnly) && currentStep && (
+                {/* Гостевой мягкий гейт после лимита бесплатных точек */}
+                {guestGateActive && (
+                    <QuestGuestGate
+                        passedCount={guestAnsweredCount}
+                        onLogin={() => onGuestLogin?.()}
+                        onRegister={() => onGuestRegister?.()}
+                        onDismiss={handleGuestGateDismiss}
+                        testID="quest-guest-gate"
+                    />
+                )}
+
+                {/* Шаги/карты — скрываем, если показываем только финал или активен гостевой гейт */}
+                {(!showFinaleOnly) && !guestGateActive && currentStep && (
                     <View style={useWideInlineLayout ? styles.desktopRow : undefined}>
                         <View style={useWideInlineLayout ? styles.desktopMain : undefined}>
                             <QuestStepCard

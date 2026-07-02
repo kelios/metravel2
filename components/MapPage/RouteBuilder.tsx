@@ -38,7 +38,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
           {onSwap && hasRoute && (
             <IconButton
               testID="route-swap"
-              icon={<MapIcon name="swap-vert" size={compact ? 16 : 18} color={colors.primary} />}
+              icon={<MapIcon name="swap-vert" size={compact ? 16 : 18} color={colors.primaryDark} />}
               label="Поменять старт и финиш местами"
               size={compact ? 'sm' : 'md'}
               onPress={onSwap}

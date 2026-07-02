@@ -309,7 +309,7 @@ function CollapsibleBlock({
               <Feather 
                 name={icon as any} 
                 size={compactMode ? 16 : 18} 
-                color={colors.primary}
+                color={colors.primaryDark}
                 style={styles.headerIcon}
               />
             </View>

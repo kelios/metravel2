@@ -177,7 +177,7 @@ const createStyles = (colors: ThemedColors) =>
     },
     hint: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
     consentBlock: { gap: 12, marginTop: 6 },
-    link: { color: colors.primary, fontWeight: '600' },
+    link: { color: colors.primaryText, fontWeight: '600' },
     disclaimer: { marginTop: 4 },
     error: { color: colors.danger, fontSize: 13, fontWeight: '600' },
   });

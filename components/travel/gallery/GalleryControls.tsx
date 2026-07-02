@@ -50,7 +50,7 @@ export const GalleryControls: React.FC<{
           <Text style={[styles.galleryTitle, { color: colors.text }]}>Галерея</Text>
         </View>
         <Text style={[styles.imageCount, { color: colors.textMuted }]}>
-          Загружено <Text style={[styles.highlight, { color: colors.primary }]}>{imagesCount}</Text> из{' '}
+          Загружено <Text style={[styles.highlight, { color: colors.primaryText }]}>{imagesCount}</Text> из{' '}
           {maxImages}
         </Text>
       </View>

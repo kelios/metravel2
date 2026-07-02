@@ -92,7 +92,7 @@ export const getStyles = (colors: ThemedColors) =>
       backgroundColor: colors.backgroundSecondary,
     },
     compactPreviewIconText: {
-      color: colors.primary,
+      color: colors.primaryText,
       fontSize: 20,
       fontWeight: '800',
     },

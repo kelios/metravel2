@@ -157,11 +157,11 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     accessibilityLabel={label}
                 >
                     <Text style={styles.sectionLinkText}>{label}</Text>
-                    <Feather name="arrow-right" size={14} color={colors.primary} />
+                    <Feather name="arrow-right" size={14} color={colors.primaryDark} />
                 </Pressable>
             ) : null}
         </View>
-    ), [colors.primary, router, styles.sectionHeader, styles.sectionLink, styles.sectionLinkText, styles.sectionTitle]);
+    ), [colors.primaryDark, router, styles.sectionHeader, styles.sectionLink, styles.sectionLinkText, styles.sectionTitle]);
 
     // Условные возвраты после всех хуков
     if (!isInitialized) return null;
@@ -182,7 +182,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                         style={styles.expandButton}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                        <Feather name="chevron-down" size={20} color={colors.primary} />
+                        <Feather name="chevron-down" size={20} color={colors.primaryDark} />
                         <Text style={styles.expandButtonText}>Персонализация</Text>
                     </Pressable>
                 </View>
@@ -197,7 +197,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <>
                         <View style={styles.header}>
                             <View style={[styles.iconContainer, { backgroundColor: colors.backgroundSecondary }]}>
-                                <Feather name="star" size={24} color={colors.primary} />
+                                <Feather name="star" size={24} color={colors.primaryDark} />
                             </View>
                             <View style={styles.titleContainer}>
                                 <Text style={styles.title}>Рекомендации для вас</Text>
@@ -210,7 +210,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <View style={[styles.promptCard, isMobile ? styles.promptCardMobile : styles.promptCardDesktop]}>
                         <View style={styles.promptLead}>
                             <View style={styles.promptIcon}>
-                                <Feather name="log-in" size={28} color={colors.primary} />
+                                <Feather name="log-in" size={28} color={colors.primaryDark} />
                             </View>
                             <View style={styles.promptCopy}>
                                 <Text style={[styles.promptText, !isMobile && styles.promptTextDesktop]}>
@@ -224,7 +224,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                             android_ripple={{ color: colors.primarySoft }}
                         >
                             <Text style={styles.loginButtonText}>Войти или зарегистрироваться</Text>
-                            <Feather name="arrow-right" size={18} color={colors.primary} style={ARROW_ICON_STYLE as any} />
+                            <Feather name="arrow-right" size={18} color={colors.primaryDark} style={ARROW_ICON_STYLE as any} />
                         </Pressable>
                     </View>
                 </View>
@@ -241,7 +241,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <>
                         <View style={styles.header}>
                             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
-                                <Feather name="star" size={24} color={colors.primary} />
+                                <Feather name="star" size={24} color={colors.primaryDark} />
                             </View>
                             <View style={styles.titleContainer}>
                                 <Text style={styles.title}>Рекомендации для вас</Text>
@@ -273,7 +273,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                 <>
                     <View style={styles.header}>
                         <View style={[styles.iconContainer, { backgroundColor: colors.primarySoft }]}>
-                            <Feather name="star" size={24} color={colors.primary} />
+                            <Feather name="star" size={24} color={colors.primaryDark} />
                         </View>
                         <View style={styles.titleContainer}>
                             <Text style={styles.title}>Рекомендации для вас</Text>
@@ -489,7 +489,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     sectionLinkText: {
         fontSize: 12,
         fontWeight: '700',
-        color: colors.primary,
+        color: colors.primaryText,
     },
     previewRow: {
         flexDirection: 'row',

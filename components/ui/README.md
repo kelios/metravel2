@@ -24,13 +24,16 @@ Box       Tag      EmptyState            │
 #### Цветовая Палitra (Semantic Colors)
 ```typescript
 // Primary - для основных действий
-primary: { 50: '#eff6ff', 500: '#3b82f6', 600: '#2563eb' }
+primary: DESIGN_TOKENS.colors.primary
 
 // Neutral - для фонов и текста
-neutral: { 50: '#f8fafc', 500: '#64748b', 900: '#0f172a' }
+surface: DESIGN_TOKENS.colors.surface
+textMuted: DESIGN_TOKENS.colors.textMuted
 
 // Semantic - для статусов
-success: '#10b981', warning: '#f59e0b', error: '#ef4444'
+success: DESIGN_TOKENS.colors.success
+warning: DESIGN_TOKENS.colors.warning
+danger: DESIGN_TOKENS.colors.danger
 ```
 
 #### Типографика (Typography Scale)

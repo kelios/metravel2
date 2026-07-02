@@ -68,7 +68,7 @@ function RecentAwardsTab({ testID, style }: Props) {
             style={styles.howBtn}
             testID="recent-awards-how"
           >
-            <Feather name="help-circle" size={14} color={colors.primary} />
+            <Feather name="help-circle" size={14} color={colors.primaryDark} />
             <Text style={styles.howText}>Как это достигнуто</Text>
           </Pressable>
         </View>
@@ -142,7 +142,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
     howText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     row: {
       gap: DESIGN_TOKENS.spacing.sm,

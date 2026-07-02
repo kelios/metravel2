@@ -87,7 +87,7 @@ export const MapLoadingOverlay: React.FC<{
     <View style={[styles.loader, { position: 'relative', overflow: 'hidden' }] as any}>
       <MapWebBackground opacity={0.12} />
       <View style={{ position: 'relative', zIndex: 1, alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primary} accessibilityLabel="Загрузка карты" />
+        <ActivityIndicator size="large" color={colors.primaryDark} accessibilityLabel="Загрузка карты" />
       </View>
     </View>
   </View>

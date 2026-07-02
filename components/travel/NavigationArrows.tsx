@@ -200,7 +200,7 @@ function NavigationArrows({
           android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
         >
           <View style={styles.navContent}>
-            <Feather name="chevron-left" size={24} color={colors.primary} />
+            <Feather name="chevron-left" size={24} color={colors.primaryDark} />
             <View style={styles.navInfo}>
               <Text style={styles.navLabel} numberOfLines={1}>
                 {isFallback ? 'Похожий маршрут' : 'Предыдущее'}
@@ -264,7 +264,7 @@ function NavigationArrows({
                 {nextTravel.name || 'Без названия'}
               </Text>
             </View>
-            <Feather name="chevron-right" size={24} color={colors.primary} />
+            <Feather name="chevron-right" size={24} color={colors.primaryDark} />
           </View>
         </Pressable>
       ) : isMobile ? null : (

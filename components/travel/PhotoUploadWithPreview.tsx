@@ -87,7 +87,7 @@ const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
         <input {...getInputProps()} />
         {loading ? (
           <View style={styles.loadingContainer as any}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <ActivityIndicator size="large" color={colors.primaryDark} />
             {uploadProgress > 0 && (
               <View style={styles.progressContainer as any}>
                 <View style={[styles.progressBar as any, { width: `${uploadProgress}%` } as any] as any} />
@@ -112,7 +112,7 @@ const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
           </View>
         ) : (
           <View style={styles.placeholderContainer as any}>
-            <Feather name="upload-cloud" size={40} color={colors.primary} />
+            <Feather name="upload-cloud" size={40} color={colors.primaryDark} />
             <Text style={styles.placeholderText as any}>{placeholder}</Text>
             <Text style={styles.placeholderSubtext as any}>или нажмите для выбора файла</Text>
             <Text style={styles.placeholderHint as any}>Макс. размер: {maxSizeMB}MB</Text>

@@ -22,7 +22,7 @@ function MyApplicationsList() {
   if (isLoading) {
     return (
       <View style={styles.center} testID="my-applications-loading">
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.primaryDark} />
       </View>
     );
   }

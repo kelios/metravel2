@@ -365,6 +365,6 @@ export const createSettingsStyles = (colors: ReturnType<typeof useThemedColors>)
     backToProfileButtonText: {
       fontSize: 14,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.primaryText,
     },
   });

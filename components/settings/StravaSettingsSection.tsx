@@ -214,7 +214,7 @@ export default function StravaSettingsSection() {
           <View style={styles.statusRow}>
             <Feather name={statusIcon} size={17} color={statusKind === 'connected' ? colors.success : colors.textMuted} />
             <Text style={styles.statusText}>{statusLabel}</Text>
-            {strava.statusQuery.isFetching ? <ActivityIndicator size="small" color={colors.primary} /> : null}
+            {strava.statusQuery.isFetching ? <ActivityIndicator size="small" color={colors.primaryDark} /> : null}
           </View>
           {athleteName ? <Text style={styles.statusMeta}>Атлет: {athleteName}</Text> : null}
           {status?.lastSyncAt ? <Text style={styles.statusMeta}>Последняя синхронизация: {formatDate(status.lastSyncAt)}</Text> : null}
@@ -338,7 +338,7 @@ export default function StravaSettingsSection() {
 
             {strava.activitiesQuery.isLoading ? (
               <View style={styles.loadingRow}>
-                <ActivityIndicator size="small" color={colors.primary} />
+                <ActivityIndicator size="small" color={colors.primaryDark} />
                 <Text style={styles.statusMeta}>Загружаем активности Strava…</Text>
               </View>
             ) : strava.activitiesQuery.error ? (
@@ -365,7 +365,7 @@ export default function StravaSettingsSection() {
                     {strava.selectedActivityId === activity.id ? (
                       <View style={styles.detailBox} testID={`strava-activity-detail-${activity.id}`}>
                         {strava.selectedActivityQuery.isLoading ? (
-                          <ActivityIndicator size="small" color={colors.primary} />
+                          <ActivityIndicator size="small" color={colors.primaryDark} />
                         ) : selectedActivity ? (
                           <>
                             <Text style={styles.detailTitle}>Детали активности</Text>

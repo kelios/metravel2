@@ -10,7 +10,7 @@ export const WidgetFallback = () => {
   const styles = useMemo(() => createStyles(colors), [colors])
   return (
     <View style={styles.fallback}>
-      <ActivityIndicator size="small" color={colors.primary} accessibilityLabel="Загрузка виджета" />
+      <ActivityIndicator size="small" color={colors.primaryDark} accessibilityLabel="Загрузка виджета" />
     </View>
   )
 }

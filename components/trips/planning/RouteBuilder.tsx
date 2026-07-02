@@ -109,7 +109,7 @@ function RouteBuilder({ trip }: Props) {
   const renderPoint = (point: RoutePoint, index: number) => (
     <View key={point.id} style={styles.pointRow}>
       <View style={styles.pointIcon}>
-        <Feather name={ROUTE_POINT_ICON_NAME[point.type] as never} size={18} color={colors.primary} />
+        <Feather name={ROUTE_POINT_ICON_NAME[point.type] as never} size={18} color={colors.primaryDark} />
       </View>
       <View style={styles.pointBody}>
         <Text style={styles.pointType}>{ROUTE_POINT_LABEL[point.type]}</Text>

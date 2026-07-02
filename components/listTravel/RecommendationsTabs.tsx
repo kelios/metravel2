@@ -68,14 +68,14 @@ const AuthGate = ({
   <View style={styles.gateContainer}>
     <View style={styles.gateCard}>
       <View style={styles.gateIcon}>
-        <Feather name="lock" size={24} color={colors.primary} />
+        <Feather name="lock" size={24} color={colors.primaryDark} />
       </View>
       <View style={styles.gateCopy}>
         <Text style={styles.gateText}>{message}</Text>
       </View>
       <Pressable style={styles.gateButton} onPress={onLogin} accessibilityRole="button">
         <Text style={styles.gateButtonText}>Войти</Text>
-        <Feather name="arrow-right" size={18} color={colors.primary} style={ARROW_ICON_STYLE as any} />
+        <Feather name="arrow-right" size={18} color={colors.primaryDark} style={ARROW_ICON_STYLE as any} />
       </Pressable>
     </View>
   </View>
@@ -168,7 +168,7 @@ const SavedCollectionHeader = ({
         accessibilityLabel={seeAllLabel}
       >
         <Text style={styles.seeAllButtonText}>Смотреть все</Text>
-        <Feather name="chevron-right" size={16} color={colors.primary} />
+        <Feather name="chevron-right" size={16} color={colors.primaryDark} />
       </Pressable>
 
       {onClear && count > 0 && (
@@ -233,7 +233,7 @@ const ShelfHeader = ({
         accessibilityLabel={seeAllLabel}
       >
         <Text style={styles.shelfSeeAllText}>Все</Text>
-        <Feather name="chevron-right" size={16} color={colors.primary} />
+        <Feather name="chevron-right" size={16} color={colors.primaryDark} />
       </Pressable>
     </View>
   </View>
@@ -566,7 +566,7 @@ const RecommendationsTabs = memo(
         <View style={[styles.container, styles.containerFixedHeight]}>
           <View style={styles.collapsedHeader}>
             <Pressable testID="recommendations-tabs-expand" onPress={toggleCollapse} style={styles.expandButton} accessibilityRole="button">
-              <Feather name="chevron-down" size={20} color={colors.primary} />
+              <Feather name="chevron-down" size={20} color={colors.primaryDark} />
               <Text style={styles.expandText}>Показать рекомендации</Text>
             </Pressable>
           </View>

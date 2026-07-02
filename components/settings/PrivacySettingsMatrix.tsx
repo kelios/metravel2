@@ -40,7 +40,7 @@ export default function PrivacySettingsMatrix({ showHeading = false }: Props) {
     if (isLoading) {
         return (
             <View style={styles.loadingBox}>
-                <ActivityIndicator size="small" color={colors.primary} />
+                <ActivityIndicator size="small" color={colors.primaryDark} />
             </View>
         );
     }
@@ -59,7 +59,7 @@ export default function PrivacySettingsMatrix({ showHeading = false }: Props) {
                     <View key={contentType} style={styles.card}>
                         <View style={styles.cardHeader}>
                             <View style={styles.cardIcon}>
-                                <Feather name={meta.icon} size={16} color={colors.primary} />
+                                <Feather name={meta.icon} size={16} color={colors.primaryDark} />
                             </View>
                             <View style={styles.cardTextBlock}>
                                 <Text style={styles.cardTitle}>{meta.title}</Text>
@@ -147,5 +147,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
             backgroundColor: colors.primarySoft,
         },
         segmentText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
-        segmentTextActive: { color: colors.primary },
+        segmentTextActive: { color: colors.primaryText },
     });

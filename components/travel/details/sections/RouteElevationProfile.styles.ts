@@ -49,7 +49,7 @@ export const createRouteElevationProfileStyles = (colors: ThemedColors) =>
     downloadBtnText: {
       fontSize: 13,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     downloadBtnPressed: {
       opacity: 0.85,

@@ -39,7 +39,7 @@ export default function NavCardSection({
         >
             <View style={styles.cardRow}>
                 <View style={styles.cardIcon}>
-                    <Feather name={icon} size={18} color={colors.primary} />
+                    <Feather name={icon} size={18} color={colors.primaryDark} />
                 </View>
                 <View style={styles.cardText}>
                     <Text style={styles.cardTitle}>{title}</Text>

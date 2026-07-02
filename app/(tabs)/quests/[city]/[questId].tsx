@@ -1,13 +1,12 @@
 import React, { Suspense, useCallback, useEffect, useMemo } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { useIsFocused } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 import { QuestWizard as QuestWizardDirect } from '@/components/quests/QuestWizard';
 import QuestConsentGate from '@/components/quests/QuestConsentGate';
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import UserAvatar from '@/components/layout/UserAvatar';
 import StarRating from '@/components/ui/StarRating';
 import QuestCompletionBadge from '@/components/quests/QuestCompletionBadge';
@@ -19,11 +18,11 @@ import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta';
 import { useQuestPioneerMeta } from '@/hooks/useQuestPioneerMeta';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useActionConsent } from '@/hooks/useActionConsent';
+import { useGuestQuestFlow } from '@/components/quests/useGuestQuestFlow';
 import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
-import { recordGuestQuestPreview } from '@/utils/guestTrialState';
 
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
@@ -228,7 +227,7 @@ const LoadingState = ({
         ogType="website"
       />
     ) : null}
-    <ActivityIndicator color={colors.primary} />
+    <ActivityIndicator color={colors.primaryDark} />
     <Text style={[styles.stateText, { marginTop: 12 }]}>Загружаем квест…</Text>
   </CenteredPage>
 );
@@ -286,141 +285,6 @@ const ErrorState = ({
   );
 };
 
-const pluralPoints = (count: number): string => {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${count} точка`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return `${count} точки`;
-  return `${count} точек`;
-};
-
-const QuestPreview = ({
-  bundle,
-  canonical,
-  cityId,
-  seo,
-  seoImage,
-  structuredDataTags,
-  relatedTravelsSlot,
-  ratingSlot,
-  completionSlot,
-  pioneerSlot,
-  isFocused,
-  colors,
-  styles,
-}: {
-  bundle: FrontendQuestBundle;
-  canonical: string;
-  cityId: string;
-  seo: QuestSeoModel;
-  seoImage: string;
-  structuredDataTags: React.ReactNode;
-  relatedTravelsSlot: React.ReactNode;
-  ratingSlot: React.ReactNode;
-  completionSlot: React.ReactNode;
-  pioneerSlot: React.ReactNode;
-  isFocused: boolean;
-  colors: Colors;
-  styles: ReturnType<typeof createStyles>;
-}) => {
-  const router = useRouter();
-  const cityName = bundle.city?.name;
-  const introStory = bundle.intro?.story?.trim();
-  const locations = bundle.steps.map((step) => step.location).filter(Boolean);
-  const firstStep = bundle.steps[0];
-
-  useEffect(() => {
-    if (!firstStep) return;
-    void recordGuestQuestPreview({
-      questId: bundle.storageKey || bundle.title,
-      cityId: cityId || undefined,
-      stepId: firstStep.id,
-    });
-  }, [bundle.storageKey, bundle.title, cityId, firstStep]);
-
-  return (
-    <ScrollView style={styles.page} contentContainerStyle={styles.previewContent}>
-      {isFocused ? (
-        <InstantSEO
-          headKey={seo.headKey}
-          title={seo.title}
-          description={seo.description}
-          canonical={canonical}
-          ogType={seo.ogType}
-          image={seoImage}
-          additionalTags={structuredDataTags}
-        />
-      ) : null}
-      {Platform.OS === 'web' ? <h1 style={hiddenWebHeadingStyle as any}>{seo.title}</h1> : null}
-
-      {bundle.coverUrl ? (
-        <ImageCardMedia
-          src={bundle.coverUrl}
-          alt={bundle.title}
-          fit="contain"
-          height={220}
-          borderRadius={16}
-          style={styles.previewCover}
-        />
-      ) : null}
-
-      <View style={styles.previewBody}>
-        <Text style={styles.previewTitle}>{bundle.title}</Text>
-        {pioneerSlot}
-        {ratingSlot}
-        {completionSlot ? <View style={styles.previewCompletion}>{completionSlot}</View> : null}
-        <View style={styles.previewMetaRow}>
-          {cityName ? <Text style={styles.previewMeta}>{cityName}</Text> : null}
-          <Text style={styles.previewMeta}>{pluralPoints(bundle.steps.length)}</Text>
-        </View>
-
-        {introStory ? <Text style={styles.previewStory}>{introStory}</Text> : null}
-
-        {firstStep ? (
-          <View style={styles.previewStepCard} testID="guest-quest-first-step-preview">
-            <Text style={styles.previewLocationsTitle}>Первый шаг для знакомства</Text>
-            <Text style={styles.previewStepTitle}>{firstStep.title}</Text>
-            {firstStep.location ? (
-              <View style={styles.previewStepLocationRow}>
-                <Icon name="map-pin" color={colors.primary} size={14} />
-                <Text style={styles.previewStepLocation}>{firstStep.location}</Text>
-              </View>
-            ) : null}
-            {firstStep.story ? <Text style={styles.previewStory}>{firstStep.story}</Text> : null}
-            {firstStep.task ? <Text style={styles.previewStepTask}>{firstStep.task}</Text> : null}
-            <Text style={styles.previewStepNote}>
-              Ответы, прогресс, финал и XP откроются после входа.
-            </Text>
-          </View>
-        ) : null}
-
-        {locations.length ? (
-          <View style={styles.previewLocations}>
-            <Text style={styles.previewLocationsTitle}>Маршрут квеста</Text>
-            {locations.map((location, index) => (
-              <Text key={`${location}-${index}`} style={styles.previewLocationItem}>
-                {index + 1}. {location}
-              </Text>
-            ))}
-          </View>
-        ) : null}
-
-        <View style={styles.previewCta}>
-          <Text style={styles.previewCtaText}>
-            Прохождение квеста доступно после входа — так мы сохраним ваш прогресс и результаты.
-          </Text>
-          <Pressable style={styles.primaryButton} onPress={() => router.push('/login')}>
-            <Icon name="log-in" color={colors.textOnPrimary} size={16} />
-            <Text style={styles.primaryButtonText}>Войдите, чтобы пройти квест</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      {relatedTravelsSlot}
-    </ScrollView>
-  );
-};
-
 export default function QuestByIdScreen() {
   const params = useLocalSearchParams<{ city?: string | string[]; questId?: string | string[] }>();
   const cityId = getRouteParam(params.city);
@@ -439,6 +303,12 @@ export default function QuestByIdScreen() {
     shouldLoadQuest ? questId : undefined,
     isFocused && isAuthenticated,
   );
+  const guestFlow = useGuestQuestFlow({
+    questId,
+    cityId,
+    isAuthenticated,
+    enabled: shouldLoadQuest,
+  });
   const ratingMeta = useQuestRatingMeta(shouldLoadQuest ? questId : undefined, bundle?.id);
   const ratingSlot = useMemo(() => {
     if (ratingMeta.ratingCount === 0) return null;
@@ -479,10 +349,24 @@ export default function QuestByIdScreen() {
     );
   }, [pioneer, styles.pioneerRow, styles.pioneerText, styles.pioneerName]);
 
-  const isLoading = isQuestLoading || (isAuthenticated && progressLoading);
+  const isLoading =
+    isQuestLoading ||
+    (isAuthenticated ? progressLoading : Boolean(questId) && !guestFlow.guestReady);
   const seo = useMemo(() => getQuestSeo(bundle, questId, isLoading), [bundle, isLoading, questId]);
   const seoImage = useMemo(() => getQuestImage(bundle?.coverUrl), [bundle?.coverUrl]);
   const initialProgress = useMemo(() => {
+    if (!isAuthenticated) {
+      const guest = guestFlow.guestInitial;
+      if (!guest) return undefined;
+      return {
+        currentIndex: guest.currentIndex,
+        unlockedIndex: guest.unlockedIndex,
+        answers: guest.answers,
+        attempts: guest.attempts,
+        hints: guest.hints,
+        showMap: guest.showMap,
+      };
+    }
     if (!backendProgress) return undefined;
     return {
       currentIndex: backendProgress.current_index,
@@ -492,7 +376,7 @@ export default function QuestByIdScreen() {
       hints: backendProgress.hints ?? {},
       showMap: backendProgress.show_map ?? true,
     };
-  }, [backendProgress]);
+  }, [backendProgress, guestFlow.guestInitial, isAuthenticated]);
   const structuredDataTags = useMemo(() => {
     if (!bundle || !questId) return null;
 
@@ -555,22 +439,71 @@ export default function QuestByIdScreen() {
   }
 
   if (!isAuthenticated) {
+    const guestStorageKey = `guest_${bundle.storageKey ?? questId}`;
     return (
-      <QuestPreview
-        bundle={bundle}
-        canonical={canonical}
-        cityId={cityId}
-        seo={seo}
-        seoImage={seoImage}
-        structuredDataTags={structuredDataTags}
-        relatedTravelsSlot={relatedTravelsSlot}
-        ratingSlot={ratingSlot}
-        completionSlot={completionSlot}
-        pioneerSlot={pioneerSlot}
-        isFocused={isFocused}
-        colors={colors}
-        styles={styles}
-      />
+      <View style={styles.page}>
+        {isFocused ? (
+          <InstantSEO
+            headKey={seo.headKey}
+            title={seo.title}
+            description={seo.description}
+            canonical={canonical}
+            ogType={seo.ogType}
+            image={seoImage}
+            additionalTags={structuredDataTags}
+          />
+        ) : null}
+        {Platform.OS === 'web' ? <h1 style={hiddenWebHeadingStyle as any}>{seo.title}</h1> : null}
+        {Platform.OS === 'web' ? (
+          <Suspense fallback={<View style={styles.wizardFallback}><ActivityIndicator color={colors.primaryDark} /></View>}>
+            <QuestWizardComponent
+              title={bundle.title}
+              steps={bundle.steps}
+              finale={bundle.finale}
+              intro={bundle.intro}
+              storageKey={guestStorageKey}
+              city={bundle.city}
+              coverUrl={bundle.coverUrl}
+              onProgressChange={guestFlow.persistGuestProgress}
+              initialProgress={initialProgress}
+              relatedTravelsSlot={relatedTravelsSlot}
+              ratingSlot={ratingSlot}
+              completionSlot={completionSlot}
+              pioneerSlot={pioneerSlot}
+              questId={questId}
+              cityId={cityId}
+              questNumericId={bundle.id}
+              guestMode
+              guestFreeSteps={guestFlow.guestFreeSteps}
+              onGuestLogin={guestFlow.goToLogin}
+              onGuestRegister={guestFlow.goToRegister}
+            />
+          </Suspense>
+        ) : (
+          <QuestWizardComponent
+            title={bundle.title}
+            steps={bundle.steps}
+            finale={bundle.finale}
+            intro={bundle.intro}
+            storageKey={guestStorageKey}
+            city={bundle.city}
+            coverUrl={bundle.coverUrl}
+            onProgressChange={guestFlow.persistGuestProgress}
+            initialProgress={initialProgress}
+            relatedTravelsSlot={relatedTravelsSlot}
+            ratingSlot={ratingSlot}
+            completionSlot={completionSlot}
+            pioneerSlot={pioneerSlot}
+            questId={questId}
+            cityId={cityId}
+            questNumericId={bundle.id}
+            guestMode
+            guestFreeSteps={guestFlow.guestFreeSteps}
+            onGuestLogin={guestFlow.goToLogin}
+            onGuestRegister={guestFlow.goToRegister}
+          />
+        )}
+      </View>
     );
   }
 
@@ -616,7 +549,7 @@ export default function QuestByIdScreen() {
       ) : null}
       {Platform.OS === 'web' ? <h1 style={hiddenWebHeadingStyle as any}>{seo.title}</h1> : null}
       {Platform.OS === 'web' ? (
-        <Suspense fallback={<View style={styles.wizardFallback}><ActivityIndicator color={colors.primary} /></View>}>
+        <Suspense fallback={<View style={styles.wizardFallback}><ActivityIndicator color={colors.primaryDark} /></View>}>
           <QuestWizardComponent
             title={bundle.title}
             steps={bundle.steps}
@@ -726,27 +659,6 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   wizardFallback: {
     padding: 16,
   },
-  previewContent: {
-    // Отбиваем высоту фиксированного нижнего дока (BottomDock) на мобильном,
-    // иначе CTA «Войдите, чтобы пройти квест» уезжает под док и не нажимается.
-    paddingBottom: 160,
-  },
-  previewCover: {
-    width: '100%',
-  },
-  previewBody: {
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  previewTitle: {
-    color: colors.text,
-    fontSize: 24,
-    fontWeight: '900',
-  },
-  previewCompletion: {
-    marginTop: 4,
-  },
   pioneerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -760,78 +672,5 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   pioneerName: {
     color: colors.text,
     fontWeight: '800',
-  },
-  previewMetaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  previewMeta: {
-    color: colors.textMuted,
-    fontWeight: '600',
-  },
-  previewStory: {
-    color: colors.text,
-    lineHeight: 22,
-  },
-  previewLocations: {
-    gap: 6,
-    marginTop: 4,
-  },
-  previewLocationsTitle: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  previewLocationItem: {
-    color: colors.textMuted,
-    lineHeight: 22,
-  },
-  previewStepCard: {
-    gap: 8,
-    marginTop: 4,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  previewStepTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  previewStepLocationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  previewStepLocation: {
-    flex: 1,
-    color: colors.textMuted,
-    fontWeight: '600',
-  },
-  previewStepTask: {
-    color: colors.text,
-    fontWeight: '700',
-    lineHeight: 22,
-  },
-  previewStepNote: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  previewCta: {
-    gap: 10,
-    marginTop: 8,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  previewCtaText: {
-    color: colors.textMuted,
-    lineHeight: 22,
   },
 });

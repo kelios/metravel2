@@ -50,7 +50,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
             <Feather
               name={mode === 'radius' ? 'target' : 'navigation'}
               size={12}
-              color={colors.primary}
+              color={colors.primaryDark}
             />
             <Text style={styles.compactMetaText} numberOfLines={1}>
               {compactSummary}
@@ -84,7 +84,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
             <Feather
               name={mode === 'radius' ? 'target' : 'navigation'}
               size={13}
-              color={colors.primary}
+              color={colors.primaryDark}
             />
             <Text style={styles.modeSummaryText} numberOfLines={2}>
               {summary}

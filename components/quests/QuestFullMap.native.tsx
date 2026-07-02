@@ -595,7 +595,7 @@ function QuestFullMap({
             <View style={styles.mapBox}>
                 {isLoading && (
                     <View style={styles.loader}>
-                        <ActivityIndicator size="large" color={colors.primary} />
+                        <ActivityIndicator size="large" color={colors.primaryDark} />
                         <Text style={styles.loadingText}>Загрузка карты...</Text>
                     </View>
                 )}

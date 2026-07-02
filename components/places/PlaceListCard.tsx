@@ -462,7 +462,7 @@ const PlaceListCard: React.FC<Props> = ({
                       pressed && styles.iconBtnPressed,
                     ]}
                   >
-                    <Feather name="send" size={18} color={colors.primary} />
+                    <Feather name="send" size={18} color={colors.primaryDark} />
                   </CardActionPressable>
                 </View>
               ) : (
@@ -571,7 +571,7 @@ const PlaceListCard: React.FC<Props> = ({
                   title={addLabel}
                 >
                   {isAdding ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
+                    <ActivityIndicator size="small" color={colors.primaryDark} />
                   ) : null}
                 </LabeledActionChip>
               )}
@@ -645,7 +645,7 @@ const PlaceListCard: React.FC<Props> = ({
                   title={addLabel}
                 >
                   {isAdding ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
+                    <ActivityIndicator size="small" color={colors.primaryDark} />
                   ) : null}
                 </LabeledActionChip>
               )}
@@ -665,7 +665,7 @@ const PlaceListCard: React.FC<Props> = ({
               ]}
             >
               {isAdding ? (
-                <ActivityIndicator size="small" color={colors.primary} />
+                <ActivityIndicator size="small" color={colors.primaryDark} />
               ) : (
                 <>
                   <Feather

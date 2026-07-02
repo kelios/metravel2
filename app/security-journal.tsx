@@ -67,7 +67,7 @@ export default function SecurityJournalScreen() {
                                 accessibilityLabel="Назад"
                                 {...Platform.select({ web: { cursor: 'pointer' } })}
                             >
-                                <Feather name="arrow-left" size={16} color={colors.primary} />
+                                <Feather name="arrow-left" size={16} color={colors.primaryDark} />
                                 <Text style={styles.backToProfileButtonText}>Назад</Text>
                             </Pressable>
                         </View>

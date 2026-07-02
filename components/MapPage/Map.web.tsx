@@ -791,6 +791,16 @@ export const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
 
   if (prevProps.radius !== nextProps.radius) return false
 
+  // #207 host-stability (#217): the map is a stable host that never remounts, so a
+  // desktop↔mobile resize flips isMobile at the caller, toggling these props (mobile
+  // surfaces a bottom card / suppresses the Leaflet popup; desktop keeps the anchored
+  // popup). All three are referentially stable per isMobile value at the caller
+  // (useMapScreenController), so comparing identity here does not cause a render storm —
+  // it just lets the tap semantics switch immediately instead of waiting for a data change.
+  if (prevProps.suppressLeafletPopupOnSelect !== nextProps.suppressLeafletPopupOnSelect) return false
+  if (prevProps.onMarkerSelect !== nextProps.onMarkerSelect) return false
+  if (prevProps.onMapBackgroundTap !== nextProps.onMapBackgroundTap) return false
+
   const prevData = prevProps.travel?.data ?? []
   const nextData = nextProps.travel?.data ?? []
   if (prevData.length !== nextData.length) return false

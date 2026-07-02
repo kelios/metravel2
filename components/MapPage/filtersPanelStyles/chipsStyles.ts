@@ -250,6 +250,6 @@ export const getChipsStyles = ({ colors, isMobile }: FiltersPanelStyleContext) =
     categoriesToggleText: {
       fontSize: 12,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
     },
   }) as const

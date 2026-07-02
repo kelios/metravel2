@@ -61,7 +61,7 @@ function NewConversationPicker({
                         {item.avatar ? (
                             <Image source={{ uri: optimizeImageUrl(item.avatar, { width: 80, height: 80, quality: 70, format: 'auto', fit: 'cover' }) ?? item.avatar }} style={styles.avatarImage} />
                         ) : (
-                            <Feather name="user" size={20} color={colors.primary} />
+                            <Feather name="user" size={20} color={colors.primaryDark} />
                         )}
                     </View>
                     <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>

@@ -181,7 +181,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
       >
         <View style={[styles.checkbox, { borderColor: colors.border }]}>
           {isSelected && (
-            <Feather name="check" size={16} color={colors.primary} />
+            <Feather name="check" size={16} color={colors.primaryDark} />
           )}
         </View>
         <Text
@@ -284,7 +284,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
                 <Feather
                   name={isCreating ? 'loader' : 'plus-circle'}
                   size={18}
-                  color={colors.primary}
+                  color={colors.primaryDark}
                 />
                 <Text style={styles.createText} numberOfLines={1}>
                   {isCreating ? 'Добавление…' : `${createLabel} «${trimmedQuery}»`}

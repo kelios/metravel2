@@ -175,7 +175,7 @@ export function ProfileQuickActions({
         ]}
       >
         <View style={styles.iconPill}>
-          <Feather name={item.icon} size={15} color={colors.primary} />
+          <Feather name={item.icon} size={15} color={colors.primaryDark} />
         </View>
         <Text style={styles.chipLabel}>{item.title}</Text>
         {showBadge && (

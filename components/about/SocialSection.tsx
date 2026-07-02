@@ -25,7 +25,7 @@ export const SocialSection: React.FC<Props> = ({ onOpenInstagram }) => {
         accessibilityRole="button"
         accessibilityLabel="@metravelby в Instagram"
       >
-        <Feather name="instagram" size={24} color={colors.primary} />
+        <Feather name="instagram" size={24} color={colors.primaryDark} />
         <Text style={styles.socialText}>@metravelby</Text>
       </Pressable>
     </View>

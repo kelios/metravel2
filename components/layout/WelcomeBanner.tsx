@@ -151,7 +151,7 @@ function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
               onPress={() => router.push('/travel/new')}
               accessibilityLabel="Создать путешествие"
             >
-              <Feather name="plus" size={18} color={colors.primary} />
+              <Feather name="plus" size={18} color={colors.primaryDark} />
               <Text style={styles.primaryButtonText}>Создать путешествие</Text>
             </Pressable>
 
@@ -160,7 +160,7 @@ function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
               onPress={() => router.push('/map')}
               accessibilityLabel="Открыть карту"
             >
-              <Feather name="map" size={18} color={colors.primary} />
+              <Feather name="map" size={18} color={colors.primaryDark} />
               <Text style={styles.secondaryButtonText}>На карте</Text>
             </Pressable>
           </View>

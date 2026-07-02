@@ -77,7 +77,7 @@ const CompassDial = memo(function CompassDial({
         accessibilityLabel={spinning ? 'Подбираем маршруты' : 'Крутить рулетку'}
         accessibilityRole="button"
       >
-        <Feather name="compass" size={iconSize} color={colors.primary} style={{ marginBottom: 4 }} />
+        <Feather name="compass" size={iconSize} color={colors.primaryDark} style={{ marginBottom: 4 }} />
         <Text style={styles.rouletteCompassButtonTitle}>
           {spinning ? 'Крутим…' : 'Случайный маршрут'}
         </Text>
@@ -283,7 +283,7 @@ export default function RouletteScreen() {
                     onPress={toggleFilters}
                   >
                     <View style={styles.mobileFiltersHeaderRow}>
-                      <Feather name="filter" size={14} color={colors.primary} />
+                      <Feather name="filter" size={14} color={colors.primaryDark} />
                       <Text style={styles.mobileFiltersLabel} numberOfLines={1}>
                         {`Фильтры: ${filtersSummary}`}
                       </Text>
@@ -295,7 +295,7 @@ export default function RouletteScreen() {
                       style={styles.mobileFiltersResetButton}
                       onPress={handleClearAll}
                     >
-                      <Feather name="x-circle" size={16} color={colors.primary} />
+                      <Feather name="x-circle" size={16} color={colors.primaryDark} />
                     </Pressable>
                   )}
                 </View>
@@ -315,7 +315,7 @@ export default function RouletteScreen() {
             {showLoading && (
               <View style={styles.loaderBox}>
                 <Animated.View style={{ transform: [{ rotate: compassRotate }] }}>
-                  <Feather name="compass" size={40} color={colors.primary} />
+                  <Feather name="compass" size={40} color={colors.primaryDark} />
                 </Animated.View>
                 <Text style={[styles.loaderText, { marginTop: 12 }]}>Подбираем маршруты…</Text>
               </View>

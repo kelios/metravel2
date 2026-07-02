@@ -124,7 +124,7 @@ export default function ProfileSection({
                     {profile?.avatar && !settingsAvatarError ? (
                         <Image source={{ uri: optimizeImageUrl(profile.avatar, { width: 72, height: 72, quality: 70, format: 'auto', fit: 'cover' }) ?? profile.avatar }} style={styles.profileAvatarImage} resizeMode="cover" onError={() => setSettingsAvatarError(true)} />
                     ) : (
-                        <Feather name="user" size={18} color={colors.primary} />
+                        <Feather name="user" size={18} color={colors.primaryDark} />
                     )}
                 </View>
                 <View style={styles.cardText}>
@@ -141,9 +141,9 @@ export default function ProfileSection({
                         {...Platform.select({ web: { cursor: 'pointer' } })}
                     >
                         {profileLoading ? (
-                            <ActivityIndicator size="small" color={colors.primary} />
+                            <ActivityIndicator size="small" color={colors.primaryDark} />
                         ) : (
-                            <Feather name="refresh-cw" size={16} color={colors.primary} />
+                            <Feather name="refresh-cw" size={16} color={colors.primaryDark} />
                         )}
                     </Pressable>
                 </View>
@@ -317,7 +317,7 @@ export default function ProfileSection({
                                 <Text style={styles.themeOptionTitle}>{option.label}</Text>
                             </View>
                             {isSelected ? (
-                                <Feather name="check" size={16} color={colors.primary} />
+                                <Feather name="check" size={16} color={colors.primaryDark} />
                             ) : null}
                         </Pressable>
                     );

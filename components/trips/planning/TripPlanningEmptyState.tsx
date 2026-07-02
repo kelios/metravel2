@@ -81,7 +81,7 @@ const createStyles = (colors: ThemedColors) =>
     subheading: { fontSize: 15, color: colors.textSecondary, lineHeight: 21 },
     points: { gap: 8, marginVertical: 4 },
     pointRow: { flexDirection: 'row', gap: 8 },
-    bullet: { fontSize: 15, color: colors.primary, lineHeight: 20 },
+    bullet: { fontSize: 15, color: colors.primaryText, lineHeight: 20 },
     pointText: { flex: 1, fontSize: 14, color: colors.text, lineHeight: 20 },
     exampleCard: {
       marginTop: 4,

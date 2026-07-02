@@ -210,7 +210,7 @@ export default function SubscriptionsTabContent({
       {renderTabBar()}
       {isActiveLoading ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primaryDark} />
         </View>
       ) : activeTab === 'subscriptions' ? (
         renderSubscriptionsTab()
@@ -243,7 +243,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       ...(Platform.OS === 'web' ? WEB_CARD_SHADOW_STYLE : Platform.OS === 'android' ? { elevation: 1 } : {}),
     },
     tabText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
-    tabTextActive: { color: colors.primary },
+    tabTextActive: { color: colors.primaryText },
     searchContainer: {
       flexDirection: 'row',
       alignItems: 'center',

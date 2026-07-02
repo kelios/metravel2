@@ -92,7 +92,7 @@ function PublicTripsCatalog() {
 
         {isLoading ? (
           <View style={styles.center} testID="public-trips-loading">
-            <ActivityIndicator color={colors.primary} />
+            <ActivityIndicator color={colors.primaryDark} />
           </View>
         ) : isError ? (
           <Text style={styles.empty}>Не удалось загрузить каталог поездок.</Text>

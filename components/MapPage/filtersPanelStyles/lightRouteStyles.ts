@@ -25,7 +25,7 @@ export const getLightRouteStyles = ({ colors, isMobile }: FiltersPanelStyleConte
       height: 20,
       borderRadius: PILL_RADIUS,
       backgroundColor: colors.primarySoft,
-      color: colors.primary,
+      color: colors.primaryText,
       fontSize: 11,
       fontWeight: '700',
       textAlign: 'center',
@@ -42,7 +42,7 @@ export const getLightRouteStyles = ({ colors, isMobile }: FiltersPanelStyleConte
     lightStepBadge: {
       fontSize: 11,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
       backgroundColor: colors.primarySoft,
       paddingHorizontal: 10,
       paddingVertical: 3,

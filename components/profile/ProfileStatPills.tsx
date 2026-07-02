@@ -84,7 +84,7 @@ export function ProfileStatPills({ pills }: ProfileStatPillsProps) {
           {pill.value != null ? (
             <Text style={styles.value}>{formatValue(pill.value)}</Text>
           ) : (
-            <Feather name={pill.icon} size={18} color={colors.primary} />
+            <Feather name={pill.icon} size={18} color={colors.primaryDark} />
           )}
           <Text style={styles.label} numberOfLines={1}>
             {pill.label}

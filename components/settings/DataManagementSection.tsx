@@ -30,7 +30,7 @@ export default function DataManagementSection({
             <View style={styles.card}>
                 <View style={styles.cardRow}>
                     <View style={styles.cardIcon}>
-                        <Feather name="heart" size={18} color={colors.primary} />
+                        <Feather name="heart" size={18} color={colors.primaryDark} />
                     </View>
                     <View style={styles.cardText}>
                         <Text style={styles.cardTitle}>Избранное</Text>
@@ -53,7 +53,7 @@ export default function DataManagementSection({
             <View style={styles.card}>
                 <View style={styles.cardRow}>
                     <View style={styles.cardIcon}>
-                        <Feather name="clock" size={18} color={colors.primary} />
+                        <Feather name="clock" size={18} color={colors.primaryDark} />
                     </View>
                     <View style={styles.cardText}>
                         <Text style={styles.cardTitle}>История просмотров</Text>

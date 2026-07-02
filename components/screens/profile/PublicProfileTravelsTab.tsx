@@ -34,7 +34,7 @@ export function PublicProfileTravelsTab({
   if (isLoading) {
     return (
       <View style={styles.state}>
-        <ActivityIndicator size="small" color={colors.primary} />
+        <ActivityIndicator size="small" color={colors.primaryDark} />
       </View>
     );
   }
@@ -90,7 +90,7 @@ export function PublicProfileTravelsTab({
           {...Platform.select({ web: { cursor: 'pointer' } })}
         >
           <Text style={styles.viewAllButtonText}>Смотреть все ({total})</Text>
-          <Feather name="arrow-right" size={16} color={colors.primary} />
+          <Feather name="arrow-right" size={16} color={colors.primaryDark} />
         </Pressable>
       ) : null}
     </View>
@@ -139,6 +139,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     viewAllButtonText: {
       fontSize: 14,
       fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-      color: colors.primary,
+      color: colors.primaryText,
     },
   });

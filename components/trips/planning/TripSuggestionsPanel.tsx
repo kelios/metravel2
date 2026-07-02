@@ -61,7 +61,7 @@ function TripSuggestionsPanel({ trip }: Props) {
             <Feather
               name={ROUTE_POINT_ICON_NAME[point.type] as never}
               size={16}
-              color={colors.primary}
+              color={colors.primaryDark}
             />
           </View>
           <Text style={styles.pointType}>{ROUTE_POINT_LABEL[point.type]}</Text>
@@ -132,7 +132,7 @@ function TripSuggestionsPanel({ trip }: Props) {
       <Text style={styles.heading}>Предложенные точки</Text>
 
       {suggestionsQuery.isLoading ? (
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.primaryDark} />
       ) : (
         <>
           {pending.length ? (

@@ -200,7 +200,7 @@ function HomeInspirationSections() {
             <View style={styles.quickFiltersHeader}>
               <View style={styles.quickFiltersHeaderLeft}>
                 <View style={styles.quickFiltersBadge}>
-                  <Feather name="sliders" size={13} color={colors.primary} />
+                  <Feather name="sliders" size={13} color={colors.primaryDark} />
                   <Text style={styles.quickFiltersBadgeText}>Быстрый подбор</Text>
                 </View>
                 <Text style={styles.quickFiltersTitle}>

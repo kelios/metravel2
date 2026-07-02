@@ -141,7 +141,7 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
                                     <View style={styles.cardStats}>
                                         {stats.map((stat, index) => (
                                             <View key={index} style={styles.statItem}>
-                                                <Feather name="info" size={14} color={colors.primary} />
+                                                <Feather name="info" size={14} color={colors.primaryDark} />
                                                 <Text style={styles.statText}>{stat}</Text>
                                             </View>
                                         ))}
@@ -164,7 +164,7 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
                         </View>
 
                         <View style={styles.hint}>
-                            <Feather name="info" size={16} color={colors.primary} />
+                            <Feather name="info" size={16} color={colors.primaryDark} />
                             <Text style={styles.hintText}>
                                 Так ваше путешествие будет выглядеть в списке после публикации
                             </Text>

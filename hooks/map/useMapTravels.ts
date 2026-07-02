@@ -476,13 +476,21 @@ export function useMapTravels({
   // filterValues уже дебаунсится в useMapDataController (300ms) до передачи в
   // этот хук — внутренний useDebouncedValue давал бы двойную задержку.
   const filteredTravelsData = useMemo(() => {
-    const byCategories = filterTravelsByCategories(
-      allTravelsData,
-      filterValues.categoryTravelAddress
-    );
+    // Категории уже отфильтрованы бэкендом по ID (queryKey включает их) —
+    // повторный клиентский фильтр по точному имени резал бы валидные точки при
+    // расхождении формулировок. Клиентский фильтр — только fallback, когда
+    // имена не смапились в ID и бэкенд фильтр не получил.
+    const byCategories = normalizedCategoryTravelAddressIds.length
+      ? allTravelsData
+      : filterTravelsByCategories(allTravelsData, filterValues.categoryTravelAddress);
 
     return filterTravelsBySearchQuery(byCategories, filterValues.searchQuery);
-  }, [allTravelsData, filterValues.categoryTravelAddress, filterValues.searchQuery]);
+  }, [
+    allTravelsData,
+    normalizedCategoryTravelAddressIds.length,
+    filterValues.categoryTravelAddress,
+    filterValues.searchQuery,
+  ]);
 
   return useMemo(() => ({
     allTravelsData,

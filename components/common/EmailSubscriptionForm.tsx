@@ -65,7 +65,7 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
         <View style={styles.card}>
           <View style={styles.iconRow}>
             <View style={styles.iconWrap}>
-              <Feather name="mail" size={isMobile ? 20 : 22} color={colors.primary} />
+              <Feather name="mail" size={isMobile ? 20 : 22} color={colors.primaryDark} />
             </View>
           </View>
 
@@ -76,7 +76,7 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
 
           {succeeded ? (
             <View style={[styles.successRow, isMobile ? styles.fieldsMobile : styles.fieldsDesktop]}>
-              <Feather name="check-circle" size={18} color={colors.primary} />
+              <Feather name="check-circle" size={18} color={colors.primaryDark} />
               <Text style={styles.successText}>
                 {alreadyExists
                   ? 'Вы уже подписаны — спасибо, что с нами!'

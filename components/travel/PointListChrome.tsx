@@ -83,6 +83,7 @@ export const PointListPreview = React.memo(function PointListPreview({
 }: {
   colors: {
     primary: string;
+    primaryDark: string;
     textMuted: string;
   };
   hiddenPreviewCount: number;
@@ -124,12 +125,12 @@ export const PointListPreview = React.memo(function PointListPreview({
       )}
       <View style={styles.previewFooter}>
         <View style={styles.previewFooterLead}>
-          <Feather name="list" size={14} color={colors.primary} />
+          <Feather name="list" size={14} color={colors.primaryDark} />
           <Text style={styles.previewFooterText}>
             Открыть список: {pointsLabel}
           </Text>
         </View>
-        <Feather name="chevron-right" size={16} color={colors.primary} />
+        <Feather name="chevron-right" size={16} color={colors.primaryDark} />
       </View>
     </Pressable>
   );
@@ -184,6 +185,7 @@ export const PointListViewModeBar = React.memo(function PointListViewModeBar({
 }: {
   colors: {
     primary: string;
+    primaryDark: string;
     textMuted: string;
   };
   onSelect: (mode: 'cards' | 'list') => void;
@@ -231,7 +233,7 @@ type WebPointListRowProps = {
   onOpenMap: (coordStr: string) => void | Promise<void>;
   handleAddPoint: (point: PointLike) => void | Promise<void>;
   onPointCardPress?: (point: PointLike) => void;
-  colors: { primary: string; textMuted: string };
+  colors: { primary: string; primaryDark: string; textMuted: string };
   styles: Record<string, any>;
 };
 
@@ -306,6 +308,7 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
   addingPointId: string | null;
   colors: {
     primary: string;
+    primaryDark: string;
     textMuted: string;
   };
   getCategoryLabel: (raw: PointLike['categoryName'] | null | undefined) => string;
@@ -341,7 +344,7 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
         accessibilityLabel={`Показать ещё ${remaining} точек`}
       >
         <View style={styles.toggleRow}>
-          <Feather name="chevron-down" size={16} color={colors.primary} />
+          <Feather name="chevron-down" size={16} color={colors.primaryDark} />
           <Text style={styles.toggleText}>{`Показать ещё (${remaining})`}</Text>
         </View>
       </Pressable>

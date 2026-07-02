@@ -87,7 +87,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           color: colors.textMuted,
         },
         activeTabText: {
-          color: colors.primary,
+          color: colors.primaryText,
           fontWeight: DESIGN_TOKENS.typography.weights.bold as '700',
         },
         countBadge: {

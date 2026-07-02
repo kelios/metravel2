@@ -70,7 +70,7 @@ function HomeQuestsPromoSection() {
               : {})}
           >
             <Text style={styles.ctaText}>Все квесты</Text>
-            <Feather name="arrow-right" size={16} color={colors.primary} />
+            <Feather name="arrow-right" size={16} color={colors.primaryDark} />
           </Pressable>
         </View>
       </ResponsiveContainer>
@@ -97,12 +97,12 @@ function createStyles(colors: ThemedColors, isMobile: boolean) {
     title: {
       fontSize: isMobile ? 24 : 34,
       fontWeight: '800',
-      color: colors.text ?? '#1a1a1a',
+      color: colors.text,
       textAlign: 'center',
     },
     subtitle: {
       fontSize: isMobile ? 14 : 16,
-      color: colors.textMuted ?? '#6b7280',
+      color: colors.textMuted,
       textAlign: 'center',
       maxWidth: 560,
     },
@@ -129,18 +129,18 @@ function createStyles(colors: ThemedColors, isMobile: boolean) {
       paddingVertical: 12,
       borderRadius: 999,
       borderWidth: 1,
-      borderColor: colors.primaryAlpha30 ?? 'rgba(245,132,44,0.30)',
-      backgroundColor: colors.surface ?? '#fff',
+      borderColor: colors.primaryAlpha30,
+      backgroundColor: colors.surface,
       ...(IS_WEB ? { cursor: 'pointer' } : null),
     },
     ctaButtonHover: {
-      backgroundColor: colors.primarySoft ?? 'rgba(245,132,44,0.10)',
-      borderColor: colors.primary ?? '#f5842c',
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
     },
     ctaText: {
       fontSize: 15,
       fontWeight: '700',
-      color: colors.primary ?? '#f5842c',
+      color: colors.primaryText,
     },
   })
 }

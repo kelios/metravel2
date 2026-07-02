@@ -302,7 +302,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           flex: 1,
         },
         itemTextActive: {
-          color: colors.primary,
+          color: colors.primaryText,
           fontWeight: "800",
         },
         metaPill: {

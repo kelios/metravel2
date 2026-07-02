@@ -350,7 +350,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
 
         <View style={styles.cardHeader}>
           <View style={styles.iconCircle}>
-            <Feather name={step.icon} size={20} color={colors.primary} />
+            <Feather name={step.icon} size={20} color={colors.primaryDark} />
           </View>
           <Text style={styles.title}>{step.title}</Text>
         </View>

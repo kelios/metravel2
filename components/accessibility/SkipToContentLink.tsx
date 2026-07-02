@@ -8,6 +8,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface SkipToContentLinkProps {
   targetId?: string;
@@ -22,14 +23,15 @@ export const SkipToContentLink: React.FC<SkipToContentLinkProps> = ({
   initiallyVisible = false,
   autoFocusOnMount = false,
 }) => {
+  const colors = useThemedColors();
   const linkRef = useRef<HTMLAnchorElement | null>(null);
   const linkStyle = useMemo(
     () => ({
       position: 'absolute',
       top: 0,
       left: initiallyVisible ? '0' : '-9999px',
-      background: DESIGN_TOKENS.colors.text,
-      color: DESIGN_TOKENS.colors.textOnDark,
+      background: colors.text,
+      color: colors.textOnDark,
       padding: `${DESIGN_TOKENS.spacing.xs}px ${DESIGN_TOKENS.spacing.sm}px`,
       textDecoration: 'none',
       zIndex: DESIGN_TOKENS.zIndex.fixed,
@@ -38,7 +40,7 @@ export const SkipToContentLink: React.FC<SkipToContentLinkProps> = ({
       fontWeight: DESIGN_TOKENS.typography.weights.semibold,
       transition: `left ${DESIGN_TOKENS.animations.duration.normal}ms ${DESIGN_TOKENS.animations.easing.default}`,
     }),
-    [initiallyVisible]
+    [colors.text, colors.textOnDark, initiallyVisible]
   );
 
   useEffect(() => {

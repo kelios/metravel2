@@ -30,7 +30,7 @@ function UserRareAwardsSection({ userId, testID, style }: Props) {
   return (
     <View style={[styles.card, style]} testID={testID}>
       <View style={styles.headerRow}>
-        <Feather name="star" size={16} color={colors.primary} />
+        <Feather name="star" size={16} color={colors.primaryDark} />
         <Text style={styles.heading}>Редкие награды</Text>
       </View>
       <View style={styles.list}>

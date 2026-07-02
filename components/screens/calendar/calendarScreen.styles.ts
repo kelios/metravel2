@@ -118,7 +118,7 @@ export function createCalendarStyles(colors: ReturnType<typeof useThemedColors>,
     filterChipText: {
       fontSize: 13,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     listContent: {
       paddingHorizontal: 16,
@@ -212,7 +212,7 @@ export function createCalendarStyles(colors: ReturnType<typeof useThemedColors>,
       color: colors.surface,
     },
     emptyDateBadgeText: {
-      color: colors.primary,
+      color: colors.primaryText,
     },
     cardMetaStack: {
       gap: 3,

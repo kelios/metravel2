@@ -298,7 +298,7 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                 pressed && styles.actionButtonPressed,
               ]}
             >
-              <Feather name="mail" size={15} color={colors.primary} />
+              <Feather name="mail" size={15} color={colors.primaryDark} />
               {!isMobile && <Text style={styles.actionButtonAccentText}>Написать</Text>}
             </Pressable>
           )}
@@ -495,7 +495,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     actionButtonAccentText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
     },
   })
 

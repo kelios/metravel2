@@ -28,7 +28,7 @@ function SectionState({ isFetching, hasData, emptyText, children }: Props) {
   if (isFetching) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.primaryDark} />
       </View>
     )
   }

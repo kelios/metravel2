@@ -84,6 +84,11 @@ jest.mock('@/components/travel/details/sections/TravelPointsBlock', () => ({
   default: (props: any) => mockTravelPointsBlock(props),
 }))
 
+jest.mock('@/components/travel/details/sections/TravelRegisterCtaSection', () => ({
+  __esModule: true,
+  default: () => null,
+}))
+
 jest.mock('@/components/MapPage/MapPlaceBottomCard', () => {
   const React = require('react')
   const { Text, View } = require('react-native')

@@ -267,7 +267,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     if (isLoading) {
         return (
             <View style={styles.loaderContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
+                <ActivityIndicator size="large" color={colors.primaryDark} />
                 <Text style={styles.loadingText}>Загрузка фильтров...</Text>
             </View>
         );

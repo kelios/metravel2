@@ -34,7 +34,7 @@ function TripNotificationsList() {
   if (isLoading) {
     return (
       <View style={styles.center} testID="trip-notifications-loading">
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.primaryDark} />
       </View>
     );
   }
@@ -61,7 +61,7 @@ function TripNotificationsList() {
           testID={`trip-notification-${n.id}`}
         >
           <View style={styles.iconWrap}>
-            <Feather name={ICON[n.kind]} size={16} color={colors.primary} />
+            <Feather name={ICON[n.kind]} size={16} color={colors.primaryDark} />
           </View>
           <View style={styles.body}>
             <Text style={styles.message}>{n.message}</Text>

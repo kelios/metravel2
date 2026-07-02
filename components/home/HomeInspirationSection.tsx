@@ -453,7 +453,7 @@ function EmptyState({
         importantForAccessibility="no-hide-descendants"
         {...({ 'aria-hidden': true } as any)}
       >
-        <Feather name="compass" size={22} color={colors.primary} focusable={false as any} />
+        <Feather name="compass" size={22} color={colors.primaryDark} focusable={false as any} />
       </View>
       <View style={buildEmptyPillStyle(colors)}>
         <Text style={buildEmptyPillTextStyle(colors)}>Пока без совпадений</Text>

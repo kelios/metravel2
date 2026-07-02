@@ -135,7 +135,7 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
               <Feather
                 name={copy.icon as any}
                 size={isCompact ? 18 : isMobile ? 20 : 22}
-                color={colors.primary}
+                color={colors.primaryDark}
               />
             </View>
           </View>

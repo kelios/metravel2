@@ -47,13 +47,13 @@ function RankProgressCard({ rank, onPress, testID }: Props) {
     >
       <View style={styles.headerRow}>
         <View style={styles.titleWrap}>
-          <Feather name="trending-up" size={14} color={colors.primary} />
+          <Feather name="trending-up" size={14} color={colors.primaryDark} />
           <Text style={styles.headerTitle}>Ваш ранг</Text>
         </View>
         {onPress ? (
           <View style={styles.detailsCta}>
             <Text style={styles.detailsText}>Подробнее</Text>
-            <Feather name="chevron-right" size={14} color={colors.primary} />
+            <Feather name="chevron-right" size={14} color={colors.primaryDark} />
           </View>
         ) : null}
       </View>
@@ -103,7 +103,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
     detailsText: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     loadingRank: {
       flexDirection: 'row',

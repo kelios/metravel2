@@ -97,7 +97,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
       return (
         <View style={styles.container}>
           <View style={styles.header}>
-            <MapIcon name="star" size={20} color={colors.primary} />
+            <MapIcon name="star" size={20} color={colors.primaryDark} />
             <Text style={styles.title}>Популярное рядом</Text>
           </View>
           <View style={styles.cardStack}>
@@ -145,7 +145,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <MapIcon name="star" size={20} color={colors.primary} />
+          <MapIcon name="star" size={20} color={colors.primaryDark} />
           <Text style={styles.title}>Популярное рядом</Text>
         </View>
         <View style={styles.cardStack}>{cards}</View>

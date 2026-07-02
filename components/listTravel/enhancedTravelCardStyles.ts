@@ -19,7 +19,7 @@ const liveBlur = (radius: number) =>
     ? {}
     : { backdropFilter: `blur(${radius}px)`, WebkitBackdropFilter: `blur(${radius}px)` };
 
-const FROST_LIGHT = 'rgba(255, 255, 255, 0.75)';
+const FROST_LIGHT = 'var(--color-surfaceMuted)';
 
 // Создаем отдельные стили для web и native с правильными типами
 const webStyles: any = {

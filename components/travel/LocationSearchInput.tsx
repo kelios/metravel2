@@ -90,7 +90,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
                     autoCorrect={false}
                 />
                 {isLoading && (
-                    <ActivityIndicator size="small" color={colors.primary} style={styles.spinner} />
+                    <ActivityIndicator size="small" color={colors.primaryDark} style={styles.spinner} />
                 )}
                 {query.length > 0 && !isLoading && (
                     <Pressable
@@ -138,7 +138,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
                             ]}
                             onPress={() => handleResultSelect(result)}
                         >
-                            <Feather name="map-pin" size={16} color={colors.primary} style={styles.resultIcon} />
+                            <Feather name="map-pin" size={16} color={colors.primaryDark} style={styles.resultIcon} />
                             <View style={styles.resultTextContainer}>
                                 <Text style={styles.resultTitle} numberOfLines={1}>
                                     {result.display_name.split(',')[0]}

@@ -85,7 +85,7 @@ function QuestReviewsModal({ questId, visible, onClose }: Props) {
 
           {isLoading ? (
             <View style={styles.stateBox} testID="quest-reviews-loading">
-              <ActivityIndicator color={colors.primary} />
+              <ActivityIndicator color={colors.primaryDark} />
             </View>
           ) : isError ? (
             <View style={styles.stateBox} testID="quest-reviews-error">

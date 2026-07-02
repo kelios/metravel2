@@ -177,7 +177,7 @@ export default function QuestsMapScreen() {
     if (questsLoading) {
         return (
             <View style={styles.fallback}>
-                <ActivityIndicator color={colors.primary} />
+                <ActivityIndicator color={colors.primaryDark} />
                 <Text style={styles.fallbackText}>Загружаем карту квестов…</Text>
             </View>
         );
@@ -223,7 +223,7 @@ export default function QuestsMapScreen() {
             )}
             <Suspense fallback={
                 <View style={styles.fallback}>
-                    <ActivityIndicator color={colors.primary} />
+                    <ActivityIndicator color={colors.primaryDark} />
                 </View>
             }>
                 <LazyMap

@@ -215,7 +215,7 @@ const createStyles = (colors: ThemedColors) =>
     coordRow: { flexDirection: 'row', gap: 8 },
     coordInput: { flex: 1 },
     error: { color: colors.danger, fontSize: 13, fontWeight: '600' },
-    success: { color: colors.primary, fontSize: 13, fontWeight: '600' },
+    success: { color: colors.primaryText, fontSize: 13, fontWeight: '600' },
   });
 
 export default React.memo(TripSuggestPointForm);

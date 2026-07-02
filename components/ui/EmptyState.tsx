@@ -94,7 +94,7 @@ function EmptyState({
           <View style={styles.examplesList}>
             {examples.slice(0, 3).map((example, index) => (
               <View key={index} style={styles.exampleCard}>
-                <Feather name="map-pin" size={16} color={colors.primary} />
+                <Feather name="map-pin" size={16} color={colors.primaryDark} />
                 <Text style={styles.exampleTitle} numberOfLines={1}>
                   {example.title}
                 </Text>

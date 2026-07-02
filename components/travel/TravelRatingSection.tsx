@@ -401,7 +401,7 @@ const createStyles = (colors: any) =>
         },
         savingText: {
             fontSize: 13,
-            color: colors.primary,
+            color: colors.primaryText,
             fontWeight: '500',
         },
         successRow: {

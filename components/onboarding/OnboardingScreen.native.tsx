@@ -101,7 +101,7 @@ export default function OnboardingScreen() {
     <View style={styles.overlay} pointerEvents="auto">
       <View style={[styles.card, { maxWidth: cardMaxWidth }]}>
         <View style={styles.iconBadge}>
-          <Feather name={slide.icon} size={36} color={colors.primary} />
+          <Feather name={slide.icon} size={36} color={colors.primaryDark} />
         </View>
 
         <Text style={styles.title}>{slide.title}</Text>

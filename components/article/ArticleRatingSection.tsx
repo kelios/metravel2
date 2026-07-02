@@ -187,7 +187,7 @@ const createStyles = (colors: any) =>
         },
         savingText: {
             fontSize: 12,
-            color: colors.primary,
+            color: colors.primaryText,
             marginTop: 4,
         },
         loginHint: {

@@ -66,7 +66,7 @@ function CategoryChips({
         const icon = isSelected ? (
           <Feather name="x" size={14} color={colors.textOnPrimary} />
         ) : shouldShowIcon ? (
-          <Feather name={iconName as any} size={14} color={colors.primary} />
+          <Feather name={iconName as any} size={14} color={colors.primaryDark} />
         ) : undefined;
 
         return (

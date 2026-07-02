@@ -47,7 +47,7 @@ function PlaceFirstBadgesSection({ userId, testID, style }: Props) {
 
       {isLoading || !data ? (
         <View style={styles.loading}>
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={colors.primaryDark} />
         </View>
       ) : (
         <View style={styles.list}>

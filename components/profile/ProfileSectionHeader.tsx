@@ -42,7 +42,7 @@ function ProfileSectionHeader({
             pressed ? { opacity: 0.7 } : null,
           ]}
         >
-          <Feather name="chevron-left" size={14} color={colors.primary} />
+          <Feather name="chevron-left" size={14} color={colors.primaryDark} />
           <Text style={styles.crumbText}>{backLabel}</Text>
         </Pressable>
       ) : null}
@@ -69,7 +69,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
     crumbText: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     title: {
       fontSize: DESIGN_TOKENS.typography.sizes.lg,

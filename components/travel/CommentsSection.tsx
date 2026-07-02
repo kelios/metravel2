@@ -104,11 +104,11 @@ export function CommentsSection({
           {Object.keys(replies).length > 0 && (
             <View style={styles.threadControls}>
               <Pressable onPress={expandAllThreads} style={styles.threadControlButton} accessibilityLabel="Развернуть все треды">
-                <Feather name="maximize-2" size={16} color={colors.primary} />
+                <Feather name="maximize-2" size={16} color={colors.primaryDark} />
                 <Text style={styles.threadControlText}>Развернуть все</Text>
               </Pressable>
               <Pressable onPress={collapseAllThreads} style={styles.threadControlButton} accessibilityLabel="Свернуть все треды">
-                <Feather name="minimize-2" size={16} color={colors.primary} />
+                <Feather name="minimize-2" size={16} color={colors.primaryDark} />
                 <Text style={styles.threadControlText}>Свернуть все</Text>
               </Pressable>
             </View>
@@ -126,7 +126,7 @@ export function CommentsSection({
           {!isAuthenticated && (
             <Pressable onPress={handleLoginPress} style={styles.loginPrompt} accessibilityRole="button" accessibilityLabel="Войти, чтобы оставить комментарий">
               <View style={styles.loginPromptRow}>
-                <Feather name="log-in" size={18} color={colors.primary} />
+                <Feather name="log-in" size={18} color={colors.primaryDark} />
                 <Text style={styles.loginText}>Войдите, чтобы оставить комментарий</Text>
               </View>
             </Pressable>
@@ -142,7 +142,7 @@ export function CommentsSection({
             ) : topLevel.length === 0 ? (
               <View style={styles.emptyState}>
                 <View style={styles.emptyStateIconWrap}>
-                  <Feather name="message-circle" size={28} color={colors.primary} />
+                  <Feather name="message-circle" size={28} color={colors.primaryDark} />
                 </View>
                 <Text style={styles.emptyText}>Пока нет комментариев</Text>
                 <Text style={styles.emptySubtext}>

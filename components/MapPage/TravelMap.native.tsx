@@ -5,7 +5,7 @@ import { WebView } from 'react-native-webview'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
 import { LAYOUT } from '@/constants/layout'
-import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
+import { DESIGN_COLORS } from '@/constants/designSystem'
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { getSiteBaseUrl } from '@/utils/seo'
@@ -357,7 +357,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     <View style={[styles.container, containerStyle, { backgroundColor: colors.surface }]}>
       {isLoading && (
         <View style={[styles.loader, { backgroundColor: loaderOverlay }]}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primaryDark} />
         </View>
       )}
       <WebView
@@ -404,7 +404,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         animationType="slide"
         onRequestClose={() => setSelectedPoint(null)}
       >
-        <View style={styles.modalRoot}>
+        <View style={[styles.modalRoot, { backgroundColor: colors.background }]}>
           <MapPlaceBottomCard
             point={selectedPoint as any}
             userLocation={null}
@@ -423,7 +423,6 @@ const styles = StyleSheet.create({
     width: '100%',
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },
   centered: { alignItems: 'center', justifyContent: 'center' },
   webview: { flex: 1, width: '100%' },
@@ -435,7 +434,6 @@ const styles = StyleSheet.create({
   },
   modalRoot: {
     flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.background,
   },
 })
 

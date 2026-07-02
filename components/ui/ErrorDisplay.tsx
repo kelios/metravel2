@@ -232,7 +232,7 @@ export default function ErrorDisplay({
                 },
               })}
             >
-              <Feather name="mail" size={16} color={colors.primary} />
+              <Feather name="mail" size={16} color={colors.primaryDark} />
               <Text style={[styles.buttonText, styles.secondaryButtonText]}>
                 Связаться с поддержкой
               </Text>

@@ -214,7 +214,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       gap: 6,
     },
     selectedOrderStripIcon: {
-      color: colors.primary,
+      color: colors.primaryText,
     },
     selectedOrderStripLabel: {
       fontSize: 13,

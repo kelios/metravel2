@@ -164,7 +164,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
       borderColor: colors.primary,
     },
     favoriteButtonLabel: {
-      color: colors.primary,
+      color: colors.primaryText,
     },
     buttonLabelMobile: {
       fontSize: 14,
@@ -258,7 +258,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
             <Feather
               name="heart"
               size={18}
-              color={colors.primary}
+              color={colors.primaryDark}
             />
           }
           style={[

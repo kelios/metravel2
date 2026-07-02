@@ -60,7 +60,7 @@ const GroupedFiltersSection: React.FC<GroupedFiltersSectionProps> = ({
             >
                 <View style={styles.headerLeft}>
                     <View style={styles.iconWrapper}>
-                        <Feather name={group.iconName} size={18} color={colors.primary} />
+                        <Feather name={group.iconName} size={18} color={colors.primaryDark} />
                     </View>
                     <View style={styles.headerTextColumn}>
                         <View style={styles.titleRow}>

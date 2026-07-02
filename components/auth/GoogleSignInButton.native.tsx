@@ -147,7 +147,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     googleIcon: {
         fontSize: 14,
         fontWeight: '700',
-        color: colors.primary,
+        color: colors.primaryText,
     },
     text: {
         fontSize: 16,

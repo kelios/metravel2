@@ -117,7 +117,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
               </View>
             ) : iconName ? (
               <View style={styles.sectionHeaderIcon}>
-                <Icon name={iconName} size={18} color={colors.primary} />
+                <Icon name={iconName} size={18} color={colors.primaryDark} />
               </View>
             ) : null}
             <Text style={styles.sectionHeaderText}>{title}</Text>

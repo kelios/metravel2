@@ -49,7 +49,7 @@ export default function PlannedTripsScreen() {
             style={styles.communityLink}
             testID="plan-community-link"
           >
-            <Feather name="compass" size={14} color={colors.primary} />
+            <Feather name="compass" size={14} color={colors.primaryDark} />
             <Text style={styles.communityLinkText}>Маршруты сообщества</Text>
           </Pressable>
         </View>
@@ -95,7 +95,7 @@ const createStyles = (colors: ThemedColors) =>
     h1: { fontSize: 26, fontWeight: '800', color: colors.text },
     lead: { fontSize: 15, color: colors.textSecondary, lineHeight: 21 },
     communityLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    communityLinkText: { fontSize: 14, fontWeight: '600', color: colors.primary },
+    communityLinkText: { fontSize: 14, fontWeight: '600', color: colors.primaryText },
     list: { gap: 10 },
     loader: { marginVertical: 24 },
     error: { color: colors.danger, fontSize: 14, fontWeight: '600' },
