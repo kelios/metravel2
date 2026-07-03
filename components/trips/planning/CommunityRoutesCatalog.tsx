@@ -154,7 +154,9 @@ const createStyles = (colors: ThemedColors) =>
       borderColor: colors.primary,
       backgroundColor: colors.surfaceMuted,
     },
-    chipText: { fontSize: 13, color: colors.textSecondary, flexShrink: 0 },
+    // #672: базовый вес '600' — на Android normal-weight текст в чипе меряется
+    // Yoga уже, чем рендерится, и лейбл обрезается. Вес 600 меряется корректно.
+    chipText: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
     chipTextActive: { color: colors.primaryText, fontWeight: '600' },
     input: {
       borderWidth: 1,
