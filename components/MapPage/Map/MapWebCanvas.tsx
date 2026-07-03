@@ -161,6 +161,7 @@ type MapWebLeafletCanvasProps = {
   ) => void
   suppressLeafletPopupOnSelect?: boolean
   onMarkerInstance: (coord: string, marker: any | null) => void
+  onClusterTap?: () => void
   travelMarkerOpacity: number
 }
 
@@ -215,6 +216,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
   handleMarkerZoom,
   suppressLeafletPopupOnSelect = false,
   onMarkerInstance,
+  onClusterTap,
   travelMarkerOpacity,
 }) => {
   const { MapContainer, Marker, Popup, Tooltip, Circle, TileLayer, useMap, useMapEvents } = rl
@@ -410,6 +412,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
           suppressLeafletPopupOnSelect={suppressLeafletPopupOnSelect}
           onMarkerClick={handleMarkerZoom}
           onMarkerInstance={onMarkerInstance}
+          onClusterTap={onClusterTap}
           hintCenter={hintCenterLatLng}
         />
       ) : null}

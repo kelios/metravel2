@@ -50,6 +50,12 @@ const DEFAULT_ZOOM = 11
 const DEFAULT_MAX_ZOOM = 18
 const MARKER_ZOOM_TARGET = 14
 const MARKER_REOPEN_TIMEOUT_MS = 500
+// Touch tap → synthesized map `click` arrives a few ms after the marker/cluster
+// tap. Suppress background-tap dismissal within this window.
+const MARKER_TAP_GUARD_MS = 350
+// Vertical shift so a selected point is not hidden behind MapPlaceBottomCard when
+// no zoom is applied. Approximates the mobile card height + breathing room.
+const MOBILE_CARD_OFFSET_PX = 200
 const FALLBACK_COORDINATES = { latitude: 53.8828449, longitude: 27.7273595 }
 
 type Props = MapProps
@@ -155,6 +161,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const markerByCoordRef = useRef<Map<string, any>>(new Map())
   const markerReopenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Timestamp of the last marker/cluster tap. A touch tap synthesizes a map
+  // `click` (Leaflet's deprecated `tap` handler) that would otherwise fire
+  // `onMapBackgroundTap` and dismiss the freshly-selected place card. We ignore
+  // background taps within this window after a marker/cluster tap.
+  const lastMarkerTapAtRef = useRef(0)
   const wrapperRef = useRef<View | null>(null)
 
   const colors = useThemedColors()
@@ -296,6 +307,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
       if (!map) return
       if (!isValidCoordinate(coords.lat, coords.lng)) return
 
+      // Record the marker tap so the synthesized map `click` (touch `tap` handler)
+      // does not dismiss the card we are about to open.
+      lastMarkerTapAtRef.current = Date.now()
+
       const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : mapZoom
       const maxZoom = typeof map.getMaxZoom === 'function' ? map.getMaxZoom() : DEFAULT_MAX_ZOOM
       const focusPlan = getMarkerFocusPlan({ currentZoom, maxZoom, bottomSheetState })
@@ -309,8 +324,24 @@ const MapPageComponent: React.FC<Props> = (props) => {
         onMarkerSelect?.(point)
         // Close any popup that another path might have opened.
         safeInvoke(() => map?.closePopup?.())
-        if (focusPlan.shouldSkipZoom) return
+        // Cancel any in-flight cluster-zoom animation so our move wins cleanly.
+        safeInvoke(() => map?.stop?.())
         try {
+          if (focusPlan.shouldSkipZoom) {
+            // Already zoomed in enough (e.g. right after a cluster expand): don't
+            // re-zoom, but still center the point with an upward offset so the
+            // marker is not hidden behind MapPlaceBottomCard.
+            const target = [coords.lat, coords.lng] as [number, number]
+            if (typeof map.project === 'function' && typeof map.unproject === 'function') {
+              const projected = map.project(target, currentZoom)
+              projected.y += MOBILE_CARD_OFFSET_PX / 2
+              const shifted = map.unproject(projected, currentZoom)
+              map.panTo(shifted, { animate: true, duration: 0.3 } as any)
+            } else if (typeof map.panTo === 'function') {
+              map.panTo(target, { animate: true, duration: 0.3 } as any)
+            }
+            return
+          }
           if (typeof map.flyTo === 'function') {
             map.flyTo([coords.lat, coords.lng], focusPlan.targetZoom, {
               animate: true,
@@ -400,6 +431,12 @@ const MapPageComponent: React.FC<Props> = (props) => {
     } else {
       markerByCoordRef.current.delete(coord)
     }
+  }, [])
+
+  // Stamped by MarkerClusterGroup on a cluster tap so the synthesized map `click`
+  // (touch `tap` handler) does not immediately dismiss the mobile place card.
+  const handleClusterTap = useCallback(() => {
+    lastMarkerTapAtRef.current = Date.now()
   }, [])
 
   useEffect(() => {
@@ -500,8 +537,19 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const handleMapClick = useCallback(
     (e: any) => {
-      // #207 — tapping the empty map dismisses the mobile place card.
-      onMapBackgroundTap?.()
+      // #207 — tapping the empty map dismisses the mobile place card, BUT a touch
+      // tap on a marker/cluster synthesizes a map `click` (Leaflet `tap` handler)
+      // that must NOT dismiss the just-selected card. Guard on both the DOM target
+      // (tap landed on a marker/cluster icon) and a short time window after the
+      // last marker/cluster tap (ghost-click races the icon hit-test).
+      const target = e?.originalEvent?.target as HTMLElement | undefined
+      const hitMarker =
+        typeof target?.closest === 'function' &&
+        !!target.closest('.leaflet-marker-icon, .metravel-cluster-icon')
+      const withinTapGuard = Date.now() - lastMarkerTapAtRef.current < MARKER_TAP_GUARD_MS
+      if (!hitMarker && !withinTapGuard) {
+        onMapBackgroundTap?.()
+      }
       if (mode !== 'route') return
       try {
         const { lat, lng } = e.latlng
@@ -731,6 +779,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         handleMarkerZoom={handleMarkerZoom}
         suppressLeafletPopupOnSelect={suppressLeafletPopupOnSelect}
         onMarkerInstance={handleMarkerInstance}
+        onClusterTap={handleClusterTap}
         travelMarkerOpacity={travelMarkerOpacity}
       />
 

@@ -27,6 +27,7 @@ const ONLY_QUEST_ID = onlyQuestIdArg ? onlyQuestIdArg.split('=').slice(1).join('
 const ASSETS_DIR = path.resolve(__dirname, '..', 'assets', 'quests');
 
 const QUEST_COVERS = [
+  { quest_id: 'oshmyany-crossroads', assetsDir: 'oshmyanyCrossroads', cover: 'cover.png' },
   { quest_id: 'grodno-royal', assetsDir: 'grodnoRoyal', cover: 'cover.png' },
   { quest_id: 'brest-fortress', assetsDir: 'brestFortress', cover: 'cover.png' },
   { quest_id: 'vitebsk-chagall', assetsDir: 'vitebskChagall', cover: 'cover.png' },
@@ -58,6 +59,9 @@ const QUEST_COVERS = [
   { quest_id: 'batumi-golden-fleece', assetsDir: 'batumiGoldenFleece', cover: 'cover.png' },
   { quest_id: 'bobruisk-beaver-odessa', assetsDir: 'bobruiskBeaverOdessa', cover: 'cover.png' },
   { quest_id: 'budapest-two-cities', assetsDir: 'budapestTwoCities', cover: 'cover.png' },
+  { quest_id: 'kutaisi-golden-age', assetsDir: 'kutaisiGoldenAge', cover: 'cover.png' },
+  { quest_id: 'antalya-kaleici', assetsDir: 'antalyaKaleici', cover: 'cover.png' },
+  { quest_id: 'istanbul-galata', assetsDir: 'istanbulGalata', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {

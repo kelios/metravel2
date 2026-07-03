@@ -119,7 +119,8 @@
           "color": "#7a9d8f",
           "defaultChannel": "updates"
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "tsconfigPaths": true,

@@ -78,6 +78,10 @@ const QUESTS = [
     { questId: 'batumi-golden-fleece', dir: 'batumiGoldenFleece', city: 'Батуми', mood: 'city', finaleId: 41 },
     { questId: 'bobruisk-beaver-odessa', dir: 'bobruiskBeaverOdessa', city: 'Бобруйск', mood: 'city', finaleId: 42 },
     { questId: 'budapest-two-cities', dir: 'budapestTwoCities', city: 'Будапешт', mood: 'epic', finaleId: 43 },
+    { questId: 'oshmyany-crossroads', dir: 'oshmyanyCrossroads', city: 'Ошмяны', mood: 'city', finaleId: 44 },
+    { questId: 'kutaisi-golden-age', dir: 'kutaisiGoldenAge', city: 'Кутаиси', mood: 'city', finaleId: 45 },
+    { questId: 'antalya-kaleici', dir: 'antalyaKaleici', city: 'Анталья', mood: 'city', finaleId: 46 },
+    { questId: 'istanbul-galata', dir: 'istanbulGalata', city: 'Стамбул', mood: 'city', finaleId: 47 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

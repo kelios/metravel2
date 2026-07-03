@@ -56,6 +56,8 @@ interface MarkerClusterGroupProps {
   ) => void
   /** Register marker ref by coord string */
   onMarkerInstance?: (coord: string, marker: any | null) => void
+  /** Notify parent that a cluster was tapped (tap-guard for background dismiss) */
+  onClusterTap?: () => void
   /** Hint for coordinate parsing (lng/lat swap) */
   hintCenter?: { lat: number; lng: number } | null
 }
@@ -232,6 +234,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
   suppressLeafletPopupOnSelect = false,
   onMarkerClick,
   onMarkerInstance,
+  onClusterTap,
   hintCenter,
 }) => {
   const map = useMap()
@@ -250,10 +253,12 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
   // destroy+rebuild маркеров и закрывал открытый попап на КАЖДЫЙ рендер родителя.
   const onMarkerClickRef = useRef(onMarkerClick)
   const onMarkerInstanceRef = useRef(onMarkerInstance)
+  const onClusterTapRef = useRef(onClusterTap)
   const popupPropsRef = useRef(popupProps)
   useEffect(() => {
     onMarkerClickRef.current = onMarkerClick
     onMarkerInstanceRef.current = onMarkerInstance
+    onClusterTapRef.current = onClusterTap
     popupPropsRef.current = popupProps
   })
 
@@ -338,10 +343,14 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     const handleClusterClick = (event: any) => {
       try {
         event?.originalEvent?.preventDefault?.()
+        // Stop at the Leaflet layer level too so the synthesized touch `tap`
+        // does not bubble a map `click` that dismisses the place card.
+        L?.DomEvent?.stopPropagation?.(event)
         event?.originalEvent?.stopPropagation?.()
       } catch {
         // noop
       }
+      onClusterTapRef.current?.()
       runClusterClick(map, event?.layer)
     }
 
@@ -475,6 +484,9 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       // Click handler
       marker.on('click', (e: any) => {
         try {
+          // Stop at the Leaflet layer level too so the synthesized touch `tap`
+          // does not bubble a map `click` that dismisses the place card.
+          L?.DomEvent?.stopPropagation?.(e)
           e?.originalEvent?.stopPropagation?.()
         } catch {
           // noop
