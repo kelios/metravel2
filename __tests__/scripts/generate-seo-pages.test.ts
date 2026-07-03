@@ -450,9 +450,30 @@ describe('stripHtml', () => {
     expect(stripHtml('  hello   world  ')).toBe('hello world');
   });
 
-  it('truncates to maxLength', () => {
+  it('truncates a single long token by hard cut (no word boundary available)', () => {
     const long = 'a'.repeat(200);
     expect(stripHtml(long, 100).length).toBe(100);
+  });
+
+  it('truncates on a word boundary without cutting mid-word', () => {
+    const text = 'Прогулка по старому городу с чистыми улицами и уютными кафе повсюду';
+    const out = stripHtml(text, 30);
+    expect(out.length).toBeLessThanOrEqual(30);
+    // Ends on a whole word — no dangling partial token like "с чист"
+    expect(text.startsWith(out)).toBe(true);
+    expect(out.endsWith(' ')).toBe(false);
+    expect(out).toBe('Прогулка по старому городу с');
+  });
+
+  it('drops trailing punctuation/dashes after the word cut', () => {
+    const text = 'Озеро глубиной 11,5 м — оно самое глубокое в регионе бесспорно';
+    const out = stripHtml(text, 24);
+    expect(out).toBe('Озеро глубиной 11,5 м');
+    expect(/[\s,;:–—-]$/.test(out)).toBe(false);
+  });
+
+  it('returns full text unchanged when shorter than maxLength', () => {
+    expect(stripHtml('Короткий текст', 160)).toBe('Короткий текст');
   });
 
   it('returns empty string for falsy input', () => {

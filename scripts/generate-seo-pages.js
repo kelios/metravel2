@@ -93,7 +93,15 @@ function stripHtml(html, maxLength = 160) {
     .replace(/&#039;/gi, "'")
     .replace(/\s+/g, ' ')
     .trim();
-  return plain.slice(0, maxLength) || '';
+  if (plain.length <= maxLength) return plain;
+  // Truncate on a word boundary: cut back to the last space within the limit
+  // so the meta description ends on a whole word, then drop any trailing
+  // punctuation/dashes. Falls back to the hard cut when there is no space
+  // (single very long token).
+  const cut = plain.slice(0, maxLength);
+  const lastSpace = cut.lastIndexOf(' ');
+  const onWord = lastSpace > 0 ? cut.slice(0, lastSpace) : cut;
+  return onWord.replace(/[\s,;:–—-]+$/, '') || cut;
 }
 
 function toAbsoluteUrl(input) {
