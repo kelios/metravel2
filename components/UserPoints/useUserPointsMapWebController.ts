@@ -41,6 +41,21 @@ export function useUserPointsMapWebController({
     return { color: colors.primary, weight: 4, opacity: 0.85 } as any
   }, [colors.primary])
 
+  // Стабильная пустая ссылка — свежий [] на каждый рендер иначе пересобирал бы
+  // GPX/KML-колбэки в useMapApi и вместе с ними весь api-объект.
+  const emptyRoutePoints = React.useMemo<[number, number][]>(() => [], [])
+
+  // Стабилизируем userLocation по числовым lat/lng — иначе новый объектный литерал
+  // на каждый рендер менял бы identity зависимости useMapApi → api пересобирался бы
+  // каждый рендер → эффект доставки дергал бы onMapUiApiReady(setMapUiApi) → новый
+  // рендер → бесконечный цикл "Maximum update depth exceeded" (усиленный 2600+ маркерами).
+  const userLocation = React.useMemo(() => {
+    const lat = Number(centerOverride?.lat)
+    const lng = Number(centerOverride?.lng)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    return { lat, lng }
+  }, [centerOverride?.lat, centerOverride?.lng])
+
   const { leafletBaseLayerRef, leafletOverlayLayersRef, leafletControlRef } = useMapInstance({
     map: mapInstance,
     L: mods?.L,
@@ -271,8 +286,8 @@ export function useUserPointsMapWebController({
     L: mods?.L,
     onMapUiApiReady,
     travelData,
-    userLocation: centerOverride ? { lat: centerOverride.lat, lng: centerOverride.lng } : null,
-    routePoints: [],
+    userLocation,
+    routePoints: emptyRoutePoints,
     leafletBaseLayerRef,
     leafletOverlayLayersRef,
     leafletControlRef,
