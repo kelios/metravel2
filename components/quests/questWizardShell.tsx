@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -68,6 +68,62 @@ type QuestHeaderPanelProps = NavigationSharedProps & {
   ratingSlot?: React.ReactNode
   completionSlot?: React.ReactNode
   pioneerSlot?: React.ReactNode
+}
+
+type QuestActionButtonProps = {
+  styles: any
+  label: string
+  accessibilityLabel: string
+  iconName: React.ComponentProps<typeof Feather>['name']
+  iconColor: string
+  onPress: () => void
+  disabled?: boolean
+  hitSlop?: number
+  baseStyle: any
+  showLabel: boolean
+  textStyle?: any
+  iconSize?: number
+}
+
+function QuestActionButton({
+  styles,
+  label,
+  accessibilityLabel,
+  iconName,
+  iconColor,
+  onPress,
+  disabled,
+  hitSlop,
+  baseStyle,
+  showLabel,
+  textStyle,
+  iconSize = 15,
+}: QuestActionButtonProps) {
+  const [tooltipVisible, setTooltipVisible] = useState(false)
+  const showTooltip = Platform.OS === 'web' && !showLabel && tooltipVisible
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[baseStyle, !showLabel && styles.actionIconButton]}
+      disabled={disabled}
+      hitSlop={hitSlop}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onHoverIn={() => setTooltipVisible(true)}
+      onHoverOut={() => setTooltipVisible(false)}
+      onFocus={() => setTooltipVisible(true)}
+      onBlur={() => setTooltipVisible(false)}
+    >
+      <Feather name={iconName} size={iconSize} color={iconColor} />
+      {showLabel && <Text style={textStyle}>{label}</Text>}
+      {showTooltip && (
+        <Text pointerEvents="none" style={styles.actionTooltip}>
+          {label}
+        </Text>
+      )}
+    </Pressable>
+  )
 }
 
 function ActiveScrollNav({
@@ -158,6 +214,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     pioneerSlot,
     showExcursions = true,
   } = props
+  const iconOnlyActions = Platform.OS === 'web'
 
   return (
     <View style={styles.compactSidebar}>
@@ -167,45 +224,54 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
         {ratingSlot ?? null}
         {completionSlot ?? null}
         <View style={styles.compactSidebarActions}>
-          <Pressable
-            onPress={onPrintDownload}
-            style={styles.actionLabelButton}
-            accessibilityRole="button"
+          <QuestActionButton
+            styles={styles}
+            label="Печать"
             accessibilityLabel="Печать квеста"
-          >
-            <Feather name="download" size={15} color={colors.textMuted} />
-            <Text style={styles.actionLabelText}>Печать</Text>
-          </Pressable>
-          <Pressable
-            onPress={onOfflineMapDownload}
-            style={styles.actionLabelButton}
-            disabled={offlineMapPointsCount === 0}
-            accessibilityRole="button"
+            iconName="download"
+            iconColor={colors.textMuted}
+            onPress={onPrintDownload}
+            baseStyle={styles.actionLabelButton}
+            showLabel={!iconOnlyActions}
+            textStyle={styles.actionLabelText}
+          />
+          <QuestActionButton
+            styles={styles}
+            label="Скачать GPX"
             accessibilityLabel={`Скачать GPX с ${offlineMapPointsCount} точками квеста`}
-          >
-            <Feather name="download" size={15} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
-            <Text style={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}>Скачать GPX</Text>
-          </Pressable>
-          <Pressable
-            onPress={onOfflineMapOpenInApp}
-            style={styles.actionLabelButton}
+            iconName="download"
+            iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
+            onPress={onOfflineMapDownload}
             disabled={offlineMapPointsCount === 0}
-            accessibilityRole="button"
+            baseStyle={styles.actionLabelButton}
+            showLabel={!iconOnlyActions}
+            textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
+          />
+          <QuestActionButton
+            styles={styles}
+            label="Открыть в приложении"
             accessibilityLabel="Открыть точки квеста в приложении карт"
-          >
-            <Feather name="external-link" size={15} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
-            <Text style={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}>Открыть в приложении</Text>
-          </Pressable>
-          <Pressable
-            onPress={onReset}
-            style={styles.resetButton}
-            hitSlop={12}
-            accessibilityRole="button"
+            iconName="external-link"
+            iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
+            onPress={onOfflineMapOpenInApp}
+            disabled={offlineMapPointsCount === 0}
+            baseStyle={styles.actionLabelButton}
+            showLabel={!iconOnlyActions}
+            textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
+          />
+          <QuestActionButton
+            styles={styles}
+            label="Сбросить"
             accessibilityLabel="Сбросить прогресс"
-          >
-            <Feather name="rotate-ccw" size={13} color={colors.textMuted} />
-            <Text style={styles.resetText}>Сбросить</Text>
-          </Pressable>
+            iconName="rotate-ccw"
+            iconColor={colors.textMuted}
+            onPress={onReset}
+            baseStyle={styles.resetButton}
+            showLabel={!iconOnlyActions}
+            textStyle={styles.resetText}
+            hitSlop={12}
+            iconSize={13}
+          />
         </View>
       </View>
 
@@ -297,6 +363,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
   } = props
 
   const wideDesktop = screenW >= 1100
+  const showActionLabels = Platform.OS !== 'web' && !isMobile
 
   return (
     <View style={styles.header}>
@@ -311,46 +378,55 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
         </View>
         <View style={styles.headerActionRow}>
           {Platform.OS === 'web' && (
-            <Pressable
-              onPress={onPrintDownload}
-              style={[styles.actionLabelButton, isMobile && styles.actionIconButton]}
-              accessibilityRole="button"
+            <QuestActionButton
+              styles={styles}
+              label="Печать"
               accessibilityLabel="Печать квеста"
-            >
-              <Feather name="download" size={15} color={colors.textMuted} />
-              {!isMobile && <Text style={styles.actionLabelText}>Печать</Text>}
-            </Pressable>
+              iconName="download"
+              iconColor={colors.textMuted}
+              onPress={onPrintDownload}
+              baseStyle={styles.actionLabelButton}
+              showLabel={showActionLabels}
+              textStyle={styles.actionLabelText}
+            />
           )}
-          <Pressable
-            onPress={onOfflineMapDownload}
-            style={[styles.actionLabelButton, isMobile && styles.actionIconButton]}
-            disabled={offlineMapPointsCount === 0}
-            accessibilityRole="button"
+          <QuestActionButton
+            styles={styles}
+            label="Скачать GPX"
             accessibilityLabel={`Скачать GPX с ${offlineMapPointsCount} точками квеста`}
-          >
-            <Feather name="download" size={15} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
-            {!isMobile && <Text style={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}>Скачать GPX</Text>}
-          </Pressable>
-          <Pressable
-            onPress={onOfflineMapOpenInApp}
-            style={[styles.actionLabelButton, isMobile && styles.actionIconButton]}
+            iconName="download"
+            iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
+            onPress={onOfflineMapDownload}
             disabled={offlineMapPointsCount === 0}
-            accessibilityRole="button"
+            baseStyle={styles.actionLabelButton}
+            showLabel={showActionLabels}
+            textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
+          />
+          <QuestActionButton
+            styles={styles}
+            label="Открыть в приложении"
             accessibilityLabel="Открыть точки квеста в приложении карт"
-          >
-            <Feather name="external-link" size={15} color={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted} />
-            {!isMobile && <Text style={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}>Открыть в приложении</Text>}
-          </Pressable>
-          <Pressable
-            onPress={onReset}
-            style={[styles.resetButton, isMobile && styles.actionIconButton]}
-            hitSlop={12}
-            accessibilityRole="button"
+            iconName="external-link"
+            iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
+            onPress={onOfflineMapOpenInApp}
+            disabled={offlineMapPointsCount === 0}
+            baseStyle={styles.actionLabelButton}
+            showLabel={showActionLabels}
+            textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
+          />
+          <QuestActionButton
+            styles={styles}
+            label="Сбросить"
             accessibilityLabel="Сбросить прогресс"
-          >
-            <Feather name="rotate-ccw" size={13} color={colors.textMuted} />
-            {!isMobile && <Text style={styles.resetText}>Сбросить</Text>}
-          </Pressable>
+            iconName="rotate-ccw"
+            iconColor={colors.textMuted}
+            onPress={onReset}
+            baseStyle={styles.resetButton}
+            showLabel={showActionLabels}
+            textStyle={styles.resetText}
+            hitSlop={12}
+            iconSize={13}
+          />
         </View>
       </View>
 

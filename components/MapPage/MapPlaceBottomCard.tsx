@@ -186,6 +186,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   if (!point) return null
 
   const bottomContentInset = IS_WEB ? bottomChromeInset + 12 : 12
+  const visibleViewportHeight = 'var(--metravel-map-vh, 100svh)'
 
   // On web, close via a NATIVE DOM handler instead of relying solely on RN-Web's
   // `onPress`. RN-Web synthesises `onPress` through its responder system over
@@ -243,8 +244,8 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
           style={[
             styles.sheetCard,
             {
-              height: `calc(100dvh - ${topChromeInset + bottomChromeInset}px)`,
-              maxHeight: `calc(100dvh - ${topChromeInset + bottomChromeInset}px)`,
+              height: `calc(${visibleViewportHeight} - ${topChromeInset + bottomChromeInset}px)`,
+              maxHeight: `calc(${visibleViewportHeight} - ${topChromeInset + bottomChromeInset}px)`,
               marginTop: topChromeInset,
               marginBottom: bottomChromeInset,
               paddingTop: insets?.top ?? 0,

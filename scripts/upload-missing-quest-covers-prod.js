@@ -55,6 +55,9 @@ const QUEST_COVERS = [
   { quest_id: 'tbilisi-warm-city', assetsDir: 'tbilisiWarmCity', cover: 'cover.png' },
   { quest_id: 'istanbul-empires', assetsDir: 'istanbulEmpires', cover: 'cover.png' },
   { quest_id: 'novogrudok-crown', assetsDir: 'novogrudokCrown', cover: 'cover.png' },
+  { quest_id: 'batumi-golden-fleece', assetsDir: 'batumiGoldenFleece', cover: 'cover.png' },
+  { quest_id: 'bobruisk-beaver-odessa', assetsDir: 'bobruiskBeaverOdessa', cover: 'cover.png' },
+  { quest_id: 'budapest-two-cities', assetsDir: 'budapestTwoCities', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {

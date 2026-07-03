@@ -235,11 +235,22 @@ export function useListTravelFilters({
 
   const handleToggleCategory = useCallback((categoryName: string) => {
     const currentCategories = filter.categories || [];
-    const newCategories = currentCategories.includes(categoryName)
-      ? currentCategories.filter((c): c is string | number => c !== categoryName)
-      : [...currentCategories, categoryName];
+    const categoryOption = options?.categories?.find((option) => option.name === categoryName);
+    const categoryId = categoryOption ? Number(categoryOption.id) : null;
+    const isSelected = currentCategories.some((category) => {
+      if (category === categoryName) return true;
+      if (categoryId === null || !Number.isFinite(categoryId)) return false;
+      return Number(category) === categoryId;
+    });
+    const newCategories = isSelected
+      ? currentCategories.filter((category): category is string | number => {
+          if (category === categoryName) return false;
+          if (categoryId === null || !Number.isFinite(categoryId)) return true;
+          return Number(category) !== categoryId;
+        })
+      : [...currentCategories, categoryId !== null && Number.isFinite(categoryId) ? categoryId : categoryName];
     onSelect('categories', newCategories);
-  }, [filter.categories, onSelect]);
+  }, [filter.categories, onSelect, options?.categories]);
 
   return {
     filter,

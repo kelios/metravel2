@@ -1,5 +1,5 @@
 import React from 'react'
-import { Platform } from 'react-native'
+import { Platform, StyleSheet, View } from 'react-native'
 
 const renderer = require('react-test-renderer')
 
@@ -72,6 +72,33 @@ describe('MapPlaceBottomCard', () => {
     const close = tree.root.findByProps({ testID: 'map-place-bottom-card-close' })
     expect(close).toBeTruthy()
     expect(tree.root.findByProps({ testID: 'mock-popup-content' })).toBeTruthy()
+  })
+
+  it('sizes mobile web sheet to the measured viewport and the bottom footer edge', () => {
+    require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }))
+
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <MapPlaceBottomCard
+          point={point}
+          userLocation={null}
+          onClose={jest.fn()}
+          topInset={20}
+          bottomInset={56}
+        />,
+      )
+    })
+
+    const sheet = tree.root.findAllByType(View).find((node: any) => {
+      const style = StyleSheet.flatten(node.props.style)
+      return style?.height === 'calc(var(--metravel-map-vh, 100svh) - 76px)'
+    })
+    const sheetStyle = StyleSheet.flatten(sheet?.props.style)
+
+    expect(sheetStyle?.maxHeight).toBe('calc(var(--metravel-map-vh, 100svh) - 76px)')
+    expect(sheetStyle?.marginTop).toBe(20)
+    expect(sheetStyle?.marginBottom).toBe(56)
   })
 
   it('calls onClose from the fullscreen close button', () => {

@@ -7,7 +7,7 @@ test.describe('Travel details should not flash Home', () => {
 
     // Force deterministic slow details load.
     let requestCount = 0;
-    await page.route('**/api/travels/by-slug/**', async (route: any, request: any) => {
+    const routeHandler = async (route: any, request: any) => {
       if (request.method() !== 'GET') {
         await route.continue();
         return;
@@ -42,6 +42,8 @@ test.describe('Travel details should not flash Home', () => {
         plus: '',
         minus: '',
         userIds: '',
+        publish: true,
+        moderation: true,
       };
 
       await route.fulfill({
@@ -49,7 +51,10 @@ test.describe('Travel details should not flash Home', () => {
         contentType: 'application/json',
         body: JSON.stringify(mocked),
       });
-    });
+    };
+
+    await page.route('**/api/travels/by-slug/**', routeHandler);
+    await page.route('**/travels/by-slug/**', routeHandler);
 
     await page.goto('/travels/e2e-no-flicker', { waitUntil: 'domcontentloaded' });
 

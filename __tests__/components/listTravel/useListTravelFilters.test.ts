@@ -9,7 +9,10 @@ const makeOptions = () => ({
   transports: [
     { id: '10', name: 'Авто' },
   ],
-  categoryTravelAddress: [] as { id: string; name: string }[],
+  categoryTravelAddress: [
+    { id: '84', name: 'Озеро' },
+    { id: '110', name: 'Река' },
+  ],
   companions: [] as { id: string; name: string }[],
   complexity: [] as { id: string; name: string }[],
   month: [] as { id: string; name: string }[],
@@ -66,18 +69,26 @@ describe('useListTravelFilters', () => {
     });
   });
 
-  it('maps textual categories to numeric ids for queryParams', () => {
+  it('maps textual categories to numeric ids for filter state and queryParams', () => {
     const { result } = setup();
 
     act(() => {
       result.current.onSelect('categories', ['Горы', '2']);
     });
 
-    // В filter должны остаться исходные значения
-    expect(result.current.filter.categories).toEqual(['Горы', '2']);
-
-    // В queryParams категории должны быть приведены к числам по id
+    expect(result.current.filter.categories).toEqual([2, 1]);
     expect(result.current.queryParams.categories).toEqual([1, 2]);
+  });
+
+  it('maps textual point categories to numeric ids for filter state and queryParams', () => {
+    const { result } = setup();
+
+    act(() => {
+      result.current.onSelect('categoryTravelAddress', ['Озеро', '110']);
+    });
+
+    expect(result.current.filter.categoryTravelAddress).toEqual([110, 84]);
+    expect(result.current.queryParams.categoryTravelAddress).toEqual([84, 110]);
   });
 
   it('keeps year as non-empty trimmed string and drops empty year', () => {
@@ -120,7 +131,7 @@ describe('useListTravelFilters', () => {
     act(() => {
       result.current.handleToggleCategory('Горы');
     });
-    expect(result.current.filter.categories).toEqual(['Горы']);
+    expect(result.current.filter.categories).toEqual([1]);
 
     act(() => {
       result.current.handleToggleCategory('Горы');

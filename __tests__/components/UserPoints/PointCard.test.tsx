@@ -1,28 +1,49 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Text, View } from 'react-native';
+
 import { PointCard } from '@/components/UserPoints/PointCard';
 import { PointStatus } from '@/types/userPoints';
 import type { ImportedPoint } from '@/types/userPoints';
+
+const mockPlaceListCard = jest.fn((props: any) => {
+  const React = require('react');
+  return (
+    <View testID={props.testID ?? 'mock-place-list-card'}>
+      <Text>{props.title}</Text>
+      {props.categoryLabel ? <Text>{props.categoryLabel}</Text> : null}
+      {props.coord ? <Text>{props.coord}</Text> : null}
+      <Text testID="image-height">{String(props.imageHeight)}</Text>
+      <Text testID="image-url">{String(props.imageUrl ?? '')}</Text>
+      {(props.badges ?? []).map((badge: string) => <Text key={badge}>{badge}</Text>)}
+      {props.onCopyCoord ? (
+        <Text accessibilityRole="button" accessibilityLabel="Копировать координаты" onPress={props.onCopyCoord}>
+          copy
+        </Text>
+      ) : null}
+      {(props.mapActions ?? []).map((action: any) => (
+        <Text key={action.key} onPress={action.onPress}>{action.label}</Text>
+      ))}
+      {(props.inlineActions ?? []).map((action: any) => (
+        <Text key={action.key} accessibilityLabel={action.accessibilityLabel} onPress={action.onPress}>
+          {action.label}
+        </Text>
+      ))}
+    </View>
+  );
+});
+
+jest.mock('@/components/places/PlaceListCard', () => ({
+  __esModule: true,
+  default: (props: any) => mockPlaceListCard(props),
+}));
 
 jest.mock('expo-clipboard', () => ({
   __esModule: true,
   setStringAsync: jest.fn(async () => true),
 }));
 
-jest.mock('@/components/ui/UnifiedTravelCard', () => ({
-  __esModule: true,
-  default: ({ contentSlot, containerOverlaySlot, leftTopSlot, rightTopSlot, testID, imageHeight }: any) => {
-    const React = require('react');
-    const { View, Text } = require('react-native');
-    return (
-      <View testID={testID ?? 'mock-unified-travel-card'}>
-        <Text testID="media-image-height">{String(imageHeight)}</Text>
-        {leftTopSlot}
-        {rightTopSlot}
-        {containerOverlaySlot}
-        {contentSlot}
-      </View>
-    );
-  },
+jest.mock('@/utils/externalLinks', () => ({
+  openExternalUrlInNewTab: jest.fn(async () => true),
 }));
 
 describe('PointCard', () => {
@@ -40,30 +61,41 @@ describe('PointCard', () => {
     source: 'google_maps',
     imported_at: '2024-01-15T10:00:00Z',
     created_at: '2024-01-15T10:00:00Z',
-    updated_at: '2024-01-15T10:00:00Z'
+    updated_at: '2024-01-15T10:00:00Z',
   };
 
-  it('should render point name', () => {
+  beforeEach(() => {
+    mockPlaceListCard.mockClear();
+  });
+
+  it('renders user point through the shared PlaceListCard template', () => {
     render(<PointCard point={mockPoint} />);
+
+    expect(mockPlaceListCard).toHaveBeenCalled();
+    const props = mockPlaceListCard.mock.calls[0]?.[0];
+    expect(props.popupAligned).toBe(true);
+    expect(props.titleLayout).toBe('content');
+    expect(props.compact).toBe(true);
+    expect(props.showAddButton).toBe(false);
     expect(screen.getByText('Test Restaurant')).toBeTruthy();
   });
 
-  it('should render description', () => {
+  it('passes point metadata as content props and badges', () => {
     render(<PointCard point={mockPoint} />);
-    expect(screen.getByText('A great place to eat')).toBeTruthy();
-  });
 
-  it('should render address', () => {
-    render(<PointCard point={mockPoint} />);
+    const props = mockPlaceListCard.mock.calls[0]?.[0];
+    expect(props.categoryLabel).toBe('Ресторан');
+    expect(props.coord).toBe('50.450100, 30.523400');
+    expect(props.badges).toEqual([
+      'Main Street 123, Kyiv',
+      'A great place to eat',
+      '4.5',
+    ]);
+    expect(screen.getByText('Ресторан')).toBeTruthy();
     expect(screen.getByText('Main Street 123, Kyiv')).toBeTruthy();
   });
 
-  it('should render coordinates under address', () => {
-    render(<PointCard point={mockPoint} />);
-    expect(screen.getByText('50.450100, 30.523400')).toBeTruthy();
-  });
-
-  it('should show a clean title when name is a raw reverse-geocode address', () => {
+  it('shows a clean title when name is a raw reverse-geocode address', () => {
     const geocoded = {
       ...mockPoint,
       name: '3, Рыночная площадь, Old Town, Краков, Малопольское воеводство, Польша',
@@ -71,38 +103,29 @@ describe('PointCard', () => {
       description: null,
     };
     render(<PointCard point={geocoded} />);
-    // Заголовок — первый осмысленный сегмент (с ведущим номером дома).
+
     expect(screen.getByText('3, Рыночная площадь')).toBeTruthy();
-    // Полный адрес остаётся вторичной строкой.
     expect(
       screen.getByText('3, Рыночная площадь, Old Town, Краков, Малопольское воеводство, Польша')
     ).toBeTruthy();
   });
 
-  it('should not render status label', () => {
+  it('does not render status label', () => {
     render(<PointCard point={mockPoint} />);
     expect(screen.queryByText('Посещено')).toBeNull();
   });
 
-  it('should render category when coordinates are present', () => {
-    render(<PointCard point={mockPoint} />);
-    expect(screen.getByText('Ресторан')).toBeTruthy();
-  });
-
-  it('should render category even when coordinates are missing (shown on image overlay)', () => {
+  it('does not pass coordinates when coordinates are missing', () => {
     const pointWithoutCoords = { ...mockPoint, latitude: Number.NaN, longitude: Number.NaN };
     render(<PointCard point={pointWithoutCoords} />);
-    // In the new vertical card design, category is shown on image overlay regardless of coords
-    expect(screen.getByText('Ресторан')).toBeTruthy();
-  });
 
-  it('should not render coordinates when coordinates are missing', () => {
-    const pointWithoutCoords = { ...mockPoint, latitude: Number.NaN, longitude: Number.NaN };
-    render(<PointCard point={pointWithoutCoords} />);
+    const props = mockPlaceListCard.mock.calls[0]?.[0];
+    expect(props.coord).toBeUndefined();
+    expect(props.mapActions).toEqual([]);
     expect(screen.queryByText('50.450100, 30.523400')).toBeNull();
   });
 
-  it('should copy coordinates to clipboard on native', async () => {
+  it('copies coordinates to clipboard on native', async () => {
     const Clipboard = require('expo-clipboard');
     render(<PointCard point={mockPoint} />);
 
@@ -113,7 +136,7 @@ describe('PointCard', () => {
     });
   });
 
-  it('should copy coordinates via navigator.clipboard on web when available', async () => {
+  it('copies coordinates via navigator.clipboard on web when available', async () => {
     const originalPlatform = require('react-native').Platform.OS;
     (require('react-native').Platform as any).OS = 'web';
 
@@ -136,66 +159,55 @@ describe('PointCard', () => {
     (require('react-native').Platform as any).OS = originalPlatform;
   });
 
-  it('should render a collapsed navigation menu and expand it to map chips', () => {
+  it('passes navigation actions into the shared card overflow model', () => {
     render(<PointCard point={mockPoint} />);
 
-    // Меню навигаторов свёрнуто по умолчанию — виден только тумблер.
-    expect(screen.getByText('Открыть в навигаторе')).toBeTruthy();
-    expect(screen.queryByText('Google')).toBeNull();
-
-    fireEvent.press(screen.getByText('Открыть в навигаторе'));
-
-    expect(screen.getByText('Google')).toBeTruthy();
-    expect(screen.getByText('Apple')).toBeTruthy();
-    expect(screen.getByText('Organic')).toBeTruthy();
-    expect(screen.getByText('Waze')).toBeTruthy();
-    expect(screen.getByText('Яндекс Карты')).toBeTruthy();
-    expect(screen.getByText('Яндекс Нави')).toBeTruthy();
-    expect(screen.getByText('OSM')).toBeTruthy();
+    const props = mockPlaceListCard.mock.calls[0]?.[0];
+    expect(props.mapActions.map((action: any) => action.key)).toEqual([
+      'google',
+      'apple',
+      'organic',
+      'waze',
+      'yandex-maps',
+      'yandex',
+      'osm',
+    ]);
   });
 
-  it('should render rating when provided', () => {
-    render(<PointCard point={mockPoint} />);
-    expect(screen.getByText('4.5')).toBeTruthy();
+  it('passes edit and delete as shared card inline actions', () => {
+    const onEdit = jest.fn();
+    const onDelete = jest.fn();
+    render(<PointCard point={mockPoint} onEdit={onEdit} onDelete={onDelete} />);
+
+    fireEvent.press(screen.getByLabelText('Редактировать'));
+    fireEvent.press(screen.getByLabelText('Удалить'));
+
+    expect(onEdit).toHaveBeenCalledWith(mockPoint);
+    expect(onDelete).toHaveBeenCalledWith(mockPoint);
   });
 
-  it('should not render rating when not provided', () => {
-    const pointWithoutRating = { ...mockPoint, rating: undefined };
-    render(<PointCard point={pointWithoutRating} />);
-    expect(screen.queryByText('4.5')).toBeNull();
+  it('passes selection action in selection mode', () => {
+    const onToggleSelect = jest.fn();
+    render(<PointCard point={mockPoint} selectionMode selected onToggleSelect={onToggleSelect} />);
+
+    fireEvent.press(screen.getByLabelText('Точка выбрана'));
+    expect(onToggleSelect).toHaveBeenCalledWith(mockPoint);
   });
 
-  it('should render without description', () => {
-    const pointWithoutDescription = { ...mockPoint, description: undefined };
-    render(<PointCard point={pointWithoutDescription} />);
+  it('renders without description or address', () => {
+    const pointWithoutDetails = { ...mockPoint, description: undefined, address: undefined };
+    render(<PointCard point={pointWithoutDetails} />);
     expect(screen.getByText('Test Restaurant')).toBeTruthy();
   });
 
-  it('should render without address', () => {
-    const pointWithoutAddress = { ...mockPoint, address: undefined };
-    render(<PointCard point={pointWithoutAddress} />);
-    expect(screen.getByText('Test Restaurant')).toBeTruthy();
-  });
-
-  it('should not reserve an empty image area when point has no photo (F-05)', () => {
+  it('uses the shared card media area for points without and with photos', () => {
     render(<PointCard point={mockPoint} />);
-    // mockPoint has no photo -> media area collapsed (imageHeight 0), no blank box
-    expect(screen.getByTestId('media-image-height').props.children).toBe('0');
-    // category still readable inline in content
-    expect(screen.getByText('Ресторан')).toBeTruthy();
-  });
+    expect(Number(screen.getByTestId('image-height').props.children)).toBeGreaterThan(0);
 
-  it('should render the image area when point has a photo', () => {
+    mockPlaceListCard.mockClear();
     const pointWithPhoto = { ...mockPoint, photo: 'https://example.com/p.jpg' } as any;
     render(<PointCard point={pointWithPhoto} />);
-    expect(screen.getByTestId('media-image-height').props.children).toBe('220');
-  });
 
-  it('should display correct color indicator', () => {
-    const { getByTestId } = render(<PointCard point={mockPoint} />);
-    const colorIndicator = getByTestId('color-indicator');
-    expect(colorIndicator.props.style).toContainEqual(
-      expect.objectContaining({ backgroundColor: expect.any(String) })
-    );
+    expect(screen.getByTestId('image-url').props.children).toBe('https://example.com/p.jpg');
   });
 });

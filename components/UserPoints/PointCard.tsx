@@ -1,34 +1,39 @@
 import React from 'react';
-import { View, Text, Platform, useWindowDimensions } from 'react-native';
+import { Platform, StyleSheet, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
+
+import PlaceListCard from '@/components/places/PlaceListCard';
+import {
+  buildAppleMapsUrl,
+  buildGoogleMapsUrl,
+  buildOpenStreetMapUrl,
+  buildOrganicMapsUrl,
+  buildTelegramShareUrl,
+  buildWazeUrl,
+  buildYandexMapsUrl,
+  buildYandexNaviUrl,
+} from '@/components/MapPage/Map/mapLinks';
+import { NAVIGATION_ACTION_LABELS } from '@/components/navigation/navigationActionMeta';
+import {
+  getNativeCardImageHeight,
+  getNativeCardWidth,
+  getWebCardWidth,
+} from '@/components/MapPage/AddressListItem/utils';
+import { PLACE_CARD_STYLE } from '@/components/MapPage/AddressListItem/constants';
 import type { ImportedPoint } from '@/types/userPoints';
 import { useThemedColors } from '@/hooks/useTheme';
-import { createStyles } from './PointCard.styles';
-import IconButton from '@/components/ui/IconButton';
-import CardActionPressable from '@/components/ui/CardActionPressable';
-import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
-import PointNavigationMenu from '@/components/navigation/PointNavigationMenu';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { getSiteBaseUrl } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
 
-// Точки, импортированные через обратный геокодинг, иногда приходят с name,
-// равным полному адресу Nominatim ("3, Рыночная площадь, Old Town, Краков, ...").
-// Для заголовка карточки берём первый осмысленный сегмент такого адреса,
-// а полную строку показываем вторичной строкой.
-const looksLikeFullAddress = (value: string): boolean => {
-  const parts = value.split(',').map((p) => p.trim()).filter(Boolean);
-  return parts.length >= 3;
-};
-
-const firstMeaningfulSegment = (value: string): string => {
-  const parts = value.split(',').map((p) => p.trim()).filter(Boolean);
-  if (parts.length === 0) return value.trim();
-  // Ведущий номер дома ("3, Рыночная площадь") сам по себе не заголовок —
-  // склеиваем его со следующим сегментом.
-  if (/^\d+[A-Za-zА-Яа-я]?$/.test(parts[0]) && parts[1]) {
-    return `${parts[0]}, ${parts[1]}`;
-  }
-  return parts[0];
+type ActionChip = {
+  key: string;
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+  onPress: () => void;
+  accessibilityLabel?: string;
+  title?: string;
 };
 
 interface PointCardProps {
@@ -49,6 +54,112 @@ interface PointCardProps {
   onToggleSelect?: (point: ImportedPoint) => void;
 }
 
+const isWebPlatform = () => Platform.OS === 'web';
+
+const looksLikeFullAddress = (value: string): boolean => {
+  const parts = value.split(',').map((p) => p.trim()).filter(Boolean);
+  return parts.length >= 3;
+};
+
+const firstMeaningfulSegment = (value: string): string => {
+  const parts = value.split(',').map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 0) return value.trim();
+  if (/^\d+[A-Za-zА-Яа-я]?$/.test(parts[0]) && parts[1]) {
+    return `${parts[0]}, ${parts[1]}`;
+  }
+  return parts[0];
+};
+
+const getPointPhotoUrl = (point: ImportedPoint): string | null => {
+  const pointRecord = point as unknown as Record<string, unknown>;
+  const direct = typeof point.photo === 'string' ? point.photo.trim() : '';
+  if (direct) return direct;
+
+  const legacy = pointRecord.photos;
+  if (typeof legacy === 'string' && legacy.trim()) return legacy.trim();
+  if (!legacy || typeof legacy !== 'object') return null;
+
+  const knownKeys = ['url', 'src', 'photo', 'image', 'thumb', 'thumbnail', 'travelImageThumbUrl'];
+  for (const key of knownKeys) {
+    const value = (legacy as Record<string, unknown>)[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  for (const value of Object.values(legacy as Record<string, unknown>)) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+};
+
+const getCountryLabel = (point: ImportedPoint): string => {
+  const direct = String((point as unknown as Record<string, unknown>).country ?? '').trim();
+  if (direct) return direct;
+  const address = String(point.address ?? '').trim();
+  if (!address) return '';
+  const parts = address.split(',').map((p) => p.trim()).filter(Boolean);
+  return parts.length >= 2 ? parts[parts.length - 1] ?? '' : '';
+};
+
+const getCategoryLabel = (point: ImportedPoint, countryLabel: string): string => {
+  const clean = (values: unknown[]) =>
+    values
+      .map((value) => String(value).trim())
+      .filter(Boolean)
+      .filter((name) => !countryLabel || name.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) !== 0)
+      .join(', ');
+
+  const names = (point as unknown as Record<string, unknown>).categoryNames;
+  if (Array.isArray(names) && names.length > 0) return clean(names);
+
+  const ids = point.categoryIds ?? point.category_ids;
+  if (Array.isArray(ids) && ids.length > 0) return clean(ids);
+
+  const legacy = String(point.category ?? '').trim();
+  if (!legacy) return '';
+  if (countryLabel && legacy.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) === 0) return '';
+  return legacy;
+};
+
+const getPointTitle = (point: ImportedPoint): string => {
+  const name = String(point.name ?? '').trim();
+  if (name) return looksLikeFullAddress(name) ? firstMeaningfulSegment(name) : name;
+  const address = String(point.address ?? '').trim();
+  if (address) return looksLikeFullAddress(address) ? firstMeaningfulSegment(address) : address;
+  return 'Точка';
+};
+
+const getPointSubtitle = (point: ImportedPoint, title: string): string => {
+  const name = String(point.name ?? '').trim();
+  const address = String(point.address ?? '').trim();
+  const fullFromName = name && looksLikeFullAddress(name) && name !== title ? name : '';
+  const source = fullFromName || address;
+  if (!source || source.toLowerCase() === title.toLowerCase()) return '';
+  return source;
+};
+
+const openPointUrl = async (url: string) => {
+  const opened = await openExternalUrlInNewTab(url, {
+    allowRelative: true,
+    baseUrl: getSiteBaseUrl(),
+  });
+  if (!opened) {
+    void showToast({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
+  }
+};
+
+const openMapUrl = async (url: string) => {
+  const opened = await openExternalUrlInNewTab(url);
+  if (!opened) {
+    void showToast({ type: 'info', text1: 'Не удалось открыть карту', position: 'bottom' });
+  }
+};
+
+const openShareUrl = async (url: string) => {
+  const opened = await openExternalUrlInNewTab(url);
+  if (!opened) {
+    void showToast({ type: 'info', text1: 'Не удалось поделиться', position: 'bottom' });
+  }
+};
+
 export const PointCard: React.FC<PointCardProps> = React.memo(({
   point,
   onPress,
@@ -58,130 +169,56 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   selectionMode,
   selected,
   active,
-  compact,
+  compact = true,
   driveInfo,
   onToggleSelect,
 }) => {
   const colors = useThemedColors();
   const { width: viewportWidth } = useWindowDimensions();
-  const isNarrowLayout = viewportWidth <= 430;
-  const isSitePoint = React.useMemo(() => {
-    const tags = (point as any)?.tags;
-    return Boolean(String(tags?.travelUrl ?? '').trim() || String(tags?.articleUrl ?? '').trim());
-  }, [point]);
-  const markerColor = String(point.color || '').trim() || colors.backgroundTertiary;
+
+  const title = React.useMemo(() => getPointTitle(point), [point]);
+  const subtitle = React.useMemo(() => getPointSubtitle(point, title), [point, title]);
+  const countryLabel = React.useMemo(() => getCountryLabel(point), [point]);
+  const categoryLabel = React.useMemo(() => getCategoryLabel(point, countryLabel), [point, countryLabel]);
+  const imageUrl = React.useMemo(() => getPointPhotoUrl(point), [point]);
   const hasCoords = Number.isFinite(point.latitude) && Number.isFinite(point.longitude);
-  const coordsText = hasCoords
+  const coord = hasCoords
     ? `${Number(point.latitude).toFixed(6)}, ${Number(point.longitude).toFixed(6)}`
     : '';
-  const countryLabel = React.useMemo(() => {
-    try {
-      const direct = String((point as any)?.country ?? '').trim();
-      if (direct) return direct;
-      const address = String((point as any)?.address ?? '').trim();
-      if (!address) return '';
-      const parts = address
-        .split(',')
-        .map((p) => p.trim())
-        .filter(Boolean);
-      if (parts.length >= 2) return parts[parts.length - 1];
-      return '';
-    } catch {
-      return '';
-    }
-  }, [point]);
-  const categoryLabel = React.useMemo(() => {
-    const names = (point as any)?.categoryNames;
-    if (Array.isArray(names) && names.length > 0) {
-      const cleaned = names
-        .map((v: any) => String(v).trim())
-        .filter(Boolean)
-        .filter((name) => !countryLabel || name.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) !== 0);
-      return cleaned.join(', ');
-    }
-    const ids = (point as any)?.categoryIds;
-    if (Array.isArray(ids) && ids.length > 0) {
-      const cleaned = ids
-        .map((v: any) => String(v).trim())
-        .filter(Boolean)
-        .filter((name) => !countryLabel || name.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) !== 0);
-      return cleaned.join(', ');
-    }
-    const legacy = String((point as any)?.category ?? '').trim();
-    if (!legacy) return '';
-    if (countryLabel && legacy.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) === 0) {
-      return '';
-    }
-    return legacy;
-  }, [countryLabel, point]);
-  const displayName = React.useMemo(() => {
-    const name = String(point.name ?? '').trim();
-    if (!name) return '';
-    if (looksLikeFullAddress(name)) return firstMeaningfulSegment(name);
-    return name;
-  }, [point.name]);
-  const displaySubtitle = React.useMemo(() => {
-    const name = String(point.name ?? '').trim();
-    const addr = String(point.address ?? '').trim();
-    // Если имя оказалось сырым адресом — полную строку показываем вторичной.
-    const fullFromName = name && looksLikeFullAddress(name) && name !== displayName ? name : '';
-    const source = fullFromName || addr;
-    if (!source) return '';
-    if (source.toLowerCase() === displayName.toLowerCase()) return '';
-    return source;
-  }, [point.name, point.address, displayName]);
+  const tags = (point.tags ?? {}) as Record<string, unknown>;
+  const articleUrl = String(tags.articleUrl ?? '').trim();
+  const travelUrl = String(tags.travelUrl ?? '').trim();
+  const relatedPageUrl = articleUrl || travelUrl;
+
   const styles = React.useMemo(() => createStyles(colors), [colors]);
-
-  const photoUrl = React.useMemo(() => {
-    const v = (point as any)?.photo;
-    const s = typeof v === 'string' ? v.trim() : '';
-    if (s) return s;
-
-    const legacy = (point as any)?.photos;
-    if (typeof legacy === 'string' && legacy.trim()) return legacy.trim();
-    if (legacy && typeof legacy === 'object') {
-      const knownKeys = ['url', 'src', 'photo', 'image', 'thumb', 'thumbnail', 'travelImageThumbUrl'];
-      for (const k of knownKeys) {
-        const val = (legacy as any)?.[k];
-        if (typeof val === 'string' && val.trim()) return val.trim();
-      }
-      for (const val of Object.values(legacy as Record<string, unknown>)) {
-        if (typeof val === 'string' && val.trim()) return val.trim();
-      }
-    }
-
-    return null;
-  }, [point]);
-
-  const showActions = !selectionMode && (typeof onEdit === 'function' || typeof onDelete === 'function');
-  const navTestIdPrefix = React.useMemo(
-    () => `userpoints-point-navigation-${coordsText.replace(/[^a-zA-Z0-9_-]+/g, '-')}`,
-    [coordsText],
-  );
-
-  const secondaryLabel = displaySubtitle || (!isSitePoint && countryLabel ? countryLabel : '');
+  const cardWidth = React.useMemo(() => {
+    if (layout === 'grid') return undefined;
+    return isWebPlatform() ? getWebCardWidth(viewportWidth) : getNativeCardWidth(viewportWidth);
+  }, [layout, viewportWidth]);
+  const imageHeight = React.useMemo(() => {
+    if (layout === 'grid') return 220;
+    return isWebPlatform()
+      ? Math.round(Math.max(128, Math.min(188, (cardWidth ?? getWebCardWidth(viewportWidth)) * 0.48)))
+      : getNativeCardImageHeight(viewportWidth);
+  }, [cardWidth, layout, viewportWidth]);
 
   const copyCoords = React.useCallback(async () => {
-    if (!hasCoords) return;
-
-    const text = coordsText;
+    if (!coord) return;
     try {
       if (
         Platform.OS === 'web' &&
         typeof window !== 'undefined' &&
-        (window as any).navigator?.clipboard?.writeText
+        (window as unknown as { navigator?: { clipboard?: { writeText?: (text: string) => Promise<void> } } }).navigator?.clipboard?.writeText
       ) {
-        await (window as any).navigator.clipboard.writeText(text);
-        void showToast({ type: 'success', text1: 'Скопировано', position: 'bottom' });
-        return;
+        await (window as unknown as { navigator: { clipboard: { writeText: (text: string) => Promise<void> } } }).navigator.clipboard.writeText(coord);
+      } else {
+        await Clipboard.setStringAsync(coord);
       }
-
-      await Clipboard.setStringAsync(text);
       void showToast({ type: 'success', text1: 'Скопировано', position: 'bottom' });
     } catch {
-      // ignore
+      void showToast({ type: 'info', text1: 'Не удалось скопировать', position: 'bottom' });
     }
-  }, [coordsText, hasCoords]);
+  }, [coord]);
 
   const handleCardPress = React.useCallback(() => {
     if (selectionMode) {
@@ -191,310 +228,175 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     onPress?.(point);
   }, [onPress, onToggleSelect, point, selectionMode]);
 
-  const driveInfoNode =
-    active && !selectionMode && driveInfo?.status === 'ok' ? (
-      <Text numberOfLines={1}>
-        На машине: {driveInfo.distanceKm} км · ~{driveInfo.durationMin} мин
-      </Text>
-    ) : active && !selectionMode && driveInfo?.status === 'loading' ? (
-      <Text numberOfLines={1}>Считаю маршрут…</Text>
-    ) : null;
+  const badges = React.useMemo(() => {
+    const result: string[] = [];
+    if (subtitle) result.push(subtitle);
+    if (point.description) result.push(String(point.description));
+    if (driveInfo?.status === 'ok') result.push(`${driveInfo.distanceKm} км · ~${driveInfo.durationMin} мин`);
+    if (driveInfo?.status === 'loading') result.push('Считаю маршрут…');
+    if (typeof point.rating === 'number' && Number.isFinite(point.rating)) result.push(point.rating.toFixed(1));
+    return result;
+  }, [driveInfo, point.description, point.rating, subtitle]);
 
-  // ── Overlay corner controls (select checkbox / edit-delete) over the photo ──
-  const selectionBadge = selectionMode ? (
-    <View
-      style={[
-        styles.selectionBadge,
-        selected ? styles.selectionBadgeSelected : styles.selectionBadgeUnselected,
-      ]}
-    >
-      <Feather
-        name={selected ? 'check-circle' : 'circle'}
-        size={18}
-        color={selected ? colors.textOnPrimary : colors.textOnDark}
-      />
-    </View>
-  ) : null;
+  const mapActions = React.useMemo<ActionChip[]>(() => {
+    if (!coord) return [];
+    const base: ActionChip[] = [
+      {
+        key: 'google',
+        label: isWebPlatform() ? 'Google Maps' : NAVIGATION_ACTION_LABELS.google,
+        icon: 'map-pin',
+        onPress: () => void openMapUrl(buildGoogleMapsUrl(coord)),
+        title: 'Открыть в Google Maps',
+      },
+      {
+        key: 'organic',
+        label: isWebPlatform() ? 'Organic Maps' : NAVIGATION_ACTION_LABELS.organic,
+        icon: 'compass',
+        onPress: () => void openMapUrl(buildOrganicMapsUrl(coord, title)),
+        title: 'Открыть в Organic Maps',
+      },
+      {
+        key: 'waze',
+        label: NAVIGATION_ACTION_LABELS.waze,
+        icon: 'navigation',
+        onPress: () => void openMapUrl(buildWazeUrl(coord)),
+        title: 'Проложить маршрут в Waze',
+      },
+      {
+        key: 'yandex',
+        label: isWebPlatform() ? 'Яндекс.Навигатор' : NAVIGATION_ACTION_LABELS.yandex,
+        icon: 'navigation-2',
+        onPress: () => void openMapUrl(buildYandexNaviUrl(coord)),
+        title: 'Проложить маршрут в Яндекс Навигаторе',
+      },
+    ];
+    if (isWebPlatform()) return base;
+    return [
+      base[0]!,
+      {
+        key: 'apple',
+        label: NAVIGATION_ACTION_LABELS.apple,
+        icon: 'map',
+        onPress: () => void openMapUrl(buildAppleMapsUrl(coord)),
+        title: 'Открыть в Apple Maps',
+      },
+      base[1]!,
+      base[2]!,
+      {
+        key: 'yandex-maps',
+        label: NAVIGATION_ACTION_LABELS['yandex-maps'],
+        icon: 'map',
+        onPress: () => void openMapUrl(buildYandexMapsUrl(coord)),
+        title: 'Открыть в Яндекс Картах',
+      },
+      base[3]!,
+      {
+        key: 'osm',
+        label: NAVIGATION_ACTION_LABELS.osm,
+        icon: 'map',
+        onPress: () => void openMapUrl(buildOpenStreetMapUrl(coord)),
+        title: 'Открыть в OpenStreetMap',
+      },
+    ];
+  }, [coord, title]);
 
-  const cornerActions = showActions ? (
-    <View style={styles.cornerActionsRow}>
-      {typeof onEdit === 'function' ? (
-        <CardActionPressable
-          style={styles.cornerActionBtn}
-          accessibilityLabel="Редактировать"
-          title="Редактировать"
-          onPress={() => onEdit(point)}
-        >
-          <Feather name="edit-2" size={16} color={colors.textOnDark} />
-        </CardActionPressable>
-      ) : null}
-      {typeof onDelete === 'function' ? (
-        <CardActionPressable
-          style={styles.cornerActionBtn}
-          accessibilityLabel="Удалить"
-          title="Удалить"
-          onPress={() => onDelete(point)}
-        >
-          <Feather name="trash-2" size={16} color={colors.textOnDark} />
-        </CardActionPressable>
-      ) : null}
-    </View>
-  ) : null;
-
-  // ── Photo-dominant bottom scrim overlay (parity with travel/PointCard) ──
-  const photoOverlay = (
-    <View style={styles.overlayBottom} pointerEvents="box-none">
-      <Text
-        style={[styles.overlayTitle, showActions && styles.overlayTitleWithActions]}
-        numberOfLines={2}
-      >
-        {displayName}
-      </Text>
-
-      {secondaryLabel ? (
-        <Text style={styles.overlaySubtitle} numberOfLines={1}>
-          {secondaryLabel}
-        </Text>
-      ) : null}
-
-      {hasCoords ? (
-        <View style={styles.overlayCoordRow}>
-          <Feather name="map-pin" size={14} color={colors.textOnDark} />
-          <Text style={styles.overlayCoordText} numberOfLines={1}>
-            {coordsText}
-          </Text>
-          <CardActionPressable
-            style={styles.overlayCoordCopyBtn}
-            accessibilityLabel="Копировать координаты"
-            title="Копировать координаты"
-            onPress={() => void copyCoords()}
-          >
-            <Feather name="copy" size={15} color={colors.textOnDark} />
-          </CardActionPressable>
-        </View>
-      ) : null}
-
-      {hasCoords ? (
-        <View style={styles.overlayNavigationMenu}>
-          <PointNavigationMenu
-            coord={coordsText}
-            label="Открыть в навигаторе"
-            testIDPrefix={navTestIdPrefix}
-          />
-        </View>
-      ) : null}
-
-      {categoryLabel ? (
-        <View style={styles.overlayCategoryRow}>
-          <View style={styles.overlayCategoryChip}>
-            <Text style={styles.overlayCategoryText} numberOfLines={1}>
-              {categoryLabel}
-            </Text>
-          </View>
-        </View>
-      ) : null}
-
-      {driveInfoNode ? (
-        <View style={styles.overlayDriveInfo}>
-          <Text style={styles.overlayDriveInfoText} numberOfLines={1}>
-            {driveInfoNode.props.children}
-          </Text>
-        </View>
-      ) : null}
-    </View>
-  );
-
-  const overlaySlot = (
-    <>
-      <View testID="color-indicator" style={[styles.colorIndicator, { backgroundColor: markerColor }]} />
-      {photoOverlay}
-    </>
-  );
-
-  const overlayImageHeight = layout === 'grid' ? 240 : 220;
-
-  if (photoUrl) {
-    return (
-      <UnifiedTravelCard
-        testID={point?.id != null ? `userpoints-point-card-${String(point.id)}` : undefined}
-        title={point.name}
-        imageUrl={photoUrl}
-        onPress={handleCardPress}
-        imageHeight={overlayImageHeight}
-        mediaFit="contain"
-        containerOverlaySlot={overlaySlot}
-        leftTopSlot={selectionBadge}
-        rightTopSlot={cornerActions}
-        // Весь контент уже лежит оверлеем на фото (photoOverlay). contentSlot
-        // должен быть не-null (иначе UnifiedTravelCard рендерит свой дефолтный
-        // блок "заголовок + Локация уточняется" под фото, UnifiedTravelCard.tsx:659-684) —
-        // передаём пустой узел, чтобы явно ничего не показывать.
-        contentSlot={<></>}
-        contentContainerStyle={styles.contentContainer}
-        style={[
-          styles.container,
-          layout === 'grid' ? styles.containerGrid : null,
-          compact ? styles.containerCompact : null,
-          active ? styles.containerActive : null,
-        ]}
-        mediaProps={{
-          blurBackground: true,
-          blurRadius: 16,
-          allowCriticalWebBlur: true,
-        }}
-        webHoverScale={false}
-      />
-    );
-  }
-
-  // ── No-photo fallback: overlay-on-photo needs a photo, so points without one
-  // fall back to a compact content-below card (inline meta stays readable). ──
-  const noPhotoContent = (
-    <View style={[styles.content, selectionMode ? styles.contentSelectionMode : null]}>
-      {selectionMode ? (
-        <View
-          style={[
-            styles.noPhotoSelectionBadge,
-            selected ? styles.selectionBadgeSelected : null,
-          ]}
-        >
-          <Feather
-            name={selected ? 'check-circle' : 'circle'}
-            size={18}
-            color={selected ? colors.textOnPrimary : colors.textMuted}
-          />
-        </View>
-      ) : null}
-
-      {(categoryLabel || (point.color && String(point.color).trim())) ? (
-        <View style={styles.noPhotoMetaRow}>
-          <View testID="color-indicator" style={[styles.noPhotoColorDot, { backgroundColor: markerColor }]} />
-          {categoryLabel ? (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText} numberOfLines={1}>{categoryLabel}</Text>
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-
-      <View style={[styles.headerRow, isNarrowLayout ? styles.headerRowNarrow : null]}>
-        <View style={[styles.headerMain, isNarrowLayout ? styles.headerMainNarrow : null]}>
-          <Text style={styles.name} numberOfLines={2}>
-            {displayName}
-          </Text>
-        </View>
-
-        {showActions ? (
-          <View style={[styles.headerActions, isNarrowLayout ? styles.headerActionsNarrow : null]}>
-            {typeof onEdit === 'function' ? (
-              Platform.OS === 'web' ? (
-                <CardActionPressable
-                  style={styles.webActionButton}
-                  accessibilityLabel="Редактировать"
-                  title="Редактировать"
-                  onPress={() => onEdit(point)}
-                >
-                  <Feather name="edit-2" size={14} color={colors.text} />
-                </CardActionPressable>
-              ) : (
-                <IconButton
-                  icon={<Feather name="edit-2" size={16} color={colors.text} />}
-                  label="Редактировать"
-                  onPress={() => onEdit(point)}
-                  size="sm"
-                />
-              )
-            ) : null}
-            {typeof onDelete === 'function' ? (
-              Platform.OS === 'web' ? (
-                <CardActionPressable
-                  style={styles.webActionButton}
-                  accessibilityLabel="Удалить"
-                  title="Удалить"
-                  onPress={() => onDelete(point)}
-                >
-                  <Feather name="trash-2" size={14} color={colors.text} />
-                </CardActionPressable>
-              ) : (
-                <IconButton
-                  icon={<Feather name="trash-2" size={16} color={colors.text} />}
-                  label="Удалить"
-                  onPress={() => onDelete(point)}
-                  size="sm"
-                />
-              )
-            ) : null}
-          </View>
-        ) : null}
-      </View>
-
-      {secondaryLabel ? (
-        <Text style={styles.address} numberOfLines={1}>
-          {secondaryLabel}
-        </Text>
-      ) : null}
-
-      {point.description ? (
-        <Text style={styles.description} numberOfLines={2}>
-          {point.description}
-        </Text>
-      ) : null}
-
-      {hasCoords ? (
-        <View style={styles.coordsRow}>
-          <Text style={styles.coordsText} numberOfLines={isNarrowLayout ? 2 : 1}>
-            {coordsText}
-          </Text>
-          <View style={[styles.coordsActionsRow, isNarrowLayout ? styles.coordsActionsRowNarrow : null]}>
-            <IconButton
-              icon={<Feather name="copy" size={14} color={colors.textMuted} />}
-              label="Копировать координаты"
-              onPress={() => void copyCoords()}
-              size="sm"
-            />
-          </View>
-        </View>
-      ) : null}
-
-      {hasCoords ? (
-        <View style={styles.noPhotoNavigationMenu}>
-          <PointNavigationMenu
-            coord={coordsText}
-            label="Открыть в навигаторе"
-            testIDPrefix={navTestIdPrefix}
-          />
-        </View>
-      ) : null}
-
-      {typeof point.rating === 'number' && Number.isFinite(point.rating) ? (
-        <Text style={styles.rating}>{point.rating.toFixed(1)}</Text>
-      ) : null}
-
-      {driveInfoNode ? (
-        <View style={styles.driveInfoRow}>
-          <Text style={styles.driveInfoText}>{driveInfoNode.props.children}</Text>
-        </View>
-      ) : null}
-    </View>
-  );
+  const inlineActions = React.useMemo<ActionChip[]>(() => {
+    const result: ActionChip[] = [];
+    if (selectionMode) {
+      result.push({
+        key: 'select',
+        label: selected ? 'Выбрано' : 'Выбрать',
+        icon: selected ? 'check-circle' : 'circle',
+        onPress: () => onToggleSelect?.(point),
+        accessibilityLabel: selected ? 'Точка выбрана' : 'Выбрать точку',
+        title: selected ? 'Точка выбрана' : 'Выбрать точку',
+      });
+      return result;
+    }
+    if (relatedPageUrl) {
+      result.push({
+        key: 'article',
+        label: 'Страница',
+        icon: 'book-open',
+        onPress: () => void openPointUrl(relatedPageUrl),
+        accessibilityLabel: 'Открыть страницу',
+        title: 'Открыть страницу',
+      });
+    }
+    if (onEdit) {
+      result.push({
+        key: 'edit',
+        label: 'Изменить',
+        icon: 'edit-2',
+        onPress: () => onEdit(point),
+        accessibilityLabel: 'Редактировать',
+        title: 'Редактировать',
+      });
+    }
+    if (onDelete) {
+      result.push({
+        key: 'delete',
+        label: 'Удалить',
+        icon: 'trash-2',
+        onPress: () => onDelete(point),
+        accessibilityLabel: 'Удалить',
+        title: 'Удалить',
+      });
+    }
+    return result;
+  }, [onDelete, onEdit, onToggleSelect, point, relatedPageUrl, selected, selectionMode]);
 
   return (
-    <UnifiedTravelCard
-      testID={point?.id != null ? `userpoints-point-card-${String(point.id)}` : undefined}
-      title={point.name}
-      imageUrl={null}
-      onPress={handleCardPress}
-      imageHeight={0}
-      mediaFit="contain"
-      contentSlot={noPhotoContent}
-      contentContainerStyle={styles.contentContainer}
+    <PlaceListCard
+      title={title}
+      imageUrl={imageUrl}
+      categoryLabel={categoryLabel || undefined}
+      coord={coord || undefined}
+      badges={badges}
+      onCardPress={handleCardPress}
+      onMediaPress={relatedPageUrl && !selectionMode ? () => void openPointUrl(relatedPageUrl) : undefined}
+      onCopyCoord={coord ? copyCoords : undefined}
+      onShare={coord ? () => void openShareUrl(buildTelegramShareUrl(coord)) : undefined}
+      mapActions={mapActions}
+      inlineActions={inlineActions}
+      showAddButton={false}
+      imageHeight={imageHeight}
+      width={cardWidth}
       style={[
-        styles.container,
-        layout === 'grid' ? styles.containerGrid : null,
-        compact ? styles.containerCompact : null,
-        active ? styles.containerActive : null,
+        PLACE_CARD_STYLE,
+        layout === 'grid' ? styles.gridCard : null,
+        compact ? styles.compactCard : null,
+        active ? styles.activeCard : null,
+        selected ? styles.selectedCard : null,
       ]}
-      webHoverScale={false}
+      compact={compact}
+      popupAligned
+      titleLayout="content"
+      titleNumberOfLines={2}
+      testID={point?.id != null ? `userpoints-point-card-${String(point.id)}` : undefined}
     />
   );
+});
+
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+  compactCard: {
+    marginHorizontal: 0,
+  },
+  gridCard: {
+    flex: 1,
+    alignSelf: 'stretch',
+    width: '100%',
+  },
+  activeCard: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+    backgroundColor: colors.primarySoft,
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: `0 0 0 3px ${colors.primaryAlpha30}, ${colors.boxShadows.hover}` } as any)
+      : null),
+  },
+  selectedCard: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+  },
 });

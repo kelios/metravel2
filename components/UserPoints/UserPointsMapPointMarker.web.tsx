@@ -1,13 +1,24 @@
 import React from 'react'
-import { Platform } from 'react-native'
-import Feather from '@expo/vector-icons/Feather'
+import type Feather from '@expo/vector-icons/Feather'
+import * as Clipboard from 'expo-clipboard'
 
-import CardActionPressable from '@/components/ui/CardActionPressable'
-import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import PlacePopupCard from '@/components/MapPage/Map/PlacePopupCard'
+import {
+  buildAppleMapsUrl,
+  buildGoogleMapsUrl,
+  buildOpenStreetMapUrl,
+  buildOrganicMapsUrl,
+  buildTelegramShareUrl,
+  buildWazeUrl,
+  buildYandexMapsUrl,
+  buildYandexNaviUrl,
+} from '@/components/MapPage/Map/mapLinks'
 import { DESIGN_COLORS } from '@/constants/designSystem'
+import { LAYOUT } from '@/constants/layout'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { ImportedPoint } from '@/types/userPoints'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
+import { getSiteBaseUrl } from '@/utils/seo'
 import { showToast } from '@/utils/toast'
 
 const DEFAULT_SITE_POINT_COLOR = DESIGN_COLORS.travelPoint
@@ -36,6 +47,115 @@ type UserPointsMapPointMarkerWebProps = {
   onMarkerReady?: (args: { pointId: number; marker: any | null }) => void
 }
 
+type UserPointPopupAction = {
+  key: string
+  label: string
+  icon: React.ComponentProps<typeof Feather>['name']
+  onPress: () => void
+  accessibilityLabel?: string
+  tooltip?: string
+}
+
+const looksLikeFullAddress = (value: string): boolean => {
+  const parts = value.split(',').map((part) => part.trim()).filter(Boolean)
+  return parts.length >= 3
+}
+
+const firstMeaningfulSegment = (value: string): string => {
+  const parts = value.split(',').map((part) => part.trim()).filter(Boolean)
+  if (parts.length === 0) return value.trim()
+  if (/^\d+[A-Za-zА-Яа-я]?$/.test(parts[0]) && parts[1]) return `${parts[0]}, ${parts[1]}`
+  return parts[0]
+}
+
+const getPointTitle = (point: ImportedPoint): string => {
+  const name = String(point.name ?? '').trim()
+  if (name) return looksLikeFullAddress(name) ? firstMeaningfulSegment(name) : name
+  const address = String(point.address ?? '').trim()
+  if (address) return looksLikeFullAddress(address) ? firstMeaningfulSegment(address) : address
+  return 'Точка'
+}
+
+const getPointSubtitle = (point: ImportedPoint, title: string): string => {
+  const name = String(point.name ?? '').trim()
+  const address = String(point.address ?? '').trim()
+  const fullFromName = name && looksLikeFullAddress(name) && name !== title ? name : ''
+  const source = fullFromName || address
+  if (!source || source.toLowerCase() === title.toLowerCase()) return ''
+  return source
+}
+
+const getPointPhotoUrl = (point: ImportedPoint): string | null => {
+  const pointRecord = point as unknown as Record<string, unknown>
+  const direct = typeof point.photo === 'string' ? point.photo.trim() : ''
+  if (direct) return direct
+
+  const legacy = pointRecord.photos
+  if (typeof legacy === 'string' && legacy.trim()) return legacy.trim()
+  if (!legacy || typeof legacy !== 'object') return null
+
+  const knownKeys = ['url', 'src', 'photo', 'image', 'thumb', 'thumbnail', 'travelImageThumbUrl']
+  for (const key of knownKeys) {
+    const value = (legacy as Record<string, unknown>)[key]
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  for (const value of Object.values(legacy as Record<string, unknown>)) {
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return null
+}
+
+const getCountryLabel = (point: ImportedPoint): string => {
+  const direct = String((point as unknown as Record<string, unknown>).country ?? '').trim()
+  if (direct) return direct
+  const address = String(point.address ?? '').trim()
+  if (!address) return ''
+  const parts = address.split(',').map((part) => part.trim()).filter(Boolean)
+  return parts.length >= 2 ? parts[parts.length - 1] ?? '' : ''
+}
+
+const getCategoryLabel = (point: ImportedPoint, countryLabel: string): string => {
+  const clean = (values: unknown[]) =>
+    values
+      .map((value) => String(value).trim())
+      .filter(Boolean)
+      .filter((name) => !countryLabel || name.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) !== 0)
+      .join(', ')
+
+  const names = (point as unknown as Record<string, unknown>).categoryNames
+  if (Array.isArray(names) && names.length > 0) return clean(names)
+
+  const ids = point.categoryIds ?? point.category_ids
+  if (Array.isArray(ids) && ids.length > 0) return clean(ids)
+
+  const legacy = String(point.category ?? '').trim()
+  if (!legacy) return ''
+  if (countryLabel && legacy.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) === 0) return ''
+  return legacy
+}
+
+const getRelatedUrls = (point: ImportedPoint) => {
+  const tags = (point.tags ?? {}) as Record<string, unknown>
+  const articleUrl = String(tags.articleUrl ?? '').trim()
+  const travelUrl = String(tags.travelUrl ?? '').trim()
+  return { articleUrl, travelUrl }
+}
+
+const openExternal = async (url: string, errorText = 'Не удалось открыть ссылку') => {
+  if (!url) return
+  const opened = await openExternalUrlInNewTab(url)
+  if (!opened) void showToast({ type: 'info', text1: errorText, position: 'bottom' })
+}
+
+const openRelatedPage = async (url: string) => {
+  if (!url) return
+  const opened = await openExternalUrlInNewTab(url, {
+    allowRelative: true,
+    baseUrl: getSiteBaseUrl(),
+  })
+  if (!opened) void showToast({ type: 'info', text1: 'Не удалось открыть страницу', position: 'bottom' })
+}
+
 export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPointMarkerWeb(
   props: UserPointsMapPointMarkerWebProps
 ) {
@@ -46,8 +166,6 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
     colors,
     mapInstance,
     isCompactPopup,
-    isNarrowPopup,
-    isTinyPopup,
     centerOverride,
     driveInfo,
     getMarkerIconCached,
@@ -60,126 +178,90 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
 
   const markerInstanceRef = React.useRef<any | null>(null)
 
-  const hasCoords = Number.isFinite((point as any)?.latitude) && Number.isFinite((point as any)?.longitude)
-  const lat = Number((point as any)?.latitude)
-  const lng = Number((point as any)?.longitude)
-
-  const coordsText = React.useMemo(() => {
-    return Number.isFinite(lat) && Number.isFinite(lng) ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : ''
-  }, [lat, lng])
-
-  const countryLabel = React.useMemo(() => {
-    try {
-      const direct = String((point as any)?.country ?? '').trim()
-      if (direct) return direct
-      const address = String((point as any)?.address ?? '').trim()
-      if (!address) return ''
-      const parts = address
-        .split(',')
-        .map((p) => p.trim())
-        .filter(Boolean)
-      if (parts.length >= 2) return parts[parts.length - 1]
-      return ''
-    } catch {
-      return ''
-    }
-  }, [point])
-
-  const categoryLabel = React.useMemo(() => {
-    const names = (point as any)?.categoryNames
-    if (Array.isArray(names) && names.length > 0) {
-      const cleaned = names
-        .map((v: any) => String(v).trim())
-        .filter(Boolean)
-        .filter((name) => !countryLabel || name.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) !== 0)
-      return cleaned.join(', ')
-    }
-    const ids = (point as any)?.categoryIds
-    if (Array.isArray(ids) && ids.length > 0) {
-      const cleaned = ids
-        .map((v: any) => String(v).trim())
-        .filter(Boolean)
-        .filter((name) => !countryLabel || name.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) !== 0)
-      return cleaned.join(', ')
-    }
-    const legacy = String((point as any)?.category ?? '').trim()
-    if (!legacy) return ''
-    if (countryLabel && legacy.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) === 0) {
-      return ''
-    }
-    return legacy
-  }, [countryLabel, point])
-
-  const handleCopyCoords = React.useCallback(() => {
-    if (!coordsText) return
-    try {
-      ;(navigator as any)?.clipboard?.writeText?.(coordsText)
-      void showToast({ type: 'success', text1: 'Скопировано', position: 'bottom' })
-    } catch {
-      // noop
-    }
-  }, [coordsText])
-
-  const handleShareTelegram = React.useCallback(() => {
-    if (!coordsText) return
-    try {
-      const text = String((point as any)?.name ?? '') || coordsText
-      const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`
-      const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`
-      void openExternalUrlInNewTab(tg)
-      void showToast({ type: 'success', text1: 'Открываю Telegram', position: 'bottom' })
-    } catch {
-      // noop
-    }
-  }, [coordsText, point])
-
-  const openExternalMap = React.useCallback((url: string) => {
-    void openExternalUrlInNewTab(url)
-    void showToast({ type: 'success', text1: 'Открываю карту', position: 'bottom' })
-  }, [])
-
-  const colorLabel = React.useMemo(() => String((point as any)?.color ?? '').trim(), [point])
-  const markerAccentColor = React.useMemo(
-    () => String((point as any)?.color ?? '').trim() || colors.backgroundTertiary,
-    [colors.backgroundTertiary, point]
-  )
-  const badgeLabel = hasCoords && categoryLabel ? categoryLabel : colorLabel
-
-  const photoUrl = React.useMemo(() => {
-    const v = (point as any)?.photo
-    if (typeof v === 'string' && v.trim()) return v.trim()
-
-    const legacy = (point as any)?.photos
-    if (typeof legacy === 'string' && legacy.trim()) return legacy.trim()
-    if (legacy && typeof legacy === 'object') {
-      const knownKeys = ['url', 'src', 'photo', 'image', 'thumb', 'thumbnail', 'travelImageThumbUrl']
-      for (const k of knownKeys) {
-        const val = (legacy as any)?.[k]
-        if (typeof val === 'string' && val.trim()) return val.trim()
-      }
-      for (const val of Object.values(legacy as Record<string, unknown>)) {
-        if (typeof val === 'string' && val.trim()) return val.trim()
-      }
-    }
-
-    return ''
-  }, [point])
-
-  const mapLinks = React.useMemo(
-    () =>
-      [
-        { key: 'Google', url: `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}` },
-        { key: 'Apple', url: `https://maps.apple.com/?q=${encodeURIComponent(`${lat},${lng}`)}` },
-        { key: 'Яндекс', url: `https://yandex.ru/maps/?pt=${encodeURIComponent(`${lng},${lat}`)}&z=16&l=map` },
-        {
-          key: 'OSM',
-          url: `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(lat))}&mlon=${encodeURIComponent(
-            String(lng)
-          )}#map=16/${encodeURIComponent(String(lat))}/${encodeURIComponent(String(lng))}`,
-        },
-      ] as const,
+  const hasCoords = Number.isFinite(point.latitude) && Number.isFinite(point.longitude)
+  const lat = Number(point.latitude)
+  const lng = Number(point.longitude)
+  const coord = React.useMemo(
+    () => (Number.isFinite(lat) && Number.isFinite(lng) ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : ''),
     [lat, lng]
   )
+
+  const title = React.useMemo(() => getPointTitle(point), [point])
+  const subtitle = React.useMemo(() => getPointSubtitle(point, title), [point, title])
+  const countryLabel = React.useMemo(() => getCountryLabel(point), [point])
+  const categoryLabel = React.useMemo(() => getCategoryLabel(point, countryLabel), [countryLabel, point])
+  const imageUrl = React.useMemo(() => getPointPhotoUrl(point), [point])
+  const { articleUrl, travelUrl } = React.useMemo(() => getRelatedUrls(point), [point])
+
+  const pointId = React.useMemo(() => Number(point.id), [point.id])
+  const markerPosition = React.useMemo(() => [lat, lng] as [number, number], [lat, lng])
+
+  const handleClosePopup = React.useCallback(() => {
+    try {
+      markerInstanceRef.current?.closePopup?.()
+    } catch {
+      // noop
+    }
+    try {
+      mapInstance?.closePopup?.()
+    } catch {
+      // noop
+    }
+  }, [mapInstance])
+
+  const handleCopyCoords = React.useCallback(async () => {
+    if (!coord) return
+    try {
+      await Clipboard.setStringAsync(coord)
+      void showToast({ type: 'success', text1: 'Координаты скопированы', position: 'bottom' })
+    } catch {
+      void showToast({ type: 'error', text1: 'Не удалось скопировать координаты', position: 'bottom' })
+    }
+  }, [coord])
+
+  const handleOpenArticle = React.useCallback(() => {
+    void openRelatedPage(articleUrl || travelUrl)
+  }, [articleUrl, travelUrl])
+
+  const handleShareTelegram = React.useCallback(() => {
+    if (!coord) return
+    void openExternal(buildTelegramShareUrl(coord), 'Не удалось поделиться')
+  }, [coord])
+
+  const handleOpenGoogleMaps = React.useCallback(() => {
+    if (!coord) return
+    void openExternal(buildGoogleMapsUrl(coord), 'Не удалось открыть Google Maps')
+  }, [coord])
+
+  const handleOpenAppleMaps = React.useCallback(() => {
+    if (!coord) return
+    void openExternal(buildAppleMapsUrl(coord), 'Не удалось открыть Apple Maps')
+  }, [coord])
+
+  const handleOpenOrganicMaps = React.useCallback(() => {
+    if (!coord) return
+    void openExternal(buildOrganicMapsUrl(coord, title), 'Не удалось открыть Organic Maps')
+  }, [coord, title])
+
+  const handleOpenWaze = React.useCallback(() => {
+    if (!coord) return
+    void openExternal(buildWazeUrl(coord), 'Не удалось открыть Waze')
+  }, [coord])
+
+  const handleOpenYandexMaps = React.useCallback(() => {
+    if (!coord) return
+    void openExternal(buildYandexMapsUrl(coord), 'Не удалось открыть Яндекс Карты')
+  }, [coord])
+
+  const handleOpenYandexNavi = React.useCallback(() => {
+    if (!coord) return
+    void openExternal(buildYandexNaviUrl(coord), 'Не удалось открыть Яндекс Навигатор')
+  }, [coord])
+
+  const handleOpenOpenStreetMap = React.useCallback(() => {
+    if (!coord) return
+    void openExternal(buildOpenStreetMapUrl(coord), 'Не удалось открыть OpenStreetMap')
+  }, [coord])
 
   const handleMarkerClick = React.useCallback(() => {
     try {
@@ -200,7 +282,6 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
     }
 
     try {
-      const pointId = Number((point as any)?.id)
       const userLat = Number(centerOverride?.lat)
       const userLng = Number(centerOverride?.lng)
       if (!Number.isFinite(pointId)) return
@@ -212,46 +293,7 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
     }
 
     onPointPress?.(point)
-  }, [centerOverride?.lat, centerOverride?.lng, driveInfo?.status, lat, lng, mapInstance, onPointPress, point, requestDriveInfo])
-
-  const markerPosition = React.useMemo(() => [lat, lng] as [number, number], [lat, lng])
-
-  const isSitePoint = React.useMemo(() => {
-    const tags = (point as any)?.tags
-    return Boolean(String(tags?.travelUrl ?? '').trim() || String(tags?.articleUrl ?? '').trim())
-  }, [point])
-
-  const markerIcon = React.useMemo(() => {
-    const fallback = colors.backgroundTertiary
-    const baseColor = String((point as any)?.color ?? '').trim()
-    const fill = isSitePoint ? baseColor || DEFAULT_SITE_POINT_COLOR : baseColor
-    return getMarkerIconCached(String(fill || '').trim() || fallback, { active: isActive, emphasize: isSitePoint })
-  }, [colors.backgroundTertiary, getMarkerIconCached, isActive, isSitePoint, point])
-
-  const markerEventHandlers = React.useMemo(() => ({ click: handleMarkerClick } as any), [handleMarkerClick])
-
-  const pointId = React.useMemo(() => Number((point as any)?.id), [point])
-  const markerRefCb = React.useCallback(
-    (marker: any | null) => {
-      if (!Number.isFinite(pointId)) return
-      markerInstanceRef.current = marker
-      onMarkerReady?.({ pointId, marker })
-    },
-    [onMarkerReady, pointId]
-  )
-
-  const handleClosePopup = React.useCallback(() => {
-    try {
-      markerInstanceRef.current?.closePopup?.()
-    } catch {
-      // noop
-    }
-    try {
-      mapInstance?.closePopup?.()
-    } catch {
-      // noop
-    }
-  }, [mapInstance])
+  }, [centerOverride?.lat, centerOverride?.lng, driveInfo?.status, lat, lng, mapInstance, onPointPress, point, pointId, requestDriveInfo])
 
   const handleEditPoint = React.useCallback(() => {
     handleClosePopup()
@@ -263,381 +305,101 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
     onDeletePoint?.(point)
   }, [handleClosePopup, onDeletePoint, point])
 
+  const isSitePoint = React.useMemo(() => Boolean(articleUrl || travelUrl), [articleUrl, travelUrl])
+  const markerIcon = React.useMemo(() => {
+    const fallback = colors.backgroundTertiary
+    const baseColor = String(point.color ?? '').trim()
+    const fill = isSitePoint ? baseColor || DEFAULT_SITE_POINT_COLOR : baseColor
+    return getMarkerIconCached(String(fill || '').trim() || fallback, { active: isActive, emphasize: isSitePoint })
+  }, [colors.backgroundTertiary, getMarkerIconCached, isActive, isSitePoint, point.color])
+
+  const markerEventHandlers = React.useMemo(() => ({ click: handleMarkerClick } as any), [handleMarkerClick])
+  const markerRefCb = React.useCallback(
+    (marker: any | null) => {
+      if (!Number.isFinite(pointId)) return
+      markerInstanceRef.current = marker
+      onMarkerReady?.({ pointId, marker })
+    },
+    [onMarkerReady, pointId]
+  )
+
+  const extraActions = React.useMemo<UserPointPopupAction[]>(() => {
+    const actions: UserPointPopupAction[] = []
+    if (onEditPoint) {
+      actions.push({
+        key: 'edit',
+        label: 'Изменить',
+        icon: 'edit-2',
+        onPress: handleEditPoint,
+        accessibilityLabel: 'Редактировать',
+        tooltip: 'Редактировать',
+      })
+    }
+    if (onDeletePoint) {
+      actions.push({
+        key: 'delete',
+        label: 'Удалить',
+        icon: 'trash-2',
+        onPress: handleDeletePoint,
+        accessibilityLabel: 'Удалить',
+        tooltip: 'Удалить',
+      })
+    }
+    actions.push({
+      key: 'close',
+      label: 'Закрыть',
+      icon: 'x',
+      onPress: handleClosePopup,
+      accessibilityLabel: 'Закрыть попап',
+      tooltip: 'Закрыть',
+    })
+    return actions
+  }, [handleClosePopup, handleDeletePoint, handleEditPoint, onDeletePoint, onEditPoint])
+
+  const drivingDistanceMeters = driveInfo?.status === 'ok' ? driveInfo.distanceKm * 1000 : null
+  const drivingDurationSeconds = driveInfo?.status === 'ok' ? driveInfo.durationMin * 60 : null
+
+  if (!hasCoords) return null
+
   return (
     <mods.Marker ref={markerRefCb as any} position={markerPosition} icon={markerIcon} eventHandlers={markerEventHandlers}>
-      <mods.Popup className="metravel-user-point-popup" closeButton={false} autoPan autoPanPadding={isCompactPopup ? ([16, 92] as any) : ([28, 120] as any)}>
-        <div
-          style={{
-            width: isTinyPopup ? 276 : isNarrowPopup ? 292 : isCompactPopup ? 300 : 340,
-            maxWidth: isCompactPopup ? '88vw' : '74vw',
-            maxHeight: isCompactPopup ? '58vh' : '52vh',
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            padding: isTinyPopup ? '10px 10px 8px' : isNarrowPopup ? '11px 11px 9px' : '12px 12px 10px',
-            boxSizing: 'border-box',
-            borderLeft: `5px solid ${markerAccentColor}`,
-            borderTopLeftRadius: 12,
-            borderBottomLeftRadius: 12,
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: isCompactPopup ? 'column' : 'row',
-              alignItems: isCompactPopup ? 'stretch' : 'flex-start',
-              justifyContent: 'space-between',
-              gap: isCompactPopup ? 8 : 10,
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: isCompactPopup ? 16 : 18,
-                  fontWeight: 700,
-                  lineHeight: isTinyPopup ? '20px' : isCompactPopup ? '22px' : '24px',
-                  color: colors.text,
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  overflowWrap: 'anywhere',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {(point as any)?.name}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: isTinyPopup ? 6 : 8, marginTop: isTinyPopup ? 8 : 10 }}>
-                {badgeLabel ? (
-                  <div
-                    style={{
-                      background: colors.backgroundSecondary,
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: 999,
-                      padding: isTinyPopup ? '5px 8px' : isCompactPopup ? '6px 10px' : '8px 12px',
-                      fontSize: isTinyPopup ? 12 : isCompactPopup ? 13 : 14,
-                      lineHeight: isTinyPopup ? '13px' : isCompactPopup ? '14px' : '16px',
-                      color: colors.textSecondary,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {badgeLabel}
-                  </div>
-                ) : null}
-                {!isSitePoint && countryLabel ? (
-                  <div
-                    style={{
-                      background: colors.backgroundSecondary,
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: 999,
-                      padding: isTinyPopup ? '5px 8px' : isCompactPopup ? '6px 10px' : '8px 12px',
-                      fontSize: isTinyPopup ? 12 : isCompactPopup ? 13 : 14,
-                      lineHeight: isTinyPopup ? '13px' : isCompactPopup ? '14px' : '16px',
-                      color: colors.textSecondary,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {countryLabel}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: isTinyPopup ? 6 : 8,
-                flexShrink: 0,
-                minWidth: 0,
-                flexWrap: 'wrap',
-                justifyContent: isCompactPopup ? 'flex-start' : 'flex-end',
-              }}
-            >
-              {typeof onEditPoint === 'function' ? (
-                <CardActionPressable
-                  accessibilityLabel="Редактировать"
-                  title="Редактировать"
-                  onPress={handleEditPoint}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: colors.backgroundSecondary,
-                    color: colors.text,
-                    borderRadius: 14,
-                    width: isTinyPopup ? 38 : 40,
-                    height: isTinyPopup ? 38 : 40,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-                  }}
-                >
-                  <Feather name="edit-2" size={isTinyPopup ? 16 : 17} color={colors.text} />
-                </CardActionPressable>
-              ) : null}
-
-              {typeof onDeletePoint === 'function' ? (
-                <CardActionPressable
-                  accessibilityLabel="Удалить"
-                  title="Удалить"
-                  onPress={handleDeletePoint}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: colors.backgroundSecondary,
-                    color: colors.text,
-                    borderRadius: 14,
-                    width: isTinyPopup ? 38 : 40,
-                    height: isTinyPopup ? 38 : 40,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-                  }}
-                >
-                  <Feather name="trash-2" size={isTinyPopup ? 16 : 17} color={colors.text} />
-                </CardActionPressable>
-              ) : null}
-
-              <CardActionPressable
-                accessibilityLabel="Закрыть попап"
-                title="Закрыть"
-                onPress={handleClosePopup}
-                style={{
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  backgroundColor: colors.backgroundSecondary,
-                  color: colors.text,
-                  borderRadius: 14,
-                  width: isTinyPopup ? 38 : 40,
-                  height: isTinyPopup ? 38 : 40,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-                }}
-              >
-                <Feather name="x" size={isTinyPopup ? 16 : 17} color={colors.text} />
-              </CardActionPressable>
-            </div>
-          </div>
-
-          {photoUrl ? (
-            <div
-              style={{
-                marginTop: 12,
-                borderRadius: 12,
-                overflow: 'hidden',
-                border: `1px solid ${colors.border}`,
-                background: colors.backgroundSecondary,
-              }}
-            >
-              <ImageCardMedia
-                src={photoUrl}
-                alt="Фото точки"
-                height={isTinyPopup ? 108 : isNarrowPopup ? 120 : 140}
-                width="100%"
-                borderRadius={12}
-                fit="contain"
-                blurBackground
-                allowCriticalWebBlur
-                blurRadius={16}
-              />
-            </div>
-          ) : null}
-
-          {(point as any)?.description ? (
-            <div
-              style={{
-                marginTop: 10,
-                color: colors.text,
-                whiteSpace: 'pre-wrap',
-                overflowWrap: 'anywhere',
-                fontSize: isTinyPopup ? 13 : 14,
-                lineHeight: isTinyPopup ? '18px' : '20px',
-              }}
-            >
-              {(point as any)?.description}
-            </div>
-          ) : null}
-
-          {(point as any)?.address ? (
-            <div style={{ marginTop: 10, color: colors.textMuted, overflowWrap: 'anywhere' }}>
-              <span style={{ fontSize: isTinyPopup ? 11 : 12, lineHeight: isTinyPopup ? '15px' : '16px' }}>{(point as any)?.address}</span>
-            </div>
-          ) : null}
-
-          {(Boolean((point as any)?.address) || Boolean(coordsText)) ? (
-            <div
-              style={{
-                height: 1,
-                background: colors.border,
-                opacity: 0.8,
-                marginTop: 12,
-                marginBottom: 12,
-              }}
-            />
-          ) : null}
-
-          {coordsText ? (
-            <div>
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: isCompactPopup ? 'column' : 'row',
-                  alignItems: isCompactPopup ? 'stretch' : 'center',
-                  justifyContent: 'space-between',
-                  gap: 10,
-                }}
-              >
-                <div
-                  style={{
-                    border: `1px solid ${colors.border}`,
-                    background: colors.backgroundSecondary,
-                    borderRadius: 12,
-                    padding: isTinyPopup ? '9px 10px' : isCompactPopup ? '10px 12px' : '12px 14px',
-                    flex: 1,
-                    minWidth: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: isTinyPopup ? 12 : isCompactPopup ? 13 : 15,
-                      color: colors.textSecondary,
-                      lineHeight: 1.2,
-                      overflowWrap: 'anywhere',
-                      wordBreak: 'break-word',
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {coordsText}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: isTinyPopup ? 5 : 6,
-                    flexShrink: 0,
-                    flexWrap: 'wrap',
-                    justifyContent: isCompactPopup ? 'flex-end' : 'flex-start',
-                  }}
-                >
-                  <CardActionPressable
-                    accessibilityLabel="Копировать координаты"
-                    title="Копировать координаты"
-                    onPress={handleCopyCoords}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      backgroundColor: colors.backgroundSecondary,
-                      color: colors.text,
-                      borderRadius: 14,
-                      width: isTinyPopup ? 38 : 40,
-                      height: isTinyPopup ? 38 : 40,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-                    }}
-                  >
-                    <Feather name="copy" size={isTinyPopup ? 16 : 17} color={colors.text} />
-                  </CardActionPressable>
-
-                  <CardActionPressable
-                    accessibilityLabel="Поделиться в Telegram"
-                    title="Поделиться в Telegram"
-                    onPress={handleShareTelegram}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      backgroundColor: colors.backgroundSecondary,
-                      color: colors.text,
-                      borderRadius: 14,
-                      width: isTinyPopup ? 38 : 40,
-                      height: isTinyPopup ? 38 : 40,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-                    }}
-                  >
-                    <Feather name="send" size={isTinyPopup ? 16 : 17} color={colors.text} />
-                  </CardActionPressable>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: isTinyPopup ? 5 : 6, flexWrap: 'wrap', justifyContent: 'flex-start', width: '100%' }}>
-                  {mapLinks.map((p) => (
-                    <CardActionPressable
-                      key={p.key}
-                      accessibilityLabel={p.key}
-                      title={p.key}
-                      onPress={() => openExternalMap(p.url)}
-                      style={{
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                        backgroundColor: colors.backgroundSecondary,
-                        color: colors.text,
-                        borderRadius: 999,
-                        paddingVertical: isTinyPopup ? 4 : isCompactPopup ? 5 : 6,
-                        paddingHorizontal: isTinyPopup ? 7 : isCompactPopup ? 9 : 10,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-                        minWidth: isTinyPopup ? 46 : isCompactPopup ? 50 : 52,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: isTinyPopup ? 10 : isCompactPopup ? 11 : 12,
-                          lineHeight: isTinyPopup ? '12px' : isCompactPopup ? '13px' : '14px',
-                          color: colors.textSecondary,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {p.key}
-                      </span>
-                    </CardActionPressable>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {Number.isFinite((driveInfo as any)?.distanceKm) ? (
-            <div style={{ marginTop: 12 }}>
-              <div
-                style={{
-                  height: 1,
-                  background: colors.border,
-                  opacity: 0.8,
-                  marginBottom: 10,
-                }}
-              />
-              <div style={{ fontSize: 12, color: colors.textMuted }}>
-                На машине: {(driveInfo as any).distanceKm} км · ~{(driveInfo as any).durationMin} мин
-              </div>
-            </div>
-          ) : driveInfo?.status === 'loading' ? (
-            <div style={{ marginTop: 12 }}>
-              <div
-                style={{
-                  height: 1,
-                  background: colors.border,
-                  opacity: 0.8,
-                  marginBottom: 10,
-                }}
-              />
-              <div style={{ fontSize: 12, color: colors.textMuted }}>Считаю маршрут…</div>
-            </div>
-          ) : null}
-        </div>
+      <mods.Popup
+        className="metravel-user-point-popup metravel-place-popup"
+        closeButton={false}
+        autoPan
+        autoPanPadding={isCompactPopup ? ([16, 92] as any) : ([28, 120] as any)}
+      >
+        <PlacePopupCard
+          colors={colors}
+          title={title}
+          subtitle={subtitle}
+          imageUrl={imageUrl}
+          articleHref={articleUrl || travelUrl || null}
+          relatedTravelUrl={travelUrl || null}
+          categoryLabel={categoryLabel || null}
+          coord={coord}
+          drivingDistanceMeters={drivingDistanceMeters}
+          drivingDurationSeconds={drivingDurationSeconds}
+          isDrivingLoading={driveInfo?.status === 'loading'}
+          onOpenArticle={articleUrl || travelUrl ? handleOpenArticle : undefined}
+          onCopyCoord={handleCopyCoords}
+          onShareTelegram={handleShareTelegram}
+          onOpenGoogleMaps={handleOpenGoogleMaps}
+          onOpenAppleMaps={handleOpenAppleMaps}
+          onOpenOrganicMaps={handleOpenOrganicMaps}
+          onOpenWaze={handleOpenWaze}
+          onOpenYandexMaps={handleOpenYandexMaps}
+          onOpenYandexNavi={handleOpenYandexNavi}
+          onOpenOpenStreetMap={handleOpenOpenStreetMap}
+          extraActions={extraActions}
+          suppressFallbackPrimaryAction
+          compactLayout={isCompactPopup}
+          fullscreenOnMobile={isCompactPopup && Boolean(imageUrl)}
+          popupSplit={!isCompactPopup && Boolean(imageUrl)}
+          fullscreenTopInset={LAYOUT.headerHeight}
+          fullscreenBottomInset={LAYOUT.tabBarHeight}
+          onClose={handleClosePopup}
+        />
       </mods.Popup>
     </mods.Marker>
   )

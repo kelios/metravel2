@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import UserPointsScreen from '@/app/(tabs)/userpoints';
 import { useAuth } from '@/context/AuthContext';
@@ -6,6 +7,7 @@ jest.mock('@/context/AuthContext');
 const mockPush = jest.fn();
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
+const mockUseResponsive = jest.fn();
 let mockParams: Record<string, string | undefined> = {};
 jest.mock('expo-router', () => ({
   router: {
@@ -29,6 +31,10 @@ jest.mock('@/components/profile/ProfileCollectionHeader', () => {
     );
   };
 });
+
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => mockUseResponsive(),
+}));
 
 jest.mock('@/components/UserPoints/PointsList', () => ({
   PointsList: ({ onImportPress }: any) => {
@@ -57,11 +63,18 @@ jest.mock('@/components/UserPoints/ImportWizard', () => ({
 }));
 
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+const originalPlatformOS = Platform.OS;
 
 describe('UserPointsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (Platform.OS as any) = 'web';
+    mockUseResponsive.mockReturnValue({ isHydrated: true, isMobile: false });
     mockParams = {};
+  });
+
+  afterAll(() => {
+    (Platform.OS as any) = originalPlatformOS;
   });
 
   it('should not show auth required message while auth is not ready', async () => {
@@ -208,5 +221,34 @@ describe('UserPointsScreen', () => {
     fireEvent.press(await screen.findByLabelText('Назад'));
 
     expect(mockReplace).toHaveBeenCalledWith('/profile');
+  });
+
+  it('hides local title and back button on mobile web because HeaderContextBar owns them', async () => {
+    mockUseResponsive.mockReturnValue({ isHydrated: true, isMobile: true });
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      username: 'testuser',
+      userId: '1',
+      isSuperuser: false,
+      userAvatar: null,
+      authReady: true,
+      profileRefreshToken: 0,
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      setUserAvatar: jest.fn(),
+      triggerProfileRefresh: jest.fn(),
+      login: jest.fn(),
+      logout: jest.fn(),
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn()
+    });
+
+    render(<UserPointsScreen />);
+
+    expect(await screen.findByLabelText('Добавить')).toBeTruthy();
+    expect(screen.queryByText('Мои точки')).toBeNull();
+    expect(screen.queryByLabelText('Назад')).toBeNull();
   });
 });

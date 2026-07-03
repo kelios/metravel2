@@ -39,6 +39,15 @@ type Props = {
   onOpenOpenStreetMap?: () => void;
   onAddPoint?: () => void;
   onBuildRoute?: () => void;
+  extraActions?: Array<{
+    key: string;
+    label: string;
+    icon: React.ComponentProps<typeof Feather>['name'];
+    onPress: () => void;
+    accessibilityLabel?: string;
+    tooltip?: string;
+  }>;
+  suppressFallbackPrimaryAction?: boolean;
   /**
    * #FIX-3 — surface «Поделиться» as a small icon in the title row (next to the
    * share/utility area) instead of inside the navigation sheet. Telegram is a share
@@ -120,6 +129,8 @@ const PlacePopupCard: React.FC<Props> = ({
   onOpenOpenStreetMap,
   onAddPoint,
   onBuildRoute,
+  extraActions,
+  suppressFallbackPrimaryAction = false,
   shareInActionRow = false,
   addDisabled = false,
   isAdding = false,
@@ -289,6 +300,7 @@ const PlacePopupCard: React.FC<Props> = ({
   }, [imageUrl, isBottomCardLayout, navActions.length, useNavSheet]);
 
   const renderFallbackPrimaryAction =
+    !suppressFallbackPrimaryAction &&
     !primaryActionOverride &&
     !!primaryAction &&
     !onBuildRoute &&
@@ -583,6 +595,24 @@ const PlacePopupCard: React.FC<Props> = ({
                 </CardActionPressable>
               )}
 
+              {(extraActions ?? []).map((action) => (
+                <CardActionPressable
+                  key={action.key}
+                  accessibilityLabel={action.accessibilityLabel ?? action.label}
+                  onPress={action.onPress}
+                  title={action.tooltip ?? action.label}
+                  enableWebClickFallback
+                  style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
+                >
+                  <View style={styles.iconActionBubble}>
+                    <Feather name={action.icon} size={19} color={colors.text} />
+                  </View>
+                  <View style={styles.iconActionLabelRow}>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>{action.label}</Text>
+                  </View>
+                </CardActionPressable>
+              ))}
+
               {showNavToggle && (
                 <CardActionPressable
                   accessibilityLabel={
@@ -664,6 +694,7 @@ const PlacePopupCard: React.FC<Props> = ({
     colors.successDark,
     colors.successSoft,
     displayCoord,
+    extraActions,
     hasCoord,
     isAdding,
     isBottomCardLayout,

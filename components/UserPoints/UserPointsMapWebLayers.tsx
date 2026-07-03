@@ -89,7 +89,7 @@ export function UserPointsMapWebStyles({
 
         .metravel-user-point-popup .leaflet-popup-content {
           margin: 0 !important;
-          width: auto !important;
+          width: min(88vw, 360px) !important;
           min-width: 0 !important;
           max-width: min(88vw, 360px);
         }

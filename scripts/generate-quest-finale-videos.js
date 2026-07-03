@@ -75,6 +75,9 @@ const QUESTS = [
     { questId: 'tbilisi-warm-city', dir: 'tbilisiWarmCity', city: 'Тбилиси', mood: 'city', finaleId: 38 },
     { questId: 'istanbul-empires', dir: 'istanbulEmpires', city: 'Стамбул', mood: 'epic', finaleId: 39 },
     { questId: 'novogrudok-crown', dir: 'novogrudokCrown', city: 'Новогрудок', mood: 'castle', finaleId: 40 },
+    { questId: 'batumi-golden-fleece', dir: 'batumiGoldenFleece', city: 'Батуми', mood: 'city', finaleId: 41 },
+    { questId: 'bobruisk-beaver-odessa', dir: 'bobruiskBeaverOdessa', city: 'Бобруйск', mood: 'city', finaleId: 42 },
+    { questId: 'budapest-two-cities', dir: 'budapestTwoCities', city: 'Будапешт', mood: 'epic', finaleId: 43 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

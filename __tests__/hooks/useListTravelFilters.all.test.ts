@@ -77,7 +77,7 @@ describe('useListTravelFilters - All Filters', () => {
         result.current.onSelect('categories', ['hiking', 'cycling']);
       });
 
-      expect(result.current.filter.categories).toEqual(['hiking', 'cycling']);
+      expect(result.current.filter.categories).toEqual([1, 2]);
       expect(result.current.queryParams.categories).toEqual([1, 2]);
     });
 
@@ -88,7 +88,7 @@ describe('useListTravelFilters - All Filters', () => {
         result.current.handleToggleCategory('hiking');
       });
 
-      expect(result.current.filter.categories).toEqual(['hiking']);
+      expect(result.current.filter.categories).toEqual([1]);
 
       act(() => {
         result.current.handleToggleCategory('hiking');
@@ -108,8 +108,8 @@ describe('useListTravelFilters - All Filters', () => {
         result.current.handleToggleCategory('cycling');
       });
 
-      expect(result.current.filter.categories).toContain('hiking');
-      expect(result.current.filter.categories).toContain('cycling');
+      expect(result.current.filter.categories).toContain(1);
+      expect(result.current.filter.categories).toContain(2);
     });
 
     it('should merge numeric selections with mapped category names', () => {
@@ -133,7 +133,7 @@ describe('useListTravelFilters - All Filters', () => {
         result.current.handleToggleCategory('sailing');
       });
 
-      expect(result.current.filter.categories).toEqual([3, 'sailing']);
+      expect(result.current.filter.categories).toEqual([3, 42]);
       expect(result.current.queryParams.categories).toEqual([3, 42]);
     });
 
@@ -281,7 +281,7 @@ describe('useListTravelFilters - All Filters', () => {
       });
 
       expect(result.current.filter.countries).toEqual([1, 2]);
-      expect(result.current.filter.categories).toEqual(['hiking']);
+      expect(result.current.filter.categories).toEqual([1]);
       expect(result.current.filter.transports).toEqual([1]);
       expect(result.current.filter.year).toBe('2023');
 
@@ -303,7 +303,7 @@ describe('useListTravelFilters - All Filters', () => {
       });
 
       expect(result.current.filter.countries).toEqual([1]);
-      expect(result.current.filter.categories).toEqual(['hiking']);
+      expect(result.current.filter.categories).toEqual([1]);
     });
 
     it('should remove one filter without affecting others', () => {

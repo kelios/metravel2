@@ -563,6 +563,14 @@ describe('PlacePopupCard', () => {
     expect(hero).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Скопировать координаты' })).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Открыть точку в Google Maps' })).toBeTruthy();
+    const navToggle = tree.root.findByProps({ accessibilityLabel: 'Открыть способы навигации' });
+    expect(navToggle.props.accessibilityState).toEqual({ expanded: false });
+
+    renderer.act(() => {
+      navToggle.props.onPress();
+    });
+
+    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть способы навигации' }).props.accessibilityState).toEqual({ expanded: true });
     expect(tree.root.findByProps({ accessibilityLabel: 'Apple Maps' })).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Organic Maps' })).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Waze' })).toBeTruthy();
@@ -570,9 +578,9 @@ describe('PlacePopupCard', () => {
     expect(tree.root.findByProps({ accessibilityLabel: 'Яндекс Навигатор' })).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'OpenStreetMap' })).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Поделиться в Telegram' })).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'Скрыть способы навигации' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Закрыть меню действий' })).toBeTruthy();
     expect(tree.root.findAllByProps({ accessibilityLabel: 'Показать способы навигации' })).toHaveLength(0);
-    expect(tree.root.findAll((node: any) => node.props?.children === 'Открыть в навигаторе').length).toBeGreaterThan(0);
+    expect(tree.root.findAll((node: any) => node.props?.children === 'Навигация и действия').length).toBeGreaterThan(0);
     expect(tree.root.findAll((node: any) => node.props?.children === 'Apple').length).toBeGreaterThan(0);
     expect(tree.root.findAll((node: any) => node.props?.children === 'Organic').length).toBeGreaterThan(0);
     expect(tree.root.findAll((node: any) => node.props?.children === 'Яндекс Карты').length).toBeGreaterThan(0);

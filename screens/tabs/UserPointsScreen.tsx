@@ -1,11 +1,12 @@
 // src/screens/tabs/UserPointsScreen.tsx
 import { useState } from 'react';
-import { View, StyleSheet, Modal, ActivityIndicator } from 'react-native';
+import { Platform, View, StyleSheet, Modal, ActivityIndicator } from 'react-native';
 import { PointsList } from '@/components/UserPoints/PointsList';
 import { ImportWizard } from '@/components/UserPoints/ImportWizard';
 import { useAuth } from '@/context/AuthContext';
 import { router, useLocalSearchParams, useRouter } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { buildLoginHref } from '@/utils/authNavigation';
 import EmptyState from '@/components/ui/EmptyState';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
@@ -15,8 +16,10 @@ export default function UserPointsScreen() {
   const { isAuthenticated, authReady } = useAuth();
   const colors = useThemedColors();
   const navigation = useRouter();
+  const { isMobile, isHydrated } = useResponsive();
   const params = useLocalSearchParams<{ from?: string }>();
   const cameFromProfile = params.from === 'profile';
+  const showPageHeader = Platform.OS === 'web' && !(isHydrated && isMobile);
 
   const styles = createStyles(colors);
   const handleBack = () => {
@@ -59,7 +62,7 @@ export default function UserPointsScreen() {
 
   return (
     <View style={styles.container} testID="userpoints-screen">
-      <ProfileCollectionHeader title="Мои точки" onBackPress={handleBack} dense />
+      {showPageHeader && <ProfileCollectionHeader title="Мои точки" onBackPress={handleBack} dense />}
       <PointsList onImportPress={() => setShowImportWizard(true)} />
 
       <Modal

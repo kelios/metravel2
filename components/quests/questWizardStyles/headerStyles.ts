@@ -48,6 +48,7 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         lineHeight: 20,
     },
     resetButton: {
+        position: 'relative',
         flexDirection: 'row',
         alignItems: 'center',
         gap: 5,
@@ -64,6 +65,7 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         }),
     },
     actionLabelButton: {
+        position: 'relative',
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
@@ -88,6 +90,26 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         justifyContent: 'center',
     },
     actionLabelText: { color: colors.textMuted, fontWeight: '600', fontSize: 13 },
+    actionTooltip: {
+        position: 'absolute',
+        top: 42,
+        alignSelf: 'center',
+        paddingHorizontal: SPACING.sm,
+        paddingVertical: SPACING.xs,
+        borderRadius: 6,
+        backgroundColor: colors.text,
+        color: colors.surface,
+        fontSize: 12,
+        lineHeight: 16,
+        fontWeight: '600',
+        zIndex: 20,
+        ...Platform.select({
+            web: {
+                whiteSpace: 'nowrap',
+                boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
+            } as any,
+        }),
+    },
     resetText: { color: colors.textMuted, fontWeight: '600', fontSize: 12 },
     exportHint: {
         color: colors.textMuted,
