@@ -22,8 +22,10 @@ export const TravelHeroExtras: React.FC<{
   const styles = useTravelDetailsHeroStyles()
   const { quickJumpLinks, showQuickJumps } = useTravelHeroExtrasModel(sectionLinks)
   const router = useRouter()
+  // Категории точек путешествия (Озеро/Река/Скала…) — это таксономия «Что посмотреть»
+  // (categoryTravelAddress), как в фильтре карты, а не активити-категории путешествия.
   const handleCategoryPress = useCallback((category: string) => {
-    router.push({ pathname: '/travelsby', params: { categories: category } })
+    router.push({ pathname: '/travelsby', params: { categoryTravelAddress: category } })
   }, [router])
 
   return (

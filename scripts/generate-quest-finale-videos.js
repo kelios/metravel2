@@ -124,7 +124,77 @@ async function fetchCoverUrl(questId) {
     return q.cover_url;
 }
 
+// ffmpeg без libfreetype (нет drawtext, напр. homebrew-сборка) → текст рендерим
+// в прозрачный PNG через python3+PIL и накладываем overlay-ом с fade-in.
+let _hasDrawtext = null;
+function hasDrawtext() {
+    if (_hasDrawtext === null) {
+        const r = spawnSync(FFMPEG, ['-hide_banner', '-filters'], { encoding: 'utf8' });
+        _hasDrawtext = (r.stdout || '').includes('drawtext');
+    }
+    return _hasDrawtext;
+}
+
+function renderTextOverlayPng(cityLabel) {
+    const out = path.join(os.tmpdir(), `qf-overlay-${Math.random().toString(36).slice(2)}.png`);
+    const py = [
+        'import sys',
+        'from PIL import Image, ImageDraw, ImageFont',
+        'W,H=1280,720',
+        'img=Image.new("RGBA",(W,H),(0,0,0,0))',
+        'd=ImageDraw.Draw(img)',
+        `fb=ImageFont.truetype(sys.argv[1],64)`,
+        `fr=ImageFont.truetype(sys.argv[2],40)`,
+        'def line(text,font,y):',
+        '    w=d.textlength(text,font=font)',
+        '    d.text(((W-w)/2,y),text,font=font,fill=(255,255,255,255),stroke_width=2,stroke_fill=(0,0,0,140))',
+        `line("Квест пройден!",fb,H-220)`,
+        `line(sys.argv[4],fr,H-130)`,
+        'img.save(sys.argv[3])',
+    ].join('\n');
+    const fontBold = process.env.FONT_BOLD_PATH || '/System/Library/Fonts/Supplemental/Arial Bold.ttf';
+    const fontReg = process.env.FONT_REG_PATH || '/System/Library/Fonts/Supplemental/Arial.ttf';
+    const r = spawnSync('python3', ['-c', py, fontBold, fontReg, out, cityLabel], { encoding: 'utf8' });
+    if (r.status !== 0) throw new Error(`overlay png failed: ${r.stderr}`);
+    return out;
+}
+
+function generateVideoOverlay(coverPath, outPath, cityLabel, musicPath) {
+    const overlayPng = renderTextOverlayPng(cityLabel);
+    const seg1f = Math.round(SEG1 * FPS), seg2f = Math.round(SEG2 * FPS), seg3f = Math.round(SEG3 * FPS);
+    const textStart = SEG1 + SEG2 - 2 * XFADE + 1; // 12.44 — после второго xfade
+    const filter = [
+        `[0:v]scale=2560:-2,setsar=1[base]`,
+        `[base]split=3[s1][s2][s3]`,
+        `[s1]zoompan=z='1+0.12*on/${seg1f}':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':d=${seg1f}:s=1280x720:fps=${FPS},trim=duration=${SEG1},setpts=PTS-STARTPTS[v1]`,
+        `[s2]zoompan=z=1.15:x='(iw-iw/zoom)*on/${seg2f}':y='(ih-ih/zoom)/2':d=${seg2f}:s=1280x720:fps=${FPS},trim=duration=${SEG2},setpts=PTS-STARTPTS[v2]`,
+        `[s3]zoompan=z='1.15-0.10*on/${seg3f}':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':d=${seg3f}:s=1280x720:fps=${FPS},trim=duration=${SEG3},setpts=PTS-STARTPTS[v3]`,
+        `[v1][v2]xfade=transition=fade:duration=${XFADE}:offset=${(SEG1 - XFADE).toFixed(2)}[x1]`,
+        `[x1][v3]xfade=transition=fade:duration=${XFADE}:offset=${(SEG1 + SEG2 - 2 * XFADE).toFixed(2)}[x2]`,
+        `[2:v]format=rgba,fade=t=in:st=${textStart.toFixed(2)}:d=0.8:alpha=1[txt]`,
+        `[x2][txt]overlay=0:0:format=auto[vout]`,
+        `[1:a]atrim=0:${DURATION.toFixed(2)},afade=t=in:d=1,afade=t=out:st=${(DURATION - 3).toFixed(2)}:d=3,volume=0.85[aout]`,
+    ].join(';');
+
+    run([
+        '-y', '-hide_banner', '-loglevel', 'error',
+        '-i', coverPath,
+        '-i', musicPath,
+        '-loop', '1', '-framerate', String(FPS), '-t', DURATION.toFixed(2), '-i', overlayPng,
+        '-filter_complex', filter,
+        '-map', '[vout]', '-map', '[aout]',
+        '-t', DURATION.toFixed(2),
+        '-c:v', 'libx264', '-crf', '23', '-preset', 'medium', '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac', '-b:a', '96k',
+        '-movflags', '+faststart',
+        outPath,
+    ], path.basename(outPath));
+
+    fs.unlinkSync(overlayPng);
+}
+
 function generateVideo(coverPath, outPath, cityLabel, musicPath) {
+    if (!hasDrawtext()) return generateVideoOverlay(coverPath, outPath, cityLabel, musicPath);
     const line1 = writeTextFile('Квест пройден!');
     const line2 = writeTextFile(cityLabel);
     const seg1f = Math.round(SEG1 * FPS), seg2f = Math.round(SEG2 * FPS), seg3f = Math.round(SEG3 * FPS);

@@ -386,10 +386,10 @@ const PlacePopupCard: React.FC<Props> = ({
     useCompactLayout,
   ]);
 
-  // Web (desktop popup overlay + mobile-web inline «Статус поездки» row) keeps the
-  // ♥ favorite + «Был/Хочу/Планирую» status control. On the native bottom card this
-  // inline stack is NOT rendered — both ♥ and the (compact) status icon live in the
-  // hero corner instead (see `heroActionOverlay`).
+  // The desktop Leaflet popup overlay keeps this ♥ favorite + «Был/Хочу/Планирую»
+  // status stack (rendered via `relatedTravelOverlays`). On the bottom card (mobile
+  // web + native) this inline stack is NOT rendered — both ♥ and the (compact) status
+  // icon live in the hero corner instead (see `heroActionOverlay`).
   const relatedTravelActionStack = useMemo(() => {
     if (!relatedTravelUrl) return null;
     return (
@@ -861,6 +861,15 @@ const PlacePopupCard: React.FC<Props> = ({
             colors={colors}
           />
         )}
+
+        {useNavSheet && navSheetActions.length > 0 ? (
+          <ActionListSheet
+            visible={navSheetVisible}
+            onClose={closeNavSheet}
+            title="Навигация и действия"
+            actions={navSheetActions}
+          />
+        ) : null}
       </>
     );
   }

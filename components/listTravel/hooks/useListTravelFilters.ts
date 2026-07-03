@@ -113,20 +113,32 @@ export function useListTravelFilters({
   }, [initialFilter]);
 
   // Когда категория приходит как имя (deep-link по чипу категории со страницы
-  // путешествия), после загрузки опций фильтров переписываем имя→числовой id прямо
-  // в состоянии: тогда корректно работает и API-запрос, и активный чип фильтра
-  // (getOptionName ищет по id), и его удаление.
+  // путешествия ведёт на /travelsby?categoryTravelAddress=Озеро), после загрузки опций
+  // фильтров переписываем имя→числовой id прямо в состоянии: тогда корректно работает
+  // и API-запрос, и активный чип фильтра (getOptionName ищет по id), и его удаление.
+  const filterCategories = filter.categories;
+  const filterCategoryAddress = filter.categoryTravelAddress;
   useEffect(() => {
-    const textualCategories = extractCategoryNames(filter.categories);
-    if (!textualCategories.length || !options?.categories?.length) return;
+    const patch: Partial<FilterState> = {};
 
-    const mappedCategoryIds = mapCategoryNamesToIds(textualCategories, options.categories);
-    if (!mappedCategoryIds.length) return;
+    ([
+      ['categories', filterCategories, options?.categories],
+      ['categoryTravelAddress', filterCategoryAddress, options?.categoryTravelAddress],
+    ] as const).forEach(([key, values, optionList]) => {
+      const textual = extractCategoryNames(values as Array<string | number> | undefined);
+      if (!textual.length || !optionList?.length) return;
 
-    const numericIds = extractNumericCategoryIds(filter.categories);
-    const merged = Array.from(new Set<number>([...numericIds, ...mappedCategoryIds]));
-    setFilter((prev) => ({ ...prev, categories: merged }));
-  }, [filter.categories, options?.categories]);
+      const mappedIds = mapCategoryNamesToIds(textual, optionList);
+      if (!mappedIds.length) return;
+
+      const numericIds = extractNumericCategoryIds(values as Array<string | number> | undefined);
+      (patch as any)[key] = Array.from(new Set<number>([...numericIds, ...mappedIds]));
+    });
+
+    if (Object.keys(patch).length) {
+      setFilter((prev) => ({ ...prev, ...patch }));
+    }
+  }, [filterCategories, filterCategoryAddress, options?.categories, options?.categoryTravelAddress]);
 
   const filterForQuery = useMemo(() => {
     const textualCategories = extractCategoryNames(filter.categories);
