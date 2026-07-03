@@ -63,6 +63,7 @@ function CommunityRoutesCatalog({ initialTransport }: Props) {
         >
           <Text
             numberOfLines={1}
+            textBreakStrategy="simple"
             style={[styles.chipText, transport === null && styles.chipTextActive]}
           >
             Все
@@ -84,6 +85,7 @@ function CommunityRoutesCatalog({ initialTransport }: Props) {
               />
               <Text
                 numberOfLines={1}
+                textBreakStrategy="simple"
                 style={[styles.chipText, active && styles.chipTextActive]}
               >
                 {TRANSPORT_LABEL[option]}

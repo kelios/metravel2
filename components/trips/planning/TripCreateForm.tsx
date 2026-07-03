@@ -264,6 +264,7 @@ function TripCreateForm({ onCreated }: Props) {
               />
               <Text
                 numberOfLines={1}
+                textBreakStrategy="simple"
                 style={[styles.chipText, active && styles.chipTextActive]}
               >
                 {TRANSPORT_LABEL[option]}
@@ -286,6 +287,7 @@ function TripCreateForm({ onCreated }: Props) {
             >
               <Text
                 numberOfLines={1}
+                textBreakStrategy="simple"
                 style={[styles.chipText, active && styles.chipTextActive]}
               >
                 {VISIBILITY_LABEL[option]}
