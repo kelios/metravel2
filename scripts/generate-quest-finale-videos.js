@@ -72,6 +72,9 @@ const QUESTS = [
     { questId: 'bialystok-zamenhof', dir: 'bialystokZamenhof', city: 'Белосток', mood: 'city', finaleId: 35 },
     { questId: 'kaunas-capital', dir: 'kaunasCapital', city: 'Каунас', mood: 'city', finaleId: 36 },
     { questId: 'pinsk-polesie', dir: 'pinskPolesie', city: 'Пинск', mood: 'city', finaleId: 37 },
+    { questId: 'tbilisi-warm-city', dir: 'tbilisiWarmCity', city: 'Тбилиси', mood: 'city', finaleId: 38 },
+    { questId: 'istanbul-empires', dir: 'istanbulEmpires', city: 'Стамбул', mood: 'epic', finaleId: 39 },
+    { questId: 'novogrudok-crown', dir: 'novogrudokCrown', city: 'Новогрудок', mood: 'castle', finaleId: 40 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

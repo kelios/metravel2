@@ -736,7 +736,10 @@ export default function PlacesScreen() {
           ]}
         >
           <Feather name="sliders" size={16} color={selectedCategoryCount > 0 ? colors.primary : colors.text} />
-          <Text style={[styles.mobileFilterToggleText, selectedCategoryCount > 0 && styles.mobileFilterToggleTextActive]}>
+          <Text
+            numberOfLines={1}
+            style={[styles.mobileFilterToggleText, selectedCategoryCount > 0 && styles.mobileFilterToggleTextActive]}
+          >
             Категории
           </Text>
           {selectedCategoryCount > 0 ? (

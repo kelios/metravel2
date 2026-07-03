@@ -43,6 +43,7 @@ export function TravelHeroQuickJumps({
       link={link}
       isPrimary={link.key === activeOrDefault}
       onQuickJump={onQuickJump}
+      isMobile={isMobile}
     />
   ))
 
@@ -73,10 +74,12 @@ const QuickJumpChip = React.memo(function QuickJumpChip({
   link,
   isPrimary,
   onQuickJump,
+  isMobile,
 }: {
   link: TravelSectionLink
   isPrimary: boolean
   onQuickJump: (key: string) => void
+  isMobile: boolean
 }) {
   const styles = useTravelDetailsHeroStyles()
   const colors = useThemedColors()
@@ -130,6 +133,7 @@ const QuickJumpChip = React.memo(function QuickJumpChip({
       testID={`travel-quick-jump-${link.key}`}
       style={({ pressed }) => [
         styles.quickJumpChip,
+        isMobile && styles.quickJumpChipMobile,
         isPrimary && styles.quickJumpChipPrimary,
         !isPrimary && pressed && styles.quickJumpChipPressed,
       ]}

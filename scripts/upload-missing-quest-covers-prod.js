@@ -52,6 +52,9 @@ const QUEST_COVERS = [
   { quest_id: 'bialystok-zamenhof', assetsDir: 'bialystokZamenhof', cover: 'cover.png' },
   { quest_id: 'kaunas-capital', assetsDir: 'kaunasCapital', cover: 'cover.png' },
   { quest_id: 'pinsk-polesie', assetsDir: 'pinskPolesie', cover: 'cover.png' },
+  { quest_id: 'tbilisi-warm-city', assetsDir: 'tbilisiWarmCity', cover: 'cover.png' },
+  { quest_id: 'istanbul-empires', assetsDir: 'istanbulEmpires', cover: 'cover.png' },
+  { quest_id: 'novogrudok-crown', assetsDir: 'novogrudokCrown', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {

@@ -396,7 +396,9 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     flexDirection: 'row',
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.xs,
-    flex: 1,
+    // Короткий первичный лейбл «Категории» не сжимаем (иначе клиппится на 390px
+    // рядом с селектом страны и «Сбросить») — остаток ряда забирает селект страны.
+    flexShrink: 0,
     minHeight: 38,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     borderRadius: DESIGN_TOKENS.radii.pill,
@@ -415,8 +417,8 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.xs,
     flex: 1,
+    minWidth: 0,
     minHeight: 38,
-    maxWidth: '52%',
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     borderRadius: DESIGN_TOKENS.radii.pill,
     borderWidth: 1,

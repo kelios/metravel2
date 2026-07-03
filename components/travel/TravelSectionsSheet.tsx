@@ -3,6 +3,7 @@ import { DeviceEventEmitter, Modal, Platform, Pressable, ScrollView, StyleSheet,
 import Feather from '@expo/vector-icons/Feather';
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { useThemedColors } from "@/hooks/useTheme" // ✅ РЕДИЗАЙН: Темная тема
+import { useResponsive } from "@/hooks/useResponsive"
 import { DESIGN_TOKENS } from "@/constants/designSystem"
 import { useTravelSectionsStore } from "@/stores/travelSectionsStore"
 
@@ -57,6 +58,8 @@ const requestSectionOpen = (key: string) => {
 
 const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate, testID }) => {
   const colors = useThemedColors() // ✅ РЕДИЗАЙН: Темная тема
+  const { isMobile } = useResponsive()
+  const isMobileWeb = Platform.OS === "web" && isMobile
   const [open, setOpen] = useState(false)
   const openNonce = useTravelSectionsStore((s) => s.openNonce)
   const triggerRef = useRef<any>(null)
@@ -221,8 +224,14 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
             ? ({
                 boxShadow:
                   (colors.boxShadows as any)?.modal ?? DESIGN_TOKENS.shadows.modal,
-                backdropFilter: "blur(18px) saturate(1.05)",
-                WebkitBackdropFilter: "blur(18px) saturate(1.05)",
+                // Живой backdrop-filter убивает мобильный GPU при выезде шита и всё равно
+                // невидим под непрозрачным surface — оставляем блюр только на десктопе (CLAUDE.md, правило #2).
+                ...(isMobileWeb
+                  ? null
+                  : {
+                      backdropFilter: "blur(18px) saturate(1.05)",
+                      WebkitBackdropFilter: "blur(18px) saturate(1.05)",
+                    }),
               } as any)
             : null),
         },
@@ -317,7 +326,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           color: colors.textMuted,
         },
       }),
-    [colors]
+    [colors, isMobileWeb]
   )
 
   if (!links.length) return null

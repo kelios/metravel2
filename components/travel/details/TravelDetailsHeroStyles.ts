@@ -34,9 +34,9 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
             top: 0,
             zIndex: 20,
             marginTop: 0,
-            marginBottom: DESIGN_TOKENS.spacing.md,
-            paddingTop: DESIGN_TOKENS.spacing.xs,
-            paddingBottom: DESIGN_TOKENS.spacing.xs,
+            marginBottom: DESIGN_TOKENS.spacing.sm,
+            paddingTop: DESIGN_TOKENS.spacing.xxs,
+            paddingBottom: DESIGN_TOKENS.spacing.xxs,
             backgroundColor: colors.background,
             borderBottomWidth: StyleSheet.hairlineWidth,
             borderBottomColor: colors.borderLight,
@@ -46,8 +46,8 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
     quickJumpStickyNativeBar: {
       width: '100%',
       backgroundColor: colors.background,
-      paddingTop: DESIGN_TOKENS.spacing.xs,
-      paddingBottom: DESIGN_TOKENS.spacing.xs,
+      paddingTop: DESIGN_TOKENS.spacing.xxs,
+      paddingBottom: DESIGN_TOKENS.spacing.xxs,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
     },
@@ -106,6 +106,9 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
             } as any,
           } as any)
         : {}),
+    },
+    quickJumpChipMobile: {
+      marginBottom: 0,
     },
     quickJumpChipPressed: {
       backgroundColor: colors.primarySoft,
