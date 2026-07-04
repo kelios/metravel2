@@ -242,6 +242,32 @@ test.describe('@smoke mobile map panel content', () => {
       ).toBeVisible({ timeout: 20_000 })
     })
 
+    await test.step('Nearby-place card navigation sheet exposes the full maps set', async () => {
+      const firstCard = page
+        .locator('[data-testid="map-travel-card"], [testID="map-travel-card"]')
+        .first()
+
+      await firstCard
+        .getByRole('button', { name: 'Навигация и действия' })
+        .click({ force: true })
+
+      await expect(page.getByText('Навигация и действия').last()).toBeVisible({
+        timeout: 20_000,
+      })
+
+      await expect(page.getByRole('button', { name: 'Открыть в Google Maps' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Открыть в Apple Maps' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Открыть в Organic Maps' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Проложить маршрут в Waze' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Открыть в Яндекс Картах' })).toBeVisible()
+      await expect(
+        page.getByRole('button', { name: 'Проложить маршрут в Яндекс.Навигаторе' }),
+      ).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Открыть в OpenStreetMap' })).toBeVisible()
+
+      await page.getByRole('button', { name: 'Закрыть меню действий' }).click({ force: true })
+    })
+
     await test.step('Radius tab shows filters body instead of a blank sheet', async () => {
       await page.getByTestId('travel-list-open-filters').click({ force: true })
 

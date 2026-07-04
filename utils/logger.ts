@@ -16,6 +16,64 @@ const isDevelopment = (): boolean => {
 
 const DEV = isDevelopment();
 
+const WEB_DEV_NETWORK_ERROR_LIMIT = 1;
+const webDevNetworkErrorKeys = new Set<string>();
+
+const isBrowserRuntime = (): boolean =>
+  typeof window !== 'undefined' && typeof document !== 'undefined';
+
+const normalizeLogArg = (arg: unknown, seen = new WeakSet<object>()): unknown => {
+  if (arg instanceof Error) return arg.message;
+  if (!arg || typeof arg !== 'object') return arg;
+  if (seen.has(arg)) return '[Circular]';
+  seen.add(arg);
+  if (Array.isArray(arg)) return arg.map((item) => normalizeLogArg(item, seen));
+  return Object.fromEntries(
+    Object.entries(arg as Record<string, unknown>).map(([key, value]) => [key, normalizeLogArg(value, seen)])
+  );
+};
+
+const stringifyLogArg = (arg: unknown): string => {
+  if (typeof arg === 'string') return arg;
+  if (arg instanceof Error) return arg.message;
+  try {
+    return JSON.stringify(normalizeLogArg(arg));
+  } catch {
+    return String(arg);
+  }
+};
+
+const getWebDevApiNetworkErrorKey = (args: unknown[]): string | null => {
+  if (!isBrowserRuntime()) return null;
+
+  const message = args.map(stringifyLogArg).join(' ');
+  if (!/Network error while fetching .*\/api\//i.test(message)) return null;
+
+  return message
+    .replace(/https?:\/\/[^\s"']+/g, (url) => {
+      try {
+        const parsed = new URL(url);
+        parsed.search = '';
+        return parsed.toString();
+      } catch {
+        return url;
+      }
+    })
+    .slice(0, 220);
+};
+
+const logCompactWebDevNetworkWarning = (args: unknown[]): boolean => {
+  const networkErrorKey = getWebDevApiNetworkErrorKey(args);
+  if (!networkErrorKey) return false;
+  if (webDevNetworkErrorKeys.has(networkErrorKey)) return true;
+  const shouldLogSummary = webDevNetworkErrorKeys.size < WEB_DEV_NETWORK_ERROR_LIMIT;
+  webDevNetworkErrorKeys.add(networkErrorKey);
+  if (shouldLogSummary) {
+    console.warn('[dev-network] API network errors suppressed in web dev:', networkErrorKey);
+  }
+  return true;
+};
+
 /**
  * Логирует сообщение только в режиме разработки
  */
@@ -30,6 +88,7 @@ export const devLog = (...args: any[]): void => {
  */
 export const devWarn = (...args: any[]): void => {
   if (DEV) {
+    if (logCompactWebDevNetworkWarning(args)) return;
     console.warn(...args);
   }
 };
@@ -39,6 +98,7 @@ export const devWarn = (...args: any[]): void => {
  */
 export const devError = (...args: any[]): void => {
   if (DEV) {
+    if (logCompactWebDevNetworkWarning(args)) return;
     console.error(...args);
   }
 };

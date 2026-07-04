@@ -33,6 +33,10 @@ const config = getDefaultConfig(__dirname)
 const previousEnhanceMiddleware = config.server && config.server.enhanceMiddleware
 const DEFAULT_DEV_API_HOST = 'http://192.168.50.36'
 
+if (process.env.METRAVEL_QUIET_METRO === '1') {
+  config.reporter = { update: () => {} }
+}
+
 const isSameLocalOrigin = (targetUrl, requestHost) => {
   if (!targetUrl || !requestHost) return false
 
@@ -193,6 +197,9 @@ config.resolver.resolveRequest = ((orig) => {
 
 	config.server = {
 	  ...config.server,
+    // QA browser audits navigate many routes quickly. Forwarding every browser
+    // console event through Metro can crash Expo's V8 console task on Node 20.
+    forwardClientLogs: false,
 	  enhanceMiddleware: (middleware) => {
 	    const baseMiddleware =
 	      typeof previousEnhanceMiddleware === 'function'

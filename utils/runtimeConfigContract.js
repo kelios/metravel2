@@ -26,7 +26,7 @@ const isLikelySelfProxyApiUrl = (parsed) => {
   const port = String(parsed.port || '').trim()
   return (
     (host === 'localhost' || host === '127.0.0.1' || host === '::1') &&
-    (port === '8085' || port === '19006')
+    (port === '8081' || port === '8082' || port === '8085' || port === '19006')
   )
 }
 

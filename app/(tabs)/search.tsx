@@ -6,7 +6,6 @@ import { useIsFocused } from 'expo-router'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import ErrorBoundary from '@/components/ui/ErrorBoundary'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
-import FloatingActionButton from '@/components/ui/FloatingActionButton'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
@@ -36,13 +35,25 @@ function SearchScreen() {
   const handleCreateTravelPress = useCallback(() => {
     trackContentCreateCtaClicked({
       contentType: 'route',
-      source: 'search_fab',
+      source: 'search_toolbar',
       authState: 'authenticated',
       intent: 'create-travel',
       action: 'create',
     })
     router.push('/travel/new' as any)
   }, [router])
+
+  const createTravelAction = useMemo(() => {
+    if (!isAuthenticated || Platform.OS === 'web') return undefined
+
+    return {
+      accessibilityHint: 'Открывает мастер создания нового маршрута',
+      iconName: 'plus' as const,
+      label: 'Создать маршрут',
+      onPress: handleCreateTravelPress,
+      testID: 'create-travel-toolbar-button',
+    }
+  }, [handleCreateTravelPress, isAuthenticated])
 
   const styles = useMemo(
     () =>
@@ -103,21 +114,12 @@ function SearchScreen() {
         >
           {canRenderList ? (
             <Suspense fallback={<SearchPageSkeleton />}>
-              <ListTravel />
+              <ListTravel primaryAction={createTravelAction} />
             </Suspense>
           ) : (
             <SearchPageSkeleton />
           )}
         </ErrorBoundary>
-
-        {isAuthenticated && Platform.OS !== 'web' && (
-          <FloatingActionButton
-            icon="plus"
-            label="Создать маршрут"
-            onPress={handleCreateTravelPress}
-            testID="fab-create-travel"
-          />
-        )}
       </View>
     </>
   )

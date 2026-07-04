@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, usePathname } from 'expo-router';
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
 import { LAYOUT } from '@/constants/layout';
@@ -85,7 +85,7 @@ function ConsentBanner() {
     // the last row of cards behind the floating cookie banner. bottomOffset already
     // accounts for the bottom dock + safe-area; the banner itself is ~96px on mobile,
     // ~64px on desktop. The +8 keeps an additional breathing gap below the last card.
-    const bannerH = isMobile ? 124 : 64;
+    const bannerH = isMobile ? 104 : 64;
     root.style.setProperty('--mt-consent-h', `${bottomOffset + bannerH + 8}px`);
     return () => {
       root.style.removeProperty('--mt-consent-h');
@@ -165,13 +165,10 @@ function ConsentBanner() {
       >
         <View style={[styles.textBlock, !isMobile && styles.textBlockDesktop]}>
           <Text
-            numberOfLines={isMobile ? 3 : undefined}
+            numberOfLines={isMobile ? 2 : undefined}
             style={[styles.text, isMobile && styles.textMobile, { color: colors.textMuted }]}
           >
-            Используем аналитику для улучшения сервиса.{' '}
-            <Link href="/cookies" style={{ color: colors.primaryText, textDecorationLine: 'underline', fontSize: 12 }}>
-              Подробнее
-            </Link>
+            Используем аналитику для улучшения сервиса.
           </Text>
         </View>
         <View
@@ -181,6 +178,21 @@ function ConsentBanner() {
             isNarrowMobile && styles.buttonsRowNarrow,
           ]}
         >
+          <Link href="/cookies" asChild>
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel="Подробнее о cookies"
+              style={({ pressed }) => [
+                styles.detailsLink,
+                { borderColor: colors.border },
+                pressed && styles.detailsLinkPressed,
+              ]}
+            >
+              <Text style={[styles.detailsLinkText, { color: colors.primaryText }]}>
+                Подробнее
+              </Text>
+            </Pressable>
+          </Link>
           <Button
             label="Отклонить"
             onPress={handleNecessaryOnly}
@@ -271,8 +283,8 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'stretch',
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 10 as any,
+    paddingVertical: 8,
+    gap: 6 as any,
   },
   containerNarrow: {
     flexDirection: 'column',
@@ -317,6 +329,23 @@ const styles = StyleSheet.create({
   },
   buttonNarrow: {
     width: '100%',
+  },
+  detailsLink: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 9999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+  },
+  detailsLinkPressed: {
+    opacity: 0.78,
+  },
+  detailsLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });
 

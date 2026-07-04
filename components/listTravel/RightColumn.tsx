@@ -93,6 +93,13 @@ interface RightColumnProps {
   density?: ListDensity
   onDensityChange?: (density: ListDensity) => void
   showDensityToggle?: boolean
+  primaryAction?: {
+    accessibilityHint?: string
+    iconName: React.ComponentProps<typeof Feather>['name']
+    label: string
+    onPress: () => void
+    testID: string
+  }
 }
 
 const RightColumn: React.FC<RightColumnProps> = (
@@ -137,6 +144,7 @@ const RightColumn: React.FC<RightColumnProps> = (
      density = 'comfortable',
      onDensityChange,
      showDensityToggle = false,
+     primaryAction,
    }) => {
     const colors = useThemedColors()
 
@@ -520,6 +528,7 @@ const RightColumn: React.FC<RightColumnProps> = (
             resultsCount={isError ? undefined : total}
             activeFiltersCount={activeFiltersCount}
             onClearAll={onClearAll ?? (() => setSearch(''))}
+            primaryAction={primaryAction}
           />
         </View>
 

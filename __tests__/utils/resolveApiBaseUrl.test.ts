@@ -7,7 +7,7 @@ import {
 } from '@/utils/resolveApiBaseUrl';
 
 describe('resolveApiBaseUrl', () => {
-  it('uses local web proxy on localhost', () => {
+  it('keeps configured backend on localhost web dev', () => {
     expect(
       resolveApiBaseUrl({
         platformOS: 'web',
@@ -15,7 +15,19 @@ describe('resolveApiBaseUrl', () => {
         windowOrigin: 'http://127.0.0.1:8081',
         windowHostname: '127.0.0.1',
       })
-    ).toBe('http://127.0.0.1:8081/api');
+    ).toBe('https://metravel.by/api');
+  });
+
+  it('falls back to prod api on localhost web dev when env leaked Expo self-proxy url', () => {
+    expect(
+      resolveApiBaseUrl({
+        platformOS: 'web',
+        envApiUrl: 'http://127.0.0.1:8081',
+        prodApiUrl: 'https://metravel.by',
+        windowOrigin: 'http://127.0.0.1:8081',
+        windowHostname: '127.0.0.1',
+      })
+    ).toBe('https://metravel.by/api');
   });
 
   it('falls back to current site api when env leaked self-proxy url on production web', () => {
@@ -131,6 +143,8 @@ describe('resolveApiBaseUrl helpers', () => {
   });
 
   it('detects expo self-proxy urls', () => {
+    expect(isLikelySelfProxyApiUrl('http://127.0.0.1:8081/api')).toBe(true);
+    expect(isLikelySelfProxyApiUrl('http://localhost:8082')).toBe(true);
     expect(isLikelySelfProxyApiUrl('http://127.0.0.1:8085')).toBe(true);
     expect(isLikelySelfProxyApiUrl('http://localhost:19006/api')).toBe(true);
     expect(isLikelySelfProxyApiUrl('https://metravel.by')).toBe(false);

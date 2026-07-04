@@ -12,7 +12,7 @@ type ResolveApiBaseUrlOptions = {
   windowHostname?: string | null;
 };
 
-const SELF_PROXY_PORTS = new Set(['8085', '19006']);
+const SELF_PROXY_PORTS = new Set(['8081', '8082', '8085', '19006']);
 
 const normalizeString = (value?: string | null): string => String(value || '').trim();
 
@@ -77,16 +77,14 @@ export const resolveApiBaseUrl = ({
   const normalizedProdApiUrl = normalizeString(prodApiUrl) || DEFAULT_PROD_API_URL;
 
   if (platformOS === 'web') {
-    if (isLocalWebHostname(windowHostname) && webOriginApi) {
+    if ((isE2E || isLocalApi) && webOriginApi) {
       return webOriginApi;
     }
 
     if (isLikelySelfProxyApiUrl(normalizedEnvApiUrl) && webOriginApi) {
-      return webOriginApi;
-    }
-
-    if ((isE2E || isLocalApi) && webOriginApi) {
-      return webOriginApi;
+      return isLocalWebHostname(windowHostname)
+        ? normalizeApiBaseUrl(normalizedProdApiUrl)
+        : webOriginApi;
     }
   }
 

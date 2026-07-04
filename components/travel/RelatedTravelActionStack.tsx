@@ -105,7 +105,7 @@ export default function RelatedTravelActionStack({
         travelYear={relatedTravel?.year}
         travelMonthName={relatedTravel?.monthName}
         compact={variant !== 'inline'}
-        idleLabel={variant === 'inline' ? 'Был / Хочу / Планирую' : undefined}
+        idleLabel="Был / Хочу / Планирую"
       />
     </View>
   )

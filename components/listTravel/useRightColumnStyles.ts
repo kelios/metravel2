@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { Platform, type StyleProp, type ViewStyle } from 'react-native'
 
-import { useAuth } from '@/context/AuthContext'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { LAYOUT } from '@/constants/layout'
 import {
   getRightColumnColumns,
   getRightColumnWebRowBaseStyle,
@@ -42,11 +42,10 @@ export function useRightColumnStyles({
   cardsContainerStyle,
   cardsGridStyle,
 }: UseRightColumnStylesArgs) {
-  // Native-only: the FAB «Создать маршрут» (56dp, bottom:80) floats over the list
-  // for authorized users and would otherwise cover the last card. Reserve clearance
-  // (dock offset 80 + fab 56 + gap) only when the FAB is actually present.
-  const { isAuthenticated } = useAuth()
-  const nativeBottomReserve = !isWeb && isAuthenticated ? 150 : 28
+  const nativeBottomReserve = !isWeb
+    ? (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl
+    : DESIGN_TOKENS.spacing.lg
+
   const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
     const resetPadding = {
       flex: 1,

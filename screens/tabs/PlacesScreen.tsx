@@ -683,7 +683,6 @@ export default function PlacesScreen() {
                 <Button
                   label="Все места"
                   variant="outline"
-                  size="sm"
                   onPress={handleClearCategories}
                 />
               ) : null}

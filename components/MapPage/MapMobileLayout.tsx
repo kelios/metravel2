@@ -12,7 +12,10 @@ import { useRouteStore } from '@/stores/routeStore'
 import { useMapMobileDerivations } from '@/hooks/map/useMapMobileDerivations'
 import { FiltersSkeleton } from '@/components/ui/SkeletonLoader'
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet'
-import { getMapMobileLayoutStyles } from './MapMobileLayout.styles'
+import {
+  getMapMobileLayoutStyles,
+  getSearchAreaButtonBottom,
+} from './MapMobileLayout.styles'
 import { MapMobileSheetBody } from './MapMobile/MapMobileSheetBody'
 import { MapMobileTopOverlay } from './MapMobile/MapMobileTopOverlay'
 import MapPlaceBottomCard from './MapPlaceBottomCard'
@@ -391,6 +394,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     ? (LAYOUT?.tabBarHeight ?? 56) +
       (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
     : bottomSheetInset
+  const searchAreaButtonBottom = getSearchAreaButtonBottom(
+    IS_WEB,
+    isNarrow,
+    consentBannerVisible,
+  )
 
   const filtersLoadingFallback = useMemo(
     () => (
@@ -561,6 +569,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             accessibilityLabel="Искать в этой области"
             style={({ pressed }) => [
               styles.searchAreaButton,
+              IS_WEB ? ({ bottom: searchAreaButtonBottom } as any) : null,
               pressed && { opacity: 0.9 },
             ]}
           >

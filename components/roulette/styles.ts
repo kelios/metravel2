@@ -2,6 +2,25 @@ import { Platform, StyleSheet } from 'react-native';
 
 import type { ThemedColors } from '@/hooks/useTheme';
 
+const nativeShadow = (
+  colors: ThemedColors,
+  height: number,
+  opacity: number,
+  radius: number,
+  elevation?: number,
+) => Platform.select({
+  web: {
+    boxShadow: colors.boxShadows.heavy,
+  } as any,
+  default: {
+    shadowColor: colors.shadows.heavy.shadowColor,
+    shadowOffset: { width: 0, height },
+    shadowOpacity: opacity,
+    shadowRadius: radius,
+    ...(typeof elevation === 'number' ? { elevation } : {}),
+  },
+});
+
 export const createStyles = (colors: ThemedColors) => StyleSheet.create({
   root: {
     flex: 1,
@@ -42,11 +61,7 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
       web: colors.surfaceMuted,
       default: colors.surface,
     }) as string,
-    shadowColor: colors.shadows.heavy.shadowColor,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 8,
+    ...nativeShadow(colors, 10, 0.08, 24, 8),
     padding: 16,
     ...(Platform.OS === 'web' ? { overflow: 'auto' as any } : {}),
   },
@@ -249,11 +264,7 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 3,
     borderColor: colors.borderLight,
-    shadowColor: colors.shadows.heavy.shadowColor,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 10,
+    ...nativeShadow(colors, 10, 0.12, 24, 10),
   },
   rouletteCompassImage: {
     width: '100%',
@@ -275,11 +286,7 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 3,
     borderColor: colors.borderLight,
-    shadowColor: colors.shadows.heavy.shadowColor,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 8,
+    ...nativeShadow(colors, 8, 0.12, 20, 8),
   },
   // Кнопка поверх компаса
   rouletteCompassButton: {
@@ -293,10 +300,7 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
-    shadowColor: colors.shadows.heavy.shadowColor,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
+    ...nativeShadow(colors, 6, 0.15, 16),
     zIndex: 5,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
@@ -311,10 +315,7 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
-    shadowColor: colors.shadows.heavy.shadowColor,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
+    ...nativeShadow(colors, 6, 0.15, 16),
     zIndex: 5,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
@@ -367,10 +368,7 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    shadowColor: colors.shadows.heavy.shadowColor,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 25,
+    ...nativeShadow(colors, 10, 0.15, 25),
   },
   spinnerText: {
     fontSize: 14,

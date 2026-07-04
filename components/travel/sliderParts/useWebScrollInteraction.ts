@@ -13,10 +13,15 @@ export function shouldHandleMouseDragStart(event: {
   return true;
 }
 
-export function shouldHandlePointerDragStart(pointerType: string | undefined, isMobile: boolean): boolean {
+export function shouldHandlePointerDragStart(
+  pointerType: string | undefined,
+  isMobile: boolean,
+  rawTouchPathActive = isMobile,
+): boolean {
   if (pointerType === 'mouse') return true;
-  if (isMobile) return false;
-  return pointerType === 'touch' || pointerType === 'pen';
+  if (pointerType === 'touch') return !rawTouchPathActive;
+  if (pointerType === 'pen') return true;
+  return false;
 }
 
 export function getTouchGestureAxis(deltaX: number, deltaY: number): 'x' | 'y' | null {
@@ -27,4 +32,3 @@ export function getTouchGestureAxis(deltaX: number, deltaY: number): 'x' | 'y' |
   if (absY > absX + TOUCH_AXIS_DOMINANCE_PX) return 'y';
   return null;
 }
-

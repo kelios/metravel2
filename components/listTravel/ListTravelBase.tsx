@@ -4,6 +4,7 @@ import {
   Platform,
   View,
 } from 'react-native'
+import type Feather from '@expo/vector-icons/Feather'
 import { showToastMessage } from '@/utils/toast'
 import { queryKeys } from '@/api/queryKeys'
 import { usePathname, useRouter } from 'expo-router'
@@ -57,7 +58,17 @@ import {
 
 const EMPTY_FALLBACK_STEPS: ReturnType<typeof buildListTravelFallbackSteps> = [];
 
-function ListTravelBase() {
+type ListTravelBaseProps = {
+  primaryAction?: {
+    accessibilityHint?: string
+    iconName: keyof typeof Feather.glyphMap
+    label: string
+    onPress: () => void
+    testID: string
+  }
+}
+
+function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
     const colors = useThemedColors();
     const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
     const {
@@ -808,6 +819,7 @@ function ListTravelBase() {
         onDensityChange: setDensity,
         showDensityToggle: true,
         testID: 'travels-list',
+        primaryAction,
       }}
     />
   );

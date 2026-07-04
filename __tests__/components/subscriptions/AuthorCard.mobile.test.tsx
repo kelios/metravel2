@@ -1,4 +1,5 @@
 import { render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
 import AuthorCard from '@/components/subscriptions/AuthorCard';
 
@@ -51,7 +52,7 @@ describe('AuthorCard mobile layout', () => {
   });
 
   it('renders compact horizontal rail cards for mobile subscriptions', () => {
-    const { getByTestId } = render(
+    const { getByLabelText, getByTestId } = render(
       <AuthorCard
         author={author}
         onUnsubscribe={jest.fn()}
@@ -62,6 +63,9 @@ describe('AuthorCard mobile layout', () => {
     );
 
     expect(getByTestId('subscription-travels-rail')).toBeTruthy();
+    expect(StyleSheet.flatten(getByTestId('subscription-travels-rail').props.contentContainerStyle).minWidth).toBeUndefined();
+    expect(StyleSheet.flatten(getByLabelText('Написать Siarhey').props.style).width).toBe(44);
+    expect(StyleSheet.flatten(getByLabelText('Отписаться от Siarhey').props.style).height).toBe(44);
     expect(mockTabTravelCard).toHaveBeenCalledTimes(2);
     expect(mockTabTravelCard.mock.calls[0][0]).toEqual(
       expect.objectContaining({

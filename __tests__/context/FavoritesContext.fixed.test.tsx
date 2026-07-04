@@ -175,39 +175,47 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
   })
 
   it('should handle invalid favorite IDs gracefully', async () => {
-    const TestComponentWithInvalid = () => {
-      const { addFavorite, favorites } = useFavorites()
-      const [error, setError] = React.useState<string | null>(null)
-      
-      // Try to add with invalid ID (HTTP error code)
-      React.useEffect(() => {
-        addFavorite({
-          id: 404,
-          type: 'travel',
-          title: 'Invalid Travel',
-          url: '/invalid',
-        }).catch((e: any) => setError(e?.message ?? String(e)))
-      }, [addFavorite])
-      
-      return (
-        <View>
-          <Text testID="invalid-test">{favorites.length}</Text>
-          <Text testID="invalid-error">{error ?? ''}</Text>
-        </View>
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const TestComponentWithInvalid = () => {
+        const { addFavorite, favorites } = useFavorites()
+        const [error, setError] = React.useState<string | null>(null)
+
+        // Try to add with invalid ID (HTTP error code)
+        React.useEffect(() => {
+          addFavorite({
+            id: 404,
+            type: 'travel',
+            title: 'Invalid Travel',
+            url: '/invalid',
+          }).catch((e: any) => setError(e?.message ?? String(e)))
+        }, [addFavorite])
+
+        return (
+          <View>
+            <Text testID="invalid-test">{favorites.length}</Text>
+            <Text testID="invalid-error">{error ?? ''}</Text>
+          </View>
+        )
+      }
+
+      const { getByTestId } = render(
+        <AuthProvider>
+          <FavoritesProvider>
+            <TestComponentWithInvalid />
+          </FavoritesProvider>
+        </AuthProvider>
       )
+
+      await waitFor(() => {
+        expect(getByTestId('invalid-test').props.children).toBe(1)
+        expect(getByTestId('invalid-error').props.children).toBe('')
+      })
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Suspicious favorite ID detected: 404 (looks like HTTP error code), продолжим сохранение',
+      )
+    } finally {
+      warnSpy.mockRestore()
     }
-
-    const { getByTestId } = render(
-      <AuthProvider>
-        <FavoritesProvider>
-          <TestComponentWithInvalid />
-        </FavoritesProvider>
-      </AuthProvider>
-    )
-
-    await waitFor(() => {
-      expect(getByTestId('invalid-test').props.children).toBe(1)
-      expect(getByTestId('invalid-error').props.children).toBe('')
-    })
   })
 })

@@ -248,6 +248,9 @@ describe('MapMobileLayout', () => {
     expect(getSearchAreaButtonBottom(true, true)).toBe(
       'calc(16px + env(safe-area-inset-bottom))',
     )
+    expect(getSearchAreaButtonBottom(true, true, true)).toBe(
+      'max(176px, var(--mt-consent-h, 176px))',
+    )
     expect(getSearchAreaButtonBottom(false, true)).toBe(96)
     expect(getSearchAreaButtonBottom(false, false)).toBe(104)
   })

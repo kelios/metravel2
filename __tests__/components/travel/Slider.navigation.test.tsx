@@ -17,6 +17,7 @@ import {
   shouldHandleMouseDragStart,
   shouldHandlePointerDragStart,
 } from '@/components/travel/sliderParts/useWebScrollInteraction'
+import { shouldUseRawTouchGesturePath } from '@/components/travel/sliderParts/useSliderPointerDrag'
 
 const createImages = (count: number): SliderImage[] =>
   Array.from({ length: count }, (_, index) => ({
@@ -351,6 +352,16 @@ describe('Slider navigation - Web', () => {
       expect(shouldHandlePointerDragStart('touch', true)).toBe(false)
       expect(shouldHandlePointerDragStart('touch', false)).toBe(true)
       expect(shouldHandlePointerDragStart('pen', false)).toBe(true)
+    })
+
+    it('uses the raw touch gesture path on mobile web sliders', () => {
+      expect(shouldUseRawTouchGesturePath(true)).toBe(true)
+    })
+
+    it('keeps touch pointer events out of the pointer path when raw touch handlers are active', () => {
+      expect(shouldHandlePointerDragStart('touch', false, true)).toBe(false)
+      expect(shouldHandlePointerDragStart('mouse', true, true)).toBe(true)
+      expect(shouldHandlePointerDragStart('pen', true, true)).toBe(true)
     })
 
     it('locks swipe direction only after a clear axis is established', () => {

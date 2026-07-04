@@ -58,6 +58,16 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           gap: DESIGN_TOKENS.spacing.xs,
           paddingHorizontal: DESIGN_TOKENS.spacing.md,
         },
+        mobileTabRow: {
+          gap: DESIGN_TOKENS.spacing.xxs,
+          paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+        },
+        compactMobileTabRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: DESIGN_TOKENS.spacing.xxs,
+          paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+        },
         tab: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -74,6 +84,17 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
             default: {},
           }),
         },
+        mobileTab: {
+          minHeight: 44,
+          gap: 4,
+          paddingVertical: DESIGN_TOKENS.spacing.xs,
+          paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+        },
+        compactMobileTab: {
+          flex: 1,
+          minWidth: 0,
+          paddingHorizontal: 6,
+        },
         desktopTabFlex: {
           flex: 1,
         },
@@ -85,6 +106,11 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           fontSize: DESIGN_TOKENS.typography.sizes.sm,
           fontWeight: DESIGN_TOKENS.typography.weights.semibold as '600',
           color: colors.textMuted,
+          flexShrink: 1,
+        },
+        mobileTabText: {
+          fontSize: 13,
+          lineHeight: 16,
         },
         activeTabText: {
           color: colors.primaryText,
@@ -132,6 +158,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
         .map((key) => allTabs.find((tab) => tab.key === key))
         .filter((tab): tab is (typeof allTabs)[number] => tab != null)
     : allTabs;
+  const useCompactMobileRow = isMobile && tabs.length <= 3;
 
   const renderTab = (tab: (typeof allTabs)[number]) => {
     const isActive = activeTab === tab.key;
@@ -142,6 +169,8 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
         key={tab.key}
         style={[
           styles.tab,
+          isMobile && styles.mobileTab,
+          useCompactMobileRow && styles.compactMobileTab,
           !isMobile && styles.desktopTabFlex,
           isActive && styles.activeTab,
           globalFocusStyles.focusable,
@@ -157,7 +186,10 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           size={15}
           color={isActive ? colors.primary : colors.textMuted}
         />
-        <Text style={[styles.tabText, isActive && styles.activeTabText]} numberOfLines={1}>
+        <Text
+          style={[styles.tabText, isMobile && styles.mobileTabText, isActive && styles.activeTabText]}
+          numberOfLines={1}
+        >
           {tab.label}
         </Text>
         {count > 0 ? (
@@ -174,13 +206,17 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
   return (
     <View style={styles.wrapper} accessibilityRole="tablist">
       {isMobile ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabRow}
-        >
-          {tabs.map(renderTab)}
-        </ScrollView>
+        useCompactMobileRow ? (
+          <View style={styles.compactMobileTabRow}>{tabs.map(renderTab)}</View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[styles.tabRow, styles.mobileTabRow]}
+          >
+            {tabs.map(renderTab)}
+          </ScrollView>
+        )
       ) : (
         <View style={styles.tabRow}>{tabs.map(renderTab)}</View>
       )}

@@ -238,16 +238,26 @@ export function adaptFinale(apiFinale: ApiQuestFinale): QuestFinale {
     };
 }
 
+export function normalizeQuestCountryCode(rawCode: unknown, lat: number, lng: number): string | undefined {
+    const normalizedRawCode = typeof rawCode === 'string'
+        ? rawCode.trim().toUpperCase()
+        : rawCode == null
+            ? ''
+            : String(rawCode).trim().toUpperCase();
+
+    return normalizedRawCode || getCountryCodeByCoords(lat, lng) || undefined;
+}
+
 /** Конвертирует город из API формата */
 export function adaptCity(apiCity: ApiQuestCity): QuestCity {
     const lat = coordNum(apiCity.lat);
     const lng = coordNum(apiCity.lng);
-    const countryCode = apiCity.country_code || getCountryCodeByCoords(lat, lng);
+    const countryCode = normalizeQuestCountryCode(apiCity.country_code, lat, lng);
     return {
         name: apiCity.name || undefined,
         lat,
         lng,
-        countryCode: countryCode || undefined,
+        countryCode,
     };
 }
 
@@ -336,9 +346,7 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
 export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
     const lat = coordNum(apiMeta.lat);
     const lng = coordNum(apiMeta.lng);
-    const normalizedCountryCode = String(
-        apiMeta.country_code || getCountryCodeByCoords(lat, lng) || '',
-    ).trim().toUpperCase() || undefined;
+    const normalizedCountryCode = normalizeQuestCountryCode(apiMeta.country_code, lat, lng);
 
     return {
         id: apiMeta.quest_id,

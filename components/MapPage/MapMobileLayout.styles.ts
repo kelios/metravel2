@@ -5,6 +5,7 @@ import type { ThemedColors } from '@/hooks/useTheme'
 
 const MOBILE_WEB_BOTTOM_CHROME_GAP = 28
 const MOBILE_WEB_SEARCH_AREA_BOTTOM = 16
+const MOBILE_WEB_CONSENT_SEARCH_AREA_BOTTOM = 176
 const CONTROL_RADIUS = 12
 
 type MapMobileLayoutStyleOptions = {
@@ -14,7 +15,14 @@ type MapMobileLayoutStyleOptions = {
   isSheetPreview: boolean
 }
 
-export function getSearchAreaButtonBottom(isWeb: boolean, isNarrow: boolean) {
+export function getSearchAreaButtonBottom(
+  isWeb: boolean,
+  isNarrow: boolean,
+  consentBannerVisible = false,
+) {
+  if (isWeb && consentBannerVisible) {
+    return `max(${MOBILE_WEB_CONSENT_SEARCH_AREA_BOTTOM}px, var(--mt-consent-h, ${MOBILE_WEB_CONSENT_SEARCH_AREA_BOTTOM}px))`
+  }
   if (isWeb) {
     return `calc(${MOBILE_WEB_SEARCH_AREA_BOTTOM}px + env(safe-area-inset-bottom))`
   }

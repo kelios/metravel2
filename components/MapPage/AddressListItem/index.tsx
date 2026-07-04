@@ -107,31 +107,52 @@ const AddressListItem: React.FC<Props> = ({
     return [
       {
         key: 'google',
-        label: 'Google Maps',
+        label: NAVIGATION_ACTION_LABELS.google,
         icon: 'map-pin' as const,
         onPress: () => openExternal(buildMapUrl(coord)),
         title: 'Открыть в Google Maps',
       },
       {
+        key: 'apple',
+        label: NAVIGATION_ACTION_LABELS.apple,
+        icon: 'map' as const,
+        onPress: () => openExternal(buildAppleMapsUrl(coord)),
+        title: 'Открыть в Apple Maps',
+      },
+      {
         key: 'organic',
-        label: 'Organic Maps',
+        label: NAVIGATION_ACTION_LABELS.organic,
         icon: 'compass' as const,
         onPress: () => openExternal(buildOrganicMapsUrl(coord)),
         title: 'Открыть в Organic Maps',
       },
       {
         key: 'waze',
-        label: 'Waze',
+        label: NAVIGATION_ACTION_LABELS.waze,
         icon: 'navigation' as const,
         onPress: () => openExternal(buildWazeUrl(coord)),
         title: 'Проложить маршрут в Waze',
       },
       {
+        key: 'yandex-maps',
+        label: NAVIGATION_ACTION_LABELS['yandex-maps'],
+        icon: 'map' as const,
+        onPress: () => openExternal(buildYandexMapsUrl(coord)),
+        title: 'Открыть в Яндекс Картах',
+      },
+      {
         key: 'yandex',
-        label: 'Яндекс.Навигатор',
+        label: NAVIGATION_ACTION_LABELS.yandex,
         icon: 'navigation-2' as const,
         onPress: () => openExternal(buildYandexNaviUrl(coord)),
         title: 'Проложить маршрут в Яндекс.Навигаторе',
+      },
+      {
+        key: 'osm',
+        label: NAVIGATION_ACTION_LABELS.osm,
+        icon: 'map' as const,
+        onPress: () => openExternal(buildOpenStreetMapUrl(coord)),
+        title: 'Открыть в OpenStreetMap',
       },
     ]
   }, [coord])

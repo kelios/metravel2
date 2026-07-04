@@ -188,8 +188,8 @@ const createStyles = (colors: ThemedColors, bottomOffset?: number) =>
       color: colors.text,
     },
     closeBtn: {
-      width: 32,
-      height: 32,
+      width: 44,
+      height: 44,
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',

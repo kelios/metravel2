@@ -280,8 +280,8 @@ const getStyles = (colors: ThemedColors) =>
       flexShrink: 0,
     },
     densityButton: {
-      width: 34,
-      height: 30,
+      width: DESIGN_TOKENS.touchTarget.minWidth,
+      height: DESIGN_TOKENS.touchTarget.minHeight,
       alignItems: 'center',
       justifyContent: 'center',
       ...Platform.select({ web: { cursor: 'pointer' } as any }),

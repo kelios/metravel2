@@ -42,6 +42,13 @@ interface StickySearchBarProps {
   // SRCH-06: Quick-filter chips
   quickFilters?: QuickFilterChip[];
   onQuickFilterPress?: (id: string) => void;
+  primaryAction?: {
+    accessibilityHint?: string;
+    iconName: ComponentProps<typeof Feather>['name'];
+    label: string;
+    onPress: () => void;
+    testID: string;
+  };
 }
 
 const spacing = DESIGN_TOKENS.spacing;
@@ -295,13 +302,13 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     borderColor: colors.borderStrong,
   },
   actionButtonMobile: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: DESIGN_TOKENS.touchTarget.minWidth,
+    height: DESIGN_TOKENS.touchTarget.minHeight,
+    borderRadius: 12,
   },
   actionButtonMobileWeb: {
-    width: 42,
-    height: 42,
+    width: DESIGN_TOKENS.touchTarget.minWidth,
+    height: DESIGN_TOKENS.touchTarget.minHeight,
     borderRadius: 12,
   },
   actionButtonActive: {
@@ -498,6 +505,7 @@ function StickySearchBar({
   activeFiltersCount,
   quickFilters,
   onQuickFilterPress,
+  primaryAction,
 }: StickySearchBarProps) {
   const colors = useThemedColors();
   const { isPhone, isLargePhone, width } = useResponsive();
@@ -744,20 +752,32 @@ function StickySearchBar({
 
           {/* Действия */}
           <View style={[styles.actions, !isMobile && styles.actionsDesktop, isMobile && styles.actionsMobile]}>
-          {(showPendingState || showResultsCount || shouldReserveDesktopResultsSlot) && (
-            <View
-              style={[
-                styles.resultsInline,
-                !showPendingState && !showResultsCount ? ({ opacity: 0 } as any) : null,
-                ({ pointerEvents: showPendingState || showResultsCount ? 'auto' : 'none' } as any),
-              ]}
-              testID="results-count-wrapper"
-            >
-              {showPendingState ? (
-                <View style={styles.pendingStatusRow} testID="search-pending-status">
-                  <ActivityIndicator size="small" color={colors.primaryDark} accessibilityLabel="Ищем маршруты" />
-                  <Text style={styles.pendingStatusText}>Ищем...</Text>
-                </View>
+            {primaryAction ? (
+              renderActionButton({
+                accessibilityHint: primaryAction.accessibilityHint,
+                accessibilityLabel: primaryAction.label,
+                iconColor: colors.primary,
+                iconName: primaryAction.iconName,
+                iconSize: actionIconSize,
+                onPress: primaryAction.onPress,
+                testID: primaryAction.testID,
+              })
+            ) : null}
+
+            {(showPendingState || showResultsCount || shouldReserveDesktopResultsSlot) && (
+              <View
+                style={[
+                  styles.resultsInline,
+                  !showPendingState && !showResultsCount ? ({ opacity: 0 } as any) : null,
+                  ({ pointerEvents: showPendingState || showResultsCount ? 'auto' : 'none' } as any),
+                ]}
+                testID="results-count-wrapper"
+              >
+                {showPendingState ? (
+                  <View style={styles.pendingStatusRow} testID="search-pending-status">
+                    <ActivityIndicator size="small" color={colors.primaryDark} accessibilityLabel="Ищем маршруты" />
+                    <Text style={styles.pendingStatusText}>Ищем...</Text>
+                  </View>
               ) : (
                 <>
                   <Text style={styles.resultsLabel}>Результаты</Text>

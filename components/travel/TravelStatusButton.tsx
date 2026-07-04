@@ -41,7 +41,7 @@ type Props = {
   travelYear?: string
   travelMonth?: string | string[]
   travelMonthName?: string
-  /** Компактный режим: только иконка, стиль как у OptimizedFavoriteButton */
+  /** Компактный режим: иконка + короткий видимый статус, стиль как у OptimizedFavoriteButton */
   compact?: boolean
   idleLabel?: string
   style?: StyleProp<ViewStyle>
@@ -205,18 +205,29 @@ export default function TravelStatusButton({
 
   const compactStyles = useMemo(() => StyleSheet.create({
     btn: {
-      padding: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+      paddingVertical: 8,
+      paddingHorizontal: idleLabel ? 10 : 8,
       borderRadius: 999,
       backgroundColor: 'rgba(0, 0, 0, 0.4)',
       borderWidth: 1,
       borderColor: 'rgba(255, 255, 255, 0.3)',
-      alignItems: 'center',
-      justifyContent: 'center',
       minHeight: 44,
       minWidth: 44,
+      maxWidth: 174,
       ...(Platform.OS === 'web' ? { backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', cursor: 'pointer' } as any : {}),
     },
-  }), [])
+    text: {
+      color: colors.textOnDark,
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: '700',
+      flexShrink: 1,
+    },
+  }), [colors.textOnDark, idleLabel])
 
   const styles = useMemo(() => StyleSheet.create({
     btn: {
@@ -510,9 +521,10 @@ export default function TravelStatusButton({
     </Modal>
   )
 
-  // Compact mode — icon-only circle button, same visual as OptimizedFavoriteButton
+  // Compact mode — small overlay button with a visible status label.
   if (compact) {
     const compactAccessibilityLabel = currentOption ? currentOption.label : 'Добавить в план'
+    const compactLabel = currentOption?.label ?? idleLabel ?? null
     const compactIcon = (
       <Feather
         name={currentOption?.icon ?? 'plus-circle'}
@@ -548,6 +560,11 @@ export default function TravelStatusButton({
             } as any)}
           >
             {compactIcon}
+            {compactLabel ? (
+              <Text style={compactStyles.text} numberOfLines={1}>
+                {compactLabel}
+              </Text>
+            ) : null}
           </View>
           {modalJsx}
         </>
@@ -565,6 +582,11 @@ export default function TravelStatusButton({
           hitSlop={6}
         >
           {compactIcon}
+          {compactLabel ? (
+            <Text style={compactStyles.text} numberOfLines={1}>
+              {compactLabel}
+            </Text>
+          ) : null}
         </Pressable>
         {modalJsx}
       </>

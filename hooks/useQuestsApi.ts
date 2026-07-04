@@ -17,8 +17,9 @@ import { queryKeys } from '@/api/queryKeys';
 import {
     adaptMeta,
     adaptBundle,
+    normalizeQuestCountryCode,
 } from '@/utils/questAdapters';
-import { getCountryCodeByCoords } from '@/utils/geoCountry';
+import { devWarn } from '@/utils/logger';
 import type { QuestMeta, FrontendQuestBundle } from '@/utils/questAdapters';
 
 // Re-export types for backward compatibility
@@ -60,7 +61,7 @@ export function useQuestsList() {
             .catch((err) => {
                 if (cancelled) return;
                 const message = getErrorMessage(err, 'Ошибка загрузки квестов');
-                console.warn('Failed to load quests list:', message);
+                devWarn('Failed to load quests list:', message);
                 setError(message);
                 setLoading(false);
             });
@@ -94,24 +95,23 @@ export function useQuestCities() {
                 if (cancelled) return;
 
                 const safeCities = Array.isArray(data) ? data : [];
-                setCities(safeCities.map(c => ({
-                    id: String(c.id),
-                    name: c.name || '',
-                    lat: parseFloat(String(c.lat)),
-                    lng: parseFloat(String(c.lng)),
-                    countryCode: (
-                        c.country_code ||
-                        getCountryCodeByCoords(
-                            parseFloat(String(c.lat)),
-                            parseFloat(String(c.lng)),
-                        ) ||
-                        undefined
-                    ),
-                })));
+                setCities(safeCities.map(c => {
+                    const lat = parseFloat(String(c.lat));
+                    const lng = parseFloat(String(c.lng));
+                    const countryCode = normalizeQuestCountryCode(c.country_code, lat, lng);
+
+                    return {
+                        id: String(c.id),
+                        name: c.name || '',
+                        lat,
+                        lng,
+                        countryCode,
+                    };
+                }));
             } catch (err: unknown) {
                 if (cancelled) return;
                 const message = err instanceof Error ? err.message : String(err);
-                console.warn('Failed to load quest cities:', message);
+                devWarn('Failed to load quest cities:', message);
             } finally {
                 if (!cancelled) setLoading(false);
             }

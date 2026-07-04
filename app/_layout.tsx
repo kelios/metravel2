@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useColorScheme, useWindowDimensions } from "react-native";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import AppProviders from "@/components/layout/AppProviders";
@@ -258,17 +258,45 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     /** === SSR-safe Toast: рендерим только на клиенте === */
     const [isMounted, setIsMounted] = useState(false);
     useEffect(() => {
-        if (!isWeb) return;
-        setIsViewportHydrated(true);
-    }, []);
-
-    useEffect(() => {
+        let cancelled = false;
         let mountedTimer: ReturnType<typeof setTimeout> | null = null;
+        let rafOne: number | null = null;
+        let rafTwo: number | null = null;
 
-        // Defer mount-only UI to avoid hydration-time updates (React error 421 with Suspense).
-        mountedTimer = setTimeout(() => setIsMounted(true), 0);
+        const revealClientOnlyUi = () => {
+          if (cancelled) return;
+          startTransition(() => {
+            if (isWeb) setIsViewportHydrated(true);
+            setIsMounted(true);
+          });
+        };
+
+        if (!isWeb || typeof window === 'undefined') {
+          revealClientOnlyUi();
+          return () => {
+            cancelled = true;
+          };
+        }
+
+        // Route modules such as /map and /travel/new hydrate inside Suspense
+        // boundaries. Mounting web-only chrome immediately after commit can send
+        // an update before those boundaries finish hydrating, which React reports
+        // in production as #419. Wait for the browser to paint the hydrated shell
+        // first, then reveal mobile chrome/toasts as a transition.
+        if (typeof window.requestAnimationFrame === 'function') {
+          rafOne = window.requestAnimationFrame(() => {
+            rafTwo = window.requestAnimationFrame(() => {
+              mountedTimer = setTimeout(revealClientOnlyUi, 120);
+            });
+          });
+        } else {
+          mountedTimer = setTimeout(revealClientOnlyUi, 120);
+        }
 
         return () => {
+          cancelled = true;
+          if (rafOne !== null) window.cancelAnimationFrame(rafOne);
+          if (rafTwo !== null) window.cancelAnimationFrame(rafTwo);
           if (mountedTimer) clearTimeout(mountedTimer);
         };
     }, []);

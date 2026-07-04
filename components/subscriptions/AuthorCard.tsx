@@ -17,6 +17,8 @@ import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 
 const WEB_HORIZONTAL_SCROLL_STYLE = {
   WebkitOverflowScrolling: 'touch' as const,
+  maxWidth: '100%' as const,
+  minWidth: 0,
   overflowX: 'auto' as const,
   overflowY: 'hidden' as const,
   overscrollBehaviorX: 'contain' as const,
@@ -178,6 +180,8 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
 const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boolean) =>
   StyleSheet.create({
     section: {
+      width: 'auto',
+      maxWidth: '100%',
       marginHorizontal: isCompact ? 10 : 16,
       marginBottom: isCompact ? 10 : 16,
       backgroundColor: colors.surface,
@@ -212,17 +216,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
     authorSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
     authorActions: { flexDirection: 'row', gap: isCompact ? 6 : 8 },
     actionButton: {
-      width: isCompact ? 38 : 40,
-      height: isCompact ? 38 : 40,
-      borderRadius: isCompact ? 19 : 20,
+      width: isCompact ? 44 : 40,
+      height: isCompact ? 44 : 40,
+      borderRadius: isCompact ? 22 : 20,
       backgroundColor: colors.primaryLight,
       alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.primaryAlpha30,
       ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
     },
     actionButtonDanger: {
-      width: isCompact ? 38 : 40,
-      height: isCompact ? 38 : 40,
-      borderRadius: isCompact ? 19 : 20,
+      width: isCompact ? 44 : 40,
+      height: isCompact ? 44 : 40,
+      borderRadius: isCompact ? 22 : 20,
       backgroundColor: colors.dangerLight,
       alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.danger,
       ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
@@ -233,7 +237,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       paddingHorizontal: isCompact ? 12 : 14,
       paddingBottom: isCompact ? 12 : 14,
       gap: isCompact ? 10 : 12,
-      ...(Platform.OS === 'web' ? ({ minWidth: 'max-content' } as any) : {}),
     },
     travelCardWrap: { width: isCompact ? 168 : 240 },
     travelCard: { width: '100%' },

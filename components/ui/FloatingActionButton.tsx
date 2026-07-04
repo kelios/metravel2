@@ -92,7 +92,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
-      default: {
+      android: {
+        elevation: 6,
+      },
+      ios: {
         elevation: 6,
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.27,
@@ -102,7 +105,10 @@ const styles = StyleSheet.create({
   },
   fabPressed: {
     ...Platform.select({
-      default: {
+      android: {
+        elevation: 2,
+      },
+      ios: {
         elevation: 2,
       },
     }),

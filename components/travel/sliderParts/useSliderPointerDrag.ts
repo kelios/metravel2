@@ -1,21 +1,22 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { clamp, resolveSwipeTargetIndex } from './utils';
-import { getTouchGestureAxis } from './useWebScrollInteraction';
+import { getTouchGestureAxis, shouldHandlePointerDragStart } from './useWebScrollInteraction';
 import { getDomNode } from './useSliderTrack';
 import { isIOSWebKit } from '@/components/ui/ImageCardMediaWebHelpers';
 
-// iOS Safari resolves the scroll/gesture arbitration within the first one or two
-// `touchmove` events based on `touch-action` and whether `preventDefault` was
-// called synchronously on a NON-passive `touchmove`. A late `preventDefault` on a
-// `pointermove` (which is what the generic path does, only after 8px of travel)
-// is ignored by WebKit — it has already committed the gesture and stops
-// delivering further moves (or fires `pointercancel`). So on iOS Safari we drive
-// the touch drag from raw touch events with `{ passive: false }` and claim the
-// horizontal gesture on the very first dominant move.
+// Mobile browsers resolve scroll/gesture arbitration early. iOS WebKit in
+// particular ignores a late `preventDefault` on touch-derived pointer moves
+// after it has committed the gesture, so mobile touch drag is driven from raw
+// touch events with `{ passive: false }` and claims horizontal intent on the
+// first dominant move.
 const IOS_AXIS_THRESHOLD_PX = 4;
 export const IOS_TOUCH_START_OPTIONS = { passive: true, capture: true } as const;
 export const IOS_TOUCH_MOVE_OPTIONS = { passive: false, capture: true } as const;
 export const IOS_TOUCH_END_OPTIONS = { passive: true, capture: true } as const;
+
+export function shouldUseRawTouchGesturePath(isMobile: boolean): boolean {
+  return isMobile || isIOSWebKit();
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,7 +79,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
     viewportRef,
     wrapperRef,
     imagesLen,
-    isMobile: _isMobile,
+    isMobile,
     maxIndex,
     indexRef,
     containerWRef,
@@ -138,10 +139,11 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
 
     wrapperNode.setAttribute('tabindex', '0');
 
-    // On iOS Safari the touch gesture is driven by raw touch events (below),
-    // so the pointer path must handle mouse only — otherwise the touch-derived
-    // pointer events would race the touch handlers over the shared drag state.
-    const useTouchPath = isIOSWebKit();
+    // On mobile web the touch gesture is driven by raw touch events (below).
+    // iOS WebKit requires a synchronous preventDefault on a non-passive
+    // touchmove, and Chrome/Android is more reliable when the same path claims
+    // horizontal intent before pointer cancellation can interrupt the drag.
+    const useTouchPath = shouldUseRawTouchGesturePath(isMobile);
 
     const resetDrag = () => {
       const activePointerId = dragStateRef.current.pointerId;
@@ -159,7 +161,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
 
     const beginPointer = (event: PointerEvent) => {
       if (imagesLen < 2) return;
-      if (useTouchPath && event.pointerType !== 'mouse') return;
+      if (!shouldHandlePointerDragStart(event.pointerType, isMobile, useTouchPath)) return;
       if (event.pointerType === 'mouse' && event.button !== 0) return;
 
       stopAnimation();
@@ -444,6 +446,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
     enablePrefetch,
     imagesLen,
     indexRef,
+    isMobile,
     maxIndex,
     onWrapperKeyDown,
     pauseAutoplay,

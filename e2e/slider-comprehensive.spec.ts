@@ -670,7 +670,7 @@ test.describe('Slider — autoplay disabled on travel page', () => {
 });
 
 test.describe('Slider — touch/pointer swipe', () => {
-  test('pointer swipe left advances to next slide', async ({ page }) => {
+  test('mobile touch swipe left advances to next slide', async ({ page }) => {
     await preacceptCookies(page);
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
@@ -679,8 +679,18 @@ test.describe('Slider — touch/pointer swipe', () => {
 
     expect(counter.current).toBe(1);
 
-    // Use pointer events (touch simulation) — pageX is not in PointerEventInit type
-    // so we use clientX only (sufficient for scroll behavior)
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() => {
+            const scroll = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement | null;
+            return scroll ? getComputedStyle(scroll).touchAction : null;
+          }),
+        { timeout: 10_000 },
+      )
+      .toBe('pan-y pinch-zoom');
+
     const swipeOk = await page.evaluate(async () => {
       const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const scroll = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement;
@@ -691,39 +701,44 @@ test.describe('Slider — touch/pointer swipe', () => {
       const endX = rect.left + rect.width * 0.1;
       const y = rect.top + rect.height / 2;
 
-      // Simulate touch via pointer events
-      scroll.dispatchEvent(new PointerEvent('pointerdown', {
-        pointerId: 1, pointerType: 'touch',
-        clientX: startX, clientY: y, bubbles: true,
-      }));
+      const dispatchTouch = (type: string, clientX: number, clientY: number, cancelable: boolean) => {
+        const event = new Event(type, { bubbles: true, cancelable });
+        const touch = {
+          identifier: 1,
+          target: scroll,
+          clientX,
+          clientY,
+          pageX: clientX,
+          pageY: clientY,
+          screenX: clientX,
+          screenY: clientY,
+        };
+        Object.defineProperty(event, 'touches', {
+          value: type === 'touchend' || type === 'touchcancel' ? [] : [touch],
+        });
+        Object.defineProperty(event, 'changedTouches', { value: [touch] });
+        scroll.dispatchEvent(event);
+      };
+
+      dispatchTouch('touchstart', startX, y, false);
       await delay(50);
 
       const steps = 10;
       for (let i = 1; i <= steps; i++) {
         const x = startX + (endX - startX) * (i / steps);
-        scroll.dispatchEvent(new PointerEvent('pointermove', {
-          pointerId: 1, pointerType: 'touch',
-          clientX: x, clientY: y, bubbles: true,
-        }));
+        dispatchTouch('touchmove', x, y, true);
         await delay(16);
       }
 
-      scroll.dispatchEvent(new PointerEvent('pointerup', {
-        pointerId: 1, pointerType: 'touch',
-        clientX: endX, clientY: y, bubbles: true,
-      }));
+      dispatchTouch('touchend', endX, y, false);
 
       return true;
     });
 
     expect(swipeOk).toBe(true);
-    // Allow time for scroll snap to settle
-    await page.waitForTimeout(1200);
 
-    // The slide may have advanced via native scroll-snap (touch scrolling)
-    // We just verify no crash and slider is still functional
-    const cAfter = await getCounter(page);
-    expect(cAfter).not.toBeNull();
+    const cAfter = await waitForCounterValue(page, 2, 8_000);
+    expect(cAfter?.current).toBe(2);
   });
 });
 

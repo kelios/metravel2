@@ -38,7 +38,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     barMobile: {
         paddingVertical: DESIGN_TOKENS.spacing.xs / 2,
-        minHeight: Platform.OS === 'android' ? 48 : 40,
+        minHeight: Platform.OS === 'android' ? 48 : 44,
     },
 
     centerContainer: {
@@ -57,8 +57,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     iconMinimal: {
         margin: 0,
-        width: 28,
-        height: 28,
+        width: 44,
+        height: 44,
     },
     minimalText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -74,8 +74,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         paddingVertical: DESIGN_TOKENS.spacing.xs / 2,
         borderRadius: DESIGN_TOKENS.radii.pill,
         marginLeft: DESIGN_TOKENS.spacing.xs / 2,
-        minWidth: 28,
-        minHeight: 28, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+        minWidth: 44,
+        minHeight: 44,
         alignItems: "center",
         justifyContent: "center",
     },
@@ -95,8 +95,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     iconMobile: {
         margin: 0,
-        width: 32,
-        height: 32,
+        width: 44,
+        height: 44,
     },
     mobileInputContainer: {
         flexDirection: "row",
@@ -127,8 +127,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         paddingVertical: DESIGN_TOKENS.spacing.xs / 2,
         borderRadius: DESIGN_TOKENS.radii.pill,
         marginLeft: DESIGN_TOKENS.spacing.xs / 2,
-        minWidth: 28,
-        minHeight: 28, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+        minWidth: 44,
+        minHeight: 44,
         alignItems: "center",
         justifyContent: "center",
     },

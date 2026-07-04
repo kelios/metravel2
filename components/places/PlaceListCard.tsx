@@ -306,11 +306,9 @@ const PlaceListCard: React.FC<Props> = ({
   );
   const openOverflowMenu = useCallback(() => setOverflowVisible(true), []);
   const closeOverflowMenu = useCallback(() => setOverflowVisible(false), []);
-  // Popup parity: in the popup-aligned points card the favorite + trip-status are
-  // compact icons stacked in the photo TOP-LEFT corner (RelatedTravelActionStack
-  // overlay variant), NOT a labeled «Статус поездки» row with a full-width
-  // «Был/Хочу/Планирую» pill below the title. So the inline status section is
-  // disabled here and the stack is routed into `leftTopSlot` instead.
+  // Popup parity: in the popup-aligned points card the favorite + trip-status
+  // controls stay in the photo TOP-LEFT corner (RelatedTravelActionStack overlay
+  // variant), while the trip-status control still keeps visible status text.
   const showInlineRelatedTravelActions =
     !popupAligned && !!relatedTravelUrl && showTitleInContent;
   const overflowActionLabel = mapActions.length > 0 ? 'Навигация' : 'Ещё';
@@ -425,14 +423,7 @@ const PlaceListCard: React.FC<Props> = ({
       leftTopSlot={popupAligned ? relatedTravelActions : undefined}
       rightTopSlot={popupAligned ? undefined : relatedTravelActions}
       rightTopSlotScrim={!popupAligned}
-      mediaPlaceholderSlot={
-        <View style={styles.mediaPlaceholder}>
-          <Feather name="map-pin" size={26} color={colors.textMuted} />
-          <Text style={styles.mediaPlaceholderText} numberOfLines={1}>
-            {categoryLabel || 'Без фото'}
-          </Text>
-        </View>
-      }
+      mediaPlaceholderSlot={<View style={styles.mediaPlaceholder} />}
       contentSlot={
         <View style={styles.content}>
           {showTitleInContent && (
@@ -719,15 +710,8 @@ const createStyles = (
     mediaPlaceholder: {
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 6,
       paddingHorizontal: 16,
-    },
-    mediaPlaceholderText: {
-      fontSize: 12,
-      fontWeight: '600',
-      letterSpacing: 0.2,
-      color: colors.textMuted,
-      maxWidth: 180,
+      backgroundColor: colors.backgroundSecondary,
     },
     content: {
       gap: stackGap,

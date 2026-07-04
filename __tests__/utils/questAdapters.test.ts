@@ -261,6 +261,13 @@ describe('questAdapters', () => {
       expect(result.lat).toBeCloseTo(50.0617);
       expect(result.lng).toBeCloseTo(19.9383);
     });
+
+    it('normalizes backend country code and falls back to coords when it is blank', () => {
+      expect(adaptCity({ name: 'Kraków', lat: '50.0617', lng: '19.9383', country_code: ' pl ' } as any).countryCode)
+        .toBe('PL');
+      expect(adaptCity({ name: 'Kraków', lat: '50.0617', lng: '19.9383', country_code: '   ' } as any).countryCode)
+        .toBe('PL');
+    });
   });
 
   describe('adaptMeta', () => {
@@ -285,6 +292,28 @@ describe('questAdapters', () => {
       expect(result.tags).toEqual(['history', 'walking']);
       expect(result.petFriendly).toBe(true);
       expect(result.cover).toBe('https://img.com/cover.jpg');
+    });
+
+    it('normalizes backend country code and falls back to coords when it is blank', () => {
+      expect(adaptMeta({
+        quest_id: 'krakow-dragon',
+        title: 'Тайна дракона',
+        points: '100',
+        city_id: 'krakow',
+        lat: '50.06',
+        lng: '19.94',
+        country_code: ' pl ',
+      } as any).countryCode).toBe('PL');
+
+      expect(adaptMeta({
+        quest_id: 'krakow-dragon',
+        title: 'Тайна дракона',
+        points: '100',
+        city_id: 'krakow',
+        lat: '50.06',
+        lng: '19.94',
+        country_code: '   ',
+      } as any).countryCode).toBe('PL');
     });
 
     it('handles missing optional fields', () => {

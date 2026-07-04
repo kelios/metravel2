@@ -115,7 +115,9 @@ const Header = React.memo(function Header() {
     const [, setVariant] = useState<HeaderVariant>(() => getStaticHeaderVariant(pathname));
     // Mobile-only: re-evaluate header suppression on resize/route so the map tab
     // drops the global header bar once we know the viewport is mobile.
-    const [hideForMap, setHideForMap] = useState<boolean>(() => shouldHideHeaderForMap(pathname));
+    const [hideForMap, setHideForMap] = useState<boolean>(() =>
+        Platform.OS === 'web' ? false : shouldHideHeaderForMap(pathname)
+    );
     const [measuredHeight, setMeasuredHeight] = useState<number>(
         () => HEADER_HEIGHT_FALLBACK[getStaticHeaderVariant(pathname)],
     );

@@ -382,7 +382,9 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             >
               {BOTTOM_DOCK_MORE_MENU_SECTIONS.map((section, sectionIndex) => (
                 <React.Fragment key={section.key}>
-                  {section.items.map((item) => renderMoreMenuItem(item, () => setShowMore(false)))}
+                  {section.items
+                    .filter((item) => item.route !== '/privacy' && item.route !== '/cookies')
+                    .map((item) => renderMoreMenuItem(item, () => setShowMore(false)))}
                   {sectionIndex < BOTTOM_DOCK_MORE_MENU_SECTIONS.length - 1 ? <View style={styles.moreDivider} /> : null}
                 </React.Fragment>
               ))}
@@ -698,8 +700,8 @@ const createStyles = (
     color: colors.text,
   },
   sheetCloseBtn: {
-    width: 32,
-    height: 32,
+    width: DESIGN_TOKENS.touchTarget.minWidth,
+    height: DESIGN_TOKENS.touchTarget.minHeight,
     borderRadius: CONTROL_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',

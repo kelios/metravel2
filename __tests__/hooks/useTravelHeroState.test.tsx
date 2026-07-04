@@ -240,4 +240,64 @@ describe('useTravelHeroState', () => {
       configurable: true,
     })
   })
+
+  it('unblocks the mobile web hero slider when iPhone WebKit misses the LCP load event', () => {
+    const originalUserAgent = window.navigator.userAgent
+    const originalMaxTouchPoints = window.navigator.maxTouchPoints
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    const onFirstImageLoad = jest.fn()
+    const travel = {
+      id: 48,
+      name: 'iPhone handoff travel',
+      gallery: [
+        {
+          id: 1,
+          url: 'https://example.com/iphone-gallery.jpg',
+          width: 1200,
+          height: 800,
+        },
+        {
+          id: 2,
+          url: 'https://example.com/iphone-gallery-2.jpg',
+          width: 1200,
+          height: 800,
+        },
+      ],
+    } as any
+
+    const { result } = renderHook(() =>
+      useTravelHeroState(travel, true, onFirstImageLoad, false),
+    )
+
+    expect(result.current.webHeroLoaded).toBe(false)
+
+    act(() => {
+      jest.advanceTimersByTime(799)
+    })
+    expect(result.current.webHeroLoaded).toBe(false)
+
+    act(() => {
+      jest.advanceTimersByTime(1)
+    })
+    expect(result.current.webHeroLoaded).toBe(true)
+    expect(onFirstImageLoad).not.toHaveBeenCalled()
+
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value: originalUserAgent,
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: originalMaxTouchPoints,
+      configurable: true,
+    })
+  })
 })

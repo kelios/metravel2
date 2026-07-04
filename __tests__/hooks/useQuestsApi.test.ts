@@ -37,6 +37,11 @@ jest.mock('@/utils/questAdapters', () => ({
     city: { name: b.city?.name, lat: 0, lng: 0 },
     coverUrl: b.cover_url ?? undefined,
   }),
+  normalizeQuestCountryCode: (rawCode: unknown, lat: number, lng: number) => {
+    const code = String(rawCode ?? '').trim().toUpperCase();
+    if (code) return code;
+    return lat >= 49 && lat <= 54.84 && lng >= 14.12 && lng <= 24.15 ? 'PL' : undefined;
+  },
 }));
 
 import {
@@ -64,7 +69,7 @@ const API_META = {
   cover_url: null,
 };
 
-const API_CITY = { id: 1, name: 'Kraków', lat: '50.06', lng: '19.94' };
+const API_CITY = { id: 1, name: 'Kraków', lat: '50.06', lng: '19.94', country_code: 'pl' };
 
 const API_BUNDLE = {
   id: 1,
@@ -153,6 +158,19 @@ describe('useQuestsApi hooks', () => {
       expect(result.current.cities).toHaveLength(1);
       expect(result.current.cities[0].name).toBe('Kraków');
       expect(result.current.cities[0].lat).toBeCloseTo(50.06);
+      expect(result.current.cities[0].countryCode).toBe('PL');
+    });
+
+    it('falls back to coords when API returns a blank country code', async () => {
+      mockFetchQuestCities.mockResolvedValueOnce([
+        { ...API_CITY, country_code: '   ' },
+      ]);
+
+      const { result } = renderHook(() => useQuestCities());
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.cities[0].countryCode).toBe('PL');
     });
 
     it('handles API failure gracefully (no fallback)', async () => {

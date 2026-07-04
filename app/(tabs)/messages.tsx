@@ -20,10 +20,25 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { devError } from '@/utils/logger';
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
+import { useWebHydrationGate } from '@/hooks/useWebHydrationGate';
 
 const InstantSEO = React.lazy(() => import('@/components/seo/LazyInstantSEO'));
 
+function MessagesHydrationFallback() {
+    return <View style={styles.mobileContainer} />;
+}
+
 export default function MessagesScreen() {
+    const hydrationReady = useWebHydrationGate();
+
+    if (!hydrationReady) {
+        return <MessagesHydrationFallback />;
+    }
+
+    return <MessagesScreenContent />;
+}
+
+function MessagesScreenContent() {
     const router = useRouter();
     const isFocused = useIsFocused();
     const { isAuthenticated, authReady, userId } = useAuth();

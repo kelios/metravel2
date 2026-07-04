@@ -9,6 +9,7 @@ import { Platform, useWindowDimensions } from 'react-native'
 
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
 import { useTdTrace } from '@/hooks/useTdTrace'
+import { isIOSWebKit } from '@/components/ui/ImageCardMediaWebHelpers'
 import type { Travel } from '@/types/types'
 
 type ImgLike = {
@@ -36,7 +37,8 @@ const HERO_HEIGHT = {
 // браузера → <img onLoad> может не выстрелить), принудительно снимаем оверлей,
 // иначе слайдер навсегда остаётся pointerEvents:none + opacity:0 (мёртвый свайп).
 // Картинка слайда = та же, что LCP-оверлей (уже декодирована) → без вспышки.
-const OVERLAY_FALLBACK_UNMOUNT_MS = 1200
+const OVERLAY_FALLBACK_UNMOUNT_MS = 800
+const WEB_HERO_LOAD_BACKSTOP_MS = 800
 
 const normalizeGalleryImage = (
   item: unknown,
@@ -194,6 +196,22 @@ function useHeroMediaModel(
   useEffect(() => {
     if (Platform.OS === 'web' && overlayUnmounted) tdTrace('hero:overlayHidden')
   }, [overlayUnmounted, tdTrace])
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (webHeroLoaded || !firstImg?.url) return
+    const shouldBackstopHeroLoad = isMobile || isIOSWebKit()
+    if (!shouldBackstopHeroLoad) return
+
+    const timer = setTimeout(() => {
+      if (webHeroLoadNotifiedRef.current) return
+      webHeroLoadNotifiedRef.current = true
+      setWebHeroLoaded(true)
+      tdTrace('hero:lcpImg:onLoad:backstop')
+    }, WEB_HERO_LOAD_BACKSTOP_MS)
+
+    return () => clearTimeout(timer)
+  }, [firstImg?.url, isMobile, tdTrace, webHeroLoaded])
 
   const handleWebHeroLoad = useCallback(() => {
     if (webHeroLoadNotifiedRef.current) return

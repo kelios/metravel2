@@ -166,6 +166,53 @@ describe('StickySearchBar Component', () => {
     expect(mockOnFiltersPress).toHaveBeenCalled();
   });
 
+  it('renders primary mobile action and calls it without using an overlay FAB', () => {
+    (global as any).__mockResponsive = {
+      width: 375,
+      height: 768,
+      isSmallPhone: false,
+      isPhone: true,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: true,
+      isLandscape: false,
+      orientation: 'portrait',
+      breakpoints: {},
+      isAtLeast: () => false,
+      isAtMost: () => true,
+      isBetween: () => false,
+    };
+    const onCreateTravel = jest.fn();
+
+    renderWithProviders(
+      <StickySearchBar
+        search=""
+        onSearchChange={mockOnSearchChange}
+        onFiltersPress={mockOnFiltersPress}
+        onToggleRecommendations={mockOnToggleRecommendations}
+        isRecommendationsVisible={false}
+        hasActiveFilters={false}
+        resultsCount={10}
+        activeFiltersCount={0}
+        onClearAll={mockOnClearAll}
+        primaryAction={{
+          iconName: 'plus',
+          label: 'Создать маршрут',
+          onPress: onCreateTravel,
+          testID: 'create-travel-toolbar-button',
+        }}
+      />
+    );
+
+    const createButton = screen.getByTestId('create-travel-toolbar-button');
+    fireEvent.press(createButton);
+
+    expect(onCreateTravel).toHaveBeenCalledTimes(1);
+  });
+
   it('calls onToggleRecommendations when recommendations button is pressed', () => {
     renderWithProviders(
       <StickySearchBar

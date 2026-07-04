@@ -1,4 +1,5 @@
 import React, { Suspense, useEffect } from 'react'
+import { View } from 'react-native'
 import { usePathname } from 'expo-router'
 import { useIsFocused } from 'expo-router'
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
@@ -6,6 +7,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss'
 import { buildCanonicalUrl, buildOgImageUrl, MAP_OG_IMAGE_PATH } from '@/utils/seo'
 import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo'
+import { useWebHydrationGate } from '@/hooks/useWebHydrationGate'
 
 const WEB_SR_ONLY_STYLE = {
   position: 'absolute',
@@ -22,9 +24,12 @@ const WEB_SR_ONLY_STYLE = {
 const mapScreenImport = Promise.resolve(import('@/screens/tabs/MapScreen'))
 const MapScreenImpl = React.lazy(() => mapScreenImport)
 
-ensureLeafletCss()
+function MapHydrationFallback() {
+  return <View style={{ flex: 1 }} />
+}
 
 export default function MapScreen() {
+  const hydrationReady = useWebHydrationGate()
   const pathname = usePathname()
   const isFocused = useIsFocused()
   const title = MAP_SEO_TITLE
@@ -36,7 +41,7 @@ export default function MapScreen() {
     ensureLeafletCss()
   }, [])
 
-  const seoBlock = isFocused ? (
+  const seoBlock = hydrationReady && isFocused ? (
     <InstantSEO
       headKey="map"
       title={title}
@@ -52,10 +57,14 @@ export default function MapScreen() {
   return (
     <>
       {seoBlock}
-      <h1 style={WEB_SR_ONLY_STYLE as any}>{title}</h1>
-      <Suspense fallback={<MapPageSkeleton />}>
-        <MapScreenImpl />
-      </Suspense>
+      {hydrationReady ? <h1 style={WEB_SR_ONLY_STYLE as any}>{title}</h1> : null}
+      {hydrationReady ? (
+        <Suspense fallback={<MapPageSkeleton />}>
+          <MapScreenImpl />
+        </Suspense>
+      ) : (
+        <MapHydrationFallback />
+      )}
     </>
   )
 }
