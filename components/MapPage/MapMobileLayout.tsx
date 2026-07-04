@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Platform, Pressable, Text as RNText, useWindowDimensions, View } from 'react-native'
+import { BackHandler, Platform, Pressable, Text as RNText, useWindowDimensions, View } from 'react-native'
 import { usePathname } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -380,6 +380,31 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const handleClearSelectedPlace = useCallback(() => {
     clearSelectedPlace?.()
   }, [clearSelectedPlace])
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (activePopover) {
+        setActivePopover(null)
+        return true
+      }
+
+      if (hasSelectedPlace) {
+        handleClearSelectedPlace()
+        return true
+      }
+
+      if (sheetStateRef.current !== 'collapsed') {
+        bottomSheetRef.current?.snapToCollapsed()
+        return true
+      }
+
+      return false
+    })
+
+    return () => subscription.remove()
+  }, [activePopover, handleClearSelectedPlace, hasSelectedPlace])
 
   // F-49 — "Искать в этой области" видна только когда есть значимый сдвиг карты,
   // шторка закрыта и не открыта карточка места. В открытой шторке кнопка

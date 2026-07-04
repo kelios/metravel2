@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native'
-import { StyleSheet, View } from 'react-native'
+import { BackHandler, Platform, StyleSheet, View } from 'react-native'
 
 import { MapMobileLayout } from '@/components/MapPage/MapMobileLayout'
 import { getSearchAreaButtonBottom } from '@/components/MapPage/MapMobileLayout.styles'
@@ -55,6 +55,17 @@ jest.mock('@/components/MapPage/MapBottomSheet', () => {
       mockMapBottomSheet(props)
       return React.createElement(View, { testID: 'mock-map-bottom-sheet' }, children)
     }),
+  }
+})
+
+jest.mock('@/components/MapPage/MapPlaceBottomCard', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+
+  return function MockMapPlaceBottomCard({ point }: any) {
+    return point
+      ? React.createElement(View, { testID: 'map-place-bottom-card' })
+      : null
   }
 })
 
@@ -242,6 +253,44 @@ describe('MapMobileLayout', () => {
     })
 
     expect(screen.queryByTestId('map-search-this-area')).toBeNull()
+  })
+
+  it('consumes Android Back by closing the selected place card in place', () => {
+    const originalPlatform = Platform.OS
+    ;(Platform as any).OS = 'android'
+    const clearSelectedPlace = jest.fn()
+    let hardwareBackHandler: (() => boolean) | undefined
+    const remove = jest.fn()
+    const addEventListenerSpy = jest
+      .spyOn(BackHandler, 'addEventListener')
+      .mockImplementation((_eventName: any, handler: any) => {
+        hardwareBackHandler = handler
+        return { remove } as any
+      })
+
+    try {
+      const screen = render(
+        <MapMobileLayout
+          mapComponent={<View testID="mock-map" />}
+          travelsData={[]}
+          coordinates={{ latitude: 53.9, longitude: 27.56 }}
+          transportMode="car"
+          buildRouteTo={jest.fn()}
+          onCenterOnUser={jest.fn()}
+          onOpenFilters={jest.fn()}
+          filtersPanelProps={null}
+          selectedPlace={{ id: 'place-1', coord: '53.9,27.56', address: 'Test place' }}
+          clearSelectedPlace={clearSelectedPlace}
+        />,
+      )
+
+      expect(screen.getByTestId('map-place-bottom-card')).toBeTruthy()
+      expect(hardwareBackHandler?.()).toBe(true)
+      expect(clearSelectedPlace).toHaveBeenCalledTimes(1)
+    } finally {
+      addEventListenerSpy.mockRestore()
+      ;(Platform as any).OS = originalPlatform
+    }
   })
 
   it('keeps the web search-this-area button close to the mobile footer dock', () => {
