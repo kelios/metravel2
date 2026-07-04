@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, TouchableOpacity, View } from 'react-native';
 import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
+import { getMediaLqipUrl } from '@/utils/travelMediaVariants';
 import type { SliderImage } from './types';
 import { injectSliderGlobalStyles } from './globalStyles';
 
@@ -176,6 +177,7 @@ const Slide = memo(function Slide({
       fit: 'cover',
     }) ?? resolvedUri;
   }, [shouldBlur, resolvedUri]);
+  const mediaLqipUrl = useMemo(() => getMediaLqipUrl(item.media), [item.media]);
   const effectiveBlurBackground = shouldBlur;
   const effectiveAllowCriticalWebBlur = shouldBlur && Platform.OS === 'web';
   const shouldRevealOnLoadOnly = isSliderSafari && effectiveAllowCriticalWebBlur;
@@ -331,6 +333,7 @@ const Slide = memo(function Slide({
             blurBackground={effectiveBlurBackground}
             blurSrc={nativeBlurSrc}
             blurRadius={12}
+            placeholderSrc={mediaLqipUrl}
             priority={mainPriority as any}
             prefetch={Platform.OS === 'web' ? shouldPreloadAhead : false}
             loading={

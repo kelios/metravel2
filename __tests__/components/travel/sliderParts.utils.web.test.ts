@@ -99,4 +99,28 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
     expect(src).toContain('dpr=3')
     expect(src).toContain('fit=contain')
   })
+
+  it('prefers backend media manifest variants for gallery slider images', () => {
+    const src = buildUriWeb(
+      {
+        id: 'gallery-1',
+        url: 'https://metravel.by/gallery/123/original.jpg',
+        media: {
+          id: 3706,
+          lqip_url: '/gallery/123/photo.webp?w=32&q=35&fit=cover',
+          variants: {
+            thumb_320: '/gallery/123/photo.webp?w=320&q=72&fit=cover',
+            card_640: '/gallery/123/photo.webp?w=640&q=75&fit=cover',
+            hero_1280: '/gallery/123/photo.webp?w=1280&q=78&fit=contain',
+          },
+        },
+      } as any,
+      1180,
+      undefined,
+      'contain',
+      false,
+    )
+
+    expect(src).toBe('https://metravel.by/gallery/123/photo.webp?w=1280&q=78&fit=contain')
+  })
 })

@@ -88,12 +88,15 @@ const renderItem = (props: Partial<React.ComponentProps<typeof TravelListItem>> 
 describe('TravelListItem media props on web', () => {
   const originalUserAgent = window.navigator.userAgent;
   const originalMaxTouchPoints = window.navigator.maxTouchPoints;
+  const originalApiUrl = process.env.EXPO_PUBLIC_API_URL;
 
   beforeEach(() => {
     mockUnifiedTravelCard.mockClear();
+    process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api';
   });
 
   afterEach(() => {
+    process.env.EXPO_PUBLIC_API_URL = originalApiUrl;
     Object.defineProperty(window.navigator, 'userAgent', {
       value: originalUserAgent,
       configurable: true,
@@ -165,5 +168,40 @@ describe('TravelListItem media props on web', () => {
     expect(adminStyle.top).toBe(8);
     expect(adminStyle.left).toBe(8);
     expect(adminStyle.paddingHorizontal).toBe(5);
+  });
+
+  it('passes backend media variants and lqip to UnifiedTravelCard when cover manifest exists', () => {
+    renderItem({
+      travel: {
+        ...baseTravel,
+        media: {
+          cover: {
+            id: 11,
+            lqip_url: '/gallery/11/cover.webp?w=32&q=35&fit=cover',
+            variants: {
+              thumb_160: '/gallery/11/cover.webp?w=160&q=70&fit=cover',
+              thumb_320: '/gallery/11/cover.webp?w=320&q=72&fit=cover',
+              card_640: '/gallery/11/cover.webp?w=640&q=75&fit=cover',
+            },
+            sizes_hint: '(max-width: 768px) 100vw, 320px',
+          },
+          gallery: null,
+          address_images: null,
+        },
+      } as any,
+      viewportWidth: 1280,
+    });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props).toBeTruthy();
+    expect(props.mediaProps?.placeholderSrc).toBe(
+      'https://metravel.by/gallery/11/cover.webp?w=32&q=35&fit=cover',
+    );
+    expect(props.mediaProps?.webResponsiveSource?.src).toBe(
+      'https://metravel.by/gallery/11/cover.webp?w=640&q=75&fit=cover',
+    );
+    expect(props.mediaProps?.webResponsiveSource?.srcSet).toContain('160w');
+    expect(props.mediaProps?.webResponsiveSource?.srcSet).toContain('320w');
+    expect(props.mediaProps?.webResponsiveSource?.srcSet).toContain('640w');
   });
 });

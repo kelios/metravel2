@@ -6,6 +6,7 @@ import {
   getPreferredImageFormat,
   optimizeImageUrl,
 } from '@/utils/imageOptimization';
+import { buildResponsiveImagePropsFromMedia } from '@/utils/travelMediaVariants';
 import type { SliderImage } from './types';
 
 export const DEFAULT_AR = 16 / 9;
@@ -188,6 +189,13 @@ export const buildUriWeb = (
       : isMobileWidth
         ? 78
         : 78;
+    const fromMedia = buildResponsiveImagePropsFromMedia(img.media, {
+      maxWidth: targetWidth,
+      widths: [320, 640, 720, 960, 1280],
+      sizes: isMobileWidth ? '100vw' : '(max-width: 1280px) 100vw, 1280px',
+    });
+    if (fromMedia?.src) return fromMedia.src;
+
     const format = isFirst ? undefined : PREFERRED_FORMAT;
     const dpr = isFirst ? undefined : effectiveDevicePixelRatio;
     return (

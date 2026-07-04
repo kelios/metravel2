@@ -322,6 +322,41 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainImage.props.srcSet).toBeUndefined()
   })
 
+  it('uses caller-provided backend responsive source on web', () => {
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://metravel.by/gallery/544/gallery/original.jpg"
+          width={320}
+          height={200}
+          blurBackground
+          fit="contain"
+          webResponsiveSource={{
+            src: 'https://metravel.by/gallery/544/gallery/photo.webp?w=640&q=75&fit=cover',
+            srcSet:
+              'https://metravel.by/gallery/544/gallery/photo.webp?w=320&q=72&fit=cover 320w, https://metravel.by/gallery/544/gallery/photo.webp?w=640&q=75&fit=cover 640w',
+            sizes: '(max-width: 768px) 100vw, 320px',
+          }}
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(mainImage).toBeTruthy()
+    expect(mainImage.props.src).toBe(
+      'https://metravel.by/gallery/544/gallery/photo.webp?w=640&q=75&fit=cover',
+    )
+    expect(mainImage.props.srcSet).toContain('320w')
+    expect(mainImage.props.srcSet).toContain('640w')
+    expect(mainImage.props.sizes).toBe('(max-width: 768px) 100vw, 320px')
+  })
+
   it('keeps responsive srcSet for pre-optimized shared-blur cards on iPhone Safari', () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       value:
