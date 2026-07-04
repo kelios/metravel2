@@ -113,15 +113,15 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
         mapActions={itemModel.mapActions}
         inlineActions={itemModel.inlineActions}
         onAddPoint={itemModel.handleAddPointClick}
-        addLabel={isMobileWeb || (Platform.OS !== 'web' && isMobile) ? 'Сохранить' : 'Мои точки'}
+        addLabel="Сохранить"
         addDisabled={itemModel.addDisabled}
         isAdding={itemModel.isAdding}
         imageHeight={cardImageHeight}
         width={isWebGrid ? undefined : isMobileWeb ? undefined : Platform.OS === 'web' ? 300 : undefined}
         style={cardStyle}
         webTouchAction={isMobileWeb ? 'pan-x pan-y' : undefined}
-        compact={isMobileWeb || (Platform.OS !== 'web' && isMobile)}
-        popupAligned={isMobileWeb || (Platform.OS !== 'web' && isMobile)}
+        compact
+        popupAligned
         titleLayout="content"
         titleNumberOfLines={2}
         relatedTravelUrl={relatedTravelUrl}

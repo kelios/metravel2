@@ -5,8 +5,19 @@
 import React from 'react';
 import { act } from 'react-test-renderer';
 import { render } from '@testing-library/react-native';
+import { QueryClientProvider } from '@tanstack/react-query';
+
+import { createTestQueryClient } from '@/__tests__/helpers/testQueryClient';
 
 // useIsFocused/useNavigation приходят из глобального мока expo-router (setup.ts)
+
+const withQueryClient = () => {
+  const queryClient = createTestQueryClient();
+  const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+  return Wrapper;
+};
 
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({
@@ -191,7 +202,9 @@ describe('TravelDetailsContainer (mobile) no duplicated engagement blocks', () =
   });
 
   it('renders Telegram engagement block only once', async () => {
-    const { queryAllByTestId } = render(<TravelDetailsContainer />);
+    const { queryAllByTestId } = render(<TravelDetailsContainer />, {
+      wrapper: withQueryClient(),
+    });
 
     // TravelDetails uses internal Defer (rIC + timeout up to 2600ms) before rendering heavy sections.
     await act(async () => {

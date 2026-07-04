@@ -62,6 +62,49 @@ export interface ParsedPoint {
   rating?: number;
 }
 
+/**
+ * Single row of the backend import preview (dry-run) response.
+ * Shape mirrors `points_preview[]` from `POST /api/user-points/import/?dry_run=true`.
+ */
+export interface ImportPreviewPoint {
+  name: string;
+  description?: string | null;
+  latitude: number;
+  longitude: number;
+  address?: string | null;
+  color: string;
+  status: string;
+  source: string;
+  originalId?: string | null;
+  categoryIds: string[];
+}
+
+/**
+ * Backend import preview/import summary. `created`/`updated`/`skipped` are 0 for dry-run.
+ */
+export interface ImportPreviewSummary {
+  totalParsed: number;
+  valid: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  duplicates: number;
+  warnings: string[];
+  errors: string[];
+}
+
+/**
+ * Normalized result of a dry-run preview call.
+ */
+export interface ImportPreviewResult {
+  importId: string;
+  dryRun: boolean;
+  source: string;
+  dedupePolicy: DedupePolicy;
+  points: ImportPreviewPoint[];
+  summary: ImportPreviewSummary;
+}
+
 export interface PointFilters {
   colors?: string[];
   categoryIds?: string[];

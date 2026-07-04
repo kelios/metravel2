@@ -1,6 +1,9 @@
 import { createRef } from 'react'
+import type { ReactNode } from 'react'
 import { render, screen, waitFor } from '@testing-library/react-native'
+import { QueryClientProvider } from '@tanstack/react-query'
 
+import { createTestQueryClient } from '@/__tests__/helpers/testQueryClient'
 import type { Travel } from '@/types/types'
 import { TravelDetailsContentSection } from '@/components/travel/details/sections/TravelDetailsContentSection'
 
@@ -95,6 +98,14 @@ const createTravel = (overrides: Partial<Travel> = {}) =>
     ...overrides,
   }) as Travel
 
+const withQueryClient = () => {
+  const queryClient = createTestQueryClient()
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+  return Wrapper
+}
+
 describe('TravelDetailsContentSection', () => {
   beforeEach(() => {
     mockProgressiveShouldLoad = true
@@ -107,7 +118,8 @@ describe('TravelDetailsContentSection', () => {
         isMobile={false}
         forceOpenKey={null}
         anchors={createAnchors()}
-      />
+      />,
+      { wrapper: withQueryClient() }
     )
 
     expect(screen.getByTestId('travel-details-description')).toBeTruthy()
@@ -120,7 +132,8 @@ describe('TravelDetailsContentSection', () => {
         isMobile
         forceOpenKey="minus"
         anchors={createAnchors()}
-      />
+      />,
+      { wrapper: withQueryClient() }
     )
 
     expect(screen.getByText('Впечатления автора')).toBeTruthy()
@@ -137,7 +150,8 @@ describe('TravelDetailsContentSection', () => {
         isMobile={false}
         forceOpenKey={null}
         anchors={createAnchors()}
-      />
+      />,
+      { wrapper: withQueryClient() }
     )
 
     expect(screen.queryByTestId('lazy-youtube')).toBeNull()

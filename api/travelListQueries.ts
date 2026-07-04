@@ -1,4 +1,6 @@
 import { Travel } from '@/types/types';
+import { apiClient } from '@/api/client';
+import type { NearLocationParams } from '@/api/quests';
 import { devError, devWarn } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
@@ -379,3 +381,55 @@ export const fetchRandomTravels = async (
         throw e;
     }
 };
+
+/** Элемент ответа /travels/near-location/ (score/distance считает бэкенд). */
+export type TravelNearLocation = {
+    travel: Travel;
+    score: number;
+    distanceKm: number | null;
+};
+
+type ApiTravelNearLocation = {
+    travel: unknown;
+    score: number;
+    distance_km: number | null;
+};
+
+type NearLocationEnvelope = {
+    results: ApiTravelNearLocation[];
+    count: number;
+};
+
+function buildTravelNearLocationQuery(params: NearLocationParams): string {
+    const search = new URLSearchParams();
+    const city = params.city?.trim();
+    const country = params.country?.trim();
+    if (city) search.set('city', city);
+    if (country) search.set('country', country);
+    if (typeof params.lat === 'number' && Number.isFinite(params.lat)) search.set('lat', String(params.lat));
+    if (typeof params.lng === 'number' && Number.isFinite(params.lng)) search.set('lng', String(params.lng));
+    if (typeof params.limit === 'number' && Number.isFinite(params.limit)) search.set('limit', String(params.limit));
+    return search.toString();
+}
+
+/**
+ * Гео-рекомендации travel-статей рядом с локацией квеста (score/distance
+ * считает бэкенд). Кидает {@link ApiError} со status 404 на старом деплое без
+ * эндпоинта — потребитель делает graceful fallback на клиентский расчёт.
+ */
+export async function fetchTravelsNearLocation(
+    params: NearLocationParams,
+    options?: { signal?: AbortSignal },
+): Promise<TravelNearLocation[]> {
+    const query = buildTravelNearLocationQuery(params);
+    const res = await apiClient.get<NearLocationEnvelope>(
+        `/travels/near-location/${query ? `?${query}` : ''}`,
+        undefined,
+        options,
+    );
+    return (res?.results ?? []).map((item) => ({
+        travel: normalizeTravelItem(item.travel),
+        score: item.score,
+        distanceKm: item.distance_km,
+    }));
+}

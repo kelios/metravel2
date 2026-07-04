@@ -1,27 +1,17 @@
 import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ImportWizard } from '@/components/UserPoints/ImportWizard';
+import type { ImportPreviewResult } from '@/types/userPoints';
 
 jest.mock('expo-document-picker', () => ({
   getDocumentAsync: jest.fn(),
 }));
 
-jest.mock('@/api/parsers/googleMapsParser', () => ({
-  GoogleMapsParser: {
-    parse: jest.fn(),
-  },
-}));
-
-jest.mock('@/api/parsers/osmParser', () => ({
-  OSMParser: {
-    parse: jest.fn(),
-  },
-}));
-
 jest.mock('@/api/userPoints', () => ({
   userPointsApi: {
-    importPoints: jest.fn()
-  }
+    previewImport: jest.fn(),
+    importPoints: jest.fn(),
+  },
 }));
 
 describe('ImportWizard', () => {
@@ -63,33 +53,51 @@ describe('ImportWizard', () => {
   };
 
   const mockGetDocumentAsync = require('expo-document-picker').getDocumentAsync as jest.Mock;
-  const mockGoogleParse = require('@/api/parsers/googleMapsParser').GoogleMapsParser.parse as jest.Mock;
-  const mockOsmParse = require('@/api/parsers/osmParser').OSMParser.parse as jest.Mock;
+  const mockPreviewImport = require('@/api/userPoints').userPointsApi.previewImport as jest.Mock;
   const mockImportPoints = require('@/api/userPoints').userPointsApi.importPoints as jest.Mock;
 
   const mockAsset = {
-    uri: 'file://test.json',
-    name: 'Saved Places.json',
+    uri: 'file://test.geojson',
+    name: 'Saved Places.geojson',
     size: 123,
-    mimeType: 'application/json',
+    mimeType: 'application/geo+json',
+  };
+
+  const previewResult: ImportPreviewResult = {
+    importId: 'preview-1',
+    dryRun: true,
+    source: 'geojson',
+    dedupePolicy: 'merge',
+    points: [
+      {
+        name: 'Point 1',
+        description: null,
+        latitude: 1,
+        longitude: 2,
+        address: null,
+        color: 'brown',
+        status: 'planned',
+        source: 'geojson',
+        originalId: null,
+        categoryIds: [],
+      },
+    ],
+    summary: {
+      totalParsed: 1,
+      valid: 1,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      duplicates: 0,
+      warnings: [],
+      errors: [],
+    },
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetDocumentAsync.mockResolvedValue({ canceled: false, assets: [mockAsset] });
-    mockGoogleParse.mockResolvedValue([
-      {
-        id: 'p1',
-        name: 'Point 1',
-        latitude: 1,
-        longitude: 2,
-        color: 'blue',
-        category: 'other',
-        status: 'planning',
-        importedAt: new Date(0).toISOString(),
-      },
-    ]);
-    mockOsmParse.mockRejectedValue(new Error('not osm'));
+    mockPreviewImport.mockResolvedValue(previewResult);
     mockImportPoints.mockResolvedValue({ created: 1, skipped: 0 });
   });
 
@@ -100,7 +108,7 @@ describe('ImportWizard', () => {
     expect(screen.getByText('Отмена')).toBeTruthy();
   });
 
-  it('should open file picker and move to preview after selecting a file', async () => {
+  it('should send the file to the server dry-run preview and move to preview', async () => {
     renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
@@ -109,7 +117,8 @@ describe('ImportWizard', () => {
     expect(mockGetDocumentAsync).toHaveBeenCalled();
 
     expect(await screen.findByText('Предпросмотр данных')).toBeTruthy();
-    expect(screen.getByText('Найдено точек: 1')).toBeTruthy();
+    expect(mockPreviewImport).toHaveBeenCalledWith(mockAsset);
+    expect(screen.getByText(/Найдено точек:\s*1/)).toBeTruthy();
   });
 
   it('should allow going back to intro from preview', async () => {
@@ -132,7 +141,7 @@ describe('ImportWizard', () => {
     expect(mockOnCancel).toHaveBeenCalled();
   });
 
-  it('should import after preview', async () => {
+  it('should import after preview via non-dry-run call', async () => {
     renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
@@ -142,7 +151,7 @@ describe('ImportWizard', () => {
     fireEvent.press(screen.getByText('Импортировать'));
 
     await waitFor(() => {
-      expect(mockImportPoints).toHaveBeenCalled();
+      expect(mockImportPoints).toHaveBeenCalledWith(mockAsset, { dedupePolicy: 'merge' });
     });
 
     expect(await screen.findByText('Импорт завершен!')).toBeTruthy();
@@ -181,17 +190,29 @@ describe('ImportWizard', () => {
     expect(mockOnComplete).toHaveBeenCalled();
   });
 
-  it('should show error when file type cannot be detected', async () => {
-    mockGoogleParse.mockRejectedValueOnce(new Error('bad google'));
-    mockOsmParse.mockRejectedValueOnce(new Error('bad osm'));
+  it('should show backend errors when preview returns no points', async () => {
+    mockPreviewImport.mockResolvedValueOnce({
+      ...previewResult,
+      points: [],
+      summary: { ...previewResult.summary, totalParsed: 0, valid: 0, errors: ['Unsupported file type'] },
+    });
 
     renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
     fireEvent.press(importBtns[importBtns.length - 1]);
 
-    expect(
-      await screen.findByText(/Не удалось распознать формат файла/)
-    ).toBeTruthy();
+    expect(await screen.findByText(/Unsupported file type/)).toBeTruthy();
+  });
+
+  it('should surface a thrown preview error', async () => {
+    mockPreviewImport.mockRejectedValueOnce(new Error('Network down'));
+
+    renderWithClient();
+
+    const importBtns = screen.getAllByText('Импорт точек');
+    fireEvent.press(importBtns[importBtns.length - 1]);
+
+    expect(await screen.findByText(/Network down/)).toBeTruthy();
   });
 });

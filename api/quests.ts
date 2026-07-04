@@ -340,6 +340,66 @@ export async function fetchQuestsList(): Promise<ApiQuestMeta[]> {
     return list.map(withQuestMetaDefaults);
 }
 
+/** Параметры гео-рекомендаций (город/страна и/или координаты). */
+export type NearLocationParams = {
+    city?: string | null;
+    country?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+    limit?: number | null;
+};
+
+/** Элемент ответа /quests/near-location/ (бэкенд считает score/distance). */
+export type ApiQuestNearLocation = {
+    quest: ApiQuestMeta;
+    score: number;
+    distance_km: number | null;
+};
+
+type NearLocationResponse<T> = {
+    results: T[];
+    count: number;
+};
+
+function buildNearLocationQuery(params: NearLocationParams): string {
+    const search = new URLSearchParams();
+    const city = params.city?.trim();
+    const country = params.country?.trim();
+    if (city) search.set('city', city);
+    if (country) search.set('country', country);
+    if (typeof params.lat === 'number' && Number.isFinite(params.lat)) {
+        search.set('lat', String(params.lat));
+    }
+    if (typeof params.lng === 'number' && Number.isFinite(params.lng)) {
+        search.set('lng', String(params.lng));
+    }
+    if (typeof params.limit === 'number' && Number.isFinite(params.limit)) {
+        search.set('limit', String(params.limit));
+    }
+    return search.toString();
+}
+
+/**
+ * Гео-рекомендации квестов рядом с локацией (score/distance считает бэкенд).
+ * Кидает {@link ApiError} со status 404 на старом деплое без эндпоинта —
+ * потребитель делает graceful fallback на клиентский расчёт.
+ */
+export async function fetchQuestsNearLocation(
+    params: NearLocationParams,
+    options?: { signal?: AbortSignal },
+): Promise<ApiQuestNearLocation[]> {
+    const query = buildNearLocationQuery(params);
+    const res = await apiClient.get<NearLocationResponse<ApiQuestNearLocation>>(
+        `/quests/near-location/${query ? `?${query}` : ''}`,
+        undefined,
+        options,
+    );
+    return (res?.results ?? []).map((item) => ({
+        ...item,
+        quest: withQuestMetaDefaults(item.quest),
+    }));
+}
+
 /** Получить квесты по городу */
 export async function fetchQuestsByCity(cityId: number): Promise<ApiQuestBundle> {
     const bundle = await apiClient.get<ApiQuestBundle>(`/quests/by-city/${cityId}/`);

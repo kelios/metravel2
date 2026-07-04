@@ -2,16 +2,26 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
-import { GoogleMapsParser } from '@/api/parsers/googleMapsParser';
-import { OSMParser } from '@/api/parsers/osmParser';
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
-import type { ImportPointsResult, ParsedPoint } from '@/types/userPoints';
+import type {
+  ImportPointsResult,
+  ImportPreviewResult,
+  ImportPreviewPoint,
+} from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 
 type ImportStep = 'intro' | 'preview' | 'progress' | 'complete';
+
+const PREVIEW_STATUS_LABELS: Record<string, string> = {
+  visited: 'Посещено',
+  want_to_visit: 'Хочу посетить',
+  planning: 'Планирую',
+  planned: 'Планирую',
+  archived: 'Архив',
+};
 
 export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => void }> = ({ 
   onComplete, 
@@ -20,7 +30,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
   const queryClient = useQueryClient();
   const [step, setStep] = useState<ImportStep>('intro');
   const [file, setFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
-  const [parsedPoints, setParsedPoints] = useState<ParsedPoint[]>([]);
+  const [preview, setPreview] = useState<ImportPreviewResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<ImportPointsResult | null>(null);
@@ -38,48 +48,36 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
     };
   }, []);
 
-  const detectAndParse = async (selectedFile: DocumentPicker.DocumentPickerAsset) => {
-    let googleError: unknown = null;
-    let osmError: unknown = null;
-    try {
-      const points = await GoogleMapsParser.parse(selectedFile);
-      return { points };
-    } catch (err) {
-      googleError = err;
-    }
-
-    try {
-      const points = await OSMParser.parse(selectedFile);
-      return { points };
-    } catch (err) {
-      osmError = err;
-    }
-
-    const baseMessage =
-      'Не удалось распознать формат файла. Поддерживаются: JSON (Google Takeout), GeoJSON, GPX, KML, KMZ.';
-
-    const googleMsg = googleError instanceof Error ? googleError.message : '';
-    const osmMsg = osmError instanceof Error ? osmError.message : '';
-    const details = [googleMsg && `Google: ${googleMsg}`, osmMsg && `OSM: ${osmMsg}`].filter(Boolean).join(' | ');
-
-    throw new Error(details ? `${baseMessage} (${details})` : baseMessage);
-  };
+  const previewPoints = preview?.points ?? [];
 
   const handleFileSelect = async (selectedFile: DocumentPicker.DocumentPickerAsset) => {
     const token = ++selectTokenRef.current;
 
     setFile(selectedFile);
+    setPreview(null);
     setIsLoading(true);
     setError(null);
 
     try {
-      const { points } = await detectAndParse(selectedFile);
+      // Server-side preview: backend parses + validates (KML/KMZ/GPX/GeoJSON/JSON)
+      // and returns points_preview + summary without writing anything.
+      const result = await userPointsApi.previewImport(selectedFile);
       if (!isMountedRef.current || token !== selectTokenRef.current) return;
-      setParsedPoints(points);
+
+      if (result.points.length === 0 && result.summary.errors.length > 0) {
+        setError(result.summary.errors.join('\n'));
+        return;
+      }
+
+      setPreview(result);
       setStep('preview');
     } catch (err) {
       if (!isMountedRef.current || token !== selectTokenRef.current) return;
-      setError(err instanceof Error ? err.message : 'Ошибка парсинга файла');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Не удалось разобрать файл. Поддерживаются: KML, KMZ, GPX, GeoJSON, JSON (Google Takeout).'
+      );
     } finally {
       if (isMountedRef.current && token === selectTokenRef.current) {
         setIsLoading(false);
@@ -96,7 +94,9 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
     setStep('progress');
 
     try {
-      const result = await userPointsApi.importPoints(file);
+      const result = await userPointsApi.importPoints(file, {
+        dedupePolicy: preview?.dedupePolicy,
+      });
       if (!isMountedRef.current) return;
       setImportResult(result);
       setStep('complete');
@@ -106,15 +106,10 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
 
       const serverHandled =
         (result?.created ?? 0) + (result?.updated ?? 0) + (result?.skipped ?? 0);
-      const serverParsed = result?.totalParsed ?? serverHandled;
 
-      if (parsedPoints.length > 0 && serverHandled === 0) {
+      if (previewPoints.length > 0 && serverHandled === 0) {
         setError(
-          'Импорт на сервере завершился без созданных точек. Возможно, файл слишком большой или сервер не смог распознать данные. Попробуйте JSON из Google Takeout или разделите файл на части.'
-        );
-      } else if (parsedPoints.length > 0 && serverParsed !== parsedPoints.length) {
-        setError(
-          `В предпросмотре найдено точек: ${parsedPoints.length}, а сервер обработал: ${serverParsed}. Результат импорта может отличаться от предпросмотра — проверьте импортированные точки.`
+          'Импорт на сервере завершился без созданных точек. Возможно, файл слишком большой или сервер не смог сохранить данные. Попробуйте разделить файл на части.'
         );
       }
     } catch (err) {
@@ -155,8 +150,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       <Text style={styles.title}>Импорт точек</Text>
       <Text style={styles.subtitle}>
         {'Поддерживаемые форматы:\n'}
-        {'Google Maps: JSON (Google Takeout), KML, KMZ\n'}
-        {'OpenStreetMap: GeoJSON, GPX'}
+        {'KML, KMZ, GPX, GeoJSON, JSON (Google Takeout)'}
       </Text>
 
       <Button
@@ -183,31 +177,45 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
     </View>
   );
 
+  const renderPreviewDetails = (point: ImportPreviewPoint) => {
+    const statusLabel = PREVIEW_STATUS_LABELS[point.status] ?? point.status;
+    const category = point.categoryIds.length > 0 ? point.categoryIds.join(', ') : '';
+    return [category, statusLabel].filter(Boolean).join(' • ');
+  };
+
   const renderPreview = () => (
     <View style={styles.stepContainer}>
       <Text style={styles.title}>Предпросмотр данных</Text>
       <Text style={styles.subtitle}>
-        Найдено точек: {parsedPoints.length}
+        Найдено точек: {previewPoints.length}
+        {preview?.source ? ` • формат: ${preview.source}` : ''}
       </Text>
 
       <ScrollView style={styles.previewList}>
-        {parsedPoints.slice(0, 10).map((point, index) => (
+        {previewPoints.slice(0, 10).map((point, index) => (
           <View key={index} style={styles.previewItem}>
             <Text style={styles.previewName}>{point.name}</Text>
-            <Text style={styles.previewDetails}>
-              {Array.isArray((point as any)?.categoryIds) && (point as any).categoryIds.length > 0
-                ? (point as any).categoryIds.join(', ')
-                : ''}{' '}
-              • {point.color}
-            </Text>
+            <Text style={styles.previewDetails}>{renderPreviewDetails(point)}</Text>
           </View>
         ))}
-        {parsedPoints.length > 10 && (
+        {previewPoints.length > 10 && (
           <Text style={styles.moreText}>
-            ... и еще {parsedPoints.length - 10} точек
+            ... и еще {previewPoints.length - 10} точек
           </Text>
         )}
       </ScrollView>
+
+      {preview?.summary.warnings.length ? (
+        <Text style={styles.warningText}>
+          {preview.summary.warnings.slice(0, 5).join('\n')}
+        </Text>
+      ) : null}
+
+      {preview?.summary.errors.length ? (
+        <Text style={styles.errorText}>
+          {preview.summary.errors.slice(0, 5).join('\n')}
+        </Text>
+      ) : null}
 
       {!!error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -380,6 +388,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   errorText: {
     color: colors.danger,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    marginTop: DESIGN_TOKENS.spacing.md,
+  },
+  warningText: {
+    color: colors.warning ?? colors.textMuted,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     marginTop: DESIGN_TOKENS.spacing.md,
   },

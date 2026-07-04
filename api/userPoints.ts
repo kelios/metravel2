@@ -1,11 +1,13 @@
 import { apiClient } from './client';
-import { devError } from '@/utils/logger';
-import type { 
-  ImportedPoint, 
+import type {
+  ImportedPoint,
   ImportPointsResult,
+  ImportPreviewResult,
+  ImportPreviewPoint,
+  ImportPreviewSummary,
   DedupePolicy,
-  PointFilters, 
-  RouteRequest, 
+  PointFilters,
+  RouteRequest,
   RouteResponse,
   RecommendationRequest,
   RecommendationResponse,
@@ -13,10 +15,13 @@ import type {
 } from '@/types/userPoints';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 
-// JSZip is loaded dynamically to avoid pulling ~90 KiB into the initial bundle
-const getJSZip = () => Promise.resolve(import('jszip')).then((m) => m.default ?? m);
-
 type FileInput = File | DocumentPickerAsset;
+
+export interface ImportOptions {
+  dedupePolicy?: DedupePolicy;
+  defaultColor?: string;
+  defaultStatus?: string;
+}
 
  const USER_POINTS_LIST_TIMEOUT_MS = 30000;
 
@@ -88,155 +93,141 @@ const normalizeImportPointsResult = (raw: unknown): ImportPointsResult => {
   };
 };
 
+const toNumber = (v: unknown, fallback = 0): number =>
+  typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+
+const toStringArray = (v: unknown): string[] =>
+  Array.isArray(v) ? v.map((x) => (typeof x === 'string' ? x : String(x))) : [];
+
+const normalizePreviewPoint = (raw: unknown): ImportPreviewPoint => {
+  const p = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  return {
+    name: typeof p.name === 'string' && p.name ? p.name : 'Без названия',
+    description: typeof p.description === 'string' ? p.description : null,
+    latitude: toNumber(p.latitude),
+    longitude: toNumber(p.longitude),
+    address: typeof p.address === 'string' ? p.address : null,
+    color: typeof p.color === 'string' ? p.color : 'brown',
+    status: typeof p.status === 'string' ? p.status : 'planned',
+    source: typeof p.source === 'string' ? p.source : '',
+    originalId:
+      typeof p.original_id === 'string'
+        ? p.original_id
+        : typeof p.originalId === 'string'
+          ? p.originalId
+          : null,
+    categoryIds: toStringArray(p.category_ids ?? p.categoryIds),
+  };
+};
+
+const normalizeImportPreviewSummary = (raw: unknown): ImportPreviewSummary => {
+  const s = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const strings = (v: unknown): string[] =>
+    Array.isArray(v) ? v.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))) : [];
+  return {
+    totalParsed: toNumber(s.total_parsed ?? s.totalParsed),
+    valid: toNumber(s.valid),
+    created: toNumber(s.created),
+    updated: toNumber(s.updated),
+    skipped: toNumber(s.skipped),
+    duplicates: toNumber(s.duplicates),
+    warnings: strings(s.warnings),
+    errors: strings(s.errors),
+  };
+};
+
+const normalizeImportPreviewResult = (raw: unknown): ImportPreviewResult => {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const dp = r.dedupe_policy ?? r.dedupePolicy;
+  const dedupePolicy: DedupePolicy =
+    dp === 'merge' || dp === 'skip' || dp === 'duplicate' ? dp : 'merge';
+  const previewRows = Array.isArray(r.points_preview)
+    ? r.points_preview
+    : Array.isArray(r.points)
+      ? r.points
+      : [];
+  return {
+    importId:
+      (typeof r.importId === 'string' ? r.importId : undefined) ??
+      (typeof r.import_id === 'string' ? r.import_id : undefined) ??
+      '',
+    dryRun: r.dry_run === true || r.dryRun === true,
+    source: typeof r.source === 'string' ? r.source : '',
+    dedupePolicy,
+    points: previewRows.map(normalizePreviewPoint),
+    summary: normalizeImportPreviewSummary(r.summary),
+  };
+};
+
+/**
+ * Resolve a picked file / File into a FormData `file` part usable on web and native.
+ * Backend now parses every supported format server-side (KML/KMZ/GPX/GeoJSON/JSON),
+ * so no client-side KMZ extraction happens here anymore.
+ */
+const appendFilePart = async (formData: FormData, file: FileInput): Promise<void> => {
+  if ('uri' in file) {
+    const asset = file as DocumentPickerAsset;
+    const webFile = (asset as DocumentPickerAsset & { file?: File }).file ?? null;
+
+    if (webFile) {
+      formData.append('file', webFile);
+      return;
+    }
+
+    // Native: pass the RN multipart part { uri, name, type }. apiClient uploads
+    // native FormData through XHR which serializes such parts correctly.
+    formData.append('file', {
+      uri: asset.uri,
+      name: asset.name || 'points',
+      type: asset.mimeType || 'application/octet-stream',
+    } as unknown as Blob);
+    return;
+  }
+
+  formData.append('file', file as File);
+};
+
+const buildImportFormData = async (
+  file: FileInput,
+  options?: ImportOptions,
+  dryRun = false
+): Promise<FormData> => {
+  const formData = new FormData();
+
+  if (options?.dedupePolicy) {
+    formData.append('dedupe_policy', options.dedupePolicy);
+  }
+  if (options?.defaultColor) {
+    formData.append('default_color', options.defaultColor);
+  }
+  if (options?.defaultStatus) {
+    formData.append('default_status', options.defaultStatus);
+  }
+  if (dryRun) {
+    formData.append('dry_run', 'true');
+  }
+
+  await appendFilePart(formData, file);
+  return formData;
+};
+
 export const userPointsApi = {
-  async importPoints(
-    file: FileInput,
-    options?: {
-      dedupePolicy?: DedupePolicy;
-      defaultColor?: string;
-      defaultStatus?: string;
-    }
-  ) {
-    const formData = new FormData();
+  /**
+   * Server-side preview (dry-run): backend parses + validates the file and returns
+   * `points_preview` + `summary` without writing anything to the DB.
+   */
+  async previewImport(file: FileInput, options?: ImportOptions): Promise<ImportPreviewResult> {
+    const formData = await buildImportFormData(file, options, true);
+    const raw = await apiClient.uploadFormData<unknown>('/user-points/import/', formData, 'POST');
+    return normalizeImportPreviewResult(raw);
+  },
 
-    if (options?.dedupePolicy) {
-      formData.append('dedupe_policy', options.dedupePolicy);
-    }
-    if (options?.defaultColor) {
-      formData.append('default_color', options.defaultColor);
-    }
-    if (options?.defaultStatus) {
-      formData.append('default_status', options.defaultStatus);
-    }
-
-    const extractKmlFromKmz = async (buffer: ArrayBuffer) => {
-      const JSZip = await getJSZip();
-      const zip = await JSZip.loadAsync(buffer);
-
-      const fileNames = Object.keys(zip.files);
-      const kmlNames = fileNames
-        .filter((n) => n.toLowerCase().endsWith('.kml'))
-        .filter((n) => !zip.files[n]?.dir);
-
-      if (kmlNames.length === 0) {
-        throw new Error('KMZ не содержит KML файла');
-      }
-
-      const preferDoc = (name: string) => {
-        const lower = name.toLowerCase();
-        return lower.endsWith('/doc.kml') || lower.endsWith('doc.kml');
-      };
-
-      let bestName: string | null = null;
-      let bestText: string | null = null;
-      let bestScore = -1;
-
-      for (const name of kmlNames) {
-        const kmlFile = zip.file(name);
-        if (!kmlFile) continue;
-        const kmlText = await kmlFile.async('string');
-        const score = (kmlText.match(/<Placemark\b/gi) ?? []).length;
-
-        if (
-          score > bestScore ||
-          (score === bestScore && bestName != null && preferDoc(name) && !preferDoc(bestName)) ||
-          (bestName == null)
-        ) {
-          bestName = name;
-          bestText = kmlText;
-          bestScore = score;
-        }
-      }
-
-      if (!bestText) {
-        throw new Error('KMZ не содержит KML файла');
-      }
-
-      return bestText;
-    };
-
-    const toKmlName = (originalName: string) => {
-      if (!originalName) return 'doc.kml';
-      const lower = originalName.toLowerCase();
-      if (lower.endsWith('.kmz')) return `${originalName.slice(0, -4)}.kml`;
-      return originalName;
-    };
-
-    const getAssetFile = (asset: DocumentPickerAsset): File | null => {
-      const webFile = (asset as DocumentPickerAsset & { file?: File }).file;
-      if (webFile) {
-        return webFile;
-      }
-      return null;
-    };
-
-    // file upload handling for web/native
-    if ('uri' in file) {
-      const asset = file as DocumentPickerAsset;
-      const webFile = getAssetFile(asset);
-
-      if (webFile) {
-        const isKmz = String(webFile.name || '').toLowerCase().endsWith('.kmz');
-
-        if (isKmz && typeof webFile.arrayBuffer === 'function') {
-          try {
-            const buffer = await webFile.arrayBuffer();
-            const kmlText = await extractKmlFromKmz(buffer);
-            const kmlFile = new File([kmlText], toKmlName(webFile.name), {
-              type: 'application/vnd.google-earth.kml+xml',
-            });
-            formData.append('file', kmlFile);
-          } catch (error) {
-            devError('KMZ→KML extraction failed, uploading original file:', error);
-            formData.append('file', webFile);
-          }
-        } else {
-          formData.append('file', webFile);
-        }
-      } else {
-        const response = await fetch(asset.uri);
-        const blob = await response.blob();
-
-        const isKmz = String(asset.name || '').toLowerCase().endsWith('.kmz');
-        if (isKmz) {
-          try {
-            const buffer = await blob.arrayBuffer();
-            const kmlText = await extractKmlFromKmz(buffer);
-            const kmlBlob = new Blob([kmlText], { type: 'application/vnd.google-earth.kml+xml' });
-            formData.append('file', kmlBlob, toKmlName(asset.name));
-          } catch (error) {
-            devError('KMZ→KML extraction failed, uploading original file:', error);
-            formData.append('file', blob, asset.name);
-          }
-        } else {
-          formData.append('file', blob, asset.name);
-        }
-      }
-    } else {
-      const webFile = file as File;
-      const isKmz = String(webFile.name || '').toLowerCase().endsWith('.kmz');
-
-      if (isKmz) {
-        try {
-          const buffer = await webFile.arrayBuffer();
-          const kmlText = await extractKmlFromKmz(buffer);
-          const kmlFile = new File([kmlText], toKmlName(webFile.name), {
-            type: 'application/vnd.google-earth.kml+xml',
-          });
-          formData.append('file', kmlFile);
-        } catch (error) {
-          devError('KMZ→KML extraction failed, uploading original file:', error);
-          formData.append('file', webFile);
-        }
-      } else {
-        formData.append('file', webFile);
-      }
-    }
-
+  async importPoints(file: FileInput, options?: ImportOptions) {
+    const formData = await buildImportFormData(file, options, false);
     const raw = await apiClient.uploadFormData<unknown>('/user-points/import/', formData, 'POST');
     return normalizeImportPointsResult(raw);
   },
-  
+
   async getPoints(filters?: PointFilters) {
     const params = new URLSearchParams();
     

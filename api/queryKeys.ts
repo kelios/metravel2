@@ -53,6 +53,8 @@ export const queryKeys = {
   questRating: (questId: number | undefined) => ['quest', questId, 'rating'] as const,
   questReviews: (questId: string | undefined) => ['quest', questId, 'reviews'] as const,
   travelsForQuest: (searchTerm: string) => ['travels-for-quest', searchTerm] as const,
+  questsNearLocation: (loc: string) => ['quests-near-location', loc] as const,
+  travelsNearLocation: (loc: string) => ['travels-near-location', loc] as const,
   articleRating: (articleId: number | undefined, isAuthenticated: boolean) =>
     ['articleRating', articleId, isAuthenticated] as const,
   article: (articleIdOrSlug: number | string | undefined) => ['article', articleIdOrSlug] as const,

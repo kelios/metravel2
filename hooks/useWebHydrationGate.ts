@@ -28,14 +28,20 @@ export function useWebHydrationGate(delayMs = 120): boolean {
       startTransition(() => setReady(true))
     }
 
+    // Guaranteed reveal: setTimeout keeps firing in background/hidden tabs
+    // (throttled, but it runs), whereas requestAnimationFrame is PAUSED while the
+    // tab isn't visible. Relying on rAF alone left gated screens (e.g. /map) stuck
+    // on their empty hydration fallback — no map, no markers — whenever the page
+    // hydrated while unfocused. The timeout is the load-bearing trigger.
+    timeoutId = setTimeout(reveal, delayMs)
+
+    // Fast path: when the tab is visible, reveal on the next frame(s) for a smoother
+    // paint. reveal() is idempotent, so racing it with the timeout above is safe —
+    // rAF is only an optimization here, never the sole trigger.
     if (typeof window.requestAnimationFrame === 'function') {
       rafOne = window.requestAnimationFrame(() => {
-        rafTwo = window.requestAnimationFrame(() => {
-          timeoutId = setTimeout(reveal, delayMs)
-        })
+        rafTwo = window.requestAnimationFrame(reveal)
       })
-    } else {
-      timeoutId = setTimeout(reveal, delayMs)
     }
 
     return () => {

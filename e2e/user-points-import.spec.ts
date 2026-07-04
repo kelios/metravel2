@@ -146,6 +146,47 @@ test.describe('User points import (mock API)', () => {
         }
 
         if (method === 'POST' && /\/api\/user-points\/import\/?$/.test(url)) {
+          const postData = req.postData() || '';
+          const isDryRun = /name="dry_run"[\s\S]*?true/.test(postData);
+
+          if (isDryRun) {
+            // Server-side preview (dry-run): backend returns points_preview + summary.
+            return route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({
+                import_id: 'e2e-preview',
+                dry_run: true,
+                source: fmt.name.toLowerCase(),
+                dedupe_policy: 'merge',
+                points_preview: [
+                  {
+                    name: 'Sample point',
+                    description: null,
+                    latitude: 53.9,
+                    longitude: 27.56,
+                    address: null,
+                    color: 'brown',
+                    status: 'planned',
+                    source: fmt.name.toLowerCase(),
+                    original_id: null,
+                    category_ids: [],
+                  },
+                ],
+                summary: {
+                  total_parsed: 1,
+                  valid: 1,
+                  created: 0,
+                  updated: 0,
+                  skipped: 0,
+                  duplicates: 0,
+                  warnings: [],
+                  errors: [],
+                },
+              }),
+            });
+          }
+
           return route.fulfill({
             status: 201,
             contentType: 'application/json',
