@@ -359,8 +359,23 @@ const matchesFilters = (trip: PublicTrip, filters?: PublicTripsFilters): boolean
   return true;
 };
 
-// BE-каталог поддерживает только page/perPage; доменные фильтры применяем на клиенте.
-const PAGE_QUERY = '?perPage=100';
+// Каталог фильтруется server-side (#407): status(open|full|completed) / region(partial) /
+// type(transport_mode). Контракт сверен с origin/master (tests/trips/test_public_trips_catalog_api.py).
+// matchesFilters ниже оставлен как defensive post-filter, т.к. на проде пока 0 поездок
+// и серверную фильтрацию не на чем runtime-верифицировать (FE-guard) — при непустых
+// данных он no-op над уже отфильтрованным сервером набором.
+const PER_PAGE = 100;
+// Applications/notifications listы пагинируются, но доменных фильтров не имеют.
+const PAGE_QUERY = `?perPage=${PER_PAGE}`;
+
+const buildCatalogQuery = (filters?: PublicTripsFilters): string => {
+  const params = new URLSearchParams({ perPage: String(PER_PAGE) });
+  const region = filters?.region?.trim();
+  if (region) params.set('region', region);
+  if (filters?.tripType) params.set('type', filters.tripType);
+  if (filters?.status) params.set('status', filters.status);
+  return `?${params.toString()}`;
+};
 
 // ── Публичные fetch-функции ─────────────────────────────────────────────────
 
@@ -370,7 +385,7 @@ export async function fetchPublicTrips(
   if (USE_MOCK) return MOCK_PUBLIC_TRIPS.filter((t) => matchesFilters(t, filters));
   try {
     const res = await apiClient.get<Paginated<PublicTripDto>>(
-      `/public-trips/${PAGE_QUERY}`,
+      `/public-trips/${buildCatalogQuery(filters)}`,
       undefined,
       { skipAuth: true },
     );

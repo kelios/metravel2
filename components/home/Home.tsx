@@ -28,6 +28,13 @@ import {
 
 const IS_WEB = Platform.OS === 'web'
 
+// Ключи секций главной, чей queryKey[0] не начинается с 'home-'.
+// Используются в предикате pull-to-refresh, чтобы не сбрасывать глобальный кэш.
+const HOME_INVALIDATE_KEYS = new Set<string>([
+  'my-travels-count',
+  'quests',
+])
+
 const FAQ_PLACEHOLDER_STYLE = { minHeight: 360 } as const
 
 const WEB_SCROLL_STYLE = IS_WEB
@@ -177,7 +184,18 @@ function Home() {
     hapticImpact('light')
     setRefreshing(true)
     try {
-      await queryClient.invalidateQueries()
+      // Инвалидируем только ключи секций главной, а не весь кэш приложения
+      // (иначе pull-to-refresh сбрасывал бы travel-деталь, карту, профиль и т.д.).
+      await queryClient.invalidateQueries({
+        predicate: (query) => {
+          const first = query.queryKey[0]
+          if (typeof first !== 'string') return false
+          return (
+            first.startsWith('home-') ||
+            HOME_INVALIDATE_KEYS.has(first)
+          )
+        },
+      })
     } finally {
       setRefreshing(false)
     }

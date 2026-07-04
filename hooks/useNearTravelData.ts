@@ -8,25 +8,23 @@ import { queryConfigs } from '@/utils/reactQueryConfig';
 import { queryKeys } from '@/queryKeys';
 import type { Travel } from '@/types/types';
 
+const NEAR_TRAVELS_LIMIT = 50;
+
 export function useNearTravelData(
   travelId: number | null,
   loadMoreCount: number,
   onTravelsLoaded?: (travels: Travel[]) => void,
+  enabled: boolean = true,
 ) {
   const [visibleCount, setVisibleCount] = useState(6);
-  const [isQueryEnabled, setIsQueryEnabled] = useState(false);
 
   const onTravelsLoadedRef = useRef(onTravelsLoaded);
   useEffect(() => {
     onTravelsLoadedRef.current = onTravelsLoaded;
   }, [onTravelsLoaded]);
 
-  // Small delay to prioritize main content rendering
   useEffect(() => {
-    setIsQueryEnabled(false);
     setVisibleCount(6);
-    const timer = setTimeout(() => setIsQueryEnabled(true), 300);
-    return () => clearTimeout(timer);
   }, [travelId]);
 
   const {
@@ -37,9 +35,11 @@ export function useNearTravelData(
     refetch: refetchTravelsNear,
   } = useQuery<Travel[]>({
     queryKey: queryKeys.travelsNear(travelId as number),
-    enabled: isQueryEnabled && travelId != null,
-    queryFn: ({ signal }) => fetchTravelsNear(travelId as number, signal) as Promise<Travel[]>,
-    select: (data) => (Array.isArray(data) ? data.slice(0, 50) : []),
+    enabled: enabled && travelId != null,
+    queryFn: ({ signal }) =>
+      fetchTravelsNear(travelId as number, signal, NEAR_TRAVELS_LIMIT) as Promise<Travel[]>,
+    // Backend already caps at NEAR_TRAVELS_LIMIT; client slice stays as a safety net.
+    select: (data) => (Array.isArray(data) ? data.slice(0, NEAR_TRAVELS_LIMIT) : []),
     placeholderData: keepPreviousData,
     ...queryConfigs.paginated,
     refetchOnMount: false,

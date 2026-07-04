@@ -108,6 +108,13 @@ export type UserCountryProgressRegion =
     | 'oceania'
     | 'other';
 
+export type UserCountryProgressVisitDto = {
+    travel_id: number;
+    travel_title: string | null;
+    travel_url: string | null;
+    year: number | null;
+};
+
 export type UserCountryProgressCountryDto = {
     country_id: number;
     country_code: string | null;
@@ -117,6 +124,7 @@ export type UserCountryProgressCountryDto = {
     visited: boolean;
     visited_travels_count: number;
     first_visited_date: string | null;
+    visits?: UserCountryProgressVisitDto[] | null;
 };
 
 export type UserCountryProgressDto = {

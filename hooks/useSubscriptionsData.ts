@@ -1,7 +1,7 @@
 // hooks/useSubscriptionsData.ts
 // D1: Data-fetching hook extracted from subscriptions.tsx
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/context/AuthContext';
@@ -22,6 +22,24 @@ export type AuthorWithTravels = {
 };
 
 const SUBSCRIPTION_TRAVELS_PREVIEW_LIMIT = 10;
+const AUTHOR_TRAVELS_FETCH_CONCURRENCY = 4;
+
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<void>
+): Promise<void> {
+  let cursor = 0;
+  const pump = async (): Promise<void> => {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      await worker(items[index]);
+    }
+  };
+  const runners = Array.from({ length: Math.min(limit, items.length) }, () => pump());
+  await Promise.all(runners);
+}
 
 interface UseSubscriptionsDataOptions {
   /**
@@ -70,47 +88,81 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   const [authorTravels, setAuthorTravels] = useState<
     Record<number, { travels: TravelPreview[]; total: number; loading: boolean }>
   >({});
+  const authorTravelsRef = useRef(authorTravels);
+  authorTravelsRef.current = authorTravels;
+
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!includeAuthorTravels) return;
     if (!subscriptions.length) return;
 
-    subscriptions.forEach((profile) => {
-      const userId = profile.user ?? profile.id;
+    let cancelled = false;
 
-      setAuthorTravels((prev) => {
-        if (prev[userId] && !prev[userId].loading) return prev;
-        if (prev[userId]?.loading) return prev;
-        return {
-          ...prev,
-          [userId]: {
-            travels: prev[userId]?.travels ?? [],
-            total: prev[userId]?.total ?? 0,
-            loading: true,
-          },
+    const pending = subscriptions.filter((profile) => {
+      const userId = profile.user ?? profile.id;
+      const entry = authorTravelsRef.current[userId];
+      return !entry || (!entry.loading && entry.travels.length === 0 && entry.total === 0);
+    });
+    if (!pending.length) return;
+
+    const commit = (
+      updater: (
+        prev: Record<number, { travels: TravelPreview[]; total: number; loading: boolean }>
+      ) => Record<number, { travels: TravelPreview[]; total: number; loading: boolean }>
+    ) => {
+      if (cancelled || !mountedRef.current) return;
+      setAuthorTravels(updater);
+    };
+
+    commit((prev) => {
+      const next = { ...prev };
+      pending.forEach((profile) => {
+        const userId = profile.user ?? profile.id;
+        next[userId] = {
+          travels: prev[userId]?.travels ?? [],
+          total: prev[userId]?.total ?? 0,
+          loading: true,
         };
       });
-
-      fetchMyTravels({ user_id: userId, perPage: SUBSCRIPTION_TRAVELS_PREVIEW_LIMIT })
-        .then((result) => {
-          const { items: list, total } = unwrapMyTravelsPayload(result);
-          const normalizedTravels = list.map(normalizeTravelPreview);
-          setAuthorTravels((prev) => ({
-            ...prev,
-            [userId]: {
-              travels: normalizedTravels,
-              total: total || normalizedTravels.length,
-              loading: false,
-            },
-          }));
-        })
-        .catch(() => {
-          setAuthorTravels((prev) => ({
-            ...prev,
-            [userId]: { travels: [], total: 0, loading: false },
-          }));
-        });
+      return next;
     });
+
+    void runWithConcurrency(pending, AUTHOR_TRAVELS_FETCH_CONCURRENCY, async (profile) => {
+      if (cancelled || !mountedRef.current) return;
+      const userId = profile.user ?? profile.id;
+      try {
+        const result = await fetchMyTravels({
+          user_id: userId,
+          perPage: SUBSCRIPTION_TRAVELS_PREVIEW_LIMIT,
+        });
+        const { items: list, total } = unwrapMyTravelsPayload(result);
+        const normalizedTravels = list.map(normalizeTravelPreview);
+        commit((prev) => ({
+          ...prev,
+          [userId]: {
+            travels: normalizedTravels,
+            total: total || normalizedTravels.length,
+            loading: false,
+          },
+        }));
+      } catch {
+        commit((prev) => ({
+          ...prev,
+          [userId]: { travels: [], total: 0, loading: false },
+        }));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [subscriptions, includeAuthorTravels]);
 
   const authors: AuthorWithTravels[] = useMemo(

@@ -185,6 +185,29 @@ describe('normalizeTravelItem', () => {
       expect((out.gallery as { id: number }[]).map((g) => g.id)).toEqual([2, 1]);
     });
 
+    it('passes canonical pre-sorted gallery through unchanged (BE #700)', () => {
+      // Canonical list payload: absolute https urls + explicit ascending `order`.
+      // Must be returned identically (no re-sort, no url rewrite).
+      const gallery = [
+        { id: 1, url: 'https://metravel.by/gallery/1/a.webp', order: 1 },
+        { id: 2, url: 'https://metravel.by/gallery/2/b.webp', order: 2 },
+        { id: 3, url: 'https://metravel.by/gallery/3/c.webp', order: 3 },
+      ];
+      const out = normalizeTravelItem({
+        travel_image_thumb_url: 'https://metravel.by/travel-image/1/x.webp',
+        gallery,
+        // stale ordering hints that would conflict if the declared-order path ran:
+        travelImageThumbUrlArr: [3, 2, 1],
+      });
+      expect((out.gallery as typeof gallery).map((g) => g.id)).toEqual([1, 2, 3]);
+      expect((out.gallery as typeof gallery).map((g) => g.url)).toEqual([
+        'https://metravel.by/gallery/1/a.webp',
+        'https://metravel.by/gallery/2/b.webp',
+        'https://metravel.by/gallery/3/c.webp',
+      ]);
+      expect(out.travel_image_thumb_url).toBe('https://metravel.by/travel-image/1/x.webp');
+    });
+
     it('keeps gallery order stable when no ordering hints present', () => {
       const out = normalizeTravelItem({
         gallery: [

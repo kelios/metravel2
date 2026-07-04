@@ -60,7 +60,7 @@ export function useTravelDetailsSidebarSectionModel({
     setRelatedTravels((prev) => (areSameTravelLists(prev, travels) ? prev : travels))
   }, [])
 
-  const { setElementRef: setNearRef } = useProgressiveLoad({
+  const { setElementRef: setNearRef, shouldLoad: nearInViewport } = useProgressiveLoad({
     ...TRAVEL_DETAILS_SIDEBAR_PROGRESSIVE_LOAD_CONFIG,
     enabled: progressiveEnabled,
   })
@@ -77,6 +77,7 @@ export function useTravelDetailsSidebarSectionModel({
   return {
     handleTravelsLoaded,
     hasValidTravelId,
+    nearInViewport,
     relatedTravels,
     setNearRef,
     setPopularRef,

@@ -157,6 +157,11 @@ export function HomeInspirationSection({
     queryKey: [queryKey],
     queryFn: ({ signal } = {} as any) => fetchFn({ signal }),
     ...queryConfigs.dynamic,
+    // Секции главной — lazy-острова: не рефетчим фоново при каждом маунте, если
+    // кэш ещё свежий (<staleTime). refetchOnMount из queryConfigs.dynamic (true)
+    // здесь даёт лишний запрос на нав-туда-обратно; scoped-override, чтобы не
+    // ломать других потребителей dynamic (профиль country-progress).
+    refetchOnMount: false,
   })
 
   const travelsList = useMemo(() => {

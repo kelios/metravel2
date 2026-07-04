@@ -249,6 +249,17 @@ export const normalizeTravelItem = (input: unknown): Travel => {
         let trimmed = url.trim();
         if (!trimmed) return '';
 
+        // Fast path for canonical payload (BE #700): absolute https URL without an
+        // `/api` media prefix needs no rewriting. Avoids `new URL()` construction and
+        // the http->https branch per gallery item on every list render.
+        // Legacy/stale/relative/http URLs fall through to the full normalization below.
+        if (
+            trimmed.startsWith('https://') &&
+            trimmed.indexOf('/api/') === -1
+        ) {
+            return trimmed;
+        }
+
         // Backend (or stale payloads) may occasionally return media URLs with an invalid `/api` prefix.
         // Fix known media paths to avoid 404s in slider/gallery.
         if (mediaPathWithApiPrefix.test(trimmed)) {
@@ -364,9 +375,21 @@ export const normalizeTravelItem = (input: unknown): Travel => {
             })
             .filter(Boolean);
 
-        const declaredGalleryOrder = getGalleryDeclaredOrder(t);
-        const byDeclaredOrder = sortGalleryByDeclaredOrder(normalizedGallery, declaredGalleryOrder);
-        out.gallery = sortGalleryByExplicitOrder(byDeclaredOrder);
+        // Canonical payload (BE #700) ships gallery items with an explicit `order`
+        // field (and already pre-sorted). When present, explicit order is the source of
+        // truth and overrides declared order anyway — so skip the declared-order scan
+        // (candidate-array regex id extraction) entirely. Legacy/stale payloads without
+        // `order` fall back to the declared-order reconstruction path.
+        const hasExplicitGalleryOrder = normalizedGallery.some(
+            (item) => getExplicitGalleryOrder(item) !== null,
+        );
+
+        if (hasExplicitGalleryOrder) {
+            out.gallery = sortGalleryByExplicitOrder(normalizedGallery);
+        } else {
+            const declaredGalleryOrder = getGalleryDeclaredOrder(t);
+            out.gallery = sortGalleryByDeclaredOrder(normalizedGallery, declaredGalleryOrder);
+        }
     }
 
     return out as Travel;

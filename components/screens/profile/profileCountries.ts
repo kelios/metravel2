@@ -24,6 +24,13 @@ export type ProfileCountryRegionKey =
   | 'oceania'
   | 'other'
 
+export type VisitedCountryVisit = {
+  travelId: string
+  title: string
+  url: string
+  year: number | null
+}
+
 export type ProfileCountryRow = {
   id: string
   name: string
@@ -33,6 +40,7 @@ export type ProfileCountryRow = {
   source: 'backend' | 'catalog' | 'visited'
   visitedTravelsCount?: number
   firstVisitedDate?: string | null
+  visits?: VisitedCountryVisit[]
 }
 
 export type ProfileCountryRegionGroup = {
@@ -56,6 +64,7 @@ export type VisitedCountryMeta = {
   visitedTravelsCount: number
   firstVisitedDate: string | null
   name: string
+  visits: VisitedCountryVisit[]
 }
 
 export type VisitedCountryIndex = {
@@ -540,6 +549,30 @@ const readNonNegativeInteger = (record: Record<string, unknown>, fields: readonl
   return undefined
 }
 
+const readCountryVisits = (record: Record<string, unknown>): VisitedCountryVisit[] => {
+  const raw = record.visits
+  if (!Array.isArray(raw)) return []
+
+  const seen = new Set<string>()
+  const visits: VisitedCountryVisit[] = []
+
+  raw.forEach((item) => {
+    if (!isRecord(item)) return
+    const travelId = readString(item, ['travel_id', 'travelId', 'id'])
+    const url = readString(item, ['travel_url', 'travelUrl', 'url'])
+    if (!travelId || seen.has(travelId)) return
+
+    const title = readString(item, ['travel_title', 'travelTitle', 'title', 'name']) || url || travelId
+    const yearValue = item.year
+    const year = typeof yearValue === 'number' && Number.isFinite(yearValue) ? yearValue : null
+
+    seen.add(travelId)
+    visits.push({ travelId, title, url, year })
+  })
+
+  return visits
+}
+
 export const groupProfileCountriesByRegion = (rows: ProfileCountryRow[]): ProfileCountryRegionGroup[] => {
   const groups = new Map<ProfileCountryRegionKey, ProfileCountryRow[]>()
 
@@ -677,6 +710,7 @@ export function buildProfileCountryStatsFromProgress(
         source: 'backend',
         visitedTravelsCount: readNonNegativeInteger(country, VISITED_TRAVELS_COUNT_FIELDS),
         firstVisitedDate: readString(country, FIRST_VISITED_DATE_FIELDS) || null,
+        visits: readCountryVisits(country),
       }
     })
     .filter((row): row is ProfileCountryRow => Boolean(row))
@@ -788,11 +822,28 @@ export const buildVisitedCountryIndex = (rows: ProfileCountryRow[]): VisitedCoun
       row.firstVisitedDate ?? null,
     )
     const name = existing?.name || row.name || code
+    const visits = mergeVisits(existing?.visits ?? [], row.visits ?? [])
 
-    byCode.set(code, { visitedTravelsCount, firstVisitedDate, name })
+    byCode.set(code, { visitedTravelsCount, firstVisitedDate, name, visits })
   })
 
   return { visitedCodes, byCode }
+}
+
+const mergeVisits = (
+  a: VisitedCountryVisit[],
+  b: VisitedCountryVisit[],
+): VisitedCountryVisit[] => {
+  if (a.length === 0) return b
+  if (b.length === 0) return a
+  const seen = new Set<string>()
+  const merged: VisitedCountryVisit[] = []
+  for (const visit of [...a, ...b]) {
+    if (seen.has(visit.travelId)) continue
+    seen.add(visit.travelId)
+    merged.push(visit)
+  }
+  return merged
 }
 
 const pickEarlierDate = (a: string | null, b: string | null): string | null => {

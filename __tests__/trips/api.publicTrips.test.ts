@@ -109,6 +109,15 @@ describe('fetchPublicTrips — mapper', () => {
     expect(url).toContain('perPage=')
   })
 
+  it('sends domain filters as server-side query params (#407)', async () => {
+    mockGet.mockResolvedValueOnce(paged([]) as never)
+    await fetchPublicTrips({ region: 'Минск', tripType: 'car', status: 'open' })
+    const url = mockGet.mock.calls[0][0] as string
+    expect(url).toContain('region=')
+    expect(url).toContain('type=car')
+    expect(url).toContain('status=open')
+  })
+
   it('applies domain filters client-side', async () => {
     mockGet.mockResolvedValueOnce(
       paged([

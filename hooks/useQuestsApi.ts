@@ -3,7 +3,7 @@
 // Чистые адаптеры и типы вынесены в utils/questAdapters.ts.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { ApiQuestProgress, QuestReview } from '@/api/quests';
+import type { ApiQuestMeta, ApiQuestProgress, QuestReview } from '@/api/quests';
 import {
     fetchQuestsList,
     fetchQuestByQuestId,
@@ -39,35 +39,28 @@ type PendingQuestProgressData = {
 const getErrorMessage = (error: unknown, fallback: string): string =>
     error instanceof Error && typeof error.message === 'string' ? error.message : fallback;
 
+// Полный список квестов кешируется под одним ключом queryKeys.quests(), чтобы
+// экран квестов, промо-блок главной и три мета-хука детали (rating/completion/
+// pioneer) дедуплицировались в один запрос /quests/. Держим список «свежим»
+// ~30 мин и в кеше ~60 мин.
+export const QUESTS_LIST_STALE_TIME = 30 * 60 * 1000;
+export const QUESTS_LIST_GC_TIME = 60 * 60 * 1000;
+
 // ===================== ХУКИ =====================
 
 /** Хук для загрузки списка квестов */
 export function useQuestsList() {
-    const [quests, setQuests] = useState<QuestMeta[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { data, isPending, error } = useQuery<ApiQuestMeta[]>({
+        queryKey: queryKeys.quests(),
+        queryFn: fetchQuestsList,
+        staleTime: QUESTS_LIST_STALE_TIME,
+        gcTime: QUESTS_LIST_GC_TIME,
+    });
 
-    useEffect(() => {
-        let cancelled = false;
-        setLoading(true);
-        setError(null);
-
-        fetchQuestsList()
-            .then((data) => {
-                if (cancelled) return;
-                setQuests(data.map(adaptMeta));
-                setLoading(false);
-            })
-            .catch((err) => {
-                if (cancelled) return;
-                const message = getErrorMessage(err, 'Ошибка загрузки квестов');
-                devWarn('Failed to load quests list:', message);
-                setError(message);
-                setLoading(false);
-            });
-
-        return () => { cancelled = true; };
-    }, []);
+    const quests = useMemo<QuestMeta[]>(
+        () => (data ?? []).map(adaptMeta),
+        [data],
+    );
 
     // Группировка по городу
     const cityQuestsIndex = useMemo(() => {
@@ -78,7 +71,12 @@ export function useQuestsList() {
         return index;
     }, [quests]);
 
-    return { quests, cityQuestsIndex, loading, error };
+    const errorMessage = error
+        ? getErrorMessage(error, 'Ошибка загрузки квестов')
+        : null;
+    if (error) devWarn('Failed to load quests list:', errorMessage);
+
+    return { quests, cityQuestsIndex, loading: isPending, error: errorMessage };
 }
 
 /** Хук для загрузки городов с квестами */
@@ -147,18 +145,20 @@ export function useQuestBundle(questId: string | undefined) {
         setError(null);
         setBundle(null);
 
-        Promise.allSettled([fetchQuestByQuestId(questId), fetchQuestsList()])
-            .then(([bundleResult, questListResult]) => {
+        fetchQuestByQuestId(questId)
+            .then(async (rawBundle) => {
                 if (cancelled) return;
 
-                if (bundleResult.status !== 'fulfilled') {
-                    throw bundleResult.reason;
-                }
-
-                const adaptedBundle = adaptBundle(bundleResult.value);
-                if (!adaptedBundle.coverUrl && questListResult.status === 'fulfilled') {
-                    const matchedMeta = Array.isArray(questListResult.value)
-                        ? questListResult.value.find((quest) => String(quest?.quest_id) === questId)
+                const adaptedBundle = adaptBundle(rawBundle);
+                // cover_url теперь приходит в детальном бандле (#729, verified prod).
+                // Полный список /quests/ подгружаем ЛЕНИВО, только если обложки в
+                // детали почему-то нет (легаси/кэш) — экономит запрос всего списка
+                // на каждое открытие квеста.
+                if (!adaptedBundle.coverUrl) {
+                    const list = await fetchQuestsList().catch(() => null);
+                    if (cancelled) return;
+                    const matchedMeta = Array.isArray(list)
+                        ? list.find((quest) => String(quest?.quest_id) === questId)
                         : null;
                     const coverFallback = matchedMeta ? adaptMeta(matchedMeta).cover : undefined;
                     if (coverFallback) {

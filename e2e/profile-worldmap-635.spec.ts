@@ -4,11 +4,20 @@ import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
 
 // [FE-635-T2/T3] Карта мира v2: зум/пан + клик по стране → маршруты страны.
 const COUNTRY_PROGRESS = {
-  total_count: 234, visited_count: 3, remaining_count: 231,
+  total_count: 234, visited_count: 4, remaining_count: 230,
   countries: [
     { country_id: 1, country_code: 'BY', region: 'europe', title_ru: 'Беларусь', visited: true, visited_travels_count: 5, first_visited_date: '2018-05-01' },
     { country_id: 2, country_code: 'FR', region: 'europe', title_ru: 'Франция', visited: true, visited_travels_count: 2, first_visited_date: '2019-07-10' },
     { country_id: 3, country_code: 'JP', region: 'asia', title_ru: 'Япония', visited: true, visited_travels_count: 1, first_visited_date: '2020-01-03' },
+    // RU: маршруты приходят в visits[] (привязка по метаданным визита). Их primary
+    // country_code — Египет/локальный, поэтому buildTravelsByCountryCode их НЕ кладёт
+    // под RU. FE обязан показать карточки именно из visits[] — репро бага «2 маршрута,
+    // но карточек нет».
+    { country_id: 4, country_code: 'RU', region: 'europe', title_ru: 'Россия', visited: true, visited_travels_count: 2, first_visited_date: null,
+      visits: [
+        { travel_id: 210, travel_title: 'Египет. Хургада.', travel_url: '/travels/egipet', year: 2012 },
+        { travel_id: 245, travel_title: 'Калининград зимой', travel_url: '/travels/kaliningrad', year: 2013 },
+      ] },
   ],
 }
 
@@ -226,4 +235,38 @@ test('T3: страна без маршрутов → пустой стейт', a
   })
   expect(clicked).toBe(true)
   await expect(page.getByText('Нет маршрутов в этой стране').first()).toBeVisible({ timeout: 5000 })
+})
+
+test('T3: маршруты из backend visits[] показываются карточками (баг «N маршрутов, но карточек нет»)', async ({ page }) => {
+  await openMapTab(page)
+
+  const clicked = await page.evaluate(() => {
+    const el = document.getElementById('wc-RU')
+    if (!el) return false
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    return true
+  })
+  expect(clicked).toBe(true)
+
+  // Счётчик и карточки должны совпадать: обе карточки из visits[] видны, хотя их
+  // primary-код страны — не RU (buildTravelsByCountryCode их бы пропустил).
+  await expect(page.getByText('Посещено · 2 маршрута').first()).toBeVisible({ timeout: 5000 })
+  await expect(page.getByText('Калининград зимой').first()).toBeVisible({ timeout: 5000 })
+  await expect(page.getByText('Египет. Хургада.').first()).toBeVisible({ timeout: 5000 })
+})
+
+test('T3: маршруты страны видны и в полноэкранной карте', async ({ page }) => {
+  await openMapTab(page)
+
+  await page.locator('[aria-label="Открыть карту во весь экран"]').first().click()
+  await expect(page.getByLabel('Закрыть полноэкранную карту')).toBeVisible({ timeout: 5000 })
+
+  await page.evaluate(() => {
+    document
+      .getElementById('wc-RU')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+  })
+
+  // Раньше полноэкранная инфо-карточка рендерила только «Посещено · N», без списка.
+  await expect(page.getByText('Калининград зимой').first()).toBeVisible({ timeout: 5000 })
 })

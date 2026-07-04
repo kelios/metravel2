@@ -20,7 +20,7 @@ import { useRouter } from 'expo-router'
 
 import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
-import { CountryTravelsPanel } from './CountryTravelsPanel'
+import { CountryTravelsPanel, type CountryTravelCard } from './CountryTravelsPanel'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useMapZoomPan } from '@/hooks/useMapZoomPan'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -108,19 +108,53 @@ export function ProfileWorldMapTab({
 
   const travelsByCountry = useMemo(() => buildTravelsByCountryCode(travels), [travels])
 
+  // Индекс авторских маршрутов по id — источник фото/заголовка для карточек,
+  // собранных из бэкендового visits[] (который фото не отдаёт).
+  const travelsById = useMemo(() => {
+    const map = new Map<string, Travel>()
+    travels.forEach((travel) => map.set(String(travel.id), travel))
+    return map
+  }, [travels])
+
   const selected = useMemo(() => {
     if (!selectedCode) return null
     const meta = byCode.get(selectedCode)
     const geom = getCountryGeometry(selectedCode)
+
+    const toImageUrl = (travel: Travel | undefined) =>
+      travel?.travel_image_thumb_small_url || travel?.travel_image_thumb_url || ''
+
+    // Список карточек — из бэкендового visits[] (совпадает со счётчиком и учитывает
+    // страны, привязанные метаданными визита, а не только primary-кодом маршрута).
+    // Фото/заголовок обогащаем из локальных авторских маршрутов по id. Если бэкенд
+    // visits не отдал (fallback-режим без userId) — берём локальную группировку.
+    const backendVisits = meta?.visits ?? []
+    const cards: CountryTravelCard[] = backendVisits.length
+      ? backendVisits.map((visit) => {
+          const local = travelsById.get(visit.travelId)
+          return {
+            id: visit.travelId,
+            name: local?.name || visit.title,
+            url: local?.url || visit.url,
+            imageUrl: toImageUrl(local),
+          }
+        })
+      : (travelsByCountry.get(selectedCode) ?? []).map((travel) => ({
+          id: String(travel.id),
+          name: travel.name,
+          url: travel.url,
+          imageUrl: toImageUrl(travel),
+        }))
+
     return {
       code: selectedCode,
       name: meta?.name || geom?.name || selectedCode,
       visited: visitedCodes.has(selectedCode),
       visitedTravelsCount: meta?.visitedTravelsCount ?? 0,
       firstVisitedDate: meta?.firstVisitedDate ?? null,
-      travels: travelsByCountry.get(selectedCode) ?? [],
+      travels: cards,
     }
-  }, [selectedCode, byCode, visitedCodes, travelsByCountry])
+  }, [selectedCode, byCode, visitedCodes, travelsByCountry, travelsById])
 
   const openTravel = useCallback(
     (url: string) => {
@@ -540,6 +574,19 @@ export function ProfileWorldMapTab({
                       }`
                     : 'Ещё не посещено'}
                 </Text>
+
+                {selected.travels.length > 0 ? (
+                  <View style={styles.travelsList}>
+                    <CountryTravelsPanel
+                      travels={selected.travels}
+                      isMobile={isMobile}
+                      onOpenTravel={openTravel}
+                      onShowAll={onBackToOverview}
+                    />
+                  </View>
+                ) : selected.visited ? (
+                  <Text style={styles.emptyTravels}>Нет маршрутов в этой стране</Text>
+                ) : null}
               </View>
             ) : null}
           </View>

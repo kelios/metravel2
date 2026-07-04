@@ -2,6 +2,7 @@ import {
   buildCountryApplicationRows,
   buildProfileCountryStats,
   buildProfileCountryStatsFromProgress,
+  buildVisitedCountryIndex,
   normalizeCountryCatalog,
 } from '@/components/screens/profile/profileCountries'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
@@ -150,6 +151,42 @@ describe('profileCountries', () => {
       'northAmerica',
       'southAmerica',
     ])
+  })
+
+  it('parses per-country visits[] from progress and exposes them via the visited index', () => {
+    const stats = buildProfileCountryStatsFromProgress({
+      total_count: 1,
+      visited_count: 1,
+      remaining_count: 0,
+      countries: [
+        {
+          country_id: 1,
+          country_code: 'RU',
+          region: 'europe',
+          title_ru: 'Россия',
+          title_en: 'Russia',
+          visited: true,
+          visited_travels_count: 3,
+          first_visited_date: null,
+          visits: [
+            { travel_id: 210, travel_title: 'Египет. Хургада.', travel_url: '/travels/egipet', year: 2012 },
+            { travel_id: 245, travel_title: 'Калининград зимой', travel_url: '/travels/kaliningrad', year: 2013 },
+            // дубль по travel_id должен схлопнуться
+            { travel_id: 245, travel_title: 'Калининград зимой', travel_url: '/travels/kaliningrad', year: 2013 },
+          ],
+        },
+      ],
+    })
+
+    const ru = stats.rows.find((row) => row.code === 'RU')
+    expect(ru?.visits).toEqual([
+      { travelId: '210', title: 'Египет. Хургада.', url: '/travels/egipet', year: 2012 },
+      { travelId: '245', title: 'Калининград зимой', url: '/travels/kaliningrad', year: 2013 },
+    ])
+
+    const index = buildVisitedCountryIndex(stats.rows)
+    expect(index.byCode.get('RU')?.visits).toHaveLength(2)
+    expect(index.byCode.get('RU')?.visitedTravelsCount).toBe(3)
   })
 
   it('builds copy-friendly application rows from visited country progress', () => {

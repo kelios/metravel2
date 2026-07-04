@@ -16,6 +16,7 @@ import { parseTravelStatusDateParts, useTravelStatusStore, type TravelStatus } f
 import MiniCalendar from '@/components/calendar/MiniCalendar'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useBreakpoints } from '@/hooks/useResponsive'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { showToast } from '@/utils/toast'
@@ -82,6 +83,7 @@ export default function TravelStatusButton({
   style,
 }: Props) {
   const colors = useThemedColors()
+  const { isMobile } = useBreakpoints()
   const { isAuthenticated, userId } = useAuth()
   const { requireAuth } = useRequireAuth({ intent: 'calendar' })
 
@@ -89,6 +91,7 @@ export default function TravelStatusButton({
   const current = getStatus(travelId)
 
   const [modalOpen, setModalOpen] = useState(false)
+  const [hovered, setHovered] = useState(false)
   const [datePicking, setDatePicking] = useState(false)
   const [dateInput, setDateInput] = useState('')
   const [dateError, setDateError] = useState('')
@@ -210,7 +213,7 @@ export default function TravelStatusButton({
       justifyContent: 'center',
       gap: DESIGN_TOKENS.spacing.xs,
       paddingVertical: 8,
-      paddingHorizontal: idleLabel ? 10 : 8,
+      paddingHorizontal: 8,
       borderRadius: 999,
       backgroundColor: 'rgba(0, 0, 0, 0.4)',
       borderWidth: 1,
@@ -227,7 +230,7 @@ export default function TravelStatusButton({
       fontWeight: '700',
       flexShrink: 1,
     },
-  }), [colors.textOnDark, idleLabel])
+  }), [colors.textOnDark])
 
   const styles = useMemo(() => StyleSheet.create({
     btn: {
@@ -534,6 +537,8 @@ export default function TravelStatusButton({
     )
 
     if (Platform.OS === 'web') {
+      // Icon-only by default; the label reveals on hover — desktop web only.
+      const showCompactLabel = Boolean(compactLabel) && !isMobile && hovered
       return (
         <>
           <View
@@ -546,6 +551,8 @@ export default function TravelStatusButton({
               title: 'Управление статусом путешествия',
               'data-card-action': 'true',
               onClick: handleMainPress,
+              onMouseEnter: isMobile ? undefined : () => setHovered(true),
+              onMouseLeave: isMobile ? undefined : () => setHovered(false),
               onMouseDown: stopWebCardPropagation,
               onMouseUp: stopWebCardPropagation,
               onPointerDown: stopWebCardPropagation,
@@ -560,7 +567,7 @@ export default function TravelStatusButton({
             } as any)}
           >
             {compactIcon}
-            {compactLabel ? (
+            {showCompactLabel ? (
               <Text style={compactStyles.text} numberOfLines={1}>
                 {compactLabel}
               </Text>
@@ -571,6 +578,7 @@ export default function TravelStatusButton({
       )
     }
 
+    // Native (mobile) — icon-only, no label.
     return (
       <>
         <Pressable
@@ -582,11 +590,6 @@ export default function TravelStatusButton({
           hitSlop={6}
         >
           {compactIcon}
-          {compactLabel ? (
-            <Text style={compactStyles.text} numberOfLines={1}>
-              {compactLabel}
-            </Text>
-          ) : null}
         </Pressable>
         {modalJsx}
       </>

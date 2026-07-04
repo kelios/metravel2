@@ -104,11 +104,6 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     fontSize: 14,
     color: colors.textMuted,
   },
-  heroButtonBlock: {
-    minWidth: 200,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -208,21 +203,38 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     textAlign: 'center',
     maxWidth: 360,
   },
-  hintBox: {
-    paddingVertical: 32,
-    alignItems: 'center',
-  },
-  hintTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  hintText: {
-    fontSize: 14,
+  poolHint: {
+    fontSize: 13,
     color: colors.textMuted,
     textAlign: 'center',
-    maxWidth: 380,
+    marginTop: 12,
+  },
+  slotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 20,
+    width: '100%',
+    maxWidth: 960,
+    flexWrap: 'wrap',
+    marginTop: 4,
+  },
+  slotCard: {
+    width: 280,
+    maxWidth: '31%',
+    minWidth: 200,
+    height: 160,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: colors.borderStrong,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  slotLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textMuted,
   },
   cardsGrid: {
     paddingVertical: 12,

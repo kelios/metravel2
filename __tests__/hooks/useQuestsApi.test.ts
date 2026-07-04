@@ -1,4 +1,6 @@
+import { createElement, type ReactNode } from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 
 // Mock the API module
@@ -106,10 +108,20 @@ describe('useQuestsApi hooks', () => {
   // ===================== useQuestsList =====================
 
   describe('useQuestsList', () => {
+    let queryClient: QueryClient;
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
+
+    beforeEach(() => {
+      queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+    });
+
     it('loads quests from API and adapts them', async () => {
       mockFetchQuestsList.mockResolvedValueOnce([API_META]);
 
-      const { result } = renderHook(() => useQuestsList());
+      const { result } = renderHook(() => useQuestsList(), { wrapper });
 
       // Initially loading
       expect(result.current.loading).toBe(true);
@@ -124,7 +136,7 @@ describe('useQuestsApi hooks', () => {
     it('sets error when API fails (no fallback)', async () => {
       mockFetchQuestsList.mockRejectedValueOnce(new Error('Network error'));
 
-      const { result } = renderHook(() => useQuestsList());
+      const { result } = renderHook(() => useQuestsList(), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -136,7 +148,7 @@ describe('useQuestsApi hooks', () => {
       const meta2 = { ...API_META, quest_id: 'minsk-cmok', city_id: 'minsk' };
       mockFetchQuestsList.mockResolvedValueOnce([API_META, meta2]);
 
-      const { result } = renderHook(() => useQuestsList());
+      const { result } = renderHook(() => useQuestsList(), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -203,7 +215,6 @@ describe('useQuestsApi hooks', () => {
 
     it('sets error when API fails (no fallback)', async () => {
       mockFetchQuestByQuestId.mockRejectedValueOnce(new Error('Not found'));
-      mockFetchQuestsList.mockResolvedValueOnce([]);
 
       const { result } = renderHook(() => useQuestBundle('nonexistent'));
 
@@ -211,6 +222,8 @@ describe('useQuestsApi hooks', () => {
 
       expect(result.current.bundle).toBeNull();
       expect(result.current.error).toBe('Not found');
+      // Деталь упала → полный список квестов НЕ грузим (#729 lazy-fallback).
+      expect(mockFetchQuestsList).not.toHaveBeenCalled();
     });
 
     it('returns null bundle for undefined questId', async () => {
@@ -257,6 +270,20 @@ describe('useQuestsApi hooks', () => {
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.bundle?.coverUrl).toBe('https://img.com/cover.jpg');
+    });
+
+    it('does NOT fetch the quest list when the bundle already has cover_url (#729)', async () => {
+      mockFetchQuestByQuestId.mockResolvedValueOnce({
+        ...API_BUNDLE,
+        cover_url: 'https://img.com/detail-cover.jpg',
+      });
+
+      const { result } = renderHook(() => useQuestBundle('krakow-dragon'));
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.bundle?.coverUrl).toBe('https://img.com/detail-cover.jpg');
+      expect(mockFetchQuestsList).not.toHaveBeenCalled();
     });
   });
 

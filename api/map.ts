@@ -292,9 +292,13 @@ const withOptionalLimit = (url: string, limit?: number): string => {
   return `${url}${separator}page=1&perPage=${perPage}`;
 };
 
-export const fetchTravelsNear = async (travel_id: number, signal?: AbortSignal) => {
+export const fetchTravelsNear = async (
+  travel_id: number,
+  signal?: AbortSignal,
+  limit?: number,
+) => {
   try {
-    const urlTravel = `${GET_TRAVELS}${travel_id}/near/`;
+    const urlTravel = withOptionalLimit(`${GET_TRAVELS}${travel_id}/near/`, limit);
     const res = await fetchWithTimeout(urlTravel, { signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
       // 404 is a common/expected case for travels that don't have a near-list on backend.

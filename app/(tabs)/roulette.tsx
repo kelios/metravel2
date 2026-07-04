@@ -26,6 +26,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useRouletteLogic } from '@/components/roulette/useRoulette';
 import { createStyles } from '@/components/roulette/styles';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { getTravelLabel } from '@/utils/pluralize';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 
 const SEO_TITLE = 'Случайный маршрут | Metravel';
@@ -36,6 +37,7 @@ const MAP_BACKGROUND = require('../../assets/travel/roulette-map-bg.jpg') as Ima
 const COMPASS_BACKGROUND = require('../../assets/travel/roulette-compass-bg.jpg') as ImageSourcePropType;
 
 const MAX_RESULTS = 3;
+const PLACEHOLDER_SLOTS = [1, 2, 3] as const;
 
 type Styles = ReturnType<typeof createStyles>;
 
@@ -123,6 +125,7 @@ const FiltersPanel = memo(function FiltersPanel({
       onYearChange={onYearChange}
       onClose={onClose}
       onApply={onApply}
+      optionalHint
     />
   );
 });
@@ -217,12 +220,6 @@ export default function RouletteScreen() {
     ).start();
   }, [result, cardAnims]);
 
-  const spinLabel = spinning
-    ? 'Подбираем маршруты…'
-    : result.length > 0
-      ? 'Подобрать ещё варианты'
-      : 'Подобрать маршруты';
-
   const compassSubtitle = result.length > 0 ? 'Ещё раз' : 'Нажми';
 
   return (
@@ -262,15 +259,10 @@ export default function RouletteScreen() {
               <Text style={styles.heroTitle}>Не знаешь, куда поехать?</Text>
               <Text style={styles.heroSubtitle}>
                 {isMobile
-                  ? 'Выбери фильтры и нажми «Подобрать» — покажем 3 маршрута.'
-                  : 'Подбери фильтры — и мы случайно предложим три маршрута под твои пожелания.'}
+                  ? 'Нажми компас — покажем 3 маршрута.'
+                  : 'Нажми компас — покажем 3 случайных маршрута. Фильтры слева сузят выбор, но можно крутить сразу.'}
               </Text>
             </View>
-            {!isMobile && (
-              <View style={styles.heroButtonBlock}>
-                <UIButton label={spinLabel} onPress={handleSpin} disabled={showLoading} />
-              </View>
-            )}
           </View>
 
           {isMobile && (
@@ -300,13 +292,15 @@ export default function RouletteScreen() {
                   )}
                 </View>
 
-                <View style={styles.mobileSpinButton}>
-                  <UIButton
-                    label={spinning ? 'Подбираем…' : result.length > 0 ? 'Ещё' : 'Подобрать'}
-                    onPress={handleSpin}
-                    disabled={showLoading}
-                  />
-                </View>
+                {(spinning || result.length > 0) && (
+                  <View style={styles.mobileSpinButton}>
+                    <UIButton
+                      label={spinning ? 'Подбираем…' : 'Ещё'}
+                      onPress={handleSpin}
+                      disabled={showLoading}
+                    />
+                  </View>
+                )}
               </View>
             </View>
           )}
@@ -326,15 +320,6 @@ export default function RouletteScreen() {
                 <Text style={styles.emptyTitle}>Ничего не нашли</Text>
                 <Text style={styles.emptyText}>
                   Попробуй убрать часть фильтров или измени запрос.
-                </Text>
-              </View>
-            )}
-
-            {!showLoading && !isEmpty && result.length === 0 && totalCount > 0 && (
-              <View style={styles.hintBox}>
-                <Text style={styles.hintTitle}>Готов к случайному путешествию?</Text>
-                <Text style={styles.hintText}>
-                  Настрой фильтры и нажми «Подобрать маршруты», чтобы получить три идеи поездок.
                 </Text>
               </View>
             )}
@@ -362,6 +347,22 @@ export default function RouletteScreen() {
                       buttonStyle={styles.rouletteCompassButton}
                       iconSize={22}
                     />
+
+                    {result.length === 0 && totalCount > 0 && (
+                      <>
+                        <Text style={styles.poolHint}>
+                          {`Случайный выбор из ${totalCount} ${getTravelLabel(totalCount)}`}
+                        </Text>
+                        <View style={styles.slotsRow}>
+                          {PLACEHOLDER_SLOTS.map((slotIndex) => (
+                            <View key={slotIndex} style={styles.slotCard}>
+                              <Feather name="map-pin" size={24} color={colors.borderStrong} />
+                              <Text style={styles.slotLabel}>{`Идея ${slotIndex}`}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </>
+                    )}
 
                     {result.length > 0 && (
                       <View style={styles.rouletteCardsRow}>
@@ -426,6 +427,11 @@ export default function RouletteScreen() {
                           buttonStyle={styles.mobileRouletteCompassButton}
                           iconSize={20}
                         />
+                        {totalCount > 0 && (
+                          <Text style={styles.poolHint}>
+                            {`Случайный выбор из ${totalCount} ${getTravelLabel(totalCount)}`}
+                          </Text>
+                        )}
                       </View>
                     )}
                     <FlashList<Travel>

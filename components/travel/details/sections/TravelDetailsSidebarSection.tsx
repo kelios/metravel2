@@ -49,6 +49,7 @@ export const TravelDetailsSidebarSection: React.FC<{
   const {
     handleTravelsLoaded,
     hasValidTravelId,
+    nearInViewport,
     relatedTravels,
     setNearRef,
     setPopularRef,
@@ -93,6 +94,7 @@ export const TravelDetailsSidebarSection: React.FC<{
                   onTravelsLoaded={handleTravelsLoaded}
                   showHeader={false}
                   embedded
+                  fetchEnabled={nearInViewport}
                 />
               </Suspense>
             </View>

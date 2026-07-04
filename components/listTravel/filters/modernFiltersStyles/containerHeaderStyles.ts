@@ -102,6 +102,11 @@ export const createContainerHeaderStyles = (ctx: StylesCtx) => {
       color: colors.text,
       letterSpacing: -0.2,
     },
+    optionalHint: {
+      fontSize: typography.sizes.xs,
+      color: colors.textMuted,
+      flexShrink: 0,
+    },
     headerCountChip: {
       paddingHorizontal: spacing.sm,
       paddingVertical: 4,

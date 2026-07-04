@@ -132,6 +132,18 @@ SWAP_B64="$(printf '%s' "$SWAP_SCRIPT" | base64 | tr -d '\n')"
 ssh "$SERVER" "set -euo pipefail
   cd '$REMOTE_DIR'
   test -d dist/$ENV
+  # Resolve real container names at deploy time. docker compose project uses
+  # underscores (metravel_app_1 / metravel_nginx_1); the old hardcoded dash
+  # names (metravel-app-1) made the swap die with 'No such container' and needed
+  # manual recovery (board #733). Match both separators so a project rename or a
+  # compose-version naming change can't silently break the swap again.
+  app_ctr=\"\$(docker ps --format '{{.Names}}' | grep -E '^metravel[-_]app[-_]1\$' | head -1)\"
+  nginx_ctr=\"\$(docker ps --format '{{.Names}}' | grep -E '^metravel[-_]nginx[-_]1\$' | head -1)\"
+  if [ -z \"\$app_ctr\" ] || [ -z \"\$nginx_ctr\" ]; then
+    echo 'ERROR: cannot resolve metravel app/nginx container names' >&2
+    docker ps --format '{{.Names}}' >&2
+    exit 1
+  fi
   # Self-heal static/ ownership drift before the swap (recurring infra bug,
   # board #653). The swap below runs as the container user (uid 1984); if an
   # out-of-band op left the TOP static/ dir owned by the host user (1000), uid
@@ -145,9 +157,9 @@ ssh "$SERVER" "set -euo pipefail
   # (1000) that the container user cannot unlink, so the in-container swap's
   # 'rm -rf dist.old' silently fails and the next 'mv dist dist.old' nests
   # inside the leftover dir instead of replacing it (past manual-recovery need).
-  docker exec -u 0 metravel-app-1 sh -c 'chown 1984:1000 /app/static && chmod 2775 /app/static && rm -rf /app/static/dist.new /app/static/dist.old'
-  printf '%s' '$SWAP_B64' | base64 -d | docker exec -i metravel-app-1 sh -s
-  docker restart metravel-nginx-1
+  docker exec -u 0 \"\$app_ctr\" sh -c 'chown 1984:1000 /app/static && chmod 2775 /app/static && rm -rf /app/static/dist.new /app/static/dist.old'
+  printf '%s' '$SWAP_B64' | base64 -d | docker exec -i \"\$app_ctr\" sh -s
+  docker restart \"\$nginx_ctr\"
   rm -rf dist icons images
 "
 

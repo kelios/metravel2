@@ -194,14 +194,18 @@ describe('PointList (web coordinates list uses popup template)', () => {
       <PointList points={[basePoint as any]} baseUrl={baseUrl} />
     );
 
+    // Compact popup-aligned points card: copy / share / article stay as direct
+    // tiles, while the individual map-app links collapse behind the «Навигация и
+    // действия» overflow sheet — open it, then assert the map links resolve.
     expect(getByLabelText('Скопировать координаты')).toBeTruthy();
     expect(getByLabelText('Поделиться в Telegram')).toBeTruthy();
-    expect(getByLabelText('Открыть в Google Maps')).toBeTruthy();
-    expect(getByLabelText('Открыть в Apple Maps')).toBeTruthy();
-    expect(getByLabelText('Открыть в Яндекс Картах')).toBeTruthy();
-    expect(getByLabelText('Открыть в OpenStreetMap')).toBeTruthy();
     expect(getByLabelText('Открыть статью')).toBeTruthy();
+    expect(getByLabelText('Навигация и действия')).toBeTruthy();
 
+    // Each sheet action closes the sheet on press, so re-open it before the next.
+    const openMapSheet = () => fireEvent.press(getByLabelText('Навигация и действия'));
+
+    openMapSheet();
     fireEvent.press(getByLabelText('Открыть в Google Maps'));
     return waitFor(() => {
       expect(openSpy).toHaveBeenCalledWith(
@@ -210,11 +214,13 @@ describe('PointList (web coordinates list uses popup template)', () => {
         'noopener'
       );
     }).then(() => {
+      openMapSheet();
       fireEvent.press(getByLabelText('Открыть в Apple Maps'));
       return waitFor(() => {
         expect(openSpy).toHaveBeenCalledWith('https://maps.apple.com/?q=50%2C20', '_blank', 'noopener');
       });
     }).then(() => {
+      openMapSheet();
       fireEvent.press(getByLabelText('Открыть в Яндекс Картах'));
       return waitFor(() => {
         expect(openSpy).toHaveBeenCalledWith(
@@ -224,6 +230,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
         );
       });
     }).then(() => {
+      openMapSheet();
       fireEvent.press(getByLabelText('Открыть в OpenStreetMap'));
       return waitFor(() => {
         expect(openSpy).toHaveBeenCalledWith(
@@ -264,7 +271,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
       <PointList points={[basePoint as any]} baseUrl="https://example.com/travel-page" travelName="T" />
     );
 
-    const addButtons = getAllByLabelText('Мои точки');
+    const addButtons = getAllByLabelText('Сохранить');
     fireEvent.press(addButtons[0]);
 
     await waitFor(() => {

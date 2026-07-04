@@ -140,6 +140,7 @@ interface ModernFiltersProps {
   onToggleDraftsOnly?: () => void;
   onApply?: () => void;
   onClose?: () => void;
+  optionalHint?: boolean;
 }
 
 const ModernFilters: React.FC<ModernFiltersProps> = memo(({
@@ -160,6 +161,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   onToggleDraftsOnly,
   onApply,
   onClose,
+  optionalHint = false,
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createModernFiltersStyles(colors), [colors]);
@@ -270,6 +272,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 <Text style={styles.headerTitle}>Фильтры</Text>
               </>
             )}
+            {optionalHint && <Text style={styles.optionalHint}>необязательно</Text>}
             {!!resultsText && (
               <View style={styles.headerCountChip} testID="filters-results-chip">
                 <Text style={styles.headerCountChipText} numberOfLines={1}>{resultsText}</Text>

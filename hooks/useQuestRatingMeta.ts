@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { fetchQuestsList, type ApiQuestMeta } from '@/api/quests'
 import { queryKeys } from '@/api/queryKeys'
+import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/useQuestsApi'
 
 export type QuestRatingMeta = {
   ratingAvg: number | null
@@ -32,7 +33,8 @@ export function useQuestRatingMeta(
       return list
     },
     enabled: Boolean(questId),
-    staleTime: 60_000,
+    staleTime: QUESTS_LIST_STALE_TIME,
+    gcTime: QUESTS_LIST_GC_TIME,
   })
 
   if (questNumericId == null) return EMPTY

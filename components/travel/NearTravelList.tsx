@@ -45,6 +45,8 @@ type NearTravelListProps = {
   onTravelsLoaded?: (travels: Travel[]) => void;
   showHeader?: boolean;
   embedded?: boolean;
+  // Gate the near-request on the section's real viewport visibility (web observer).
+  fetchEnabled?: boolean;
 };
 
 const TravelCardSkeleton = ({ colors }: { colors: ReturnType<typeof useThemedColors> }) => {
@@ -165,6 +167,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
      onTravelsLoaded,
      showHeader = true,
      embedded = false,
+     fetchEnabled = true,
    }) => {
     const [viewMode, setViewMode] = useState<Segment>('list');
     const { width } = useWindowDimensions();
@@ -205,7 +208,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       travelsNear, displayedTravels, mapPoints,
       isLoading, isError, error, visibleCount,
       refetchTravelsNear, handleLoadMore,
-    } = useNearTravelData(travelId, loadMoreCount, onTravelsLoaded);
+    } = useNearTravelData(travelId, loadMoreCount, onTravelsLoaded, fetchEnabled);
 
 
     // ✅ РЕДИЗАЙН: Стили с поддержкой темной темы

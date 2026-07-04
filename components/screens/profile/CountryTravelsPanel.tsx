@@ -10,12 +10,18 @@ import Feather from '@expo/vector-icons/Feather'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
-import type { Travel } from '@/types/types'
 
 const INITIAL_LIMIT = 6
 
+export type CountryTravelCard = {
+  id: string
+  name: string
+  url: string
+  imageUrl: string
+}
+
 interface CountryTravelsPanelProps {
-  travels: Travel[]
+  travels: CountryTravelCard[]
   isMobile: boolean
   onOpenTravel: (url: string) => void
   onShowAll: () => void
@@ -93,7 +99,7 @@ export function CountryTravelsPanel({
     [colors, cardWidth],
   )
 
-  const renderCard = (travel: Travel) => (
+  const renderCard = (travel: CountryTravelCard) => (
     <Pressable
       key={travel.id}
       onPress={() => onOpenTravel(travel.url)}
@@ -102,7 +108,7 @@ export function CountryTravelsPanel({
       style={styles.card}
     >
       <ImageCardMedia
-        src={travel.travel_image_thumb_small_url || travel.travel_image_thumb_url}
+        src={travel.imageUrl}
         alt={travel.name}
         height={photoHeight}
         width="100%"
