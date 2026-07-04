@@ -16,6 +16,10 @@ import { globalFocusStyles } from '@/styles/globalFocus'
 import { formatViewCount } from '@/components/travel/utils/travelHelpers'
 import { hasAnyTravelEngagementStats } from '@/utils/travelEngagementStats'
 import { appendReturnToParam } from '@/utils/navigationReturnPath'
+import {
+  buildResponsiveImagePropsFromMedia,
+  getMediaLqipUrl,
+} from '@/utils/travelMediaVariants'
 
 import { getResponsiveCardValues } from './enhancedTravelCardStyles'
 import { TRAVEL_CARD_IMAGE_HEIGHT } from './utils/listTravelConstants'
@@ -213,6 +217,29 @@ function TravelListItem({
     () => getResponsiveCardValues(effectiveWidth),
     [effectiveWidth],
   )
+
+  const coverMedia = travel.media?.cover ?? null
+  const coverMediaLqip = useMemo(() => getMediaLqipUrl(coverMedia), [coverMedia])
+  const coverMediaResponsiveSource = useMemo(() => {
+    if (!IS_WEB || !coverMedia) return null
+    const targetWidth =
+      typeof cardWidth === 'number'
+        ? cardWidth
+        : visualVariant === 'home-featured'
+          ? 480
+          : Math.min(effectiveWidth, isMobile ? 640 : 720)
+
+    return buildResponsiveImagePropsFromMedia(coverMedia, {
+      maxWidth: Math.max(targetWidth, isFirst ? 720 : 640),
+      widths: [160, 320, 480, 640, 720, 960],
+      sizes:
+        typeof cardWidth === 'number'
+          ? `${Math.round(cardWidth)}px`
+          : isMobile
+            ? '100vw'
+            : '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw',
+    })
+  }, [cardWidth, coverMedia, effectiveWidth, isFirst, isMobile, visualVariant])
 
   const lastSelectableTouchAtRef = useRef(0)
 
@@ -554,7 +581,8 @@ function TravelListItem({
       mediaProps={{
         placeholderBlurhash: PLACEHOLDER_BLURHASH,
         placeholderSrc:
-          thumbSmallUrl && !isLikelyWatermarked(thumbSmallUrl) ? thumbSmallUrl : null,
+          coverMediaLqip ??
+          (thumbSmallUrl && !isLikelyWatermarked(thumbSmallUrl) ? thumbSmallUrl : null),
         blurBackground: true,
         allowCriticalWebBlur: IS_WEB,
         revealOnLoadOnly: isMobileSafariFirstCard,
@@ -572,6 +600,7 @@ function TravelListItem({
         transition: Platform.OS === 'android' ? 0 : undefined,
         imageProps: ANDROID_LIST_IMAGE_PROPS,
         showLoadingIndicator: Platform.OS !== 'android',
+        webResponsiveSource: coverMediaResponsiveSource,
       }}
       {...nativeCardProps}
     />

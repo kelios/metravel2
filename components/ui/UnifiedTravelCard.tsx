@@ -79,6 +79,7 @@ type Props = {
     transition?: number;
     imageProps?: ComponentProps<typeof ImageCardMedia>['imageProps'];
     showLoadingIndicator?: boolean;
+    webResponsiveSource?: ComponentProps<typeof ImageCardMedia>['webResponsiveSource'];
   };
   width?: number;
   imageHeight?: number;
@@ -542,7 +543,7 @@ function UnifiedTravelCard({
       {optimizedImageUrl && !imageFailed ? (
         <>
           <ImageCardMedia
-            src={displayImageUrl}
+            src={mediaProps?.webResponsiveSource?.src ?? displayImageUrl}
             alt={title}
             width={typeof width === 'number' ? width : undefined}
             height={typeof imageHeight === 'number' ? imageHeight : undefined}
@@ -563,6 +564,7 @@ function UnifiedTravelCard({
             transition={mediaProps?.transition}
             imageProps={mediaProps?.imageProps}
             showLoadingIndicator={mediaProps?.showLoadingIndicator ?? true}
+            webResponsiveSource={mediaProps?.webResponsiveSource}
             onLoad={handleImageLoad}
             onError={handleImageError}
           />

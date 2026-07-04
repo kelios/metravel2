@@ -10,7 +10,8 @@ import { Platform, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
 import { useTdTrace } from '@/hooks/useTdTrace'
 import { isIOSWebKit } from '@/components/ui/ImageCardMediaWebHelpers'
-import type { Travel } from '@/types/types'
+import type { Travel, TravelMediaImage } from '@/types/types'
+import { findGalleryMediaImage } from '@/utils/travelMediaVariants'
 
 type ImgLike = {
   url: string
@@ -18,6 +19,7 @@ type ImgLike = {
   height?: number
   updated_at?: string | null
   id?: number | string
+  media?: TravelMediaImage | null
 }
 type GalleryImage = ImgLike & Record<string, unknown>
 
@@ -66,10 +68,14 @@ function useHeroMediaModel(
 
   const galleryImages = useMemo(() => {
     const gallery = Array.isArray(travel.gallery) ? travel.gallery : []
-    return gallery.map((item: unknown, index: number) =>
-      normalizeGalleryImage(item, index),
-    )
-  }, [travel.gallery])
+    return gallery.map((item: unknown, index: number) => {
+      const normalized = normalizeGalleryImage(item, index)
+      return {
+        ...normalized,
+        media: findGalleryMediaImage(travel.media, normalized.id),
+      }
+    })
+  }, [travel.gallery, travel.media])
 
   const heroSliderImages = useMemo(() => {
     return galleryImages

@@ -71,6 +71,15 @@ type Props = {
   preserveOptimizedWebSrc?: boolean;
   /** Skip web URL resizing when the upstream optimizer returns padded contain canvases. */
   optimizeWeb?: boolean;
+  /**
+   * Web-only responsive source prepared by a caller that already owns the image
+   * variant contract, for example backend media manifest entries.
+   */
+  webResponsiveSource?: {
+    src?: string | null;
+    srcSet?: string | null;
+    sizes?: string | null;
+  } | null;
 };
 
 function ImageCardMedia({
@@ -107,6 +116,7 @@ function ImageCardMedia({
   contentAspectRatio,
   preserveOptimizedWebSrc = false,
   optimizeWeb = true,
+  webResponsiveSource,
 }: Props) {
   const isJest =
     typeof process !== 'undefined' && !!(process as any)?.env?.JEST_WORKER_ID;
@@ -218,8 +228,26 @@ function ImageCardMedia({
     return !isSafariWeb;
   }, [allowCriticalWebBlur, isSafariWeb, preserveOptimizedWebSrc]);
 
+  const providedWebResponsiveSource = useMemo(() => {
+    if (Platform.OS !== 'web') return null;
+    const nextSrc = typeof webResponsiveSource?.src === 'string' ? webResponsiveSource.src.trim() : '';
+    if (!nextSrc) return null;
+    return {
+      src: nextSrc,
+      srcSet:
+        typeof webResponsiveSource?.srcSet === 'string' && webResponsiveSource.srcSet.trim()
+          ? webResponsiveSource.srcSet.trim()
+          : undefined,
+      sizes:
+        typeof webResponsiveSource?.sizes === 'string' && webResponsiveSource.sizes.trim()
+          ? webResponsiveSource.sizes.trim()
+          : undefined,
+    };
+  }, [webResponsiveSource]);
+
   const webOptimizedSource = useMemo(() => {
     if (Platform.OS !== 'web') return null;
+    if (providedWebResponsiveSource?.src) return providedWebResponsiveSource.src;
     if (!resolvedSource || typeof resolvedSource === 'number') return null;
     // Handle local asset string from require() on web
     if (typeof resolvedSource === 'string') return resolvedSource;
@@ -238,7 +266,7 @@ function ImageCardMedia({
         format: 'auto',
       }) ?? uri
     );
-  }, [resolvedSource, optimizeWeb, shouldPreserveProvidedOptimizedUrl, stableWidth, stableHeight, contentFit, quality]);
+  }, [providedWebResponsiveSource, resolvedSource, optimizeWeb, shouldPreserveProvidedOptimizedUrl, stableWidth, stableHeight, contentFit, quality]);
   const webMainSrc = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     // For require() sources (numbers), return null to use OptimizedImage/ExpoImage
@@ -282,6 +310,7 @@ function ImageCardMedia({
 
   const webSrcSet = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
+    if (providedWebResponsiveSource) return providedWebResponsiveSource.srcSet;
     if (!resolvedSource || typeof resolvedSource === 'number') return undefined;
     // Skip srcset for local assets
     if (typeof resolvedSource === 'string') return undefined;
@@ -309,10 +338,11 @@ function ImageCardMedia({
         fit: contentFit === 'contain' ? 'contain' : 'cover',
       }) || undefined
     );
-  }, [resolvedSource, optimizeWeb, shouldPreserveProvidedOptimizedUrl, contentFit, quality, stableWidth, isSafariWeb]);
+  }, [providedWebResponsiveSource, resolvedSource, optimizeWeb, shouldPreserveProvidedOptimizedUrl, contentFit, quality, stableWidth, isSafariWeb]);
 
   const webSizes = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
+    if (providedWebResponsiveSource?.sizes) return providedWebResponsiveSource.sizes;
     if (typeof width === 'number' && Number.isFinite(width) && width > 0) {
       return `${Math.round(width)}px`;
     }
@@ -320,7 +350,7 @@ function ImageCardMedia({
       return '(min-width: 768px) 50vw, 100vw';
     }
     return '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw';
-  }, [width, isSafariWeb]);
+  }, [providedWebResponsiveSource, width, isSafariWeb]);
 
   const shouldRenderWebBlurBackground = useMemo(() => {
     if (Platform.OS !== 'web') return false;

@@ -1,9 +1,12 @@
+import type { TravelMediaImage } from '@/types/types';
+
 export interface SliderImage {
   url: string;
   id: number | string;
   updated_at?: string;
   width?: number;
   height?: number;
+  media?: TravelMediaImage | null;
 }
 
 export interface SliderProps {
