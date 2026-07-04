@@ -14,7 +14,7 @@ import {
 import Feather from '@expo/vector-icons/Feather'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useIsFocused } from 'expo-router'
-import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useInfiniteQuery, useQueries, useQuery } from '@tanstack/react-query'
 
 import { fetchPlacesCatalog } from '@/api/places'
 import Button from '@/components/ui/Button'
@@ -30,23 +30,19 @@ import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
 import ContributionBanner from '@/components/common/ContributionBanner'
 
 import {
+  type CategoryCollection,
+  INTERESTING_CATEGORY_COLLECTIONS,
   LOAD_MORE_SCROLL_THRESHOLD,
   MAP_FOCUS_RADIUS_KM,
   PLACES_PAGE_SIZE,
   PRESSED_OPACITY,
+  getActiveCategoryTitle,
   getPlacesCountLabel,
+  isSameCategorySet,
+  parseCategoryParam,
 } from './PlacesScreen.helpers'
 import { PlaceCard, SkeletonGrid, StateBlock } from './PlacesScreen.parts'
 import { createStyles } from './PlacesScreen.styles'
-
-const parseSingleCategoryParam = (value: unknown): string | null => {
-  if (typeof value !== 'string') return null
-  const first = value
-    .split(',')
-    .map((item) => decodeURIComponent(item).trim())
-    .filter(Boolean)[0]
-  return first ?? null
-}
 
 export default function PlacesScreen() {
   const router = useRouter()
@@ -63,8 +59,8 @@ export default function PlacesScreen() {
   const deferredQuery = useDeferredValue(query)
   const [categoryQuery, setCategoryQuery] = useState('')
   const deferredCategoryQuery = useDeferredValue(categoryQuery)
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(() =>
-    parseSingleCategoryParam(params.category),
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
+    parseCategoryParam(params.category),
   )
   const [selectedCountry, setSelectedCountry] = useState<string | null>(() =>
     typeof params.country === 'string' && params.country.trim() ? params.country.trim() : null,
@@ -83,14 +79,15 @@ export default function PlacesScreen() {
   const listParams = useMemo(
     () => ({
       q: deferredQuery.trim() || undefined,
-      categories: selectedCategory ? [selectedCategory] : undefined,
+      categories: selectedCategories.length > 0 ? selectedCategories : undefined,
       country: selectedCountry ?? undefined,
     }),
-    [deferredQuery, selectedCategory, selectedCountry],
+    [deferredQuery, selectedCategories, selectedCountry],
   )
 
   // Main paginated list — filters go to the server (q/category/country) and pages
   // are fetched on demand instead of loading the whole 2000+ catalog into memory.
+  // Multiple categories are sent as repeated `category` params → backend OR-union.
   const placesQuery = useInfiniteQuery({
     queryKey: ['places-catalog', 'list', listParams],
     queryFn: ({ pageParam, signal }) =>
@@ -109,7 +106,7 @@ export default function PlacesScreen() {
   })
 
   // Facets (category / country chips + counts) come from a category-agnostic query
-  // so the chip list stays complete while a category is selected. It mirrors the
+  // so the chip list stays complete while categories are selected. It mirrors the
   // active q/country filter, matching the map endpoint's cross-filtered counts.
   const facetsParams = useMemo(
     () => ({ q: deferredQuery.trim() || undefined, country: selectedCountry ?? undefined }),
@@ -126,6 +123,32 @@ export default function PlacesScreen() {
     refetchOnWindowFocus: false,
   })
 
+  // Per-collection totals for the "Интересные подборки" cards. Each collection is a
+  // fixed multi-category set, so its count comes from a lightweight perPage=1 catalog
+  // request that mirrors the active country filter (matching the map endpoint's
+  // cross-filtered counts). Runs only on web/desktop where the section is shown.
+  const showCollections = Platform.OS === 'web' && !isCompact
+  const collectionCountsParams = useMemo(
+    () => ({ country: selectedCountry ?? undefined }),
+    [selectedCountry],
+  )
+  const collectionCountQueries = useQueries({
+    queries: INTERESTING_CATEGORY_COLLECTIONS.map((collection) => ({
+      queryKey: ['places-catalog', 'collection', collection.id, collectionCountsParams],
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        fetchPlacesCatalog(
+          { page: 1, perPage: 1, categories: [...collection.categories], ...collectionCountsParams },
+          signal,
+        ),
+      enabled: showCollections,
+      placeholderData: keepPreviousData,
+      staleTime: 5 * 60 * 1000,
+      gcTime: 20 * 60 * 1000,
+      retry: 2,
+      refetchOnWindowFocus: false,
+    })),
+  })
+
   const visiblePlaces = useMemo(
     () => placesQuery.data?.pages.flatMap((page) => page.places) ?? [],
     [placesQuery.data],
@@ -135,17 +158,36 @@ export default function PlacesScreen() {
   const categoryFacets = useMemo(() => facetsQuery.data?.categoryFacets ?? [], [facetsQuery.data])
   const countryFacets = useMemo(() => facetsQuery.data?.countryFacets ?? [], [facetsQuery.data])
 
+  const collectionCards = useMemo(
+    () =>
+      INTERESTING_CATEGORY_COLLECTIONS.map((collection, index) => ({
+        ...collection,
+        count: collectionCountQueries[index]?.data?.count ?? 0,
+        countReady: !!collectionCountQueries[index]?.data,
+      })),
+    [collectionCountQueries],
+  )
+
   const filteredCategoryFacets = useMemo(() => {
     const normalized = deferredCategoryQuery.trim().toLowerCase()
+    const selectedSet = new Set(selectedCategories)
     const list = normalized
       ? categoryFacets.filter((facet) => facet.name.toLowerCase().includes(normalized))
       : categoryFacets
-    if (!selectedCategory) return list
-    // Keep the selected category reachable even if the facet list is filtered.
-    return list.some((facet) => facet.name === selectedCategory)
-      ? list
-      : [{ id: null, name: selectedCategory, count: 0 }, ...list]
-  }, [categoryFacets, deferredCategoryQuery, selectedCategory])
+    const withSelected = selectedCategories.reduce<typeof list>((acc, name) => {
+      // Keep every selected category reachable even if the facet list is filtered.
+      return acc.some((facet) => facet.name === name)
+        ? acc
+        : [{ id: null, name, count: 0 }, ...acc]
+    }, list)
+    // Selected chips float to the top so the active multi-selection stays visible.
+    return [...withSelected].sort((a, b) => {
+      const aSel = selectedSet.has(a.name)
+      const bSel = selectedSet.has(b.name)
+      if (aSel !== bSel) return aSel ? -1 : 1
+      return 0
+    })
+  }, [categoryFacets, deferredCategoryQuery, selectedCategories])
 
   const hasMorePlaces = placesQuery.hasNextPage
   const showLoadedCounts = !facetsQuery.isLoading && !facetsQuery.isError
@@ -154,18 +196,18 @@ export default function PlacesScreen() {
   const gridColumns = isWide ? 3 : isCompact ? 1 : 2
   const firstScreenCount = gridColumns * 2
 
-  const activeCategoryTitle = selectedCategory ?? 'Все места'
-  const pageDescription = selectedCategory
-    ? `Места категории «${selectedCategory}». Карточки точек, переход на карту и ссылка на путешествие.`
+  const activeCategoryTitle = getActiveCategoryTitle(selectedCategories)
+  const pageDescription = selectedCategories.length > 0
+    ? `Места выбранных категорий: ${selectedCategories.join(', ')}. Карточки точек, переход на карту и ссылка на путешествие.`
     : 'Каталог мест MeTravel: замки, музеи, парки, природные точки и другие места из путешествий.'
 
   // ─── SEO ───
   const seoHeading = useMemo(() => {
     const parts = ['Места']
-    if (selectedCategory) parts.push(selectedCategory)
+    if (selectedCategories.length > 0) parts.push(activeCategoryTitle)
     if (selectedCountry) parts.push(selectedCountry)
     return parts.join(' — ')
-  }, [selectedCategory, selectedCountry])
+  }, [activeCategoryTitle, selectedCategories.length, selectedCountry])
   const seoTitle = `${seoHeading} | MeTravel`
   const seoPlaces = useMemo(() => visiblePlaces.slice(0, 12), [visiblePlaces])
   const placesJsonLd = useMemo(() => {
@@ -197,6 +239,10 @@ export default function PlacesScreen() {
     )
   }, [isFocused, seoHeading, seoPlaces, totalCount])
 
+  const syncCategoryParams = useCallback((categories: string[]) => {
+    router.setParams(categories.length > 0 ? { category: categories.join(',') } : { category: '' })
+  }, [router])
+
   const handleQueryChange = useCallback((next: string) => {
     setQuery(next)
     router.setParams(next ? { q: next } : { q: '' })
@@ -206,8 +252,10 @@ export default function PlacesScreen() {
   // (e.g. in-app navigation to /places?category=...). Guarded on value equality
   // so it never loops with the setParams calls in the handlers below.
   useEffect(() => {
-    const nextCategory = parseSingleCategoryParam(params.category)
-    setSelectedCategory((current) => (current === nextCategory ? current : nextCategory))
+    const nextCategories = parseCategoryParam(params.category)
+    setSelectedCategories((current) =>
+      isSameCategorySet(current, nextCategories) ? current : nextCategories,
+    )
   }, [params.category])
 
   useEffect(() => {
@@ -241,18 +289,26 @@ export default function PlacesScreen() {
     }
   }, [hasMorePlaces, loadMorePlaces, placesQuery.isFetchingNextPage])
 
-  const handleSelectCategory = useCallback((category: string | null) => {
-    setSelectedCategory((current) => {
-      const next = current === category ? null : category
-      router.setParams(next ? { category: next } : { category: '' })
+  const handleToggleCategory = useCallback((category: string) => {
+    setSelectedCategories((current) => {
+      const next = current.includes(category)
+        ? current.filter((item) => item !== category)
+        : [...current, category]
+      syncCategoryParams(next)
       return next
     })
-  }, [router])
+  }, [syncCategoryParams])
 
-  const handleClearCategory = useCallback(() => {
-    setSelectedCategory(null)
-    router.setParams({ category: '' })
-  }, [router])
+  const handleClearCategories = useCallback(() => {
+    setSelectedCategories([])
+    syncCategoryParams([])
+  }, [syncCategoryParams])
+
+  const selectCategoryCollection = useCallback((collection: CategoryCollection) => {
+    const next = [...collection.categories]
+    setSelectedCategories(next)
+    syncCategoryParams(next)
+  }, [syncCategoryParams])
 
   const handleSelectCountry = useCallback((country: string | null) => {
     setSelectedCountry(country)
@@ -289,15 +345,15 @@ export default function PlacesScreen() {
     void openExternalUrlInNewTab(place.urlTravel)
   }, [router])
 
-  const hasActiveFilters = !!selectedCategory || !!selectedCountry || !!query
+  const hasActiveFilters = selectedCategories.length > 0 || !!selectedCountry || !!query
   const hasCategorySearch = deferredCategoryQuery.trim().length > 0
 
   const resetAll = useCallback(() => {
     handleQueryChange('')
     setCategoryQuery('')
-    handleClearCategory()
+    handleClearCategories()
     handleSelectCountry(null)
-  }, [handleQueryChange, handleClearCategory, handleSelectCountry])
+  }, [handleQueryChange, handleClearCategories, handleSelectCountry])
 
   const isInitialLoading = placesQuery.isLoading
   const resultsStatus: 'loading' | 'error' | 'empty' | 'list' = isInitialLoading
@@ -519,9 +575,9 @@ export default function PlacesScreen() {
             >
               <View style={styles.sidebarHeader}>
                 <Text style={styles.sectionTitle}>Категории</Text>
-                {selectedCategory ? (
+                {selectedCategories.length > 0 ? (
                   <View style={styles.selectedBadge}>
-                    <Text style={styles.selectedBadgeText}>1</Text>
+                    <Text style={styles.selectedBadgeText}>{selectedCategories.length}</Text>
                   </View>
                 ) : null}
               </View>
@@ -555,15 +611,77 @@ export default function PlacesScreen() {
                 ) : null}
               </View>
 
+              {showCollections && !hasCategorySearch ? (
+                <View style={styles.collectionSection}>
+                  <Text style={styles.hintText}>Интересные подборки</Text>
+                  <View style={styles.collectionList}>
+                    {collectionCards.map((collection) => {
+                      const selected = isSameCategorySet(selectedCategories, collection.categories)
+                      return (
+                        <View
+                          key={collection.id}
+                          style={[styles.featuredCard, selected && styles.featuredCardActive]}
+                        >
+                          <Pressable
+                            onPress={() => selectCategoryCollection(collection)}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected }}
+                            accessibilityLabel={`Подборка: ${collection.title}`}
+                            style={({ pressed }) => [
+                              styles.featuredSelectArea,
+                              pressed && PRESSED_OPACITY,
+                            ]}
+                            testID={`places-collection-${collection.id}`}
+                          >
+                            <View style={styles.featuredIconWrap}>
+                              <Feather name={collection.icon} size={14} color={colors.primaryText} />
+                            </View>
+                            <View style={styles.featuredTextBlock}>
+                              <Text style={styles.featuredLabel}>{collection.hint}</Text>
+                              <Text style={styles.featuredName} numberOfLines={2}>
+                                {collection.title}
+                              </Text>
+                            </View>
+                            {/* Reserve the count slot from first paint so the count
+                                appearing after load does not narrow the text block and
+                                re-wrap featuredName, which caused cascading CLS on /places. */}
+                            <View style={styles.featuredCountSlot}>
+                              {collection.countReady ? (
+                                <Text style={styles.featuredCount}>{collection.count}</Text>
+                              ) : null}
+                            </View>
+                          </Pressable>
+                          {selected ? (
+                            <Pressable
+                              onPress={handleClearCategories}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Очистить подборку ${collection.title}`}
+                              hitSlop={10}
+                              style={({ pressed }) => [styles.featuredClear, pressed && PRESSED_OPACITY]}
+                            >
+                              <Feather name="x" size={14} color={colors.primaryText} />
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      )
+                    })}
+                  </View>
+                </View>
+              ) : null}
+
               <Text style={styles.hintText}>
-                {hasCategorySearch ? 'Найденные категории' : 'Выберите категорию'}
+                {hasCategorySearch
+                  ? 'Найденные категории'
+                  : showCollections
+                    ? 'Или выберите категории вручную'
+                    : 'Выберите категории'}
               </Text>
               <View style={styles.chipRow}>
                 <Chip
                   label="Все категории"
                   count={showLoadedCounts ? catalogTotal : undefined}
-                  selected={!selectedCategory}
-                  onPress={handleClearCategory}
+                  selected={selectedCategories.length === 0}
+                  onPress={handleClearCategories}
                   style={styles.filterChipCompact}
                   testID="places-category-chip-all"
                 />
@@ -572,8 +690,8 @@ export default function PlacesScreen() {
                     key={group.name}
                     label={group.name}
                     count={showLoadedCounts ? group.count : undefined}
-                    selected={selectedCategory === group.name}
-                    onPress={() => handleSelectCategory(group.name)}
+                    selected={selectedCategories.includes(group.name)}
+                    onPress={() => handleToggleCategory(group.name)}
                     style={styles.filterChipCompact}
                     testID={`places-category-chip-${group.name}`}
                   />
@@ -610,11 +728,11 @@ export default function PlacesScreen() {
                     : `${totalCount} ${getPlacesCountLabel(totalCount)}`}
                 </Text>
               </View>
-              {selectedCategory ? (
+              {selectedCategories.length > 0 ? (
                 <Button
                   label="Все места"
                   variant="outline"
-                  onPress={handleClearCategory}
+                  onPress={handleClearCategories}
                 />
               ) : null}
             </View>
@@ -661,20 +779,20 @@ export default function PlacesScreen() {
           accessibilityState={{ expanded: filtersOpen }}
           style={({ pressed }) => [
             styles.compactFilterToggle,
-            !!selectedCategory && styles.compactFilterToggleActive,
+            selectedCategories.length > 0 && styles.compactFilterToggleActive,
             pressed && PRESSED_OPACITY,
           ]}
         >
-          <Feather name="sliders" size={16} color={selectedCategory ? colors.primary : colors.text} />
+          <Feather name="sliders" size={16} color={selectedCategories.length > 0 ? colors.primary : colors.text} />
           <Text
             numberOfLines={1}
-            style={[styles.mobileFilterToggleText, !!selectedCategory && styles.mobileFilterToggleTextActive]}
+            style={[styles.mobileFilterToggleText, selectedCategories.length > 0 && styles.mobileFilterToggleTextActive]}
           >
             Категории
           </Text>
-          {selectedCategory ? (
+          {selectedCategories.length > 0 ? (
             <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>1</Text>
+              <Text style={styles.filterBadgeText}>{selectedCategories.length}</Text>
             </View>
           ) : null}
           <Feather

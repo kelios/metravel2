@@ -240,6 +240,95 @@ describe('fetchMyAchievements', () => {
     expect(my.recentlyEarned).toHaveLength(1)
   })
 
+  it('reads server rank-progress summary directly (canonical #721 path)', async () => {
+    // Buggy rank_levels intentionally present but MUST be ignored when summary fields exist.
+    const dto = {
+      rank: rankDto({
+        total_points: 15,
+        current_level_min_points: 0,
+        next_level_min_points: 50,
+        next_level_title: 'Путешественник',
+        is_max_level: false,
+        progress_ratio: 0.3,
+        remaining_points: 35,
+      }),
+      rank_levels: [{ level: 99, title: 'WRONG', min_points: 999999 }],
+      earned_badges: [],
+      progress: [],
+    }
+    mockGet.mockResolvedValueOnce(dto)
+    const my = await fetchMyAchievements()
+
+    expect(my.rank.currentLevelMinPoints).toBe(0)
+    expect(my.rank.nextLevelMinPoints).toBe(50)
+    expect(my.rank.nextLevelTitle).toBe('Путешественник')
+    expect(my.rank.isMaxLevel).toBe(false)
+    expect(my.rank.progressRatio).toBe(0.3)
+    expect(my.rank.remainingPoints).toBe(35)
+    // legacy rank_levels must NOT leak in when summary is present
+    expect(my.rank.nextLevelTitle).not.toBe('WRONG')
+  })
+
+  it('server max-level summary → ratio 1, remaining 0, thresholds from server', async () => {
+    const dto = {
+      rank: rankDto({
+        total_points: 5000,
+        current_level_min_points: 4000,
+        next_level_min_points: null,
+        next_level_title: null,
+        is_max_level: true,
+        progress_ratio: 1,
+        remaining_points: 0,
+      }),
+      earned_badges: [],
+      progress: [],
+    }
+    mockGet.mockResolvedValueOnce(dto)
+    const my = await fetchMyAchievements()
+    expect(my.rank.isMaxLevel).toBe(true)
+    expect(my.rank.nextLevelMinPoints).toBeNull()
+    expect(my.rank.progressRatio).toBe(1)
+    expect(my.rank.remainingPoints).toBe(0)
+  })
+
+  it('server summary present but ratio/remaining omitted → derived from is_max_level', async () => {
+    // Defensive: summary thresholds present, progress fields absent (partial rollout).
+    const dto = {
+      rank: rankDto({
+        current_level_min_points: 0,
+        next_level_min_points: 50,
+        is_max_level: false,
+        // progress_ratio / remaining_points intentionally omitted
+      }),
+      earned_badges: [],
+      progress: [],
+    }
+    mockGet.mockResolvedValueOnce(dto)
+    const my = await fetchMyAchievements()
+    // progressRatio/remainingPoints null → RankBar falls back to client compute
+    expect(my.rank.progressRatio).toBeNull()
+    expect(my.rank.remainingPoints).toBeNull()
+    expect(my.rank.nextLevelMinPoints).toBe(50)
+  })
+
+  it('legacy fallback: no summary fields → computes thresholds from rank_levels, null progress', async () => {
+    const dto = {
+      rank: rankDto(), // total_points=150, no summary fields
+      rank_levels: rankLevels, // [0,100,300] → current=100, next=300
+      earned_badges: [],
+      progress: [],
+    }
+    mockGet.mockResolvedValueOnce(dto)
+    const my = await fetchMyAchievements()
+    expect(my.rank.currentLevelMinPoints).toBe(100)
+    expect(my.rank.nextLevelMinPoints).toBe(300)
+    expect(my.rank.nextLevelTitle).toBe('Исследователь')
+    expect(my.rank.isMaxLevel).toBe(false)
+    // legacy path leaves progress null → RankBar computes it
+    expect(my.rank.progressRatio).toBeNull()
+    expect(my.rank.remainingPoints).toBeNull()
+  })
+
   it('isMaxLevel true when total_points >= last rank_level min_points', async () => {
     const dto = {
       rank: rankDto({ total_points: 500 }), // exceeds max level 300
@@ -344,6 +433,31 @@ describe('fetchUserAchievements', () => {
     expect(pub.rank.nextLevelMinPoints).toBeNull()
     expect(pub.earned).toHaveLength(1)
     expect(pub.earned[0].badge.slug).toBe('test-badge')
+  })
+
+  it('reads server rank-progress summary on public endpoint (#721)', async () => {
+    // Public endpoint now also returns full rank summary → RankBar can show XP bar.
+    const dto = {
+      rank: rankDto({
+        level: 5,
+        title: 'Эксперт',
+        total_points: 840,
+        current_level_min_points: 700,
+        next_level_min_points: 1200,
+        next_level_title: 'Легенда',
+        is_max_level: false,
+        progress_ratio: 0.28,
+        remaining_points: 360,
+      }),
+      earned_badges: [],
+    }
+    mockGet.mockResolvedValueOnce(dto)
+    const pub = await fetchUserAchievements(7)
+    expect(pub.rank.currentLevelMinPoints).toBe(700)
+    expect(pub.rank.nextLevelMinPoints).toBe(1200)
+    expect(pub.rank.progressRatio).toBe(0.28)
+    expect(pub.rank.remainingPoints).toBe(360)
+    expect(pub.rank.isMaxLevel).toBe(false)
   })
 
   it('passes userId in the request URL', async () => {

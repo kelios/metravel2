@@ -31,6 +31,8 @@ export const queryKeys = {
   travelsForMapRoute: (params: Record<string, unknown>) =>
     ['travelsForMapRoute', params] as const,
   travelsForMapRouteAll: () => ['travelsForMapRoute'] as const,
+  mapClusters: (params: Record<string, unknown>) => ['mapClusters', params] as const,
+  mapClustersAll: () => ['mapClusters'] as const,
   articles: (params: { page: number; itemsPerPage: number; user_id?: string }) =>
     ['articles', params] as const,
   addressSearch: (query: string) => ['address-search', query] as const,

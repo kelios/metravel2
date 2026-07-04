@@ -199,6 +199,8 @@ const makeRank = (overrides: Partial<UserRank> = {}): UserRank => ({
   nextLevelMinPoints: 100,
   nextLevelTitle: 'Путешественник',
   isMaxLevel: false,
+  progressRatio: 0,
+  remainingPoints: 100,
   ...overrides,
 });
 

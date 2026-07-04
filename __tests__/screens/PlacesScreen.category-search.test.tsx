@@ -143,6 +143,40 @@ describe('PlacesScreen category search', () => {
     expect(mockSetParams).toHaveBeenCalledWith({ category: 'Замок' })
   })
 
+  it('toggles multiple category chips into a CSV category param (OR multi-select)', async () => {
+    const { findByTestId } = render(<PlacesScreen />, {
+      wrapper: createQueryWrapper().Wrapper,
+    })
+
+    fireEvent.press(await findByTestId('places-category-chip-Замок'))
+    expect(mockSetParams).toHaveBeenLastCalledWith({ category: 'Замок' })
+
+    fireEvent.press(await findByTestId('places-category-chip-Парковка'))
+    expect(mockSetParams).toHaveBeenLastCalledWith({ category: 'Замок,Парковка' })
+
+    // The catalog list request carries both categories, not just the last one.
+    const multiCall = mockedFetchPlacesCatalog.mock.calls.find(
+      ([params]) =>
+        Array.isArray(params.categories) &&
+        params.categories.includes('Замок') &&
+        params.categories.includes('Парковка'),
+    )
+    expect(multiCall).toBeTruthy()
+  })
+
+  it('renders the "Интересные подборки" collections and selects one', async () => {
+    const { findByTestId } = render(<PlacesScreen />, {
+      wrapper: createQueryWrapper().Wrapper,
+    })
+
+    const featured = await findByTestId('places-collection-nature')
+    fireEvent.press(featured)
+
+    const lastCall = mockSetParams.mock.calls.at(-1)?.[0]
+    expect(String(lastCall?.category)).toContain('Озеро')
+    expect(String(lastCall?.category)).toContain('Река')
+  })
+
   it('shows an empty state when no category matches the query', async () => {
     const { findByTestId } = render(<PlacesScreen />, {
       wrapper: createQueryWrapper().Wrapper,

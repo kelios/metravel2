@@ -19,11 +19,20 @@ function RankBar({ rank, compact = false, testID, style }: Props) {
   const colors = useThemedColors();
 
   // 'max' — достигнут максимум; 'progress' — есть следующий уровень; 'unknown' —
-  // пороги не пришли (публичный эндпоинт без rank_levels), полосу не рисуем.
+  // пороги не пришли (legacy-ответ без summary и без rank_levels), полосу не рисуем.
+  // Canonical: progressRatio/remainingPoints приходят готовыми с бэка (#721). Legacy:
+  // если их нет (null) — считаем из порогов клиентом (старый деплой).
   const { mode, ratio, remaining } = useMemo(() => {
     if (rank.isMaxLevel) return { mode: 'max' as const, ratio: 1, remaining: 0 };
     if (rank.nextLevelMinPoints == null) {
       return { mode: 'unknown' as const, ratio: 0, remaining: 0 };
+    }
+    if (rank.progressRatio != null && rank.remainingPoints != null) {
+      return {
+        mode: 'progress' as const,
+        ratio: Math.max(0, Math.min(1, rank.progressRatio)),
+        remaining: Math.max(0, rank.remainingPoints),
+      };
     }
     const span = Math.max(1, rank.nextLevelMinPoints - rank.currentLevelMinPoints);
     const done = rank.totalPoints - rank.currentLevelMinPoints;

@@ -31,6 +31,9 @@ import RankBar from '@/components/achievements/RankBar'
 
 // ── fixtures ───────────────────────────────────────────────────────────────────
 
+// Default fixture leaves progressRatio/remainingPoints null → exercises the legacy
+// client-side compute path (thresholds from current/next). Server-summary cases pass
+// them explicitly below.
 const makeRank = (overrides: Partial<UserRank> = {}): UserRank => ({
   level: 3,
   title: 'Бывалый',
@@ -40,6 +43,8 @@ const makeRank = (overrides: Partial<UserRank> = {}): UserRank => ({
   nextLevelMinPoints: 900,
   nextLevelTitle: 'Писатель',
   isMaxLevel: false,
+  progressRatio: null,
+  remainingPoints: null,
   ...overrides,
 })
 
@@ -168,6 +173,59 @@ describe('RankBar', () => {
       />,
     )
     expect(getByText('До «Писатель»: 500 XP')).toBeTruthy()
+  })
+
+  it('uses server-provided remainingPoints when present (canonical #721)', () => {
+    // Server summary: remainingPoints=35 must win over any client-computed value
+    // (totalPoints/nextLevelMinPoints here would give 450, but server says 35).
+    const { getByText } = render(
+      <RankBar
+        rank={makeRank({
+          totalPoints: 15,
+          currentLevelMinPoints: 0,
+          nextLevelMinPoints: 50,
+          nextLevelTitle: 'Путешественник',
+          progressRatio: 0.3,
+          remainingPoints: 35,
+        })}
+      />,
+    )
+    expect(getByText('До «Путешественник»: 35 XP')).toBeTruthy()
+  })
+
+  it('uses server-provided progressRatio for the fill width', () => {
+    const { getByLabelText } = render(
+      <RankBar
+        rank={makeRank({
+          level: 5,
+          title: 'Эксперт',
+          totalPoints: 840,
+          nextLevelMinPoints: 1200,
+          nextLevelTitle: 'Легенда',
+          progressRatio: 0.28,
+          remainingPoints: 360,
+        })}
+      />,
+    )
+    // remaining 360 comes straight from the server summary
+    expect(getByLabelText(/осталось 360/)).toBeTruthy()
+  })
+
+  it('falls back to client compute when server progress fields are null (legacy)', () => {
+    // progressRatio/remainingPoints null → compute: 900-450 = 450
+    const { getByText } = render(
+      <RankBar
+        rank={makeRank({
+          totalPoints: 450,
+          currentLevelMinPoints: 400,
+          nextLevelMinPoints: 900,
+          nextLevelTitle: 'Писатель',
+          progressRatio: null,
+          remainingPoints: null,
+        })}
+      />,
+    )
+    expect(getByText('До «Писатель»: 450 XP')).toBeTruthy()
   })
 
   it('clamps remaining to 0 when totalPoints exceeds nextLevelMinPoints', () => {

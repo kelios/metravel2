@@ -64,6 +64,18 @@ describe('fetchPlacesCatalog', () => {
     expect(page.countryFacets[0]).toEqual({ id: null, name: 'Чехия', count: 11 })
   })
 
+  it('sends multiple categories as repeated category params (OR filter)', async () => {
+    mockedFetch.mockResolvedValueOnce(okResponse(catalogPayload))
+
+    await fetchPlacesCatalog({ page: 1, perPage: 20, categories: ['Замок', 'Озеро'] })
+
+    const [url] = mockedFetch.mock.calls[0]
+    const matches = String(url).match(/category=/g) ?? []
+    expect(matches).toHaveLength(2)
+    expect(url).toContain('category=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA')
+    expect(url).toContain('category=%D0%9E%D0%B7%D0%B5%D1%80%D0%BE')
+  })
+
   it('omits empty filter params from the request', async () => {
     mockedFetch.mockResolvedValueOnce(okResponse(catalogPayload))
 

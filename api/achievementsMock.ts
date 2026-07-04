@@ -62,6 +62,8 @@ const earned = (b: Badge, earnedAt: string): UserBadge => ({
   earnedAt,
 });
 
+// Значения зеркалят готовый rank-progress summary с бэка (#721):
+// span=900-400=500, done=480-400=80 → ratio=0.16, remaining=900-480=420.
 export const MOCK_RANK: UserRank = {
   level: 4,
   title: 'Бывалый',
@@ -71,6 +73,8 @@ export const MOCK_RANK: UserRank = {
   nextLevelMinPoints: 900,
   nextLevelTitle: 'Писатель',
   isMaxLevel: false,
+  progressRatio: 0.16,
+  remainingPoints: 420,
 };
 
 const MOCK_EARNED: UserBadge[] = [

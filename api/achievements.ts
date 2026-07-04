@@ -66,9 +66,15 @@ export interface UserRank {
   currentLevelMinPoints: number;
   nextLevelMinPoints: number | null;
   nextLevelTitle: string | null;
-  /** true — достигнут максимальный уровень; false при null-порогах = пороги неизвестны
-   * (публичный эндпоинт не отдаёт rank_levels). */
+  /** true — достигнут максимальный уровень. */
   isMaxLevel: boolean;
+  /** Доля прогресса к следующему уровню [0..1]. Приходит готовой с бэка (#721);
+   * при max-level = 1. null — пороги неизвестны (legacy-ответ без summary и без
+   * rank_levels) → RankBar не рисует XP-полосу. */
+  progressRatio: number | null;
+  /** Сколько XP осталось до следующего уровня. Готовое значение с бэка; при
+   * max-level = 0; null когда пороги неизвестны (см. progressRatio). */
+  remainingPoints: number | null;
 }
 
 export interface MyAchievements {
@@ -155,6 +161,15 @@ interface RankSummaryDto {
   title?: string | null;
   total_points?: number | null;
   badges_count?: number | null;
+  // Готовый rank-progress summary (#721): бэк отдаёт пороги/прогресс уже посчитанными
+  // на обоих эндпоинтах (/me/ и /user/{id}/). До rollout этих полей может не быть —
+  // тогда падаем на legacy-вычисление из rank_levels.
+  current_level_min_points?: number | null;
+  next_level_min_points?: number | null;
+  next_level_title?: string | null;
+  is_max_level?: boolean | null;
+  progress_ratio?: number | null;
+  remaining_points?: number | null;
   recomputed_at?: string | null;
 }
 
@@ -180,6 +195,9 @@ interface MyAchievementsDto {
 
 interface PublicAchievementsDto {
   rank: RankSummaryDto;
+  // Публичный эндпоинт теперь тоже отдаёт rank_levels (#721) — оставляем как legacy
+  // fallback, если rank без summary; canonical path — поля прямо в rank.
+  rank_levels?: RankLevelDto[];
   earned_badges: UserBadgeDto[];
   peer_received?: PeerBadgeReceivedDto[];
 }
@@ -244,12 +262,41 @@ const mapProgress = (dto: BadgeProgressDto): BadgeProgress => ({
   threshold: dto.threshold ?? 0,
 });
 
-// Бэк отдаёт rank БЕЗ порогов уровней (level/title/total_points/badges_count) +
-// отдельный список rank_levels (только в /me/). Пороги к текущему/следующему уровню
-// и флаг максимума вычисляем здесь. Без rank_levels (публичный эндпоинт) пороги
-// остаются null, isMaxLevel=false — RankBar показывает уровень без XP-полосы.
+// Canonical path (#721): бэк отдаёт rank-progress summary уже посчитанным на обоих
+// эндпоинтах — пороги, is_max_level, progress_ratio и remaining_points читаем как есть.
+// Legacy fallback: старый деплой отдавал rank БЕЗ порогов + отдельный rank_levels
+// (только в /me/) → вычисляем пороги клиентом, progress_ratio/remaining оставляем null
+// (RankBar посчитает сам). Без summary И без rank_levels (старый публичный ответ)
+// пороги остаются null, isMaxLevel=false — RankBar рисует уровень без XP-полосы.
+const hasServerSummary = (dto: RankSummaryDto): boolean =>
+  dto.is_max_level != null ||
+  dto.progress_ratio != null ||
+  dto.next_level_min_points != null ||
+  dto.current_level_min_points != null;
+
 const mapRank = (dto: RankSummaryDto, levels?: RankLevelDto[]): UserRank => {
   const totalPoints = dto.total_points ?? 0;
+  const base = {
+    level: dto.level ?? 1,
+    title: dto.title ?? 'Новичок',
+    totalPoints,
+    badgesCount: dto.badges_count ?? 0,
+  };
+
+  if (hasServerSummary(dto)) {
+    const isMaxLevel = Boolean(dto.is_max_level);
+    return {
+      ...base,
+      currentLevelMinPoints: dto.current_level_min_points ?? 0,
+      nextLevelMinPoints: dto.next_level_min_points ?? null,
+      nextLevelTitle: dto.next_level_title ?? null,
+      isMaxLevel,
+      progressRatio: dto.progress_ratio != null ? dto.progress_ratio : isMaxLevel ? 1 : null,
+      remainingPoints: dto.remaining_points != null ? dto.remaining_points : isMaxLevel ? 0 : null,
+    };
+  }
+
+  // ── legacy fallback: вычисление из rank_levels ──
   let currentLevelMinPoints = 0;
   let nextLevelMinPoints: number | null = null;
   let nextLevelTitle: string | null = null;
@@ -267,14 +314,14 @@ const mapRank = (dto: RankSummaryDto, levels?: RankLevelDto[]): UserRank => {
   }
 
   return {
-    level: dto.level ?? 1,
-    title: dto.title ?? 'Новичок',
-    totalPoints,
-    badgesCount: dto.badges_count ?? 0,
+    ...base,
     currentLevelMinPoints,
     nextLevelMinPoints,
     nextLevelTitle,
     isMaxLevel,
+    // legacy: summary с бэка нет → RankBar считает ratio/remaining из порогов сам.
+    progressRatio: null,
+    remainingPoints: null,
   };
 };
 
@@ -302,7 +349,7 @@ const mapPeerReceived = (dto: PeerBadgeReceivedDto): PeerBadgeReceived => ({
 });
 
 const mapPublic = (dto: PublicAchievementsDto): PublicAchievements => ({
-  rank: mapRank(dto.rank),
+  rank: mapRank(dto.rank, dto.rank_levels),
   earned: (dto.earned_badges ?? []).map(mapUserBadge),
   peerReceived: (dto.peer_received ?? []).map(mapPeerReceived),
 });
@@ -311,11 +358,11 @@ const mapPublic = (dto: PublicAchievementsDto): PublicAchievements => ({
 
 const USE_MOCK = process.env.EXPO_PUBLIC_ACHIEVEMENTS_MOCK === 'true';
 
-// /achievements/me/ пересчитывает ранг + прогресс по всем значкам на каждый
-// запрос (без кэша на бэке) — на тяжёлых аккаунтах не укладывается в дефолтные
-// 10с. Даём запас, чтобы секция значков догружалась, а не абортилась в спиннер.
-// Митигейшн под бэкенд-перф (см. тикет на кэш /achievements/me/).
-const MY_ACHIEVEMENTS_TIMEOUT = 25000;
+// #721 закэшировал summary на бэке: /achievements/me/ больше не пересчитывает ранг
+// на каждый запрос (rank отдаётся из кэша, recomputed_at в payload). Возвращаем
+// умеренный запас вместо прежних 25с — тяжёлого пересчёта под спиннером больше нет,
+// но держим чуть выше дефолта на случай холодного кэша/первого пересчёта.
+const MY_ACHIEVEMENTS_TIMEOUT = 15000;
 
 /** Бэкенд ещё не задеплоен → 404/501/0. В DEV или под флагом отдаём мок. */
 const shouldFallbackToMock = (error: unknown): boolean => {

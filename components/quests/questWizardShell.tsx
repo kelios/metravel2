@@ -228,7 +228,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
             styles={styles}
             label="Печать"
             accessibilityLabel="Печать квеста"
-            iconName="download"
+            iconName="printer"
             iconColor={colors.textMuted}
             onPress={onPrintDownload}
             baseStyle={styles.actionLabelButton}
@@ -382,7 +382,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
               styles={styles}
               label="Печать"
               accessibilityLabel="Печать квеста"
-              iconName="download"
+              iconName="printer"
               iconColor={colors.textMuted}
               onPress={onPrintDownload}
               baseStyle={styles.actionLabelButton}

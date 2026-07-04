@@ -13,6 +13,8 @@ const makeRank = (overrides: Partial<UserRank> = {}): UserRank => ({
   nextLevelMinPoints: 300,
   nextLevelTitle: 'Исследователь',
   isMaxLevel: false,
+  progressRatio: 0.25,
+  remainingPoints: 150,
   ...overrides,
 })
 
