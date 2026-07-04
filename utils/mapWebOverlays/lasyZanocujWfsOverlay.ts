@@ -1,6 +1,7 @@
 import type { WebMapLayerDefinition } from '@/config/mapWebLayers';
 import type { BBox } from '@/utils/overpass';
 import { bboxAreaKm2, normalizeBBox } from '@/utils/overpass';
+import { fetchBackendOverlay } from './backendOverlaysAdapter';
 
 // Re-export from extracted modules for backward compatibility
 export { filterGeoJsonByBBox, sanitizeGeoJson, computeGeoJsonBounds, bboxesOverlap, swapGeoJsonAxes, geometryHasFiniteCoords } from './geoJsonUtils';
@@ -268,7 +269,36 @@ export const attachLasyZanocujWfsOverlay = (
     abort = new AbortController();
     isLoading = true;
 
+    const getZoom = (map as unknown as { getZoom?: () => number }).getZoom;
+    const zoom = typeof getZoom === 'function' ? Number(getZoom.call(map)) : undefined;
+
     try {
+      // Canonical path: backend proxy/cache (BE #714). WFS нестабилен upstream —
+      // fallback на static-data / прямой WFS обязателен.
+      const backendLayer = def.id === 'wfs-geojson' ? 'wfs-geojson' : 'lasy-zanocuj-wfs';
+      const backend = await fetchBackendOverlay({
+        layer: backendLayer,
+        bbox,
+        zoom,
+        signal: abort.signal,
+      });
+      if (backend.status === 'ok') {
+        if (backend.geojson) {
+          renderGeoJson(backend.geojson);
+        } else {
+          layerGroup.clearLayers();
+        }
+        backoffMs = 0;
+        nextAllowedAt = Date.now() + 1200;
+        return;
+      }
+      if (backend.status === 'skip') {
+        layerGroup.clearLayers();
+        backoffMs = 0;
+        nextAllowedAt = Date.now() + 1200;
+        return;
+      }
+      // backend.status === 'fallback' → static-data / прямой WFS ниже.
       if (isProductionHost()) {
         const ok = await loadFromStaticData(bbox, abort.signal);
         if (ok) {

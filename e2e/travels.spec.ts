@@ -463,8 +463,28 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
 
     test('should show retry button on error', async ({ page }) => {
       await preacceptCookies(page);
-      await page.route('**/api/travels/by-slug/**', (route: any) => route.abort('failed'));
-      await page.route('**/travels/by-slug/**', (route: any) => route.abort('failed'));
+      await page.addInitScript(() => {
+        try {
+          delete (window as any).__metravelTravelPreload;
+        } catch {
+          // ignore
+        }
+      });
+      await page.route('**/api/travels/**', (route: any) =>
+        route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ detail: 'E2E forced travel load failure' }),
+        }),
+      );
+      await page.route('**/travels/**', (route: any) => {
+        if (route.request().resourceType() === 'document') return route.continue();
+        return route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ detail: 'E2E forced travel load failure' }),
+        });
+      });
 
       await page.goto(`/travels/${FALLBACK_TRAVEL_SLUG}`, { waitUntil: 'domcontentloaded' });
 

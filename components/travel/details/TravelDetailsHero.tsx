@@ -3,6 +3,7 @@ import { Platform, View } from 'react-native'
 
 import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
+import { findGalleryMediaImage } from '@/utils/travelMediaVariants'
 import {
   QuickFactsSkeleton,
   QuickJumpSkeleton,
@@ -224,6 +225,7 @@ function TravelHeroSectionInner({
                     height={heroHeight}
                     isMobile={isMobile}
                     containerWidth={heroContainerWidth}
+                    media={findGalleryMediaImage(travel.media, firstImg.id)}
                     onLoad={handleWebHeroLoad}
                   />
                 </View>

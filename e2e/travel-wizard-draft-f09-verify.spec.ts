@@ -8,6 +8,24 @@ import { mockFakeAuthApis } from './helpers/auth';
 //   accessibilityLabel:  'Найден локальный черновик'
 const DIALOG_TITLE = 'Есть несохранённые изменения';
 const DRAFT_PREFIX = 'metravel_travel_draft';
+const LOCAL_PROD_API_CORS_RE = /https:\/\/metravel\.by\/api\/(countries|getFiltersTravel)\//;
+const LOCAL_PROD_ORIGIN = "from origin 'http://127.0.0.1:8085'";
+
+function filterExpectedLocalProdApiCorsNoise(errors: string[]) {
+  const hasExpectedLocalProdApiCorsNoise = errors.some(
+    (message) => message.includes(LOCAL_PROD_ORIGIN) && LOCAL_PROD_API_CORS_RE.test(message),
+  );
+
+  if (!hasExpectedLocalProdApiCorsNoise) return errors;
+
+  return errors.filter(
+    (message) =>
+      !(
+        LOCAL_PROD_API_CORS_RE.test(message) ||
+        message.includes('Failed to load resource: net::ERR_FAILED')
+      ),
+  );
+}
 
 function readEnv() {
   const email = (process.env.E2E_EMAIL || '').trim();
@@ -177,7 +195,7 @@ test.describe('F-09 wizard draft recovery — false prompt after autosave id-syn
       ).toEqual([]);
 
       // --- STEP 5: console/network clean -----------------------------------------
-      const relevantErrors = consoleErrors.filter(
+      const relevantErrors = filterExpectedLocalProdApiCorsNoise(consoleErrors).filter(
         (e) => !/favicon|ResizeObserver|Download the React DevTools|web-vitals/i.test(e)
       );
       expect(relevantErrors, `Console errors: ${JSON.stringify(relevantErrors)}`).toEqual([]);

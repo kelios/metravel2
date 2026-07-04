@@ -6,6 +6,8 @@ import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { ExportStage } from '@/types/pdf-export';
 import type { ExportConfig } from '@/types/pdf-export';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
+import type { BookExportFormat, BookExportSettingsPayload } from '@/api/bookExportApi';
+import { downloadBookExportArtifact, requestServerBookExport } from '@/api/bookExportApi';
 import type { BookHtmlExportService } from '@/services/book/BookHtmlExportService';
 import { activePdfEntitlementSource } from '@/services/pdf-export/entitlement/PdfEntitlementSource';
 
@@ -60,6 +62,82 @@ async function getBookPreviewModule() {
 async function openBookPreview(html: string, targetWindow?: Window | null): Promise<void> {
   const mod = await getBookPreviewModule();
   mod.openBookPreviewWindow(html, targetWindow ?? undefined);
+}
+
+// #716/#713: canonical-путь экспорта = серверный async job (format:"pdf"); клиентский
+// рантайм остаётся полноценным fallback'ом (на проде серверный PDF пока
+// PDF_RENDERER_UNAVAILABLE — тогда весь путь работает как раньше).
+const SERVER_BOOK_EXPORT_FORMAT: BookExportFormat = 'pdf';
+
+function collectServerExportTravelIds(selected: Travel[]): number[] | null {
+  const ids: number[] = [];
+  for (const travel of selected) {
+    const id = Number(travel.id);
+    if (!Number.isFinite(id) || id <= 0) return null;
+    ids.push(id);
+  }
+  return ids.length ? ids : null;
+}
+
+function toServerBookSettings(settings: BookSettings): BookExportSettingsPayload {
+  return {
+    template: settings.template,
+    include_gallery: settings.includeGallery,
+    include_map: settings.includeMap,
+    include_toc: settings.includeToc,
+  };
+}
+
+function saveArtifactBlob(blob: Blob, filename: string): void {
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    anchor.rel = 'noopener';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+  }
+}
+
+// true = серверный экспорт доставил артефакт; false = любой отказ (capability,
+// сетевые ошибки, failed job, таймаут) — работает текущий клиентский рантайм.
+async function tryServerBookExport(
+  selected: Travel[],
+  settings: BookSettings,
+  updateProgress: UpdateProgress,
+): Promise<boolean> {
+  const travelIds = collectServerExportTravelIds(selected);
+  if (!travelIds) return false;
+
+  try {
+    const job = await requestServerBookExport({
+      travelIds,
+      settings: toServerBookSettings(settings),
+      format: SERVER_BOOK_EXPORT_FORMAT,
+    });
+    if (!job) return false;
+
+    updateProgress(ExportStage.RENDERING, 90, 'Скачивание готовой книги...', [
+      'Серверный экспорт ✓',
+    ]);
+    const artifact = await downloadBookExportArtifact(job);
+    if (artifact.contentType?.includes('text/html')) {
+      await openBookPreview(await artifact.blob.text());
+    } else {
+      saveArtifactBlob(
+        artifact.blob,
+        artifact.filename || `metravel-book-${job.job_id}.${SERVER_BOOK_EXPORT_FORMAT}`,
+      );
+    }
+    return true;
+  } catch (error) {
+    console.warn('[usePdfExport] Серверный экспорт недоступен, используем клиентский рантайм', error);
+    return false;
+  }
 }
 
 export async function prewarmPdfExportRuntime(): Promise<void> {
@@ -202,14 +280,22 @@ export async function runPdfExport({
   const startTime = Date.now();
 
   try {
+    updateProgress(ExportStage.VALIDATING, 2, 'Проверка данных...', ['Проверка путешествий']);
+
+    if (await tryServerBookExport(selected, settings, updateProgress)) {
+      const elapsedTime = Math.round((Date.now() - startTime) / 1000);
+      if (isMountedRef.current) {
+        updateProgress(ExportStage.COMPLETE, 100, `Готово! (${elapsedTime} сек)`, ['Документ создан ✓']);
+      }
+      return;
+    }
+
     const htmlService = await getBookHtmlExportService();
 
     if (!isMountedRef.current) {
       Alert.alert('Ошибка', 'Предпросмотр книги недоступен');
       return;
     }
-
-    updateProgress(ExportStage.VALIDATING, 2, 'Проверка данных...', ['Проверка путешествий']);
 
     const travelsForExport = await loadDetailedTravels(selected, settings, config, travelCacheRef, updateProgress);
     if (!travelsForExport.length) {

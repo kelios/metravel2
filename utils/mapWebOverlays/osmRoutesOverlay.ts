@@ -1,6 +1,7 @@
 import type { BBox, OSMLineFeature } from '@/utils/overpass';
 import { bboxAreaKm2, fetchOsmRoutes, overpassToLines } from '@/utils/overpass';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { fetchBackendOverlay } from './backendOverlaysAdapter';
 
 type LeafletMap = any;
 
@@ -196,7 +197,29 @@ export const attachOsmRoutesOverlay = (L: any, map: LeafletMap, opts?: OsmRoutes
     abort = new AbortController();
     isLoading = true;
 
+    const zoom = typeof map?.getZoom === 'function' ? Number(map.getZoom()) : undefined;
+
     try {
+      // Canonical path: backend proxy/cache (BE #714). Routes нестабильны upstream —
+      // fallback на прямой Overpass обязателен.
+      const backend = await fetchBackendOverlay({
+        layer: 'osm-overpass-routes',
+        bbox,
+        zoom,
+        signal: abort.signal,
+      });
+      if (backend.status === 'ok') {
+        renderLines(backend.lines);
+        backoffMs = 0;
+        nextAllowedAt = Date.now() + 800;
+        return;
+      }
+      if (backend.status === 'skip') {
+        layerGroup.clearLayers();
+        backoffMs = 0;
+        nextAllowedAt = Date.now() + 800;
+        return;
+      }
       const data = await fetchOsmRoutes(bbox, { signal: abort.signal });
       const lines = overpassToLines(data);
       renderLines(lines);

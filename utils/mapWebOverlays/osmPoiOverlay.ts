@@ -7,6 +7,7 @@ import {
   type OSMPointFeature,
 } from '@/utils/overpass';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { fetchBackendOverlay } from './backendOverlaysAdapter';
 
 type LeafletMap = any;
 
@@ -315,7 +316,29 @@ export const attachOsmPoiOverlay = (L: any, map: LeafletMap, opts?: OsmPoiOverla
 
     isLoading = true;
 
+    const zoom = typeof map?.getZoom === 'function' ? Number(map.getZoom()) : undefined;
+
     try {
+      // Canonical path: backend proxy/cache (BE #714).
+      const backend = await fetchBackendOverlay({
+        layer: 'osm-overpass-poi',
+        bbox,
+        zoom,
+        signal: abort.signal,
+      });
+      if (backend.status === 'ok') {
+        renderPoints(backend.points);
+        backoffMs = 0;
+        nextAllowedAt = Date.now() + 800;
+        return;
+      }
+      if (backend.status === 'skip') {
+        layerGroup.clearLayers();
+        backoffMs = 0;
+        nextAllowedAt = Date.now() + 800;
+        return;
+      }
+      // backend.status === 'fallback' → прямой Overpass ниже.
       const data = await fetchOsmPoi(bbox, { signal: abort.signal, categories: selectedCategories });
       const pts = overpassToPoints(data);
       renderPoints(pts);
