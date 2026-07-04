@@ -98,6 +98,19 @@ describe('fetchMapClusters', () => {
     expect(params.get('category')).toBe('5,10');
   });
 
+  test('adds radius anchor filters when provided', async () => {
+    await fetchMapClusters(BBOX, 8, {
+      lat: 50.06789111549241,
+      lng: 19.849468752317385,
+      radius: 10,
+    });
+    const url = String(mockFetchWithTimeout.mock.calls[0][0]);
+    const params = new URLSearchParams(url.split('?')[1] ?? '');
+    expect(params.get('lat')).toBe('50.06789111549241');
+    expect(params.get('lng')).toBe('19.849468752317385');
+    expect(params.get('radius')).toBe('10');
+  });
+
   test('omits empty filters', async () => {
     await fetchMapClusters(BBOX, 8, { query: '   ', category: [] });
     const url = String(mockFetchWithTimeout.mock.calls[0][0]);

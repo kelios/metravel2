@@ -392,17 +392,25 @@ export function useMapScreenController() {
     );
     const category = Array.from(new Set([...categoryIds, ...categoryTravelAddressIds]));
     const query = String(filterValues.searchQuery || '').trim();
+    const lat = Number(queryCoordinates?.latitude);
+    const lng = Number(queryCoordinates?.longitude);
+    const radius = Number(filterValues.radius);
 
     return {
       ...(query ? { query } : {}),
       ...(category.length ? { category } : {}),
+      ...(Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : {}),
+      ...(Number.isFinite(radius) && radius > 0 ? { radius } : {}),
     };
   }, [
     filterValues.categories,
     filterValues.categoryTravelAddress,
+    filterValues.radius,
     filterValues.searchQuery,
     filters.categories,
     filters.categoryTravelAddress,
+    queryCoordinates?.latitude,
+    queryCoordinates?.longitude,
   ]);
 
   // Счётчик мест в боковом меню: показываем общее число (backend total), а не

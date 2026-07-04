@@ -42,7 +42,11 @@ import {
 } from './Map/mapWebGeometry'
 import { queryKeys } from '@/api/queryKeys'
 import { isFallbackMinskCenter } from './Map/fallbackCenter'
-import { buildServerClusterRenderData } from './Map/serverClusterRenderData'
+import {
+  buildServerClusterRenderData,
+  filterServerClusterRenderDataByRadius,
+  getRadiusFilterLimit,
+} from './Map/serverClusterRenderData'
 
 type ReactLeafletNS = typeof import('react-leaflet')
 
@@ -265,7 +269,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
     const hasValidCenter = CoordinateConverter.isValid(center)
     const hasValidRadius =
       Number.isFinite(radiusInMeters as any) && !!radiusInMeters && (radiusInMeters as number) > 0
-    const guardRadius = hasValidCenter && hasValidRadius ? (radiusInMeters as number) * 2 : null
+    const guardRadius = hasValidCenter && hasValidRadius
+      ? getRadiusFilterLimit(radiusInMeters as number)
+      : null
 
     return travelData.filter((p) => {
       try {
@@ -320,14 +326,29 @@ const MapPageComponent: React.FC<Props> = (props) => {
     () => buildServerClusterRenderData(serverClusterQuery.data),
     [serverClusterQuery.data],
   )
+  const radiusFilteredServerClusterRenderData = useMemo(() => {
+    const center = filterCenter ?? coordinatesLatLng
+    return mode === 'radius'
+      ? filterServerClusterRenderDataByRadius(serverClusterRenderData, center, radiusInMeters)
+      : serverClusterRenderData
+    // filterCenter.lat/lng used instead of filterCenter object to avoid recompute on identity churn
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    coordinatesLatLng,
+    filterCenter?.lat,
+    filterCenter?.lng,
+    mode,
+    radiusInMeters,
+    serverClusterRenderData,
+  ])
   const shouldUseServerClusterData =
-    mode === 'radius' && !serverClusterQuery.isError && serverClusterRenderData.hasServerData
-  const renderedMarkers = shouldUseServerClusterData && serverClusterRenderData.markers.length > 0
-    ? serverClusterRenderData.markers
+    mode === 'radius' && !serverClusterQuery.isError && radiusFilteredServerClusterRenderData.hasServerData
+  const renderedMarkers = shouldUseServerClusterData && radiusFilteredServerClusterRenderData.markers.length > 0
+    ? radiusFilteredServerClusterRenderData.markers
     : markers
   const renderedServerClusters =
-    shouldUseServerClusterData && serverClusterRenderData.clusters.length > 0
-      ? serverClusterRenderData.clusters
+    shouldUseServerClusterData && radiusFilteredServerClusterRenderData.clusters.length > 0
+      ? radiusFilteredServerClusterRenderData.clusters
       : []
 
   const handleMarkerZoom = useCallback(

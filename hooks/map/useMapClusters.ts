@@ -86,6 +86,16 @@ export interface UseMapClustersResult {
 export function useMapClusters(params: UseMapClustersParams): UseMapClustersResult {
   const { bbox, zoom, filters, isFocused = true, enabled = true, debounceMs = 350 } = params;
   const filterCategory = filters?.category;
+  const filterLat = Number(filters?.lat);
+  const filterLng = Number(filters?.lng);
+  const filterRadius = Number(filters?.radius);
+  const hasRadiusFilter =
+    Number.isFinite(filterLat) &&
+    Math.abs(filterLat) <= 90 &&
+    Number.isFinite(filterLng) &&
+    Math.abs(filterLng) <= 180 &&
+    Number.isFinite(filterRadius) &&
+    filterRadius > 0;
 
   const roundedZoom = Number.isFinite(zoom) ? Math.round(zoom) : NaN;
 
@@ -101,10 +111,13 @@ export function useMapClusters(params: UseMapClustersParams): UseMapClustersResu
     () => (Array.isArray(filterCategory) ? filterCategory.join(',') : ''),
     [filterCategory],
   );
+  const radiusSignature = hasRadiusFilter
+    ? `${Math.round(filterLat * 1000) / 1000},${Math.round(filterLng * 1000) / 1000},${filterRadius}`
+    : '';
 
   const debounceInput = useMemo(
-    () => `${bboxSignature}|${roundedZoom}|${queryText}|${categorySignature}`,
-    [bboxSignature, roundedZoom, queryText, categorySignature],
+    () => `${bboxSignature}|${roundedZoom}|${queryText}|${categorySignature}|${radiusSignature}`,
+    [bboxSignature, roundedZoom, queryText, categorySignature, radiusSignature],
   );
   const debouncedInput = useDebouncedValue(debounceInput, debounceMs);
   const isDebouncing = debouncedInput !== debounceInput;
@@ -112,8 +125,14 @@ export function useMapClusters(params: UseMapClustersParams): UseMapClustersResu
   const isEnabled = enabled && isFocused && bboxSignature !== '' && Number.isFinite(roundedZoom);
 
   const queryKeyParams = useMemo(
-    () => ({ bbox: bboxSignature, zoom: roundedZoom, q: queryText, category: categorySignature }),
-    [bboxSignature, roundedZoom, queryText, categorySignature],
+    () => ({
+      bbox: bboxSignature,
+      zoom: roundedZoom,
+      q: queryText,
+      category: categorySignature,
+      radius: radiusSignature,
+    }),
+    [bboxSignature, roundedZoom, queryText, categorySignature, radiusSignature],
   );
 
   const query = useQuery<MapClustersResult>({
@@ -124,7 +143,11 @@ export function useMapClusters(params: UseMapClustersParams): UseMapClustersResu
       return fetchMapClusters(
         roundBBox(bbox),
         roundedZoom,
-        { query: queryText || undefined, category: filterCategory },
+        {
+          query: queryText || undefined,
+          category: filterCategory,
+          ...(hasRadiusFilter ? { lat: filterLat, lng: filterLng, radius: filterRadius } : {}),
+        },
         { signal },
       );
     },

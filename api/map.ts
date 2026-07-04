@@ -523,6 +523,12 @@ export interface MapClustersFilters {
   query?: string;
   /** Category ids, maps to ?category=<csv> */
   category?: Array<number | string>;
+  /** Radius-mode anchor latitude, maps to ?lat= */
+  lat?: number | string;
+  /** Radius-mode anchor longitude, maps to ?lng= */
+  lng?: number | string;
+  /** Radius in kilometers, maps to ?radius= */
+  radius?: number | string;
 }
 
 const EMPTY_CLUSTERS_RESULT: MapClustersResult = {
@@ -643,6 +649,13 @@ export const fetchMapClusters = async (
 
     const categoryIds = normalizeNumericArray(filters?.category ?? []);
     if (categoryIds.length > 0) params.set('category', categoryIds.join(','));
+
+    const lat = Number(filters?.lat);
+    const lng = Number(filters?.lng);
+    const radius = Number(filters?.radius);
+    if (Number.isFinite(lat) && Math.abs(lat) <= 90) params.set('lat', String(lat));
+    if (Number.isFinite(lng) && Math.abs(lng) <= 180) params.set('lng', String(lng));
+    if (Number.isFinite(radius) && radius > 0) params.set('radius', String(radius));
 
     const url = `${GET_MAP_CLUSTERS}?${params.toString()}`;
     const res = await fetchWithTransientRetry(url, { signal: options?.signal }, LONG_TIMEOUT, 1);

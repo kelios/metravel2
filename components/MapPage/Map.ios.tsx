@@ -9,7 +9,10 @@ import { openExternalUrl } from '@/utils/externalLinks';
 import { resolveInternalTravelRoute } from '@/utils/relatedTravel';
 import { useMapClusters } from '@/hooks/map/useMapClusters';
 import type { MapClusterBBox, MapClustersFilters } from '@/api/map';
-import { buildServerClusterRenderData } from './Map/serverClusterRenderData';
+import {
+  buildServerClusterRenderData,
+  filterServerClusterRenderDataByRadius,
+} from './Map/serverClusterRenderData';
 import {
   getActiveOverlayLayers,
   getThemedNativeBaseTileUrl,
@@ -253,15 +256,35 @@ const Map: React.FC<TravelProps> = ({
     () => buildServerClusterRenderData(serverClusterQuery.data),
     [serverClusterQuery.data],
   );
+  const radiusFilterCenter = useMemo(() => {
+    const lat = Number(mapClusterFilters?.lat);
+    const lng = Number(mapClusterFilters?.lng);
+    if (Number.isFinite(lat) && Math.abs(lat) <= 90 && Number.isFinite(lng) && Math.abs(lng) <= 180) {
+      return { lat, lng };
+    }
+    return { lat: centerLat, lng: centerLng };
+  }, [centerLat, centerLng, mapClusterFilters?.lat, mapClusterFilters?.lng]);
+  const radiusMeters = useMemo(() => {
+    const radiusKm = Number(mapClusterFilters?.radius);
+    return Number.isFinite(radiusKm) && radiusKm > 0 ? radiusKm * 1000 : null;
+  }, [mapClusterFilters?.radius]);
+  const radiusFilteredServerClusterRenderData = useMemo(
+    () => filterServerClusterRenderDataByRadius(
+      serverClusterRenderData,
+      radiusFilterCenter,
+      radiusMeters,
+    ),
+    [radiusFilterCenter, radiusMeters, serverClusterRenderData],
+  );
   const shouldUseServerClusterData =
-    mode === 'radius' && !serverClusterQuery.isError && serverClusterRenderData.hasServerData;
+    mode === 'radius' && !serverClusterQuery.isError && radiusFilteredServerClusterRenderData.hasServerData;
   const renderedNativePoints =
-    shouldUseServerClusterData && serverClusterRenderData.markers.length > 0
-      ? serverClusterRenderData.markers
+    shouldUseServerClusterData && radiusFilteredServerClusterRenderData.markers.length > 0
+      ? radiusFilteredServerClusterRenderData.markers
       : travelAddress;
   const renderedNativeClusters = useMemo(
-    () => (shouldUseServerClusterData ? serverClusterRenderData.clusters : []),
-    [serverClusterRenderData.clusters, shouldUseServerClusterData],
+    () => (shouldUseServerClusterData ? radiusFilteredServerClusterRenderData.clusters : []),
+    [radiusFilteredServerClusterRenderData.clusters, shouldUseServerClusterData],
   );
   const renderedNativePointsRef = useRef(renderedNativePoints);
   renderedNativePointsRef.current = renderedNativePoints;

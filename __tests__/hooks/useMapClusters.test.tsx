@@ -60,6 +60,24 @@ describe('useMapClusters', () => {
     expect(bboxArg.south).toBeCloseTo(53.5)
   })
 
+  it('passes radius anchor filters to the cluster endpoint', async () => {
+    renderHook(
+      () =>
+        useMapClusters({
+          bbox: BBOX,
+          zoom: 9,
+          filters: { lat: 53.9, lng: 27.56, radius: 10 },
+          debounceMs: 0,
+        }),
+      { wrapper: makeWrapper() },
+    )
+
+    await waitFor(() => expect(mockFetchMapClusters).toHaveBeenCalled())
+    expect(mockFetchMapClusters.mock.calls[0]?.[2]).toEqual(
+      expect.objectContaining({ lat: 53.9, lng: 27.56, radius: 10 }),
+    )
+  })
+
   it('does not fetch when bbox is null (fallback to local clustering)', async () => {
     renderHook(() => useMapClusters({ bbox: null, zoom: 9, debounceMs: 0 }), {
       wrapper: makeWrapper(),

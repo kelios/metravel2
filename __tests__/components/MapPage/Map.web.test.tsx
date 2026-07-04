@@ -971,6 +971,43 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       expect(circleProps.radius).toBe(10000)
     })
 
+    it('does not render local fallback markers outside the selected radius', async () => {
+      const travel = {
+        data: [
+          {
+            id: 1,
+            coord: '53.9,27.5667',
+            address: 'Inside radius',
+            travelImageThumbUrl: 'thumb.jpg',
+            categoryName: 'Test',
+          },
+          {
+            id: 2,
+            coord: '54.04,27.5667',
+            address: 'Outside radius but inside old doubled guard',
+            travelImageThumbUrl: 'thumb.jpg',
+            categoryName: 'Test',
+          },
+        ],
+      }
+
+      renderWithProviders(
+        <MapPageComponent
+          {...defaultProps}
+          mode="radius"
+          radius="10"
+          travel={travel as any}
+        />
+      )
+
+      await act(async () => {})
+
+      expect(mockMarkerClusterGroupProps).toHaveBeenCalled()
+      const renderedPoints = mockMarkerClusterGroupProps.mock.calls.at(-1)?.[0]?.points ?? []
+      expect(renderedPoints).toHaveLength(1)
+      expect(renderedPoints[0]).toEqual(expect.objectContaining({ address: 'Inside radius' }))
+    })
+
     it('renders travel markers when travel data is provided (does not crash)', async () => {
       const travel = {
         data: [
@@ -1091,6 +1128,53 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         })
       )
       expect(mockMarkerClusterGroupProps).not.toHaveBeenCalled()
+    })
+
+    it('filters backend clusters by selected radius before rendering', async () => {
+      mockMapClustersResult = {
+        ...mockMapClustersResult,
+        data: {
+          clusters: [
+            {
+              id: 'inside-cluster',
+              center: { lat: 53.9, lng: 27.56 },
+              count: 5,
+              bounds: { south: 53.89, west: 27.55, north: 53.91, east: 27.57 },
+              previewItems: [],
+            },
+            {
+              id: 'outside-cluster',
+              center: { lat: 54.04, lng: 27.56 },
+              count: 7,
+              bounds: { south: 54.03, west: 27.55, north: 54.05, east: 27.57 },
+              previewItems: [],
+            },
+          ],
+          markers: [],
+          totalCount: 12,
+          source: 'server',
+          generatedAt: '2026-07-04T00:00:00Z',
+        },
+      }
+
+      renderWithProviders(
+        <MapPageComponent
+          {...defaultProps}
+          mode="radius"
+          radius="10"
+          travel={{
+            data: [{ id: 1, coord: '53.9,27.5667', address: 'Fallback Address' }],
+          } as any}
+          mapClusterFilters={{ lat: 53.9, lng: 27.5667, radius: 10 }}
+        />
+      )
+
+      await act(async () => {})
+
+      expect(mockClusterLayerProps).toHaveBeenCalled()
+      const renderedClusters = mockClusterLayerProps.mock.calls.at(-1)?.[0]?.clusters ?? []
+      expect(renderedClusters).toHaveLength(1)
+      expect(renderedClusters[0]).toEqual(expect.objectContaining({ key: 'inside-cluster' }))
     })
 
     it('falls back to local MarkerClusterGroup when backend clusters fail', async () => {
