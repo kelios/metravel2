@@ -97,7 +97,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
     ? undefined
     : Math.max(
         180,
-        Math.min(Math.round(viewportHeight * 0.46), nativeSheetMaxHeight - NATIVE_CONTENT_RESERVE),
+        Math.min(Math.round(viewportHeight * 0.52), nativeSheetMaxHeight - NATIVE_CONTENT_RESERVE),
       )
 
   const PopupComponent = useMemo(
