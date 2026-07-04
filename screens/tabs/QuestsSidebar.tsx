@@ -54,6 +54,11 @@ export default function QuestsSidebar({
 }: QuestsSidebarProps) {
     const { isMobile } = useResponsive();
     const iconSize = isMobile ? 16 : 18;
+    const hasCountryGroups = citiesByCountry.length > 0;
+    const isNearbySelected = selectedCityId === nearbyId;
+    const mapActionActive = viewMode === 'map';
+    const mapActionLabel = viewMode === 'map' ? 'Показать квесты списком' : 'Показать квесты на карте';
+    const toggleAllLabel = areAllCountryGroupsCollapsed ? 'Развернуть все страны' : 'Свернуть все страны';
 
     return (
         <View style={styles.sidebar}>
@@ -78,18 +83,71 @@ export default function QuestsSidebar({
                 <View style={styles.sidebarActions}>
                     <Pressable
                         style={[
-                            styles.actionBtn,
-                            viewMode === 'map' && styles.actionBtnSecondary,
+                            isMobile ? styles.sidebarActionIconBtn : styles.actionBtn,
+                            !isMobile && mapActionActive && styles.actionBtnSecondary,
+                            isMobile && mapActionActive && styles.sidebarActionIconBtnActive,
                         ]}
                         accessibilityRole="button"
-                        accessibilityLabel={viewMode === 'map' ? 'Показать квесты списком' : 'Показать квесты на карте'}
+                        accessibilityLabel={mapActionLabel}
+                        accessibilityState={{ selected: mapActionActive }}
                         onPress={() => onSetViewMode(viewMode === 'map' ? 'list' : 'map')}
+                        testID="quests-sidebar-toggle-view-mode"
+                        {...(isMobile ? ({ title: mapActionLabel } as any) : ({} as any))}
                     >
-                        <Feather name={viewMode === 'map' ? 'list' : 'map'} size={16} color={viewMode === 'map' ? colors.text : colors.textOnPrimary} />
-                        <Text style={[styles.actionBtnText, viewMode === 'map' && styles.actionBtnTextSecondary]}>
-                            {viewMode === 'map' ? 'Показать списком' : 'Показать на карте'}
-                        </Text>
+                        <Feather
+                            name={viewMode === 'map' ? 'list' : 'map'}
+                            size={isMobile ? 18 : 16}
+                            color={isMobile
+                                ? (mapActionActive ? colors.textOnPrimary : colors.text)
+                                : (mapActionActive ? colors.text : colors.textOnPrimary)}
+                        />
+                        {!isMobile && (
+                            <Text style={[styles.actionBtnText, mapActionActive && styles.actionBtnTextSecondary]}>
+                                {viewMode === 'map' ? 'Показать списком' : 'Показать на карте'}
+                            </Text>
+                        )}
                     </Pressable>
+                    {isMobile && (
+                        <>
+                            <Pressable
+                                style={[
+                                    styles.sidebarActionIconBtn,
+                                    isNearbySelected && styles.sidebarActionIconBtnActive,
+                                ]}
+                                onPress={() => onSelectCity(nearbyId)}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Рядом со мной, ${pluralizeQuest(cityQuestCountById[nearbyId] || 0)}`}
+                                accessibilityState={{ selected: isNearbySelected }}
+                                testID="quests-sidebar-nearby-button"
+                                {...({ title: 'Рядом со мной' } as any)}
+                            >
+                                <Feather
+                                    name="navigation"
+                                    size={18}
+                                    color={isNearbySelected ? colors.textOnPrimary : colors.text}
+                                />
+                            </Pressable>
+                            <Pressable
+                                style={[
+                                    styles.sidebarActionIconBtn,
+                                    !hasCountryGroups && styles.sidebarActionIconBtnDisabled,
+                                ]}
+                                onPress={onToggleAllCountryGroups}
+                                disabled={!hasCountryGroups}
+                                accessibilityRole="button"
+                                accessibilityLabel={toggleAllLabel}
+                                accessibilityState={{ expanded: !areAllCountryGroupsCollapsed, disabled: !hasCountryGroups }}
+                                testID="quests-sidebar-toggle-all-countries"
+                                {...({ title: toggleAllLabel } as any)}
+                            >
+                                <Feather
+                                    name={areAllCountryGroupsCollapsed ? 'chevrons-down' : 'chevrons-up'}
+                                    size={18}
+                                    color={colors.text}
+                                />
+                            </Pressable>
+                        </>
+                    )}
                 </View>
             </View>
 
@@ -98,33 +156,35 @@ export default function QuestsSidebar({
                 contentContainerStyle={{ paddingBottom: spacingMd }}
                 showsVerticalScrollIndicator
             >
-                <View style={styles.cityListSection}>
-                    <Text style={styles.cityListLabel}>Выбор местоположения</Text>
-                    <Pressable
-                        onPress={() => onSelectCity(nearbyId)}
-                        style={[styles.cityItem, selectedCityId === nearbyId && styles.cityItemActive]}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Рядом, ${pluralizeQuest(cityQuestCountById[nearbyId] || 0)}`}
-                        accessibilityState={{ selected: selectedCityId === nearbyId }}
-                    >
-                        <View style={styles.cityItemLeft}>
-                            <View style={[styles.cityItemIcon, selectedCityId === nearbyId && styles.cityItemIconActive]}>
-                                <Feather name="navigation" size={iconSize} color={selectedCityId === nearbyId ? colors.textOnPrimary : colors.textMuted} />
+                {!isMobile && (
+                    <View style={styles.cityListSection}>
+                        <Text style={styles.cityListLabel}>Выбор местоположения</Text>
+                        <Pressable
+                            onPress={() => onSelectCity(nearbyId)}
+                            style={[styles.cityItem, isNearbySelected && styles.cityItemActive]}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Рядом, ${pluralizeQuest(cityQuestCountById[nearbyId] || 0)}`}
+                            accessibilityState={{ selected: isNearbySelected }}
+                        >
+                            <View style={styles.cityItemLeft}>
+                                <View style={[styles.cityItemIcon, isNearbySelected && styles.cityItemIconActive]}>
+                                    <Feather name="navigation" size={iconSize} color={isNearbySelected ? colors.textOnPrimary : colors.textMuted} />
+                                </View>
+                                <Text style={[styles.cityItemText, isNearbySelected && styles.cityItemTextActive]}>
+                                    Рядом со мной
+                                </Text>
                             </View>
-                            <Text style={[styles.cityItemText, selectedCityId === nearbyId && styles.cityItemTextActive]}>
-                                Рядом со мной
-                            </Text>
-                        </View>
-                    </Pressable>
-                </View>
+                        </Pressable>
+                    </View>
+                )}
 
-                {citiesByCountry.length > 0 && (
+                {!isMobile && hasCountryGroups && (
                     <View style={styles.countryToolsSection}>
                         <Pressable
                             onPress={onToggleAllCountryGroups}
                             style={styles.collapseAllBtn}
                             accessibilityRole="button"
-                            accessibilityLabel={areAllCountryGroupsCollapsed ? 'Развернуть все страны' : 'Свернуть все страны'}
+                            accessibilityLabel={toggleAllLabel}
                         >
                             <Feather
                                 name={areAllCountryGroupsCollapsed ? 'chevrons-down' : 'chevrons-up'}

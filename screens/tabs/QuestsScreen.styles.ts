@@ -134,6 +134,29 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             gap: spacing.sm,
             marginTop: isMobileW ? spacing.sm : spacing.md,
         },
+        sidebarActionIconBtn: {
+            width: DESIGN_TOKENS.touchTarget.minWidth,
+            height: DESIGN_TOKENS.touchTarget.minHeight,
+            borderRadius: CONTROL_RADIUS,
+            backgroundColor: colors.backgroundSecondary,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            alignItems: 'center',
+            justifyContent: 'center',
+            ...Platform.select({
+                web: {
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease',
+                } as any,
+            }),
+        },
+        sidebarActionIconBtnActive: {
+            backgroundColor: colors.brand,
+            borderColor: colors.brand,
+        },
+        sidebarActionIconBtnDisabled: {
+            opacity: 0.5,
+        },
         actionBtn: {
             flexDirection: 'row',
             gap: spacing.xs,

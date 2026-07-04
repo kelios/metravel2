@@ -312,6 +312,11 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
         ? {}
         : {
             ...(require('@expo/vector-icons/Feather') as any).font,
+            // MapIcon рисует транспортные режимы маршрута (авто/пешком/вело) глифами
+            // MaterialCommunityIcons. Без предзагрузки @expo/vector-icons тянет .ttf лениво
+            // при открытии панели маршрута — на нестабильном dev-Metro это валит
+            // непойманный промис (ExpoAsset.downloadAsync rejected). Грузим шрифт на старте.
+            ...(require('@expo/vector-icons/MaterialCommunityIcons') as any).font,
           }
     );
 

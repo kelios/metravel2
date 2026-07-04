@@ -62,6 +62,7 @@ const QUEST_COVERS = [
   { quest_id: 'kutaisi-golden-age', assetsDir: 'kutaisiGoldenAge', cover: 'cover.png' },
   { quest_id: 'antalya-kaleici', assetsDir: 'antalyaKaleici', cover: 'cover.png' },
   { quest_id: 'istanbul-galata', assetsDir: 'istanbulGalata', cover: 'cover.png' },
+  { quest_id: 'vienna-imperial-secrets', assetsDir: 'viennaSecrets', cover: 'cover.jpg' },
 ];
 
 function getMime(filePath) {

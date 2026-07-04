@@ -528,7 +528,7 @@ export default function TravelStatusButton({
     const compactIcon = (
       <Feather
         name={currentOption?.icon ?? 'plus-circle'}
-        size={18}
+        size={20}
         color={current ? colors.primary : 'rgba(255, 255, 255, 0.85)'}
       />
     )

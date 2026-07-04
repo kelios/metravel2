@@ -93,7 +93,7 @@ export default function RelatedTravelActionStack({
         url={travelUrl}
         country={travelCountry}
         city={travelCity}
-        size={18}
+        size={20}
       />
       <TravelStatusButton
         travelId={resolvedTravelId}
@@ -105,7 +105,11 @@ export default function RelatedTravelActionStack({
         travelYear={relatedTravel?.year}
         travelMonthName={relatedTravel?.monthName}
         compact={variant !== 'inline'}
-        idleLabel="Был / Хочу / Планирую"
+        // Overlay (hero-corner) variant: no idle text — a plain icon circle like ♥
+        // so it never stretches into a wide «Был / Хочу / Планирую» pill over the
+        // photo. A selected status still shows its short label. The full inline
+        // variant keeps the descriptive idle label.
+        idleLabel={variant === 'inline' ? 'Был / Хочу / Планирую' : undefined}
       />
     </View>
   )
@@ -114,6 +118,10 @@ export default function RelatedTravelActionStack({
 const styles = StyleSheet.create({
   stack: {
     flexDirection: 'column',
+    // Each button sizes to its own content (compact icon circle); without this the
+    // column's default `stretch` widens ♥ to match the status button, so both
+    // render as wide pills over the photo instead of icons.
+    alignItems: 'flex-start',
     gap: 6,
   },
 })
