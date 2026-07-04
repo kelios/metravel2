@@ -60,6 +60,10 @@ const PHONE_COMPACT_LAYOUT_MAX_WIDTH = 430
 const PHONE_COMPACT_ACTIONS_MAX_WIDTH = 520
 const PHONE_STACKED_TOOLBAR_MAX_WIDTH = 360
 const WEB_MOBILE_BOTTOM_DOCK_INSET = 104
+// The mobile-web selected-place card must sit flush on top of the real web dock
+// (BottomDock MOBILE_DOCK_HEIGHT_WEB === LAYOUT.tabBarHeight === 56). Using the larger
+// WEB_MOBILE_BOTTOM_DOCK_INSET (104) here left a ~48px gap above the footer.
+const WEB_MOBILE_SELECTED_PLACE_INSET = LAYOUT?.tabBarHeight ?? 56
 const WEB_MOBILE_CONSENT_BANNER_INSET = 112
 const NATIVE_MOBILE_BOTTOM_DOCK_INSET = (LAYOUT?.tabBarHeight ?? 56) + 16
 
@@ -391,7 +395,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
     : NATIVE_MOBILE_BOTTOM_DOCK_INSET
   const selectedPlaceBottomInset = IS_WEB
-    ? WEB_MOBILE_BOTTOM_DOCK_INSET +
+    ? WEB_MOBILE_SELECTED_PLACE_INSET +
       (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
     : bottomSheetInset
   const searchAreaButtonBottom = getSearchAreaButtonBottom(

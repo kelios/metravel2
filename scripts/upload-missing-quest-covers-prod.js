@@ -63,6 +63,12 @@ const QUEST_COVERS = [
   { quest_id: 'antalya-kaleici', assetsDir: 'antalyaKaleici', cover: 'cover.png' },
   { quest_id: 'istanbul-galata', assetsDir: 'istanbulGalata', cover: 'cover.png' },
   { quest_id: 'vienna-imperial-secrets', assetsDir: 'viennaSecrets', cover: 'cover.jpg' },
+  { quest_id: 'paris-point-zero', assetsDir: 'parisPointZero', cover: 'cover.png' },
+  { quest_id: 'amsterdam-on-piles', assetsDir: 'amsterdamOnPiles', cover: 'cover.png' },
+  { quest_id: 'berlin-wall-line', assetsDir: 'berlinWallLine', cover: 'cover.png' },
+  { quest_id: 'brest-lantern', assetsDir: 'brestLantern', cover: 'cover.png' },
+  { quest_id: 'vitebsk-avangard', assetsDir: 'vitebskAvangard', cover: 'cover.png' },
+  { quest_id: 'grodno-gorodnitsa', assetsDir: 'grodnoGorodnitsa', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {

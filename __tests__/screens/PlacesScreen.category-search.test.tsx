@@ -4,6 +4,7 @@ import { createQueryWrapper } from '../helpers/testQueryClient'
 import PlacesScreen from '@/screens/tabs/PlacesScreen'
 import { fetchPlacesCatalog } from '@/api/places'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
+import type { PlacesCatalogPage } from '@/utils/placesCatalog'
 
 const mockPush = jest.fn()
 const mockSetParams = jest.fn()
@@ -58,45 +59,69 @@ jest.mock('@/ui/paper', () => {
 
 const mockedFetchPlacesCatalog = fetchPlacesCatalog as jest.MockedFunction<typeof fetchPlacesCatalog>
 
-const placesFixture = [
-  {
-    id: 'place-1',
-    name: 'Парковка у озера',
-    title: 'Парковка у озера',
-    address: 'Минск, Беларусь',
-    categoryName: 'Парковка',
-    category: 'Парковка',
-    countryName: 'Беларусь',
-    country: 'Беларусь',
-    coord: '53.9,27.56',
-    latNumber: 53.9,
-    lngNumber: 27.56,
-    urlTravel: '/travels/parking',
-    searchText: 'парковка у озера минск беларусь парковка беларусь',
-  },
-  {
-    id: 'place-2',
-    name: 'Старый замок',
-    title: 'Старый замок',
-    address: 'Гродно, Беларусь',
-    categoryName: 'Замок',
-    category: 'Замок',
-    countryName: 'Беларусь',
-    country: 'Беларусь',
-    coord: '53.68,23.83',
-    latNumber: 53.68,
-    lngNumber: 23.83,
-    urlTravel: '/travels/castle',
-    searchText: 'старый замок гродно беларусь замок беларусь',
-  },
-]
+const makePlace = (over: Partial<PlacesCatalogPage['places'][number]>): PlacesCatalogPage['places'][number] => ({
+  id: 'place-x',
+  title: 'Место',
+  category: 'Замок',
+  categoryId: 43,
+  country: 'Беларусь',
+  countryCode: 'by',
+  latNumber: 53.9,
+  lngNumber: 27.56,
+  coord: '53.9,27.56',
+  lat: '53.9',
+  lng: '27.56',
+  address: 'Минск, Беларусь',
+  categoryName: 'Замок',
+  travelImageThumbUrl: '',
+  urlTravel: '/travels/x',
+  searchText: 'место',
+  ...over,
+})
+
+const catalogPage: PlacesCatalogPage = {
+  count: 2,
+  places: [
+    makePlace({
+      id: 'place-1',
+      title: 'Парковка у озера',
+      category: 'Парковка',
+      categoryName: 'Парковка',
+      address: 'Минск, Беларусь',
+      coord: '53.9,27.56',
+      lat: '53.9',
+      lng: '27.56',
+      latNumber: 53.9,
+      lngNumber: 27.56,
+      urlTravel: '/travels/parking',
+    }),
+    makePlace({
+      id: 'place-2',
+      title: 'Старый замок',
+      category: 'Замок',
+      categoryName: 'Замок',
+      address: 'Гродно, Беларусь',
+      coord: '53.68,23.83',
+      lat: '53.68',
+      lng: '23.83',
+      latNumber: 53.68,
+      lngNumber: 23.83,
+      urlTravel: '/travels/castle',
+    }),
+  ],
+  categoryFacets: [
+    { id: 10, name: 'Парковка', count: 1 },
+    { id: 43, name: 'Замок', count: 1 },
+  ],
+  countryFacets: [{ id: null, name: 'Беларусь', count: 2 }],
+}
 
 describe('PlacesScreen category search', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockParams = { category: '' }
     ;(Platform as any).OS = 'web'
-    mockedFetchPlacesCatalog.mockResolvedValue(placesFixture as any)
+    mockedFetchPlacesCatalog.mockResolvedValue(catalogPage)
   })
 
   it('filters manual category chips and keeps selection working', async () => {

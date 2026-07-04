@@ -191,6 +191,60 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         actionBtnTextSecondary: {
             color: colors.text,
         },
+        // Desktop-web hover-раскрывающаяся пилюля действия: по умолчанию квадратная
+        // icon-only, при наведении подпись плавно выезжает справа от иконки.
+        sidebarActionPill: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: DESIGN_TOKENS.touchTarget.minHeight,
+            minWidth: DESIGN_TOKENS.touchTarget.minHeight,
+            paddingHorizontal: spacing.sm,
+            borderRadius: CONTROL_RADIUS,
+            backgroundColor: colors.backgroundSecondary,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            ...Platform.select({
+                web: {
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease',
+                } as any,
+            }),
+        },
+        sidebarActionPillActive: {
+            backgroundColor: colors.brand,
+            borderColor: colors.brand,
+        },
+        sidebarActionPillLabelWrap: {
+            overflow: 'hidden',
+            ...Platform.select({
+                web: {
+                    maxWidth: 0,
+                    opacity: 0,
+                    transition: 'max-width 0.25s ease, opacity 0.2s ease, margin-left 0.25s ease',
+                } as any,
+            }),
+        },
+        sidebarActionPillLabelWrapOpen: {
+            ...Platform.select({
+                web: {
+                    maxWidth: 180,
+                    opacity: 1,
+                    marginLeft: spacing.xs,
+                } as any,
+            }),
+        },
+        sidebarActionPillLabel: {
+            color: colors.text,
+            fontWeight: '600',
+            fontSize: typography.sizes.sm,
+            ...Platform.select({
+                web: { whiteSpace: 'nowrap' } as any,
+            }),
+        },
+        sidebarActionPillLabelActive: {
+            color: colors.textOnPrimary,
+        },
 
         /* ---- City List (Premium, spacious) ---- */
         cityListSection: {

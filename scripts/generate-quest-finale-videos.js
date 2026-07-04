@@ -82,6 +82,12 @@ const QUESTS = [
     { questId: 'kutaisi-golden-age', dir: 'kutaisiGoldenAge', city: 'Кутаиси', mood: 'city', finaleId: 45 },
     { questId: 'antalya-kaleici', dir: 'antalyaKaleici', city: 'Анталья', mood: 'city', finaleId: 46 },
     { questId: 'istanbul-galata', dir: 'istanbulGalata', city: 'Стамбул', mood: 'city', finaleId: 47 },
+    { questId: 'paris-point-zero', dir: 'parisPointZero', city: 'Париж', mood: 'city', finaleId: 48 },
+    { questId: 'amsterdam-on-piles', dir: 'amsterdamOnPiles', city: 'Амстердам', mood: 'city', finaleId: 49 },
+    { questId: 'berlin-wall-line', dir: 'berlinWallLine', city: 'Берлин', mood: 'epic', finaleId: 50 },
+    { questId: 'brest-lantern', dir: 'brestLantern', city: 'Брест', mood: 'city', finaleId: 51 },
+    { questId: 'vitebsk-avangard', dir: 'vitebskAvangard', city: 'Витебск', mood: 'city', finaleId: 52 },
+    { questId: 'grodno-gorodnitsa', dir: 'grodnoGorodnitsa', city: 'Гродно', mood: 'city', finaleId: 53 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

@@ -12,7 +12,6 @@ export type {
   MapMode,
   RouteSegment,
   RouteState,
-  MapPopupProps,
   MapClusterData,
   MapEventHandlers,
   MapCoreProps,
@@ -24,9 +23,7 @@ export {
   normalizePoint,
 } from './types';
 
-// C2.2: Shared popup
-export { default as MapPopup } from './MapPopup';
-export type { MapPopupConfig } from './MapPopup';
+// C2.2: Shared popup CSS (Leaflet popup chrome)
 export { getPopupCss } from './mapPopupStyles';
 
 // C2.3: Shared Leaflet lifecycle

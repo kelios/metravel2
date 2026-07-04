@@ -1,86 +1,84 @@
-import { normalizeCatalogPlaces } from '@/utils/placesCatalog'
-import type { TravelCoords } from '@/types/types'
+import { mapPlacesCatalogResponse, type RawPlacesCatalogResponse } from '@/utils/placesCatalog'
 
-const makePlace = (overrides: Partial<TravelCoords> = {}): TravelCoords => ({
-  address: 'Мирский замок, Мир, Беларусь',
-  categoryName: 'Замок',
-  coord: '53.4514,26.4728',
-  lat: '53.4514',
-  lng: '26.4728',
-  travelImageThumbUrl: '',
-  urlTravel: '/travels/mir',
+const rawItem = (overrides: Record<string, unknown> = {}) => ({
+  id: 1039,
+  title: 'Hrad Loket',
+  address: 'Hrad Loket, Loket, Чехия',
+  category: { id: 43, name: 'Замок' },
+  country: { code: 'cz', name: 'Чехия' },
+  coord: '50.1871828,12.7546903',
+  lat: 50.1871828,
+  lng: 12.7546903,
+  search_text: 'Hrad Loket Чехия Замок',
+  travel: { id: 158, slug: 'karlovy-vary', url: '/travels/karlovy-vary', title: 'Карловы Вары' },
+  image: {
+    thumb_url: 'https://metravel.by/address-image/1039/conversions/x-thumb_400_wp.webp',
+    landscape_url: null,
+  },
   ...overrides,
 })
 
-describe('placesCatalog', () => {
-  it('does not use coordinate-only labels as place titles', () => {
-    const [place] = normalizeCatalogPlaces([
-      makePlace({
-        address: '52.9654099, 29.7841898',
-        categoryName: 'Дворец',
-        lat: '52.9654099',
-        lng: '29.7841898',
-      }),
-    ])
+const rawResponse = (overrides: Partial<RawPlacesCatalogResponse> = {}): RawPlacesCatalogResponse => ({
+  results: [rawItem()],
+  count: 220,
+  facets: {
+    categories: [{ id: 43, name: 'Замок', count: 72 }],
+    countries: [{ code: 'cz', name: 'Чехия', count: 11 }],
+  },
+  ...overrides,
+})
 
-    expect(place.title).toBe('Дворец без названия')
+describe('mapPlacesCatalogResponse', () => {
+  it('maps the server catalog payload to CatalogPlace shape', () => {
+    const page = mapPlacesCatalogResponse(rawResponse())
+
+    expect(page.count).toBe(220)
+    expect(page.places).toHaveLength(1)
+
+    const [place] = page.places
+    expect(place.id).toBe('1039')
+    expect(place.title).toBe('Hrad Loket')
+    expect(place.category).toBe('Замок')
+    expect(place.categoryId).toBe(43)
+    expect(place.country).toBe('Чехия')
+    expect(place.countryCode).toBe('cz')
+    expect(place.latNumber).toBeCloseTo(50.1871828)
+    expect(place.lngNumber).toBeCloseTo(12.7546903)
+    expect(place.coord).toBe('50.1871828,12.7546903')
+    expect(place.urlTravel).toBe('/travels/karlovy-vary')
+    expect(place.travelImageThumbUrl).toContain('thumb_400_wp.webp')
+    expect(place.searchText).toBe('hrad loket чехия замок')
   })
 
-  it('does not use coordinate-pair names as place titles', () => {
-    const [place] = normalizeCatalogPlaces([
-      makePlace({
-        name: '52.9654099, 29.7841898',
-        address: '52.9654099, 29.7841898',
-        categoryName: 'Дворец',
-        lat: '52.9654099',
-        lng: '29.7841898',
-      } as Partial<TravelCoords>),
-    ])
+  it('reads facets from the response', () => {
+    const page = mapPlacesCatalogResponse(rawResponse())
 
-    expect(place.title).toBe('Дворец без названия')
+    expect(page.categoryFacets).toEqual([{ id: 43, name: 'Замок', count: 72 }])
+    expect(page.countryFacets).toEqual([{ id: null, name: 'Чехия', count: 11 }])
   })
 
-  it('uses readable address parts after junk marker labels', () => {
-    const [place] = normalizeCatalogPlaces([
-      makePlace({
-        address: '№7, Башня замка, Смольяны, Беларусь',
-        categoryName: 'Руины замка',
-      }),
-    ])
-
-    expect(place.title).toBe('Башня замка, Смольяны')
+  it('skips items without resolvable coordinates', () => {
+    const page = mapPlacesCatalogResponse(
+      rawResponse({ results: [rawItem({ coord: null, lat: null, lng: null })] }),
+    )
+    expect(page.places).toHaveLength(0)
   })
 
-  it('drops street segments from address-derived titles', () => {
-    const [place] = normalizeCatalogPlaces([
-      makePlace({
-        address: 'Архірэйскі палац, улица Архиерейский Вал Канисского',
-        categoryName: 'Дворец',
-      }),
-    ])
-
-    expect(place.title).toBe('Архірэйскі палац')
+  it('falls back to results length when count is missing', () => {
+    const page = mapPlacesCatalogResponse(rawResponse({ count: undefined }))
+    expect(page.count).toBe(1)
   })
 
-  it('drops administrative-unit tails from address-derived titles', () => {
-    const [place] = normalizeCatalogPlaces([
-      makePlace({
-        address: 'Большое Ситно, Малоситнянский сельский Совет',
-        categoryName: 'Озеро',
+  it('upgrades http image urls to https for remote hosts', () => {
+    const page = mapPlacesCatalogResponse(
+      rawResponse({
+        results: [
+          rawItem({
+            image: { thumb_url: 'http://metravel.by/address-image/x.webp', landscape_url: null },
+          }),
+        ],
       }),
-    ])
-
-    expect(place.title).toBe('Большое Ситно')
-  })
-
-  it('prefers the locality when the address starts with a street', () => {
-    const [place] = normalizeCatalogPlaces([
-      makePlace({
-        address: 'улица Мира, Дятлово',
-        categoryName: 'Парк',
-      }),
-    ])
-
-    expect(place.title).toBe('Дятлово')
+    )
+    expect(page.places[0].travelImageThumbUrl).toBe('https://metravel.by/address-image/x.webp')
   })
 })

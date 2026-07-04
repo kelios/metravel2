@@ -246,7 +246,12 @@ const PlacePopupCard: React.FC<Props> = ({
   // reads «Сохранить/Сохранено», and a divider precedes the action row. The desktop
   // Leaflet popup (isBottomCardLayout === false) keeps its own inline layout untouched.
   const useBottomCardChrome = isBottomCardLayout;
-  const useNavSheet = useBottomCardChrome;
+  // Route the secondary navigation (Google/Apple/Organic/Waze/Яндекс/OSM) into the
+  // ActionListSheet on EVERY mobile surface — the native bottom card AND the mobile
+  // web fullscreen overlay — so mobile web matches the device (compact card, nav in a
+  // sheet) instead of an always-expanded inline grid. Desktop (Leaflet popup /
+  // popupSplit) keeps its inline toggle-expand grid untouched.
+  const useNavSheet = useBottomCardChrome || useFullscreenMobileOverlay;
 
   const toggleNav = useCallback(() => {
     if (useNavSheet) {
@@ -271,10 +276,10 @@ const PlacePopupCard: React.FC<Props> = ({
     [secondaryActions, shareInActionRow],
   );
   const showNavToggle = navActions.length > 0;
-  // Inline nav grid: web mobile-web sheet shows it always-expanded (isBottomCardLayout),
-  // desktop popup expands on toggle. Native routes nav into the sheet → never inline.
-  const showNavGrid =
-    navActions.length > 0 && !useNavSheet && (isBottomCardLayout || navExpanded);
+  // Inline nav grid is DESKTOP-ONLY now: the desktop Leaflet popup expands it on
+  // toggle. Every mobile surface (native bottom card + mobile web fullscreen overlay)
+  // has useNavSheet === true → nav opens in the ActionListSheet, never inline.
+  const showNavGrid = navActions.length > 0 && !useNavSheet && navExpanded;
 
   const navSheetActions = useMemo<ActionListSheetItem[]>(
     () =>
@@ -294,10 +299,10 @@ const PlacePopupCard: React.FC<Props> = ({
   useEffect(() => {
     setFullscreenVisible(false);
     setNavSheetVisible(false);
-    // Web mobile-web bottom card keeps the inline secondary navigation expanded;
-    // native uses the sheet, desktop popup keeps it collapsed.
-    setNavExpanded(isBottomCardLayout && !useNavSheet && navActions.length > 0);
-  }, [imageUrl, isBottomCardLayout, navActions.length, useNavSheet]);
+    // Nav starts collapsed everywhere: mobile surfaces open the ActionListSheet on
+    // tap (useNavSheet), the desktop popup expands the inline grid on the «Ещё» toggle.
+    setNavExpanded(false);
+  }, [imageUrl, navActions.length, useNavSheet]);
 
   const renderFallbackPrimaryAction =
     !suppressFallbackPrimaryAction &&

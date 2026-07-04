@@ -1,75 +1,87 @@
 import { fetchPlacesCatalog } from '@/api/places'
-import { fetchTravelsForMap } from '@/api/map'
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
 
-jest.mock('@/api/map', () => ({
-  fetchTravelsForMap: jest.fn(),
+jest.mock('@/utils/fetchWithTimeout', () => ({
+  fetchWithTimeout: jest.fn(),
 }))
 
-const mockedFetchTravelsForMap = fetchTravelsForMap as jest.MockedFunction<typeof fetchTravelsForMap>
+const mockedFetch = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>
 
-const pagePayload = (items: unknown[], total: number) => {
-  const payload: Record<string, unknown> = {}
-  items.forEach((item, index) => {
-    payload[index] = item
-  })
-  Object.defineProperty(payload, '__total', {
-    value: total,
-    enumerable: false,
-  })
-  return payload
+const catalogPayload = {
+  results: [
+    {
+      id: 1039,
+      title: 'Hrad Loket',
+      address: 'Hrad Loket, Loket, Чехия',
+      category: { id: 43, name: 'Замок' },
+      country: { code: 'cz', name: 'Чехия' },
+      coord: '50.1871828,12.7546903',
+      lat: 50.1871828,
+      lng: 12.7546903,
+      search_text: 'hrad loket чехия замок',
+      travel: { id: 158, slug: 's', url: '/travels/s', title: 'T' },
+      image: { thumb_url: 'https://metravel.by/address-image/x.webp', landscape_url: null },
+    },
+  ],
+  count: 220,
+  facets: {
+    categories: [{ id: 43, name: 'Замок', count: 72 }],
+    countries: [{ code: 'cz', name: 'Чехия', count: 11 }],
+  },
 }
 
-const makePlace = (id: number) => ({
-  id,
-  address: `Место ${id}, Беларусь`,
-  categoryName: 'Замок',
-  lat: String(53 + id / 1000),
-  lng: String(27 + id / 1000),
-  urlTravel: `/travels/place-${id}`,
-})
+const okResponse = (json: unknown) =>
+  ({ ok: true, status: 200, statusText: 'OK', text: async () => JSON.stringify(json) }) as unknown as Response
 
 describe('fetchPlacesCatalog', () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
 
-  it('loads every paginated catalog page when backend returns total count', async () => {
-    const firstPage = Array.from({ length: 1000 }, (_, index) => makePlace(index + 1))
-    const secondPage = [makePlace(1001), makePlace(1002)]
+  it('hits the places catalog endpoint with paging + filters and maps the payload', async () => {
+    mockedFetch.mockResolvedValueOnce(okResponse(catalogPayload))
 
-    mockedFetchTravelsForMap
-      .mockResolvedValueOnce(pagePayload(firstPage, 1002) as any)
-      .mockResolvedValueOnce(pagePayload(secondPage, 1002) as any)
+    const page = await fetchPlacesCatalog({
+      page: 2,
+      perPage: 20,
+      q: 'замок',
+      categories: ['Замок'],
+      country: 'cz',
+    })
 
-    const places = await fetchPlacesCatalog()
+    expect(mockedFetch).toHaveBeenCalledTimes(1)
+    const [url] = mockedFetch.mock.calls[0]
+    expect(url).toContain('/places/catalog/?')
+    expect(url).toContain('page=2')
+    expect(url).toContain('perPage=20')
+    expect(url).toContain('q=%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA')
+    expect(url).toContain('category=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA')
+    expect(url).toContain('country=cz')
 
-    expect(places).toHaveLength(1002)
-    expect(mockedFetchTravelsForMap).toHaveBeenCalledTimes(2)
-    expect(mockedFetchTravelsForMap).toHaveBeenNthCalledWith(
-      1,
-      0,
-      1000,
-      expect.objectContaining({ radius: 20000 }),
-      expect.objectContaining({ throwOnError: true }),
-    )
-    expect(mockedFetchTravelsForMap).toHaveBeenNthCalledWith(
-      2,
-      1,
-      1000,
-      expect.objectContaining({ radius: 20000 }),
-      expect.objectContaining({ throwOnError: true }),
-    )
+    expect(page.count).toBe(220)
+    expect(page.places[0].title).toBe('Hrad Loket')
+    expect(page.categoryFacets[0]).toEqual({ id: 43, name: 'Замок', count: 72 })
+    expect(page.countryFacets[0]).toEqual({ id: null, name: 'Чехия', count: 11 })
   })
 
-  it('keeps the single-request path for legacy unpaginated payloads', async () => {
-    mockedFetchTravelsForMap.mockResolvedValueOnce([
-      makePlace(1),
-      makePlace(2),
-    ] as any)
+  it('omits empty filter params from the request', async () => {
+    mockedFetch.mockResolvedValueOnce(okResponse(catalogPayload))
 
-    const places = await fetchPlacesCatalog()
+    await fetchPlacesCatalog({ page: 1, perPage: 20 })
 
-    expect(places).toHaveLength(2)
-    expect(mockedFetchTravelsForMap).toHaveBeenCalledTimes(1)
+    const [url] = mockedFetch.mock.calls[0]
+    expect(url).not.toContain('q=')
+    expect(url).not.toContain('category=')
+    expect(url).not.toContain('country=')
+  })
+
+  it('throws on non-ok responses so React Query can surface the error state', async () => {
+    mockedFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: 'Server Error',
+    } as unknown as Response)
+
+    await expect(fetchPlacesCatalog({ page: 1, perPage: 20 })).rejects.toThrow('HTTP 500')
   })
 })

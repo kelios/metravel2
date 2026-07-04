@@ -1,87 +1,69 @@
-import { fetchTravelsForMap } from '@/api/map'
-import type { TravelCoords, TravelsForMap } from '@/types/types'
-import { normalizeCatalogPlaces, type CatalogPlace } from '@/utils/placesCatalog'
+import { Platform } from 'react-native'
 
-const PLACES_CATALOG_PER_PAGE = 1000
-const PLACES_CATALOG_RADIUS_KM = 20000
-const PLACES_CATALOG_TIMEOUT_MS = 12000
-const PLACES_CATALOG_CENTER = {
-  lat: '53.9006',
-  lng: '27.5590',
+import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl'
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
+import { safeJsonParse } from '@/utils/safeJsonParse'
+import {
+  mapPlacesCatalogResponse,
+  type PlacesCatalogPage,
+  type RawPlacesCatalogResponse,
+} from '@/utils/placesCatalog'
+
+const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true'
+const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true'
+const rawApiUrl = resolveApiBaseUrl({
+  platformOS: Platform.OS,
+  envApiUrl: process.env.EXPO_PUBLIC_API_URL,
+  prodApiUrl: process.env.PROD_API_URL,
+  nodeEnv: process.env.NODE_ENV,
+  isE2E,
+  isLocalApi,
+  windowOrigin: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location?.origin : null,
+  windowHostname: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location?.hostname : null,
+})
+if (!rawApiUrl) {
+  throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.')
 }
 
-const rejectAfter = (ms: number): Promise<never> =>
-  new Promise((_, reject) => {
-    setTimeout(() => reject(new Error('Places catalog request timed out')), ms)
-  })
+const PLACES_CATALOG_URL = `${rawApiUrl}/places/catalog/`
+const PLACES_CATALOG_TIMEOUT_MS = 15000
 
-const toTravelCoordsArray = (value: TravelsForMap): TravelCoords[] => {
-  if (Array.isArray(value)) return value as unknown as TravelCoords[]
-  if (value && typeof value === 'object') {
-    return Object.values(value as Record<string, unknown>) as TravelCoords[]
+export type PlacesCatalogParams = {
+  page: number
+  perPage: number
+  q?: string
+  categories?: string[]
+  country?: string | null
+}
+
+const buildQuery = ({ page, perPage, q, categories, country }: PlacesCatalogParams): string => {
+  const params = new URLSearchParams()
+  params.set('page', String(Math.max(1, Math.floor(page))))
+  params.set('perPage', String(Math.max(1, Math.floor(perPage))))
+
+  const trimmedQuery = q?.trim()
+  if (trimmedQuery) params.set('q', trimmedQuery)
+
+  const normalizedCategories = (categories ?? [])
+    .map((item) => item.trim())
+    .filter(Boolean)
+  normalizedCategories.forEach((category) => params.append('category', category))
+
+  const trimmedCountry = country?.trim()
+  if (trimmedCountry) params.set('country', trimmedCountry)
+
+  return params.toString()
+}
+
+export const fetchPlacesCatalog = async (
+  params: PlacesCatalogParams,
+  signal?: AbortSignal,
+): Promise<PlacesCatalogPage> => {
+  const url = `${PLACES_CATALOG_URL}?${buildQuery(params)}`
+  const res = await fetchWithTimeout(url, { signal }, PLACES_CATALOG_TIMEOUT_MS)
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`)
   }
-  return []
-}
-
-const readTravelsForMapTotal = (value: TravelsForMap): number | null => {
-  if (!value || typeof value !== 'object') return null
-  const total = (value as Record<string, unknown>).__total
-  return typeof total === 'number' && Number.isFinite(total) ? total : null
-}
-
-const fetchPlacesCatalogPage = (
-  page: number,
-  signal: AbortSignal,
-): Promise<TravelsForMap> =>
-  fetchTravelsForMap(
-    page,
-    PLACES_CATALOG_PER_PAGE,
-    {
-      ...PLACES_CATALOG_CENTER,
-      radius: PLACES_CATALOG_RADIUS_KM,
-    },
-    { signal, throwOnError: true },
-  )
-
-export const fetchPlacesCatalog = async (signal?: AbortSignal): Promise<CatalogPlace[]> => {
-  const controller = new AbortController()
-  const abortFromParent = () => controller.abort()
-  const timeoutId = setTimeout(() => controller.abort(), PLACES_CATALOG_TIMEOUT_MS)
-
-  if (signal?.aborted) controller.abort()
-  signal?.addEventListener('abort', abortFromParent, { once: true })
-
-  try {
-    const places = await Promise.race([
-      (async () => {
-        const firstPayload = await fetchPlacesCatalogPage(0, controller.signal)
-        const allPlaces = toTravelCoordsArray(firstPayload)
-        const total = readTravelsForMapTotal(firstPayload)
-
-        if (total == null || allPlaces.length <= 0 || allPlaces.length >= total) {
-          return allPlaces
-        }
-
-        // Remaining pages are independent — fetch them in parallel instead of a
-        // serial waterfall so the full catalog is ready in one round-trip worth
-        // of latency rather than N.
-        const maxPages = Math.ceil(total / PLACES_CATALOG_PER_PAGE)
-        const restPages = await Promise.all(
-          Array.from({ length: maxPages - 1 }, (_, i) =>
-            fetchPlacesCatalogPage(i + 1, controller.signal),
-          ),
-        )
-        for (const payload of restPages) {
-          allPlaces.push(...toTravelCoordsArray(payload))
-        }
-
-        return allPlaces
-      })(),
-      rejectAfter(PLACES_CATALOG_TIMEOUT_MS),
-    ])
-    return normalizeCatalogPlaces(places)
-  } finally {
-    clearTimeout(timeoutId)
-    signal?.removeEventListener('abort', abortFromParent)
-  }
+  const payload = await safeJsonParse<RawPlacesCatalogResponse>(res, {})
+  return mapPlacesCatalogResponse(payload)
 }

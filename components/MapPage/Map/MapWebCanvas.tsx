@@ -264,8 +264,12 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
       key={mapInstanceKey}
       zoomControl={false}
       preferCanvas={false}
-      tap
-      tapTolerance={30}
+      // iOS Safari: Leaflet's legacy `tap` handler re-synthesizes clicks from
+      // touchstart/touchmove and fights native multi-touch, making pinch/pan janky.
+      // Disabling it (Leaflet's own iOS recommendation) restores smooth gestures;
+      // native click events still fire, so marker/popup taps keep working.
+      tap={false}
+      touchZoom
     >
       {typeof Pane === 'function' && mapInstance ? (
         <>

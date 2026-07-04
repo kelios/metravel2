@@ -12,6 +12,21 @@ description: >-
 
 ## Принципы (ОБЯЗАТЕЛЬНО)
 
+0a. **Автор — только Юля (`ignatieva_julia@tut.by`, user id 1).** Все статьи
+   ведутся от её имени. Перед созданием НОВОЙ статьи (`create-*-guide.js` или
+   `PUT /travels/upsert/` с `id:null`) взять её токен:
+   `METRAVEL_TOKEN=$(E2E_EMAIL=$E2E_EMAIL2 E2E_PASSWORD=$E2E_PASSWORD2 node scripts/get-quest-token.js)`
+   (аккаунт 2 в `.env.e2e` = Julia id 1). Дефолтный токен (`.secrets/metravel-token.json`,
+   `E2E_EMAIL`) = Сергей id 104 — под ним статьи создавать НЕЛЬЗЯ. Автор бэк ставит
+   по токену ПРИ СОЗДАНИи и не меняет при upsert/PATCH; вышло под чужим автором —
+   `DELETE /api/travels/<id>/` + пересоздать токеном Юли (slug переиспользуется).
+   Правка статей Юли через `seo-edit --desc-file` авторство сохраняет.
+0b. **Фото — ТОЛЬКО из собственных статей metravel.by.** URL брать из галерей/
+   описаний уже опубликованных travel (`/gallery/…`, `/travel-description-image/…`,
+   `/address-image/…`), каждый проверять HEAD=200. Внешние/стоковые/Wikimedia
+   картинки в теле статьи запрещены. Нет своего фото под раздел — раздел без фото,
+   не выдумывать.
+
 1. **Не дублировать.** Перед созданием получи список уже существующих путешествий
    за этот год и пропусти совпадения:
    `GET https://metravel.by/api/travels/?where={"publish":1,"moderation":1,"year":"<YEAR>"}&perPage=100`

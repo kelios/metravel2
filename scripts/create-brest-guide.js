@@ -75,6 +75,8 @@ const payload = {
     publish: doPublish,
     moderation: doPublish,
     year: 2024,
+    userIds: '1', // автор — Юля (ignatieva_julia@tut.by), user id 1; статьи ведутся от её имени
+    user: 1,
 };
 
 async function main() {

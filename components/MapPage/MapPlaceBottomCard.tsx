@@ -206,6 +206,9 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       } as any)
     : null
 
+  // Corner-pill ✕ used ONLY by the legacy wide-web (>560) tablet card. The mobile
+  // web sheet (≤560) and native both use the header-row close button below to match
+  // the device (golden reference).
   const closeButton = (
     // Rendered after the body so it paints on top of the edge-to-edge hero
     // photo (RN has no zIndex across siblings without elevation); dark pill
@@ -216,13 +219,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       accessibilityRole="button"
       accessibilityLabel="Закрыть карточку места"
       hitSlop={10}
-      style={({ pressed }) => [
-        styles.closeButton,
-        isFullscreenWeb && styles.closeButtonFullscreen,
-        // Fullscreen web: keep ✕ below the status bar / notch (insets not in getStyles).
-        isFullscreenWeb && IS_WEB ? ({ top: (insets?.top ?? 0) + 12 } as any) : null,
-        pressed && { opacity: 0.7 },
-      ]}
+      style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.7 }]}
       {...(webCloseHandlers ?? {})}
     >
       <Feather name="x" size={18} color="#fff" />
@@ -233,6 +230,24 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   // map stays visible above it. The sheet hosts the split layout (fixed hero photo +
   // scrollable caption/actions) so every element stays reachable and the photo never
   // jerks when «Ещё» expands. Sits above the global bottom dock.
+  // #FIX-1 — the ✕ matches the native bottom card: a header row (grabber + a
+  // round close button aligned to the top-right of the sheet header) instead of a
+  // dark pill floating over the hero photo. Native is the golden reference, so the
+  // mobile web sheet uses the SAME header-row close button.
+  const headerCloseButton = (
+    <Pressable
+      testID="map-place-bottom-card-close"
+      onPress={handleClose}
+      accessibilityRole="button"
+      accessibilityLabel="Закрыть карточку места"
+      hitSlop={12}
+      style={({ pressed }) => [styles.headerCloseButton, pressed && { opacity: 0.6 }]}
+      {...(webCloseHandlers ?? {})}
+    >
+      <Feather name="x" size={20} color={colors.text} />
+    </Pressable>
+  )
+
   if (isFullscreenWeb) {
     return (
       <View
@@ -254,11 +269,11 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
           ]}
           {...({ pointerEvents: 'auto' } as any)}
         >
-          <View style={styles.handleZone} {...(webSwipeHandlers ?? {})}>
+          <View style={styles.handleRow} {...(webSwipeHandlers ?? {})}>
             <View style={styles.grabber} />
+            {headerCloseButton}
           </View>
           <PopupComponent point={point} closePopup={handleClose} />
-          {closeButton}
         </View>
       </View>
     )
@@ -299,7 +314,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
         style={styles.nativeBackdrop}
       />
       <View style={[styles.nativePanel, { maxHeight: nativeSheetMaxHeight, marginBottom: nativePanelMargin }]}>
-        <View style={styles.nativeHandleRow} {...(nativeSwipeHandlers ?? {})}>
+        <View style={styles.handleRow} {...(nativeSwipeHandlers ?? {})}>
           <View style={styles.grabber} />
           <Pressable
             testID="map-place-bottom-card-close"
@@ -307,7 +322,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Закрыть карточку места"
             hitSlop={12}
-            style={({ pressed }) => [styles.nativeHeaderCloseButton, pressed && { opacity: 0.6 }]}
+            style={({ pressed }) => [styles.headerCloseButton, pressed && { opacity: 0.6 }]}
           >
             <Feather name="x" size={20} color={colors.text} />
           </Pressable>
@@ -360,14 +375,17 @@ const getStyles = (colors: ThemedColors) =>
       shadowRadius: 18,
       elevation: 18,
     },
-    nativeHandleRow: {
+    // Shared header row (native bottom sheet + mobile web sheet): centered grabber
+    // with a round close button pinned top-right. Golden reference = native.
+    handleRow: {
       minHeight: 40,
       paddingTop: 8,
       paddingBottom: 4,
       alignItems: 'center',
       justifyContent: 'center',
+      ...(IS_WEB ? ({ cursor: 'grab', touchAction: 'none' } as any) : null),
     },
-    nativeHeaderCloseButton: {
+    headerCloseButton: {
       position: 'absolute',
       right: 12,
       top: 2,
@@ -379,6 +397,7 @@ const getStyles = (colors: ThemedColors) =>
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
+      ...(IS_WEB ? ({ cursor: 'pointer', zIndex: 6 } as any) : null),
     },
     nativeScroll: {
       flexGrow: 0,
@@ -467,14 +486,6 @@ const getStyles = (colors: ThemedColors) =>
             shadowRadius: 6,
             elevation: 6,
           }),
-    },
-    closeButtonFullscreen: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      right: 12,
-      backgroundColor: 'rgba(0,0,0,0.6)',
-      ...(IS_WEB ? ({ zIndex: 10 } as any) : null),
     },
     body: {
       // Photo runs edge-to-edge: the popup card's own contentContainer/footerContainer

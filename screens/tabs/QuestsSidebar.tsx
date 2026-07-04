@@ -1,3 +1,5 @@
+import type { ComponentProps } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -6,6 +8,92 @@ import type { ThemedColors } from '@/hooks/useTheme';
 
 import type { City, NearbyCity } from './questsShared';
 import { pluralizeQuest } from './questsShared';
+
+type FeatherName = ComponentProps<typeof Feather>['name'];
+
+type SidebarActionButtonProps = {
+    styles: any;
+    colors: ThemedColors;
+    isMobile: boolean;
+    icon: FeatherName;
+    label: string;
+    active?: boolean;
+    disabled?: boolean;
+    onPress: () => void;
+    accessibilityLabel: string;
+    accessibilityState?: Record<string, boolean>;
+    testID?: string;
+};
+
+// Иконка-действие в шапке сайдбара. На мобильном — квадратная icon-only кнопка
+// (подпись только в accessibilityLabel/title). На вебе — пилюля, которая по
+// наведению плавно раскрывается и показывает текстовую подпись рядом с иконкой.
+function SidebarActionButton({
+    styles,
+    colors,
+    isMobile,
+    icon,
+    label,
+    active = false,
+    disabled = false,
+    onPress,
+    accessibilityLabel,
+    accessibilityState,
+    testID,
+}: SidebarActionButtonProps) {
+    const [hovered, setHovered] = useState(false);
+    const iconColor = active ? colors.textOnPrimary : colors.text;
+
+    if (isMobile) {
+        return (
+            <Pressable
+                style={[
+                    styles.sidebarActionIconBtn,
+                    active && styles.sidebarActionIconBtnActive,
+                    disabled && styles.sidebarActionIconBtnDisabled,
+                ]}
+                onPress={onPress}
+                disabled={disabled}
+                accessibilityRole="button"
+                accessibilityLabel={accessibilityLabel}
+                accessibilityState={accessibilityState}
+                testID={testID}
+                {...({ title: label } as any)}
+            >
+                <Feather name={icon} size={18} color={iconColor} />
+            </Pressable>
+        );
+    }
+
+    const isOpen = hovered && !disabled;
+    return (
+        <Pressable
+            style={[
+                styles.sidebarActionPill,
+                active && styles.sidebarActionPillActive,
+                disabled && styles.sidebarActionIconBtnDisabled,
+            ]}
+            onPress={onPress}
+            disabled={disabled}
+            onHoverIn={() => setHovered(true)}
+            onHoverOut={() => setHovered(false)}
+            accessibilityRole="button"
+            accessibilityLabel={accessibilityLabel}
+            accessibilityState={accessibilityState}
+            testID={testID}
+        >
+            <Feather name={icon} size={18} color={iconColor} />
+            <View style={[styles.sidebarActionPillLabelWrap, isOpen && styles.sidebarActionPillLabelWrapOpen]}>
+                <Text
+                    numberOfLines={1}
+                    style={[styles.sidebarActionPillLabel, active && styles.sidebarActionPillLabelActive]}
+                >
+                    {label}
+                </Text>
+            </View>
+        </Pressable>
+    );
+}
 
 type CountryGroup = {
     code: string;
@@ -81,73 +169,42 @@ export default function QuestsSidebar({
                     Раскрой тайны городов через загадки и легенды
                 </Text>
                 <View style={styles.sidebarActions}>
-                    <Pressable
-                        style={[
-                            isMobile ? styles.sidebarActionIconBtn : styles.actionBtn,
-                            !isMobile && mapActionActive && styles.actionBtnSecondary,
-                            isMobile && mapActionActive && styles.sidebarActionIconBtnActive,
-                        ]}
-                        accessibilityRole="button"
+                    <SidebarActionButton
+                        styles={styles}
+                        colors={colors}
+                        isMobile={isMobile}
+                        icon={viewMode === 'map' ? 'list' : 'map'}
+                        label={viewMode === 'map' ? 'Показать списком' : 'Показать на карте'}
+                        active={mapActionActive}
+                        onPress={() => onSetViewMode(viewMode === 'map' ? 'list' : 'map')}
                         accessibilityLabel={mapActionLabel}
                         accessibilityState={{ selected: mapActionActive }}
-                        onPress={() => onSetViewMode(viewMode === 'map' ? 'list' : 'map')}
                         testID="quests-sidebar-toggle-view-mode"
-                        {...(isMobile ? ({ title: mapActionLabel } as any) : ({} as any))}
-                    >
-                        <Feather
-                            name={viewMode === 'map' ? 'list' : 'map'}
-                            size={isMobile ? 18 : 16}
-                            color={isMobile
-                                ? (mapActionActive ? colors.textOnPrimary : colors.text)
-                                : (mapActionActive ? colors.text : colors.textOnPrimary)}
-                        />
-                        {!isMobile && (
-                            <Text style={[styles.actionBtnText, mapActionActive && styles.actionBtnTextSecondary]}>
-                                {viewMode === 'map' ? 'Показать списком' : 'Показать на карте'}
-                            </Text>
-                        )}
-                    </Pressable>
-                    {isMobile && (
-                        <>
-                            <Pressable
-                                style={[
-                                    styles.sidebarActionIconBtn,
-                                    isNearbySelected && styles.sidebarActionIconBtnActive,
-                                ]}
-                                onPress={() => onSelectCity(nearbyId)}
-                                accessibilityRole="button"
-                                accessibilityLabel={`Рядом со мной, ${pluralizeQuest(cityQuestCountById[nearbyId] || 0)}`}
-                                accessibilityState={{ selected: isNearbySelected }}
-                                testID="quests-sidebar-nearby-button"
-                                {...({ title: 'Рядом со мной' } as any)}
-                            >
-                                <Feather
-                                    name="navigation"
-                                    size={18}
-                                    color={isNearbySelected ? colors.textOnPrimary : colors.text}
-                                />
-                            </Pressable>
-                            <Pressable
-                                style={[
-                                    styles.sidebarActionIconBtn,
-                                    !hasCountryGroups && styles.sidebarActionIconBtnDisabled,
-                                ]}
-                                onPress={onToggleAllCountryGroups}
-                                disabled={!hasCountryGroups}
-                                accessibilityRole="button"
-                                accessibilityLabel={toggleAllLabel}
-                                accessibilityState={{ expanded: !areAllCountryGroupsCollapsed, disabled: !hasCountryGroups }}
-                                testID="quests-sidebar-toggle-all-countries"
-                                {...({ title: toggleAllLabel } as any)}
-                            >
-                                <Feather
-                                    name={areAllCountryGroupsCollapsed ? 'chevrons-down' : 'chevrons-up'}
-                                    size={18}
-                                    color={colors.text}
-                                />
-                            </Pressable>
-                        </>
-                    )}
+                    />
+                    <SidebarActionButton
+                        styles={styles}
+                        colors={colors}
+                        isMobile={isMobile}
+                        icon="navigation"
+                        label="Рядом со мной"
+                        active={isNearbySelected}
+                        onPress={() => onSelectCity(nearbyId)}
+                        accessibilityLabel={`Рядом со мной, ${pluralizeQuest(cityQuestCountById[nearbyId] || 0)}`}
+                        accessibilityState={{ selected: isNearbySelected }}
+                        testID="quests-sidebar-nearby-button"
+                    />
+                    <SidebarActionButton
+                        styles={styles}
+                        colors={colors}
+                        isMobile={isMobile}
+                        icon={areAllCountryGroupsCollapsed ? 'chevrons-down' : 'chevrons-up'}
+                        label={areAllCountryGroupsCollapsed ? 'Развернуть все' : 'Свернуть все'}
+                        disabled={!hasCountryGroups}
+                        onPress={onToggleAllCountryGroups}
+                        accessibilityLabel={toggleAllLabel}
+                        accessibilityState={{ expanded: !areAllCountryGroupsCollapsed, disabled: !hasCountryGroups }}
+                        testID="quests-sidebar-toggle-all-countries"
+                    />
                 </View>
             </View>
 
@@ -156,48 +213,6 @@ export default function QuestsSidebar({
                 contentContainerStyle={{ paddingBottom: spacingMd }}
                 showsVerticalScrollIndicator
             >
-                {!isMobile && (
-                    <View style={styles.cityListSection}>
-                        <Text style={styles.cityListLabel}>Выбор местоположения</Text>
-                        <Pressable
-                            onPress={() => onSelectCity(nearbyId)}
-                            style={[styles.cityItem, isNearbySelected && styles.cityItemActive]}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Рядом, ${pluralizeQuest(cityQuestCountById[nearbyId] || 0)}`}
-                            accessibilityState={{ selected: isNearbySelected }}
-                        >
-                            <View style={styles.cityItemLeft}>
-                                <View style={[styles.cityItemIcon, isNearbySelected && styles.cityItemIconActive]}>
-                                    <Feather name="navigation" size={iconSize} color={isNearbySelected ? colors.textOnPrimary : colors.textMuted} />
-                                </View>
-                                <Text style={[styles.cityItemText, isNearbySelected && styles.cityItemTextActive]}>
-                                    Рядом со мной
-                                </Text>
-                            </View>
-                        </Pressable>
-                    </View>
-                )}
-
-                {!isMobile && hasCountryGroups && (
-                    <View style={styles.countryToolsSection}>
-                        <Pressable
-                            onPress={onToggleAllCountryGroups}
-                            style={styles.collapseAllBtn}
-                            accessibilityRole="button"
-                            accessibilityLabel={toggleAllLabel}
-                        >
-                            <Feather
-                                name={areAllCountryGroupsCollapsed ? 'chevrons-down' : 'chevrons-up'}
-                                size={14}
-                                color={colors.textMuted}
-                            />
-                            <Text style={styles.collapseAllBtnText}>
-                                {areAllCountryGroupsCollapsed ? 'Развернуть все' : 'Свернуть все'}
-                            </Text>
-                        </Pressable>
-                    </View>
-                )}
-
                 {citiesByCountry.map((group) => {
                     const isCollapsed = collapsedCountryCodes[group.code] ?? false;
                     const countryQuestCount = group.cities.reduce((acc, city) => acc + (cityQuestCountById[city.id] || 0), 0);
