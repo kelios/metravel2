@@ -384,16 +384,14 @@ export function useMapScreenController() {
   } = dataController;
 
   // Счётчик мест в боковом меню: показываем общее число (backend total), а не
-  // длину загруженной страницы. Текстовый поиск и фильтр категорий — чисто
-  // клиентские фильтры (см. filterTravelsByCategories/BySearchQuery в
-  // useMapTravels), их backend total не учитывает. Поэтому при активном клиентском
-  // фильтре показываем длину уже отфильтрованного набора (то же множество, что
-  // отрисовано маркерами и в списке «Места рядом»), иначе бейдж расходится с
-  // картой (#335).
-  const hasTextSearch = Boolean(filterValues.searchQuery && filterValues.searchQuery.trim());
+  // длину загруженной страницы. Текстовый поиск теперь серверный (where.query,
+  // BE #695) и УЧТЁН в total — поэтому при поиске тоже берём backend total.
+  // Фильтр категорий по имени (когда имя не смапилось в ID) остаётся клиентским
+  // и в total не попадает — только для него показываем длину отфильтрованного
+  // набора, чтобы бейдж не расходился с картой (#335).
   const hasCategoryFilter = Array.isArray(filterValues.categoryTravelAddress)
     && filterValues.categoryTravelAddress.length > 0;
-  const travelsCount = hasTextSearch || hasCategoryFilter
+  const travelsCount = hasCategoryFilter
     ? travelsData.length
     : Math.max(total ?? 0, travelsData.length);
 
@@ -769,6 +767,10 @@ export function useMapScreenController() {
     () => ({
       travelsData: allTravelsData,
       filteredTravelsData: travelsData,
+      // Серверный счётчик результатов (учитывает where.query, BE #695) — для бейджа
+      // «На карте подходит», чтобы он показывал полный total, а не длину загруженной
+      // страницы (≤30).
+      resultsTotal: travelsCount,
       isMobile,
       mapUiApi,
       closeMenu: closeRightPanel,
@@ -787,6 +789,7 @@ export function useMapScreenController() {
     [
       allTravelsData,
       travelsData,
+      travelsCount,
       isMobile,
       mapUiApi,
       closeRightPanel,

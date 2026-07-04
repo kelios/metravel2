@@ -34,6 +34,9 @@ export interface FiltersContextValue {
   // Data
   travelsData: { categoryName?: string }[];
   filteredTravelsData?: { categoryName?: string }[];
+  // Серверный счётчик результатов (учитывает where.query, BE #695) для бейджа
+  // «На карте подходит»; фолбэк — длина filteredTravelsData.
+  resultsTotal?: number;
   // #211 — карта/список грузятся или фильтры дебаунсятся (для гейта empty-state).
   isBusy?: boolean;
 
@@ -131,6 +134,7 @@ export function FiltersProvider({ children, ...contextValue }: FiltersProviderPr
     contextValue.onResetOverlays,
     contextValue.travelsData,
     contextValue.filteredTravelsData,
+    contextValue.resultsTotal,
     contextValue.isMobile,
     contextValue.closeMenu,
     contextValue.mode,

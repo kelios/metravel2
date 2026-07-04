@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react-native'
+import { renderHook, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
 import { useRouteFilePreviews } from '@/hooks/useRouteFilePreviews'
@@ -36,6 +36,12 @@ jest.mock('@/utils/routeFileParser', () => ({
 
 const { useTravelRouteFiles } = jest.requireMock('@/hooks/useTravelRouteFiles') as {
   useTravelRouteFiles: jest.Mock
+}
+const { downloadTravelRouteFileBlob } = jest.requireMock('@/api/travelRoutes') as {
+  downloadTravelRouteFileBlob: jest.Mock
+}
+const { parseRouteFilePreviews } = jest.requireMock('@/utils/routeFileParser') as {
+  parseRouteFilePreviews: jest.Mock
 }
 
 describe('useRouteFilePreviews', () => {
@@ -87,5 +93,72 @@ describe('useRouteFilePreviews', () => {
     )
 
     expect(result.current.isRoutePreviewLoading).toBe(true)
+  })
+
+  it('uses server-provided preview without downloading or parsing the route blob', async () => {
+    const serverPreview = {
+      linePoints: [
+        { coord: '49.28,19.84', elevation: 905 },
+        { coord: '49.24,19.79', elevation: 1145 },
+      ],
+      elevationProfile: [
+        { distanceKm: 0, elevationM: 905 },
+        { distanceKm: 7.48, elevationM: 1145 },
+      ],
+    }
+    useTravelRouteFiles.mockReturnValue({
+      data: [{ id: 18, original_name: 'route.gpx', ext: 'gpx', preview: serverPreview }],
+      isLoading: false,
+      isFetching: false,
+    })
+
+    const { result } = renderHook(() =>
+      useRouteFilePreviews({
+        travelId: 563,
+        canRenderHeavy: true,
+        shouldRender: true,
+        shouldForceRenderMap: false,
+      })
+    )
+
+    await waitFor(() => {
+      expect(result.current.primaryRoutePreview).toEqual(serverPreview)
+    })
+    expect(downloadTravelRouteFileBlob).not.toHaveBeenCalled()
+    expect(parseRouteFilePreviews).not.toHaveBeenCalled()
+  })
+
+  it('falls back to download+parse when the server preview is absent (old deployments)', async () => {
+    const parsedPreview = {
+      linePoints: [
+        { coord: '49.28,19.84', elevation: 905 },
+        { coord: '49.24,19.79', elevation: 1145 },
+      ],
+      elevationProfile: [
+        { distanceKm: 0, elevationM: 905 },
+        { distanceKm: 7.48, elevationM: 1145 },
+      ],
+    }
+    useTravelRouteFiles.mockReturnValue({
+      data: [{ id: 18, original_name: 'route.gpx', ext: 'gpx' }],
+      isLoading: false,
+      isFetching: false,
+    })
+    downloadTravelRouteFileBlob.mockResolvedValue({ text: '<gpx/>' })
+    parseRouteFilePreviews.mockReturnValue([parsedPreview])
+
+    const { result } = renderHook(() =>
+      useRouteFilePreviews({
+        travelId: 563,
+        canRenderHeavy: true,
+        shouldRender: true,
+        shouldForceRenderMap: false,
+      })
+    )
+
+    await waitFor(() => {
+      expect(result.current.primaryRoutePreview).toEqual(parsedPreview)
+    })
+    expect(downloadTravelRouteFileBlob).toHaveBeenCalledWith(563, 18)
   })
 })

@@ -1,7 +1,80 @@
 import { apiClient } from '@/api/client';
-import type { TravelRouteFile } from '@/types/travelRoutes';
+import type {
+  ParsedRoutePoint,
+  ParsedRoutePreview,
+  RouteElevationSample,
+  TravelRouteFile,
+  TravelRouteServerSummary,
+} from '@/types/travelRoutes';
 
 const LONG_TIMEOUT = 30000;
+
+const toFiniteNumber = (value: unknown): number | null => {
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+
+const toCoordString = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const normalizeServerLinePoints = (value: unknown): ParsedRoutePoint[] => {
+  if (!Array.isArray(value)) return [];
+  const points: ParsedRoutePoint[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue;
+    const coord = toCoordString((entry as Record<string, unknown>).coord);
+    if (!coord) continue;
+    const elevation = toFiniteNumber((entry as Record<string, unknown>).elevation);
+    points.push(elevation === null ? { coord } : { coord, elevation });
+  }
+  return points;
+};
+
+const normalizeServerElevationProfile = (value: unknown): RouteElevationSample[] => {
+  if (!Array.isArray(value)) return [];
+  const samples: RouteElevationSample[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue;
+    const rec = entry as Record<string, unknown>;
+    const distanceKm = toFiniteNumber(rec.distance_km ?? rec.distanceKm);
+    const elevationM = toFiniteNumber(rec.elevation_m ?? rec.elevationM);
+    if (distanceKm === null || elevationM === null) continue;
+    samples.push({ distanceKm, elevationM });
+  }
+  return samples;
+};
+
+const normalizeServerPreview = (value: unknown): ParsedRoutePreview | null => {
+  if (!value || typeof value !== 'object') return null;
+  const rec = value as Record<string, unknown>;
+  const linePoints = normalizeServerLinePoints(rec.line_points ?? rec.linePoints);
+  if (linePoints.length < 2) return null;
+  return {
+    linePoints,
+    elevationProfile: normalizeServerElevationProfile(rec.elevation_profile ?? rec.elevationProfile),
+  };
+};
+
+const normalizeServerSummary = (value: unknown): TravelRouteServerSummary | null => {
+  if (!value || typeof value !== 'object') return null;
+  const rec = value as Record<string, unknown>;
+  return {
+    distanceKm: toFiniteNumber(rec.distance_km ?? rec.distanceKm),
+    hasElevation: Boolean(rec.has_elevation ?? rec.hasElevation),
+    ascentM: toFiniteNumber(rec.ascent_m ?? rec.ascentM),
+    descentM: toFiniteNumber(rec.descent_m ?? rec.descentM),
+    minElevationM: toFiniteNumber(rec.min_elevation_m ?? rec.minElevationM),
+    maxElevationM: toFiniteNumber(rec.max_elevation_m ?? rec.maxElevationM),
+    elevationRangeM: toFiniteNumber(rec.elevation_range_m ?? rec.elevationRangeM),
+    avgClimbMPerKm: toFiniteNumber(rec.avg_climb_m_per_km ?? rec.avgClimbMPerKm),
+    startCoord: toCoordString(rec.start_coord ?? rec.startCoord),
+    finishCoord: toCoordString(rec.finish_coord ?? rec.finishCoord),
+    peakCoord: toCoordString(rec.peak_coord ?? rec.peakCoord),
+  };
+};
 
 type MaybePaginated<T> =
   | T[]
@@ -29,6 +102,8 @@ const normalizeRouteFile = (input: unknown): TravelRouteFile | null => {
           ? rec.downloadUrl
           : undefined,
     created_at: typeof rec.created_at === 'string' ? rec.created_at : null,
+    preview: normalizeServerPreview(rec.preview),
+    summary: normalizeServerSummary(rec.summary),
   };
 };
 

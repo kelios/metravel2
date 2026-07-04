@@ -431,6 +431,14 @@ export const fetchTravelsForMap = async (
       }
     }
 
+    // Серверный полнотекстовый поиск (BE #695): where.query фильтрует выдачу и
+    // учитывается в total. Раньше текст фильтровался на клиенте по загруженной
+    // странице — теперь это делает бэкенд, чтобы счётчик и пагинация были верны.
+    const queryRaw = typeof filter?.query === 'string' ? filter.query.trim() : '';
+    if (queryRaw) {
+      whereObject.query = queryRaw;
+    }
+
     const paramsObj = {
       page: (page + 1).toString(),
       perPage: itemsPerPage.toString(),

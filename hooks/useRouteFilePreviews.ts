@@ -148,9 +148,20 @@ export function useRouteFilePreviews({
             const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
               .toLowerCase()
               .replace(/^\./, '')
-            const downloaded = await downloadTravelRouteFileBlob(travelId, file.id)
+            // Prefer server-prepared preview (#699): line_points + elevation_profile
+            // already computed on the backend. Avoids downloading the GPX/KML blob
+            // and re-parsing/recomputing elevation on the client. Fall back to the
+            // download+parse path only on old deployments that don't ship a preview.
+            const serverPreview =
+              (file.preview?.linePoints?.length ?? 0) >= 2 ? file.preview : null
+            const previews = serverPreview
+              ? [serverPreview]
+              : await (async () => {
+                  const downloaded = await downloadTravelRouteFileBlob(travelId, file.id)
+                  if (!active) return []
+                  return parseRouteFilePreviews(downloaded.text, ext)
+                })()
             if (!active) return [] as RoutePreviewItem[]
-            const previews = parseRouteFilePreviews(downloaded.text, ext)
             const validPreviews = previews.filter((preview) => (preview?.linePoints?.length ?? 0) >= 2)
             if (validPreviews.length === 0) return [] as RoutePreviewItem[]
 

@@ -167,28 +167,6 @@ function filterTravelsByCategories(
   });
 }
 
-function filterTravelsBySearchQuery(
-  all: TravelCoords[],
-  searchQuery?: string
-): TravelCoords[] {
-  const normalizedQuery = String(searchQuery || '').trim().toLowerCase();
-  if (!normalizedQuery) return all;
-
-  return all.filter((travel) => {
-    const searchable = [
-      travel.address,
-      travel.categoryName,
-      (travel as TravelCoords & { name?: string }).name,
-      travel.urlTravel,
-    ]
-      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-      .join(' ')
-      .toLowerCase();
-
-    return searchable.includes(normalizedQuery);
-  });
-}
-
 function parseBackendFilters(filtersKey: string): {
   categories?: Array<number | string>;
   categoryTravelAddress?: Array<number | string>;
@@ -289,6 +267,15 @@ export function useMapTravels({
     [fullRouteCoords]
   );
 
+  // Текстовый поиск теперь серверный (BE #695): нормализуем и кладём в queryParams,
+  // чтобы он попал в queryKey (смена → рефетч) и в where.query. Дебаунс уже сделан
+  // в useMapDataController (300ms) до передачи filterValues сюда — сервер не бьётся
+  // на каждый символ.
+  const searchQuery = useMemo(
+    () => String(filterValues.searchQuery || '').trim(),
+    [filterValues.searchQuery]
+  );
+
   // Параметры запроса
   const queryParams = useMemo(
     () => {
@@ -303,8 +290,9 @@ export function useMapTravels({
         mode,
         routeKey: routeSignature,
         filtersKey: JSON.stringify(backendFilters),
+        query: searchQuery,
       };
-      
+
       return params;
     },
     [
@@ -314,6 +302,7 @@ export function useMapTravels({
       mode,
       routeSignature,
       backendFilters,
+      searchQuery,
     ]
   );
 
@@ -350,6 +339,7 @@ export function useMapTravels({
           radius: queryParams.radius,
           categories: parsedFilters.categories,
           categoryTravelAddress: parsedFilters.categoryTravelAddress,
+          query: queryParams.query,
         },
         { signal }
       );
@@ -472,24 +462,22 @@ export function useMapTravels({
     return allTravelsData.length;
   }, [queryParams.mode, enabledRadius, enabledRoute, radiusQuery.data?.pages, allTravelsData]);
 
-  // Поиск по тексту фильтруется на клиенте. Дебаунс не нужен здесь: весь
-  // filterValues уже дебаунсится в useMapDataController (300ms) до передачи в
-  // этот хук — внутренний useDebouncedValue давал бы двойную задержку.
+  // Текстовый поиск теперь серверный (where.query, BE #695) — выдача и total уже
+  // отфильтрованы бэкендом. Клиентского text-фильтра в render-path НЕТ: он резал бы
+  // валидные FTS-совпадения (сервер матчит по полному тексту, а не по видимому
+  // address) и искажал бы счётчик «На карте подходит».
   const filteredTravelsData = useMemo(() => {
     // Категории уже отфильтрованы бэкендом по ID (queryKey включает их) —
     // повторный клиентский фильтр по точному имени резал бы валидные точки при
     // расхождении формулировок. Клиентский фильтр — только fallback, когда
     // имена не смапились в ID и бэкенд фильтр не получил.
-    const byCategories = normalizedCategoryTravelAddressIds.length
+    return normalizedCategoryTravelAddressIds.length
       ? allTravelsData
       : filterTravelsByCategories(allTravelsData, filterValues.categoryTravelAddress);
-
-    return filterTravelsBySearchQuery(byCategories, filterValues.searchQuery);
   }, [
     allTravelsData,
     normalizedCategoryTravelAddressIds.length,
     filterValues.categoryTravelAddress,
-    filterValues.searchQuery,
   ]);
 
   return useMemo(() => ({

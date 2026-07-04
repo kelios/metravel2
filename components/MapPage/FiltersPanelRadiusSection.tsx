@@ -28,6 +28,7 @@ interface FiltersPanelRadiusSectionProps {
   }
   travelsData: { categoryName?: string; name?: string; address?: string }[]
   filteredTravelsData?: { categoryName?: string; name?: string; address?: string }[]
+  resultsTotal?: number
   onFilterChange: (field: string, value: any) => void
 }
 
@@ -39,6 +40,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
   filterValue,
   travelsData,
   filteredTravelsData = [],
+  resultsTotal,
   onFilterChange,
 }) => {
   const safeOnFilterChange = useCallback(
@@ -150,7 +152,11 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           value={searchQueryValue}
           onChange={handleSearchChange}
           placeholder="Найти место по названию..."
-          resultsCount={searchQueryValue ? filteredTravelsData.length : undefined}
+          resultsCount={
+            searchQueryValue
+              ? (typeof resultsTotal === 'number' ? resultsTotal : filteredTravelsData.length)
+              : undefined
+          }
           autoFocusOnSignal={isMobile}
         />
       </View>
