@@ -1,0 +1,135 @@
+[
+  {
+    "id": 2628,
+    "lat": 53.8984373,
+    "lng": 30.3340234,
+    "country": 3,
+    "address": "Могилёвская ратуша, 1А, Ленинская улица, Стары горад, Ленинский район, Могилёв, Могилёвская область, 212030, Беларусь",
+    "categories": [
+      107
+    ],
+    "image": "https://metravel.by/address-image/3367/conversions/AtCzyRYipAICgkQ7AlFSAIMZs2pmQtYAyrfCWMvW-thumb_400_wp.webp"
+  },
+  {
+    "id": 2629,
+    "lat": 53.9022649,
+    "lng": 30.3407578,
+    "country": 3,
+    "address": "Собор Успения Девы Марии и Св. Станислава, 4, Комсомольская улица, Стары горад, Ленинский район, Могилёв, Могилёвская область, 212030, Беларусь",
+    "categories": [
+      127
+    ],
+    "image": "https://metravel.by/address-image/3368/conversions/b57vlkohx4Dh4rFZgbxlAKf6CoiGqmd7ykbCuebH-thumb_400_wp.webp"
+  },
+  {
+    "id": 2631,
+    "lat": 53.9047142,
+    "lng": 30.3435484,
+    "country": 3,
+    "address": "61, Ленинская улица, Стары горад, Ленинский район, Могилёв, Могилёвская область, 212030, Беларусь",
+    "categories": [
+      50,
+      109
+    ],
+    "image": "https://metravel.by/address-image/3370/conversions/vlJCE8IzInTceEIizZ46RJhUrRzq5mfrTyGoSrgq-thumb_400_wp.webp"
+  },
+  {
+    "id": 2632,
+    "lat": 53.8951911,
+    "lng": 30.3344901,
+    "country": 3,
+    "address": "Архірэйскі палац, 1, улица Архиерейский Вал Канисского, Стары горад, Ленинский район, Могилёв, Могилёвская область, 212030, Беларусь",
+    "categories": [
+      33
+    ],
+    "image": "https://metravel.by/address-image/3371/conversions/t8sfmasNHkROxZrSf1we7rztdVQpPneZhcjacI5V-thumb_400_wp.webp"
+  },
+  {
+    "id": null,
+    "lat": 53.90228,
+    "lng": 30.340768,
+    "country": 3,
+    "address": "Площадь Звёзд — памятник Звездочёту и 12 стульев зодиака, Могилёв",
+    "categories": [
+      39
+    ],
+    "image": ""
+  },
+  {
+    "id": null,
+    "lat": 53.8936,
+    "lng": 30.3456,
+    "country": 3,
+    "address": "Свято-Никольский женский монастырь, Могилёв",
+    "categories": [
+      39
+    ],
+    "image": ""
+  },
+  {
+    "id": null,
+    "lat": 53.897514,
+    "lng": 30.333304,
+    "country": 3,
+    "address": "Могилёвский областной драматический театр, Первомайская улица, 7, Могилёв",
+    "categories": [
+      85
+    ],
+    "image": ""
+  },
+  {
+    "id": null,
+    "lat": 53.894583,
+    "lng": 30.33194,
+    "country": 3,
+    "address": "Могилёвский областной краеведческий музей имени Е. Р. Романова, площадь Славы, 1, Могилёв",
+    "categories": [
+      76
+    ],
+    "image": ""
+  },
+  {
+    "id": null,
+    "lat": 53.894548,
+    "lng": 30.330654,
+    "country": 3,
+    "address": "Музей В. К. Бялыницкого-Бирули, улица Ленинская, 37, Могилёв",
+    "categories": [
+      76
+    ],
+    "image": ""
+  },
+  {
+    "id": null,
+    "lat": 53.86167,
+    "lng": 30.25417,
+    "country": 3,
+    "address": "Мемориальный комплекс «Буйничское поле», Могилёвский район",
+    "categories": [
+      39
+    ],
+    "image": ""
+  },
+  {
+    "id": null,
+    "lat": 53.863333,
+    "lng": 30.267778,
+    "country": 3,
+    "address": "Могилёвский зоосад, Буйничи",
+    "categories": [
+      90
+    ],
+    "image": ""
+  },
+  {
+    "id": null,
+    "lat": 53.863197,
+    "lng": 30.26059,
+    "country": 3,
+    "address": "Белорусская этнографическая деревня XIX века, Буйничи",
+    "categories": [
+      39
+    ],
+    "image": ""
+  }
+]

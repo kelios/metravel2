@@ -10,6 +10,15 @@ const isTestEnv =
     (process as any).env?.JEST_WORKER_ID != null ||
     (globalThis as any)?.jest != null);
 
+const AUTO_FIT_COORD_PRECISION = 3;
+
+const getCoarseAutoFitLocationKey = (location?: LatLng | null): string => {
+  if (!location || !Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
+    return 'no-location';
+  }
+  return `${location.lat.toFixed(AUTO_FIT_COORD_PRECISION)},${location.lng.toFixed(AUTO_FIT_COORD_PRECISION)}`;
+};
+
 /**
  * Compute geographic bounding box for a circle without requiring a Leaflet map instance.
  * L.circle().getBounds() needs the circle added to a map (uses layerPointToLatLng internally),
@@ -111,6 +120,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   const lastRadiusKeyRef = useRef<string | null>(null);
   const lastSyncedZoomRef = useRef<number | null>(null);
   const lastPreFitKeyRef = useRef<string | null>(null);
+  const hasCompletedAutoFitRef = useRef(false);
 
   const getInitialRadiusZoom = useCallback((radiusMeters?: number | null) => {
     const r = Number(radiusMeters);
@@ -314,7 +324,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     // Radius mode: when userLocation becomes available/changes, allow auto-fit to run again.
     // This keeps default behavior: show results around current position (radius default is handled upstream).
     if (mode === 'radius' && hasValidUserLocation) {
-      const key = `${userLocation!.lat.toFixed(6)},${userLocation!.lng.toFixed(6)}`;
+      const key = getCoarseAutoFitLocationKey(userLocation);
       if (lastUserLocationKeyRef.current !== key) {
         lastUserLocationKeyRef.current = key;
         hasInitializedRef.current = false;
@@ -402,9 +412,9 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       .map((p) => (p.id != null ? `id:${p.id}` : `c:${p.coord}`))
       .join('|');
     const radiusKey = circleCenter && Number.isFinite(radiusInMeters)
-      ? `r:${circleCenter.lat.toFixed(4)},${circleCenter.lng.toFixed(4)}:${Number(radiusInMeters).toFixed(0)}`
+      ? `r:${getCoarseAutoFitLocationKey(circleCenter)}:${Number(radiusInMeters).toFixed(0)}`
       : 'no-radius';
-    const autoFitKey = `${mode}:${dataKey}:${userLocation ? `${userLocation.lat},${userLocation.lng}` : 'no-user'}:${radiusKey}`;
+    const autoFitKey = `${mode}:${dataKey}:${getCoarseAutoFitLocationKey(userLocation)}:${radiusKey}`;
     if (lastAutoFitKeyRef.current === autoFitKey) return;
 
     const hasValidCircle = hasValidRadiusCircle;
@@ -537,7 +547,13 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         // to far-away points, so the "never wider than the circle" contract holds.
         const padFactor = mode === 'radius' ? 0.1 : 0.12;
         try {
-          map.fitBounds(bounds.pad(padFactor), { animate: false, maxZoom, ...padding } as any);
+          const animate = !isTestEnv && hasCompletedAutoFitRef.current;
+          map.fitBounds(bounds.pad(padFactor), {
+            animate,
+            duration: animate ? 0.35 : undefined,
+            maxZoom,
+            ...padding,
+          } as any);
         } catch {
           // Pane element may not be ready yet (e.g. _mapPane is undefined).
           // Swallow to prevent "Cannot set properties of undefined" crashes.
@@ -547,6 +563,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         // Sync zoom immediately after fitBounds so clustering doesn't run on stale mapZoom.
         requestAnimationFrame(() => syncZoomFromMap());
         lastAutoFitKeyRef.current = autoFitKey;
+        hasCompletedAutoFitRef.current = true;
       };
 
       if (isTestEnv || typeof requestAnimationFrame !== 'function') {

@@ -1,5 +1,5 @@
 import { memo, useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 
@@ -76,6 +76,8 @@ type Props = {
     prefetch?: boolean;
     showImmediately?: boolean;
     optimizeWeb?: boolean;
+    transition?: number;
+    imageProps?: ComponentProps<typeof ImageCardMedia>['imageProps'];
   };
   width?: number;
   imageHeight?: number;
@@ -88,6 +90,7 @@ type Props = {
   visualVariant?: 'default' | 'featured';
   webHoverScale?: boolean;
   webTouchAction?: string;
+  nativePressScaleEnabled?: boolean;
 };
 
 
@@ -125,6 +128,7 @@ function UnifiedTravelCard({
   visualVariant = 'default',
   webHoverScale = true,
   webTouchAction,
+  nativePressScaleEnabled = true,
 }: Props) {
   const isWeb = Platform.OS === 'web' || webAsView;
   const colors = useThemedColors();
@@ -151,15 +155,15 @@ function UnifiedTravelCard({
     transform: [{ scale: pressScale.value }],
   }));
   const handlePressIn = useCallback(() => {
-    if (!isWeb) {
+    if (!isWeb && nativePressScaleEnabled) {
       pressScale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
     }
-  }, [isWeb, pressScale]);
+  }, [isWeb, nativePressScaleEnabled, pressScale]);
   const handlePressOut = useCallback(() => {
-    if (!isWeb) {
+    if (!isWeb && nativePressScaleEnabled) {
       pressScale.value = withSpring(1, { damping: 12, stiffness: 200 });
     }
-  }, [isWeb, pressScale]);
+  }, [isWeb, nativePressScaleEnabled, pressScale]);
   const optimizedImageUrl = useMemo(() => {
     if (!imageUrl || !isWeb) return imageUrl ?? null;
     if (mediaProps?.optimizeWeb === false) return imageUrl;
@@ -517,8 +521,11 @@ function UnifiedTravelCard({
   const displayMetaText = normalizedMetaText || 'Локация уточняется';
 
   // AND-16: Wrap in Animated.View for native spring, plain View for web
-  const CardWrapper = isWeb ? View : Animated.View;
-  const wrapperStyle = isWeb ? (typeof width === 'number' ? { width } : undefined) : [animatedCardStyle, typeof width === 'number' ? { width } : undefined];
+  const shouldUseNativePressScale = !isWeb && nativePressScaleEnabled;
+  const CardWrapper = shouldUseNativePressScale ? Animated.View : View;
+  const wrapperStyle = shouldUseNativePressScale
+    ? [animatedCardStyle, typeof width === 'number' ? { width } : undefined]
+    : (typeof width === 'number' ? { width } : undefined);
   const mediaNode = (
     <View
       key="media"
@@ -552,6 +559,8 @@ function UnifiedTravelCard({
             prefetch={mediaProps?.prefetch ?? false}
             showImmediately={mediaProps?.showImmediately ?? false}
             optimizeWeb={mediaProps?.optimizeWeb ?? true}
+            transition={mediaProps?.transition}
+            imageProps={mediaProps?.imageProps}
             onLoad={handleImageLoad}
             onError={handleImageError}
           />

@@ -35,6 +35,8 @@ export const getStyles = (
     : bp === 'narrow'
       ? 12
       : 14;
+  const bottomSheetHeroBasis = bp === 'narrow' ? '58%' : bp === 'compact' ? '62%' : '66%';
+  const bottomSheetHeroMinHeight = bp === 'narrow' ? '46%' : bp === 'compact' ? '50%' : '54%';
 
   return StyleSheet.create({
     container: {
@@ -58,9 +60,16 @@ export const getStyles = (
       position: 'relative',
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       overflow: 'hidden',
-      // Photo is the dominant element (~70% of the sheet) and never scrolls.
+      // Photo is pinned and dominant, but narrow mobile needs enough fixed
+      // room below it for title, coordinates, and the first action row.
       ...(Platform.OS === 'web'
-        ? ({ flexGrow: 0, flexShrink: 0, flexBasis: '70%', maxHeight: '70%', minHeight: '58%' } as any)
+        ? ({
+            flexGrow: 0,
+            flexShrink: 0,
+            flexBasis: bottomSheetHeroBasis,
+            maxHeight: bottomSheetHeroBasis,
+            minHeight: bottomSheetHeroMinHeight,
+          } as any)
         : null),
     },
     // Desktop Leaflet popup split: unlike the mobile sheet, the popup has NO fixed
@@ -239,7 +248,7 @@ export const getStyles = (
       // behind hover state — touch users never hover).
       ...(Platform.OS === 'web' ? ({ cursor: 'zoom-in' } as any) : null),
     },
-    // Bottom-sheet split (web): the hero fills its fixed 70% header instead of using
+    // Bottom-sheet split (web): the hero fills its fixed header instead of using
     // the card's own fixed photo height, so it stays pinned and gap-free while the
     // caption/actions scroll beneath it. ImageCardMedia keeps contain+blur.
     imageContainerFill: {

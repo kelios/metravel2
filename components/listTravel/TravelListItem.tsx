@@ -39,6 +39,14 @@ const FAVORITE_ICON_SIZE = Platform.OS === 'web' ? 18 : 16
 const IS_WEB = Platform.OS === 'web' || typeof document !== 'undefined'
 const ANDROID_RIPPLE =
   Platform.OS === 'android' ? { color: 'rgba(17,24,39,0.06)' } : undefined
+const ANDROID_LIST_IMAGE_PROPS =
+  Platform.OS === 'android'
+    ? {
+        allowDownscaling: true,
+        decodeFormat: 'rgb' as const,
+        placeholderContentFit: 'contain' as const,
+      }
+    : undefined
 
 const POINTER_EVENTS_BOX_NONE = { pointerEvents: 'box-none' } as any
 const ANCHOR_FILL_STYLE = {
@@ -543,6 +551,7 @@ function TravelListItem({
       webAsView={IS_WEB}
       webPressableProps={IS_WEB && selectable ? selectableWebHandlers : undefined}
       webTouchAction={webTouchAction ?? (selectable ? 'manipulation' : undefined)}
+      nativePressScaleEnabled={Platform.OS !== 'android'}
       mediaProps={{
         placeholderBlurhash: PLACEHOLDER_BLURHASH,
         placeholderSrc:
@@ -551,7 +560,7 @@ function TravelListItem({
         allowCriticalWebBlur: IS_WEB,
         revealOnLoadOnly: isMobileSafariFirstCard,
         recyclingKey: travelKey,
-        priority: IS_WEB ? (isFirst ? 'high' : 'low') : 'normal',
+        priority: IS_WEB ? (isFirst ? 'high' : 'low') : (isFirst ? 'normal' : 'low'),
         // Eager on web so FlashList's mounted-ahead cells (~700px before the
         // viewport) start fetching before they scroll in — otherwise lazy <img>
         // defers until visible and the card shows the blurred placeholder first,
@@ -561,6 +570,8 @@ function TravelListItem({
         // is unaffected (it never keyed off loading).
         loading: IS_WEB ? 'eager' : 'lazy',
         prefetch: IS_WEB ? isFirst : false,
+        transition: Platform.OS === 'android' ? 0 : undefined,
+        imageProps: ANDROID_LIST_IMAGE_PROPS,
       }}
       {...nativeCardProps}
     />

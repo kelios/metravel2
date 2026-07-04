@@ -525,7 +525,7 @@ describe('PlacePopupCard', () => {
     expect(tree.root.findAllByProps({ accessibilityLabel: 'Открыть статью' })).toHaveLength(0);
   });
 
-  it('keeps the mobile bottom-card photo at 70 percent and exposes map/share actions', () => {
+  it('keeps the mobile bottom-card photo compact enough for actions and exposes map/share actions', () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
 
     let tree: any;
@@ -557,7 +557,7 @@ describe('PlacePopupCard', () => {
 
     const hero = tree.root.findAll((node: any) => {
       const style = StyleSheet.flatten(node.props?.style);
-      return style?.flexBasis === '70%' && style?.maxHeight === '70%';
+      return style?.flexBasis === '58%' && style?.maxHeight === '58%' && style?.minHeight === '46%';
     })[0];
 
     expect(hero).toBeTruthy();

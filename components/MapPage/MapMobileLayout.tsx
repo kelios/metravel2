@@ -391,7 +391,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
     : NATIVE_MOBILE_BOTTOM_DOCK_INSET
   const selectedPlaceBottomInset = IS_WEB
-    ? (LAYOUT?.tabBarHeight ?? 56) +
+    ? WEB_MOBILE_BOTTOM_DOCK_INSET +
       (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
     : bottomSheetInset
   const searchAreaButtonBottom = getSearchAreaButtonBottom(

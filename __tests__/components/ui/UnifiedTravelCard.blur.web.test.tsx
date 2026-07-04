@@ -82,6 +82,35 @@ describe('UnifiedTravelCard blur background (web)', () => {
     expect(props.revealOnLoadOnly).toBe(true)
   })
 
+  it('passes list image performance props through mediaProps', () => {
+    renderer.act(() => {
+      renderer.create(
+        <UnifiedTravelCard
+          title="Test travel"
+          imageUrl="https://example.com/photo.jpg"
+          onPress={() => {}}
+          mediaProps={{
+            transition: 0,
+            imageProps: {
+              allowDownscaling: true,
+              decodeFormat: 'rgb',
+              placeholderContentFit: 'contain',
+            },
+          }}
+        />
+      )
+    })
+
+    const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
+    expect(props).toBeTruthy()
+    expect(props.transition).toBe(0)
+    expect(props.imageProps).toMatchObject({
+      allowDownscaling: true,
+      decodeFormat: 'rgb',
+      placeholderContentFit: 'contain',
+    })
+  })
+
   it('forwards explicit card media dimensions to ImageCardMedia', () => {
     renderer.act(() => {
       renderer.create(
