@@ -33,6 +33,7 @@ jest.mock('@/context/AuthContext', () => ({
 // Force mobile layout via useResponsive
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ isMobile: true, width: 375 }),
+  useBreakpoints: () => ({ isMobile: true }),
 }));
 
 // Make TravelDetailsContainer deterministic: provide travel data and avoid network

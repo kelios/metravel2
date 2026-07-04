@@ -49,10 +49,12 @@ export const QUESTS_LIST_GC_TIME = 60 * 60 * 1000;
 // ===================== ХУКИ =====================
 
 /** Хук для загрузки списка квестов */
-export function useQuestsList() {
+export function useQuestsList(opts?: { enabled?: boolean }) {
+    const enabled = opts?.enabled ?? true;
     const { data, isPending, error } = useQuery<ApiQuestMeta[]>({
         queryKey: queryKeys.quests(),
         queryFn: fetchQuestsList,
+        enabled,
         staleTime: QUESTS_LIST_STALE_TIME,
         gcTime: QUESTS_LIST_GC_TIME,
     });
@@ -76,7 +78,7 @@ export function useQuestsList() {
         : null;
     if (error) devWarn('Failed to load quests list:', errorMessage);
 
-    return { quests, cityQuestsIndex, loading: isPending, error: errorMessage };
+    return { quests, cityQuestsIndex, loading: enabled && isPending, error: errorMessage };
 }
 
 /** Хук для загрузки городов с квестами */

@@ -113,20 +113,21 @@ export function useQuestsForLocation(
   const server = useServerQuestsNearLocation(query, limit)
 
   // Клиентский fallback подключается только если серверный эндпоинт недоступен.
-  const { quests, loading: questsLoading } = useQuestsList()
+  const fallbackEnabled = server.serverUnavailable
+  const { quests, loading: questsLoading } = useQuestsList({ enabled: fallbackEnabled })
   const { cityName, countryName, countryCode, coords } = query
 
   const fallbackMatches = useMemo(() => {
-    if (!server.serverUnavailable || questsLoading || !quests.length) return []
+    if (!fallbackEnabled || questsLoading || !quests.length) return []
     return findQuestsNearLocation(
       quests,
       { cityName, countryName, countryCode, coords },
       typeof limit === 'number' ? { limit } : undefined,
     )
-  }, [server.serverUnavailable, questsLoading, quests, cityName, countryName, countryCode, coords, limit])
+  }, [fallbackEnabled, questsLoading, quests, cityName, countryName, countryCode, coords, limit])
 
-  if (server.serverUnavailable) {
-    return { matches: fallbackMatches, loading: questsLoading }
+  if (fallbackEnabled) {
+    return { matches: fallbackMatches, loading: fallbackEnabled && questsLoading }
   }
   return { matches: server.matches, loading: server.loading }
 }
