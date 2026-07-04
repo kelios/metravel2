@@ -13,12 +13,14 @@ import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import { validateReadyForModeration } from '@/utils/travelWizardValidation';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
+const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
 const rawApiUrl = resolveApiBaseUrl({
   platformOS: Platform.OS,
   envApiUrl: process.env.EXPO_PUBLIC_API_URL,
   prodApiUrl: process.env.PROD_API_URL,
   nodeEnv: process.env.NODE_ENV,
   isLocalApi,
+  isE2E,
   windowOrigin: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location?.origin : null,
   windowHostname: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location?.hostname : null,
 });
