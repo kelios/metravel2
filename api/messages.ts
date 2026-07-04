@@ -60,13 +60,70 @@ async function messagingFetch<T>(
 
 // ---- Types ----
 
+// #708: канонические имена/аватары участников в payload /message-threads/.
+// Отсутствует только на старом API — тогда работает fetchUserProfile-fallback.
+export interface ParticipantPreview {
+    id: number;
+    display_name: string;
+    avatar_url: string | null;
+    username: string | null;
+    is_deleted: boolean;
+}
+
 export interface MessageThread {
     id: number;
     participants: number[];
+    participant_previews?: ParticipantPreview[];
     created_at: string | null;
     last_message_created_at: string | null;
     unread_count: number;
 }
+
+export const getParticipantPreviewDisplayName = (preview: ParticipantPreview): string | null => {
+    const displayName = preview.display_name?.trim();
+    if (displayName) return displayName;
+    const username = preview.username?.trim();
+    if (username) return username;
+    return preview.is_deleted ? 'Удалённый пользователь' : null;
+};
+
+export const threadHasParticipantPreviews = (thread: MessageThread): boolean =>
+    Array.isArray(thread.participant_previews);
+
+export type ParticipantPreviewInfo = { name: string | null; avatar: string | null };
+
+// Канонический мэппинг previews -> имена/аватары для списка диалогов и шапки чата.
+export const collectParticipantPreviews = (
+    threads: Array<MessageThread | null | undefined>,
+): Map<number, ParticipantPreviewInfo> => {
+    const map = new Map<number, ParticipantPreviewInfo>();
+    for (const thread of threads) {
+        for (const preview of thread?.participant_previews ?? []) {
+            if (typeof preview?.id !== 'number' || map.has(preview.id)) continue;
+            map.set(preview.id, {
+                name: getParticipantPreviewDisplayName(preview),
+                avatar: preview.avatar_url ?? null,
+            });
+        }
+    }
+    return map;
+};
+
+// Peers, которым нужен fetchUserProfile-fallback: ТОЛЬКО из тредов старого API
+// без participant_previews. Канонический payload previews не даёт N+1 запросов.
+export const collectLegacyPeerIds = (
+    threads: MessageThread[],
+    currentUserId: number,
+): number[] => {
+    const ids = new Set<number>();
+    for (const thread of threads) {
+        if (threadHasParticipantPreviews(thread)) continue;
+        for (const participantId of thread.participants) {
+            if (participantId !== currentUserId) ids.add(participantId);
+        }
+    }
+    return Array.from(ids);
+};
 
 export interface Message {
     id: number;

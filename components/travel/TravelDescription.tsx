@@ -17,6 +17,8 @@ interface TravelDescriptionProps {
     htmlContent: string;
     title?: string;
     noBox?: boolean;
+    // htmlContent — серверный canonical safe_html (#709): без полного sanitize, только дешёвый guard
+    serverSanitized?: boolean;
 }
 
 /**
@@ -31,6 +33,7 @@ interface TravelDescriptionProps {
 const TravelDescription: React.FC<TravelDescriptionProps> = ({
                                                                  htmlContent,
                                                                  noBox = false,
+                                                                 serverSanitized = false,
                                                              }) => {
     const { width, height } = useWindowDimensions();
     const isMobileLayout = width < METRICS.breakpoints.tablet;
@@ -213,7 +216,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
           {isEmptyHtml ? (
             <Text style={styles.placeholder}>Автор ещё не добавил описание</Text>
           ) : canParseHtml ? (
-            <StableContent html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} />
+            <StableContent html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} serverSanitized={serverSanitized} />
           ) : (
             <View
               testID="travel-description-fallback"

@@ -230,6 +230,24 @@ export const normalizeTravelItem = (input: unknown): Travel => {
     out.plus = normalizeRichTextMediaUrls(stripDraftPlaceholder(out.plus));
     out.minus = normalizeRichTextMediaUrls(stripDraftPlaceholder(out.minus));
 
+    // #709: canonical rich_text.*.safe_html — та же нормализация first-party media URL,
+    // что и у legacy-полей выше (http://metravel.by/... -> https://...).
+    if (t.rich_text && typeof t.rich_text === 'object') {
+        const rawRichText = asRecord(t.rich_text);
+        const normalizedRichText: Record<string, unknown> = { ...rawRichText };
+        for (const key of ['description', 'plus', 'minus', 'recommendation'] as const) {
+            const block = rawRichText[key];
+            if (block && typeof block === 'object') {
+                const blockRecord = asRecord(block);
+                normalizedRichText[key] = {
+                    ...blockRecord,
+                    safe_html: normalizeRichTextMediaUrls(blockRecord.safe_html),
+                };
+            }
+        }
+        out.rich_text = normalizedRichText;
+    }
+
     // Нормализация полей рейтинга
     if (typeof t.rating !== 'undefined') {
         const ratingVal = Number(t.rating);

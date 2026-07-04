@@ -35,17 +35,19 @@ interface StableContentProps {
   html: string;
   contentWidth: number;
   fullWidth?: boolean;
+  // html — серверный canonical safe_html (#709): без полного sanitize, только дешёвый guard
+  serverSanitized?: boolean;
 }
 
 type IframeModelType = typeof import("@native-html/iframe-plugin")["iframeModel"];
 
-const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, fullWidth = false }) => {
+const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, fullWidth = false, serverSanitized = false }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const webRichTextStyles = useMemo(() => getWebRichTextStyles(colors), [colors]);
   const [iframeModel, setIframeModel] = useState<IframeModelType | null>(null);
   const [lightboxImage, setLightboxImage] = useState<LightboxImage | null>(null);
-  const prepared = useMemo(() => prepareStableContentHtml(html), [html]);
+  const prepared = useMemo(() => prepareStableContentHtml(html, { serverSanitized }), [html, serverSanitized]);
 
   const scrollToHashTarget = (hash: string) => {
     try {

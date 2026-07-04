@@ -9,6 +9,7 @@ import { CollapsibleSection } from './CollapsibleSection'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import TravelDescription from '@/components/travel/TravelDescription'
 import { safeGetYoutubeId } from '@/utils/travelMedia'
+import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
 import { LazyYouTube } from './LazyYouTubeSection'
 import QuestForCitySection from './QuestForCitySection'
@@ -52,6 +53,11 @@ export const TravelDetailsContentSection: React.FC<{
   const styles = useTravelDetailsStyles()
   const publish = (travel as any).publish
   const moderation = (travel as any).moderation
+  // #709: canonical rich_text.*.safe_html с бэка, legacy-поля — fallback для старого payload
+  const descriptionContent = resolveServerRichTextHtml(travel.rich_text?.description, travel.description || '')
+  const recommendationContent = resolveServerRichTextHtml(travel.rich_text?.recommendation, travel.recommendation)
+  const plusContent = resolveServerRichTextHtml(travel.rich_text?.plus, travel.plus)
+  const minusContent = resolveServerRichTextHtml(travel.rich_text?.minus, travel.minus)
   const {
     buildInsightControl,
     hasInsights,
@@ -110,7 +116,7 @@ export const TravelDetailsContentSection: React.FC<{
               </View>
               {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>Содержание маршрута</h2>}
 
-              <TravelDescription title={travel.name} htmlContent={travel.description || ''} noBox />
+              <TravelDescription title={travel.name} htmlContent={descriptionContent.html} serverSanitized={descriptionContent.serverSanitized} noBox />
 
               {/* P2-3: Кнопка «Назад к началу» удалена — глобальный ScrollToTopButton достаточен */}
             </View>
@@ -205,7 +211,7 @@ export const TravelDetailsContentSection: React.FC<{
                 {...buildInsightControl('recommendation')}
               >
                 <View style={styles.descriptionContainer}>
-                  <TravelDescription title="Рекомендации" htmlContent={travel.recommendation} noBox />
+                  <TravelDescription title="Рекомендации" htmlContent={recommendationContent.html} serverSanitized={recommendationContent.serverSanitized} noBox />
                 </View>
               </CollapsibleSection>
             </View>
@@ -229,7 +235,7 @@ export const TravelDetailsContentSection: React.FC<{
                 {...buildInsightControl('plus')}
               >
                 <View style={styles.descriptionContainer}>
-                  <TravelDescription title="Плюсы" htmlContent={travel.plus} noBox />
+                  <TravelDescription title="Плюсы" htmlContent={plusContent.html} serverSanitized={plusContent.serverSanitized} noBox />
                 </View>
               </CollapsibleSection>
             </View>
@@ -253,7 +259,7 @@ export const TravelDetailsContentSection: React.FC<{
                 {...buildInsightControl('minus')}
               >
                 <View style={styles.descriptionContainer}>
-                  <TravelDescription title="Минусы" htmlContent={travel.minus} noBox />
+                  <TravelDescription title="Минусы" htmlContent={minusContent.html} serverSanitized={minusContent.serverSanitized} noBox />
                 </View>
               </CollapsibleSection>
             </View>

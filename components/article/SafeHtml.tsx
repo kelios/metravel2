@@ -7,9 +7,13 @@ import { normalizeArticleEditorHtmlForInput } from '@/components/article/article
 import { useThemedColors } from '@/hooks/useTheme';
 import { getInstagramCardStyles, replaceInstagramEmbedsWithCards } from '@/utils/instagramRichText';
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
+import { guardServerSafeHtml } from '@/utils/serverSafeHtml';
 
 interface SafeHtmlProps {
     html: string;
+    // html — серверный canonical rich_text.*.safe_html (#709): полный клиентский
+    // sanitize не запускается, остаётся только дешёвый guard (script/on*/iframe).
+    serverSanitized?: boolean;
     style?: any;
     className?: string;
     testID?: string;
@@ -22,15 +26,19 @@ const SAFE_HTML_RICH_TEXT_STYLES_ID = 'safe-html-rich-text-styles';
  * Компонент для безопасного рендеринга HTML контента
  * Автоматически санитизирует HTML для защиты от XSS
  */
-export function SafeHtml({ html, style, className, testID }: SafeHtmlProps) {
+export function SafeHtml({ html, serverSanitized = false, style, className, testID }: SafeHtmlProps) {
     const colors = useThemedColors();
     const trimmed = String(html ?? '').trim();
 
     // Санитизируем HTML
     const sanitized = useMemo(() => {
         if (!trimmed) return '';
+        if (serverSanitized) {
+            // canonical safe_html с бэка (#709): без normalize+sanitize, только guard
+            return replaceInstagramEmbedsWithCards(guardServerSafeHtml(html));
+        }
         return sanitizeRichText(replaceInstagramEmbedsWithCards(normalizeArticleEditorHtmlForInput(html)));
-    }, [html, trimmed]);
+    }, [html, trimmed, serverSanitized]);
     const richTextStyles = useMemo(
         () => getInstagramCardStyles(`.${SAFE_HTML_RICH_TEXT_CLASS}`, colors),
         [colors]

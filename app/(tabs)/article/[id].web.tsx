@@ -14,6 +14,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { buildCanonicalUrl } from '@/utils/seo'
 import { stripToDescription } from '@/components/travel/utils/travelHelpers'
+import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { webTouchScrollStyle } from '@/utils'
 
 export default function ArticleDetails() {
@@ -161,17 +162,20 @@ export default function ArticleDetails() {
     )
   }
 
+  // #709: canonical rich_text.description.safe_html с бэка, description — fallback
+  const articleContent = resolveServerRichTextHtml(article.rich_text?.description, article.description)
+
   return (
     <>
       {seoBlock}
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView style={[styles.container, webTouchScrollStyle]} contentContainerStyle={styles.contentContainer}>
           <Stack.Screen options={{ headerTitle: article.name }} />
-          {article.description && (
+          {articleContent.html && (
             <Card style={styles.card}>
               <Card.Content>
                 <h1 style={{ fontSize: 18, fontWeight: '700', margin: 0 } as any}>{article.name}</h1>
-                <SafeHtml html={article.description} style={{ marginTop: 16 }} />
+                <SafeHtml html={articleContent.html} serverSanitized={articleContent.serverSanitized} style={{ marginTop: 16 }} />
               </Card.Content>
             </Card>
           )}

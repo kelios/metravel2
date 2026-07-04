@@ -16,6 +16,7 @@ import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/a
 import { SafeHtml } from '@/components/article/SafeHtml'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
+import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 
 export default function ArticleDetails() {
   const { width } = useResponsive()
@@ -108,6 +109,9 @@ export default function ArticleDetails() {
     )
   }
 
+  // #709: canonical rich_text.description.safe_html с бэка, description — fallback
+  const articleContent = resolveServerRichTextHtml(article.rich_text?.description, article.description)
+
   return (
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView
@@ -115,20 +119,21 @@ export default function ArticleDetails() {
             contentContainerStyle={styles.contentContainer}
         >
           <Stack.Screen options={{ headerTitle: article.name }} />
-          {article.description && (
+          {articleContent.html && (
               <Card style={styles.card}>
                 <Card.Content>
                   <Title>{article.name}</Title>
                   {Platform.select({
                     web: (
-                        <SafeHtml 
-                            html={article.description}
+                        <SafeHtml
+                            html={articleContent.html}
+                            serverSanitized={articleContent.serverSanitized}
                             style={{ marginTop: 16 }}
                         />
                     ),
                     default: (
                         <RenderHTML
-                            source={{ html: article.description }}
+                            source={{ html: articleContent.html }}
                             contentWidth={width - 50}
                             renderers={{ iframe: IframeRenderer }}
                             customHTMLElementModels={{ iframe: iframeModel }}

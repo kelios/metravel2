@@ -7,6 +7,26 @@ export type GalleryItem = string | {
     updated_at?: string;
 }
 
+// #709: серверный canonical rich-text — safe_html уже санитизирован бэком,
+// клиент рендерит его без полного normalize+sanitize pipeline (дешёвый guard остаётся).
+export type ServerRichTextBlock = {
+    safe_html: string
+    plain_text: string
+}
+
+export type ServerRichTextTocItem = {
+    id: string
+    level: number
+    text: string
+}
+
+export type ServerRichText = {
+    description?: (ServerRichTextBlock & { toc?: ServerRichTextTocItem[] }) | null
+    plus?: ServerRichTextBlock | null
+    minus?: ServerRichTextBlock | null
+    recommendation?: ServerRichTextBlock | null
+}
+
 export type TravelAddressItem = string | {
     id: number;
     name: string;
@@ -14,6 +34,28 @@ export type TravelAddressItem = string | {
     coords?: string;
     lat?: number;
     lng?: number;
+}
+
+// #715: backend media variants manifest в payload travel (media.cover/gallery/address_images).
+// URL внутри относительные (`/travel-image/...?w=640&q=75&fit=cover`) — резолвятся
+// через utils/travelMediaVariants. Поле опционально: старый payload его не содержит.
+export type TravelMediaImage = {
+    id: number
+    alt?: string | null
+    dominant_color?: string | null
+    blurhash?: string | null
+    lqip_url?: string | null
+    // Имена вида thumb_160 / card_640 / hero_1920 / print_2500 / original
+    variants?: Record<string, string> | null
+    srcset?: string | null
+    sizes_hint?: string | null
+    updated_at?: string | null
+}
+
+export type TravelMedia = {
+    cover?: TravelMediaImage | null
+    gallery?: TravelMediaImage[] | null
+    address_images?: Record<string, TravelMediaImage> | null
 }
 
 export type Travel = {
@@ -36,6 +78,8 @@ export type Travel = {
     recommendation: string
     plus: string
     minus: string
+    // #709: canonical rich-text с бэка; отсутствует на старом payload
+    rich_text?: ServerRichText | null
     cityName: string
     countryName: string
     countUnicIpView: string
@@ -50,6 +94,8 @@ export type Travel = {
     // ✅ ИСПРАВЛЕНО: Поддержка обоих форматов для обратной совместимости
     gallery: GalleryItem[]
     travelAddress: TravelAddressItem[]
+    // #715: backend media variants manifest; отсутствует на старом payload
+    media?: TravelMedia | null
     userIds: string
     year: string
     monthName: string
@@ -148,6 +194,8 @@ export type Article = {
     url?: string
     name: string
     description: string
+    // #709: canonical rich-text с бэка; отсутствует на старом payload
+    rich_text?: ServerRichText | null
     article_image_thumb_url: string
     article_image_thumb_small_url: string
     article_type: ArticleType

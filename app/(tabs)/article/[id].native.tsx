@@ -23,6 +23,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
 import { handleRichTextLinkPress } from '@/utils/internalLinks'
 import { normalizeArticleReturnHref } from '@/utils/articleNavigation'
+import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 
 export default function ArticleDetails() {
   const { width } = useResponsive()
@@ -148,22 +149,25 @@ export default function ArticleDetails() {
     )
   }
 
+  // #709: canonical rich_text.description.safe_html с бэка, description — fallback
+  const articleContent = resolveServerRichTextHtml(article.rich_text?.description, article.description)
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ headerTitle: article.name, headerBackVisible: false }} />
       <ArticleBackButton colors={colors} onPress={handleBack} styles={styles} />
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-        {article.description && (
+        {articleContent.html && (
           <Card style={styles.card}>
             <Card.Content>
               <Title>{article.name}</Title>
               {Platform.select({
                 web: (
-                  <SafeHtml html={article.description} style={{ marginTop: 16 }} />
+                  <SafeHtml html={articleContent.html} serverSanitized={articleContent.serverSanitized} style={{ marginTop: 16 }} />
                 ),
                 default: (
                   <RenderHTML
-                    source={{ html: article.description }}
+                    source={{ html: articleContent.html }}
                     contentWidth={width - 50}
                     renderers={{ iframe: IframeRenderer }}
                     customHTMLElementModels={{ iframe: iframeModel }}

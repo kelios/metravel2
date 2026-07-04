@@ -7,7 +7,13 @@ import { useIsFocused } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { useThreads, useThreadMessages, useSendMessage, useDeleteMessage, useDeleteThread, useAvailableUsers, useMarkThreadRead } from '@/hooks/useMessages';
-import { fetchThreadByUser, getMessagingUserDisplayName, getMessagingUserId } from '@/api/messages';
+import {
+    collectLegacyPeerIds,
+    collectParticipantPreviews,
+    fetchThreadByUser,
+    getMessagingUserDisplayName,
+    getMessagingUserId,
+} from '@/api/messages';
 import { fetchUserProfile } from '@/api/user';
 import type { MessageThread } from '@/api/messages';
 import ThreadList from '@/components/messages/ThreadList';
@@ -97,24 +103,28 @@ function MessagesScreenContent() {
         return selectedThread.participants.find((id) => id !== currentUserIdNum) ?? null;
     }, [selectedThread, userId]);
 
-    // Peers (thread participants + the open chat peer) are often NOT in the
-    // available-users list, so both the thread LIST and the chat header would fall
-    // back to the generic «Пользователь». Resolve their profiles by id and merge.
+    // #708: канонический источник имён/аватаров — participant_previews из payload
+    // /message-threads/. Покрывает и список диалогов, и шапку открытого чата.
+    const previewPeers = useMemo(
+        () => collectParticipantPreviews([...threads, selectedThread]),
+        [threads, selectedThread],
+    );
+
+    // Fallback для старого API без participant_previews: peers часто отсутствуют в
+    // available-users, поэтому без резолва профилей список и шапка показывали бы
+    // генерик «Пользователь». На каноническом payload previews этот путь не даёт
+    // ни одного fetchUserProfile-запроса (N+1 убран).
     const [resolvedPeers, setResolvedPeers] = useState<
         Map<number, { name: string; avatar: string | null }>
     >(() => new Map());
 
     const peerIdsToResolve = useMemo(() => {
-        const ids = new Set<number>();
-        const me = Number(userId);
-        for (const t of threads) {
-            for (const pid of t.participants) {
-                if (pid !== me) ids.add(pid);
-            }
-        }
+        const ids = new Set<number>(collectLegacyPeerIds(threads, Number(userId)));
         if (otherUserId != null) ids.add(otherUserId);
-        return Array.from(ids).filter((id) => !participantNames.has(id) && !resolvedPeers.has(id));
-    }, [threads, otherUserId, userId, participantNames, resolvedPeers]);
+        return Array.from(ids).filter(
+            (id) => !previewPeers.has(id) && !participantNames.has(id) && !resolvedPeers.has(id),
+        );
+    }, [threads, otherUserId, userId, previewPeers, participantNames, resolvedPeers]);
 
     useEffect(() => {
         if (peerIdsToResolve.length === 0) return;
@@ -148,21 +158,28 @@ function MessagesScreenContent() {
 
     // Names/avatars enriched with resolved peer profiles — used by BOTH the thread
     // list and the open chat header so neither shows the generic «Пользователь».
+    // participant_previews (#708) — канонический источник, перекрывает остальные.
     const mergedNames = useMemo(() => {
         const map = new Map(participantNames);
         for (const [id, info] of resolvedPeers) {
             if (info.name && !map.has(id)) map.set(id, info.name);
         }
+        for (const [id, info] of previewPeers) {
+            if (info.name) map.set(id, info.name);
+        }
         return map;
-    }, [participantNames, resolvedPeers]);
+    }, [participantNames, resolvedPeers, previewPeers]);
 
     const mergedAvatars = useMemo(() => {
         const map = new Map(participantAvatars);
         for (const [id, info] of resolvedPeers) {
             if (!map.has(id)) map.set(id, info.avatar);
         }
+        for (const [id, info] of previewPeers) {
+            if (info.avatar || !map.has(id)) map.set(id, info.avatar);
+        }
         return map;
-    }, [participantAvatars, resolvedPeers]);
+    }, [participantAvatars, resolvedPeers, previewPeers]);
 
     const otherUserName = useMemo(() => {
         if (otherUserId != null && mergedNames.has(otherUserId)) {

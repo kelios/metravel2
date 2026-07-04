@@ -4,6 +4,7 @@ import { normalizeArticleEditorHtmlForInput } from '@/components/article/article
 import { replaceInstagramEmbedsWithCards } from '@/utils/instagramRichText'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
 import { applySmartImageLayout } from '@/utils/richTextImageLayout'
+import { guardServerSafeHtml } from '@/utils/serverSafeHtml'
 
 const OPTIMIZATION_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr']
 
@@ -352,8 +353,17 @@ const decorateRichImageFrames = (html: string) => {
     )
 }
 
-export const prepareStableContentHtml = (html: string) => {
-  const normalizedEmbeds = normalizeArticleEditorHtmlForInput(html)
+export type PrepareStableContentHtmlOptions = {
+  // true — html уже canonical rich_text.*.safe_html с бэка (#709): полный
+  // normalize+sanitize pipeline не запускается, остаётся только дешёвый guard.
+  serverSanitized?: boolean
+}
+
+export const prepareStableContentHtml = (html: string, options?: PrepareStableContentHtmlOptions) => {
+  const serverSanitized = options?.serverSanitized === true
+  const normalizedEmbeds = serverSanitized
+    ? guardServerSafeHtml(html)
+    : normalizeArticleEditorHtmlForInput(html)
   const isWeb = Platform.OS === 'web' || typeof document !== 'undefined'
   // На web: вместо живого iframe (каждый тянет ~целый Instagram-рантайм, ~900KB/десятки
   // запросов на статью) — лёгкий facade, настоящий iframe монтируется лениво при подходе
@@ -361,7 +371,7 @@ export const prepareStableContentHtml = (html: string) => {
   const instagramSafeHtml = replaceInstagramEmbedsWithCards(normalizedEmbeds, {
     iframeStrategy: isWeb ? 'facade' : 'card',
   })
-  const safe = sanitizeRichText(instagramSafeHtml)
+  const safe = serverSanitized ? instagramSafeHtml : sanitizeRichText(instagramSafeHtml)
   const normalizedBase = replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)))
   const normalized = Platform.OS === 'web'
     ? normalizedBase
