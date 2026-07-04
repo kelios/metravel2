@@ -1,6 +1,6 @@
 import { commentsApi } from '@/api/comments';
 import { apiClient } from '@/api/client';
-import type { TravelComment, TravelCommentThread } from '@/types/comments';
+import type { TravelComment, TravelCommentThread, TravelCommentTree } from '@/types/comments';
 
 jest.mock('@/api/client');
 
@@ -255,6 +255,93 @@ describe('Comments API', () => {
 
       expect(result).toHaveLength(3);
       expect(result.map((c: TravelComment) => c.text)).toEqual(['A', 'B', 'C']);
+    });
+  });
+
+  describe('getCommentTree', () => {
+    it('should fetch the canonical comments tree for a travel', async () => {
+      const tree: TravelCommentTree = {
+        travel_id: 123,
+        total_count: 2,
+        top_level: [
+          {
+            id: 1,
+            thread: 9,
+            sub_thread: 50,
+            user: 1,
+            text: 'Root',
+            created_at: null,
+            updated_at: null,
+            likes_count: 0,
+            depth: 0,
+            replies_count: 1,
+            replies: [
+              {
+                id: 2,
+                thread: 50,
+                sub_thread: null,
+                user: 2,
+                text: 'Reply',
+                created_at: null,
+                updated_at: null,
+                likes_count: 0,
+                depth: 1,
+                replies_count: 0,
+                replies: [],
+              },
+            ],
+          },
+        ],
+        flat: [
+          { id: 1, thread: 9, sub_thread: 50, user: 1, text: 'Root', created_at: null, updated_at: null, likes_count: 0 },
+          { id: 2, thread: 50, sub_thread: null, user: 2, text: 'Reply', created_at: null, updated_at: null, likes_count: 0 },
+        ],
+      };
+
+      mockedApiClient.get.mockResolvedValueOnce(tree);
+
+      const result = await commentsApi.getCommentTree(123);
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/tree/?travel_id=123');
+      expect(result).toEqual(tree);
+    });
+
+    it('should return null when the tree endpoint is missing (404 -> flat fallback signal)', async () => {
+      mockedApiClient.get.mockRejectedValueOnce({ response: { status: 404 } });
+
+      const result = await commentsApi.getCommentTree(123);
+
+      expect(result).toBeNull();
+    });
+
+    it('should return an empty tree on 400 (rejected travel_id lookup)', async () => {
+      mockedApiClient.get.mockRejectedValueOnce({ response: { status: 400 } });
+
+      const result = await commentsApi.getCommentTree(123);
+
+      expect(result).toEqual({ travel_id: 123, total_count: 0, top_level: [], flat: [] });
+    });
+
+    it('should return an empty tree when comment reads are auth-protected (403)', async () => {
+      mockedApiClient.get.mockRejectedValueOnce({ response: { status: 403 } });
+
+      const result = await commentsApi.getCommentTree(123);
+
+      expect(result).toEqual({ travel_id: 123, total_count: 0, top_level: [], flat: [] });
+    });
+
+    it('should return null for an invalid travel id without issuing a request', async () => {
+      const result = await commentsApi.getCommentTree(0);
+
+      expect(result).toBeNull();
+      expect(mockedApiClient.get).not.toHaveBeenCalled();
+    });
+
+    it('should rethrow unexpected server errors', async () => {
+      const error = { response: { status: 500 } };
+      mockedApiClient.get.mockRejectedValueOnce(error);
+
+      await expect(commentsApi.getCommentTree(123)).rejects.toEqual(error);
     });
   });
 

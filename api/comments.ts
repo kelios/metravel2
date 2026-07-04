@@ -2,6 +2,7 @@ import { apiClient, ApiError } from './client';
 import type {
   TravelComment,
   TravelCommentThread,
+  TravelCommentTree,
   TravelCommentCreate,
   TravelCommentUpdate,
 } from '@/types/comments';
@@ -164,6 +165,39 @@ export const commentsApi = {
     }
 
     return allComments;
+  },
+
+  // Canonical comments tree (BE #711): the backend returns the whole
+  // conversation already assembled (top_level with nested replies + a flat
+  // list), so the client neither reconstructs threads from a flat list nor
+  // issues BFS sub-thread requests. Returns `null` when the tree endpoint is
+  // unavailable (older/stale deployments answering 404) so callers can fall
+  // back to the flat `getTravelComments` path.
+  getCommentTree: async (travelId: number): Promise<TravelCommentTree | null> => {
+    if (!(typeof travelId === 'number' && travelId > 0)) {
+      return null;
+    }
+    try {
+      return await apiClient.get<TravelCommentTree>(
+        `/travel-comments/tree/?travel_id=${travelId}`
+      );
+    } catch (error) {
+      const status = getErrorStatus(error);
+      // 404 => endpoint not deployed here; signal the flat fallback path.
+      if (status === 404) {
+        return null;
+      }
+      // 400 => backend rejected the travel_id lookup (e.g. after a DB reset);
+      // treat as an empty, publicly readable discussion.
+      if (status === 400) {
+        return { travel_id: travelId, total_count: 0, top_level: [], flat: [] };
+      }
+      // Some deployments protect comment reads behind auth; degrade to empty.
+      if (status === 401 || status === 403) {
+        return { travel_id: travelId, total_count: 0, top_level: [], flat: [] };
+      }
+      throw error;
+    }
   },
 
   getComment: async (commentId: number): Promise<TravelComment> => {

@@ -1,4 +1,4 @@
-import type { TravelComment } from '@/types/comments'
+import type { TravelComment, TravelCommentTreeNode } from '@/types/comments'
 
 export type CommentThreadModel = {
   topLevel: TravelComment[]
@@ -54,6 +54,54 @@ export function buildCommentThreadModel(
     allComments,
     subThreadToParent,
     warnedAllSubThread: hasWarnedAllSubThread,
+  }
+}
+
+const stripTreeFields = (node: TravelCommentTreeNode): TravelComment => {
+  const { replies: _replies, replies_count: _repliesCount, depth: _depth, ...comment } = node
+  return comment
+}
+
+export function buildCommentThreadModelFromTree(
+  topLevelNodes: TravelCommentTreeNode[],
+): CommentThreadModel {
+  const topLevel: TravelComment[] = []
+  const replies: Record<number, TravelComment[]> = {}
+  const allComments: Record<number, TravelComment> = {}
+  const subThreadToParent: Record<number, number> = {}
+
+  const walk = (node: TravelCommentTreeNode, parentId: number | null): void => {
+    const comment = stripTreeFields(node)
+    allComments[comment.id] = comment
+
+    const subThread =
+      typeof comment.sub_thread === 'string' ? Number(comment.sub_thread) : comment.sub_thread
+    if (typeof subThread === 'number' && !Number.isNaN(subThread) && subThread > 0) {
+      subThreadToParent[subThread] = comment.id
+    }
+
+    if (parentId != null) {
+      ;(replies[parentId] ??= []).push(comment)
+    } else {
+      topLevel.push(comment)
+    }
+
+    const childNodes = Array.isArray(node.replies) ? node.replies : []
+    for (const child of childNodes) {
+      walk(child, comment.id)
+    }
+  }
+
+  for (const node of topLevelNodes) {
+    walk(node, null)
+  }
+
+  return {
+    topLevel,
+    replies,
+    allComments,
+    subThreadToParent,
+    warnedAllSubThread: false,
   }
 }
 

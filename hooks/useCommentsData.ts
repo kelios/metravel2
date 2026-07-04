@@ -5,6 +5,7 @@ import { useState, useCallback, useMemo, useRef } from 'react';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import {
   useTravelComments,
+  useTravelCommentTree,
   useCreateComment,
   useUpdateComment,
   useReplyToComment,
@@ -15,6 +16,7 @@ import { devWarn } from '@/utils/logger';
 import type { TravelComment } from '@/types/comments';
 import {
   buildCommentThreadModel,
+  buildCommentThreadModelFromTree,
   findTopLevelAncestor as findCommentTopLevelAncestor,
   getCommentParentChain,
 } from './comments/commentThreadModel';
@@ -32,28 +34,59 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
   const didWarnAllSubThread = useRef(false);
   const mainThreadId: number | undefined = undefined;
 
+  // Canonical path (BE #711): the backend returns a ready comments tree, so we
+  // build the UI model directly from `top_level`/`replies` — no flat-list
+  // reconstruction and no BFS sub-thread requests.
   const {
-    data: comments = [],
-    isLoading: isLoadingComments,
-    error: commentsError,
-    refetch: refetchComments,
+    data: tree,
+    isLoading: isLoadingTree,
+    error: treeError,
+    refetch: refetchTree,
+  } = useTravelCommentTree(travelId, { enabled: isEnabled });
+
+  // Flat fallback for older deployments / stale devs where the tree endpoint
+  // answers 404 (adapter returns `null`). Only fires once the tree query has
+  // settled without a payload, so canonical deployments never issue it.
+  const treeUnavailable = !isLoadingTree && !treeError && tree == null;
+  const {
+    data: flatComments = [],
+    isLoading: isLoadingFlat,
+    error: flatError,
+    refetch: refetchFlat,
   } = useTravelComments(travelId, mainThreadId, {
-    enabled: isEnabled,
+    enabled: isEnabled && treeUnavailable,
   });
 
   const createComment = useCreateComment();
   const updateComment = useUpdateComment();
   const replyToComment = useReplyToComment();
 
+  const comments = useMemo<TravelComment[]>(
+    () => (tree ? tree.flat : flatComments),
+    [tree, flatComments],
+  );
+
   // Thread structure
   const { topLevel, replies, allComments, subThreadToParent } = useMemo(() => {
-    const model = buildCommentThreadModel(comments, didWarnAllSubThread.current)
-    if (model.warnedAllSubThread && !didWarnAllSubThread.current && comments.length > 0) {
+    if (tree) {
+      return buildCommentThreadModelFromTree(tree.top_level)
+    }
+    const model = buildCommentThreadModel(flatComments, didWarnAllSubThread.current)
+    if (model.warnedAllSubThread && !didWarnAllSubThread.current && flatComments.length > 0) {
       devWarn('[Comments] All comments ended up as replies; showing them as top-level fallback.')
       didWarnAllSubThread.current = true
     }
     return model
-  }, [comments]);
+  }, [tree, flatComments]);
+
+  const isLoadingComments = isLoadingTree || (treeUnavailable && isLoadingFlat);
+  const commentsError = treeError ?? (treeUnavailable ? flatError : null);
+  const refetchComments = useCallback(async () => {
+    await refetchTree();
+    if (treeUnavailable) {
+      await refetchFlat();
+    }
+  }, [refetchTree, refetchFlat, treeUnavailable]);
 
   const findTopLevelAncestor = useCallback((commentId: number): number | null => {
     return findCommentTopLevelAncestor(commentId, allComments, subThreadToParent)

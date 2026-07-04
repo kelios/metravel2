@@ -2,8 +2,41 @@
 // Чистые хелперы для оптимистичного обновления кэша комментариев.
 // Извлечены из hooks/useComments.ts для устранения дублирования и независимого тестирования.
 
-import type { TravelComment, TravelCommentCreate } from '@/types/comments';
+import type {
+  TravelComment,
+  TravelCommentCreate,
+  TravelCommentTree,
+  TravelCommentTreeNode,
+} from '@/types/comments';
 import type { QueryClient } from '@tanstack/react-query';
+
+// ===================== Tree-payload guards =====================
+
+const isCommentTree = (value: unknown): value is TravelCommentTree =>
+  typeof value === 'object' &&
+  value !== null &&
+  Array.isArray((value as TravelCommentTree).top_level) &&
+  Array.isArray((value as TravelCommentTree).flat);
+
+const mapTreeNode = (
+  node: TravelCommentTreeNode,
+  commentId: number,
+  transform: (comment: TravelComment) => TravelComment,
+): TravelCommentTreeNode => {
+  const next = node.id === commentId ? { ...node, ...transform(node) } : node;
+  const replies = node.replies.map((child) => mapTreeNode(child, commentId, transform));
+  return { ...next, replies };
+};
+
+const mapTreeComment = (
+  tree: TravelCommentTree,
+  commentId: number,
+  transform: (comment: TravelComment) => TravelComment,
+): TravelCommentTree => ({
+  ...tree,
+  top_level: tree.top_level.map((node) => mapTreeNode(node, commentId, transform)),
+  flat: tree.flat.map((comment) => (comment.id === commentId ? transform(comment) : comment)),
+});
 
 // ===================== Merge helpers =====================
 
@@ -56,6 +89,18 @@ export function optimisticToggleLike(
         };
         queryClient.setQueryData(query.queryKey, newComments);
       }
+    } else if (isCommentTree(data)) {
+      if (data.flat.some((c) => c.id === commentId)) {
+        previousData[JSON.stringify(query.queryKey)] = data;
+        queryClient.setQueryData(
+          query.queryKey,
+          mapTreeComment(data, commentId, (comment) => ({
+            ...comment,
+            likes_count: Math.max(0, comment.likes_count + delta),
+            is_liked: liked,
+          })),
+        );
+      }
     } else if ((data as TravelComment).id === commentId) {
       previousData[JSON.stringify(query.queryKey)] = data;
       queryClient.setQueryData(query.queryKey, {
@@ -94,6 +139,17 @@ export function reconcileLikeResponse(
           is_liked: liked,
         };
         queryClient.setQueryData(query.queryKey, newComments);
+      }
+    } else if (isCommentTree(data)) {
+      if (data.flat.some((c) => c.id === commentId)) {
+        queryClient.setQueryData(
+          query.queryKey,
+          mapTreeComment(data, commentId, (comment) => ({
+            ...comment,
+            ...updatedComment,
+            is_liked: liked,
+          })),
+        );
       }
     } else if ((data as TravelComment).id === commentId) {
       const current = data as TravelComment;

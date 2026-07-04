@@ -21,6 +21,19 @@ export interface TravelComment {
   is_author?: boolean;
 }
 
+export interface TravelCommentTreeNode extends TravelComment {
+  depth: number;
+  replies_count: number;
+  replies: TravelCommentTreeNode[];
+}
+
+export interface TravelCommentTree {
+  travel_id: number;
+  total_count: number;
+  top_level: TravelCommentTreeNode[];
+  flat: TravelComment[];
+}
+
 export interface TravelCommentCreate {
   thread_id?: number;
   travel_id?: number;

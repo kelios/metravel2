@@ -5,6 +5,7 @@ import { CommentsSection } from '@/components/travel/CommentsSection';
 import {
   useMainThread,
   useTravelComments,
+  useTravelCommentTree,
   useCreateComment,
   useUpdateComment,
   useReplyToComment,
@@ -21,6 +22,9 @@ jest.mock('@/context/AuthContext');
 
 const mockUseMainThread = useMainThread as jest.MockedFunction<typeof useMainThread>;
 const mockUseTravelComments = useTravelComments as jest.MockedFunction<typeof useTravelComments>;
+const mockUseTravelCommentTree = useTravelCommentTree as jest.MockedFunction<
+  typeof useTravelCommentTree
+>;
 const mockUseCreateComment = useCreateComment as jest.MockedFunction<typeof useCreateComment>;
 const mockUseUpdateComment = useUpdateComment as jest.MockedFunction<typeof useUpdateComment>;
 const mockUseReplyToComment = useReplyToComment as jest.MockedFunction<typeof useReplyToComment>;
@@ -70,6 +74,14 @@ const createAuthState = (overrides: Partial<AuthStore> = {}): AuthStore => ({
 describe('CommentsSection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Force the flat fallback path so these cases keep exercising
+    // useTravelComments; tree coverage lives in useCommentsData tests.
+    mockUseTravelCommentTree.mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: null,
+      refetch: jest.fn(),
+    } as any);
     mockUseCreateComment.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as any);
     mockUseUpdateComment.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as any);
     mockUseReplyToComment.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as any);

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { commentsApi } from '@/api/comments'
-import type { TravelComment } from '@/types/comments'
+import type { TravelComment, TravelCommentTree, TravelCommentTreeNode } from '@/types/comments'
 import { buildPrevById, mergeIsLikedFromCache } from '@/utils/commentCacheHelpers'
 
 import { commentKeys } from './commentKeys'
@@ -62,6 +62,44 @@ export function useTravelComments(
         queryClient.getQueryData<TravelComment[]>(commentKeys.travelComments(travelId, threadId)),
       )
       return data.map((comment) => mergeIsLikedFromCache(comment, prevById))
+    },
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  })
+}
+
+const remapTreeNodeLiked = (
+  node: TravelCommentTreeNode,
+  prevById: Map<number, TravelComment>,
+): TravelCommentTreeNode => {
+  const merged = mergeIsLikedFromCache(node, prevById)
+  return {
+    ...node,
+    is_liked: merged.is_liked,
+    replies: node.replies.map((child) => remapTreeNodeLiked(child, prevById)),
+  }
+}
+
+export function useTravelCommentTree(travelId: number, options?: { enabled?: boolean }) {
+  const queryClient = useQueryClient()
+  const isEnabled = options?.enabled ?? true
+  return useQuery({
+    queryKey: commentKeys.travelTree(travelId),
+    queryFn: () => commentsApi.getCommentTree(travelId),
+    enabled: isEnabled && !!travelId && travelId > 0,
+    select: (data): TravelCommentTree | null => {
+      if (!data) return data
+      const prev = queryClient.getQueryData<TravelCommentTree | null>(
+        commentKeys.travelTree(travelId),
+      )
+      const prevById = buildPrevById(prev?.flat)
+      return {
+        ...data,
+        top_level: data.top_level.map((node) => remapTreeNodeLiked(node, prevById)),
+        flat: data.flat.map((comment) => mergeIsLikedFromCache(comment, prevById)),
+      }
     },
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,

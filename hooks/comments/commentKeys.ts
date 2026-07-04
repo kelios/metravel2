@@ -6,5 +6,6 @@ export const commentKeys = {
   comments: (threadId: number) => [...commentKeys.all, 'list', threadId] as const,
   travelComments: (travelId: number, threadId?: number | null) =>
     [...commentKeys.all, 'travel', travelId, threadId || 0] as const,
+  travelTree: (travelId: number) => [...commentKeys.all, 'travel-tree', travelId] as const,
   comment: (commentId: number) => [...commentKeys.all, 'detail', commentId] as const,
 }

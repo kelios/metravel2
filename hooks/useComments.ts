@@ -5,6 +5,7 @@ export {
   useMainThread,
   useThread,
   useTravelComments,
+  useTravelCommentTree,
 } from './comments/commentQueries'
 export {
   useCreateComment,
