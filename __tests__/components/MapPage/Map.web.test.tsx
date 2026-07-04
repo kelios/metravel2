@@ -6,7 +6,16 @@ const { QueryClient, QueryClientProvider } = require('@tanstack/react-query')
  const originalPlatformOS = RN.Platform.OS
  RN.Platform.OS = 'web'
 
- let MapPageComponent: any
+let MapPageComponent: any
+let mockMapClustersResult: any = {
+  data: { clusters: [], markers: [], totalCount: 0, source: '', generatedAt: '' },
+  isLoading: false,
+  isFetching: false,
+  isError: false,
+  isDebouncing: false,
+}
+const mockClusterLayerProps = jest.fn()
+const mockMarkerClusterGroupProps = jest.fn()
 
 // Mock leaflet modules
 const mockLeaflet = {
@@ -96,7 +105,8 @@ const mockReactLeaflet = (() => {
 jest.mock('@/components/MapPage/Map/ClusterLayer', () => {
   const RN = require('react-native')
   const View = RN.View
-  return function ClusterLayer() {
+  return function ClusterLayer(props: any) {
+    mockClusterLayerProps(props)
     // Simulate that clustered rendering uses Leaflet divIcon under the hood.
     try {
       ;(globalThis as any)?.window?.L?.divIcon?.({})
@@ -124,6 +134,7 @@ jest.mock('@/components/MapPage/Map/MarkerClusterGroup', () => {
   const RN = require('react-native')
   const View = RN.View
   return function MarkerClusterGroup(props: any) {
+    mockMarkerClusterGroupProps(props)
     const point = props?.points?.[0]
     return (
       <View testID="marker-cluster-group">
@@ -179,6 +190,10 @@ jest.mock('@/components/MapPage/Map/useClustering', () => {
   void api.useClustering
   return api
 })
+
+jest.mock('@/hooks/map/useMapClusters', () => ({
+  useMapClusters: jest.fn(() => mockMapClustersResult),
+}))
 
 jest.mock('@/components/MapPage/Map/useMapCleanup', () => {
   const api = {
@@ -367,6 +382,13 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockMapClustersResult = {
+      data: { clusters: [], markers: [], totalCount: 0, source: '', generatedAt: '' },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      isDebouncing: false,
+    }
     ;(window as any).L = mockLeaflet
     ;(window as any).innerWidth = 1024
     // Reset marker click handler
@@ -1006,6 +1028,110 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
       // MarkerClusterGroup should be rendered
       expect(queryByTestId('marker-cluster-group')).toBeTruthy()
+    })
+
+    it('renders backend clusters through ClusterLayer when server cluster data is available', async () => {
+      mockMapClustersResult = {
+        ...mockMapClustersResult,
+        data: {
+          clusters: [
+            {
+              id: 'server-cluster-1',
+              center: { lat: 53.9, lng: 27.56 },
+              count: 42,
+              bounds: { south: 53.8, west: 27.4, north: 54.0, east: 27.7 },
+              previewItems: [
+                {
+                  id: 10,
+                  lat: '53.9',
+                  lng: '27.56',
+                  coord: '53.9,27.56',
+                  address: 'Server point',
+                  categoryName: 'Test',
+                  travelImageThumbUrl: 'thumb.jpg',
+                  imageUrl: 'image.jpg',
+                  urlTravel: '/travels/server',
+                },
+              ],
+            },
+          ],
+          markers: [],
+          totalCount: 42,
+          source: 'server',
+          generatedAt: '2026-07-04T00:00:00Z',
+        },
+      }
+
+      const { queryByTestId } = renderWithProviders(
+        <MapPageComponent
+          {...defaultProps}
+          mode="radius"
+          travel={{
+            data: [{ id: 1, coord: '53.9,27.5667', address: 'Fallback Address' }],
+          } as any}
+          mapClusterFilters={{ query: 'замок', category: [5] }}
+        />
+      )
+
+      await act(async () => {})
+
+      const { useMapClusters } = require('@/hooks/map/useMapClusters')
+      expect(useMapClusters).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: { query: 'замок', category: [5] },
+        })
+      )
+      expect(queryByTestId('cluster-layer')).toBeTruthy()
+      expect(mockClusterLayerProps).toHaveBeenCalled()
+      expect(mockClusterLayerProps.mock.calls[0]?.[0]?.clusters?.[0]).toEqual(
+        expect.objectContaining({
+          key: 'server-cluster-1',
+          count: 42,
+          center: [53.9, 27.56],
+        })
+      )
+      expect(mockMarkerClusterGroupProps).not.toHaveBeenCalled()
+    })
+
+    it('falls back to local MarkerClusterGroup when backend clusters fail', async () => {
+      mockMapClustersResult = {
+        ...mockMapClustersResult,
+        isError: true,
+        data: {
+          clusters: [
+            {
+              id: 'ignored-server-cluster',
+              center: { lat: 53.9, lng: 27.56 },
+              count: 42,
+              bounds: { south: 53.8, west: 27.4, north: 54.0, east: 27.7 },
+              previewItems: [],
+            },
+          ],
+          markers: [],
+          totalCount: 42,
+          source: 'server',
+          generatedAt: '2026-07-04T00:00:00Z',
+        },
+      }
+
+      const { queryByTestId } = renderWithProviders(
+        <MapPageComponent
+          {...defaultProps}
+          mode="radius"
+          travel={{
+            data: [{ id: 1, coord: '53.9,27.5667', address: 'Fallback Address' }],
+          } as any}
+        />
+      )
+
+      await act(async () => {})
+
+      expect(queryByTestId('marker-cluster-group')).toBeTruthy()
+      expect(mockMarkerClusterGroupProps).toHaveBeenCalledWith(
+        expect.objectContaining({
+          points: [expect.objectContaining({ address: 'Fallback Address' })],
+        })
+      )
     })
   })
 

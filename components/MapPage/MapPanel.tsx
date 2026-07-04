@@ -7,6 +7,7 @@ import { MapSkeleton } from '@/components/ui/SkeletonLoader';
 import Map from '@/components/MapPage/Map';
 import MapRouteEngine from '@/components/MapPage/MapRouteEngine';
 import type { MapUiApi } from '@/types/mapUi';
+import type { MapClustersFilters } from '@/api/map';
 import type { ComponentType } from 'react';
 import { isFallbackMinskCenter } from './Map/fallbackCenter';
 
@@ -46,6 +47,7 @@ interface MapPanelProps {
     setRoutingLoading?: (loading: boolean) => void;
     setRoutingError?: (error: string | null) => void;
     radius?: string; // Радиус поиска в км
+    mapClusterFilters?: MapClustersFilters;
     onMapUiApiReady?: (api: MapUiApi | null) => void;
     onUserLocationChange?: ((loc: LatLng | null) => void) | undefined;
     onMapMove?: (center: LatLng) => void;
@@ -93,6 +95,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                setRoutingLoading,
                                                setRoutingError,
                                                radius,
+                                               mapClusterFilters,
                                                onMapUiApiReady,
                                                onUserLocationChange,
                                                onMapMove,
@@ -164,6 +167,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                     userLocation={nativeUserLocation}
                     routePoints={routePoints}
                     fullRouteCoords={fullRouteCoords}
+                    mapClusterFilters={mapClusterFilters}
                     mode={mode}
                     transportMode={transportMode}
                     setRouteDistance={setRouteDistance}
@@ -200,6 +204,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                       setRoutingLoading={setRoutingLoading}
                       setRoutingError={setRoutingError}
                       radius={radius}
+                      mapClusterFilters={mapClusterFilters}
                       onMapUiApiReady={onMapUiApiReady}
                       onUserLocationChange={onUserLocationChange}
                       onMapMove={onMapMove}

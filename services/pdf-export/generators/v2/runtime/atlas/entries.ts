@@ -8,13 +8,15 @@ import {
   type AtlasTravelEntry,
 } from './types'
 
+function hasFiniteCoordinates(location: { lat?: number; lng?: number }): boolean {
+  return Number.isFinite(location.lat) && Number.isFinite(location.lng)
+}
+
 export function getAtlasTravelsWithMap(meta: TravelSectionMeta[]): TravelSectionMeta[] {
   return meta.filter(
     (item) =>
       item.hasMap &&
-      item.locations.some(
-        (l) => typeof l.lat === 'number' && typeof l.lng === 'number',
-      ),
+      item.locations.some(hasFiniteCoordinates),
   )
 }
 
@@ -26,9 +28,7 @@ export function shouldRenderAtlas(meta: TravelSectionMeta[], includeMap: boolean
 export function buildEntries(meta: TravelSectionMeta[]): AtlasTravelEntry[] {
   const atlasTravels = getAtlasTravelsWithMap(meta)
   return atlasTravels.map((item, idx) => {
-    const pointsWithCoords = item.locations.filter(
-      (l) => typeof l.lat === 'number' && typeof l.lng === 'number',
-    )
+    const pointsWithCoords = item.locations.filter(hasFiniteCoordinates)
     const pointCount = item.locations.length
     const headerRows = 2
     const listRows = Math.ceil(Math.max(1, pointCount) / 2)

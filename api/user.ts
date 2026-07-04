@@ -104,7 +104,9 @@ export type UserCountryProgressRegion =
     | 'asia'
     | 'africa'
     | 'north_america'
+    | 'northAmerica'
     | 'south_america'
+    | 'southAmerica'
     | 'oceania'
     | 'other';
 
@@ -127,11 +129,20 @@ export type UserCountryProgressCountryDto = {
     visits?: UserCountryProgressVisitDto[] | null;
 };
 
+export type UserCountryProgressRegionGroupDto = {
+    key: UserCountryProgressRegion;
+    label: string;
+    total_count: number;
+    visited_count: number;
+    remaining_count: number;
+};
+
 export type UserCountryProgressDto = {
     total_count: number;
     visited_count: number;
     remaining_count: number;
     countries: UserCountryProgressCountryDto[];
+    region_groups?: UserCountryProgressRegionGroupDto[];
 };
 
 /**

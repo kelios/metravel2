@@ -12,6 +12,7 @@ type CardActionPressableProps = {
   accessibilityHint?: string;
   title?: string;
   onPress?: () => void;
+  onPressIn?: () => void;
   onLongPress?: () => void;
   onHoverIn?: () => void;
   onHoverOut?: () => void;
@@ -83,6 +84,7 @@ const CardActionPressable = ({
   accessibilityHint,
   title,
   onPress,
+  onPressIn,
   onLongPress,
   onHoverIn,
   onHoverOut,
@@ -150,6 +152,7 @@ const CardActionPressable = ({
       accessibilityHint={accessibilityHint}
       accessibilityState={effectiveAccessibilityState}
       disabled={disabled}
+      onPressIn={onPressIn}
       onPress={activate}
       onLongPress={onLongPress}
       onHoverIn={onHoverIn}

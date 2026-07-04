@@ -4,6 +4,17 @@ import { act, render } from '@testing-library/react-native';
 import { View } from 'react-native';
 
 const mockInjectJavaScript = jest.fn();
+const mockUseMapClusters = jest.fn(() => ({
+  data: { clusters: [], markers: [], totalCount: 0, source: '', generatedAt: '' },
+  isLoading: false,
+  isFetching: false,
+  isError: false,
+  isDebouncing: false,
+}));
+
+jest.mock('@/hooks/map/useMapClusters', () => ({
+  useMapClusters: (...args: unknown[]) => mockUseMapClusters(...args),
+}));
 
 jest.mock('react-native-webview', () => {
   const React = require('react');
@@ -32,6 +43,14 @@ describe('Map.ios Component', () => {
 
   beforeEach(() => {
     mockInjectJavaScript.mockClear();
+    mockUseMapClusters.mockClear();
+    mockUseMapClusters.mockReturnValue({
+      data: { clusters: [], markers: [], totalCount: 0, source: '', generatedAt: '' },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      isDebouncing: false,
+    });
   });
 
   const mockTravel = {
@@ -214,6 +233,72 @@ describe('Map.ios Component', () => {
     const injectedScript = getInjectedPayloadScript(rendered);
     expect(injectedScript).toContain('"id":1');
     expect(injectedScript).toContain('"id":2');
+  });
+
+  it('requests server clusters from native viewport bbox and filters', () => {
+    const rendered = render(
+      <Map
+        travel={mockTravel}
+        coordinates={mockCoordinates}
+        mapClusterFilters={{ query: 'замок', category: [5] }}
+      />
+    );
+
+    const webView = getWebView(rendered);
+    act(() => {
+      webView.props.onMessage({
+        nativeEvent: {
+          data: JSON.stringify({
+            type: 'MAP_VIEWPORT',
+            bbox: { south: 53.1, west: 27.1, north: 54.1, east: 28.1 },
+            zoom: 9,
+          }),
+        },
+      });
+    });
+
+    expect(mockUseMapClusters).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        bbox: { south: 53.1, west: 27.1, north: 54.1, east: 28.1 },
+        zoom: 9,
+        filters: { query: 'замок', category: [5] },
+        enabled: true,
+      }),
+    );
+  });
+
+  it('injects server clusters into the native WebView payload', () => {
+    mockUseMapClusters.mockReturnValue({
+      data: {
+        clusters: [
+          {
+            id: 'cluster-1',
+            center: { lat: 53.95, lng: 27.6 },
+            count: 12,
+            bounds: { south: 53.8, west: 27.4, north: 54.1, east: 27.8 },
+            previewItems: [],
+          },
+        ],
+        markers: [],
+        totalCount: 12,
+        source: 'server',
+        generatedAt: '2026-07-04T00:00:00Z',
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      isDebouncing: false,
+    });
+    const rendered = render(
+      <Map travel={mockTravel} coordinates={mockCoordinates} />
+    );
+
+    const injectedScript = getInjectedPayloadScript(rendered);
+    expect(injectedScript).toContain('"clusters":[{"key":"cluster-1"');
+    expect(injectedScript).toContain('"count":12');
+    expect(injectedScript).toContain('"usesServerClusters":true');
+    expect(getWebViewHtml(rendered)).toContain('makeClusterIcon');
+    expect(getWebViewHtml(rendered)).toContain("__metravelPostViewport('MAP_VIEWPORT')");
   });
 
   it('should handle empty travel data', () => {

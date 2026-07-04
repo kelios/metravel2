@@ -53,8 +53,8 @@ test.describe('@smoke Manual QA automation: footer navigation', () => {
     await page.setViewportSize({ width: 390, height: 844 });
 
     const targets = [
-      { label: 'Политика конфиденциальности', path: /\/privacy/ },
-      { label: 'Настройки cookies', path: /\/cookies/ },
+      { label: 'Места', path: /\/places/ },
+      { label: 'Статьи', path: /\/articles/ },
       { label: 'Связаться с нами', path: /\/contact/ },
     ];
 
@@ -71,7 +71,8 @@ test.describe('@smoke Manual QA automation: footer navigation', () => {
       expect(moreOpen).toBe('true');
       await expect(page.getByTestId('consent-banner')).toBeHidden({ timeout: 5_000 });
 
-      await page.getByText(target.label, { exact: true }).click();
+      const sheet = page.getByTestId('footer-more-sheet');
+      await sheet.getByText(target.label, { exact: true }).click();
       await expect(page).toHaveURL(target.path);
     }
   });

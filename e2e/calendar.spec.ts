@@ -448,6 +448,12 @@ test.describe('Calendar @smoke', () => {
       return;
     }
 
+    const hasExpectedLocalProdApiCorsNoise = errors.some(
+      (e) =>
+        e.includes("from origin 'http://127.0.0.1:8085'") &&
+        /https:\/\/metravel\.by\/api\/(countries|getFiltersTravel)\//.test(e),
+    );
+
     const critical = errors.filter(
       (e) =>
         !e.includes('401') &&
@@ -455,7 +461,13 @@ test.describe('Calendar @smoke', () => {
         !e.includes('favicon') &&
         !e.includes('ResizeObserver') &&
         !e.includes('Non-Error exception') &&
-        !e.includes('Loading chunk')
+        !e.includes('Loading chunk') &&
+        !(
+          hasExpectedLocalProdApiCorsNoise &&
+          (e.includes('https://metravel.by/api/countries/') ||
+            e.includes('https://metravel.by/api/getFiltersTravel/') ||
+            e.includes('Failed to load resource: net::ERR_FAILED'))
+        )
     );
 
     expect(critical, `Console errors on /calendar: ${critical.join('\n')}`).toHaveLength(0);

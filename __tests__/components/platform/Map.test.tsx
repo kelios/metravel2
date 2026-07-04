@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { Platform } from 'react-native';
+import { createQueryWrapper } from '@/__tests__/helpers/testQueryClient';
 
 // Mock react-native-maps
 jest.mock('react-native-maps', () => {
@@ -102,6 +103,11 @@ describe('Map Component - Platform Specific', () => {
     longitude: 27.5,
   };
 
+  const renderWithQueryClient = (ui: React.ReactElement) => {
+    const { Wrapper } = createQueryWrapper();
+    return render(ui, { wrapper: Wrapper });
+  };
+
   describe('iOS Platform', () => {
     beforeEach(() => {
       Platform.OS = 'ios';
@@ -109,12 +115,12 @@ describe('Map Component - Platform Specific', () => {
 
     it('should render Map component on iOS', () => {
       const Map = require('../../../components/MapPage/Map.ios').default;
-      expect(() => render(<Map travel={mockTravel} coordinates={mockCoordinates} />)).not.toThrow();
+      expect(() => renderWithQueryClient(<Map travel={mockTravel} coordinates={mockCoordinates} />)).not.toThrow();
     });
 
     it('should handle null coordinates on iOS', () => {
       const Map = require('../../../components/MapPage/Map.ios').default;
-      expect(() => render(<Map travel={mockTravel} coordinates={null} />)).not.toThrow();
+      expect(() => renderWithQueryClient(<Map travel={mockTravel} coordinates={null} />)).not.toThrow();
     });
   });
 
@@ -125,12 +131,12 @@ describe('Map Component - Platform Specific', () => {
 
     it('should render Map component on Android', () => {
       const Map = require('../../../components/MapPage/Map.android').default;
-      expect(() => render(<Map travel={mockTravel} coordinates={mockCoordinates} />)).not.toThrow();
+      expect(() => renderWithQueryClient(<Map travel={mockTravel} coordinates={mockCoordinates} />)).not.toThrow();
     });
 
     it('should handle null coordinates on Android', () => {
       const Map = require('../../../components/MapPage/Map.android').default;
-      expect(() => render(<Map travel={mockTravel} coordinates={null} />)).not.toThrow();
+      expect(() => renderWithQueryClient(<Map travel={mockTravel} coordinates={null} />)).not.toThrow();
     });
 
     it('should use same implementation as iOS', () => {

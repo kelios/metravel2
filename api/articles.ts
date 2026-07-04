@@ -39,6 +39,14 @@ const ARTICLE_STOPWORDS = new Set([
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 
+type ArticleSlugResolverResponse = {
+  id?: unknown;
+  slug?: unknown;
+  canonical_url?: unknown;
+  status?: unknown;
+  item?: unknown;
+};
+
 const normalizeParamValue = (value: string): string => {
   const trimmed = String(value || '').trim().split('#')[0].split('?')[0];
   if (!/%[0-9A-Fa-f]{2}/.test(trimmed)) return trimmed;
@@ -321,24 +329,54 @@ export const fetchArticleBySlug = async (
     throw new Error('Пустой slug статьи');
   }
 
+  const safeSlug = encodeURIComponent(normalizedSlug);
+  let canonicalNotFound = false;
+
   try {
-    const safeSlug = encodeURIComponent(normalizedSlug);
-    const directRes = await fetchWithTimeout(
-      `${GET_ARTICLES}/by-slug/${safeSlug}/`,
+    const resolverRes = await fetchWithTimeout(
+      `${GET_ARTICLES}/resolve-slug/${safeSlug}/`,
       { signal: options?.signal },
-      10000
+      LONG_TIMEOUT
     );
 
-    if (directRes.ok) {
-      return await safeJsonParse<Article>(directRes, {} as Article);
+    if (resolverRes.ok) {
+      const resolved = await safeJsonParse<ArticleSlugResolverResponse>(resolverRes, {});
+      const item = asRecord(resolved?.item);
+      if (Object.keys(item).length > 0) return item as Article;
+
+      const resolvedId = Number(resolved?.id);
+      if (Number.isFinite(resolvedId) && resolvedId > 0) {
+        return fetchArticle(resolvedId, options);
+      }
     }
 
-    if (directRes.status !== 404) {
-      throw new Error(`HTTP ${directRes.status}: ${directRes.statusText}`);
+    if (resolverRes.status === 404) {
+      const directRes = await fetchWithTimeout(
+        `${GET_ARTICLES}/by-slug/${safeSlug}/`,
+        { signal: options?.signal },
+        10000
+      );
+
+      if (directRes.ok) {
+        return await safeJsonParse<Article>(directRes, {} as Article);
+      }
+
+      const notFoundError = new Error(`Статья со slug "${normalizedSlug}" не найдена`);
+      canonicalNotFound = true;
+      if (options?.throwOnError) {
+        throw notFoundError;
+      }
+      return {} as Article;
     }
+
+    throw new Error(`HTTP ${resolverRes.status}: ${resolverRes.statusText}`);
   } catch (e: unknown) {
     if (e instanceof Error && e.name === 'AbortError') {
       throw e;
+    }
+    if (canonicalNotFound) {
+      if (options?.throwOnError) throw e;
+      return {} as Article;
     }
   }
 

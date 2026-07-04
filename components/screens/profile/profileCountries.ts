@@ -86,6 +86,7 @@ export type ProfileCountryProgressPayload = {
   visited_count?: number | null
   remaining_count?: number | null
   countries?: Array<Record<string, unknown>> | null
+  region_groups?: Array<Record<string, unknown>> | null
 } | null | undefined
 
 const NAME_FIELDS = [
@@ -114,6 +115,9 @@ const ID_FIELDS = ['country_id', 'countryId', 'id', 'pk', 'value'] as const
 const REGION_FIELDS = ['region', 'continent', 'zone', 'world_region'] as const
 const FIRST_VISITED_DATE_FIELDS = ['first_visited_date', 'firstVisitedDate'] as const
 const VISITED_TRAVELS_COUNT_FIELDS = ['visited_travels_count', 'visitedTravelsCount', 'visits_count', 'visit_count'] as const
+const REGION_GROUP_TOTAL_COUNT_FIELDS = ['total_count', 'totalCount'] as const
+const REGION_GROUP_VISITED_COUNT_FIELDS = ['visited_count', 'visitedCount'] as const
+const REGION_GROUP_REMAINING_COUNT_FIELDS = ['remaining_count', 'remainingCount'] as const
 
 export const PROFILE_COUNTRY_REGION_META: Array<{ key: ProfileCountryRegionKey; label: string }> = [
   { key: 'europe', label: 'Европа' },
@@ -134,9 +138,13 @@ const REGION_BY_KEYWORD: Record<string, ProfileCountryRegionKey> = {
   africa: 'africa',
   'африка': 'africa',
   north_america: 'northAmerica',
+  northamerica: 'northAmerica',
+  northAmerica: 'northAmerica',
   'north america': 'northAmerica',
   'северная америка': 'northAmerica',
   south_america: 'southAmerica',
+  southamerica: 'southAmerica',
+  southAmerica: 'southAmerica',
   'south america': 'southAmerica',
   'южная америка': 'southAmerica',
   oceania: 'oceania',
@@ -598,6 +606,53 @@ export const groupProfileCountriesByRegion = (rows: ProfileCountryRow[]): Profil
     .filter((group) => group.totalCount > 0)
 }
 
+const getRegionMetaLabel = (key: ProfileCountryRegionKey, fallbackLabel: string) =>
+  PROFILE_COUNTRY_REGION_META.find((meta) => meta.key === key)?.label || fallbackLabel || key
+
+const buildProfileCountryRegionGroupsFromProgress = (
+  rawGroups: unknown,
+  rows: ProfileCountryRow[],
+): ProfileCountryRegionGroup[] | null => {
+  if (!Array.isArray(rawGroups)) return null
+
+  const rowsByRegion = new Map<ProfileCountryRegionKey, ProfileCountryRow[]>()
+  rows.forEach((row) => {
+    const groupRows = rowsByRegion.get(row.region) ?? []
+    groupRows.push(row)
+    rowsByRegion.set(row.region, groupRows)
+  })
+
+  const seen = new Set<ProfileCountryRegionKey>()
+  const groups = rawGroups
+    .map((rawGroup): ProfileCountryRegionGroup | null => {
+      if (!isRecord(rawGroup)) return null
+      const key = normalizeRegion(readString(rawGroup, ['key', ...REGION_FIELDS]))
+      if (!key || seen.has(key)) return null
+      seen.add(key)
+
+      const groupRows = (rowsByRegion.get(key) ?? []).slice().sort(compareCountryRows)
+      const derivedTotalCount = groupRows.length
+      const derivedVisitedCount = groupRows.filter((row) => row.visited).length
+      const totalCount = readNonNegativeInteger(rawGroup, REGION_GROUP_TOTAL_COUNT_FIELDS) ?? derivedTotalCount
+      const visitedCount = readNonNegativeInteger(rawGroup, REGION_GROUP_VISITED_COUNT_FIELDS) ?? derivedVisitedCount
+      const remainingCount =
+        readNonNegativeInteger(rawGroup, REGION_GROUP_REMAINING_COUNT_FIELDS) ??
+        Math.max(0, totalCount - visitedCount)
+
+      return {
+        key,
+        label: getRegionMetaLabel(key, readString(rawGroup, ['label', 'name', 'title'])),
+        totalCount,
+        visitedCount,
+        remainingCount,
+        rows: groupRows,
+      }
+    })
+    .filter((group): group is ProfileCountryRegionGroup => group !== null && group.totalCount > 0)
+
+  return groups.length > 0 ? groups : null
+}
+
 export function buildProfileCountryStats({
   countries,
   travels,
@@ -726,7 +781,9 @@ export function buildProfileCountryStatsFromProgress(
 
   return {
     rows,
-    regionGroups: groupProfileCountriesByRegion(rows),
+    regionGroups:
+      buildProfileCountryRegionGroupsFromProgress(progressRecord.region_groups, rows) ??
+      groupProfileCountriesByRegion(rows),
     visitedCount,
     remainingCount,
     totalCount,

@@ -27,6 +27,15 @@ const travelInFlight = new Map<string, Promise<Travel>>();
 
 type PublicTravelRequestOptions = { signal?: AbortSignal; skipAuth?: boolean };
 
+type ResolveTravelSlugResponse = {
+    id?: unknown;
+    slug?: unknown;
+    url?: unknown;
+    canonical_url?: unknown;
+    status?: unknown;
+    item?: unknown;
+};
+
 type TravelPreloadWindow = Window & typeof globalThis & {
     __metravelTravelPreload?: {
         data?: unknown;
@@ -393,25 +402,43 @@ const findTravelBySlugFallbackWithDeadline = async (
     }
 };
 
-// BE-IDX-1: /travels/resolve-slug/ returns the canonical {id, slug} for an exact
-// slug AND for renamed slugs (backend keeps a slug-redirect history). It is exact
-// and cheap, so it runs before the fuzzy search fan-out below.
-const resolveTravelSlugId = async (
+// Canonical backend resolver for exact, redirected, and fuzzy travel slugs.
+// It runs before legacy by-slug/fuzzy compatibility fallbacks and may return the
+// full detail payload in `item`, avoiding a second detail request.
+const fetchTravelByResolvedSlug = async (
     slug: string,
     options?: { signal?: AbortSignal }
-): Promise<number | null> => {
-    try {
-        const response = await apiClient.get<{ id?: unknown; slug?: unknown; url?: unknown }>(
-            `/travels/resolve-slug/?slug=${encodeURIComponent(slug)}`,
-            LONG_TIMEOUT,
-            { ...(options ?? {}), skipAuth: true }
-        );
-        const id = Number(response?.id);
-        return Number.isFinite(id) && id > 0 ? id : null;
-    } catch (error: unknown) {
-        if (isAbortError(error)) throw error;
-        return null;
+): Promise<Travel | null> => {
+    const response = await apiClient.get<ResolveTravelSlugResponse>(
+        `/travels/resolve-slug/${encodeURIComponent(slug)}/`,
+        LONG_TIMEOUT,
+        { ...(options ?? {}), skipAuth: true }
+    );
+
+    if (response?.item) {
+        const normalized = normalizeTravelItem(response.item as Travel);
+        if (hasAnyTravelIdentity(normalized)) return normalized;
     }
+
+    const detailLikeResponse = normalizeTravelItem(response as Travel);
+    if (hasMinimumTravelIdentity(detailLikeResponse)) return detailLikeResponse;
+
+    const id = Number(response?.id);
+    if (!Number.isFinite(id) || id <= 0) return null;
+
+    const detailedTravel = await fetchTravel(id, options);
+    const normalized = normalizeTravelItem(detailedTravel);
+    if (!hasAnyTravelIdentity(normalized)) return null;
+
+    if (__DEV__) {
+        devWarn('Resolved travel via canonical slug resolver', {
+            requestedSlug: slug,
+            resolvedSlug: normalized.slug,
+            id,
+            status: response?.status,
+        });
+    }
+    return normalized;
 };
 
 export const fetchTravel = async (
@@ -554,31 +581,41 @@ export const fetchTravelBySlug = async (
         return null;
     };
 
-    const fetchTravelByResolvedSlug = async (requestOptions?: PublicTravelRequestOptions) => {
-        const resolvedId = await resolveTravelSlugId(slugCacheKey, requestOptions);
-        if (!resolvedId) return null;
-
-        const detailedTravel = await fetchTravel(resolvedId, requestOptions);
-        const normalized = normalizeTravelItem(detailedTravel);
-        if (!hasAnyTravelIdentity(normalized)) return null;
-
-        if (__DEV__) {
-            devWarn('Resolved travel via resolve-slug redirect history', {
-                requestedSlug: slug,
-                resolvedSlug: normalized.slug,
-                id: resolvedId,
-            });
-        }
-        return normalized;
-    };
-
     const fetchBySlugWithFallback = async (requestOptions?: PublicTravelRequestOptions) => {
+        try {
+            const resolvedTravel = await fetchTravelByResolvedSlug(slugCacheKey, requestOptions);
+            if (resolvedTravel) return resolvedTravel;
+        } catch (e: unknown) {
+            if (isAbortError(e)) throw e;
+
+            const status = getErrorStatus(e);
+            if (status === 404) {
+                try {
+                    const legacyTravel = await fetchBySlug(requestOptions);
+                    if (hasAnyTravelIdentity(legacyTravel)) return legacyTravel;
+                } catch (legacyError: unknown) {
+                    if (isAbortError(legacyError)) throw legacyError;
+                }
+                const notFoundError = Object.assign(
+                    new Error(`Travel not found by slug: ${slug}`),
+                    { status: 404 }
+                );
+                devError('Error fetching Travel by slug:', notFoundError);
+                throw notFoundError;
+            }
+
+            if (!shouldUseSlugFallback(status)) {
+                devError('Error fetching Travel by slug:', e);
+                throw e;
+            }
+        }
+
         let bySlugError: unknown = null;
         try {
             const travel = await fetchBySlug(requestOptions);
-            // A renamed slug makes /by-slug/ answer 301 to the SPA page URL; fetch
-            // follows it into HTML and the JSON parse yields an empty object. Treat
-            // that as a miss so the resolve-slug fallback below can recover.
+            // Legacy compatibility path after a resolver API failure: if /by-slug/
+            // returns a sparse/HTML-followed payload, treat it as a miss and continue
+            // to the old fuzzy compatibility fallback.
             if (hasAnyTravelIdentity(travel)) {
                 return travel;
             }
@@ -591,11 +628,6 @@ export const fetchTravelBySlug = async (
                 throw e;
             }
             bySlugError = e;
-        }
-
-        const resolvedTravel = await fetchTravelByResolvedSlug(requestOptions);
-        if (resolvedTravel) {
-            return resolvedTravel;
         }
 
         const directVariantTravel = await fetchByDirectSlugVariant(requestOptions);

@@ -118,4 +118,26 @@ describe('Travel atlas (global map + index)', () => {
     expect(pages[0]).toContain('#3F7CAC')
     expect(pages[0]).toContain('#D9A445')
   })
+
+  test('atlas map ignores non-finite coordinates and fills the first map card', () => {
+    const pages = renderAtlasPages({
+      meta: [
+        makeMeta('Валидное путешествие', 'Грузия', '2024', 6, 8, [
+          { name: 'Тбилиси', lat: 41.7151, lng: 44.8271 },
+          { name: 'Битая точка', lat: Number.NaN, lng: 44.8271 },
+        ]),
+        makeMeta('Второе путешествие', 'Армения', '2024', 12, 14, [
+          { name: 'Ереван', lat: 40.1872, lng: 44.5152 },
+          { name: 'Битая долгота', lat: 40.1872, lng: Number.POSITIVE_INFINITY },
+        ]),
+      ],
+      theme,
+      startPageNumber: 4,
+    })
+
+    expect(pages[0]).toContain('atlas-map-page')
+    expect(pages[0]).toContain('style="width:100%;height:100%;display:block;"')
+    expect(pages[0]).not.toContain('NaN')
+    expect(pages[0]).not.toContain('Infinity')
+  })
 })

@@ -9,6 +9,8 @@ import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
 import { LAYOUT } from '@/constants/layout'
 import { createMapPopupComponent } from './Map/createMapPopupComponent'
 import { useUserLocationSignal } from './Map/userLocationSignal'
+import { useMapClusters } from '@/hooks/map/useMapClusters'
+import { useMapViewportSnapshot } from '@/hooks/map/useMapViewportSnapshot'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { resolveRoutingApiKey } from '@/utils/routingApiKey'
@@ -40,6 +42,7 @@ import {
 } from './Map/mapWebGeometry'
 import { queryKeys } from '@/api/queryKeys'
 import { isFallbackMinskCenter } from './Map/fallbackCenter'
+import { buildServerClusterRenderData } from './Map/serverClusterRenderData'
 
 type ReactLeafletNS = typeof import('react-leaflet')
 
@@ -130,6 +133,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     setRoutingLoading,
     setRoutingError,
     radius,
+    mapClusterFilters,
     onUserLocationChange,
     onMapMove,
     hideFloatingControls = false,
@@ -300,6 +304,31 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // never consumed here (only TravelMap.web.tsx uses it).
   const markers = filteredTravelData
   const travelMarkerOpacity = mode === 'route' ? 0.7 : 1
+  const canRenderMap = leafletReady && !!(L && rl)
+  const viewportSnapshot = useMapViewportSnapshot(
+    mapInstance,
+    Number.isFinite(safeCoordinates.zoom) ? Number(safeCoordinates.zoom) : DEFAULT_ZOOM,
+    IS_WEB && mode === 'radius' && canRenderMap,
+  )
+  const serverClusterQuery = useMapClusters({
+    bbox: viewportSnapshot.bbox,
+    zoom: viewportSnapshot.zoom,
+    filters: mapClusterFilters,
+    enabled: IS_WEB && mode === 'radius' && canRenderMap,
+  })
+  const serverClusterRenderData = useMemo(
+    () => buildServerClusterRenderData(serverClusterQuery.data),
+    [serverClusterQuery.data],
+  )
+  const shouldUseServerClusterData =
+    mode === 'radius' && !serverClusterQuery.isError && serverClusterRenderData.hasServerData
+  const renderedMarkers = shouldUseServerClusterData && serverClusterRenderData.markers.length > 0
+    ? serverClusterRenderData.markers
+    : markers
+  const renderedServerClusters =
+    shouldUseServerClusterData && serverClusterRenderData.clusters.length > 0
+      ? serverClusterRenderData.clusters
+      : []
 
   const handleMarkerZoom = useCallback(
     (point: Point, coords: { lat: number; lng: number }, clickedMarker?: any) => {
@@ -604,7 +633,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const noPointsAlongRoute =
     mode === 'route' && Array.isArray(routePoints) && routePoints.length >= 2 && travelData.length === 0
 
-  const canRenderMap = leafletReady && !!(L && rl)
   const { mapPaneWidth } = useMapWebLayoutEffects({
     wrapperRef,
     mapRef,
@@ -659,6 +687,45 @@ const MapPageComponent: React.FC<Props> = (props) => {
       paddingBottomRight: [AIR, AIR + 24] as [number, number],
     }
   }, [mode, mapPaneWidth, popupBottomOffset])
+
+  const handleServerClusterZoom = useCallback(
+    (payload: {
+      center: [number, number]
+      bounds: [[number, number], [number, number]]
+      key: string
+      items: Point[]
+    }) => {
+      const map = mapRef.current
+      if (!map) return
+      lastMarkerTapAtRef.current = Date.now()
+
+      try {
+        const [[south, west], [north, east]] = payload.bounds
+        if (
+          L?.latLngBounds &&
+          Number.isFinite(south) &&
+          Number.isFinite(west) &&
+          Number.isFinite(north) &&
+          Number.isFinite(east) &&
+          typeof map.fitBounds === 'function'
+        ) {
+          map.fitBounds(L.latLngBounds([[south, west], [north, east]]), fitBoundsPadding as any)
+          return
+        }
+
+        const [lat, lng] = payload.center
+        const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : mapZoom
+        const maxZoom = typeof map.getMaxZoom === 'function' ? map.getMaxZoom() : DEFAULT_MAX_ZOOM
+        const targetZoom = Math.min(maxZoom, Math.max(currentZoom + 1, MARKER_ZOOM_TARGET))
+        if (typeof map.setView === 'function') {
+          map.setView([lat, lng], targetZoom, { animate: true } as any)
+        }
+      } catch {
+        ignoreOptionalMapRuntimeError()
+      }
+    },
+    [L, fitBoundsPadding, mapZoom],
+  )
 
   const useCompactPopupLayout = useMemo(() => {
     if (mapPaneWidth > 0) return mapPaneWidth <= COMPACT_POPUP_MAX_WIDTH
@@ -773,7 +840,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
         setFullRouteCoords={setFullRouteCoords}
         setRouteElevationStats={setRouteElevationStats}
         orsApiKey={ORS_API_KEY}
-        markers={markers}
+        markers={renderedMarkers}
+        serverClusters={renderedServerClusters}
+        onServerClusterZoom={handleServerClusterZoom}
         PopupComponent={PopupComponent}
         popupAutoPanPadding={popupAutoPanPadding}
         handleMarkerZoom={handleMarkerZoom}
@@ -839,6 +908,7 @@ export const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
   if (prevFull.length > 0 && !prevFull.every((p, i) => coordsApproxEqual(p, nextFull[i]))) return false
 
   if (prevProps.radius !== nextProps.radius) return false
+  if (prevProps.mapClusterFilters !== nextProps.mapClusterFilters) return false
 
   // #207 host-stability (#217): the map is a stable host that never remounts, so a
   // desktop↔mobile resize flips isMobile at the caller, toggling these props (mobile

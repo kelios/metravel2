@@ -43,6 +43,7 @@ export const PointsListGrid: React.FC<{
   renderHeader: () => React.ReactElement
   renderItem: ({ item }: { item: any }) => React.ReactElement
   renderEmpty: () => React.ReactElement
+  onOpenActions?: () => void
 
   renderFooter?: () => React.ReactElement | null
 
@@ -88,6 +89,7 @@ export const PointsListGrid: React.FC<{
   renderHeader,
   renderItem,
   renderEmpty,
+  onOpenActions,
 	  renderFooter,
 	  onRefresh,
 	  currentLocation,
@@ -159,6 +161,16 @@ export const PointsListGrid: React.FC<{
       { key: 'filters', label: 'Фильтры', icon: 'filter-list' },
     ],
     [filteredPoints.length]
+  )
+  const handleMobileTabChange = React.useCallback(
+    (key: string) => {
+      const nextTab = key as 'map' | 'list' | 'filters'
+      setMobileTab(nextTab)
+      if (nextTab === 'list' || nextTab === 'filters') {
+        setPanelTab(nextTab)
+      }
+    },
+    [setPanelTab],
   )
 
   const renderMapCanvas = React.useCallback(
@@ -266,6 +278,17 @@ export const PointsListGrid: React.FC<{
           />
 
           <View style={localStyles.listControlsActions}>
+            {onOpenActions ? (
+              <IconButton
+                icon={<Feather name="settings" size={16} color={themedColors.text} />}
+                label="Управление точками"
+                onPress={onOpenActions}
+                size="sm"
+                testID="userpoints-actions-open"
+                showLabel={!compactControls}
+              />
+            ) : null}
+
             <IconButton
               icon={<Feather name="sliders" size={16} color={themedColors.text} />}
               label="Фильтры"
@@ -321,6 +344,7 @@ export const PointsListGrid: React.FC<{
       localStyles.recommendationsTitle,
       compactControls,
       onCloseRecommendations,
+      onOpenActions,
       onRefreshRecommendations,
       onResetFilters,
       onSearch,
@@ -654,9 +678,10 @@ export const PointsListGrid: React.FC<{
         <SegmentedControl
           options={mobileTabOptions}
           value={mobileTab}
-          onChange={(key) => setMobileTab(key as 'map' | 'list' | 'filters')}
+          onChange={handleMobileTabChange}
           accessibilityLabel="Карта, список или фильтры точек"
           compact
+          activateOnPressInNative
         />
       </View>
 

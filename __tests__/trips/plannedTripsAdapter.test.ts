@@ -104,6 +104,108 @@ describe('estimateRouteSummary', () => {
   })
 })
 
+describe('fetchMyPlannedTrips backend route_summary mapping', () => {
+  afterEach(() => {
+    delete process.env.EXPO_PUBLIC_TRIPS_MOCK
+    jest.dontMock('@/api/client')
+    jest.resetModules()
+  })
+
+  it('uses backend route_summary instead of local haversine estimate', async () => {
+    delete process.env.EXPO_PUBLIC_TRIPS_MOCK
+    const apiClientMock = {
+      get: jest.fn(async () => [
+        {
+          id: 42,
+          title: 'Backend route',
+          description: 'Uses server summary',
+          start_date: '2026-07-04',
+          status: 'planned',
+          transport_mode: 'bicycle',
+          owner: { id: 7, username: 'Owner', avatar: null },
+          route: {
+            points: [
+              {
+                id: 1,
+                point_type: 'rest',
+                order: 0,
+                title: 'Start',
+                description: 'Meet here',
+                lat: 53.9,
+                lng: 27.56,
+              },
+              {
+                id: 2,
+                place_id: 99,
+                point_type: 'travel',
+                order: 1,
+                title: 'Castle',
+                description: 'Server description',
+                lat: 53.22,
+                lng: 26.69,
+              },
+            ],
+          },
+          route_summary: {
+            distance_km: '123.4',
+            duration_min: '321',
+            elevation_gain_m: '456',
+            stops_count: 9,
+            provider: 'backend',
+            updated_at: '2026-07-04T12:00:00Z',
+          },
+          participants: [],
+          is_public: false,
+          max_participants: 3,
+        },
+      ]),
+    }
+
+    jest.resetModules()
+    jest.doMock('@/api/client', () => ({
+      apiClient: apiClientMock,
+      ApiError: class ApiError extends Error {
+        status: number
+        constructor(status: number, message: string) {
+          super(message)
+          this.status = status
+        }
+      },
+    }))
+    jest.doMock('@/stores/authStore', () => ({
+      useAuthStore: { getState: jest.fn(() => ({ userId: '7', isAuthenticated: true })) },
+    }))
+    jest.doMock('@/utils/logger', () => ({
+      devWarn: jest.fn(),
+      devLog: jest.fn(),
+      devError: jest.fn(),
+    }))
+
+    const { fetchMyPlannedTrips } = require('@/api/plannedTrips') as typeof import('@/api/plannedTrips')
+    const [trip] = await fetchMyPlannedTrips()
+
+    expect(apiClientMock.get).toHaveBeenCalledWith('/trips/planned/me/')
+    expect(trip.transport).toBe('bike')
+    expect(trip.route[0]).toEqual(expect.objectContaining({
+      type: 'rest',
+      description: 'Meet here',
+    }))
+    expect(trip.route[1]).toEqual(expect.objectContaining({
+      type: 'place',
+      placeId: 99,
+      description: 'Server description',
+    }))
+    expect(trip.routeSummary).toEqual({
+      distanceKm: 123.4,
+      durationMin: 321,
+      elevationGainM: 456,
+      stopsCount: 9,
+      provider: 'backend',
+      updatedAt: '2026-07-04T12:00:00Z',
+    })
+  })
+})
+
 // ── mock fetch functions ──────────────────────────────────────────────────────
 
 describe('fetchMyPlannedTrips (TRIPS_MOCK=true)', () => {

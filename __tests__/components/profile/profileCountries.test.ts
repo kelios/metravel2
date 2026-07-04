@@ -134,6 +134,29 @@ describe('profileCountries', () => {
           visited: false,
         },
       ],
+      region_groups: [
+        {
+          key: 'northAmerica',
+          label: 'North America',
+          total_count: 1,
+          visited_count: 0,
+          remaining_count: 1,
+        },
+        {
+          key: 'europe',
+          label: 'Europe',
+          total_count: 1,
+          visited_count: 1,
+          remaining_count: 0,
+        },
+        {
+          key: 'southAmerica',
+          label: 'South America',
+          total_count: 1,
+          visited_count: 0,
+          remaining_count: 1,
+        },
+      ],
     })
 
     expect(stats.totalCount).toBe(3)
@@ -147,10 +170,18 @@ describe('profileCountries', () => {
       firstVisitedDate: '2024-05-12',
     })
     expect(stats.regionGroups.map((group) => group.key)).toEqual([
-      'europe',
       'northAmerica',
+      'europe',
       'southAmerica',
     ])
+    expect(stats.regionGroups.find((group) => group.key === 'northAmerica')).toEqual(
+      expect.objectContaining({
+        label: 'Северная Америка',
+        totalCount: 1,
+        visitedCount: 0,
+        remainingCount: 1,
+      }),
+    )
   })
 
   it('parses per-country visits[] from progress and exposes them via the visited index', () => {

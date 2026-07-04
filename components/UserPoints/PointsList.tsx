@@ -273,6 +273,11 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
   const handleLocateMe = locateMe;
 
+  const handleOpenActions = useCallback(() => {
+    blurActiveElementForModal();
+    setShowActions(true);
+  }, [blurActiveElementForModal]);
+
   const renderHeader = usePointsHeaderRenderer({
     styles,
     colors: headerColors,
@@ -292,10 +297,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     showMapSettings,
     onToggleMapSettings: () => setShowMapSettings((v) => !v),
     showingRecommendations,
-    onOpenActions: () => {
-      blurActiveElementForModal();
-      setShowActions(true);
-    },
+    onOpenActions: handleOpenActions,
     onOpenRecommendations: handleOpenRecommendations,
     searchQuery,
     onSearch: handleSearch,
@@ -391,6 +393,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 	        renderHeader={renderHeader}
 	        renderItem={renderItem}
 	        renderEmpty={renderEmpty}
+        onOpenActions={handleOpenActions}
         renderFooter={renderFooter}
         onRefresh={refetch}
 	        currentLocation={currentLocation}

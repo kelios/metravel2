@@ -44,6 +44,7 @@ interface SegmentedControlProps {
   role?: 'radio' | 'button';
   tone?: Tone;
   iconOnly?: boolean;
+  activateOnPressInNative?: boolean;
 }
 
 const SegmentedControl: React.FC<SegmentedControlProps> = ({
@@ -59,6 +60,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
   role = 'radio',
   tone = 'default',
   iconOnly = false,
+  activateOnPressInNative = false,
 }) => {
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const colors = useThemedColors();
@@ -121,6 +123,11 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
               isDisabled && styles.segmentDisabled,
               globalFocusStyles.focusable,
             ]}
+            onPressIn={
+              activateOnPressInNative && Platform.OS !== 'web' && !isDisabled
+                ? () => onChange(key)
+                : undefined
+            }
             onPress={() => {
               if (isDisabled) return;
               onChange(key);

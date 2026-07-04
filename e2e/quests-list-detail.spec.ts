@@ -14,6 +14,8 @@ const QUEST_DETAIL_URL_RE = /\/quests\/[^/]+\/[^/?#]+/
 const QUEST_FALLBACK_RE =
   /ошибка|Internal Server Error|Failed to load quests|не удалось загрузить|квесты не найдены|нет квестов|Нет квестов|0 квестов|Выберите город/i
 const RESOURCE_500_RE = /Failed to load resource: the server responded with a status of 500/i
+const LOCAL_PROD_API_CORS_RE = /https:\/\/metravel\.by\/api\/(countries|getFiltersTravel)\//
+const LOCAL_PROD_ORIGIN = "from origin 'http://127.0.0.1:8085'"
 
 const waitForQuestCatalogReady = async (page: Page) =>
   Promise.any([
@@ -56,16 +58,11 @@ test.describe('Quests list -> detail', () => {
     await expect(page.getByRole('heading', { name: /Квесты/i }).first()).toBeVisible({ timeout: WAIT_MS })
 
     // Country grouping: the "Рядом со мной" location filter is always present in the sidebar.
-    await expect(
-      page.getByText('Рядом со мной', { exact: false }).first(),
-    ).toBeVisible({ timeout: WAIT_MS })
+    await expect(page.getByTestId('quests-sidebar-nearby-button')).toBeVisible({ timeout: WAIT_MS })
 
     // Map toggle control exists ("Показать квесты на карте" / "на карте").
     await expect(
-      page
-        .getByRole('button', { name: /на карте|на карту/i })
-        .or(page.getByText(/Показать на карте/i))
-        .first(),
+      page.getByTestId('quests-sidebar-toggle-view-mode'),
     ).toBeVisible({ timeout: WAIT_MS })
 
     // No horizontal overflow on the catalog screen.
@@ -92,9 +89,19 @@ test.describe('Quests list -> detail', () => {
     }
 
     const unexpectedPageErrors = pageErrors.filter((message) => !isRecoverableReactHydrationError(message))
-    const unexpectedConsoleErrors = backendFallbackVisible
-      ? consoleErrors.filter((message) => !RESOURCE_500_RE.test(message))
-      : consoleErrors
+    const hasExpectedLocalProdApiCorsNoise = consoleErrors.some(
+      (message) => message.includes(LOCAL_PROD_ORIGIN) && LOCAL_PROD_API_CORS_RE.test(message),
+    )
+    const unexpectedConsoleErrors = consoleErrors.filter((message) => {
+      if (backendFallbackVisible && RESOURCE_500_RE.test(message)) return false
+      if (
+        hasExpectedLocalProdApiCorsNoise &&
+        (LOCAL_PROD_API_CORS_RE.test(message) || message.includes('Failed to load resource: net::ERR_FAILED'))
+      ) {
+        return false
+      }
+      return true
+    })
     expect(unexpectedPageErrors, `page errors: ${pageErrors.join('\n')}`).toHaveLength(0)
     expect(unexpectedConsoleErrors, `console errors: ${consoleErrors.join('\n')}`).toHaveLength(0)
   })

@@ -16,6 +16,7 @@ import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaI
 import { useThemedColors } from '@/hooks/useTheme';
 import { getStyles } from '@/screens/tabs/map.styles';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { mapCategoryNamesToIds } from '@/utils/filterQuery';
 
 // Модульные хуки для карты
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates';
@@ -383,6 +384,27 @@ export function useMapScreenController() {
     isDebouncingFilters,
   } = dataController;
 
+  const mapClusterFilters = useMemo(() => {
+    const categoryIds = mapCategoryNamesToIds(filterValues.categories, filters.categories);
+    const categoryTravelAddressIds = mapCategoryNamesToIds(
+      filterValues.categoryTravelAddress,
+      filters.categoryTravelAddress,
+    );
+    const category = Array.from(new Set([...categoryIds, ...categoryTravelAddressIds]));
+    const query = String(filterValues.searchQuery || '').trim();
+
+    return {
+      ...(query ? { query } : {}),
+      ...(category.length ? { category } : {}),
+    };
+  }, [
+    filterValues.categories,
+    filterValues.categoryTravelAddress,
+    filterValues.searchQuery,
+    filters.categories,
+    filters.categoryTravelAddress,
+  ]);
+
   // Счётчик мест в боковом меню: показываем общее число (backend total), а не
   // длину загруженной страницы. Текстовый поиск теперь серверный (where.query,
   // BE #695) и УЧТЁН в total — поэтому при поиске тоже берём backend total.
@@ -619,6 +641,7 @@ export function useMapScreenController() {
       mode,
       transportMode,
       radius: filterValues.radius,
+      mapClusterFilters,
       setRoutePoints,
       setRouteDistance,
       setRouteDuration,
@@ -646,6 +669,7 @@ export function useMapScreenController() {
       mode,
       transportMode,
       filterValues.radius,
+      mapClusterFilters,
       setRoutePoints,
       setRouteDistance,
       setRouteDuration,

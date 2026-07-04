@@ -18,10 +18,10 @@ function projectAtlasPoints(entries: AtlasTravelEntry[]): {
   viewBoxW: number
   viewBoxH: number
 } {
-  const viewBoxW = 200
-  const viewBoxH = 120
-  const paddingX = 10
-  const paddingY = 10
+  const viewBoxW = 160
+  const viewBoxH = 150
+  const paddingX = 12
+  const paddingY = 14
 
   const flat: Array<{
     lat: number
@@ -33,6 +33,7 @@ function projectAtlasPoints(entries: AtlasTravelEntry[]): {
   }> = []
   for (const entry of entries) {
     entry.pointsWithCoords.forEach((point, idx) => {
+      if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return
       flat.push({
         lat: point.lat as number,
         lng: point.lng as number,
@@ -78,7 +79,7 @@ export function buildAtlasMapSvg(
 
   if (!points.length) {
     return `
-      <svg viewBox="0 0 ${viewBoxW} ${viewBoxH}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Атлас">
+      <svg viewBox="0 0 ${viewBoxW} ${viewBoxH}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block;" role="img" aria-label="Атлас">
         <rect x="0" y="0" width="${viewBoxW}" height="${viewBoxH}" rx="6" fill="${colors.surfaceAlt}" />
         <text x="${viewBoxW / 2}" y="${viewBoxH / 2}" text-anchor="middle" font-size="6" fill="${colors.textMuted}">
           Недостаточно координат для атласа
@@ -123,7 +124,7 @@ export function buildAtlasMapSvg(
     .join('')
 
   return `
-    <svg viewBox="0 0 ${viewBoxW} ${viewBoxH}" preserveAspectRatio="xMidYMid meet" overflow="hidden" role="img" aria-label="Карта всех точек книги">
+    <svg viewBox="0 0 ${viewBoxW} ${viewBoxH}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block;" overflow="hidden" role="img" aria-label="Карта всех точек книги">
       <defs>
         <linearGradient id="atlasBg" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="${colors.surfaceAlt}" />

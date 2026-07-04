@@ -272,7 +272,7 @@ describe('RouletteScreen', () => {
   it('calls refetch when roulette center is pressed on desktop web', async () => {
     const { getByLabelText, refetch, unmount } = setupWeb();
 
-    fireEvent.press(getByLabelText('Подобрать маршруты'));
+    fireEvent.press(getByLabelText('Крутить рулетку'));
 
     await waitFor(() => {
       expect(refetch).toHaveBeenCalled();
@@ -285,7 +285,7 @@ describe('RouletteScreen', () => {
     const { getByText, unmount } = setupWeb();
 
     await waitFor(() => {
-      expect(getByText('Готов к случайному путешествию?')).toBeTruthy();
+      expect(getByText('Не знаешь, куда поехать?')).toBeTruthy();
     });
 
     unmount();

@@ -1,5 +1,6 @@
 // components/MapPage/map/types.ts
 import type { MapUiApi } from '@/types/mapUi';
+import type { MapClustersFilters } from '@/api/map';
 
 // Re-export shared types from map-core for backward compatibility
 export type { Point, Coordinates, TransportMode, MapMode } from '@/components/map-core';
@@ -29,6 +30,7 @@ export interface MapProps {
   setRoutingLoading?: (loading: boolean) => void;
   setRoutingError?: (error: string | null) => void;
   radius?: string;
+  mapClusterFilters?: MapClustersFilters;
   onMapUiApiReady?: (api: MapUiApi | null) => void;
   onUserLocationChange?: (loc: Coordinates | null) => void;
   /**

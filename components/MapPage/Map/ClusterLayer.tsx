@@ -35,6 +35,8 @@ interface ClusterLayerProps {
   renderer?: any
   hintCenter?: { lat: number; lng: number } | null
   useMap?: () => any
+  suppressLeafletPopupOnSelect?: boolean
+  onClusterTap?: () => void
 }
 
 const TOOLTIP_MAX_LEN = 30
@@ -57,6 +59,8 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   renderer,
   hintCenter,
   useMap: useMapHook,
+  suppressLeafletPopupOnSelect = false,
+  onClusterTap,
 }) => {
   const colors = useThemedColors()
   const { isDark } = useTheme()
@@ -132,7 +136,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
         // noop
       }
 
-      if (e?.target?.openPopup) {
+      if (!suppressLeafletPopupOnSelect && e?.target?.openPopup) {
         try {
           e.target.openPopup()
         } catch {
@@ -141,7 +145,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
       }
       onMarkerClick?.(point, coords)
     },
-    [onMarkerClick],
+    [onMarkerClick, suppressLeafletPopupOnSelect],
   )
 
   return (
@@ -211,13 +215,15 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                           : item.address}
                       </Tooltip>
                     )}
-                    <MarkerPopup
-                      point={item}
-                      Popup={Popup}
-                      PopupContent={PopupContent}
-                      popupProps={popupProps}
-                      useMap={useMapHook}
-                    />
+                    {!suppressLeafletPopupOnSelect && (
+                      <MarkerPopup
+                        point={item}
+                        Popup={Popup}
+                        PopupContent={PopupContent}
+                        popupProps={popupProps}
+                        useMap={useMapHook}
+                      />
+                    )}
                   </Marker>
                 )
               })}
@@ -274,13 +280,15 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                     : item.address}
                 </Tooltip>
               )}
-              <MarkerPopup
-                point={item}
-                Popup={Popup}
-                PopupContent={PopupContent}
-                popupProps={popupProps}
-                useMap={useMapHook}
-              />
+              {!suppressLeafletPopupOnSelect && (
+                <MarkerPopup
+                  point={item}
+                  Popup={Popup}
+                  PopupContent={PopupContent}
+                  popupProps={popupProps}
+                  useMap={useMapHook}
+                />
+              )}
             </Marker>
           )
         }
@@ -313,6 +321,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                 } catch {
                   // noop
                 }
+                onClusterTap?.()
                 if (
                   !Number.isFinite(cluster.bounds?.[0]?.[0]) ||
                   !Number.isFinite(cluster.bounds?.[0]?.[1]) ||
@@ -384,6 +393,8 @@ export default React.memo(ClusterLayer, (prev, next) => {
     prev.PopupContent === next.PopupContent &&
     prev.popupProps === next.popupProps &&
     prev.useMap === next.useMap &&
+    prev.suppressLeafletPopupOnSelect === next.suppressLeafletPopupOnSelect &&
+    prev.onClusterTap === next.onClusterTap &&
     prev.hintCenter?.lat === next.hintCenter?.lat &&
     prev.hintCenter?.lng === next.hintCenter?.lng
   )

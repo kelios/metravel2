@@ -62,6 +62,8 @@ export interface RouteSummary {
   durationMin: number;
   elevationGainM: number;
   stopsCount: number;
+  provider?: 'backend' | 'fallback' | string;
+  updatedAt?: string | null;
 }
 
 export interface TripParticipant extends TripPerson {
@@ -245,10 +247,21 @@ type ProfileField = ProfileObject | string | null;
 interface BeRoutePoint {
   id: number;
   place_id?: number | null;
+  point_type?: string | null;
   order?: number;
   lat?: number | null;
   lng?: number | null;
   title?: string | null;
+  description?: string | null;
+}
+
+interface BeRouteSummary {
+  distance_km?: number | string | null;
+  duration_min?: number | string | null;
+  elevation_gain_m?: number | string | null;
+  stops_count?: number | string | null;
+  provider?: string | null;
+  updated_at?: string | null;
 }
 
 interface BeParticipant {
@@ -268,8 +281,10 @@ interface PlannedTripDto {
   owner: BeUser;
   participants?: BeParticipant[];
   route?: { points?: BeRoutePoint[] } | null;
+  route_summary?: BeRouteSummary | null;
   is_public?: boolean;
   max_participants?: number | null;
+  transport_mode?: string | null;
 }
 
 /** TripReportSerializer (POST /trips/{id}/complete/). */
@@ -443,18 +458,32 @@ const toNum = (v: number | string | null | undefined): number => {
 
 const mapPlannedPoint = (p: BeRoutePoint): RoutePoint => ({
   id: String(p.id),
-  type: p.place_id != null ? 'place' : 'custom',
+  type: p.place_id != null ? 'place' : pointTypeFromBe(p.point_type),
   name: p.title ?? '',
-  description: null,
+  description: p.description || null,
   coordinates:
     p.lat != null && p.lng != null ? [p.lng, p.lat] : null,
   placeId: p.place_id ?? null,
 });
 
+const mapRouteSummary = (summary?: BeRouteSummary | null): RouteSummary | null => {
+  if (!summary) return null;
+
+  return {
+    distanceKm: toNum(summary.distance_km),
+    durationMin: Math.round(toNum(summary.duration_min)),
+    elevationGainM: Math.round(toNum(summary.elevation_gain_m)),
+    stopsCount: Math.round(toNum(summary.stops_count)),
+    provider: summary.provider ?? undefined,
+    updatedAt: summary.updated_at ?? null,
+  };
+};
+
 const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
   const me = currentUserId();
   const points = dto.route?.points ?? [];
   const route = points.map(mapPlannedPoint);
+  const transport = transportFromBe(dto.transport_mode);
   const participants: TripParticipant[] = (dto.participants ?? []).map((p) => ({
     ...mapUser(p.user),
     rsvp: participantRsvpFromBe(p.status),
@@ -468,14 +497,16 @@ const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
     description: dto.description ?? '',
     startDate: dto.start_date ?? '',
     startTime: null,
-    transport: 'car',
+    transport,
     visibility: dto.is_public ? 'public' : 'private',
     seatsTotal: dto.max_participants ?? 0,
     startPoint: null,
     status: planStatusFromFacade(dto.status),
     organizer: mapUser(dto.owner),
     route,
-    routeSummary: route.length ? estimateRouteSummary(route, 'car') : null,
+    routeSummary:
+      mapRouteSummary(dto.route_summary) ??
+      (route.length ? estimateRouteSummary(route, transport) : null),
     participants,
     coverUrl: null,
     region: '',

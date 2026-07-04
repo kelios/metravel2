@@ -10,6 +10,8 @@ import { MapLayers } from './MapLayers'
 import { MapLogicComponent } from './MapLogicComponent'
 import MarkerClusterGroup from './MarkerClusterGroup'
 import { RouteMarkersLayer } from './RouteMarkersLayer'
+import ClusterLayer from './ClusterLayer'
+import type { ClusterData } from './types'
 
 type ReactLeafletNS = typeof import('react-leaflet')
 
@@ -152,6 +154,13 @@ type MapWebLeafletCanvasProps = {
   setRouteElevationStats?: (gainMeters: number | null, lossMeters: number | null) => void
   orsApiKey: string | undefined
   markers: Point[]
+  serverClusters?: ClusterData[]
+  onServerClusterZoom?: (payload: {
+    center: [number, number]
+    bounds: [[number, number], [number, number]]
+    key: string
+    items: Point[]
+  }) => void
   PopupComponent: any
   popupAutoPanPadding: any
   handleMarkerZoom: (
@@ -211,6 +220,8 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
   setRouteElevationStats,
   orsApiKey,
   markers,
+  serverClusters,
+  onServerClusterZoom,
   PopupComponent,
   popupAutoPanPadding,
   handleMarkerZoom,
@@ -400,6 +411,29 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
       ) : null}
 
       {canRenderMap &&
+      customIcons?.meTravel &&
+      Array.isArray(serverClusters) &&
+      serverClusters.length > 0 &&
+      PopupComponent ? (
+        <ClusterLayer
+          L={L}
+          clusters={serverClusters}
+          Marker={Marker}
+          Popup={Popup}
+          Tooltip={Tooltip}
+          PopupContent={PopupComponent}
+          popupProps={popupAutoPanPadding}
+          onMarkerClick={handleMarkerZoom}
+          onMarkerInstance={onMarkerInstance}
+          onClusterZoom={onServerClusterZoom ?? (() => {})}
+          onClusterTap={onClusterTap}
+          markerIcon={customIcons.meTravel}
+          markerOpacity={travelMarkerOpacity}
+          hintCenter={hintCenterLatLng}
+          useMap={useMap as any}
+          suppressLeafletPopupOnSelect={suppressLeafletPopupOnSelect}
+        />
+      ) : canRenderMap &&
       customIcons?.meTravel &&
       markers.length > 0 &&
       PopupComponent ? (

@@ -7,6 +7,9 @@ import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { resolveInternalTravelRoute } from '@/utils/relatedTravel';
+import { useMapClusters } from '@/hooks/map/useMapClusters';
+import type { MapClusterBBox, MapClustersFilters } from '@/api/map';
+import { buildServerClusterRenderData } from './Map/serverClusterRenderData';
 import {
   getActiveOverlayLayers,
   getThemedNativeBaseTileUrl,
@@ -52,8 +55,8 @@ type Point = {
   lng?: string;
   coord: string;
   address: string;
-  travelImageThumbUrl: string;
-  categoryName: string;
+  travelImageThumbUrl?: string;
+  categoryName?: string | { name?: string } | Array<string | { name?: string }>;
   articleUrl?: string;
   urlTravel?: string;
 };
@@ -80,6 +83,11 @@ interface Coordinates {
   longitude: number;
 }
 
+interface NativeViewportSnapshot {
+  bbox: MapClusterBBox;
+  zoom: number;
+}
+
 interface TravelProps {
   travel: TravelPropsType;
   coordinates: Coordinates | null;
@@ -104,6 +112,7 @@ interface TravelProps {
    * screen can offer a Google-Maps-style "Search this area" action.
    */
   onMapMove?: (center: Coordinates) => void;
+  mapClusterFilters?: MapClustersFilters;
   onMapUiApiReady?: (api: {
     zoomIn: () => void;
     zoomOut: () => void;
@@ -139,6 +148,27 @@ const normalizeRoutePoint = (point: unknown): [number, number] | null => {
   return [lat, lng];
 };
 
+const isSameViewportSnapshot = (
+  left: NativeViewportSnapshot | null,
+  right: NativeViewportSnapshot,
+): boolean => {
+  if (!left) return false;
+  return (
+    Math.abs(left.zoom - right.zoom) < 0.01 &&
+    Math.abs(left.bbox.south - right.bbox.south) < 0.0005 &&
+    Math.abs(left.bbox.west - right.bbox.west) < 0.0005 &&
+    Math.abs(left.bbox.north - right.bbox.north) < 0.0005 &&
+    Math.abs(left.bbox.east - right.bbox.east) < 0.0005
+  );
+};
+
+const isValidNativeViewportSnapshot = (snapshot: NativeViewportSnapshot): boolean =>
+  Number.isFinite(snapshot.zoom) &&
+  Number.isFinite(snapshot.bbox.south) &&
+  Number.isFinite(snapshot.bbox.west) &&
+  Number.isFinite(snapshot.bbox.north) &&
+  Number.isFinite(snapshot.bbox.east);
+
 // Данные шлём в WebView через injectJavaScript, а не через перезагрузку source.html:
 // на Android смена source.html не всегда триггерит reload, и инлайн JSON может
 // оборвать <script> неэкранированными символами. U+2028/U+2029 — валидны в JSON,
@@ -160,6 +190,7 @@ const Map: React.FC<TravelProps> = ({
   onMapClick,
   onMarkerSelect,
   onMapMove,
+  mapClusterFilters,
   onMapUiApiReady,
 }) => {
   const router = useRouter();
@@ -170,6 +201,7 @@ const Map: React.FC<TravelProps> = ({
     () => travel?.travelAddress?.data ?? travel?.data ?? [],
     [travel?.travelAddress?.data, travel?.data],
   );
+  const [viewportSnapshot, setViewportSnapshot] = useState<NativeViewportSnapshot | null>(null);
   const [localCoordinates, setLocalCoordinates] = useState<Coordinates | null>(propCoordinates);
   const [isLoading, setIsLoading] = useState(true);
   const themeColors = useThemedColors();
@@ -211,6 +243,28 @@ const Map: React.FC<TravelProps> = ({
       .filter((point): point is [number, number] => Boolean(point)),
     [fullRouteCoords, routePoints],
   );
+  const serverClusterQuery = useMapClusters({
+    bbox: viewportSnapshot?.bbox ?? null,
+    zoom: viewportSnapshot?.zoom ?? 10,
+    filters: mapClusterFilters,
+    enabled: mode === 'radius',
+  });
+  const serverClusterRenderData = useMemo(
+    () => buildServerClusterRenderData(serverClusterQuery.data),
+    [serverClusterQuery.data],
+  );
+  const shouldUseServerClusterData =
+    mode === 'radius' && !serverClusterQuery.isError && serverClusterRenderData.hasServerData;
+  const renderedNativePoints =
+    shouldUseServerClusterData && serverClusterRenderData.markers.length > 0
+      ? serverClusterRenderData.markers
+      : travelAddress;
+  const renderedNativeClusters = useMemo(
+    () => (shouldUseServerClusterData ? serverClusterRenderData.clusters : []),
+    [serverClusterRenderData.clusters, shouldUseServerClusterData],
+  );
+  const renderedNativePointsRef = useRef(renderedNativePoints);
+  renderedNativePointsRef.current = renderedNativePoints;
 
   const injectMapCommand = useCallback((script: string) => {
     try {
@@ -251,13 +305,24 @@ const Map: React.FC<TravelProps> = ({
   // данных, но HTML при этом НЕ пересобирается — маркеры дорисовываются injectJavaScript.
   const mapPayload = useMemo(
     () => ({
-      points: travelAddress,
+      points: renderedNativePoints,
+      clusters: renderedNativeClusters,
       routePoints: selectedRouteLatLngs,
       routeLine: routeLineLatLngs,
       mode,
       center: { lat: centerLat, lng: centerLng },
+      usesServerClusters: shouldUseServerClusterData,
     }),
-    [travelAddress, selectedRouteLatLngs, routeLineLatLngs, mode, centerLat, centerLng],
+    [
+      renderedNativePoints,
+      renderedNativeClusters,
+      selectedRouteLatLngs,
+      routeLineLatLngs,
+      mode,
+      centerLat,
+      centerLng,
+      shouldUseServerClusterData,
+    ],
   );
 
   const pushPayload = useCallback(() => {
@@ -378,6 +443,21 @@ const Map: React.FC<TravelProps> = ({
           background: ${markerColor};
           clip-path: polygon(50% 100%, 0 0, 100% 0);
         }
+        .metravel-cluster {
+          width: 44px;
+          height: 44px;
+          border-radius: 999px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: ${themeColors.primary};
+          color: ${themeColors.textOnDark};
+          border: 3px solid ${themeColors.surface};
+          box-shadow: 0 4px 12px ${markerShadowColor};
+          font-weight: 700;
+          font-size: 14px;
+          line-height: 1;
+        }
       </style>
     </head>
     <body>
@@ -414,23 +494,46 @@ const Map: React.FC<TravelProps> = ({
         // почти не сдвинулся относительно последнего отправленного (jitter-гард).
         var __metravelMoveTimer = null;
         var __metravelLastSentCenter = null;
-        function __metravelEmitMapMove() {
+        function __metravelViewportPayload(type) {
           try {
             var c = map.getCenter ? map.getCenter() : null;
-            if (!c || !isFinite(c.lat) || !isFinite(c.lng)) return;
-            if (__metravelLastSentCenter &&
-                Math.abs(__metravelLastSentCenter.lat - c.lat) < 0.0001 &&
-                Math.abs(__metravelLastSentCenter.lng - c.lng) < 0.0001) {
-              return;
+            var b = map.getBounds ? map.getBounds() : null;
+            var sw = b && b.getSouthWest ? b.getSouthWest() : null;
+            var ne = b && b.getNorthEast ? b.getNorthEast() : null;
+            var zoom = map.getZoom ? Number(map.getZoom()) : NaN;
+            if (!c || !isFinite(c.lat) || !isFinite(c.lng) || !sw || !ne || !isFinite(zoom)) return null;
+            return {
+              type: type,
+              lat: c.lat,
+              lng: c.lng,
+              zoom: zoom,
+              bbox: {
+                south: Math.min(sw.lat, ne.lat),
+                west: Math.min(sw.lng, ne.lng),
+                north: Math.max(sw.lat, ne.lat),
+                east: Math.max(sw.lng, ne.lng)
+              }
+            };
+          } catch (e) { return null; }
+        }
+        function __metravelPostViewport(type) {
+          try {
+            var payload = __metravelViewportPayload(type);
+            if (!payload) return;
+            if (type === 'MAP_MOVED') {
+              if (__metravelLastSentCenter &&
+                  Math.abs(__metravelLastSentCenter.lat - payload.lat) < 0.0001 &&
+                  Math.abs(__metravelLastSentCenter.lng - payload.lng) < 0.0001) {
+                return;
+              }
+              __metravelLastSentCenter = { lat: payload.lat, lng: payload.lng };
             }
-            __metravelLastSentCenter = { lat: c.lat, lng: c.lng };
             if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'MAP_MOVED', lat: c.lat, lng: c.lng
-              }));
+              window.ReactNativeWebView.postMessage(JSON.stringify(payload));
             }
           } catch (e) {}
         }
+        function __metravelEmitMapMove() { __metravelPostViewport('MAP_MOVED'); }
         map.on('moveend', function() {
           try {
             window.__metravelScheduleInvalidate('moveend');
@@ -439,7 +542,10 @@ const Map: React.FC<TravelProps> = ({
           } catch (e) {}
         });
         map.on('zoomend', function() {
-          try { window.__metravelScheduleInvalidate('zoomend'); } catch (e) {}
+          try {
+            window.__metravelScheduleInvalidate('zoomend');
+            __metravelPostViewport('MAP_VIEWPORT');
+          } catch (e) {}
         });
 
         window.__metravelMapZoomIn = function() {
@@ -494,6 +600,7 @@ const Map: React.FC<TravelProps> = ({
         });
 
         const markersLayer = L.layerGroup().addTo(map);
+        const clustersLayer = L.layerGroup().addTo(map);
         const routeLayer = L.layerGroup().addTo(map);
         // Отдельный слой для маркера «вы здесь». НЕ чистится в __metravelRenderPoints
         // (где clearLayers зовётся только для markersLayer/routeLayer), поэтому синяя
@@ -546,6 +653,16 @@ const Map: React.FC<TravelProps> = ({
           iconAnchor: [16, 48],
           popupAnchor: [0, -48]
         });
+        function makeClusterIcon(count) {
+          var label = Number(count);
+          var text = isFinite(label) && label > 999 ? '999+' : String(isFinite(label) && label > 0 ? label : '');
+          return L.divIcon({
+            className: '',
+            html: '<div class="metravel-cluster" aria-hidden="true">' + escapeHtml(text) + '</div>',
+            iconSize: [44, 44],
+            iconAnchor: [22, 22]
+          });
+        }
 
         const ROUTE_COLOR = ${JSON.stringify(DESIGN_COLORS.routeLine)};
         const ROUTE_SURFACE = ${JSON.stringify(themeColors.surface)};
@@ -566,17 +683,38 @@ const Map: React.FC<TravelProps> = ({
           try {
             const data = payload || {};
             const points = Array.isArray(data.points) ? data.points : [];
+            const clusters = Array.isArray(data.clusters) ? data.clusters : [];
             const routePoints = Array.isArray(data.routePoints) ? data.routePoints : [];
             const routeLine = Array.isArray(data.routeLine) ? data.routeLine : routePoints;
             const routeMode = data.mode || 'radius';
+            const usesServerClusters = data.usesServerClusters === true;
             window.__metravelMapMode = routeMode;
             if (data.center && isFinite(data.center.lat) && isFinite(data.center.lng)) {
               map.__userCenter = [data.center.lat, data.center.lng];
             }
 
             markersLayer.clearLayers();
+            clustersLayer.clearLayers();
             routeLayer.clearLayers();
             const bounds = L.latLngBounds();
+
+            clusters.forEach(function(cluster) {
+              if (!cluster || !Array.isArray(cluster.center) || cluster.center.length < 2) return;
+              const lat = Number(cluster.center[0]);
+              const lng = Number(cluster.center[1]);
+              if (!isFinite(lat) || !isFinite(lng)) return;
+              const marker = L.marker([lat, lng], { icon: makeClusterIcon(cluster.count) }).addTo(clustersLayer);
+              marker.on('click', function() {
+                try {
+                  if (Array.isArray(cluster.bounds) && cluster.bounds.length >= 2) {
+                    map.fitBounds(cluster.bounds, { padding: [50, 50] });
+                    return;
+                  }
+                  map.setView([lat, lng], Math.min((map.getZoom ? map.getZoom() : 10) + 2, 18));
+                } catch (err) {}
+              });
+              bounds.extend([lat, lng]);
+            });
 
             points.forEach(function(point, pointIndex) {
               if (!point || !point.coord) return;
@@ -699,12 +837,13 @@ const Map: React.FC<TravelProps> = ({
                   map.setView(routeBounds.getCenter(), Math.max(map.getZoom ? map.getZoom() : 13, 14));
                 } catch (e) {}
               }
-            } else if (bounds.isValid()) {
+            } else if (bounds.isValid() && !usesServerClusters) {
               map.fitBounds(bounds, { padding: [50, 50] });
             } else if (map.__userCenter) {
               map.setView(map.__userCenter, map.getZoom ? map.getZoom() : 10);
             }
             window.__metravelScheduleInvalidate('renderPoints');
+            setTimeout(function() { __metravelPostViewport('MAP_VIEWPORT'); }, 0);
           } catch (e) {}
         };
 
@@ -979,6 +1118,7 @@ const Map: React.FC<TravelProps> = ({
         if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'READY' }));
         }
+        setTimeout(function() { __metravelPostViewport('MAP_VIEWPORT'); }, 0);
       </script>
     </body>
     </html>
@@ -1034,15 +1174,36 @@ const Map: React.FC<TravelProps> = ({
               if (Number.isFinite(lat) && Number.isFinite(lng)) {
                 onMapMoveRef.current?.({ latitude: lat, longitude: lng });
               }
+            }
+            if (parsed?.type === 'MAP_MOVED' || parsed?.type === 'MAP_VIEWPORT') {
+              const zoom = Number(parsed?.zoom);
+              const bbox = parsed?.bbox;
+              if (bbox) {
+                const nextViewport = {
+                  bbox: {
+                    south: Number(bbox.south),
+                    west: Number(bbox.west),
+                    north: Number(bbox.north),
+                    east: Number(bbox.east),
+                  },
+                  zoom,
+                };
+                if (isValidNativeViewportSnapshot(nextViewport)) {
+                  setViewportSnapshot((current) =>
+                    isSameViewportSnapshot(current, nextViewport) ? current : nextViewport,
+                  );
+                }
+              }
               return;
             }
             if (parsed?.type === 'SELECT_PLACE') {
               // F-46 — индекс точки в массиве, отправленном в WebView
               // (window.__metravelRenderPoints), маппится на ту же точку
-              // travelAddress на RN-стороне.
+              // active points на RN-стороне (server markers или local fallback).
               const index = Number(parsed?.index);
-              if (Number.isInteger(index) && index >= 0 && index < travelAddress.length) {
-                const point = travelAddress[index];
+              const selectablePoints = renderedNativePointsRef.current;
+              if (Number.isInteger(index) && index >= 0 && index < selectablePoints.length) {
+                const point = selectablePoints[index];
                 if (point) onMarkerSelect?.(point);
               }
               return;

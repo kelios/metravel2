@@ -193,43 +193,47 @@ describe('extractArticleIdFromParam', () => {
 });
 
 describe('fetchArticleBySlug', () => {
-  it('returns article from direct by-slug endpoint', async () => {
+  it('returns article from canonical resolve-slug endpoint', async () => {
     const article = { id: 7, slug: 'test-article' };
     fetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 });
-    safeJsonParse.mockResolvedValueOnce(article);
+    safeJsonParse.mockResolvedValueOnce({ id: 7, slug: 'test-article', item: article });
 
     const result = await fetchArticleBySlug('test-article', { throwOnError: true });
 
     expect(result).toEqual(article);
     expect(fetchWithTimeout).toHaveBeenCalledWith(
-      expect.stringContaining('/api/articles/by-slug/test-article/'),
+      expect.stringContaining('/api/articles/resolve-slug/test-article/'),
       expect.any(Object),
-      10000,
+      30000,
     );
   });
 
-  it('uses fallback search when by-slug endpoint returns 404', async () => {
+  it('loads article detail by id when resolver omits item', async () => {
     fetchWithTimeout
-      .mockResolvedValueOnce({ ok: false, status: 404, statusText: 'Not Found' })
+      .mockResolvedValueOnce({ ok: true, status: 200 })
       .mockResolvedValueOnce({ ok: true, status: 200 });
-    safeJsonParse.mockResolvedValueOnce({
-      data: [
-        {
-          id: 11,
-          slug: 'old-test-article',
-          url: '/article/old-test-article',
-          name: 'Old Test Article',
-        },
-      ],
-      total: 1,
-    });
+    safeJsonParse
+      .mockResolvedValueOnce({ id: 11, slug: 'old-test-article' })
+      .mockResolvedValueOnce({ id: 11, slug: 'old-test-article', name: 'Old Test Article' });
 
     const result = await fetchArticleBySlug('old-test-article', { throwOnError: true });
 
     expect(result.id).toBe(11);
     expect(fetchWithTimeout).toHaveBeenCalledTimes(2);
-    const fallbackUrl = fetchWithTimeout.mock.calls[1][0] as string;
-    const fallbackParams = new URL(fallbackUrl).searchParams;
-    expect(fallbackParams.get('query')).toContain('old');
+    expect(fetchWithTimeout.mock.calls[1][0]).toContain('/api/articles/11');
+  });
+
+  it('does not run broad fallback search for canonical 404', async () => {
+    fetchWithTimeout
+      .mockResolvedValueOnce({ ok: false, status: 404, statusText: 'Not Found' })
+      .mockResolvedValueOnce({ ok: false, status: 404, statusText: 'Not Found' });
+
+    await expect(fetchArticleBySlug('missing-article', { throwOnError: true })).rejects.toThrow(
+      'Статья со slug "missing-article" не найдена'
+    );
+
+    expect(fetchWithTimeout).toHaveBeenCalledTimes(2);
+    expect(fetchWithTimeout.mock.calls[0][0]).toContain('/api/articles/resolve-slug/missing-article/');
+    expect(fetchWithTimeout.mock.calls[1][0]).toContain('/api/articles/by-slug/missing-article/');
   });
 });

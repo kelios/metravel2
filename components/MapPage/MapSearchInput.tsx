@@ -17,19 +17,12 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 
-// On native the input lives inside a @gorhom bottom sheet: BottomSheetTextInput
-// makes the sheet rise above the keyboard on focus (keyboard-avoidance). The web
-// sheet is a separate DOM impl (and @gorhom must not initialise on web), so we
-// resolve the variant lazily off-web and fall back to the plain RN TextInput if
-// the module/export isn't available (e.g. the jest native renderer).
+// Keep the search input on the plain RN TextInput across platforms. The map
+// sheet already leaves the field above the dock, and this avoids a native
+// BottomSheetTextInput focus race where Android shows the field but never routes
+// typed text into it.
 const resolveFocusableInput = (): typeof TextInput => {
-  if (Platform.OS === 'web') return TextInput;
-  try {
-    const mod = require('@gorhom/bottom-sheet');
-    return (mod?.BottomSheetTextInput as typeof TextInput) ?? TextInput;
-  } catch {
-    return TextInput;
-  }
+  return TextInput;
 };
 
 const FocusableInput: typeof TextInput = resolveFocusableInput();
@@ -79,10 +72,9 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
   // reports focused; on success we clear the latched store intent.
   //
   // Why the previous single 350ms timeout failed on-device: on native the input
-  // is a @gorhom BottomSheetTextInput that only becomes focusable once (a) the
-  // sheet open/snap animation finishes and (b) the input is actually mounted in
-  // the visible snap. A fixed delay races both, so the keyboard never showed
-  // (mInputShown=false).
+  // only becomes focusable once the sheet open/snap animation finishes and the
+  // input is mounted in the visible snap. A fixed delay races both, so the
+  // keyboard never showed (mInputShown=false).
   const runFocus = useCallback(() => {
     let cancelled = false;
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -135,6 +127,12 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
     return runFocus();
   }, [autoFocusOnSignal, pendingSearchFocus, runFocus]);
 
+  const handleWrapperPress = useCallback(() => {
+    if (Platform.OS === 'web') return;
+    inputRef.current?.focus();
+    runFocus();
+  }, [runFocus]);
+
   const handleClear = useCallback(() => {
     onChange('');
     onClear?.();
@@ -145,7 +143,10 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
 
   return (
     <View style={styles.container}>
-      <View style={[styles.inputWrapper, isFocused && styles.inputWrapperFocused]}>
+      <Pressable
+        style={[styles.inputWrapper, isFocused && styles.inputWrapperFocused]}
+        onPressIn={handleWrapperPress}
+      >
         <Feather name="search" size={16} color={colors.textMuted} style={styles.searchIcon} />
         <FocusableInput
           ref={inputRef}
@@ -175,7 +176,7 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
             <Feather name="x" size={16} color={colors.textMuted} />
           </Pressable>
         )}
-      </View>
+      </Pressable>
       {showResultsHint && (
         <Text style={styles.resultsHint}>
           {resultsCount === 0

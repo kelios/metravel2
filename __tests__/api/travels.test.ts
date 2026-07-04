@@ -818,15 +818,16 @@ describe('src/api/travelsApi.ts', () => {
       expect(devError).toHaveBeenCalled();
     });
 
-    it('fetchTravelBySlug передаёт токен, если он есть', async () => {
+    it('fetchTravelBySlug использует canonical resolve-slug endpoint', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
-      const travelPayload = { id: 77 } as any;
+      const travelPayload = { id: 77, slug: 'my-trip', name: 'My trip' } as any;
       mockedApiClientGet.mockResolvedValue(travelPayload);
 
       mockedGetSecureItem.mockResolvedValueOnce('slug-token');
       await fetchTravelBySlug('my-trip');
       expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
-      expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/by-slug/my-trip/');
+      expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/resolve-slug/my-trip/');
+      expect(mockedApiClientGet.mock.calls[0][2]).toEqual(expect.objectContaining({ skipAuth: true }));
     });
 
     it('fetchTravelBySlug не возвращает stale cache после ошибки авторизованного by-slug запроса', async () => {
@@ -843,15 +844,15 @@ describe('src/api/travelsApi.ts', () => {
       await expect(fetchTravelBySlug('my-trip')).rejects.toThrow();
     });
 
-    it('fetchTravelBySlug использует путь /api/travels/by-slug/{slug}/', async () => {
+    it('fetchTravelBySlug использует путь /api/travels/resolve-slug/{slug}/', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       mockedGetSecureItem.mockResolvedValueOnce(null);
-      mockedApiClientGet.mockResolvedValueOnce({ id: 1, slug: 'sluggy' } as any);
+      mockedApiClientGet.mockResolvedValueOnce({ id: 1, slug: 'sluggy', name: 'Sluggy' } as any);
 
       await fetchTravelBySlug('sluggy');
 
       expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
-      expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/by-slug/sluggy/');
+      expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/resolve-slug/sluggy/');
     });
 
     it('fetchTravelBySlug переиспользует in-flight guest-запросы для одного slug', async () => {
@@ -898,105 +899,59 @@ describe('src/api/travelsApi.ts', () => {
       expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
     });
 
-    it('fetchTravelBySlug использует fallback-поиск по похожему slug при 404', async () => {
+    it('fetchTravelBySlug не запускает broad fallback search при canonical 404', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const notFoundError = Object.assign(new Error('not found'), { status: 404 });
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // by-slug
       mockedApiClientGet.mockRejectedValueOnce(notFoundError); // resolve-slug
-      mockedApiClientGet.mockResolvedValueOnce({
-        id: 2677,
-        name: 'Модынь  - одна из самых высоких вершин Бескидов',
-        slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
-        description: '<p>detail payload</p>',
-        gallery: [],
-        travelAddress: [{ id: 1, coord: '53.9,27.56' }],
-      } as any);
-      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce({
-        data: [
-          {
-            id: 2677,
-            name: 'Модынь  - одна из самых высоких вершин Бескидов',
-            slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
-            url: '/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
-            publish: true,
-            moderation: true,
-          },
-          {
-            id: 3000,
-            name: 'Нерелевантный маршрут',
-            slug: 'modyn-random',
-            url: '/travels/modyn-random',
-            publish: true,
-            moderation: true,
-          },
-        ],
-        total: 2,
-      } as any);
+      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // legacy exact by-slug compat
 
-      const result = await fetchTravelBySlug('modyn-odna-iz-samykh-vershin-beskidov');
+      await expect(fetchTravelBySlug('missing-travel')).rejects.toThrow('Travel not found by slug: missing-travel');
 
-      expect(result.slug).toBe('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
-      expect(result.id).toBe(2677);
-      expect(result.description).toBe('<p>detail payload</p>');
-      expect(mockedApiClientGet).toHaveBeenCalledTimes(3);
-      expect(mockedApiClientGet.mock.calls[1][0]).toContain('/travels/resolve-slug/');
-      expect(mockedApiClientGet.mock.calls[2][0]).toBe('/travels/2677/');
-      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
-      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
-      const urlObj = new URL(url);
-      expect(urlObj.pathname).toContain('/api/travels/');
-      expect(urlObj.searchParams.get('query')).toContain('modyn');
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(2);
+      expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/resolve-slug/missing-travel/');
+      expect(mockedApiClientGet.mock.calls[1][0]).toBe('/travels/by-slug/missing-travel/');
+      expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
     });
 
-    // BE-IDX-1 contract (backend slug-redirect history, origin/master 4df4938):
-    // /travels/resolve-slug/?slug=<old> returns the canonical {id, slug, url} for a
-    // renamed travel. The cheap exact resolve runs BEFORE the fuzzy search fan-out.
-    it('fetchTravelBySlug резолвит переименованный slug через resolve-slug без fan-out', async () => {
+    it('fetchTravelBySlug возвращает item из canonical resolve-slug без fan-out', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
-      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // by-slug (старый slug → 404)
       mockedApiClientGet.mockResolvedValueOnce({
         id: 384,
         slug: 'korotkiy-novyy-slug',
-        url: '/travels/korotkiy-novyy-slug',
-      } as any); // resolve-slug
-      mockedApiClientGet.mockResolvedValueOnce({
-        id: 384,
-        name: 'Короткое новое название',
-        slug: 'korotkiy-novyy-slug',
-        description: '<p>detail payload</p>',
-        gallery: [],
-      } as any); // detail fetch
+        canonical_url: '/travels/korotkiy-novyy-slug',
+        status: 'fuzzy',
+        item: {
+          id: 384,
+          name: 'Короткое новое название',
+          slug: 'korotkiy-novyy-slug',
+          description: '<p>detail payload</p>',
+          gallery: [],
+        },
+      } as any);
 
       const result = await fetchTravelBySlug('staryy-ochen-dlinnyy-razdutyy-slug');
 
       expect(result.id).toBe(384);
       expect(result.slug).toBe('korotkiy-novyy-slug');
       expect(result.description).toBe('<p>detail payload</p>');
-      expect(mockedApiClientGet).toHaveBeenCalledTimes(3);
-      expect(mockedApiClientGet.mock.calls[1][0]).toBe(
-        '/travels/resolve-slug/?slug=staryy-ochen-dlinnyy-razdutyy-slug'
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
+      expect(mockedApiClientGet.mock.calls[0][0]).toBe(
+        '/travels/resolve-slug/staryy-ochen-dlinnyy-razdutyy-slug/'
       );
-      expect(mockedApiClientGet.mock.calls[1][2]).toEqual(
+      expect(mockedApiClientGet.mock.calls[0][2]).toEqual(
         expect.objectContaining({ skipAuth: true })
       );
-      expect(mockedApiClientGet.mock.calls[2][0]).toBe('/travels/384/');
-      // Точный resolve сработал — тяжёлый поисковый fan-out не запускался.
       expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
     });
 
-    // Renamed slug + 301: /by-slug/ answers HttpResponsePermanentRedirect to the SPA
-    // page URL; fetch follows into HTML and the client JSON-parses it into null/{}.
-    // The empty payload must be treated as a miss and recovered via resolve-slug.
-    it('fetchTravelBySlug восстанавливается через resolve-slug, когда by-slug ушёл за 301 в HTML', async () => {
+    it('fetchTravelBySlug догружает detail, когда resolver вернул только id', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
-      mockedApiClientGet.mockResolvedValueOnce(null as any); // by-slug → 301 → HTML → null
       mockedApiClientGet.mockResolvedValueOnce({
         id: 512,
         slug: 'novyy-kanonicheskiy-slug',
-        url: '/travels/novyy-kanonicheskiy-slug',
-      } as any); // resolve-slug
+        canonical_url: '/travels/novyy-kanonicheskiy-slug',
+        status: 'redirect',
+      } as any);
       mockedApiClientGet.mockResolvedValueOnce({
         id: 512,
         name: 'Каноническое название',
@@ -1009,16 +964,17 @@ describe('src/api/travelsApi.ts', () => {
 
       expect(result.id).toBe(512);
       expect(result.slug).toBe('novyy-kanonicheskiy-slug');
-      expect(mockedApiClientGet).toHaveBeenCalledTimes(3);
-      expect(mockedApiClientGet.mock.calls[1][0]).toContain('/travels/resolve-slug/');
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(2);
+      expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/resolve-slug/pereimenovannyy-slug/');
+      expect(mockedApiClientGet.mock.calls[1][0]).toBe('/travels/512/');
       expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
     });
 
     it('fetchTravelBySlug использует fallback-поиск по похожему slug при 502', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const badGatewayError = Object.assign(new Error('bad gateway'), { status: 502 });
-      mockedApiClientGet.mockRejectedValueOnce(badGatewayError); // by-slug
       mockedApiClientGet.mockRejectedValueOnce(badGatewayError); // resolve-slug
+      mockedApiClientGet.mockRejectedValueOnce(badGatewayError); // legacy by-slug
       mockedApiClientGet.mockResolvedValueOnce({
         id: 2677,
         name: 'Модынь  - одна из самых высоких вершин Бескидов',
@@ -1049,272 +1005,6 @@ describe('src/api/travelsApi.ts', () => {
       expect(result.description).toBe('<p>detail payload</p>');
       expect(mockedApiClientGet).toHaveBeenCalledTimes(3);
       expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
-    });
-
-    it('fetchTravelBySlug продолжает fallback-скан, если первые query не дают результатов', async () => {
-      const { fetchTravelBySlug } = loadTravelsApi();
-      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // by-slug
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // resolve-slug
-      mockedApiClientGet.mockResolvedValueOnce({
-        id: 2677,
-        name: 'Модынь  - одна из самых высоких вершин Бескидов',
-        slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
-        description: '<p>detail payload</p>',
-        gallery: [],
-        travelAddress: [{ id: 1, coord: '53.9,27.56' }],
-      } as any);
-
-      mockedFetchWithTimeout
-        .mockResolvedValueOnce({ ok: true } as any)
-        .mockResolvedValueOnce({ ok: true } as any)
-        .mockResolvedValueOnce({ ok: true } as any)
-        .mockResolvedValueOnce({ ok: true } as any);
-
-      mockedSafeJsonParse
-        .mockResolvedValueOnce({ data: [], total: 0 } as any)
-        .mockResolvedValueOnce({ data: [], total: 0 } as any)
-        .mockResolvedValueOnce({ data: [], total: 0 } as any)
-        .mockResolvedValueOnce({
-          data: [
-            {
-              id: 2677,
-              name: 'Модынь  - одна из самых высоких вершин Бескидов',
-              slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
-              url: '/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
-              publish: true,
-              moderation: true,
-            },
-          ],
-          total: 1,
-        } as any);
-
-      const result = await fetchTravelBySlug('modyn-odna-iz-samykh-vershin-beskidov');
-
-      expect(result.id).toBe(2677);
-      expect(result.description).toBe('<p>detail payload</p>');
-      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(4);
-      const firstUrl = mockedFetchWithTimeout.mock.calls[0][0] as string;
-      const firstUrlObj = new URL(firstUrl);
-      expect(firstUrlObj.searchParams.get('query')).toContain('modyn');
-    });
-
-    it('fetchTravelBySlug fallback использует короткий токен slug, когда длинные query пустые', async () => {
-      const { fetchTravelBySlug } = loadTravelsApi();
-      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // by-slug
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // resolve-slug
-      mockedApiClientGet.mockResolvedValueOnce({
-        id: 498,
-        name: 'Модынь  - одна из самых высоких вершин Бескидов (1029)',
-        slug: 'modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029',
-        description: '<p>detail payload</p>',
-        gallery: [],
-        travelAddress: [{ id: 1, coord: '53.9,27.56' }],
-      } as any);
-
-      mockedFetchWithTimeout.mockImplementation(async (url: string) => ({
-        ok: true,
-        __url: url,
-      } as any));
-      mockedSafeJsonParse.mockImplementation(async (res: any) => {
-        const url = new URL(res.__url);
-        const query = url.searchParams.get('query') || '';
-        if (query === 'modyn') {
-          return {
-            data: [
-              {
-                id: 498,
-                name: 'Модынь  - одна из самых высоких вершин Бескидов (1029)',
-                slug: 'modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029',
-                url: '/travels/modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029',
-                publish: true,
-                moderation: true,
-              },
-            ],
-            total: 1,
-          } as any;
-        }
-        return { data: [], total: 0 } as any;
-      });
-
-      const result = await fetchTravelBySlug('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
-
-      expect(result.id).toBe(498);
-      expect(result.slug).toBe('modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029');
-      expect(result.description).toBe('<p>detail payload</p>');
-      const requestedQueries = mockedFetchWithTimeout.mock.calls.map(
-        (call: any[]) => new URL(call[0] as string).searchParams.get('query') || ''
-      );
-      expect(requestedQueries).toContain('modyn');
-    });
-
-    it('fetchTravelBySlug fallback пробует одиночный токен первым (prod API не поддерживает multi-word)', async () => {
-      const { fetchTravelBySlug } = loadTravelsApi();
-      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // by-slug
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // resolve-slug
-      mockedApiClientGet.mockResolvedValueOnce({
-        id: 498,
-        name: 'Модынь  - одна из самых высоких вершин Бескидов (1029)',
-        slug: 'modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029',
-        description: '<p>detail payload</p>',
-        gallery: [],
-        travelAddress: [{ id: 1, coord: '53.9,27.56' }],
-      } as any);
-
-      mockedFetchWithTimeout.mockImplementation(async (url: string) => ({
-        ok: true,
-        __url: url,
-      } as any));
-      mockedSafeJsonParse.mockImplementation(async (res: any) => {
-        const url = new URL(res.__url);
-        const query = url.searchParams.get('query') || '';
-        if (query === 'modyn') {
-          return {
-            data: [
-              {
-                id: 498,
-                name: 'Модынь  - одна из самых высоких вершин Бескидов (1029)',
-                slug: 'modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029',
-                url: '/travels/modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029',
-                publish: true,
-                moderation: true,
-              },
-            ],
-            total: 1,
-          } as any;
-        }
-        return { data: [], total: 0 } as any;
-      });
-
-      const result = await fetchTravelBySlug('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
-
-      expect(result.id).toBe(498);
-      expect(result.description).toBe('<p>detail payload</p>');
-      const firstQuery = new URL(mockedFetchWithTimeout.mock.calls[0][0] as string).searchParams.get('query') || '';
-      expect(firstQuery.split(' ').length).toBe(1);
-      expect(firstQuery).toBe('modyn');
-    });
-
-    it('fetchTravelBySlug fallback быстро резолвит близкий translit slug', async () => {
-      const { fetchTravelBySlug } = loadTravelsApi();
-      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // by-slug
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // resolve-slug
-      mockedApiClientGet.mockResolvedValueOnce({
-        id: 390,
-        name: 'Дворцово-парковый комплекс Слотвинских',
-        slug: 'dvorcovo-parkovyy-kompleks-slotvinskih',
-        description: '<p>detail payload</p>',
-        gallery: [],
-        travelAddress: [{ id: 1, coord: '53.8843369,28.6151820' }],
-      } as any);
-
-      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce({
-        data: [
-          {
-            id: 452,
-            name: 'Дворцово-парковый комплекс в Кровярках',
-            slug: 'dvorcovo-parkovyy-kompleks-v-krovyarkah',
-            url: '/travels/dvorcovo-parkovyy-kompleks-v-krovyarkah',
-            publish: true,
-            moderation: true,
-          },
-          {
-            id: 390,
-            name: 'Дворцово-парковый комплекс Слотвинских',
-            slug: 'dvorcovo-parkovyy-kompleks-slotvinskih',
-            url: '/travels/dvorcovo-parkovyy-kompleks-slotvinskih',
-            publish: true,
-            moderation: true,
-          },
-        ],
-        total: 2,
-      } as any);
-
-      const result = await fetchTravelBySlug('dvorcovo-parkovyy-kompleks-slotvinskikh');
-
-      expect(result.id).toBe(390);
-      expect(result.slug).toBe('dvorcovo-parkovyy-kompleks-slotvinskih');
-      expect(result.description).toBe('<p>detail payload</p>');
-      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
-      expect(mockedApiClientGet).toHaveBeenCalledTimes(3);
-      expect(mockedApiClientGet.mock.calls[2][0]).toBe('/travels/390/');
-    });
-
-    it('fetchTravelBySlug fallback находит slug с переставленными соседними буквами', async () => {
-      const { fetchTravelBySlug } = loadTravelsApi();
-      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
-      mockedApiClientGet.mockImplementation(async (endpoint: string) => {
-        if (endpoint === '/travels/by-slug/gervyaty/') {
-          return {
-            id: 427,
-            name: 'Гервяты. Костёл Пресвятой Троицы',
-            slug: 'gervyaty',
-            description: '<p>detail payload</p>',
-            gallery: [],
-            travelAddress: [{ id: 1, coord: '54.6871796,26.1441112' }],
-          } as any;
-        }
-        throw notFoundError;
-      });
-
-      const result = await fetchTravelBySlug('geryvaty');
-
-      expect(result.id).toBe(427);
-      expect(result.slug).toBe('gervyaty');
-      expect(result.description).toBe('<p>detail payload</p>');
-      expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
-      expect(mockedSafeJsonParse).not.toHaveBeenCalled();
-      const directVariantCall = mockedApiClientGet.mock.calls.find(
-        (call) => call[0] === '/travels/by-slug/gervyaty/'
-      );
-      expect(directVariantCall).toBeTruthy();
-      expect(directVariantCall?.[2]).toEqual({ skipAuth: true });
-    });
-
-    it('fetchTravelBySlug fallback корректно обрабатывает slug с числовым суффиксом', async () => {
-      const { fetchTravelBySlug } = loadTravelsApi();
-      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // by-slug
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // resolve-slug
-      mockedApiClientGet.mockResolvedValueOnce({
-        id: 1029,
-        name: 'Модынь  - одна из самых высоких вершин Бескидов',
-        slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
-        description: '<p>detail payload</p>',
-        gallery: [],
-        travelAddress: [{ id: 1, coord: '53.9,27.56' }],
-      } as any);
-      mockedFetchWithTimeout.mockResolvedValue({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValue({
-        data: [
-          {
-            id: 1029,
-            name: 'Модынь  - одна из самых высоких вершин Бескидов',
-            slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
-            url: '/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
-            publish: true,
-            moderation: true,
-          },
-        ],
-        total: 1,
-      } as any);
-
-      const result = await fetchTravelBySlug('modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029');
-
-      expect(result.id).toBe(1029);
-      expect(result.slug).toBe('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
-      expect(result.description).toBe('<p>detail payload</p>');
-      expect(mockedFetchWithTimeout.mock.calls.length).toBeGreaterThan(0);
-      expect(mockedFetchWithTimeout.mock.calls.length).toBeLessThanOrEqual(3);
-      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
-      const urlObj = new URL(url);
-      const queryParam = urlObj.searchParams.get('query') || '';
-      expect(queryParam).toContain('modyn');
-      expect(queryParam).not.toContain('1029');
     });
 
     it('fetchTravel пробрасывает AbortError без логирования', async () => {

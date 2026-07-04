@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react-native'
 
+import { createQueryWrapper } from '@/__tests__/helpers/testQueryClient'
 import MapPanel from '@/components/MapPage/MapPanel'
 
 const simplify = (node: any): any => {
@@ -12,9 +13,14 @@ const simplify = (node: any): any => {
   }
 }
 
+const renderWithQueryClient = (ui: React.ReactElement) => {
+  const { Wrapper } = createQueryWrapper()
+  return render(ui, { wrapper: Wrapper })
+}
+
 describe('MapPanel native map rendering', () => {
   it('renders the native map container instead of the browser-only placeholder', () => {
-    const tree = render(
+    const tree = renderWithQueryClient(
       <MapPanel
         travelsData={[]}
         coordinates={{ latitude: 0, longitude: 0 }}
@@ -54,7 +60,7 @@ describe('MapPanel native map rendering', () => {
   it('wires native map UI API to the WebView map implementation', () => {
     const onMapUiApiReady = jest.fn()
 
-    render(
+    renderWithQueryClient(
       <MapPanel
         travelsData={[]}
         coordinates={{ latitude: 0, longitude: 0 }}
