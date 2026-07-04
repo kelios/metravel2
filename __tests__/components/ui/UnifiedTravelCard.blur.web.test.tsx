@@ -91,9 +91,9 @@ describe('UnifiedTravelCard blur background (web)', () => {
           onPress={() => {}}
           mediaProps={{
             transition: 0,
+            showLoadingIndicator: false,
             imageProps: {
               allowDownscaling: true,
-              decodeFormat: 'rgb',
               placeholderContentFit: 'contain',
             },
           }}
@@ -104,9 +104,9 @@ describe('UnifiedTravelCard blur background (web)', () => {
     const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
     expect(props).toBeTruthy()
     expect(props.transition).toBe(0)
+    expect(props.showLoadingIndicator).toBe(false)
     expect(props.imageProps).toMatchObject({
       allowDownscaling: true,
-      decodeFormat: 'rgb',
       placeholderContentFit: 'contain',
     })
   })

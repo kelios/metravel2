@@ -129,6 +129,7 @@ interface OptimizedImageProps {
   transition?: number;
   cachePolicy?: ExpoImageProps['cachePolicy'];
   imageProps?: Partial<ExpoImageProps>;
+  showLoadingIndicator?: boolean;
   onLoad?: () => void;
   onError?: () => void;
   style?: any;
@@ -188,6 +189,7 @@ function OptimizedImage({
   transition = 200,
   cachePolicy = 'memory-disk',
   imageProps,
+  showLoadingIndicator = true,
   onLoad,
   onError,
   style,
@@ -471,7 +473,7 @@ function OptimizedImage({
       )}
 
       {/* Индикатор загрузки */}
-      {!blurOnly && validSource && isLoading && !hasError && !shouldDisableNetwork && (
+      {!blurOnly && showLoadingIndicator && validSource && isLoading && !hasError && !shouldDisableNetwork && (
         <ShimmerOverlay testID="optimized-image-loading" />
       )}
 

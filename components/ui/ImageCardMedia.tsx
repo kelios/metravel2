@@ -53,6 +53,7 @@ type Props = {
   transition?: number;
   cachePolicy?: ExpoImageProps['cachePolicy'];
   imageProps?: Partial<ExpoImageProps>;
+  showLoadingIndicator?: boolean;
   testID?: string;
   style?: any;
   onLoad?: () => void;
@@ -94,6 +95,7 @@ function ImageCardMedia({
   transition,
   cachePolicy,
   imageProps,
+  showLoadingIndicator = true,
   testID,
   style,
   onLoad,
@@ -612,6 +614,7 @@ function ImageCardMedia({
               transition={transition}
               cachePolicy={cachePolicy}
               imageProps={{ ...(imageProps || {}), ...(webImageProps || {}) }}
+              showLoadingIndicator={showLoadingIndicator}
               style={
                 Platform.OS === 'web' && shouldRenderWebBlurBackground
                   ? ({ backgroundColor: 'transparent', position: 'relative', zIndex: 1 } as any)

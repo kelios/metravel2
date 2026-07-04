@@ -16,7 +16,7 @@ import {
   type DimensionValue,
   type LayoutChangeEvent,
 } from 'react-native'
-import Animated, { useAnimatedStyle } from 'react-native-reanimated'
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated'
 
 import { useThemedColors } from '@/hooks/useTheme'
 import type { MapZoomPanControls } from '@/hooks/useMapZoomPan'
@@ -51,14 +51,16 @@ export interface WorldMapFlagsProps {
 function WorldMapFlagsComponent({ visitedCodes, size = 16, zoom }: WorldMapFlagsProps) {
   const colors = useThemedColors()
   const widthRef = React.useRef(WORLD_MAP_WIDTH)
+  const widthValue = useSharedValue(WORLD_MAP_WIDTH)
   const [, forceTick] = React.useState(0)
   const onLayout = useCallback((e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width
     if (w > 0 && Math.abs(w - widthRef.current) > 0.5) {
       widthRef.current = w
+      widthValue.value = w
       forceTick((t) => t + 1)
     }
-  }, [])
+  }, [widthValue])
 
   const markers = useMemo(() => {
     const list: { code: string; left: DimensionValue; top: DimensionValue; emoji: string | null }[] = []
@@ -78,7 +80,7 @@ function WorldMapFlagsComponent({ visitedCodes, size = 16, zoom }: WorldMapFlags
   // Оверлей-трансформ в px: viewBox-translate * k (k = ширина/1000), origin top-left.
   const overlayStyle = useAnimatedStyle(() => {
     if (!zoom) return {}
-    const k = widthRef.current / WORLD_MAP_WIDTH
+    const k = widthValue.value / WORLD_MAP_WIDTH
     return {
       transform: [
         { translateX: zoom.translateX.value * k },

@@ -111,6 +111,7 @@ export default function ProfileScreen() {
     viewsCount: 0,
   });
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
+  const [worldMapGestureActive, setWorldMapGestureActive] = useState(false);
   const { data: myAchievements } = useMyAchievements({ enabled: activeTab === 'overview' });
   const badgesCount = myAchievements?.rank?.badgesCount ?? 0;
   const rank = useMemo(
@@ -397,7 +398,12 @@ export default function ProfileScreen() {
 
   const handleProfileTabChange = useCallback((tab: ProfileTabKey) => {
     setActiveTravelMetric(null);
+    setWorldMapGestureActive(false);
     setActiveTab(tab);
+  }, []);
+
+  const handleWorldMapGestureActiveChange = useCallback((active: boolean) => {
+    setWorldMapGestureActive(active);
   }, []);
 
   const emptyStateProps = useMemo(() => {
@@ -696,9 +702,16 @@ export default function ProfileScreen() {
         travels={profileTravels}
         personalTravelStatusEntries={personalTravelStatusEntries}
         onBackToOverview={() => handleProfileTabChange('overview')}
+        onMapGestureActiveChange={handleWorldMapGestureActiveChange}
       />
     ),
-    [userId, profileTravels, personalTravelStatusEntries, handleProfileTabChange]
+    [
+      userId,
+      profileTravels,
+      personalTravelStatusEntries,
+      handleProfileTabChange,
+      handleWorldMapGestureActiveChange,
+    ]
   );
 
   const subscriptionsContent = useMemo(() => {
@@ -882,6 +895,7 @@ export default function ProfileScreen() {
           renderItem={renderItem}
           refreshing={refreshing}
           onRefresh={onRefresh}
+          scrollEnabled={!worldMapGestureActive}
           ListEmptyComponent={
             isSectionTab ? null : isTravelsTabLoading ? ListSkeleton : (
               <View style={styles.emptyWrap}>

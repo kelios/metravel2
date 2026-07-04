@@ -6,9 +6,16 @@
 // жесты pinch/pan (native) + onWheel (web). Тап по Path сохранён.
 
 import React, { useCallback, useMemo } from 'react'
-import { Platform, StyleProp, View, ViewStyle, type LayoutChangeEvent } from 'react-native'
-import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler'
-import Animated, { useAnimatedProps, runOnJS } from 'react-native-reanimated'
+import {
+  PanResponder,
+  Platform,
+  StyleProp,
+  View,
+  ViewStyle,
+  type GestureResponderEvent,
+  type LayoutChangeEvent,
+} from 'react-native'
+import Animated, { useAnimatedProps } from 'react-native-reanimated'
 import Svg, { G, Path } from 'react-native-svg'
 
 import { useTheme, useThemedColors } from '@/hooks/useTheme'
@@ -25,6 +32,47 @@ import {
 
 const AnimatedG = Animated.createAnimatedComponent(G)
 
+const countryBounds = worldCountryCodes.map((code) => {
+  const geom = worldCountryGeometry[code]
+  const values = geom.d.match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? []
+  let minX = Number.POSITIVE_INFINITY
+  let minY = Number.POSITIVE_INFINITY
+  let maxX = Number.NEGATIVE_INFINITY
+  let maxY = Number.NEGATIVE_INFINITY
+  for (let index = 0; index < values.length - 1; index += 2) {
+    const x = values[index]
+    const y = values[index + 1]
+    minX = Math.min(minX, x)
+    minY = Math.min(minY, y)
+    maxX = Math.max(maxX, x)
+    maxY = Math.max(maxY, y)
+  }
+  return {
+    code,
+    minX,
+    minY,
+    maxX,
+    maxY,
+    area: Math.max(0, maxX - minX) * Math.max(0, maxY - minY),
+  }
+})
+
+const getCountryCodeAtViewBoxPoint = (x: number, y: number): string | null => {
+  let bestCode: string | null = null
+  let bestArea = Number.POSITIVE_INFINITY
+  for (const bounds of countryBounds) {
+    const contains =
+      x >= bounds.minX &&
+      x <= bounds.maxX &&
+      y >= bounds.minY &&
+      y <= bounds.maxY
+    if (!contains || bounds.area >= bestArea) continue
+    bestCode = bounds.code
+    bestArea = bounds.area
+  }
+  return bestCode
+}
+
 export interface WorldChoroplethMapProps {
   /** ISO alpha-2 (UPPERCASE) посещённых стран. */
   visitedCodes: ReadonlySet<string>
@@ -36,6 +84,8 @@ export interface WorldChoroplethMapProps {
   children?: React.ReactNode
   /** Зум/пан-контроллер (T2). Без него карта статична (scale=1). */
   zoom?: MapZoomPanControls
+  /** Native: lets the parent list stop stealing touches while map gestures run. */
+  onGestureActiveChange?: (active: boolean) => void
   style?: StyleProp<ViewStyle>
 }
 
@@ -45,6 +95,7 @@ function WorldChoroplethMapComponent({
   onCountryPress,
   children,
   zoom,
+  onGestureActiveChange,
   style,
 }: WorldChoroplethMapProps) {
   const colors = useThemedColors()
@@ -107,32 +158,134 @@ function WorldChoroplethMapComponent({
     }
   })
 
-  // Жесты pinch/pan — только на native: RNGH-web-шим нестабилен (Gesture API
-  // местами отсутствует и роняет рендер). На web зум — колесо + кнопки +/−/сброс.
-  const gesture = useMemo(() => {
-    if (!zoom || Platform.OS === 'web') return undefined
+  const nativeTouchRef = React.useRef({
+    startX: 0,
+    startY: 0,
+    x: 0,
+    y: 0,
+    pinchDist: 0,
+    moved: false,
+  })
+  const notifyNativeGestureActive = useCallback(
+    (active: boolean) => {
+      if (Platform.OS !== 'web' && zoom) {
+        onGestureActiveChange?.(active)
+      }
+    },
+    [onGestureActiveChange, zoom]
+  )
+
+  const nativePanHandlers = useMemo(() => {
+    if (!zoom || Platform.OS === 'web') return null
+
     const toViewBox = () => WORLD_MAP_WIDTH / Math.max(1, widthRef.current)
+    const getTouches = (event: GestureResponderEvent) => event.nativeEvent.touches
+    const getCentroid = (event: GestureResponderEvent) => {
+      const touches = getTouches(event)
+      if (touches.length === 0) return null
+      const total = touches.reduce(
+        (acc, touch) => ({
+          x: acc.x + touch.locationX,
+          y: acc.y + touch.locationY,
+        }),
+        { x: 0, y: 0 }
+      )
+      return {
+        x: total.x / touches.length,
+        y: total.y / touches.length,
+      }
+    }
+    const getPinchDistance = (event: GestureResponderEvent) => {
+      const [a, b] = getTouches(event)
+      if (!a || !b) return 0
+      return Math.hypot(a.locationX - b.locationX, a.locationY - b.locationY)
+    }
+    const finishGesture = () => {
+      nativeTouchRef.current = {
+        startX: 0,
+        startY: 0,
+        x: 0,
+        y: 0,
+        pinchDist: 0,
+        moved: false,
+      }
+      notifyNativeGestureActive(false)
+    }
 
-    const pan = Gesture.Pan()
-      // activeOffset вместо minDistance: web-шим gesture-handler не всегда
-      // экспонирует minDistance; порог активации держит тап по стране проходящим.
-      .activeOffsetX([-6, 6])
-      .activeOffsetY([-6, 6])
-      .onChange((e) => {
-        const k = WORLD_MAP_WIDTH / Math.max(1, widthRef.current)
-        runOnJS(zoom.panBy)(e.changeX * k, e.changeY * k)
-      })
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponder: (event, state) =>
+        getTouches(event).length >= 2 || Math.abs(state.dx) > 5 || Math.abs(state.dy) > 5,
+      onMoveShouldSetPanResponderCapture: (event, state) =>
+        getTouches(event).length >= 2 || Math.abs(state.dx) > 5 || Math.abs(state.dy) > 5,
+      onPanResponderGrant: (event) => {
+        notifyNativeGestureActive(true)
+        const centroid = getCentroid(event)
+        const x = centroid?.x ?? 0
+        const y = centroid?.y ?? 0
+        nativeTouchRef.current = {
+          startX: x,
+          startY: y,
+          x,
+          y,
+          pinchDist: getPinchDistance(event),
+          moved: false,
+        }
+      },
+      onPanResponderMove: (event) => {
+        const centroid = getCentroid(event)
+        if (!centroid) return
+        const k = toViewBox()
+        const distance = getPinchDistance(event)
+        const previous = nativeTouchRef.current
+        const moved =
+          previous.moved ||
+          Math.abs(centroid.x - previous.startX) > 5 ||
+          Math.abs(centroid.y - previous.startY) > 5
 
-    const pinch = Gesture.Pinch().onChange((e) => {
-      const k = toViewBox()
-      // Фокус щипка в координатах viewBox: (focalScreen*k - translate) / scale.
-      const fx = (e.focalX * k - zoom.translateX.value) / zoom.scale.value
-      const fy = (e.focalY * k - zoom.translateY.value) / zoom.scale.value
-      runOnJS(zoom.zoomAtPoint)(e.scaleChange, fx, fy, false)
-    })
+        if (getTouches(event).length >= 2 && distance > 0) {
+          if (previous.pinchDist > 0) {
+            const fx = (centroid.x * k - zoom.translateX.value) / zoom.scale.value
+            const fy = (centroid.y * k - zoom.translateY.value) / zoom.scale.value
+            zoom.zoomAtPoint(distance / previous.pinchDist, fx, fy, false)
+          }
+          nativeTouchRef.current = {
+            startX: previous.startX,
+            startY: previous.startY,
+            x: centroid.x,
+            y: centroid.y,
+            pinchDist: distance,
+            moved: true,
+          }
+          return
+        }
 
-    return Gesture.Simultaneous(pan, pinch)
-  }, [zoom])
+        zoom.panBy((centroid.x - previous.x) * k, (centroid.y - previous.y) * k)
+        nativeTouchRef.current = {
+          startX: previous.startX,
+          startY: previous.startY,
+          x: centroid.x,
+          y: centroid.y,
+          pinchDist: 0,
+          moved,
+        }
+      },
+      onPanResponderRelease: () => {
+        const touch = nativeTouchRef.current
+        if (!touch.moved && onCountryPress) {
+          const k = toViewBox()
+          const x = (touch.x * k - zoom.translateX.value) / zoom.scale.value
+          const y = (touch.y * k - zoom.translateY.value) / zoom.scale.value
+          const code = getCountryCodeAtViewBoxPoint(x, y)
+          if (code) onCountryPress(code)
+        }
+        finishGesture()
+      },
+      onPanResponderTerminate: finishGesture,
+      onPanResponderTerminationRequest: () => false,
+    }).panHandlers
+  }, [zoom, notifyNativeGestureActive, onCountryPress])
 
   // Web: колесо → зум к курсору; 1 палец/мышь → пан (порог 5px держит тап по
   // стране); 2 пальца → пинч-зум. RNGH-web-шим нестабилен, поэтому жесты на web
@@ -319,8 +472,12 @@ function WorldChoroplethMapComponent({
         style,
       ]}
       onLayout={onLayout}
+      onTouchStart={() => notifyNativeGestureActive(true)}
+      onTouchEnd={() => notifyNativeGestureActive(false)}
+      onTouchCancel={() => notifyNativeGestureActive(false)}
       // RN Web пробрасывает DOM-обработчики на <div>; типы RN View их не знают.
       {...((webProps ?? {}) as object)}
+      {...((nativePanHandlers ?? {}) as object)}
     >
       <Svg width="100%" height="100%" viewBox={WORLD_MAP_VIEWBOX}>
         {zoom ? (
@@ -333,18 +490,6 @@ function WorldChoroplethMapComponent({
     </View>
   )
 
-  if (gesture) {
-    // GestureDetector требует GestureHandlerRootView выше по дереву. Глобального
-    // root в app/_layout.tsx НЕТ (заменён на обычный View из-за краша dev-client,
-    // см. RootContainerView) — поэтому, как MapScreenShell/questWizardStepCard,
-    // оборачиваем локально. Без него на Android GestureDetector роняет рендер.
-    // gesture !== undefined только на native (web-ветка выше возвращает undefined).
-    return (
-      <GestureHandlerRootView style={{ width: '100%' }}>
-        <GestureDetector gesture={gesture}>{map}</GestureDetector>
-      </GestureHandlerRootView>
-    )
-  }
   return map
 }
 

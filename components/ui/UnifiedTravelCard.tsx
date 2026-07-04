@@ -78,6 +78,7 @@ type Props = {
     optimizeWeb?: boolean;
     transition?: number;
     imageProps?: ComponentProps<typeof ImageCardMedia>['imageProps'];
+    showLoadingIndicator?: boolean;
   };
   width?: number;
   imageHeight?: number;
@@ -561,6 +562,7 @@ function UnifiedTravelCard({
             optimizeWeb={mediaProps?.optimizeWeb ?? true}
             transition={mediaProps?.transition}
             imageProps={mediaProps?.imageProps}
+            showLoadingIndicator={mediaProps?.showLoadingIndicator ?? true}
             onLoad={handleImageLoad}
             onError={handleImageError}
           />

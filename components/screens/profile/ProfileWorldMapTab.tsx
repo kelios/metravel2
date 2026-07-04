@@ -5,7 +5,16 @@
 // [FE-635-T3] Клик по стране → список маршрутов пользователя в стране.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import {
+  Modal,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
 
@@ -35,6 +44,7 @@ interface ProfileWorldMapTabProps {
   travels: Travel[]
   personalTravelStatusEntries: TravelStatusEntry[]
   onBackToOverview: () => void
+  onMapGestureActiveChange?: (active: boolean) => void
 }
 
 const formatCountriesLabel = (count: number) => {
@@ -58,6 +68,7 @@ export function ProfileWorldMapTab({
   travels,
   personalTravelStatusEntries,
   onBackToOverview,
+  onMapGestureActiveChange,
 }: ProfileWorldMapTabProps) {
   const colors = useThemedColors()
   const { isDark } = useTheme()
@@ -76,7 +87,13 @@ export function ProfileWorldMapTab({
   }, [reset])
 
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false)
   const handleCountryPress = useCallback((code: string) => setSelectedCode(code), [])
+  const openMapFullscreen = useCallback(() => setIsMapFullscreen(true), [])
+  const closeMapFullscreen = useCallback(() => {
+    setIsMapFullscreen(false)
+    onMapGestureActiveChange?.(false)
+  }, [onMapGestureActiveChange])
 
   // Клик по стране должен давать явный отклик: проскроллить инфо-панель в вид.
   useEffect(() => {
@@ -156,6 +173,62 @@ export function ProfileWorldMapTab({
           alignSelf: 'center',
           width: '100%',
           ...(isMobile ? {} : { maxWidth: 920 }),
+        },
+        fullscreenRoot: {
+          flex: 1,
+          backgroundColor: colors.background,
+          paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0,
+        },
+        fullscreenHeader: {
+          minHeight: 56,
+          paddingHorizontal: DESIGN_TOKENS.spacing.md,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: colors.border,
+          backgroundColor: colors.surface,
+        },
+        fullscreenTitle: {
+          flex: 1,
+          fontSize: DESIGN_TOKENS.typography.sizes.lg,
+          fontWeight: DESIGN_TOKENS.typography.weights.bold as '700',
+          color: colors.text,
+        },
+        fullscreenCloseButton: {
+          width: 44,
+          height: 44,
+          borderRadius: DESIGN_TOKENS.radii.md,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.surfaceMuted,
+          ...Platform.select({ web: { cursor: 'pointer' } as object, default: {} }),
+        },
+        fullscreenBody: {
+          flex: 1,
+          paddingHorizontal: DESIGN_TOKENS.spacing.md,
+          paddingVertical: DESIGN_TOKENS.spacing.md,
+          gap: DESIGN_TOKENS.spacing.md,
+        },
+        fullscreenMapFrame: {
+          flex: 1,
+          minHeight: 280,
+          justifyContent: 'flex-start',
+        },
+        fullscreenMapWrap: {
+          width: '100%',
+          maxWidth: 1180,
+          alignSelf: 'center',
+          borderRadius: DESIGN_TOKENS.radii.md,
+          overflow: 'hidden',
+          backgroundColor: colors.surface,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.border,
+        },
+        fullscreenInfo: {
+          maxWidth: 1180,
+          alignSelf: 'center',
+          width: '100%',
         },
         zoomControls: {
           position: 'absolute',
@@ -246,6 +319,74 @@ export function ProfileWorldMapTab({
     [colors, isMobile]
   )
 
+  const renderMap = useCallback(
+    (mode: 'inline' | 'fullscreen') => (
+      <>
+        <WorldChoroplethMap
+          visitedCodes={visitedCodes}
+          selectedCode={selectedCode}
+          onCountryPress={handleCountryPress}
+          zoom={zoom}
+          onGestureActiveChange={onMapGestureActiveChange}
+        >
+          <WorldMapFlags visitedCodes={visitedCodes} size={mode === 'fullscreen' ? 16 : isMobile ? 13 : 16} zoom={zoom} />
+        </WorldChoroplethMap>
+
+        <View style={styles.zoomControls}>
+          <Pressable
+            onPress={() => zoom.zoomByCentered(1.5)}
+            accessibilityRole="button"
+            accessibilityLabel="Приблизить карту"
+            hitSlop={6}
+            style={styles.zoomButton}
+          >
+            <Feather name="plus" size={18} color={colors.text} />
+          </Pressable>
+          <Pressable
+            onPress={() => zoom.zoomByCentered(1 / 1.5)}
+            accessibilityRole="button"
+            accessibilityLabel="Отдалить карту"
+            hitSlop={6}
+            style={styles.zoomButton}
+          >
+            <Feather name="minus" size={18} color={colors.text} />
+          </Pressable>
+          <Pressable
+            onPress={() => zoom.reset()}
+            accessibilityRole="button"
+            accessibilityLabel="Сбросить масштаб карты"
+            hitSlop={6}
+            style={styles.zoomButton}
+          >
+            <Feather name="maximize" size={16} color={colors.text} />
+          </Pressable>
+          {mode === 'inline' ? (
+            <Pressable
+              onPress={openMapFullscreen}
+              accessibilityRole="button"
+              accessibilityLabel="Открыть карту во весь экран"
+              hitSlop={6}
+              style={styles.zoomButton}
+            >
+              <Feather name="maximize-2" size={17} color={colors.text} />
+            </Pressable>
+          ) : null}
+        </View>
+      </>
+    ),
+    [
+      visitedCodes,
+      selectedCode,
+      handleCountryPress,
+      zoom,
+      onMapGestureActiveChange,
+      isMobile,
+      styles,
+      colors.text,
+      openMapFullscreen,
+    ]
+  )
+
   return (
     <View>
       <ProfileSectionHeader
@@ -274,46 +415,7 @@ export function ProfileWorldMapTab({
           {isLoading ? (
             <SkeletonLoader width="100%" height={isMobile ? 180 : 320} borderRadius={DESIGN_TOKENS.radii.md} />
           ) : (
-            <>
-              <WorldChoroplethMap
-                visitedCodes={visitedCodes}
-                selectedCode={selectedCode}
-                onCountryPress={handleCountryPress}
-                zoom={zoom}
-              >
-                <WorldMapFlags visitedCodes={visitedCodes} size={isMobile ? 13 : 16} zoom={zoom} />
-              </WorldChoroplethMap>
-
-              <View style={styles.zoomControls}>
-                <Pressable
-                  onPress={() => zoom.zoomByCentered(1.5)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Приблизить карту"
-                  hitSlop={6}
-                  style={styles.zoomButton}
-                >
-                  <Feather name="plus" size={18} color={colors.text} />
-                </Pressable>
-                <Pressable
-                  onPress={() => zoom.zoomByCentered(1 / 1.5)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Отдалить карту"
-                  hitSlop={6}
-                  style={styles.zoomButton}
-                >
-                  <Feather name="minus" size={18} color={colors.text} />
-                </Pressable>
-                <Pressable
-                  onPress={() => zoom.reset()}
-                  accessibilityRole="button"
-                  accessibilityLabel="Сбросить масштаб карты"
-                  hitSlop={6}
-                  style={styles.zoomButton}
-                >
-                  <Feather name="maximize" size={16} color={colors.text} />
-                </Pressable>
-              </View>
-            </>
+            renderMap('inline')
           )}
         </View>
 
@@ -383,6 +485,66 @@ export function ProfileWorldMapTab({
           </View>
         </View>
       </View>
+
+      <Modal
+        visible={isMapFullscreen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={closeMapFullscreen}
+      >
+        <SafeAreaView style={styles.fullscreenRoot}>
+          <View style={styles.fullscreenHeader}>
+            <Text style={styles.fullscreenTitle} numberOfLines={1}>
+              Карта мира
+            </Text>
+            <Pressable
+              onPress={closeMapFullscreen}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть полноэкранную карту"
+              hitSlop={8}
+              style={styles.fullscreenCloseButton}
+            >
+              <Feather name="x" size={22} color={colors.text} />
+            </Pressable>
+          </View>
+          <View style={styles.fullscreenBody}>
+            <View style={styles.fullscreenMapFrame}>
+              <View style={styles.fullscreenMapWrap}>{isLoading ? null : renderMap('fullscreen')}</View>
+            </View>
+            {selected ? (
+              <View style={[styles.infoCard, styles.fullscreenInfo]}>
+                <View style={styles.infoTitleRow}>
+                  <Text style={styles.infoName} numberOfLines={1}>
+                    {selected.name}
+                  </Text>
+                  <Pressable
+                    onPress={() => setSelectedCode(null)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Закрыть"
+                    hitSlop={8}
+                    style={styles.infoClose}
+                  >
+                    <Feather name="x" size={16} color={colors.textSecondary} />
+                  </Pressable>
+                </View>
+                <Text style={styles.infoMeta}>
+                  {selected.visited
+                    ? `Посещено${
+                        selected.visitedTravelsCount > 0
+                          ? ` · ${formatRoutesLabel(selected.visitedTravelsCount)}`
+                          : ''
+                      }${
+                        selected.firstVisitedDate
+                          ? ` · с ${selected.firstVisitedDate.slice(0, 4)}`
+                          : ''
+                      }`
+                    : 'Ещё не посещено'}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </SafeAreaView>
+      </Modal>
     </View>
   )
 }
