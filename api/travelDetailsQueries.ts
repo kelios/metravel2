@@ -80,6 +80,23 @@ const hasAnyTravelIdentity = (travel: Travel | undefined): boolean => {
     );
 };
 
+// The resolve-slug `item` may be a lightweight card payload (rich_text/points/media
+// only, without description/travelAddress/coordsMeTravel/countries). Returning it as
+// the detail loses the article body and the route map on SPA navigation. Card payloads
+// are recognized by `points` replacing the legacy route arrays; an item with a legacy
+// description and no card markers is a full detail even without route arrays.
+const hasFullTravelDetailPayload = (travel: Travel | undefined): boolean => {
+    if (!travel) return false;
+    const t = travel as Record<string, unknown>;
+    if (typeof t.description !== 'string' || t.description.length === 0) {
+        return false;
+    }
+    const hasRouteFields =
+        Array.isArray(t.travelAddress) || Array.isArray(t.coordsMeTravel);
+    const looksLikeCardPayload = Array.isArray(t.points) && !hasRouteFields;
+    return !looksLikeCardPayload;
+};
+
 const consumeDirectApiWindowPreload = (
     key: string | number,
     isId: boolean
@@ -415,16 +432,20 @@ const fetchTravelByResolvedSlug = async (
         { ...(options ?? {}), skipAuth: true }
     );
 
+    let lightResolvedItem: Travel | null = null;
     if (response?.item) {
         const normalized = normalizeTravelItem(response.item as Travel);
-        if (hasAnyTravelIdentity(normalized)) return normalized;
+        if (hasAnyTravelIdentity(normalized)) {
+            if (hasFullTravelDetailPayload(normalized)) return normalized;
+            lightResolvedItem = normalized;
+        }
     }
 
     const detailLikeResponse = normalizeTravelItem(response as Travel);
     if (hasMinimumTravelIdentity(detailLikeResponse)) return detailLikeResponse;
 
-    const id = Number(response?.id);
-    if (!Number.isFinite(id) || id <= 0) return null;
+    const id = Number(response?.id ?? lightResolvedItem?.id);
+    if (!Number.isFinite(id) || id <= 0) return lightResolvedItem;
 
     const detailedTravel = await fetchTravel(id, options);
     const normalized = normalizeTravelItem(detailedTravel);

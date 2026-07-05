@@ -1,0 +1,160 @@
+diff --git a/node_modules/react-native-render-html/src/TChildrenRenderer.tsx b/node_modules/react-native-render-html/src/TChildrenRenderer.tsx
+index 618a592..ee854f3 100644
+--- a/node_modules/react-native-render-html/src/TChildrenRenderer.tsx
++++ b/node_modules/react-native-render-html/src/TChildrenRenderer.tsx
+@@ -6,9 +6,6 @@ import renderChildren from './renderChildren';
+  * A component to render collections of tnodes.
+  * Especially useful when used with {@link useTNodeChildrenProps}.
+  */
+-const TChildrenRenderer: FunctionComponent<TChildrenRendererProps> =
+-  renderChildren.bind(null);
+-
+ export const tchildrenRendererDefaultProps: Pick<
+   TChildrenRendererProps,
+   'propsForChildren'
+@@ -16,9 +13,12 @@ export const tchildrenRendererDefaultProps: Pick<
+   propsForChildren: {}
+ };
+ 
+-/**
+- * @ignore
+- */
+-TChildrenRenderer.defaultProps = tchildrenRendererDefaultProps;
++// React 19 removed defaultProps for function components. Apply the default
++// explicitly instead of relying on `.defaultProps`. Patched via patch-package.
++const TChildrenRenderer: FunctionComponent<TChildrenRendererProps> = (props) =>
++  renderChildren({
++    ...tchildrenRendererDefaultProps,
++    ...props
++  });
+ 
+ export default TChildrenRenderer;
+diff --git a/node_modules/react-native-render-html/src/TNodeChildrenRenderer.tsx b/node_modules/react-native-render-html/src/TNodeChildrenRenderer.tsx
+index bf5aef6..742b78b 100644
+--- a/node_modules/react-native-render-html/src/TNodeChildrenRenderer.tsx
++++ b/node_modules/react-native-render-html/src/TNodeChildrenRenderer.tsx
+@@ -60,9 +60,10 @@ export function useTNodeChildrenProps({
+ /**
+  * A component to render all children of a {@link TNode}.
+  */
+-function TNodeChildrenRenderer(
+-  props: TNodeChildrenRendererProps
+-): ReactElement {
++function TNodeChildrenRenderer(rawProps: TNodeChildrenRendererProps): ReactElement {
++  // React 19 removed defaultProps for function components. Apply the default
++  // explicitly instead of relying on `.defaultProps`. Patched via patch-package.
++  const props = { ...tchildrenRendererDefaultProps, ...rawProps };
+   if (props.tnode.type === 'text') {
+     // see https://github.com/DefinitelyTyped/DefinitelyTyped/issues/20544
+     return props.tnode.data as unknown as ReactElement;
+@@ -73,9 +74,4 @@ function TNodeChildrenRenderer(
+   return renderChildren(useTNodeChildrenProps(props));
+ }
+ 
+-/**
+- * @ignore
+- */
+-TNodeChildrenRenderer.defaultProps = tchildrenRendererDefaultProps;
+-
+ export default TNodeChildrenRenderer;
+diff --git a/node_modules/react-native-render-html/src/TNodeRenderer.tsx b/node_modules/react-native-render-html/src/TNodeRenderer.tsx
+index d32140f..94dfaa9 100644
+--- a/node_modules/react-native-render-html/src/TNodeRenderer.tsx
++++ b/node_modules/react-native-render-html/src/TNodeRenderer.tsx
+@@ -42,8 +42,14 @@ function isGhostTNode(tnode: TNode) {
+  * A component to render any {@link TNode}.
+  */
+ const TNodeRenderer = memo(function MemoizedTNodeRenderer(
+-  props: TNodeRendererProps<any>
++  rawProps: TNodeRendererProps<any>
+ ): ReactElement | null {
++  // React 19 removed defaultProps for function components. Apply the default
++  // explicitly instead of relying on `.defaultProps`. Patched via patch-package.
++  const props =
++    rawProps.propsFromParent === undefined
++      ? { ...rawProps, ...defaultProps }
++      : rawProps;
+   const { tnode } = props;
+   const sharedProps = useSharedProps();
+   const renderRegistry = useRendererRegistry();
+@@ -127,9 +133,6 @@ const defaultProps: Required<Pick<TNodeRendererProps<any>, 'propsFromParent'>> =
+     }
+   };
+ 
+-// @ts-expect-error default props must be defined
+-TNodeRenderer.defaultProps = defaultProps;
+-
+ export {
+   TDefaultBlockRenderer,
+   TDefaultPhrasingRenderer,
+diff --git a/node_modules/react-native-render-html/src/TRenderEngineProvider.tsx b/node_modules/react-native-render-html/src/TRenderEngineProvider.tsx
+index 95b60df..3822ed8 100644
+--- a/node_modules/react-native-render-html/src/TRenderEngineProvider.tsx
++++ b/node_modules/react-native-render-html/src/TRenderEngineProvider.tsx
+@@ -99,7 +99,14 @@ export default function TRenderEngineProvider({
+   children,
+   ...config
+ }: PropsWithChildren<TRenderEngineConfig>): ReactElement {
+-  const engine = useTRenderEngine(config);
++  // React 19 removed defaultProps support for function components. Apply the
++  // mandatory engine defaults (emSize, fonts, parser options, UA styles…)
++  // explicitly here — otherwise the render engine is built with undefined
++  // values and renders an empty block on native. Patched via patch-package.
++  const engine = useTRenderEngine({
++    ...defaultTRenderEngineProviderProps,
++    ...config
++  });
+   return (
+     <TRenderEngineContext.Provider value={engine}>
+       {children}
+@@ -107,11 +114,6 @@ export default function TRenderEngineProvider({
+   );
+ }
+ 
+-/**
+- * @ignore
+- */
+-TRenderEngineProvider.defaultProps = defaultTRenderEngineProviderProps;
+-
+ /**
+  * @ignore
+  */
+diff --git a/node_modules/react-native-render-html/src/elements/IMGElement.tsx b/node_modules/react-native-render-html/src/elements/IMGElement.tsx
+index 573e7c1..d8b69d2 100644
+--- a/node_modules/react-native-render-html/src/elements/IMGElement.tsx
++++ b/node_modules/react-native-render-html/src/elements/IMGElement.tsx
+@@ -23,7 +23,18 @@ function identity(arg: any) {
+  * {@link IMGElementContentSuccess}, {@link IMGElementContentLoading}
+  * and {@link IMGElementContentError} for customization.
+  */
+-function IMGElement(props: IMGElementProps): ReactElement {
++const imgElementDefaultProps = {
++  enableExperimentalPercentWidth: false,
++  computeMaxWidth: identity,
++  imagesInitialDimensions: defaultImageInitialDimensions,
++  style: {}
++};
++
++function IMGElement(rawProps: IMGElementProps): ReactElement {
++  // React 19 removed defaultProps for function components. Apply the defaults
++  // explicitly (notably the required `computeMaxWidth`) instead of relying on
++  // `.defaultProps`. Patched via patch-package.
++  const props = { ...imgElementDefaultProps, ...rawProps };
+   const state = useIMGElementState(props);
+   let content: ReactNode;
+   if (state.type === 'success') {
+@@ -72,14 +83,4 @@ const propTypes: Record<keyof IMGElementProps, any> = {
+  */
+ IMGElement.propTypes = propTypes;
+ 
+-/**
+- * @ignore
+- */
+-IMGElement.defaultProps = {
+-  enableExperimentalPercentWidth: false,
+-  computeMaxWidth: identity,
+-  imagesInitialDimensions: defaultImageInitialDimensions,
+-  style: {}
+-};
+-
+ export default IMGElement;

@@ -830,6 +830,55 @@ describe('src/api/travelsApi.ts', () => {
       expect(mockedApiClientGet.mock.calls[0][2]).toEqual(expect.objectContaining({ skipAuth: true }));
     });
 
+    it('fetchTravelBySlug дотягивает полную деталь, когда resolve-slug item лёгкий (без description/точек)', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      const lightItem = {
+        id: 664,
+        slug: 'my-trip',
+        name: 'My trip',
+        rich_text: { description: { safe_html: '<p>text</p>' } },
+        points: [{ id: 1, lat: '52.0', lng: '23.6' }],
+      } as any;
+      const fullDetail = {
+        id: 664,
+        slug: 'my-trip',
+        name: 'My trip',
+        description: '<p>full text</p>',
+        travelAddress: [{ id: 1, coord: '52.0,23.6' }],
+        coordsMeTravel: [{ id: 1, lat: 52.0, lng: 23.6 }],
+      } as any;
+      mockedGetSecureItem.mockResolvedValue(null);
+      mockedApiClientGet
+        .mockResolvedValueOnce({ id: 664, slug: 'my-trip', status: 200, item: lightItem } as any)
+        .mockResolvedValueOnce(fullDetail);
+
+      const result = await fetchTravelBySlug('my-trip');
+
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(2);
+      expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/resolve-slug/my-trip/');
+      expect(mockedApiClientGet.mock.calls[1][0]).toBe('/travels/664/');
+      expect(result.description).toBe('<p>full text</p>');
+      expect(result.travelAddress).toHaveLength(1);
+    });
+
+    it('fetchTravelBySlug возвращает resolve-slug item без второго запроса, когда он полный', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      const fullItem = {
+        id: 664,
+        slug: 'my-trip',
+        name: 'My trip',
+        description: '<p>full text</p>',
+        travelAddress: [{ id: 1, coord: '52.0,23.6' }],
+      } as any;
+      mockedGetSecureItem.mockResolvedValue(null);
+      mockedApiClientGet.mockResolvedValueOnce({ id: 664, slug: 'my-trip', status: 200, item: fullItem } as any);
+
+      const result = await fetchTravelBySlug('my-trip');
+
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
+      expect(result.description).toBe('<p>full text</p>');
+    });
+
     it('fetchTravelBySlug не возвращает stale cache после ошибки авторизованного by-slug запроса', async () => {
       await savePublicStalePayload('/travels/by-slug/my-trip/', { id: 77, slug: 'my-trip', name: 'Cached slug' } as any);
 
@@ -925,6 +974,8 @@ describe('src/api/travelsApi.ts', () => {
           name: 'Короткое новое название',
           slug: 'korotkiy-novyy-slug',
           description: '<p>detail payload</p>',
+          travelAddress: [],
+          coordsMeTravel: [],
           gallery: [],
         },
       } as any);
