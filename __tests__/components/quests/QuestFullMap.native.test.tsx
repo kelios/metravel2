@@ -83,6 +83,14 @@ describe('QuestFullMap native marker status', () => {
     );
 
     const html = getByTestId('quest-map-webview').props.source.html;
+    expect(html).toContain('function isValidLatLng(point)');
+    expect(html).toContain('var rawRoutePoints =');
+    expect(html).toContain('rawRoutePoints.filter(isValidLatLng)');
+    expect(html).toContain('}).setView(initialCenter');
+    expect(html).toContain('function hasStableMapSize()');
+    expect(html).toContain('function ensureTileLayer()');
+    expect(html).toContain('tileLayer.addTo(map)');
+    expect(html).toContain('Number.isFinite(nextZoom)');
     expect(html).toContain('updateWhenIdle: false');
     expect(html).toContain('updateWhenZooming: false');
     expect(html).toContain('keepBuffer: 1');

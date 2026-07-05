@@ -168,23 +168,23 @@ function QuestFullMap({
     <body>
       <div id="map"></div>
       <script>
-        var map = L.map('map', {
-          zoomControl: false,
-          preferCanvas: true,
-          fadeAnimation: false,
-          zoomAnimation: false,
-          markerZoomAnimation: false
-        });
-        L.tileLayer('${getOsmNativeTileUrl()}', {
-          attribution: '© OpenStreetMap',
-          maxZoom: ${OSM_PROXY_MAX_ZOOM},
-          updateWhenIdle: false,
-          updateWhenZooming: false,
-          keepBuffer: 1
-        }).addTo(map);
+        function isValidLatLng(point) {
+          return Array.isArray(point) &&
+            point.length >= 2 &&
+            Number.isFinite(point[0]) &&
+            Number.isFinite(point[1]) &&
+            point[0] >= -90 && point[0] <= 90 &&
+            point[1] >= -180 && point[1] <= 180;
+        }
 
-        var routePoints = ${safeJson(points.map(p => [p.lat, p.lng]))};
-        var grouped = ${safeJson(groupedPoints)};
+        var rawRoutePoints = ${safeJson(points.map(p => [p.lat, p.lng]))};
+        var routePoints = rawRoutePoints.filter(isValidLatLng);
+        var grouped = ${safeJson(groupedPoints)}.filter(function (point) {
+          return Number.isFinite(point.lat) &&
+            Number.isFinite(point.lng) &&
+            point.lat >= -90 && point.lat <= 90 &&
+            point.lng >= -180 && point.lng <= 180;
+        });
         var navProviders = ${safeJson(QUEST_NAV_PROVIDERS)};
         var theme = ${safeJson({
             primary: colors.primary,
@@ -195,10 +195,27 @@ function QuestFullMap({
             textOnPrimary: colors.textOnPrimary,
             routeLine: DESIGN_COLORS.routeLine,
         })};
+        var initialCenter = routePoints[0] || [53.9, 27.56];
 
-        if (routePoints.length > 1) {
-          L.polyline(routePoints, { color: theme.routeLine, weight: 4 }).addTo(map);
-        }
+        var map = L.map('map', {
+          zoomControl: false,
+          preferCanvas: true,
+          fadeAnimation: false,
+          zoomAnimation: false,
+          markerZoomAnimation: false
+        }).setView(initialCenter, routePoints.length > 1 ? 14 : 15);
+
+        var tileLayer = L.tileLayer('${getOsmNativeTileUrl()}', {
+          attribution: '© OpenStreetMap',
+          maxZoom: ${OSM_PROXY_MAX_ZOOM},
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 1
+        });
+
+        var routeLine = routePoints.length > 1
+          ? L.polyline(routePoints, { color: theme.routeLine, weight: 4 }).addTo(map)
+          : null;
 
         function iconFor(label, active) {
           var size = active ? 36 : 28;
@@ -322,10 +339,30 @@ function QuestFullMap({
             var active = activeIndex != null && gp.indexes.indexOf(activeIndex + 1) !== -1;
             markers[i].setIcon(iconFor(gp.indexes.join(','), active));
           });
-          if (activeIndex != null && routePoints[activeIndex]) {
+          if (activeIndex != null && isValidLatLng(routePoints[activeIndex])) {
             map.panTo(routePoints[activeIndex], { animate: true });
           }
         };
+
+        function hasStableMapSize() {
+          try {
+            var container = map.getContainer();
+            var rect = container.getBoundingClientRect();
+            var size = map.getSize();
+            return rect.width > 0 && rect.height > 0 && size.x > 0 && size.y > 0;
+          } catch (e) {
+            return false;
+          }
+        }
+
+        function ensureTileLayer() {
+          try {
+            if (!map.hasLayer(tileLayer) && hasStableMapSize()) {
+              tileLayer.addTo(map);
+              if (routeLine && !map.hasLayer(routeLine)) routeLine.addTo(map);
+            }
+          } catch (e) {}
+        }
 
         scheduleMapRefresh('init');
         window.addEventListener('resize', function() { scheduleMapRefresh('resize'); });
@@ -341,16 +378,36 @@ function QuestFullMap({
         // Повторяем fit после invalidateSize, пока контейнер не получит размер.
         function fitToRoute() {
           try {
-            if (routePoints.length === 0) { map.setView([53.9, 27.56], 10); return; }
+            if (routePoints.length === 0) {
+              map.setView([53.9, 27.56], 10);
+              ensureTileLayer();
+              return true;
+            }
             map.invalidateSize();
-            var size = map.getSize();
-            if (!size || size.x === 0 || size.y === 0) return false;
+            if (!hasStableMapSize()) return false;
             var bounds = L.latLngBounds(routePoints).pad(0.15);
-            map.fitBounds(bounds, { animate: false });
+            if (!bounds.isValid()) {
+              map.setView(initialCenter, 15);
+              ensureTileLayer();
+              return true;
+            }
+            var nextZoom = map.getBoundsZoom(bounds, false);
+            if (Number.isFinite(nextZoom)) {
+              map.fitBounds(bounds, { animate: false, maxZoom: 17 });
+            } else {
+              map.setView(initialCenter, routePoints.length > 1 ? 14 : 15);
+            }
+            ensureTileLayer();
             scheduleMapRefresh('fit');
             window.setTimeout(function () { postMapStatus('fit'); }, 50);
             return true;
-          } catch (e) { return false; }
+          } catch (e) {
+            try {
+              map.setView(initialCenter, routePoints.length > 1 ? 14 : 15);
+              ensureTileLayer();
+            } catch (err) {}
+            return false;
+          }
         }
 
         if (!fitToRoute()) {

@@ -445,6 +445,13 @@
 
 Используй этот набор, когда Android-устройство подключено по USB и нужно подтвердить native-поведение, а не только mobile web. Перед прогоном укажи: модель устройства, Android/API, build/dev-client, backend/API URL, аккаунт (`гость` или e2e-аккаунт без вывода секрета).
 
+Аудит перед клиентским показом, 2026-07-05:
+
+- Android-чеклист покрывает правильные риск-классы, но полный `AND-USB-01..31` слишком широк для короткой демонстрации и смешивает smoke, regression и store-submission проверки.
+- Для показа заказчику сначала проходи компактный **Customer Demo Gate** ниже; полный P1/P2 набор оставь для release/store readiness или если менялись соответствующие поверхности.
+- `e2e/maestro/recommendation-shelves.yaml` сейчас является known-red регресс-детектором из `e2e/maestro/README.md`; он не должен считаться зелёным demo evidence, пока баг рендера полок не закрыт.
+- Любой красный P0/P1 demo-кейс перед показом либо чинится, либо явно исключается из демонстрационного сценария с причиной и owner'ом; silently show-around запрещён.
+
 Предусловия:
 
 - `adb devices -l` показывает ровно нужное устройство со статусом `device`; `unauthorized` = blocked до подтверждения RSA на телефоне.
@@ -456,6 +463,37 @@
 - Уже покрыто: readiness/launch, runtime health, базовая навигация, поиск, детали маршрута, share/export, карта, permissions, auth, квестовые native-регрессии и recommendation shelves.
 - Добавленные пробелы: standalone-сборка без Metro, app/deep links, lifecycle и cold restart, offline/recovery, soft keyboard, native media upload, push/deep-link routing, external intents и rich embedded content.
 - Для Android release/dev-client QA P1-минимум: `AND-USB-01..06`, `AND-USB-08`, `AND-USB-10`, `AND-USB-13..18`, `AND-USB-21..31`; P2-кейсы `AND-USB-07`, `AND-USB-09`, `AND-USB-19..20` проходить перед store submission или когда менялись соответствующие поверхности.
+
+#### Customer Demo Gate для Android
+
+Цель gate — подтвердить, что устройство, старт приложения и демонстрационные пользовательские сценарии не сорвут встречу. Это не заменяет полный release-прогон.
+
+| Gate | Кейсы | Что доказывает | Блокирует показ |
+|------|-------|----------------|-----------------|
+| G0 readiness | `AND-USB-01..03` | Телефон/эмулятор доступен, dev-client или preview build стартует, logcat без fatal/runtime crash | Любой fail/block |
+| G1 guest journey | `AND-USB-04..06`, `AND-USB-08`, `AND-USB-22..23` | Гость может открыть главную/поиск/детали/карту, нижняя навигация и фильтры выглядят стабильно | Crash, blank screen, broken navigation, некликабельные фильтры |
+| G2 auth journey | `AND-USB-10`, `AND-USB-21`, `AND-USB-28`, `AND-USB-30` | Авторизация, избранное, сообщения и профиль готовы к показу без вывода секретов | Login не работает, favorite action падает, профиль/сообщения недоступны |
+| G3 map/places | `AND-USB-26..27`, `AND-USB-29` | Карта, попапы, сохранённые точки и внешние навигаторы не ломают Android UX | Серые тайлы без объяснённого dev-origin fallback, не закрывающиеся sheets, broken external intent |
+| G4 optional wow | `AND-USB-11`, `AND-USB-25`, `AND-USB-31` | Квесты, детали маршрута, погода/награды/ads slots можно показывать, если они в сценарии встречи | Fail только если этот сценарий реально включён в demo script |
+
+Минимальный артефакт после gate:
+
+```text
+Android Demo QA Pass
+Date:
+Build:
+Device:
+Android/API:
+Backend/API:
+Account mode: guest / e2e-auth
+Cases passed:
+Cases failed/blocked:
+Logcat fatal/runtime scan:
+Screens/video:
+Demo-safe scenarios:
+Do-not-show scenarios:
+Owners/follow-up:
+```
 
 | ID | Заголовок | Предусловие | Шаги | Ожидаемый результат |
 |----|-----------|-------------|------|---------------------|
@@ -470,7 +508,7 @@
 | AND-USB-09 | Permissions | Сценарий использует разрешения | Проверить геолокацию/медиа permission prompt: allow и deny ветки, если доступны без destructive effects | Allow дает ожидаемый результат; deny показывает понятный fallback без краша |
 | AND-USB-10 | Auth entrypoints | Нужен e2e-аккаунт | Войти через безопасный e2e-механизм/уже подготовленный аккаунт; не печатать пароль/токен | Авторизованные экраны открываются; состояние сохраняется после app reload |
 | AND-USB-11 | Quests native regressions | Установлен build с квестами | Пройти `e2e/maestro/quest-reviews.yaml`, `quest-intro-map-points.yaml` и `quest-offline-points.yaml` либо вручную повторить их шаги | Отзывы открывают модалку отзывов; intro-карта квеста показывает точки маршрута; GPX/share готовится без `expo-file-system` runtime throw |
-| AND-USB-12 | Recommendation shelves | Авторизованный аккаунт с избранным/историей | Пройти `e2e/maestro/recommendation-shelves.yaml` либо вручную открыть полки идей на Маршрутах | «Избранное» и «Недавно смотрели» рендерятся; если нет — баг остается подтвержденным |
+| AND-USB-12 | Recommendation shelves | Авторизованный аккаунт с избранным/историей | Пройти `e2e/maestro/recommendation-shelves.yaml` либо вручную открыть полки идей на Маршрутах | «Избранное» и «Недавно смотрели» рендерятся; текущий known-red Maestro flow из `e2e/maestro/README.md` = demo blocker, если полки входят в сценарий показа |
 | AND-USB-13 | Standalone install without Metro | Установлен preview/prod build, Metro остановлен | Очистить logcat, force-stop приложения, запустить с иконки или `adb shell monkey -p by.metravel.app 1` | Приложение стартует без Dev Launcher/Metro, показывает home/«Маршруты», в logcat нет fatal/runtime crash |
 | AND-USB-14 | App links and deep links | Из `app.json`/manifest известны scheme `metravel` и app-link host `metravel.by`; есть валидный маршрут | При убитом и тёплом приложении открыть `https://metravel.by/travels/<id>` и `metravel://travels/<id>`, затем невалидный путь; отдельно проверить ссылку/уведомление с `#anchor`, если такой payload доступен | Валидный путь открывает нужный экран после готовности навигации; невалидный путь даёт fallback/404; hash не уводит native на корень |
 | AND-USB-15 | Lifecycle + cold restart persistence | Авторизованный e2e-аккаунт, есть избранное/история или тестовый статус | Открыть профиль/избранное/историю, свернуть и вернуть приложение, затем force-stop → launch; повторить после явного reload dev-client | Авторизация и локальное состояние сохраняются; нет logout-flash, пустых полок из-за потерянной ширины, stale-bundle UI или runtime warning |
@@ -506,7 +544,7 @@
 | AND-USB-09 | P2 | manual permission matrix | manual |
 | AND-USB-10 | P1 | manual with `.env.e2e`/prepared account, no secret output | manual |
 | AND-USB-11 | P1 | Maestro `quest-reviews.yaml`, `quest-intro-map-points.yaml`, `quest-offline-points.yaml` | repeatable device e2e |
-| AND-USB-12 | P1 | Maestro `recommendation-shelves.yaml` | known regression detector |
+| AND-USB-12 | P1 | Maestro `recommendation-shelves.yaml` | known-red regression detector; blocker only when shelves are in demo/release scope |
 | AND-USB-13 | P1 | manual adb/standalone launch; candidate for Maestro launch flow | manual |
 | AND-USB-14 | P1 | manual adb intent/app links; unit `services/notifications.extractDeepLinkFromNotification` | manual |
 | AND-USB-15 | P1 | manual adb lifecycle; unit `secureStorage`, `viewHistoryStore`, `travelStatusStore` | manual |

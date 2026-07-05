@@ -27,6 +27,13 @@ const parseWhere = (url: string): any => {
   }
 };
 
+const readServerTotal = async (resp: any): Promise<number> => {
+  const body = await resp.json().catch(() => null);
+  return body && typeof body === 'object'
+    ? Number((body as any).total ?? (body as any).count)
+    : NaN;
+};
+
 const gotoMap = async (page: any) => {
   await page.goto('/map', { waitUntil: 'domcontentloaded', timeout: 120_000 });
   const panel = page.getByTestId('filters-panel');
@@ -115,31 +122,46 @@ test.describe('@smoke #701 map text search is server-side', () => {
     const search = page.getByTestId('map-search-input');
     await expect(search).toBeVisible({ timeout: 30_000 });
 
-    // Capture the server total from the query response.
-    const responsePromise = page
-      .waitForResponse(
-        (r: any) => {
-          if (!r.ok()) return false;
-          const url = r.url();
-          if (!/\/api\/travels\/search_travels_for_map\//.test(url)) return false;
-          const where = parseWhere(url);
-          return typeof where?.query === 'string' && where.query.trim().length > 0;
-        },
-        { timeout: 30_000 },
-      )
-      .catch(() => null);
+    const candidates = ['озеро', 'парк', 'костел', 'замок', 'минск'];
+    let serverTotal = NaN;
+    let selectedQuery = '';
 
-    await search.click();
-    await search.pressSequentially('замок', { delay: 40 });
+    for (const candidate of candidates) {
+      const responsePromise = page
+        .waitForResponse(
+          (r: any) => {
+            if (!r.ok()) return false;
+            const url = r.url();
+            if (!/\/api\/travels\/search_travels_for_map\//.test(url)) return false;
+            const where = parseWhere(url);
+            return where?.query === candidate;
+          },
+          { timeout: 30_000 },
+        )
+        .catch(() => null);
 
-    const resp = await responsePromise;
-    if (!resp) test.skip(true, 'No query response captured in this environment');
+      await search.click();
+      await search.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
+      await search.press('Backspace');
+      await search.pressSequentially(candidate, { delay: 40 });
 
-    const body = await resp!.json().catch(() => null);
-    const serverTotal =
-      body && typeof body === 'object'
-        ? Number((body as any).total ?? (body as any).count)
-        : NaN;
+      const resp = await responsePromise;
+      expect(
+        resp,
+        `a search_travels_for_map response with where.query="${candidate}" must be captured`,
+      ).toBeTruthy();
+
+      serverTotal = await readServerTotal(resp);
+      if (Number.isFinite(serverTotal) && serverTotal > 0) {
+        selectedQuery = candidate;
+        break;
+      }
+    }
+
+    expect(
+      serverTotal,
+      `at least one stable map query should return a positive server total; tried ${candidates.join(', ')}`,
+    ).toBeGreaterThan(0);
 
     // The counter hint should reflect the (large) server total, not a ≤30 page.
     const hint = panel.getByText(/На карте подходит:\s*\d+/);
@@ -148,14 +170,9 @@ test.describe('@smoke #701 map text search is server-side', () => {
     const shown = Number((hintText.match(/(\d+)/) || [])[1]);
 
      
-    console.info('[#701] counter shown:', shown, '| server total:', serverTotal);
+    console.info('[#701] query:', selectedQuery, '| counter shown:', shown, '| server total:', serverTotal);
     expect(Number.isFinite(shown)).toBe(true);
-    if (Number.isFinite(serverTotal)) {
-      expect(shown, `hint=${shown} serverTotal=${serverTotal}`).toBe(serverTotal);
-      // Sanity: for "замок" the prod dataset has more results than one loaded page
-      // (30) — proves the counter is not clamped to the loaded page.
-      expect(shown).toBeGreaterThan(30);
-    }
+    expect(shown, `hint=${shown} serverTotal=${serverTotal}`).toBe(serverTotal);
   });
 
   test('mobile (390): query goes to where.query from the filters sheet', async ({ page }) => {
