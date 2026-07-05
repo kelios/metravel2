@@ -3,6 +3,7 @@ import { routeCache } from '@/utils/routeCache'
 import { orsDirections } from '@/api/external/ors'
 import { osrmRoute } from '@/api/external/osrm'
 import { valhallaRoute } from '@/api/external/valhalla'
+import { serverRoute } from '@/api/external/serverRouting'
 import {
     type RouteResult,
     getORSProfile,
@@ -106,6 +107,41 @@ export const useRouting = (
         }
         return false;
     }, []);
+
+    // Canonical routing path: server endpoint backed by ORS on the backend
+    // (task board #707/#732). Client-side ORS/OSRM/Valhalla below remain only
+    // as a fallback for network errors or older deployments without this route.
+    const fetchServerRoute = useCallback(async (
+        points: [number, number][],
+        mode: 'car' | 'bike' | 'foot',
+        signal: AbortSignal
+    ): Promise<RouteResult> => {
+        validateRoutePoints(points)
+
+        const res = await serverRoute(
+            points.map(([lng, lat]) => ({ lat, lng })),
+            mode,
+            { signal },
+        )
+
+        if (!res.ok) {
+            await throwForRoutingStatus(res, 'сервера маршрутизации')
+        }
+
+        const data = await res.json()
+        const geometry = data?.geometry
+
+        if (!Array.isArray(geometry) || geometry.length === 0) {
+            throw new Error('Пустой маршрут от сервера маршрутизации')
+        }
+
+        return {
+            coords: geometry as [number, number][],
+            distance: Number(data.distance_m) || 0,
+            duration: Number(data.duration_s) || 0,
+            isOptimal: Boolean(data.is_optimal),
+        }
+    }, [])
 
     const fetchORS = useCallback(async (
         points: [number, number][],
@@ -484,8 +520,13 @@ export const useRouting = (
 
                 let result: RouteResult | null = null
 
-                // 1) Primary: ORS if we have a key (best for all transport modes).
-                if (shouldUseORS) {
+                // 0) Primary: canonical server routing endpoint (backend-configured ORS).
+                result = await attempt('ServerRouting', () =>
+                    fetchServerRoute(currentPoints, transportMode, abortController.signal)
+                )
+
+                // 1) Fallback: client-side ORS if we have a key (best for all transport modes).
+                if (!result && shouldUseORS) {
                     result = await attempt('ORS', () =>
                         fetchORS(currentPoints, transportMode, abortController.signal)
                     )
@@ -600,7 +641,7 @@ export const useRouting = (
                 // noop
             }
         }
-    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, fetchORS, fetchOSRM, fetchValhalla, forceOsrm, isTestEnv])
+    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, fetchServerRoute, fetchORS, fetchOSRM, fetchValhalla, forceOsrm, isTestEnv])
 
     useEffect(() => {
         return () => {

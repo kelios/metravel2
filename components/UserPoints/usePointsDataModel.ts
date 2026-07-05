@@ -1,7 +1,8 @@
-import { useCallback, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
+import type { ImportedPoint } from '@/types/userPoints';
 import { useFilterOptions } from '@/hooks/useFilterOptions';
 import type { PointFilters } from '@/types/userPoints';
 import {
@@ -53,9 +54,14 @@ export const usePointsDataModel = ({
     [categoryNameToIds]
   );
 
+  const queryClient = useQueryClient();
+
+  // First page renders fast (perPage=defaultPerPage). Remaining pages stream in
+  // the background and are appended to the same flat-array cache so map pins and
+  // list rows appear incrementally without the first paint waiting for all points.
   const pointsQuery = useQuery({
     queryKey: queryKeys.userPointsAll(),
-    queryFn: () => userPointsApi.getPoints({ page: 1, perPage: defaultPerPage }),
+    queryFn: () => userPointsApi.getPointsPage(1, defaultPerPage).then((r) => r.items),
     staleTime: 10 * 60 * 1000,
   });
 
@@ -63,6 +69,58 @@ export const usePointsDataModel = ({
     if (pointsQuery.error) return [];
     return Array.isArray(pointsQuery.data) ? pointsQuery.data : [];
   }, [pointsQuery.data, pointsQuery.error]);
+
+  const backgroundLoadRef = useRef<{ running: boolean; token: number }>({ running: false, token: 0 });
+  const firstPageCount = pointsQuery.data?.length ?? 0;
+
+  useEffect(() => {
+    // Only start streaming once the first page arrived and it filled exactly a
+    // full batch: a short first page means there is nothing more to load, an
+    // oversized one means the backend ignored perPage (#752) and already
+    // returned the whole set.
+    if (pointsQuery.isLoading || pointsQuery.error) return;
+    if (firstPageCount !== defaultPerPage) return;
+    if (backgroundLoadRef.current.running) return;
+
+    const token = backgroundLoadRef.current.token + 1;
+    backgroundLoadRef.current = { running: true, token };
+    let cancelled = false;
+
+    (async () => {
+      try {
+        let page = 2;
+        // Guard against runaway loops on an unexpectedly non-terminating backend.
+        const maxPages = 200;
+        while (!cancelled && page <= maxPages) {
+          const { items, hasMore } = await userPointsApi.getPointsPage(page, defaultPerPage);
+          if (cancelled || backgroundLoadRef.current.token !== token) return;
+          let added = 0;
+          if (items.length > 0) {
+            queryClient.setQueryData(queryKeys.userPointsAll(), (prev: unknown) => {
+              const arr: ImportedPoint[] = Array.isArray(prev) ? (prev as ImportedPoint[]) : [];
+              const seen = new Set(arr.map((p) => Number(p?.id)));
+              const next = items.filter((p) => !seen.has(Number(p?.id)));
+              added = next.length;
+              return next.length ? [...arr, ...next] : arr;
+            });
+          }
+          // A page that adds nothing new means the backend is not actually
+          // paginating (returns the full set every time, see #752) or we are
+          // past the end — stop instead of re-downloading the same payload.
+          if (!hasMore || added === 0) break;
+          page += 1;
+        }
+      } finally {
+        if (backgroundLoadRef.current.token === token) {
+          backgroundLoadRef.current.running = false;
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [defaultPerPage, firstPageCount, pointsQuery.error, pointsQuery.isLoading, queryClient]);
 
   const pointsWithDerivedCategories = useMemo(() => {
     return (points as any[]).map((p) => {

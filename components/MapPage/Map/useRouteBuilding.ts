@@ -7,6 +7,7 @@ import type { RouteData, TransportMode } from '@/types/route';
 import { orsDirections } from '@/api/external/ors';
 import { osrmRoute } from '@/api/external/osrm';
 import { valhallaRoute } from '@/api/external/valhalla';
+import { serverRoute } from '@/api/external/serverRouting';
 
 interface RouteResult {
   coords: LatLng[];
@@ -51,6 +52,48 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
 
   const abortRef = useRef<AbortController | null>(null);
   const lastRouteKeyRef = useRef<string | null>(null);
+
+  // Canonical routing path: server endpoint backed by ORS on the backend
+  // (task board #707/#732). ORS/OSRM/Valhalla below remain only as a fallback
+  // for network errors or older deployments without this route.
+  const fetchServerRoute = useCallback(
+    async (
+      points: LatLng[],
+      mode: TransportMode,
+      signal: AbortSignal
+    ): Promise<RouteResult> => {
+      const res = await serverRoute(
+        points.map(p => ({ lat: p.lat, lng: p.lng })),
+        mode,
+        { signal },
+      );
+
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => '');
+        throw new Error(
+          `Ошибка сервера маршрутизации: ${res.status}${errorText ? ` - ${errorText}` : ''}`
+        );
+      }
+
+      const data = await res.json();
+      const geometry = data?.geometry;
+
+      if (!Array.isArray(geometry) || geometry.length === 0)
+        throw new Error('Пустой маршрут от сервера маршрутизации');
+
+      const coords: LatLng[] = geometry.map(
+        ([lng, lat]: [number, number]) => ({ lat, lng })
+      );
+
+      return {
+        coords,
+        distance: Number(data.distance_m) || 0,
+        duration: Number(data.duration_s) || 0,
+        isOptimal: Boolean(data.is_optimal),
+      };
+    },
+    []
+  );
 
   const fetchORS = useCallback(
     async (
@@ -322,45 +365,53 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       let result: RouteResult;
 
       try {
-        // Try primary service based on transport mode
-        if (ORS_API_KEY) {
-          // ORS supports all modes
-          result = await fetchORS(pointCoords, transportMode, abortController.signal);
-        } else if (transportMode === 'car') {
-          // OSRM only supports driving
-          result = await fetchOSRM(pointCoords, transportMode, abortController.signal);
-        } else {
-          // For bike/foot use free Valhalla
-          result = await fetchValhalla(pointCoords, transportMode, abortController.signal);
-        }
-      } catch (primaryError: any) {
-        if (primaryError?.name === 'AbortError') throw primaryError;
+        // Primary: canonical server routing endpoint (backend-configured ORS).
+        result = await fetchServerRoute(pointCoords, transportMode, abortController.signal);
+      } catch (serverError: any) {
+        if (serverError?.name === 'AbortError') throw serverError;
 
-        // Try fallback services
         try {
-          if (transportMode === 'car') {
-            // For car, try Valhalla as fallback
-            result = await fetchValhalla(pointCoords, transportMode, abortController.signal);
+          // Try client-side service based on transport mode (fallback for
+          // network errors / older deployments without the server endpoint).
+          if (ORS_API_KEY) {
+            // ORS supports all modes
+            result = await fetchORS(pointCoords, transportMode, abortController.signal);
+          } else if (transportMode === 'car') {
+            // OSRM only supports driving
+            result = await fetchOSRM(pointCoords, transportMode, abortController.signal);
           } else {
-            // For bike/foot, try OSRM driving route (better than nothing)
-            result = await fetchOSRM(pointCoords, 'car', abortController.signal);
-            result.isOptimal = false;
+            // For bike/foot use free Valhalla
+            result = await fetchValhalla(pointCoords, transportMode, abortController.signal);
           }
-        } catch (fallbackError: any) {
-          if (fallbackError?.name === 'AbortError') throw fallbackError;
+        } catch (primaryError: any) {
+          if (primaryError?.name === 'AbortError') throw primaryError;
 
-          // Use direct line as last resort
-          const distance = CoordinateConverter.pathDistance(pointCoords);
-          result = {
-            coords: pointCoords,
-            distance,
-            duration: 0,
-            isOptimal: false,
-          };
+          // Try fallback services
+          try {
+            if (transportMode === 'car') {
+              // For car, try Valhalla as fallback
+              result = await fetchValhalla(pointCoords, transportMode, abortController.signal);
+            } else {
+              // For bike/foot, try OSRM driving route (better than nothing)
+              result = await fetchOSRM(pointCoords, 'car', abortController.signal);
+              result.isOptimal = false;
+            }
+          } catch (fallbackError: any) {
+            if (fallbackError?.name === 'AbortError') throw fallbackError;
 
-          setError(
-            'Используется прямая линия (сервисы маршрутизации недоступны)'
-          );
+            // Use direct line as last resort
+            const distance = CoordinateConverter.pathDistance(pointCoords);
+            result = {
+              coords: pointCoords,
+              distance,
+              duration: 0,
+              isOptimal: false,
+            };
+
+            setError(
+              'Используется прямая линия (сервисы маршрутизации недоступны)'
+            );
+          }
         }
       }
 
@@ -400,7 +451,7 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
         error: errorMessage,
       });
     }
-  }, [points, transportMode, ORS_API_KEY, fetchORS, fetchOSRM, fetchValhalla, setRoute, setBuilding, setError]);
+  }, [points, transportMode, ORS_API_KEY, fetchServerRoute, fetchORS, fetchOSRM, fetchValhalla, setRoute, setBuilding, setError]);
 
   // Auto-build route when points change
   useEffect(() => {

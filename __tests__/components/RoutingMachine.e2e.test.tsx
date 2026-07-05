@@ -26,12 +26,11 @@ describe('RoutingMachine E2E Tests', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        routes: [{
-          geometry: {
-            coordinates: routeCoords,
-          },
-          distance: 8500,
-        }],
+        geometry: routeCoords,
+        distance_m: 8500,
+        duration_s: 0,
+        provider: 'ors',
+        is_optimal: true,
       }),
     });
 
@@ -66,12 +65,11 @@ describe('RoutingMachine E2E Tests', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        routes: [{
-          geometry: {
-            coordinates: [startPoint, endPoint],
-          },
-          distance: 5000,
-        }],
+        geometry: [startPoint, endPoint],
+        distance_m: 5000,
+        duration_s: 0,
+        provider: 'ors',
+        is_optimal: true,
       }),
     });
 
@@ -95,12 +93,11 @@ describe('RoutingMachine E2E Tests', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        routes: [{
-          geometry: {
-            coordinates: [startPoint, endPoint],
-          },
-          distance: 4000,
-        }],
+        geometry: [startPoint, endPoint],
+        distance_m: 4000,
+        duration_s: 0,
+        provider: 'ors',
+        is_optimal: true,
       }),
     });
 
@@ -125,25 +122,16 @@ describe('RoutingMachine E2E Tests', () => {
     const startPoint: [number, number] = [27.5590, 53.9006];
     const endPoint: [number, number] = [27.5700, 53.9100];
 
-    // useRouting uses Valhalla for foot/bike when ORS key isn't provided.
-    // To keep this test focused and deterministic, we provide a dummy ORS key
-    // and mock the ORS geojson response format.
+    // The canonical routing path (server /api/routing/route/) is tried first;
+    // mock its response shape directly.
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        features: [
-          {
-            geometry: {
-              coordinates: [startPoint, endPoint],
-            },
-            properties: {
-              summary: {
-                distance: 12345,
-                duration: 0,
-              },
-            },
-          },
-        ],
+        geometry: [startPoint, endPoint],
+        distance_m: 12345,
+        duration_s: 0,
+        provider: 'ors',
+        is_optimal: true,
       }),
     });
 
@@ -174,12 +162,11 @@ describe('RoutingMachine E2E Tests', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        routes: [{
-          geometry: {
-            coordinates: routeCoords,
-          },
-          distance: 10000,
-        }],
+        geometry: routeCoords,
+        distance_m: 10000,
+        duration_s: 0,
+        provider: 'ors',
+        is_optimal: true,
       }),
     });
 

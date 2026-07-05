@@ -151,8 +151,15 @@ describe('useRouting - Safety Tests', () => {
 
   describe('Network Error Handling', () => {
     it('retries ORS with radiuses when error.code=2010 (no routable point)', async () => {
-      // First call: ORS 404 with code=2010 and coordinate index 0
+      // First call: canonical server routing endpoint fails, so the hook
+      // falls back to client-side ORS.
       ;(global.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          text: jest.fn().mockResolvedValue(''),
+        })
+        // Second call: ORS 404 with code=2010 and coordinate index 0
         .mockResolvedValueOnce({
           ok: false,
           status: 404,
@@ -166,7 +173,7 @@ describe('useRouting - Safety Tests', () => {
             })
           ),
         })
-        // Second call: ORS ok
+        // Third call: ORS ok
         .mockResolvedValueOnce({
           ok: true,
           json: jest.fn().mockResolvedValue({
@@ -198,11 +205,11 @@ describe('useRouting - Safety Tests', () => {
       );
 
       await waitFor(() => {
-        expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(2);
+        expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(3);
       });
 
-      const secondCall = (global.fetch as jest.Mock).mock.calls[1];
-      const options = secondCall?.[1] as any;
+      const thirdCall = (global.fetch as jest.Mock).mock.calls[2];
+      const options = thirdCall?.[1] as any;
       const body = JSON.parse(String(options?.body || '{}'));
       expect(Array.isArray(body.radiuses)).toBe(true);
       expect(body.radiuses.length).toBe(2);

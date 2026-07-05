@@ -54,7 +54,7 @@ type PointsListProps = {
 };
 
 export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
-  const defaultPerPage = Platform.OS === 'web' ? 5000 : 200;
+  const defaultPerPage = 200;
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showMapSettings, setShowMapSettings] = useState(false);

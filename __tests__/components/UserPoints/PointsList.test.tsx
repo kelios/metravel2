@@ -56,17 +56,26 @@ jest.mock('expo-location', () => ({
   getCurrentPositionAsync: jest.fn(async () => ({ coords: { latitude: 0, longitude: 0 } })),
 }));
 
-jest.mock('@/api/userPoints', () => ({
-  userPointsApi: {
-    getPoints: jest.fn(),
-    createPoint: jest.fn(),
-    updatePoint: jest.fn(),
-    deletePoint: jest.fn(),
-    purgePoints: jest.fn(),
-    bulkUpdatePoints: jest.fn(),
-    exportKml: jest.fn(),
-  },
-}));
+jest.mock('@/api/userPoints', () => {
+  const getPoints = jest.fn();
+  return {
+    userPointsApi: {
+      getPoints,
+      // Data model loads pages via getPointsPage (delegates to getPoints).
+      getPointsPage: jest.fn(async (page: number, perPage: number) => {
+        const items = await getPoints({ page, perPage });
+        const arr = Array.isArray(items) ? items : [];
+        return { items: arr, hasMore: arr.length >= perPage };
+      }),
+      createPoint: jest.fn(),
+      updatePoint: jest.fn(),
+      deletePoint: jest.fn(),
+      purgePoints: jest.fn(),
+      bulkUpdatePoints: jest.fn(),
+      exportKml: jest.fn(),
+    },
+  };
+});
 
 jest.mock('@/api/miscOptimized', () => ({
   fetchAllFiltersOptimized: jest.fn(),

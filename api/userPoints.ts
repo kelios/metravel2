@@ -270,7 +270,18 @@ export const userPointsApi = {
     }
     return [] as ImportedPoint[];
   },
-  
+
+  /**
+   * Paginated variant used by the map/list screen to load points incrementally
+   * (first page renders fast, remaining pages stream in the background).
+   * Returns the page items plus a heuristic `hasMore` flag derived from whether
+   * the backend returned a full `perPage` batch.
+   */
+  async getPointsPage(page: number, perPage: number): Promise<{ items: ImportedPoint[]; hasMore: boolean }> {
+    const items = await this.getPoints({ page, perPage });
+    return { items, hasMore: items.length >= perPage };
+  },
+
   async getPoint(id: number) {
     return apiClient.get<ImportedPoint>(`/user-points/${id}/`);
   },

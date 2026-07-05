@@ -53,12 +53,11 @@ describe('RoutingMachine', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        routes: [{
-          geometry: {
-            coordinates: [[27.5590, 53.9006], [27.5700, 53.9100]],
-          },
-          distance: 5000,
-        }],
+        geometry: [[27.5590, 53.9006], [27.5700, 53.9100]],
+        distance_m: 5000,
+        duration_s: 0,
+        provider: 'ors',
+        is_optimal: true,
       }),
     });
 
@@ -73,12 +72,11 @@ describe('RoutingMachine', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        routes: [{
-          geometry: {
-            coordinates: [[27.5590, 53.9006], [27.5700, 53.9100]],
-          },
-          distance: 5000,
-        }],
+        geometry: [[27.5590, 53.9006], [27.5700, 53.9100]],
+        distance_m: 5000,
+        duration_s: 0,
+        provider: 'ors',
+        is_optimal: true,
       }),
     });
 
@@ -94,12 +92,11 @@ describe('RoutingMachine', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        routes: [{
-          geometry: {
-            coordinates: [[27.5590, 53.9006], [27.5700, 53.9100]],
-          },
-          distance: expectedDistance,
-        }],
+        geometry: [[27.5590, 53.9006], [27.5700, 53.9100]],
+        distance_m: expectedDistance,
+        duration_s: 0,
+        provider: 'ors',
+        is_optimal: true,
       }),
     });
 
@@ -115,12 +112,11 @@ describe('RoutingMachine', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        routes: [{
-          geometry: {
-            coordinates: expectedCoords,
-          },
-          distance: 5000,
-        }],
+        geometry: expectedCoords,
+        distance_m: 5000,
+        duration_s: 0,
+        provider: 'ors',
+        is_optimal: true,
       }),
     });
 
@@ -151,12 +147,11 @@ describe('RoutingMachine', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        routes: [{
-          geometry: {
-            coordinates: [[27.5590, 53.9006], [27.5700, 53.9100]],
-          },
-          distance: 5000,
-        }],
+        geometry: [[27.5590, 53.9006], [27.5700, 53.9100]],
+        distance_m: 5000,
+        duration_s: 0,
+        provider: 'ors',
+        is_optimal: true,
       }),
     });
 
@@ -207,12 +202,11 @@ describe('RoutingMachine', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        routes: [{
-          geometry: {
-            coordinates: [[27.5590, 53.9006], [27.5700, 53.9100]],
-          },
-          distance: 5000,
-        }],
+        geometry: [[27.5590, 53.9006], [27.5700, 53.9100]],
+        distance_m: 5000,
+        duration_s: 0,
+        provider: 'ors',
+        is_optimal: true,
       }),
     });
 
@@ -233,12 +227,11 @@ describe('RoutingMachine', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        routes: [{
-          geometry: {
-            coordinates: [[27.5590, 53.9006], [27.5700, 53.9100]],
-          },
-          distance: 4000,
-        }],
+        geometry: [[27.5590, 53.9006], [27.5700, 53.9100]],
+        distance_m: 4000,
+        duration_s: 0,
+        provider: 'ors',
+        is_optimal: true,
       }),
     });
 
@@ -301,13 +294,12 @@ describe('RoutingMachine', () => {
       resolveFetch({
         ok: true,
         json: async () => ({
-          routes: [{
-            geometry: {
-              coordinates: [[27.5590, 53.9006], [27.5700, 53.9100]],
-            },
-            distance: 5000,
-          }],
-        }),
+        geometry: [[27.5590, 53.9006], [27.5700, 53.9100]],
+        distance_m: 5000,
+        duration_s: 0,
+        provider: 'ors',
+        is_optimal: true,
+      }),
       });
     }
 
