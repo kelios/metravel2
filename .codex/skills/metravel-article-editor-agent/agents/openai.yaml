@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Article Editor"
-  short_description: "Edit articles, HTML, generated images, and publish state."
-  default_prompt: "Use $metravel-article-editor-agent to edit metravel articles through the article API, keep token values in .secrets hidden, generate or reuse local article images without internet sources, save rollback snapshots, and verify the public article result."
+  short_description: "Manage article media, generated images, and publish state."
+  default_prompt: "Use $metravel-article-editor-agent to manage metravel article media and publish state through the article API, keep token values in .secrets hidden, generate or reuse local article images without internet sources, ask for explicit confirmation before any creative text edits, save rollback snapshots, and verify the public article result."

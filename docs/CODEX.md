@@ -40,7 +40,7 @@
 - `$metravel-ticket-board`: используй как оператора общего MCP task board для list/create/update/sync задач и спринтов; он не пишет feature code.
 - `$metravel-sprint-reviewer`: используй для приёмки тикетов активного спринта на MCP task board: проверить Task Contract/Done gate реальными тестами/browser/API evidence и двигать только подтвержденное в `done`.
 - `$metravel-backend-diagnostician`: используй для read-only диагностики backend/API/5xx/contract mismatch, сверки backend status с бордом и оформления back-задач без правки backend-кода.
-- `$metravel-article-editor-agent`: используй для редактирования, создания, публикации и проверки статей через `/api/articles`, правки HTML/SEO тела статьи, добавления generated images и безопасной работы с токеном из `.secrets`.
+- `$metravel-article-editor-agent`: используй для публикации/проверки статей через `/api/articles`, добавления generated images и безопасной работы с токеном из `.secrets`; любые творческие правки текста статьи сначала подтверждай отдельным вопросом.
 - `$metravel-codex-orchestrator`: используй как верхний self-check для сложных или многошаговых задач: triage, минимальный набор skills, role prompts, validation plan, handoff и final self-check по правилам проекта.
 - `$metravel-agent-workflow`: используй для координации ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
 - `$metravel-project-analyst`: используй для read-only анализа структуры проекта, активных фич, зависимостей, validation surface, risk hotspots и выбора следующих агентов перед крупной задачей.
@@ -87,7 +87,7 @@
 | Mobile parity / map-place point cards | `docs/RULES.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/features/map.md`, `docs/features/places.md`, `docs/features/travel.md`, `$metravel-map-expert`, `$metravel-travel-expert`, `$metravel-ui-guardrails`, `$metravel-mobile-tester` для проверки | mobile web, Android и iOS должны совпадать по визуальному контракту; map/place/travel-point карточки используют общий fullscreen point/place template; travel point card tap только фокусит/подсвечивает маркер, marker tap открывает popup |
 | Browser review / visible regression fix | всё из UI-контекста + `$metravel-browser-reviewer` | diff review + browser snapshot/screenshot/console/network; исправить real issues и reverify |
 | External links | `docs/RULES.md`, `docs/TESTING.md`, `utils/externalLinks.ts` | никаких direct `window.open(...)` и `Linking.openURL(...)` вне chokepoint |
-| Article editing / generated article images | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/DEVELOPMENT.md`, `$metravel-article-editor-agent` | токен только из `.secrets`/env без вывода значения; backup перед write; не использовать интернет-картинки; generated images только как фотореалистичные raster-файлы через `imagegen`/licensed-local source; никаких SVG/Playwright/схематичных placeholder-картинок; verify через API и страницу |
+| Article editing / generated article images | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/DEVELOPMENT.md`, `$metravel-article-editor-agent` | токен только из `.secrets`/env без вывода значения; backup перед write; самостоятельная работа только с images/media; творческий текст статьи/квеста - только после отдельного confirmation question; не использовать интернет-картинки; generated images только как фотореалистичные raster-файлы через `imagegen`/licensed-local source; никаких SVG/Playwright/схематичных placeholder-картинок; verify через API и страницу |
 | Test running | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, профильный feature-doc при наличии | выбрать самый узкий надёжный test command, сначала проверить operation gate, не дублировать активный full/preflight/e2e run, не оставлять `.skip`, после фикса rerun обязателен |
 | Repo-wide quality fix | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/DEVELOPMENT.md`, `docs/RELEASE.md` | запустить lint + Jest + Playwright, исправить реальные падения, повторить проверки и явно отметить только несвязанные блокеры |
 | Test writing | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, профильный feature-doc, ближайшие существующие тесты | писать тест на ближайшем подходящем уровне, фиксировать реальный контракт, избегать flaky assertions |
@@ -141,7 +141,7 @@ Validation: <expected checks/evidence>.
 10. `$metravel-hook-builder` подключай дополнительно, если основной объём работы — вынос локальной логики в hooks или cleanup hook boundaries.
 11. `$metravel-refactor-surgeon` подключай для behavior-preserving split больших компонентов и file-complexity violations.
 12. `$metravel-feature-builder` реализует минимальный diff по утвержденному design/brief.
-13. `$metravel-article-editor-agent` выполняет article API/content операции, если задача про статьи, HTML тела, generated images или publish/unpublish.
+13. `$metravel-article-editor-agent` выполняет article API/media операции, если задача про статьи, generated images или publish/unpublish; творческие текстовые правки делает только после отдельного confirmation question.
 14. `$metravel-seo-index-operator` выполняет SEO/index operations и формирует owner/code/content split.
 15. `$metravel-backend-diagnostician` диагностирует backend/API blockers read-only и готовит back-задачи/evidence.
 16. `$metravel-ticket-board` создаёт/обновляет задачи и спринты на MCP task board; `$metravel-task-contract` проверяет обязательный контракт FE/BE задачи перед стартом, review и `done`, особенно когда FE зависит от BE endpoints/fields/events.
@@ -178,7 +178,7 @@ Validation: <expected checks/evidence>.
 - Sprint Reviewer не пишет feature code и не двигает `done` без runtime evidence.
 - Production Smoke ничего не деплоит и не мутирует прод; только read-only health evidence.
 - DevOps agent не деплоит `prod` без явного production deploy запроса и не меняет серверные/SSL пути без проверки на целевом host.
-- Article Editor Agent не выводит токены из `.secrets`, не использует интернет-картинки без явного разрешения, делает rollback snapshot перед записью и проверяет результат после write.
+- Article Editor Agent не выводит токены из `.secrets`, не использует интернет-картинки без явного разрешения, самостоятельно меняет только images/media, переспросом подтверждает любые творческие текстовые правки, делает rollback snapshot перед записью и проверяет результат после write.
 - Designer не создает отдельную дизайн-систему: использует `components/ui`, `DESIGN_TOKENS`, Feather icons и существующие feature-компоненты.
 - Orchestrator держит unrelated user changes отдельно и не завершает задачу с известными реальными проблемами в затронутом scope.
 - Для visible web UI обязательны browser preview, screenshot и console check.

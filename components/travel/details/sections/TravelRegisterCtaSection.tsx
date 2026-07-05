@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 
 import { useAuth } from '@/context/AuthContext'
 import { useThemedColors } from '@/hooks/useTheme'
+import { buildRegistrationHref } from '@/utils/authNavigation'
 import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 
 const HEADING = 'Сохраняй маршруты и любимые места'
@@ -11,15 +12,19 @@ const SUBTITLE =
   'Бесплатный аккаунт: собирай избранное, планируй поездки и синхронизируй их на всех устройствах.'
 const CTA_LABEL = 'Создать бесплатный аккаунт'
 
-export const TravelRegisterCtaSection: React.FC = () => {
+type TravelRegisterCtaSectionProps = {
+  redirect?: string
+}
+
+export const TravelRegisterCtaSection: React.FC<TravelRegisterCtaSectionProps> = ({ redirect }) => {
   const { isAuthenticated } = useAuth()
   const colors = useThemedColors()
   const router = useRouter()
 
   const handlePress = useCallback(() => {
-    trackRegisterCtaClicked({ source: 'travel_article', authState: 'guest' })
-    router.push('/registration' as never)
-  }, [router])
+    trackRegisterCtaClicked({ source: 'travel_article', intent: 'favorite', authState: 'guest' })
+    router.push(buildRegistrationHref({ redirect, intent: 'favorite' }) as never)
+  }, [redirect, router])
 
   if (isAuthenticated) return null
 

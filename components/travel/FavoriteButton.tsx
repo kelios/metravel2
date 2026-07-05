@@ -10,6 +10,8 @@ import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕН�
 import { showToast } from '@/utils/toast';
 import { hapticImpact } from '@/utils/haptics';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { saveGuestFavoriteIntent } from '@/utils/guestFavoriteIntent';
+import { trackFavoriteIntentGuest } from '@/utils/growthFunnelAnalytics';
 
 const UNFAVORITED_ICON_STYLE = { opacity: 0.55 } as const;
 
@@ -102,6 +104,8 @@ function FavoriteButton({
 
         const isAndroidGuest = Platform.OS === 'android' && !isAuthenticated;
         if (!isAuthenticated && !isAndroidGuest) {
+            trackFavoriteIntentGuest({ itemType: type, itemId: id, source: 'favorite_button', url });
+            void saveGuestFavoriteIntent({ id: String(id), type, title, imageUrl, url, source: 'favorite_button' });
             requireAuth();
             return;
         }

@@ -321,7 +321,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       // __common. Штатный путь — markercluster уже применён в loadLeafletRuntime;
       // это async-фолбэк для нештатного L.
       let cancelled = false
-      import('@/utils/leafletVendor')
+      Promise.resolve(import('@/utils/leafletVendor'))
         .then(() => {
           if (!cancelled && typeof L.markerClusterGroup === 'function') {
             setClusterPluginNonce((v) => v + 1)

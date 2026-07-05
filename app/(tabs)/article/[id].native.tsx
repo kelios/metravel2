@@ -12,6 +12,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
+import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
 import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
 import RenderHTML from 'react-native-render-html'
 import { WebView } from 'react-native-webview'
@@ -151,6 +152,7 @@ export default function ArticleDetails() {
 
   // #709: canonical rich_text.description.safe_html с бэка, description — fallback
   const articleContent = resolveServerRichTextHtml(article.rich_text?.description, article.description)
+  const articlePath = numericId ? `/article/${numericId}` : normalizedSlug ? `/article/${normalizedSlug}` : undefined
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -201,6 +203,7 @@ export default function ArticleDetails() {
                   />
                 ),
               })}
+              <ArticleActivationCtaSection article={article} redirectPath={articlePath} />
             </Card.Content>
           </Card>
         )}

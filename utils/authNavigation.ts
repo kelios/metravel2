@@ -41,3 +41,16 @@ export const buildLoginHref = ({
   return `/login?${params.toString()}`
 }
 
+export const buildRegistrationHref = ({
+  redirect,
+  intent,
+  fallbackRedirect = '/',
+}: BuildLoginHrefParams = {}) => {
+  const resolvedRedirect =
+    redirect && redirect.trim().length > 0 ? normalizeRedirect(redirect, fallbackRedirect) : getWebRedirectPath(fallbackRedirect)
+
+  const params = new URLSearchParams()
+  params.set('redirect', resolvedRedirect)
+  if (intent) params.set('intent', String(intent))
+  return `/registration?${params.toString()}`
+}

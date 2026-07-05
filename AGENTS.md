@@ -50,7 +50,7 @@
 - `$metravel-ticket-board` - оператор общего MCP task board: list/create/update/sync задач и спринтов без правки feature-кода.
 - `$metravel-sprint-reviewer` - приёмка тикетов активного спринта на MCP task board по Task Contract/Done gate с реальными тестами/browser/API evidence.
 - `$metravel-backend-diagnostician` - read-only диагностика backend/API проблем, 5xx/contract mismatch, backend status sync и создание/обновление back-задач с evidence.
-- `$metravel-article-editor-agent` - редактирование статей через API, HTML/SEO тела статьи, generated images, publish/unpublish и проверка результата без вывода токенов.
+- `$metravel-article-editor-agent` - публикация/проверка статей через API, generated images/media, publish/unpublish и только подтвержденные текстовые правки без вывода токенов.
 - `$metravel-codex-orchestrator` - верхний workflow для Codex: triage, выбор skills/агентов, промты ролей, план проверок и финальный self-check.
 - `$metravel-agent-workflow` - координация ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
 - `$metravel-project-analyst` - read-only анализ структуры проекта, активных фич, рисков, проверок и handoff к профильным агентам.
@@ -145,6 +145,7 @@
 - Для опубликованных travel/article медиа (обложки, изображения в описании, галерея, фото точек на карте) не генерируй плоские SVG, Playwright-скриншоты, векторные/схематичные, мультяшные или placeholder-картинки.
   - Используй только реальные фото, явно разрешённые licensed/local фото или фотореалистичные generated raster images, сохранённые локальным файлом перед upload.
   - Если подходящую фотореалистичную картинку нельзя получить, не подменяй её стилизованной заглушкой; зафиксируй blocker.
+- При задачах со статьями и квестами можно самостоятельно добавлять, генерировать и загружать только изображения/медиа для статьи, точек или квеста. Если для результата нужно написать, дописать, переписать или творчески улучшить текст статьи/квеста, сначала переспроси пользователя и не выполняй такую текстовую правку без отдельного явного подтверждения после вопроса.
 - В web rich-text валидные Instagram post/reel/tv должны показываться встроенными постами; fallback-карточки допустимы только для неembed-ссылок вроде stories/highlights/profile или неподдержанных контекстов.
 
 ### 4.3 Иконки

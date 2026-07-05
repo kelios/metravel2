@@ -9,6 +9,7 @@ import { Stack, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
 import ArticleRatingSection from '@/components/article/ArticleRatingSection'
+import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
 import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
 import RenderHTML from 'react-native-render-html'
 import { Card, Title } from '@/ui/paper'
@@ -111,6 +112,7 @@ export default function ArticleDetails() {
 
   // #709: canonical rich_text.description.safe_html с бэка, description — fallback
   const articleContent = resolveServerRichTextHtml(article.rich_text?.description, article.description)
+  const articlePath = numericId ? `/article/${numericId}` : normalizedSlug ? `/article/${normalizedSlug}` : undefined
 
   return (
       <SafeAreaView style={{ flex: 1 }}>
@@ -167,6 +169,7 @@ export default function ArticleDetails() {
                       initialCount={article.rating_count}
                       initialUserRating={article.user_rating}
                   />
+                  <ArticleActivationCtaSection article={article} redirectPath={articlePath} />
                 </Card.Content>
               </Card>
           )}

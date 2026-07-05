@@ -127,7 +127,7 @@ export const TravelDetailsMapSection: React.FC<{
         travel={travel}
       />
 
-      <TravelRegisterCtaSection />
+      <TravelRegisterCtaSection redirect={travel?.slug ? `/travels/${travel.slug}` : undefined} />
 
     </>
   )

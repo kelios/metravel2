@@ -625,6 +625,12 @@ const Map: React.FC<TravelProps> = ({
         const markersLayer = L.layerGroup().addTo(map);
         const clustersLayer = L.layerGroup().addTo(map);
         const routeLayer = L.layerGroup().addTo(map);
+        // Radius-mode data updates can arrive after every zoom/pan through the
+        // server-cluster query. Auto-fitting on each payload fights the user's
+        // gesture and causes Android WebView to visibly pan back and redraw
+        // clusters. Do one initial positioning pass only; user gestures and
+        // explicit cluster/marker taps remain in control after that.
+        var __metravelDidInitialRadiusPosition = false;
         // Отдельный слой для маркера «вы здесь». НЕ чистится в __metravelRenderPoints
         // (где clearLayers зовётся только для markersLayer/routeLayer), поэтому синяя
         // точка не мигает при ре-рендере travel-маркеров. Добавлен последним —
@@ -771,8 +777,9 @@ const Map: React.FC<TravelProps> = ({
               // F-46 — на native НЕ открываем Leaflet-попап (зеркало web-фикса):
               // тап по маркеру только отдаёт выбор в RN, экран показывает нижнюю
               // карточку места (MapPlaceBottomCard), где есть вся навигация попапа.
-              // Шлём индекс точки в текущем массиве points; RN маппит его на ту же
-              // точку travelAddress.
+              // Шлём стабильные id/coord + индекс как fallback: при server clusters
+              // массив points может пересоздаться между zoom/re-render, и один индекс
+              // уже недостаточно надёжен для открытия карточки.
               marker.on('click', function() {
                 // #FIX-2 — capture the tap into the route ONLY while it is still being
                 // built (fewer than 2 points). A fully-built route (e.g. from a popup's
@@ -796,25 +803,12 @@ const Map: React.FC<TravelProps> = ({
                   return;
                 }
                 try {
-                  // #591 — центрируем карту на ВЫБРАННОЙ точке (а не оставляем вид на
-                  // «где я» / общем bounds). Точку поднимаем над нижней карточкой:
-                  // целевой центр сдвигаем вверх на ~25% высоты карты, чтобы маркер
-                  // не прятался за MapPlaceBottomCard. Зум подтягиваем минимум до 14.
-                  var targetZoom = Math.max(map.getZoom ? map.getZoom() : 13, 14);
-                  var projected = map.project([lat, lng], targetZoom);
-                  var size = map.getSize ? map.getSize() : { y: 0 };
-                  projected.y += size.y * 0.25;
-                  var shifted = map.unproject(projected, targetZoom);
-                  if (map.flyTo) {
-                    map.flyTo(shifted, targetZoom, { animate: true, duration: 0.35 });
-                  } else {
-                    map.setView(shifted, targetZoom);
-                  }
-                } catch (err) {}
-                try {
                   if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({
-                      type: 'SELECT_PLACE', index: pointIndex
+                      type: 'SELECT_PLACE',
+                      index: pointIndex,
+                      id: point.id == null ? null : String(point.id),
+                      coord: point.coord == null ? null : String(point.coord)
                     }));
                   }
                 } catch (err) {}
@@ -860,10 +854,12 @@ const Map: React.FC<TravelProps> = ({
                   map.setView(routeBounds.getCenter(), Math.max(map.getZoom ? map.getZoom() : 13, 14));
                 } catch (e) {}
               }
-            } else if (bounds.isValid() && !usesServerClusters) {
+            } else if (!__metravelDidInitialRadiusPosition && bounds.isValid() && !usesServerClusters) {
               map.fitBounds(bounds, { padding: [50, 50] });
-            } else if (map.__userCenter) {
+              __metravelDidInitialRadiusPosition = true;
+            } else if (!__metravelDidInitialRadiusPosition && map.__userCenter) {
               map.setView(map.__userCenter, map.getZoom ? map.getZoom() : 10);
+              __metravelDidInitialRadiusPosition = true;
             }
             window.__metravelScheduleInvalidate('renderPoints');
             setTimeout(function() { __metravelPostViewport('MAP_VIEWPORT'); }, 0);
@@ -1220,15 +1216,23 @@ const Map: React.FC<TravelProps> = ({
               return;
             }
             if (parsed?.type === 'SELECT_PLACE') {
-              // F-46 — индекс точки в массиве, отправленном в WebView
-              // (window.__metravelRenderPoints), маппится на ту же точку
-              // active points на RN-стороне (server markers или local fallback).
+              // F-46 — WebView sends stable id/coord plus index fallback. Server
+              // cluster updates can replace the points array during zoom, so relying
+              // only on the index can miss the tapped marker and fail to open the card.
               const index = Number(parsed?.index);
               const selectablePoints = renderedNativePointsRef.current;
-              if (Number.isInteger(index) && index >= 0 && index < selectablePoints.length) {
-                const point = selectablePoints[index];
-                if (point) onMarkerSelect?.(point);
+              const selectedId = parsed?.id == null ? '' : String(parsed.id);
+              const selectedCoord = parsed?.coord == null ? '' : String(parsed.coord).trim();
+              let selectedPoint = selectedId
+                ? selectablePoints.find((point) => point?.id != null && String(point.id) === selectedId)
+                : undefined;
+              if (!selectedPoint && selectedCoord) {
+                selectedPoint = selectablePoints.find((point) => String(point?.coord ?? '').trim() === selectedCoord);
               }
+              if (!selectedPoint && Number.isInteger(index) && index >= 0 && index < selectablePoints.length) {
+                selectedPoint = selectablePoints[index];
+              }
+              if (selectedPoint) onMarkerSelect?.(selectedPoint);
               return;
             }
             if (parsed?.type !== 'OPEN_URL') return;

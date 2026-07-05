@@ -1,6 +1,7 @@
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import {
   GROWTH_FUNNEL_EVENTS,
+  trackFavoriteIntentGuest,
   trackArticleEditorAutosaveSucceeded,
   trackContentCreateCtaClicked,
   trackRegisterCtaClicked,
@@ -50,6 +51,7 @@ describe('growthFunnelAnalytics', () => {
       'quest_point_done',
       'quest_finish',
       'favorite_add',
+      GROWTH_FUNNEL_EVENTS.favoriteIntentGuest,
       GROWTH_FUNNEL_EVENTS.routeCreatePublishSuccess,
       'cta_register_click',
     ]).toEqual([
@@ -59,6 +61,7 @@ describe('growthFunnelAnalytics', () => {
       'quest_point_done',
       'quest_finish',
       'favorite_add',
+      'favorite_intent_guest',
       'travel_publish',
       'cta_register_click',
     ]);
@@ -153,6 +156,26 @@ describe('growthFunnelAnalytics', () => {
         auth_state: 'guest',
         intent: 'add-place',
         action: 'register',
+      },
+    );
+  });
+
+  it('tracks guest favorite intent before auth wall without leaking query params', () => {
+    trackFavoriteIntentGuest({
+      itemType: 'article',
+      itemId: 7,
+      source: 'article_detail',
+      url: '/article/test?token=secret',
+    });
+
+    expect(mockedQueueAnalyticsEvent).toHaveBeenCalledWith(
+      GROWTH_FUNNEL_EVENTS.favoriteIntentGuest,
+      {
+        item_type: 'article',
+        item_id: '7',
+        source: 'article_detail',
+        url: '/article/test',
+        auth_state: 'guest',
       },
     );
   });

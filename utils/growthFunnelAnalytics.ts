@@ -2,6 +2,7 @@ import { queueAnalyticsEvent } from '@/utils/analytics';
 
 export const GROWTH_FUNNEL_EVENTS = {
   registerCtaClick: 'cta_register_click',
+  favoriteIntentGuest: 'favorite_intent_guest',
   registrationView: 'registration_view',
   registrationSubmit: 'registration_submit',
   registrationSuccess: 'registration_complete',
@@ -120,6 +121,13 @@ type RegisterCtaParams = {
   authState?: GrowthAuthState;
 };
 
+type FavoriteIntentParams = {
+  itemType: 'travel' | 'article';
+  itemId?: unknown;
+  source?: unknown;
+  url?: unknown;
+};
+
 /**
  * Единая активационная цель `cta_register_click` (тикет #768): любой клик по
  * CTA «Зарегистрироваться» в любом месте UI. Точечные события конкретных
@@ -130,6 +138,16 @@ export const trackRegisterCtaClicked = ({ source, intent, authState }: RegisterC
     source: safeString(source) ?? 'unknown',
     intent: safeString(intent),
     auth_state: authState,
+  });
+};
+
+export const trackFavoriteIntentGuest = ({ itemType, itemId, source, url }: FavoriteIntentParams) => {
+  emitGrowthFunnelEvent(GROWTH_FUNNEL_EVENTS.favoriteIntentGuest, {
+    item_type: itemType,
+    item_id: safeString(itemId),
+    source: safeString(source) ?? 'unknown',
+    url: safePath(url),
+    auth_state: 'guest',
   });
 };
 

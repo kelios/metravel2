@@ -7,6 +7,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
+import { saveGuestFavoriteIntent } from '@/utils/guestFavoriteIntent';
+import { trackFavoriteIntentGuest } from '@/utils/growthFunnelAnalytics';
 
 type OptimizedFavoriteButtonProps = {
     id: string | number;
@@ -63,6 +65,8 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
 
         const isAndroidGuest = Platform.OS === 'android' && !isAuthenticated;
         if (!isAuthenticated && !isAndroidGuest) {
+            trackFavoriteIntentGuest({ itemType: type, itemId: id, source: 'optimized_favorite_button', url });
+            void saveGuestFavoriteIntent({ id: String(id), type, title, url, imageUrl, source: 'optimized_favorite_button' });
             requireAuth();
             return;
         }

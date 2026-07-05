@@ -8,6 +8,7 @@ import { Stack, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
 import { Card, Title } from '@/ui/paper'
+import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles'
 import { SafeHtml } from '@/components/article/SafeHtml'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -164,6 +165,7 @@ export default function ArticleDetails() {
 
   // #709: canonical rich_text.description.safe_html с бэка, description — fallback
   const articleContent = resolveServerRichTextHtml(article.rich_text?.description, article.description)
+  const articlePath = routeKey ? `/article/${routeKey}` : undefined
 
   return (
     <>
@@ -176,6 +178,7 @@ export default function ArticleDetails() {
               <Card.Content>
                 <h1 style={{ fontSize: 18, fontWeight: '700', margin: 0 } as any}>{article.name}</h1>
                 <SafeHtml html={articleContent.html} serverSanitized={articleContent.serverSanitized} style={{ marginTop: 16 }} />
+                <ArticleActivationCtaSection article={article} redirectPath={articlePath} />
               </Card.Content>
             </Card>
           )}

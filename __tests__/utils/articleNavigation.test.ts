@@ -3,6 +3,7 @@ import {
   normalizeArticleListSourceHref,
   normalizeArticleReturnHref,
 } from '@/utils/articleNavigation'
+import { buildRegistrationHref } from '@/utils/authNavigation'
 
 describe('articleNavigation', () => {
   it('keeps only safe internal article return hrefs', () => {
@@ -24,5 +25,16 @@ describe('articleNavigation', () => {
     expect(buildArticlesHrefFromSource('/map')).toBe('/articles?from=%2Fmap')
     expect(buildArticlesHrefFromSource('/map?mode=nearby')).toBe('/articles?from=%2Fmap%3Fmode%3Dnearby')
     expect(buildArticlesHrefFromSource('/articles')).toBe('/articles')
+  })
+})
+
+describe('authNavigation registration href', () => {
+  it('builds registration href with safe internal redirect and intent', () => {
+    expect(buildRegistrationHref({ redirect: '/article/test?token=secret', intent: 'favorite' })).toBe(
+      '/registration?redirect=%2Farticle%2Ftest%3Ftoken%3Dsecret&intent=favorite',
+    )
+    expect(buildRegistrationHref({ redirect: 'https://example.com/article', intent: 'favorite' })).toBe(
+      '/registration?redirect=%2F&intent=favorite',
+    )
   })
 })

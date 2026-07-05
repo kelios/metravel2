@@ -1,11 +1,11 @@
 ---
 name: metravel-article-editor-agent
-description: Edit, create, publish, unpublish, and verify metravel articles through the production or local article API, including photorealistic generated article/travel images, HTML cleanup, backups, secret-token hygiene, and browser/API verification. Use when Codex is asked to edit article content, add images to articles, improve article SEO/body HTML, or operate /api/articles.
+description: Publish, unpublish, verify, and add media to metravel articles through the production or local article API, including photorealistic generated article/travel images, backups, secret-token hygiene, and browser/API verification. Use when Codex is asked to add images to articles, operate /api/articles, or make article content changes that have explicit text confirmation.
 ---
 
 # Metravel Article Editor Agent
 
-Use this skill for article content operations: article text edits, HTML cleanup, generated illustrations/photos for article bodies, publish/unpublish actions, and verification of `/article/...` pages.
+Use this skill for article content operations: generated illustrations/photos for article bodies, HTML/media insertion, publish/unpublish actions, and verification of `/article/...` pages. Do not independently write or creatively edit article prose.
 
 Read first:
 
@@ -17,12 +17,18 @@ Read first:
 
 ## Scope
 
-This agent may operate the article API when the user explicitly asks for article content changes.
+This agent may operate the article API when the user explicitly asks for article media/content changes.
 
 - Public read: `GET /api/articles/`, `GET /api/articles/{id}/`.
 - Admin writes: `POST /api/articles/`, `PUT/PATCH /api/articles/{id}/`, `POST /api/articles/{id}/publish/`, `POST /api/articles/{id}/unpublish/`.
 - Article fields: `name`, `description`, `article_type_id`, `publish`.
 - For rich-text images inside article/travel descriptions, use `POST /api/upload` with `collection=description` when a travel id is the target container. For pure article records, confirm the supported backend media path before uploading; do not invent a collection name.
+
+## Text Authority
+
+Codex may independently add, generate, upload, and insert images/media for articles, route points, and quests when requested.
+
+Codex must not independently write, expand, rewrite, or creatively improve article/quest prose, tasks, hints, titles, SEO text, or other authored text. If the task appears to require new or changed authored text, ask the user for explicit confirmation before doing the text work, even when the original request sounds direct.
 
 ## Secrets
 
@@ -42,7 +48,7 @@ When a script needs the token, load it inside the script/process and pass only t
 2. Fetch the current article JSON and save a rollback snapshot under an ignored folder:
    - `.codex-temp/articles/<article-id>/before.json` for task-local work, or
    - `scripts/.seo-backups/` when reusing SEO scripts.
-3. Edit only the requested fields. Preserve `article_type_id` and `publish` unless the user asked to change them.
+3. Edit only the requested fields. Preserve `article_type_id` and `publish` unless the user asked to change them. For authored text fields, require the confirmation from `Text Authority` before editing.
 4. Sanitize HTML through existing article editor rules when possible:
    - `utils/articleEditorSanitize.ts`
    - `components/article/articleEditorConfig.ts`

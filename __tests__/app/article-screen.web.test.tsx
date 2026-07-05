@@ -5,6 +5,7 @@ import ArticleScreen from '@/app/(tabs)/article/[id].web'
 
 const mockUseLocalSearchParams = jest.fn()
 const mockUseIsFocused = jest.fn()
+const mockRouterPush = jest.fn()
 const mockFetchArticle = jest.fn()
 const mockFetchArticleBySlug = jest.fn()
 const mockSeo = jest.fn(() => null)
@@ -15,6 +16,7 @@ jest.mock('expo-router', () => ({
   },
   useLocalSearchParams: () => mockUseLocalSearchParams(),
   useIsFocused: () => mockUseIsFocused(),
+  useRouter: () => ({ push: mockRouterPush }),
 }))
 
 jest.mock('@/api/articles', () => ({
@@ -40,6 +42,24 @@ jest.mock('@/hooks/useTheme', () => ({
     background: '#fff',
     surface: '#fff',
     border: '#ddd',
+    primary: '#ff7043',
+    primaryDark: '#e64a19',
+    primarySoft: '#fff3e0',
+    primaryAlpha30: '#ff70434d',
+    text: '#111',
+    textSecondary: '#666',
+    textOnPrimary: '#fff',
+  }),
+}))
+
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ isAuthenticated: false }),
+}))
+
+jest.mock('@/context/FavoritesContext', () => ({
+  useFavorites: () => ({
+    isFavorite: jest.fn(() => false),
+    addFavorite: jest.fn(),
   }),
 }))
 

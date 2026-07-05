@@ -35,10 +35,10 @@ describe('TravelRegisterCtaSection', () => {
     ;(queueAnalyticsEvent as jest.Mock).mockReset()
   })
 
-  it('renders CTA for a guest and navigates to /registration with analytics on press', () => {
+  it('renders CTA for a guest and navigates to registration with redirect and analytics on press', () => {
     useAuth.mockReturnValue({ isAuthenticated: false })
 
-    const { getByLabelText } = render(<TravelRegisterCtaSection />)
+    const { getByLabelText } = render(<TravelRegisterCtaSection redirect="/travels/test-route" />)
 
     const button = getByLabelText('Создать бесплатный аккаунт')
     expect(button).toBeTruthy()
@@ -47,9 +47,10 @@ describe('TravelRegisterCtaSection', () => {
 
     expect(queueAnalyticsEvent).toHaveBeenCalledWith('cta_register_click', {
       source: 'travel_article',
+      intent: 'favorite',
       auth_state: 'guest',
     })
-    expect(mockPush).toHaveBeenCalledWith('/registration')
+    expect(mockPush).toHaveBeenCalledWith('/registration?redirect=%2Ftravels%2Ftest-route&intent=favorite')
   })
 
   it('renders nothing for an authenticated user', () => {

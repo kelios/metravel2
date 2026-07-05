@@ -270,6 +270,10 @@ npx serve dist/prod -l 3000 -s
 - Published travel/article media (covers, rich-text description images, gallery images, and map-point photos) must be real photos, user-approved licensed photos, or photorealistic generated images saved as local raster files before upload.
   - Do not use flat SVG, Playwright screenshot, vector, icon-like, schematic, cartoon, generic illustration, or "photo-like" placeholder generation for these surfaces.
   - If a suitable photorealistic image cannot be generated or sourced, leave the media unchanged and report the blocker instead of uploading a stylized substitute.
+- Article and quest content authority:
+  - Codex may independently add, generate, upload, and insert images/media for articles, route points, and quests when requested.
+  - Codex must not independently write, expand, rewrite, or creatively improve article/quest prose, tasks, hints, titles, SEO text, or other authored text.
+  - If a requested article/quest task appears to require new or changed authored text, ask the user for explicit confirmation before doing the text work, even when the original request sounds direct.
 - For web content images that intentionally use `contain + blurBackground` in cards, popups, inline rich-text media, map previews, and similar surfaces, enable the shared-source blur mode (`allowCriticalWebBlur` in `ImageCardMedia`, or `mediaProps.allowCriticalWebBlur` in `UnifiedTravelCard`).
   - The visible image and the blur backdrop must use the same effective image source whenever possible.
   - Sibling sections that use the same card/media pattern must not render different backdrop strength or timing.
