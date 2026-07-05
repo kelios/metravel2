@@ -449,7 +449,7 @@
 
 - Android-чеклист покрывает правильные риск-классы, но полный `AND-USB-01..31` слишком широк для короткой демонстрации и смешивает smoke, regression и store-submission проверки.
 - Для показа заказчику сначала проходи компактный **Customer Demo Gate** ниже; полный P1/P2 набор оставь для release/store readiness или если менялись соответствующие поверхности.
-- `e2e/maestro/recommendation-shelves.yaml` сейчас является known-red регресс-детектором из `e2e/maestro/README.md`; он не должен считаться зелёным demo evidence, пока баг рендера полок не закрыт.
+- `e2e/maestro/recommendation-shelves.yaml` зелёный с 2026-07-05; dev-client launch использует deep-link fallback к `127.0.0.1:8081`, если Expo Dev Launcher не показывает auto-discovered сервер.
 - Любой красный P0/P1 demo-кейс перед показом либо чинится, либо явно исключается из демонстрационного сценария с причиной и owner'ом; silently show-around запрещён.
 
 Предусловия:
@@ -508,7 +508,7 @@ Owners/follow-up:
 | AND-USB-09 | Permissions | Сценарий использует разрешения | Проверить геолокацию/медиа permission prompt: allow и deny ветки, если доступны без destructive effects | Allow дает ожидаемый результат; deny показывает понятный fallback без краша |
 | AND-USB-10 | Auth entrypoints | Нужен e2e-аккаунт | Войти через безопасный e2e-механизм/уже подготовленный аккаунт; не печатать пароль/токен | Авторизованные экраны открываются; состояние сохраняется после app reload |
 | AND-USB-11 | Quests native regressions | Установлен build с квестами | Пройти `e2e/maestro/quest-reviews.yaml`, `quest-intro-map-points.yaml` и `quest-offline-points.yaml` либо вручную повторить их шаги | Отзывы открывают модалку отзывов; intro-карта квеста показывает точки маршрута; GPX/share готовится без `expo-file-system` runtime throw |
-| AND-USB-12 | Recommendation shelves | Авторизованный аккаунт с избранным/историей | Пройти `e2e/maestro/recommendation-shelves.yaml` либо вручную открыть полки идей на Маршрутах | «Избранное» и «Недавно смотрели» рендерятся; текущий known-red Maestro flow из `e2e/maestro/README.md` = demo blocker, если полки входят в сценарий показа |
+| AND-USB-12 | Recommendation shelves | Авторизованный аккаунт с избранным/историей | Пройти `e2e/maestro/recommendation-shelves.yaml` либо вручную открыть полки идей на Маршрутах | «Избранное» и «Недавно смотрели» рендерятся; Maestro flow должен оставаться зелёным для demo/release scope |
 | AND-USB-13 | Standalone install without Metro | Установлен preview/prod build, Metro остановлен | Очистить logcat, force-stop приложения, запустить с иконки или `adb shell monkey -p by.metravel.app 1` | Приложение стартует без Dev Launcher/Metro, показывает home/«Маршруты», в logcat нет fatal/runtime crash |
 | AND-USB-14 | App links and deep links | Из `app.json`/manifest известны scheme `metravel` и app-link host `metravel.by`; есть валидный маршрут | При убитом и тёплом приложении открыть `https://metravel.by/travels/<id>` и `metravel://travels/<id>`, затем невалидный путь; отдельно проверить ссылку/уведомление с `#anchor`, если такой payload доступен | Валидный путь открывает нужный экран после готовности навигации; невалидный путь даёт fallback/404; hash не уводит native на корень |
 | AND-USB-15 | Lifecycle + cold restart persistence | Авторизованный e2e-аккаунт, есть избранное/история или тестовый статус | Открыть профиль/избранное/историю, свернуть и вернуть приложение, затем force-stop → launch; повторить после явного reload dev-client | Авторизация и локальное состояние сохраняются; нет logout-flash, пустых полок из-за потерянной ширины, stale-bundle UI или runtime warning |
@@ -544,7 +544,7 @@ Owners/follow-up:
 | AND-USB-09 | P2 | manual permission matrix | manual |
 | AND-USB-10 | P1 | manual with `.env.e2e`/prepared account, no secret output | manual |
 | AND-USB-11 | P1 | Maestro `quest-reviews.yaml`, `quest-intro-map-points.yaml`, `quest-offline-points.yaml` | repeatable device e2e |
-| AND-USB-12 | P1 | Maestro `recommendation-shelves.yaml` | known-red regression detector; blocker only when shelves are in demo/release scope |
+| AND-USB-12 | P1 | Maestro `recommendation-shelves.yaml` | green regression detector for shelves in demo/release scope |
 | AND-USB-13 | P1 | manual adb/standalone launch; candidate for Maestro launch flow | manual |
 | AND-USB-14 | P1 | manual adb intent/app links; unit `services/notifications.extractDeepLinkFromNotification` | manual |
 | AND-USB-15 | P1 | manual adb lifecycle; unit `secureStorage`, `viewHistoryStore`, `travelStatusStore` | manual |

@@ -14,7 +14,9 @@
  */
 
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
+import { spawnSync } from 'child_process'
 
 const ROOT = path.resolve(__dirname, '..', '..')
 const STUB_REL = 'metro-stubs/react-native-gesture-handler.js'
@@ -124,5 +126,64 @@ describe('PERF-014 gesture-handler web stub — completeness', () => {
     const stub = require(path.join(ROOT, STUB_REL))
     const missing = [...imported].filter((name) => stub[name] === undefined)
     expect(missing).toEqual([])
+  })
+})
+
+describe('PERF-017 eager-web analyze guard', () => {
+  it('prefers the client entry.js dump over a larger router-server dump', () => {
+    const dumpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-eager-guard-'))
+    try {
+      const clientEntry = path.join(ROOT, 'entry.js')
+      const clientDep = path.join(ROOT, 'metro-stubs/react-native-gesture-handler.js')
+      const serverEntry = path.join(ROOT, 'node_modules/@expo/router-server/node/render.js')
+      const serverDep = path.join(ROOT, 'node_modules/react-dom/server.node.js')
+
+      fs.writeFileSync(
+        path.join(dumpDir, 'metro-analyze-111-2.json'),
+        JSON.stringify({
+          entry: clientEntry,
+          count: 2,
+          mods: [
+            [clientEntry, 100, [clientDep]],
+            [clientDep, 50, []],
+          ],
+        }),
+      )
+      fs.writeFileSync(
+        path.join(dumpDir, 'metro-analyze-111-3.json'),
+        JSON.stringify({
+          entry: serverEntry,
+          count: 3,
+          mods: [
+            [serverEntry, 5000, [serverDep]],
+            [serverDep, 5000, []],
+            [path.join(ROOT, 'node_modules/expo-router/head.js'), 5000, []],
+          ],
+        }),
+      )
+
+      const result = spawnSync(
+        process.execPath,
+        [path.join(ROOT, 'scripts/guard-eager-web-bundle.js'), '--from-analyze', '--fail', '--json'],
+        {
+          cwd: ROOT,
+          env: {
+            ...process.env,
+            METRO_DUMP_DIR: dumpDir,
+            EAGER_BUDGET_KB: '1',
+          },
+          encoding: 'utf8',
+        },
+      )
+
+      expect(result.status).toBe(0)
+      expect(result.stderr).toBe('')
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        ok: true,
+        eagerModules: 2,
+      })
+    } finally {
+      fs.rmSync(dumpDir, { recursive: true, force: true })
+    }
   })
 })

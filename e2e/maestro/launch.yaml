@@ -1,12 +1,16 @@
 # Общий запуск приложения. На DEV-CLIENT `launchApp` открывает лаунчер Expo (список
-# dev-серверов), а не приложение — поэтому опционально тапаем dev-сервер, чтобы подключить
-# бандл. На STANDALONE preview/release-сборке этих элементов нет → optional:true пропускает
-# шаг, и launchApp сразу открывает приложение. Затем ждём загрузки UI.
+# dev-серверов), а не приложение — поэтому опционально тапаем dev-сервер, а если auto-discovery
+# пустой, открываем dev-client deep-link к adb-reverse `127.0.0.1:8081`. На STANDALONE
+# preview/release-сборке optional-шаги пропускаются, и launchApp сразу открывает приложение.
+# Затем ждём загрузки UI.
 appId: by.metravel.app
 ---
 - launchApp
 - tapOn:
     text: ".*8081.*"
+    optional: true
+- openLink:
+    link: "exp+metravel://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
     optional: true
 - extendedWaitUntil:
     visible:

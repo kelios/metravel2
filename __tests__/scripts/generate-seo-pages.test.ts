@@ -646,13 +646,15 @@ describe('travel hero preload helpers', () => {
 });
 
 describe('travel SSR SEO helpers', () => {
-  it('injectHiddenH1 adds exactly one hidden H1 into body', () => {
+  it('injectHiddenH1 adds exactly one hidden H1 before the React root', () => {
     const result = injectHiddenH1(MINIMAL_BASE, 'Тропа ведьм')
 
     expect(result).toMatch(/<h1[^>]*data-ssg-travel-h1="true"[^>]*>Тропа ведьм<\/h1>/)
     expect((result.match(/<h1\b/gi) || []).length).toBe(1)
     expect(result).toContain('position:absolute')
     expect(result).toContain('clip-path:inset(50%)')
+    expect(result).toMatch(/<\/head><body><h1[^>]*data-ssg-travel-h1="true"[^>]*>Тропа ведьм<\/h1><div id="root">/)
+    expect(result).not.toMatch(/<div id="root"><h1[^>]*data-ssg-travel-h1="true"/)
   })
 
   it('buildTravelSeoDescription expands too-short content with contextual fallback', () => {

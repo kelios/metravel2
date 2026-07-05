@@ -930,8 +930,8 @@ function injectHiddenH1(baseHtml, headingText) {
   if (!text) return baseHtml;
 
   // SSR H1 stays in raw HTML for crawlers and no-JS consumers, but it must not
-  // participate in the RN Web flex layout inside #root. Keep it out of flow so
-  // travel pages cannot be squeezed into a narrow right-side column in prod.
+  // participate in React hydration inside #root. Keep it out of flow and insert
+  // it as a root sibling; placing it inside #root creates a hydration mismatch.
   const headingStyle = [
     'position:absolute',
     'width:1px',
@@ -962,7 +962,7 @@ function injectHiddenH1(baseHtml, headingText) {
   if (/<div\s+id="root"[^>]*>/i.test(baseHtml)) {
     return baseHtml.replace(
       /<div(\s+id="root"[^>]*)>/i,
-      `<div$1>${ssgHeading}`
+      `${ssgHeading}<div$1>`
     );
   }
 

@@ -27,7 +27,7 @@ sudo ln -sfn "$(brew --prefix openjdk@17)/libexec/openjdk.jdk" /Library/Java/Jav
 
 ## Предусловия
 - Устройство по USB (`adb devices -l`) ИЛИ эмулятор; `by.metravel.app` установлен.
-- **dev-client:** Metro запущен (`npm start`); `launch.yaml` сам подключит bundle (тап по dev-серверу `…8081`). **standalone preview/release-сборка надёжнее** — там `launchApp` сразу открывает приложение (на dev-client `launchApp` показывает лаунчер Expo).
+- **dev-client:** Metro запущен (`npm start`); `launch.yaml` сам подключит bundle (тап по dev-серверу `…8081` или deep-link к `127.0.0.1:8081`). **standalone preview/release-сборка надёжнее** — там `launchApp` сразу открывает приложение (на dev-client `launchApp` показывает лаунчер Expo).
 - Залогинен тест-аккаунтом sergey@lyte.com; `apiUrl=https://metravel.by`.
 - Тексты ассертов — русские (UI на русском). Лейблы кнопок — из `accessibilityLabel`.
 - Если Java недоступна для Maestro, не помечай device QA как зелёный: зафиксируй blocker и
@@ -52,12 +52,11 @@ maestro test e2e/maestro/            # все сразу
 | `quest-reviews.yaml` | Чип «💬 N» → модалка отзывов (не старт квеста) | ✅ зелёный на 2026-06-22 |
 | `quest-intro-map-points.yaml` | Деталка квеста → intro-карта показывает точки маршрута до старта | 🆕 покрывает регресс пустой карты |
 | `quest-offline-points.yaml` | Скачать GPX / открыть в приложении → share с .gpx (не тост ошибки) | ✅ зелёный на 2026-06-22 |
-| `recommendation-shelves.yaml` | Полки Избранное/Недавно смотрели на Маршрутах | ⚠️ ПАДАЕТ — открытый баг рендера полок (data есть, рендера нет) |
+| `recommendation-shelves.yaml` | Полки Избранное/Недавно смотрели на Маршрутах | ✅ зелёный на 2026-07-05 |
 
 ## Заметки
-- `recommendation-shelves.yaml` сейчас красный намеренно — это регресс-детектор открытого бага
-  (полки favorites/history не рендерятся на native, хотя `[QA-STATE]` показывает fav:4/hist:20).
-  Закроется зелёным, когда баг рендера починят.
+- `recommendation-shelves.yaml` использует dev-client deep-link fallback, потому что Expo Dev
+  Launcher не всегда показывает auto-discovered сервер `8081`.
 - Топ-бар деталки квеста — кнопки по `accessibilityLabel` («Скачать GPX с N точками квеста»,
   «Открыть точки квеста в приложении карт»). Если добавите явные `testID` — заменить на `id:`.
 - Системный share-лист — это OS UI; Maestro его видит (ассерт по `.gpx`/тексту).

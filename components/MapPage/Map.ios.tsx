@@ -781,27 +781,6 @@ const Map: React.FC<TravelProps> = ({
               // массив points может пересоздаться между zoom/re-render, и один индекс
               // уже недостаточно надёжен для открытия карточки.
               marker.on('click', function() {
-                // #FIX-2 — capture the tap into the route ONLY while it is still being
-                // built (fewer than 2 points). A fully-built route (e.g. from a popup's
-                // «Маршрут» button) releases marker taps so they open the place card
-                // again; the route line stays drawn (gated on routeMode==='route').
-                if (routeMode === 'route' && routePoints.length < 2) {
-                  try {
-                    if (map.flyTo) {
-                      map.flyTo([lat, lng], Math.max(map.getZoom ? map.getZoom() : 13, 14), { animate: true, duration: 0.25 });
-                    } else {
-                      map.setView([lat, lng], Math.max(map.getZoom ? map.getZoom() : 13, 14));
-                    }
-                  } catch (err) {}
-                  try {
-                    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-                      window.ReactNativeWebView.postMessage(JSON.stringify({
-                        type: 'MAP_CLICK', lat: lat, lng: lng
-                      }));
-                    }
-                  } catch (err) {}
-                  return;
-                }
                 try {
                   if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({

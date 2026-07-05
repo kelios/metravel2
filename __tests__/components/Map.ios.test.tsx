@@ -159,6 +159,9 @@ describe('Map.ios Component', () => {
     expect(html).toContain("marker.on('click'");
     expect(html).toContain("type: 'SELECT_PLACE'");
     expect(html).toContain('index: pointIndex');
+    expect(html).toContain('id: point.id == null ? null : String(point.id)');
+    expect(html).toContain('coord: point.coord == null ? null : String(point.coord)');
+    expect(html).not.toContain("type: 'MAP_CLICK', lat: lat, lng: lng");
     expect(html).not.toContain('marker.bindPopup(popupContent');
   });
 

@@ -173,16 +173,25 @@ function runAnalyze(result) {
     return
   }
 
-  // Pick the dump with the most modules — the main client web graph.
+  // Prefer the client web graph. Static export also emits a router-server SSR
+  // graph, and that dump can contain slightly more modules than the client graph.
+  // Falling back to the largest dump keeps compatibility with older dump shapes.
   let best = null
+  let largest = null
   for (const f of files) {
     try {
       const j = JSON.parse(fs.readFileSync(f, 'utf8'))
-      if (!best || j.count > best.count) best = { ...j, file: f }
+      const candidate = { ...j, file: f }
+      if (!largest || j.count > largest.count) largest = candidate
+      const entry = String(j.entry || '').replace(/\\/g, '/')
+      if (entry.endsWith('/entry.js')) {
+        if (!best || j.count > best.count) best = candidate
+      }
     } catch {
       /* skip corrupt */
     }
   }
+  if (!best) best = largest
   if (!best) {
     problems.push('--from-analyze: all dumps were unreadable/corrupt')
     return
