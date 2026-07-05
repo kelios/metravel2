@@ -183,6 +183,28 @@ describe('travelWizardValidation', () => {
       expect(result.warnings.some(w => w.field === 'gallery')).toBe(true);
     });
 
+    it('does not warn about cover image when travel has persisted cover url', () => {
+      const formData: Partial<TravelFormData> = {
+        travel_image_thumb_small_url: 'https://cdn.example.com/cover.webp',
+        gallery: [],
+      };
+
+      const result = validateStep(3, formData as TravelFormData);
+      expect(result.warnings.some(w => w.field === 'coverImage')).toBe(false);
+      expect(result.warnings.some(w => w.field === 'gallery')).toBe(true);
+    });
+
+    it('does not warn about cover image when travel has cover image id array', () => {
+      const formData: Partial<TravelFormData> = {
+        travelImageThumbUrlArr: ['3796'],
+        gallery: [],
+      };
+
+      const result = validateStep(3, formData as TravelFormData);
+      expect(result.warnings.some(w => w.field === 'coverImage')).toBe(false);
+      expect(getStepProgress(3, formData as TravelFormData)).toBe(50);
+    });
+
     it('should validate step 6 (publish) with all required fields', () => {
       const formDataInvalid: Partial<TravelFormData> = {
         name: 'Test',

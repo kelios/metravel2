@@ -314,6 +314,8 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       });
       kf('name', 'nil');
       kf('name', 'emptyString');
+      kf('visitedDate', 'nil');
+      kf('visitedDate', 'emptyString');
 
       if (options?.preserveEditingState) {
         (['name', 'description', 'plus', 'minus', 'recommendation', 'youtube_link'] as const).forEach(assignCurrentEditableField);

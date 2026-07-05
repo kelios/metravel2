@@ -20,6 +20,46 @@ function stripUndefinedDeep<T>(value: T): T {
   return value;
 }
 
+const isEmptyPlainObject = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) &&
+  typeof value === 'object' &&
+  !Array.isArray(value) &&
+  Object.getPrototypeOf(value) === Object.prototype;
+
+function normalizeDraftComparable(value: unknown, key?: string): unknown {
+  if (value == null) return undefined;
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.startsWith('__draft_placeholder__')) return undefined;
+    return key === 'id' ? trimmed : value;
+  }
+
+  if (key === 'id' && (typeof value === 'number' || typeof value === 'boolean')) {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map((item) => normalizeDraftComparable(item))
+      .filter((item) => item !== undefined);
+    return normalized.length > 0 ? normalized : undefined;
+  }
+
+  if (isEmptyPlainObject(value)) {
+    const entries = Object.entries(value)
+      .map(([entryKey, entryValue]) => [entryKey, normalizeDraftComparable(entryValue, entryKey)] as const)
+      .filter(([, entryValue]) => entryValue !== undefined);
+    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+  }
+
+  return value;
+}
+
+function areDraftsEquivalent(left: unknown, right: unknown): boolean {
+  return isEqual(normalizeDraftComparable(left), normalizeDraftComparable(right));
+}
+
 const DRAFT_STORAGE_KEY = 'metravel_travel_draft';
 const DRAFT_DEBOUNCE_MS = 2000;
 
@@ -105,7 +145,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
               // as done once we actually have it.
               if (currentData) {
                 comparedDraftKeyRef.current = draftKey;
-                if (isEqual(stripUndefinedDeep(parsed.data), stripUndefinedDeep(currentData))) {
+                if (areDraftsEquivalent(stripUndefinedDeep(parsed.data), stripUndefinedDeep(currentData))) {
                   await removeStorageItem(draftKey);
                   if (cancelled) return;
                   setState({

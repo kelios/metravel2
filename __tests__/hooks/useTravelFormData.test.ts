@@ -582,6 +582,48 @@ describe('useTravelFormData', () => {
     expect(sentPayload.description).toBe(html);
   });
 
+  it('includes visitedDate in manual save payload', async () => {
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => {
+      const { visitedDate: _visitedDate, ...response } = payload;
+      return response;
+    });
+
+    const { result } = renderHook(
+      () =>
+      useTravelFormData({
+        travelId: null,
+        isNew: true,
+        userId: '42',
+        isSuperAdmin: false,
+        isAuthenticated: true,
+        authReady: true,
+      })
+      ,
+      { concurrentRoot: false }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        id: 817,
+        name: 'Тестовая поездка',
+        description: 'Описание поездки',
+        visitedDate: '2026-07-25',
+      });
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave();
+    });
+
+    expect(saveFormData).toHaveBeenCalledTimes(1);
+    const sentPayload = (saveFormData as jest.Mock).mock.calls[0][0];
+    expect(sentPayload.visitedDate).toBe('2026-07-25');
+    expect((result.current.formData as any).visitedDate).toBe('2026-07-25');
+  });
+
   it('preserves local previews when server response returns empty images/markers and does not include local blob urls', async () => {
     const localCover = 'blob:https://example.com/cover-preview';
     const localPointImage = 'blob:https://example.com/point-preview';

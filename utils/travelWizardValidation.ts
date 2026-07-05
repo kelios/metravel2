@@ -222,6 +222,22 @@ function isEmptyForRules(value: unknown, rules: FieldRule | undefined): boolean 
   return false;
 }
 
+function getValidationFieldValue(formData: TravelFormData, fieldName: string): unknown {
+  const data = formData as unknown as UnknownRecord;
+
+  if (fieldName === 'coverImage') {
+    return (
+      data.travel_image_thumb_small_url ??
+      data.travel_image_thumb_url ??
+      data.travelImageThumbUrlArr ??
+      data.travelImageThumbUrArr ??
+      null
+    );
+  }
+
+  return data[fieldName];
+}
+
 /**
  * Валидация конкретного поля
  */
@@ -305,7 +321,7 @@ export function validateStep(
   // Проверка обязательных полей
   if (rules.required) {
     for (const fieldName of rules.required) {
-      const value = (formData as unknown as UnknownRecord)[fieldName];
+      const value = getValidationFieldValue(formData, fieldName);
       const fieldRules = rules.fields?.[fieldName];
       const isEmpty = isEmptyForRules(value, fieldRules);
 
@@ -336,7 +352,7 @@ export function validateStep(
   // Проверка рекомендуемых полей (warnings)
   if (rules.recommended) {
     for (const fieldName of rules.recommended) {
-      const value = (formData as unknown as UnknownRecord)[fieldName];
+      const value = getValidationFieldValue(formData, fieldName);
       const fieldRules = rules.fields?.[fieldName];
       const isEmpty = isEmptyForRules(value, fieldRules);
 
@@ -374,7 +390,7 @@ export function getStepProgress(step: number, formData: TravelFormData): number 
 
   let filledCount = 0;
   for (const fieldName of allFields) {
-    const value = (formData as unknown as UnknownRecord)[fieldName];
+    const value = getValidationFieldValue(formData, fieldName);
     // Используем те же правила пустоты, что и валидация шага: для html-полей
     // пустота считается по видимому тексту (<p></p> не «заполнено»).
     const isEmpty = isEmptyForRules(value, rules.fields?.[fieldName]);

@@ -102,6 +102,44 @@ describe('useDraftRecovery', () => {
     expect(stored).toBeNull();
   });
 
+  it('auto-removes stale draft when it only differs by empty form defaults', async () => {
+    await AsyncStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        data: {
+          id: 443,
+          name: 'same',
+          month: [],
+          description: '__draft_placeholder__',
+        },
+        timestamp: Date.now() - 60_000,
+      })
+    );
+
+    const { result } = renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: {
+          id: '443',
+          name: 'same',
+          month: [],
+          visitedDate: '',
+          description: '',
+          coordsMeTravel: [],
+        } as any,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.hasPendingDraft).toBe(false);
+    });
+
+    const stored = await AsyncStorage.getItem(draftKey);
+    expect(stored).toBeNull();
+  });
+
   it('does not re-check drafts on subsequent currentData changes (prevents popup on autosave)', async () => {
     await AsyncStorage.setItem(
       draftKey,

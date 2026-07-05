@@ -17,6 +17,7 @@ describe('travelFormUtils', () => {
       expect(result.id).toBeNull();
       expect(result.name).toBe('');
       expect(result.countries).toEqual([]);
+      expect(result.visitedDate).toBe('');
     });
 
     it('should create empty form data with provided id', () => {
@@ -44,7 +45,19 @@ describe('travelFormUtils', () => {
       expect(result.year).toBe('2024');
       expect(result.number_days).toBe('10');
       expect(result.number_peoples).toBe('2');
+      expect(result.visitedDate).toBe('');
       expect(result.categories).toEqual(['1', '2']);
+    });
+
+    it('should transform backend visited_date to visitedDate for editing', () => {
+      const travel: Travel = {
+        id: 123,
+        name: 'Test Travel',
+        visited_date: '2026-07-25',
+      } as any;
+
+      const result = transformTravelToFormData(travel);
+      expect(result.visitedDate).toBe('2026-07-25');
     });
 
     it('should handle missing optional fields', () => {

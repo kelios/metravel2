@@ -217,6 +217,7 @@ export function getEmptyFormData(id: string | null): TravelFormData {
     categories: [],
     transports: [],
     month: [],
+    visitedDate: '',
     complexity: [],
     over_nights_stay: [],
     cities: [],
