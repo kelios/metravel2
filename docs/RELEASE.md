@@ -41,6 +41,7 @@ npm run build:web:prod
 
 - Accepts env argument: `dev`, `preprod`, `prod` (default: `prod`).
 - Pipeline: applies `.env.<env>` -> builds `dist/<env>` -> runs SEO/public post-processing -> deploys to server.
+- The script is the normal production deploy path on machines with working `rsync`. It runs the canonical build and static SEO guards, uploads `dist/`, atomically swaps `static/dist`, overlays missing old Expo chunks for open tabs, restarts `app` + `nginx`, and runs post-deploy SEO checks.
 - Build without deploy:
 
 ```bash
@@ -72,6 +73,17 @@ ssh metravel-prod 'cd /home/sx3/metravel && mv static/dist static/dist.broken &&
 ```
 
 Regular releases from a machine with working `rsync` may still use `./build-prod.sh prod`.
+
+### Emergency frontend redeploy
+
+`scripts/fix-prod.sh` is a recovery path for production web static assets, not the default release command.
+Use it only when the user explicitly asks for emergency frontend recovery or the normal deploy path is
+unavailable and the reason is recorded in the handoff.
+
+The script acquires a remote deploy lock, can rebuild `dist/prod`, verifies the prod artifact config,
+uploads static assets, performs an in-container atomic swap, overlays missing old Expo chunks, restarts
+nginx, validates live chunks/config, and fails closed on wrong prod config. Do not replace the normal
+`./build-prod.sh prod` or Windows/Codex wrapper flow with custom `rsync`, `scp`, or SSH deploy commands.
 
 ## Post-deploy SEO check
 

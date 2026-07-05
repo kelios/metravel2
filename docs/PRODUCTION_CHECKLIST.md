@@ -82,6 +82,17 @@ bash /d/metravel/ops/deploy-frontend.sh
 The Windows/Codex wrapper builds with `DEPLOY=0`, uploads via `tar+ssh`, performs an atomic swap,
 restarts `app` and `nginx`, verifies health, and auto-rolls back on failed health checks.
 
+Emergency frontend recovery only:
+
+```bash
+scripts/fix-prod.sh
+```
+
+Use this only through the DevOps deploy workflow when the normal production deploy path is unavailable
+or explicit recovery is requested. It has its own remote deploy lock, prod artifact config gate, static
+asset swap, old Expo chunk overlap, nginx restart, and live chunk verification. Do not replace approved
+deploy paths with custom `rsync`, `scp`, or SSH deploy commands.
+
 ---
 
 ## 📊 Post-Release Monitoring

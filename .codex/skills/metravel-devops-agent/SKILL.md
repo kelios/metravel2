@@ -1,11 +1,13 @@
 ---
 name: metravel-devops-agent
-description: Deploy metravel web builds to dev, preprod, or production using the project release scripts or the Windows/Codex ops wrapper, with preflight checks, server-path safety, secret hygiene, post-deploy validation, rollback awareness, and explicit environment gating. Use when Codex is asked to deploy, prepare a deploy, verify a deploy, rollback planning, or operate dev/prod release infrastructure.
+description: Deploy metravel web builds to dev, preprod, or production through the project-owned release scripts, the Windows/Codex ops wrapper, or the documented emergency frontend redeploy path, with preflight checks, server-path safety, secret hygiene, post-deploy validation, rollback awareness, and explicit environment gating. Use when Codex is asked to deploy, prepare a deploy, verify a deploy, rollback planning, or operate dev/prod release infrastructure.
 ---
 
 # Metravel DevOps Agent
 
 Use this skill for deploy preparation, deployment execution, and post-deploy verification. Treat production deploys as high-risk operations: require an explicit target environment and do not infer `prod` from vague wording.
+
+This skill intentionally follows the legacy Claude deploy contract: use existing scripts, do not write ad-hoc `rsync`/`scp`/SSH deploy commands, take a health baseline, let build guards fail closed, swap static assets atomically, verify production, and keep a rollback path visible.
 
 Read first:
 
@@ -23,6 +25,7 @@ Before running deploy commands, report:
 - current branch and `git status --short`
 - operation gate result: active deploy/build/rebuild/test processes and relevant locks for the same target
 - whether the worktree contains unrelated user changes
+- SSH/access readiness for the requested target, without printing secrets
 - planned checks and deploy command
 - known blockers or missing access
 
@@ -35,27 +38,28 @@ Rules:
 - Do not deploy `prod` unless the user explicitly requested production deploy in the current task.
 - If the worktree is dirty, deploy only when the dirty files are intentionally part of the deploy or the user explicitly accepts the risk.
 - Before deploy, build, server rebuild, or server restart, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if another agent already runs the same target operation, do not start a duplicate and report the PID/command/target blocker.
+- Never edit server shell dotfiles such as `~/.bashrc`, `~/.profile`, `~/.zshrc`, `~/.ssh/config`, or `~/.ssh/environment`. Use inline env vars or project env files instead.
 
 ## Preflight
 
 Choose the smallest safe preflight for the target:
 
-- Dev deploy smoke: `npm run check:fast`, then build/deploy dev.
+- Dev deploy smoke: `npm run check:fast`, then `./build-dev.sh` for the LAN dev server (`192.168.50.36`) unless current project docs explicitly define a different dev target.
 - Production deploy: prefer `npm run release:check` before deploy.
 - Production build-only verification: `DEPLOY=0 ./build-prod.sh prod`.
 - External-link/governance-sensitive changes: include `npm run governance:verify`.
 - UI-visible changes: require browser verification before deploy when feasible.
 
-Fix real failures in scope before deploy. If a failure is outside scope or needs unavailable access, stop and report the blocker.
+Before a mutating deploy, also take a read-only baseline for the target, for example `/`, a representative API GET, and any changed route. Fix real failures in scope before deploy. If a failure is outside scope or needs unavailable access, stop and report the blocker.
 
 ## Deploy Commands
 
-Use the existing scripts and documented ops wrapper; do not invent parallel deploy paths.
+Use the existing scripts and documented ops wrapper; do not invent parallel deploy paths. The build scripts run the canonical web export, SEO/static generation, static travel SEO guards, public-file copy, and cache-bust post-processing.
 
 Build without deploy:
 
 ```bash
-DEPLOY=0 ./build-prod.sh dev
+DEPLOY=0 ./build-dev.sh
 DEPLOY=0 ./build-prod.sh preprod
 DEPLOY=0 ./build-prod.sh prod
 ```
@@ -63,12 +67,12 @@ DEPLOY=0 ./build-prod.sh prod
 Deploy:
 
 ```bash
-./build-prod.sh dev
+./build-dev.sh
 ./build-prod.sh preprod
 ./build-prod.sh prod
 ```
 
-Legacy dev deploy script exists as `./build-dev.sh`; prefer `./build-prod.sh dev` unless the user explicitly asks for the legacy script or a current project doc says otherwise.
+Dev server deploy is the Claude-proven `./build-dev.sh` path: it performs a clean dependency reinstall, builds `dist/dev`, uploads frontend static assets to `192.168.50.36`, swaps `static/dist`, and restarts `app` + `nginx`. Do not use `./build-prod.sh dev` as a substitute for the LAN dev-server deploy unless project docs have been updated to define that target.
 
 ### Production deploy from this Windows/Codex machine
 
@@ -90,6 +94,12 @@ This wrapper:
 - atomically swaps `static/dist`, keeps `static/dist.bak`, overlays old Expo chunks, and restarts `app` + `nginx`
 - runs health checks and auto-rolls back from `static/dist.bak` on failure
 
+### Emergency production frontend redeploy
+
+Use `scripts/fix-prod.sh` only when the user explicitly asks for emergency production frontend recovery or when the canonical production path is unavailable and the safer recovery path is justified in the handoff.
+
+That script acquires a remote deploy lock, can rebuild `dist/prod`, verifies the production artifact config, uploads static assets, performs an in-container atomic swap, overlays missing old Expo chunks, restarts nginx, verifies the live entry/runtime chunks, and fails closed on wrong prod config. Do not use it as a casual shortcut for normal releases.
+
 Manual rollback if needed:
 
 ```bash
@@ -100,6 +110,8 @@ ssh metravel-prod 'cd /home/sx3/metravel && mv static/dist static/dist.broken &&
 
 For production:
 
+- confirm the baseline URLs still return healthy status codes
+- verify the current HTML references available static JS/CSS chunks
 - run `npm run test:seo:postdeploy`
 - run production performance checks when requested or when release risk warrants it:
 
@@ -120,6 +132,7 @@ Return a compact `Deploy Report`:
 
 - target environment
 - commit/branch/worktree state
+- baseline health before deploy
 - checks run and results
 - deploy command run
 - post-deploy checks and results

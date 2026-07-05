@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Codex Orchestrator"
   short_description: "Choose skills, prompts, rules, validation, and handoff."
-  default_prompt: "Use $metravel-codex-orchestrator to organize the metravel task from docs/CODEX.md: classify scope, choose the minimal project skills, apply role prompts and repository rules, check the operation gate before long exclusive commands, plan validation, keep secrets safe, and finish with a concise handoff."
+  default_prompt: "Use $metravel-codex-orchestrator to organize the metravel task from docs/CODEX.md: classify scope, choose the minimal project skills, apply role prompts and repository rules, check the operation gate before long exclusive commands, plan validation, keep secrets safe, and finish with a concise handoff. For deploy or rollback, route execution through $metravel-devops-agent so Codex uses only approved project deploy scripts, the Windows/Codex wrapper when applicable, or the documented emergency frontend recovery path."

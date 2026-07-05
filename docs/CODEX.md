@@ -33,7 +33,7 @@
 - `$metravel-growth-analyst`: используй для анализа GA4/GSC/Yandex/affiliate-цифр, SEO/organic роста, пользовательского поведения, drop-off, регистрации, auth и создания маршрутов/статей.
 - `$metravel-seo-index-operator`: используй для ежедневной SEO/index рутины, GSC digest, URL Inspection/index status, IndexNow backup, SEO-аудита статей и списка URL для ручной индексации.
 - `$metravel-code-reviewer`: используй для focused review diff'а, поиска рисков, rule violations, validation gaps и остаточных проблем перед handoff или approve.
-- `$metravel-devops-agent`: используй для подготовки, запуска и проверки deploy на `dev`, `preprod` или `prod`, включая preflight, secret hygiene, server-path safety и post-deploy validation.
+- `$metravel-devops-agent`: используй для подготовки, запуска и проверки deploy на `dev`, `preprod` или `prod`, включая preflight, secret hygiene, server-path safety, approved deploy-command selection, rollback/recovery и post-deploy validation.
 - `$metravel-production-smoke`: используй для read-only production health check `metravel.by` после deploy, при 502/white screen/static/API/sitemap подозрениях или регулярном smoke.
 - `$metravel-docs-maintainer`: используй при изменении `docs/`, `AGENTS.md`, `.codex/skills` или правил работы Codex.
 - `$metravel-task-contract`: используй при создании или ревью FE/BE задач на борде, чтобы заполнить обязательный `Task Contract` и проверить, можно ли двигать задачу в `todo`/`done`.
@@ -177,7 +177,7 @@ Validation: <expected checks/evidence>.
 - Refactor Surgeon не меняет бизнес-логику и не делает редизайн; только behavior-preserving extraction.
 - Sprint Reviewer не пишет feature code и не двигает `done` без runtime evidence.
 - Production Smoke ничего не деплоит и не мутирует прод; только read-only health evidence.
-- DevOps agent не деплоит `prod` без явного production deploy запроса и не меняет серверные/SSL пути без проверки на целевом host.
+- DevOps agent не деплоит `prod` без явного production deploy запроса, не меняет серверные/SSL пути без проверки на целевом host и не пишет самодельные `rsync`/`scp`/SSH deploy-команды в обход утвержденных scripts/wrapper.
 - Article Editor Agent не выводит токены из `.secrets`, не использует интернет-картинки без явного разрешения, самостоятельно меняет только images/media, переспросом подтверждает любые творческие текстовые правки, делает rollback snapshot перед записью и проверяет результат после write.
 - Designer не создает отдельную дизайн-систему: использует `components/ui`, `DESIGN_TOKENS`, Feather icons и существующие feature-компоненты.
 - Orchestrator держит unrelated user changes отдельно и не завершает задачу с известными реальными проблемами в затронутом scope.
@@ -243,6 +243,11 @@ bash /d/metravel/ops/deploy-frontend.sh
 
 This wrapper still uses the canonical build/guards through `DEPLOY=0 bash ./build-prod.sh prod`, then
 deploys with `tar+ssh`, performs an atomic server swap, verifies health, and rolls back on failure.
+- `scripts/fix-prod.sh` is an emergency production frontend recovery path only. It has its own remote
+  deploy lock, prod artifact config gate, in-container atomic swap, old Expo chunk overlap, nginx restart,
+  and live chunk/config verification. Use it through `$metravel-devops-agent` only when normal deploy is
+  unavailable or explicitly requested for recovery; do not replace approved deploy paths with ad-hoc
+  `rsync`, `scp`, or SSH commands.
 
 ## Быстрая карта поиска
 

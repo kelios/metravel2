@@ -28,9 +28,10 @@ Use the project-specific command map:
 Keep release and performance validation aligned with repo policy:
 
 - Build web for production checks with `npm run build:web:prod`.
-- For production deploy command selection, defer to `docs/RELEASE.md` and `$metravel-devops-agent`;
-  on this Windows/Codex machine the final deploy command is `bash /d/metravel/ops/deploy-frontend.sh`,
-  not repeated retries of `./build-prod.sh prod`.
+- Treat deploy execution and rollback as `$metravel-devops-agent` work, not release-checks work.
+- For production deploy command selection, defer to `docs/RELEASE.md` and `$metravel-devops-agent`.
+- On this Windows/Codex machine the final production deploy command is `bash /d/metravel/ops/deploy-frontend.sh`, not repeated retries of `./build-prod.sh prod`.
+- Use `scripts/fix-prod.sh` only as a documented emergency frontend recovery path through `$metravel-devops-agent`, after recording why the normal deploy path is unavailable or unsafe.
 - Run Lighthouse against a production build or the real production URL, never against a dev server.
 - Use post-deploy checks against the real site after release, for example `npm run test:seo:postdeploy`.
 - Do not reintroduce service worker runtime/static caching or any user-facing "clear cache" workaround.

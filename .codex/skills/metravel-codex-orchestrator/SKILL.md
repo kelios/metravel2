@@ -54,7 +54,7 @@ If the branch is not `main`, stop before editing and ask how to proceed.
 - Use `$metravel-e2e-runner` for Playwright/browser flows and `.env.e2e` auth.
 - Use `$metravel-performance-analyst` only with production build or real URL performance evidence.
 - Use `$metravel-seo-index-operator` for GSC/indexing routines, URL Inspection/index status, IndexNow backup, and SEO owner/action lists.
-- Use `$metravel-release-checks` and `$metravel-devops-agent` for release/deploy/build operations and explicit environment gates.
+- Use `$metravel-release-checks` for validation planning and `$metravel-devops-agent` for deploy execution, rollback, approved deploy-command selection, Windows/Codex wrapper use, and emergency frontend recovery.
 - Use `$metravel-production-smoke` for read-only production health checks and route failures to the right owner.
 - Use `$metravel-docs-maintainer` for docs, AGENTS, CODEX, or skill changes.
 - Use `$metravel-backend-diagnostician` for read-only backend/API diagnosis and backend board follow-up.
@@ -86,7 +86,7 @@ Do not leak desired conclusions into QA/reviewer prompts; pass raw scope, diff, 
 - Do not create one-off reports unless the user asks; update canonical docs instead.
 - For visible web UI, require browser preview, screenshot, and console check.
 - For Android/native, do not claim device readiness without emulator/device evidence.
-- For production deploy or submit, require explicit target environment and clean gates.
+- For production deploy or submit, require explicit target environment and clean gates. Do not let roles invent deploy commands; route mutating deploy/rollback work through `$metravel-devops-agent`.
 - Before assigning or running deploy, build, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; do not launch duplicates for the same target.
 
 ## Final Self-Check
