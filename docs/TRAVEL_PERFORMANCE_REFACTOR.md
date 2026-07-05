@@ -487,7 +487,7 @@ Production build после delayed comments fallback:
 Статус: реализован статический bundle-budget guard.
 
 - Скрипт: `scripts/guard-bundle-budget.js`. Читает чанки prod-сборки из `dist/prod/_expo/static/js/web/*.js`, группирует их по логическому имени (без content-hash), считает raw + gzip и сравнивает с бюджетом.
-- Бюджет: `config/bundle-budget.json` — кураторский набор critical-path чанков (`entry`, `__common`, `index`, `[param]` travel route, `Map`, `TravelDetailsMapSection`, `TravelDetailsPostLcpRuntime`, `TravelDetailsFooterSection`, `TravelDetailsSidebarSection`, `CommentsSection`) плюс агрегатный `total`. Допуск `tolerancePct: 10`.
+- Бюджет: `config/bundle-budget.json` — кураторский набор critical-path чанков (`entry`, `__common`, `index`, `[param]` travel route, `Map`, `TravelDetailsMapSection`, `TravelDetailsPostLcpRuntime`, `TravelDetailsFooterSection`, `TravelDetailsSidebarSection`, `CommentsSection`) плюс агрегатный `total`. Допуск `tolerancePct: 5`.
 - npm-скрипты:
   - `npm run guard:bundle-budget` — отчёт (exit 0);
   - `npm run guard:bundle-budget:fail` — exit 1 при любом превышении (для CI/preflight, требует свежий `npm run build:web:prod`);

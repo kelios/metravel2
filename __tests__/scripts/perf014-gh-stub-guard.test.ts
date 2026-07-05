@@ -14,9 +14,8 @@
  */
 
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
-import { spawnSync } from 'child_process'
+import { makeTempDir, runNodeCli } from './cli-test-utils'
 
 const ROOT = path.resolve(__dirname, '..', '..')
 const STUB_REL = 'metro-stubs/react-native-gesture-handler.js'
@@ -131,7 +130,7 @@ describe('PERF-014 gesture-handler web stub — completeness', () => {
 
 describe('PERF-017 eager-web analyze guard', () => {
   it('prefers the client entry.js dump over a larger router-server dump', () => {
-    const dumpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-eager-guard-'))
+    const dumpDir = makeTempDir('metravel-eager-guard-')
     try {
       const clientEntry = path.join(ROOT, 'entry.js')
       const clientDep = path.join(ROOT, 'metro-stubs/react-native-gesture-handler.js')
@@ -162,17 +161,11 @@ describe('PERF-017 eager-web analyze guard', () => {
         }),
       )
 
-      const result = spawnSync(
-        process.execPath,
+      const result = runNodeCli(
         [path.join(ROOT, 'scripts/guard-eager-web-bundle.js'), '--from-analyze', '--fail', '--json'],
         {
-          cwd: ROOT,
-          env: {
-            ...process.env,
-            METRO_DUMP_DIR: dumpDir,
-            EAGER_BUDGET_KB: '1',
-          },
-          encoding: 'utf8',
+          METRO_DUMP_DIR: dumpDir,
+          EAGER_BUDGET_KB: '1',
         },
       )
 

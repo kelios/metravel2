@@ -1,16 +1,13 @@
-import { test, expect } from '@playwright/test'
-
-const qaUrl = (baseURL: string | undefined, path: string) => {
-  const base = process.env.QA_BASE || baseURL || process.env.BASE_URL
-  return base ? new URL(path, base).toString() : path
-}
+import { test, expect } from './fixtures'
+import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
 
 test.use({ viewport: { width: 390, height: 844 } })
 
-test('#586 «Мои точки»: случайный выбор подписан понятно', async ({ page, baseURL }) => {
+test('#586 «Мои точки»: случайный выбор подписан понятно', async ({ page }, testInfo) => {
   page.on('pageerror', (e) => console.log('PAGEERROR', e.message))
 
-  await page.goto(qaUrl(baseURL, '/userpoints'), { waitUntil: 'domcontentloaded' })
+  await preacceptCookies(page)
+  await gotoWithRetry(page, '/userpoints')
   await page.waitForTimeout(4000)
 
   const consent = page.getByText('Принять всё', { exact: true }).first()
@@ -34,7 +31,7 @@ test('#586 «Мои точки»: случайный выбор подписан
     await page.waitForTimeout(2000)
   }
 
-  await page.screenshot({ path: 'e2e/__screenshots__/qa-586-random-section.png', fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('qa-586-random-section.png'), fullPage: true })
 
   const randomTitle = page.getByText('Куда поехать?', { exact: false }).first()
   const randomBtn = page.getByText('случайные точки', { exact: false }).first()

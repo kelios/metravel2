@@ -11,14 +11,33 @@ const getAccountAnchor = (page: any) =>
     .or(page.getByRole('button', { name: /Открыть меню аккаунта/i }))
     .first()
 
-const openAccountMenu = async (page: any) => {
+const isMissingRouteShell = async (page: any) => {
+  const text = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '')
+  return /Страница не найдена|Not found/i.test(text)
+}
+
+const waitForAccountAnchor = async (page: any) => {
   let anchor = getAccountAnchor(page)
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    if (await anchor.isVisible().catch(() => false)) break
-    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60_000 })
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const visible = await anchor.waitFor({ state: 'visible', timeout: attempt === 0 ? 1500 : 5000 })
+      .then(() => true)
+      .catch(() => false)
+    if (visible) return anchor
+
+    if (await isMissingRouteShell(page)) {
+      await gotoWithRetry(page, '/', { timeout: 60_000, maxAttempts: 2 })
+    } else {
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60_000 })
+    }
     anchor = getAccountAnchor(page)
   }
-  await expect(anchor).toBeVisible({ timeout: 15_000 })
+  await expect(anchor, `account menu anchor did not render after route stabilization; url=${page.url()}`)
+    .toBeVisible({ timeout: 15_000 })
+  return anchor
+}
+
+const openAccountMenu = async (page: any) => {
+  const anchor = await waitForAccountAnchor(page)
 
   await anchor.hover().catch(() => null)
   await anchor.focus().catch(() => null)

@@ -15,7 +15,7 @@ test.describe('@smoke QA pending scenarios: 404, SEO, cookies, legal', () => {
   // --- Scenario Q: 404/unknown route ---
 
   test('unknown route shows not-found page with navigation', async ({ page }) => {
-    await gotoWithRetry(page, '/this-page-does-not-exist-12345');
+    await gotoWithRetry(page, '/this-page-does-not-exist-12345', { allowMissingRouteShell: true });
 
     const notFoundText = page.getByText('Страница не найдена');
     await expect(notFoundText).toBeVisible({ timeout: 15_000 });

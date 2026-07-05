@@ -23,8 +23,23 @@ const path = require('path')
 const zlib = require('zlib')
 
 const repoRoot = path.join(__dirname, '..')
-const jsDir = path.join(repoRoot, 'dist', 'prod', '_expo', 'static', 'js', 'web')
-const budgetPath = path.join(repoRoot, 'config', 'bundle-budget.json')
+const DEFAULT_TOLERANCE_PCT = 5
+const DEFAULT_BUDGET_DESCRIPTION =
+  'Web bundle size budget (KB). Regression guard: critical path + eager chunks and total JS. Regenerate with `node scripts/guard-bundle-budget.js --update`, then re-curate key chunks. Runs in release:check after build:web:prod.'
+
+function resolveRepoPath(value, fallback) {
+  if (!value) return fallback
+  return path.isAbsolute(value) ? value : path.join(repoRoot, value)
+}
+
+const jsDir = resolveRepoPath(
+  process.env.BUNDLE_BUDGET_JS_DIR,
+  path.join(repoRoot, 'dist', 'prod', '_expo', 'static', 'js', 'web'),
+)
+const budgetPath = resolveRepoPath(
+  process.env.BUNDLE_BUDGET_CONFIG,
+  path.join(repoRoot, 'config', 'bundle-budget.json'),
+)
 
 const args = process.argv.slice(2)
 const FAIL = args.includes('--fail')
@@ -73,10 +88,17 @@ for (const file of files) {
 }
 
 if (UPDATE) {
+  let existingBudget = {}
+  if (fs.existsSync(budgetPath)) {
+    try {
+      existingBudget = JSON.parse(fs.readFileSync(budgetPath, 'utf-8'))
+    } catch {
+      existingBudget = {}
+    }
+  }
   const budget = {
-    description:
-      'Web bundle size budget (KB). Guards travel-route perf refactor (docs/TRAVEL_PERFORMANCE_REFACTOR.md этап 7). Regenerate with `node scripts/guard-bundle-budget.js --update`.',
-    tolerancePct: 10,
+    description: existingBudget.description || DEFAULT_BUDGET_DESCRIPTION,
+    tolerancePct: DEFAULT_TOLERANCE_PCT,
     total: { maxRawKB: toKB(totalRaw), maxGzipKB: toKB(totalGzip) },
     chunks: {},
   }

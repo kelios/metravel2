@@ -1,0 +1,61 @@
+[
+  {
+    "lat": 50.0364047,
+    "lng": 19.9097898,
+    "country": 160,
+    "address": "Kąpielisko Zakrzówek, Wyłom, Краков, Малопольское воеводство, Польша",
+    "categories": [
+      163,
+      101
+    ]
+  },
+  {
+    "lat": 50.0479959,
+    "lng": 19.7875786,
+    "country": 160,
+    "address": "Zalew na Piaskach (Kryspinów), Budzyń, gmina Liszki, Польша",
+    "categories": [
+      101,
+      21
+    ]
+  },
+  {
+    "lat": 50.0529093,
+    "lng": 20.3297024,
+    "country": 160,
+    "address": "Bobrowe Rozlewisko, Zabierzów Bocheński, gmina Niepołomice, Польша",
+    "categories": [
+      21,
+      101
+    ]
+  },
+  {
+    "lat": 50.0868556,
+    "lng": 18.9917139,
+    "country": 160,
+    "address": "Plaża Paprocany, Promenada, Тыхы, Силезское воеводство, Польша",
+    "categories": [
+      84,
+      101
+    ]
+  },
+  {
+    "lat": 49.8469826,
+    "lng": 20.7085075,
+    "country": 160,
+    "address": "Kąpielisko Chorwacja, Jurków, gmina Czchów, Малопольское воеводство, Польша",
+    "categories": [
+      101
+    ]
+  },
+  {
+    "lat": 50.2254785,
+    "lng": 19.3168745,
+    "country": 160,
+    "address": "Park Gródek, Pieczyska, Явожно, Силезское воеводство, Польша",
+    "categories": [
+      163,
+      90
+    ]
+  }
+]

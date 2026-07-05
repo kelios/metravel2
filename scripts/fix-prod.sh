@@ -164,7 +164,7 @@ ssh "$SERVER" "set -euo pipefail
 "
 
 echo "Validating deployed entry chunk..."
-entry_chunk="$(grep -oE 'entry-[a-f0-9]+\.js' "dist/$ENV/index.html" | head -1)"
+entry_chunk="$(grep -oE 'entry-[a-f0-9]+\.js' "dist/$ENV/index.html" | head -1 || true)"
 if [ -z "$entry_chunk" ]; then
   echo "ERROR: cannot detect entry chunk in dist/$ENV/index.html"
   exit 1
@@ -201,7 +201,7 @@ tmp_html="$(mktemp)"
 tmp_index="$(mktemp)"
 tmp_header="$(mktemp)"
 "${HC_CURL[@]}" -sS "$SITE_URL/" > "$tmp_html"
-served_index_chunk="$(grep -oE '_expo/static/js/web/index-[a-f0-9]+\.js' "$tmp_html" | head -1)"
+served_index_chunk="$(grep -oE '_expo/static/js/web/index-[a-f0-9]+\.js' "$tmp_html" | head -1 || true)"
 if [ -z "$served_index_chunk" ]; then
   echo "ERROR: cannot detect served index chunk from $SITE_URL/"
   rm -f "$tmp_html" "$tmp_index" "$tmp_header"
@@ -213,7 +213,7 @@ fi
 # and it may now be inlined into the index chunk instead of code-split). Match any
 # *Header* chunk resiliently. If none is referenced, the header is not a separate chunk
 # on this build, so skip the regression check rather than fail a legitimate deploy.
-served_header_chunk="$(grep -oE '_expo/static/js/web/[A-Za-z]*Header[A-Za-z]*-[a-f0-9]+\.js' "$tmp_index" | head -1)"
+served_header_chunk="$(grep -oE '_expo/static/js/web/[A-Za-z]*Header[A-Za-z]*-[a-f0-9]+\.js' "$tmp_index" | head -1 || true)"
 if [ -z "$served_header_chunk" ]; then
   echo "WARN: no separate *Header* chunk referenced from $served_index_chunk - skipping direct-useFilters regression check (header likely inlined; not a deploy failure)"
   rm -f "$tmp_html" "$tmp_index" "$tmp_header"

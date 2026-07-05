@@ -5,18 +5,6 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { TRAVEL_CARD_IMAGE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
 
-// Lazy-require reanimated only on native to avoid pulling ~200KB into the web bundle.
-// On web the skeleton uses pure CSS animations (slider-shimmer keyframes).
-const Reanimated = Platform.OS !== 'web'
-  ? require('react-native-reanimated')
-  : null;
-const Animated = Reanimated?.default;
-const useSharedValue = Reanimated?.useSharedValue;
-const useAnimatedStyle = Reanimated?.useAnimatedStyle;
-const withRepeat = Reanimated?.withRepeat;
-const withTiming = Reanimated?.withTiming;
-const ReanimatedEasing = Reanimated?.Easing;
-
 interface SkeletonLoaderProps {
   testID?: string;
   width?: number | string;
@@ -67,33 +55,9 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   }
 
   return (
-    <NativeSkeletonPulse testID={testID} baseStyle={baseStyle} />
-  );
-};
-
-// Separate native-only component to keep reanimated hooks out of the web render path.
-const NativeSkeletonPulse: React.FC<{ testID?: string; baseStyle: any[] }> = ({ testID, baseStyle }) => {
-  const opacity = useSharedValue!(0.3);
-
-  React.useEffect(() => {
-    opacity.value = withRepeat!(
-      withTiming!(0.7, { duration: 1200, easing: ReanimatedEasing!.inOut(ReanimatedEasing!.ease) }),
-      -1,
-      true,
-    );
-  }, [opacity]);
-
-  // 'worklet' обязателен: callee — локальная переменная с `!`, babel worklets-plugin
-  // не распознаёт такой вызов useAnimatedStyle по имени и без директивы не воркletизирует колбэк
-  const pulseStyle = useAnimatedStyle!(() => {
-    'worklet';
-    return { opacity: opacity.value };
-  });
-
-  return (
-    <Animated.View
+    <View
       testID={testID}
-      style={[...baseStyle, pulseStyle]}
+      style={[...baseStyle, styles.nativeSkeleton]}
     />
   );
 };
@@ -158,6 +122,9 @@ export const FiltersSkeleton: React.FC = () => {
 const styles = StyleSheet.create({
   skeleton: {
     overflow: 'hidden',
+  },
+  nativeSkeleton: {
+    opacity: 0.45,
   },
   mapSkeletonContainer: {
     padding: 16,

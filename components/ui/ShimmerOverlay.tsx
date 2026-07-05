@@ -1,17 +1,6 @@
-import React, { memo, useEffect } from 'react';
+import React, { memo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
-
-// Lazy-require reanimated only on native to avoid pulling ~200KB into the web bundle.
-const Reanimated = Platform.OS !== 'web'
-  ? require('react-native-reanimated')
-  : null;
-const Animated = Reanimated?.default;
-const useSharedValue = Reanimated?.useSharedValue;
-const useAnimatedStyle = Reanimated?.useAnimatedStyle;
-const withRepeat = Reanimated?.withRepeat;
-const withTiming = Reanimated?.withTiming;
-const Easing = Reanimated?.Easing;
 
 interface ShimmerOverlayProps {
   style?: any;
@@ -22,7 +11,9 @@ interface ShimmerOverlayProps {
  * Modern shimmer/skeleton loading overlay.
  *
  * - **Web**: CSS `@keyframes slider-shimmer` sweep (GPU-accelerated, defined in global.css).
- * - **Native**: Reanimated opacity pulse (0.35 → 0.75, 1.2 s cycle).
+ * - **Native**: static neutral overlay. Keep this off Reanimated so startup
+ *   skeletons do not trigger Fabric synchronous-props warnings before the
+ *   surface is fully mounted.
  *
  * Neutral by design: no icons, text, or bright colors (per RULES.md).
  */
@@ -66,31 +57,9 @@ function ShimmerOverlayInner({ style, testID }: ShimmerOverlayProps) {
     );
   }
 
-  return <NativeShimmerPulse baseStyle={baseStyle} testID={testID} />;
-}
-
-// Separate native-only component to keep reanimated hooks out of the web render path.
-const NativeShimmerPulse: React.FC<{ baseStyle: any[]; testID?: string }> = ({ baseStyle, testID }) => {
-  const opacity = useSharedValue!(0.35);
-
-  useEffect(() => {
-    opacity.value = withRepeat!(
-      withTiming!(0.75, { duration: 1200, easing: Easing!.inOut(Easing!.ease) }),
-      -1,
-      true,
-    );
-  }, [opacity]);
-
-  // 'worklet' обязателен: callee — локальная переменная с `!`, babel worklets-plugin
-  // не распознаёт такой вызов useAnimatedStyle по имени и без директивы не воркletизирует колбэк
-  const pulseStyle = useAnimatedStyle!(() => {
-    'worklet';
-    return { opacity: opacity.value };
-  });
-
   return (
-    <Animated.View
-      style={[...baseStyle, pulseStyle]}
+    <View
+      style={[...baseStyle, shimmerStyles.nativeStatic]}
       testID={testID}
     />
   );
@@ -103,6 +72,9 @@ const shimmerStyles = StyleSheet.create({
   overflow: {
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
+  },
+  nativeStatic: {
+    opacity: 0.55,
   },
 });
 

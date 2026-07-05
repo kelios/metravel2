@@ -19,6 +19,7 @@ const {
   injectTravelHeroPreload,
   injectTravelBootstrapData,
   injectHiddenH1,
+  disableExpoRouterHydration,
   injectQuestIntroSection,
   buildQuestPromoCatalog,
   findTravelQuestPromoMatches,
@@ -655,6 +656,15 @@ describe('travel SSR SEO helpers', () => {
     expect(result).toContain('clip-path:inset(50%)')
     expect(result).toMatch(/<\/head><body><h1[^>]*data-ssg-travel-h1="true"[^>]*>Тропа ведьм<\/h1><div id="root">/)
     expect(result).not.toMatch(/<div id="root"><h1[^>]*data-ssg-travel-h1="true"/)
+  })
+
+  it('disableExpoRouterHydration disables React hydration for generated travel pages', () => {
+    const base = '<html><body><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script><div id="root"></div></body></html>'
+    const result = disableExpoRouterHydration(base)
+
+    expect(result).toContain('globalThis.__EXPO_ROUTER_HYDRATE__=false;')
+    expect(result).not.toContain('globalThis.__EXPO_ROUTER_HYDRATE__=true;')
+    expect(result).toContain('<div id="root"></div>')
   })
 
   it('buildTravelSeoDescription expands too-short content with contextual fallback', () => {

@@ -300,4 +300,62 @@ describe('useTravelHeroState', () => {
       configurable: true,
     })
   })
+
+  // Regression for #774 «iPhone: не листается галерея в деталях путешествия»:
+  // если ни LCP-<img>, ни первый слайд слайдера не дёргают onLoad (кэш iOS WebKit),
+  // цепочка бэкстопов обязана сама снять оверлей — иначе интерактивный слайдер
+  // навсегда остаётся смонтированным под оверлеем с opacity:0 (мёртвый свайп).
+  it('unmounts the LCP overlay via backstops even when no load event ever fires (iPhone dead-swipe chain)', () => {
+    const originalUserAgent = window.navigator.userAgent
+    const originalMaxTouchPoints = window.navigator.maxTouchPoints
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    const onFirstImageLoad = jest.fn()
+    const travel = {
+      id: 49,
+      name: 'iPhone dead swipe travel',
+      gallery: [
+        { id: 1, url: 'https://example.com/dead-swipe-1.jpg', width: 1200, height: 800 },
+        { id: 2, url: 'https://example.com/dead-swipe-2.jpg', width: 1200, height: 800 },
+      ],
+    } as any
+
+    const { result } = renderHook(() =>
+      useTravelHeroState(travel, true, onFirstImageLoad, false),
+    )
+
+    expect(result.current.webHeroLoaded).toBe(false)
+    expect(result.current.overlayUnmounted).toBe(false)
+
+    // 1) hero-load backstop releases webHeroLoaded (slider mounts under overlay)
+    act(() => {
+      jest.advanceTimersByTime(800)
+    })
+    expect(result.current.webHeroLoaded).toBe(true)
+    expect(result.current.sliderUpgradeAllowed).toBe(true)
+    expect(result.current.overlayUnmounted).toBe(false)
+
+    // 2) slider-image fallback unmounts the overlay → gallery becomes visible/interactive
+    act(() => {
+      jest.advanceTimersByTime(800)
+    })
+    expect(result.current.overlayUnmounted).toBe(true)
+
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value: originalUserAgent,
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: originalMaxTouchPoints,
+      configurable: true,
+    })
+  })
 })

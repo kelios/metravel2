@@ -969,6 +969,12 @@ function injectHiddenH1(baseHtml, headingText) {
   return baseHtml.replace(/<body([^>]*)>/i, `<body$1>${ssgHeading}`);
 }
 
+function disableExpoRouterHydration(baseHtml) {
+  const hydrateFlag = /globalThis\.__EXPO_ROUTER_HYDRATE__\s*=\s*true\s*;?/;
+  if (!hydrateFlag.test(baseHtml)) return baseHtml;
+  return baseHtml.replace(hydrateFlag, 'globalThis.__EXPO_ROUTER_HYDRATE__=false;');
+}
+
 function injectJsonLd(baseHtml, payload, marker) {
   if (!payload || typeof payload !== 'object') return baseHtml;
 
@@ -2054,7 +2060,9 @@ async function main() {
       );
       const htmlWithQuestPromo = injectTravelQuestPromoSection(htmlWithSkeleton, questMatches);
       const htmlWithRegisterCta = injectTravelRegisterCtaSection(htmlWithQuestPromo);
-      const finalTravelHtml = injectHiddenH1(htmlWithRegisterCta, name || routeKey);
+      const finalTravelHtml = disableExpoRouterHydration(
+        injectHiddenH1(htmlWithRegisterCta, name || routeKey)
+      );
 
       // Write both explicit-file and directory-index variants.
       // NOTE: we intentionally avoid writing an extensionless file because
@@ -2310,6 +2318,7 @@ if (typeof module !== 'undefined' && module.exports) {
     injectTravelHeroPreload,
     injectTravelBootstrapData,
     injectHiddenH1,
+    disableExpoRouterHydration,
     injectJsonLd,
     buildTravelArticleJsonLd,
     injectBreadcrumbJsonLd,

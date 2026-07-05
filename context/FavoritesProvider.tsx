@@ -11,6 +11,7 @@ import { useFavoritesStore } from '@/stores/favoritesStore';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { useViewHistoryStore } from '@/stores/viewHistoryStore';
 import { useRecommendationsStore } from '@/stores/recommendationsStore';
+import { consumeGuestFavoriteIntent } from '@/utils/guestFavoriteIntent';
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, userId } = useAuth();
@@ -61,6 +62,32 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     },
     [auth]
   );
+
+  // Deferred first value action: a guest tapped "save" before the auth wall
+  // (utils/guestFavoriteIntent). Complete it once after login/registration so
+  // the guest CTA is not a dead end. consumeGuestFavoriteIntent removes the
+  // stored intent before returning it, so the favorite is added (and
+  // `favorite_add` fires) at most once.
+  useEffect(() => {
+    if (!isAuthenticated || !userId) return;
+    let cancelled = false;
+
+    void consumeGuestFavoriteIntent().then((intent) => {
+      if (!intent || cancelled) return;
+      if (useFavoritesStore.getState().isFavorite(intent.id, intent.type)) return;
+      void addFavorite({
+        id: intent.id,
+        type: intent.type,
+        title: intent.title,
+        url: intent.url,
+        imageUrl: intent.imageUrl,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [addFavorite, isAuthenticated, userId]);
 
   const removeFavorite = useCallback(
     (id: number | string, type?: FavoriteItem['type']) =>

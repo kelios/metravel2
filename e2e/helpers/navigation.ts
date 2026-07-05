@@ -135,15 +135,27 @@ export async function preacceptCookies(page: Page) {
 export async function gotoWithRetry(
   page: Page,
   url: string,
-  opts?: { maxAttempts?: number; timeout?: number }
+  opts?: {
+    maxAttempts?: number;
+    attempts?: number;
+    timeout?: number;
+    waitUntil?: 'load' | 'domcontentloaded' | 'networkidle' | 'commit';
+    allowMissingRouteShell?: boolean;
+  }
 ) {
-  const maxAttempts = opts?.maxAttempts ?? 5;
+  const maxAttempts = opts?.maxAttempts ?? opts?.attempts ?? 5;
   const timeout = opts?.timeout ?? 60_000;
+  const waitUntil = opts?.waitUntil ?? 'domcontentloaded';
   let lastError: any = null;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
+      await page.goto(url, { waitUntil, timeout });
+      if (!opts?.allowMissingRouteShell && (await isMissingRouteShell(page))) {
+        lastError = new Error(`Unexpected missing-route shell after navigating to ${url}`);
+        await page.waitForTimeout(Math.min(700 + attempt * 500, 3000));
+        continue;
+      }
       return;
     } catch (e) {
       lastError = e;
@@ -165,6 +177,14 @@ export async function gotoWithRetry(
     }
   }
   if (lastError) throw lastError;
+}
+
+async function isMissingRouteShell(page: Page): Promise<boolean> {
+  const bodyText = await page
+    .locator('body')
+    .innerText({ timeout: 1000 })
+    .catch(() => '');
+  return /Страница не найдена|Not found/i.test(bodyText);
 }
 
 /**

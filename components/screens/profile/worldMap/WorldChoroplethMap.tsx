@@ -157,6 +157,9 @@ function WorldChoroplethMapComponent({
       transform: `translate(${zoom.translateX.value} ${zoom.translateY.value}) scale(${zoom.scale.value})`,
     }
   })
+  const webTransform = zoom
+    ? `translate(${zoom.translateX.value} ${zoom.translateY.value}) scale(${zoom.scale.value})`
+    : ''
 
   const nativeTouchRef = React.useRef({
     startX: 0,
@@ -480,7 +483,9 @@ function WorldChoroplethMapComponent({
       {...((nativePanHandlers ?? {}) as object)}
     >
       <Svg width="100%" height="100%" viewBox={WORLD_MAP_VIEWBOX}>
-        {zoom ? (
+        {zoom && Platform.OS === 'web' ? (
+          <G transform={webTransform}>{paths}</G>
+        ) : zoom ? (
           <AnimatedG animatedProps={animatedProps}>{paths}</AnimatedG>
         ) : (
           <G>{paths}</G>

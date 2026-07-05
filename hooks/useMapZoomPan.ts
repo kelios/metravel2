@@ -4,7 +4,8 @@
 // кламп пана так, чтобы контент всегда покрывал вьюпорт (без «улёта» за край).
 // Reanimated SharedValue — общий источник для SVG-трансформа (<G>) и оверлея флажков.
 
-import { useCallback } from 'react'
+import { useCallback, useReducer } from 'react'
+import { Platform } from 'react-native'
 import { useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated'
 
 export const MAP_ZOOM_MIN = 1
@@ -54,6 +55,11 @@ export function useMapZoomPan({
   const scale = useSharedValue(1)
   const translateX = useSharedValue(0)
   const translateY = useSharedValue(0)
+  const [, bumpWebRender] = useReducer((value: number) => value + 1, 0)
+
+  const syncWebRender = useCallback(() => {
+    if (Platform.OS === 'web') bumpWebRender()
+  }, [])
 
   const applyZoom = useCallback(
     (factor: number, focusX: number, focusY: number, animated: boolean) => {
@@ -71,7 +77,8 @@ export function useMapZoomPan({
         contentHeight,
         next,
       )
-      if (animated) {
+      const shouldAnimate = animated && Platform.OS !== 'web'
+      if (shouldAnimate) {
         scale.value = withTiming(next, { duration: 160 })
         translateX.value = withTiming(nextTx, { duration: 160 })
         translateY.value = withTiming(nextTy, { duration: 160 })
@@ -80,8 +87,9 @@ export function useMapZoomPan({
         translateX.value = nextTx
         translateY.value = nextTy
       }
+      syncWebRender()
     },
-    [scale, translateX, translateY, contentWidth, contentHeight, maxScale],
+    [scale, translateX, translateY, contentWidth, contentHeight, maxScale, syncWebRender],
   )
 
   const zoomAtPoint = useCallback(
@@ -105,13 +113,15 @@ export function useMapZoomPan({
       const s = scale.value
       translateX.value = clampTranslate(translateX.value + dx, contentWidth, s)
       translateY.value = clampTranslate(translateY.value + dy, contentHeight, s)
+      syncWebRender()
     },
-    [scale, translateX, translateY, contentWidth, contentHeight],
+    [scale, translateX, translateY, contentWidth, contentHeight, syncWebRender],
   )
 
   const reset = useCallback(
     (animated = true) => {
-      if (animated) {
+      const shouldAnimate = animated && Platform.OS !== 'web'
+      if (shouldAnimate) {
         scale.value = withTiming(1, { duration: 200 })
         translateX.value = withTiming(0, { duration: 200 })
         translateY.value = withTiming(0, { duration: 200 })
@@ -120,8 +130,9 @@ export function useMapZoomPan({
         translateX.value = 0
         translateY.value = 0
       }
+      syncWebRender()
     },
-    [scale, translateX, translateY],
+    [scale, translateX, translateY, syncWebRender],
   )
 
   return { scale, translateX, translateY, zoomAtPoint, zoomByCentered, panBy, reset }
