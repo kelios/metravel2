@@ -6,20 +6,11 @@ import { TRAVEL_CARD_MAX_WIDTH } from './utils/listTravelConstants';
 // Alias для более короткой записи
 const designTokens = DESIGN_TOKENS;
 
-// Live `backdrop-filter: blur()` over scrolling list cards tanks the mobile GPU (frost rule,
-// CLAUDE.md). On mobile web we use a static frosted background; the live blur stays desktop-only.
-const isMobileWebViewport =
-  Platform.OS === 'web' &&
-  typeof window !== 'undefined' &&
-  (window.innerWidth || 0) > 0 &&
-  (window.innerWidth || 0) < METRICS.breakpoints.tablet;
-
 const liveBlur = (radius: number) =>
-  isMobileWebViewport
-    ? {}
-    : { backdropFilter: `blur(${radius}px)`, WebkitBackdropFilter: `blur(${radius}px)` };
-
-const FROST_LIGHT = 'var(--color-surfaceMuted)';
+  // Keep module-level styles deterministic between static export and the first
+  // client render. Reading window.innerWidth here changes RNW-generated CSS
+  // before hydration and can surface as React #418 at the document root.
+  ({ backdropFilter: `blur(${radius}px)`, WebkitBackdropFilter: `blur(${radius}px)` });
 
 // Создаем отдельные стили для web и native с правильными типами
 const webStyles: any = {
@@ -50,7 +41,6 @@ const webStyles: any = {
   },
   favoriteButton: {
     ...liveBlur(12),
-    ...(isMobileWebViewport ? { backgroundColor: FROST_LIGHT } : {}),
     // ✅ A5.2: Упрощенная тень
     boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
     transition: "transform 0.2s ease-out, box-shadow 0.2s ease-out",
@@ -66,7 +56,6 @@ const webStyles: any = {
   },
   adminActionsContainer: {
     ...liveBlur(12),
-    ...(isMobileWebViewport ? { backgroundColor: FROST_LIGHT } : {}),
     // ✅ A5.2: Упрощенная тень
     boxShadow: '0 4px 8px rgba(15,23,42,0.1)',
     transition: "transform 0.2s ease-out",
@@ -86,7 +75,6 @@ const webStyles: any = {
     // ✅ A5.2: Упрощенная тень
     boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
     ...liveBlur(8),
-    ...(isMobileWebViewport ? { backgroundColor: FROST_LIGHT } : {}),
     transition: "transform 0.2s ease-out",
     ":hover": {
       transform: "scale(1.03)",

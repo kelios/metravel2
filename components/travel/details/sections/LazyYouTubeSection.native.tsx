@@ -70,11 +70,22 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
     <Suspense fallback={<Fallback />}>
       <View style={styles.videoContainer}>
         <WebViewComponent
+          testID="travel-youtube-webview"
           source={{ uri: embedUrl ?? `https://www.youtube.com/embed/${id}` }}
           style={{ flex: 1 }}
+          originWhitelist={['https://*']}
+          javaScriptEnabled
+          domStorageEnabled
+          thirdPartyCookiesEnabled
+          sharedCookiesEnabled
           mediaPlaybackRequiresUserAction={false}
           allowsInlineMediaPlayback
           allowsFullscreenVideo
+          allowsProtectedMedia
+          setSupportMultipleWindows={false}
+          javaScriptCanOpenWindowsAutomatically={false}
+          androidLayerType="hardware"
+          mixedContentMode="compatibility"
         />
       </View>
     </Suspense>

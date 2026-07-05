@@ -1,6 +1,6 @@
 // ✅ МИГРАЦИЯ: Добавлена поддержка useThemedColors для динамических тем
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Pressable, Dimensions, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { Article } from '@/types/types';
 import { Card, Title, Paragraph, Text } from '@/ui/paper';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
@@ -10,15 +10,20 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { stripToDescription } from '@/components/travel/utils/travelHelpers';
+import { useResponsiveWidth } from '@/hooks/useResponsive';
 
 type ArticleListItemProps = {
   article: Article;
   returnHref?: string | null;
 };
 
-const { width } = Dimensions.get('window');
-const ARTICLE_IMAGE_HEIGHT = width < 600 ? 220 : 260;
-const ARTICLE_PLACEHOLDER_HEIGHT = width < 600 ? 112 : 140;
+const getArticleMediaHeights = (width: number) => {
+  const isNarrow = width < 600;
+  return {
+    image: isNarrow ? 220 : 260,
+    placeholder: isNarrow ? 112 : 140,
+  };
+};
 
 const normalizeArticleImageUrl = (value: unknown): string | null => {
   if (typeof value !== 'string') return null;
@@ -48,6 +53,7 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article, returnHref }
   const { id, name, description, article_image_thumb_url, article_type } = article;
   const articleImageThumbSmallUrl = (article as any).article_image_thumb_small_url;
   const colors = useThemedColors();
+  const viewportWidth = useResponsiveWidth();
   const pathname = usePathname();
   const resolvedImageUrl = useMemo(
     () =>
@@ -82,7 +88,8 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article, returnHref }
   const styles = useMemo(() => createStyles(colors), [colors]);
   const webOpenHint = 'Открыть в новой вкладке: Ctrl/Cmd + клик';
   const mediaSrc = imageFailed ? null : resolvedImageUrl;
-  const mediaHeight = mediaSrc ? ARTICLE_IMAGE_HEIGHT : ARTICLE_PLACEHOLDER_HEIGHT;
+  const mediaHeights = useMemo(() => getArticleMediaHeights(viewportWidth), [viewportWidth]);
+  const mediaHeight = mediaSrc ? mediaHeights.image : mediaHeights.placeholder;
 
   useEffect(() => {
     setImageFailed(false);
