@@ -1,25 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { RECOMMENDATIONS_VISIBLE_KEY } from '../utils/listTravelConstants';
 
-let nativeAsyncStorageModulePromise: Promise<typeof import('@react-native-async-storage/async-storage')> | null = null;
-
-const getNativeAsyncStorageModule = async () => {
-  if (!nativeAsyncStorageModulePromise) {
-    nativeAsyncStorageModulePromise = Promise.resolve(import('@react-native-async-storage/async-storage'));
-  }
-  return nativeAsyncStorageModulePromise;
-};
-
 const loadNativeRecommendationsVisibility = async (): Promise<boolean> => {
-  const storageModule = await getNativeAsyncStorageModule();
-  const stored = await storageModule.default.getItem(RECOMMENDATIONS_VISIBLE_KEY);
+  const stored = await AsyncStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
   return stored === 'true';
 };
 
 const saveNativeRecommendationsVisibility = async (visible: boolean) => {
-  const storageModule = await getNativeAsyncStorageModule();
-  await storageModule.default.setItem(RECOMMENDATIONS_VISIBLE_KEY, visible ? 'true' : 'false');
+  await AsyncStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, visible ? 'true' : 'false');
 };
 
 export interface UseRecommendationsVisibilityResult {
