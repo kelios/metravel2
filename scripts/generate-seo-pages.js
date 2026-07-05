@@ -749,6 +749,24 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
       /<meta[^>]*property="og:image"[^>]*\/?>/i,
       `<meta data-rh="true" property="og:image" content="${escapeAttr(image)}"/>`
     );
+    // The prerendered shell carries generic og:image:secure_url (logo) and
+    // og:image:alt ("[param] | Metravel") from the route placeholder — keep
+    // them in sync with the per-page image, otherwise crawlers read the shell values.
+    html = replaceOrInsert(
+      html,
+      /<meta[^>]*property="og:image:secure_url"[^>]*\/?>/i,
+      `<meta data-rh="true" property="og:image:secure_url" content="${escapeAttr(image)}"/>`
+    );
+    html = replaceOrInsert(
+      html,
+      /<meta[^>]*property="og:image:alt"[^>]*\/?>/i,
+      `<meta data-rh="true" property="og:image:alt" content="${escapeAttr(title)}"/>`
+    );
+    html = replaceOrInsert(
+      html,
+      /<meta[^>]*name="twitter:image:alt"[^>]*\/?>/i,
+      `<meta data-rh="true" name="twitter:image:alt" content="${escapeAttr(title)}"/>`
+    );
   }
 
   // --- og:site_name ---

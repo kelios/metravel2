@@ -15,7 +15,7 @@ FORCE_REBUILD="${FORCE_REBUILD:-1}"
 # Health-check curls MUST be bounded: under `set -e` a hung/slow request (no
 # timeout) silently aborts an otherwise-successful deploy. Bound + retry so a
 # transient blip does not fail the release.
-HC_CURL=(curl --max-time 20 --connect-timeout 10 --retry 2 --retry-delay 2)
+HC_CURL=(curl --max-time 20 --connect-timeout 10 --retry 2 --retry-delay 2 --retry-all-errors)
 
 echo "FIX-PROD: safe web redeploy"
 echo "server=$SERVER"

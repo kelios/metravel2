@@ -57,6 +57,9 @@ const FULL_BASE = [
   '<meta data-rh="true" property="og:description" content="old og desc"/>',
   '<meta data-rh="true" property="og:url" content="https://metravel.by/old"/>',
   '<meta data-rh="true" property="og:image" content="https://metravel.by/old.jpg"/>',
+  '<meta data-rh="true" property="og:image:secure_url" content="https://metravel.by/assets/icons/logo_yellow_512x512.png"/>',
+  '<meta data-rh="true" property="og:image:alt" content="[param] | Metravel"/>',
+  '<meta data-rh="true" name="twitter:image:alt" content="[param] | Metravel"/>',
   '<meta data-rh="true" property="og:site_name" content="MeTravel"/>',
   '<meta data-rh="true" name="twitter:card" content="summary"/>',
   '<meta data-rh="true" name="twitter:title" content="Old Title"/>',
@@ -331,6 +334,25 @@ describe('injectMeta (replace mode — tags exist in base HTML)', () => {
     const canonicalCount = (result.match(/rel="canonical"/g) || []).length;
     expect(ogTitleCount).toBe(1);
     expect(canonicalCount).toBe(1);
+  });
+
+  it('syncs og:image:secure_url with the per-page image (not the shell logo)', () => {
+    expect(result).toContain(
+      `property="og:image:secure_url" content="${SAMPLE_META.image}"`
+    );
+    expect(result).not.toMatch(
+      /property="og:image:secure_url" content="[^"]*logo_yellow/
+    );
+  });
+
+  it('replaces placeholder og:image:alt and twitter:image:alt with the page title', () => {
+    expect(result).toContain(
+      `property="og:image:alt" content="${escapeAttr(SAMPLE_META.title)}"`
+    );
+    expect(result).toContain(
+      `name="twitter:image:alt" content="${escapeAttr(SAMPLE_META.title)}"`
+    );
+    expect(result).not.toContain('[param]');
   });
 });
 
