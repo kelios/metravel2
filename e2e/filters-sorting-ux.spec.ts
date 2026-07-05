@@ -104,30 +104,32 @@ async function ensureInteractiveFiltersReady(page: any) {
 
 async function ensureFiltersPanelVisible(page: any) {
   const filtersTitle = page.getByText('Фильтры', { exact: true }).first();
-  if (await filtersTitle.isVisible().catch(() => false)) {
-    return;
-  }
-
   const toggleAllButton = page.getByTestId('toggle-all-groups').first();
   const sortTrigger = getSortTrigger(page);
-  if (
+  const hasPanelSignal = async () =>
+    (await filtersTitle.isVisible().catch(() => false)) ||
     (await toggleAllButton.isVisible().catch(() => false)) ||
-    (await sortTrigger.isVisible().catch(() => false))
-  ) {
-    return;
-  }
+    (await sortTrigger.isVisible().catch(() => false));
 
-  const openFiltersButton = page.getByLabel('Открыть фильтры').first();
-  if (await openFiltersButton.isVisible().catch(() => false)) {
-    await openFiltersButton.click();
+  if (await hasPanelSignal()) {
+    return;
   }
 
   await expect
     .poll(
-      async () =>
-        (await filtersTitle.isVisible().catch(() => false)) ||
-        (await toggleAllButton.isVisible().catch(() => false)) ||
-        (await sortTrigger.isVisible().catch(() => false)),
+      async () => {
+        if (await hasPanelSignal()) {
+          return true;
+        }
+
+        const openFiltersButton = page.getByLabel('Открыть фильтры').first();
+        if (!(await openFiltersButton.isVisible().catch(() => false))) {
+          return false;
+        }
+
+        await openFiltersButton.click({ timeout: 1_000 }).catch(() => {});
+        return hasPanelSignal();
+      },
       { timeout: FILTER_TIMEOUT_MS },
     )
     .toBe(true);
