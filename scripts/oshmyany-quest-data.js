@@ -12,7 +12,7 @@
 module.exports = [
     {
         quest_id: 'oshmyany-crossroads',
-        title: 'Ошмяны: город четырёх флагов',
+        title: 'Квест по Ошмянам: город четырёх флагов',
         city: { name: 'Ошмяны', lat: 54.4247, lng: 25.9367, country: 3 },
         meta: {
             lat: 54.4245,

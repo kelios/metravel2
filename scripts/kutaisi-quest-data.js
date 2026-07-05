@@ -9,7 +9,7 @@
 module.exports = [
     {
         quest_id: 'kutaisi-golden-age',
-        title: 'Кутаиси: столица золотого века',
+        title: 'Квест по Кутаиси: золотой век Грузии',
         city: { name: 'Кутаиси', lat: 42.2679, lng: 42.6946, country: 7 },
         meta: {
             lat: 42.2725,

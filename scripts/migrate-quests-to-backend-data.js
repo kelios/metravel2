@@ -4,7 +4,7 @@
 module.exports = [
     {
         quest_id: 'krakow-dragon',
-        title: 'Тайна Краковского дракона',
+        title: 'Квест по Кракову: Вавельский дракон',
         city: { name: 'Kraków', lat: 50.0614, lng: 19.9366, country: 160 },
         meta: { lat: 50.0617, lng: 19.9371, duration_min: 120, difficulty: 'easy', tags: ['legend', 'citywalk', 'history'], pet_friendly: true },
         storage_key: 'quest_krakow_dragon_v1',
@@ -27,7 +27,7 @@ module.exports = [
     },
     {
         quest_id: 'pakocim-voices',
-        title: 'Голоса Прокоцина',
+        title: 'Парк Прокоцим: семейный квест в Кракове',
         city: { name: 'Kraków – Prokocim', lat: 50.0185, lng: 19.9941, country: 160 },
         meta: { lat: 50.0185, lng: 19.9941, duration_min: 90, difficulty: 'easy', tags: ['park', 'history', 'nature', 'family'], pet_friendly: true },
         storage_key: 'quest_pakocim_v1',
@@ -53,7 +53,7 @@ module.exports = [
     },
     {
         quest_id: 'barkovshchina-spirits',
-        title: 'Хранитель тайн Барковщины',
+        title: 'Квест по Барковщине: озёра и легенды',
         city: { name: 'Тайны Барковщинского леса', lat: 55.101231, lng: 28.603838, country: 3 },
         meta: { lat: 55.101231, lng: 28.603838, duration_min: 60, difficulty: 'easy', tags: ['nature', 'forest', 'lake', 'legend'], pet_friendly: true },
         storage_key: 'quest_barkov_forest_secrets_v1',
@@ -75,7 +75,7 @@ module.exports = [
     },
     {
         quest_id: 'minsk-cmok',
-        title: 'Тайна Свислочского Цмока: Легенда оживает',
+        title: 'Квест по центру Минска: Свислочский цмок',
         city: { name: 'Минск', lat: 53.9023, lng: 27.5619, country: 3 },
         meta: { lat: 53.9045, lng: 27.5615, duration_min: 45, difficulty: 'easy', tags: ['citywalk', 'myth'], pet_friendly: false },
         storage_key: 'quest_minsk_smok_awakened_v3',

@@ -9,7 +9,7 @@
 module.exports = [
     {
         quest_id: 'brest-lantern',
-        title: 'Брест: город, где зажигают фонари',
+        title: 'Квест по Бресту: фонарщик и улица Советская',
         city: { name: 'Брест', lat: 52.0976, lng: 23.7341, country: 3 },
         meta: {
             lat: 52.0955,

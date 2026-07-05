@@ -47,6 +47,7 @@ describe('TravelRegisterCtaSection', () => {
 
     expect(queueAnalyticsEvent).toHaveBeenCalledWith('cta_register_click', {
       source: 'travel_article',
+      auth_state: 'guest',
     })
     expect(mockPush).toHaveBeenCalledWith('/registration')
   })

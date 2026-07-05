@@ -8,7 +8,7 @@
 module.exports = [
     {
         quest_id: 'budapest-two-cities',
-        title: 'Будапешт: город, сшитый из двух',
+        title: 'Квест по Будапешту: Буда и Пешт',
         city: { name: 'Будапешт', lat: 47.4979, lng: 19.0402, country: 50 },
         meta: {
             lat: 47.501,

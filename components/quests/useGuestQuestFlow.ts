@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router'
 
 import { buildLoginHref } from '@/utils/authNavigation'
 import { queueAnalyticsEvent } from '@/utils/analytics'
+import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 import {
   clearGuestQuestProgress,
   GUEST_QUEST_FREE_STEPS,
@@ -81,6 +82,7 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
 
   const goToRegister = useCallback(() => {
     queueAnalyticsEvent('quest_guest_gate_register_click', { quest_id: questId, city: cityId })
+    trackRegisterCtaClicked({ source: 'quest_guest_gate', intent: 'quest', authState: 'guest' })
     const href = `/registration?redirect=${encodeURIComponent(redirectPath)}&intent=quest`
     router.push(href as never)
   }, [cityId, questId, redirectPath, router])

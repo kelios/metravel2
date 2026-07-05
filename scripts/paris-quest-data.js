@@ -9,7 +9,7 @@
 module.exports = [
     {
         quest_id: 'paris-point-zero',
-        title: 'Париж: город с нулевого километра',
+        title: 'Квест по Парижу: от нулевого километра',
         city: { name: 'Париж', lat: 48.8566, lng: 2.3522, country: 209 },
         meta: {
             lat: 48.8595,

@@ -3,6 +3,7 @@ import {
   GROWTH_FUNNEL_EVENTS,
   trackArticleEditorAutosaveSucceeded,
   trackContentCreateCtaClicked,
+  trackRegisterCtaClicked,
   trackRegistrationFailed,
   trackRegistrationSucceeded,
   trackRegistrationViewed,
@@ -61,6 +62,29 @@ describe('growthFunnelAnalytics', () => {
       'travel_publish',
       'cta_register_click',
     ]);
+  });
+
+  it('tracks unified register CTA clicks with the contract goal id', () => {
+    trackRegisterCtaClicked({ source: 'login_form', intent: 'quest', authState: 'guest' });
+
+    expect(mockedQueueAnalyticsEvent).toHaveBeenCalledWith(
+      GROWTH_FUNNEL_EVENTS.registerCtaClick,
+      {
+        source: 'login_form',
+        intent: 'quest',
+        auth_state: 'guest',
+      },
+    );
+    expect(GROWTH_FUNNEL_EVENTS.registerCtaClick).toBe('cta_register_click');
+  });
+
+  it('falls back to unknown source and drops empty register CTA params', () => {
+    trackRegisterCtaClicked();
+
+    expect(mockedQueueAnalyticsEvent).toHaveBeenCalledWith(
+      GROWTH_FUNNEL_EVENTS.registerCtaClick,
+      { source: 'unknown' },
+    );
   });
 
   it('emits contract registration and publish goal ids', () => {

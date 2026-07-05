@@ -10,7 +10,7 @@
 module.exports = [
     {
         quest_id: 'gomel-soviet',
-        title: 'Советская: деловое сити старого Гомеля',
+        title: 'Квест по Гомелю: улица Советская',
         city: { name: 'Гомель', lat: 52.4245, lng: 31.0140, country: 3 },
         meta: {
             lat: 52.4245,

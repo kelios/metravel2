@@ -9,7 +9,7 @@
 module.exports = [
     {
         quest_id: 'batumi-golden-fleece',
-        title: 'Батуми: берег золотого руна',
+        title: 'Квест по Батуми: по следам золотого руна',
         city: { name: 'Батуми', lat: 41.6461, lng: 41.6339, country: 7 },
         meta: {
             lat: 41.6520,

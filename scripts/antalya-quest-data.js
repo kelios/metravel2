@@ -9,7 +9,7 @@
 module.exports = [
     {
         quest_id: 'antalya-kaleici',
-        title: 'Анталья: город у ворот императора',
+        title: 'Квест по Анталье: старый город Калеичи',
         city: { name: 'Анталья', lat: 36.8841, lng: 30.7056, country: 200 },
         meta: {
             lat: 36.885,

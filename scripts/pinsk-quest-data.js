@@ -6,7 +6,7 @@
 module.exports = [
     {
         quest_id: 'pinsk-polesie',
-        title: 'Пинск: столица Полесья',
+        title: 'Квест по Пинску: столица Полесья',
         city: { name: 'Пинск', lat: 52.1129, lng: 26.1023, country: 3 },
         meta: {
             lat: 52.1135,

@@ -247,6 +247,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
   // Бамп при (пере)создании cluster-группы — чтобы sync-эффект перезаполнил новую
   // (пустую) группу. Иначе при пересоздании группы маркеры молча исчезают.
   const [groupVersion, setGroupVersion] = useState(0)
+  const [clusterPluginNonce, setClusterPluginNonce] = useState(0)
 
   // «Latest»-рефы на нестабильные пропсы. Родитель передаёт инлайн onMarkerInstance
   // (и потенциально onMarkerClick/popupProps); без рефов sync-эффект делал бы полный
@@ -316,14 +317,21 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     if (!L || !map) return
     // Ensure leaflet.markercluster has augmented L
     if (typeof L.markerClusterGroup !== 'function') {
-      // Try to import it side-effect style
-      try {
-        require('leaflet.markercluster')
-      } catch {
-        // noop
+      // #765: sync require('leaflet.markercluster') хойстил leaflet-вендор в eager
+      // __common. Штатный путь — markercluster уже применён в loadLeafletRuntime;
+      // это async-фолбэк для нештатного L.
+      let cancelled = false
+      import('@/utils/leafletVendor')
+        .then(() => {
+          if (!cancelled && typeof L.markerClusterGroup === 'function') {
+            setClusterPluginNonce((v) => v + 1)
+          }
+        })
+        .catch(() => {})
+      return () => {
+        cancelled = true
       }
     }
-    if (typeof L.markerClusterGroup !== 'function') return
 
     const group = L.markerClusterGroup({
       chunkedLoading: true,
@@ -374,7 +382,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       currentMarkerMap.clear()
       setOpenPopups((prev) => (prev.size ? new Map() : prev))
     }
-  }, [L, map, clusterIconFactory])
+  }, [L, map, clusterIconFactory, clusterPluginNonce])
 
   // Sync markers with cluster group
   useEffect(() => {

@@ -7,7 +7,7 @@
 module.exports = [
     {
         quest_id: 'tbilisi-warm-city',
-        title: 'Тбилиси: тёплый город',
+        title: 'Квест по Тбилиси: старый город и серные бани',
         city: { name: 'Тбилиси', lat: 41.6934, lng: 44.8015, country: 7 },
         meta: {
             lat: 41.6900,

@@ -5,7 +5,7 @@
 module.exports = [
     {
         quest_id: 'warsaw-syrenka',
-        title: 'Варшава: Сирена, Базилишек и Золотая утка',
+        title: 'Квест по Варшаве: Сирена и Старый город',
         city: { name: 'Варшава', lat: 52.2297, lng: 21.0122, country: 160 },
         meta: {
             lat: 52.2297,

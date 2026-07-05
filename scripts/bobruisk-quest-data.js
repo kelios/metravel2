@@ -7,7 +7,7 @@
 module.exports = [
     {
         quest_id: 'bobruisk-beaver-odessa',
-        title: 'Бобруйск: белорусская Одесса',
+        title: 'Квест по Бобруйску: бобры и белорусская Одесса',
         city: { name: 'Бобруйск', lat: 53.1446, lng: 29.2214, country: 3 },
         meta: {
             lat: 53.1336,

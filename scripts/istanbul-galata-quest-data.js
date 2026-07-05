@@ -10,7 +10,7 @@
 module.exports = [
     {
         quest_id: 'istanbul-galata',
-        title: 'Стамбул: другой берег',
+        title: 'Квест по Стамбулу: Галата и Каракёй',
         city: { name: 'Стамбул', lat: 41.0082, lng: 28.9784, country: 200 },
         meta: {
             lat: 41.0256,

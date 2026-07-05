@@ -179,6 +179,22 @@ config.resolver.resolveRequest = ((orig) => {
         type: 'sourceFile',
       }
     }
+    // #764: reanimated вернулся в eager __common после PERF-014 через прямые импорты
+    // первопартийных home-eager компонентов (UnifiedTravelCard, SyncIndicator,
+    // NetworkStatus, usePanelController) — ~670KB raw / ~250KB gzip на КАЖДОЙ странице.
+    // На web микроанимации press/collapse деградируют до мгновенных статичных стилей
+    // (стаб возвращает конечные значения), native-бандл использует настоящий reanimated.
+    // Opt-out: DISABLE_REANIMATED_STUB=1.
+    if (
+      process.env.DISABLE_REANIMATED_STUB !== '1' &&
+      platform === 'web' &&
+      moduleName === 'react-native-reanimated'
+    ) {
+      return {
+        filePath: path.resolve(__dirname, 'metro-stubs/react-native-reanimated.js'),
+        type: 'sourceFile',
+      }
+    }
     if (platform === 'web' && moduleName === 'quill/dist/quill.snow.css') {
       return orig(context, moduleName, platform)
     }

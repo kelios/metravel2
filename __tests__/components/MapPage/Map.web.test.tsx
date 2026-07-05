@@ -288,6 +288,10 @@ jest.mock('leaflet', () => ({
   default: mockLeaflet,
 }))
 
+// leafletVendor (#765) side-effect-imports leaflet.markercluster, which extends the
+// real Leaflet global and throws against the mocked one — stub it out.
+jest.mock('leaflet.markercluster', () => ({}))
+
 // Mock react-leaflet module
 jest.mock('react-leaflet', () => {
   return mockReactLeaflet

@@ -13,7 +13,7 @@
 module.exports = [
     {
         quest_id: 'vitebsk-avangard',
-        title: 'Витебск: столица авангарда',
+        title: 'Квест по Витебску: столица авангарда',
         city: { name: 'Витебск', lat: 55.1904, lng: 30.2049, country: 3 },
         meta: {
             lat: 55.1921,

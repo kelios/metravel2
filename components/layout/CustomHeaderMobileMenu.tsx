@@ -5,6 +5,7 @@ import type { ThemedColors } from '@/hooks/useTheme'
 import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS, SECONDARY_HEADER_NAV_ITEMS, type HeaderNavItem } from '@/constants/headerNavigation'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import { buildLoginHref } from '@/utils/authNavigation'
+import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import UnreadBadge from './UnreadBadge'
 import NavigationIcon from './NavigationIcon'
@@ -104,7 +105,10 @@ export default function CustomHeaderMobileMenu({
           key: 'registration',
           label: 'Зарегистрироваться',
           icon: 'user-plus',
-          onPress: () => onUserAction('/registration'),
+          onPress: () => {
+            trackRegisterCtaClicked({ source: 'mobile_menu', intent: 'menu', authState: 'guest' })
+            onUserAction('/registration')
+          },
         },
       ]
     : [

@@ -10,7 +10,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { ResponsiveContainer } from '@/components/layout'
 import Button from '@/components/ui/Button'
 import { buildLoginHref } from '@/utils/authNavigation'
-import { trackContentCreateCtaClicked } from '@/utils/growthFunnelAnalytics'
+import { trackContentCreateCtaClicked, trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 
 export type ContributionBannerVariant =
   | 'home'
@@ -114,6 +114,7 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
   }
 
   const handleRegister = () => {
+    trackRegisterCtaClicked({ source, intent: 'add-place', authState })
     trackContentCreateCtaClicked({
       contentType: 'route',
       source,

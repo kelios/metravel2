@@ -88,7 +88,7 @@ const getQuestSeo = (bundle: FrontendQuestBundle | null, questId: string, isLoad
 
   return {
     title: bundle.title,
-    description: `${bundle.title} — офлайн-квест: маршрут, задания и финал.`,
+    description: `${bundle.title} — точки на карте, задания и подсказки. Проходите прямо со смартфона.`,
     headKey: `quest-${bundle.storageKey ?? questId}`,
     ogType: 'article',
   };

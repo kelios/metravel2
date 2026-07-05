@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router'
 
 import { useAuth } from '@/context/AuthContext'
 import { useThemedColors } from '@/hooks/useTheme'
-import { queueAnalyticsEvent } from '@/utils/analytics'
+import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 
 const HEADING = 'Сохраняй маршруты и любимые места'
 const SUBTITLE =
@@ -17,7 +17,7 @@ export const TravelRegisterCtaSection: React.FC = () => {
   const router = useRouter()
 
   const handlePress = useCallback(() => {
-    queueAnalyticsEvent('cta_register_click', { source: 'travel_article' })
+    trackRegisterCtaClicked({ source: 'travel_article', authState: 'guest' })
     router.push('/registration' as never)
   }, [router])
 

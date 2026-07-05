@@ -10,7 +10,7 @@
 module.exports = [
     {
         quest_id: 'minsk-cipher',
-        title: 'Код Минска: семь загадок проспекта',
+        title: 'Квест по проспекту Независимости: загадки Минска',
         city: { name: 'Минск', lat: 53.9023, lng: 27.5619, country: 3 },
         meta: {
             lat: 53.8917,

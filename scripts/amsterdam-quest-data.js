@@ -9,7 +9,7 @@
 module.exports = [
     {
         quest_id: 'amsterdam-on-piles',
-        title: 'Амстердам: город на сваях',
+        title: 'Квест по Амстердаму: город на сваях',
         city: { name: 'Амстердам', lat: 52.3676, lng: 4.9041, country: 139 },
         meta: {
             lat: 52.3715,

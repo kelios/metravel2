@@ -24,6 +24,7 @@ import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { sendAnalyticsEvent } from '@/utils/analytics';
+import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
@@ -383,6 +384,13 @@ export default function Login() {
                                                     }
                                                     style={styles.registerLink}
                                                     disabled={isSubmitting || submitted || googleBusy}
+                                                    onPress={() => {
+                                                        trackRegisterCtaClicked({
+                                                            source: 'login_form',
+                                                            intent,
+                                                            authState: 'guest',
+                                                        });
+                                                    }}
                                                 >
                                                     Зарегистрируйтесь
                                                 </Link>

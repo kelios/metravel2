@@ -7,7 +7,7 @@
 module.exports = [
     {
         quest_id: 'bialystok-zamenhof',
-        title: 'Белосток: город, придумавший общий язык',
+        title: 'Квест по Белостоку: Заменгоф и эсперанто',
         city: { name: 'Белосток', lat: 53.1325, lng: 23.1688, country: 160 },
         meta: {
             lat: 53.1325,

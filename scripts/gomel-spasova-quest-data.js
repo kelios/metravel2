@@ -7,7 +7,7 @@
 module.exports = [
     {
         quest_id: 'gomel-spasova',
-        title: 'Спасова слобода: тайна старой веры над Сожем',
+        title: 'Квест по Гомелю: Спасова слобода',
         city: { name: 'Гомель', lat: 52.4245, lng: 31.0140, country: 3 },
         meta: {
             lat: 52.4245,

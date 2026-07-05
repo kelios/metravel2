@@ -9,7 +9,7 @@
 module.exports = [
     {
         quest_id: 'berlin-wall-line',
-        title: 'Берлин: город, сшитый заново',
+        title: 'Квест по Берлину: вдоль Берлинской стены',
         city: { name: 'Берлин', lat: 52.52, lng: 13.405, country: 65 },
         meta: {
             lat: 52.5165,

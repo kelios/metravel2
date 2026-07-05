@@ -7,7 +7,7 @@
 module.exports = [
     {
         quest_id: 'grodno-gorodnitsa',
-        title: 'Гродно: город чудаков и изобретателей',
+        title: 'Квест по Гродно: Городница Тизенгауза',
         city: { name: 'Гродно', lat: 53.6778, lng: 23.8297, country: 3 },
         meta: {
             lat: 53.6800,

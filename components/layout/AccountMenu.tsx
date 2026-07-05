@@ -23,6 +23,7 @@ import { PRIMARY_HEADER_NAV_ITEMS, SECONDARY_HEADER_NAV_ITEMS } from '@/constant
 import { routes } from '@/utils/routes'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildLoginHref } from '@/utils/authNavigation'
+import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 
@@ -228,12 +229,17 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
     [navigate],
   )
 
+  const handleRegister = useCallback(() => {
+    trackRegisterCtaClicked({ source: 'account_menu', intent: 'menu', authState: 'guest' })
+    navigate('/registration')
+  }, [navigate])
+
   const guestItems = useMemo<MenuLinkItem[]>(
     () => [
       { key: 'login', title: 'Войти', icon: 'log-in', onPress: handleLogin },
-      { key: 'registration', title: 'Зарегистрироваться', icon: 'user-plus', path: '/registration' },
+      { key: 'registration', title: 'Зарегистрироваться', icon: 'user-plus', onPress: handleRegister },
     ],
-    [handleLogin],
+    [handleLogin, handleRegister],
   )
 
   const accountItems = useMemo<MenuLinkItem[]>(

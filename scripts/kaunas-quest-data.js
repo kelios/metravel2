@@ -6,7 +6,7 @@
 module.exports = [
     {
         quest_id: 'kaunas-capital',
-        title: 'Каунас: временная столица',
+        title: 'Квест по Каунасу: временная столица Литвы',
         city: { name: 'Каунас', lat: 54.8985, lng: 23.9036, country: 13 },
         meta: {
             lat: 54.8975,

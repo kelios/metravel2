@@ -2,6 +2,28 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Api Proxy 4620",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        ".claude/prod-server.js",
+        "4620",
+        "dist",
+        "https://metravel.by"
+      ],
+      "port": 4620,
+      "autoPort": false
+    },
+    {
+      "name": "Expo Web ProxyApi 8089",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_API_URL=http://localhost:4620 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8089"
+      ],
+      "port": 8089,
+      "autoPort": false
+    },
+    {
       "name": "Expo Web Heap 8088",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

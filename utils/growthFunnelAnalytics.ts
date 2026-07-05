@@ -1,6 +1,7 @@
 import { queueAnalyticsEvent } from '@/utils/analytics';
 
 export const GROWTH_FUNNEL_EVENTS = {
+  registerCtaClick: 'cta_register_click',
   registrationView: 'registration_view',
   registrationSubmit: 'registration_submit',
   registrationSuccess: 'registration_complete',
@@ -111,6 +112,25 @@ const emitGrowthFunnelEvent = (
 ) => {
   if (typeof queueAnalyticsEvent !== 'function') return;
   queueAnalyticsEvent(eventName, compactParams(params));
+};
+
+type RegisterCtaParams = {
+  source?: unknown;
+  intent?: unknown;
+  authState?: GrowthAuthState;
+};
+
+/**
+ * Единая активационная цель `cta_register_click` (тикет #768): любой клик по
+ * CTA «Зарегистрироваться» в любом месте UI. Точечные события конкретных
+ * поверхностей (quest_guest_gate_register_click и т.п.) остаются как детализация.
+ */
+export const trackRegisterCtaClicked = ({ source, intent, authState }: RegisterCtaParams = {}) => {
+  emitGrowthFunnelEvent(GROWTH_FUNNEL_EVENTS.registerCtaClick, {
+    source: safeString(source) ?? 'unknown',
+    intent: safeString(intent),
+    auth_state: authState,
+  });
 };
 
 const registrationBaseParams = ({ source, intent, redirect, method }: RegistrationParams) => ({

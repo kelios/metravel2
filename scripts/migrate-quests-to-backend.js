@@ -124,7 +124,7 @@ function serializeStep(step) {
 const QUESTS = [
     {
         quest_id: 'krakow-dragon',
-        title: 'Тайна Краковского дракона',
+        title: 'Квест по Кракову: Вавельский дракон',
         city: { name: 'Kraków', lat: 50.0614, lng: 19.9366 },
         meta: {
             lat: 50.0617,
@@ -209,7 +209,7 @@ const QUESTS = [
     },
     {
         quest_id: 'pakocim-voices',
-        title: 'Голоса Прокоцина',
+        title: 'Парк Прокоцим: семейный квест в Кракове',
         city: { name: 'Kraków – Prokocim', lat: 50.0185, lng: 19.9941 },
         meta: {
             lat: 50.0185,
@@ -246,7 +246,7 @@ const QUESTS = [
     },
     {
         quest_id: 'barkovshchina-spirits',
-        title: 'Хранитель тайн Барковщины',
+        title: 'Квест по Барковщине: озёра и легенды',
         city: { name: 'Тайны Барковщинского леса', lat: 55.101231, lng: 28.603838 },
         meta: {
             lat: 55.101231,
@@ -278,7 +278,7 @@ const QUESTS = [
     },
     {
         quest_id: 'minsk-cmok',
-        title: 'Тайна Свислочского Цмока: Легенда оживает',
+        title: 'Квест по центру Минска: Свислочский цмок',
         city: { name: 'Минск', lat: 53.9023, lng: 27.5619 },
         meta: {
             lat: 53.9045,

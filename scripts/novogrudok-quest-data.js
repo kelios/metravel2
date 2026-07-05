@@ -6,7 +6,7 @@
 module.exports = [
     {
         quest_id: 'novogrudok-crown',
-        title: 'Новогрудок: первая корона',
+        title: 'Квест по Новогрудку: первая столица ВКЛ',
         city: { name: 'Новогрудок', lat: 53.5966, lng: 25.8281, country: 3 },
         meta: {
             lat: 53.5999,

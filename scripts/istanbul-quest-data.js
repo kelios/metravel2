@@ -7,7 +7,7 @@
 module.exports = [
     {
         quest_id: 'istanbul-empires',
-        title: 'Стамбул: город трёх империй',
+        title: 'Квест по Стамбулу: город трёх империй',
         city: { name: 'Стамбул', lat: 41.0082, lng: 28.9784, country: 200 },
         meta: {
             lat: 41.0072,
