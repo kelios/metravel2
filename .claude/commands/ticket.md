@@ -13,4 +13,7 @@ description: Прогнать фронтенд-тикет через общий 
 (MCP `metravel-task-board`), реализация/тесты/ревью/релиз — профильными FE-агентами. Если
 борд недоступен — укажи на `docs/TASK_BOARD_MCP.md` и не продолжай вслепую.
 
+**Взял задачу → СРАЗУ `status=in_progress` (+`assignee`), до правок кода.** Никаких
+`todo → done` напрямую даже для одиночной задачи. Порядок: `todo → in_progress → review/testing → done`.
+
 Аргументы: `$ARGUMENTS`
