@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
 import { useDraftRecovery } from '@/hooks/useDraftRecovery';
+import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 
 jest.mock('@react-native-async-storage/async-storage', () => {
   const store = new Map<string, string>();
@@ -202,6 +203,54 @@ describe('useDraftRecovery', () => {
           ],
           gallery: [{ id: '10', url: '/gallery/a.jpg' }],
           travel_image_thumb_url: '/travel-image/cover.jpg',
+        } as any,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.hasPendingDraft).toBe(false);
+    });
+    expect(await AsyncStorage.getItem(draftKey)).toBeNull();
+  });
+
+  it('auto-removes phantom draft where description differs only by smart-image-layout re-pass (travel 672 case)', async () => {
+    // Регресс на фантомный черновик travel/672: описание с картинками прогоняется
+    // через applySmartImageLayout при каждом сейве. Раньше трансформ был НЕ
+    // идемпотентным — каждый прогон добавлял по лишнему пробелу в `<p  class="…">`,
+    // так что перезаписанный после сейва черновик отличался от серверного описания
+    // одним лишь дрейфом пробелов → ложный диалог «есть несохранённые изменения».
+    const serverDescription =
+      '<p>Вступление к маршрутам.</p><p class="img-float-right figure-portrait"><img src="https://metravel.by/address-image/1/c.webp"></p><p>Дальше текст.</p>';
+    // Черновик = описание, повторно прогнанное через layout (как после сейва).
+    const driftedDescription = applySmartImageLayout(
+      applySmartImageLayout(serverDescription),
+    );
+
+    await AsyncStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        data: {
+          id: 672,
+          name: 'Маршруты выходного дня',
+          publish: true,
+          moderation: true,
+          description: driftedDescription,
+        },
+        timestamp: Date.now() - 60_000,
+      })
+    );
+
+    const { result } = renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: {
+          id: '443',
+          name: 'Маршруты выходного дня',
+          publish: true,
+          moderation: true,
+          description: applySmartImageLayout(serverDescription),
         } as any,
       })
     );

@@ -297,8 +297,15 @@ export function removeImageLayoutClasses(html: string): string {
         .filter(Boolean)
         .filter((className: string) => !classesToStrip.includes(className));
 
+      // Normalize surrounding whitespace so repeated passes stay idempotent:
+      // without trimming, the space that separated `<p` from `class="` is kept in
+      // `before` AND re-added before the rebuilt ` class="…"`, so each pass adds one
+      // extra space (`<p class` → `<p  class` → …). That silent drift makes a
+      // re-saved description differ from the stored one and surfaces a phantom draft.
+      const beforeAttr = before.trim() ? ` ${before.trim()}` : '';
+      const afterAttr = after.trim() ? ` ${after.trim()}` : '';
       const classAttr = nextClasses.length ? ` class="${nextClasses.join(' ')}"` : '';
-      return `<p${before}${classAttr}${after}>`;
+      return `<p${beforeAttr}${classAttr}${afterAttr}>`;
     });
 
   result = stripParagraphClasses(result, [

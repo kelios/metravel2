@@ -197,5 +197,26 @@ describe('richTextImageLayout', () => {
       expect(applySmartImageLayout(null as unknown as string)).toBe('');
       expect(applySmartImageLayout(undefined as unknown as string)).toBe('');
     });
+
+    // Load-bearing (travel/672 phantom draft): каждый сейв прогоняет описание через
+    // applySmartImageLayout. Не идемпотентный трансформ дрейфует HTML при каждом
+    // прогоне (лишний пробел в `<p  class="…">`), и перезаписанный после сейва
+    // черновик перестаёт быть смыслово равным серверному описанию — всплывает
+    // ложный диалог восстановления. Трансформ ОБЯЗАН быть идемпотентным.
+    it('is idempotent — repeated passes produce identical output (no whitespace drift)', () => {
+      const cases = [
+        '<p>Intro.</p><p class="img-float-right figure-portrait"><img src="https://metravel.by/address-image/1/c.webp"></p><p>Outro.</p>',
+        '<p class="figure-portrait">plain</p>',
+        '<div class="img-row-2"><p><img src="1.jpg"></p><p><img src="2.jpg"></p></div>',
+        '<p data-block="a" class="img-single-wide figure-landscape">x</p>',
+      ];
+      for (const html of cases) {
+        const once = applySmartImageLayout(html);
+        const twice = applySmartImageLayout(once);
+        expect(twice).toBe(once);
+        // и никакого удвоения пробелов между `<p` и `class`
+        expect(once).not.toMatch(/<p {2,}/);
+      }
+    });
   });
 });
