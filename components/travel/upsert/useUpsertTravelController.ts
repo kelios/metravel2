@@ -88,7 +88,7 @@ export function useUpsertTravelController(): UpsertTravelController {
     travelId,
     isNew,
     currentData: form.formData,
-    enabled: isAuthenticated && !form.isInitialLoading,
+    enabled: isAuthenticated && !form.isInitialLoading && form.hasAccess && !form.loadError,
   });
 
   const { saveDraft, clearDraft, recoverDraft } = draft;

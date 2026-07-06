@@ -20,44 +20,159 @@ function stripUndefinedDeep<T>(value: T): T {
   return value;
 }
 
-const isEmptyPlainObject = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) &&
-  typeof value === 'object' &&
-  !Array.isArray(value) &&
-  Object.getPrototypeOf(value) === Object.prototype;
+// --- Смысловое сравнение черновика с текущими данными -----------------------
+// Черновик и серверные данные проходят разные пайплайны нормализации (GET →
+// transformTravelToFormData vs upsert-ответ → applySavedData), поэтому полный
+// deep-equal всей формы даёт ложные расхождения на серверном шуме: updated_at,
+// slug, эхо-поля, id/картинки маркеров, число-vs-строка year и т.п. Диалог
+// «восстановить черновик?» должен появляться только когда отличаются поля,
+// которые реально редактирует пользователь — сравниваем канонизированную
+// проекцию только этих полей.
 
-function normalizeDraftComparable(value: unknown, key?: string): unknown {
+const DRAFT_TEXT_FIELDS = [
+  'name',
+  'description',
+  'plus',
+  'minus',
+  'recommendation',
+  'youtube_link',
+  'budget',
+  'year',
+  'number_peoples',
+  'number_days',
+  'visitedDate',
+] as const;
+
+// Порядок в мультиселектах не несёт смысла — сортируем.
+const DRAFT_ID_LIST_FIELDS = [
+  'categories',
+  'transports',
+  'complexity',
+  'companions',
+  'over_nights_stay',
+  'month',
+  'countries',
+  'cities',
+] as const;
+
+const isTransientLocalUrl = (value: string): boolean =>
+  value.startsWith('blob:') || value.startsWith('data:');
+
+function comparableText(value: unknown): string | undefined {
   if (value == null) return undefined;
+  if (typeof value === 'boolean') return String(value);
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : undefined;
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.startsWith('__draft_placeholder__')) return undefined;
+  return trimmed;
+}
 
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed || trimmed.startsWith('__draft_placeholder__')) return undefined;
-    return key === 'id' ? trimmed : value;
+function comparableIdList(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const ids = value
+    .map((item) => {
+      if (item == null) return null;
+      if (typeof item === 'object') {
+        const rec = item as Record<string, unknown>;
+        const raw = rec.id ?? rec.pk ?? rec.value ?? rec.country_id;
+        return raw == null ? null : String(raw).trim();
+      }
+      const str = String(item).trim();
+      return str || null;
+    })
+    .filter((id): id is string => Boolean(id))
+    .sort();
+  return ids.length > 0 ? ids : undefined;
+}
+
+const comparableCoord = (value: unknown): number | undefined => {
+  const num = typeof value === 'number' ? value : Number(String(value ?? '').trim());
+  // ~6 знаков — сантиметровая точность; хвосты float/строковых конверсий не считаются правкой.
+  return Number.isFinite(num) ? Math.round(num * 1e6) / 1e6 : undefined;
+};
+
+// Маркер сравниваем по сути (позиция/адрес/категории). id меняется при
+// rehydrate после сейва, image гуляет между blob-превью/fallback-обложкой/CDN —
+// их различие не означает пользовательскую правку.
+function comparableMarkers(value: unknown): unknown[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const markers = value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+    .map((marker) => ({
+      lat: comparableCoord(marker.lat),
+      lng: comparableCoord(marker.lng),
+      address: comparableText(marker.address),
+      categories: comparableIdList(marker.categories),
+    }));
+  return markers.length > 0 ? markers : undefined;
+}
+
+// Галерея: стабильная идентичность — id, иначе URL без origin (GET и upsert
+// могут отдавать разные варианты хоста/миниатюр). blob:/data: превью не
+// переживают перезагрузку — игнорируем.
+function comparableGallery(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const items = value
+    .map((item) => {
+      if (item == null) return null;
+      if (typeof item === 'string') {
+        return isTransientLocalUrl(item) ? null : stripUrlOrigin(item);
+      }
+      if (typeof item === 'object') {
+        const rec = item as Record<string, unknown>;
+        if (rec.id != null) return String(rec.id);
+        const url = typeof rec.url === 'string' ? rec.url : null;
+        return url && !isTransientLocalUrl(url) ? stripUrlOrigin(url) : null;
+      }
+      return null;
+    })
+    .filter((id): id is string => Boolean(id))
+    .sort();
+  return items.length > 0 ? items : undefined;
+}
+
+function stripUrlOrigin(url: string): string {
+  return url.replace(/^https?:\/\/[^/]+/i, '');
+}
+
+function comparableCover(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || isTransientLocalUrl(trimmed)) return undefined;
+  return stripUrlOrigin(trimmed);
+}
+
+export function extractDraftComparable(data: unknown): Record<string, unknown> {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return {};
+  const rec = data as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+
+  for (const field of DRAFT_TEXT_FIELDS) {
+    const normalized = comparableText(rec[field]);
+    if (normalized !== undefined) result[field] = normalized;
+  }
+  for (const field of DRAFT_ID_LIST_FIELDS) {
+    const normalized = comparableIdList(rec[field]);
+    if (normalized !== undefined) result[field] = normalized;
   }
 
-  if (key === 'id' && (typeof value === 'number' || typeof value === 'boolean')) {
-    return String(value);
-  }
+  const markers = comparableMarkers(rec.coordsMeTravel);
+  if (markers !== undefined) result.coordsMeTravel = markers;
 
-  if (Array.isArray(value)) {
-    const normalized = value
-      .map((item) => normalizeDraftComparable(item))
-      .filter((item) => item !== undefined);
-    return normalized.length > 0 ? normalized : undefined;
-  }
+  const gallery = comparableGallery(rec.gallery);
+  if (gallery !== undefined) result.gallery = gallery;
 
-  if (isEmptyPlainObject(value)) {
-    const entries = Object.entries(value)
-      .map(([entryKey, entryValue]) => [entryKey, normalizeDraftComparable(entryValue, entryKey)] as const)
-      .filter(([, entryValue]) => entryValue !== undefined);
-    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
-  }
+  const cover = comparableCover(rec.travel_image_thumb_url);
+  if (cover !== undefined) result.travel_image_thumb_url = cover;
 
-  return value;
+  if (typeof rec.visa === 'boolean' && rec.visa) result.visa = true;
+
+  return result;
 }
 
 function areDraftsEquivalent(left: unknown, right: unknown): boolean {
-  return isEqual(normalizeDraftComparable(left), normalizeDraftComparable(right));
+  return isEqual(extractDraftComparable(left), extractDraftComparable(right));
 }
 
 const DRAFT_STORAGE_KEY = 'metravel_travel_draft';

@@ -305,13 +305,22 @@ const Map: React.FC<TravelProps> = ({
   // Ловим изменение высоты контейнера в RN и дёргаем тот же __metravelScheduleInvalidate,
   // что уже вызывается на init/resize/renderPoints — лишний invalidateSize безвреден.
   const lastLayoutHeightRef = useRef(0);
+  // При переключении вкладки «Список → Карта» карта РЕ-монтируется: onLayout с
+  // финальной высотой прилетает ДО onLoadEnd WebView (isReadyRef ещё false), и
+  // прежний ранний return его терял → Leaflet кэшировал меньший размер, оставляя
+  // серую полосу сверху. Теперь запоминаем «нужно пересчитать» и досылаем
+  // invalidateSize в handleReady, когда WebView готов.
+  const pendingLayoutInvalidateRef = useRef(false);
   const handleContainerLayout = useCallback(
     (event: { nativeEvent: { layout: { height: number } } }) => {
       const height = event?.nativeEvent?.layout?.height ?? 0;
       if (!Number.isFinite(height) || height <= 0) return;
       if (Math.abs(height - lastLayoutHeightRef.current) < 1) return;
       lastLayoutHeightRef.current = height;
-      if (!isReadyRef.current) return;
+      if (!isReadyRef.current) {
+        pendingLayoutInvalidateRef.current = true;
+        return;
+      }
       injectMapCommand('window.__metravelScheduleInvalidate && window.__metravelScheduleInvalidate("rn-layout")');
     },
     [injectMapCommand],
@@ -423,6 +432,15 @@ const Map: React.FC<TravelProps> = ({
     // F-17 — если контейнер уже разложился до готовности WebView, DOM-resize не
     // сработает; форсим пересчёт размера сразу после ready (без ожидания re-render).
     injectMapCommand('window.__metravelScheduleInvalidate && window.__metravelScheduleInvalidate("ready")');
+    // F-17 (re-mount после «Список → Карта»): контейнер получил финальную высоту
+    // ещё до готовности WebView. Досылаем ещё один отложенный пересчёт, чтобы
+    // Leaflet точно перечитал полный размер и не оставил серую полосу сверху.
+    if (pendingLayoutInvalidateRef.current) {
+      pendingLayoutInvalidateRef.current = false;
+      injectMapCommand(
+        'window.__metravelScheduleInvalidate && window.__metravelScheduleInvalidate("rn-layout-pending")',
+      );
+    }
     pushPayloadRef.current();
     pushUserLocationRef.current();
     // Переприменяем включённые оверлеи после (ре)загрузки WebView.

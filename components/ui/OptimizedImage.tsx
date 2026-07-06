@@ -316,8 +316,11 @@ function OptimizedImage({
     } catch {
       isPrivateHost = false;
     }
+    // Cache-bust retry runs on every platform: on native (Android especially)
+    // a transient decode/network failure otherwise sticks the card on the blur
+    // placeholder forever, since there is no other retry path (iOS at least has
+    // the force-jpg branch below). Bounded by MAX_RETRY_ATTEMPTS.
     const canRetry =
-      Platform.OS === 'web' &&
       typeof activeSource !== 'number' &&
       uri.length > 0 &&
       /^https?:\/\//i.test(uri) &&

@@ -140,6 +140,136 @@ describe('useDraftRecovery', () => {
     expect(stored).toBeNull();
   });
 
+  it('auto-removes phantom draft that differs only by server-echo noise (false recovery dialog, #board)', async () => {
+    // Реальный сценарий: после успешного сейва rehydrate маркеров перезаписал
+    // черновик = те же данные, но в форме upsert-ответа (другие id/image у точек,
+    // числовой year, свежий updated_at, абсолютные URL галереи). При следующем
+    // открытии GET-нормализация даёт другую структуру — диалог показываться НЕ должен.
+    await AsyncStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        data: {
+          id: 443,
+          slug: 'old-slug',
+          updated_at: '2026-07-05T10:00:00Z',
+          name: 'Моё путешествие',
+          year: 2024,
+          publish: true,
+          moderation: true,
+          countries: [3, 7],
+          categories: ['2', '1'],
+          coordsMeTravel: [
+            {
+              id: null,
+              lat: '53.900001',
+              lng: 27.5667,
+              address: 'Минск, пл. Независимости',
+              categories: [5],
+              image: 'blob:http://localhost/dead-preview',
+            },
+          ],
+          gallery: [{ id: 10, url: 'https://metravel.by/gallery/a-small.jpg' }],
+          travel_image_thumb_url: 'https://metravel.by/travel-image/cover.jpg',
+        },
+        timestamp: Date.now() - 60_000,
+      })
+    );
+
+    const { result } = renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: {
+          id: '443',
+          slug: 'new-slug',
+          updated_at: '2026-07-06T09:00:00Z',
+          name: 'Моё путешествие',
+          year: '2024',
+          publish: true,
+          moderation: true,
+          countries: ['7', '3'],
+          categories: [1, 2],
+          coordsMeTravel: [
+            {
+              id: 9001,
+              lat: 53.900001,
+              lng: '27.5667',
+              address: 'Минск, пл. Независимости',
+              categories: ['5'],
+              image: '/address-image/9001.jpg',
+            },
+          ],
+          gallery: [{ id: '10', url: '/gallery/a.jpg' }],
+          travel_image_thumb_url: '/travel-image/cover.jpg',
+        } as any,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.hasPendingDraft).toBe(false);
+    });
+    expect(await AsyncStorage.getItem(draftKey)).toBeNull();
+  });
+
+  it('still shows the dialog when the draft has a real user edit (text changed)', async () => {
+    await AsyncStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        data: { id: '443', name: 'Моё путешествие', description: '<p>новый недосохранённый текст</p>' },
+        timestamp: Date.now() - 60_000,
+      })
+    );
+
+    const { result } = renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: {
+          id: '443',
+          name: 'Моё путешествие',
+          description: '<p>старый серверный текст</p>',
+        } as any,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.hasPendingDraft).toBe(true);
+    });
+  });
+
+  it('still shows the dialog when the draft has a moved point (lat changed beyond rounding)', async () => {
+    await AsyncStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        data: {
+          id: '443',
+          name: 'same',
+          coordsMeTravel: [{ lat: 53.91, lng: 27.5667, address: 'A', categories: [1] }],
+        },
+        timestamp: Date.now() - 60_000,
+      })
+    );
+
+    const { result } = renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: {
+          id: '443',
+          name: 'same',
+          coordsMeTravel: [{ lat: 53.9, lng: 27.5667, address: 'A', categories: [1] }],
+        } as any,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.hasPendingDraft).toBe(true);
+    });
+  });
+
   it('does not re-check drafts on subsequent currentData changes (prevents popup on autosave)', async () => {
     await AsyncStorage.setItem(
       draftKey,
