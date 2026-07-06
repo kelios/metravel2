@@ -222,23 +222,12 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     };
   }, [map, mapRef, onMapReady, setMapZoom, syncZoomFromMap]);
 
-  // Close popup on map click or zoom
-  useEffect(() => {
-    if (!map) return;
-    const close = () => {
-      try {
-        map.closePopup();
-      } catch {
-        // noop
-      }
-    };
-    map.on('click', close);
-    map.on('zoomstart', close);
-    return () => {
-      map.off('click', close);
-      map.off('zoomstart', close);
-    };
-  }, [map]);
+  // Popup dismissal on zoomstart is handled once, via the useMapEvents `zoomstart`
+  // handler above. The map `click` popup-close is intentionally NOT re-registered
+  // here: `mapClickHandler` (wired through useMapEvents) owns click semantics
+  // (background-tap dismissal + tap-guard), and Leaflet already closes the popup
+  // on marker/background click. A second manual subscription only doubled the
+  // work on every zoom start.
 
   // Save current map view (route mode only)
   useEffect(() => {

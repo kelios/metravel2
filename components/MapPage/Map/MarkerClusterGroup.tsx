@@ -312,6 +312,15 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     }
   }, [L, isDark])
 
+  // «Latest»-ref на текущую icon-factory. Держим её вне зависимостей create-эффекта,
+  // чтобы смена темы (isDark) не уничтожала и не пересоздавала весь markerClusterGroup
+  // (и не переприлагала все маркеры) — вместо этого тема обновляет только иконки
+  // кластеров через group.refreshClusters() в отдельном эффекте ниже.
+  const clusterIconFactoryRef = useRef(clusterIconFactory)
+  useEffect(() => {
+    clusterIconFactoryRef.current = clusterIconFactory
+  }, [clusterIconFactory])
+
   // Create cluster group once
   useEffect(() => {
     if (!L || !map) return
@@ -333,10 +342,19 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       }
     }
 
+    // Stable wrapper → the factory identity changing on theme switch never forces
+    // a group rebuild; refreshClusters() below re-runs this against the fresh ref.
+    const iconCreateFunction = clusterIconFactoryRef.current
+      ? (cluster: any) => {
+          const factory = clusterIconFactoryRef.current
+          return factory ? factory(cluster) : undefined
+        }
+      : undefined
+
     const group = L.markerClusterGroup({
       chunkedLoading: true,
       maxClusterRadius: 60,
-      iconCreateFunction: clusterIconFactory ?? undefined,
+      iconCreateFunction,
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,
       // Handle cluster click explicitly so viewport math stays stable on web.
@@ -382,7 +400,23 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       currentMarkerMap.clear()
       setOpenPopups((prev) => (prev.size ? new Map() : prev))
     }
-  }, [L, map, clusterIconFactory, clusterPluginNonce])
+    // Theme (isDark) intentionally NOT a dep: icons recolor via the refreshClusters
+    // effect below, not by tearing down/rebuilding the group + re-adding markers.
+  }, [L, map, clusterPluginNonce])
+
+  // Theme switch: recolor existing cluster icons in place. The create-effect uses a
+  // stable iconCreateFunction wrapper reading clusterIconFactoryRef, so once the ref
+  // points at the new-theme factory, refreshClusters() re-runs it for all clusters —
+  // no group teardown, no marker re-add (which would flash markers / close popups).
+  useEffect(() => {
+    const group = clusterGroupRef.current
+    if (!group || typeof group.refreshClusters !== 'function') return
+    try {
+      group.refreshClusters()
+    } catch {
+      // noop
+    }
+  }, [isDark, groupVersion])
 
   // Sync markers with cluster group
   useEffect(() => {

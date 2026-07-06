@@ -165,8 +165,17 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const [showInitialLoader, setShowInitialLoader] = useState(!IS_WEB)
   const [errors, setErrors] = useState<any>({ routing: false })
   const [disableFitBounds] = useState(false)
-  const [mapZoom, setMapZoom] = useState<number>(DEFAULT_ZOOM)
   const [mapInstance, setMapInstance] = useState<any>(null)
+
+  // Current Leaflet zoom kept in a ref (not state): it is only read as a fallback
+  // inside imperative marker/cluster tap handlers when `map.getZoom()` is
+  // unavailable. Storing it in state re-rendered the whole map tree on every
+  // zoomend (freeze on zoom). The ref is updated by MapLogicComponent's
+  // syncZoomFromMap via the `setMapZoom` prop below.
+  const mapZoomRef = useRef<number>(DEFAULT_ZOOM)
+  const setMapZoom = useCallback((zoom: number) => {
+    if (Number.isFinite(zoom)) mapZoomRef.current = zoom
+  }, [])
 
   const markerByCoordRef = useRef<Map<string, any>>(new Map())
   const markerReopenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -362,7 +371,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
       // does not dismiss the card we are about to open.
       lastMarkerTapAtRef.current = Date.now()
 
-      const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : mapZoom
+      const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : mapZoomRef.current
       const maxZoom = typeof map.getMaxZoom === 'function' ? map.getMaxZoom() : DEFAULT_MAX_ZOOM
       const focusPlan = getMarkerFocusPlan({ currentZoom, maxZoom, bottomSheetState })
 
@@ -463,7 +472,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     },
     [
       bottomSheetState,
-      mapZoom,
       onMarkerSelect,
       requestBottomSheetCollapse,
       suppressLeafletPopupOnSelect,
@@ -736,7 +744,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         }
 
         const [lat, lng] = payload.center
-        const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : mapZoom
+        const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : mapZoomRef.current
         const maxZoom = typeof map.getMaxZoom === 'function' ? map.getMaxZoom() : DEFAULT_MAX_ZOOM
         const targetZoom = Math.min(maxZoom, Math.max(currentZoom + 1, MARKER_ZOOM_TARGET))
         if (typeof map.setView === 'function') {
@@ -746,7 +754,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         ignoreOptionalMapRuntimeError()
       }
     },
-    [L, fitBoundsPadding, mapZoom],
+    [L, fitBoundsPadding],
   )
 
   const useCompactPopupLayout = useMemo(() => {

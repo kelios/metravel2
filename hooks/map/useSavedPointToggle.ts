@@ -35,21 +35,67 @@ function readPointsFromUnknown(data: unknown): ImportedPoint[] {
   return [];
 }
 
+// Grid step for the coordinate index. COORD_EPSILON = 1e-5, so a 1e-5 grid buckets
+// points at the same match granularity; a match may straddle a bucket boundary, so
+// lookups also probe the 8 neighbouring cells and re-verify with COORD_EPSILON.
+const COORD_INDEX_STEP = COORD_EPSILON;
+
+const coordBucket = (value: number): number => Math.round(value / COORD_INDEX_STEP);
+const coordBucketKey = (latBucket: number, lngBucket: number): string =>
+  `${latBucket},${lngBucket}`;
+
+export type SavedPointCoordIndex = globalThis.Map<string, ImportedPoint[]>;
+
+export function buildSavedPointCoordIndex(points: ImportedPoint[]): SavedPointCoordIndex {
+  const index: SavedPointCoordIndex = new globalThis.Map();
+  for (const p of points) {
+    const pLat = Number(p?.latitude);
+    const pLng = Number(p?.longitude);
+    if (!Number.isFinite(pLat) || !Number.isFinite(pLng)) continue;
+    const key = coordBucketKey(coordBucket(pLat), coordBucket(pLng));
+    const bucket = index.get(key);
+    if (bucket) bucket.push(p);
+    else index.set(key, [p]);
+  }
+  return index;
+}
+
+function findSavedPointInIndex(
+  index: SavedPointCoordIndex,
+  lat: number,
+  lng: number,
+): ImportedPoint | null {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const latB = coordBucket(lat);
+  const lngB = coordBucket(lng);
+  // Probe the target cell + 8 neighbours so an epsilon-close point that rounded
+  // into an adjacent bucket is still found; verify with the original epsilon.
+  for (let dLat = -1; dLat <= 1; dLat += 1) {
+    for (let dLng = -1; dLng <= 1; dLng += 1) {
+      const bucket = index.get(coordBucketKey(latB + dLat, lngB + dLng));
+      if (!bucket) continue;
+      for (const p of bucket) {
+        const pLat = Number(p?.latitude);
+        const pLng = Number(p?.longitude);
+        if (
+          Math.abs(pLat - lat) <= COORD_EPSILON &&
+          Math.abs(pLng - lng) <= COORD_EPSILON
+        ) {
+          return p;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 export function findSavedPointByCoord(
   points: ImportedPoint[],
   lat: number,
   lng: number,
 ): ImportedPoint | null {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  for (const p of points) {
-    const pLat = Number(p?.latitude);
-    const pLng = Number(p?.longitude);
-    if (!Number.isFinite(pLat) || !Number.isFinite(pLng)) continue;
-    if (Math.abs(pLat - lat) <= COORD_EPSILON && Math.abs(pLng - lng) <= COORD_EPSILON) {
-      return p;
-    }
-  }
-  return null;
+  return findSavedPointInIndex(buildSavedPointCoordIndex(points), lat, lng);
 }
 
 type UseSavedPointToggleArgs = {
@@ -72,10 +118,14 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
 
   const points = useMemo(() => readPointsFromUnknown(pointsQuery.data), [pointsQuery.data]);
 
+  // Build the coord index once per points snapshot (O(n)); each popup then matches
+  // O(1) instead of rescanning up to 1000 points on every render.
+  const coordIndex = useMemo(() => buildSavedPointCoordIndex(points), [points]);
+
   const savedPoint = useMemo(() => {
     if (!coord) return null;
-    return findSavedPointByCoord(points, coord.lat, coord.lng);
-  }, [coord, points]);
+    return findSavedPointInIndex(coordIndex, coord.lat, coord.lng);
+  }, [coord, coordIndex]);
 
   const invalidate = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });

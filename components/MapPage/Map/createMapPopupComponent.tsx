@@ -253,10 +253,6 @@ export const createMapPopupComponent = ({
       const abortController = new AbortController();
       abortDriveRef.current = abortController;
 
-      setIsDrivingLoading(true);
-      setDrivingDistanceMeters(null);
-      setDrivingDurationSeconds(null);
-
       const fetchDrive = async () => {
         try {
           const res = await osrmRoute(
@@ -285,10 +281,32 @@ export const createMapPopupComponent = ({
         }
       };
 
-      void fetchDrive();
+      // Defer the driving-distance work off the popup's first paint frame: the
+      // loading-state churn + network kickoff run at idle so opening the card is
+      // instant. The distance still renders when the response arrives.
+      const startDrive = () => {
+        if (abortController.signal.aborted) return;
+        setIsDrivingLoading(true);
+        setDrivingDistanceMeters(null);
+        setDrivingDurationSeconds(null);
+        void fetchDrive();
+      };
+
+      const w = typeof window !== 'undefined' ? (window as any) : null;
+      let idleHandle: number | null = null;
+      let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+      if (w && typeof w.requestIdleCallback === 'function') {
+        idleHandle = w.requestIdleCallback(startDrive, { timeout: 400 });
+      } else {
+        timeoutHandle = setTimeout(startDrive, 0);
+      }
 
       return () => {
         abortController.abort();
+        if (idleHandle != null && w && typeof w.cancelIdleCallback === 'function') {
+          w.cancelIdleCallback(idleHandle);
+        }
+        if (timeoutHandle != null) clearTimeout(timeoutHandle);
       };
     }, [normalizedCoord, userLat, userLng]);
 

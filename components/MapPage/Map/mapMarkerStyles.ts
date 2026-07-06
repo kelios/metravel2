@@ -83,17 +83,17 @@ export const buildBirdMarkerHtml = () => {
       pointer-events: none;
       user-select: none;
       transform: translateZ(0);
+      will-change: transform;
     ">
       <div style="
         position: absolute;
         left: 50%;
-        bottom: 2px;
-        width: 26px;
-        height: 9px;
-        margin-left: -13px;
+        bottom: 0px;
+        width: 34px;
+        height: 13px;
+        margin-left: -17px;
         border-radius: 999px;
-        background: rgba(40, 30, 18, 0.20);
-        filter: blur(5px);
+        background: radial-gradient(ellipse at 50% 50%, rgba(40,30,18,0.26) 0%, rgba(40,30,18,0.12) 45%, transparent 72%);
         box-sizing: border-box;
       "></div>
       <div style="
@@ -105,7 +105,6 @@ export const buildBirdMarkerHtml = () => {
         margin-left: -22px;
         border-radius: 999px;
         background: radial-gradient(circle at 50% 50%, ${brandSoft} 0%, transparent 70%);
-        filter: blur(0.2px);
         box-sizing: border-box;
       "></div>
       <div style="
@@ -136,7 +135,6 @@ export const buildBirdMarkerHtml = () => {
         margin-left: -14px;
         background: linear-gradient(180deg, rgba(255,255,255,0.58) 0%, rgba(255,255,255,0) 100%);
         border-radius: 999px;
-        filter: blur(0.5px);
         box-sizing: border-box;
       "></div>
       <div style="
@@ -163,7 +161,6 @@ export const buildBirdMarkerHtml = () => {
         height: 26px;
         margin-left: -13px;
         display: block;
-        filter: drop-shadow(0 1px 1px rgba(0,0,0,0.16));
         box-sizing: border-box;
       ">${buildBirdLogoSvg(26)}</div>
     </div>
@@ -188,17 +185,18 @@ export const buildMapPinHtml = (accentColor: string) => {
       box-sizing: border-box;
       pointer-events: none;
       user-select: none;
+      transform: translateZ(0);
+      will-change: transform;
     ">
       <div style="
         position: absolute;
         left: 50%;
-        bottom: 1px;
-        width: 18px;
-        height: 6px;
-        margin-left: -9px;
+        bottom: 0px;
+        width: 24px;
+        height: 9px;
+        margin-left: -12px;
         border-radius: 999px;
-        background: rgba(30, 20, 10, 0.22);
-        filter: blur(3px);
+        background: radial-gradient(ellipse at 50% 50%, rgba(30,20,10,0.28) 0%, rgba(30,20,10,0.13) 45%, transparent 72%);
         box-sizing: border-box;
       "></div>
       <div style="
@@ -226,7 +224,6 @@ export const buildMapPinHtml = (accentColor: string) => {
         margin-left: -9px;
         background: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 100%);
         border-radius: 999px;
-        filter: blur(0.5px);
         box-sizing: border-box;
       "></div>
       <div style="
@@ -461,7 +458,6 @@ export const buildClusterIconHtml = ({
           margin-top: -${metrics.size / 2 - 6}px;
           border-radius: 999px;
           background: linear-gradient(180deg, ${gloss} 0%, rgba(255,255,255,0) 100%);
-          filter: blur(0.6px);
           box-sizing: border-box;
         "></div>
         <div style="
