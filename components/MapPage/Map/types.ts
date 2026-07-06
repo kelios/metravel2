@@ -51,6 +51,14 @@ export interface MapProps {
    * Leaflet popup (the caller renders a bottom card via onMarkerSelect instead).
    */
   suppressLeafletPopupOnSelect?: boolean;
+  /**
+   * When true, the map renders ONLY the points passed via `travel.data` and never
+   * queries the server-side travel/places cluster endpoint (`/api/map/clusters/`).
+   * Used by the quests map (`/quests`), which passes its own quest markers and must
+   * not show travel/places points. Defaults to false so /map, /travels and
+   * /travel/[id] keep their server-clustered travel layer.
+   */
+  pointsOnly?: boolean;
 }
 
 export interface ClusterData {

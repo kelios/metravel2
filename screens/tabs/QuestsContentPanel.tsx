@@ -195,6 +195,7 @@ export default function QuestsContentPanel({
                                     <LazyQuestMap
                                         travel={{ data: mapPoints as any }}
                                         coordinates={mapCenter}
+                                        pointsOnly
                                         mode="radius"
                                         radius={selectedCityId === nearbyId
                                             ? (userLoc || isMapAreaActive ? String(Math.max(nearbyRadiusKm, 5)) : '50')
@@ -228,6 +229,7 @@ export default function QuestsContentPanel({
                                 <Map
                                     travel={{ data: mapPoints as any }}
                                     coordinates={mapCenter}
+                                    pointsOnly
                                     mode="radius"
                                     radius={selectedCityId === nearbyId
                                         ? (userLoc || isMapAreaActive ? String(Math.max(nearbyRadiusKm, 5)) : '50')

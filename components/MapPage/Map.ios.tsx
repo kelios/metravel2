@@ -116,6 +116,11 @@ interface TravelProps {
    */
   onMapMove?: (center: Coordinates) => void;
   mapClusterFilters?: MapClustersFilters;
+  /**
+   * Рендерить ТОЛЬКО переданные `travel.data`, не запрашивая серверный travel/places
+   * кластер-эндпоинт. Для карты квестов (`/quests`), где показываем только квесты.
+   */
+  pointsOnly?: boolean;
   onMapUiApiReady?: (api: {
     zoomIn: () => void;
     zoomOut: () => void;
@@ -194,6 +199,7 @@ const Map: React.FC<TravelProps> = ({
   onMarkerSelect,
   onMapMove,
   mapClusterFilters,
+  pointsOnly = false,
   onMapUiApiReady,
 }) => {
   const router = useRouter();
@@ -250,7 +256,7 @@ const Map: React.FC<TravelProps> = ({
     bbox: viewportSnapshot?.bbox ?? null,
     zoom: viewportSnapshot?.zoom ?? 10,
     filters: mapClusterFilters,
-    enabled: mode === 'radius',
+    enabled: mode === 'radius' && !pointsOnly,
   });
   const serverClusterRenderData = useMemo(
     () => buildServerClusterRenderData(serverClusterQuery.data),

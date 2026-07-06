@@ -144,6 +144,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     onMarkerSelect,
     onMapBackgroundTap,
     suppressLeafletPopupOnSelect = false,
+    pointsOnly = false,
   } = props
 
   const { L, RL: rl, loading: leafletLoading, error: leafletError, ready: leafletReady } =
@@ -314,13 +315,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const viewportSnapshot = useMapViewportSnapshot(
     mapInstance,
     Number.isFinite(safeCoordinates.zoom) ? Number(safeCoordinates.zoom) : DEFAULT_ZOOM,
-    IS_WEB && mode === 'radius' && canRenderMap,
+    IS_WEB && mode === 'radius' && !pointsOnly && canRenderMap,
   )
   const serverClusterQuery = useMapClusters({
     bbox: viewportSnapshot.bbox,
     zoom: viewportSnapshot.zoom,
     filters: mapClusterFilters,
-    enabled: IS_WEB && mode === 'radius' && canRenderMap,
+    enabled: IS_WEB && mode === 'radius' && !pointsOnly && canRenderMap,
   })
   const serverClusterRenderData = useMemo(
     () => buildServerClusterRenderData(serverClusterQuery.data),
