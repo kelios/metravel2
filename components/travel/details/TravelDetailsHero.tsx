@@ -213,6 +213,9 @@ function TravelHeroSectionInner({
                       onFirstImageLoad={handleSliderImageLoad}
                       firstImagePreloaded={webHeroLoaded}
                       onImagePress={handleImagePress}
+                      fullscreenVisible={fullscreenVisible}
+                      fullscreenIndex={fullscreenIndex}
+                      onCloseFullscreen={handleCloseFullscreen}
                     />
                   </Suspense>
                 </View>

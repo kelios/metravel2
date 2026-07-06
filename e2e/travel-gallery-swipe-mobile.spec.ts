@@ -84,4 +84,51 @@ test.describe('Галерея на странице путешествия — �
     const heroTopAfter = (await slider.boundingBox())!.y;
     expect(heroTopAfter, 'вертикальный touch-жест над галереей должен скроллить страницу').toBeLessThan(heroTopBefore - 30);
   });
+
+  test('тап по фото открывает fullscreen-галерею, свайп листает, крестик закрывает', async ({ page, context, browserName }) => {
+    test.skip(browserName !== 'chromium', 'CDP touch injection доступен только в chromium');
+
+    await preacceptCookies(page);
+    await mockFallbackTravelDetails(page);
+    await gotoWithRetry(page, `/travels/${FALLBACK_TRAVEL_SLUG}`);
+
+    const slider = page.locator(tid('slider-scroll')).first();
+    await slider.waitFor({ state: 'visible', timeout: 60_000 });
+    await expect(page.getByText('1/3', { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+    await page.waitForTimeout(1200);
+
+    const box = await slider.boundingBox();
+    expect(box).toBeTruthy();
+    const midX = box!.x + box!.width / 2;
+    const midY = box!.y + box!.height / 2;
+    const cdp = await context.newCDPSession(page);
+    const fullscreen = page.locator(tid('travel-fullscreen-gallery'));
+
+    // Драг — это листание, НЕ тап: fullscreen не должен открыться.
+    await touchSwipe(page, cdp, { x: box!.x + box!.width - 30, y: midY }, { x: box!.x + 30, y: midY });
+    await expect(page.getByText('2/3', { exact: true }).first()).toBeVisible({ timeout: 10_000 });
+    await expect(fullscreen).toHaveCount(0);
+
+    // Тап (touch без движения) открывает fullscreen на текущем слайде.
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: midX, y: midY, id: 1 }],
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect(fullscreen).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('2 / 3', { exact: true })).toBeVisible({ timeout: 10_000 });
+
+    // Свайп внутри fullscreen листает фото (scroll-snap paging).
+    const gbox = await fullscreen.boundingBox();
+    expect(gbox).toBeTruthy();
+    const gMidY = gbox!.y + gbox!.height / 2;
+    await touchSwipe(page, cdp, { x: gbox!.x + gbox!.width - 30, y: gMidY }, { x: gbox!.x + 30, y: gMidY });
+    await expect(page.getByText('3 / 3', { exact: true })).toBeVisible({ timeout: 10_000 });
+
+    // Крестик закрывает, свайп слайдера после закрытия живой.
+    await page.locator(tid('travel-fullscreen-gallery-close')).click();
+    await expect(fullscreen).toHaveCount(0);
+    await touchSwipe(page, cdp, { x: box!.x + 30, y: midY }, { x: box!.x + box!.width - 30, y: midY });
+    await expect(page.getByText('1/3', { exact: true }).first()).toBeVisible({ timeout: 10_000 });
+  });
 });
