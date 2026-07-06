@@ -223,6 +223,79 @@ describe('src/api/client.ts apiClient', () => {
     expect((options as any).headers.Authorization).toBeUndefined();
   });
 
+  // #810: спонтанный логаут — единичный 401 не должен необратимо стирать токены.
+  it('401 с токеном: при живом токене (проба 200) токены НЕ стираются, ответ берётся из fallback', async () => {
+    mockedGetSecureItem
+      .mockResolvedValueOnce('token') // чтение access-токена в request()
+      .mockResolvedValueOnce(null); // refresh-токена нет (бэк его не выдаёт)
+
+    mockedFetchWithTimeout
+      .mockResolvedValueOnce({ // основной запрос → транзиентный 401
+        ok: false,
+        status: 401,
+        text: async () => 'unauthorized',
+      } as any)
+      .mockResolvedValueOnce({ // контрольная проба /user/me/verifications/ → токен жив
+        ok: true,
+        status: 200,
+      } as any)
+      .mockResolvedValueOnce({ // fallback без авторизации
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+      } as any);
+
+    const result = await apiClient.get('/flaky-401');
+
+    expect(result).toEqual({ ok: true });
+    expect(mockedRemoveSecureItems).not.toHaveBeenCalled();
+    const probeUrl = String(mockedFetchWithTimeout.mock.calls[1][0]);
+    expect(probeUrl).toContain('/user/me/verifications/');
+  });
+
+  it('401 с токеном: токены стираются только когда проба подтвердила 401', async () => {
+    mockedGetSecureItem
+      .mockResolvedValueOnce('deadToken')
+      .mockResolvedValueOnce(null);
+
+    mockedFetchWithTimeout
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: async () => 'unauthorized',
+      } as any)
+      .mockResolvedValueOnce({ // проба тоже 401 → токен реально отвергнут сервером
+        ok: false,
+        status: 401,
+      } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+      } as any);
+
+    await apiClient.get('/dead-token');
+
+    expect(mockedRemoveSecureItems).toHaveBeenCalledWith(['userToken', 'refreshToken']);
+  });
+
+  it('401 без токена: если повторное чтение secure-store вернуло токен (глюк чтения), токены НЕ стираются', async () => {
+    mockedGetSecureItem
+      .mockResolvedValueOnce(null) // транзиентный сбой чтения перед запросом
+      .mockResolvedValueOnce('aliveToken'); // перечитка в 401-ветке — токен на месте
+
+    mockedFetchWithTimeout.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      text: async () => 'unauthorized',
+    } as any);
+
+    await expect(apiClient.get('/read-glitch')).rejects.toEqual(
+      expect.objectContaining({ status: 401 }),
+    );
+    expect(mockedRemoveSecureItems).not.toHaveBeenCalled();
+  });
+
   it('skipAuth: при 401 не очищает сохранённый токен', async () => {
     mockedFetchWithTimeout.mockResolvedValueOnce({
       ok: false,

@@ -42,7 +42,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "by.metravel.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "ACCESS_COARSE_LOCATION",
