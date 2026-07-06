@@ -1,0 +1,11 @@
+{
+  "requestedUrl": "https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom",
+  "configSettings": { "throttlingMethod": "devtools", "formFactor": "mobile" },
+  "categories": { "performance": { "score": 0.45 } },
+  "audits": {
+    "first-contentful-paint": { "numericValue": 7800 },
+    "largest-contentful-paint": { "numericValue": 13100 },
+    "cumulative-layout-shift": { "numericValue": 0.164 },
+    "total-blocking-time": { "numericValue": 420 }
+  }
+}

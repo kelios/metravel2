@@ -75,6 +75,8 @@ upload-keystore.jks
 /*-review-*.png
 lighthouse-report*.json
 lighthouse*.json
+# Committed Lighthouse budget config (not a transient report) — keep tracked (#816)
+!config/lighthouse-budget-mobile.json
 lighthouse-reports/
 lighthouse-reports/local-*.json
 lighthouse-reports/local-*.html

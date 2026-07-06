@@ -112,6 +112,32 @@ Sitemap ownership:
 - Frontend release/build scripts must not generate or overwrite production sitemap files.
 - If sitemap contents are wrong, fix the backend generator or backend deploy configuration, then verify with `npm run test:seo:postdeploy`.
 
+## Mobile travel Lighthouse budget guard (#816)
+
+Runtime-metric regression tripwire for the mobile travel-details page, complementing
+the byte-level guards (`guard:bundle-budget`, `guard:eager-web`) that gate `release:check`.
+
+- Guard: `scripts/guard-lighthouse-mobile-budget.js` (npm `guard:lighthouse:mobile` / `:fail`).
+- Budget: `config/lighthouse-budget-mobile.json` (score ≥ 60, LCP ≤ 4000ms, CLS ≤ 0.1, TBT ≤ 600ms, FCP ≤ 3000ms).
+- The guard is **report-consuming and deterministic**: its fixture self-test
+  (`__tests__/scripts/lighthouse-mobile-budget-guard.test.ts`) proves it catches the bad
+  Sorapis baseline and passes a good one, and runs inside `test:run` (i.e. `release:check`).
+
+Required post-deploy gate (environment-dependent, not wired as a release blocker):
+
+```bash
+npm run lighthouse:produrl:travel:mobile -- --url https://metravel.by/travels/<slug>
+npm run guard:lighthouse:mobile:fail   # reads ./lighthouse-report.produrl.mobile.json
+```
+
+- Produce the report with **APPLIED throttling** (`--throttling-method=devtools`). The
+  Lighthouse `simulate`/lantern model inflates CLS attribution to the hero block and
+  reports a phantom ~0.15 hero shift that does not occur on real throttled devices (#814);
+  real applied-throttling CLS on travel-details is ~0.07–0.10 (within the 0.1 budget).
+- Mobile LCP is hydration/bundle-bound; its removable eager weight was already shipped
+  (#764/#765) and the residual is irreducible framework runtime. The hard release gate for
+  that floor is the byte budget, so the LCP line here is a tracked tripwire, not a blocker.
+
 ## Web cache policy (do not revert)
 
 - Service Worker caching for web is disabled by policy.
