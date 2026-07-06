@@ -7,6 +7,7 @@ import {
   Modal,
   ScrollView,
   Platform,
+  PanResponder,
   type StyleProp,
   type ViewStyle,
 } from 'react-native'
@@ -282,12 +283,26 @@ export default function TravelStatusButton({
       alignSelf: 'center',
       marginBottom: 16,
     },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingLeft: 20,
+      paddingRight: 8,
+      marginBottom: 12,
+    },
     sheetTitle: {
+      flex: 1,
       fontSize: 16,
       fontWeight: '700',
       color: colors.text,
-      paddingHorizontal: 20,
-      marginBottom: 12,
+    },
+    closeBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
     },
     option: {
       flexDirection: 'row',
@@ -418,6 +433,21 @@ export default function TravelStatusButton({
     },
   }), [colors, current, dateInput])
 
+  // Swipe-down-to-dismiss on the sheet header/grabber (native only; web uses ✕ / tap-outside).
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_evt, gesture) =>
+          Platform.OS !== 'web' && gesture.dy > 8 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+        onPanResponderRelease: (_evt, gesture) => {
+          if (gesture.dy > 60 || gesture.vy > 0.5) {
+            setModalOpen(false)
+          }
+        },
+      }),
+    []
+  )
+
   // --- modal JSX (shared between compact and full) ---
   const modalJsx = (
     <Modal
@@ -428,10 +458,23 @@ export default function TravelStatusButton({
     >
       <Pressable style={styles.overlay} onPress={() => setModalOpen(false)}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.handle} />
-          <Text style={styles.sheetTitle}>
-            {datePicking ? 'Укажите дату поездки' : 'Добавить в план'}
-          </Text>
+          <View {...panResponder.panHandlers}>
+            <View style={styles.handle} />
+            <View style={styles.headerRow}>
+              <Text style={styles.sheetTitle}>
+                {datePicking ? 'Укажите дату поездки' : 'Добавить в план'}
+              </Text>
+              <Pressable
+                style={[styles.closeBtn, globalFocusStyles.focusable]}
+                onPress={() => setModalOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Закрыть"
+                hitSlop={8}
+              >
+                <Feather name="x" size={22} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+          </View>
 
           {!datePicking ? (
             <ScrollView bounces={false}>

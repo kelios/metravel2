@@ -124,7 +124,7 @@ export default function ArticleDetails() {
           {articleContent.html && (
               <Card style={styles.card}>
                 <Card.Content>
-                  <Title>{article.name}</Title>
+                  {/* Заголовок даёт навигационный header (headerTitle) — в теле не дублируем (F-4). */}
                   {Platform.select({
                     web: (
                         <SafeHtml

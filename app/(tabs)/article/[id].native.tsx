@@ -155,8 +155,10 @@ export default function ArticleDetails() {
   const articlePath = numericId ? `/article/${numericId}` : normalizedSlug ? `/article/${normalizedSlug}` : undefined
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-      <Stack.Screen options={{ headerTitle: article.name, headerBackVisible: false }} />
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
+      {/* Нативный header скрыт: заголовок и «Назад» дают собственный бар (правильная
+          логика возврата, #573/#616) + один in-body <Title>. Иначе тройной заголовок. */}
+      <Stack.Screen options={{ headerShown: false }} />
       <ArticleBackButton colors={colors} onPress={handleBack} styles={styles} />
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         {articleContent.html && (
