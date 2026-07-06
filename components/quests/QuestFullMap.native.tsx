@@ -2,10 +2,11 @@
 // Native-реализация карты квеста: WebView + Leaflet (как Map.ios.tsx).
 // Web-версия (react-leaflet) — в QuestFullMap.tsx; она грузит Leaflet только на web,
 // из-за чего на native карта навсегда висла в «Загрузка карты...» (F-22).
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    InteractionManager,
     Modal,
     StyleSheet,
     Text,
@@ -88,6 +89,7 @@ function QuestFullMap({
     activeStepIndex,
     allowFullscreen = true,
     interactive = true,
+    pointerFrozen = false,
 }: {
     steps: StepPoint[];
     height?: number;
@@ -95,10 +97,14 @@ function QuestFullMap({
     activeStepIndex?: number;
     allowFullscreen?: boolean;
     interactive?: boolean;
+    pointerFrozen?: boolean;
 }) {
     const [isLoading, setIsLoading] = useState(true);
     const [exportMenuVisible, setExportMenuVisible] = useState(false);
     const [fullscreenVisible, setFullscreenVisible] = useState(false);
+    // Пока идёт закрытие fullscreen — снимаем pointerEvents с WebView, чтобы native
+    // touch-responder успел получить UP/CANCEL до размонтирования (RN touch-deadlock).
+    const [fullscreenClosing, setFullscreenClosing] = useState(false);
     const [markerStatus, setMarkerStatus] = useState<MarkerStatus | null>(null);
     const webViewRef = useRef<WebView>(null);
     const { height: viewportHeight } = useWindowDimensions();
@@ -108,9 +114,21 @@ function QuestFullMap({
     const resolvedHeight = Math.max(MIN_INLINE_MAP_HEIGHT, Math.round(height));
     const fullscreenMapHeight = Math.max(360, Math.round(viewportHeight - 72));
 
+    // Двухфазное закрытие fullscreen-карты. Синхронный unmount WebView во время
+    // активного жеста пана оставляет JSResponder залоченным (DOWN без UP/CANCEL) —
+    // приложение перестаёт принимать касания (#809). Сначала гасим pointerEvents
+    // WebView, затем размонтируем Modal после завершения touch-каскада.
+    const closeFullscreen = useCallback(() => {
+        setFullscreenClosing(true);
+        InteractionManager.runAfterInteractions(() => {
+            setFullscreenVisible(false);
+            setFullscreenClosing(false);
+        });
+    }, []);
+
     useAndroidBackHandler(() => {
         if (fullscreenVisible) {
-            setFullscreenVisible(false);
+            closeFullscreen();
             return true;
         }
         return false;
@@ -571,14 +589,14 @@ function QuestFullMap({
                     transparent={false}
                     animationType="slide"
                     statusBarTranslucent
-                    onRequestClose={() => setFullscreenVisible(false)}
+                    onRequestClose={closeFullscreen}
                 >
                     <View style={[styles.fullscreenModal, { paddingTop: insets.top }]}>
                         <View style={styles.fullscreenHeader}>
                             <Text style={styles.fullscreenTitle} numberOfLines={1}>{title}</Text>
                             <TouchableOpacity
                                 style={styles.fullscreenClose}
-                                onPress={() => setFullscreenVisible(false)}
+                                onPress={closeFullscreen}
                                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                                 accessibilityRole="button"
                                 accessibilityLabel="Закрыть полноэкранную карту квеста"
@@ -592,6 +610,7 @@ function QuestFullMap({
                             title={title}
                             activeStepIndex={activeStepIndex}
                             allowFullscreen={false}
+                            pointerFrozen={fullscreenClosing}
                         />
                     </View>
                 </Modal>
@@ -663,7 +682,7 @@ function QuestFullMap({
                 </TouchableOpacity>
             </Modal>
 
-            <View style={styles.mapBox}>
+            <View style={styles.mapBox} pointerEvents={pointerFrozen ? 'none' : 'auto'}>
                 {isLoading && (
                     <View style={styles.loader}>
                         <ActivityIndicator size="large" color={colors.primaryDark} />
