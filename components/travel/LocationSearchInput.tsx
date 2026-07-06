@@ -70,18 +70,34 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
                 const container = containerRef.current;
                 const scroll = scrollViewRef.current;
                 if (!container || !scroll || typeof container.measure !== 'function') return;
-                container.measure((_x, _y, _w, _h, _pageX, pageY) => {
-                    if (!Number.isFinite(pageY)) return;
-                    // Абсолютная позиция инпута в контенте ScrollView =
-                    // текущий скролл + окно-координата инпута. Небольшой отступ
-                    // сверху оставляет подпись над инпутом видимой.
-                    const currentOffset = scrollOffsetRef?.current ?? 0;
-                    const targetY = Math.max(
-                        0,
-                        currentOffset + pageY - DESIGN_TOKENS.spacing.xxl * 4,
-                    );
-                    scroll.scrollTo({ y: targetY, animated: true });
-                });
+                // Узел самого ScrollView для measure() (совместимо со старой и новой
+                // архитектурой). Его window-top — точка отсчёта для позиции инпута.
+                const scrollNode = (
+                    typeof (scroll as { getScrollableNode?: () => { measure?: unknown } }).getScrollableNode ===
+                    'function'
+                        ? (scroll as { getScrollableNode: () => { measure?: unknown } }).getScrollableNode()
+                        : scroll
+                ) as { measure?: (cb: (x: number, y: number, w: number, h: number, px: number, py: number) => void) => void };
+                const applyScroll = (scrollTopWindowY: number) => {
+                    container.measure((_x, _y, _w, _h, _pageX, pageY) => {
+                        if (!Number.isFinite(pageY)) return;
+                        const currentOffset = scrollOffsetRef?.current ?? 0;
+                        // Позиция инпута в контенте = текущий скролл + (окно-Y инпута −
+                        // окно-Y верха ScrollView). Небольшой отступ сверху оставляет
+                        // подпись над инпутом видимой. Так инпут встаёт у верхней
+                        // кромки области, а выпадашка помещается над клавиатурой (F-13).
+                        const inputContentY = currentOffset + (pageY - scrollTopWindowY);
+                        const targetY = Math.max(0, inputContentY - DESIGN_TOKENS.spacing.lg);
+                        scroll.scrollTo({ y: targetY, animated: true });
+                    });
+                };
+                if (typeof scrollNode?.measure === 'function') {
+                    scrollNode.measure((_sx, _sy, _sw, _sh, _spx, scrollPageY) => {
+                        applyScroll(Number.isFinite(scrollPageY) ? scrollPageY : 0);
+                    });
+                } else {
+                    applyScroll(0);
+                }
             });
         });
     }, [scrollViewRef, scrollOffsetRef]);
@@ -112,13 +128,24 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
         }
     }, [debouncedQuery]);
 
-    // Когда появились результаты и инпут в фокусе — на native ещё раз подтягиваем
-    // выпадашку над клавиатурой (список отрисовался ниже инпута → нужно докрутить).
+    // Инпут подтягиваем к верху видимой области ОДИН раз — на фокусе (см. handleFocus).
+    // Повторный scrollInputIntoView на приход каждого результата раньше складывался
+    // с фокус-скроллом и уводил инпут выше вьюпорта. Выпадашка (maxHeight 300) рендерится
+    // под инпутом и помещается над клавиатурой без дополнительного скролла (F-13).
+    // Докручиваем только один раз при ПЕРВОМ появлении результатов, если инпут ещё
+    // не был спозиционирован (напр. результаты пришли до срабатывания фокус-скролла).
+    const didScrollForResultsRef = useRef(false);
     useEffect(() => {
-        if (!isWeb && showResults && isFocusedRef.current) {
+        if (isWeb) return;
+        if (!showResults) {
+            didScrollForResultsRef.current = false;
+            return;
+        }
+        if (isFocusedRef.current && !didScrollForResultsRef.current) {
+            didScrollForResultsRef.current = true;
             scrollInputIntoView();
         }
-    }, [showResults, results.length, scrollInputIntoView]);
+    }, [showResults, scrollInputIntoView]);
 
     const handleResultSelect = useCallback((result: SearchResult) => {
         onLocationSelect(result);
