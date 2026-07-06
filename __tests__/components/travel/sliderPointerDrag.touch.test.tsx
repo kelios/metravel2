@@ -35,6 +35,7 @@ function createHarness() {
   const containerWRef = { current: SLIDE_WIDTH }
   const applyOffset = jest.fn()
   const scrollTo = jest.fn()
+  const onSlideTap = jest.fn()
   const snapOffsetForIndex = jest.fn((idx: number) => -idx * SLIDE_WIDTH)
 
   function Harness() {
@@ -55,11 +56,12 @@ function createHarness() {
       resumeAutoplay: jest.fn(),
       dismissSwipeHint: jest.fn(),
       enablePrefetch: jest.fn(),
+      onSlideTap,
     })
     return null
   }
 
-  return { Harness, viewportNode, wrapperNode, applyOffset, scrollTo, indexRef }
+  return { Harness, viewportNode, wrapperNode, applyOffset, scrollTo, onSlideTap, indexRef }
 }
 
 describe('useSliderPointerDrag — raw touch path vs implicit pointer capture', () => {
@@ -97,6 +99,62 @@ describe('useSliderPointerDrag — raw touch path vs implicit pointer capture', 
       ([offset, withTransition]) => offset === 0 && withTransition === true,
     )
     expect(snapBackCalls).toHaveLength(0)
+
+    await act(async () => {
+      tree!.unmount()
+    })
+  })
+
+  it('fires onSlideTap for a touch without movement past the axis threshold', async () => {
+    const { Harness, viewportNode, scrollTo, onSlideTap, indexRef } = createHarness()
+    indexRef.current = 1
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(<Harness />)
+    })
+
+    await act(async () => {
+      dispatchTouch(viewportNode, 'touchstart', [{ clientX: 200, clientY: 100 }])
+      // jitter below the 4px axis threshold — still a tap, not a drag
+      dispatchTouch(viewportNode, 'touchmove', [{ clientX: 202, clientY: 101 }])
+      dispatchTouch(viewportNode, 'touchend', [])
+    })
+
+    expect(onSlideTap).toHaveBeenCalledTimes(1)
+    expect(onSlideTap).toHaveBeenCalledWith(1)
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    await act(async () => {
+      tree!.unmount()
+    })
+  })
+
+  it('does NOT fire onSlideTap for a horizontal drag or a cancelled touch', async () => {
+    const { Harness, viewportNode, scrollTo, onSlideTap } = createHarness()
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(<Harness />)
+    })
+
+    // Horizontal drag — resolves as swipe, not tap
+    await act(async () => {
+      dispatchTouch(viewportNode, 'touchstart', [{ clientX: 290, clientY: 100 }])
+      for (let i = 1; i <= 6; i++) {
+        dispatchTouch(viewportNode, 'touchmove', [{ clientX: 290 - i * 25, clientY: 100 }])
+      }
+      dispatchTouch(viewportNode, 'touchend', [])
+    })
+    expect(scrollTo).toHaveBeenCalledWith(1, true)
+    expect(onSlideTap).not.toHaveBeenCalled()
+
+    // Cancelled touch (e.g. browser pinch takeover) — not a tap either
+    await act(async () => {
+      dispatchTouch(viewportNode, 'touchstart', [{ clientX: 200, clientY: 100 }])
+      dispatchTouch(viewportNode, 'touchcancel', [])
+    })
+    expect(onSlideTap).not.toHaveBeenCalled()
 
     await act(async () => {
       tree!.unmount()

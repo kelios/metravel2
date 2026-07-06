@@ -391,6 +391,9 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     resumeAutoplay,
     dismissSwipeHint,
     enablePrefetch,
+    // На web слайды под pointerEvents:'none' — тап (touch без движения) ловит
+    // сам drag-хук и пробрасывает как onImagePress текущего слайда.
+    onSlideTap: onImagePress,
   })
 
   const scrollToDom = useCallback(

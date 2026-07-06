@@ -68,6 +68,12 @@ export interface UseSliderPointerDragOptions {
   resumeAutoplay: () => void;
   dismissSwipeHint: () => void;
   enablePrefetch: () => void;
+  /**
+   * Fired when a touch gesture ends without ever resolving an axis or moving
+   * past the axis threshold — i.e. a tap on the slide, as opposed to a drag.
+   * Receives the current slide index.
+   */
+  onSlideTap?: (index: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,6 +98,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
     resumeAutoplay,
     dismissSwipeHint,
     enablePrefetch,
+    onSlideTap,
   } = options;
 
   const dragStateRef = useRef<DragState>(initialDragState());
@@ -363,7 +370,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
       drag.lastTs = now;
     };
 
-    const endTouch = () => {
+    const endTouch = (event?: TouchEvent) => {
       const drag = dragStateRef.current;
       if (drag.pointerId !== TOUCH_POINTER_ID) return;
 
@@ -376,6 +383,10 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
         maxIndex,
       });
       const draggedHorizontally = drag.axis === 'x' && drag.hasMoved;
+      // Tap = finger never crossed the axis threshold (no axis, no movement) and
+      // the gesture ended with touchend, not touchcancel.
+      const wasTap =
+        drag.axis == null && !drag.hasMoved && event?.type === 'touchend';
 
       dragStateRef.current = initialDragState();
       viewportNode.style.userSelect = '';
@@ -383,6 +394,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
         scrollTo(targetIndex, true);
       } else {
         applyOffsetTracked(snapOffsetForIndex(indexRef.current), true, 200);
+        if (wasTap) onSlideTap?.(indexRef.current);
       }
       resumeAutoplay();
     };
@@ -454,6 +466,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
     indexRef,
     isMobile,
     maxIndex,
+    onSlideTap,
     onWrapperKeyDown,
     pauseAutoplay,
     renderedSlideWidth,

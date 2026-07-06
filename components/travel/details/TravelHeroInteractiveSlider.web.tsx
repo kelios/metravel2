@@ -1,8 +1,11 @@
 import { View } from 'react-native';
 
+import FullscreenGallery from '@/components/travel/FullscreenGallery';
 import Slider from '@/components/travel/Slider.web';
 
 type GalleryImage = Record<string, any>;
+
+const noop = () => {};
 
 const ABSOLUTE_FILL_STYLE = {
   position: 'absolute',
@@ -23,6 +26,9 @@ export default function TravelHeroInteractiveSlider({
   onImagePress,
   visible = true,
   skipFirstSlideImage = false,
+  fullscreenVisible = false,
+  fullscreenIndex = 0,
+  onCloseFullscreen,
 }: {
   galleryImages: GalleryImage[];
   isMobile: boolean;
@@ -41,6 +47,7 @@ export default function TravelHeroInteractiveSlider({
   if (!visible) return null;
 
   return (
+    <>
     <View style={ABSOLUTE_FILL_STYLE} collapsable={false}>
       <Slider
         images={galleryImages as any}
@@ -62,5 +69,15 @@ export default function TravelHeroInteractiveSlider({
         skipFirstSlideImage={skipFirstSlideImage}
       />
     </View>
+    {/* Паритет с устройством: fullscreen-просмотр по тапу на фото (mobile web). */}
+    <FullscreenGallery
+      visible={fullscreenVisible}
+      images={galleryImages
+        .filter((img) => !!img.url)
+        .map((img) => ({ url: img.url! }))}
+      initialIndex={fullscreenIndex}
+      onClose={onCloseFullscreen ?? noop}
+    />
+    </>
   );
 }

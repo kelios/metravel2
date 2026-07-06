@@ -43,11 +43,16 @@ export function useTravelDetailsHeroCompositionModel({
     webHeroLoaded
   const sliderPreloadCount = Platform.OS === 'web' ? (isMobile ? 2 : 3) : isMobile ? 1 : 2
 
-  const handleImagePress = useCallback((index: number) => {
-    if (Platform.OS === 'web') return
-    setFullscreenIndex(index)
-    setFullscreenVisible(true)
-  }, [])
+  const handleImagePress = useCallback(
+    (index: number) => {
+      // Паритет с устройством: на mobile web тап по фото открывает fullscreen,
+      // как на Android/iOS. Desktop web остаётся без fullscreen (стрелки/клавиатура).
+      if (Platform.OS === 'web' && !isMobile) return
+      setFullscreenIndex(index)
+      setFullscreenVisible(true)
+    },
+    [isMobile]
+  )
 
   const handleCloseFullscreen = useCallback(() => {
     setFullscreenVisible(false)
