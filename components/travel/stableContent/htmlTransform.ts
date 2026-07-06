@@ -125,6 +125,45 @@ export const buildWeservProxyUrl = (src: string) => {
   }
 }
 
+// Первопартийные metravel-картинки описания сервер режет по «лестнице» ширин 320/480/640/720
+// (те же ступени, что у hero/gallery). Раньше normalizeImgTags отдавал оригинал (params
+// стриплись) — description-картинки грузились по 200-360KiB. Строим srcset по лестнице, чтобы
+// браузер тянул под свой вьюпорт (#815).
+const RESPONSIVE_WIDTHS = [320, 480, 640, 720]
+const RESPONSIVE_SIZES = '(max-width: 768px) 100vw, 720px'
+const RESPONSIVE_QUALITY = 72
+
+const isFirstPartyMetravelHost = (host: string): boolean => {
+  const value = String(host || '').toLowerCase()
+  return value === 'metravel.by' || value === 'cdn.metravel.by' || value === 'api.metravel.by'
+}
+
+const buildMetravelSizedUrl = (base: URL, width: number): string => {
+  const url = new URL(base.toString())
+  url.searchParams.set('w', String(width))
+  url.searchParams.set('q', String(RESPONSIVE_QUALITY))
+  url.searchParams.set('fit', 'contain')
+  return url.toString()
+}
+
+type ResponsiveImage = { src: string; srcSet: string; sizes: string }
+
+const buildMetravelResponsiveImage = (src: string): ResponsiveImage | null => {
+  try {
+    const trimmed = String(src || '').trim()
+    if (!trimmed || trimmed.startsWith('data:')) return null
+    const parsed = new URL(trimmed.replace(/&amp;/g, '&'), 'https://metravel.by')
+    if (!isFirstPartyMetravelHost(parsed.hostname)) return null
+    if (parsed.protocol === 'http:') parsed.protocol = 'https:'
+    // сбрасываем ранее заданные размеры, сохраняя cache-buster `v`
+    for (const param of OPTIMIZATION_PARAMS) parsed.searchParams.delete(param)
+    const srcSet = RESPONSIVE_WIDTHS.map((w) => `${buildMetravelSizedUrl(parsed, w)} ${w}w`).join(', ')
+    return { src: buildMetravelSizedUrl(parsed, 720), srcSet, sizes: RESPONSIVE_SIZES }
+  } catch {
+    return null
+  }
+}
+
 const stripDangerousTags = (html: string) =>
   html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '')
 
@@ -171,7 +210,8 @@ const normalizeImgTags = (html: string): string => {
   let imgIdx = 0
   return html.replace(/<img\b[^>]*?>/gi, (tag) => {
     const src = tag.match(/\bsrc="([^"]+)"/i)?.[1] ?? ''
-    const optimizedSrc = src ? buildWeservProxyUrl(src) || src : src
+    const responsive = src ? buildMetravelResponsiveImage(src) : null
+    const optimizedSrc = responsive?.src ?? (src ? buildWeservProxyUrl(src) || src : src)
     let width = tag.match(/\bwidth="(\d+)"/i)?.[1]
     let height = tag.match(/\bheight="(\d+)"/i)?.[1]
 
@@ -197,6 +237,13 @@ const normalizeImgTags = (html: string): string => {
       .replace(/\bsizes="[^"]*"/i, '')
       .replace(/\bwidth="[^"]*"/i, '')
       .replace(/\bheight="[^"]*"/i, '')
+
+    if (responsive) {
+      out = out.replace(
+        />$/,
+        ` srcset="${escapeHtmlAttr(responsive.srcSet)}" sizes="${escapeHtmlAttr(responsive.sizes)}">`
+      )
+    }
 
     const finalW = width || 800
     const finalH = height || 450
