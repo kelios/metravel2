@@ -83,6 +83,10 @@ function TravelWizardStepRoute({
   const isMountedRef = useRef(true)
   const quickDraftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const addPointSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Текущее вертикальное смещение ScrollView — нужно LocationSearchInput, чтобы
+  // из window-координат инпута вычислить абсолютную позицию в контенте и поднять
+  // его над клавиатурой (F-13).
+  const scrollOffsetRef = useRef(0)
 
   useEffect(() => {
     isMountedRef.current = true
@@ -466,6 +470,10 @@ function TravelWizardStepRoute({
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
+          onScroll={(e) => {
+            scrollOffsetRef.current = e.nativeEvent.contentOffset.y
+          }}
+          scrollEventThrottle={16}
           testID="travel-wizard.step-route.scroll"
         >
           <View style={styles.contentInner}>
@@ -490,6 +498,7 @@ function TravelWizardStepRoute({
                 onLocationSelect={handleLocationSelect}
                 placeholder="Поиск места (например: Эйфелева башня, Париж)"
                 scrollViewRef={scrollRef}
+                scrollOffsetRef={scrollOffsetRef}
               />
 
               <ManualPointPanel

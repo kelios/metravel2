@@ -8,7 +8,6 @@ import {
     ActivityIndicator,
     ScrollView,
     Platform,
-    findNodeHandle,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -28,6 +27,10 @@ interface LocationSearchInputProps {
     // результатов подскролливаем его так, чтобы инпут и выпадашка не прятались за
     // софт-клавиатурой (F-13). На web не используется — клавиатуры нет.
     scrollViewRef?: React.RefObject<ScrollView | null>;
+    // Native-only: текущее вертикальное смещение того же ScrollView (обновляется
+    // родителем через onScroll). Нужно, чтобы из window-координат инпута вычислить
+    // абсолютную позицию в контенте для scrollTo.
+    scrollOffsetRef?: React.RefObject<number>;
 }
 
 /**
@@ -39,6 +42,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
     placeholder = 'Поиск места на карте...',
     autoFocus = false,
     scrollViewRef,
+    scrollOffsetRef,
 }) => {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -53,24 +57,34 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
     // Native-only keyboard avoidance: подскролливаем родительский ScrollView так,
     // чтобы инпут поиска оказался в верхней части видимой области, а выпадашка
     // результатов уместилась над клавиатурой. На web — no-op (нет клавиатуры).
+    // Используем measure() (window-координаты), а НЕ measureLayout(nodeHandle):
+    // на RN 0.84/Fabric measureLayout с findNodeHandle бросает «must be called with
+    // a ref to a native component» и scrollTo не вызывается → инпут остаётся под
+    // клавиатурой. measure() архитектурно-независим и не требует чужого узла (F-13).
     const scrollInputIntoView = useCallback(() => {
         if (isWeb || !scrollViewRef?.current) return;
-        const scrollNode = findNodeHandle(scrollViewRef.current);
-        if (scrollNode == null) return;
-        // requestAnimationFrame: даём клавиатуре начать анимацию, чтобы measureLayout
-        // считался относительно уже усаженного контейнера.
+        // Двойной rAF: дать клавиатуре начать анимацию (adjustResize усаживает окно),
+        // чтобы measure() вернул уже актуальные координаты.
         requestAnimationFrame(() => {
-            containerRef.current?.measureLayout(
-                scrollNode,
-                (_x, y) => {
-                    // Небольшой отступ сверху, чтобы над инпутом оставалась подпись.
-                    const targetY = Math.max(0, y - DESIGN_TOKENS.spacing.lg);
-                    scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
-                },
-                () => {},
-            );
+            requestAnimationFrame(() => {
+                const container = containerRef.current;
+                const scroll = scrollViewRef.current;
+                if (!container || !scroll || typeof container.measure !== 'function') return;
+                container.measure((_x, _y, _w, _h, _pageX, pageY) => {
+                    if (!Number.isFinite(pageY)) return;
+                    // Абсолютная позиция инпута в контенте ScrollView =
+                    // текущий скролл + окно-координата инпута. Небольшой отступ
+                    // сверху оставляет подпись над инпутом видимой.
+                    const currentOffset = scrollOffsetRef?.current ?? 0;
+                    const targetY = Math.max(
+                        0,
+                        currentOffset + pageY - DESIGN_TOKENS.spacing.xxl * 4,
+                    );
+                    scroll.scrollTo({ y: targetY, animated: true });
+                });
+            });
         });
-    }, [scrollViewRef]);
+    }, [scrollViewRef, scrollOffsetRef]);
 
     const handleFocus = useCallback(() => {
         isFocusedRef.current = true;
