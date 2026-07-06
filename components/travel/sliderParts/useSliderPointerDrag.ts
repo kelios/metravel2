@@ -272,15 +272,21 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
       resumeAutoplay();
     };
 
+    // ---- iOS Safari touch path (passive:false touchmove, early preventDefault) ----
+    const TOUCH_POINTER_ID = -100;
+
     const handleLostPointerCapture = () => {
-      if (dragStateRef.current.pointerId == null) return;
+      const activePointerId = dragStateRef.current.pointerId;
+      if (activePointerId == null) return;
+      // Touch drags are driven by raw touch events. Browsers implicitly capture
+      // touch pointers, so EVERY finger release fires lostpointercapture ahead of
+      // touchend — resetting here would cancel the gesture before endTouch runs
+      // (the recurring "мёртвый свайп": track follows the finger, then snaps back).
+      if (activePointerId === TOUCH_POINTER_ID) return;
       resetDrag();
       applyOffsetTracked(snapOffsetForIndex(indexRef.current), true, 200);
       resumeAutoplay();
     };
-
-    // ---- iOS Safari touch path (passive:false touchmove, early preventDefault) ----
-    const TOUCH_POINTER_ID = -100;
 
     const beginTouch = (event: TouchEvent) => {
       if (imagesLen < 2) return;
