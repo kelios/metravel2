@@ -84,6 +84,10 @@ export interface WorldChoroplethMapProps {
   children?: React.ReactNode
   /** Зум/пан-контроллер (T2). Без него карта статична (scale=1). */
   zoom?: MapZoomPanControls
+  /** Заполнять высоту родителя вместо 2:1-аспекта (fullscreen на портрете). */
+  fillParent?: boolean
+  /** Пиксельный размер контейнера на layout — для fit-to-fill зума родителем. */
+  onContainerLayout?: (width: number, height: number) => void
   /** Native: lets the parent list stop stealing touches while map gestures run. */
   onGestureActiveChange?: (active: boolean) => void
   style?: StyleProp<ViewStyle>
@@ -95,6 +99,8 @@ function WorldChoroplethMapComponent({
   onCountryPress,
   children,
   zoom,
+  fillParent,
+  onContainerLayout,
   onGestureActiveChange,
   style,
 }: WorldChoroplethMapProps) {
@@ -104,10 +110,16 @@ function WorldChoroplethMapComponent({
 
   // px-размер контейнера → перевод экранных дельт жестов/колеса в координаты viewBox.
   const widthRef = React.useRef(WORLD_MAP_WIDTH)
-  const onLayout = useCallback((e: LayoutChangeEvent) => {
-    const w = e.nativeEvent.layout.width
-    if (w > 0) widthRef.current = w
-  }, [])
+  const heightRef = React.useRef(WORLD_MAP_HEIGHT)
+  const onLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const { width: w, height: h } = e.nativeEvent.layout
+      if (w > 0) widthRef.current = w
+      if (h > 0) heightRef.current = h
+      if (w > 0 && h > 0) onContainerLayout?.(w, h)
+    },
+    [onContainerLayout]
+  )
 
   // react-native-svg типизирует onPress пересечением (event => object) & (event => void).
   // Наш void-обработчик валиден в рантайме, но не проходит по второй ветви типа — кастуем.
@@ -470,7 +482,9 @@ function WorldChoroplethMapComponent({
     <View
       ref={containerRef}
       style={[
-        { width: '100%', aspectRatio: WORLD_MAP_WIDTH / WORLD_MAP_HEIGHT },
+        fillParent
+          ? { width: '100%', flex: 1 }
+          : { width: '100%', aspectRatio: WORLD_MAP_WIDTH / WORLD_MAP_HEIGHT },
         Platform.OS === 'web' && zoom ? ({ cursor: 'grab' } as object) : null,
         style,
       ]}

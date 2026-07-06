@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useIsFocused } from 'expo-router';
@@ -31,7 +31,13 @@ import { useWebHydrationGate } from '@/hooks/useWebHydrationGate';
 const InstantSEO = React.lazy(() => import('@/components/seo/LazyInstantSEO'));
 
 function MessagesHydrationFallback() {
-    return <View style={styles.mobileContainer} />;
+    // Видимый лоадер вместо пустого экрана: при переходе с профиля тап должен сразу
+    // читаться как «загружается», а не как «ничего не произошло».
+    return (
+        <View style={[styles.mobileContainer, styles.hydrationFallback]}>
+            <ActivityIndicator />
+        </View>
+    );
 }
 
 export default function MessagesScreen() {
@@ -575,6 +581,10 @@ function MessagesScreenContent() {
 const styles = StyleSheet.create({
     mobileContainer: {
         flex: 1,
+    },
+    hydrationFallback: {
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     desktopContainer: {
         flex: 1,

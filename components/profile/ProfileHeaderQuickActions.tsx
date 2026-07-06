@@ -179,6 +179,10 @@ export function ProfileHeaderQuickActions({
           <Pressable
             key={item.key}
             onPress={() => onPress(item.key)}
+            // Компактные icon-only чипы (~40px) в ряд с узкими зазорами: без hitSlop
+            // тап по краю/в зазор попадает в контейнер, а не в кнопку — отклика нет,
+            // навигация «залипает». Расширяем тач-зону, вертикаль больше (ряд низкий).
+            hitSlop={{ top: 10, bottom: 10, left: 4, right: 4 }}
             accessibilityRole="menuitem"
             accessibilityLabel={
               showBadge ? `${item.label}, ${unreadMessagesCount} непрочитанных` : item.label
@@ -189,6 +193,9 @@ export function ProfileHeaderQuickActions({
               isCta && { backgroundColor: colors.brand, borderColor: colors.brand },
               globalFocusStyles.focusable,
               pressed && styles.actionPressed,
+              // Мгновенный однозначный отклик на тап независимо от тона/CTA: на
+              // frost-подложке смены фона мало заметно, opacity читается всегда.
+              pressed && { opacity: 0.6 },
             ]}
           >
             <View

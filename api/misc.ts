@@ -5,6 +5,7 @@ import { sanitizeInput } from '@/utils/security';
 import { stripBase64Images } from '@/utils/htmlUtils';
 import { validateAIMessage, validateImageFile } from '@/utils/aiValidation';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { getCsrfHeader } from '@/utils/csrf';
 import { getSecureItem } from '@/utils/secureStorage';
 import { apiClient } from '@/api/client';
 import { ApiError } from '@/api/client';
@@ -520,11 +521,11 @@ export const sendFeedback = async (
   try {
     const res = await fetchWithTimeout(SEND_FEEDBACK, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        name: sanitizedName, 
-        email: sanitizedEmail, 
-        message: sanitizedMessage 
+      headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
+      body: JSON.stringify({
+        name: sanitizedName,
+        email: sanitizedEmail,
+        message: sanitizedMessage
       }),
     }, DEFAULT_TIMEOUT);
 
@@ -583,7 +584,7 @@ export const subscribeEmail = async (
       SUBSCRIBE_EMAIL,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
         body: JSON.stringify({
           email: sanitizedEmail,
           source,
@@ -633,7 +634,7 @@ export const sendAIMessage = async (inputText: string) => {
   try {
     const response = await fetchWithTimeout(SEND_AI_QUESTION, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
       body: JSON.stringify({ message: inputText.trim() }),
     }, LONG_TIMEOUT);
     

@@ -22,7 +22,7 @@ import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { CountryTravelsPanel, type CountryTravelCard } from './CountryTravelsPanel'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { useMapZoomPan } from '@/hooks/useMapZoomPan'
+import { MAP_ZOOM_MAX, useMapZoomPan } from '@/hooks/useMapZoomPan'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useTheme, useThemedColors } from '@/hooks/useTheme'
 import { useVisitedCountries } from '@/hooks/useVisitedCountries'
@@ -89,11 +89,33 @@ export function ProfileWorldMapTab({
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
   const [isMapFullscreen, setIsMapFullscreen] = useState(false)
   const handleCountryPress = useCallback((code: string) => setSelectedCode(code), [])
-  const openMapFullscreen = useCallback(() => setIsMapFullscreen(true), [])
+
+  // Fit-to-fill: на портретном экране карта 2:1 иначе лежит узкой полосой. При
+  // открытии fullscreen подбираем начальный масштаб так, чтобы карта заполняла
+  // высоту вьюпорта (страны крупные и тапабельные), а мир листался по горизонтали.
+  const fullscreenFitApplied = useRef(false)
+  const applyFullscreenFit = useCallback(
+    (width: number, height: number) => {
+      if (fullscreenFitApplied.current || width <= 0 || height <= 0) return
+      fullscreenFitApplied.current = true
+      const containFitHeight = width * (WORLD_MAP_HEIGHT / WORLD_MAP_WIDTH)
+      const fitScale = Math.min(MAP_ZOOM_MAX, Math.max(1, height / containFitHeight))
+      reset(false)
+      if (fitScale > 1.02) zoom.zoomByCentered(fitScale)
+    },
+    [reset, zoom]
+  )
+
+  const openMapFullscreen = useCallback(() => {
+    fullscreenFitApplied.current = false
+    setIsMapFullscreen(true)
+  }, [])
   const closeMapFullscreen = useCallback(() => {
     setIsMapFullscreen(false)
+    fullscreenFitApplied.current = false
+    reset(false)
     onMapGestureActiveChange?.(false)
-  }, [onMapGestureActiveChange])
+  }, [onMapGestureActiveChange, reset])
 
   // Клик по стране должен давать явный отклик: проскроллить инфо-панель в вид.
   useEffect(() => {
@@ -240,29 +262,34 @@ export function ProfileWorldMapTab({
         },
         fullscreenBody: {
           flex: 1,
-          paddingHorizontal: DESIGN_TOKENS.spacing.md,
-          paddingVertical: DESIGN_TOKENS.spacing.md,
-          gap: DESIGN_TOKENS.spacing.md,
+          padding: isMobile ? 0 : DESIGN_TOKENS.spacing.md,
+          gap: isMobile ? 0 : DESIGN_TOKENS.spacing.md,
         },
         fullscreenMapFrame: {
           flex: 1,
-          minHeight: 280,
-          justifyContent: 'flex-start',
         },
         fullscreenMapWrap: {
+          flex: 1,
           width: '100%',
-          maxWidth: 1180,
+          maxWidth: isMobile ? undefined : 1180,
           alignSelf: 'center',
-          borderRadius: DESIGN_TOKENS.radii.md,
           overflow: 'hidden',
           backgroundColor: colors.surface,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: colors.border,
+          ...(isMobile
+            ? {}
+            : {
+                borderRadius: DESIGN_TOKENS.radii.md,
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: colors.border,
+              }),
         },
         fullscreenInfo: {
           maxWidth: 1180,
-          alignSelf: 'center',
-          width: '100%',
+          alignSelf: isMobile ? 'stretch' : 'center',
+          width: isMobile ? undefined : '100%',
+          marginHorizontal: isMobile ? DESIGN_TOKENS.spacing.md : 0,
+          marginTop: isMobile ? DESIGN_TOKENS.spacing.sm : 0,
+          marginBottom: isMobile ? DESIGN_TOKENS.spacing.md : 0,
         },
         zoomControls: {
           position: 'absolute',
@@ -361,6 +388,8 @@ export function ProfileWorldMapTab({
           selectedCode={selectedCode}
           onCountryPress={handleCountryPress}
           zoom={zoom}
+          fillParent={mode === 'fullscreen'}
+          onContainerLayout={mode === 'fullscreen' ? applyFullscreenFit : undefined}
           onGestureActiveChange={onMapGestureActiveChange}
         >
           <WorldMapFlags visitedCodes={visitedCodes} size={mode === 'fullscreen' ? 16 : isMobile ? 13 : 16} zoom={zoom} />
@@ -413,6 +442,7 @@ export function ProfileWorldMapTab({
       selectedCode,
       handleCountryPress,
       zoom,
+      applyFullscreenFit,
       onMapGestureActiveChange,
       isMobile,
       styles,

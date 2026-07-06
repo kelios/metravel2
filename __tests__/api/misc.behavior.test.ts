@@ -32,6 +32,10 @@ jest.mock('@/utils/fetchWithTimeout', () => ({
   fetchWithTimeout: (...args: any[]) => mockFetchWithTimeout(...args),
 }))
 
+jest.mock('@/utils/csrf', () => ({
+  getCsrfHeader: () => ({ 'X-CSRFToken': 'test-csrf-token' }),
+}))
+
 jest.mock('@/utils/safeJsonParse', () => ({
   safeJsonParse: (...args: any[]) => mockSafeJsonParse(...args),
 }))
@@ -394,6 +398,34 @@ describe('api/misc', () => {
     mockFetchWithTimeout.mockResolvedValue({ ok: false })
     mockSafeJsonParse.mockResolvedValue({ message: 'oops' })
     await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow('oops')
+  })
+
+  it('sendFeedback sends the X-CSRFToken header on the POST (Django SessionAuth CSRF guard)', async () => {
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockFetchWithTimeout.mockResolvedValue({ ok: true })
+    mockSafeJsonParse.mockResolvedValue({ message: 'ok' })
+
+    await sendFeedback('A', 'b@c.com', 'Hi')
+
+    const [, init] = mockFetchWithTimeout.mock.calls[0]
+    expect(init.headers['X-CSRFToken']).toBe('test-csrf-token')
+  })
+
+  it('subscribeEmail and sendAIMessage also send the X-CSRFToken header', async () => {
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockValidateAIMessage.mockReturnValue({ valid: true })
+    mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 201 })
+    mockSafeJsonParse.mockResolvedValue({ ok: true, status: 'created' })
+
+    await subscribeEmail('a@b.com', 'home')
+    expect(mockFetchWithTimeout.mock.calls[0][1].headers['X-CSRFToken']).toBe('test-csrf-token')
+
+    mockFetchWithTimeout.mockClear()
+    mockFetchWithTimeout.mockResolvedValue({ ok: true })
+    mockSafeJsonParse.mockResolvedValue({ answer: 'hi' })
+
+    await sendAIMessage('hello')
+    expect(mockFetchWithTimeout.mock.calls[0][1].headers['X-CSRFToken']).toBe('test-csrf-token')
   })
 
   it('sendFeedback prefers field-specific validation errors when present', async () => {
