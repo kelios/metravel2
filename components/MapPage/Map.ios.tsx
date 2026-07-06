@@ -297,6 +297,26 @@ const Map: React.FC<TravelProps> = ({
     }
   }, []);
 
+  // F-17 — RN-layout → Leaflet invalidateSize bridge. Когда контейнер карты
+  // получает финальную высоту ПОСЛЕ инициализации WebView (карта смонтирована на
+  // ещё-не-разложенной вкладке «Карта» в «Мои точки»: таб-бар сверху добирает
+  // высоту после первого layout, и WebView успел закэшировать меньший размер →
+  // серая полоса ~150px сверху), DOM-событие `resize` внутри WebView не стреляет.
+  // Ловим изменение высоты контейнера в RN и дёргаем тот же __metravelScheduleInvalidate,
+  // что уже вызывается на init/resize/renderPoints — лишний invalidateSize безвреден.
+  const lastLayoutHeightRef = useRef(0);
+  const handleContainerLayout = useCallback(
+    (event: { nativeEvent: { layout: { height: number } } }) => {
+      const height = event?.nativeEvent?.layout?.height ?? 0;
+      if (!Number.isFinite(height) || height <= 0) return;
+      if (Math.abs(height - lastLayoutHeightRef.current) < 1) return;
+      lastLayoutHeightRef.current = height;
+      if (!isReadyRef.current) return;
+      injectMapCommand('window.__metravelScheduleInvalidate && window.__metravelScheduleInvalidate("rn-layout")');
+    },
+    [injectMapCommand],
+  );
+
   // Состояние включённых оверлеев. Храним в ref, чтобы переприменить их после
   // reload WebView (handleReady) — иначе при пересборке HTML слой пропал бы.
   const enabledOverlaysRef = useRef<Record<string, boolean>>({});
@@ -400,6 +420,9 @@ const Map: React.FC<TravelProps> = ({
 
   const handleReady = useCallback(() => {
     isReadyRef.current = true;
+    // F-17 — если контейнер уже разложился до готовности WebView, DOM-resize не
+    // сработает; форсим пересчёт размера сразу после ready (без ожидания re-render).
+    injectMapCommand('window.__metravelScheduleInvalidate && window.__metravelScheduleInvalidate("ready")');
     pushPayloadRef.current();
     pushUserLocationRef.current();
     // Переприменяем включённые оверлеи после (ре)загрузки WebView.
@@ -1125,7 +1148,10 @@ const Map: React.FC<TravelProps> = ({
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.surface }]}>
+    <View
+      style={[styles.container, { backgroundColor: themeColors.surface }]}
+      onLayout={handleContainerLayout}
+    >
       {isLoading && (
         <View style={[styles.loader, { backgroundColor: loaderOverlay }]}>
           <ActivityIndicator size="large" color={themeColors.primary} />

@@ -13,6 +13,9 @@ import { isInternalArticleHref } from './domEvents';
 
 type FeatherIcon = React.ComponentProps<typeof Feather>['name'];
 
+// Расстояние, за которым авто-ETA перестаёт иметь смысл (тысячи км → тысячи минут).
+const DRIVE_ETA_MAX_KM = 1000;
+
 type PrimaryActionOverride = {
   label: string;
   icon: FeatherIcon;
@@ -89,9 +92,14 @@ export function usePopupActions({
   const drivingText = useMemo(() => {
     if (!hasDrivingInfo) return null;
     const km = drivingDistanceMeters! / 1000;
-    const mins = Math.max(1, Math.round(drivingDurationSeconds! / 60));
     const kmLabel = km >= 10 ? `${Math.round(km)} км` : `${km.toFixed(1)} км`;
-    return `${kmLabel} · ${mins} мин`;
+    // За пределами разумной автопоездки ETA теряет смысл (тысячи км → тысячи минут) —
+    // показываем только расстояние.
+    if (km > DRIVE_ETA_MAX_KM) return kmLabel;
+    const totalMins = Math.max(1, Math.round(drivingDurationSeconds! / 60));
+    const durationLabel =
+      totalMins < 60 ? `${totalMins} мин` : `${Math.floor(totalMins / 60)} ч ${totalMins % 60} мин`;
+    return `${kmLabel} · ${durationLabel}`;
   }, [drivingDistanceMeters, drivingDurationSeconds, hasDrivingInfo]);
 
   const primaryAction = useMemo(() => {

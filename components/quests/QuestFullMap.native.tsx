@@ -87,12 +87,14 @@ function QuestFullMap({
     title = 'Карта квеста',
     activeStepIndex,
     allowFullscreen = true,
+    interactive = true,
 }: {
     steps: StepPoint[];
     height?: number;
     title?: string;
     activeStepIndex?: number;
     allowFullscreen?: boolean;
+    interactive?: boolean;
 }) {
     const [isLoading, setIsLoading] = useState(true);
     const [exportMenuVisible, setExportMenuVisible] = useState(false);
@@ -197,12 +199,24 @@ function QuestFullMap({
         })};
         var initialCenter = routePoints[0] || [53.9, 27.56];
 
+        var mapInteractive = ${interactive ? 'true' : 'false'};
         var map = L.map('map', {
           zoomControl: false,
           preferCanvas: true,
           fadeAnimation: false,
           zoomAnimation: false,
-          markerZoomAnimation: false
+          markerZoomAnimation: false,
+          // Превью-карта внутри вертикального ScrollView (interactive=false): гасим
+          // все жесты панорамирования/зума в Leaflet, чтобы Android WebView не
+          // перехватывал вертикальный свайп страницы. Зум остаётся через нативные
+          // кнопки +/− (injectJavaScript), полное взаимодействие — в fullscreen.
+          dragging: mapInteractive,
+          touchZoom: mapInteractive,
+          scrollWheelZoom: mapInteractive,
+          doubleClickZoom: mapInteractive,
+          boxZoom: mapInteractive,
+          keyboard: mapInteractive,
+          tap: mapInteractive
         }).setView(initialCenter, routePoints.length > 1 ? 14 : 15);
 
         var tileLayer = L.tileLayer('${getOsmNativeTileUrl()}', {
@@ -423,7 +437,7 @@ function QuestFullMap({
       </script>
     </body>
     </html>
-  `, [points, groupedPoints, colors]);
+  `, [points, groupedPoints, colors, interactive]);
 
     useEffect(() => {
         if (isLoading) return;
@@ -666,7 +680,8 @@ function QuestFullMap({
                     startInLoadingState
                     onLoadEnd={() => setIsLoading(false)}
                     onMessage={handleMapMessage}
-                    scrollEnabled
+                    scrollEnabled={interactive}
+                    nestedScrollEnabled={interactive}
                 />
                 <View style={styles.zoomControls} pointerEvents="box-none">
                     <TouchableOpacity
@@ -689,7 +704,11 @@ function QuestFullMap({
             </View>
 
             <View style={styles.touchHints}>
-                <Text style={styles.hintText}>↕️ Двумя пальцами для масштабирования</Text>
+                <Text style={styles.hintText}>
+                    {interactive
+                        ? '↕️ Двумя пальцами для масштабирования'
+                        : 'Откройте карту на весь экран, чтобы перемещать её'}
+                </Text>
             </View>
         </View>
     );

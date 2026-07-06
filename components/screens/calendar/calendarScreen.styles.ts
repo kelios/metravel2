@@ -228,6 +228,9 @@ export function createCalendarStyles(colors: ReturnType<typeof useThemedColors>,
       color: colors.textSecondary,
       flex: 1,
     },
+    modalKeyboardAvoider: {
+      flex: 1,
+    },
     modalOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.45)',

@@ -295,6 +295,15 @@ export default function QuestsContentPanel({
         </>
     );
 
+    // На native в режиме карты НЕ оборачиваем в ScrollView: WebView-Leaflet
+    // (scrollEnabled) внутри вертикального ScrollView перехватывает жест, из-за
+    // чего шапка с тоглом «список ↔ карта» становилась недосягаема — переключение
+    // обратно на список не срабатывало (F-10). Карта живёт фиксированным блоком,
+    // шапка с тоглом всегда сверху и кликабельна.
+    if (Platform.OS !== 'web' && isMobile && viewMode === 'map') {
+        return <View style={[styles.content, { flex: 1 }]}>{inner}</View>;
+    }
+
     return (
         <ScrollView
             style={styles.content}

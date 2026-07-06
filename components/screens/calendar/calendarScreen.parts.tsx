@@ -6,6 +6,7 @@ import {
   Platform,
   Modal,
   TextInput,
+  KeyboardAvoidingView,
   type GestureResponderEvent,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -291,104 +292,109 @@ export function DateEditorModal({
 
   return (
     <Modal visible={Boolean(editor)} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={styles.modalSheet} onPress={(event) => event.stopPropagation()}>
-          <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>Статус в календаре</Text>
-          <Text style={styles.modalSubtitle}>{subtitle}</Text>
+      <KeyboardAvoidingView
+        style={styles.modalKeyboardAvoider}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <Pressable style={styles.modalOverlay} onPress={onClose}>
+          <Pressable style={styles.modalSheet} onPress={(event) => event.stopPropagation()}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Статус в календаре</Text>
+            <Text style={styles.modalSubtitle}>{subtitle}</Text>
 
-          <View style={styles.statusEditorRow}>
-            {TABS.map((statusOption) => {
-              const isActive = selectedStatus === statusOption.key
-              const accentColor = badgeColors[statusOption.key]
-              return (
-                <Pressable
-                  key={statusOption.key}
-                  style={[
-                    styles.statusEditorOption,
-                    isActive && { backgroundColor: accentColor, borderColor: accentColor },
-                    globalFocusStyles.focusable,
-                  ]}
-                  onPress={() => onStatusChange(statusOption.key)}
-                  accessibilityRole="button"
-                  accessibilityLabel={statusOption.label}
-                  accessibilityState={{ selected: isActive }}
-                >
-                  <Feather name={statusOption.icon} size={14} color={isActive ? colors.surface : colors.textMuted} />
-                  <Text style={[styles.statusEditorOptionText, isActive && { color: colors.surface }]}>
-                    {statusOption.label}
-                  </Text>
-                </Pressable>
-              )
-            })}
-          </View>
-
-          {needsDateInput ? (
-            Platform.OS === 'web' ? (
-              <WebDateInput value={editor?.value ?? ''} onChange={onChange} />
-            ) : (
-              <TextInput
-                style={styles.dateInput}
-                value={editor?.value ?? ''}
-                onChangeText={onChange}
-                placeholder="ГГГГ-ММ-ДД"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="numbers-and-punctuation"
-                maxLength={10}
-                accessibilityLabel="Дата путешествия"
-              />
-            )
-          ) : (
-            <View style={styles.statusNoteBox}>
-              <Feather name="bookmark" size={14} color={colors.textMuted} />
-              <Text style={styles.statusNoteText}>Для статуса «Хочу» достаточно просто сохранить маршрут.</Text>
+            <View style={styles.statusEditorRow}>
+              {TABS.map((statusOption) => {
+                const isActive = selectedStatus === statusOption.key
+                const accentColor = badgeColors[statusOption.key]
+                return (
+                  <Pressable
+                    key={statusOption.key}
+                    style={[
+                      styles.statusEditorOption,
+                      isActive && { backgroundColor: accentColor, borderColor: accentColor },
+                      globalFocusStyles.focusable,
+                    ]}
+                    onPress={() => onStatusChange(statusOption.key)}
+                    accessibilityRole="button"
+                    accessibilityLabel={statusOption.label}
+                    accessibilityState={{ selected: isActive }}
+                  >
+                    <Feather name={statusOption.icon} size={14} color={isActive ? colors.surface : colors.textMuted} />
+                    <Text style={[styles.statusEditorOptionText, isActive && { color: colors.surface }]}>
+                      {statusOption.label}
+                    </Text>
+                  </Pressable>
+                )
+              })}
             </View>
-          )}
 
-          {!!editor?.error && <Text style={styles.dateError}>{editor.error}</Text>}
+            {needsDateInput ? (
+              Platform.OS === 'web' ? (
+                <WebDateInput value={editor?.value ?? ''} onChange={onChange} />
+              ) : (
+                <TextInput
+                  style={styles.dateInput}
+                  value={editor?.value ?? ''}
+                  onChangeText={onChange}
+                  placeholder="ГГГГ-ММ-ДД"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="numbers-and-punctuation"
+                  maxLength={10}
+                  accessibilityLabel="Дата путешествия"
+                />
+              )
+            ) : (
+              <View style={styles.statusNoteBox}>
+                <Feather name="bookmark" size={14} color={colors.textMuted} />
+                <Text style={styles.statusNoteText}>Для статуса «Хочу» достаточно просто сохранить маршрут.</Text>
+              </View>
+            )}
 
-          <View style={styles.dateActions}>
-            {canClearDate && (
+            {!!editor?.error && <Text style={styles.dateError}>{editor.error}</Text>}
+
+            <View style={styles.dateActions}>
+              {canClearDate && (
+                <Pressable
+                  style={[styles.dateSecondaryButton, globalFocusStyles.focusable]}
+                  onPress={onClear}
+                  accessibilityRole="button"
+                  accessibilityLabel="Убрать дату"
+                >
+                  <Text style={styles.dateSecondaryText}>Убрать дату</Text>
+                </Pressable>
+              )}
               <Pressable
                 style={[styles.dateSecondaryButton, globalFocusStyles.focusable]}
-                onPress={onClear}
+                onPress={onClose}
                 accessibilityRole="button"
-                accessibilityLabel="Убрать дату"
+                accessibilityLabel="Отмена"
               >
-                <Text style={styles.dateSecondaryText}>Убрать дату</Text>
+                <Text style={styles.dateSecondaryText}>Отмена</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.datePrimaryButton, globalFocusStyles.focusable]}
+                onPress={onSave}
+                accessibilityRole="button"
+                accessibilityLabel={needsDateInput ? 'Сохранить дату' : 'Сохранить статус'}
+              >
+                <Text style={styles.datePrimaryText}>{needsDateInput ? 'Сохранить' : 'Сохранить статус'}</Text>
+              </Pressable>
+            </View>
+
+            {canRemoveStatus && (
+              <Pressable
+                style={[styles.dateDangerButton, globalFocusStyles.focusable]}
+                onPress={onRemove}
+                accessibilityRole="button"
+                accessibilityLabel="Удалить из календаря"
+              >
+                <Feather name="trash-2" size={15} color={colors.danger} />
+                <Text style={styles.dateDangerText}>Удалить из календаря</Text>
               </Pressable>
             )}
-            <Pressable
-              style={[styles.dateSecondaryButton, globalFocusStyles.focusable]}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="Отмена"
-            >
-              <Text style={styles.dateSecondaryText}>Отмена</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.datePrimaryButton, globalFocusStyles.focusable]}
-              onPress={onSave}
-              accessibilityRole="button"
-              accessibilityLabel={needsDateInput ? 'Сохранить дату' : 'Сохранить статус'}
-            >
-              <Text style={styles.datePrimaryText}>{needsDateInput ? 'Сохранить' : 'Сохранить статус'}</Text>
-            </Pressable>
-          </View>
-
-          {canRemoveStatus && (
-            <Pressable
-              style={[styles.dateDangerButton, globalFocusStyles.focusable]}
-              onPress={onRemove}
-              accessibilityRole="button"
-              accessibilityLabel="Удалить из календаря"
-            >
-              <Feather name="trash-2" size={15} color={colors.danger} />
-              <Text style={styles.dateDangerText}>Удалить из календаря</Text>
-            </Pressable>
-          )}
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }

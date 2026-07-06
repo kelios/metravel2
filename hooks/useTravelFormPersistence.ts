@@ -30,7 +30,11 @@ import {
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 import { showToastMessage } from '@/utils/toast';
-import { getErrorMessage, getErrorName } from '@/utils/errorHelpers';
+import {
+  getErrorMessage,
+  getErrorName,
+  mapKnownServerErrorToRu,
+} from '@/utils/errorHelpers';
 import {
   confirmRichTextLossIfNeeded,
   type RichTextSnapshot,
@@ -605,15 +609,30 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         if ((error as Error)?.message === 'Request aborted') {
           throw error;
         }
-        const details =
+        const rawDetails =
           error instanceof ApiError
             ? error.message
             : getErrorMessage(error);
+        // Маппинг известной серверной ошибки (англ. текст DRF) в локализованное
+        // RU-сообщение. Ошибка модерации-публикации означает, что контент сохранён
+        // как черновик, но переход в «опубликовано» отклонён — данные НЕ потеряны,
+        // поэтому заголовок «Ошибка сохранения» здесь неверен.
+        const mappedRu = rawDetails ? mapKnownServerErrorToRu(rawDetails) : null;
+        // isPublishIntent объявлен в try-блоке выше — в catch он вне области видимости,
+        // поэтому пересчитываем локально.
+        const isPublishIntent = options?.intent === 'publish';
+        const isModerationPublishError = mappedRu != null && isPublishIntent;
+
+        const toastTitle = isModerationPublishError
+          ? 'Сохранено как черновик'
+          : 'Ошибка сохранения';
+        const toastText = mappedRu
+          ?? (rawDetails && rawDetails !== 'Save failed' ? rawDetails : 'Попробуйте ещё раз');
 
         void showToastMessage({
-          type: 'error',
-          text1: 'Ошибка сохранения',
-          text2: details && details !== 'Save failed' ? details : 'Попробуйте ещё раз',
+          type: isModerationPublishError ? 'info' : 'error',
+          text1: toastTitle,
+          text2: toastText,
         });
         console.error('Manual save error:', error);
         if (error instanceof Error) {

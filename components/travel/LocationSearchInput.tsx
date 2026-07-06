@@ -1,5 +1,15 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator, ScrollView, Platform } from 'react-native';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import {
+    View,
+    Text,
+    TextInput,
+    StyleSheet,
+    Pressable,
+    ActivityIndicator,
+    ScrollView,
+    Platform,
+    findNodeHandle,
+} from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -14,6 +24,10 @@ interface LocationSearchInputProps {
     onLocationSelect: (result: SearchResult) => void;
     placeholder?: string;
     autoFocus?: boolean;
+    // Native-only: ссылка на родительский ScrollView. На фокусе инпута/появлении
+    // результатов подскролливаем его так, чтобы инпут и выпадашка не прятались за
+    // софт-клавиатурой (F-13). На web не используется — клавиатуры нет.
+    scrollViewRef?: React.RefObject<ScrollView | null>;
 }
 
 /**
@@ -24,6 +38,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
     onLocationSelect,
     placeholder = 'Поиск места на карте...',
     autoFocus = false,
+    scrollViewRef,
 }) => {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -31,6 +46,40 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
     const [query, setQuery] = useState('');
     const [showResults, setShowResults] = useState(false);
     const debouncedQuery = useDebouncedValue(query, 500);
+
+    const containerRef = useRef<View>(null);
+    const isFocusedRef = useRef(false);
+
+    // Native-only keyboard avoidance: подскролливаем родительский ScrollView так,
+    // чтобы инпут поиска оказался в верхней части видимой области, а выпадашка
+    // результатов уместилась над клавиатурой. На web — no-op (нет клавиатуры).
+    const scrollInputIntoView = useCallback(() => {
+        if (isWeb || !scrollViewRef?.current) return;
+        const scrollNode = findNodeHandle(scrollViewRef.current);
+        if (scrollNode == null) return;
+        // requestAnimationFrame: даём клавиатуре начать анимацию, чтобы measureLayout
+        // считался относительно уже усаженного контейнера.
+        requestAnimationFrame(() => {
+            containerRef.current?.measureLayout(
+                scrollNode,
+                (_x, y) => {
+                    // Небольшой отступ сверху, чтобы над инпутом оставалась подпись.
+                    const targetY = Math.max(0, y - DESIGN_TOKENS.spacing.lg);
+                    scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
+                },
+                () => {},
+            );
+        });
+    }, [scrollViewRef]);
+
+    const handleFocus = useCallback(() => {
+        isFocusedRef.current = true;
+        scrollInputIntoView();
+    }, [scrollInputIntoView]);
+
+    const handleBlur = useCallback(() => {
+        isFocusedRef.current = false;
+    }, []);
 
     const {
         data: results = [],
@@ -48,6 +97,14 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
             setShowResults(false);
         }
     }, [debouncedQuery]);
+
+    // Когда появились результаты и инпут в фокусе — на native ещё раз подтягиваем
+    // выпадашку над клавиатурой (список отрисовался ниже инпута → нужно докрутить).
+    useEffect(() => {
+        if (!isWeb && showResults && isFocusedRef.current) {
+            scrollInputIntoView();
+        }
+    }, [showResults, results.length, scrollInputIntoView]);
 
     const handleResultSelect = useCallback((result: SearchResult) => {
         onLocationSelect(result);
@@ -76,13 +133,15 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
     }, []);
 
     return (
-        <View style={styles.container}>
+        <View ref={containerRef} style={styles.container}>
             <View style={styles.inputWrapper}>
                 <Feather name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
                 <TextInput
                     style={styles.input}
                     value={query}
                     onChangeText={setQuery}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
                     placeholder={placeholder}
                     placeholderTextColor={colors.textMuted}
                     autoFocus={autoFocus}

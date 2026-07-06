@@ -142,6 +142,10 @@ export function QuestDesktopMapPanel({
           height={useWideInlineLayout ? (compactDesktopLayout ? 460 : 520) : 360}
           title="Карта квеста"
           activeStepIndex={activeStepIndex}
+          // На native превью-карта внутри вертикального ScrollView не должна
+          // перехватывать свайп страницы (F-7): панорамирование — только в
+          // fullscreen. На web скролл-конфликта нет, карта остаётся интерактивной.
+          interactive={Platform.OS === 'web'}
         />
       </Suspense>
     </View>

@@ -58,3 +58,22 @@ export const getApiErrorMessage = (
     `Ошибка запроса: ${fallbackStatusText}`
   )
 }
+
+// Маппинг известных технических серверных ошибок (англ. текст DRF-валидаторов)
+// в человекочитаемые локализованные RU-сообщения. Возвращает null, если
+// сообщение не распознано — вызывающий код показывает свой fallback.
+export const mapKnownServerErrorToRu = (rawMessage: string): string | null => {
+  const message = rawMessage.toLowerCase()
+
+  // publish: Published travels must pass moderation before they can be published.
+  // Отправка на модерацию нового ещё не одобренного маршрута: бэк требует, чтобы
+  // публикация прошла модерацию. Для пользователя это ожидаемый флоу «на модерации».
+  if (
+    message.includes('must pass moderation') ||
+    (message.includes('publish') && message.includes('moderation'))
+  ) {
+    return 'Маршрут сохранён как черновик, но пока не может быть опубликован: сначала он должен пройти модерацию.'
+  }
+
+  return null
+}

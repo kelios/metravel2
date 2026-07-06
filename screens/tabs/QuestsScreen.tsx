@@ -154,6 +154,13 @@ export default function QuestsScreen() {
         if (isMobile) setFilterDrawerOpen(false);
     }, [isMobile]);
 
+    // Функциональный тогл: не зависит от замкнутого viewMode, поэтому не залипает
+    // на устаревшем значении при повторных тапах на Android (F-10).
+    const handleToggleViewMode = useCallback(() => {
+        setViewMode((current) => (current === 'map' ? 'list' : 'map'));
+        if (isMobile) setFilterDrawerOpen(false);
+    }, [isMobile]);
+
     const handleSetRadius = useCallback(async (km: number) => {
         setNearbyRadiusKm(km);
         try {
@@ -609,7 +616,7 @@ export default function QuestsScreen() {
                 isMobile={isMobile}
                 onShowNearby={requestNearbyQuests}
                 onOpenFilterDrawer={() => setFilterDrawerOpen(true)}
-                onToggleViewMode={() => handleSetViewMode(viewMode === 'map' ? 'list' : 'map')}
+                onToggleViewMode={handleToggleViewMode}
                 onMapUserLocationChange={handleMapUserLocationChange}
                 onMapMove={handleMapMove}
                 onSearchMapArea={handleSearchMapArea}

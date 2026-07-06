@@ -152,12 +152,15 @@ function QuestFullMap({
                                          title = 'Карта квеста',
                                          activeStepIndex,
                                          allowFullscreen = true,
+                                         // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                         interactive = true,
                                      }: {
     steps: StepPoint[];
     height?: number;
     title?: string;
     activeStepIndex?: number;
     allowFullscreen?: boolean;
+    interactive?: boolean;
 }) {
     const [mods, setMods] = useState<Mods | null>(null);
     const [exportMenuVisible, setExportMenuVisible] = useState(false);

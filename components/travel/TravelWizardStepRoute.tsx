@@ -489,6 +489,7 @@ function TravelWizardStepRoute({
               <LocationSearchInput
                 onLocationSelect={handleLocationSelect}
                 placeholder="Поиск места (например: Эйфелева башня, Париж)"
+                scrollViewRef={scrollRef}
               />
 
               <ManualPointPanel
