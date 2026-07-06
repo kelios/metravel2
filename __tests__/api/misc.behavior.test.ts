@@ -19,6 +19,7 @@ const mockValidateAIMessage = jest.fn()
 const mockSanitizeInput = jest.fn((...args: any[]) => args[0])
 const mockSanitizeRichText = jest.fn((...args: any[]) => args[0])
 const mockDevError = jest.fn()
+const mockGetCsrfHeader = jest.fn(() => ({ 'X-CSRFToken': 'test-csrf-token' }))
 const mockApiClientPut = jest.fn()
 const mockApiClientUploadFormData = jest.fn()
 const mockApiClientRequest = jest.fn()
@@ -33,7 +34,7 @@ jest.mock('@/utils/fetchWithTimeout', () => ({
 }))
 
 jest.mock('@/utils/csrf', () => ({
-  getCsrfHeader: () => ({ 'X-CSRFToken': 'test-csrf-token' }),
+  getCsrfHeader: () => mockGetCsrfHeader(),
 }))
 
 jest.mock('@/utils/safeJsonParse', () => ({
@@ -102,6 +103,7 @@ describe('api/misc', () => {
     jest.resetAllMocks()
     mockSanitizeInput.mockImplementation((...args: any[]) => args[0])
     mockSanitizeRichText.mockImplementation((...args: any[]) => args[0])
+    mockGetCsrfHeader.mockReturnValue({ 'X-CSRFToken': 'test-csrf-token' })
     ;(global as any).File = class FakeFile {}
   })
 
@@ -409,6 +411,19 @@ describe('api/misc', () => {
 
     const [, init] = mockFetchWithTimeout.mock.calls[0]
     expect(init.headers['X-CSRFToken']).toBe('test-csrf-token')
+  })
+
+  it('sendFeedback omits browser credentials so a stale session cookie cannot trigger CSRF failure', async () => {
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockGetCsrfHeader.mockReturnValueOnce({})
+    mockFetchWithTimeout.mockResolvedValue({ ok: true })
+    mockSafeJsonParse.mockResolvedValue({ message: 'ok' })
+
+    await sendFeedback('A', 'b@c.com', 'Hi')
+
+    const [, init] = mockFetchWithTimeout.mock.calls[0]
+    expect(init.credentials).toBe('omit')
+    expect(init.headers).toEqual({ 'Content-Type': 'application/json' })
   })
 
   it('subscribeEmail and sendAIMessage also send the X-CSRFToken header', async () => {

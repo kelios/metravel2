@@ -521,6 +521,8 @@ export const sendFeedback = async (
   try {
     const res = await fetchWithTimeout(SEND_FEEDBACK, {
       method: 'POST',
+      // Public endpoint: do not send a stale session cookie without csrftoken.
+      credentials: 'omit',
       headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
       body: JSON.stringify({
         name: sanitizedName,
