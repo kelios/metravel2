@@ -107,7 +107,6 @@ type QuestsSidebarProps = {
     viewMode: 'list' | 'map';
     selectedCityId: string | null;
     nearbyId: string;
-    nearbyRadiusKm: number;
     areAllCountryGroupsCollapsed: boolean;
     collapsedCountryCodes: Record<string, boolean>;
     citiesByCountry: CountryGroup[];
@@ -117,7 +116,6 @@ type QuestsSidebarProps = {
     onSetViewMode: (mode: 'list' | 'map') => void;
     onToggleCountryGroup: (code: string) => void;
     onToggleAllCountryGroups: () => void;
-    onSetRadius: (km: number) => void;
     onCloseDrawer?: () => void;
 };
 
@@ -127,7 +125,6 @@ export default function QuestsSidebar({
     viewMode,
     selectedCityId,
     nearbyId,
-    nearbyRadiusKm,
     areAllCountryGroupsCollapsed,
     collapsedCountryCodes,
     citiesByCountry,
@@ -137,7 +134,6 @@ export default function QuestsSidebar({
     onSetViewMode,
     onToggleCountryGroup,
     onToggleAllCountryGroups,
-    onSetRadius,
     onCloseDrawer,
 }: QuestsSidebarProps) {
     const { isMobile } = useResponsive();
@@ -268,25 +264,6 @@ export default function QuestsSidebar({
                         </View>
                     );
                 })}
-
-                {selectedCityId === nearbyId && (
-                    <View style={styles.radiusSection}>
-                        <Text style={styles.radiusLabel}>Радиус:</Text>
-                        {[5, 10, 15, 20, 30].map((km) => (
-                            <Pressable
-                                key={km}
-                                onPress={() => onSetRadius(km)}
-                                style={[styles.radiusChip, nearbyRadiusKm === km && styles.radiusChipActive]}
-                                accessibilityRole="button"
-                                accessibilityLabel={`Радиус ${km} км`}
-                            >
-                                <Text style={[styles.radiusChipText, nearbyRadiusKm === km && styles.radiusChipTextActive]}>
-                                    {km} км
-                                </Text>
-                            </Pressable>
-                        ))}
-                    </View>
-                )}
             </ScrollView>
         </View>
     );

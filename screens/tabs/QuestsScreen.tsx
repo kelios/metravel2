@@ -243,10 +243,10 @@ export default function QuestsScreen() {
         };
     }, [filterDrawerOpen]);
 
-    useEffect(() => {
-        setPendingMapAreaCenter(null);
-        setActiveMapAreaCenter(null);
-    }, [nearbyRadiusKm]);
+    // Радиус-контрол теперь живёт у карты и задаёт окружность видимой области.
+    // Смена радиуса при активном «Искать в этой области» НЕ сбрасывает область —
+    // фильтр (зависит от nearbyRadiusKm) просто пересчитывает квесты вокруг того
+    // же центра, синхронно с окружностью, которую перерисовывает карта.
 
     // ── Derived data ──
     const citiesWithNearby: (City | NearbyCity)[] = useMemo(
@@ -339,10 +339,15 @@ export default function QuestsScreen() {
         if (!selectedCityId || !dataLoaded) return [];
         if (selectedCityId === NEARBY_ID) {
             if (activeMapAreaCenter) {
-                const radiusKm = Math.max(nearbyRadiusKm, 5);
+                // «Искать в этой области» считает квесты по той же окружности радиуса,
+                // что карта РИСУЕТ вокруг центра области (см. `radius` в
+                // QuestsContentPanel) — поэтому в счётчик/список попадает ровно то,
+                // что видно маркерами. Раньше фильтр брал заниженный
+                // Math.max(nearbyRadiusKm, 5), из-за чего при отдалённой карте
+                // видимые по краям квесты отсекались и получалось 0 квестов.
                 return ALL_QUESTS
                     .map((q) => ({ ...q, _distanceKm: haversineKm(activeMapAreaCenter.latitude, activeMapAreaCenter.longitude, q.lat, q.lng) }))
-                    .filter((q) => (q._distanceKm ?? Infinity) <= radiusKm)
+                    .filter((q) => (q._distanceKm ?? Infinity) <= nearbyRadiusKm)
                     .sort((a, b) => a._distanceKm! - b._distanceKm!);
             }
             // Радиусную фильтрацию применяем только при явном выборе «Рядом»;
@@ -554,7 +559,6 @@ export default function QuestsScreen() {
                             viewMode={viewMode}
                             selectedCityId={selectedCityId}
                             nearbyId={NEARBY_ID}
-                            nearbyRadiusKm={nearbyRadiusKm}
                             areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
                             collapsedCountryCodes={collapsedCountryCodes}
                             citiesByCountry={citiesByCountry}
@@ -564,7 +568,6 @@ export default function QuestsScreen() {
                             onSetViewMode={handleSetViewMode}
                             onToggleCountryGroup={handleToggleCountryGroup}
                             onToggleAllCountryGroups={handleToggleAllCountryGroups}
-                            onSetRadius={handleSetRadius}
                             onCloseDrawer={() => setFilterDrawerOpen(false)}
                         />
                     </View>
@@ -579,7 +582,6 @@ export default function QuestsScreen() {
                     viewMode={viewMode}
                     selectedCityId={selectedCityId}
                     nearbyId={NEARBY_ID}
-                    nearbyRadiusKm={nearbyRadiusKm}
                     areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
                     collapsedCountryCodes={collapsedCountryCodes}
                     citiesByCountry={citiesByCountry}
@@ -589,7 +591,6 @@ export default function QuestsScreen() {
                     onSetViewMode={handleSetViewMode}
                     onToggleCountryGroup={handleToggleCountryGroup}
                     onToggleAllCountryGroups={handleToggleAllCountryGroups}
-                    onSetRadius={handleSetRadius}
                 />
             )}
 
@@ -617,6 +618,7 @@ export default function QuestsScreen() {
                 onShowNearby={requestNearbyQuests}
                 onOpenFilterDrawer={() => setFilterDrawerOpen(true)}
                 onToggleViewMode={handleToggleViewMode}
+                onSetRadius={handleSetRadius}
                 onMapUserLocationChange={handleMapUserLocationChange}
                 onMapMove={handleMapMove}
                 onSearchMapArea={handleSearchMapArea}

@@ -55,10 +55,13 @@ type QuestsContentPanelProps = {
     onShowNearby: () => void;
     onOpenFilterDrawer: () => void;
     onToggleViewMode: () => void;
+    onSetRadius: (km: number) => void;
     onMapUserLocationChange: (loc: { latitude: number; longitude: number } | null) => void;
     onMapMove: (center: { latitude: number; longitude: number }) => void;
     onSearchMapArea: () => void;
 };
+
+const RADIUS_OPTIONS = [5, 10, 15, 20, 30] as const;
 
 export default function QuestsContentPanel({
     styles,
@@ -84,6 +87,7 @@ export default function QuestsContentPanel({
     onShowNearby,
     onOpenFilterDrawer,
     onToggleViewMode,
+    onSetRadius,
     onMapUserLocationChange,
     onMapMove,
     onSearchMapArea,
@@ -95,6 +99,31 @@ export default function QuestsContentPanel({
         if (!meta?.cityId || !meta?.id) return;
         router.push(`/quests/${meta.cityId}/${meta.id}`);
     };
+
+    // Контрол радиуса живёт рядом с картой (а не в списке городов): он задаёт
+    // окружность, которую карта рисует, и радиус, по которому «Искать в этой
+    // области»/«Рядом» считают квесты — так «что видно» совпадает со счётчиком.
+    const showRadiusControl = viewMode === 'map' && selectedCityId === nearbyId;
+    const radiusControl = showRadiusControl ? (
+        <View style={styles.mapRadiusBar}>
+            <Text style={styles.radiusLabel}>Радиус:</Text>
+            {RADIUS_OPTIONS.map((km) => (
+                <Pressable
+                    key={km}
+                    onPress={() => onSetRadius(km)}
+                    style={[styles.radiusChip, nearbyRadiusKm === km && styles.radiusChipActive]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Радиус ${km} км`}
+                    accessibilityState={{ selected: nearbyRadiusKm === km }}
+                    testID={`quests-map-radius-${km}`}
+                >
+                    <Text style={[styles.radiusChipText, nearbyRadiusKm === km && styles.radiusChipTextActive]}>
+                        {km} км
+                    </Text>
+                </Pressable>
+            ))}
+        </View>
+    ) : null;
 
     const inner = (
         <>
@@ -155,6 +184,8 @@ export default function QuestsContentPanel({
 
                 {viewMode === 'map' ? (
                     <View style={styles.mapSection}>
+                        {radiusControl}
+
                         {dataLoaded && selectedCityId === nearbyId && !userLoc && !isMapAreaActive && (
                             <View style={styles.geoBanner} testID="quests-geo-banner">
                                 <Feather name="map-pin" size={13} color={colors.warning} />
@@ -210,9 +241,7 @@ export default function QuestsContentPanel({
                                         coordinates={mapCenter}
                                         pointsOnly
                                         mode="radius"
-                                        radius={selectedCityId === nearbyId
-                                            ? (userLoc || isMapAreaActive ? String(Math.max(nearbyRadiusKm, 5)) : '50')
-                                            : '30'}
+                                        radius={selectedCityId === nearbyId ? String(nearbyRadiusKm) : '30'}
                                         routePoints={[]}
                                         transportMode="foot"
                                         onMapClick={() => {}}
@@ -244,9 +273,7 @@ export default function QuestsContentPanel({
                                     coordinates={mapCenter}
                                     pointsOnly
                                     mode="radius"
-                                    radius={selectedCityId === nearbyId
-                                        ? (userLoc || isMapAreaActive ? String(Math.max(nearbyRadiusKm, 5)) : '50')
-                                        : '30'}
+                                    radius={selectedCityId === nearbyId ? String(nearbyRadiusKm) : '30'}
                                     routePoints={[]}
                                     transportMode="foot"
                                     onMapClick={() => {}}

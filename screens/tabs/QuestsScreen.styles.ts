@@ -417,6 +417,18 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             paddingBottom: spacing.sm,
             paddingTop: spacing.xs,
         },
+        // Радиус-бар над картой (перенесён из сайдбара). Карта на мобильном
+        // full-bleed (contentBodyMap убирает горизонтальный паддинг), поэтому бар
+        // добавляет свой боковой отступ; вертикальные паддинги ужаты, чтобы шапка
+        // + бар вместе не съедали >20% высоты вьюпорта.
+        mapRadiusBar: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: spacing.xs,
+            paddingHorizontal: isMobileW ? spacing.md : 0,
+            paddingBottom: spacing.sm,
+        },
         radiusLabel: {
             color: colors.textMuted,
             fontSize: typography.sizes.sm,

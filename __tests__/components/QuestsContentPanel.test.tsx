@@ -39,6 +39,12 @@ describe('QuestsContentPanel', () => {
         skeletonGrid: {},
         skeletonCard: {},
         questsGrid: {},
+        mapRadiusBar: {},
+        radiusLabel: {},
+        radiusChip: {},
+        radiusChipActive: {},
+        radiusChipText: {},
+        radiusChipTextActive: {},
     };
 
     const colors = {
@@ -54,7 +60,7 @@ describe('QuestsContentPanel', () => {
         mockIsMobile = false;
     });
 
-    it('shows a geolocation-disabled banner and keeps the map visible with a wide radius fallback', () => {
+    it('shows a geolocation-disabled banner and draws the map radius circle at the picked nearby radius', () => {
         (Platform as { OS: string }).OS = 'web';
         const LazyQuestMap = jest.fn(() => null);
 
@@ -91,6 +97,7 @@ describe('QuestsContentPanel', () => {
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
+                onSetRadius={() => {}}
                 onMapUserLocationChange={() => {}}
                 onMapMove={() => {}}
                 onSearchMapArea={() => {}}
@@ -102,7 +109,7 @@ describe('QuestsContentPanel', () => {
         expect(LazyQuestMap).toHaveBeenCalledWith(
             expect.objectContaining({
                 coordinates: { latitude: 53.9, longitude: 27.56 },
-                radius: '50',
+                radius: '15',
             }),
             undefined,
         );
@@ -139,6 +146,7 @@ describe('QuestsContentPanel', () => {
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={onOpenFilterDrawer}
                 onToggleViewMode={() => {}}
+                onSetRadius={() => {}}
                 onMapUserLocationChange={() => {}}
                 onMapMove={() => {}}
                 onSearchMapArea={() => {}}
@@ -181,6 +189,7 @@ describe('QuestsContentPanel', () => {
                 onShowNearby={onShowNearby}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
+                onSetRadius={() => {}}
                 onMapUserLocationChange={() => {}}
                 onMapMove={() => {}}
                 onSearchMapArea={() => {}}
@@ -232,6 +241,7 @@ describe('QuestsContentPanel', () => {
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
+                onSetRadius={() => {}}
                 onMapUserLocationChange={() => {}}
                 onMapMove={onMapMove}
                 onSearchMapArea={onSearchMapArea}
@@ -290,6 +300,7 @@ describe('QuestsContentPanel', () => {
                 onShowNearby={onShowNearby}
                 onOpenFilterDrawer={onOpenFilterDrawer}
                 onToggleViewMode={onToggleViewMode}
+                onSetRadius={() => {}}
                 onMapUserLocationChange={() => {}}
                 onMapMove={() => {}}
                 onSearchMapArea={() => {}}
