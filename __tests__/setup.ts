@@ -882,6 +882,45 @@ jest.mock('expo-auth-session/providers/google', () => ({
   ]),
 }))
 
+jest.mock('@react-native-google-signin/google-signin', () => {
+  const mockUserInfo = {
+    idToken: 'mockIdToken',
+    serverAuthCode: null,
+    scopes: [],
+    user: {
+      email: 'mock@example.com',
+      id: 'mock-google-user',
+      givenName: 'Mock',
+      familyName: 'User',
+      photo: null,
+      name: 'Mock User',
+    },
+  }
+
+  return {
+    __esModule: true,
+    GoogleSignin: {
+      configure: jest.fn(),
+      hasPlayServices: jest.fn(async () => true),
+      signIn: jest.fn(async () => ({ type: 'success', data: mockUserInfo })),
+      getTokens: jest.fn(async () => ({ idToken: mockUserInfo.idToken, accessToken: 'mockAccessToken' })),
+      signOut: jest.fn(async () => null),
+      revokeAccess: jest.fn(async () => null),
+      hasPreviousSignIn: jest.fn(() => false),
+      getCurrentUser: jest.fn(() => null),
+    },
+    isCancelledResponse: (response: { type?: string }) => response.type === 'cancelled',
+    isErrorWithCode: (error: unknown): error is { code: string } =>
+      typeof error === 'object' && error !== null && 'code' in error,
+    isSuccessResponse: (response: { type?: string }) => response.type === 'success',
+    statusCodes: {
+      IN_PROGRESS: 'IN_PROGRESS',
+      PLAY_SERVICES_NOT_AVAILABLE: 'PLAY_SERVICES_NOT_AVAILABLE',
+      SIGN_IN_CANCELLED: 'SIGN_IN_CANCELLED',
+    },
+  }
+})
+
 // Mock expo font loader used by vector icons
 jest.mock('expo-font', () => ({
   loadAsync: jest.fn(() => Promise.resolve()),

@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+import {
+    GoogleSignin,
+    isCancelledResponse,
+    isErrorWithCode,
+    isSuccessResponse,
+    statusCodes,
+} from '@react-native-google-signin/google-signin';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -64,13 +70,19 @@ const GOOGLE_NATIVE_UNAVAILABLE_A11Y = 'Google Sign-In не настроен д�
 
 type GoogleSignInButtonConfiguredProps = GoogleSignInButtonProps & {
     webClientId: string;
-    expoClientId: string;
-    androidClientId: string;
     iosClientId: string;
 };
 
 const getNativeGoogleClientId = (androidClientId: string, iosClientId: string) =>
     Platform.OS === 'ios' ? iosClientId : androidClientId;
+
+const configureGoogleSignIn = (webClientId: string, iosClientId: string) => {
+    GoogleSignin.configure({
+        webClientId,
+        ...(Platform.OS === 'ios' && iosClientId ? { iosClientId } : {}),
+        offlineAccess: false,
+    });
+};
 
 function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInButtonProps) {
     const colors = useThemedColors();
@@ -268,11 +280,10 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
 
 function GoogleSignInButtonNative({ onSuccess, onError, disabled }: GoogleSignInButtonProps) {
     const webClientId = String(process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '').trim();
-    const expoClientId = String(process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID || '').trim();
     const androidClientId = String(process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '').trim();
     const iosClientId = String(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '').trim();
 
-    if (!getNativeGoogleClientId(androidClientId, iosClientId)) {
+    if (!webClientId || !getNativeGoogleClientId(androidClientId, iosClientId)) {
         return <GoogleSignInButtonNativeUnavailable />;
     }
 
@@ -282,8 +293,6 @@ function GoogleSignInButtonNative({ onSuccess, onError, disabled }: GoogleSignIn
             onError={onError}
             disabled={disabled}
             webClientId={webClientId}
-            expoClientId={expoClientId}
-            androidClientId={androidClientId}
             iosClientId={iosClientId}
         />
     );
@@ -316,64 +325,60 @@ function GoogleSignInButtonNativeConfigured({
     onError,
     disabled,
     webClientId,
-    expoClientId,
-    androidClientId,
     iosClientId,
 }: GoogleSignInButtonConfiguredProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const [isLoading, setIsLoading] = useState(false);
 
-    const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-        webClientId: webClientId || undefined,
-        clientId: expoClientId || undefined,
-        androidClientId: androidClientId || undefined,
-        iosClientId: iosClientId || undefined,
-        scopes: ['openid', 'profile', 'email'],
-    });
-
     useEffect(() => {
-        if (!response) return;
-
-        if (response.type === 'success') {
-            const token = response.params?.id_token;
-            setIsLoading(false);
-            if (token) {
-                onSuccess(token);
-            } else {
-                onError?.('Не удалось получить id_token от Google');
-            }
-            return;
-        }
-
-        if (response.type === 'error') {
-            setIsLoading(false);
-            onError?.('Ошибка авторизации Google');
-        }
-    }, [onError, onSuccess, response]);
+        configureGoogleSignIn(webClientId, iosClientId);
+    }, [iosClientId, webClientId]);
 
     const handlePress = async () => {
         if (disabled || isLoading) return;
 
-        if (!request) {
-            onError?.('Google Sign-In инициализируется, попробуйте еще раз');
-            return;
-        }
-
         setIsLoading(true);
         try {
-            const result = await promptAsync();
-            if (result.type !== 'success') {
-                setIsLoading(false);
-                if (result.type === 'error') {
-                    onError?.('Не удалось завершить Google Sign-In');
+            await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+            const result = await GoogleSignin.signIn();
+
+            if (isSuccessResponse(result)) {
+                let token = result.data.idToken;
+                if (!token) {
+                    token = (await GoogleSignin.getTokens()).idToken;
                 }
+                setIsLoading(false);
+                if (!token) {
+                    onError?.('Не удалось получить id_token от Google');
+                    return;
+                }
+                onSuccess(token);
+                return;
+            }
+
+            setIsLoading(false);
+            if (!isCancelledResponse(result)) {
+                onError?.('Не удалось завершить Google Sign-In');
             }
         } catch (error) {
+            setIsLoading(false);
+            if (isErrorWithCode(error)) {
+                if (error.code === statusCodes.IN_PROGRESS) {
+                    onError?.('Google Sign-In уже выполняется');
+                    return;
+                }
+                if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+                    onError?.('Google Play Services недоступны или требуют обновления');
+                    return;
+                }
+                if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+                    return;
+                }
+            }
             if (__DEV__) {
                 console.error('Google native sign-in error:', error);
             }
-            setIsLoading(false);
             onError?.('Ошибка при открытии Google Sign-In');
         }
     };

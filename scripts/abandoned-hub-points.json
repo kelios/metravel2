@@ -233,5 +233,126 @@
       118
     ],
     "sourceImage": "https://metravel.by/address-image/15520/conversions/2c41bcdd59f84e58af7d33c581525d92.webp"
+  },
+  {
+    "lat": 54.2511747,
+    "lng": 26.0204315,
+    "address": "Гольшанский замок (руины замка Сапег)",
+    "categories": [
+      115
+    ],
+    "sourceImage": "https://metravel.by/address-image/3518/conversions/HpT9Zy6hsmp98u3gP8nkjWwGOwmniS4JjLkh08m6-thumb_400_wp.webp"
+  },
+  {
+    "lat": 54.3092241,
+    "lng": 26.2830305,
+    "address": "Кревский замок",
+    "categories": [
+      115
+    ],
+    "sourceImage": "https://metravel.by/address-image/3523/conversions/0TBMykf9UrzpGjSohx32ZetFSp7fkVSX1ogiKqFP-thumb_400_wp.webp"
+  },
+  {
+    "lat": 54.6012569,
+    "lng": 30.0543494,
+    "address": "Смольяны: башня замка «Белый Ковель»",
+    "categories": [
+      115
+    ],
+    "sourceImage": "https://metravel.by/address-image/3327/conversions/WbpSWD8swfhzqz3zbHFBLLlcnGtNcOiDGlTpd4OU-thumb_400_wp.webp"
+  },
+  {
+    "lat": 52.860402,
+    "lng": 24.8958478,
+    "address": "Ружаны: дворцовый комплекс Сапег",
+    "categories": [
+      118,
+      33
+    ],
+    "sourceImage": "https://metravel.by/address-image/3738/conversions/TgTy1HVTFlIpVlyD9GhLrB9sRnqedue7bfaMORmt-thumb_400_wp.webp"
+  },
+  {
+    "lat": 53.5180096,
+    "lng": 30.2588882,
+    "address": "Быховский замок",
+    "categories": [
+      115
+    ],
+    "sourceImage": "https://metravel.by/address-image/3266/conversions/BDiSPfF4j5lIADmORrxDE0XHGj2w5l5ONQ8tFW0w-thumb_400_wp.webp"
+  },
+  {
+    "lat": 53.3466702,
+    "lng": 27.0806208,
+    "address": "Наднеман: усадьба Наркевича-Иодко",
+    "categories": [
+      116
+    ],
+    "sourceImage": "https://metravel.by/address-image/437/conversions/8678db12eb06404f9ae322f453346679.JPG"
+  },
+  {
+    "lat": 53.009179,
+    "lng": 26.6773818,
+    "address": "Красная Звезда: руины летнего дворца Радзивиллов",
+    "categories": [
+      118
+    ],
+    "sourceImage": "https://metravel.by/address-image/3492/conversions/4BL7xdRv8luKIJsq1sy0BlS5d65iV2eyxbEIyfEL-thumb_400_wp.webp"
+  },
+  {
+    "lat": 53.8843624,
+    "lng": 28.6151962,
+    "address": "Рованичи: дворец Слотвинских",
+    "categories": [
+      33,
+      116
+    ],
+    "sourceImage": "https://metravel.by/address-image/3598/conversions/gNZKPh2o9Md7kCTlEf8hazKU5FtTkZif01qdQQPB-thumb_400_wp.webp"
+  },
+  {
+    "lat": 52.4930999,
+    "lng": 24.4803007,
+    "address": "Линово: дворцово-парковый комплекс Трэмбицких",
+    "categories": [
+      116
+    ],
+    "sourceImage": "https://metravel.by/address-image/3821/conversions/ef55ICoBrT0inak3ovYTl29eVs4fnnL3lDvE5fHv-thumb_400_wp.webp"
+  },
+  {
+    "lat": 52.4937988,
+    "lng": 24.4786484,
+    "address": "Линово: бровар (1921)",
+    "categories": [
+      114
+    ],
+    "sourceImage": "https://metravel.by/address-image/7932/conversions/d1f9705022274a60a0ab1f5045e8f5e5.webp"
+  },
+  {
+    "lat": 52.2842772,
+    "lng": 23.3455117,
+    "address": "Червинцы: усадьба Пузынов",
+    "categories": [
+      116
+    ],
+    "sourceImage": "https://metravel.by/address-image/3831/conversions/LLAYYJPMeV7YVmLUmn02Ajeqp5eshbmkVhBAU0eH-thumb_400_wp.webp"
+  },
+  {
+    "lat": 55.8533064,
+    "lng": 27.7160919,
+    "address": "Опытная: дворец Нитославских",
+    "categories": [
+      116,
+      33
+    ],
+    "sourceImage": "https://metravel.by/address-image/5487/conversions/93e15f18a1534b3aac81f1595761e213.JPG"
+  },
+  {
+    "lat": 54.6449671,
+    "lng": 30.4315785,
+    "address": "Высокое (Оршанский район): усадьба Макшицких",
+    "categories": [
+      136,
+      116
+    ],
+    "sourceImage": "https://metravel.by/address-image/3306/conversions/VVntU3lcMIVnT0CcbhJqV1iLZpxTPLJPOZKpF7rn-thumb_400_wp.webp"
   }
 ]
