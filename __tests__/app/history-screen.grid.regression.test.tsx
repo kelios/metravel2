@@ -107,6 +107,7 @@ describe('HistoryScreen grid regression', () => {
 
     const utils = await renderLoaded();
 
-    expect(utils.getByText('1 последнее открытие')).toBeTruthy();
+    expect(utils.getByText('1 элемент в истории')).toBeTruthy();
+    expect(utils.getByText('Последнее: T1')).toBeTruthy();
   });
 });

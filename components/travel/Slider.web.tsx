@@ -512,10 +512,12 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                   prefetchEnabled &&
                   (distanceToCurrent === 0 ||
                     (distanceToCurrent <= effectivePreloadCount && allowNeighbourPreload))
+                // Prepare the blur backdrop for the ±1 neighbours too (was
+                // active-only on mobile) so a swipe doesn't have to build the
+                // neighbour's blur layer from scratch mid-gesture. The critical
+                // web blur reuses the slide's main src, so this adds no request.
                 const prepareBlur =
-                  layoutMeasured &&
-                  blurBackground &&
-                  (isMobileDevice ? distanceToCurrent === 0 : distanceToCurrent <= 1)
+                  layoutMeasured && blurBackground && distanceToCurrent <= 1
                 const slideUri = getUri(index)
 
                 return (

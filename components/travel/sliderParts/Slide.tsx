@@ -160,7 +160,12 @@ const Slide = memo(function Slide({
         : 'normal'
       : isFirstSlide || isActive
         ? 'high'
-        : 'low';
+        : // The adjacent neighbour we're about to swipe onto must not sit at the
+          // lowest fetch tier or its decode only starts at the gesture; give the
+          // preloaded neighbour 'normal', everything further out stays 'low'.
+          shouldPreloadAhead
+          ? 'normal'
+          : 'low';
 
   const mainFit: 'cover' | 'contain' = fit;
   const shouldBlur = blurBackground && (isActive || prepareBlur);
