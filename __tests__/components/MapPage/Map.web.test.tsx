@@ -1221,6 +1221,54 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         })
       )
     })
+
+    // Регрессия бага фильтра карты: категория выбрана, но её имя не смапилось в
+    // числовой backend-ID → серверный кластер-эндпоинт вернул ВСЕ точки. Флаг
+    // categoryFilterUnresolved должен заставить карту рендерить клиентски
+    // name-отфильтрованные маркеры, а не (нефильтрованные) серверные кластеры,
+    // иначе снятие категории не убирает маркеры.
+    it('ignores server clusters and renders client markers when category filter is unresolved', async () => {
+      mockMapClustersResult = {
+        ...mockMapClustersResult,
+        isError: false,
+        data: {
+          clusters: [
+            {
+              id: 'unfiltered-server-cluster',
+              center: { lat: 53.9, lng: 27.56 },
+              count: 42,
+              bounds: { south: 53.8, west: 27.4, north: 54.0, east: 27.7 },
+              previewItems: [],
+            },
+          ],
+          markers: [],
+          totalCount: 42,
+          source: 'server',
+          generatedAt: '2026-07-04T00:00:00Z',
+        },
+      }
+
+      const { queryByTestId } = renderWithProviders(
+        <MapPageComponent
+          {...defaultProps}
+          mode="radius"
+          categoryFilterUnresolved
+          travel={{
+            data: [{ id: 1, coord: '53.9,27.5667', address: 'Client Filtered Address' }],
+          } as any}
+        />
+      )
+
+      await act(async () => {})
+
+      // Серверные кластеры не рендерятся — карта на клиентском name-фильтре.
+      expect(queryByTestId('marker-cluster-group')).toBeTruthy()
+      expect(mockMarkerClusterGroupProps).toHaveBeenCalledWith(
+        expect.objectContaining({
+          points: [expect.objectContaining({ address: 'Client Filtered Address' })],
+        })
+      )
+    })
   })
 
   describe('My location button and location permissions', () => {

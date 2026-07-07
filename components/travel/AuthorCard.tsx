@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
@@ -18,6 +18,7 @@ import { getTravelLabel } from '@/utils/pluralize'
 import { useUserAchievements } from '@/hooks/useAchievementsApi'
 import RankBar from '@/components/achievements/RankBar'
 import BadgeMedal from '@/components/achievements/BadgeMedal'
+import BadgeDetailSheet, { type BadgeDetail } from '@/components/achievements/BadgeDetailSheet'
 import VerifiedBadge from '@/components/profile/VerifiedBadge'
 
 const STRICT_PLACEHOLDER = /^[.\s·•]+$|^Автор|^Пользователь|^User/i
@@ -97,11 +98,14 @@ function getAvatarSize(isMobile: boolean, isTablet: boolean): number {
 
 interface AuthorAchievementsProps {
   userId: number | string
+  ownerName?: string
   styles: ReturnType<typeof createStyles>
+  colors: ReturnType<typeof useThemedColors>
 }
 
-function AuthorAchievements({ userId, styles }: AuthorAchievementsProps) {
+function AuthorAchievements({ userId, ownerName, styles, colors }: AuthorAchievementsProps) {
   const { data } = useUserAchievements(userId)
+  const [selected, setSelected] = useState<BadgeDetail | null>(null)
 
   if (!data) return null
   if (data.earned.length === 0 && data.rank.totalPoints === 0) return null
@@ -110,14 +114,42 @@ function AuthorAchievements({ userId, styles }: AuthorAchievementsProps) {
 
   return (
     <View style={styles.achievementsBlock}>
-      <RankBar rank={data.rank} compact />
+      <RankBar rank={data.rank} compact titlePrefix="Уровень: " />
       {topBadges.length > 0 && (
-        <View style={styles.badgesRow}>
-          {topBadges.map((ub) => (
-            <BadgeMedal key={ub.badge.id} badge={ub.badge} size={36} earned />
-          ))}
-        </View>
+        <>
+          <View style={styles.badgesHeaderRow}>
+            <Feather name="award" size={13} color={colors.textMuted} />
+            <Text style={styles.badgesHeaderText}>Значки автора</Text>
+          </View>
+          <View style={styles.badgesRow}>
+            {topBadges.map((ub) => (
+              <BadgeMedal
+                key={ub.badge.id}
+                badge={ub.badge}
+                size={40}
+                earned
+                showLabel
+                onPress={() =>
+                  setSelected({
+                    badge: ub.badge,
+                    earned: true,
+                    userBadgeId: ub.id,
+                    earnedAt: ub.earnedAt,
+                    progress: null,
+                  })
+                }
+              />
+            ))}
+          </View>
+        </>
       )}
+
+      <BadgeDetailSheet
+        visible={selected != null}
+        onClose={() => setSelected(null)}
+        detail={selected}
+        ownerName={ownerName}
+      />
     </View>
   )
 }
@@ -243,6 +275,54 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
               </View>
             )}
 
+            {showActionsRow && (
+              <View style={styles.authorActionsRow}>
+                {canSubscribe && (
+                  <SubscribeButton
+                    targetUserId={userId!}
+                    size="sm"
+                    iconOnly={isMobile}
+                    style={isMobile ? styles.subscribeIconButton : styles.subscribeButton}
+                  />
+                )}
+
+                {!isOwnTravel && (
+                  <Pressable
+                    onPress={handleWriteToAuthor}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Написать автору${userName ? ` ${userName}` : ''}`}
+                    style={({ pressed }) => [
+                      styles.actionButton,
+                      isMobile && styles.actionButtonIconOnly,
+                      styles.actionButtonAccent,
+                      pressed && styles.actionButtonPressed,
+                    ]}
+                  >
+                    <Feather name="mail" size={15} color={colors.primaryDark} />
+                    {!isMobile && <Text style={styles.actionButtonAccentText}>Написать</Text>}
+                  </Pressable>
+                )}
+
+                <Pressable
+                  onPress={handleViewAuthorTravels}
+                  accessibilityRole="button"
+                  accessibilityLabel="Все путешествия автора"
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    isMobile && styles.actionButtonIconOnly,
+                    pressed && styles.actionButtonPressed,
+                  ]}
+                >
+                  <Feather name="map" size={15} color={colors.textSecondary} />
+                  {!isMobile && (
+                    <Text style={styles.actionButtonText} numberOfLines={1}>
+                      Все путешествия
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            )}
+
             {socials.length > 0 && (
               <View style={styles.socialsRow}>
                 {socials.map((s) => (
@@ -271,56 +351,17 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
               </View>
             )}
 
-            {userId != null && <AuthorAchievements userId={userId} styles={styles} />}
+            {userId != null && (
+              <AuthorAchievements
+                userId={userId}
+                ownerName={userName || undefined}
+                styles={styles}
+                colors={colors}
+              />
+            )}
           </View>
         </View>
       </View>
-
-      {showActionsRow && (
-        <View style={styles.authorActionsRow}>
-          {canSubscribe && (
-            <SubscribeButton
-              targetUserId={userId!}
-              size="sm"
-              iconOnly={isMobile}
-              style={isMobile ? styles.subscribeIconButton : styles.subscribeButton}
-            />
-          )}
-
-          {!isOwnTravel && (
-            <Pressable
-              onPress={handleWriteToAuthor}
-              accessibilityRole="button"
-              accessibilityLabel={`Написать автору${userName ? ` ${userName}` : ''}`}
-              style={({ pressed }) => [
-                styles.actionButton,
-                styles.actionButtonAccent,
-                pressed && styles.actionButtonPressed,
-              ]}
-            >
-              <Feather name="mail" size={15} color={colors.primaryDark} />
-              {!isMobile && <Text style={styles.actionButtonAccentText}>Написать</Text>}
-            </Pressable>
-          )}
-
-          <Pressable
-            onPress={handleViewAuthorTravels}
-            accessibilityRole="button"
-            accessibilityLabel="Все путешествия автора"
-            style={({ pressed }) => [
-              styles.actionButton,
-              pressed && styles.actionButtonPressed,
-            ]}
-          >
-            <Feather name="map" size={15} color={colors.textSecondary} />
-            {!isMobile && (
-              <Text style={styles.actionButtonText} numberOfLines={1}>
-                Все путешествия
-              </Text>
-            )}
-          </Pressable>
-        </View>
-      )}
     </View>
   )
 }
@@ -439,27 +480,47 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       marginTop: DESIGN_TOKENS.spacing.xs,
       gap: DESIGN_TOKENS.spacing.sm,
     },
-    badgesRow: {
+    badgesHeaderRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      gap: 5,
+    },
+    badgesHeaderText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      fontWeight: '700',
+      color: colors.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+    },
+    badgesRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      flexWrap: 'wrap',
       gap: DESIGN_TOKENS.spacing.sm,
     },
     authorActionsRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      flexWrap: 'wrap',
       gap: DESIGN_TOKENS.spacing.sm,
-      marginTop: DESIGN_TOKENS.spacing.sm,
+      marginTop: 2,
     },
     subscribeButton: { flexShrink: 1 },
     subscribeIconButton: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: 999,
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
+    },
+    actionButtonIconOnly: {
+      width: 44,
+      height: 44,
+      paddingHorizontal: 0,
+      paddingVertical: 0,
     },
     actionButton: {
       flexDirection: 'row',

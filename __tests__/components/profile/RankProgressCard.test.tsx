@@ -28,7 +28,7 @@ describe('RankProgressCard', () => {
     fireEvent.press(getByTestId('rank-progress-card'))
 
     expect(getByTestId('rank-progress-card-loading')).toBeTruthy()
-    expect(getByText('Загружаем XP, уровень и значки.')).toBeTruthy()
+    expect(getByText('Загружаем уровень, очки опыта и значки.')).toBeTruthy()
     expect(onPress).toHaveBeenCalledTimes(1)
   })
 

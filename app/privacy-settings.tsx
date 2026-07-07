@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { View, Text, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { useRouter, useIsFocused } from 'expo-router';
+import { useRouter, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
@@ -17,12 +17,30 @@ import { buildCanonicalUrl } from '@/utils/seo';
 import PrivacySettingsMatrix from '@/components/settings/PrivacySettingsMatrix';
 
 export default function PrivacySettingsScreen() {
-    useAndroidBackHandler();
     const router = useRouter();
+    const params = useLocalSearchParams<{ from?: string }>();
     const isFocused = useIsFocused();
     const { isAuthenticated, authReady } = useAuth();
     const colors = useThemedColors();
     const styles = useMemo(() => createSettingsStyles(colors), [colors]);
+    const cameFromProfile = params.from === 'profile';
+
+    const handleBackToSource = useCallback(() => {
+        if (cameFromProfile) {
+            router.replace('/profile' as any);
+            return true;
+        }
+
+        if (router.canGoBack()) {
+            router.back();
+            return true;
+        }
+
+        router.replace('/profile' as any);
+        return true;
+    }, [cameFromProfile, router]);
+
+    useAndroidBackHandler(undefined, { resolveBack: handleBackToSource });
 
     if (authReady && !isAuthenticated) {
         return (
@@ -62,7 +80,7 @@ export default function PrivacySettingsScreen() {
                             </View>
                             <Pressable
                                 style={[styles.backToProfileButton, globalFocusStyles.focusable]}
-                                onPress={() => router.back()}
+                                onPress={handleBackToSource}
                                 accessibilityRole="button"
                                 accessibilityLabel="Назад"
                                 {...Platform.select({ web: { cursor: 'pointer' } })}

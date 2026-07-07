@@ -31,6 +31,14 @@ export interface MapProps {
   setRoutingError?: (error: string | null) => void;
   radius?: string;
   mapClusterFilters?: MapClustersFilters;
+  /**
+   * True when a category filter is active but its names did not resolve to
+   * numeric backend IDs, so the server-cluster endpoint can't filter by category
+   * and returns everything. When true the map renders the client-side
+   * name-filtered dataset instead of the (unfiltered) server clusters, so
+   * deselecting a category actually removes its markers.
+   */
+  categoryFilterUnresolved?: boolean;
   onMapUiApiReady?: (api: MapUiApi | null) => void;
   onUserLocationChange?: (loc: Coordinates | null) => void;
   /**

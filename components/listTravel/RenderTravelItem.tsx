@@ -76,6 +76,7 @@ type RenderTravelItemProps = {
     cardWidth?: string | number; // пока не используем для width, оставляем для совместимости пропсов
     imageHeight?: number;
     viewportWidth?: number;
+    gridColumns?: number;
     hideAuthor?: boolean;
     visualVariant?: 'default' | 'home-featured';
     isDeleting?: boolean;
@@ -103,6 +104,7 @@ function RenderTravelItem({
                               cardWidth,
                               imageHeight,
                               viewportWidth = 0,
+                              gridColumns,
                               hideAuthor = false,
                               visualVariant = 'default',
                                isDeleting = false,
@@ -144,6 +146,7 @@ function RenderTravelItem({
                 viewportWidth={viewportWidth}
                 cardWidth={cardWidthNumber}
                 imageHeight={imageHeight}
+                gridColumns={gridColumns}
                 hideAuthor={hideAuthor}
                 visualVariant={visualVariant}
                 isDeleting={isDeleting}
@@ -177,6 +180,7 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
     if (prev.hideAuthor !== next.hideAuthor) return false;
     if (prev.cardWidth !== next.cardWidth) return false;
     if (prev.viewportWidth !== next.viewportWidth) return false;
+    if (prev.gridColumns !== next.gridColumns) return false;
     if (prev.imageHeight !== next.imageHeight) return false;
     if (prev.visualVariant !== next.visualVariant) return false;
     if (prev.isDeleting !== next.isDeleting) return false;

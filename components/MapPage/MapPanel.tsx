@@ -49,6 +49,7 @@ interface MapPanelProps {
     setRoutingError?: (error: string | null) => void;
     radius?: string; // Радиус поиска в км
     mapClusterFilters?: MapClustersFilters;
+    categoryFilterUnresolved?: boolean;
     onMapUiApiReady?: (api: MapUiApi | null) => void;
     onUserLocationChange?: ((loc: LatLng | null) => void) | undefined;
     onMapMove?: (center: MapMovePayload) => void;
@@ -97,6 +98,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                setRoutingError,
                                                radius,
                                                mapClusterFilters,
+                                               categoryFilterUnresolved,
                                                onMapUiApiReady,
                                                onUserLocationChange,
                                                onMapMove,
@@ -169,6 +171,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                     routePoints={routePoints}
                     fullRouteCoords={fullRouteCoords}
                     mapClusterFilters={mapClusterFilters}
+                    categoryFilterUnresolved={categoryFilterUnresolved}
                     mode={mode}
                     transportMode={transportMode}
                     setRouteDistance={setRouteDistance}
@@ -206,6 +209,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                       setRoutingError={setRoutingError}
                       radius={radius}
                       mapClusterFilters={mapClusterFilters}
+                      categoryFilterUnresolved={categoryFilterUnresolved}
                       onMapUiApiReady={onMapUiApiReady}
                       onUserLocationChange={onUserLocationChange}
                       onMapMove={onMapMove}

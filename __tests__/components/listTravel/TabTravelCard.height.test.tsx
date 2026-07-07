@@ -16,6 +16,7 @@ const mockUnifiedTravelCard = jest.fn((props: any) => {
   return (
     <View testID={props.testID || 'unified-travel-card'}>
       {props.contentSlot}
+      {props.bottomRightSlot}
     </View>
   );
 });
@@ -85,6 +86,37 @@ describe('TabTravelCard content height rules', () => {
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0];
     expect(props?.webTouchAction).toBe('pan-x pan-y');
+  });
+
+  it('renders a formatted views badge in bottomRightSlot when views are positive', () => {
+    const { getByTestId } = render(
+      <TabTravelCard
+        item={{ ...baseItem, views: 15801 } as any}
+        onPress={() => undefined}
+        testID="tab-card"
+      />
+    );
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0];
+    expect(props?.bottomRightSlot).toBeTruthy();
+    expect(getByTestId('tab-card-views')).toBeTruthy();
+  });
+
+  it('omits the views badge when views are zero or missing', () => {
+    const zero = render(
+      <TabTravelCard
+        item={{ ...baseItem, views: 0 } as any}
+        onPress={() => undefined}
+        testID="tab-card-zero"
+      />
+    );
+    expect(mockUnifiedTravelCard.mock.calls.at(-1)?.[0]?.bottomRightSlot).toBeNull();
+    expect(zero.queryByTestId('tab-card-zero-views')).toBeNull();
+
+    render(
+      <TabTravelCard item={baseItem as any} onPress={() => undefined} testID="tab-card-none" />
+    );
+    expect(mockUnifiedTravelCard.mock.calls.at(-1)?.[0]?.bottomRightSlot).toBeNull();
   });
 
   it('generates a stable fallback testID when one is not provided', () => {

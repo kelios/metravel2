@@ -113,6 +113,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                 imageUrl: t.travel_image_thumb_url,
                 url: resolveTravelUrl({ id: Number(t.id) || 0, slug: t.slug, url: t.url } as any),
                 country: t.countryName,
+                views: Number(t.countUnicIpView ?? t.count_unic_ip_view ?? 0) || 0,
             }));
     }, [popularValues, viewHistory]);
     const preview = useVisibleCardCount({
@@ -125,10 +126,6 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
     // ВАЖНО: все хуки должны быть вызваны до условных возвратов
     const handleItemPress = useCallback((url: string) => {
         router.push(url as any);
-    }, [router]);
-
-    const handleOpenAll = useCallback(() => {
-        router.push('/search' as any);
     }, [router]);
 
     // Условный возврат после всех хуков
@@ -173,15 +170,6 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                                 Подборка месяца
                             </Text>
                         </View>
-                        <Pressable
-                            onPress={handleOpenAll}
-                            style={styles.seeAllButton}
-                            accessibilityRole="link"
-                            accessibilityLabel="Смотреть все маршруты"
-                        >
-                            <Text style={[styles.seeAllText, { color: colors.primaryText }]}>Все</Text>
-                            <Feather name="arrow-right" size={14} color={colors.primaryDark} />
-                        </Pressable>
                     </View>
                     <Text style={[styles.subtitle, { color: colors.textMuted }]}>Самые популярные маршруты этого месяца</Text>
                 </>
@@ -197,11 +185,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                                     imageUrl: item.imageUrl,
                                     city: null,
                                     country: item.country ?? null,
-                                }}
-                                badge={{
-                                    icon: 'trending-up',
-                                    backgroundColor: colors.surface,
-                                    iconColor: colors.primary,
+                                    views: item.views,
                                 }}
                                 onPress={() => handleItemPress(item.url)}
                                 layout="grid"
@@ -220,11 +204,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                                     imageUrl: item.imageUrl,
                                     city: null,
                                     country: item.country ?? null,
-                                }}
-                                badge={{
-                                    icon: 'trending-up',
-                                    backgroundColor: colors.surface,
-                                    iconColor: colors.primary,
+                                    views: item.views,
                                 }}
                                 onPress={() => handleItemPress(item.url)}
                                 layout="grid"
@@ -247,11 +227,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                                 imageUrl: item.imageUrl,
                                 city: null,
                                 country: item.country ?? null,
-                            }}
-                            badge={{
-                                icon: 'trending-up',
-                                backgroundColor: colors.surface,
-                                iconColor: colors.primary,
+                                views: item.views,
                             }}
                             onPress={() => handleItemPress(item.url)}
                         />
@@ -277,11 +253,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                                 imageUrl: item.imageUrl,
                                 city: null,
                                 country: item.country ?? null,
-                            }}
-                            badge={{
-                                icon: 'trending-up',
-                                backgroundColor: colors.surface,
-                                iconColor: colors.primary,
+                                views: item.views,
                             }}
                             onPress={() => handleItemPress(item.url)}
                         />
@@ -337,23 +309,6 @@ const styles = StyleSheet.create({
         fontSize: 15, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше размер
         fontWeight: '600', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше жирность
         letterSpacing: -0.1,
-    },
-    seeAllButton: {
-        flexShrink: 0,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        ...Platform.select({
-            web: {
-                cursor: 'pointer',
-            },
-        }),
-    },
-    seeAllText: {
-        fontSize: 12,
-        fontWeight: '700',
     },
     subtitle: {
         fontSize: 13,

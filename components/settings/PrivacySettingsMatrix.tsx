@@ -16,7 +16,7 @@ const CONTENT_LABELS: Record<PrivacyContentType, { title: string; meta: string; 
     trips: { title: 'Путешествия', meta: 'Кто видит ваши опубликованные путешествия', icon: 'map' },
     routes: { title: 'Маршруты', meta: 'Кто видит ваши сохранённые маршруты', icon: 'navigation' },
     social: { title: 'Контакты и соцсети', meta: 'Кто видит ваши ссылки на соцсети', icon: 'at-sign' },
-    achievements: { title: 'Достижения', meta: 'Кто видит ваши значки и ранг', icon: 'award' },
+    achievements: { title: 'Достижения', meta: 'Кто видит ваши значки и уровень', icon: 'award' },
     visited_places: { title: 'Посещённые места', meta: 'Кто видит карту ваших посещений', icon: 'check-circle' },
 };
 

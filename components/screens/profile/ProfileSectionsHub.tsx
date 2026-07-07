@@ -56,7 +56,7 @@ const BASE_ITEMS: HubItem[] = [
     title: 'Приватность',
     subtitle: 'Кто видит контакты',
     icon: 'shield',
-    route: '/privacy-settings',
+    route: '/privacy-settings?from=profile',
   },
   {
     key: 'security',

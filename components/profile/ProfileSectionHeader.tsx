@@ -23,7 +23,7 @@ function ProfileSectionHeader({
   title,
   subtitle,
   onBack,
-  backLabel = 'Главное',
+  backLabel = 'Обзор',
   testID,
 }: Props) {
   const colors = useThemedColors()

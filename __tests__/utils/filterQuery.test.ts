@@ -1,6 +1,7 @@
 import {
   buildTravelQueryParams,
   mapCategoryNamesToIds,
+  isCategoryFilterUnresolved,
 } from '@/utils/filterQuery'
 
 describe('buildTravelQueryParams', () => {
@@ -69,5 +70,28 @@ describe('mapCategoryNamesToIds', () => {
     )
 
     expect(ids).toEqual([5, 9])
+  })
+})
+
+describe('isCategoryFilterUnresolved', () => {
+  // Регрессия карты: категория выбрана в фильтре, но её имя не смапилось в
+  // числовой backend-ID (частый кейс: API категорий пуст, чипы взяты из точек с
+  // id=name) → серверный кластер-эндпоинт получает пустой category и возвращает
+  // все точки. Флаг должен быть true, чтобы карта откатилась на клиентский
+  // name-фильтр и снятие категории убирало маркеры.
+  it('is true when a category is selected but no numeric ids resolved', () => {
+    expect(isCategoryFilterUnresolved([['Замки'], []], [])).toBe(true)
+    expect(isCategoryFilterUnresolved([[], ['Природа']], undefined)).toBe(true)
+  })
+
+  it('is false when no category is selected', () => {
+    expect(isCategoryFilterUnresolved([[], []], [])).toBe(false)
+    expect(isCategoryFilterUnresolved([undefined, null], undefined)).toBe(false)
+  })
+
+  it('is false when the selected category resolved to numeric ids', () => {
+    // Имена смапились → серверный путь может фильтровать сам, откат не нужен.
+    expect(isCategoryFilterUnresolved([['Замки'], []], [5])).toBe(false)
+    expect(isCategoryFilterUnresolved([['Замки'], ['Природа']], [5, 9])).toBe(false)
   })
 })

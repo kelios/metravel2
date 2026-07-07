@@ -138,6 +138,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     setRoutingError,
     radius,
     mapClusterFilters,
+    categoryFilterUnresolved = false,
     onUserLocationChange,
     onMapMove,
     hideFloatingControls = false,
@@ -351,8 +352,15 @@ const MapPageComponent: React.FC<Props> = (props) => {
     radiusInMeters,
     serverClusterRenderData,
   ])
+  // Когда категория выбрана, но не смапилась в числовой backend-ID, серверные
+  // кластеры не отфильтрованы по категории (эндпоинт получил пустой category и
+  // вернул всё) — используем клиентски отфильтрованный по имени `markers`, иначе
+  // снятие категории не убирало бы маркеры.
   const shouldUseServerClusterData =
-    mode === 'radius' && !serverClusterQuery.isError && radiusFilteredServerClusterRenderData.hasServerData
+    mode === 'radius' &&
+    !serverClusterQuery.isError &&
+    radiusFilteredServerClusterRenderData.hasServerData &&
+    !categoryFilterUnresolved
   const renderedMarkers = shouldUseServerClusterData && radiusFilteredServerClusterRenderData.markers.length > 0
     ? radiusFilteredServerClusterRenderData.markers
     : markers
@@ -962,6 +970,7 @@ export const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
 
   if (prevProps.radius !== nextProps.radius) return false
   if (prevProps.mapClusterFilters !== nextProps.mapClusterFilters) return false
+  if (prevProps.categoryFilterUnresolved !== nextProps.categoryFilterUnresolved) return false
 
   // #207 host-stability (#217): the map is a stable host that never remounts, so a
   // desktop↔mobile resize flips isMobile at the caller, toggling these props (mobile

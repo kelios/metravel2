@@ -118,6 +118,12 @@ interface TravelProps {
   onMapMove?: (center: Coordinates) => void;
   mapClusterFilters?: MapClustersFilters;
   /**
+   * Категория выбрана, но её имя не смапилось в числовой backend-ID → серверные
+   * кластеры не отфильтрованы по категории. Тогда рендерим клиентски
+   * отфильтрованный по имени набор точек, чтобы снятие категории убирало маркеры.
+   */
+  categoryFilterUnresolved?: boolean;
+  /**
    * Рендерить ТОЛЬКО переданные `travel.data`, не запрашивая серверный travel/places
    * кластер-эндпоинт. Для карты квестов (`/quests`), где показываем только квесты.
    */
@@ -232,6 +238,7 @@ const Map: React.FC<TravelProps> = ({
   onMarkerSelect,
   onMapMove,
   mapClusterFilters,
+  categoryFilterUnresolved = false,
   pointsOnly = false,
   onMapUiApiReady,
 }) => {
@@ -315,8 +322,15 @@ const Map: React.FC<TravelProps> = ({
     ),
     [radiusFilterCenter, radiusMeters, serverClusterRenderData],
   );
+  // Категория выбрана, но не смапилась в числовой backend-ID → серверные кластеры
+  // не отфильтрованы по категории (вернулись все) → откатываемся на клиентски
+  // отфильтрованный по имени `travelAddress`, иначе снятие категории не убирает
+  // маркеры.
   const shouldUseServerClusterData =
-    mode === 'radius' && !serverClusterQuery.isError && radiusFilteredServerClusterRenderData.hasServerData;
+    mode === 'radius' &&
+    !serverClusterQuery.isError &&
+    radiusFilteredServerClusterRenderData.hasServerData &&
+    !categoryFilterUnresolved;
   const renderedNativePoints =
     shouldUseServerClusterData && radiusFilteredServerClusterRenderData.markers.length > 0
       ? radiusFilteredServerClusterRenderData.markers

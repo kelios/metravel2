@@ -72,6 +72,11 @@ function CharacterProfileCard({ userId, bare = false, testID, style }: Props) {
 
   const styles = useMemo(() => getStyles(colors), [colors])
 
+  // Сырое имя ветки (Собачья/Лисья/…) обрамляем как «Ветка «…»», а не как крупный
+  // заголовок персонажа. Дефолт 'Персонаж' из маппера ветку не обозначает — прячем.
+  const rawBranch = data?.pathName ?? data?.name ?? null
+  const branchName = rawBranch && rawBranch !== 'Персонаж' && rawBranch !== '' ? rawBranch : null
+
   if (isError) return null
   if (isOwn && !isAuthenticated) return null
   // Не fetching и нет данных (disabled/idle/пусто) — секция необязательная.
@@ -82,13 +87,18 @@ function CharacterProfileCard({ userId, bare = false, testID, style }: Props) {
       <View style={styles.headerRow}>
         <CharacterHeadIcon slug={data?.pathSlug ?? null} size={44} />
         <View style={styles.headerBody}>
-          <Text style={styles.name}>{data?.name ?? 'Ваш путешественник'}</Text>
+          <Text style={styles.name}>
+            {isOwn ? 'Ваш персонаж' : 'Персонаж путешественника'}
+          </Text>
           <Text style={styles.meta}>
-            {data ? `Уровень ${data.level}` : ''}
-            {data?.pathName ? ` · ${data.pathName}` : ''}
+            {branchName ? `Ветка «${branchName}»` : ''}
+            {branchName && data ? ' · ' : ''}
+            {data ? `уровень ${data.level}` : ''}
           </Text>
           <Text style={styles.headerHint} numberOfLines={2}>
-            Персонаж растёт по направлениям активности — выберите ветку развития.
+            {isOwn
+              ? 'Персонаж растёт по направлениям активности — выберите ветку развития.'
+              : 'Персонаж растёт по направлениям активности путешественника.'}
           </Text>
         </View>
       </View>

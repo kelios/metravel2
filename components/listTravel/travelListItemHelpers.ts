@@ -108,6 +108,15 @@ export const resolveTravelAuthorName = (travel: Travel, userName: unknown): stri
   return ''
 }
 
+export const resolveDisplayTravelYear = (
+  year: Travel['year'] | number | null | undefined,
+): string | null => {
+  if (year == null) return null
+  const parsed = Number(String(year).trim())
+  if (!Number.isInteger(parsed) || parsed < 1900 || parsed > 2100) return null
+  return String(parsed)
+}
+
 export const resolveTravelAuthorDisplayName = (authorName: string): string => {
   const value = String(authorName || '').trim()
   if (!value) return ''

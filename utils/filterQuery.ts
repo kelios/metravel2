@@ -194,3 +194,22 @@ export const mapCategoryNamesToIds = (
 
   return unique(ids)
 }
+
+/**
+ * True when the user has a category filter active but none of the selected
+ * category names resolved to a numeric backend ID. In that case the server
+ * cluster endpoint receives an empty `category` and returns ALL points, so the
+ * caller must render the client-side name-filtered dataset instead — otherwise
+ * deselecting a category leaves every marker on the map (map category filter bug).
+ */
+export const isCategoryFilterUnresolved = (
+  selectedCategoryNameGroups: Array<string[] | undefined | null>,
+  resolvedCategoryIds: number[] | undefined | null,
+): boolean => {
+  const selectedCount = selectedCategoryNameGroups.reduce(
+    (sum, group) => sum + (Array.isArray(group) ? group.length : 0),
+    0,
+  )
+  const resolvedCount = Array.isArray(resolvedCategoryIds) ? resolvedCategoryIds.length : 0
+  return selectedCount > 0 && resolvedCount === 0
+}

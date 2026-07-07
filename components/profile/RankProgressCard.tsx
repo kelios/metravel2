@@ -24,20 +24,20 @@ function RankProgressCard({ rank, onPress, testID }: Props) {
   const styles = useMemo(() => getStyles(colors), [colors])
 
   const explainer = !rank
-    ? 'Загружаем XP, уровень и значки.'
+    ? 'Загружаем уровень, очки опыта и значки.'
     : rank.isMaxLevel
     ? 'Вы достигли максимального уровня — открыты все привилегии.'
     : rank.nextLevelMinPoints != null
-      ? `Зарабатывайте XP за маршруты, отзывы и активность, чтобы открыть уровень «${rank.nextLevelTitle ?? ''}».`
-      : 'Зарабатывайте XP за маршруты, отзывы и активность, чтобы расти в ранге.'
+      ? `Зарабатывайте очки опыта за маршруты, отзывы и активность, чтобы открыть уровень «${rank.nextLevelTitle ?? ''}».`
+      : 'Зарабатывайте очки опыта за маршруты, отзывы и активность, чтобы повышать уровень.'
 
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : 'summary'}
-      accessibilityLabel={rank ? `Ранг: уровень ${rank.level}, ${rank.title}` : 'Ранг загружается'}
-      accessibilityHint={onPress ? 'Открыть детали наград и ранга' : undefined}
+      accessibilityLabel={rank ? `Уровень ${rank.level}: ${rank.title}` : 'Уровень загружается'}
+      accessibilityHint={onPress ? 'Открыть детали наград и уровня' : undefined}
       style={({ pressed }) => [
         styles.card,
         globalFocusStyles.focusable,
@@ -48,11 +48,11 @@ function RankProgressCard({ rank, onPress, testID }: Props) {
       <View style={styles.headerRow}>
         <View style={styles.titleWrap}>
           <Feather name="trending-up" size={14} color={colors.primaryDark} />
-          <Text style={styles.headerTitle}>Ваш ранг</Text>
+          <Text style={styles.headerTitle}>Ваш уровень</Text>
         </View>
         {onPress ? (
           <View style={styles.detailsCta}>
-            <Text style={styles.detailsText}>Подробнее</Text>
+            <Text style={styles.detailsText}>Все награды</Text>
             <Feather name="chevron-right" size={14} color={colors.primaryDark} />
           </View>
         ) : null}
@@ -71,7 +71,7 @@ function RankProgressCard({ rank, onPress, testID }: Props) {
       )}
 
       <Text style={styles.whatIsIt}>
-        Ранг растёт за вашу активность на MeTravel — публикации, квесты, лайки.
+        Уровень растёт за вашу активность на MeTravel — публикации, квесты, лайки.
       </Text>
       <Text style={styles.explainer}>{explainer}</Text>
     </Pressable>

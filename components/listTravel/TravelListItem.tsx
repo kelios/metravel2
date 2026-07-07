@@ -30,6 +30,7 @@ import { createTravelListItemStyles } from './travelListItemStyles'
 import {
   isLikelyWatermarked,
   normalizeOwnerIds,
+  resolveDisplayTravelYear,
   resolveTravelAuthorDisplayName,
   resolveTravelAuthorName,
 } from './travelListItemHelpers'
@@ -90,6 +91,7 @@ type Props = {
   cardWidth?: number
   imageHeight?: number
   viewportWidth?: number
+  gridColumns?: number
   hideAuthor?: boolean
   visualVariant?: 'default' | 'home-featured'
   webTouchAction?: string
@@ -111,6 +113,7 @@ function TravelListItem({
   cardWidth,
   imageHeight,
   viewportWidth,
+  gridColumns,
   hideAuthor = false,
   visualVariant = 'default',
   webTouchAction,
@@ -306,9 +309,16 @@ function TravelListItem({
     [isNavigable, handlePress],
   )
 
+  // Year is shown when the card spans the full row (single-column native grid)
+  // or on web (including multi-column grid). Compact native multi-column grids
+  // omit it so the meta row stays readable. Invalid/empty year is dropped.
+  const showYearContext = IS_WEB || gridColumns === 1
+  const displayYear = showYearContext ? resolveDisplayTravelYear(travel.year) : null
+
   const a11yLabel =
     `Путешествие: ${title}` +
     (countries.length ? `. Страны: ${countries.join(', ')}` : '') +
+    (displayYear ? `. Год: ${displayYear}` : '') +
     (views > 0 ? `. Просмотров: ${viewsFormatted}` : '')
 
   const hasAuthorMeta = !hideAuthor && authorDisplayName !== ''
@@ -509,12 +519,19 @@ function TravelListItem({
   const hasSecondaryMeta =
     topRowItems.length > 0 ||
     hasEngagementStats ||
-    hasRating
+    hasRating ||
+    displayYear != null
 
   const secondaryMetaSlot = hasSecondaryMeta ? (
     <View style={styles.metaRow}>
       <View style={styles.inlineMetaGroup}>{topRowItems}</View>
       <View style={styles.metaBadgesRow}>
+        {displayYear != null && (
+          <View style={styles.metaYear} testID="year-meta">
+            <Feather name="calendar" size={VIEW_ICON_SIZE} color={colors.textMuted} />
+            <Text style={styles.metaYearText}>{displayYear}</Text>
+          </View>
+        )}
         {hasEngagementStats && (
           <TravelListItemEngagementMetrics
             engagementStats={engagementStats}
@@ -659,6 +676,7 @@ function areEqual(prev: Props, next: Props) {
     prev.cardWidth === next.cardWidth &&
     prev.imageHeight === next.imageHeight &&
     prev.viewportWidth === next.viewportWidth &&
+    prev.gridColumns === next.gridColumns &&
     prev.webTouchAction === next.webTouchAction &&
     prev.isDeleting === next.isDeleting
   )

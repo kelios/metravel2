@@ -64,7 +64,7 @@ export function ProfileOverviewTab({
       />
       <ProfileSectionHeader
         title="Награды и прогресс"
-        subtitle="Ваш путь, значки и достижения"
+        subtitle="Уровень, значки и достижения"
       />
       <AwardsHub requestedTab={awardsTab} />
       <PlaceFirstBadgesSection />

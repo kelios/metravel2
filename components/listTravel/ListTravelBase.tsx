@@ -464,6 +464,7 @@ function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
           cardWidth={searchCardWidth}
           imageHeight={searchCardImageHeight}
           viewportWidth={width}
+          gridColumns={gridColumns}
         />
       ),
       [

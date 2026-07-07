@@ -11,11 +11,13 @@ interface Props {
   rank: UserRank;
   /** Компактный вариант (карточка автора): без подписи XP. */
   compact?: boolean;
+  /** Префикс перед названием ранга, напр. «Ранг: » — делает слово понятным. */
+  titlePrefix?: string;
   testID?: string;
   style?: StyleProp<ViewStyle>;
 }
 
-function RankBar({ rank, compact = false, testID, style }: Props) {
+function RankBar({ rank, compact = false, titlePrefix = '', testID, style }: Props) {
   const colors = useThemedColors();
 
   // 'max' — достигнут максимум; 'progress' — есть следующий уровень; 'unknown' —
@@ -114,11 +116,11 @@ function RankBar({ rank, compact = false, testID, style }: Props) {
         </View>
         <View style={styles.titleWrap}>
           <Text style={styles.title} numberOfLines={1}>
-            {rank.title}
+            {`${titlePrefix}${rank.title}`}
           </Text>
           {!compact ? (
             <Text style={styles.points}>
-              {rank.totalPoints} XP · значков: {rank.badgesCount}
+              {rank.totalPoints} очков опыта · значков: {rank.badgesCount}
             </Text>
           ) : null}
         </View>
@@ -143,7 +145,7 @@ function RankBar({ rank, compact = false, testID, style }: Props) {
           </View>
         ) : (
           <Text style={styles.caption}>
-            До «{rank.nextLevelTitle}»: {remaining} XP
+            До «{rank.nextLevelTitle}»: ещё {remaining} очков опыта
           </Text>
         )
       ) : null}

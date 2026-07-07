@@ -325,6 +325,21 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
     },
 
+    // Год путешествия — компактный чип в правой части мета-строки
+    metaYear: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      flexShrink: 0,
+    },
+
+    metaYearText: {
+      fontSize: META_TEXT_FONT_SIZE,
+      lineHeight: META_TEXT_LINE_HEIGHT,
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+      color: colors.textSecondary,
+    },
+
     // Inline рейтинг (без чипа)
     metaRating: {
       flexDirection: 'row',

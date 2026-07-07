@@ -387,7 +387,7 @@ describe('ProfileScreen', () => {
 
     const { getByLabelText, findByLabelText } = renderProfile();
 
-    // По умолчанию активна вкладка "Главное"; переключаемся на "Маршруты"
+    // По умолчанию активна вкладка "Обзор"; переключаемся на "Маршруты"
     fireEvent.press(await findByLabelText('Мои маршруты: 3'));
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
 
@@ -506,7 +506,7 @@ describe('ProfileScreen', () => {
 
     const { findByLabelText, findByText } = renderProfile();
 
-    fireEvent.press(await findByLabelText('Главное'));
+    fireEvent.press(await findByLabelText('Обзор'));
     expect(await findByText('С чего начать')).toBeTruthy();
 
     fireEvent.press(await findByLabelText('Создать первый маршрут'));

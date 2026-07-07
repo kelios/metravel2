@@ -5,10 +5,12 @@ import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import { formatViewCount } from '@/components/travel/utils/travelHelpers';
 
 import { createTabCardTemplate, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
 
 const ICON_MARGIN_STYLE = { marginRight: 4 } as const;
+const VIEW_ICON_SIZE = Platform.OS === 'web' ? 13 : 12;
 
 export type TabTravelCardBadge = {
   icon: keyof typeof Feather.glyphMap;
@@ -22,6 +24,7 @@ export type TabTravelCardItem = {
   imageUrl?: string | null;
   city?: string | null;
   country?: string | null;
+  views?: number | string | null;
 };
 
 type Props = {
@@ -72,6 +75,19 @@ function TabTravelCard({
     return [item?.city, item?.country].filter(Boolean).join(', ');
   }, [item?.city, item?.country]);
 
+  const views = Number(item?.views) || 0;
+  const viewsBadge = useMemo(() => {
+    if (views <= 0) return null;
+    return (
+      <View style={styles.viewsBadge} testID={`${resolvedTestID}-views`} pointerEvents="none">
+        <Feather name="eye" size={VIEW_ICON_SIZE} color="#fff" />
+        <Text style={styles.viewsBadgeText} numberOfLines={1}>
+          {formatViewCount(views)}
+        </Text>
+      </View>
+    );
+  }, [resolvedTestID, styles.viewsBadge, styles.viewsBadgeText, views]);
+
   const contentSlot = useMemo(() => {
     return (
       <View
@@ -106,6 +122,7 @@ function TabTravelCard({
       mediaFit={mediaFit}
       heroTitleOverlay={false}
       contentSlot={contentSlot}
+      bottomRightSlot={viewsBadge}
       width={
         typeof width === 'number'
           ? width
@@ -177,6 +194,23 @@ const createStyles = (template: ReturnType<typeof createTabCardTemplate>) => Sty
     fontSize: 12,
     fontWeight: '600',
     flex: 1,
+  },
+
+  viewsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+
+  viewsBadgeText: {
+    color: '#fff',
+    fontSize: Platform.OS === 'web' ? 12 : 11,
+    lineHeight: Platform.OS === 'web' ? 16 : 14,
+    fontWeight: '600',
   },
 
 });

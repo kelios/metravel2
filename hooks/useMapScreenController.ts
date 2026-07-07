@@ -16,7 +16,7 @@ import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaI
 import { useThemedColors } from '@/hooks/useTheme';
 import { getStyles } from '@/screens/tabs/map.styles';
 import { buildCanonicalUrl } from '@/utils/seo';
-import { mapCategoryNamesToIds } from '@/utils/filterQuery';
+import { mapCategoryNamesToIds, isCategoryFilterUnresolved } from '@/utils/filterQuery';
 
 // Модульные хуки для карты
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates';
@@ -413,6 +413,20 @@ export function useMapScreenController() {
     queryCoordinates?.longitude,
   ]);
 
+  // Категория выбрана в фильтре, но её имя не смапилось в числовой backend-ID
+  // (частый кейс: API категорий пуст → чипы берут имена из точек с id=name).
+  // Тогда серверный кластер-эндпоинт получает пустой category и возвращает ВСЁ,
+  // перекрывая клиентский name-фильтр → снятие категории не убирает маркеры.
+  // Флаг говорит карте откатиться на клиентски-отфильтрованный по имени набор.
+  const categoryFilterUnresolved = useMemo(
+    () =>
+      isCategoryFilterUnresolved(
+        [filterValues.categories, filterValues.categoryTravelAddress],
+        mapClusterFilters.category,
+      ),
+    [filterValues.categories, filterValues.categoryTravelAddress, mapClusterFilters.category],
+  );
+
   // Счётчик мест в боковом меню: показываем общее число (backend total), а не
   // длину загруженной страницы. Текстовый поиск теперь серверный (where.query,
   // BE #695) и УЧТЁН в total — поэтому при поиске тоже берём backend total.
@@ -650,6 +664,7 @@ export function useMapScreenController() {
       transportMode,
       radius: filterValues.radius,
       mapClusterFilters,
+      categoryFilterUnresolved,
       setRoutePoints,
       setRouteDistance,
       setRouteDuration,
@@ -678,6 +693,7 @@ export function useMapScreenController() {
       transportMode,
       filterValues.radius,
       mapClusterFilters,
+      categoryFilterUnresolved,
       setRoutePoints,
       setRouteDistance,
       setRouteDuration,

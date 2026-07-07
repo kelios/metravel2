@@ -157,11 +157,22 @@ describe('TravelListItem content & metadata', () => {
     expect(queryByText('Long Author Name')).toBeNull();
   });
 
-  it('does not render the year on the travel card', () => {
-    const { queryByTestId, queryByText } = renderItem({ year: '2024' } as any);
+  it('renders the year on web travel cards', () => {
+    const { getByTestId, getByText } = renderItem({ year: '2024' } as any);
 
-    expect(queryByTestId('year-meta')).toBeNull();
-    expect(queryByText('2024')).toBeNull();
+    expect(getByTestId('year-meta')).toBeTruthy();
+    expect(getByText('2024')).toBeTruthy();
+  });
+
+  it('omits the year when it is empty or invalid', () => {
+    const empty = renderItem({ year: '' } as any);
+    expect(empty.queryByTestId('year-meta')).toBeNull();
+
+    const invalid = renderItem({ year: 'not-a-year' } as any);
+    expect(invalid.queryByTestId('year-meta')).toBeNull();
+
+    const outOfRange = renderItem({ year: '1200' } as any);
+    expect(outOfRange.queryByTestId('year-meta')).toBeNull();
   });
 
   it('renders engagement metrics on the travel card when stats exist', () => {

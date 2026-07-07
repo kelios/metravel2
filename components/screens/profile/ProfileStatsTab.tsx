@@ -52,7 +52,7 @@ export function ProfileStatsTab({
         title="Статистика маршрутов"
         subtitle="Как сообщество взаимодействует с вашими маршрутами"
         onBack={onBackToOverview}
-        backLabel="Главное"
+        backLabel="Обзор"
       />
       <ProfileTravelEngagementSummary
         summary={authoredTravelEngagementSummary}

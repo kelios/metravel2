@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, StyleSheet, Platform, ScrollView, Text } from 'react-native';
+import { View, StyleSheet, Platform, ScrollView, Text, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
@@ -27,11 +27,11 @@ import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeade
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { useViewHistoryStore, type ViewHistoryItem } from '@/stores/viewHistoryStore';
 
-const getHistorySubtitle = (count: number) => {
-    if (count <= 0) return 'Профиль';
-
-    return `${count} ${pluralizeRu(count, 'последнее открытие', 'последних открытия', 'последних открытий')}`;
-};
+// На native глобальный HeaderContextBar уже показывает «Назад» + заголовок «История»
+// для /history (см. components/layout/customHeaderModel.ts), поэтому in-page шапку
+// не рендерим — иначе дублируется. На web этот бар для /history скрыт (top-level path),
+// поэтому там оставляем компактную ProfileCollectionHeader как единственную навигацию.
+const hasGlobalHeader = Platform.OS !== 'web';
 
 export default function HistoryScreen() {
     const router = useRouter();
@@ -79,6 +79,22 @@ export default function HistoryScreen() {
             paddingHorizontal: 16,
             paddingBottom: 24,
             paddingTop: 12,
+        },
+        nativeClearRow: {
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
+            paddingHorizontal: 16,
+            paddingTop: 8,
+        },
+        nativeClearButton: {
+            width: 40,
+            height: 40,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: DESIGN_TOKENS.radii.md,
+            borderWidth: 1,
+            borderColor: colors.danger,
+            backgroundColor: colors.surface,
         },
         webGrid: {
             flexDirection: 'row',
@@ -304,6 +320,40 @@ export default function HistoryScreen() {
         await clearHistory();
     }, [clearHistory]);
 
+    const renderHeader = useCallback(
+        (showClear: boolean) => {
+            if (hasGlobalHeader) {
+                if (!showClear) return null;
+
+                return (
+                    <View style={styles.nativeClearRow}>
+                        <Pressable
+                            style={styles.nativeClearButton}
+                            onPress={handleClear}
+                            accessibilityRole="button"
+                            accessibilityLabel="Очистить историю просмотров"
+                        >
+                            <Feather name="trash-2" size={16} color={colors.danger} />
+                        </Pressable>
+                    </View>
+                );
+            }
+
+            return (
+                <ProfileCollectionHeader
+                    title="История"
+                    dense
+                    onBackPress={handleBackToProfile}
+                    showClearButton={showClear}
+                    onClearPress={handleClear}
+                    clearAccessibilityLabel="Очистить историю просмотров"
+                    compactClear
+                />
+            );
+        },
+        [colors.danger, handleBackToProfile, handleClear, styles]
+    );
+
     const renderHistorySummary = useCallback(
         () => (
             <View style={styles.summaryWrap}>
@@ -367,7 +417,7 @@ export default function HistoryScreen() {
     if (!authReady) {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
-                <ProfileCollectionHeader title="История" subtitle={getHistorySubtitle(0)} onBackPress={handleBackToProfile} />
+                {renderHeader(false)}
                 <View style={styles.gridContent}>
                     {Array.from({ length: numColumns > 1 ? numColumns * 2 : 3 }).map((_, index) => (
                         <View key={index} style={styles.gridItem}>
@@ -398,7 +448,7 @@ export default function HistoryScreen() {
     if (isLoading) {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
-                <ProfileCollectionHeader title="История" subtitle={getHistorySubtitle(data.length)} onBackPress={handleBackToProfile} />
+                {renderHeader(false)}
                 <View style={styles.gridContent}>
                     {Array.from({ length: numColumns > 1 ? numColumns * 2 : 3 }).map((_, index) => (
                         <View key={index} style={styles.gridItem}>
@@ -442,14 +492,7 @@ export default function HistoryScreen() {
                     robots="noindex, nofollow"
                 />
             )}
-            <ProfileCollectionHeader
-                title="История"
-                subtitle={getHistorySubtitle(data.length)}
-                onBackPress={handleBackToProfile}
-                showClearButton={typeof clearHistory === 'function' && data.length > 0}
-                onClearPress={handleClear}
-                clearAccessibilityLabel="Очистить историю просмотров"
-            />
+            {renderHeader(typeof clearHistory === 'function' && data.length > 0)}
 
             {Platform.OS === 'web' ? (
                 <ScrollView

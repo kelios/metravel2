@@ -61,18 +61,27 @@ describe('RankBar', () => {
     expect(getByText('Бывалый')).toBeTruthy()
   })
 
+  it('prepends titlePrefix to the rank title so the rank is explained', () => {
+    const { getByText, queryByText } = render(
+      <RankBar rank={makeRank({ title: 'Эксперт' })} compact titlePrefix="Ранг: " />,
+    )
+    expect(getByText('Ранг: Эксперт')).toBeTruthy()
+    // без префикса «голого» слова быть не должно
+    expect(queryByText('Эксперт')).toBeNull()
+  })
+
   it('renders XP and badge count in non-compact mode', () => {
     const { getByText } = render(
       <RankBar rank={makeRank({ totalPoints: 450, badgesCount: 5 })} />,
     )
-    expect(getByText('450 XP · значков: 5')).toBeTruthy()
+    expect(getByText('450 очков опыта · значков: 5')).toBeTruthy()
   })
 
   it('does NOT render XP line in compact mode', () => {
     const { queryByText } = render(
       <RankBar rank={makeRank({ totalPoints: 450, badgesCount: 5 })} compact />,
     )
-    expect(queryByText(/XP · значков/)).toBeNull()
+    expect(queryByText(/очков опыта · значков/)).toBeNull()
   })
 
   it('renders caption "До «...»: N XP" with correct remaining value', () => {
@@ -87,7 +96,7 @@ describe('RankBar', () => {
         })}
       />,
     )
-    expect(getByText('До «Писатель»: 450 XP')).toBeTruthy()
+    expect(getByText('До «Писатель»: ещё 450 очков опыта')).toBeTruthy()
   })
 
   it('renders maximum level caption when isMaxLevel is true', () => {
@@ -172,7 +181,7 @@ describe('RankBar', () => {
         })}
       />,
     )
-    expect(getByText('До «Писатель»: 500 XP')).toBeTruthy()
+    expect(getByText('До «Писатель»: ещё 500 очков опыта')).toBeTruthy()
   })
 
   it('uses server-provided remainingPoints when present (canonical #721)', () => {
@@ -190,7 +199,7 @@ describe('RankBar', () => {
         })}
       />,
     )
-    expect(getByText('До «Путешественник»: 35 XP')).toBeTruthy()
+    expect(getByText('До «Путешественник»: ещё 35 очков опыта')).toBeTruthy()
   })
 
   it('uses server-provided progressRatio for the fill width', () => {
@@ -225,7 +234,7 @@ describe('RankBar', () => {
         })}
       />,
     )
-    expect(getByText('До «Писатель»: 450 XP')).toBeTruthy()
+    expect(getByText('До «Писатель»: ещё 450 очков опыта')).toBeTruthy()
   })
 
   it('clamps remaining to 0 when totalPoints exceeds nextLevelMinPoints', () => {
@@ -240,6 +249,6 @@ describe('RankBar', () => {
       />,
     )
     // remaining = max(0, 900 - 1000) = 0
-    expect(getByText('До «Писатель»: 0 XP')).toBeTruthy()
+    expect(getByText('До «Писатель»: ещё 0 очков опыта')).toBeTruthy()
   })
 })

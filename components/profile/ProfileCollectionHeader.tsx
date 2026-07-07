@@ -15,6 +15,11 @@ type Props = {
   onClearPress?: () => void;
   clearAccessibilityLabel?: string;
   clearButtonText?: string;
+  /**
+   * Icon-only кнопка очистки (без текстовой подписи) — для экранов, где текст
+   * дублирует уже видимую идентичность (напр. /history с глобальным контекст-баром).
+   */
+  compactClear?: boolean;
   backAccessibilityLabel?: string;
   /**
    * Компактная шапка для экранов с тяжёлым контентом под ней (календарь):
@@ -33,6 +38,7 @@ export default function ProfileCollectionHeader({
   onClearPress,
   clearAccessibilityLabel = 'Очистить',
   clearButtonText = 'Очистить',
+  compactClear = false,
   backAccessibilityLabel = 'Назад',
   dense = false,
 }: Props) {
@@ -87,6 +93,16 @@ export default function ProfileCollectionHeader({
           backgroundColor: colors.surface,
           minHeight: 40,
         },
+        clearButtonCompact: {
+          width: 40,
+          height: 40,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: DESIGN_TOKENS.radii.md,
+          borderWidth: 1,
+          borderColor: colors.danger,
+          backgroundColor: colors.surface,
+        },
         clearButtonText: {
           fontSize: 14,
           fontWeight: '600',
@@ -135,14 +151,14 @@ export default function ProfileCollectionHeader({
 
           {showClearButton && typeof onClearPress === 'function' && (
             <Pressable
-              style={[styles.clearButton, globalFocusStyles.focusable]}
+              style={[compactClear ? styles.clearButtonCompact : styles.clearButton, globalFocusStyles.focusable]}
               onPress={onClearPress}
               accessibilityRole="button"
               accessibilityLabel={clearAccessibilityLabel}
               {...Platform.select({ web: { cursor: 'pointer' } })}
             >
               <Feather name="trash-2" size={16} color={colors.danger} />
-              <Text style={styles.clearButtonText}>{clearButtonText}</Text>
+              {!compactClear && <Text style={styles.clearButtonText}>{clearButtonText}</Text>}
             </Pressable>
           )}
         </View>

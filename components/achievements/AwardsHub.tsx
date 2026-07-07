@@ -30,7 +30,7 @@ interface Props {
 }
 
 const TABS: AwardsTab[] = [
-  { key: 'path', label: 'Ваш путь' },
+  { key: 'path', label: 'Развитие' },
   { key: 'all', label: 'Все награды' },
   { key: 'recent', label: 'Последние' },
   { key: 'rare', label: 'Особые' },
