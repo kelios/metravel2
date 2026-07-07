@@ -53,7 +53,7 @@ export default function QuestsMapScreen() {
 
     const { quests, loading: questsLoading } = useQuestsList();
 
-    const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
+    const isWeb = Platform.OS === 'web';
 
     const travel = useMemo(() => {
         const data: Point[] = quests
