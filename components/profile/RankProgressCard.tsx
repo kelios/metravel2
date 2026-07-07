@@ -70,6 +70,9 @@ function RankProgressCard({ rank, onPress, testID }: Props) {
         </View>
       )}
 
+      <Text style={styles.whatIsIt}>
+        Ранг растёт за вашу активность на MeTravel — публикации, квесты, лайки.
+      </Text>
       <Text style={styles.explainer}>{explainer}</Text>
     </Pressable>
   )
@@ -131,6 +134,12 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       height: 10,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.backgroundTertiary,
+    },
+    whatIsIt: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      lineHeight: 18,
+      color: colors.text,
+      fontWeight: '600',
     },
     explainer: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,

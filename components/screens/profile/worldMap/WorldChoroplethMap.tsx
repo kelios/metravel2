@@ -73,8 +73,13 @@ const getCountryCodeAtViewBoxPoint = (x: number, y: number): string | null => {
   return bestCode
 }
 
-const getRenderedMapRect = (width: number, height: number) => {
-  const scale = Math.min(width / WORLD_MAP_WIDTH, height / WORLD_MAP_HEIGHT)
+// meet (contain, inline): min-scale, карта вписана целиком, offsets >= 0 (леттербокс).
+// slice (cover, fullscreen-портрет): max-scale, карта заполняет контейнер, обрезана
+// по одной оси, offsets <= 0 (кадр смещён за край) — так же, как SVG slice центрирует.
+const getRenderedMapRect = (width: number, height: number, cover = false) => {
+  const scale = cover
+    ? Math.max(width / WORLD_MAP_WIDTH, height / WORLD_MAP_HEIGHT)
+    : Math.min(width / WORLD_MAP_WIDTH, height / WORLD_MAP_HEIGHT)
   const renderedWidth = WORLD_MAP_WIDTH * scale
   const renderedHeight = WORLD_MAP_HEIGHT * scale
   return {
@@ -127,11 +132,15 @@ function WorldChoroplethMapComponent({
     offsetX: 0,
     offsetY: 0,
   })
+  // fillParent: <svg height="100%"> не резолвится сквозь flex-цепочку Modal → падает
+  // в интринсик 2:1 (узкая полоса). Задаём SVG ЯВНЫЕ px-размеры контейнера из onLayout.
+  const [svgSize, setSvgSize] = React.useState<{ w: number; h: number } | null>(null)
+  const setViewport = zoom?.setViewport
   const onLayout = useCallback(
     (e: LayoutChangeEvent) => {
       const { width: w, height: h } = e.nativeEvent.layout
       if (w > 0 && h > 0) {
-        const rect = getRenderedMapRect(w, h)
+        const rect = getRenderedMapRect(w, h, fillParent)
         layoutRef.current = {
           width: w,
           height: h,
@@ -139,10 +148,16 @@ function WorldChoroplethMapComponent({
           offsetX: rect.offsetX,
           offsetY: rect.offsetY,
         }
+        // Видимый вьюпорт в единицах viewBox: cover → viewW ≈ w/coverScale < 1000
+        // по X (мир шире экрана) → пан E↔W доступен уже при scale=1.
+        setViewport?.(w / rect.scale, h / rect.scale)
+        if (fillParent) {
+          setSvgSize((prev) => (prev && prev.w === w && prev.h === h ? prev : { w, h }))
+        }
+        onContainerLayout?.(w, h)
       }
-      if (w > 0 && h > 0) onContainerLayout?.(w, h)
     },
-    [onContainerLayout]
+    [onContainerLayout, fillParent, setViewport]
   )
 
   // react-native-svg типизирует onPress пересечением (event => object) & (event => void).
@@ -361,7 +376,7 @@ function WorldChoroplethMapComponent({
       e.preventDefault()
       const rect = node.getBoundingClientRect()
       if (!rect || rect.width <= 0 || rect.height <= 0) return
-      const mapRect = getRenderedMapRect(rect.width, rect.height)
+      const mapRect = getRenderedMapRect(rect.width, rect.height, fillParent)
       const px = e.clientX - rect.left - mapRect.offsetX
       const py = e.clientY - rect.top - mapRect.offsetY
       const fx = (px / mapRect.scale - z.translateX.value) / z.scale.value
@@ -371,7 +386,7 @@ function WorldChoroplethMapComponent({
     }
     node.addEventListener('wheel', onWheel, { passive: false })
     return () => node.removeEventListener('wheel', onWheel)
-  }, [zoom])
+  }, [zoom, fillParent])
 
   type WebPointerEvent = {
     clientX: number
@@ -474,7 +489,7 @@ function WorldChoroplethMapComponent({
               }
             ).getBoundingClientRect?.()
             if (!rect || rect.width <= 0 || rect.height <= 0) return
-            const mapRect = getRenderedMapRect(rect.width, rect.height)
+            const mapRect = getRenderedMapRect(rect.width, rect.height, fillParent)
             const k = 1 / Math.max(0.0001, mapRect.scale)
             // Два пальца → пинч-зум к середине щипка.
             if (pts.size >= 2) {
@@ -533,10 +548,12 @@ function WorldChoroplethMapComponent({
       {...((nativePanHandlers ?? {}) as object)}
     >
       <Svg
-        width="100%"
-        height="100%"
+        // fillParent: проценты не резолвятся сквозь flex-высоту Modal → явные px из
+        // onLayout. slice (cover) заполняет высоту, обрезает по ширине — без леттербокса.
+        width={fillParent && svgSize ? svgSize.w : '100%'}
+        height={fillParent && svgSize ? svgSize.h : '100%'}
         viewBox={WORLD_MAP_VIEWBOX}
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio={fillParent ? 'xMidYMid slice' : 'xMidYMid meet'}
       >
         {zoom && Platform.OS === 'web' ? (
           <G transform={webTransform}>{paths}</G>

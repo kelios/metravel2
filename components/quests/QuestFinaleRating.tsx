@@ -3,27 +3,33 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import StarRating from '@/components/ui/StarRating'
 import { type QuestRating } from '@/api/questRating'
-import { useAuth } from '@/context/AuthContext'
-import { useQuestRatingMutation } from '@/hooks/useQuestRating'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 type Props = {
   questNumericId: number | undefined
+  userRating: number | null
+  isSubmitting: boolean
+  canRate: boolean
+  onRate: (rating: QuestRating) => void
 }
 
-function QuestFinaleRating({ questNumericId }: Props) {
+function QuestFinaleRating({
+  questNumericId,
+  userRating,
+  isSubmitting,
+  canRate,
+  onRate,
+}: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
-  const { isAuthenticated } = useAuth()
-  const { userRating, isSubmitting, canRate, rate } = useQuestRatingMutation(questNumericId)
   const [editing, setEditing] = useState(false)
 
-  if (!isAuthenticated || !questNumericId) return null
+  if (!canRate || !questNumericId) return null
 
   const handleRate = (value: number) => {
     if (!canRate || isSubmitting) return
-    rate(value as QuestRating)
+    onRate(value as QuestRating)
     setEditing(false)
   }
 
@@ -31,7 +37,10 @@ function QuestFinaleRating({ questNumericId }: Props) {
 
   return (
     <View style={styles.container} testID="quest-finale-rating">
-      <Text style={styles.label}>{showInteractive ? 'Оцените квест' : 'Ваша оценка'}</Text>
+      <Text style={styles.label}>
+        {showInteractive ? 'Быстрая оценка квеста' : 'Оценка в рейтинге'}
+      </Text>
+      <Text style={styles.helper}>Учитывается в общем рейтинге квеста</Text>
 
       {showInteractive ? (
         <StarRating
@@ -80,6 +89,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     label: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: '700',
+      color: colors.textMuted,
+    },
+    helper: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
       color: colors.textMuted,
     },
     savedRow: {

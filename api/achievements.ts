@@ -34,11 +34,21 @@ export interface Badge {
   slug: string;
   name: string;
   description: string;
+  /** id категории значка (BE category.id), null если не отдан. */
+  categoryId: number | null;
   categorySlug: string;
   categoryName: string;
+  /** Иконка категории (Feather-ключ с бэка), null если не задана. */
+  categoryIcon: string | null;
   tier: BadgeTier;
   /** URL картинки значка в S3. null до готовности DES-A1 — рисуем процедурную медаль. */
   imageUrl: string | null;
+  /** Статус генерации картинки (BE image_status: none/pending/ready/…), null если не отдан. */
+  imageStatus: string | null;
+  /** Тип награды (BE award_type: auto/peer/rare/…), null если не отдан. */
+  awardType: string | null;
+  /** Кому выдаётся значок ('user' | 'travel' | …), null если не задано. */
+  target: string | null;
   points: number;
   isSecret: boolean;
   order: number;
@@ -50,6 +60,10 @@ export interface UserBadge {
   id: number;
   badge: Badge;
   earnedAt: string;
+  /** Период получения (BE period: сезон/месяц и т.п.), null если не задан. */
+  period: string | null;
+  /** Метка «первооткрыватель/редкость» из BE discovery, null если не задано. */
+  discovery: string | null;
 }
 
 export interface BadgeProgress {
@@ -75,6 +89,25 @@ export interface UserRank {
   /** Сколько XP осталось до следующего уровня. Готовое значение с бэка; при
    * max-level = 0; null когда пороги неизвестны (см. progressRatio). */
   remainingPoints: number | null;
+  /** Когда ранг пересчитан на бэке (rank.recomputed_at), null если не отдан. */
+  recomputedAt: string | null;
+}
+
+/** Тип активности пользователя (Исследователь/Читатель/Автор/Участник) с очками
+ * и произвольными метриками. Приходит top-level в /me/ и /user/{id}/. */
+export interface ActivityType {
+  /** Ключ активности (BE type), напр. 'explorer'. */
+  type: string;
+  /** Локализованный лейбл, напр. «Исследователь». */
+  label: string;
+  score: number;
+  level: number;
+  /** Порог следующего уровня активности; null при max/отсутствии. */
+  nextThreshold: number | null;
+  /** Готовый % прогресса [0..100] с бэка; null если не пришёл. */
+  progressPercent: number | null;
+  /** Произвольные счётчики активности (ключи задаёт бэк). */
+  metrics: Record<string, number>;
 }
 
 export interface MyAchievements {
@@ -82,6 +115,11 @@ export interface MyAchievements {
   earned: UserBadge[];
   locked: BadgeProgress[];
   recentlyEarned: UserBadge[];
+  /** Типы активности (top-level activity_types[]). Пустой массив, если не отдано. */
+  activityTypes: ActivityType[];
+  /** Редкие награды из консолидированного ответа (top-level rare_awards[]).
+   * null — поля в ответе не было (тогда хук делает отдельный запрос). */
+  rareAwards?: RareAward[] | null;
   /** Сырые DTO персонажа/прогрессии из консолидированного эндпоинта (#588):
    * используются только для засева кэшей gamification, не для рендера. */
   characterDto?: CharacterStateDto | null;
@@ -92,6 +130,16 @@ export interface PublicAchievements {
   rank: UserRank;
   earned: UserBadge[];
   peerReceived: PeerBadgeReceived[];
+  /** Типы активности автора (top-level activity_types[]). Пустой массив, если не отдано. */
+  activityTypes: ActivityType[];
+  /** Редкие награды автора из консолидированного ответа (top-level rare_awards[]).
+   * null — поля не было → хук берёт отдельный запрос как fallback. */
+  rareAwards?: RareAward[] | null;
+  /** Сырые DTO персонажа/прогрессии из ОДНОГО ответа /user/{id}/ — засев кэшей
+   * gamification без лишних запросов /progression-lines/ и /character/.
+   * null — поля не было → отдельный запрос как fallback. */
+  characterDto?: CharacterStateDto | null;
+  progressionDto?: ProgressionLineDto[] | null;
 }
 
 // ── Peer-awarded badges (награды от сообщества, §10) ─────────────────────────
@@ -139,6 +187,8 @@ interface BadgeDto {
   tier?: string | null;
   image_url?: string | null;
   image_status?: string | null;
+  award_type?: string | null;
+  target?: string | null;
   points?: number | null;
   is_secret?: boolean | null;
   order?: number | null;
@@ -148,6 +198,18 @@ interface UserBadgeDto {
   id: number;
   badge: BadgeDto;
   earned_at: string;
+  period?: string | null;
+  discovery?: string | null;
+}
+
+interface ActivityTypeDto {
+  type: string;
+  label?: string | null;
+  score?: number | null;
+  level?: number | null;
+  next_threshold?: number | null;
+  progress_percent?: number | null;
+  metrics?: Record<string, number> | null;
 }
 
 interface BadgeProgressDto {
@@ -185,6 +247,10 @@ interface MyAchievementsDto {
   earned_badges: UserBadgeDto[];
   progress: BadgeProgressDto[];
   recently_earned?: UserBadgeDto[];
+  // Живой BE отдаёт top-level типы активности и редкие награды одним ответом —
+  // читаем их, чтобы не терять смысловые поля и не делать лишних запросов.
+  activity_types?: ActivityTypeDto[] | null;
+  rare_awards?: RareAwardDto[] | null;
   // Консолидированный эндпоинт уже отдаёт персонажа и линейки прогрессии —
   // тем же payload'ом, что и /achievements/character/me/ и /progression/me/.
   // Пробрасываем сырые DTO, чтобы засеять их кэши и не делать повторных запросов
@@ -200,6 +266,13 @@ interface PublicAchievementsDto {
   rank_levels?: RankLevelDto[];
   earned_badges: UserBadgeDto[];
   peer_received?: PeerBadgeReceivedDto[];
+  // Живой /user/{id}/ отдаёт те же top-level ключи, что и /me/ — читаем их, чтобы
+  // чужой профиль сеялся из ОДНОГО ответа (без /progression-lines/, /character/,
+  // /rare-awards/ отдельными запросами; те остаются только как fallback).
+  activity_types?: ActivityTypeDto[] | null;
+  rare_awards?: RareAwardDto[] | null;
+  character?: CharacterStateDto | null;
+  progression_lines?: ProgressionLineDto[] | null;
 }
 
 interface PeerBadgeDto extends BadgeDto {
@@ -240,11 +313,16 @@ const mapBadge = (dto: BadgeDto): Badge => ({
   slug: dto.slug,
   name: dto.name,
   description: dto.description ?? '',
+  categoryId: dto.category?.id ?? null,
   categorySlug: dto.category?.slug ?? 'other',
   categoryName: dto.category?.name ?? 'Достижения',
+  categoryIcon: dto.category?.icon ?? null,
   tier: normalizeTier(dto.tier),
   // Бэк отдаёт '' когда картинки нет — нормализуем в null (BadgeMedal рисует фолбэк).
   imageUrl: dto.image_url ? dto.image_url : null,
+  imageStatus: dto.image_status ?? null,
+  awardType: dto.award_type ?? null,
+  target: dto.target ?? null,
   points: dto.points ?? 0,
   isSecret: Boolean(dto.is_secret),
   order: dto.order ?? dto.id,
@@ -254,6 +332,18 @@ const mapUserBadge = (dto: UserBadgeDto): UserBadge => ({
   id: dto.id,
   badge: mapBadge(dto.badge),
   earnedAt: dto.earned_at,
+  period: dto.period ?? null,
+  discovery: dto.discovery ?? null,
+});
+
+const mapActivityType = (dto: ActivityTypeDto): ActivityType => ({
+  type: dto.type,
+  label: dto.label ?? '',
+  score: dto.score ?? 0,
+  level: dto.level ?? 0,
+  nextThreshold: dto.next_threshold ?? null,
+  progressPercent: dto.progress_percent ?? null,
+  metrics: dto.metrics ?? {},
 });
 
 const mapProgress = (dto: BadgeProgressDto): BadgeProgress => ({
@@ -281,6 +371,7 @@ const mapRank = (dto: RankSummaryDto, levels?: RankLevelDto[]): UserRank => {
     title: dto.title ?? 'Новичок',
     totalPoints,
     badgesCount: dto.badges_count ?? 0,
+    recomputedAt: dto.recomputed_at ?? null,
   };
 
   if (hasServerSummary(dto)) {
@@ -330,6 +421,9 @@ const mapMy = (dto: MyAchievementsDto): MyAchievements => ({
   earned: (dto.earned_badges ?? []).map(mapUserBadge),
   locked: (dto.progress ?? []).map(mapProgress),
   recentlyEarned: (dto.recently_earned ?? []).map(mapUserBadge),
+  activityTypes: (dto.activity_types ?? []).map(mapActivityType),
+  // null (не []) когда поля не было — хук отличает «пусто» от «не пришло» и делает fallback-запрос.
+  rareAwards: dto.rare_awards != null ? dto.rare_awards.map(mapRareAward) : null,
   characterDto: dto.character ?? null,
   progressionDto: dto.progression_lines ?? null,
 });
@@ -352,6 +446,12 @@ const mapPublic = (dto: PublicAchievementsDto): PublicAchievements => ({
   rank: mapRank(dto.rank, dto.rank_levels),
   earned: (dto.earned_badges ?? []).map(mapUserBadge),
   peerReceived: (dto.peer_received ?? []).map(mapPeerReceived),
+  activityTypes: (dto.activity_types ?? []).map(mapActivityType),
+  // null (не []) когда поля не было — хук делает fallback-запрос за rare-awards.
+  rareAwards: dto.rare_awards != null ? dto.rare_awards.map(mapRareAward) : null,
+  // Сеем gamification-кэши из этого же ответа; null → отдельный запрос как fallback.
+  characterDto: dto.character ?? null,
+  progressionDto: dto.progression_lines ?? null,
 });
 
 // ── Мок-фолбэк (до готовности BE-A4) ────────────────────────────────────────
@@ -676,10 +776,15 @@ export const rareAwardToBadge = (award: RareAward): Badge => ({
   slug: award.slug,
   name: award.title,
   description: award.reason,
+  categoryId: null,
   categorySlug: award.category,
   categoryName: 'Редкие награды',
+  categoryIcon: null,
   tier: RARE_LEVEL_TIERS[award.level] ?? 'legendary',
   imageUrl: null,
+  imageStatus: null,
+  awardType: 'rare',
+  target: 'user',
   points: 0,
   isSecret: false,
   order: award.id,

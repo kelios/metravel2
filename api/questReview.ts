@@ -65,7 +65,7 @@ export const submitQuestReview = async (
 ): Promise<QuestReviewRecord> => {
   const { questId, rating, liked, disliked } = params
 
-  if (rating < 0 || rating > 5) {
+  if (rating < 1 || rating > 5) {
     throw new Error('Рейтинг должен быть от 1 до 5')
   }
 

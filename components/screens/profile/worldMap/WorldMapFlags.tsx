@@ -47,9 +47,11 @@ export interface WorldMapFlagsProps {
   size?: number
   /** Зум/пан-контроллер (T2): оверлей следует за картой. */
   zoom?: MapZoomPanControls
+  /** Cover-режим (fullscreen-портрет): SVG заполняет контейнер (slice), а не вписан. */
+  cover?: boolean
 }
 
-function WorldMapFlagsComponent({ visitedCodes, size = 16, zoom }: WorldMapFlagsProps) {
+function WorldMapFlagsComponent({ visitedCodes, size = 16, zoom, cover = false }: WorldMapFlagsProps) {
   const colors = useThemedColors()
   const mapScaleValue = useSharedValue(1)
   const [mapRect, setMapRect] = React.useState({
@@ -62,7 +64,11 @@ function WorldMapFlagsComponent({ visitedCodes, size = 16, zoom }: WorldMapFlags
     const { width, height } = e.nativeEvent.layout
     if (width <= 0 || height <= 0) return
 
-    const scale = Math.min(width / WORLD_MAP_WIDTH, height / WORLD_MAP_HEIGHT)
+    // meet (inline): min-scale + положит. offset (леттербокс). cover (fullscreen):
+    // max-scale + отрицат. offset (кадр за краем) — как SVG slice центрирует.
+    const scale = cover
+      ? Math.max(width / WORLD_MAP_WIDTH, height / WORLD_MAP_HEIGHT)
+      : Math.min(width / WORLD_MAP_WIDTH, height / WORLD_MAP_HEIGHT)
     const next = {
       left: (width - WORLD_MAP_WIDTH * scale) / 2,
       top: (height - WORLD_MAP_HEIGHT * scale) / 2,
@@ -78,7 +84,7 @@ function WorldMapFlagsComponent({ visitedCodes, size = 16, zoom }: WorldMapFlags
         Math.abs(current.height - next.height) > 0.5
       return changed ? next : current
     })
-  }, [mapScaleValue])
+  }, [mapScaleValue, cover])
 
   const markers = useMemo(() => {
     const list: { code: string; left: DimensionValue; top: DimensionValue; emoji: string | null }[] = []

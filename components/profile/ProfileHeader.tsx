@@ -123,6 +123,13 @@ export function ProfileHeader({
     [rank]
   );
 
+  // Компактная подпись чипа: уровень + название ранга («Ур.5 · Эксперт»), чтобы
+  // чип читался как самостоятельный статус, а не обрезанный «Ур.5».
+  const rankChipText = useMemo(
+    () => (rank ? `Ур.${rank.level} · ${rank.title}` : null),
+    [rank]
+  );
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -257,7 +264,12 @@ export function ProfileHeader({
           flexDirection: 'row',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: DESIGN_TOKENS.spacing.xxs,
+          gap: DESIGN_TOKENS.spacing.xs,
+        },
+        statusCaption: {
+          fontSize: DESIGN_TOKENS.typography.sizes.xs,
+          color: colors.textMuted,
+          flexShrink: 1,
         },
         rankChip: {
           flexDirection: 'row',
@@ -379,7 +391,7 @@ export function ProfileHeader({
                 disabled={!onRankPress}
                 accessibilityRole={onRankPress ? 'button' : undefined}
                 accessibilityLabel={onRankPress ? `Открыть прогресс профиля: ${rankLabel}` : rankLabel}
-                accessibilityHint={onRankPress ? 'Показывает ваш путь, уровни и награды' : undefined}
+                accessibilityHint="Уровень растёт за вашу активность на MeTravel"
                 style={({ pressed }) => [
                   styles.rankChip,
                   pressed && { opacity: 0.78 },
@@ -388,7 +400,7 @@ export function ProfileHeader({
               >
                 <Feather name="award" size={12} color={colors.primaryDark} />
                 <Text style={styles.rankChipText} numberOfLines={1}>
-                  Ур. {rank?.level}
+                  {rankChipText}
                 </Text>
               </Pressable>
             ) : null}
@@ -413,12 +425,29 @@ export function ProfileHeader({
               </Pressable>
             ))}
           </View>
-          <View style={styles.statusRow}>
-            <VerifiedBadge
-              isVerified={profile?.is_verified}
-              organizerStatus={profile?.organizer_status ?? null}
-            />
-          </View>
+          {profile?.is_verified || profile?.organizer_status === 'experienced' ? (
+            <View style={styles.statusRow}>
+              <View
+                accessibilityRole={profile?.is_verified ? 'button' : undefined}
+                accessibilityLabel={profile?.is_verified ? 'Проверенный участник' : undefined}
+                accessibilityHint={
+                  profile?.is_verified
+                    ? 'Аккаунт подтверждён администрацией MeTravel'
+                    : undefined
+                }
+              >
+                <VerifiedBadge
+                  isVerified={profile?.is_verified}
+                  organizerStatus={profile?.organizer_status ?? null}
+                />
+              </View>
+              {profile?.is_verified ? (
+                <Text style={styles.statusCaption} numberOfLines={1}>
+                  Аккаунт подтверждён MeTravel
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
         </View>
       </View>
     </View>

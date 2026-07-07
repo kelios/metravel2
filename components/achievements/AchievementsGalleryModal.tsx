@@ -119,6 +119,12 @@ function AchievementsGalleryModal({ visible, onClose, data, ownerName }: Props) 
           backgroundColor: colors.backgroundSecondary,
         },
         body: { paddingHorizontal: DESIGN_TOKENS.spacing.lg },
+        subheading: {
+          fontSize: DESIGN_TOKENS.typography.sizes.sm,
+          lineHeight: 18,
+          color: colors.textMuted,
+          marginBottom: DESIGN_TOKENS.spacing.md,
+        },
         rankBlock: {
           backgroundColor: colors.surface,
           borderRadius: DESIGN_TOKENS.radii.lg,
@@ -160,12 +166,17 @@ function AchievementsGalleryModal({ visible, onClose, data, ownerName }: Props) 
               <RankBar rank={data.rank} />
             </View>
 
+            <Text style={styles.subheading}>
+              Значки — за конкретные достижения. Сгруппированы по разделам.
+            </Text>
+
             {groups.map((group) => (
               <View key={group.slug} style={styles.group}>
                 <Text style={styles.groupTitle}>{group.name}</Text>
                 <BadgeGrid
                   items={group.items}
                   size={68}
+                  showDescriptions
                   onBadgePress={openDetail}
                 />
               </View>

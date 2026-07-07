@@ -30,7 +30,14 @@ function CharacterPathChoice({ options, testID, style }: Props) {
   const { mutate, isPending, variables } = useChooseCharacterPath();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
-  if (options.length === 0) return null;
+  // Домен теперь несёт ВСЕ ветки (в т.ч. заблокированные с lockedReason) — пикер
+  // выбора по-прежнему показывает только выбираемые, поведение UI не меняется.
+  const selectable = useMemo(
+    () => options.filter((o) => o.canSelect),
+    [options],
+  );
+
+  if (selectable.length === 0) return null;
 
   return (
     <View style={[styles.wrap, style]} testID={testID}>

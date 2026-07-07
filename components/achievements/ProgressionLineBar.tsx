@@ -46,6 +46,14 @@ function ProgressionLineBar({ line, testID, style }: Props) {
     if (line.isMaxLevel || line.nextLevelMin == null) {
       return { ratio: 1, remaining: 0 }
     }
+    // Приоритет — готовым серверным значениям (progressPercent/pointsToNext);
+    // при их отсутствии считаем из порогов клиентом (legacy-фолбэк).
+    if (line.progressPercent != null && line.pointsToNext != null) {
+      return {
+        ratio: Math.max(0, Math.min(1, line.progressPercent / 100)),
+        remaining: Math.max(0, line.pointsToNext),
+      }
+    }
     const span = Math.max(1, line.nextLevelMin - line.currentLevelMin)
     const done = line.current - line.currentLevelMin
     return {

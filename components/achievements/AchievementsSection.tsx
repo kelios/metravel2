@@ -50,6 +50,7 @@ function AchievementsSection({ bare = false, testID, style }: Props) {
     <SectionState isFetching={isFetching} hasData={data != null}>
       {data ? (
         <>
+          <Text style={styles.subheading}>Значки — за конкретные достижения.</Text>
           <RankBar rank={data.rank} style={styles.rank} />
 
           {data.earned.length > 0 ? (
@@ -150,6 +151,11 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: '700',
       color: colors.primaryText,
+    },
+    subheading: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      color: colors.textMuted,
+      lineHeight: 16,
     },
     rank: { marginBottom: DESIGN_TOKENS.spacing.xxs },
     medalsRow: {

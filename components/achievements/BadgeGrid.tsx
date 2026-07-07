@@ -15,6 +15,8 @@ interface Props {
   items: BadgeGridItem[];
   size?: number;
   showLabels?: boolean;
+  /** Показать описание значка («за что») под названием. */
+  showDescriptions?: boolean;
   onBadgePress?: (badge: Badge) => void;
   testID?: string;
   style?: StyleProp<ViewStyle>;
@@ -24,6 +26,7 @@ function BadgeGrid({
   items,
   size = 72,
   showLabels = true,
+  showDescriptions = false,
   onBadgePress,
   testID,
   style,
@@ -38,6 +41,7 @@ function BadgeGrid({
           earned={item.earned}
           progress={item.earned ? null : item.progress ?? null}
           showLabel={showLabels}
+          showDescription={showDescriptions}
           onPress={onBadgePress ? () => onBadgePress(item.badge) : undefined}
         />
       ))}

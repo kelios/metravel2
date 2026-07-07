@@ -369,6 +369,30 @@ describe('fetchMyGamificationProgress', () => {
     expect((l as any).next_level).toBeUndefined()
   })
 
+  it('maps server progress_percent/points_to_next/visual_key/levels (BE-authoritative)', async () => {
+    mockGet.mockResolvedValueOnce([progressionLineDto()])
+    const { lines } = await fetchMyGamificationProgress()
+    const l = lines[0]
+    expect(l.progressPercent).toBe(44)
+    expect(l.pointsToNext).toBe(28)
+    expect(l.visualKey).toBe('dog')
+    expect(l.levels).toHaveLength(3)
+    expect(l.levels[0].minScore).toBe(0)
+    expect(l.levels[2].title).toBe('Надёжный спутник')
+    expect(l.levels[2].visualKey).toBe('dog-level-3')
+  })
+
+  it('progressPercent/pointsToNext null and levels [] when BE omits them', async () => {
+    mockGet.mockResolvedValueOnce([
+      progressionLineDto({ progress_percent: null, points_to_next: null, levels: undefined, visual_key: null }),
+    ])
+    const { lines } = await fetchMyGamificationProgress()
+    expect(lines[0].progressPercent).toBeNull()
+    expect(lines[0].pointsToNext).toBeNull()
+    expect(lines[0].visualKey).toBeNull()
+    expect(lines[0].levels).toEqual([])
+  })
+
   it('normalizes unknown activity_type to "explorer"', async () => {
     mockGet.mockResolvedValueOnce([progressionLineDto({ activity_type: 'unknown_type' })])
     const { lines } = await fetchMyGamificationProgress()
@@ -572,6 +596,20 @@ describe('fetchMyCharacter', () => {
     expect((char as any).available_paths).toBeUndefined()
   })
 
+  it('maps extended character fields (visual detail equipped/minLevel/visualKey, active/suggested/updated)', async () => {
+    mockGet.mockResolvedValueOnce(characterStateDto())
+    const char = await fetchMyCharacter()
+    // visual detail extras
+    expect(char.details[0].visualKey).toBe('fox-collar')
+    expect(char.details[0].minLevel).toBe(1)
+    expect(char.details[0].equipped).toBe(true)
+    // active/suggested path + switch + updated
+    expect(char.activePathSlug).toBe('fox')
+    expect(char.suggestedPathSlug).toBe('fox')
+    expect(char.switchUnlocked).toBe(true)
+    expect(char.updatedAt).toBe('2026-06-21T10:00:00Z')
+  })
+
   it('reflects a chosen path via selected_path (line slug)', async () => {
     mockGet.mockResolvedValueOnce(
       characterStateDto({
@@ -650,18 +688,30 @@ describe('fetchMyCharacter', () => {
     expect(char.pathOptions).toEqual([])
   })
 
-  it('excludes non-selectable available_paths (can_select=false)', async () => {
+  it('keeps non-selectable available_paths with canSelect flag + lockedReason (additive)', async () => {
     mockGet.mockResolvedValueOnce(
       characterStateDto({
         available_paths: [
-          availablePathDto({ slug: 'dog', can_select: true }),
-          availablePathDto({ slug: 'boar', can_select: false }),
+          availablePathDto({ slug: 'dog', can_select: true, locked_reason: '' }),
+          availablePathDto({
+            slug: 'boar',
+            can_select: false,
+            locked_reason: 'Достигните 5 уровня',
+          }),
         ],
       }),
     )
     const char = await fetchMyCharacter()
-    expect(char.pathOptions).toHaveLength(1)
-    expect(char.pathOptions[0].slug).toBe('dog')
+    // Маппер больше не прячет заблокированные пути — отдаёт все с флагом доступности.
+    expect(char.pathOptions).toHaveLength(2)
+    const dog = char.pathOptions.find((o) => o.slug === 'dog')!
+    const boar = char.pathOptions.find((o) => o.slug === 'boar')!
+    expect(dog.canSelect).toBe(true)
+    expect(boar.canSelect).toBe(false)
+    expect(boar.lockedReason).toBe('Достигните 5 уровня')
+    // score/level из available_paths[] тоже пробрасываются
+    expect(boar.score).toBe(1523)
+    expect(boar.level).toBe(5)
   })
 
   it('derives path option emoji from line slug', async () => {

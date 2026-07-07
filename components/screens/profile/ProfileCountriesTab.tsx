@@ -152,7 +152,7 @@ export function ProfileCountriesTab({
         title="Страны"
         subtitle="Ваш прогресс по посещённым странам"
         onBack={onBackToOverview}
-        backLabel="Обзор"
+        backLabel="Главное"
       />
 
       <View style={styles.summaryCard}>

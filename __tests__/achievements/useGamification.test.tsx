@@ -13,12 +13,17 @@ jest.mock('@/utils/gamificationAnalytics', () => ({
   trackPathChosen: jest.fn(),
 }))
 
-// useMyGamificationProgress and useMyCharacter wait for the consolidated
-// /achievements/me/ response (#588) before deciding whether to fire separate
-// requests. Mock useMyAchievements to immediately resolve with no embedded
+// useMyGamificationProgress/useMyCharacter (and the *user* variants) wait for the
+// consolidated /achievements/me/ resp. /user/{id}/ response before deciding whether
+// to fire separate requests. Mock both hooks to immediately resolve with no embedded
 // progression/character so the hooks fall back to their own fetches.
 jest.mock('@/hooks/useAchievementsApi', () => ({
   useMyAchievements: () => ({
+    data: { progressionDto: null, characterDto: null },
+    isSuccess: true,
+    isFetching: false,
+  }),
+  useUserAchievements: () => ({
     data: { progressionDto: null, characterDto: null },
     isSuccess: true,
     isFetching: false,
@@ -71,6 +76,8 @@ const progress: GamificationProgress = {
       name: 'Лисья',
       activityKind: 'reader',
       activityName: 'Читатель',
+      description: null,
+      visualKey: 'fox',
       level: 5,
       levelTitle: 'Мудрая лиса',
       current: 1523,
@@ -78,6 +85,9 @@ const progress: GamificationProgress = {
       nextLevelMin: null,
       nextLevelTitle: null,
       isMaxLevel: true,
+      progressPercent: 100,
+      pointsToNext: null,
+      levels: [],
       emoji: '🦊',
     },
   ],
@@ -89,11 +99,26 @@ const character: CharacterState = {
   level: 5,
   pathSlug: null,
   pathName: null,
-  details: [{ slug: 'collar', name: 'Ошейник', unlocked: true }],
+  activePathSlug: 'fox',
+  suggestedPathSlug: 'fox',
+  switchUnlocked: true,
+  details: [
+    { slug: 'collar', name: 'Ошейник', unlocked: true, visualKey: null, minLevel: null, equipped: true },
+  ],
   pendingChoice: true,
   pathOptions: [
-    { slug: 'fox', name: 'Лисья', description: 'Ветка читателя', emoji: '🦊' },
+    {
+      slug: 'fox',
+      name: 'Лисья',
+      description: 'Ветка читателя',
+      emoji: '🦊',
+      score: 1523,
+      level: 5,
+      canSelect: true,
+      lockedReason: null,
+    },
   ],
+  updatedAt: null,
 }
 
 let queryClient: QueryClient

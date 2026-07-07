@@ -154,6 +154,33 @@ describe('fetchBadgeCatalog', () => {
     expect(b.imageUrl).toBeNull()
   })
 
+  it('maps extended badge fields (image_status/award_type/target/category id+icon)', async () => {
+    mockGet.mockResolvedValueOnce([
+      badgeDto({
+        image_status: 'ready',
+        award_type: 'peer',
+        target: 'travel',
+        category: { id: 7, slug: 'community', name: 'Сообщество', order: 2, icon: 'users' },
+      }),
+    ])
+    const [b] = await fetchBadgeCatalog()
+    expect(b.imageStatus).toBe('ready')
+    expect(b.awardType).toBe('peer')
+    expect(b.target).toBe('travel')
+    expect(b.categoryId).toBe(7)
+    expect(b.categoryIcon).toBe('users')
+  })
+
+  it('defaults extended badge fields to null when absent', async () => {
+    mockGet.mockResolvedValueOnce([{ id: 3, slug: 's', name: 'N' }])
+    const [b] = await fetchBadgeCatalog()
+    expect(b.imageStatus).toBeNull()
+    expect(b.awardType).toBeNull()
+    expect(b.target).toBeNull()
+    expect(b.categoryId).toBeNull()
+    expect(b.categoryIcon).toBeNull()
+  })
+
   it('preserves non-empty image_url', async () => {
     mockGet.mockResolvedValueOnce([badgeDto({ image_url: 'https://s3.example.com/img.png' })])
     const [b] = await fetchBadgeCatalog()
@@ -238,6 +265,90 @@ describe('fetchMyAchievements', () => {
 
     // recentlyEarned
     expect(my.recentlyEarned).toHaveLength(1)
+  })
+
+  it('maps top-level activity_types with arbitrary metrics', async () => {
+    const dto = {
+      rank: rankDto(),
+      earned_badges: [],
+      progress: [],
+      activity_types: [
+        {
+          type: 'explorer',
+          label: 'Исследователь',
+          score: 320,
+          level: 3,
+          next_threshold: 500,
+          progress_percent: 64,
+          metrics: { places: 42, countries: 7 },
+        },
+      ],
+    }
+    mockGet.mockResolvedValueOnce(dto)
+    const my = await fetchMyAchievements()
+    expect(my.activityTypes).toHaveLength(1)
+    const a = my.activityTypes[0]
+    expect(a.type).toBe('explorer')
+    expect(a.label).toBe('Исследователь')
+    expect(a.score).toBe(320)
+    expect(a.nextThreshold).toBe(500)
+    expect(a.progressPercent).toBe(64)
+    expect(a.metrics.places).toBe(42)
+    expect(a.metrics.countries).toBe(7)
+  })
+
+  it('activityTypes defaults to empty array when absent', async () => {
+    mockGet.mockResolvedValueOnce({ rank: {}, earned_badges: [], progress: [] })
+    const my = await fetchMyAchievements()
+    expect(my.activityTypes).toEqual([])
+  })
+
+  it('maps top-level rare_awards; null when field absent', async () => {
+    mockGet.mockResolvedValueOnce({
+      rank: {},
+      earned_badges: [],
+      progress: [],
+      rare_awards: [
+        { id: 901, slug: 'first-wave', category: 'first-wave', title: 'Первая волна', level: 'legendary' },
+      ],
+    })
+    const withRare = await fetchMyAchievements()
+    expect(withRare.rareAwards).toHaveLength(1)
+    expect(withRare.rareAwards![0].slug).toBe('first-wave')
+
+    mockGet.mockResolvedValueOnce({ rank: {}, earned_badges: [], progress: [] })
+    const withoutRare = await fetchMyAchievements()
+    // null (not []) distinguishes "field absent" so the hook can do a fallback fetch.
+    expect(withoutRare.rareAwards).toBeNull()
+  })
+
+  it('passes through consolidated character/progression_lines DTOs; null when absent', async () => {
+    mockGet.mockResolvedValueOnce({
+      rank: {},
+      earned_badges: [],
+      progress: [],
+      character: { user_id: 1 },
+      progression_lines: [],
+    })
+    const seeded = await fetchMyAchievements()
+    expect(seeded.characterDto).toEqual({ user_id: 1 })
+    expect(seeded.progressionDto).toEqual([])
+
+    mockGet.mockResolvedValueOnce({ rank: {}, earned_badges: [], progress: [] })
+    const bare = await fetchMyAchievements()
+    expect(bare.characterDto).toBeNull()
+    expect(bare.progressionDto).toBeNull()
+  })
+
+  it('maps earned badge period/discovery', async () => {
+    mockGet.mockResolvedValueOnce({
+      rank: {},
+      earned_badges: [userBadgeDto({ period: 'summer-2026', discovery: 'first' })],
+      progress: [],
+    })
+    const my = await fetchMyAchievements()
+    expect(my.earned[0].period).toBe('summer-2026')
+    expect(my.earned[0].discovery).toBe('first')
   })
 
   it('reads server rank-progress summary directly (canonical #721 path)', async () => {
@@ -433,6 +544,38 @@ describe('fetchUserAchievements', () => {
     expect(pub.rank.nextLevelMinPoints).toBeNull()
     expect(pub.earned).toHaveLength(1)
     expect(pub.earned[0].badge.slug).toBe('test-badge')
+  })
+
+  it('seeds gamification from a single /user/{id}/ response (activity/rare/character/progression)', async () => {
+    const dto = {
+      rank: rankDto(),
+      earned_badges: [],
+      activity_types: [
+        { type: 'author', label: 'Автор', score: 180, level: 2, metrics: { travels: 12 } },
+      ],
+      rare_awards: [
+        { id: 902, slug: 'ambassador', category: 'ambassador', title: 'Амбассадор', level: 'platinum' },
+      ],
+      character: { user_id: 42 },
+      progression_lines: [],
+    }
+    mockGet.mockResolvedValueOnce(dto)
+    const pub = await fetchUserAchievements(42)
+    expect(pub.activityTypes).toHaveLength(1)
+    expect(pub.activityTypes[0].metrics.travels).toBe(12)
+    expect(pub.rareAwards).toHaveLength(1)
+    expect(pub.rareAwards![0].slug).toBe('ambassador')
+    expect(pub.characterDto).toEqual({ user_id: 42 })
+    expect(pub.progressionDto).toEqual([])
+  })
+
+  it('public consolidated fields null/empty when absent (fallback signal for hooks)', async () => {
+    mockGet.mockResolvedValueOnce({ rank: rankDto(), earned_badges: [] })
+    const pub = await fetchUserAchievements(42)
+    expect(pub.activityTypes).toEqual([])
+    expect(pub.rareAwards).toBeNull()
+    expect(pub.characterDto).toBeNull()
+    expect(pub.progressionDto).toBeNull()
   })
 
   it('reads server rank-progress summary on public endpoint (#721)', async () => {

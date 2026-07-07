@@ -106,24 +106,60 @@ export function useTravelPeerBadges(travelId: string | number | null | undefined
 /** Редкие награды текущего пользователя (своя зона профиля). */
 export function useMyRareAwards() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  return useQuery<RareAward[]>({
+  const qc = useQueryClient();
+  // Живой /achievements/me/ отдаёт rare_awards top-level — засеваемся из него и
+  // отдельный /rare-awards/me/ дёргаем только когда поля в ответе не оказалось.
+  const { data: ach, isSuccess: achSuccess, isFetching: achFetching } =
+    useMyAchievements({ enabled: isAuthenticated });
+  const consolidatedHasRare = ach?.rareAwards != null;
+  const needsSeparateFetch = achSuccess && !consolidatedHasRare;
+
+  const query = useQuery<RareAward[]>({
     queryKey: queryKeys.achievementsRareMe(),
     queryFn: fetchMyRareAwards,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && needsSeparateFetch,
     staleTime: STALE_TIME,
     retry,
+    initialData: () => {
+      const cached = qc.getQueryData<MyAchievements>(queryKeys.achievementsMe());
+      return cached?.rareAwards ?? undefined;
+    },
+    initialDataUpdatedAt: () =>
+      qc.getQueryState(queryKeys.achievementsMe())?.dataUpdatedAt ?? 0,
   });
+
+  const isFetching = query.isFetching || (!query.data && achFetching);
+  return { ...query, isFetching };
 }
 
 /** Публичные редкие награды автора. */
 export function useUserRareAwards(userId: string | number | null | undefined) {
-  return useQuery<RareAward[]>({
+  const qc = useQueryClient();
+  // /user/{id}/ отдаёт rare_awards top-level → сеемся из него, отдельный
+  // /user/{id}/rare-awards/ только как fallback, когда поля не было.
+  const { data: ach, isSuccess: achSuccess, isFetching: achFetching } =
+    useUserAchievements(userId);
+  const consolidatedHasRare = ach?.rareAwards != null;
+  const needsSeparateFetch = achSuccess && !consolidatedHasRare;
+
+  const query = useQuery<RareAward[]>({
     queryKey: queryKeys.achievementsRareUser(userId),
     queryFn: () => fetchUserRareAwards(userId as string | number),
-    enabled: userId != null && userId !== '',
+    enabled: userId != null && userId !== '' && needsSeparateFetch,
     staleTime: STALE_TIME,
     retry,
+    initialData: () => {
+      const cached = qc.getQueryData<PublicAchievements>(
+        queryKeys.achievementsUser(userId),
+      );
+      return cached?.rareAwards ?? undefined;
+    },
+    initialDataUpdatedAt: () =>
+      qc.getQueryState(queryKeys.achievementsUser(userId))?.dataUpdatedAt ?? 0,
   });
+
+  const isFetching = query.isFetching || (!query.data && achFetching);
+  return { ...query, isFetching };
 }
 
 /** Каталог редких наград для админ-пикера выдачи (staff-only). */

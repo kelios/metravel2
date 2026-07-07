@@ -26,6 +26,8 @@ interface Props {
   progress?: { current: number; threshold: number } | null;
   /** Подпись с названием под медалью. */
   showLabel?: boolean;
+  /** Показать краткое описание значка («за что») под названием. */
+  showDescription?: boolean;
   onPress?: () => void;
   testID?: string;
   style?: StyleProp<ViewStyle>;
@@ -37,6 +39,7 @@ function BadgeMedal({
   earned = true,
   progress = null,
   showLabel = false,
+  showDescription = false,
   onPress,
   testID,
   style,
@@ -61,7 +64,7 @@ function BadgeMedal({
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        wrap: { alignItems: 'center', width: size + 8 },
+        wrap: { alignItems: 'center', width: showDescription ? size + 40 : size + 8 },
         medalBox: { width: size, height: size },
         medal: {
           width: size,
@@ -108,7 +111,15 @@ function BadgeMedal({
           fontWeight: '600',
           color: earned ? colors.text : colors.textMuted,
           textAlign: 'center',
-          maxWidth: size + 8,
+          maxWidth: showDescription ? size + 40 : size + 8,
+        },
+        description: {
+          marginTop: 2,
+          fontSize: 10,
+          lineHeight: 13,
+          color: colors.textMuted,
+          textAlign: 'center',
+          maxWidth: size + 40,
         },
         progressTrack: {
           marginTop: 6,
@@ -130,7 +141,7 @@ function BadgeMedal({
           color: colors.textMuted,
         },
       }),
-    [colors, earned, ratio, size, tier.ring, tier.shade],
+    [colors, earned, ratio, size, showDescription, tier.ring, tier.shade],
   );
 
   const hasImage = !!badge.imageUrl;
@@ -172,6 +183,11 @@ function BadgeMedal({
       {showLabel ? (
         <Text style={styles.label} numberOfLines={2}>
           {badge.name}
+        </Text>
+      ) : null}
+      {showDescription && badge.description ? (
+        <Text style={styles.description} numberOfLines={2}>
+          {badge.description}
         </Text>
       ) : null}
       {!earned && progress ? (

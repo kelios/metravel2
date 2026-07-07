@@ -4,6 +4,8 @@
 // Контракт зеркалит docs/features/social-trips-gamification-backlog.md (Sprint A).
 
 import type {
+  CharacterDetail,
+  CharacterPathOption,
   CharacterState,
   GamificationProgress,
   PlaceFirstBadge,
@@ -42,11 +44,29 @@ export const MOCK_PLACE_FIRST_BADGES: PlaceFirstBadge[] = [
 ];
 
 const line = (
-  data: Omit<ProgressionLine, 'isMaxLevel'> & { nextLevelMin: number | null },
-): ProgressionLine => ({
-  ...data,
-  isMaxLevel: data.nextLevelMin == null,
-});
+  data: Omit<
+    ProgressionLine,
+    'isMaxLevel' | 'visualKey' | 'progressPercent' | 'pointsToNext' | 'levels'
+  > & { nextLevelMin: number | null },
+): ProgressionLine => {
+  const isMaxLevel = data.nextLevelMin == null;
+  const span = isMaxLevel ? 0 : (data.nextLevelMin as number) - data.currentLevelMin;
+  const done = Math.max(0, data.current - data.currentLevelMin);
+  return {
+    ...data,
+    visualKey: data.slug,
+    isMaxLevel,
+    progressPercent: isMaxLevel
+      ? 100
+      : span > 0
+        ? Math.min(100, Math.round((done / span) * 100))
+        : 0,
+    pointsToNext: isMaxLevel
+      ? null
+      : Math.max(0, (data.nextLevelMin as number) - data.current),
+    levels: [],
+  };
+};
 
 // Пары слаг↔активность и пороги уровней зеркалят реальный BE
 // (dog=Участник, boar=Автор, fox=Читатель, bird=Исследователь).
@@ -113,45 +133,61 @@ export const MOCK_GAMIFICATION_PROGRESS: GamificationProgress = {
 
 // BE-модель: «путь» персонажа — одна из четырёх линеек прогрессии
 // (dog/boar/fox/bird). Мок зеркалит camelCase-домен из mapCharacter.
+const detail = (
+  slug: string,
+  name: string,
+  unlocked: boolean,
+  minLevel: number,
+): CharacterDetail => ({
+  slug,
+  name,
+  unlocked,
+  visualKey: `fox-${slug}`,
+  minLevel,
+  equipped: unlocked,
+});
+
+const pathOption = (
+  slug: CharacterPathOption['slug'],
+  name: string,
+  description: string,
+  emoji: string,
+  score: number,
+  level: number,
+): CharacterPathOption => ({
+  slug,
+  name,
+  description,
+  emoji,
+  score,
+  level,
+  canSelect: true,
+  lockedReason: null,
+});
+
 export const MOCK_CHARACTER_STATE: CharacterState = {
   id: 1,
   name: 'Лисья',
   level: 4,
   pathSlug: null,
   pathName: null,
+  activePathSlug: 'fox',
+  suggestedPathSlug: 'fox',
+  switchUnlocked: true,
   details: [
-    { slug: 'collar', name: 'Ошейник', unlocked: true },
-    { slug: 'backpack', name: 'Рюкзак', unlocked: true },
-    { slug: 'compass', name: 'Компас', unlocked: true },
-    { slug: 'map', name: 'Карта', unlocked: false },
-    { slug: 'medals', name: 'Медали', unlocked: false },
-    { slug: 'cape', name: 'Плащ', unlocked: false },
+    detail('collar', 'Ошейник', true, 1),
+    detail('backpack', 'Рюкзак', true, 2),
+    detail('compass', 'Компас', true, 3),
+    detail('map', 'Карта', false, 4),
+    detail('medals', 'Медали', false, 5),
+    detail('cape', 'Плащ', false, 6),
   ],
   pendingChoice: true,
   pathOptions: [
-    {
-      slug: 'dog',
-      name: 'Собачья',
-      description: 'Социальная ветка за участие, помощь другим и командные действия.',
-      emoji: '🐕',
-    },
-    {
-      slug: 'boar',
-      name: 'Кабанья',
-      description: 'Авторская ветка за маршруты, места и реакции на контент.',
-      emoji: '🐗',
-    },
-    {
-      slug: 'fox',
-      name: 'Лисья',
-      description: 'Ветка читателя за просмотры, сохранения и изучение маршрутов.',
-      emoji: '🦊',
-    },
-    {
-      slug: 'bird',
-      name: 'Птичья',
-      description: 'Исследовательская ветка за страны и первые открытия мест.',
-      emoji: '🦅',
-    },
+    pathOption('dog', 'Собачья', 'Социальная ветка за участие, помощь другим и командные действия.', '🐕', 47, 2),
+    pathOption('boar', 'Кабанья', 'Авторская ветка за маршруты, места и реакции на контент.', '🐗', 10, 1),
+    pathOption('fox', 'Лисья', 'Ветка читателя за просмотры, сохранения и изучение маршрутов.', '🦊', 1523, 5),
+    pathOption('bird', 'Птичья', 'Исследовательская ветка за страны и первые открытия мест.', '🦅', 15, 1),
   ],
+  updatedAt: '2026-06-21T10:00:00Z',
 };

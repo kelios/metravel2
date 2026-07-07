@@ -24,7 +24,11 @@ import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 import { trackPathChosen } from '@/utils/gamificationAnalytics';
-import { useMyAchievements } from '@/hooks/useAchievementsApi';
+import {
+  useMyAchievements,
+  useUserAchievements,
+} from '@/hooks/useAchievementsApi';
+import type { PublicAchievements } from '@/api/achievements';
 
 const STALE_TIME = 5 * 60 * 1000;
 
@@ -100,13 +104,34 @@ export function useMyGamificationProgress() {
 export function useUserGamificationProgress(
   userId: string | number | null | undefined,
 ) {
-  return useQuery<GamificationProgress>({
+  const qc = useQueryClient();
+  // Публичный /user/{id}/ теперь отдаёт progression_lines одним ответом — подписываемся
+  // на него и сеемся из консолидированного payload'а, отдельный /progression-lines/
+  // дёргаем только если поля в нём не оказалось (fallback).
+  const { data: ach, isSuccess: achSuccess, isFetching: achFetching } =
+    useUserAchievements(userId);
+  const consolidatedHasProgression = ach?.progressionDto != null;
+  const needsSeparateFetch = achSuccess && !consolidatedHasProgression;
+
+  const query = useQuery<GamificationProgress>({
     queryKey: queryKeys.gamificationProgressUser(userId),
     queryFn: () => fetchUserGamificationProgress(userId as string | number),
-    enabled: hasId(userId),
+    enabled: hasId(userId) && needsSeparateFetch,
     staleTime: STALE_TIME,
     retry,
+    initialData: () => {
+      const cached = qc.getQueryData<PublicAchievements>(
+        queryKeys.achievementsUser(userId),
+      );
+      if (cached?.progressionDto == null) return undefined;
+      return mapProgress(cached.progressionDto);
+    },
+    initialDataUpdatedAt: () =>
+      qc.getQueryState(queryKeys.achievementsUser(userId))?.dataUpdatedAt ?? 0,
   });
+
+  const isFetching = query.isFetching || (!query.data && achFetching);
+  return { ...query, isFetching };
 }
 
 // ── Персонажи + выбор пути ──────────────────────────────────────────────────
@@ -147,13 +172,33 @@ export function useMyCharacter() {
 }
 
 export function useUserCharacter(userId: string | number | null | undefined) {
-  return useQuery<CharacterState>({
+  const qc = useQueryClient();
+  // Тот же паттерн, что и /me/: сеемся из консолидированного /user/{id}/ (character),
+  // отдельный /character/ дёргаем только когда поля там нет.
+  const { data: ach, isSuccess: achSuccess, isFetching: achFetching } =
+    useUserAchievements(userId);
+  const consolidatedHasCharacter = ach?.characterDto != null;
+  const needsSeparateFetch = achSuccess && !consolidatedHasCharacter;
+
+  const query = useQuery<CharacterState>({
     queryKey: queryKeys.gamificationCharacterUser(userId),
     queryFn: () => fetchUserCharacter(userId as string | number),
-    enabled: hasId(userId),
+    enabled: hasId(userId) && needsSeparateFetch,
     staleTime: STALE_TIME,
     retry,
+    initialData: () => {
+      const cached = qc.getQueryData<PublicAchievements>(
+        queryKeys.achievementsUser(userId),
+      );
+      if (cached?.characterDto == null) return undefined;
+      return mapCharacter(cached.characterDto);
+    },
+    initialDataUpdatedAt: () =>
+      qc.getQueryState(queryKeys.achievementsUser(userId))?.dataUpdatedAt ?? 0,
   });
+
+  const isFetching = query.isFetching || (!query.data && achFetching);
+  return { ...query, isFetching };
 }
 
 /** Мутация выбора пути: обновляет кэш персонажа и шлёт path_chosen. */

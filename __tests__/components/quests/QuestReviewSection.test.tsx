@@ -90,6 +90,26 @@ describe('QuestReviewSection', () => {
     })
   })
 
+  it('prefills review stars from the quick quest rating', async () => {
+    const { getByText, getByTestId } = render(
+      <QuestReviewSection questId="krakow-dragon" questNumericId={1} initialRating={5} />,
+    )
+
+    expect(getByText('Подробный отзыв о квесте')).toBeTruthy()
+    expect(getByText('Оценка в отзыве')).toBeTruthy()
+    expect(getByText('Подставили вашу быструю оценку. Можно изменить для отзыва.')).toBeTruthy()
+
+    fireEvent.press(getByTestId('quest-review-section-submit'))
+
+    await waitFor(() => {
+      expect(mockSubmit).toHaveBeenCalledWith({
+        rating: 5,
+        liked: '',
+        disliked: '',
+      })
+    })
+  })
+
   it('shows a thank-you state when the user already left a review', () => {
     mockReviewState.review = { id: 7, user: 1, quest: 1, rating: 5, liked: 'x', disliked: '' }
 
@@ -97,7 +117,7 @@ describe('QuestReviewSection', () => {
       <QuestReviewSection questId="krakow-dragon" questNumericId={1} />,
     )
 
-    expect(getByText('Спасибо за отзыв!')).toBeTruthy()
+    expect(getByText('Спасибо за подробный отзыв!')).toBeTruthy()
     expect(queryByPlaceholderText('Расскажите, что было интересно')).toBeNull()
   })
 })

@@ -145,7 +145,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
     { key: 'travels', label: 'Маршруты', a11yLabel: 'Мои маршруты', hint: 'Показать ваши опубликованные путешествия' },
     { key: 'subscribers', label: 'Подписчики', a11yLabel: 'Подписчики', hint: 'Открыть список подписчиков' },
     { key: 'subscriptions', label: 'Подписки', a11yLabel: 'Подписки', hint: 'Открыть список подписок' },
-    { key: 'overview', label: 'Обзор', a11yLabel: 'Обзор профиля', hint: 'Сводка: достижения и быстрые действия' },
+    { key: 'overview', label: 'Главное', a11yLabel: 'Главное', hint: 'Сводка: ранг, награды, персонаж и быстрые действия' },
     { key: 'stats', label: 'Статистика', a11yLabel: 'Статистика профиля', hint: 'Вовлечённость маршрутов и личные статусы' },
     { key: 'countries', label: 'Страны', a11yLabel: 'Страны профиля', hint: 'Показать страны, где вы уже были, и оставшиеся страны' },
     { key: 'worldmap', label: 'Карта', a11yLabel: 'Карта мира', hint: 'Карта посещённых стран: серым — не посещено, цветом — посещено' },

@@ -7,6 +7,7 @@ import { getAffiliateOffers } from '@/components/affiliate/affiliateConfig'
 import { BadgeUnlockToast } from '@/components/achievements'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta'
+import { useQuestRatingMutation } from '@/hooks/useQuestRating'
 import { pluralizeRu } from '@/utils/pluralize'
 import QuestPioneerBlock from './QuestPioneerBlock'
 import QuestReviewSection from './QuestReviewSection'
@@ -280,6 +281,41 @@ function QuestFinaleCompletionLine({
   )
 }
 
+function QuestFinaleFeedback({
+  questId,
+  questNumericId,
+}: {
+  questId?: string
+  questNumericId?: number
+}) {
+  const {
+    userRating,
+    isSubmitting: isRatingSubmitting,
+    canRate,
+    rate,
+  } = useQuestRatingMutation(questNumericId)
+
+  return (
+    <>
+      <QuestFinaleRating
+        questNumericId={questNumericId}
+        userRating={userRating}
+        isSubmitting={isRatingSubmitting}
+        canRate={canRate}
+        onRate={rate}
+      />
+
+      {questId ? (
+        <QuestReviewSection
+          questId={questId}
+          questNumericId={questNumericId}
+          initialRating={userRating}
+        />
+      ) : null}
+    </>
+  )
+}
+
 export function QuestFinalePanel({
   colors: _colors,
   styles,
@@ -401,11 +437,7 @@ export function QuestFinalePanel({
             />
           ) : null}
 
-          <QuestFinaleRating questNumericId={questNumericId} />
-
-          {questId ? (
-            <QuestReviewSection questId={questId} questNumericId={questNumericId} />
-          ) : null}
+          <QuestFinaleFeedback questId={questId} questNumericId={questNumericId} />
         </>
       ) : (
         <>

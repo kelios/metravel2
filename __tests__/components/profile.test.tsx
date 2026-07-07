@@ -29,6 +29,14 @@ jest.mock('@/hooks/useAchievementsApi', () => ({
     isFetching: false,
     isSuccess: Boolean(mockMyAchievementsData),
   })),
+  // useGamification.ts теперь подписывается на публичный ответ для засева кэшей —
+  // на своём профиле user-хуки не активны, но модуль импортирует функцию, поэтому
+  // она обязана существовать в моке.
+  useUserAchievements: jest.fn(() => ({
+    data: undefined,
+    isFetching: false,
+    isSuccess: false,
+  })),
 }));
 
 jest.mock('expo-router', () => ({
@@ -201,6 +209,7 @@ const makeRank = (overrides: Partial<UserRank> = {}): UserRank => ({
   isMaxLevel: false,
   progressRatio: 0,
   remainingPoints: 100,
+  recomputedAt: null,
   ...overrides,
 });
 
@@ -209,6 +218,7 @@ const makeAchievements = (rankOverrides: Partial<UserRank> = {}): MyAchievements
   earned: [],
   locked: [],
   recentlyEarned: [],
+  activityTypes: [],
 });
 
 const setupAuth = (overrides?: Partial<ReturnType<typeof useAuth>>) => {
@@ -377,7 +387,7 @@ describe('ProfileScreen', () => {
 
     const { getByLabelText, findByLabelText } = renderProfile();
 
-    // По умолчанию активна вкладка "Обзор"; переключаемся на "Маршруты"
+    // По умолчанию активна вкладка "Главное"; переключаемся на "Маршруты"
     fireEvent.press(await findByLabelText('Мои маршруты: 3'));
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
 
@@ -496,7 +506,7 @@ describe('ProfileScreen', () => {
 
     const { findByLabelText, findByText } = renderProfile();
 
-    fireEvent.press(await findByLabelText('Обзор профиля'));
+    fireEvent.press(await findByLabelText('Главное'));
     expect(await findByText('С чего начать')).toBeTruthy();
 
     fireEvent.press(await findByLabelText('Создать первый маршрут'));

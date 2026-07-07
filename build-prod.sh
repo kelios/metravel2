@@ -90,28 +90,31 @@ deploy_prod() {
   ssh sx3@178.172.137.129 "set -e
     cd /home/sx3/metravel
     mkdir -p static
-    rm -rf static/dist.new
-    mv dist/$ENV static/dist.new
-    ts=\$(date +%Y%m%d%H%M%S)
-    stale_old=static/dist.old
-    if [ -e \"\$stale_old\" ]; then
-      stale_target=\"static/dist.old.stale-\$ts\"
-      i=0
-      while [ -e \"\$stale_target\" ]; do
-        i=\$((i + 1))
-        stale_target=\"static/dist.old.stale-\$ts-\$i\"
-      done
-      if mv \"\$stale_old\" \"\$stale_target\" 2>/dev/null; then
-        echo \"⚠️ Moved stale \$stale_old to \$stale_target\"
-      else
-        echo \"⚠️ Cannot move stale \$stale_old; using timestamped rollback directory\"
-      fi
+    # static/ is bind-mounted into the app container at /app/static. Swap dirs
+    # (dist.new/dist.old) get created by the container user (uid 1984) or an
+    # out-of-band op, so they end up owned by a uid the host user (sx3) cannot
+    # unlink — a plain host 'rm -rf' silently fails and stale dist.old(.stale-*)
+    # dirs pile up (past manual-recovery need). Route every destructive removal
+    # through root inside the container; mv/rename still works on the host
+    # (write on static/ is enough for a rename within it).
+    app_ctr=\$(docker ps --format '{{.Names}}' | grep -E '^metravel[-_]app[-_]1\$' | head -1)
+    if [ -z \"\$app_ctr\" ]; then
+      echo \"⚠️ app container not found; stale-dir cleanup falls back to host rm (may lack permissions)\"
     fi
+    rroot() { # rm -rf the given paths as root in the container; never abort
+      if [ -n \"\$app_ctr\" ]; then
+        docker exec -u 0 \"\$app_ctr\" sh -c \"rm -rf \$1\" || true
+      else
+        rm -rf \$1 2>/dev/null || true
+      fi
+    }
+
+    # Purge leftovers from a prior interrupted/manual deploy before the swap.
+    rroot '/app/static/dist.new /app/static/dist.old /app/static/dist.old-* /app/static/dist.old.stale-*'
+
+    mv dist/$ENV static/dist.new
 
     rollback_dir=static/dist.old
-    if [ -e \"\$rollback_dir\" ]; then
-      rollback_dir=\"static/dist.old-\$ts\"
-    fi
     if [ -d static/dist ]; then
       mv static/dist \"\$rollback_dir\"
     fi
@@ -128,7 +131,8 @@ deploy_prod() {
     fi
     # HTML shell still switches atomically to the new build below.
     mv static/dist.new static/dist
-    rm -rf \"\$rollback_dir\" || echo \"⚠️ Could not remove \$rollback_dir; cleanup requires server permissions\"
+    # Drop the rollback copy as root (may be owned by another uid).
+    rroot '/app/static/dist.old'
     if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
       docker compose -f docker-compose-prod.app.yaml restart app nginx
     else

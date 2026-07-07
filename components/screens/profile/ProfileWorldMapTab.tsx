@@ -22,7 +22,7 @@ import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { CountryTravelsPanel, type CountryTravelCard } from './CountryTravelsPanel'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { MAP_ZOOM_MAX, useMapZoomPan } from '@/hooks/useMapZoomPan'
+import { useMapZoomPan } from '@/hooks/useMapZoomPan'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useTheme, useThemedColors } from '@/hooks/useTheme'
 import { useVisitedCountries } from '@/hooks/useVisitedCountries'
@@ -94,20 +94,36 @@ export function ProfileWorldMapTab({
   const [isMapFullscreen, setIsMapFullscreen] = useState(false)
   const handleCountryPress = useCallback((code: string) => setSelectedCode(code), [])
 
-  // Fit-to-fill: на портретном экране карта 2:1 иначе лежит узкой полосой. При
-  // открытии fullscreen подбираем начальный масштаб так, чтобы карта заполняла
-  // высоту вьюпорта (страны крупные и тапабельные), а мир листался по горизонтали.
+  // Fullscreen-портрет карты рендерится в cover-режиме (SVG slice): при scale=1 карта
+  // уже заполняет ВСЮ высоту (все широты), обрезана по долготе — мир листается пальцем
+  // E↔W. Дополнительный масштаб не нужен, только центрируем видимую долготу на
+  // центроиде посещённых стран, чтобы они были в кадре сразу. Вертикаль залочена
+  // клампом (высота заполнена целиком).
   const fullscreenFitApplied = useRef(false)
   const applyFullscreenFit = useCallback(
     (width: number, height: number) => {
       if (fullscreenFitApplied.current || width <= 0 || height <= 0) return
       fullscreenFitApplied.current = true
-      const containFitHeight = width * (WORLD_MAP_HEIGHT / WORLD_MAP_WIDTH)
-      const fitScale = Math.min(MAP_ZOOM_MAX, Math.max(1, height / containFitHeight))
       reset(false)
-      if (fitScale > 1.02) zoom.zoomByCentered(fitScale)
+      // Центроид посещённых стран (единицы viewBox) → центрируем окно по X.
+      if (visitedCodes.size === 0) return
+      let sumX = 0
+      let count = 0
+      for (const code of visitedCodes) {
+        const geom = getCountryGeometry(code)
+        if (!geom) continue
+        sumX += geom.cx
+        count += 1
+      }
+      if (count === 0) return
+      const focusX = sumX / count
+      const coverScale = Math.max(width / WORLD_MAP_WIDTH, height / WORLD_MAP_HEIGHT)
+      const viewW = width / coverScale // видимая ширина в единицах viewBox
+      // translateX так, чтобы focusX оказался в центре окна; кламп внутри panBy.
+      const targetTx = viewW / 2 - focusX
+      zoom.panBy(targetTx, 0)
     },
-    [reset, zoom]
+    [reset, zoom, visitedCodes]
   )
 
   const openMapFullscreen = useCallback(() => {
@@ -395,10 +411,13 @@ export function ProfileWorldMapTab({
           onCountryPress={handleCountryPress}
           zoom={zoom}
           fillParent={mode === 'fullscreen'}
+          // Явная px-высота: проценты <svg height="100%"> не резолвятся сквозь
+          // цепочку flex-высот Modal → падают в интринсик 2:1 (узкая полоса).
+          style={mode === 'fullscreen' && isMobile ? { height: fullscreenMapHeight } : undefined}
           onContainerLayout={mode === 'fullscreen' ? applyFullscreenFit : undefined}
           onGestureActiveChange={onMapGestureActiveChange}
         >
-          <WorldMapFlags visitedCodes={visitedCodes} size={mode === 'fullscreen' ? 16 : isMobile ? 13 : 16} zoom={zoom} />
+          <WorldMapFlags visitedCodes={visitedCodes} size={mode === 'fullscreen' ? 16 : isMobile ? 13 : 16} zoom={zoom} cover={mode === 'fullscreen'} />
         </WorldChoroplethMap>
 
         <View style={styles.zoomControls}>
@@ -449,6 +468,7 @@ export function ProfileWorldMapTab({
       handleCountryPress,
       zoom,
       applyFullscreenFit,
+      fullscreenMapHeight,
       onMapGestureActiveChange,
       isMobile,
       styles,

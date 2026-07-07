@@ -44,6 +44,15 @@ export type ActivityKind = 'explorer' | 'reader' | 'author' | 'participant';
 /** Слаг RPG-линейки прогрессии. */
 export type ProgressionLineSlug = 'dog' | 'boar' | 'fox' | 'bird';
 
+/** Один уровень внутри линейки прогрессии (доменный, camelCase). */
+export interface ProgressionLevel {
+  level: number;
+  title: string;
+  minScore: number;
+  /** Визуальный ключ уровня (для будущей арт-темизации), null если BE не отдал. */
+  visualKey: string | null;
+}
+
 /** Одна линейка прогрессии: текущий уровень + % до следующего. */
 export interface ProgressionLine {
   slug: ProgressionLineSlug;
@@ -54,6 +63,8 @@ export interface ProgressionLine {
   activityName: string;
   /** Что засчитывается в трек (от BE); null — берём FE-фолбэк по activityKind. */
   description: string | null;
+  /** Визуальный ключ ветки (арт-темизация), null если BE не отдал. */
+  visualKey: string | null;
   level: number;
   levelTitle: string;
   /** Текущее значение метрики активности. */
@@ -62,6 +73,13 @@ export interface ProgressionLine {
   nextLevelMin: number | null;
   nextLevelTitle: string | null;
   isMaxLevel: boolean;
+  /** Готовый % прогресса к следующему уровню [0..100] с бэка; null если не пришёл
+   * (тогда UI считает сам из current/порогов). */
+  progressPercent: number | null;
+  /** Сколько очков осталось до следующего уровня (с бэка); null при max-level/отсутствии. */
+  pointsToNext: number | null;
+  /** Полная лесенка уровней ветки (с бэка). Пустой массив, если не отдана. */
+  levels: ProgressionLevel[];
   /** Эмодзи-маскот ветки (Собака/Кабан/Лиса/Птица). */
   emoji: string;
 }
@@ -81,6 +99,12 @@ export interface CharacterDetail {
   slug: string;
   name: string;
   unlocked: boolean;
+  /** Визуальный ключ детали (арт-темизация), null если BE не отдал. */
+  visualKey: string | null;
+  /** Минимальный уровень персонажа, с которого деталь доступна; null если не задан. */
+  minLevel: number | null;
+  /** Надета ли деталь сейчас (equipped). */
+  equipped: boolean;
 }
 
 /** Вариант пути развития, доступный при разблокировке выбора. */
@@ -89,6 +113,14 @@ export interface CharacterPathOption {
   name: string;
   description: string;
   emoji: string;
+  /** Текущий счёт по ветке (с available_paths[]). */
+  score: number;
+  /** Достигнутый уровень по ветке; null если BE не отдал. */
+  level: number | null;
+  /** Можно ли выбрать путь прямо сейчас. false → путь заблокирован (см. lockedReason). */
+  canSelect: boolean;
+  /** Причина блокировки выбора (пустая строка/null — нет ограничения). */
+  lockedReason: string | null;
 }
 
 export interface CharacterState {
@@ -98,10 +130,20 @@ export interface CharacterState {
   /** Выбранный путь (null — ещё не выбран). */
   pathSlug: CharacterPathSlug | null;
   pathName: string | null;
+  /** Активный путь (может отличаться от selected — суггест/дефолт), null если нет. */
+  activePathSlug: CharacterPathSlug | null;
+  /** Подсказанный BE путь, null если нет. */
+  suggestedPathSlug: CharacterPathSlug | null;
+  /** Разблокирована ли смена пути (BE switch_unlocked). */
+  switchUnlocked: boolean;
   details: CharacterDetail[];
   /** true → пользователю доступен выбор следующего пути (показать UI выбора). */
   pendingChoice: boolean;
+  /** ВСЕ доступные варианты пути, включая заблокированные (с lockedReason/canSelect).
+   * UI сам решает как показывать locked — маппер их больше не прячет. */
   pathOptions: CharacterPathOption[];
+  /** Время последнего обновления состояния персонажа (BE updated_at), null если нет. */
+  updatedAt: string | null;
 }
 
 export interface ChoosePathInput {
@@ -245,6 +287,13 @@ const mapPlaceFirstBadge = (dto: PlaceFirstBadgeDto): PlaceFirstBadge => ({
   isFresh: Boolean(dto.is_fresh),
 });
 
+const mapProgressionLevel = (dto: ProgressionLevelDto): ProgressionLevel => ({
+  level: dto.level ?? 1,
+  title: dto.title ?? '',
+  minScore: dto.min_score ?? 0,
+  visualKey: dto.visual_key ?? null,
+});
+
 const mapProgressionLine = (dto: ProgressionLineDto): ProgressionLine => {
   const slug = normalizeLineSlug(dto.slug);
   const current = dto.score ?? 0;
@@ -255,6 +304,7 @@ const mapProgressionLine = (dto: ProgressionLineDto): ProgressionLine => {
     activityKind: normalizeActivityKind(dto.activity_type),
     activityName: dto.activity_label,
     description: dto.description ?? null,
+    visualKey: dto.visual_key ?? null,
     level: dto.level?.level ?? 1,
     levelTitle: dto.level?.title ?? '',
     current,
@@ -262,6 +312,11 @@ const mapProgressionLine = (dto: ProgressionLineDto): ProgressionLine => {
     nextLevelMin,
     nextLevelTitle: dto.next_level?.title ?? null,
     isMaxLevel: dto.next_level == null,
+    // Приоритет — серверным значениям; UI-фолбэк (клиентский пересчёт) остаётся
+    // в компонентах, когда эти поля null.
+    progressPercent: dto.progress_percent ?? null,
+    pointsToNext: dto.points_to_next ?? null,
+    levels: (dto.levels ?? []).map(mapProgressionLevel),
     emoji: lineEmoji(slug),
   };
 };
@@ -278,6 +333,9 @@ const mapVisualDetail = (dto: CharacterVisualDetailDto): CharacterDetail => ({
   slug: dto.key,
   name: dto.label,
   unlocked: Boolean(dto.unlocked),
+  visualKey: dto.visual_key ?? null,
+  minLevel: dto.min_level ?? null,
+  equipped: Boolean(dto.equipped),
 });
 
 // Вариант пути == доступная для выбора линейка прогрессии (available_paths[]).
@@ -288,26 +346,34 @@ const mapAvailablePath = (dto: AvailablePathDto): CharacterPathOption => {
     name: dto.name,
     description: dto.description ?? dto.level?.title ?? '',
     emoji: lineEmoji(slug),
+    score: dto.score ?? 0,
+    level: dto.level?.level ?? null,
+    canSelect: dto.can_select !== false,
+    lockedReason: dto.locked_reason ?? null,
   };
 };
 
 export const mapCharacter = (dto: CharacterStateDto): CharacterState => {
   const active = dto.active_path ?? dto.selected_path ?? null;
   const selected = dto.selected_path ?? null;
+  const suggested = dto.suggested_path ?? null;
   // Выбор доступен, когда BE разблокировал смену и путь ещё не закреплён.
   const pendingChoice = Boolean(dto.switch_unlocked) && selected == null;
-  const options = (dto.available_paths ?? []).filter(
-    (p) => p.can_select !== false,
-  );
+  // Раньше маппер прятал заблокированные пути (can_select===false) — теперь отдаём
+  // все варианты с флагом canSelect/lockedReason, UI сам решает как их показать.
   return {
     id: dto.user_id,
     name: active?.name ?? 'Персонаж',
     level: active?.level?.level ?? 1,
     pathSlug: normalizePathSlug(selected?.slug),
     pathName: selected?.name ?? null,
+    activePathSlug: normalizePathSlug(active?.slug),
+    suggestedPathSlug: normalizePathSlug(suggested?.slug),
+    switchUnlocked: Boolean(dto.switch_unlocked),
     details: (dto.visual_details ?? []).map(mapVisualDetail),
     pendingChoice,
-    pathOptions: options.map(mapAvailablePath),
+    pathOptions: (dto.available_paths ?? []).map(mapAvailablePath),
+    updatedAt: dto.updated_at ?? null,
   };
 };
 

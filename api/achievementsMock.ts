@@ -4,6 +4,7 @@
 // намеренно null — BadgeMedal рисует процедурную медаль до готовности DES-A1.
 
 import type {
+  ActivityType,
   Badge,
   BadgeProgress,
   MyAchievements,
@@ -31,10 +32,15 @@ const badge = (
   slug,
   name,
   description,
+  categoryId: null,
   categorySlug,
   categoryName,
+  categoryIcon: null,
   tier,
   imageUrl: null,
+  imageStatus: 'none',
+  awardType: 'auto',
+  target: 'user',
   points,
   isSecret: false,
   order: id,
@@ -60,6 +66,8 @@ const earned = (b: Badge, earnedAt: string): UserBadge => ({
   id: b.id + 100,
   badge: b,
   earnedAt,
+  period: null,
+  discovery: null,
 });
 
 // Значения зеркалят готовый rank-progress summary с бэка (#721):
@@ -75,7 +83,49 @@ export const MOCK_RANK: UserRank = {
   isMaxLevel: false,
   progressRatio: 0.16,
   remainingPoints: 420,
+  recomputedAt: '2026-01-22T08:10:00Z',
 };
+
+// Типы активности (top-level activity_types[] в живом ответе). Метрики — произвольные
+// счётчики: маппер кладёт их как есть в Record<string, number>.
+export const MOCK_ACTIVITY_TYPES: ActivityType[] = [
+  {
+    type: 'explorer',
+    label: 'Исследователь',
+    score: 320,
+    level: 3,
+    nextThreshold: 500,
+    progressPercent: 64,
+    metrics: { places: 42, countries: 7 },
+  },
+  {
+    type: 'author',
+    label: 'Автор',
+    score: 180,
+    level: 2,
+    nextThreshold: 300,
+    progressPercent: 60,
+    metrics: { travels: 12, likes: 210 },
+  },
+  {
+    type: 'reader',
+    label: 'Читатель',
+    score: 1523,
+    level: 5,
+    nextThreshold: null,
+    progressPercent: 100,
+    metrics: { reads: 1523, saves: 88 },
+  },
+  {
+    type: 'participant',
+    label: 'Участник',
+    score: 47,
+    level: 2,
+    nextThreshold: 75,
+    progressPercent: 44,
+    metrics: { joinedTrips: 4, comments: 63 },
+  },
+];
 
 const MOCK_EARNED: UserBadge[] = [
   earned(MOCK_BADGES[0], '2025-09-01T10:00:00Z'),
@@ -109,6 +159,7 @@ export const MOCK_MY_ACHIEVEMENTS: MyAchievements = {
     MOCK_EARNED[4], // badge id=8, earnedAt 2025-11-18 (~7 months ago)
     MOCK_EARNED[3], // badge id=6, earnedAt 2025-10-03 (~8 months ago)
   ],
+  activityTypes: MOCK_ACTIVITY_TYPES,
 };
 
 // ── Peer-awarded badges (§10) ───────────────────────────────────────────────
@@ -125,14 +176,18 @@ const peerBadge = (
   slug,
   name,
   description,
+  categoryId: null,
   categorySlug: 'community',
   categoryName: 'От сообщества',
+  categoryIcon: null,
   tier,
   imageUrl: null,
+  imageStatus: 'none',
+  awardType: 'peer',
+  target,
   points: 0,
   isSecret: false,
   order: id,
-  target,
 });
 
 export const MOCK_PEER_CATALOG: PeerBadge[] = [
@@ -168,6 +223,7 @@ export const MOCK_PUBLIC_ACHIEVEMENTS: PublicAchievements = {
   rank: MOCK_RANK,
   earned: MOCK_EARNED,
   peerReceived: MOCK_PEER_RECEIVED,
+  activityTypes: MOCK_ACTIVITY_TYPES,
 };
 
 // ── Редкие награды (Sprint 11 / блок B) ──────────────────────────────────────

@@ -10,10 +10,15 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 type Props = {
   questId: string
   questNumericId: number | undefined
+  initialRating?: number | null
   testID?: string
 }
 
-function QuestReviewSection({ questNumericId, testID = 'quest-review-section' }: Props) {
+function QuestReviewSection({
+  questNumericId,
+  initialRating,
+  testID = 'quest-review-section',
+}: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const { isAuthenticated, requireAuth } = useRequireAuth({ intent: 'rate' })
@@ -27,7 +32,12 @@ function QuestReviewSection({ questNumericId, testID = 'quest-review-section' }:
   const [liked, setLiked] = useState('')
   const [disliked, setDisliked] = useState('')
 
-  const effectiveRating = rating || review?.rating || 0
+  const initialReviewRating =
+    typeof initialRating === 'number' && Number.isFinite(initialRating) && initialRating > 0
+      ? Math.max(1, Math.min(5, Math.round(initialRating)))
+      : 0
+  const effectiveRating = rating || review?.rating || initialReviewRating
+  const showRatingPrefillNote = !rating && !review?.rating && initialReviewRating > 0
   const alreadyReviewed = !!review && !isSubmitted
   const showSuccess = isSubmitted || alreadyReviewed
 
@@ -46,9 +56,9 @@ function QuestReviewSection({ questNumericId, testID = 'quest-review-section' }:
   if (showSuccess) {
     return (
       <View style={styles.container} testID={testID} nativeID="quest-review-section">
-        <Text style={styles.title}>Отзыв о квесте</Text>
+        <Text style={styles.title}>Ваш отзыв о квесте</Text>
         <View style={styles.successBox}>
-          <Text style={styles.successText}>Спасибо за отзыв!</Text>
+          <Text style={styles.successText}>Спасибо за подробный отзыв!</Text>
         </View>
       </View>
     )
@@ -56,10 +66,13 @@ function QuestReviewSection({ questNumericId, testID = 'quest-review-section' }:
 
   return (
     <View style={styles.container} testID={testID} nativeID="quest-review-section">
-      <Text style={styles.title}>Оставьте отзыв о квесте</Text>
+      <Text style={styles.title}>Подробный отзыв о квесте</Text>
+      <Text style={styles.subtitle}>
+        Здесь можно оставить текстовый отзыв; оценка ниже относится к этому отзыву.
+      </Text>
 
       <View style={styles.starsRow}>
-        <Text style={styles.fieldLabel}>Ваша оценка</Text>
+        <Text style={styles.fieldLabel}>Оценка в отзыве</Text>
         <StarRating
           rating={effectiveRating}
           userRating={effectiveRating}
@@ -70,6 +83,11 @@ function QuestReviewSection({ questNumericId, testID = 'quest-review-section' }:
           showValue={false}
           showCount={false}
         />
+        {showRatingPrefillNote ? (
+          <Text style={styles.ratingHint}>
+            Подставили вашу быструю оценку. Можно изменить для отзыва.
+          </Text>
+        ) : null}
       </View>
 
       <View style={styles.field}>
@@ -136,7 +154,11 @@ const createStyles = (colors: any) =>
       fontSize: 18,
       fontWeight: '600',
       color: colors.text,
-      letterSpacing: -0.2,
+    },
+    subtitle: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: colors.textMuted,
     },
     starsRow: {
       gap: 8,
@@ -147,6 +169,11 @@ const createStyles = (colors: any) =>
     fieldLabel: {
       fontSize: 13,
       fontWeight: '600',
+      color: colors.textMuted,
+    },
+    ratingHint: {
+      fontSize: 12,
+      lineHeight: 16,
       color: colors.textMuted,
     },
     input: {

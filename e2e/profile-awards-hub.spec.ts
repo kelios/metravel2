@@ -306,9 +306,9 @@ async function setupPage(page: import('@playwright/test').Page) {
 }
 
 async function navigateToOverviewTab(page: import('@playwright/test').Page) {
-  // Profile starts on "Маршруты" tab — click "Обзор" to show ProfileOverviewTab
-  // which contains AwardsHub. The tab has a11yLabel "Обзор профиля".
-  const overviewTab = page.getByRole('tab', { name: /Обзор/i })
+  // Profile starts on "Маршруты" tab — click "Главное" to show ProfileOverviewTab
+  // which contains AwardsHub. The tab has a11yLabel "Главное".
+  const overviewTab = page.getByRole('tab', { name: /Главное/i })
   await overviewTab.waitFor({ state: 'visible', timeout: 20_000 })
   await overviewTab.click()
 }
