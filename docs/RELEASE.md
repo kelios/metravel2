@@ -148,6 +148,12 @@ npm run guard:lighthouse:mobile:fail   # reads ./lighthouse-report.produrl.mobil
 
 See scripts in `package.json`:
 
+Android EAS/build gate:
+
+- Expo/EAS Android build credits are limited. Codex must not run Android EAS/cloud builds, Android production builds, or Android submit commands unless the user explicitly asks for that exact Android build/submit in the current task.
+- Android QA before handoff uses a locally built app installed over USB on the connected phone by default, not an EAS preview/development/production build and not an Expo export/dev-client substitute.
+- The Android commands below are release/store operations, not the default validation path.
+
 ### iOS
 
 ```bash

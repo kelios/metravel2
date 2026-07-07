@@ -1,6 +1,6 @@
 ---
 name: metravel-mobile-tester
-description: Test metravel mobile behavior across mobile web and Android/native surfaces. Use when Codex needs a mobile tester role for touch targets, responsive layouts, mobile navigation, native smoke checks, USB-connected Android device/dev-client QA, Maestro flows, mobile browser evidence, or regression reports before Android release or mobile UI handoff.
+description: Test metravel mobile behavior across mobile web and Android/native surfaces. Use when Codex needs a mobile tester role for touch targets, responsive layouts, mobile navigation, native smoke checks, USB-connected Android local-build QA, Maestro flows, mobile browser evidence, or regression reports before Android release or mobile UI handoff. Do not run Android EAS/cloud or production builds without an explicit user request.
 ---
 
 # Metravel Mobile Tester
@@ -46,8 +46,8 @@ Read first:
 ## Evidence
 
 - Use Playwright mobile viewport or browser preview for mobile web.
-- Use emulator/device/dev-client evidence for Android when available.
-- If `adb devices -l` shows a connected device, run or explicitly block the relevant `AND-USB-*` cases from `docs/MANUAL_TEST_CASES.md`; do not substitute mobile web viewport evidence for Android device evidence.
+- Use local-build device evidence for Android when available.
+- If `adb devices -l` shows a connected device, build/install locally and run or explicitly block the relevant `AND-USB-*` cases from `docs/MANUAL_TEST_CASES.md`; do not substitute mobile web viewport evidence for Android device evidence.
 - Prefer Maestro flows in `e2e/maestro/` for repeatable native regressions when Java/Maestro are available; if Maestro is blocked, record the blocker and run the matching manual device steps.
 - Store screenshots, traces, logs, and temporary captures only in ignored folders such as `.codex-temp/`, `.codex-debug/`, `test-results/`, or `playwright-report/`.
 - Never print `.env.e2e` credentials, auth tokens, EAS secrets, or Google Play keys.
@@ -56,17 +56,19 @@ Read first:
 
 1. Resolve `adb` with `which adb` on macOS or `where.exe adb` on Windows.
 2. Verify the device with `adb devices -l`; `unauthorized` is blocked until the RSA prompt is accepted.
-3. Record non-secret environment facts: model, Android release, API level, app build/dev-client.
-4. For dev-client, start Metro in LAN/dev-client mode, run `adb reverse tcp:8081 tcp:8081`, resolve the installed scheme with `adb shell dumpsys package by.metravel.app`, then launch by scheme or use Dev Launcher Connect `exp://127.0.0.1:8081`; force a reload after code changes.
-5. Clear logcat before the tested action and capture only filtered crash/runtime lines after it:
+3. Record non-secret environment facts: model, Android release, API level, local build/install command, backend/API URL.
+4. Check the operation gate, then build/install locally: `cd android && ./gradlew :app:installDebug`, or `:app:assembleDebug` plus `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`.
+5. Force-stop and launch the installed app: `adb shell am force-stop by.metravel.app` then `adb shell monkey -p by.metravel.app 1`.
+6. Clear logcat before the tested action and capture only filtered crash/runtime lines after it:
    `FATAL EXCEPTION|AndroidRuntime|ReactNativeJS|JSApplicationIllegalArgumentException|DevLauncher`.
-6. Run the relevant `AND-USB-*` cases and any matching `e2e/maestro/*.yaml` flows.
-7. Route confirmed Android/native bugs to `$metravel-android-developer`; route shared UI/layout bugs to `$metravel-ui-guardrails` or `$metravel-feature-builder`.
+7. Run the relevant `AND-USB-*` cases and any matching `e2e/maestro/*.yaml` flows.
+8. Route confirmed Android/native bugs to `$metravel-android-developer`; route shared UI/layout bugs to `$metravel-ui-guardrails` or `$metravel-feature-builder`.
 
 ## Rules
 
 - Stay read-only by default.
 - Use `.env.e2e` auth values if already configured, but never echo them.
+- Do not run Android EAS/cloud builds, Android production builds/submits, or Expo export/dev-client Android QA routes unless the user explicitly asks for that exact path in the current task.
 - Do not treat missing production-hosted media in local dev as a frontend bug by itself.
 - Distinguish mobile web from Android/native; a web viewport pass is not Android device verification.
 - Confirmed Android/iOS/native app bugs must be routed to `$metravel-android-developer` or the relevant frontend owner and created or updated on the shared board as `area=front` in the current active sprint before handoff. Do not use `area=android`/`area=ios`; keep platform context in the title/description. If the board returns `401`, follow `docs/TASK_BOARD_MCP.md` token refresh via `.env.e2e` without printing secrets.

@@ -18,7 +18,7 @@ model: opus
 
 ## Кодекс native-совместимости — ЧИТАТЬ ПЕРВЫМ
 
-`docs/NATIVE_COMPAT_RULES.md`. **Правило №0 (от владельца): web — прод, его НЕ ломать ради native.** Несовместимость лечится платформенными файлами (`.web.tsx` + `.native.tsx`), а не перекройкой общего кода; точечный Platform-гейт — только для расхождения в одно свойство. Любая правка общего файла → обязательная web-проверка (прод-бандл в браузере, консоль чистая), не только typecheck. Остальные правила — реальные краши первого native-запуска (2026-06-11): web-only babel-трансформы (react-native-web только под `platform === 'web'`); зомби-модули вне `expo/bundledNativeModules.json` (expo-av); `Promise.resolve(import(...))` для любых чейнов; web-роли a11y (`role="listitem"`) только под Platform-гейтом; postinstall-патчи node_modules — первый подозреваемый при «web ок, телефон падает»; отладка через dev-client+adb (сборки дорогие). Механические правила сторожит `__tests__/config/native-compat-governance.test.ts` — не ослаблять его, чинить код.
+`docs/NATIVE_COMPAT_RULES.md`. **Правило №0 (от владельца): web — прод, его НЕ ломать ради native.** Несовместимость лечится платформенными файлами (`.web.tsx` + `.native.tsx`), а не перекройкой общего кода; точечный Platform-гейт — только для расхождения в одно свойство. Любая правка общего файла → обязательная web-проверка (прод-бандл в браузере, консоль чистая), не только typecheck. Остальные правила — реальные краши первого native-запуска (2026-06-11): web-only babel-трансформы (react-native-web только под `platform === 'web'`); зомби-модули вне `expo/bundledNativeModules.json` (expo-av); `Promise.resolve(import(...))` для любых чейнов; web-роли a11y (`role="listitem"`) только под Platform-гейтом; postinstall-патчи node_modules — первый подозреваемый при «web ок, телефон падает»; Android QA через локальную USB-сборку и adb, без EAS/dev-client/export маршрута по умолчанию. Механические правила сторожит `__tests__/config/native-compat-governance.test.ts` — не ослаблять его, чинить код.
 
 ## Главный класс багов: web-API без Platform-guard
 
@@ -34,6 +34,7 @@ model: opus
 ## Правила
 
 - **Конфиги сборки не трогаешь**: `app.json`, `eas.json`, `plugins/**`, `scripts/**` — в списке «не трогать без явного запроса». Нужна правка пермишена/плагина/versionCode — опиши её и передай `android-builder` (или владельцу), сам не редактируй.
+- **EAS/dev-client не дефолт для проверки**: Android production/dev/preview EAS-сборки, submit, Expo export и dev-client/Metro route запускаются только по явному разрешению владельца. Обычный Android test = локальная сборка и установка на USB-телефон.
 - Внешние ссылки — только `@/utils/externalLinks.openExternalUrl`, не `Linking.openURL`.
 - Токен — через `utils/secureStorage.ts` (на native = `expo-secure-store`), не лезь в localStorage напрямую.
 - expo-image не импортировать напрямую — только через `ImageCardMedia`.
@@ -43,7 +44,7 @@ model: opus
 ## Верификация (обязательно)
 
 - Код-проверка: `npm run typecheck`, `npm run lint`, `npm run check:fast` на изменённом scope. Меняешь общий компонент — проверь, что **оба** бандла (web и native) собираются (web-only импорт не утёк в native).
-- Реальное поведение native проверяется только на эмуляторе/устройстве через dev-client (сборку делает `android-builder`). Пока прогона на устройстве не было — **не помечай «работает на Android»**, ставь `verify pending: нужен прогон dev-client на эмуляторе/устройстве` с причиной.
+- Реальное поведение native проверяется только на подключённом устройстве через локально установленную сборку: `cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`, затем `adb shell monkey -p by.metravel.app 1` и `AND-USB-*`. Пока такого прогона на устройстве не было — **не помечай «работает на Android»**, ставь `verify pending` с точной причиной блокировки локальной сборки/установки.
 
 ## Стиль ответа
 
@@ -65,7 +66,7 @@ model: opus
 «Мобильная версия» = mobile web (~390px, `isMobile`) + Android + iOS ОДНОВРЕМЕННО: пользователь на всех трёх должен видеть один и тот же дизайн. Когда в задаче сказано «мобильный/mobile» — это всегда все три платформы сразу, не только web.
 
 - **Эталон — устройство.** Android/iOS-приложение оттестировано и принято как образец: при любом расхождении mobile web правится под устройство, НЕ наоборот.
-- **Верификация UI-правок — на обеих платформах со скринами:** web-превью 390px (`preview_resize` + `preview_screenshot`) И устройство/эмулятор (`adb exec-out screencap -p`; dev-client сидит на том же Metro — HMR обновляет обе стороны).
+- **Верификация UI-правок — на обеих платформах со скринами:** web-превью 390px (`preview_resize` + `preview_screenshot`) И устройство с локально установленной сборкой (`adb exec-out screencap -p`).
 - **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
 - **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
 - **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.

@@ -87,7 +87,7 @@
    - для точечных изменений обязательно запусти релевантные проверки по затронутому scope;
    - для крупных изменений обязательно запусти полный прогон.
 10. Тестирование выполняет AI-агент самостоятельно: человек ничего не тестирует за агента.
-    - Используй доступные средства проверки: браузер/Playwright, Android-устройство или эмулятор, unit/integration/e2e тесты, production build/smoke по scope задачи.
+    - Используй доступные средства проверки: браузер/Playwright, Android-устройство с локально установленной сборкой, unit/integration/e2e тесты, production web build/smoke по scope задачи.
     - Сам находи надежный маршрут проверки для конкретной задачи; просьба к пользователю проверить вручную не считается validation.
 
 ### 3.1 E2E окружение и доступы
@@ -97,16 +97,18 @@
 - Никогда не выводи секреты из `.env.e2e` в ответах, логах, скриншотах и коммитах.
 - Если task-board API/MCP отвечает `HTTP 401`, обнови staff token через программный login из `.env.e2e` по `docs/TASK_BOARD_MCP.md`, перезапиши `.secrets/metravel-task-board.env` без вывода токена и повтори `/api/tasks/`, `/api/tasks/board/`, `/api/sprints/`.
 
-### 3.2 Android device testing
+### 3.2 Android device testing and builds
 
-- Если задачу нужно проверить на Android, считай, что Android-устройство может быть подключено к этому компьютеру: сначала проверь `adb devices -l`.
-- Если `adb` показывает устройство со статусом `device`, самостоятельно тестируй нужный Android-сценарий на нём по `docs/MANUAL_TEST_CASES.md` `AND-USB-*`; не помечай Android как недоступный и не перекладывай проверку на пользователя.
-- `unauthorized`, отсутствие устройства, недоступный dev-client/Metro или другой реальный blocker фиксируй конкретно: команда, результат и следующий безопасный шаг.
+- Expo/EAS Android build credits are limited. Do not run Android EAS/cloud builds (`eas build --platform android`, `npm run android:build:*`, `npm run build:all:*`) and do not create Android production builds/submits unless the user explicitly asks for that exact Android build/submit in the current task.
+- Если задачу нужно проверить на Android, считай, что Android-телефон подключён к этому компьютеру по USB-кабелю: сначала проверь `adb devices -l`.
+- Если `adb` показывает устройство со статусом `device`, сначала собери Android локально и установи сборку на телефон (`cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`), затем самостоятельно тестируй нужный Android-сценарий по `docs/MANUAL_TEST_CASES.md` `AND-USB-*`.
+- Не заменяй Android device validation mobile-web viewport, Expo web export, EAS preview/development/production build или dev-client/export flow без явного разрешения пользователя.
+- `unauthorized`, отсутствие устройства или поломка локальной сборки/установки фиксируй конкретно: команда, результат и следующий безопасный шаг.
 
 ### 3.3 Координация долгих операций
 
-- Деплой, release/build, production web build, server rebuild/restart, full/preflight проверки, Playwright/e2e, Lighthouse и другие долгие операции с общими артефактами считаются эксклюзивными.
-- Перед запуском такой операции проверь, не идет ли уже операция того же типа и target: активные процессы (`ps`/`pgrep -af` по `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `docker compose`, `nginx`, `systemctl`) и lock-файлы вроде `dist/.prod-build.lock` или `.codex-temp/ops/*.lock`, если они есть.
+- Деплой, release/build, production web build, Android local/EAS build or install, server rebuild/restart, full/preflight проверки, Playwright/e2e, Lighthouse и другие долгие операции с общими артефактами считаются эксклюзивными.
+- Перед запуском такой операции проверь, не идет ли уже операция того же типа и target: активные процессы (`ps`/`pgrep -af` по `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `docker compose`, `nginx`, `systemctl`) и lock-файлы вроде `dist/.prod-build.lock` или `.codex-temp/ops/*.lock`, если они есть.
 - Если другой агент уже запустил deploy/build/rebuild/tests для того же target или глобальный full gate, не запускай второй экземпляр. Дождись результата, используй уже идущую проверку либо зафиксируй blocker с PID, командой и target.
 - Не убивай и не перезапускай чужой процесс без явной команды пользователя или документированного safe-wrapper'а. Если lock явно stale, сначала зафиксируй почему он stale, затем аккуратно очисти lock и продолжай.
 - Если запускаешь новую долгую операцию без собственного lock механизма, оставь короткий marker в `.codex-temp/ops/` и удали его после завершения.

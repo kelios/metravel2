@@ -47,7 +47,7 @@ Default bug loop:
 3. Android Developer fixes confirmed Android/native bugs; Programmer fixes non-native feature bugs.
 4. QA Agent or Mobile Tester re-tests the fixed scenario.
 5. Reviewer checks the diff and validation.
-6. DevOps Agent deploys/builds/releases only if the fix is approved and the user explicitly requested a target environment or mobile build.
+6. DevOps Agent deploys/builds/releases only if the fix is approved and the user explicitly requested a target environment or mobile build. Android production/EAS builds require an explicit Android build/submit request in the current task.
 
 ## Control Rules
 
@@ -57,12 +57,13 @@ Default bug loop:
 - Use Backend Diagnostician only for read-only backend/API diagnosis and board evidence; do not let it edit backend or frontend code.
 - Keep Mobile Tester read-only unless the user explicitly asks to update tests.
 - Do not let Android Developer change mobile release/build configs without explicit user approval.
+- Do not let Android Developer or Mobile Tester run Android EAS/cloud builds, Android production builds/submits, or dev-client/export Android QA routes without explicit user approval; Android QA defaults to local build/install on the USB-connected phone.
 - Do not let Refactor Surgeon change business logic or visual design; it only extracts structure.
 - Do not let Sprint Reviewer move tickets to `done` without runtime evidence for the Task Contract Done gate.
 - Do not let Production Smoke deploy, rollback, or mutate production; it only probes read-only health.
 - Do not let implementation start from vague requirements; require acceptance criteria or a bug report first.
 - Do not deploy production from vague wording; require an explicit `prod` deploy request and a clean environment gate.
-- Before assigning deploy, build, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, check the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if the same target is already running, do not start a second agent command.
+- Before assigning deploy, build, Android install, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, check the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if the same target is already running, do not start a second agent command.
 - Keep unrelated user changes separate; never revert files outside the task.
 - Preserve project rules for external links, design tokens, e2e secrets, server paths, and scope-based validation.
 - For visible web UI changes, require browser verification, screenshot, and console check before final handoff.

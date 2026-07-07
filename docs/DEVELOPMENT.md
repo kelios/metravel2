@@ -38,6 +38,12 @@ npm run ios
 npm run android
 ```
 
+Android QA rule:
+
+- `npm run android` only starts the Expo/Metro Android dev flow; it is not sufficient Android device validation by itself.
+- For Android testing, assume the phone is connected by USB, run `adb devices -l`, build locally, install to the device, and test that installed build. Default local commands are `cd android && ./gradlew :app:installDebug` or `:app:assembleDebug` followed by `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`.
+- Do not run Android EAS/cloud builds, Android production builds/submits, or use Expo export/dev-client as the Android QA path unless the user explicitly asks for that exact Android build path.
+
 ## Useful scripts
 
 - `npm run lint` — ESLint.

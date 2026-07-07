@@ -16,7 +16,7 @@ See `INDEX.md` for full docs map.
 - `DEVELOPMENT.md` — local setup and dev workflow
 - `DESIGN_SYSTEM.md` — design-token decisions and palette roles
 - `TESTING.md` — Jest + Playwright + CI quality gate
-- `MANUAL_TEST_CASES.md` — ручные web/mobile/Android тест-кейсы, включая Android USB/dev-client smoke
+- `MANUAL_TEST_CASES.md` — ручные web/mobile/Android тест-кейсы, включая Android USB/local-build smoke
 - `RELEASE.md` — release/deploy checklist
 - `PRODUCTION_CHECKLIST.md` — production release checklist
 - `EXTERNAL_LINK_GOVERNANCE_PR_SUMMARY.md` — external-links governance PR summary/template

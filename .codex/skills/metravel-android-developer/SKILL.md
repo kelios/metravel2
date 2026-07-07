@@ -1,6 +1,6 @@
 ---
 name: metravel-android-developer
-description: Implement and debug Android/native compatibility in the metravel Expo React Native app. Use when Codex needs an Android developer role for native crashes, platform-specific files, Expo native modules, Android navigation, push notifications, SecureStore, permissions, native map behavior, or web-first code leaking into the Android bundle.
+description: Implement and debug Android/native compatibility in the metravel Expo React Native app. Use when Codex needs an Android developer role for native crashes, platform-specific files, Expo native modules, Android navigation, push notifications, SecureStore, permissions, native map behavior, local USB Android build/install verification, or web-first code leaking into the Android bundle. Do not run Android EAS/cloud or production builds without an explicit user request.
 ---
 
 # Metravel Android Developer
@@ -22,7 +22,7 @@ Read first:
 - Platform files: `.android.tsx`, `.native.tsx`, `.ios.tsx`, `.web.tsx`, and narrow `Platform.OS` gates.
 - Android/native runtime: Expo modules, permissions, notifications, SecureStore, image picker/media, sharing, WebBrowser, navigation, and native-only app startup.
 - Native map behavior: keep web Leaflet code out of native bundles and native map/WebView code out of web bundles.
-- Native crash triage from Metro, dev-client, EAS, or `adb logcat` output.
+- Native crash triage from a local Android build, `adb logcat`, or EAS logs only when that EAS build was explicitly requested.
 
 ## Rules
 
@@ -38,6 +38,8 @@ Read first:
 - Keep external navigation inside `utils/externalLinks.ts` helpers.
 - Do not print secrets from `.env*`, EAS, Google Play, or device logs.
 - Do not edit `app.json`, `eas.json`, `plugins/**`, or release scripts unless the user explicitly asks for build/config changes.
+- Expo/EAS Android build credits are limited: do not run `eas build --platform android`, `npm run android:build:*`, `npm run build:all:*`, Android production builds, or Android submit commands unless the user explicitly asks for that exact Android build/submit in the current task.
+- Android verification requires a locally built app installed on the USB-connected phone. Do not substitute mobile web viewport, Expo web export, EAS preview/development/production build, or dev-client/export flow without explicit user approval.
 
 ## Bug Intake
 
@@ -46,7 +48,7 @@ Read first:
 - Use `area=front`, `status=todo`, `reporter=Codex Android QA`, and `assignee=metravel-android-developer` for newly confirmed Android app/frontend bugs. Do not use `area=android`; keep Android context in the title, description, validation, and assignee. Create `area=back` only when evidence shows a backend/API/server defect.
 - Include device model, Android/API version, exact route, reproduction steps, `adb logcat`/Metro evidence, acceptance criteria, likely files, validation, and blockers.
 
-## Cable Dev-Client Smoke
+## USB Local Build Smoke
 
 Use this flow for Android testing over USB. The project is worked on from both Windows and macOS, so keep commands portable and provide both variants when documenting a workflow.
 For QA coverage, pair this launch flow with `docs/MANUAL_TEST_CASES.md` `AND-USB-*` cases and `e2e/maestro/` flows when available.
@@ -58,36 +60,33 @@ For QA coverage, pair this launch flow with `docs/MANUAL_TEST_CASES.md` `AND-USB
    - Windows: `& 'D:\metravel\tools\platform-tools\adb.exe' devices -l`
    - macOS: `adb devices -l`
    - If status is `unauthorized`, confirm the RSA debugging prompt on the phone.
-3. Start Metro for dev-client in LAN mode so it binds beyond IPv6 localhost.
+3. Check the operation gate before any build/install: no competing `gradlew`, `adb install`, `eas build`, `expo run:android`, full/preflight/e2e, or shared build process for the same target.
+4. Build and install locally.
    - Windows PowerShell:
      ```powershell
-     $env:Path = 'D:\metravel\tools\platform-tools;' + $env:Path
-     $env:REACT_NATIVE_PACKAGER_HOSTNAME = '<LAN_IP>'
-     npx expo start --dev-client --host lan
+     cd android
+     .\gradlew.bat :app:installDebug
      ```
    - macOS/zsh:
      ```bash
-     export REACT_NATIVE_PACKAGER_HOSTNAME=<LAN_IP>
-     npx expo start --dev-client --host lan
+     cd android
+     ./gradlew :app:installDebug
      ```
-4. For USB cable testing, reverse Metro ports before launching:
+   If `installDebug` is unavailable, build then install the APK:
    ```bash
-   adb reverse --remove-all
-   adb reverse tcp:8081 tcp:8081
-   adb reverse tcp:8084 tcp:8084
-   adb reverse --list
+   cd android
+   ./gradlew :app:assembleDebug
+   adb install -r app/build/outputs/apk/debug/app-debug.apk
    ```
-5. Resolve the installed development build scheme before deep-link launch:
-   ```bash
-   adb shell dumpsys package by.metravel.app | grep -E 'Scheme:|expo-development-client|MainActivity'
-   ```
-   Do not assume the source `app.json` scheme matches the installed build; older or local dev builds may expose `myapp` or `exp+metravel`.
-6. Launch with the resolved scheme, or fall back to the Dev Launcher UI:
+5. Launch the installed app and confirm it is the new build.
    ```bash
    adb shell am force-stop by.metravel.app
-   adb shell am start -W -a android.intent.action.VIEW -d "<scheme>://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081" by.metravel.app
+   adb shell monkey -p by.metravel.app 1
    ```
-   If the direct intent does not resolve or Metro returns `unexpected end of stream`, open `by.metravel.app/.MainActivity`, enter `127.0.0.1:8081` in the Dev Launcher `exp://` field, tap Connect, and record the blocker if it still fails.
+6. For deep-link checks, resolve the installed scheme before launch:
+   ```bash
+   adb shell dumpsys package by.metravel.app | grep -E 'Scheme:|MainActivity'
+   ```
 7. Capture health evidence without leaking secrets:
    ```bash
    adb logcat -c
@@ -96,6 +95,7 @@ For QA coverage, pair this launch flow with `docs/MANUAL_TEST_CASES.md` `AND-USB
    adb exec-out cat /sdcard/window.xml
    ```
    In PowerShell, use `Select-String` instead of `grep`.
+8. Use dev-client/Metro only if the user explicitly approves that exception. Record the exception in validation output; it is not the default Android QA route.
 
 ## Validation
 
@@ -107,7 +107,7 @@ npx jest __tests__/config/native-compat-governance.test.ts --runInBand
 
 - For code changes, run the relevant targeted tests plus `npm run check:fast` when the logical block is finished.
 - If a shared file changed for native reasons, also verify web scope with a production web build or clearly mark `verify pending` if environment blocks it.
-- Do not claim "works on Android" until it was checked on an emulator/device or dev-client. Without device evidence, report `verify pending: needs Android emulator/device check`.
+- Do not claim "works on Android" until a local build was installed on the USB phone and the relevant `AND-USB-*` cases passed. Without local-build device evidence, report `verify pending` with the exact build/install blocker.
 
 ## Output Contract
 
@@ -117,5 +117,5 @@ Report:
 - Files changed
 - Platform split or guard strategy
 - Validation run
-- Device/emulator verification status and `AND-USB-*` cases covered
+- Local Android build/install command, device verification status, and `AND-USB-*` cases covered
 - Remaining blockers or risks

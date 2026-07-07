@@ -36,8 +36,9 @@ Rules:
 - Never print secrets from `.env.*`, `.env.e2e`, SSH configs, EAS, or server logs.
 - Do not modify production server paths, SSL paths, Nginx roots, aliases, includes, or proxy targets unless the target host path existence has been verified.
 - Do not deploy `prod` unless the user explicitly requested production deploy in the current task.
+- Do not run Android EAS/cloud builds, Android production builds/submits, or mobile store submit commands unless the user explicitly requested that Android/iOS build or submit target in the current task. Web deploy/release validation must not consume Android EAS build credits.
 - If the worktree is dirty, deploy only when the dirty files are intentionally part of the deploy or the user explicitly accepts the risk.
-- Before deploy, build, server rebuild, or server restart, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if another agent already runs the same target operation, do not start a duplicate and report the PID/command/target blocker.
+- Before deploy, build, Android install, server rebuild, or server restart, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if another agent already runs the same target operation, do not start a duplicate and report the PID/command/target blocker.
 - Never edit server shell dotfiles such as `~/.bashrc`, `~/.profile`, `~/.zshrc`, `~/.ssh/config`, or `~/.ssh/environment`. Use inline env vars or project env files instead.
 
 ## Preflight

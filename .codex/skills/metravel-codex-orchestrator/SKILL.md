@@ -48,8 +48,8 @@ If the branch is not `main`, stop before editing and ask how to proceed.
 - Use `$metravel-refactor-surgeon` for behavior-preserving extraction of large components or file-complexity guard failures.
 - Use `$metravel-ui-guardrails` for visible UI, layout, icons, images, placeholders, tokens, or external-link interaction.
 - Use `$metravel-browser-reviewer` for visible web diff review, browser evidence, console/network checks, and fix/reverify loops.
-- Use `$metravel-android-developer` for Android/native implementation, crashes, Expo modules, permissions, SecureStore, push, or platform files.
-- Use `$metravel-mobile-tester` for read-only mobile web or Android/native QA evidence and retest.
+- Use `$metravel-android-developer` for Android/native implementation, crashes, Expo modules, permissions, SecureStore, push, platform files, or local USB Android build/install verification.
+- Use `$metravel-mobile-tester` for read-only mobile web or Android/native QA evidence and retest; Android evidence requires a local build installed on the USB-connected phone unless the user explicitly approved another route.
 - Use `$metravel-test-runner` to choose and run targeted checks; `$metravel-test-writer` to add stable tests.
 - Use `$metravel-e2e-runner` for Playwright/browser flows and `.env.e2e` auth.
 - Use `$metravel-performance-analyst` only with production build or real URL performance evidence.
@@ -85,9 +85,10 @@ Do not leak desired conclusions into QA/reviewer prompts; pass raw scope, diff, 
 - Never print secrets from `.env*`, `.env.e2e`, EAS, SSH, Google Play, or server configs.
 - Do not create one-off reports unless the user asks; update canonical docs instead.
 - For visible web UI, require browser preview, screenshot, and console check.
-- For Android/native, do not claim device readiness without emulator/device evidence.
+- For Android/native, do not claim device readiness without local-build evidence from the USB-connected phone.
+- Do not run Android EAS/cloud builds, Android production builds/submits, or Expo export/dev-client Android QA routes unless the user explicitly asks for that exact path in the current task.
 - For production deploy or submit, require explicit target environment and clean gates. Do not let roles invent deploy commands; route mutating deploy/rollback work through `$metravel-devops-agent`.
-- Before assigning or running deploy, build, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; do not launch duplicates for the same target.
+- Before assigning or running deploy, build, Android install, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; do not launch duplicates for the same target.
 
 ## Final Self-Check
 

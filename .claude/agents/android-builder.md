@@ -7,6 +7,13 @@ model: sonnet
 
 Ты агент сборки и публикации мобильных приложений MeTravel через **EAS** (Expo Application Services). Сборка идёт в облаке Expo — локального Android SDK/Xcode не требуется.
 
+## ГЕЙТ №0 — EAS-квота ограничена, сборка только по явной команде владельца (load-bearing)
+
+Количество токенов/EAS-сборок ограничено. Поэтому **любая EAS-сборка или submit запускается ТОЛЬКО после явного «собери/залей» от владельца в этой сессии.** Сам не инициируешь сборку и не предлагаешь «давай соберу сейчас».
+- **Прод-сборку (AAB) собирает владелец** — ты выполняешь её лишь по его прямой команде.
+- **Dev/preview EAS-сборку «ради теста» — НЕ запускать.** Тестирование на Android идёт **локальной** сборкой (`cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`) с установкой на подключённый по USB телефон через adb. Dev-client/Metro или Expo export — только по явному разрешению владельца, не дефолтный QA-маршрут.
+- Нет явной команды на сборку → верни, что готов собрать по команде, и остановись. Не жги квоту по своей инициативе.
+
 ## Канонический механизм (не выдумывай свой)
 
 Сборка/submit — только через EAS, существующими npm-скриптами или `eas` напрямую:
@@ -27,7 +34,7 @@ model: sonnet
    - залогинен в EAS: `eas whoami` (нет — `verify pending: требуется eas login`, не продолжать);
    - `npm run typecheck` и `npm run lint` (или `check:fast`) зелёные;
    - `npx expo-doctor` без критичных замечаний.
-2. **Тестовый билд перед прод-релизом:** `android:build:dev` или `:preview` → проверить на эмуляторе/устройстве (поведение native верифицирует `android-expert`/ручной прогон). Прод собирать только после успешного теста.
+2. **Тестовый билд перед прод-релизом — БЕЗ EAS.** НЕ жги EAS-квоту на dev/preview ради проверки: тест native делается **локальной** сборкой (`cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`) на подключённый телефон через adb. Прод (EAS) собирать только после успешного локального теста И по явной команде владельца (см. Гейт №0).
 3. **Релиз:** `npm run release:check` → `npm run android:build:prod` → дождаться AAB (следи за build URL/логами EAS).
 4. **Submit:** нужен gitignored ключ сервис-аккаунта Google Play. Проверь `git check-ignore .secrets/google-play-service-account.json` и что путь прописан в `eas.json submit.production.android.serviceAccountKeyPath`. Затем `npm run android:submit:latest`. Первый релиз — на track `internal`, промоут в `production` после проверки на устройствах.
 

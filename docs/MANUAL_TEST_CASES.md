@@ -441,28 +441,29 @@
 
 После написания/ревью всех сценариев выше — выполнить прогон в двух средах. Один и тот же ID проверяется на обеих платформах; различия из колонки «Платформенные отличия» учитывать.
 
-### Android USB / dev-client smoke
+### Android USB / local-build smoke
 
-Используй этот набор, когда Android-устройство подключено по USB и нужно подтвердить native-поведение, а не только mobile web. Перед прогоном укажи: модель устройства, Android/API, build/dev-client, backend/API URL, аккаунт (`гость` или e2e-аккаунт без вывода секрета).
+Используй этот набор, когда Android-устройство подключено по USB и нужно подтвердить native-поведение, а не только mobile web. Перед прогоном укажи: модель устройства, Android/API, локальный build/install command, backend/API URL, аккаунт (`гость` или e2e-аккаунт без вывода секрета).
 
 Аудит перед клиентским показом, 2026-07-05:
 
 - Android-чеклист покрывает правильные риск-классы, но полный `AND-USB-01..31` слишком широк для короткой демонстрации и смешивает smoke, regression и store-submission проверки.
 - Для показа заказчику сначала проходи компактный **Customer Demo Gate** ниже; полный P1/P2 набор оставь для release/store readiness или если менялись соответствующие поверхности.
-- `e2e/maestro/recommendation-shelves.yaml` зелёный с 2026-07-05; dev-client launch использует deep-link fallback к `127.0.0.1:8081`, если Expo Dev Launcher не показывает auto-discovered сервер.
+- `e2e/maestro/recommendation-shelves.yaml` зелёный с 2026-07-05; Android QA теперь выполняется на локально собранной и установленной по USB сборке, а dev-client/Metro route допустим только как явно разрешённое исключение.
 - Любой красный P0/P1 demo-кейс перед показом либо чинится, либо явно исключается из демонстрационного сценария с причиной и owner'ом; silently show-around запрещён.
 
 Предусловия:
 
 - `adb devices -l` показывает ровно нужное устройство со статусом `device`; `unauthorized` = blocked до подтверждения RSA на телефоне.
-- Для dev-client запущен Metro `npx expo start --dev-client --host lan`, выполнен `adb reverse tcp:8081 tcp:8081`; перед deep-link запуском проверь реальные scheme через `adb shell dumpsys package by.metravel.app`, а если direct intent не грузит bundle — используй поле Dev Launcher `exp://127.0.0.1:8081`; после правок сделан явный reload приложения.
+- Сборка выполнена локально и установлена на телефон: `cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`.
+- Android EAS/cloud builds, Android production builds/submits и Expo export/dev-client route не используются без явного разрешения пользователя.
 - Артефакты складываются только в ignored-папки (`.codex-temp/`, `.codex-debug/`, `test-results/`, `playwright-report/`) и не содержат токены/пароли.
 
 Ревью покрытия от 2026-06-23:
 
 - Уже покрыто: readiness/launch, runtime health, базовая навигация, поиск, детали маршрута, share/export, карта, permissions, auth, квестовые native-регрессии и recommendation shelves.
 - Добавленные пробелы: standalone-сборка без Metro, app/deep links, lifecycle и cold restart, offline/recovery, soft keyboard, native media upload, push/deep-link routing, external intents и rich embedded content.
-- Для Android release/dev-client QA P1-минимум: `AND-USB-01..06`, `AND-USB-08`, `AND-USB-10`, `AND-USB-13..18`, `AND-USB-21..31`; P2-кейсы `AND-USB-07`, `AND-USB-09`, `AND-USB-19..20` проходить перед store submission или когда менялись соответствующие поверхности.
+- Для Android local-build QA P1-минимум: `AND-USB-01..06`, `AND-USB-08`, `AND-USB-10`, `AND-USB-13..18`, `AND-USB-21..31`; P2-кейсы `AND-USB-07`, `AND-USB-09`, `AND-USB-19..20` проходить перед store submission или когда менялись соответствующие поверхности.
 
 #### Customer Demo Gate для Android
 
@@ -470,7 +471,7 @@
 
 | Gate | Кейсы | Что доказывает | Блокирует показ |
 |------|-------|----------------|-----------------|
-| G0 readiness | `AND-USB-01..03` | Телефон/эмулятор доступен, dev-client или preview build стартует, logcat без fatal/runtime crash | Любой fail/block |
+| G0 readiness | `AND-USB-01..03` | Телефон доступен по USB, локальная сборка установлена и стартует, logcat без fatal/runtime crash | Любой fail/block |
 | G1 guest journey | `AND-USB-04..06`, `AND-USB-08`, `AND-USB-22..23` | Гость может открыть главную/поиск/детали/карту, нижняя навигация и фильтры выглядят стабильно | Crash, blank screen, broken navigation, некликабельные фильтры |
 | G2 auth journey | `AND-USB-10`, `AND-USB-21`, `AND-USB-28`, `AND-USB-30` | Авторизация, избранное, сообщения и профиль готовы к показу без вывода секретов | Login не работает, favorite action падает, профиль/сообщения недоступны |
 | G3 map/places | `AND-USB-26..27`, `AND-USB-29` | Карта, попапы, сохранённые точки и внешние навигаторы не ломают Android UX | Серые тайлы без объяснённого dev-origin fallback, не закрывающиеся sheets, broken external intent |
@@ -498,7 +499,7 @@ Owners/follow-up:
 | ID | Заголовок | Предусловие | Шаги | Ожидаемый результат |
 |----|-----------|-------------|------|---------------------|
 | AND-USB-01 | Device readiness | Телефон подключен по USB | `adb devices -l`; снять `ro.product.model`, `ro.build.version.release`, `ro.build.version.sdk` | Устройство авторизовано; модель/API записаны в QA Pass |
-| AND-USB-02 | Dev-client launch | Metro/dev-client доступен | `adb reverse --remove-all`; `adb reverse tcp:8081 tcp:8081`; запустить `by.metravel.app` через manifest scheme (`myapp`, `exp+metravel` и т.п.) или вручную через Dev Launcher Connect `exp://127.0.0.1:8081` | Приложение открывается без красного экрана; первый экран показывает «Маршруты»/home UI |
+| AND-USB-02 | Local build install + launch | Android project and USB device доступны | `cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`; затем `adb shell am force-stop by.metravel.app` и `adb shell monkey -p by.metravel.app 1` | Приложение открывается без красного экрана; первый экран показывает «Маршруты»/home UI |
 | AND-USB-03 | Startup runtime health | Приложение запущено | Очистить logcat перед запуском, после запуска снять `FATAL EXCEPTION`, `AndroidRuntime`, `ReactNativeJS`, `JSApplicationIllegalArgumentException` | Нет fatal/runtime crash; любые предупреждения классифицированы |
 | AND-USB-04 | Native navigation + system back | Home открыт | Перейти по нижним табам: Маршруты → Беларусь/Поиск → Карта → Места → Профиль/Ещё; нажать системную Back | Табы открываются, Back возвращает назад или закрывает overlay без выхода в неконсистентное состояние |
 | AND-USB-05 | Search/list on Android | Сеть доступна | Открыть список маршрутов, выполнить текстовый поиск, очистить поиск, открыть карточку | Список фильтруется, очистка восстанавливает данные, карточка ведет в корректные детали |
@@ -511,13 +512,13 @@ Owners/follow-up:
 | AND-USB-12 | Recommendation shelves | Авторизованный аккаунт с избранным/историей | Пройти `e2e/maestro/recommendation-shelves.yaml` либо вручную открыть полки идей на Маршрутах | «Избранное» и «Недавно смотрели» рендерятся; Maestro flow должен оставаться зелёным для demo/release scope |
 | AND-USB-13 | Standalone install without Metro | Установлен preview/prod build, Metro остановлен | Очистить logcat, force-stop приложения, запустить с иконки или `adb shell monkey -p by.metravel.app 1` | Приложение стартует без Dev Launcher/Metro, показывает home/«Маршруты», в logcat нет fatal/runtime crash |
 | AND-USB-14 | App links and deep links | Из `app.json`/manifest известны scheme `metravel` и app-link host `metravel.by`; есть валидный маршрут | При убитом и тёплом приложении открыть `https://metravel.by/travels/<id>` и `metravel://travels/<id>`, затем невалидный путь; отдельно проверить ссылку/уведомление с `#anchor`, если такой payload доступен | Валидный путь открывает нужный экран после готовности навигации; невалидный путь даёт fallback/404; hash не уводит native на корень |
-| AND-USB-15 | Lifecycle + cold restart persistence | Авторизованный e2e-аккаунт, есть избранное/история или тестовый статус | Открыть профиль/избранное/историю, свернуть и вернуть приложение, затем force-stop → launch; повторить после явного reload dev-client | Авторизация и локальное состояние сохраняются; нет logout-flash, пустых полок из-за потерянной ширины, stale-bundle UI или runtime warning |
+| AND-USB-15 | Lifecycle + cold restart persistence | Авторизованный e2e-аккаунт, есть избранное/история или тестовый статус | Открыть профиль/избранное/историю, свернуть и вернуть приложение, затем force-stop → launch; повторить после reinstall/cold launch локальной сборки | Авторизация и локальное состояние сохраняются; нет logout-flash, пустых полок из-за потерянной ширины, stale-bundle UI или runtime warning |
 | AND-USB-16 | Offline and recovery | Открыты search/details/quest; переключение сети безопасно | Отключить сеть через устройство/adb, открыть уже загруженный маршрут или квест, выполнить retry/scroll, затем вернуть сеть | Показывается понятный offline/error state или cached content; нет бесконечного skeleton/blank screen; после возврата сети данные восстанавливаются |
 | AND-USB-17 | Soft keyboard and forms | Открыты login/search/comment/wizard input-поля | Фокусировать поля у нижней части экрана, вводить текст, отправить/закрыть; нажать системную Back один и два раза | `softwareKeyboardLayoutMode=resize` не перекрывает CTA/ошибки; первый Back закрывает клавиатуру/overlay, второй Back навигирует ожидаемо |
 | AND-USB-18 | Native media picker/upload | Авторизованный e2e-аккаунт, non-prod backend, тестовое фото | Проверить avatar upload и, если доступен безопасный черновик, travel cover/gallery/route-point photo: allow и deny ветки media/camera permission | Picker/camera открываются, preview сохраняет геометрию, upload/compress завершается или даёт понятный fallback; permission deny не крашит форму |
 | AND-USB-19 | Push notification permission + routing | Build с `expo-notifications`; доступен тестовый push/local quest reminder payload | Проверить allow/deny prompt, foreground notification, tap по уведомлению при тёплом и убитом приложении; payload содержит `url` или `screen` | Android channel создан, отсутствие token/push capability не крашит app, tap ведёт на нужный экран после mount навигации |
 | AND-USB-20 | External intents + embedded content | Есть маршрут/статья с внешними ссылками, YouTube/Instagram/rich-text или external maps | Открыть Telegram/WhatsApp/email/share, external maps, YouTube/Instagram/fallback-ссылки; вернуться системной Back | Открывается системный chooser/app/browser или безопасный fallback; возврат в приложение сохраняет экран; нет direct `Linking.openURL` crash |
-| AND-USB-21 | Roulette favorite auth action | Авторизованный аккаунт, dev-client подключен к рабочему API | Открыть `/roulette`, нажать «Подобрать»/«Ещё», на первой карточке результата нажать heart, дождаться смены состояния, затем нажать heart повторно | Add: label меняется на «Удалить из избранного», нет toast «Не удалось обновить избранное», `PATCH /api/travels/{id}/mark-as-favorite/` использует реальный id; Remove: label возвращается на «Добавить в избранное», `PATCH /unmark-as-favorite/` успешен; в logcat нет `ReactNativeJS` runtime error |
+| AND-USB-21 | Roulette favorite auth action | Авторизованный аккаунт, локальная сборка подключена к рабочему API | Открыть `/roulette`, нажать «Подобрать»/«Ещё», на первой карточке результата нажать heart, дождаться смены состояния, затем нажать heart повторно | Add: label меняется на «Удалить из избранного», нет toast «Не удалось обновить избранное», `PATCH /api/travels/{id}/mark-as-favorite/` использует реальный id; Remove: label возвращается на «Добавить в избранное», `PATCH /unmark-as-favorite/` успешен; в logcat нет `ReactNativeJS` runtime error |
 | AND-USB-22 | Home/footer regression pack | Home открыт, guest и auth по возможности | Проверить нижний dock на `/`: активный пункт не подсвечен как `/search`; открыть «Квесты»; проверить иконку; открыть блоки рекомендаций/«Для вас» | На главной нет ложного активного «Маршруты»; у квестов визуально отличимая иконка; дублирующие/нерабочие блоки не создают ложных CTA |
 | AND-USB-23 | Search header, filters and sorting | Открыт `/search`; есть быстрый фильтр с главной, например «у воды» | Перейти из home quick-filter; открыть фильтры, раскрыть «Месяц»; выбрать месяц; проверить активные chips, сортировку и header | Header занимает компактную верхнюю часть экрана; счётчик и переключатели вида в одной строке; нет наложения в фильтре месяца; активные chips показывают реальные названия или скрыты до загрузки справочника; нет дублей «Старые/Добавлены» |
 | AND-USB-24 | Article/edit back navigation | Открыты статьи из home/search/map; авторизован автор статьи/маршрута | Открыть статью, нажать видимую кнопку Back и системный Back; из search перейти к редактированию через `/travel/<id>?from=/search`, проверить первый экран редактора, visible Back/close и Android Back; повторить direct editor entry без `from` | Возврат идёт на экран-источник, а не на главную; на экранах редактирования есть понятный видимый путь назад; direct entry использует документированный safe fallback без dead-end состояния |
@@ -534,7 +535,7 @@ Owners/follow-up:
 | Кейс | Приоритет | Автоматизация | Статус |
 |------|-----------|---------------|--------|
 | AND-USB-01 | P1 | manual adb | manual |
-| AND-USB-02 | P1 | manual adb/dev-client | manual |
+| AND-USB-02 | P1 | manual adb/local build | manual |
 | AND-USB-03 | P1 | manual adb logcat | manual |
 | AND-USB-04 | P1 | manual; candidate for Maestro | manual |
 | AND-USB-05 | P1 | manual; candidate for Maestro | manual |
@@ -553,7 +554,7 @@ Owners/follow-up:
 | AND-USB-18 | P1 | manual non-prod media pass; unit `useAvatarUpload`, `imageCompressor` | manual |
 | AND-USB-19 | P2 | manual notification payload; unit `services/notifications`, `usePushNotifications.native` | manual |
 | AND-USB-20 | P2 | manual OS intents; unit `externalLinks`, `internalLinks`, `travelRouteDownload` | manual |
-| AND-USB-21 | P1 | manual adb/dev-client; unit `OptimizedFavoriteButton`, `favoritesStore` | manual + unit |
+| AND-USB-21 | P1 | manual adb/local build; unit `OptimizedFavoriteButton`, `favoritesStore` | manual + unit |
 | AND-USB-22 | P1 | unit `bottomDockModel`; manual Android dock/icon/recommendations | manual + unit |
 | AND-USB-23 | P1 | unit `ListTravelBase.helpers`, `listTravel/sortings`; manual Android filters/header | manual + unit |
 | AND-USB-24 | P1 | unit `ArticleListItem`; manual Android system Back/edit flow | manual + unit |

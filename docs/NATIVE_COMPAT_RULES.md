@@ -86,22 +86,32 @@ skill `android-native-audit` (семантические).
   только в `.web.tsx` или под `Platform.OS === 'web'` / `typeof window !== 'undefined'`
   **на уровне эффекта/функции**. Систематический поиск — skill `android-native-audit`.
 
-## 7. Отладка на устройстве — дёшево, сборки — дорого
+## 7. Отладка на устройстве — EAS сборки дорогие, локальная USB-сборка по умолчанию
 
-- Бесплатный лимит EAS ограничен. JS-фиксы проверяются через **dev-client +
-  adb + Metro по кабелю** (ноль сборок). Новая сборка нужна только при смене
-  НАТИВНОГО набора (добавили/убрали нативный модуль, правка app.json-плагинов).
-- Перед любой сборкой — предполётный чеклист: зомби-проверка, reanimated-таблица,
-  expo-doctor 20/20, typecheck, полный Jest, оба `expo export`.
+- Expo/EAS Android build credits are limited. Codex **не запускает** Android
+  EAS/cloud builds (`eas build --platform android`, `npm run android:build:*`,
+  `npm run build:all:*`) и Android submit/production build без явного запроса
+  пользователя именно на эту Android-сборку в текущей задаче.
+- Android QA по умолчанию: телефон подключён по USB, `adb devices -l` показывает
+  `device`, приложение собрано локально и установлено на телефон:
+  `cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` +
+  `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`.
+- Не заменять Android device verification mobile-web viewport, Expo web export,
+  EAS preview/development/production build или dev-client/export flow без
+  явного разрешения пользователя.
+- Перед разрешённой сборкой/установкой — operation gate: проверить конкурирующие
+  `gradlew`, `adb install`, `eas build`, `expo run:android`, full/preflight/e2e
+  процессы и lock-файлы. Для native-рисков прогнать релевантные governance/тесты
+  до handoff.
 - Снять причину краша: `adb logcat -d | grep -E "FATAL|ReactNativeJS"` — дословный
-  стек вместо догадок. Лог EAS-сборки: brotli (`content-encoding: br`), не gzip.
+  стек вместо догадок. Лог EAS-сборки анализируй только когда EAS-сборка была
+  явно разрешена.
 - **Device-verify обязателен, если устройство подключено.** Native-фикс НЕ
   сдавать как «verify pending», когда adb видит девайс — прогнать сценарий на нём.
-- **Грабля стейл-бандла:** Fast Refresh часто НЕ подхватывает НОВЫЕ файлы/импорты —
-  на устройстве остаётся старый код, и баг «не исправлен». После правки делать
-  **явный Reload**: `adb shell input keyevent 82` (dev-меню Expo) → «Reload»,
-  подождать ~12с пересборки, и убедиться, что НОВЫЙ UI реально появился (а не
-  старый), прежде чем тестировать.
+- После локальной установки делать cold launch/force-stop и убеждаться, что на
+  устройстве реально установлен новый билд. Если по явному разрешению используется
+  debug/dev-client + Metro, делай явный Reload и записывай этот маршрут как
+  исключение, а не дефолтный Android QA.
 
 ## 8. Legacy-методы expo-модулей, которые THROW в рантайме (а не deprecation-warn)
 

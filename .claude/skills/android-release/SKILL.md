@@ -14,6 +14,15 @@ description: >-
 web-first — поэтому первая и главная фаза не «собрать», а **доказать, что
 native вообще работает на устройстве**.
 
+## Гейт №0 — EAS-квота ограничена (load-bearing)
+
+Количество токенов/EAS-сборок ограничено. **Прод-сборку (AAB) и любую EAS-сборку/submit
+запускаешь ТОЛЬКО по явной команде владельца.** Тестовые прогоны на устройстве — через
+**локальную** сборку (`cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` +
+`adb install -r ...`) на подключённый по USB телефон, а НЕ через EAS dev/preview,
+Expo export или dev-client/Metro без отдельного явного разрешения владельца.
+Не жги квоту по своей инициативе.
+
 ## Роли (делегирование)
 
 - **`android-native-audit`** (skill) — превентивный аудит native-совместимости кода.
@@ -33,12 +42,13 @@ location/camera/media, adaptive+monochrome icon, splash, deep links на
 
 1. `android-native-audit` — закрыть очевидные краши (web-API без guard, web-only
    импорты в native-бандл) до сборки.
-2. `android-builder`: `npx expo-doctor` → починить → `npm run android:build:dev`
-   (EAS) → поставить на эмулятор/устройство.
+2. `android-expert`/device-verify: `npx expo-doctor` → починить → локально собрать
+   и установить на USB-телефон (`cd android && ./gradlew :app:installDebug` или
+   `:app:assembleDebug` + `adb install -r ...`).
 3. Smoke-прогон ключевых сценариев: запуск/splash, табы, **карта** (маркеры,
    попап, открытие точки), открытие путешествия, фото/галерея, логин (токен в
    SecureStore), избранное, поиск, push-permission. Фиксируй реальные краши.
-4. `android-expert` чинит найденное → повтор dev-билда до зелёного прогона.
+4. `android-expert` чинит найденное → повтор локальной сборки/установки до зелёного прогона.
    **Без успешного прогона на устройстве дальше не идём.**
 
 ## Фаза 2 — подготовка стора (можно параллельно)
