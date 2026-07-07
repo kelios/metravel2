@@ -37,6 +37,14 @@ describe('ssg-skeletons', () => {
       expect(css).toContain('@keyframes ssg-shimmer');
       expect(css).toContain('ssg-pulse');
     });
+
+    it('reserves geometry for travel article images before hydration', () => {
+      const css = buildSkeletonCSS();
+      expect(css).toContain('.ssg-travel-article .img-row-2>p');
+      expect(css).toContain('aspect-ratio:16/9');
+      expect(css).toContain('.ssg-travel-article .img-row-2 img,.ssg-travel-article .img-grid img{width:100%;height:100%;max-width:none');
+      expect(css).toContain('.ssg-travel-article p>img:only-child{width:100%;aspect-ratio:16/9');
+    });
   });
 
   describe('buildHomeSkeletonHtml', () => {
@@ -337,4 +345,3 @@ describe('ssg-skeletons', () => {
     });
   });
 });
-

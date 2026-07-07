@@ -93,6 +93,12 @@ function buildSkeletonCSS() {
 .ssg-travel-article li{margin:0 0 6px}
 .ssg-travel-article a{color:#1f6feb;text-decoration:underline}
 .ssg-travel-article blockquote{margin:0 0 16px;padding-left:14px;border-left:3px solid ${COLORS.light.border};color:${COLORS.light.textMuted}}
+.ssg-travel-article img{display:block;max-width:100%;height:auto;object-fit:contain;object-position:center;border-radius:12px}
+.ssg-travel-article .img-row-2,.ssg-travel-article .img-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:18px 0 22px}
+.ssg-travel-article .img-row-2>p,.ssg-travel-article .img-grid>p{margin:0;min-width:0;aspect-ratio:16/9;overflow:hidden;background:${COLORS.light.bgSecondary};border-radius:12px}
+.ssg-travel-article .img-row-2 img,.ssg-travel-article .img-grid img{width:100%;height:100%;max-width:none}
+.ssg-travel-article p>img:only-child{width:100%;aspect-ratio:16/9;background:${COLORS.light.bgSecondary}}
+@media(max-width:420px){.ssg-travel-article .img-row-2,.ssg-travel-article .img-grid{grid-template-columns:minmax(0,1fr)}}
 .ssg-travel-related{max-width:760px;margin:32px 0 8px;padding-top:20px;border-top:1px solid ${COLORS.light.border}}
 .ssg-travel-related h2{margin:0 0 12px;font:700 20px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text}}
 .ssg-travel-related ul{margin:0;padding-left:20px;font:400 16px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
@@ -119,6 +125,7 @@ html[data-theme="dark"] .ssg-travel-article{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-travel-article h2,html[data-theme="dark"] .ssg-travel-article h3{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-travel-article a{color:#5aa7ff}
 html[data-theme="dark"] .ssg-travel-article blockquote{border-color:${COLORS.dark.border};color:${COLORS.dark.textMuted}}
+html[data-theme="dark"] .ssg-travel-article .img-row-2>p,html[data-theme="dark"] .ssg-travel-article .img-grid>p,html[data-theme="dark"] .ssg-travel-article p>img:only-child{background:${COLORS.dark.bgSecondary}}
 html[data-theme="dark"] .ssg-travel-related{border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-travel-related h2{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-travel-related a{color:#5aa7ff}

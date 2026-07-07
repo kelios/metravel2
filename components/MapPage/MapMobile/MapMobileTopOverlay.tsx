@@ -19,7 +19,12 @@ import Feather from '@expo/vector-icons/Feather'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
 import MapIcon from '../MapIcon'
-import { TRANSPORT_ICON, TRANSPORT_LABEL, type TransportMode } from '../transportModes'
+import {
+  TRANSPORT_ICON,
+  TRANSPORT_LABEL,
+  TRANSPORT_SPEED_KMH,
+  type TransportMode,
+} from '../transportModes'
 import { getMapMobileTopOverlayStyles } from './MapMobileTopOverlay.styles'
 import { MapMobileRadiusPopover } from './MapMobileRadiusPopover'
 import { MapMobileLayersPopover } from './MapMobileLayersPopover'
@@ -38,6 +43,29 @@ const LAYERS_POPOVER_MIN_WIDTH = 272
 const TRANSPORT_POPOVER_WIDTH = 204
 /** How long the «tap to build» hint stays visible after entering route mode. */
 const ROUTE_HINT_TIMEOUT_MS = 6000
+const ROUTE_SUMMARY_POPOVER_OFFSET = 88
+
+function formatRouteDistance(meters: number): string {
+  if (!Number.isFinite(meters) || meters <= 0) return ''
+  if (meters < 1000) return `${Math.round(meters)} м`
+  return `${(meters / 1000).toFixed(1)} км`
+}
+
+function estimateRouteDurationSeconds(meters: number, mode: TransportMode): number {
+  if (!Number.isFinite(meters) || meters <= 0) return 0
+  const speed = TRANSPORT_SPEED_KMH[mode] ?? TRANSPORT_SPEED_KMH.car
+  return Math.round((meters / 1000 / speed) * 3600)
+}
+
+function formatRouteDuration(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return ''
+  const totalMinutes = Math.max(1, Math.round(seconds / 60))
+  if (totalMinutes < 60) return `${totalMinutes} мин`
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (minutes === 0) return `${hours} ч`
+  return `${hours} ч ${minutes} мин`
+}
 
 interface MapMobileTopOverlayProps {
   colors: ThemedColors
@@ -69,6 +97,12 @@ interface MapMobileTopOverlayProps {
   onClearRoute?: () => void
   /** Number of route points dropped so far — hint hides once 2 are set. */
   routePointCount?: number
+  /** Built route distance in meters. */
+  routeDistance?: number | null
+  /** Built route duration in seconds. */
+  routeDuration?: number | null
+  routingLoading?: boolean
+  routingError?: string | boolean | null
   // Radius popover data (same source as FiltersPanelRadiusSection).
   radiusOptions: ReadonlyArray<{ id: string; name: string }>
   radiusValue: string
@@ -108,6 +142,10 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   onTransportSelect,
   onClearRoute,
   routePointCount = 0,
+  routeDistance,
+  routeDuration,
+  routingLoading,
+  routingError,
 }) => {
   const styles = getMapMobileTopOverlayStyles(colors)
   const { width: viewportWidth } = useWindowDimensions()
@@ -133,13 +171,38 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
     if (routePointCount >= 2) setHintVisible(false)
   }, [routePointCount])
 
+  const distanceMeters =
+    typeof routeDistance === 'number' && Number.isFinite(routeDistance)
+      ? routeDistance
+      : 0
+  const hasRouteDistance = isRouteMode && distanceMeters > 0
+  const durationSeconds =
+    typeof routeDuration === 'number' && Number.isFinite(routeDuration) && routeDuration > 0
+      ? routeDuration
+      : estimateRouteDurationSeconds(distanceMeters, transportMode)
+  const routeSummaryKey = hasRouteDistance
+    ? `${transportMode}:${Math.round(distanceMeters)}:${Math.round(durationSeconds)}`
+    : ''
+  const [dismissedRouteSummaryKey, setDismissedRouteSummaryKey] = useState('')
+  const showRouteSummary =
+    hasRouteDistance && dismissedRouteSummaryKey !== routeSummaryKey
+  const routeDistanceText = formatRouteDistance(distanceMeters)
+  const routeDurationText = formatRouteDuration(durationSeconds)
+  const routeSummaryStatus =
+    routingError === 'Using direct line'
+      ? 'Прямая линия'
+      : routingLoading
+        ? 'Маршрут обновляется'
+        : 'Маршрут готов'
+
   // R-1 — глобальной шапки на табе карты больше нет, поэтому overlay сам отвечает
   // за отступ под статус-бар/нотч. Берём safe-area top, но держим небольшой пол,
   // чтобы кнопки не прилипали к самому краю там, где safe-area == 0.
   const resolvedTopPadding = Math.max(topInset, 8) + 8
   // Поповеры открываются прямо под своим рядом иконок.
   const basePopoverTop = resolvedTopPadding + BUTTON_SIZE + 8
-  const routePopoverTop = basePopoverTop
+  const popoverTop = basePopoverTop + (showRouteSummary ? ROUTE_SUMMARY_POPOVER_OFFSET : 0)
+  const routePopoverTop = popoverTop
   const layersPopoverRight = isRouteMode
     ? TOOLBAR_EDGE_OFFSET + BUTTON_STEP * 4
     : LAYERS_POPOVER_RIGHT
@@ -300,6 +363,58 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             )}
           </View>
         </View>
+
+        {showRouteSummary && (
+          <View
+            style={styles.routeSummaryCard}
+            pointerEvents="auto"
+            testID="map-mobile-route-summary"
+            accessibilityLiveRegion="polite"
+          >
+            <View style={styles.routeSummaryHeader}>
+              <View style={styles.routeSummaryTitleRow}>
+                <Feather name="navigation" size={13} color={colors.primaryDark} />
+                <RNText style={styles.routeSummaryTitle} numberOfLines={1}>
+                  {routeSummaryStatus}
+                </RNText>
+              </View>
+              <Pressable
+                testID="map-mobile-route-summary-close"
+                onPress={() => setDismissedRouteSummaryKey(routeSummaryKey)}
+                accessibilityRole="button"
+                accessibilityLabel="Скрыть сводку маршрута"
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.routeSummaryClose,
+                  pressed && styles.routeSummaryClosePressed,
+                ]}
+              >
+                <Feather name="x" size={15} color={colors.textMuted} />
+              </Pressable>
+            </View>
+            <View style={styles.routeSummaryMetrics}>
+              <View style={styles.routeSummaryMetric}>
+                <Feather name="map" size={12} color={colors.primary} />
+                <RNText style={styles.routeSummaryMetricText} numberOfLines={1}>
+                  {routeDistanceText}
+                </RNText>
+              </View>
+              {!!routeDurationText && (
+                <View style={styles.routeSummaryMetric}>
+                  <Feather name="clock" size={12} color={colors.primary} />
+                  <RNText style={styles.routeSummaryMetricText} numberOfLines={1}>
+                    {routeDurationText}
+                  </RNText>
+                </View>
+              )}
+              {routingError === 'Using direct line' && (
+                <RNText style={styles.routeSummaryNote} numberOfLines={1}>
+                  прямая линия
+                </RNText>
+              )}
+            </View>
+          </View>
+        )}
       </View>
 
       {activePopover === 'radius' && (
@@ -317,7 +432,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
       {activePopover === 'layers' && (
         <MapMobileLayersPopover
           colors={colors}
-          top={basePopoverTop}
+          top={popoverTop}
           right={layersPopoverRight}
           minWidth={layersPopoverWidth}
           maxWidth={layersPopoverWidth}

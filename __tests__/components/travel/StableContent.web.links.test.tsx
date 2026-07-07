@@ -295,12 +295,14 @@ describe('StableContent (web) link styles', () => {
       expect(richText).toBeTruthy();
       expect(richText?.innerHTML).toContain('class="rich-image-frame');
       expect(richText?.innerHTML).toContain("--travel-rich-image:url('https://images.weserv.nl/?url=example.com%2Fone.jpg");
+      expect(richText?.innerHTML).toContain('--travel-rich-image-aspect:800/600');
     });
 
     const styleEl = document.getElementById('travel-rich-text-styles') as HTMLStyleElement | null;
     expect(styleEl).toBeTruthy();
     const css = String(styleEl?.textContent || '');
     expect(css).toContain('.travel-rich-text .rich-image-frame::before');
+    expect(css).toContain('aspect-ratio: var(--travel-rich-image-aspect, 16 / 9);');
     expect(css).toContain('object-fit: contain;');
     expect(css).not.toContain('object-fit: cover;');
   });

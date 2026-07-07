@@ -137,6 +137,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   // memoized filters slice to re-flow down through props.
   const storeMode = useRouteStore((s) => s.mode)
   const storeTransportMode = useRouteStore((s) => s.transportMode)
+  const storeRouteDistance = useRouteStore((s) => s.route?.distance ?? null)
+  const storeRouteDuration = useRouteStore((s) => s.route?.duration ?? null)
+  const storeRoutingLoading = useRouteStore((s) => s.isBuilding)
+  const storeRoutingError = useRouteStore((s) => s.error)
   const filtersMode: FiltersMode | undefined =
     (filtersContextProps?.mode as FiltersMode | undefined) ?? storeMode
   const setFiltersMode: ((m: FiltersMode) => void) | undefined =
@@ -584,6 +588,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             onTransportSelect={handleTransportSelect}
             onClearRoute={handleClearRoute}
             routePointCount={routePointCount}
+            routeDistance={storeRouteDistance}
+            routeDuration={storeRouteDuration}
+            routingLoading={storeRoutingLoading}
+            routingError={storeRoutingError}
           />
         )}
 

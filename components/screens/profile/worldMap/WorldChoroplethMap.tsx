@@ -73,6 +73,17 @@ const getCountryCodeAtViewBoxPoint = (x: number, y: number): string | null => {
   return bestCode
 }
 
+const getRenderedMapRect = (width: number, height: number) => {
+  const scale = Math.min(width / WORLD_MAP_WIDTH, height / WORLD_MAP_HEIGHT)
+  const renderedWidth = WORLD_MAP_WIDTH * scale
+  const renderedHeight = WORLD_MAP_HEIGHT * scale
+  return {
+    scale,
+    offsetX: (width - renderedWidth) / 2,
+    offsetY: (height - renderedHeight) / 2,
+  }
+}
+
 export interface WorldChoroplethMapProps {
   /** ISO alpha-2 (UPPERCASE) посещённых стран. */
   visitedCodes: ReadonlySet<string>
@@ -109,13 +120,26 @@ function WorldChoroplethMapComponent({
   const unvisitedFill = getWorldMapUnvisitedFill(isDark)
 
   // px-размер контейнера → перевод экранных дельт жестов/колеса в координаты viewBox.
-  const widthRef = React.useRef(WORLD_MAP_WIDTH)
-  const heightRef = React.useRef(WORLD_MAP_HEIGHT)
+  const layoutRef = React.useRef({
+    width: WORLD_MAP_WIDTH,
+    height: WORLD_MAP_HEIGHT,
+    scale: 1,
+    offsetX: 0,
+    offsetY: 0,
+  })
   const onLayout = useCallback(
     (e: LayoutChangeEvent) => {
       const { width: w, height: h } = e.nativeEvent.layout
-      if (w > 0) widthRef.current = w
-      if (h > 0) heightRef.current = h
+      if (w > 0 && h > 0) {
+        const rect = getRenderedMapRect(w, h)
+        layoutRef.current = {
+          width: w,
+          height: h,
+          scale: rect.scale,
+          offsetX: rect.offsetX,
+          offsetY: rect.offsetY,
+        }
+      }
       if (w > 0 && h > 0) onContainerLayout?.(w, h)
     },
     [onContainerLayout]
@@ -193,7 +217,15 @@ function WorldChoroplethMapComponent({
   const nativePanHandlers = useMemo(() => {
     if (!zoom || Platform.OS === 'web') return null
 
-    const toViewBox = () => WORLD_MAP_WIDTH / Math.max(1, widthRef.current)
+    const toViewBox = () => 1 / Math.max(0.0001, layoutRef.current.scale)
+    const toViewBoxPoint = (x: number, y: number) => {
+      const layout = layoutRef.current
+      const k = toViewBox()
+      return {
+        x: (x - layout.offsetX) * k,
+        y: (y - layout.offsetY) * k,
+      }
+    }
     const getTouches = (event: GestureResponderEvent) => event.nativeEvent.touches
     const getCentroid = (event: GestureResponderEvent) => {
       const touches = getTouches(event)
@@ -261,8 +293,9 @@ function WorldChoroplethMapComponent({
 
         if (getTouches(event).length >= 2 && distance > 0) {
           if (previous.pinchDist > 0) {
-            const fx = (centroid.x * k - zoom.translateX.value) / zoom.scale.value
-            const fy = (centroid.y * k - zoom.translateY.value) / zoom.scale.value
+            const point = toViewBoxPoint(centroid.x, centroid.y)
+            const fx = (point.x - zoom.translateX.value) / zoom.scale.value
+            const fy = (point.y - zoom.translateY.value) / zoom.scale.value
             zoom.zoomAtPoint(distance / previous.pinchDist, fx, fy, false)
           }
           nativeTouchRef.current = {
@@ -289,9 +322,9 @@ function WorldChoroplethMapComponent({
       onPanResponderRelease: () => {
         const touch = nativeTouchRef.current
         if (!touch.moved && onCountryPress) {
-          const k = toViewBox()
-          const x = (touch.x * k - zoom.translateX.value) / zoom.scale.value
-          const y = (touch.y * k - zoom.translateY.value) / zoom.scale.value
+          const point = toViewBoxPoint(touch.x, touch.y)
+          const x = (point.x - zoom.translateX.value) / zoom.scale.value
+          const y = (point.y - zoom.translateY.value) / zoom.scale.value
           const code = getCountryCodeAtViewBoxPoint(x, y)
           if (code) onCountryPress(code)
         }
@@ -327,10 +360,12 @@ function WorldChoroplethMapComponent({
       if (!z) return
       e.preventDefault()
       const rect = node.getBoundingClientRect()
-      if (!rect || rect.width <= 0) return
-      const k = WORLD_MAP_WIDTH / rect.width
-      const fx = ((e.clientX - rect.left) * k - z.translateX.value) / z.scale.value
-      const fy = ((e.clientY - rect.top) * k - z.translateY.value) / z.scale.value
+      if (!rect || rect.width <= 0 || rect.height <= 0) return
+      const mapRect = getRenderedMapRect(rect.width, rect.height)
+      const px = e.clientX - rect.left - mapRect.offsetX
+      const py = e.clientY - rect.top - mapRect.offsetY
+      const fx = (px / mapRect.scale - z.translateX.value) / z.scale.value
+      const fy = (py / mapRect.scale - z.translateY.value) / z.scale.value
       const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15
       z.zoomAtPoint(factor, fx, fy, false)
     }
@@ -435,11 +470,12 @@ function WorldChoroplethMapComponent({
             pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
             const rect = (
               e.currentTarget as {
-                getBoundingClientRect?: () => { width: number; left: number; top: number }
+                getBoundingClientRect?: () => { width: number; height: number; left: number; top: number }
               }
             ).getBoundingClientRect?.()
-            if (!rect || rect.width <= 0) return
-            const k = WORLD_MAP_WIDTH / rect.width
+            if (!rect || rect.width <= 0 || rect.height <= 0) return
+            const mapRect = getRenderedMapRect(rect.width, rect.height)
+            const k = 1 / Math.max(0.0001, mapRect.scale)
             // Два пальца → пинч-зум к середине щипка.
             if (pts.size >= 2) {
               const [a, b] = [...pts.values()]
@@ -449,8 +485,8 @@ function WorldChoroplethMapComponent({
               if (prev > 0 && dist > 0) {
                 const midX = (a.x + b.x) / 2
                 const midY = (a.y + b.y) / 2
-                const fx = ((midX - rect.left) * k - zoom.translateX.value) / zoom.scale.value
-                const fy = ((midY - rect.top) * k - zoom.translateY.value) / zoom.scale.value
+                const fx = ((midX - rect.left - mapRect.offsetX) * k - zoom.translateX.value) / zoom.scale.value
+                const fy = ((midY - rect.top - mapRect.offsetY) * k - zoom.translateY.value) / zoom.scale.value
                 zoom.zoomAtPoint(dist / prev, fx, fy, false)
               }
               return
@@ -483,7 +519,7 @@ function WorldChoroplethMapComponent({
       ref={containerRef}
       style={[
         fillParent
-          ? { width: '100%', flex: 1 }
+          ? { width: '100%', height: '100%', flex: 1 }
           : { width: '100%', aspectRatio: WORLD_MAP_WIDTH / WORLD_MAP_HEIGHT },
         Platform.OS === 'web' && zoom ? ({ cursor: 'grab' } as object) : null,
         style,
@@ -496,7 +532,12 @@ function WorldChoroplethMapComponent({
       {...((webProps ?? {}) as object)}
       {...((nativePanHandlers ?? {}) as object)}
     >
-      <Svg width="100%" height="100%" viewBox={WORLD_MAP_VIEWBOX}>
+      <Svg
+        width="100%"
+        height="100%"
+        viewBox={WORLD_MAP_VIEWBOX}
+        preserveAspectRatio="xMidYMid meet"
+      >
         {zoom && Platform.OS === 'web' ? (
           <G transform={webTransform}>{paths}</G>
         ) : zoom ? (

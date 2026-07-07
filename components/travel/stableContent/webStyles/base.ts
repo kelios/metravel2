@@ -84,6 +84,7 @@ export const baseStyles = (
   isolation: isolate;
   overflow: hidden;
   background: ${colors.backgroundSecondary};
+  --travel-rich-image-aspect: 16 / 9;
 }
 
 .${cls} .rich-image-frame::before {
@@ -107,6 +108,7 @@ export const baseStyles = (
 }
 
 .${cls} .rich-image-frame > img {
+  aspect-ratio: var(--travel-rich-image-aspect, 16 / 9);
   background: transparent;
 }
 `

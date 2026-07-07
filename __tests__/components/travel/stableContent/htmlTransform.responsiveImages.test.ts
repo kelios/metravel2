@@ -51,4 +51,13 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     // третьесторонним не навешиваем нашу лестницу sizes
     expect(out).not.toContain('sizes="(max-width: 768px) 100vw, 720px"')
   })
+
+  it('reserves a stable aspect ratio for images that arrive without dimensions', () => {
+    const html = '<p><img src="https://metravel.by/gallery/540/gallery/unknown.webp" /></p>'
+    const out = prepareStableContentHtml(html)
+
+    expect(out).toContain('style="display:block;height:auto;margin:0 auto;aspect-ratio:800/450"')
+    expect(out).toContain('width="800" height="450"')
+    expect(out).toContain('--travel-rich-image-aspect:800/450')
+  })
 })

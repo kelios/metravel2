@@ -1,9 +1,10 @@
 // [FE-634] T4 — Флаг-маркеры посещённых стран поверх scratch-карты.
-// Позиционируются по центроиду страны (cx/cy в системе viewBox 0 0 1000 500),
-// переведённому в проценты контейнера. Контейнер карты имеет aspectRatio 2 == 1000:500,
-// а SVG использует preserveAspectRatio по умолчанию (meet) без леттербоксинга,
-// поэтому процент центроида = процент пикселя. pointerEvents='none' — тапы проходят
-// сквозь флажки к путям карты (T6). Флаг = эмодзи из ISO; XK/невалидные → код-пилюля.
+// Позиционируются по центроиду страны (cx/cy в системе viewBox 0 0 1000 500).
+// Оверлей привязан не ко всему контейнеру, а к фактическому SVG-rect после
+// preserveAspectRatio=meet: в fullscreen на портретном экране вокруг карты есть
+// letterbox-отступы, и проценты от полной высоты сдвигают флаги с геометрии.
+// pointerEvents='none' — тапы проходят сквозь флажки к путям карты (T6).
+// Флаг = эмодзи из ISO; XK/невалидные → код-пилюля.
 // [FE-635-T2] При зуме оверлей трансформируется синхронно с SVG-<G> (px-space:
 // scale viewBox→px = ширина/1000), а каждый маркер counter-scale (1/scale), чтобы
 // флажки не раздувались.
@@ -50,17 +51,34 @@ export interface WorldMapFlagsProps {
 
 function WorldMapFlagsComponent({ visitedCodes, size = 16, zoom }: WorldMapFlagsProps) {
   const colors = useThemedColors()
-  const widthRef = React.useRef(WORLD_MAP_WIDTH)
-  const widthValue = useSharedValue(WORLD_MAP_WIDTH)
-  const [, forceTick] = React.useState(0)
+  const mapScaleValue = useSharedValue(1)
+  const [mapRect, setMapRect] = React.useState({
+    left: 0,
+    top: 0,
+    width: WORLD_MAP_WIDTH,
+    height: WORLD_MAP_HEIGHT,
+  })
   const onLayout = useCallback((e: LayoutChangeEvent) => {
-    const w = e.nativeEvent.layout.width
-    if (w > 0 && Math.abs(w - widthRef.current) > 0.5) {
-      widthRef.current = w
-      widthValue.value = w
-      forceTick((t) => t + 1)
+    const { width, height } = e.nativeEvent.layout
+    if (width <= 0 || height <= 0) return
+
+    const scale = Math.min(width / WORLD_MAP_WIDTH, height / WORLD_MAP_HEIGHT)
+    const next = {
+      left: (width - WORLD_MAP_WIDTH * scale) / 2,
+      top: (height - WORLD_MAP_HEIGHT * scale) / 2,
+      width: WORLD_MAP_WIDTH * scale,
+      height: WORLD_MAP_HEIGHT * scale,
     }
-  }, [widthValue])
+    mapScaleValue.value = scale
+    setMapRect((current) => {
+      const changed =
+        Math.abs(current.left - next.left) > 0.5 ||
+        Math.abs(current.top - next.top) > 0.5 ||
+        Math.abs(current.width - next.width) > 0.5 ||
+        Math.abs(current.height - next.height) > 0.5
+      return changed ? next : current
+    })
+  }, [mapScaleValue])
 
   const markers = useMemo(() => {
     const list: { code: string; left: DimensionValue; top: DimensionValue; emoji: string | null }[] = []
@@ -77,10 +95,10 @@ function WorldMapFlagsComponent({ visitedCodes, size = 16, zoom }: WorldMapFlags
     return list
   }, [visitedCodes])
 
-  // Оверлей-трансформ в px: viewBox-translate * k (k = ширина/1000), origin top-left.
+  // Оверлей-трансформ в px: viewBox-translate * k, где k — реальный SVG scale.
   const overlayStyle = useAnimatedStyle(() => {
     if (!zoom) return {}
-    const k = widthValue.value / WORLD_MAP_WIDTH
+    const k = mapScaleValue.value
     return {
       transform: [
         { translateX: zoom.translateX.value * k },
@@ -99,7 +117,11 @@ function WorldMapFlagsComponent({ visitedCodes, size = 16, zoom }: WorldMapFlags
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        overlay: { ...StyleSheet.absoluteFillObject, transformOrigin: 'top left' },
+        overlayRoot: { ...StyleSheet.absoluteFillObject },
+        mapLayer: {
+          position: 'absolute',
+          transformOrigin: 'top left',
+        },
         marker: {
           position: 'absolute',
           width: size,
@@ -128,22 +150,36 @@ function WorldMapFlagsComponent({ visitedCodes, size = 16, zoom }: WorldMapFlags
   )
 
   return (
-    <Animated.View style={[styles.overlay, overlayStyle]} pointerEvents="none" onLayout={onLayout}>
-      {markers.map((m) => (
-        <Animated.View
-          key={m.code}
-          style={[styles.marker, { left: m.left, top: m.top }, markerCounterStyle]}
-        >
-          {m.emoji ? (
-            <Text style={styles.emoji}>{m.emoji}</Text>
-          ) : (
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{m.code}</Text>
-            </View>
-          )}
-        </Animated.View>
-      ))}
-    </Animated.View>
+    <View style={styles.overlayRoot} pointerEvents="none" onLayout={onLayout}>
+      <Animated.View
+        style={[
+          styles.mapLayer,
+          {
+            left: mapRect.left,
+            top: mapRect.top,
+            width: mapRect.width,
+            height: mapRect.height,
+          },
+          overlayStyle,
+        ]}
+      >
+        {markers.map((m) => (
+          <Animated.View
+            key={m.code}
+            testID={`world-map-flag-${m.code}`}
+            style={[styles.marker, { left: m.left, top: m.top }, markerCounterStyle]}
+          >
+            {m.emoji ? (
+              <Text style={styles.emoji}>{m.emoji}</Text>
+            ) : (
+              <View style={styles.pill}>
+                <Text style={styles.pillText}>{m.code}</Text>
+              </View>
+            )}
+          </Animated.View>
+        ))}
+      </Animated.View>
+    </View>
   )
 }
 

@@ -388,6 +388,70 @@ describe('MapMobileLayout', () => {
       expect(screen.queryByTestId('map-mobile-radius-button')).toBeNull()
     })
 
+    it('keeps built route metrics visible on the map until the summary close is pressed', () => {
+      jest.useFakeTimers()
+      try {
+        useRouteStore.getState().setMode('route')
+        useRouteStore.getState().addPoint({ lat: 53.9, lng: 27.56 }, 'Старт')
+        useRouteStore.getState().addPoint({ lat: 53.95, lng: 27.62 }, 'Финиш')
+        useRouteStore.getState().setRoute({
+          coordinates: [
+            { lat: 53.9, lng: 27.56 },
+            { lat: 53.95, lng: 27.62 },
+          ],
+          distance: 12500,
+          duration: 1800,
+          isOptimal: true,
+        })
+
+        const { filtersPanelProps } = buildFiltersProps({ mode: 'route' })
+        const screen = render(
+          <MapMobileLayout
+            mapComponent={<View testID="mock-map" />}
+            travelsData={[]}
+            coordinates={{ latitude: 53.9, longitude: 27.56 }}
+            transportMode="car"
+            buildRouteTo={jest.fn()}
+            onCenterOnUser={jest.fn()}
+            onOpenFilters={jest.fn()}
+            filtersPanelProps={filtersPanelProps}
+          />,
+        )
+
+        expect(screen.getByTestId('map-mobile-route-summary')).toBeTruthy()
+        expect(screen.getByText('Маршрут готов')).toBeTruthy()
+        expect(screen.getByText('12.5 км')).toBeTruthy()
+        expect(screen.getByText('30 мин')).toBeTruthy()
+
+        act(() => {
+          jest.advanceTimersByTime(10000)
+        })
+
+        expect(screen.getByTestId('map-mobile-route-summary')).toBeTruthy()
+
+        fireEvent.press(screen.getByTestId('map-mobile-route-summary-close'))
+        expect(screen.queryByTestId('map-mobile-route-summary')).toBeNull()
+
+        act(() => {
+          useRouteStore.getState().setRoute({
+            coordinates: [
+              { lat: 53.9, lng: 27.56 },
+              { lat: 54.01, lng: 27.7 },
+            ],
+            distance: 16000,
+            duration: 2400,
+            isOptimal: true,
+          })
+        })
+
+        expect(screen.getByTestId('map-mobile-route-summary')).toBeTruthy()
+        expect(screen.getByText('16.0 км')).toBeTruthy()
+        expect(screen.getByText('40 мин')).toBeTruthy()
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
     it('opens the transport popover and applies a profile via the store', () => {
       useRouteStore.getState().setMode('route')
       const { filtersPanelProps } = buildFiltersProps({ mode: 'route' })

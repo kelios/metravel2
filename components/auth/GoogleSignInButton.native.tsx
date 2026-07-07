@@ -13,17 +13,76 @@ interface GoogleSignInButtonProps {
 
 WebBrowser.maybeCompleteAuthSession();
 
+const GOOGLE_NATIVE_UNAVAILABLE_TEXT = 'Google Sign-In не настроен';
+const GOOGLE_NATIVE_UNAVAILABLE_A11Y = 'Google Sign-In не настроен для мобильного приложения';
+
+type GoogleSignInButtonConfiguredProps = GoogleSignInButtonProps & {
+    webClientId: string;
+    expoClientId: string;
+    androidClientId: string;
+    iosClientId: string;
+};
+
+const getNativeGoogleClientId = (androidClientId: string, iosClientId: string) =>
+    Platform.OS === 'ios' ? iosClientId : androidClientId;
+
 export default function GoogleSignInButton({ onSuccess, onError, disabled }: GoogleSignInButtonProps) {
+    const webClientId = String(process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '').trim();
+    const expoClientId = String(process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID || '').trim();
+    const androidClientId = String(process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '').trim();
+    const iosClientId = String(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '').trim();
+
+    if (!getNativeGoogleClientId(androidClientId, iosClientId)) {
+        return <GoogleSignInButtonUnavailable />;
+    }
+
+    return (
+        <GoogleSignInButtonConfigured
+            onSuccess={onSuccess}
+            onError={onError}
+            disabled={disabled}
+            webClientId={webClientId}
+            expoClientId={expoClientId}
+            androidClientId={androidClientId}
+            iosClientId={iosClientId}
+        />
+    );
+}
+
+function GoogleSignInButtonUnavailable() {
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
+    return (
+        <Pressable
+            disabled
+            accessibilityRole="button"
+            accessibilityState={{ disabled: true }}
+            accessibilityLabel={GOOGLE_NATIVE_UNAVAILABLE_A11Y}
+            style={[styles.button, styles.buttonDisabled]}
+        >
+            <View style={styles.content}>
+                <View style={styles.iconContainer}>
+                    <Text style={styles.googleIcon}>G</Text>
+                </View>
+                <Text style={styles.text}>{GOOGLE_NATIVE_UNAVAILABLE_TEXT}</Text>
+            </View>
+        </Pressable>
+    );
+}
+
+function GoogleSignInButtonConfigured({
+    onSuccess,
+    onError,
+    disabled,
+    webClientId,
+    expoClientId,
+    androidClientId,
+    iosClientId,
+}: GoogleSignInButtonConfiguredProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const [isLoading, setIsLoading] = useState(false);
-
-    const webClientId = String(process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '').trim();
-    const expoClientId = String(process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID || '').trim();
-    const androidClientId = String(process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || webClientId).trim();
-    const iosClientId = String(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || webClientId).trim();
-
-    const hasRequiredClientId = Platform.OS === 'ios' ? iosClientId.length > 0 : androidClientId.length > 0;
 
     const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
         webClientId: webClientId || undefined,
@@ -56,13 +115,6 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
     const handlePress = async () => {
         if (disabled || isLoading) return;
 
-        if (!hasRequiredClientId) {
-            onError?.(
-                'Google Sign-In не настроен для мобильного приложения: задайте EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID и EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID'
-            );
-            return;
-        }
-
         if (!request) {
             onError?.('Google Sign-In инициализируется, попробуйте еще раз');
             return;
@@ -89,11 +141,11 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
     return (
         <Pressable
             onPress={handlePress}
-            disabled={disabled || isLoading || !hasRequiredClientId}
+            disabled={disabled || isLoading}
             android_ripple={{ color: colors.overlay, borderless: false }}
             style={({ pressed }) => [
                 styles.button,
-                (disabled || isLoading || !hasRequiredClientId) && styles.buttonDisabled,
+                (disabled || isLoading) && styles.buttonDisabled,
                 pressed && styles.buttonPressed,
             ]}
             accessibilityRole="button"
@@ -153,5 +205,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: 16,
         fontWeight: '500',
         color: colors.text,
+        flexShrink: 1,
+        textAlign: 'center',
     },
 });

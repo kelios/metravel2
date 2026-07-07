@@ -206,6 +206,21 @@ const buildRichImageBackdropDeclaration = (src: string) => {
   return escapeHtmlAttr(`--travel-rich-image:url('${cssSafe}')`)
 }
 
+const buildRichImageAspectDeclaration = (imgMarkup: string) => {
+  const width = Number(imgMarkup.match(/\bwidth="(\d+)"/i)?.[1] ?? 0)
+  const height = Number(imgMarkup.match(/\bheight="(\d+)"/i)?.[1] ?? 0)
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return ''
+  }
+  return `--travel-rich-image-aspect:${width}/${height}`
+}
+
+const buildRichImageFrameDeclaration = (src: string, imgMarkup: string) => {
+  return [buildRichImageBackdropDeclaration(src), buildRichImageAspectDeclaration(imgMarkup)]
+    .filter(Boolean)
+    .join(';')
+}
+
 const normalizeImgTags = (html: string): string => {
   let imgIdx = 0
   return html.replace(/<img\b[^>]*?>/gi, (tag) => {
@@ -223,9 +238,12 @@ const normalizeImgTags = (html: string): string => {
       }
     }
 
+    const finalW = width || 800
+    const finalH = height || 450
+
     const styleMatch = tag.match(/\bstyle="([^"]*)"/i)
     const style = styleMatch?.[1] ?? ''
-    const aspectRule = width && height ? `aspect-ratio:${width}/${height}` : ''
+    const aspectRule = `aspect-ratio:${finalW}/${finalH}`
     const ensured = ['display:block', 'height:auto', 'margin:0 auto', aspectRule]
       .filter(Boolean)
       .reduce((acc, rule) => (acc.includes(rule) ? acc : acc ? `${acc};${rule}` : rule), style)
@@ -245,8 +263,6 @@ const normalizeImgTags = (html: string): string => {
       )
     }
 
-    const finalW = width || 800
-    const finalH = height || 450
     out = out.replace(/>$/, ` width="${finalW}" height="${finalH}">`)
     out = out
       .replace(/\bdecoding="[^"]*"/i, '')
@@ -381,22 +397,22 @@ const replaceStandaloneInstagramLinks = (html: string) =>
 const decorateRichImageFrames = (html: string) => {
   if (!html) return html
 
-  const decorateAttrs = (attrs: string, src: string) => {
+  const decorateAttrs = (attrs: string, src: string, imgMarkup: string) => {
     const nextClassAttrs = appendClass(attrs, 'rich-image-frame')
-    const backdropDeclaration = buildRichImageBackdropDeclaration(src)
-    return backdropDeclaration
-      ? appendInlineStyle(nextClassAttrs, backdropDeclaration)
+    const frameDeclaration = buildRichImageFrameDeclaration(src, imgMarkup)
+    return frameDeclaration
+      ? appendInlineStyle(nextClassAttrs, frameDeclaration)
       : nextClassAttrs
   }
 
   return html
     .replace(
       /<p([^>]*)>(\s*<img\b[^>]*\bsrc="([^"]+)"[^>]*>\s*(?:<br\s*\/?>\s*)?)<\/p>/gi,
-      (match, attrs = '', inner = '', src = '') => `<p${decorateAttrs(attrs, src)}>${inner}</p>`
+      (match, attrs = '', inner = '', src = '') => `<p${decorateAttrs(attrs, src, inner)}>${inner}</p>`
     )
     .replace(
       /<figure([^>]*)>([\s\S]*?<img\b[^>]*\bsrc="([^"]+)"[^>]*>[\s\S]*?)<\/figure>/gi,
-      (match, attrs = '', inner = '', src = '') => `<figure${decorateAttrs(attrs, src)}>${inner}</figure>`
+      (match, attrs = '', inner = '', src = '') => `<figure${decorateAttrs(attrs, src, inner)}>${inner}</figure>`
     )
 }
 

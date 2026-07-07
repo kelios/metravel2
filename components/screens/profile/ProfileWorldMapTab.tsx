@@ -72,9 +72,13 @@ export function ProfileWorldMapTab({
 }: ProfileWorldMapTabProps) {
   const colors = useThemedColors()
   const { isDark } = useTheme()
-  const { isMobile } = useResponsive()
+  const { height, isMobile } = useResponsive()
   const router = useRouter()
   const infoCardRef = useRef<View>(null)
+  const fullscreenTopOffset = (Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0) + 56
+  const fullscreenMapHeight = isMobile
+    ? Math.max(420, height - fullscreenTopOffset - DESIGN_TOKENS.spacing.md)
+    : undefined
 
   const { visitedCodes, byCode, visitedCount, remainingCount, totalCount, isLoading } =
     useVisitedCountries({ userId, travels, personalTravelStatusEntries })
@@ -266,11 +270,13 @@ export function ProfileWorldMapTab({
           gap: isMobile ? 0 : DESIGN_TOKENS.spacing.md,
         },
         fullscreenMapFrame: {
-          flex: 1,
+          flex: isMobile ? 0 : 1,
+          ...(isMobile ? { height: fullscreenMapHeight } : {}),
         },
         fullscreenMapWrap: {
           flex: 1,
           width: '100%',
+          ...(isMobile ? { minHeight: fullscreenMapHeight } : {}),
           maxWidth: isMobile ? undefined : 1180,
           alignSelf: 'center',
           overflow: 'hidden',
@@ -377,7 +383,7 @@ export function ProfileWorldMapTab({
           color: colors.textSecondary,
         },
       }),
-    [colors, isMobile]
+    [colors, fullscreenMapHeight, isMobile]
   )
 
   const renderMap = useCallback(
