@@ -231,11 +231,14 @@
 |---|---|---|
 | `npm run stats:gsc` | GSC: клики/показы/позиция/CTR + запросы на позиции 4-15 + топ-страницы | ✅ работает |
 | `npm run stats:ga4` | GA4: users/views/сессии/каналы (property 362328641 — авто) | ✅ работает |
+| `npm run stats:health` | GA4 + GSC + optional Yandex Metrika + read-only prod-проба входа с Google/Googlebot | ✅ работает |
 | `npm run stats:login` | Разовый OAuth-вход (если токен протухнет) | — |
 
 Файлы (все в `.gitignore`): `.secrets/google-oauth-client.json`, `.secrets/google-oauth-token.json`.
 Реализация zero-dep: `scripts/lib/google-oauth.js` + `google-token.js`.
-Yandex Metrika и Belkraj автодоступа не имеют — вводятся вручную в `/growth-review`.
+Yandex Metrika в `stats:health` optional: положи OAuth-токен в `YANDEX_METRIKA_TOKEN`
+или `.secrets/yandex-metrika-token`, иначе блок Metrika пропускается. Belkraj
+автодоступа не имеет — вводится вручную в `/growth-review`.
 
 ### Точная база на 2026-06-08 (автоданные, 28 дней)
 - **GSC:** 476 кликов, 21 106 показов, CTR 2.26 %, позиция **8.9**.
