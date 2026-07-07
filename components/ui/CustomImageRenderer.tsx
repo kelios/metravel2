@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Platform,
+  PixelRatio,
   StyleSheet,
   Image as RNImage,
   Pressable,
@@ -9,6 +10,7 @@ import {
 import { CustomRendererProps } from "react-native-render-html";
 import { useResponsive } from '@/hooks/useResponsive';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { optimizeImageUrl } from '@/utils/imageProxy';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface CustomImageRendererProps extends CustomRendererProps<any> {
@@ -139,6 +141,24 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
     return { boxWidth: maxFrameWidth, boxHeight: heightIfFullWidth };
   }, [maxFrameWidth, aspect, maxImageHeight]);
 
+  // На web ImageCardMedia сам ресайзит URL под размер (+srcSet по DPR); на native
+  // этого не происходит — expo-image тянет оригинал (напр. 2048px) в контейнер ~360px
+  // и Glide долго декодит тяжёлый файл, залипая на blur. Отдаём заранее уменьшенный
+  // под boxWidth×DPR URL (contain, без кропа — фото остаётся доминантой).
+  const displaySrc = useMemo(() => {
+    if (Platform.OS === 'web' || !src) return src;
+    const dpr = PixelRatio.get();
+    return (
+      optimizeImageUrl(src, {
+        width: Math.round(boxWidth * dpr),
+        height: Math.round(boxHeight * dpr),
+        quality: 70,
+        fit: 'contain',
+        format: 'auto',
+      }) ?? src
+    );
+  }, [src, boxWidth, boxHeight]);
+
   if (!raw || isSmallIcon) return null;
 
   const alt = tnode.attributes?.alt || 'Изображение маршрута';
@@ -160,7 +180,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
       )}
 
       <ImageCardMedia
-        src={src}
+        src={displaySrc}
         alt={alt}
         fit="contain"
         blurBackground
@@ -168,6 +188,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
         blurRadius={16}
         priority={Platform.OS === 'web' ? 'low' : 'normal'}
         loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
+        transition={Platform.OS === 'web' ? undefined : 120}
         style={[StyleSheet.absoluteFillObject, styles.image]}
         onLoad={() => { setImageLoaded(true); }}
         onError={() => { setErr(true); }}

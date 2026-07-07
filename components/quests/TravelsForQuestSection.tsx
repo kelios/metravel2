@@ -34,7 +34,7 @@ export function TravelsForQuestSection({ cityName, countryName, countryCode, coo
 
   if (!matches.length) return null
 
-  const heading = cityName ? `Путешествия по городу ${cityName}` : 'Путешествия по этому городу'
+  const heading = cityName ? `Путешествия — ${cityName}` : 'Путешествия по этому городу'
 
   return (
     <View
@@ -49,7 +49,7 @@ export function TravelsForQuestSection({ cityName, countryName, countryCode, coo
       >
         {heading}
       </Text>
-      <Text style={styles.subtitle}>Истории и маршруты автора по этим местам</Text>
+      <Text style={styles.subtitle}>Истории и маршруты авторов по этим местам</Text>
 
       <View style={styles.grid}>
         {matches.map(({ travel }) => {

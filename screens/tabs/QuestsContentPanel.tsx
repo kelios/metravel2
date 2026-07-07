@@ -8,6 +8,7 @@ import {
     View,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import { useRouter } from 'expo-router';
 
 import Map from '@/components/MapPage/Map';
 import EmptyState from '@/components/ui/EmptyState';
@@ -24,6 +25,10 @@ type MapPoint = {
     categoryName: string;
     articleUrl?: string;
     urlTravel?: string;
+    questMeta?: {
+        id: string;
+        cityId: string;
+    };
 };
 
 type QuestsContentPanelProps = {
@@ -83,6 +88,14 @@ export default function QuestsContentPanel({
     onMapMove,
     onSearchMapArea,
 }: QuestsContentPanelProps) {
+    const router = useRouter();
+
+    const openQuestFromPoint = (point?: { questMeta?: MapPoint['questMeta'] }) => {
+        const meta = point?.questMeta;
+        if (!meta?.cityId || !meta?.id) return;
+        router.push(`/quests/${meta.cityId}/${meta.id}`);
+    };
+
     const inner = (
         <>
             <View style={styles.contentHeader}>
@@ -237,6 +250,7 @@ export default function QuestsContentPanel({
                                     routePoints={[]}
                                     transportMode="foot"
                                     onMapClick={() => {}}
+                                    onMarkerSelect={openQuestFromPoint}
                                     setRouteDistance={() => {}}
                                     setFullRouteCoords={() => {}}
                                     onUserLocationChange={onMapUserLocationChange}

@@ -147,6 +147,14 @@ export default function QuestsMapScreen() {
                     routePoints={[]}
                     transportMode="foot"
                     onMapClick={() => {}}
+                    onMarkerSelect={(point) => {
+                        const url =
+                            point?.urlTravel ||
+                            (point?.questMeta
+                                ? `/quests/${point.questMeta.cityId}/${point.questMeta.id}`
+                                : null);
+                        if (url) router.push(url as any);
+                    }}
                     setRouteDistance={() => {}}
                     setFullRouteCoords={() => {}}
                 />
