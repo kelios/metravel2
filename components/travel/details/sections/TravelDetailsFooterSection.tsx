@@ -1,14 +1,15 @@
-import React, { useMemo } from 'react'
+import React, { Suspense, lazy, useMemo } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 
 import ShareButtons from '@/components/travel/ShareButtons'
-import TelegramDiscussionSection from '@/components/travel/TelegramDiscussionSection'
 import CTASection from '@/components/travel/CTASection'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
+
+const TelegramDiscussionSectionLazy = lazy(() => import('@/components/travel/TelegramDiscussionSection'))
 
 export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: boolean }> = React.memo(({
   travel,
@@ -66,7 +67,9 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
         accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
         style={[styles.sectionContainer, styles.authorCardContainer, footerStyles.compactSection]}
       >
-        <TelegramDiscussionSection travel={travel} />
+        <Suspense fallback={null}>
+          <TelegramDiscussionSectionLazy travel={travel} />
+        </Suspense>
       </View>
 
       {!isMobile && (
