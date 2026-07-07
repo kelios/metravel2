@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import {
     ActivityIndicator,
     Platform,
@@ -62,7 +62,7 @@ type QuestsContentPanelProps = {
     onSearchMapArea: () => void;
 };
 
-const RADIUS_OPTIONS = [5, 10, 15, 20, 30] as const;
+const RADIUS_OPTIONS = [5, 10, 20, 50] as const;
 
 export default function QuestsContentPanel({
     styles,
@@ -94,6 +94,7 @@ export default function QuestsContentPanel({
     onSearchMapArea,
 }: QuestsContentPanelProps) {
     const router = useRouter();
+    const [radiusMenuOpen, setRadiusMenuOpen] = useState(false);
 
     const openQuestFromPoint = (point?: { questMeta?: MapPoint['questMeta'] }) => {
         const meta = point?.questMeta;
@@ -101,28 +102,48 @@ export default function QuestsContentPanel({
         router.push(`/quests/${meta.cityId}/${meta.id}`);
     };
 
-    // Контрол радиуса живёт рядом с картой (а не в списке городов): он задаёт
-    // окружность, которую карта рисует, и радиус, по которому «Искать в этой
-    // области»/«Рядом» считают квесты — так «что видно» совпадает со счётчиком.
-    const showRadiusControl = viewMode === 'map' && selectedCityId === nearbyId;
-    const radiusControl = showRadiusControl ? (
-        <View style={styles.mapRadiusBar}>
-            <Text style={styles.radiusLabel}>Радиус:</Text>
-            {RADIUS_OPTIONS.map((km) => (
-                <Pressable
-                    key={km}
-                    onPress={() => onSetRadius(km)}
-                    style={[styles.radiusChip, nearbyRadiusKm === km && styles.radiusChipActive]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Радиус ${km} км`}
-                    accessibilityState={{ selected: nearbyRadiusKm === km }}
-                    testID={`quests-map-radius-${km}`}
-                >
-                    <Text style={[styles.radiusChipText, nearbyRadiusKm === km && styles.radiusChipTextActive]}>
-                        {km} км
-                    </Text>
-                </Pressable>
-            ))}
+    // Радиус — компактный overlay поверх карты (иконка + текущее значение). Тап по
+    // иконке раскрывает segmented-popover 5/10/20/50, повторный тап или выбор
+    // значения закрывает его. При активной «Искать в этой области» радиус не
+    // показываем: там первичен видимый viewport (bbox), а не радиус.
+    const showRadiusControl = viewMode === 'map' && selectedCityId === nearbyId && !isMapAreaActive;
+    const radiusOverlay = showRadiusControl ? (
+        <View style={styles.mapRadiusOverlay} pointerEvents="box-none">
+            <Pressable
+                onPress={() => setRadiusMenuOpen((open) => !open)}
+                style={[styles.mapRadiusToggle, radiusMenuOpen && styles.mapRadiusToggleActive]}
+                accessibilityRole="button"
+                accessibilityLabel={`Радиус поиска: ${nearbyRadiusKm} км`}
+                accessibilityState={{ expanded: radiusMenuOpen }}
+                testID="quests-map-radius-toggle"
+            >
+                <Feather name="disc" size={15} color={radiusMenuOpen ? colors.textOnPrimary : colors.text} />
+                <Text style={[styles.mapRadiusToggleText, radiusMenuOpen && styles.mapRadiusToggleTextActive]}>
+                    {nearbyRadiusKm} км
+                </Text>
+            </Pressable>
+            {radiusMenuOpen && (
+                <View style={styles.mapRadiusPopover}>
+                    {RADIUS_OPTIONS.map((km) => (
+                        <Pressable
+                            key={km}
+                            onPress={() => {
+                                onSetRadius(km);
+                                setRadiusMenuOpen(false);
+                            }}
+                            style={[styles.radiusChip, nearbyRadiusKm === km && styles.radiusChipActive]}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Радиус ${km} км`}
+                            accessibilityState={{ selected: nearbyRadiusKm === km }}
+                            testID={`quests-map-radius-${km}`}
+                        >
+                            <Text style={[styles.radiusChipText, nearbyRadiusKm === km && styles.radiusChipTextActive]}>
+                                {km} км
+                            </Text>
+                        </Pressable>
+                    ))}
+                </View>
+            )}
         </View>
     ) : null;
 
@@ -185,8 +206,6 @@ export default function QuestsContentPanel({
 
                 {viewMode === 'map' ? (
                     <View style={styles.mapSection}>
-                        {radiusControl}
-
                         {dataLoaded && selectedCityId === nearbyId && !userLoc && !isMapAreaActive && (
                             <View style={styles.geoBanner} testID="quests-geo-banner">
                                 <Feather name="map-pin" size={13} color={colors.warning} />
@@ -202,28 +221,12 @@ export default function QuestsContentPanel({
                             </View>
                         )}
 
-                        {dataLoaded && Platform.OS !== 'web' && mapPoints.length === 0 && (
-                            <EmptyState
-                                icon="map-pin"
-                                title="Нет квестов для отображения на карте"
-                                description="Измените город или радиус, чтобы увидеть точки на карте"
-                                variant="empty"
-                                iconSize={48}
-                            />
-                        )}
-
-                        {dataLoaded && Platform.OS === 'web' && mapPoints.length === 0 && (
-                            <EmptyState
-                                icon="map-pin"
-                                title="Нет квестов для отображения на карте"
-                                description="Измените город или радиус, чтобы увидеть точки на карте"
-                                variant="empty"
-                                iconSize={48}
-                            />
-                        )}
-
-                        {dataLoaded && Platform.OS === 'web' && mapPoints.length > 0 && (
+                        {/* Карта-исследование: держим карту живой всегда после загрузки.
+                            Ноль квестов = нет маркеров, но карта видна и интерактивна —
+                            пользователь двигает область и повторяет «Искать в этой области». */}
+                        {dataLoaded && Platform.OS === 'web' && (
                             <View style={styles.mapContainer}>
+                                {radiusOverlay}
                                 {showMapAreaSearch && (
                                     <Pressable
                                         style={styles.mapSearchAreaBtn}
@@ -255,8 +258,9 @@ export default function QuestsContentPanel({
                             </View>
                         )}
 
-                        {dataLoaded && Platform.OS !== 'web' && mapPoints.length > 0 && (
+                        {dataLoaded && Platform.OS !== 'web' && (
                             <View style={styles.mapContainer}>
+                                {radiusOverlay}
                                 {showMapAreaSearch && (
                                     <Pressable
                                         style={styles.mapSearchAreaBtn}

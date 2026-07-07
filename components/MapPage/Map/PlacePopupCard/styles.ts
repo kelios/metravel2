@@ -462,7 +462,10 @@ export const getStyles = (
     },
     actionsStack: {
       gap: bottomCardLayout ? 8 : splitLayout ? 8 : 10,
-      ...(bottomCardLayout && Platform.OS !== 'web' ? { paddingTop: 6, gap: 18 } : null),
+      // #844 — tighten the native action stack so the default card fits without a
+      // mandatory scroll (was paddingTop:6 / gap:18, which pushed the action row off
+      // a 390×844 screen). Mobile web keeps its own spacing above.
+      ...(bottomCardLayout && Platform.OS !== 'web' ? { paddingTop: 4, gap: 10 } : null),
     },
     iconActionRow: {
       flexDirection: 'row',
@@ -476,13 +479,16 @@ export const getStyles = (
       flexBasis: 0,
       minWidth: 0,
       alignItems: 'center',
-      gap: bottomCardLayout && Platform.OS !== 'web' ? 10 : 6,
-      paddingVertical: bottomCardLayout && Platform.OS !== 'web' ? 8 : 2,
+      // #844 — trim the native per-action vertical footprint (gap 10→6, padding 8→6)
+      // so the action row + labels fit under the (now ~10% smaller) hero without scroll.
+      gap: bottomCardLayout && Platform.OS !== 'web' ? 6 : 6,
+      paddingVertical: bottomCardLayout && Platform.OS !== 'web' ? 6 : 2,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     iconActionBubble: {
-      width: bottomCardLayout ? (Platform.OS !== 'web' ? 50 : 38) : compactLayout ? 44 : 46,
-      height: bottomCardLayout ? (Platform.OS !== 'web' ? 50 : 38) : compactLayout ? 44 : 46,
+      // #844 — native bottom-card bubble trimmed 50→46 to reclaim vertical budget.
+      width: bottomCardLayout ? (Platform.OS !== 'web' ? 46 : 38) : compactLayout ? 44 : 46,
+      height: bottomCardLayout ? (Platform.OS !== 'web' ? 46 : 38) : compactLayout ? 44 : 46,
       borderRadius: DESIGN_TOKENS.radii.full,
       alignItems: 'center',
       justifyContent: 'center',

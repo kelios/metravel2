@@ -24,8 +24,32 @@ export const COUNTRY_NAMES: Record<string, string> = {
 // единственный ближайший город, из-за чего по умолчанию был виден лишь 1 город).
 export const STORAGE_SELECTED_CITY = 'quests_selected_city_v2';
 export const STORAGE_NEARBY_RADIUS = 'quests_nearby_radius_km';
-export const DEFAULT_NEARBY_RADIUS_KM = 15;
+// Компактный набор радиусов для карты квестов (без переноса чипов на мобильном).
+export const ALLOWED_NEARBY_RADII_KM = [5, 10, 20, 50] as const;
+export type NearbyRadiusKm = (typeof ALLOWED_NEARBY_RADII_KM)[number];
+// Дефолт из нового набора. Прежний дефолт 15 больше не допустим; 10 — ближайшее
+// меньшее допустимое значение, разумный старт для пешего радиуса «рядом».
+export const DEFAULT_NEARBY_RADIUS_KM: NearbyRadiusKm = 10;
 export const NEARBY_ID = '__nearby__';
+
+// Нормализуем сохранённый/произвольный радиус к допустимому набору, чтобы
+// легаси-значения (15/30) не оставляли невидимый selected state. Ближайшее
+// значение, при равенстве — первое встреченное (меньшее). 15 → 10, 30 → 20.
+export function normalizeNearbyRadiusKm(value: number | null | undefined): NearbyRadiusKm {
+    if (value == null) return DEFAULT_NEARBY_RADIUS_KM;
+    const numeric = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numeric)) return DEFAULT_NEARBY_RADIUS_KM;
+    let best: NearbyRadiusKm = DEFAULT_NEARBY_RADIUS_KM;
+    let bestDist = Infinity;
+    for (const option of ALLOWED_NEARBY_RADII_KM) {
+        const dist = Math.abs(option - numeric);
+        if (dist < bestDist) {
+            bestDist = dist;
+            best = option;
+        }
+    }
+    return best;
+}
 
 let expoLocationModulePromise: Promise<typeof import('expo-location')> | null = null;
 

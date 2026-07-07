@@ -37,4 +37,20 @@ describe('buildBirdMarkerHtml', () => {
     expect(html).toContain('<svg')
     expect(html).toContain('viewBox="0 0 100 100"')
   })
+
+  // #843 — the same helper output is serialized into the native WebView divIcon
+  // template (Map.ios / TravelMap.native) via JSON.stringify. It must contain no
+  // single quotes so it can also drop into single-quoted contexts without escaping,
+  // and no external/raster asset references (inline SVG only).
+  it('is native-WebView-safe: no single quotes, no raster/external asset refs', () => {
+    const html = buildBirdMarkerHtml()
+
+    expect(html).not.toContain("'")
+    expect(html).not.toContain('data:image')
+    // No raster/external asset <img> refs — inline SVG only (xmlns namespace is fine).
+    expect(html).not.toContain('<img')
+    expect(html).not.toContain('url(http')
+    // Round-trips through JSON without throwing (used as the injected divIcon html).
+    expect(() => JSON.parse(JSON.stringify(html))).not.toThrow()
+  })
 })

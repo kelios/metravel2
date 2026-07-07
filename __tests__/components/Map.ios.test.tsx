@@ -138,14 +138,20 @@ describe('Map.ios Component', () => {
     expect(html).toContain("window.addEventListener('resize'");
   });
 
-  it('should use inline div icons for Android WebView markers', () => {
+  it('draws single POI markers with the shared brand bird divIcon (not the teardrop pin)', () => {
     const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
 
     const html = getWebViewHtml(rendered);
+    // #843 — bird divIcon replaces the teardrop `.metravel-marker-pin`.
     expect(html).toContain('L.divIcon');
-    expect(html).toContain('metravel-marker-pin');
+    expect(html).toContain("className: 'metravel-marker'");
+    expect(html).toContain('iconSize: [48, 58]');
+    expect(html).toContain('iconAnchor: [24, 54]');
+    // Inline brand-bird SVG is embedded (serialized), not a teardrop / raster URI.
+    expect(html).toContain('0 0 100 100');
+    expect(html).not.toContain('metravel-marker-pin');
     expect(html).not.toContain('filter: drop-shadow');
     expect(html).not.toContain('data:image/svg+xml');
   });

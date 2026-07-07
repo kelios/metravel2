@@ -1,7 +1,10 @@
 import {
+  ALLOWED_NEARBY_RADII_KM,
   COUNTRY_NAMES,
+  DEFAULT_NEARBY_RADIUS_KM,
   filterQuestsByMapSearchArea,
   isCoordinateInMapViewport,
+  normalizeNearbyRadiusKm,
 } from '@/screens/tabs/QuestsScreen.helpers';
 
 describe('QuestsScreen helpers', () => {
@@ -34,6 +37,50 @@ describe('QuestsScreen helpers', () => {
     );
 
     expect(result.map((quest) => quest.id).sort()).toEqual(['east', 'west']);
+  });
+
+  it('uses the visible bbox as the primary filter and ignores radius inside a valid bbox', () => {
+    const quests = [
+      { id: 'inBboxFarFromCenter', lat: 54.05, lng: 28.25 },
+      { id: 'outsideBbox', lat: 55.9, lng: 30.5 },
+    ];
+
+    // A tiny fallback radius (1 km) must NOT drop the in-bbox quest that sits far
+    // from the area center: valid bbox is the sole gate, radius is fallback-only.
+    const result = filterQuestsByMapSearchArea(
+      quests,
+      {
+        latitude: 53.92,
+        longitude: 27.8,
+        bbox: { south: 53.7, west: 27.3, north: 54.1, east: 28.3 },
+      },
+      1,
+    );
+
+    expect(result.map((quest) => quest.id)).toEqual(['inBboxFarFromCenter']);
+  });
+
+  it('normalizes legacy persisted radii to the compact allowed set', () => {
+    // Allowed options are exactly 5/10/20/50 with a 10 km default.
+    expect(ALLOWED_NEARBY_RADII_KM).toEqual([5, 10, 20, 50]);
+    expect(DEFAULT_NEARBY_RADIUS_KM).toBe(10);
+
+    // Legacy values 15/30 are no longer selectable → snap to nearest allowed.
+    expect(normalizeNearbyRadiusKm(15)).toBe(10);
+    expect(normalizeNearbyRadiusKm(30)).toBe(20);
+
+    // Already-valid values pass through untouched.
+    expect(normalizeNearbyRadiusKm(5)).toBe(5);
+    expect(normalizeNearbyRadiusKm(50)).toBe(50);
+
+    // Garbage / empty storage falls back to the default.
+    expect(normalizeNearbyRadiusKm(NaN)).toBe(10);
+    expect(normalizeNearbyRadiusKm(null)).toBe(10);
+    expect(normalizeNearbyRadiusKm(undefined)).toBe(10);
+
+    // Out-of-range values clamp to the nearest allowed edge.
+    expect(normalizeNearbyRadiusKm(1)).toBe(5);
+    expect(normalizeNearbyRadiusKm(999)).toBe(50);
   });
 
   it('falls back to the selected radius only when map bounds are unavailable', () => {

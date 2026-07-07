@@ -103,10 +103,19 @@ describe('MapPlaceBottomCard native layout', () => {
     // Panel sits flush on the dock: bottomChromeInset(80) − DOCK_BREATHING_GAP(16) = 64.
     expect(panelStyle.marginBottom).toBe(64)
 
-    // Hero height = max(180, min(round(844*0.46)=388, 728-380=348)) = 348
-    // (taller now that the «Статус поездки» row is gone → lower content reserve).
-    expect(mockCreatePopupArgs[0]?.bottomCardImageHeight).toBe(348)
+    // #844 — hero height = max(180, min(round(844*0.52)=439, 728-414=314)) = 314.
+    // Reserve bumped 380 → 414 (~10% smaller hero) so the coord row + full action row
+    // (Страница/Маршрут/Сохранить/Навигация) fit under the hero without a mandatory
+    // scroll on a standard 390×844 Android viewport.
+    expect(mockCreatePopupArgs[0]?.bottomCardImageHeight).toBe(314)
     expect(mockCreatePopupArgs[0]?.shareInActionRow).toBe(true)
+
+    // Budget guard: after the header row (~40) and the hero, the panel must leave a
+    // generous region for the coord row + full action row so they are not forced into
+    // the ScrollView overflow on the standard 390×844 screen.
+    const HANDLE_ROW = 40
+    const heroHeight = mockCreatePopupArgs[0]?.bottomCardImageHeight as number
+    expect(728 - HANDLE_ROW - heroHeight).toBeGreaterThanOrEqual(360)
 
     // One content-driven ScrollView fallback for tall content.
     const scrolls = tree.root.findAllByType(require('react-native').ScrollView)

@@ -39,8 +39,12 @@ describe('QuestsContentPanel', () => {
         skeletonGrid: {},
         skeletonCard: {},
         questsGrid: {},
-        mapRadiusBar: {},
-        radiusLabel: {},
+        mapRadiusOverlay: {},
+        mapRadiusToggle: {},
+        mapRadiusToggleActive: {},
+        mapRadiusToggleText: {},
+        mapRadiusToggleTextActive: {},
+        mapRadiusPopover: {},
         radiusChip: {},
         radiusChipActive: {},
         radiusChipText: {},
@@ -73,7 +77,7 @@ describe('QuestsContentPanel', () => {
                 selectedCityId="__nearby__"
                 selectedCityName="Рядом"
                 nearbyId="__nearby__"
-                nearbyRadiusKm={15}
+                nearbyRadiusKm={20}
                 questsAll={[]}
                 questCardWidth={320}
                 mapPoints={[
@@ -109,10 +113,117 @@ describe('QuestsContentPanel', () => {
         expect(LazyQuestMap).toHaveBeenCalledWith(
             expect.objectContaining({
                 coordinates: { latitude: 53.9, longitude: 27.56 },
-                radius: '15',
+                radius: '20',
             }),
             undefined,
         );
+    });
+
+    it('exposes only the compact 5/10/20/50 radius options in the map overlay popover', () => {
+        (Platform as { OS: string }).OS = 'web';
+        const LazyQuestMap = jest.fn(() => null);
+        const onSetRadius = jest.fn();
+
+        const { getByTestId, queryByTestId } = render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="map"
+                selectedCityId="__nearby__"
+                selectedCityName="Рядом"
+                nearbyId="__nearby__"
+                nearbyRadiusKm={10}
+                questsAll={[]}
+                questCardWidth={320}
+                mapPoints={[
+                    {
+                        id: 'minsk-quest',
+                        coord: '53.9,27.5667',
+                        address: 'Минск',
+                        travelImageThumbUrl: '',
+                        categoryName: 'Квест',
+                    },
+                ]}
+                mapCenter={{ latitude: 53.9, longitude: 27.56 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={LazyQuestMap}
+                isMobile={false}
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onSetRadius={onSetRadius}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />
+        );
+
+        // Overlay is collapsed by default: options hidden until the toggle is tapped.
+        expect(queryByTestId('quests-map-radius-10')).toBeNull();
+
+        fireEvent.press(getByTestId('quests-map-radius-toggle'));
+
+        expect(getByTestId('quests-map-radius-5')).toBeTruthy();
+        expect(getByTestId('quests-map-radius-10')).toBeTruthy();
+        expect(getByTestId('quests-map-radius-20')).toBeTruthy();
+        expect(getByTestId('quests-map-radius-50')).toBeTruthy();
+        // Legacy radii are gone.
+        expect(queryByTestId('quests-map-radius-15')).toBeNull();
+        expect(queryByTestId('quests-map-radius-30')).toBeNull();
+
+        // Picking a value applies it and closes the popover.
+        fireEvent.press(getByTestId('quests-map-radius-20'));
+        expect(onSetRadius).toHaveBeenCalledWith(20);
+        expect(queryByTestId('quests-map-radius-20')).toBeNull();
+    });
+
+    it('keeps the map mounted with zero results and shows no full empty-state in map mode', () => {
+        (Platform as { OS: string }).OS = 'web';
+        const LazyQuestMap = jest.fn(() => null);
+
+        const { queryByText } = render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="map"
+                selectedCityId="__nearby__"
+                selectedCityName="Рядом"
+                nearbyId="__nearby__"
+                nearbyRadiusKm={10}
+                questsAll={[]}
+                questCardWidth={320}
+                mapPoints={[]}
+                mapCenter={{ latitude: 53.9, longitude: 27.56 }}
+                userLoc={{ lat: 53.9, lng: 27.56 }}
+                isMapAreaActive
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={LazyQuestMap}
+                isMobile={false}
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onSetRadius={() => {}}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />
+        );
+
+        expect(LazyQuestMap).toHaveBeenCalledWith(
+            expect.objectContaining({ travel: { data: [] } }),
+            undefined,
+        );
+        expect(queryByText('Нет квестов для отображения на карте')).toBeNull();
     });
 
     it('opens the city drawer from the mobile city button', () => {

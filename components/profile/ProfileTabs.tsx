@@ -58,6 +58,10 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           gap: DESIGN_TOKENS.spacing.xs,
           paddingHorizontal: DESIGN_TOKENS.spacing.md,
         },
+        desktopTabRow: {
+          flexWrap: 'wrap',
+          rowGap: DESIGN_TOKENS.spacing.xs,
+        },
         mobileTabRow: {
           gap: DESIGN_TOKENS.spacing.xxs,
           paddingHorizontal: DESIGN_TOKENS.spacing.xs,
@@ -96,7 +100,10 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           paddingHorizontal: 6,
         },
         desktopTabFlex: {
-          flex: 1,
+          flexBasis: 144,
+          flexGrow: 1,
+          flexShrink: 1,
+          minWidth: 144,
         },
         activeTab: {
           backgroundColor: colors.primarySoft,
@@ -106,11 +113,16 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           fontSize: DESIGN_TOKENS.typography.sizes.sm,
           fontWeight: DESIGN_TOKENS.typography.weights.semibold as '600',
           color: colors.textMuted,
+          minWidth: 0,
           flexShrink: 1,
+          textAlign: 'center',
         },
         mobileTabText: {
           fontSize: 13,
           lineHeight: 16,
+        },
+        tabIcon: {
+          flexShrink: 0,
         },
         activeTabText: {
           color: colors.primaryText,
@@ -124,6 +136,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           backgroundColor: colors.borderLight,
           alignItems: 'center',
           justifyContent: 'center',
+          flexShrink: 0,
         },
         activeCountBadge: {
           backgroundColor: colors.primary,
@@ -185,10 +198,11 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           name={TAB_ICONS[tab.key]}
           size={15}
           color={isActive ? colors.primary : colors.textMuted}
+          style={styles.tabIcon}
         />
         <Text
           style={[styles.tabText, isMobile && styles.mobileTabText, isActive && styles.activeTabText]}
-          numberOfLines={1}
+          numberOfLines={2}
         >
           {tab.label}
         </Text>
@@ -218,7 +232,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           </ScrollView>
         )
       ) : (
-        <View style={styles.tabRow}>{tabs.map(renderTab)}</View>
+        <View style={[styles.tabRow, styles.desktopTabRow]}>{tabs.map(renderTab)}</View>
       )}
     </View>
   );

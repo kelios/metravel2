@@ -28,6 +28,7 @@ import {
     STORAGE_NEARBY_RADIUS,
     DEFAULT_NEARBY_RADIUS_KM,
     NEARBY_ID,
+    normalizeNearbyRadiusKm,
     filterQuestsByMapSearchArea,
     loadExpoLocation,
     type QuestMapArea,
@@ -190,7 +191,7 @@ export default function QuestsScreen() {
         (async () => {
             try {
                 const saved = await AsyncStorage.getItem(STORAGE_NEARBY_RADIUS);
-                if (saved) setNearbyRadiusKm(Number(saved));
+                if (saved != null) setNearbyRadiusKm(normalizeNearbyRadiusKm(Number(saved)));
             } catch (error) { console.warn('Error reading nearby radius storage', error); }
         })();
     }, []);

@@ -423,6 +423,63 @@ describe('PlacePopupCard', () => {
     expect(saveAction.props.disabled).toBe(true);
   });
 
+  it('shows the checked «Сохранено» state on the bottom card when the point is saved', () => {
+    const onAddPoint = jest.fn();
+    let tree: any;
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          coord="53.9, 27.56"
+          onAddPoint={onAddPoint}
+          isSaved
+          addLabel="В точках"
+          compactLayout
+        />
+      );
+    });
+
+    // Bottom-card save chip flips to the verb «Сохранено» and reports checked=true.
+    const saveAction = tree.root.findByProps({ accessibilityRole: 'checkbox' });
+    expect(saveAction.props.accessibilityState.checked).toBe(true);
+    expect(saveAction.props.accessibilityState.disabled).toBe(false);
+    expect(
+      tree.root.findAll((node: any) => node.props?.children === 'Сохранено').length,
+    ).toBeGreaterThan(0);
+
+    renderer.act(() => {
+      saveAction.props.onPress();
+    });
+    expect(onAddPoint).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks the bottom-card save action as busy/disabled while a save is in flight', () => {
+    let tree: any;
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          coord="53.9, 27.56"
+          onAddPoint={jest.fn()}
+          isAdding
+          addDisabled
+          compactLayout
+        />
+      );
+    });
+
+    const saveAction = tree.root.findByProps({ accessibilityRole: 'checkbox' });
+    expect(saveAction.props.disabled).toBe(true);
+    expect(saveAction.props.accessibilityState.disabled).toBe(true);
+    // A spinner replaces the icon so the press does not look like a silent no-op.
+    const { ActivityIndicator } = require('react-native');
+    expect(tree.root.findAllByType(ActivityIndicator).length).toBeGreaterThan(0);
+  });
+
   it('opens the page through the popup handler when the page action is pressed', () => {
     const onOpenArticle = jest.fn();
     let tree: any;

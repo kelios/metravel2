@@ -13,6 +13,7 @@ import {
   buildServerClusterRenderData,
   filterServerClusterRenderDataByRadius,
 } from './Map/serverClusterRenderData';
+import { buildBirdMarkerHtml } from './Map/mapMarkerStyles';
 import {
   getActiveOverlayLayers,
   getThemedNativeBaseTileUrl,
@@ -227,6 +228,10 @@ const serializeForInjection = (value: unknown): string =>
 
 const USER_LOCATION_COLOR = DESIGN_TOKENS.colors.accent;
 
+// #843 — shared brand «bird» divIcon HTML (same source as web/native travel map).
+// Theme-independent brand hex, so it is a stable module constant (no WebView reload).
+const BIRD_MARKER_HTML = buildBirdMarkerHtml();
+
 const Map: React.FC<TravelProps> = ({
   travel,
   coordinates: propCoordinates,
@@ -278,7 +283,6 @@ const Map: React.FC<TravelProps> = ({
     () => withAlpha(themeColors.surface, 0.8),
     [themeColors.surface]
   );
-  const markerColor = DESIGN_COLORS.mapPin;
   const markerShadowColor = withAlpha(themeColors.text, 0.24);
   const selectedRouteLatLngs = useMemo(
     () => routePoints
@@ -533,33 +537,6 @@ const Map: React.FC<TravelProps> = ({
           margin-bottom: 8px;
         }
         .metravel-marker { background: transparent; border: 0; }
-        .metravel-marker-pin {
-          width: 32px;
-          height: 48px;
-          position: relative;
-          transform: translateY(-2px);
-        }
-        .metravel-marker-pin::before {
-          content: "";
-          position: absolute;
-          left: 4px;
-          top: 0;
-          width: 24px;
-          height: 24px;
-          border-radius: 999px;
-          background: ${markerColor};
-          box-shadow: inset 0 0 0 5px ${themeColors.textOnDark}, 0 2px 4px ${markerShadowColor};
-        }
-        .metravel-marker-pin::after {
-          content: "";
-          position: absolute;
-          left: 10px;
-          top: 20px;
-          width: 12px;
-          height: 18px;
-          background: ${markerColor};
-          clip-path: polygon(50% 100%, 0 0, 100% 0);
-        }
         .metravel-cluster {
           width: 44px;
           height: 44px;
@@ -767,14 +744,16 @@ const Map: React.FC<TravelProps> = ({
           try { userLayer.clearLayers(); map.__realUserLocation = null; } catch (e) {}
         };
 
-        // Inline HTML marker works reliably in Android WebView, where SVG data-URI
-        // marker images can render as an invisible icon.
+        // #843 — shared brand «bird» divIcon. Inline HTML renders reliably in Android
+        // WebView (SVG data-URI markers can render invisible). Size/anchor mirror the
+        // web useLeafletIcons bird so the tip points at the coordinate and the popup/
+        // bottom-card offset is unchanged.
         const markerIcon = L.divIcon({
           className: 'metravel-marker',
-          html: '<div class="metravel-marker-pin" aria-hidden="true"></div>',
-          iconSize: [32, 48],
-          iconAnchor: [16, 48],
-          popupAnchor: [0, -48]
+          html: ${JSON.stringify(BIRD_MARKER_HTML)},
+          iconSize: [48, 58],
+          iconAnchor: [24, 54],
+          popupAnchor: [0, -46]
         });
         function makeClusterIcon(count) {
           var label = Number(count);
@@ -1215,7 +1194,7 @@ const Map: React.FC<TravelProps> = ({
     </body>
     </html>
   `,
-    [themeColors, markerColor, markerShadowColor],
+    [themeColors, markerShadowColor],
   );
 
   return (

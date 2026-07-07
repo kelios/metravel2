@@ -25,7 +25,7 @@ import type { MapZoomPanControls } from '@/hooks/useMapZoomPan'
 import {
   WORLD_MAP_HEIGHT,
   WORLD_MAP_WIDTH,
-  getCountryGeometry,
+  getCountryFlagAnchor,
 } from './worldGeometry'
 
 const REGIONAL_INDICATOR_A = 0x1f1e6
@@ -89,7 +89,7 @@ function WorldMapFlagsComponent({ visitedCodes, size = 16, zoom, cover = false }
   const markers = useMemo(() => {
     const list: { code: string; left: DimensionValue; top: DimensionValue; emoji: string | null }[] = []
     for (const code of visitedCodes) {
-      const geom = getCountryGeometry(code)
+      const geom = getCountryFlagAnchor(code)
       if (!geom) continue // микрогосударства без полигона в 110m — пропускаем (см. T1)
       list.push({
         code,

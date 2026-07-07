@@ -8,14 +8,13 @@ import { ProfileStatPills, type ProfileStatPill } from '@/components/profile/Pro
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
 import SubscribeButton from '@/components/ui/SubscribeButton';
 import StarRating from '@/components/ui/StarRating';
-import VerifiedBadge from '@/components/profile/VerifiedBadge';
 import UserSafetyMenu from '@/components/profile/UserSafetyMenu';
 import ProtectedContacts from '@/components/profile/ProtectedContacts';
 import SafetyNotice from '@/components/ui/SafetyNotice';
 import PeerBadgeGiveButton from '@/components/achievements/PeerBadgeGiveButton';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import type { UserProfileDto } from '@/api/user';
-import type { PeerBadgeReceived } from '@/api/achievements';
+import type { PeerBadgeReceived, UserRank } from '@/api/achievements';
 
 const AVATAR_SIZE = 112;
 const COVER_HEIGHT = 132;
@@ -38,6 +37,7 @@ interface PublicProfileHeaderProps {
   isOwnProfile: boolean;
   socials: Array<{ key: string; label: string; value: string }>;
   peerReceived: PeerBadgeReceived[];
+  rank?: UserRank | null;
   statPills: ProfileStatPill[];
   activeTab: ProfileTabKey;
   onChangeTab: (tab: ProfileTabKey) => void;
@@ -54,6 +54,7 @@ export function PublicProfileHeader({
   isOwnProfile,
   socials,
   peerReceived,
+  rank,
   statPills,
   activeTab,
   onChangeTab,
@@ -65,6 +66,8 @@ export function PublicProfileHeader({
 
   const displayName = fullName || 'Пользователь';
   const rating = profile.participant_rating;
+  // Ранг — единственный первичный статус под именем (#847). Компактно: «Ур.5 · Эксперт».
+  const rankChipText = rank ? `Ур.${rank.level} · ${rank.title}` : null;
 
   return (
     <View style={styles.wrapper}>
@@ -113,8 +116,19 @@ export function PublicProfileHeader({
           <Text style={styles.userName} numberOfLines={2}>
             {displayName}
           </Text>
-          <VerifiedBadge isVerified={profile.is_verified} organizerStatus={profile.organizer_status} />
         </View>
+        {rankChipText ? (
+          <View
+            style={styles.rankChip}
+            accessibilityRole="text"
+            accessibilityLabel={`Уровень ${rank?.level}: ${rank?.title}`}
+          >
+            <Feather name="award" size={12} color={colors.primaryDark} />
+            <Text style={styles.rankChipText} numberOfLines={1}>
+              {rankChipText}
+            </Text>
+          </View>
+        ) : null}
         {rating && rating.count > 0 ? (
           <View style={styles.ratingRow}>
             <StarRating
@@ -127,9 +141,9 @@ export function PublicProfileHeader({
             />
             <Text style={styles.ratingLabel}>как попутчик</Text>
           </View>
-        ) : (
+        ) : !rankChipText ? (
           <Text style={styles.userSub}>Автор путешествий</Text>
-        )}
+        ) : null}
       </View>
 
       <View style={styles.actionsRow}>
@@ -287,6 +301,20 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     userSub: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       color: colors.textMuted,
+    },
+    rankChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.accentSoft,
+    },
+    rankChipText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
+      color: colors.text,
     },
     ratingRow: {
       flexDirection: 'row',

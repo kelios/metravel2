@@ -35,6 +35,7 @@ import { WorldMapFlags } from './worldMap/WorldMapFlags'
 import {
   WORLD_MAP_HEIGHT,
   WORLD_MAP_WIDTH,
+  getCountryFlagAnchor,
   getCountryGeometry,
   getWorldMapUnvisitedFill,
 } from './worldMap/worldGeometry'
@@ -110,7 +111,7 @@ export function ProfileWorldMapTab({
       let sumX = 0
       let count = 0
       for (const code of visitedCodes) {
-        const geom = getCountryGeometry(code)
+        const geom = getCountryFlagAnchor(code)
         if (!geom) continue
         sumX += geom.cx
         count += 1

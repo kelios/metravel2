@@ -35,6 +35,58 @@ export const getWorldMapUnvisitedFill = (isDark: boolean): string =>
 
 const worldCountryGeometry = rawGeometry as Record<string, WorldCountryGeometry>
 
+type PathBounds = {
+  minX: number
+  minY: number
+  maxX: number
+  maxY: number
+  area: number
+}
+
+const parsePathBounds = (path: string): PathBounds | null => {
+  const values = path.match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? []
+  if (values.length < 4) return null
+
+  let minX = Number.POSITIVE_INFINITY
+  let minY = Number.POSITIVE_INFINITY
+  let maxX = Number.NEGATIVE_INFINITY
+  let maxY = Number.NEGATIVE_INFINITY
+
+  for (let index = 0; index < values.length - 1; index += 2) {
+    const x = values[index]
+    const y = values[index + 1]
+    minX = Math.min(minX, x)
+    minY = Math.min(minY, y)
+    maxX = Math.max(maxX, x)
+    maxY = Math.max(maxY, y)
+  }
+
+  const area = Math.max(0, maxX - minX) * Math.max(0, maxY - minY)
+  return Number.isFinite(area) && area > 0 ? { minX, minY, maxX, maxY, area } : null
+}
+
+const getLargestPathBounds = (d: string): PathBounds | null => {
+  const subpaths = d.match(/M[^M]+/g) ?? []
+  let largest: PathBounds | null = null
+
+  for (const subpath of subpaths) {
+    const bounds = parsePathBounds(subpath)
+    if (!bounds || (largest && bounds.area <= largest.area)) continue
+    largest = bounds
+  }
+
+  return largest
+}
+
+const isPointInsideBounds = (
+  bounds: PathBounds,
+  point: { cx: number; cy: number }
+): boolean =>
+  point.cx >= bounds.minX &&
+  point.cx <= bounds.maxX &&
+  point.cy >= bounds.minY &&
+  point.cy <= bounds.maxY
+
 /**
  * ISO alpha-2 коды с ПОЛИГОНОМ (d != '') — для отрисовки хорплета.
  * Микрогосударства/острова без полигона в 110m (VA, MU, SG, MC, MT, …) хранятся
@@ -51,6 +103,22 @@ export const getCountryGeometry = (
 ): WorldCountryGeometry | undefined => {
   if (!code) return undefined
   return worldCountryGeometry[code.trim().toUpperCase()]
+}
+
+export const getCountryFlagAnchor = (
+  code: string | null | undefined
+): WorldCountryGeometry | undefined => {
+  const geometry = getCountryGeometry(code)
+  if (!geometry) return undefined
+
+  const mainBounds = getLargestPathBounds(geometry.d)
+  if (!mainBounds || isPointInsideBounds(mainBounds, geometry)) return geometry
+
+  return {
+    ...geometry,
+    cx: (mainBounds.minX + mainBounds.maxX) / 2,
+    cy: (mainBounds.minY + mainBounds.maxY) / 2,
+  }
 }
 
 export { worldCountryGeometry }

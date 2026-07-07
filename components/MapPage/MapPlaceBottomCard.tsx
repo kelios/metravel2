@@ -25,7 +25,13 @@ const SWIPE_CLOSE_THRESHOLD_PX = 64
 // hero, so the hero can take the rest without forcing a scroll on tall content.
 // Dropped from 460 → 380 after the «Статус поездки» row was removed (♥ + status are
 // now compact icons in the hero corner), reclaiming a full row for the photo.
-const NATIVE_CONTENT_RESERVE = 380
+// #844 — Android QA showed 380 still pushed «Сохранить»/«Навигация» into the scroll
+// zone on the travel-details «Места рядом» card. Recomputed against the real footer
+// (coord row + 50px action bubbles + gaps): bumped to 414, which shrinks the hero
+// ~10% (348 → 314 on a 390×844 screen) and reserves enough for the full action row
+// without a mandatory scroll. The native action stack is tightened in parallel
+// (PlacePopupCard/styles.ts), so the default card fits.
+const NATIVE_CONTENT_RESERVE = 414
 
 type MapPlaceBottomCardProps = {
   /** Selected single marker; when null the card is not rendered. */

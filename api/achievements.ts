@@ -218,7 +218,7 @@ interface BadgeProgressDto {
   threshold?: number | null;
 }
 
-interface RankSummaryDto {
+export interface RankSummaryDto {
   level?: number | null;
   title?: string | null;
   total_points?: number | null;
@@ -364,7 +364,7 @@ const hasServerSummary = (dto: RankSummaryDto): boolean =>
   dto.next_level_min_points != null ||
   dto.current_level_min_points != null;
 
-const mapRank = (dto: RankSummaryDto, levels?: RankLevelDto[]): UserRank => {
+export const mapRank = (dto: RankSummaryDto, levels?: RankLevelDto[]): UserRank => {
   const totalPoints = dto.total_points ?? 0;
   const base = {
     level: dto.level ?? 1,

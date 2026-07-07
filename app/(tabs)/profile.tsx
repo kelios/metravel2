@@ -49,6 +49,7 @@ import { buildCanonicalUrl } from '@/utils/seo';
 import { useIsFocused } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { mapProfileRank } from '@/api/user';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { getStorageBatch } from '@/utils/storageBatch';
 import { hapticImpact } from '@/utils/haptics';
@@ -114,10 +115,13 @@ export default function ProfileScreen() {
   const [worldMapGestureActive, setWorldMapGestureActive] = useState(false);
   const { data: myAchievements } = useMyAchievements({ enabled: activeTab === 'overview' });
   const badgesCount = myAchievements?.rank?.badgesCount ?? 0;
-  const rank = useMemo(
-    () => (myAchievements?.rank ? { level: myAchievements.rank.level, title: myAchievements.rank.title } : null),
-    [myAchievements?.rank],
-  );
+  // Ранг для шапки (#847): achievements грузится только на вкладке «Обзор», поэтому
+  // на первый пейнт (вкладка «Маршруты») берём ранг из profile.rank_summary, чтобы
+  // не показывать пустой статус; когда achievements подтянется — сверяемся с ним.
+  const rank = useMemo(() => {
+    const source = myAchievements?.rank ?? mapProfileRank(profile);
+    return source ? { level: source.level, title: source.title } : null;
+  }, [myAchievements?.rank, profile]);
   const { count: unreadMessagesCount } = useUnreadCount(isAuthenticated);
   const {
     subscriptions,

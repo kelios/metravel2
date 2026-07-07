@@ -18,7 +18,6 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { UserProfileDto } from '@/api/user';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { ProfileMenu } from './ProfileMenu';
-import VerifiedBadge from './VerifiedBadge';
 import { CoverTopoTexture } from './CoverTopoTexture';
 import {
   ProfileHeaderQuickActions,
@@ -260,17 +259,6 @@ export function ProfileHeader({
           ...DESIGN_TOKENS.typography.scale.h2,
           color: colors.text,
         },
-        statusRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: DESIGN_TOKENS.spacing.xs,
-        },
-        statusCaption: {
-          fontSize: DESIGN_TOKENS.typography.sizes.xs,
-          color: colors.textMuted,
-          flexShrink: 1,
-        },
         rankChip: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -320,6 +308,11 @@ export function ProfileHeader({
             width="100%"
             borderRadius={0}
             fit="cover"
+            // Above-fold шапка: priority=high снимает reveal-гейт (по умолчанию
+            // sharp-<img> ждёт onLoad; если показ подвисал — оставался blur-слой).
+            // Теперь sharp-кадр показывается сразу; shared-source blur остаётся в DOM
+            // как фон под ним и перекрывается финальным cover-кадром.
+            priority="high"
           />
         ) : !defaultCoverFailed ? (
           <ImageCardMedia
@@ -329,6 +322,7 @@ export function ProfileHeader({
             width="100%"
             borderRadius={0}
             fit="cover"
+            priority="high"
             onError={() => setDefaultCoverFailed(true)}
           />
         ) : (
@@ -425,29 +419,6 @@ export function ProfileHeader({
               </Pressable>
             ))}
           </View>
-          {profile?.is_verified || profile?.organizer_status === 'experienced' ? (
-            <View style={styles.statusRow}>
-              <View
-                accessibilityRole={profile?.is_verified ? 'button' : undefined}
-                accessibilityLabel={profile?.is_verified ? 'Проверенный участник' : undefined}
-                accessibilityHint={
-                  profile?.is_verified
-                    ? 'Аккаунт подтверждён администрацией MeTravel'
-                    : undefined
-                }
-              >
-                <VerifiedBadge
-                  isVerified={profile?.is_verified}
-                  organizerStatus={profile?.organizer_status ?? null}
-                />
-              </View>
-              {profile?.is_verified ? (
-                <Text style={styles.statusCaption} numberOfLines={1}>
-                  Аккаунт подтверждён MeTravel
-                </Text>
-              ) : null}
-            </View>
-          ) : null}
         </View>
       </View>
     </View>

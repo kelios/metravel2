@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
-import { fetchMySubscriptions, fetchMySubscribers, type UserProfileDto } from '@/api/user';
+import { fetchMySubscriptions, fetchMySubscribers, mapProfileRank, type UserProfileDto } from '@/api/user';
 import { ApiError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
 import { webTouchScrollStyle } from '@/utils';
@@ -100,6 +100,10 @@ export default function PublicUserProfileScreen() {
   const userAchievementsQuery = useUserAchievements(userId);
   const peerReceived = userAchievementsQuery.data?.peerReceived ?? [];
   const badgesCount = userAchievementsQuery.data?.rank?.badgesCount ?? 0;
+  // Ранг для шапки (#847): profile.rank_summary даёт первый пейнт без ожидания
+  // achievements-запроса, затем сверяемся с achievements (тот же ранг с бэка).
+  const profileRank = useMemo(() => mapProfileRank(profile), [profile]);
+  const headerRank = userAchievementsQuery.data?.rank ?? profileRank;
 
   const authorTravelsQuery = useQuery<{ data: Travel[]; total: number }>({
     queryKey: queryKeys.userTravels(userId),
@@ -250,6 +254,7 @@ export default function PublicUserProfileScreen() {
           isOwnProfile={isOwnProfile}
           socials={socials}
           peerReceived={peerReceived}
+          rank={headerRank}
           statPills={statPills}
           activeTab={activeTab}
           onChangeTab={handleChangeTab}

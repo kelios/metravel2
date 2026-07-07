@@ -11,6 +11,8 @@ import { openExternalUrl } from '@/utils/externalLinks'
 import { getSiteBaseUrl } from '@/utils/seo'
 import { normalizePoint } from '@/components/map-core/types'
 import MapPlaceBottomCard from '@/components/MapPage/MapPlaceBottomCard'
+import ToastHost from '@/components/ui/ToastHost'
+import { buildBirdMarkerHtml } from './Map/mapMarkerStyles'
 import {
   DEFAULT_CENTER,
   extractTravelPoints,
@@ -43,6 +45,10 @@ type NativePoint = {
   articleUrl?: string
   urlTravel?: string
 }
+
+// #843 — shared brand «bird» divIcon HTML (same source as web/native /map). Theme-
+// independent brand hex, so it is a stable module constant (no WebView reload churn).
+const BIRD_MARKER_HTML = buildBirdMarkerHtml()
 
 const withAlpha = (color: string, alpha: number) => {
   if (!color || color.startsWith('rgba') || color.startsWith('rgb')) return color
@@ -140,19 +146,6 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const mapBorderRadius = compact ? 12 : 16
   const loaderOverlay = useMemo(() => withAlpha(colors.surface, 0.8), [colors.surface])
   const routeColor = DESIGN_COLORS.routeLine
-  const markerColor = DESIGN_COLORS.mapPin
-
-  const markerSvg = `
-    <svg width="32" height="48" viewBox="0 0 32 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g>
-        <circle cx="16" cy="15.5" r="12.5" fill="${markerColor}"/>
-        <path d="M22 28.5C19.2 34.8 16 41.8 16 41.8C16 41.8 12.8 34.8 10 28.5H22Z" fill="${markerColor}"/>
-        <circle cx="16" cy="15.5" r="5.2" fill="${colors.textOnDark}" />
-        <circle cx="16" cy="15.5" r="3.2" fill="${markerColor}" />
-      </g>
-    </svg>
-  `
-  const markerSvgUrl = `data:image/svg+xml;utf8,${encodeURIComponent(markerSvg)}`
 
   const htmlContent = useMemo(() => {
     const points = JSON.stringify(safeTravelData)
@@ -173,6 +166,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         #map { width: 100%; height: 100%; }
         .leaflet-popup-content-wrapper { background-color: ${colors.surface}; border-radius: 8px; padding: 0; }
         .leaflet-popup-content { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; }
+        .metravel-marker { background: transparent; border: 0; }
       </style>
     </head>
     <body>
@@ -226,11 +220,15 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           latlngs.forEach(function(ll) { bounds.extend(ll); boundsPointCount++; });
         });
 
-        const markerIcon = L.icon({
-          iconUrl: '${markerSvgUrl}',
-          iconSize: [32, 48],
-          iconAnchor: [16, 48],
-          popupAnchor: [0, -48]
+        // #843 — shared brand «bird» divIcon (same source as web/native /map). Inline
+        // HTML renders reliably in Android WebView (SVG data-URI markers can render
+        // invisible). Size/anchor match useLeafletIcons so the bird tip sits on the coord.
+        const markerIcon = L.divIcon({
+          className: 'metravel-marker',
+          html: ${JSON.stringify(BIRD_MARKER_HTML)},
+          iconSize: [48, 58],
+          iconAnchor: [24, 54],
+          popupAnchor: [0, -46]
         });
 
         let highlightedMarker = null;
@@ -321,7 +319,6 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     center,
     initialZoom,
     colors,
-    markerSvgUrl,
     routeColor,
   ])
 
@@ -412,6 +409,12 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             topInset={(insets?.top ?? 0) + LAYOUT.headerHeight}
             bottomInset={LAYOUT.tabBarHeight}
           />
+          {/* #844 — the app-root Toast is mounted BELOW this native Modal, so save
+              feedback (auth prompt / «Сохранено» / error) from «Мои точки» rendered
+              behind the modal and looked like a no-op. A nested Toast inside the
+              Modal surfaces it above the sheet (react-native-toast-message picks the
+              last-mounted <Toast/> ref, then falls back to root on unmount). */}
+          <ToastHost />
         </View>
       </Modal>
     </View>

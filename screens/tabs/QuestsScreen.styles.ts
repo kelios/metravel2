@@ -417,23 +417,67 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             paddingBottom: spacing.sm,
             paddingTop: spacing.xs,
         },
-        // Радиус-бар над картой (перенесён из сайдбара). Карта на мобильном
-        // full-bleed (contentBodyMap убирает горизонтальный паддинг), поэтому бар
-        // добавляет свой боковой отступ; вертикальные паддинги ужаты, чтобы шапка
-        // + бар вместе не съедали >20% высоты вьюпорта.
-        mapRadiusBar: {
+        // Компактный overlay радиуса поверх карты (иконка + текущее значение).
+        // Не бар над картой — так шапка остаётся ≤20% вьюпорта, карта получает
+        // высоту. Живём в верхнем-левом углу, чтобы не пересекать search-area
+        // (верх-центр) и карточку выбранной точки (низ).
+        mapRadiusOverlay: {
+            position: 'absolute',
+            left: spacing.sm,
+            top: Platform.OS === 'web'
+                ? (`calc(${spacing.sm}px + env(safe-area-inset-top, 0px))` as any)
+                : spacing.sm,
+            zIndex: 20,
+            alignItems: 'flex-start',
+        },
+        mapRadiusToggle: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xxs,
+            minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xs,
+            borderRadius: radii.full,
+            // Статичный «фрост» вместо живого backdrop-blur (CLAUDE.md правило #2).
+            backgroundColor: colors.surfaceMuted,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            ...Platform.select({
+                web: {
+                    cursor: 'pointer',
+                    boxShadow: ((colors.boxShadows as any)?.light ?? DESIGN_TOKENS.shadows.light) as any,
+                } as any,
+            }),
+        },
+        mapRadiusToggleActive: {
+            backgroundColor: colors.brand,
+            borderColor: colors.brandAlpha30,
+        },
+        mapRadiusToggleText: {
+            color: colors.text,
+            fontSize: typography.sizes.xs,
+            fontWeight: '700',
+        },
+        mapRadiusToggleTextActive: {
+            color: colors.textOnPrimary,
+        },
+        mapRadiusPopover: {
             flexDirection: 'row',
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: spacing.xs,
-            paddingHorizontal: isMobileW ? spacing.md : 0,
-            paddingBottom: spacing.sm,
-        },
-        radiusLabel: {
-            color: colors.textMuted,
-            fontSize: typography.sizes.sm,
-            fontWeight: '500',
-            marginRight: spacing.xs,
+            marginTop: spacing.xs,
+            padding: spacing.xs,
+            maxWidth: 220,
+            borderRadius: radii.lg,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            ...Platform.select({
+                web: {
+                    boxShadow: ((colors.boxShadows as any)?.modal ?? DESIGN_TOKENS.shadows.modal) as any,
+                } as any,
+            }),
         },
         radiusChip: {
             paddingHorizontal: spacing.sm,

@@ -49,6 +49,7 @@ jest.mock('expo-router', () => ({
 const mockFetchUserCountryProgress = jest.fn();
 
 jest.mock('@/api/user', () => ({
+  mapProfileRank: jest.fn().mockReturnValue(null),
   fetchUserProfile: jest.fn().mockResolvedValue({
     id: '123',
     first_name: 'Test',

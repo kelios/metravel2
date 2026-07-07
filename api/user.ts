@@ -1,5 +1,6 @@
 import { LONG_TIMEOUT } from '@/api/apiConfig';
 import { apiClient } from '@/api/client';
+import { mapRank, type RankSummaryDto, type UserRank } from '@/api/achievements';
 
 export type CardViewTravelDto = {
     id: number;
@@ -49,7 +50,21 @@ export type UserProfileDto = {
     is_blocked_by_me?: boolean;
     // FE-431 (BE-post-trip-rating #428): агрегатный рейтинг как участника/организатора.
     participant_rating?: { average: number; count: number } | null;
+    // Gamification rank-progress summary (#847): бэк отдаёт готовый ранг прямо в
+    // публичном профиле — те же поля, что и rank в /achievements/user/{id}/.
+    // Даёт шапке первый пейнт ранга без ожидания отдельного achievements-запроса.
+    // Опционально: пока поле не пришло — падаем на achievements-query.
+    rank_summary?: RankSummaryDto;
 };
+
+/**
+ * Maps the profile-embedded rank summary (#847) into the shared UserRank domain
+ * model, reusing the achievements mapper. Returns null when the backend has not
+ * yet included `rank_summary` (graceful fallback to the achievements query).
+ */
+export const mapProfileRank = (
+    profile: Pick<UserProfileDto, 'rank_summary'> | null | undefined
+): UserRank | null => (profile?.rank_summary ? mapRank(profile.rank_summary) : null);
 
 export type UpdateUserProfilePayload = Partial<
     Pick<
