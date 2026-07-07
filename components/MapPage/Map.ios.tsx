@@ -19,6 +19,7 @@ import {
   getThemedBaseMaxZoom,
   getThemedBaseAttribution,
 } from '@/config/mapWebLayers';
+import type { MapMovePayload } from './Map/types';
 
 // Overpass endpoint mirrors utils/overpass/fetchOverpass.ts. Inlined as a plain
 // string because the overlay engine runs INSIDE the WebView and has no access to
@@ -176,6 +177,38 @@ const isValidNativeViewportSnapshot = (snapshot: NativeViewportSnapshot): boolea
   Number.isFinite(snapshot.bbox.west) &&
   Number.isFinite(snapshot.bbox.north) &&
   Number.isFinite(snapshot.bbox.east);
+
+const parseNativeMapMovePayload = (parsed: { [key: string]: unknown }): MapMovePayload | null => {
+  const lat = Number(parsed?.lat);
+  const lng = Number(parsed?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+  const payload: MapMovePayload = { latitude: lat, longitude: lng };
+  const zoom = Number(parsed?.zoom);
+  if (Number.isFinite(zoom)) {
+    payload.zoom = zoom;
+  }
+
+  const rawBbox = parsed?.bbox as { [key: string]: unknown } | null | undefined;
+  if (rawBbox) {
+    const bbox = {
+      south: Number(rawBbox.south),
+      west: Number(rawBbox.west),
+      north: Number(rawBbox.north),
+      east: Number(rawBbox.east),
+    };
+    if (
+      Number.isFinite(bbox.south) &&
+      Number.isFinite(bbox.west) &&
+      Number.isFinite(bbox.north) &&
+      Number.isFinite(bbox.east)
+    ) {
+      payload.bbox = bbox;
+    }
+  }
+
+  return payload;
+};
 
 // Данные шлём в WebView через injectJavaScript, а не через перезагрузку source.html:
 // на Android смена source.html не всегда триггерит reload, и инлайн JSON может
@@ -1217,10 +1250,9 @@ const Map: React.FC<TravelProps> = ({
             }
             if (parsed?.type === 'MAP_MOVED') {
               // F-49 — новый центр карты после панорамирования/зума.
-              const lat = Number(parsed?.lat);
-              const lng = Number(parsed?.lng);
-              if (Number.isFinite(lat) && Number.isFinite(lng)) {
-                onMapMoveRef.current?.({ latitude: lat, longitude: lng });
+              const movePayload = parseNativeMapMovePayload(parsed);
+              if (movePayload) {
+                onMapMoveRef.current?.(movePayload);
               }
             }
             if (parsed?.type === 'MAP_MOVED' || parsed?.type === 'MAP_VIEWPORT') {

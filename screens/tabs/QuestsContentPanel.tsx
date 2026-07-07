@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import Map from '@/components/MapPage/Map';
 import EmptyState from '@/components/ui/EmptyState';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
+import type { MapMovePayload } from '@/components/MapPage/Map/types';
 
 import QuestCard from './QuestCard';
 import { pluralizeQuest, type QuestMeta } from './questsShared';
@@ -57,7 +58,7 @@ type QuestsContentPanelProps = {
     onToggleViewMode: () => void;
     onSetRadius: (km: number) => void;
     onMapUserLocationChange: (loc: { latitude: number; longitude: number } | null) => void;
-    onMapMove: (center: { latitude: number; longitude: number }) => void;
+    onMapMove: (center: MapMovePayload) => void;
     onSearchMapArea: () => void;
 };
 

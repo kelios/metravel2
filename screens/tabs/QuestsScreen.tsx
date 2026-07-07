@@ -28,7 +28,9 @@ import {
     STORAGE_NEARBY_RADIUS,
     DEFAULT_NEARBY_RADIUS_KM,
     NEARBY_ID,
+    filterQuestsByMapSearchArea,
     loadExpoLocation,
+    type QuestMapArea,
     type MapPoint,
 } from './QuestsScreen.helpers';
 
@@ -49,8 +51,8 @@ export default function QuestsScreen() {
     const [nearbyRadiusKm, setNearbyRadiusKm] = useState<number>(DEFAULT_NEARBY_RADIUS_KM);
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
-    const [pendingMapAreaCenter, setPendingMapAreaCenter] = useState<{ latitude: number; longitude: number } | null>(null);
-    const [activeMapAreaCenter, setActiveMapAreaCenter] = useState<{ latitude: number; longitude: number } | null>(null);
+    const [pendingMapAreaCenter, setPendingMapAreaCenter] = useState<QuestMapArea | null>(null);
+    const [activeMapAreaCenter, setActiveMapAreaCenter] = useState<QuestMapArea | null>(null);
     const [collapsedCountryCodes, setCollapsedCountryCodes] = useState<Record<string, boolean>>({});
 
     // API data
@@ -339,16 +341,9 @@ export default function QuestsScreen() {
         if (!selectedCityId || !dataLoaded) return [];
         if (selectedCityId === NEARBY_ID) {
             if (activeMapAreaCenter) {
-                // «Искать в этой области» считает квесты по той же окружности радиуса,
-                // что карта РИСУЕТ вокруг центра области (см. `radius` в
-                // QuestsContentPanel) — поэтому в счётчик/список попадает ровно то,
-                // что видно маркерами. Раньше фильтр брал заниженный
-                // Math.max(nearbyRadiusKm, 5), из-за чего при отдалённой карте
-                // видимые по краям квесты отсекались и получалось 0 квестов.
-                return ALL_QUESTS
-                    .map((q) => ({ ...q, _distanceKm: haversineKm(activeMapAreaCenter.latitude, activeMapAreaCenter.longitude, q.lat, q.lng) }))
-                    .filter((q) => (q._distanceKm ?? Infinity) <= nearbyRadiusKm)
-                    .sort((a, b) => a._distanceKm! - b._distanceKm!);
+                // «Искать в этой области» должен фиксировать именно видимый viewport,
+                // а не повторно резать уже показанную карту маленьким nearby-радиусом.
+                return filterQuestsByMapSearchArea(ALL_QUESTS, activeMapAreaCenter, nearbyRadiusKm);
             }
             // Радиусную фильтрацию применяем только при явном выборе «Рядом»;
             // мягкий дефолт «Рядом» показывает весь каталог.
@@ -453,9 +448,14 @@ export default function QuestsScreen() {
         });
     }, []);
 
-    const handleMapMove = useCallback((center: { latitude: number; longitude: number }) => {
+    const handleMapMove = useCallback((center: QuestMapArea) => {
         if (!center || !Number.isFinite(center.latitude) || !Number.isFinite(center.longitude)) return;
-        setPendingMapAreaCenter(center);
+        setPendingMapAreaCenter({
+            latitude: center.latitude,
+            longitude: center.longitude,
+            bbox: center.bbox,
+            zoom: center.zoom,
+        });
     }, []);
 
     const handleSearchMapArea = useCallback(() => {

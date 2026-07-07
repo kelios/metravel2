@@ -1,6 +1,6 @@
 // components/MapPage/map/types.ts
 import type { MapUiApi } from '@/types/mapUi';
-import type { MapClustersFilters } from '@/api/map';
+import type { MapClusterBBox, MapClustersFilters } from '@/api/map';
 
 // Re-export shared types from map-core for backward compatibility
 export type { Point, Coordinates, TransportMode, MapMode } from '@/components/map-core';
@@ -37,7 +37,7 @@ export interface MapProps {
    * F-49 — fired (debounced) on map pan/zoom end with the new map center, so the
    * caller can offer a Google-Maps-style "Search this area" action.
    */
-  onMapMove?: (center: Coordinates) => void;
+  onMapMove?: (center: MapMovePayload) => void;
   hideFloatingControls?: boolean;
   /**
    * #207 — mobile-web: fired when a single (non-cluster) marker is tapped, so the
@@ -60,6 +60,11 @@ export interface MapProps {
    */
   pointsOnly?: boolean;
 }
+
+export type MapMovePayload = Coordinates & {
+  bbox?: MapClusterBBox;
+  zoom?: number;
+};
 
 export interface ClusterData {
   key: string;

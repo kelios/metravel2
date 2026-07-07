@@ -14,7 +14,7 @@ import { useMapViewportSnapshot } from '@/hooks/map/useMapViewportSnapshot'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { resolveRoutingApiKey } from '@/utils/routingApiKey'
-import type { MapMode, MapProps, Point } from './Map/types'
+import type { MapMode, MapMovePayload, MapProps, Point } from './Map/types'
 import { strToLatLng } from './Map/utils'
 
 import { useMapCleanup } from '@/components/MapPage/Map/useMapCleanup'
@@ -564,6 +564,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
         const lat = Number(center?.lat)
         const lng = Number(center?.lng)
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+        const bounds = map.getBounds?.()
+        const southWest = bounds?.getSouthWest?.()
+        const northEast = bounds?.getNorthEast?.()
+        const zoom = Number(map.getZoom?.())
         if (
           lastSent &&
           Math.abs(lastSent.lat - lat) < COORD_EPSILON &&
@@ -572,7 +576,26 @@ const MapPageComponent: React.FC<Props> = (props) => {
           return
         }
         lastSent = { lat, lng }
-        onMapMoveRef.current?.({ latitude: lat, longitude: lng })
+        const payload: MapMovePayload = { latitude: lat, longitude: lng }
+        if (
+          southWest &&
+          northEast &&
+          Number.isFinite(southWest.lat) &&
+          Number.isFinite(southWest.lng) &&
+          Number.isFinite(northEast.lat) &&
+          Number.isFinite(northEast.lng)
+        ) {
+          payload.bbox = {
+            south: Math.min(southWest.lat, northEast.lat),
+            west: Math.min(southWest.lng, northEast.lng),
+            north: Math.max(southWest.lat, northEast.lat),
+            east: Math.max(southWest.lng, northEast.lng),
+          }
+        }
+        if (Number.isFinite(zoom)) {
+          payload.zoom = zoom
+        }
+        onMapMoveRef.current?.(payload)
       } catch {
         ignoreOptionalMapRuntimeError()
       }

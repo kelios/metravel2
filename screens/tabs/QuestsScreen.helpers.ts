@@ -1,5 +1,7 @@
 // src/screens/tabs/QuestsScreen.helpers.ts
 
+import { haversineKm } from '@/utils/geo';
+
 export const COUNTRY_NAMES: Record<string, string> = {
     BY: 'Беларусь',
     PL: 'Польша',
@@ -56,3 +58,74 @@ export type MapPoint = {
         cover?: string;
     };
 };
+
+export type MapViewportBounds = {
+    south: number;
+    west: number;
+    north: number;
+    east: number;
+};
+
+export type QuestMapArea = {
+    latitude: number;
+    longitude: number;
+    bbox?: MapViewportBounds | null;
+    zoom?: number;
+};
+
+const BOUNDS_EPSILON = 0.000001;
+
+export function isValidMapViewportBounds(bounds: MapViewportBounds | null | undefined): bounds is MapViewportBounds {
+    if (!bounds) return false;
+    const { south, west, north, east } = bounds;
+    return (
+        Number.isFinite(south) &&
+        Number.isFinite(west) &&
+        Number.isFinite(north) &&
+        Number.isFinite(east) &&
+        south >= -90 &&
+        north <= 90 &&
+        south <= north &&
+        west >= -180 &&
+        west <= 180 &&
+        east >= -180 &&
+        east <= 180
+    );
+}
+
+export function isCoordinateInMapViewport(
+    lat: number,
+    lng: number,
+    bounds: MapViewportBounds | null | undefined,
+): boolean {
+    if (!isValidMapViewportBounds(bounds)) return false;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+
+    const withinLat = lat >= bounds.south - BOUNDS_EPSILON && lat <= bounds.north + BOUNDS_EPSILON;
+    if (!withinLat) return false;
+
+    if (bounds.west <= bounds.east) {
+        return lng >= bounds.west - BOUNDS_EPSILON && lng <= bounds.east + BOUNDS_EPSILON;
+    }
+
+    return lng >= bounds.west - BOUNDS_EPSILON || lng <= bounds.east + BOUNDS_EPSILON;
+}
+
+export function filterQuestsByMapSearchArea<T extends { lat: number; lng: number }>(
+    quests: T[],
+    area: QuestMapArea,
+    fallbackRadiusKm: number,
+): Array<T & { _distanceKm: number }> {
+    const withDistance = quests
+        .filter((quest) => Number.isFinite(quest.lat) && Number.isFinite(quest.lng))
+        .map((quest) => ({
+            ...quest,
+            _distanceKm: haversineKm(area.latitude, area.longitude, quest.lat, quest.lng),
+        }));
+
+    const filtered = isValidMapViewportBounds(area.bbox)
+        ? withDistance.filter((quest) => isCoordinateInMapViewport(quest.lat, quest.lng, area.bbox))
+        : withDistance.filter((quest) => quest._distanceKm <= fallbackRadiusKm);
+
+    return filtered.sort((a, b) => a._distanceKm - b._distanceKm);
+}
