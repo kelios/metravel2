@@ -134,9 +134,14 @@ test.describe('@smoke Favorites', () => {
 
       await page.goto('/favorites', { waitUntil: 'domcontentloaded', timeout: 120_000 });
 
+      await expect(page.getByText('В «Хочу поехать» пока пусто', { exact: true })).toBeVisible({
+        timeout: 30_000,
+      });
       await expect(
-        page.getByText('Сохраняй маршруты, чтобы вернуться к ним позже', { exact: true })
-      ).toBeVisible({ timeout: 30_000 });
+        page.getByText('Нажмите ♥ на карточке маршрута, чтобы добавить место, куда хотите поехать.', {
+          exact: true,
+        })
+      ).toBeVisible();
       // The auth gate must NOT be shown for an authenticated user.
       await expect(page.getByText('Войдите в аккаунт', { exact: true })).toHaveCount(0);
     });
