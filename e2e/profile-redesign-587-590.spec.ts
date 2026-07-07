@@ -132,7 +132,7 @@ test.describe('Profile redesign #587-590', () => {
     await card.waitFor({ state: 'visible', timeout: 20_000 })
 
     // Explains: rank title + "до следующего" copy
-    await expect(card.getByText(/Ваш ранг/i)).toBeVisible()
+    await expect(card.getByText(/Ваш уровень/i)).toBeVisible()
     await expect(card.getByText(/Странник/)).toBeVisible()
     await expect(card.getByText(/До «Путешественник»/)).toBeVisible()
     await expect(card.getByText(/Зарабатывайте XP/)).toBeVisible()
@@ -142,10 +142,10 @@ test.describe('Profile redesign #587-590', () => {
     // Clickable → opens AwardsHub "all" tab (panel content switches from default "path").
     const panel = page.getByTestId('awards-panel')
     const before = await panel.innerHTML()
-    await card.getByText(/Подробнее/).click()
+    await card.getByText(/Все награды/).click()
     await page.waitForTimeout(500)
     const after = await panel.innerHTML()
-    expect(before, 'Подробнее should switch AwardsHub panel content').not.toBe(after)
+    expect(before, 'Все награды should switch AwardsHub panel content').not.toBe(after)
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'mobile-rank-card-opened-all.png') })
   })
 
