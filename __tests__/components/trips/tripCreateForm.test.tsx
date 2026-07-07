@@ -79,6 +79,16 @@ jest.mock('@/components/legal/ConsentCheckbox', () => {
 
 import TripCreateForm from '@/components/trips/planning/TripCreateForm'
 
+type RenderedForm = ReturnType<typeof render>
+
+function getStartDateInput(view: RenderedForm) {
+  return view.UNSAFE_getByProps({ 'data-testid': 'trip-create-start-date' })
+}
+
+function changeStartDate(view: RenderedForm, value: string) {
+  fireEvent(getStartDateInput(view), 'change', { target: { value } })
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
@@ -112,8 +122,10 @@ describe('TripCreateForm — consent gate', () => {
 
 describe('TripCreateForm — validation errors', () => {
   it('prefills a real default start date instead of showing it as a placeholder', () => {
-    const { getByTestId } = render(<TripCreateForm />)
-    expect(getByTestId('trip-create-start-date').props.value).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    const view = render(<TripCreateForm />)
+    const startDate = getStartDateInput(view)
+    expect(startDate.props.type).toBe('date')
+    expect(startDate.props.value).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
   it('accepts route-source prefill for organizing a trip from a travel page', () => {
@@ -130,14 +142,15 @@ describe('TripCreateForm — validation errors', () => {
   })
 
   it('shows title error when submitting with empty title', async () => {
-    const { getByTestId, findByText } = render(<TripCreateForm />)
+    const view = render(<TripCreateForm />)
+    const { getByTestId, findByText } = view
 
     // Toggle consent so the button is enabled and handleSubmit runs.
     fireEvent.press(getByTestId('trip-create-consent'))
 
     // Leave title empty (default '') and provide a valid date so only title fails.
     fireEvent.changeText(getByTestId('trip-create-title'), '')
-    fireEvent.changeText(getByTestId('trip-create-start-date'), '2026-08-01')
+    changeStartDate(view, '2026-08-01')
 
     // Press submit — yup will fire asynchronously and set field errors.
     fireEvent.press(getByTestId('trip-create-submit'))
@@ -149,12 +162,13 @@ describe('TripCreateForm — validation errors', () => {
   })
 
   it('shows date error when start date is missing', async () => {
-    const { getByTestId, findByText } = render(<TripCreateForm />)
+    const view = render(<TripCreateForm />)
+    const { getByTestId, findByText } = view
 
     // Toggle consent and provide a long enough title, leave date empty.
     fireEvent.press(getByTestId('trip-create-consent'))
     fireEvent.changeText(getByTestId('trip-create-title'), 'Тест-поездка')
-    fireEvent.changeText(getByTestId('trip-create-start-date'), '')
+    changeStartDate(view, '')
     fireEvent.press(getByTestId('trip-create-submit'))
 
     const err = await findByText(/Укажите дату старта/i)
@@ -162,8 +176,9 @@ describe('TripCreateForm — validation errors', () => {
   })
 
   it('submits a valid form using the default start date', async () => {
-    const { getByTestId } = render(<TripCreateForm />)
-    const defaultDate = getByTestId('trip-create-start-date').props.value
+    const view = render(<TripCreateForm />)
+    const { getByTestId } = view
+    const defaultDate = getStartDateInput(view).props.value
 
     fireEvent.press(getByTestId('trip-create-consent'))
     fireEvent.changeText(getByTestId('trip-create-title'), 'Тест-поездка')

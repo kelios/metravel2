@@ -516,6 +516,19 @@ function TravelListItem({
     </View>
   ) : null
 
+  // On compact/mobile cards the meta-row author is hidden, so surface the author
+  // as a media overlay in the bottom-left corner — paired with the views badge —
+  // without growing the card. Desktop keeps the tappable author link in the row.
+  const showAuthorOverlay = compactMeta && hasAuthorMeta && !selectable
+  const authorOverlaySlot = showAuthorOverlay ? (
+    <View style={styles.authorOverlayBadge} testID="author-overlay" pointerEvents="none">
+      <Feather name="user" size={VIEW_ICON_SIZE + 2} color="#fff" />
+      <Text style={styles.authorOverlayText} numberOfLines={1}>
+        {authorDisplayName}
+      </Text>
+    </View>
+  ) : null
+
   const hasSecondaryMeta =
     topRowItems.length > 0 ||
     hasEngagementStats ||
@@ -587,6 +600,7 @@ function TravelListItem({
       insetMedia={false}
       leftTopSlot={leftTopSlot}
       rightTopSlot={!selectable ? rightTopSlot : null}
+      bottomLeftSlot={authorOverlaySlot}
       bottomRightSlot={viewsOverlaySlot}
       containerOverlaySlot={selectableOverlay}
       contentSlot={contentSlot}

@@ -5,20 +5,30 @@
 // фото/GPX требуют asset-id, которых фронт пока не умеет создавать, поэтому форма
 // их не собирает (отправляем photoUrls: [] и gpxUrl: null). Если отчёт уже
 // опубликован — показываем read-only карточку вместо формы.
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
+import { fetchPlacesCatalog } from '@/api/places';
 import Button from '@/components/ui/Button';
 import type { PlannedTrip, SubmitReportInput } from '@/api/plannedTrips';
 import { useSubmitTripReport } from '@/hooks/usePlannedTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import type { CatalogPlace } from '@/utils/placesCatalog';
 
 interface Props {
   trip: PlannedTrip;
 }
 
 const SUMMARY_MIN = 10;
+const PLACE_SEARCH_MIN = 2;
+const PLACE_SEARCH_LIMIT = 8;
+
+type SelectedPlace = {
+  id: number;
+  title: string;
+  meta: string;
+};
 
 const formatPublishedAt = (value: string | null): string | null => {
   if (!value) return null;
@@ -27,11 +37,42 @@ const formatPublishedAt = (value: string | null): string | null => {
   return d.toLocaleDateString('ru-RU');
 };
 
-const parsePlaceIds = (raw: string): number[] =>
-  raw
-    .split(',')
-    .map((item) => Number(item.trim()))
-    .filter((n) => Number.isInteger(n) && Number.isFinite(n));
+const parsePlaceId = (value: string): number | null => {
+  const id = Number(value);
+  return Number.isInteger(id) && Number.isFinite(id) ? id : null;
+};
+
+const isAbortError = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error != null &&
+  'name' in error &&
+  (error as { name?: unknown }).name === 'AbortError';
+
+const formatPlaceMeta = (place: CatalogPlace): string =>
+  [place.country, place.category].filter(Boolean).join(' · ');
+
+const toSelectedPlace = (place: CatalogPlace): SelectedPlace | null => {
+  const id = parsePlaceId(place.id);
+  if (id == null) return null;
+  return {
+    id,
+    title: place.title,
+    meta: formatPlaceMeta(place),
+  };
+};
+
+const buildInitialVisitedPlaces = (trip: PlannedTrip): SelectedPlace[] => {
+  const byId = new Map<number, SelectedPlace>();
+  trip.route.forEach((point) => {
+    if (point.placeId == null || byId.has(point.placeId)) return;
+    byId.set(point.placeId, {
+      id: point.placeId,
+      title: point.name,
+      meta: 'Из маршрута поездки',
+    });
+  });
+  return [...byId.values()];
+};
 
 function TripReportForm({ trip }: Props) {
   const colors = useThemedColors();
@@ -39,10 +80,70 @@ function TripReportForm({ trip }: Props) {
   const submit = useSubmitTripReport();
 
   const [summary, setSummary] = useState('');
-  const [places, setPlaces] = useState('');
+  const [placeQuery, setPlaceQuery] = useState('');
+  const deferredPlaceQuery = useDeferredValue(placeQuery);
+  const [placeResults, setPlaceResults] = useState<SelectedPlace[]>([]);
+  const [placesLoading, setPlacesLoading] = useState(false);
+  const [placesError, setPlacesError] = useState<string | null>(null);
+  const [selectedPlaces, setSelectedPlaces] = useState<SelectedPlace[]>(() =>
+    buildInitialVisitedPlaces(trip),
+  );
   const [publishToCommunity, setPublishToCommunity] = useState(false);
   const [touched, setTouched] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const selectedPlaceIds = useMemo(
+    () => new Set(selectedPlaces.map((place) => place.id)),
+    [selectedPlaces],
+  );
+
+  useEffect(() => {
+    const query = deferredPlaceQuery.trim();
+    if (query.length < PLACE_SEARCH_MIN) {
+      setPlaceResults([]);
+      setPlacesLoading(false);
+      setPlacesError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setPlacesLoading(true);
+    setPlacesError(null);
+
+    fetchPlacesCatalog(
+      { page: 1, perPage: PLACE_SEARCH_LIMIT, q: query },
+      controller.signal,
+    )
+      .then((page) => {
+        setPlaceResults(
+          page.places
+            .map(toSelectedPlace)
+            .filter((place): place is SelectedPlace => place != null),
+        );
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error)) return;
+        setPlaceResults([]);
+        setPlacesError('Не удалось загрузить места');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setPlacesLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [deferredPlaceQuery]);
+
+  const addPlace = useCallback((place: SelectedPlace) => {
+    setSelectedPlaces((current) =>
+      current.some((item) => item.id === place.id) ? current : [...current, place],
+    );
+    setPlaceQuery('');
+    setPlaceResults([]);
+  }, []);
+
+  const removePlace = useCallback((id: number) => {
+    setSelectedPlaces((current) => current.filter((place) => place.id !== id));
+  }, []);
 
   if (!trip.isOwner) return null;
 
@@ -81,7 +182,7 @@ function TripReportForm({ trip }: Props) {
       summary: trimmedSummary,
       photoUrls: [],
       gpxUrl: null,
-      visitedPlaceIds: parsePlaceIds(places),
+      visitedPlaceIds: selectedPlaces.map((place) => place.id),
       publishToCommunity,
     };
     submit.mutate(input, {
@@ -110,16 +211,81 @@ function TripReportForm({ trip }: Props) {
         </Text>
       ) : null}
 
-      <Text style={styles.label}>ID посещённых мест MeTravel (через запятую)</Text>
+      <Text style={styles.label}>Посещённые места MeTravel</Text>
+      {selectedPlaces.length > 0 ? (
+        <View style={styles.selectedPlaces} testID="trip-report-selected-places">
+          {selectedPlaces.map((place) => (
+            <Pressable
+              key={place.id}
+              onPress={() => removePlace(place.id)}
+              style={styles.selectedPlaceChip}
+              accessibilityRole="button"
+              accessibilityLabel={`Убрать место ${place.title}`}
+              testID={`trip-report-selected-place-${place.id}`}
+            >
+              <Text style={styles.selectedPlaceText} numberOfLines={1}>
+                {place.title}
+              </Text>
+              <Feather name="x" size={14} color={colors.textSecondary} />
+            </Pressable>
+          ))}
+        </View>
+      ) : (
+        <Text style={styles.hint}>Добавьте места, которые реально посетили в этой поездке</Text>
+      )}
       <TextInput
-        value={places}
-        onChangeText={setPlaces}
-        placeholder="Например: 12, 48, 103"
+        value={placeQuery}
+        onChangeText={setPlaceQuery}
+        placeholder="Найти место по названию или адресу"
         placeholderTextColor={colors.textMuted}
-        autoCapitalize="none"
+        autoCapitalize="sentences"
         style={styles.input}
-        testID="trip-report-places"
+        testID="trip-report-place-search"
       />
+      {placeQuery.trim().length > 0 ? (
+        <View style={styles.placeResults} testID="trip-report-place-results">
+          {placeQuery.trim().length < PLACE_SEARCH_MIN ? (
+            <Text style={styles.hint}>Введите минимум {PLACE_SEARCH_MIN} символа</Text>
+          ) : placesLoading ? (
+            <Text style={styles.hint}>Ищем места...</Text>
+          ) : placesError ? (
+            <Text style={styles.error}>{placesError}</Text>
+          ) : placeResults.length === 0 ? (
+            <Text style={styles.hint}>Места не найдены</Text>
+          ) : (
+            placeResults.map((place) => {
+              const selected = selectedPlaceIds.has(place.id);
+              return (
+                <Pressable
+                  key={place.id}
+                  onPress={() => addPlace(place)}
+                  disabled={selected}
+                  style={[styles.placeOption, selected && styles.placeOptionSelected]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected, disabled: selected }}
+                  testID={`trip-report-place-option-${place.id}`}
+                >
+                  <Feather
+                    name={selected ? 'check-circle' : 'plus-circle'}
+                    size={16}
+                    color={selected ? colors.primaryDark : colors.textSecondary}
+                  />
+                  <View style={styles.placeOptionText}>
+                    <Text style={styles.placeOptionTitle} numberOfLines={1}>
+                      {place.title}
+                    </Text>
+                    {place.meta ? (
+                      <Text style={styles.placeOptionMeta} numberOfLines={1}>
+                        {place.meta}
+                      </Text>
+                    ) : null}
+                  </View>
+                </Pressable>
+              );
+            })
+          )}
+        </View>
+      ) : null}
 
       <Pressable
         onPress={() => setPublishToCommunity((prev) => !prev)}
@@ -183,6 +349,52 @@ const createStyles = (colors: ThemedColors) =>
       textAlignVertical: 'top',
       ...Platform.select({ web: { outlineWidth: 0 as any } }),
     },
+    selectedPlaces: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    selectedPlaceChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      maxWidth: '100%',
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      backgroundColor: colors.surfaceMuted,
+    },
+    selectedPlaceText: {
+      flexShrink: 1,
+      fontSize: 13,
+      color: colors.text,
+      fontWeight: '600',
+    },
+    placeResults: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      overflow: 'hidden',
+    },
+    placeOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+      ...Platform.select({ web: { cursor: 'pointer' as any } }),
+    },
+    placeOptionSelected: {
+      backgroundColor: colors.surfaceMuted,
+    },
+    placeOptionText: { flex: 1, minWidth: 0 },
+    placeOptionTitle: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    placeOptionMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
     toggle: {
       flexDirection: 'row',
       alignItems: 'center',

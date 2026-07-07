@@ -126,6 +126,23 @@ const buildStartPoint = (values: FormValues): RoutePoint | null => {
 function TripCreateForm({ onCreated, initialValues }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const webDateInputStyle = useMemo<React.CSSProperties>(
+    () => ({
+      width: '100%',
+      borderWidth: 1,
+      borderStyle: 'solid',
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: '10px 12px',
+      color: colors.text,
+      backgroundColor: colors.surface,
+      fontSize: 14,
+      lineHeight: '20px',
+      outline: 'none',
+      boxSizing: 'border-box',
+    }),
+    [colors],
+  );
   const create = useCreateTrip();
   const consent = useActionConsent(CONSENT_TYPES.TRIP_ORGANIZER);
 
@@ -218,15 +235,26 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
       <View style={styles.row}>
         <View style={styles.col}>
           <Text style={styles.label}>Дата старта</Text>
-          <TextInput
-            value={values.startDate}
-            onChangeText={(t) => setField('startDate', t)}
-            placeholder="ГГГГ-ММ-ДД"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="none"
-            style={styles.input}
-            testID="trip-create-start-date"
-          />
+          {Platform.OS === 'web' ? (
+            <input
+              type="date"
+              value={values.startDate}
+              onChange={(event) => setField('startDate', event.target.value)}
+              aria-label="Дата старта"
+              data-testid="trip-create-start-date"
+              style={webDateInputStyle}
+            />
+          ) : (
+            <TextInput
+              value={values.startDate}
+              onChangeText={(t) => setField('startDate', t)}
+              placeholder="ГГГГ-ММ-ДД"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              style={styles.input}
+              testID="trip-create-start-date"
+            />
+          )}
           {errors.startDate ? (
             <Text style={styles.error}>{errors.startDate}</Text>
           ) : null}

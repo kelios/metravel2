@@ -398,6 +398,26 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       fontWeight: '600',
     },
 
+    // Оверлей автора на фото для компактных/мобильных карточек, где текстовая
+    // строка автора скрыта. Зеркалит бейдж просмотров (нижний-левый угол).
+    authorOverlayBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 3,
+      paddingHorizontal: 7,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      maxWidth: 160,
+    },
+    authorOverlayText: {
+      color: '#fff',
+      fontSize: META_TEXT_FONT_SIZE,
+      lineHeight: META_TEXT_LINE_HEIGHT,
+      fontWeight: '600',
+      flexShrink: 1,
+    },
+
     metaTxt: {
       fontSize: META_TEXT_FONT_SIZE,
       color: colors.textSecondary,
