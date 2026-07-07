@@ -115,7 +115,7 @@ export default function ProfileScreen() {
   const [worldMapGestureActive, setWorldMapGestureActive] = useState(false);
   const { data: myAchievements } = useMyAchievements({ enabled: activeTab === 'overview' });
   const badgesCount = myAchievements?.rank?.badgesCount ?? 0;
-  // Ранг для шапки (#847): achievements грузится только на вкладке «Обзор», поэтому
+  // Ранг для шапки (#847): achievements грузится только на вкладке «Уровень», поэтому
   // на первый пейнт (вкладка «Маршруты») берём ранг из profile.rank_summary, чтобы
   // не показывать пустой статус; когда achievements подтянется — сверяемся с ним.
   const rank = useMemo(() => {
@@ -248,7 +248,7 @@ export default function ProfileScreen() {
     loadUserInfo();
   }, [loadUserInfo]);
 
-  // Список путешествий не нужен для первого рендера (шапка + вкладка «Обзор»
+  // Список путешествий не нужен для первого рендера (шапка + вкладка «Уровень»
   // строятся из профиля/кэша). Дёргаем его отложенно — после первого кадра —
   // чтобы счётчик «Маршруты» в шапке заполнился без блокировки экрана.
   useEffect(() => {
@@ -443,8 +443,8 @@ export default function ProfileScreen() {
       case 'favorites':
         return {
           icon: 'heart',
-          title: 'Нет сохранённых маршрутов',
-          description: 'Нажмите ♥ на любом маршруте, чтобы сохранить его сюда.',
+          title: 'В «Хочу поехать» пока пусто',
+          description: 'Добавляйте сюда маршруты, куда хотите поехать: нажмите ♥ на карточке маршрута.',
           variant: 'empty' as const,
           action: { label: 'Найти маршруты', onPress: () => router.push('/travelsby' as any) },
         };
@@ -478,14 +478,14 @@ export default function ProfileScreen() {
     try {
       if (activeTab === 'favorites') {
         const ok = await confirmAction({
-          title: 'Очистить избранное',
-          message: 'Удалить все путешествия из избранного?',
+          title: 'Очистить «Хочу поехать»',
+          message: 'Удалить все маршруты из «Хочу поехать»?',
           confirmText: 'Очистить',
           cancelText: 'Отмена',
         });
         if (!ok) return;
         await clearFavorites?.();
-        void showToastMessage({ type: 'success', text1: 'Избранное очищено' })
+        void showToastMessage({ type: 'success', text1: '«Хочу поехать» очищен' })
         return;
       }
 

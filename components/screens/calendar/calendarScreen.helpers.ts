@@ -58,8 +58,8 @@ export const EMPTY_STATE: Record<TravelStatus, EmptyStateConfig> = {
   },
   wishlist: {
     icon: 'bookmark',
-    title: 'Список желаний пуст',
-    description: 'Открой путешествие и выбери статус «Хочу поехать», чтобы собрать здесь личный список желаний.',
+    title: 'В «Хочу поехать» пока пусто',
+    description: 'Открой путешествие и выбери статус «Хочу поехать», чтобы собрать здесь личный список маршрутов.',
     actionLabel: 'Найти маршруты',
   },
 }
@@ -67,7 +67,7 @@ export const EMPTY_STATE: Record<TravelStatus, EmptyStateConfig> = {
 export const TAB_HINTS: Record<TravelStatus, string> = {
   visited: 'Выбери дату, чтобы увидеть посещённые поездки за этот день. Если точной даты нет, добавь её прямо в карточке.',
   planned: 'Выбери дату, чтобы отфильтровать запланированные поездки.',
-  wishlist: 'Это личный список желаний. Дата для него не обязательна — главное, что вы хотите сохранить маршрут на потом.',
+  wishlist: 'Это личный список «Хочу поехать». Дата для него не обязательна — главное, что вы хотите сохранить маршрут на потом.',
 }
 
 export const CARD_META_ICON_STYLE = { marginRight: 4 } as const
@@ -130,6 +130,6 @@ export const sortCalendarEntries = (entries: CalendarEntry[], status: TravelStat
 
 export const getDateEditorSubtitle = (status?: TravelStatus) => {
   if (status === 'visited') return 'Укажи дату, когда ты был в этом путешествии.'
-  if (status === 'wishlist') return 'Этот статус просто сохраняет маршрут в ваш личный список желаний. Дата не обязательна.'
+  if (status === 'wishlist') return 'Этот статус просто сохраняет маршрут в ваш личный список «Хочу поехать». Дата не обязательна.'
   return 'Укажи дату запланированной поездки.'
 }

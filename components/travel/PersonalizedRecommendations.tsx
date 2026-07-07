@@ -258,7 +258,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                         </View>
                         <View style={styles.promptCopy}>
                             <Text style={[styles.emptyText, !isMobile && styles.promptTextDesktop]}>
-                                Начните просматривать путешествия и добавлять их в избранное, чтобы получать персональные рекомендации
+                                Начните просматривать путешествия и добавлять их в «Хочу поехать», чтобы получать персональные рекомендации
                             </Text>
                         </View>
                     </View>
@@ -286,7 +286,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
 
             {hasFavorites && (
                 <View style={styles.section} testID="personalized-favorites-section">
-                    {renderSectionTitle('Избранное', '/favorites', 'Смотреть все избранное')}
+                    {renderSectionTitle('Хочу поехать', '/favorites', 'Смотреть все «Хочу поехать»')}
                     {isMobileWeb ? (
                         <View style={styles.mobileWebStack} testID="personalized-favorites-stack">
                             {favorites.slice(0, 2).map(item => (

@@ -189,6 +189,37 @@ export const getStyles = (
       left: 10,
       zIndex: 7,
     },
+    closeButton: {
+      position: 'absolute',
+      top: compactLayout ? 10 : 12,
+      right: compactLayout ? 10 : 12,
+      width: compactLayout ? 40 : 44,
+      height: compactLayout ? 40 : 44,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight ?? colors.border,
+      zIndex: 12,
+      ...(Platform.OS === 'web'
+        ? ({
+            cursor: 'pointer',
+            boxShadow: '0 10px 22px rgba(15,23,42,0.18)',
+            transition: 'opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease',
+          } as any)
+        : {
+            shadowColor: DESIGN_TOKENS.colors.text,
+            shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: 0.12,
+            shadowRadius: 8,
+            elevation: 3,
+          }),
+    },
+    closeButtonPressed: {
+      opacity: 0.72,
+      transform: [{ scale: 0.94 }],
+    },
     relatedTravelInlineSection: {
       width: '100%',
       alignItems: 'center',

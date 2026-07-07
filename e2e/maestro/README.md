@@ -52,7 +52,7 @@ maestro test e2e/maestro/            # все сразу
 | `quest-reviews.yaml` | Чип «💬 N» → модалка отзывов (не старт квеста) | ✅ зелёный на 2026-06-22 |
 | `quest-intro-map-points.yaml` | Деталка квеста → intro-карта показывает точки маршрута до старта | 🆕 покрывает регресс пустой карты |
 | `quest-offline-points.yaml` | Скачать GPX / открыть в приложении → share с .gpx (не тост ошибки) | ✅ зелёный на 2026-06-22 |
-| `recommendation-shelves.yaml` | Полки Избранное/Недавно смотрели на Маршрутах | ✅ зелёный на 2026-07-05 |
+| `recommendation-shelves.yaml` | Полки Хочу поехать/Недавно смотрели на Маршрутах | ✅ зелёный на 2026-07-05 |
 
 ## Заметки
 - `recommendation-shelves.yaml` использует dev-client deep-link fallback, потому что Expo Dev

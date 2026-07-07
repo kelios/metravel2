@@ -15,7 +15,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'outline';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps {
@@ -83,6 +83,7 @@ const ButtonComponent = ({
         styles.base,
         globalFocusStyles.focusable, // ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
         sizeStyles[size],
+        style,
         variantStyles[variant],
         fullWidth && styles.fullWidth,
         isDisabled && styles.disabled,
@@ -90,7 +91,7 @@ const ButtonComponent = ({
         !isDisabled && pressed && variantPressedStyles[variant],
         !isDisabled && hovered && Platform.OS === 'web' && hoverStyle,
         !isDisabled && pressed && pressedStyle,
-        style,
+        styles.visualShell,
       ]}
     >
       <View style={styles.content}>
@@ -140,6 +141,14 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         cursor: 'pointer',
         touchAction: 'pan-y',
+      } as any,
+    }),
+  },
+  visualShell: {
+    borderRadius: radii.md,
+    ...Platform.select({
+      web: {
+        backgroundImage: 'none',
       } as any,
     }),
   },

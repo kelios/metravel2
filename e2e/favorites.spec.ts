@@ -151,14 +151,14 @@ test.describe('@smoke Favorites', () => {
 
       await page.goto('/favorites', { waitUntil: 'domcontentloaded', timeout: 120_000 });
 
-      await expect(page.getByText('Избранное', { exact: true }).first()).toBeVisible({
+      await expect(page.getByText('Хочу поехать', { exact: true }).first()).toBeVisible({
         timeout: 30_000,
       });
       await expect(page.getByText(favorite.title, { exact: true }).first()).toBeVisible({
         timeout: 30_000,
       });
 
-      const removeBtn = page.getByLabel('Удалить из избранного').first();
+      const removeBtn = page.getByLabel('Удалить из «Хочу поехать»').first();
       if (!(await removeBtn.isVisible().catch(() => false))) {
         test.info().annotations.push({
           type: 'note',

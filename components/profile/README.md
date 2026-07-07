@@ -116,7 +116,7 @@ import { PersonalStatusSummary } from '@/components/profile/PersonalStatusSummar
 
 ## ProfileTabs
 
-Табы для переключения контента (Мои, Избранное, История).
+Табы для переключения контента (Мои, Хочу поехать, История).
 
 ### Импорт
 ```typescript
@@ -346,4 +346,3 @@ jest.mock('react-native/Libraries/Modal/Modal', () => {
 
 **Версия:** 1.0.0  
 **Дата обновления:** 2026-02-09
-

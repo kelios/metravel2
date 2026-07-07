@@ -111,7 +111,7 @@ describe('PersonalizedRecommendations', () => {
     
     const { findByText, findByLabelText, findByTestId } = render(<PersonalizedRecommendations />)
 
-    expect(await findByText('Избранное')).toBeTruthy()
+    expect(await findByText('Хочу поехать')).toBeTruthy()
     expect(await findByTestId('personalized-favorites-section')).toBeTruthy()
     expect(await findByTestId('personalized-favorites-rail')).toBeTruthy()
     // Travel names are in accessibility labels, not as text content

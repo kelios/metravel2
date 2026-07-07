@@ -88,8 +88,8 @@ describe('EmptyState', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('should pass custom action style to the primary button', () => {
-    const customActionStyle = { backgroundColor: 'token-primary', backgroundImage: 'none' };
+  it('should pass custom layout action style while preserving primary button color', () => {
+    const customActionStyle = { alignSelf: 'stretch' as const, backgroundImage: 'none' };
     const { UNSAFE_getAllByType } = render(
       <EmptyState
         icon="inbox"
@@ -108,7 +108,10 @@ describe('EmptyState', () => {
     const actionButton = pressables[pressables.length - 1];
     const buttonStyle = actionButton.props.style({ pressed: false, hovered: false });
 
-    expect(StyleSheet.flatten(buttonStyle)).toMatchObject(customActionStyle);
+    expect(StyleSheet.flatten(buttonStyle)).toMatchObject({
+      ...customActionStyle,
+      backgroundColor: '#7a9d8f',
+    });
   });
 
   it('should not render action button when not provided', () => {

@@ -11,8 +11,8 @@ test.describe('profile redesign verify #587 #588 #589 #590', () => {
     await gotoWithRetry(page, '/profile')
     await page.waitForTimeout(1200)
 
-    // Open Обзор tab where AwardsHub «Ваш путь» lives
-    await page.getByRole('tab', { name: /Обзор/i }).click()
+    // Open Уровень tab where AwardsHub «Ваш путь» lives
+    await page.getByRole('tab', { name: /Уровень/i }).click()
 
     // #588: time until «Ваш путь» panel renders character/progression content
     const t0 = Date.now()
@@ -60,13 +60,13 @@ test.describe('profile redesign verify #587 #588 #589 #590', () => {
     await page.getByRole('tab', { name: /Статистика/i }).click()
     await page.waitForTimeout(800)
 
-    const crumb = page.getByRole('button', { name: /Назад к разделу «Обзор»/i }).first()
+    const crumb = page.getByRole('button', { name: /Назад к разделу «Уровень»/i }).first()
     await expect(crumb).toBeVisible({ timeout: 10000 })
     await page.screenshot({ path: 'e2e/__screenshots__/verify-590-breadcrumb.png', fullPage: true })
     await crumb.click()
     await page.waitForTimeout(800)
     // Overview tab content should now be active (rank card present)
     await expect(page.getByTestId('rank-progress-card')).toBeVisible({ timeout: 10000 })
-    console.log('[#590] breadcrumb returned to Обзор ok')
+    console.log('[#590] breadcrumb returned to Уровень ok')
   })
 })

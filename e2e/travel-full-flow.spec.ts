@@ -152,7 +152,7 @@ test.describe('Travel full flow (API seed + UI verify)', () => {
       await markAsFavorite(apiCtx, travelId);
 
       await page.goto('/favorites', { waitUntil: 'domcontentloaded' });
-      await expect(page.locator('text=Избранное').first()).toBeVisible({ timeout: 30_000 });
+      await expect(page.locator('text=Хочу поехать').first()).toBeVisible({ timeout: 30_000 });
       await expect(page.locator(`text=${initialName}`).first()).toBeVisible({ timeout: 30_000 });
 
       await page.goto(`/travel/edit/${travelId}`, { waitUntil: 'domcontentloaded' });

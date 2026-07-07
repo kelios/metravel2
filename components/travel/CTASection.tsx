@@ -18,6 +18,7 @@ import Button from '@/components/ui/Button';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
 import { devWarn } from '@/utils/logger';
+import { buildTripPlanCreateHref } from '@/utils/tripPlanLinks';
 
 const JOURNAL_FONT_FAMILY =
   "'Georgia', 'Times New Roman', 'Inter', serif";
@@ -61,15 +62,23 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
       }
       onFavoriteToggle?.();
     } catch (error) {
-      devWarn('[CTASection] Не удалось переключить избранное:', error);
+      devWarn('[CTASection] Не удалось переключить «Хочу поехать»:', error);
       void showToast({
         type: 'error',
-        text1: 'Не удалось сохранить в избранное',
+        text1: 'Не удалось сохранить в «Хочу поехать»',
         text2: 'Попробуйте ещё раз',
         visibilityTime: 2500,
       });
     }
   }, [travel, isAuthenticated, isFavorite, addFavorite, removeFavorite, onFavoriteToggle, requireAuth]);
+
+  const handlePlanTripFromRoute = useCallback(() => {
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    router.push(buildTripPlanCreateHref(travel) as never);
+  }, [isAuthenticated, requireAuth, router, travel]);
 
   const handleCreateTravel = useCallback(() => {
     if (!isAuthenticated) {
@@ -188,7 +197,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
               Хотите сохранить это путешествие?
             </Text>
             <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>
-              Войдите или зарегистрируйтесь, чтобы добавить в избранное и создавать свои маршруты
+              Войдите или зарегистрируйтесь, чтобы добавлять маршруты в «Хочу поехать» и создавать свои маршруты
             </Text>
           </View>
           <Button
@@ -220,20 +229,37 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
             Действия с маршрутом
           </Text>
           <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>
-            Создайте свой маршрут, добавьте этот в планы или сохраните в избранном.
+            Организуйте поездку по этому маршруту, добавьте его в планы или в «Хочу поехать».
           </Text>
         </View>
 
         <Button
-          label="Создать путешествие"
-          onPress={handleCreateTravel}
+          label="Организовать поездку по маршруту"
+          onPress={handlePlanTripFromRoute}
           variant="primary"
           size="md"
           fullWidth
-          icon={<Feather name="plus-circle" size={18} color={colors.textOnPrimary} />}
+          icon={<Feather name="calendar" size={18} color={colors.textOnPrimary} />}
           style={styles.buttonBase}
           labelStyle={[styles.primaryButtonLabel, isMobile && styles.buttonLabelMobile]}
-          accessibilityLabel="Создать свое путешествие. Откроется форма создания нового путешествия"
+          accessibilityLabel="Организовать поездку по этому маршруту. Откроется форма планирования поездки"
+          testID="travel-plan-trip-cta"
+        />
+
+        <Button
+          label="Создать авторский маршрут"
+          onPress={handleCreateTravel}
+          variant="outline"
+          size="md"
+          fullWidth
+          icon={<Feather name="plus-circle" size={18} color={colors.primaryDark} />}
+          style={[styles.buttonBase, styles.outlineButton]}
+          labelStyle={[
+            styles.buttonLabel,
+            styles.favoriteButtonLabel,
+            isMobile && styles.buttonLabelMobile,
+          ]}
+          accessibilityLabel="Создать авторский маршрут. Откроется форма создания нового путешествия"
         />
 
         {/* Кнопка "Добавить в план / Мой календарь" */}
@@ -249,7 +275,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
         />
 
         <Button
-          label={isFavorite ? 'В избранном' : 'В избранное'}
+          label={isFavorite ? 'В «Хочу поехать»' : 'Хочу поехать'}
           onPress={handleFavorite}
           variant="outline"
           size="md"
@@ -271,7 +297,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
             styles.favoriteButtonLabel,
             isMobile && styles.buttonLabelMobile,
           ]}
-          accessibilityLabel={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+          accessibilityLabel={isFavorite ? 'Удалить из «Хочу поехать»' : 'Добавить в «Хочу поехать»'}
         />
       </View>
     </View>

@@ -26,9 +26,11 @@ import {
   VISIBILITY_LABEL,
 } from '@/components/trips/planning/tripPlanFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { getDefaultTripStartDate, type TripPlanPrefill } from '@/utils/tripPlanLinks';
 
 interface Props {
   onCreated?: (trip: PlannedTrip) => void;
+  initialValues?: TripPlanPrefill;
 }
 
 const TRANSPORT_OPTIONS: TripTransport[] = ['car', 'bike', 'foot', 'public', 'mixed'];
@@ -121,16 +123,16 @@ const buildStartPoint = (values: FormValues): RoutePoint | null => {
   };
 };
 
-function TripCreateForm({ onCreated }: Props) {
+function TripCreateForm({ onCreated, initialValues }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const create = useCreateTrip();
   const consent = useActionConsent(CONSENT_TYPES.TRIP_ORGANIZER);
 
   const [values, setValues] = useState<FormValues>({
-    title: '',
-    description: '',
-    startDate: '',
+    title: initialValues?.title ?? '',
+    description: initialValues?.description ?? '',
+    startDate: getDefaultTripStartDate(),
     startTime: '',
     transport: 'car',
     visibility: 'public',
@@ -219,7 +221,7 @@ function TripCreateForm({ onCreated }: Props) {
           <TextInput
             value={values.startDate}
             onChangeText={(t) => setField('startDate', t)}
-            placeholder="2026-07-11"
+            placeholder="ГГГГ-ММ-ДД"
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             style={styles.input}
@@ -234,7 +236,7 @@ function TripCreateForm({ onCreated }: Props) {
           <TextInput
             value={values.startTime}
             onChangeText={(t) => setField('startTime', t)}
-            placeholder="08:00"
+            placeholder="Например: 08:00"
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             style={styles.input}

@@ -39,7 +39,7 @@ export const TravelHeroFavoriteToggle: React.FC<{
       accessibilityRole="button"
       accessibilityState={{ disabled: isPending, selected: isFavorite }}
       accessibilityLabel={favoriteButtonA11yLabel}
-      accessibilityHint={isFavorite ? 'Убирает путешествие из вашего избранного' : 'Сохраняет путешествие в избранное'}
+      accessibilityHint={isFavorite ? 'Убирает путешествие из «Хочу поехать»' : 'Сохраняет путешествие в «Хочу поехать»'}
     >
       <Feather
         name="heart"

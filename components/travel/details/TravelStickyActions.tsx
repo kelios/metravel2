@@ -1,7 +1,7 @@
 /**
  * TravelStickyActions — sticky-bar действий на мобильном (3.6)
  * Появляется после скролла > 300px, скрывается при скролле вниз.
- * Кнопки: ❤ В избранное, ↗ Поделиться, 💬 К комментариям
+ * Кнопки: ❤ Хочу поехать, ↗ Поделиться, 💬 К комментариям
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -109,16 +109,16 @@ function TravelStickyActions({
     try {
       if (isFav) {
         await removeFavorite(travelId, 'travel');
-        void showToast({ type: 'info', text1: 'Удалено из избранного', position: 'bottom' });
+        void showToast({ type: 'info', text1: 'Удалено из «Хочу поехать»', position: 'bottom' });
       } else {
         const url = travel?.slug
           ? `/travels/${travel.slug}`
           : `/travels/${travelId}`;
         await addFavorite({ id: travelId, type: 'travel', title: travel?.name || '', url });
-        void showToast({ type: 'success', text1: 'Добавлено в избранное', position: 'bottom' });
+        void showToast({ type: 'success', text1: 'Добавлено в «Хочу поехать»', position: 'bottom' });
       }
     } catch {
-      void showToast({ type: 'error', text1: 'Не удалось обновить избранное', position: 'bottom' });
+      void showToast({ type: 'error', text1: 'Не удалось обновить «Хочу поехать»', position: 'bottom' });
     }
   }, [travelId, isAuthenticated, isFav, addFavorite, removeFavorite, requireAuth, travel?.name, travel?.slug]);
 
@@ -181,8 +181,8 @@ function TravelStickyActions({
           onPress={handleFavorite}
           style={styles.button}
           accessibilityRole="button"
-          accessibilityLabel={isFav ? 'Удалить из избранного' : 'Добавить в избранное'}
-          accessibilityHint="Сохраняет путешествие в вашем списке избранного"
+          accessibilityLabel={isFav ? 'Удалить из «Хочу поехать»' : 'Добавить в «Хочу поехать»'}
+          accessibilityHint="Сохраняет путешествие в «Хочу поехать»"
         >
           <Feather
             name="heart"
@@ -190,7 +190,7 @@ function TravelStickyActions({
             color={isFav ? colors.danger : colors.text}
           />
           <Text style={[styles.label, isFav && { color: colors.danger }]}>
-            {isFav ? 'В избранном' : 'Избранное'}
+            {isFav ? 'В «Хочу поехать»' : 'Хочу поехать'}
           </Text>
         </Pressable>
 

@@ -692,7 +692,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     }
 
     const panel = page.getByTestId('filters-panel');
-    const categoryOption = panel.locator('button').filter({ hasText: /\(\d+\)/ }).first();
+    const categoryOption = panel.locator('[data-testid^="category-option-"]').first();
     const categoryOptionVisible = await categoryOption.isVisible({ timeout: 5_000 }).catch(() => false);
     if (!categoryOptionVisible) return;
 
@@ -724,7 +724,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       .catch(() => null);
 
     await categoryOption.click({ force: true });
-    await expect(page.getByRole('button', { name: /^Убрать фильтр:/ }).first()).toBeVisible({
+    await expect(categoryOption).toHaveAttribute('aria-pressed', 'true', {
       timeout: 5_000,
     });
 

@@ -136,8 +136,8 @@ function FavoriteButton({
                 });
                 await showToast({
                     type: 'success',
-                    text1: isAndroidGuest ? 'Сохранено на этом устройстве' : 'Добавлено в избранное',
-                    text2: isAndroidGuest ? 'Войдите, чтобы синхронизировать избранное.' : undefined,
+                    text1: isAndroidGuest ? 'Сохранено на этом устройстве' : 'Добавлено в «Хочу поехать»',
+                    text2: isAndroidGuest ? 'Войдите, чтобы синхронизировать «Хочу поехать».' : undefined,
                     position: 'bottom',
                     visibilityTime: isAndroidGuest ? 3500 : 2000,
                 });
@@ -145,7 +145,7 @@ function FavoriteButton({
                 await removeFavorite(id, type);
                 await showToast({
                     type: 'info',
-                    text1: isAndroidGuest ? 'Удалено с этого устройства' : 'Удалено из избранного',
+                    text1: isAndroidGuest ? 'Удалено с этого устройства' : 'Удалено из «Хочу поехать»',
                     position: 'bottom',
                     visibilityTime: 2000,
                 });
@@ -164,7 +164,7 @@ function FavoriteButton({
                 ? (error.message.includes('network') || error.message.includes('timeout')
                     ? 'Проблема с подключением. Изменения будут синхронизированы при восстановлении сети.'
                     : error.message)
-                : 'Не удалось обновить избранное';
+                : 'Не удалось обновить «Хочу поехать»';
             
             await showToast({
                 type: 'error',
@@ -202,7 +202,7 @@ function FavoriteButton({
                       onMouseDown: (e: any) => {
                           if (e?.stopPropagation) e.stopPropagation();
                       },
-                      'aria-label': isFav ? 'Удалить из избранного' : 'Добавить в избранное',
+                      'aria-label': isFav ? 'Удалить из «Хочу поехать»' : 'Добавить в «Хочу поехать»',
                       'aria-pressed': isFav,
                   }
                 : {
@@ -210,11 +210,11 @@ function FavoriteButton({
                       hitSlop: { top: 10, bottom: 10, left: 10, right: 10 },
                       accessibilityRole: 'button',
                       accessibilityLabel: isFav
-                          ? `Удалить "${title}" из избранного`
-                          : `Добавить "${title}" в избранное`,
+                          ? `Удалить "${title}" из «Хочу поехать»`
+                          : `Добавить "${title}" в «Хочу поехать»`,
                       accessibilityHint: isFav
-                          ? 'Удаляет элемент из списка избранного'
-                          : 'Добавляет элемент в список избранного',
+                          ? 'Удаляет элемент из «Хочу поехать»'
+                          : 'Добавляет элемент в «Хочу поехать»',
                       accessibilityState: { selected: isFav },
                   })}
         >

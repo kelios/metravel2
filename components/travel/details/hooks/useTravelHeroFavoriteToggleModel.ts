@@ -18,12 +18,12 @@ export function useTravelHeroFavoriteToggleModel({
   const [isPending, setIsPending] = useState(false)
 
   const isFavorite = checkIsFavorite(travel.id, 'travel')
-  const favoriteButtonLabel = isFavorite ? 'В избранном' : 'В избранное'
+  const favoriteButtonLabel = isFavorite ? 'В «Хочу поехать»' : 'Хочу поехать'
   const favoriteButtonA11yLabel = isMobile
     ? favoriteButtonLabel
     : isFavorite
-      ? 'Удалить из избранного'
-      : 'Добавить в избранное'
+      ? 'Удалить из «Хочу поехать»'
+      : 'Добавить в «Хочу поехать»'
 
   const handleFavoriteToggle = useCallback(async () => {
     const isGuest = !isAuthenticated
@@ -36,7 +36,7 @@ export function useTravelHeroFavoriteToggleModel({
         await removeFavorite(travel.id, 'travel')
         showToast({
           type: isGuest ? 'info' : 'success',
-          text1: isGuest ? 'Удалено с этого устройства' : 'Удалено из избранного',
+          text1: isGuest ? 'Удалено с этого устройства' : 'Удалено из «Хочу поехать»',
           visibilityTime: 2000,
         })
         return
@@ -54,14 +54,14 @@ export function useTravelHeroFavoriteToggleModel({
       })
       showToast({
         type: 'success',
-        text1: isGuest ? 'Сохранено на этом устройстве' : 'Добавлено в избранное',
-        text2: isGuest ? 'Войдите, чтобы синхронизировать избранное.' : undefined,
+        text1: isGuest ? 'Сохранено на этом устройстве' : 'Добавлено в «Хочу поехать»',
+        text2: isGuest ? 'Войдите, чтобы синхронизировать «Хочу поехать».' : undefined,
         visibilityTime: isGuest ? 3500 : 2000,
       })
     } catch {
       showToast({
         type: 'error',
-        text1: 'Не удалось обновить избранное',
+        text1: 'Не удалось обновить «Хочу поехать»',
         visibilityTime: 3000,
       })
     } finally {

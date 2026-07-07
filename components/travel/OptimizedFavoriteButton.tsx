@@ -92,7 +92,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                     showToast({
                         type: 'success',
                         text1: 'Сохранено на этом устройстве',
-                        text2: 'Войдите, чтобы синхронизировать избранное.',
+                        text2: 'Войдите, чтобы синхронизировать «Хочу поехать».',
                         visibilityTime: 3500,
                     });
                 }
@@ -110,7 +110,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
             setOptimisticFav(serverIsFav);
             showToast({
                 type: 'error',
-                text1: 'Не удалось обновить избранное',
+                text1: 'Не удалось обновить «Хочу поехать»',
                 visibilityTime: 3000,
             });
         } finally {
@@ -151,7 +151,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                             handlePress(e);
                         }
                     }}
-                    aria-label={isFav ? 'Удалить из избранного' : 'Добавить в избранное'}
+                    aria-label={isFav ? 'Удалить из «Хочу поехать»' : 'Добавить в «Хочу поехать»'}
                     aria-pressed={isFav}
                     aria-busy={isPending}
                     style={[
@@ -172,7 +172,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
             hitSlop={10}
             disabled={isPending}
             accessibilityRole="button"
-            accessibilityLabel={isFav ? 'Удалить из избранного' : 'Добавить в избранное'}
+            accessibilityLabel={isFav ? 'Удалить из «Хочу поехать»' : 'Добавить в «Хочу поехать»'}
             accessibilityState={{ selected: isFav, busy: isPending, disabled: isPending }}
             testID="favorite-button"
         >

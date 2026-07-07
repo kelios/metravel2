@@ -340,11 +340,11 @@ describe('ProfileScreen', () => {
       expect(getByLabelText('Мои маршруты: 3')).toBeTruthy();
       expect(getByLabelText('Подписчики')).toBeTruthy();
       expect(getByLabelText('Подписки')).toBeTruthy();
-      expect(getByLabelText('Сохранённое: 2')).toBeTruthy();
+      expect(getByLabelText('Хочу поехать: 2')).toBeTruthy();
       expect(getByLabelText('Недавно смотрел: 5')).toBeTruthy();
     });
     expect(getAllByLabelText('Мои маршруты: 3')).toHaveLength(1);
-    expect(getAllByLabelText('Сохранённое: 2')).toHaveLength(1);
+    expect(getAllByLabelText('Хочу поехать: 2')).toHaveLength(1);
     expect(getAllByLabelText('Недавно смотрел: 5')).toHaveLength(1);
 
     // Статистика автора и личный календарь живут во вкладке "Статистика"
@@ -359,6 +359,17 @@ describe('ProfileScreen', () => {
     expect(await findByLabelText('Сохранили: 8')).toBeTruthy();
     expect((await findAllByLabelText('Были: 3')).length).toBeGreaterThan(0);
     expect((await findAllByLabelText('Планируют: 7')).length).toBeGreaterThan(0);
+  });
+
+  it('opens calendar from profile header quick action', async () => {
+    setupAuth({ isAuthenticated: true });
+    setupFavorites(2, 5);
+
+    const { findByLabelText } = renderProfile();
+
+    fireEvent.press(await findByLabelText('Календарь'));
+
+    expect(mockPush).toHaveBeenCalledWith('/calendar');
   });
 
   it('logout works', async () => {
@@ -388,11 +399,11 @@ describe('ProfileScreen', () => {
 
     const { getByLabelText, findByLabelText } = renderProfile();
 
-    // По умолчанию активна вкладка "Обзор"; переключаемся на "Маршруты"
+    // По умолчанию активна вкладка "Уровень"; переключаемся на "Маршруты"
     fireEvent.press(await findByLabelText('Мои маршруты: 3'));
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
 
-    fireEvent.press(getByLabelText('Сохранённое: 1'));
+    fireEvent.press(getByLabelText('Хочу поехать: 1'));
     expect(await findByLabelText(/Fav 1/)).toBeTruthy();
 
     fireEvent.press(getByLabelText('Недавно смотрел: 1'));
@@ -507,7 +518,7 @@ describe('ProfileScreen', () => {
 
     const { findByLabelText, findByText } = renderProfile();
 
-    fireEvent.press(await findByLabelText('Обзор'));
+    fireEvent.press(await findByLabelText('Уровень, значки и достижения'));
     expect(await findByText('С чего начать')).toBeTruthy();
 
     fireEvent.press(await findByLabelText('Создать первый маршрут'));

@@ -9,7 +9,7 @@ import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 
 const HEADING = 'Сохраняй маршруты и любимые места'
 const SUBTITLE =
-  'Бесплатный аккаунт: собирай избранное, планируй поездки и синхронизируй их на всех устройствах.'
+  'Бесплатный аккаунт: собирай «Хочу поехать», планируй поездки и синхронизируй их на всех устройствах.'
 const CTA_LABEL = 'Создать бесплатный аккаунт'
 
 type TravelRegisterCtaSectionProps = {

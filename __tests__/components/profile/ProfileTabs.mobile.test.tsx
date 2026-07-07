@@ -44,7 +44,7 @@ describe('ProfileTabs mobile layout', () => {
     };
   });
 
-  it('keeps profile tabs readable and mobile-safe inside the horizontal row', () => {
+  it('keeps compact profile tabs on one line and mobile-safe inside the horizontal row', () => {
     const { getByLabelText, getByText, UNSAFE_queryByType } = render(
       <ProfileTabs
         activeTab="travels"
@@ -58,7 +58,7 @@ describe('ProfileTabs mobile layout', () => {
     const subscribersLabel = getByText('Подписчики');
     expect(subscribersLabel).toBeTruthy();
     expect(getByText('Подписки')).toBeTruthy();
-    expect(subscribersLabel.props.numberOfLines).toBe(2);
+    expect(subscribersLabel.props.numberOfLines).toBe(1);
 
     const firstTabStyle = StyleSheet.flatten(getByLabelText('Мои маршруты: 3').props.style);
     expect(firstTabStyle.minHeight).toBeGreaterThanOrEqual(44);
@@ -68,7 +68,7 @@ describe('ProfileTabs mobile layout', () => {
     expect(UNSAFE_queryByType(ScrollView)).toBeNull();
   });
 
-  it('lets the full desktop tab set wrap instead of shortening labels', () => {
+  it('keeps the full desktop tab labels on one line without shortening labels', () => {
     mockResponsiveValue = {
       isPhone: false,
       isLargePhone: false,
@@ -89,13 +89,14 @@ describe('ProfileTabs mobile layout', () => {
     );
 
     const countriesLabel = getByText('Страны');
-    expect(countriesLabel.props.numberOfLines).toBe(2);
-    expect(getByText('Избранное')).toBeTruthy();
+    expect(countriesLabel.props.numberOfLines).toBe(1);
+    expect(getByText('Уровень')).toBeTruthy();
+    expect(getByText('Хочу поехать')).toBeTruthy();
     expect(getByText('История')).toBeTruthy();
 
     const worldMapTabStyle = StyleSheet.flatten(getByLabelText('Карта мира').props.style);
-    expect(worldMapTabStyle.minWidth).toBeGreaterThanOrEqual(144);
-    expect(worldMapTabStyle.flexBasis).toBeGreaterThanOrEqual(144);
+    expect(worldMapTabStyle.minWidth).toBeGreaterThanOrEqual(160);
+    expect(worldMapTabStyle.flexBasis).toBeGreaterThanOrEqual(160);
     expect(UNSAFE_queryByType(ScrollView)).toBeNull();
   });
 });

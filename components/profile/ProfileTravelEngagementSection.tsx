@@ -23,15 +23,15 @@ type MetricDefinition = {
 }
 
 const AUTHOR_METRICS: MetricDefinition[] = [
-  { key: 'favoritesCount', label: 'Сохранили', icon: 'heart', helper: 'добавили в избранное' },
-  { key: 'wishlistCount', label: 'Хотят', icon: 'bookmark', helper: 'добавили в список желаний' },
+  { key: 'favoritesCount', label: 'Сохранили', icon: 'heart', helper: 'добавили в «Хочу поехать»' },
+  { key: 'wishlistCount', label: 'Хотят', icon: 'bookmark', helper: 'добавили в «Хочу поехать»' },
   { key: 'visitedCount', label: 'Были', icon: 'check-circle', helper: 'уже посетили маршрут' },
   { key: 'plannedCount', label: 'Планируют', icon: 'calendar', helper: 'собираются поехать' },
 ]
 
 const CALENDAR_METRICS: MetricDefinition[] = [
   { key: 'visitedCount', label: 'Был', icon: 'check-circle', helper: 'мои посещённые поездки' },
-  { key: 'favoritesCount', label: 'Хочу', icon: 'bookmark', helper: 'мой список желаний' },
+  { key: 'favoritesCount', label: 'Хочу', icon: 'bookmark', helper: 'мои «Хочу поехать»' },
   { key: 'plannedCount', label: 'Планирую', icon: 'calendar', helper: 'мои поездки с датой' },
 ]
 

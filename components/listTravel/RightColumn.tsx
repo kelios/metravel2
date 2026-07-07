@@ -328,8 +328,14 @@ const RightColumn: React.FC<RightColumnProps> = (
         return (
           <View testID={`travel-row-${rowIndex}`} style={rowStyle}>
             {rowItems.map((travel, itemIndex) => (
+              // Slot-stable key (position in the row), NOT travel.id. FlashList
+              // recycles the row component in place with new data on scroll; keying
+              // by travel.id would remount the whole cell subtree (incl. the <img>)
+              // for the new travel, painting an empty frame until decode ("мигание").
+              // A slot key lets React reuse the cell and just swap the image src, so
+              // the browser holds the previous decoded frame until the new one decodes.
               <View
-                key={String(travel.id)}
+                key={`slot-${itemIndex}`}
                 testID={`travel-row-${rowIndex}-item-${itemIndex}`}
                 style={itemWrapperStyle}
               >

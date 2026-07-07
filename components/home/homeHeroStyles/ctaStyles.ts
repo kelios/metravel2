@@ -42,42 +42,41 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
     },
     primaryButton: {
       paddingHorizontal: isMobile
-        ? 28
+        ? 22
         : showSideSlider
           ? isCompactBookLayout
-            ? 24
-            : 28
-          : 28,
+            ? 20
+            : 24
+          : 24,
       paddingVertical: isMobile
-        ? 14
+        ? 12
         : showSideSlider
           ? isCompactBookLayout
-            ? 10
-            : 12
-          : 13,
+            ? 8
+            : 10
+          : 12,
       minHeight: isMobile
-        ? 50
+        ? 46
         : showSideSlider
           ? isCompactBookLayout
-            ? 40
-            : 44
-          : 46,
-      borderRadius: DESIGN_TOKENS.radii.pill,
+            ? 38
+            : 42
+          : 44,
+      borderRadius: DESIGN_TOKENS.radii.md,
       width: stackHeroButtons ? '100%' : undefined,
-      backgroundColor: colors.brand,
       ...Platform.select({
         web: {
           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: `0 2px 12px ${colors.brand}30`,
+          boxShadow: colors.boxShadows.light,
         } as any,
       }),
     },
     primaryButtonHover: {
-      backgroundColor: colors.brandDark,
+      backgroundColor: colors.primaryDark,
       ...Platform.select({
         web: {
           transform: 'translateY(-1px)',
-          boxShadow: `0 6px 20px ${colors.brand}40`,
+          boxShadow: colors.boxShadows.medium,
         } as any,
       }),
     },
@@ -90,30 +89,30 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
     },
     secondaryButton: {
       paddingHorizontal: isMobile
-        ? 26
+        ? 20
         : showSideSlider
           ? isCompactBookLayout
-            ? 24
-            : 28
-          : 28,
+            ? 20
+            : 24
+          : 24,
       paddingVertical: isMobile
-        ? 13
+        ? 12
         : showSideSlider
           ? isCompactBookLayout
-            ? 12
-            : 14
-          : 14,
+            ? 8
+            : 10
+          : 12,
       minHeight: isMobile
-        ? 50
+        ? 46
         : showSideSlider
           ? isCompactBookLayout
-            ? 44
-            : 48
-          : 50,
-      borderRadius: DESIGN_TOKENS.radii.pill,
+            ? 38
+            : 42
+          : 44,
+      borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: 'transparent',
       borderWidth: 1.5,
-      borderColor: colors.brand,
+      borderColor: colors.border,
       width: stackHeroButtons ? '100%' : undefined,
       ...Platform.select({
         web: {
@@ -123,8 +122,8 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
       }),
     },
     secondaryButtonHover: {
-      backgroundColor: colors.brandAlpha30 || 'rgba(230,126,34,0.10)',
-      borderColor: colors.brand,
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primaryAlpha30,
       ...Platform.select({
         web: {
           transform: 'translateY(-1px)',
@@ -134,7 +133,7 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
     secondaryButtonText: {
       fontSize: isCompactBookLayout ? 14 : 15,
       fontWeight: '600',
-      color: colors.brand,
+      color: colors.text,
       ...Platform.select({
         web: { fontFamily: editorialSerif, letterSpacing: '0.01em' } as any,
       }),

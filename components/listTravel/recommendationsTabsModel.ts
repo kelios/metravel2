@@ -22,8 +22,8 @@ export function getRecommendationsTabsConfig(params: {
     { id: 'recommendations' as const, label: 'Рекомендации', shortLabel: 'Для вас', icon: 'star' },
     {
       id: 'favorites' as const,
-      label: 'Избранное',
-      shortLabel: 'Избранное',
+      label: 'Хочу поехать',
+      shortLabel: 'Хочу',
       icon: 'heart',
       count: params.isAuthenticated ? params.favoritesCount : 0,
     },

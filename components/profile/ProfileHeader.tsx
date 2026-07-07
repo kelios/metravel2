@@ -142,6 +142,12 @@ export function ProfileHeader({
           position: 'relative',
           overflow: 'hidden',
         },
+        coverMediaLayer: {
+          height: COVER_HEIGHT,
+          width: '100%',
+          position: 'relative',
+          zIndex: 0,
+        },
         // Деликатный угловой scrim под frost-чипом overflow-меню. Картинка-обложка
         // светлая сверху, поэтому иконкам нужен лёгкий тёмный градиент только в
         // верхнем правом углу — кадр при этом не затемняется.
@@ -151,6 +157,7 @@ export function ProfileHeader({
           right: 0,
           width: 132,
           height: 60,
+          zIndex: 1,
           ...Platform.select({
             web: {
               backgroundImage: `linear-gradient(to bottom left, rgba(0,0,0,0.36), transparent 70%)`,
@@ -168,6 +175,7 @@ export function ProfileHeader({
           flexDirection: 'row',
           alignItems: 'center',
           gap: DESIGN_TOKENS.spacing.xxs,
+          zIndex: 4,
         },
         // Ряд быстрых действий как оверлей у нижней кромки баннера. Левый отступ
         // резервирует место под аватар, который наезжает на баннер снизу-слева.
@@ -177,6 +185,7 @@ export function ProfileHeader({
           right: DESIGN_TOKENS.spacing.md,
           bottom: DESIGN_TOKENS.spacing.xs,
           paddingLeft: AVATAR_SIZE + AVATAR_BORDER * 2 + DESIGN_TOKENS.spacing.sm,
+          zIndex: 3,
         },
         menuChip: {
           backgroundColor: colors.surfaceMuted,
@@ -259,6 +268,12 @@ export function ProfileHeader({
           ...DESIGN_TOKENS.typography.scale.h2,
           color: colors.text,
         },
+        metaRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: DESIGN_TOKENS.spacing.xxs,
+        },
         rankChip: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -301,30 +316,42 @@ export function ProfileHeader({
           1) uploaded cover_photo → 2) bundled default art → 3) topo-texture fallback */}
       <View style={styles.cover}>
         {coverPhoto ? (
-          <ImageCardMedia
-            src={coverPhoto}
-            alt="Обложка профиля"
-            height={COVER_HEIGHT}
-            width="100%"
-            borderRadius={0}
-            fit="cover"
-            // Above-fold шапка: priority=high снимает reveal-гейт (по умолчанию
-            // sharp-<img> ждёт onLoad; если показ подвисал — оставался blur-слой).
-            // Теперь sharp-кадр показывается сразу; shared-source blur остаётся в DOM
-            // как фон под ним и перекрывается финальным cover-кадром.
-            priority="high"
-          />
+          <View
+            style={styles.coverMediaLayer}
+            pointerEvents="none"
+            testID="profile-header-cover-media"
+          >
+            <ImageCardMedia
+              src={coverPhoto}
+              alt="Обложка профиля"
+              height={COVER_HEIGHT}
+              width="100%"
+              borderRadius={0}
+              fit="cover"
+              // Above-fold шапка: priority=high снимает reveal-гейт (по умолчанию
+              // sharp-<img> ждёт onLoad; если показ подвисал — оставался blur-слой).
+              // Теперь sharp-кадр показывается сразу; shared-source blur остаётся в DOM
+              // как фон под ним и перекрывается финальным cover-кадром.
+              priority="high"
+            />
+          </View>
         ) : !defaultCoverFailed ? (
-          <ImageCardMedia
-            source={DEFAULT_COVER_SOURCE}
-            alt="Обложка профиля"
-            height={COVER_HEIGHT}
-            width="100%"
-            borderRadius={0}
-            fit="cover"
-            priority="high"
-            onError={() => setDefaultCoverFailed(true)}
-          />
+          <View
+            style={styles.coverMediaLayer}
+            pointerEvents="none"
+            testID="profile-header-cover-media"
+          >
+            <ImageCardMedia
+              source={DEFAULT_COVER_SOURCE}
+              alt="Обложка профиля"
+              height={COVER_HEIGHT}
+              width="100%"
+              borderRadius={0}
+              fit="cover"
+              priority="high"
+              onError={() => setDefaultCoverFailed(true)}
+            />
+          </View>
         ) : (
           <CoverTopoTexture height={COVER_HEIGHT} />
         )}
@@ -337,7 +364,7 @@ export function ProfileHeader({
         {/* Быстрые действия встроены в нижнюю кромку баннера как оверлей поверх
             фото. На мобильном — компактные icon-only чипы, чтобы шапка не
             раздувалась (правило «Шапка ≤20% экрана»). */}
-        <View style={styles.overlayActions}>
+        <View style={styles.overlayActions} testID="profile-header-quick-actions">
           <ProfileHeaderQuickActions
             onPress={onQuickAction}
             unreadMessagesCount={unreadMessagesCount}
@@ -348,7 +375,7 @@ export function ProfileHeader({
       </View>
 
       {/* Identity: avatar left, info right */}
-      <View style={styles.identityRow}>
+      <View style={styles.identityRow} pointerEvents="box-none" testID="profile-header-identity-row">
         <Pressable
           onPress={onAvatarUpload}
           disabled={avatarUploading}
@@ -374,51 +401,55 @@ export function ProfileHeader({
           </View>
         </Pressable>
 
-        <View style={styles.infoColumn}>
-          <View style={styles.nameRow}>
+        <View style={styles.infoColumn} pointerEvents="box-none" testID="profile-header-info-column">
+          <View style={styles.nameRow} testID="profile-header-name-row">
             <Text style={styles.userName} numberOfLines={2}>
               {user.name || 'Пользователь'}
             </Text>
-            {rankLabel ? (
-              <Pressable
-                onPress={onRankPress}
-                disabled={!onRankPress}
-                accessibilityRole={onRankPress ? 'button' : undefined}
-                accessibilityLabel={onRankPress ? `Открыть прогресс профиля: ${rankLabel}` : rankLabel}
-                accessibilityHint="Уровень растёт за вашу активность на MeTravel"
-                style={({ pressed }) => [
-                  styles.rankChip,
-                  pressed && { opacity: 0.78 },
-                  globalFocusStyles.focusable,
-                ]}
-              >
-                <Feather name="award" size={12} color={colors.primaryDark} />
-                <Text style={styles.rankChipText} numberOfLines={1}>
-                  {rankChipText}
-                </Text>
-              </Pressable>
-            ) : null}
-            {socialLinks.map((link) => (
-              <Pressable
-                key={link.key}
-                style={({ pressed }) => [
-                  styles.socialIcon,
-                  globalFocusStyles.focusable,
-                  { opacity: pressed ? 0.75 : 1 },
-                ]}
-                onPress={() => openExternalUrl(String(link.url))}
-                accessibilityRole="link"
-                accessibilityLabel={`Открыть ${SOCIAL_LABELS[link.key] ?? link.label}`}
-                accessibilityHint={`Откроется внешняя ссылка на ${SOCIAL_LABELS[link.key] ?? link.label}`}
-              >
-                <Feather
-                  name={SOCIAL_ICONS[link.key] || 'link'}
-                  size={14}
-                  color={colors.primaryDark}
-                />
-              </Pressable>
-            ))}
           </View>
+          {(rankLabel || socialLinks.length > 0) ? (
+            <View style={styles.metaRow} testID="profile-header-meta-row">
+              {rankLabel ? (
+                <Pressable
+                  onPress={onRankPress}
+                  disabled={!onRankPress}
+                  accessibilityRole={onRankPress ? 'button' : undefined}
+                  accessibilityLabel={onRankPress ? `Открыть прогресс профиля: ${rankLabel}` : rankLabel}
+                  accessibilityHint="Уровень растёт за вашу активность на MeTravel"
+                  style={({ pressed }) => [
+                    styles.rankChip,
+                    pressed && { opacity: 0.78 },
+                    globalFocusStyles.focusable,
+                  ]}
+                >
+                  <Feather name="award" size={12} color={colors.primaryDark} />
+                  <Text style={styles.rankChipText} numberOfLines={1}>
+                    {rankChipText}
+                  </Text>
+                </Pressable>
+              ) : null}
+              {socialLinks.map((link) => (
+                <Pressable
+                  key={link.key}
+                  style={({ pressed }) => [
+                    styles.socialIcon,
+                    globalFocusStyles.focusable,
+                    { opacity: pressed ? 0.75 : 1 },
+                  ]}
+                  onPress={() => openExternalUrl(String(link.url))}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Открыть ${SOCIAL_LABELS[link.key] ?? link.label}`}
+                  accessibilityHint={`Откроется внешняя ссылка на ${SOCIAL_LABELS[link.key] ?? link.label}`}
+                >
+                  <Feather
+                    name={SOCIAL_ICONS[link.key] || 'link'}
+                    size={14}
+                    color={colors.primaryDark}
+                  />
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </View>
       </View>
     </View>

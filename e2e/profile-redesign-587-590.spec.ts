@@ -109,7 +109,7 @@ async function setup(page: import('@playwright/test').Page, counters: Counters) 
 }
 
 async function openOverview(page: import('@playwright/test').Page) {
-  const tab = page.getByRole('tab', { name: /Обзор/i })
+  const tab = page.getByRole('tab', { name: /Уровень/i })
   await tab.waitFor({ state: 'visible', timeout: 20_000 })
   await tab.click()
 }
@@ -135,7 +135,7 @@ test.describe('Profile redesign #587-590', () => {
     await expect(card.getByText(/Ваш уровень/i)).toBeVisible()
     await expect(card.getByText(/Странник/)).toBeVisible()
     await expect(card.getByText(/До «Путешественник»/)).toBeVisible()
-    await expect(card.getByText(/Зарабатывайте XP/)).toBeVisible()
+    await expect(card.getByText(/Зарабатывайте очки опыта/)).toBeVisible()
 
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'mobile-rank-card.png') })
 

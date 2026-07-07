@@ -50,7 +50,7 @@ describe('FavoriteButton', () => {
     )
     
     expect(
-      getByLabelText(/Добавить "Test Travel" в избранное/)
+      getByLabelText(/Добавить "Test Travel" в «Хочу поехать»/)
     ).toBeTruthy()
   })
 
@@ -67,7 +67,7 @@ describe('FavoriteButton', () => {
     )
     
     expect(
-      getByLabelText(/Удалить "Test Travel" из избранного/)
+      getByLabelText(/Удалить "Test Travel" из «Хочу поехать»/)
     ).toBeTruthy()
   })
 
@@ -84,7 +84,7 @@ describe('FavoriteButton', () => {
       />
     )
     
-    const button = getByLabelText(/Добавить "Test Travel" в избранное/)
+    const button = getByLabelText(/Добавить "Test Travel" в «Хочу поехать»/)
     fireEvent.press(button)
     
     await waitFor(() => {
@@ -112,7 +112,7 @@ describe('FavoriteButton', () => {
       />
     )
     
-    const button = getByLabelText(/Удалить "Test Article" из избранного/)
+    const button = getByLabelText(/Удалить "Test Article" из «Хочу поехать»/)
     fireEvent.press(button)
     
     await waitFor(() => {
@@ -133,7 +133,7 @@ describe('FavoriteButton', () => {
       />
     )
 
-    const button = getByLabelText(/Добавить "Test Travel" в избранное/)
+    const button = getByLabelText(/Добавить "Test Travel" в «Хочу поехать»/)
     fireEvent.press(button)
 
     await waitFor(() => {
@@ -159,7 +159,7 @@ describe('FavoriteButton', () => {
       />
     )
 
-    fireEvent.press(getByLabelText(/Добавить "Test Travel" в избранное/))
+    fireEvent.press(getByLabelText(/Добавить "Test Travel" в «Хочу поехать»/))
 
     await waitFor(() => {
       expect(mockAddFavorite).toHaveBeenCalledWith({
@@ -189,6 +189,6 @@ describe('FavoriteButton', () => {
       />
     )
     
-    expect(getByLabelText(/Добавить "Test" в избранное/)).toBeTruthy()
+    expect(getByLabelText(/Добавить "Test" в «Хочу поехать»/)).toBeTruthy()
   })
 })

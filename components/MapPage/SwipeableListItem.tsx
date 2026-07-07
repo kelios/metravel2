@@ -45,7 +45,7 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
     onBuildRoute?.();
   };
 
-  // Левый свайп → Избранное
+  // Левый свайп → «Хочу поехать»
   const renderLeftActions = (
     progress: Animated.AnimatedInterpolation<number>,
     dragX: Animated.AnimatedInterpolation<number>
@@ -66,7 +66,7 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
             { backgroundColor: isFavorite ? colors.warning : colors.accent },
           ]}
           onPress={handleFavorite}
-          accessibilityLabel={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+          accessibilityLabel={isFavorite ? 'Убрать из «Хочу поехать»' : 'Добавить в «Хочу поехать»'}
         >
           <MapIcon
             name={isFavorite ? 'star' : 'star-border'}
@@ -74,7 +74,7 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
             color={colors.textOnPrimary}
           />
           <Text style={[styles.actionText, { color: colors.textOnPrimary }]}>
-            {isFavorite ? 'Убрать' : 'Избранное'}
+            {isFavorite ? 'Убрать' : 'Желания'}
           </Text>
         </CardActionPressable>
       </Animated.View>

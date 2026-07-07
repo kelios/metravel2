@@ -169,7 +169,7 @@ test.describe('Calendar @smoke', () => {
     await wishlistTab.click();
     await page.waitForTimeout(300);
 
-    const wishlistHint = page.getByText(/списка желаний на этот день|статус «Хочу поехать»/i);
+    const wishlistHint = page.getByText(/«Хочу поехать» на этот день|статус «Хочу поехать»/i);
     const hasWishlistHint = await wishlistHint
       .first()
       .waitFor({ state: 'visible', timeout: 5_000 })

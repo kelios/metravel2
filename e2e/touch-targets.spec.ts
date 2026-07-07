@@ -60,7 +60,7 @@ test.describe('@smoke Touch targets (D-010)', () => {
 
     // Favorite (heart) — FavoriteButton web min-size raised 40 → 44.
     const favorite = page
-      .getByRole('button', { name: /Добавить в избранное|Удалить из избранного/i })
+      .getByRole('button', { name: /Добавить в «Хочу поехать»|Удалить из «Хочу поехать»/i })
       .first()
     if (await favorite.isVisible().catch(() => false)) {
       const box = await favorite.boundingBox()
@@ -92,7 +92,7 @@ test.describe('@smoke Touch targets (D-010)', () => {
     await preacceptCookies(page)
     await gotoWithRetry(page, '/search')
     const overlayFav = page
-      .getByRole('button', { name: /Добавить в избранное|Удалить из избранного/i })
+      .getByRole('button', { name: /Добавить в «Хочу поехать»|Удалить из «Хочу поехать»/i })
       .first()
     const visible = await overlayFav
       .waitFor({ state: 'visible', timeout: TIMEOUT })

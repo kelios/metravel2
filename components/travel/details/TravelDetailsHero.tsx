@@ -188,7 +188,7 @@ function TravelHeroSectionInner({
         testID="travel-details-hero"
         ref={anchors.gallery}
         accessibilityRole="none"
-        accessibilityLabel="Геройский блок с изображением и кнопкой избранного"
+        accessibilityLabel="Геройский блок с изображением и кнопкой «Хочу поехать»"
         {...(Platform.OS === 'web' ? { 'data-section-key': 'gallery' } : null)}
         style={sectionAndStable}
       >

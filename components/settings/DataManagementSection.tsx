@@ -33,7 +33,7 @@ export default function DataManagementSection({
                         <Feather name="heart" size={18} color={colors.primaryDark} />
                     </View>
                     <View style={styles.cardText}>
-                        <Text style={styles.cardTitle}>Избранное</Text>
+                        <Text style={styles.cardTitle}>Хочу поехать</Text>
                         <Text style={styles.cardMeta}>{Array.isArray(favorites) ? favorites.length : 0} шт.</Text>
                     </View>
                 </View>
@@ -42,11 +42,11 @@ export default function DataManagementSection({
                     style={[styles.dangerButton, globalFocusStyles.focusable]}
                     onPress={handleClearFavorites}
                     accessibilityRole="button"
-                    accessibilityLabel="Очистить избранное"
+                    accessibilityLabel="Очистить «Хочу поехать»"
                     {...Platform.select({ web: { cursor: 'pointer' } })}
                 >
                     <Feather name="trash-2" size={18} color={colors.danger} />
-                    <Text style={styles.dangerButtonText}>Очистить избранное</Text>
+                    <Text style={styles.dangerButtonText}>Очистить «Хочу поехать»</Text>
                 </Pressable>
             </View>
 

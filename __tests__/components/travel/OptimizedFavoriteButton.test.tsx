@@ -69,7 +69,7 @@ describe('OptimizedFavoriteButton', () => {
       />
     )
 
-    expect(screen.getByLabelText('Добавить в избранное').props['data-card-action']).toBe('true')
+    expect(screen.getByLabelText('Добавить в «Хочу поехать»').props['data-card-action']).toBe('true')
   })
 
   it('adds an authenticated Android travel result to favorites without showing an error toast', async () => {
@@ -110,7 +110,7 @@ describe('OptimizedFavoriteButton', () => {
     })
     expect(showToast).not.toHaveBeenCalledWith(expect.objectContaining({
       type: 'error',
-      text1: 'Не удалось обновить избранное',
+      text1: 'Не удалось обновить «Хочу поехать»',
     }))
   })
 

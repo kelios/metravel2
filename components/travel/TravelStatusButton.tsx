@@ -30,7 +30,7 @@ const STATUS_OPTIONS: Array<{
 }> = [
   { key: 'visited', label: 'Был здесь', icon: 'check-circle', hint: 'Уже посетил это место' },
   { key: 'planned', label: 'Планирую', icon: 'calendar', hint: 'Собираюсь поехать' },
-  { key: 'wishlist', label: 'Хочу поехать', icon: 'bookmark', hint: 'В списке желаний' },
+  { key: 'wishlist', label: 'Хочу поехать', icon: 'bookmark', hint: 'В «Хочу поехать»' },
 ]
 
 type Props = {

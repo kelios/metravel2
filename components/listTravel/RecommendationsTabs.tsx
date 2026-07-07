@@ -300,7 +300,7 @@ const RecommendationsTabs = memo(
         if (typeof clearFavorites !== 'function') return;
 
         if (typeof window !== 'undefined' && (window as any).confirm) {
-          const confirmed = window.confirm('Очистить избранное?');
+          const confirmed = window.confirm('Очистить «Хочу поехать»?');
           if (!confirmed) return;
         }
 
@@ -542,14 +542,14 @@ const RecommendationsTabs = memo(
             {showFavorites && (
               <CardShelf testID="recommendations-favorites-shelf" styles={styles}>
                 <ShelfHeader
-                  clearLabel="Очистить избранное"
+                  clearLabel="Очистить «Хочу поехать»"
                   colors={colors}
                   count={favorites.length}
                   onClear={typeof clearFavorites === 'function' ? handleClearFavorites : undefined}
                   onSeeAll={() => router.push('/favorites' as any)}
-                  seeAllLabel="Смотреть все избранное"
+                  seeAllLabel="Смотреть все «Хочу поехать»"
                   styles={styles}
-                  title="Избранное"
+                  title="Хочу поехать"
                 />
                 {renderMobileRail(favorites, 'favorites', 'recommendations-favorites-rail')}
               </CardShelf>
@@ -610,7 +610,7 @@ const RecommendationsTabs = memo(
           if (!isAuthenticated) {
             return renderTabPane(
               <AuthGate
-                message="Избранное будет доступно после регистрации или авторизации"
+                message="«Хочу поехать» будет доступно после регистрации или авторизации"
                 onLogin={() => router.push(buildLoginHref({ intent: 'favorites' }) as any)}
                 styles={styles}
                 colors={colors}
@@ -619,18 +619,18 @@ const RecommendationsTabs = memo(
           }
           return renderTabPane(
             favorites.length === 0 ? (
-              <EmptyState message="Избранное пусто" icon="heart" styles={styles} colors={colors} />
+              <EmptyState message="В «Хочу поехать» пока пусто" icon="heart" styles={styles} colors={colors} />
             ) : (
               <View>
                 <SavedCollectionHeader
-                  clearLabel="Очистить избранное"
+                  clearLabel="Очистить «Хочу поехать»"
                   colors={colors}
                   count={favorites.length}
                   onClear={typeof clearFavorites === 'function' ? handleClearFavorites : undefined}
                   onSeeAll={() => router.push('/favorites' as any)}
-                  seeAllLabel="Смотреть все избранное"
+                  seeAllLabel="Смотреть все «Хочу поехать»"
                   styles={styles}
-                  title="Избранное"
+                  title="Хочу поехать"
                 />
 
                 {renderCardCollection(

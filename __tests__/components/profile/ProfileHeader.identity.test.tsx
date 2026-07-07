@@ -43,10 +43,15 @@ describe('ProfileHeader identity (#847)', () => {
   it('renders the compact rank chip under the name', () => {
     const profile = { is_verified: true } as unknown as UserProfileDto;
 
-    const { getByText } = render(
+    const { getByTestId } = render(
       <ProfileHeader {...baseProps} profile={profile} rank={{ level: 5, title: 'Эксперт' }} />
     );
 
-    expect(getByText('Ур.5 · Эксперт')).toBeTruthy();
+    const nameRow = getByTestId('profile-header-name-row');
+    const metaRow = getByTestId('profile-header-meta-row');
+
+    expect(nameRow.findAllByProps({ children: 'Julia I' }).length).toBeGreaterThan(0);
+    expect(nameRow.findAllByProps({ children: 'Ур.5 · Эксперт' })).toHaveLength(0);
+    expect(metaRow.findAllByProps({ children: 'Ур.5 · Эксперт' }).length).toBeGreaterThan(0);
   });
 });

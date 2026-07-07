@@ -100,10 +100,10 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           paddingHorizontal: 6,
         },
         desktopTabFlex: {
-          flexBasis: 144,
+          flexBasis: 160,
           flexGrow: 1,
           flexShrink: 1,
-          minWidth: 144,
+          minWidth: 160,
         },
         activeTab: {
           backgroundColor: colors.primarySoft,
@@ -116,6 +116,10 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           minWidth: 0,
           flexShrink: 1,
           textAlign: 'center',
+          ...Platform.select({
+            web: { whiteSpace: 'nowrap' } as object,
+            default: {},
+          }),
         },
         mobileTabText: {
           fontSize: 13,
@@ -158,11 +162,16 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
     { key: 'travels', label: 'Маршруты', a11yLabel: 'Мои маршруты', hint: 'Показать ваши опубликованные путешествия' },
     { key: 'subscribers', label: 'Подписчики', a11yLabel: 'Подписчики', hint: 'Открыть список подписчиков' },
     { key: 'subscriptions', label: 'Подписки', a11yLabel: 'Подписки', hint: 'Открыть список подписок' },
-    { key: 'overview', label: 'Обзор', a11yLabel: 'Обзор', hint: 'Ваш уровень, награды и быстрые действия' },
+    {
+      key: 'overview',
+      label: 'Уровень',
+      a11yLabel: 'Уровень, значки и достижения',
+      hint: 'Показать ваш уровень, значки и достижения',
+    },
     { key: 'stats', label: 'Статистика', a11yLabel: 'Статистика профиля', hint: 'Вовлечённость маршрутов и личные статусы' },
     { key: 'countries', label: 'Страны', a11yLabel: 'Страны профиля', hint: 'Показать страны, где вы уже были, и оставшиеся страны' },
     { key: 'worldmap', label: 'Карта', a11yLabel: 'Карта мира', hint: 'Карта посещённых стран: серым — не посещено, цветом — посещено' },
-    { key: 'favorites', label: 'Избранное', a11yLabel: 'Сохранённое', hint: 'Показать сохранённые путешествия' },
+    { key: 'favorites', label: 'Хочу поехать', a11yLabel: 'Хочу поехать', hint: 'Показать маршруты, куда вы хотите поехать' },
     { key: 'history', label: 'История', a11yLabel: 'Недавно смотрел', hint: 'Показать историю просмотров' },
   ];
 
@@ -202,7 +211,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
         />
         <Text
           style={[styles.tabText, isMobile && styles.mobileTabText, isActive && styles.activeTabText]}
-          numberOfLines={2}
+          numberOfLines={1}
         >
           {tab.label}
         </Text>

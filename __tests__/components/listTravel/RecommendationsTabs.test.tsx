@@ -107,10 +107,10 @@ describe('RecommendationsTabs', () => {
 
     render(<RecommendationsTabs forceVisible={true} />);
 
-    fireEvent.press(screen.getByLabelText('Избранное'));
+    fireEvent.press(screen.getByLabelText('Хочу поехать'));
 
     expect(
-      await screen.findByText(/Избранное будет доступно после регистрации или авторизации/i)
+      await screen.findByText(/«Хочу поехать» будет доступно после регистрации или авторизации/i)
     ).toBeTruthy();
 
     fireEvent.press(screen.getByText('Войти'));
@@ -129,9 +129,9 @@ describe('RecommendationsTabs', () => {
 
     render(<RecommendationsTabs forceVisible={true} />);
 
-    fireEvent.press(screen.getByLabelText('Избранное'));
+    fireEvent.press(screen.getByLabelText('Хочу поехать'));
 
-    expect(await screen.findByText('Избранное пусто')).toBeTruthy();
+    expect(await screen.findByText('В «Хочу поехать» пока пусто')).toBeTruthy();
   });
 
   it('renders favorites list and clears favorites after confirmation', async () => {
@@ -158,7 +158,7 @@ describe('RecommendationsTabs', () => {
 
     render(<RecommendationsTabs forceVisible={true} />);
 
-    fireEvent.press(screen.getByText('Избранное'));
+    fireEvent.press(screen.getByText('Хочу поехать'));
 
     expect(await screen.findByText('Fav 1')).toBeTruthy();
     expect(screen.getByTestId('recommendations-tabpanel-favorites')).toBeTruthy();
@@ -169,7 +169,7 @@ describe('RecommendationsTabs', () => {
     fireEvent.press(screen.getByText('Очистить'));
 
     await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledWith('Очистить избранное?');
+      expect(confirmSpy).toHaveBeenCalledWith('Очистить «Хочу поехать»?');
       expect(clearFavorites).toHaveBeenCalledTimes(1);
     });
   });

@@ -75,8 +75,8 @@ describe('TravelHeroFavoriteToggle', () => {
       />
     )
 
-    expect(getByLabelText('Добавить в избранное')).toBeTruthy()
-    expect(queryByText('В избранное')).toBeNull()
+    expect(getByLabelText('Добавить в «Хочу поехать»')).toBeTruthy()
+    expect(queryByText('Хочу поехать')).toBeNull()
   })
 
   it('uses mobile label text as a11y label and shows text', () => {
@@ -90,8 +90,8 @@ describe('TravelHeroFavoriteToggle', () => {
       />
     )
 
-    expect(getByLabelText('В избранном')).toBeTruthy()
-    expect(getByText('В избранном')).toBeTruthy()
+    expect(getByLabelText('В «Хочу поехать»')).toBeTruthy()
+    expect(getByText('В «Хочу поехать»')).toBeTruthy()
   })
 
   it('saves web guest favorite locally without requiring auth', async () => {
@@ -107,7 +107,7 @@ describe('TravelHeroFavoriteToggle', () => {
       />
     )
 
-    fireEvent.press(getByLabelText('Добавить в избранное'))
+    fireEvent.press(getByLabelText('Добавить в «Хочу поехать»'))
 
     await waitFor(() => {
       expect(mockAddFavorite).toHaveBeenCalledWith(
@@ -126,7 +126,7 @@ describe('TravelHeroFavoriteToggle', () => {
       expect.objectContaining({
         type: 'success',
         text1: 'Сохранено на этом устройстве',
-        text2: 'Войдите, чтобы синхронизировать избранное.',
+        text2: 'Войдите, чтобы синхронизировать «Хочу поехать».',
       })
     )
   })
@@ -150,7 +150,7 @@ describe('TravelHeroFavoriteToggle', () => {
       />
     )
 
-    fireEvent.press(getByLabelText('В избранное'))
+    fireEvent.press(getByLabelText('Хочу поехать'))
 
     await waitFor(() => {
       expect(mockAddFavorite).toHaveBeenCalledWith(
@@ -168,7 +168,7 @@ describe('TravelHeroFavoriteToggle', () => {
       expect.objectContaining({
         type: 'success',
         text1: 'Сохранено на этом устройстве',
-        text2: 'Войдите, чтобы синхронизировать избранное.',
+        text2: 'Войдите, чтобы синхронизировать «Хочу поехать».',
       })
     )
   })
@@ -190,7 +190,7 @@ describe('TravelHeroFavoriteToggle', () => {
       />
     )
 
-    fireEvent.press(getByLabelText('Добавить в избранное'))
+    fireEvent.press(getByLabelText('Добавить в «Хочу поехать»'))
 
     await waitFor(() => {
       expect(mockAddFavorite).toHaveBeenCalledWith(
@@ -206,7 +206,7 @@ describe('TravelHeroFavoriteToggle', () => {
     expect(showToast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'success',
-        text1: 'Добавлено в избранное',
+        text1: 'Добавлено в «Хочу поехать»',
       })
     )
   })
@@ -222,7 +222,7 @@ describe('TravelHeroFavoriteToggle', () => {
       />
     )
 
-    fireEvent.press(getByLabelText('Удалить из избранного'))
+    fireEvent.press(getByLabelText('Удалить из «Хочу поехать»'))
 
     await waitFor(() => {
       expect(mockRemoveFavorite).toHaveBeenCalledWith(5, 'travel')
@@ -231,7 +231,7 @@ describe('TravelHeroFavoriteToggle', () => {
     expect(showToast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'success',
-        text1: 'Удалено из избранного',
+        text1: 'Удалено из «Хочу поехать»',
       })
     )
   })

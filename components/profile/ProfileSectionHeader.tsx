@@ -9,7 +9,7 @@ import { globalFocusStyles } from '@/styles/globalFocus'
 interface Props {
   title: string
   subtitle?: string
-  /** «Назад к обзору» / навигация к родителю раздела (#590, хлебная крошка). */
+  /** Навигация к родительскому разделу профиля (#590, хлебная крошка). */
   onBack?: () => void
   backLabel?: string
   testID?: string
@@ -23,7 +23,7 @@ function ProfileSectionHeader({
   title,
   subtitle,
   onBack,
-  backLabel = 'Обзор',
+  backLabel = 'Уровень',
   testID,
 }: Props) {
   const colors = useThemedColors()

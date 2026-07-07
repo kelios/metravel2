@@ -27,7 +27,7 @@ describe('ProfileTravelEngagementSummary mobile layout', () => {
     expect(getByText('Сохранили')).toBeTruthy();
     expect(getByText('Хотят')).toBeTruthy();
     expect(getByText('Планируют')).toBeTruthy();
-    expect(queryByText('добавили в избранное')).toBeNull();
+    expect(queryByText('добавили в «Хочу поехать»')).toBeNull();
     expect(queryByText('собираются поехать')).toBeNull();
   });
 });

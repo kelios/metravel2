@@ -84,7 +84,8 @@ describe('FavoritesScreen', () => {
       jest.advanceTimersByTime(350);
     });
 
-    expect(utils.getByText('Сохраняй маршруты, чтобы вернуться к ним позже')).toBeTruthy();
+    expect(utils.getByText('В «Хочу поехать» пока пусто')).toBeTruthy();
+    expect(utils.getByText('Нажмите ♥ на карточке маршрута, чтобы добавить место, куда хотите поехать.')).toBeTruthy();
   });
 
   it('goes back when "Назад" is pressed', async () => {

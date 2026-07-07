@@ -214,18 +214,18 @@ export default function SettingsScreen() {
             if (typeof clearFavorites !== 'function') return;
 
             const confirmed = await confirmAction({
-                title: 'Очистить избранное',
-                message: 'Очистить избранное?',
+                title: 'Очистить «Хочу поехать»',
+                message: 'Очистить «Хочу поехать»?',
                 confirmText: 'Очистить',
                 cancelText: 'Отмена',
             });
             if (!confirmed) return;
 
             await clearFavorites();
-            showToast({ type: 'success', text1: 'Избранное очищено', visibilityTime: 2000 });
+            showToast({ type: 'success', text1: '«Хочу поехать» очищен', visibilityTime: 2000 });
         } catch (error) {
             console.error('Error clearing favorites:', error);
-            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось очистить избранное', visibilityTime: 3000 });
+            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось очистить «Хочу поехать»', visibilityTime: 3000 });
         }
     }, [clearFavorites]);
 

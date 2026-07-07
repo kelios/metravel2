@@ -97,8 +97,8 @@ export default function FavoritesScreen() {
             if (!clearFavorites) return;
 
             const confirmed = await confirmAction({
-                title: 'Очистить избранное',
-                message: 'Очистить избранное?',
+                title: 'Очистить «Хочу поехать»',
+                message: 'Очистить «Хочу поехать»?',
                 confirmText: 'Очистить',
                 cancelText: 'Отмена',
             });
@@ -141,8 +141,8 @@ export default function FavoritesScreen() {
     const seoBlock = (
         <InstantSEO
             headKey="favorites"
-            title="Избранное | Metravel"
-            description="Ваши избранные путешествия"
+            title="Хочу поехать | Metravel"
+            description="Маршруты, куда вы хотите поехать"
             canonical={canonical}
             robots="noindex, nofollow"
         />
@@ -170,7 +170,7 @@ export default function FavoritesScreen() {
                 <EmptyState
                     icon="heart"
                     title="Войдите в аккаунт"
-                    description="Войдите, чтобы сохранять избранное и синхронизировать его между устройствами."
+                    description="Войдите, чтобы сохранять маршруты в «Хочу поехать» и синхронизировать их между устройствами."
                     action={{
                         label: 'Войти',
                         onPress: () => router.push(buildLoginHref({ redirect: '/favorites', intent: 'favorites' }) as any),
@@ -184,7 +184,7 @@ export default function FavoritesScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {seoBlock}
-                <ProfileCollectionHeader title="Избранное" onBackPress={handleBackToProfile} />
+                <ProfileCollectionHeader title="Хочу поехать" onBackPress={handleBackToProfile} />
                 <View style={styles.listContent}>
                     {Array.from({ length: 3 }).map((_, index) => (
                         <View key={index} style={styles.cardWrap}>
@@ -202,8 +202,8 @@ export default function FavoritesScreen() {
                 {seoBlock}
                 <EmptyState
                     icon="heart"
-                    title="Сохраняй маршруты, чтобы вернуться к ним позже"
-                    description="Нажми на сердечко на карточке маршрута, чтобы добавить его в избранное."
+                    title="В «Хочу поехать» пока пусто"
+                    description="Нажмите ♥ на карточке маршрута, чтобы добавить место, куда хотите поехать."
                     variant="empty"
                     action={{
                         label: 'Найти маршруты',
@@ -222,11 +222,11 @@ export default function FavoritesScreen() {
         <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
             {seoBlock}
             <ProfileCollectionHeader
-                title="Избранное"
+                title="Хочу поехать"
                 onBackPress={handleBackToProfile}
                 showClearButton={typeof clearFavorites === 'function' && data.length > 0}
                 onClearPress={handleClearAll}
-                clearAccessibilityLabel="Очистить избранное"
+                clearAccessibilityLabel="Очистить «Хочу поехать»"
             />
 
             {Platform.OS === 'web' ? (
@@ -273,7 +273,7 @@ export default function FavoritesScreen() {
                                     style={[styles.removeButton, globalFocusStyles.focusable]}
                                     onPress={() => removeFavorite?.(item.id, item.type)}
                                     accessibilityRole="button"
-                                    accessibilityLabel="Удалить из избранного"
+                                    accessibilityLabel="Удалить из «Хочу поехать»"
                                     {...Platform.select({ web: { cursor: 'pointer' } })}
                                 >
                                     <Feather name="trash-2" size={16} color={colors.textOnPrimary} />
@@ -326,7 +326,7 @@ export default function FavoritesScreen() {
                                 style={[styles.removeButton, globalFocusStyles.focusable]}
                                 onPress={() => removeFavorite?.(item.id, item.type)}
                                 accessibilityRole="button"
-                                accessibilityLabel="Удалить из избранного"
+                                accessibilityLabel="Удалить из «Хочу поехать»"
                                 {...Platform.select({ web: { cursor: 'pointer' } })}
                             >
                                 <Feather name="trash-2" size={16} color={colors.textOnPrimary} />

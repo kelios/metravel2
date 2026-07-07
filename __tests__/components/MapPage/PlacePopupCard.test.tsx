@@ -402,6 +402,30 @@ describe('PlacePopupCard', () => {
     expect(onAddPoint).toHaveBeenCalledTimes(1);
   });
 
+  it('renders an explicit popup close button when an onClose handler is provided', () => {
+    const onClose = jest.fn();
+    let tree: any;
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          imageUrl="https://example.com/photo.jpg"
+          onClose={onClose}
+        />
+      );
+    });
+
+    const closeButton = tree.root.findByProps({ accessibilityLabel: 'Закрыть попап' });
+
+    expect(closeButton).toBeTruthy();
+    renderer.act(() => {
+      closeButton.props.onPress();
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('disables the save action when addDisabled is true', () => {
     const onAddPoint = jest.fn();
     let tree: any;

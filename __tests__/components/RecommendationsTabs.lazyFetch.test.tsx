@@ -60,7 +60,7 @@ describe('RecommendationsTabs lazy backend fetching', () => {
     expect(mockEnsureServerData).not.toHaveBeenCalled()
 
     // Switch to Favorites -> should fetch favorites
-    fireEvent.press(getByText('Избранное'))
+    fireEvent.press(getByText('Хочу поехать'))
     await waitFor(() => {
       expect(mockEnsureServerData).toHaveBeenCalledWith('favorites')
     })
@@ -79,7 +79,7 @@ describe('RecommendationsTabs lazy backend fetching', () => {
     fireEvent.press(getByTestId('recommendations-tabs-collapse'))
 
     // When collapsed, tab labels are not rendered, and no extra fetch is triggered
-    expect(queryByText('Избранное')).toBeNull()
+    expect(queryByText('Хочу поехать')).toBeNull()
 
     const backendCallsBefore = mockEnsureServerDataBackend.mock.calls.length
 

@@ -168,7 +168,7 @@ describe('TravelListPanel (right list on map page)', () => {
     expect(mockShowToast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'error',
-        text1: 'Не удалось обновить избранное',
+        text1: 'Не удалось обновить «Хочу поехать»',
       })
     );
   });

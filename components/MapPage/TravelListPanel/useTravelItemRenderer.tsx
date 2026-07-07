@@ -132,7 +132,7 @@ export function useTravelItemRenderer({
             void Promise.resolve(action).catch(() => {
               void showToast({
                 type: 'error',
-                text1: 'Не удалось обновить избранное',
+                text1: 'Не удалось обновить «Хочу поехать»',
                 position: 'bottom',
               })
             })

@@ -3,14 +3,16 @@
 // Asserts consent-gate and validation errors — does NOT snapshot the full DOM.
 
 import React from 'react'
-import { fireEvent, render } from '@testing-library/react-native'
+import { fireEvent, render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
 // ── Module mocks (must precede imports of the component) ──────────────────────
 
+const mockMutate = jest.fn()
+
 jest.mock('@/hooks/usePlannedTripsApi', () => ({
   useCreateTrip: () => ({
-    mutate: jest.fn(),
+    mutate: mockMutate,
     isPending: false,
   }),
 }))
@@ -81,6 +83,7 @@ import TripCreateForm from '@/components/trips/planning/TripCreateForm'
 
 beforeEach(() => {
   ;(Platform as { OS: string }).OS = 'web'
+  mockMutate.mockClear()
 })
 
 describe('TripCreateForm — consent gate', () => {
@@ -108,6 +111,24 @@ describe('TripCreateForm — consent gate', () => {
 })
 
 describe('TripCreateForm — validation errors', () => {
+  it('prefills a real default start date instead of showing it as a placeholder', () => {
+    const { getByTestId } = render(<TripCreateForm />)
+    expect(getByTestId('trip-create-start-date').props.value).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it('accepts route-source prefill for organizing a trip from a travel page', () => {
+    const { getByTestId } = render(
+      <TripCreateForm
+        initialValues={{
+          title: 'Поездка по маршруту "Нарочь"',
+          description: 'Исходный маршрут: https://metravel.by/travels/naroch',
+        }}
+      />,
+    )
+    expect(getByTestId('trip-create-title').props.value).toBe('Поездка по маршруту "Нарочь"')
+    expect(getByTestId('trip-create-description').props.value).toContain('/travels/naroch')
+  })
+
   it('shows title error when submitting with empty title', async () => {
     const { getByTestId, findByText } = render(<TripCreateForm />)
 
@@ -133,11 +154,27 @@ describe('TripCreateForm — validation errors', () => {
     // Toggle consent and provide a long enough title, leave date empty.
     fireEvent.press(getByTestId('trip-create-consent'))
     fireEvent.changeText(getByTestId('trip-create-title'), 'Тест-поездка')
-    // startDate default is '' — do not set it.
+    fireEvent.changeText(getByTestId('trip-create-start-date'), '')
     fireEvent.press(getByTestId('trip-create-submit'))
 
     const err = await findByText(/Укажите дату старта/i)
     expect(err).toBeTruthy()
+  })
+
+  it('submits a valid form using the default start date', async () => {
+    const { getByTestId } = render(<TripCreateForm />)
+    const defaultDate = getByTestId('trip-create-start-date').props.value
+
+    fireEvent.press(getByTestId('trip-create-consent'))
+    fireEvent.changeText(getByTestId('trip-create-title'), 'Тест-поездка')
+    fireEvent.press(getByTestId('trip-create-submit'))
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+    expect(mockMutate.mock.calls[0][0]).toMatchObject({
+      title: 'Тест-поездка',
+      startDate: defaultDate,
+      seatsTotal: 4,
+    })
   })
 
   it('shows submit-level error when consent is not checked', async () => {

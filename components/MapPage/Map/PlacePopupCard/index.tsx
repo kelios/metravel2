@@ -326,6 +326,7 @@ const PlacePopupCard: React.FC<Props> = ({
   // the title row on the native bottom card (NOT in the action row, which must stay at
   // 4 items so «Маршрут» never overflows, and NOT in the nav sheet).
   const showTitleShare = shareInActionRow && !!onShareTelegram;
+  const reserveInlineCloseSpace = Boolean(onClose && (!imageUrl || useSplitLayout));
 
   const topInfoSlot = useMemo(() => (
     <View style={styles.infoSection}>
@@ -746,6 +747,18 @@ const PlacePopupCard: React.FC<Props> = ({
     </>
   ) : null;
 
+  const closeControl = onClose ? (
+    <CardActionPressable
+      accessibilityLabel="Закрыть попап"
+      onPress={onClose}
+      title="Закрыть"
+      enableWebClickFallback
+      style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
+    >
+      <Feather name="x" size={useCompactLayout ? 20 : 22} color={colors.text} />
+    </CardActionPressable>
+  ) : null;
+
   const heroImage = imageUrl ? (
     <Pressable
       onPress={handleOpenFullscreen}
@@ -876,6 +889,7 @@ const PlacePopupCard: React.FC<Props> = ({
             {relatedTravelOverlays}
             {heroImage}
             {heroActionOverlay}
+            {closeControl}
           </View>
           <View
             style={styles.splitScroll}
@@ -936,6 +950,7 @@ const PlacePopupCard: React.FC<Props> = ({
           <View style={styles.popupSplitHero}>
             {relatedTravelOverlays}
             {heroImage}
+            {closeControl}
           </View>
           <View
             style={styles.popupSplitScroll}
@@ -981,11 +996,18 @@ const PlacePopupCard: React.FC<Props> = ({
     >
       <View style={styles.popupCard}>
         {relatedTravelOverlays}
+        {closeControl}
         <View style={[styles.topSection, useSplitLayout && styles.topSectionSplit]}>
           {heroImage}
           {heroActionOverlay}
 
-          <View style={[styles.contentContainer, useSplitLayout && styles.contentContainerSplit]}>
+          <View
+            style={[
+              styles.contentContainer,
+              useSplitLayout && styles.contentContainerSplit,
+              reserveInlineCloseSpace ? { paddingRight: 58 } : null,
+            ]}
+          >
             {topInfoSlot}
           </View>
         </View>
