@@ -3,9 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View, ActivityIndicator } from '
 import * as WebBrowser from 'expo-web-browser';
 import {
     GoogleSignin,
-    isCancelledResponse,
     isErrorWithCode,
-    isSuccessResponse,
     statusCodes,
 } from '@react-native-google-signin/google-signin';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -72,6 +70,27 @@ type GoogleSignInButtonConfiguredProps = GoogleSignInButtonProps & {
     webClientId: string;
     iosClientId: string;
 };
+
+type GoogleSignInUserResult = Awaited<ReturnType<typeof GoogleSignin.signIn>>;
+type GoogleSignInSuccessResult = { type: 'success'; data: GoogleSignInUserResult };
+type GoogleSignInCancelledResult = { type: 'cancelled'; data: null };
+type GoogleSignInResult = GoogleSignInUserResult | GoogleSignInSuccessResult | GoogleSignInCancelledResult;
+
+const isGoogleSignInResponseEnvelope = (
+    result: GoogleSignInResult,
+): result is GoogleSignInSuccessResult | GoogleSignInCancelledResult =>
+    typeof result === 'object' && result !== null && 'type' in result;
+
+const getGoogleSignInIdToken = (result: GoogleSignInResult): string | null => {
+    if (isGoogleSignInResponseEnvelope(result)) {
+        return result.type === 'success' ? result.data.idToken : null;
+    }
+
+    return result.idToken;
+};
+
+const isGoogleSignInCancelled = (result: GoogleSignInResult): result is GoogleSignInCancelledResult =>
+    isGoogleSignInResponseEnvelope(result) && result.type === 'cancelled';
 
 const getNativeGoogleClientId = (androidClientId: string, iosClientId: string) =>
     Platform.OS === 'ios' ? iosClientId : androidClientId;
@@ -343,24 +362,22 @@ function GoogleSignInButtonNativeConfigured({
             await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
             const result = await GoogleSignin.signIn();
 
-            if (isSuccessResponse(result)) {
-                let token = result.data.idToken;
-                if (!token) {
-                    token = (await GoogleSignin.getTokens()).idToken;
-                }
+            if (isGoogleSignInCancelled(result)) {
                 setIsLoading(false);
-                if (!token) {
-                    onError?.('Не удалось получить id_token от Google');
-                    return;
-                }
+                return;
+            }
+
+            let token = getGoogleSignInIdToken(result);
+            if (!token) {
+                token = (await GoogleSignin.getTokens()).idToken;
+            }
+            setIsLoading(false);
+            if (token) {
                 onSuccess(token);
                 return;
             }
 
-            setIsLoading(false);
-            if (!isCancelledResponse(result)) {
-                onError?.('Не удалось завершить Google Sign-In');
-            }
+            onError?.('Не удалось получить id_token от Google');
         } catch (error) {
             setIsLoading(false);
             if (isErrorWithCode(error)) {

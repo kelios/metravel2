@@ -142,9 +142,15 @@ export const buildUriNative = (
       aspectRatio,
     );
     const quality = isFirst ? 75 : 70;
+    // getOptimalImageSize uses full device DPR on native, so a DPR-3 phone
+    // requests a ~1280px neighbour and decodes it on-device, stalling swipe
+    // 1→2. Cap neighbours to dpr 2; the active/first slide keeps full DPR.
+    const width = isFirst
+      ? optimalSize.width
+      : Math.min(optimalSize.width, Math.round(containerWidth * 2));
     return (
       optimizeImageUrl(versionedUrl, {
-        width: optimalSize.width,
+        width,
         quality,
         fit: 'contain',
       }) || versionedUrl
@@ -197,7 +203,15 @@ export const buildUriWeb = (
     if (fromMedia?.src) return fromMedia.src;
 
     const format = isFirst ? undefined : PREFERRED_FORMAT;
-    const dpr = isFirst ? undefined : effectiveDevicePixelRatio;
+    // Neighbour slides don't need full device DPR — a contain+blur photo that's
+    // only the swipe-target reveals imperceptibly sharper at dpr 3, but the
+    // decode cost of the ~1.5× larger image stalls swipe 1→2 on mobile CPUs.
+    // Cap mobile neighbours to dpr 2; first slide + desktop keep full DPR.
+    const dpr = isFirst
+      ? undefined
+      : isMobileWidth
+        ? Math.min(effectiveDevicePixelRatio, 2)
+        : effectiveDevicePixelRatio;
     return (
       optimizeImageUrl(versionedUrl, {
         width: targetWidth,
