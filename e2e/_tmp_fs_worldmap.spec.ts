@@ -45,7 +45,8 @@ test('fullscreen worldmap fills mobile viewport', async ({ page }) => {
 
   // Числа: высота видимой карты и scale <g>.
   const metrics = await page.evaluate(() => {
-    const svg = document.getElementById('wc-BY')?.closest('svg') as SVGSVGElement | null
+    const byEls = Array.from(document.querySelectorAll('[id="wc-BY"]'))
+    const svg = (byEls[byEls.length - 1]?.closest('svg') ?? null) as SVGSVGElement | null
     const gs = Array.from(document.querySelectorAll('svg g'))
     const mine = gs.find((el) => /scale\([0-9.]+\)\s*$/.test(el.getAttribute('transform') || ''))
     const m = /scale\(([0-9.]+)\)/.exec(mine?.getAttribute('transform') || '')
