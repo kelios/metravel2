@@ -79,7 +79,7 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
     expect(src).toContain('q=80')
   })
 
-  it('requests DPR-aware mobile slide variants on retina devices', () => {
+  it('caps mobile neighbour slides at dpr 2 on retina devices to cut swipe decode cost', () => {
     ;(window as any).devicePixelRatio = 3
 
     const src = buildUriWeb(
@@ -93,11 +93,30 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       false,
     )
 
-    // 390 snaps up to the 480 ladder rung; q 78 → 80; integer dpr preserved.
+    // 390 snaps up to the 480 ladder rung; q 78 → 80. A DPR-3 phone would
+    // otherwise decode a ~1440px neighbour and stall swipe 1→2, so the neighbour
+    // is capped to dpr 2 (first slide + desktop keep full DPR).
     expect(src).toContain('w=480')
     expect(src).toContain('q=80')
-    expect(src).toContain('dpr=3')
+    expect(src).toContain('dpr=2')
     expect(src).toContain('fit=contain')
+  })
+
+  it('keeps full DPR on non-mobile-width neighbour slides', () => {
+    ;(window as any).devicePixelRatio = 3
+
+    const src = buildUriWeb(
+      {
+        id: 'hero-4',
+        url: 'https://metravel.by/gallery/123/hero-4.jpg',
+      } as any,
+      1180,
+      undefined,
+      'contain',
+      false,
+    )
+
+    expect(src).toContain('dpr=3')
   })
 
   it('prefers backend media manifest variants for gallery slider images', () => {
