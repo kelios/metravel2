@@ -29,11 +29,13 @@ export function usePointListAddPointModel({
   baseUrl,
   categoryIdToName,
   categoryNameToIds,
+  isPointSaved,
   travelName,
 }: {
   baseUrl?: string;
   categoryIdToName: Map<string, string>;
   categoryNameToIds: Map<string, string[]>;
+  isPointSaved?: (coordStr?: string) => boolean;
   travelName?: string;
 }) {
   const [addingPointId, setAddingPointId] = useState<string | null>(null);
@@ -57,6 +59,17 @@ export function usePointListAddPointModel({
         void showToast({
           type: 'info',
           text1: 'У точки нет координат',
+          position: 'bottom',
+        });
+        return;
+      }
+
+      // #839: точка уже в «Мои точки» — не плодим дубль (у бэка нет remove-by-coord),
+      // просто подтверждаем состояние.
+      if (isPointSaved?.(point.coord)) {
+        void showToast({
+          type: 'info',
+          text1: 'Точка уже в «Мои точки»',
           position: 'bottom',
         });
         return;
@@ -130,7 +143,17 @@ export function usePointListAddPointModel({
 
       setAddingPointId(point.id);
       try {
-        await userPointsApi.createPoint(payload);
+        const created = await userPointsApi.createPoint(payload);
+        // #839: оптимистично добавляем созданную точку в общий кэш `userPointsAll`,
+        // чтобы координатный матчер (isPointSaved) сразу отдал true и карточка
+        // переключилась в «Сохранено» без перезагрузки — до рефетча коллекции.
+        if (created && Number.isFinite(Number((created as any).latitude))) {
+          queryClient.setQueryData<ImportedPoint[]>(queryKeys.userPointsAll(), (old) => {
+            const arr = Array.isArray(old) ? old : [];
+            if (arr.some((p) => p?.id === created.id)) return arr;
+            return [...arr, created];
+          });
+        }
         queueAnalyticsEvent('Place_Added', {
           source: 'travel_route',
           travelName: travelName || undefined,
@@ -154,7 +177,7 @@ export function usePointListAddPointModel({
         setAddingPointId(null);
       }
     },
-    [addingPointId, authReady, baseUrl, categoryIdToName, categoryNameToIds, isAuthenticated, queryClient, travelName]
+    [addingPointId, authReady, baseUrl, categoryIdToName, categoryNameToIds, isAuthenticated, isPointSaved, queryClient, travelName]
   );
 
   return {

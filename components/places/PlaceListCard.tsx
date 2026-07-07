@@ -11,6 +11,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import {
   getNavigationActionVisual,
   resolveNavigationActionKind,
+  SEMANTIC_ACTION_ICON,
 } from '@/components/navigation/navigationActionMeta';
 
 const IS_WEB = Platform.OS === 'web';
@@ -42,6 +43,8 @@ type Props = {
   onAddPoint?: () => void;
   addDisabled?: boolean;
   isAdding?: boolean;
+  // #839: точка уже в «Мои точки» — показываем ✓ «Сохранено» вместо ＋ «Сохранить».
+  isSaved?: boolean;
   addLabel?: string;
   width?: number;
   imageHeight?: number;
@@ -221,6 +224,7 @@ const PlaceListCard: React.FC<Props> = ({
   onAddPoint,
   addDisabled = false,
   isAdding = false,
+  isSaved = false,
   addLabel = 'Мои точки',
   width,
   imageHeight = 140,
@@ -261,12 +265,21 @@ const PlaceListCard: React.FC<Props> = ({
   // not a map-app) and the save action renders as a labeled tile in the row.
   const showTitleShare = popupAligned && hasCoord && !!onShare;
   const showSaveTile = popupAligned && !!onAddPoint;
+  // #839: saved-visual для кнопки сохранения точки (галочка + «Сохранено»).
+  const savedColor = (colors as any).success ?? colors.primaryDark ?? colors.primary;
+  const saveLabel = isSaved ? 'Сохранено' : addLabel;
+  const saveIcon: keyof typeof Feather.glyphMap | undefined = isAdding
+    ? undefined
+    : isSaved
+      ? 'check'
+      : 'bookmark';
+  const saveIconColor = isSaved ? savedColor : colors.textMuted;
   const shareOverflowAction: ActionChip | null =
     isCompactActionCard && !showTitleShare && hasCoord && onShare
       ? {
           key: 'share',
           label: 'Telegram',
-          icon: 'send',
+          icon: SEMANTIC_ACTION_ICON.telegramShare,
           onPress: onShare,
           accessibilityLabel: 'Поделиться в Telegram',
           title: 'Поделиться в Telegram',
@@ -453,7 +466,7 @@ const PlaceListCard: React.FC<Props> = ({
                       pressed && styles.iconBtnPressed,
                     ]}
                   >
-                    <Feather name="send" size={18} color={colors.primaryDark} />
+                    <Feather name={SEMANTIC_ACTION_ICON.telegramShare} size={18} color={colors.primaryDark} />
                   </CardActionPressable>
                 </View>
               ) : (
@@ -518,7 +531,7 @@ const PlaceListCard: React.FC<Props> = ({
               {showShareChip && onShare && (
                 <LabeledActionChip
                   accessibilityLabel="Поделиться в Telegram"
-                  icon="send"
+                  icon={SEMANTIC_ACTION_ICON.telegramShare}
                   iconColor={colors.textMuted}
                   label="Telegram"
                   onPress={() => void onShare()}
@@ -551,15 +564,15 @@ const PlaceListCard: React.FC<Props> = ({
 
               {showSaveTile && onAddPoint && (
                 <LabeledActionChip
-                  accessibilityLabel={addLabel}
-                  accessibilityState={{ disabled: addDisabled || isAdding, busy: isAdding }}
+                  accessibilityLabel={saveLabel}
+                  accessibilityState={{ checked: isSaved, disabled: addDisabled || isAdding, busy: isAdding }}
                   disabled={addDisabled || isAdding}
-                  icon={isAdding ? undefined : 'bookmark'}
-                  iconColor={colors.textMuted}
-                  label={addLabel}
+                  icon={saveIcon}
+                  iconColor={saveIconColor}
+                  label={saveLabel}
                   onPress={() => void onAddPoint()}
                   styles={styles}
-                  title={addLabel}
+                  title={saveLabel}
                 >
                   {isAdding ? (
                     <ActivityIndicator size="small" color={colors.primaryDark} />
@@ -573,7 +586,7 @@ const PlaceListCard: React.FC<Props> = ({
                     <LabeledActionChip
                       accessibilityLabel={overflowActionTitle}
                       accessibilityState={{ expanded: overflowVisible }}
-                      icon={mapActions.length > 0 ? 'navigation' : 'more-horizontal'}
+                      icon={mapActions.length > 0 ? SEMANTIC_ACTION_ICON.navigationMenu : 'more-horizontal'}
                       iconColor={colors.textMuted}
                       label={overflowActionLabel}
                       onPress={openOverflowMenu}
@@ -596,7 +609,7 @@ const PlaceListCard: React.FC<Props> = ({
                       <LabeledActionChip
                         accessibilityLabel={overflowActionTitle}
                         accessibilityState={{ expanded: overflowVisible }}
-                        icon={mapActions.length > 0 ? 'navigation' : 'more-horizontal'}
+                        icon={mapActions.length > 0 ? SEMANTIC_ACTION_ICON.navigationMenu : 'more-horizontal'}
                         iconColor={colors.textMuted}
                         label={overflowActionLabel}
                         onPress={openOverflowMenu}
@@ -626,14 +639,15 @@ const PlaceListCard: React.FC<Props> = ({
 
               {showRowAddButton && onAddPoint && (
                 <LabeledActionChip
-                  accessibilityLabel={addLabel}
+                  accessibilityLabel={saveLabel}
+                  accessibilityState={{ checked: isSaved, disabled: addDisabled || isAdding, busy: isAdding }}
                   disabled={addDisabled || isAdding}
-                  icon={isAdding ? undefined : 'bookmark'}
-                  iconColor={colors.textMuted}
-                  label={addLabel}
+                  icon={saveIcon}
+                  iconColor={saveIconColor}
+                  label={saveLabel}
                   onPress={() => void onAddPoint()}
                   styles={styles}
-                  title={addLabel}
+                  title={saveLabel}
                 >
                   {isAdding ? (
                     <ActivityIndicator size="small" color={colors.primaryDark} />
@@ -647,8 +661,9 @@ const PlaceListCard: React.FC<Props> = ({
             <CardActionPressable
               onPress={() => void onAddPoint()}
               disabled={addDisabled || isAdding}
-              accessibilityLabel={addLabel}
-              title={addLabel}
+              accessibilityLabel={saveLabel}
+              accessibilityState={{ checked: isSaved, disabled: addDisabled || isAdding, busy: isAdding }}
+              title={saveLabel}
               style={({ pressed }) => [
                 styles.addButton,
                 pressed && !addDisabled && !isAdding && styles.addButtonPressed,
@@ -660,12 +675,12 @@ const PlaceListCard: React.FC<Props> = ({
               ) : (
                 <>
                   <Feather
-                    name="bookmark"
+                    name={isSaved ? 'check' : 'bookmark'}
                     size={14}
-                    color={colors.primaryDark ?? colors.primary}
+                    color={isSaved ? savedColor : colors.primaryDark ?? colors.primary}
                   />
                   <Text style={styles.addButtonText} numberOfLines={1}>
-                    {addLabel}
+                    {saveLabel}
                   </Text>
                 </>
               )}

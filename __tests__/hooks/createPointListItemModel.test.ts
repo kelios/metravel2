@@ -100,4 +100,78 @@ describe('createPointListItemModel', () => {
     );
     expect(model.inlineActions).toEqual([]);
   });
+
+  const baseArgs = (overrides: Record<string, unknown>) => ({
+    addingPointId: null,
+    buildAppleMapsUrl: (coord: string) => `apple:${coord}`,
+    buildMapUrl: (coord: string) => `google:${coord}`,
+    buildOrganicMapsUrl: (coord: string) => `organic:${coord}`,
+    buildOsmUrl: (coord: string) => `osm:${coord}`,
+    buildYandexMapsUrl: (coord: string) => `yandex:${coord}`,
+    getCategoryLabel: () => '',
+    getImageUrl: () => undefined,
+    onAddPoint: jest.fn(),
+    onCopy: jest.fn(),
+    onOpenArticle: jest.fn(),
+    onOpenMap: jest.fn(),
+    onPointCardPress: undefined,
+    onShare: jest.fn(),
+    openExternal: jest.fn(),
+    ...overrides,
+  });
+
+  // #841
+  it('hides the article action when the link resolves to the current travel (baseUrl fallback)', () => {
+    const model = createPointListItemModel(
+      baseArgs({
+        baseUrl: 'https://metravel.by/travels/minsk',
+        item: { id: '1', address: 'Минск', coord: '53.9,27.56' },
+      }) as any
+    );
+    expect(model.inlineActions).toEqual([]);
+  });
+
+  it('hides the article action when articleUrl normalizes to the current travel URL', () => {
+    const model = createPointListItemModel(
+      baseArgs({
+        baseUrl: 'https://metravel.by/travels/minsk',
+        item: {
+          id: '1',
+          address: 'Минск',
+          coord: '53.9,27.56',
+          // same path, different origin + trailing slash + query
+          articleUrl: '/travels/minsk/?utm=x',
+        },
+      }) as any
+    );
+    expect(model.inlineActions).toEqual([]);
+  });
+
+  it('keeps the article action when the point links to a different article', () => {
+    const model = createPointListItemModel(
+      baseArgs({
+        baseUrl: 'https://metravel.by/travels/minsk',
+        item: {
+          id: '1',
+          address: 'Минск',
+          coord: '53.9,27.56',
+          articleUrl: 'https://metravel.by/travels/brest',
+        },
+      }) as any
+    );
+    expect(model.inlineActions).toHaveLength(1);
+    expect(model.inlineActions[0].key).toBe('article');
+  });
+
+  // #839
+  it('passes through the saved state', () => {
+    const saved = createPointListItemModel(
+      baseArgs({ isSaved: true, item: { id: '1', address: 'Минск', coord: '53.9,27.56' } }) as any
+    );
+    const notSaved = createPointListItemModel(
+      baseArgs({ item: { id: '1', address: 'Минск', coord: '53.9,27.56' } }) as any
+    );
+    expect(saved.isSaved).toBe(true);
+    expect(notSaved.isSaved).toBe(false);
+  });
 });

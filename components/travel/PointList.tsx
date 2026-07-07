@@ -22,6 +22,7 @@ import { usePointListAddPointModel } from '@/components/travel/hooks/usePointLis
 import { createPointListItemModel } from '@/components/travel/hooks/createPointListItemModel';
 import { usePointListCategoryDictionaryModel } from '@/components/travel/hooks/usePointListCategoryDictionaryModel';
 import { usePointListDisplayModel } from '@/components/travel/hooks/usePointListDisplayModel';
+import { usePointListSavedModel } from '@/components/travel/hooks/usePointListSavedModel';
 import { usePointListExternalActionsModel } from '@/components/travel/hooks/usePointListExternalActionsModel';
 import {
   usePointListResponsiveModel,
@@ -201,10 +202,12 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
   });
 
   const { categoryIdToName, categoryNameToIds } = usePointListCategoryDictionaryModel();
+  const { isPointSaved } = usePointListSavedModel();
   const { addingPointId, handleAddPoint } = usePointListAddPointModel({
     baseUrl,
     categoryIdToName,
     categoryNameToIds,
+    isPointSaved,
     travelName,
   });
   const { onCopy, onOpenArticle, onOpenMap, onShare } = usePointListExternalActionsModel({
@@ -228,6 +231,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
         buildYandexNaviUrl,
         getCategoryLabel: normalizeCategoryNameToString,
         getImageUrl: getOptimizedImageUrl,
+        isSaved: isPointSaved(item.coord),
         item,
         onAddPoint: handleAddPoint,
         onCopy,
@@ -262,6 +266,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
       colors,
       handleAddPoint,
       isMobile,
+      isPointSaved,
       isWebGrid,
       numColumns,
       onCopy,
@@ -278,13 +283,18 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
 
   return (
     <View style={styles.wrapper}>
-      <PointListStatus
-        isInteractiveOpen={Boolean(onPointCardPress)}
-        pointCount={safePoints.length}
-        showList={showList}
-        styles={styles}
-        viewMode={viewMode}
-      />
+      {/* #838: информационный status-блок избыточен на мобильном (web + native) —
+          список по умолчанию раскрыт, тоггл и так объясняет действие. Оставляем
+          пояснение только на десктопе, где есть место. */}
+      {!isMobile && (
+        <PointListStatus
+          isInteractiveOpen={Boolean(onPointCardPress)}
+          pointCount={safePoints.length}
+          showList={showList}
+          styles={styles}
+          viewMode={viewMode}
+        />
+      )}
 
       <PointListToggleButton
         colors={colors}

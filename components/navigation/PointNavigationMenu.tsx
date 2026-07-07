@@ -17,6 +17,7 @@ import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import {
   getNavigationActionVisual,
   NAVIGATION_ACTION_LABELS,
+  SEMANTIC_ACTION_ICON,
   type NavigationActionKind,
 } from './navigationActionMeta'
 
@@ -104,7 +105,7 @@ export default function PointNavigationMenu({
         testID={`${testIDPrefix}-toggle`}
         style={({ pressed }) => [styles.toggle, pressed && PRESSED_OPACITY]}
       >
-        <Feather name="navigation" size={15} color={colors.primaryDark} />
+        <Feather name={SEMANTIC_ACTION_ICON.navigationMenu} size={15} color={colors.primaryDark} />
         <Text style={styles.toggleText} numberOfLines={1}>{label}</Text>
         <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={15} color={colors.textMuted} />
       </Pressable>

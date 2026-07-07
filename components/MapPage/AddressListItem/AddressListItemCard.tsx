@@ -1,14 +1,17 @@
 import React from 'react'
+import type Feather from '@expo/vector-icons/Feather'
 
 import PlaceListCard from '@/components/places/PlaceListCard'
 import { TravelCoords } from '@/types/types'
 
 import { PLACE_CARD_STYLE, TRANSPORT_LABELS } from './constants'
 
+type FeatherIcon = keyof typeof Feather.glyphMap
+
 type WebMapAction = {
   key: string
   label: string
-  icon: 'map' | 'map-pin' | 'compass' | 'navigation' | 'navigation-2'
+  icon: FeatherIcon
   onPress: () => void
   title: string
 }
@@ -16,7 +19,7 @@ type WebMapAction = {
 type ListCardAction = {
   key: string
   label: string
-  icon: 'navigation' | 'book-open'
+  icon: FeatherIcon
   onPress: () => void
   accessibilityLabel: string
   title: string

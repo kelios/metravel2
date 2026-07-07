@@ -18,6 +18,25 @@ export type NavigationActionVisual = {
   tintBg: string;
 };
 
+/**
+ * #842 — единая семантика иконок для трёх ролей действий по всему сайту, чтобы одна
+ * и та же семантика не задавалась вручную (тремя похожими стрелками) в каждом
+ * компоненте. Провайдер-иконки (Google/Waze/Яндекс…) остаются отдельными и живут в
+ * `getNavigationActionVisual`; эти три — общий «язык» карточек, popup и action-sheet.
+ *
+ * Иконки подобраны так, чтобы визуально НЕ конфликтовать друг с другом:
+ *  - `send` (бумажный самолётик) — узнаваемый Telegram/share, единственный «самолёт»;
+ *  - `corner-up-right` (стрелка-поворот) — построение маршрута внутри карты;
+ *  - `compass` — открыть список внешних навигаторов.
+ */
+export type SemanticActionRole = 'telegramShare' | 'buildRoute' | 'navigationMenu';
+
+export const SEMANTIC_ACTION_ICON: Record<SemanticActionRole, keyof typeof Feather.glyphMap> = {
+  telegramShare: 'send',
+  buildRoute: 'corner-up-right',
+  navigationMenu: 'compass',
+};
+
 export const NAVIGATION_ACTION_LABELS: Record<NavigationActionKind, string> = {
   apple: 'Apple',
   google: 'Google',

@@ -23,6 +23,7 @@ type ItemModel = {
     title?: string
   }>
   isAdding: boolean
+  isSaved?: boolean
   mapActions: Array<{
     icon: keyof typeof Feather.glyphMap
     key: string
@@ -116,6 +117,7 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
         addLabel="Сохранить"
         addDisabled={itemModel.addDisabled}
         isAdding={itemModel.isAdding}
+        isSaved={itemModel.isSaved}
         imageHeight={cardImageHeight}
         width={isWebGrid ? undefined : isMobileWeb ? undefined : Platform.OS === 'web' ? 300 : undefined}
         style={cardStyle}

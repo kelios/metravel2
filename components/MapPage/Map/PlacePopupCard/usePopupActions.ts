@@ -6,6 +6,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 import {
   getNavigationActionVisual,
   NAVIGATION_ACTION_LABELS,
+  SEMANTIC_ACTION_ICON,
 } from '@/components/navigation/navigationActionMeta';
 
 import { POPUP_TOOLTIPS } from './constants';
@@ -115,7 +116,7 @@ export function usePopupActions({
     if (onBuildRoute) {
       return {
         label: 'Маршрут сюда',
-        icon: 'corner-up-right' as const,
+        icon: SEMANTIC_ACTION_ICON.buildRoute,
         onPress: onBuildRoute,
         tooltip: POPUP_TOOLTIPS.buildRoute,
         accessibilityLabel: 'Построить маршрут сюда',

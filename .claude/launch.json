@@ -223,6 +223,16 @@
       "autoPort": false
     },
     {
+      "name": "Expo Web ProxyApi Mock 8096",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_API_URL=http://localhost:4620 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_ACHIEVEMENTS_MOCK=true npx expo start --web --port 8096"
+      ],
+      "port": 8096,
+      "autoPort": false
+    },
+    {
       "name": "Mock Static 8094",
       "runtimeExecutable": "node",
       "runtimeArgs": [

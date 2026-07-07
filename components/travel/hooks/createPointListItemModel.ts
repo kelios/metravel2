@@ -1,5 +1,18 @@
 import Feather from '@expo/vector-icons/Feather';
 
+// #841: нормализуем URL для сравнения «ведёт ли ссылка на текущее путешествие».
+// Игнорируем origin (относит./абсолют.), query, hash и trailing slash — сравниваем
+// только путь (slug/id), в нижнем регистре.
+const normalizeUrlPath = (raw?: string | null): string => {
+  const url = String(raw ?? '').trim();
+  if (!url) return '';
+  const path = url
+    .replace(/^[a-z]+:\/\/[^/]+/i, '') // origin
+    .replace(/[?#].*$/, '') // query + hash
+    .replace(/\/+$/, ''); // trailing slash
+  return path.toLowerCase();
+};
+
 type PointLike = {
   id: string;
   address: string;
@@ -23,6 +36,7 @@ export function createPointListItemModel({
   buildYandexNaviUrl,
   getCategoryLabel,
   getImageUrl,
+  isSaved = false,
   item,
   onAddPoint,
   onCopy,
@@ -43,6 +57,7 @@ export function createPointListItemModel({
   buildYandexNaviUrl?: (coordStr: string) => string;
   getCategoryLabel: (raw: PointLike['categoryName'] | null | undefined) => string;
   getImageUrl: (url?: string, updatedAt?: string) => string | undefined;
+  isSaved?: boolean;
   item: PointLike;
   onAddPoint: (item: PointLike) => void | Promise<void>;
   onCopy: (coordStr: string) => void | Promise<void>;
@@ -134,13 +149,20 @@ export function createPointListItemModel({
       ]
     : [];
 
+  // #841: итоговая ссылка action «Статья» после fallback. Если она ведёт ровно на
+  // текущую страницу путешествия (baseUrl) — action бесполезен, скрываем его.
+  // Оставляем, только если точка ссылается на ДРУГУЮ статью/путешествие.
+  const articleTarget = item.articleUrl || item.urlTravel || baseUrl;
+  const articleLeadsElsewhere =
+    !!articleTarget && normalizeUrlPath(articleTarget) !== normalizeUrlPath(baseUrl);
+
   const inlineActions: Array<{
     key: string;
     label: string;
     icon: keyof typeof Feather.glyphMap;
     onPress: () => void;
     title?: string;
-  }> = item.articleUrl || item.urlTravel || baseUrl
+  }> = articleLeadsElsewhere
     ? [
         {
           key: 'article',
@@ -161,6 +183,7 @@ export function createPointListItemModel({
     imageUrl,
     inlineActions,
     isAdding,
+    isSaved,
     mapActions,
     onCardPress,
     onCopyCoord,

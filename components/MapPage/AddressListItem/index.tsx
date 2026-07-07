@@ -14,7 +14,7 @@ import {
   buildYandexMapsUrl,
   buildYandexNaviUrl,
 } from '@/components/MapPage/Map/mapLinks'
-import { NAVIGATION_ACTION_LABELS } from '@/components/navigation/navigationActionMeta'
+import { NAVIGATION_ACTION_LABELS, SEMANTIC_ACTION_ICON } from '@/components/navigation/navigationActionMeta'
 
 import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
 
@@ -225,7 +225,9 @@ const AddressListItem: React.FC<Props> = ({
         ? {
             key: 'route',
             label: 'Маршрут',
-            icon: 'navigation' as const,
+            // #842: маршрут = «стрелка-поворот», отдельно от Telegram (самолётик) и
+            // навигации (компас) — без трёх одинаковых стрелок в ряду.
+            icon: SEMANTIC_ACTION_ICON.buildRoute,
             onPress: onBuildRoute,
             accessibilityLabel: 'Построить маршрут сюда',
             title: 'Построить маршрут сюда',

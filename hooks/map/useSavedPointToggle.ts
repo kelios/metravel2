@@ -60,7 +60,7 @@ export function buildSavedPointCoordIndex(points: ImportedPoint[]): SavedPointCo
   return index;
 }
 
-function findSavedPointInIndex(
+export function findSavedPointInIndex(
   index: SavedPointCoordIndex,
   lat: number,
   lng: number,

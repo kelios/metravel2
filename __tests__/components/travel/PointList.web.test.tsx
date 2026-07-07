@@ -171,7 +171,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
     (Platform as any).OS = prevOs;
   });
 
-  it('passes baseUrl as articleUrl to PopupContentComponent on web', () => {
+  it('renders the point action tiles (copy/share/article/nav) on web', () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
 
@@ -190,8 +190,14 @@ describe('PointList (web coordinates list uses popup template)', () => {
 
     const baseUrl = 'https://example.com/travel-page';
 
+    // #841: the «Открыть статью» tile is shown only when the point links to a
+    // DIFFERENT article than the current travel (baseUrl). Give it a distinct
+    // articleUrl so the tile renders; a bare baseUrl fallback is now hidden.
     const { getByLabelText } = render(
-      <PointList points={[basePoint as any]} baseUrl={baseUrl} />
+      <PointList
+        points={[{ ...basePoint, articleUrl: 'https://example.com/other-article' } as any]}
+        baseUrl={baseUrl}
+      />
     );
 
     // Compact popup-aligned points card: copy / share / article stay as direct
@@ -252,7 +258,12 @@ describe('PointList (web coordinates list uses popup template)', () => {
       }).then(() => {
         fireEvent.press(getByLabelText('Открыть статью'));
         return waitFor(() => {
-          expect(openSpy).toHaveBeenCalledWith(baseUrl, '_blank', 'noopener');
+          // #841: opens the point's own (distinct) article, not the current travel.
+          expect(openSpy).toHaveBeenCalledWith(
+            'https://example.com/other-article',
+            '_blank',
+            'noopener'
+          );
         }).then(() => {
           (Platform as any).OS = prevOs;
         });

@@ -6,6 +6,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet';
 import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
+import { SEMANTIC_ACTION_ICON } from '@/components/navigation/navigationActionMeta';
 import { POPUP_TOOLTIPS } from './constants';
 import FullscreenImageViewer from './FullscreenImageViewer';
 import FullscreenPopupOverlay from './FullscreenPopupOverlay';
@@ -634,7 +635,8 @@ const PlacePopupCard: React.FC<Props> = ({
                   style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
                 >
                   <View style={[styles.iconActionBubble, navExpanded && styles.iconActionBubbleActive]}>
-                    <Feather name="navigation" size={19} color={colors.text} />
+                    {/* #842: единая иконка «Навигация» (компас) — как в PointNavigationMenu и на карточках. */}
+                    <Feather name={SEMANTIC_ACTION_ICON.navigationMenu} size={19} color={colors.text} />
                     {isBottomCardLayout ? (
                       <Feather
                         name={useNavSheet ? 'more-horizontal' : navExpanded ? 'chevron-up' : 'chevron-down'}
