@@ -44,11 +44,11 @@ export const TravelHeroExtras: React.FC<{
         <TravelStatusButton
           travelId={travel.id}
           travelTitle={travel.name}
-          travelUrl={`/travels/${(travel as any).slug || travel.id}`}
-          travelImageUrl={(travel as any).travel_image_thumb_url}
-          travelCountry={(travel as any).countryName}
-          travelYear={(travel as any).year}
-          travelMonthName={(travel as any).monthName}
+          travelUrl={`/travels/${travel.slug || travel.id}`}
+          travelImageUrl={travel.travel_image_thumb_url}
+          travelCountry={travel.countryName}
+          travelYear={travel.year}
+          travelMonthName={travel.monthName}
         />
       </View>
 

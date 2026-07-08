@@ -129,10 +129,7 @@ export const TravelDeferredSections: React.FC<{
           <TravelDetailsSidebarSection
             travel={travel}
             anchors={anchors}
-            scrollY={scrollY}
-            viewportHeight={viewportHeight}
             canRenderHeavy={canRenderHeavy}
-            forceOpenKey={forceOpenKey}
           />
         ) : (
           SIDEBAR_PLACEHOLDER
@@ -166,5 +163,3 @@ export const TravelDeferredSections: React.FC<{
     </>
   )
 })
-
-export const TravelEngagementSection = TravelDetailsFooterSection

@@ -285,6 +285,16 @@ export default function MapScreen() {
     [quickFilters.selected, currentRadius, currentMode, currentTransport],
   )
 
+  // Radius всегда имеет непустое дефолтное значение, поэтому активность считаем
+  // ТОЛЬКО по категориям + текстовому поиску (как ActiveFiltersBar исключает
+  // radius-чип). Иначе быстрая кнопка сброса висела бы постоянно.
+  const hasActiveMapFilters = useMemo(
+    () =>
+      quickFilters.selected.length > 0 ||
+      Boolean(String(filtersValuesSlice?.filterValue?.searchQuery ?? '').trim()),
+    [quickFilters.selected, filtersValuesSlice],
+  )
+
   const handleRemoveActiveFilter = useCallback(
     (key: string) => {
       const onChange = filtersValuesSlice?.onFilterChange
@@ -440,6 +450,7 @@ export default function MapScreen() {
       requestOpenBottomSheet={requestOpenBottomSheet}
       filtersPanelProps={filtersPanelProps}
       handleClearAllFilters={handleClearAllFilters}
+      hasActiveFilters={hasActiveMapFilters}
       handleExpandRadius={handleExpandRadius}
       isConnected={isConnected}
       shouldLoadOnboarding={shouldLoadOnboarding}

@@ -55,6 +55,11 @@ interface CreatePopupComponentArgs {
   bottomSheetSplit?: boolean;
   /** Web desktop popup split: fixed natural-height hero photo + scrollable body. */
   popupSplit?: boolean;
+  /**
+   * Suppress the card's own top-right ✕. Set by wrappers that draw their own close
+   * (e.g. `MapPlaceBottomCard`'s sheet header ✕) so the corner isn't doubled up.
+   */
+  suppressInlineClose?: boolean;
   /** Native bottom-card hero height, computed from visible app content height. */
   bottomCardImageHeight?: number;
   /**
@@ -78,6 +83,7 @@ export const createMapPopupComponent = ({
   fullscreenOnMobile = false,
   bottomSheetSplit = false,
   popupSplit = false,
+  suppressInlineClose = false,
   bottomCardImageHeight,
   shareInActionRow = false,
   fullscreenTopInset = 0,
@@ -553,6 +559,7 @@ export const createMapPopupComponent = ({
           imageHeight={bottomCardImageHeight}
           bottomSheetSplit={bottomSheetSplit}
           popupSplit={popupSplit}
+          suppressInlineClose={suppressInlineClose}
           fullscreenTopInset={fullscreenTopInset}
           fullscreenBottomInset={fullscreenBottomInset}
           onClose={handlePress}

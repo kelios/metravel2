@@ -118,6 +118,9 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
         // Mobile web sheet: fixed hero photo + scrollable caption/actions so the
         // photo never jerks when «Ещё» expands (the text scrolls under it).
         bottomSheetSplit: isFullscreenWeb,
+        // The sheet header already draws its own ✕ — drop the card's inner top-right
+        // cross so the corner doesn't show two stacked crosses (native + mobile web).
+        suppressInlineClose: true,
         bottomCardImageHeight: nativeHeroHeight,
         // #FIX-3 — Telegram is a share action, not a map-app: surface it as the
         // title-row share icon and drop it from the «Навигация и действия» sheet.

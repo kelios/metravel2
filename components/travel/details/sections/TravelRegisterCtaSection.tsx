@@ -54,7 +54,7 @@ export const TravelRegisterCtaSection: React.FC<TravelRegisterCtaSectionProps> =
           { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
         ]}
       >
-        <Text style={styles.buttonText}>{CTA_LABEL}</Text>
+        <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>{CTA_LABEL}</Text>
       </Pressable>
     </View>
   )
@@ -87,7 +87,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   buttonText: {
-    color: '#fff',
     fontSize: 15,
     fontWeight: '700',
   },

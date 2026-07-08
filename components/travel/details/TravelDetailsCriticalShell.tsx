@@ -1,5 +1,11 @@
 import React, { useEffect, useMemo } from 'react';
 import { Animated, Platform, ScrollView, View } from 'react-native';
+import type {
+  LayoutChangeEvent,
+  ScrollViewProps,
+  StyleProp,
+  ViewStyle,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
@@ -56,15 +62,17 @@ type TravelDetailsCriticalShellProps = {
   travel?: Travel;
   isMobile: boolean;
   screenWidth: number;
-  wrapperStyle: any;
+  wrapperStyle: StyleProp<ViewStyle>;
+  // Shared travel-details StyleSheet object; typed loosely as it is threaded
+  // untyped through the container/view-model layers.
   styles: any;
   skeletonPhase: 'loading' | 'fading' | 'hidden';
   skeletonFallback: React.ReactNode;
-  scrollRef: React.RefObject<any>;
-  scrollViewStyle: any;
-  scrollEventHandler: any;
-  handleContentSizeChange: (...args: any[]) => void;
-  handleLayout: (...args: any[]) => void;
+  scrollRef: React.RefObject<ScrollView | null>;
+  scrollViewStyle: StyleProp<ViewStyle>;
+  scrollEventHandler: ScrollViewProps['onScroll'];
+  handleContentSizeChange: (width: number, height: number) => void;
+  handleLayout: (event: LayoutChangeEvent) => void;
   contentHorizontalPadding: number;
   anchors: AnchorsMap;
   onFirstImageLoad: () => void;
@@ -77,7 +85,7 @@ type TravelDetailsCriticalShellProps = {
   onNavigate: (key: string) => void;
   menuWidthNum: number;
   animatedX: Animated.Value;
-  sideMenuPlatformStyles: any;
+  sideMenuPlatformStyles: StyleProp<ViewStyle>;
   deferredContent: React.ReactNode;
   mainAriaLabel: string;
   topNotice?: React.ReactNode;

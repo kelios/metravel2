@@ -25,6 +25,7 @@ type MapScreenMobileProps = {
   requestOpenBottomSheet: (tab: any) => void
   filtersPanelProps: any
   handleClearAllFilters: () => void
+  hasActiveFilters?: boolean
   handleExpandRadius: () => void
   isConnected: boolean
   shouldLoadOnboarding: boolean
@@ -60,6 +61,7 @@ export function MapScreenMobile({
   requestOpenBottomSheet,
   filtersPanelProps,
   handleClearAllFilters,
+  hasActiveFilters,
   handleExpandRadius,
   isConnected,
   shouldLoadOnboarding,
@@ -113,6 +115,7 @@ export function MapScreenMobile({
           }}
           filtersPanelProps={filtersPanelProps}
           onResetFilters={handleClearAllFilters}
+          hasActiveFilters={hasActiveFilters}
           onExpandRadius={handleExpandRadius}
           selectedPlace={selectedPlace}
           clearSelectedPlace={clearSelectedPlace}

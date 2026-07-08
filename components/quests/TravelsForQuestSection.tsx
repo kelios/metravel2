@@ -103,8 +103,12 @@ function createStyles(colors: ThemedColors) {
       maxWidth: 320,
     },
     card: {
-      height: '100%',
       backgroundColor: colors.surface,
+      // Web keeps equal-height cards via CSS %; on native Yoga can't resolve a
+      // percent height inside a wrap-row within an unbounded ScrollView — it
+      // inflates the box into a huge empty surface block. Row `align-items:
+      // stretch` already equalises heights on native, so omit the percent there.
+      ...Platform.select({ web: { height: '100%' as const } }),
     },
   })
 }

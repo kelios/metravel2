@@ -8,6 +8,11 @@ import { PointStatus, type ImportedPoint } from '@/types/userPoints';
 const mockPlacePopupCard = jest.fn((props: any) => (
   <View testID="mock-place-popup-card">
     <Text>{props.title}</Text>
+    {props.onClose && !props.suppressInlineClose ? (
+      <Text accessibilityLabel="Закрыть попап" onPress={props.onClose}>
+        Закрыть
+      </Text>
+    ) : null}
     {(props.extraActions ?? []).map((action: any) => (
       <Text key={action.key} accessibilityLabel={action.accessibilityLabel} onPress={action.onPress}>
         {action.label}
@@ -148,8 +153,10 @@ describe('UserPointsMapPointMarkerWeb', () => {
     expect(props.onOpenYandexNavi).toEqual(expect.any(Function));
     expect(props.onOpenOpenStreetMap).toEqual(expect.any(Function));
     expect(props.onShareTelegram).toEqual(expect.any(Function));
+    expect(props.onClose).toEqual(expect.any(Function));
+    expect(props.suppressInlineClose).toBeFalsy();
 
-    expect(props.extraActions.map((action: any) => action.key)).toEqual(['edit', 'delete', 'close']);
+    expect(props.extraActions.map((action: any) => action.key)).toEqual(['edit', 'delete']);
   });
 
   it('keeps edit, delete, close and marker click behavior from the old popup', () => {

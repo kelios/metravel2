@@ -48,6 +48,9 @@ interface MapMobileLayoutProps {
   onToggleFavorite?: (id: string | number) => void
   favorites?: Set<string | number>
   onResetFilters?: () => void
+  // True when category/search filters are active — reveals the always-visible
+  // quick reset button in the top overlay (radius excluded, it always has a value).
+  hasActiveFilters?: boolean
   onExpandRadius?: () => void
   // #207 — selected single marker → maps.me-style bottom card.
   selectedPlace?: any | null
@@ -87,6 +90,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   onToggleFavorite,
   favorites,
   onResetFilters,
+  hasActiveFilters,
   onExpandRadius,
   selectedPlace,
   clearSelectedPlace,
@@ -570,6 +574,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             onToggleLayers={toggleLayersPopover}
             onClosePopover={closePopover}
             onOpenFilters={openFiltersSheet}
+            hasActiveFilters={hasActiveFilters}
+            onResetFilters={onResetFilters}
             onCenterOnUser={onCenterOnUser}
             onOpenList={openList}
             listBadge={listBadge}

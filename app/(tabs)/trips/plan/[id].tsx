@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import RouteBuilder from '@/components/trips/planning/RouteBuilder';
 import TripRouteExportMenu from '@/components/trips/planning/TripRouteExportMenu';
 import TripParticipantsList from '@/components/trips/planning/TripParticipantsList';
@@ -40,6 +41,17 @@ export default function PlannedTripScreen() {
           <Text style={styles.error}>Не удалось загрузить поездку.</Text>
         ) : (
           <>
+            <View style={styles.cover} testID="trip-plan-cover">
+              <ImageCardMedia
+                src={trip.coverUrl}
+                alt={trip.title}
+                height={220}
+                fit="cover"
+                blurBackground={false}
+                borderRadius={12}
+              />
+            </View>
+
             <View style={styles.header}>
               <View
                 style={[styles.badge, { backgroundColor: planStatusColor(trip.status, colors) }]}
@@ -109,6 +121,11 @@ const createStyles = (colors: ThemedColors) =>
     inner: { width: '100%', maxWidth: 760, gap: 16 },
     loader: { marginVertical: 48 },
     error: { color: colors.danger, fontSize: 14, fontWeight: '600', marginVertical: 24 },
+    cover: {
+      overflow: 'hidden',
+      borderRadius: 12,
+      backgroundColor: colors.surfaceMuted,
+    },
     header: { gap: 6 },
     badge: {
       alignSelf: 'flex-start',

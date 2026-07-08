@@ -275,6 +275,9 @@ interface PlannedTripDto {
   id: number;
   title: string;
   description?: string | null;
+  cover_url?: string | null;
+  cover?: string | null;
+  preview_image_url?: string | null;
   start_date?: string | null;
   end_date?: string | null;
   status: 'draft' | 'planned' | 'ongoing' | 'completed';
@@ -508,7 +511,7 @@ const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
       mapRouteSummary(dto.route_summary) ??
       (route.length ? estimateRouteSummary(route, transport) : null),
     participants,
-    coverUrl: null,
+    coverUrl: dto.cover_url ?? dto.cover ?? dto.preview_image_url ?? null,
     region: '',
     publishedToCommunity: false,
     report: null,

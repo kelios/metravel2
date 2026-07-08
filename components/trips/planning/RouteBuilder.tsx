@@ -2,11 +2,15 @@
 // Конструктор маршрута поездки (Sprint 13 / блок D): список точек с reorder/delete
 // (web-safe, без нативных drag-либ), inline-добавление точки, применение шаблонов
 // и живая сводка через estimateRouteSummary. Только владелец может редактировать.
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
+import { fetchPlacesCatalog } from '@/api/places';
+import { fetchTravels } from '@/api/travelsApi';
+import type { Travel, TravelAddressItem } from '@/types/types';
 import Button from '@/components/ui/Button';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import RouteSummaryBar from '@/components/trips/planning/RouteSummaryBar';
 import {
   estimateRouteSummary,
@@ -30,6 +34,66 @@ interface Props {
 }
 
 const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
+const SITE_SEARCH_MIN_LENGTH = 2;
+
+type SiteSearchStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+type SiteRouteOption = {
+  key: string;
+  kind: 'place' | 'travel';
+  id: number | null;
+  title: string;
+  subtitle: string;
+  description: string | null;
+  coordinates: [number, number] | null;
+  imageUrl: string | null;
+};
+
+const parseNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value.replace(',', '.').trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const parseLatLngPair = (value: unknown): { lat: number; lng: number } | null => {
+  if (typeof value !== 'string') return null;
+  const [latRaw, lngRaw] = value.split(',').map((part) => part.trim());
+  const lat = parseNumber(latRaw);
+  const lng = parseNumber(lngRaw);
+  if (lat == null || lng == null) return null;
+  return { lat, lng };
+};
+
+const travelAddressCoordinates = (point: TravelAddressItem): { lat: number; lng: number } | null => {
+  if (typeof point === 'string') return null;
+  const directLat = parseNumber(point.lat);
+  const directLng = parseNumber(point.lng);
+  if (directLat != null && directLng != null) return { lat: directLat, lng: directLng };
+  return parseLatLngPair(point.coords);
+};
+
+const travelCoordinates = (travel: Travel): [number, number] | null => {
+  const routePoint = travel.coordsMeTravel?.find((point) => {
+    const lat = parseNumber(point.lat);
+    const lng = parseNumber(point.lng);
+    return lat != null && lng != null;
+  });
+  if (routePoint) return [Number(routePoint.lng), Number(routePoint.lat)];
+
+  const addressPoint = travel.travelAddress
+    ?.map(travelAddressCoordinates)
+    .find((point): point is { lat: number; lng: number } => point != null);
+  return addressPoint ? [addressPoint.lng, addressPoint.lat] : null;
+};
+
+const compactText = (parts: Array<string | number | null | undefined>): string =>
+  parts
+    .map((part) => String(part ?? '').trim())
+    .filter(Boolean)
+    .join(' · ');
 
 const move = <T,>(arr: T[], from: number, to: number): T[] => {
   if (to < 0 || to >= arr.length) return arr;
@@ -52,6 +116,9 @@ function RouteBuilder({ trip }: Props) {
   const [newLat, setNewLat] = useState('');
   const [newLng, setNewLng] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [siteQuery, setSiteQuery] = useState('');
+  const [siteOptions, setSiteOptions] = useState<SiteRouteOption[]>([]);
+  const [siteSearchStatus, setSiteSearchStatus] = useState<SiteSearchStatus>('idle');
 
   const summary = useMemo(
     () => estimateRouteSummary(route, trip.transport),
@@ -91,6 +158,80 @@ function RouteBuilder({ trip }: Props) {
     setNewLat('');
     setNewLng('');
     setNewDescription('');
+  };
+
+  useEffect(() => {
+    const query = siteQuery.trim();
+    if (newType !== 'place' || query.length < SITE_SEARCH_MIN_LENGTH) {
+      setSiteOptions([]);
+      setSiteSearchStatus('idle');
+      return;
+    }
+
+    const controller = new AbortController();
+    setSiteSearchStatus('loading');
+
+    Promise.all([
+      fetchPlacesCatalog({ page: 1, perPage: 6, q: query }, controller.signal),
+      fetchTravels(0, 6, query, {}, { signal: controller.signal }),
+    ])
+      .then(([placesPage, travelsPage]) => {
+        const placeOptions: SiteRouteOption[] = placesPage.places.map((place) => {
+          const numericId = parseNumber(place.id);
+          return {
+            key: `place-${place.id}`,
+            kind: 'place',
+            id: numericId,
+            title: place.title,
+            subtitle: compactText([place.category, place.country]),
+            description: place.address ?? null,
+            coordinates: [place.lngNumber, place.latNumber],
+            imageUrl: place.travelImageThumbUrl || place.imageUrl || null,
+          };
+        });
+
+        const travelOptions: SiteRouteOption[] = travelsPage.data.map((travel) => ({
+          key: `travel-${travel.id}`,
+          kind: 'travel',
+          id: travel.id,
+          title: travel.name,
+          subtitle: compactText(['Путешествие', travel.countryName]),
+          description: travel.description || null,
+          coordinates: travelCoordinates(travel),
+          imageUrl: travel.travel_image_thumb_url || travel.travel_image_thumb_small_url || null,
+        }));
+
+        setSiteOptions([...placeOptions, ...travelOptions]);
+        setSiteSearchStatus('ready');
+      })
+      .catch((error) => {
+        if (error instanceof Error && error.name === 'AbortError') return;
+        setSiteOptions([]);
+        setSiteSearchStatus('error');
+      });
+
+    return () => controller.abort();
+  }, [newType, siteQuery]);
+
+  const handleAddSitePoint = (option: SiteRouteOption) => {
+    const title = option.title.trim();
+    if (!title) return;
+
+    setRoute((prev) => [
+      ...prev,
+      {
+        id: `${option.key}-${prev.length}`,
+        type: 'place',
+        name: title,
+        description: option.description || option.subtitle || null,
+        coordinates: option.coordinates,
+        placeId: option.id,
+      },
+    ]);
+    trackRoutePointAdded(trip.id, 'place');
+    setSiteQuery('');
+    setSiteOptions([]);
+    setSiteSearchStatus('idle');
   };
 
   const handleApplyTemplate = (points: Array<Omit<RoutePoint, 'id'>>) => {
@@ -188,6 +329,7 @@ function RouteBuilder({ trip }: Props) {
                 accessibilityRole="button"
                 onPress={() => setNewType(type)}
                 style={[styles.typeChip, active && styles.typeChipActive]}
+                testID={`route-builder-type-${type}`}
               >
                 <Feather
                   name={ROUTE_POINT_ICON_NAME[type] as never}
@@ -202,49 +344,112 @@ function RouteBuilder({ trip }: Props) {
           })}
         </View>
 
-        <TextInput
-          value={newName}
-          onChangeText={setNewName}
-          placeholder="Название точки"
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-          testID="route-builder-name"
-        />
-        <View style={styles.coordRow}>
-          <TextInput
-            value={newLat}
-            onChangeText={setNewLat}
-            placeholder="Широта (lat)"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="numbers-and-punctuation"
-            style={[styles.input, styles.coordInput]}
-            testID="route-builder-lat"
-          />
-          <TextInput
-            value={newLng}
-            onChangeText={setNewLng}
-            placeholder="Долгота (lng)"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="numbers-and-punctuation"
-            style={[styles.input, styles.coordInput]}
-            testID="route-builder-lng"
-          />
-        </View>
-        <TextInput
-          value={newDescription}
-          onChangeText={setNewDescription}
-          placeholder="Описание (по желанию)"
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-          testID="route-builder-description"
-        />
-        <Button
-          label="Добавить точку"
-          onPress={handleAdd}
-          variant="secondary"
-          disabled={!newName.trim()}
-          testID="route-builder-add"
-        />
+        {newType === 'place' ? (
+          <View style={styles.siteSearch}>
+            <TextInput
+              value={siteQuery}
+              onChangeText={setSiteQuery}
+              placeholder="Найти место или путешествие на MeTravel"
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+              testID="route-builder-site-search"
+            />
+            {siteSearchStatus === 'loading' ? (
+              <Text style={styles.hint}>Ищем совпадения...</Text>
+            ) : null}
+            {siteSearchStatus === 'error' ? (
+              <Text style={styles.errorText}>Не удалось загрузить варианты.</Text>
+            ) : null}
+            {siteSearchStatus === 'ready' && !siteOptions.length ? (
+              <Text style={styles.hint}>Ничего не найдено.</Text>
+            ) : null}
+            {siteOptions.length ? (
+              <View style={styles.siteResults}>
+                {siteOptions.map((option) => (
+                  <Pressable
+                    key={option.key}
+                    accessibilityRole="button"
+                    onPress={() => handleAddSitePoint(option)}
+                    style={styles.siteOption}
+                    testID={`route-builder-site-option-${option.key}`}
+                  >
+                    <View style={styles.siteOptionImage}>
+                      <ImageCardMedia
+                        src={option.imageUrl}
+                        alt={option.title}
+                        height={54}
+                        fit="cover"
+                        blurBackground={false}
+                        borderRadius={8}
+                        showLoadingIndicator={false}
+                      />
+                    </View>
+                    <View style={styles.siteOptionBody}>
+                      <Text style={styles.siteOptionKind}>
+                        {option.kind === 'travel' ? 'Путешествие' : 'Место'}
+                      </Text>
+                      <Text style={styles.siteOptionTitle} numberOfLines={1}>
+                        {option.title}
+                      </Text>
+                      {option.subtitle ? (
+                        <Text style={styles.siteOptionSubtitle} numberOfLines={1}>
+                          {option.subtitle}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Feather name="plus" size={18} color={colors.primaryDark} />
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : (
+          <>
+            <TextInput
+              value={newName}
+              onChangeText={setNewName}
+              placeholder="Название точки"
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+              testID="route-builder-name"
+            />
+            <View style={styles.coordRow}>
+              <TextInput
+                value={newLat}
+                onChangeText={setNewLat}
+                placeholder="Широта (lat)"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numbers-and-punctuation"
+                style={[styles.input, styles.coordInput]}
+                testID="route-builder-lat"
+              />
+              <TextInput
+                value={newLng}
+                onChangeText={setNewLng}
+                placeholder="Долгота (lng)"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numbers-and-punctuation"
+                style={[styles.input, styles.coordInput]}
+                testID="route-builder-lng"
+              />
+            </View>
+            <TextInput
+              value={newDescription}
+              onChangeText={setNewDescription}
+              placeholder="Описание (по желанию)"
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+              testID="route-builder-description"
+            />
+            <Button
+              label="Добавить точку"
+              onPress={handleAdd}
+              variant="secondary"
+              disabled={!newName.trim()}
+              testID="route-builder-add"
+            />
+          </>
+        )}
       </View>
 
       {templates.length ? (
@@ -287,6 +492,7 @@ const createStyles = (colors: ThemedColors) =>
     heading: { fontSize: 18, fontWeight: '700', color: colors.text },
     label: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: 4 },
     hint: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
+    errorText: { fontSize: 13, color: colors.danger, lineHeight: 18 },
     pointList: { gap: 8 },
     pointRow: {
       flexDirection: 'row',
@@ -352,6 +558,27 @@ const createStyles = (colors: ThemedColors) =>
     },
     coordRow: { flexDirection: 'row', gap: 8 },
     coordInput: { flex: 1 },
+    siteSearch: { gap: 8 },
+    siteResults: { gap: 6 },
+    siteOption: {
+      minHeight: 68,
+      paddingVertical: 7,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    siteOptionImage: {
+      width: 72,
+      height: 54,
+      borderRadius: 8,
+      overflow: 'hidden',
+      backgroundColor: colors.surface,
+      flexShrink: 0,
+    },
+    siteOptionBody: { flex: 1, minWidth: 0, gap: 1 },
+    siteOptionKind: { fontSize: 11, color: colors.textMuted, fontWeight: '700' },
+    siteOptionTitle: { fontSize: 14, color: colors.text, fontWeight: '700' },
+    siteOptionSubtitle: { fontSize: 12, color: colors.textSecondary },
     templates: { gap: 8 },
     templateRow: {
       flexDirection: 'row',

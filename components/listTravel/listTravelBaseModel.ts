@@ -87,7 +87,6 @@ type ResponsiveParams = {
   isPhone: boolean
   isPortrait: boolean
   isTabletSize: boolean
-  isTestEnv: boolean
   rawWidth: number
 }
 

@@ -70,7 +70,6 @@ type ListTravelBaseProps = {
 
 function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
     const colors = useThemedColors();
-    const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
     const {
       width: rawWidth,
       isPhone,
@@ -86,7 +85,6 @@ function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
       isPhone,
       isPortrait,
       isTabletSize,
-      isTestEnv,
       rawWidth,
     });
 
@@ -569,32 +567,6 @@ function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
       isFetching,
       isEmpty,
     });
-
-    useEffect(() => {
-        if (Platform.OS !== 'web') return;
-        if (!flatListRef.current) return;
-
-        const restoreScroll = () => {
-                try {
-                    const stored = window.sessionStorage.getItem('travel-list-scroll');
-                    if (!stored) return;
-                    const value = Number(stored);
-                    if (!Number.isFinite(value) || value <= 0) return;
-
-                    // Простое восстановление без лишних анимаций
-                    setTimeout(() => {
-                        flatListRef.current?.scrollToOffset({ offset: value, animated: false });
-                    }, 50); // Небольшая задержка для стабильности
-                } catch (error) {
-                    console.warn('Failed to restore travel list scroll position', error);
-                }
-        };
-
-        // Используем setTimeout для обеспечения готовности DOM
-        const timeoutId = setTimeout(restoreScroll, 100);
-
-        return () => clearTimeout(timeoutId);
-    }, []);
 
     // Оптимизируем расчет путем использования стабильных ссылок на filter
     const activeFiltersCount = useMemo(() => getListTravelActiveFiltersCount(filter, debSearch), [filter, debSearch]);

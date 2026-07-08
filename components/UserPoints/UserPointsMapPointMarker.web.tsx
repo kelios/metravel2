@@ -345,16 +345,9 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
         tooltip: 'Удалить',
       })
     }
-    actions.push({
-      key: 'close',
-      label: 'Закрыть',
-      icon: 'x',
-      onPress: handleClosePopup,
-      accessibilityLabel: 'Закрыть попап',
-      tooltip: 'Закрыть',
-    })
+    // No inline «Закрыть» action — the card's top-right ✕ (onClose) already closes.
     return actions
-  }, [handleClosePopup, handleDeletePoint, handleEditPoint, onDeletePoint, onEditPoint])
+  }, [handleDeletePoint, handleEditPoint, onDeletePoint, onEditPoint])
 
   const drivingDistanceMeters = driveInfo?.status === 'ok' ? driveInfo.distanceKm * 1000 : null
   const drivingDurationSeconds = driveInfo?.status === 'ok' ? driveInfo.durationMin * 60 : null

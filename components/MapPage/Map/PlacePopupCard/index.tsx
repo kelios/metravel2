@@ -90,6 +90,12 @@ type Props = {
    */
   popupSplit?: boolean;
   onClose?: () => void;
+  /**
+   * Suppress the card's own top-right ✕. Set by wrappers that already draw their
+   * own close affordance (e.g. `MapPlaceBottomCard`'s sheet header ✕) so the same
+   * corner doesn't show two stacked crosses. `onClose` still fires from the wrapper.
+   */
+  suppressInlineClose?: boolean;
   colors: ThemedColors;
   /**
    * Optional override for the primary action button. When provided, it wins over
@@ -147,6 +153,7 @@ const PlacePopupCard: React.FC<Props> = ({
   fullscreenTopInset = 0,
   fullscreenBottomInset = 0,
   onClose,
+  suppressInlineClose = false,
   colors,
   primaryActionOverride,
 }) => {
@@ -747,7 +754,7 @@ const PlacePopupCard: React.FC<Props> = ({
     </>
   ) : null;
 
-  const closeControl = onClose ? (
+  const closeControl = onClose && !suppressInlineClose ? (
     <CardActionPressable
       accessibilityLabel="Закрыть попап"
       onPress={onClose}

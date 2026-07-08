@@ -34,15 +34,11 @@ const PopularTravelListComponent = Platform.OS === 'web' ? PopularTravelListLazy
 export const TravelDetailsSidebarSection: React.FC<{
   travel: Travel
   anchors: AnchorsMap
-  scrollY?: any
-  viewportHeight?: number
   canRenderHeavy: boolean
-  forceOpenKey?: string | null
 }> = ({
   travel,
   anchors,
   canRenderHeavy,
-  forceOpenKey: _forceOpenKey = null,
 }) => {
   const styles = useTravelDetailsStyles()
   const colors = useThemedColors()

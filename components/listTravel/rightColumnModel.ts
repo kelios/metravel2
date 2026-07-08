@@ -58,6 +58,10 @@ type RightColumnComparableProps = {
   topContent?: unknown
   total: number
   travels: Travel[]
+  sortOptions?: unknown
+  onSortChange?: unknown
+  onDensityChange?: unknown
+  primaryAction?: unknown
   sortValue?: string
   density?: string
   showDensityToggle?: boolean
@@ -92,6 +96,10 @@ export function areRightColumnPropsEqual(
     prev.onEndReached === next.onEndReached &&
     prev.refetch === next.refetch &&
     prev.sortValue === next.sortValue &&
+    prev.sortOptions === next.sortOptions &&
+    prev.onSortChange === next.onSortChange &&
+    prev.onDensityChange === next.onDensityChange &&
+    prev.primaryAction === next.primaryAction &&
     prev.density === next.density &&
     prev.showDensityToggle === next.showDensityToggle
   )

@@ -137,8 +137,8 @@ describe('TravelListItem content & metadata', () => {
     expect(getByTestId('views-overlay')).toBeTruthy();
   });
 
-  it('keeps views out of the meta row on narrow desktop grid cards', () => {
-    const { getByTestId, queryByTestId, queryByText } = renderItem(
+  it('keeps views and author on media overlays on narrow desktop grid cards', () => {
+    const { getByTestId, queryByTestId, getByText } = renderItem(
       {
         countryName: 'Беларусь',
         countUnicIpView: '43',
@@ -154,7 +154,8 @@ describe('TravelListItem content & metadata', () => {
 
     expect(queryByTestId('views-meta')).toBeNull();
     expect(getByTestId('views-overlay')).toBeTruthy();
-    expect(queryByText('Long Author Name')).toBeNull();
+    expect(getByTestId('author-overlay')).toBeTruthy();
+    expect(getByText('Long Author Name')).toBeTruthy();
   });
 
   it('renders the year on web travel cards', () => {

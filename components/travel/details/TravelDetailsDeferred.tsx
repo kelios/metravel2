@@ -162,7 +162,6 @@ export const TravelDeferredSections: React.FC<{
               travel={travel}
               anchors={anchors}
               canRenderHeavy={canRenderHeavy}
-              forceOpenKey={forceOpenKey}
             />
           </Suspense>
         ) : (
@@ -204,5 +203,3 @@ export const TravelDeferredSections: React.FC<{
     </>
   )
 })
-
-export const TravelEngagementSection = TravelDetailsFooterSectionLazy

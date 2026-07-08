@@ -78,6 +78,10 @@ interface MapMobileTopOverlayProps {
   onToggleLayers: () => void
   onClosePopover: () => void
   onOpenFilters: () => void
+  /** True when category/search filters are active — reveals the quick reset button. */
+  hasActiveFilters?: boolean
+  /** Reset all filters (same canonical clear-all as the filters sheet). */
+  onResetFilters?: () => void
   /** Recenter the map on the user's location. */
   onCenterOnUser: () => void
   /** Open the «Места рядом» list sheet. */
@@ -124,6 +128,8 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   onToggleLayers,
   onClosePopover,
   onOpenFilters,
+  hasActiveFilters,
+  onResetFilters,
   onCenterOnUser,
   onOpenList,
   listBadge,
@@ -302,6 +308,19 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               </View>
             )}
           </Pressable>
+
+          {hasActiveFilters && onResetFilters && (
+            <Pressable
+              testID="map-mobile-reset-filters"
+              onPress={onResetFilters}
+              accessibilityRole="button"
+              accessibilityLabel="Сбросить фильтры"
+              hitSlop={6}
+              style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+            >
+              <Feather name="rotate-ccw" size={20} color={colors.text} />
+            </Pressable>
+          )}
 
           <View
             style={styles.routeToolbar}

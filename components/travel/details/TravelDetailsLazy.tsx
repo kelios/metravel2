@@ -24,7 +24,7 @@ const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 400): Promise<
   try {
     return await fn()
   } catch (err) {
-    console.error('[withLazy] import attempt failed:', err)
+    if (__DEV__) console.error('[withLazy] import attempt failed:', err)
     if (isTestEnv || tries <= 0) throw err
     await new Promise((r) => setTimeout(r, delay))
     return retry(fn, tries - 1, delay)
