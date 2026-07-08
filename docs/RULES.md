@@ -308,7 +308,10 @@ npx serve dist/prod -l 3000 -s
 ### Icons
 
 - Avoid emoji in production UI.
+  - This includes decorative glyphs used as icons/bullets: `●` (U+25CF), `▶`, `🗺️ 🧭 📖 ❤️`, etc. — not in badge text, not as `icon={<Body>▶</Body>}`, not in feature data arrays. Use a Feather icon instead (for a status dot: a small Feather icon in a `flexDirection: 'row'` container + text).
+  - There is no automated guard for UI emoji — this is caught only by reading this section and by review.
 - Use a single icon source across the UI (e.g. `@expo/vector-icons`).
+  - Pick the brand-consistent icon for a concept, not a random Feather name: quests = flag (`flag` / nav `quest-map-person`), map = `map`/`map-fold` — so the set reads as a family and matches the tab bar / `components/layout/NavigationIcon.tsx`.
 - Avoid SVG icon stacks (`react-native-svg`, `lucide-react-native`) in components rendered on web.
 
 #### Allowed icon libraries

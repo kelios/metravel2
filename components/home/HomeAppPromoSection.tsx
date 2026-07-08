@@ -11,9 +11,9 @@ import { sendAnalyticsEvent } from '@/utils/analytics'
 const IS_WEB = Platform.OS === 'web'
 const APP_ICON = require('@/assets/images/icon.png')
 
-const HIGHLIGHTS: { icon: 'map-pin' | 'compass' | 'download'; text: string }[] = [
+const HIGHLIGHTS: { icon: 'map-pin' | 'flag' | 'download'; text: string }[] = [
   { icon: 'map-pin', text: 'Карта мест и маршрутов' },
-  { icon: 'compass', text: 'Городские квесты' },
+  { icon: 'flag', text: 'Городские квесты' },
   { icon: 'download', text: 'Офлайн-доступ' },
 ]
 
@@ -56,7 +56,8 @@ function HomeAppPromoSection() {
 
           <View style={styles.body}>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>● Уже на Android</Text>
+              <Feather name="smartphone" size={12} color={colors.primary} />
+              <Text style={styles.badgeText}>Уже на Android</Text>
             </View>
             <Text
               style={styles.title}
@@ -132,6 +133,9 @@ function createStyles(colors: ThemedColors, isMobile: boolean) {
       gap: 8,
     },
     badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
       alignSelf: 'flex-start',
       paddingHorizontal: 10,
       paddingVertical: 4,
