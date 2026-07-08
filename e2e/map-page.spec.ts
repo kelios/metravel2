@@ -220,6 +220,9 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     installNoConsoleErrorsGuard(page);
     await installTileMock(page);
     await preacceptCookies(page);
+    await page.addInitScript(() => {
+      window.localStorage.setItem('metravel_map_onboarding_completed', 'true');
+    });
   });
 
   test('desktop: map tiles are visible (screenshot)', async ({ page }) => {

@@ -65,6 +65,12 @@ export function TravelsForQuestSection({ cityName, countryName, countryCode, coo
                 metaText={metaText}
                 onPress={() => router.push(`/travels/${travel.slug || travel.id}`)}
                 imageHeight={170}
+                mediaFit="contain"
+                mediaProps={{
+                  blurBackground: true,
+                  allowCriticalWebBlur: true,
+                  optimizeWeb: false,
+                }}
                 style={styles.card}
               />
             </View>

@@ -90,4 +90,14 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
 
     expect(document.querySelectorAll('.ssg-travel-h1').length).toBe(0)
   })
+
+  it('signals that the React first screen replaced the SSG shell', () => {
+    const root = document.createElement('div')
+    root.id = 'root'
+    document.body.appendChild(root)
+
+    renderShell()
+
+    expect(root.getAttribute('data-travel-details-ready')).toBe('true')
+  })
 })

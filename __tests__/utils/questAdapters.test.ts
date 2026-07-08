@@ -6,6 +6,7 @@ import {
   adaptFinale,
   adaptCity,
   adaptMeta,
+  adaptBundle,
 } from '@/utils/questAdapters';
 
 describe('questAdapters', () => {
@@ -251,6 +252,48 @@ describe('questAdapters', () => {
       expect(result.text).toBe('Поздравляем!');
       expect(result.video).toBe('https://cdn.com/video.mp4');
       expect(result.poster).toBeUndefined();
+    });
+  });
+
+  describe('adaptBundle step ordering', () => {
+    const mkStep = (n: number, order: number) => ({
+      id: n,
+      step_id: `step-${n}`,
+      title: `Шаг ${n}`,
+      location: 'x',
+      story: 'x',
+      task: 'x',
+      answer_pattern: { type: 'text', value: 'x' },
+      lat: 50,
+      lng: 20,
+      maps_url: '',
+      order,
+    });
+
+    it('sorts steps by `order` regardless of API array order', () => {
+      const result = adaptBundle({
+        id: 1,
+        quest_id: 'q',
+        title: 'Q',
+        finale: { text: 'Финал', video_url: null, poster_url: null },
+        city: { name: 'Брест', lat: '52.09', lng: '23.68' },
+        steps: [mkStep(3, 3), mkStep(1, 1), mkStep(2, 2)],
+      } as any);
+      expect(result.steps.map((s) => s.id)).toEqual(['step-1', 'step-2', 'step-3']);
+    });
+
+    it('keeps steps without `order` after ordered ones, preserving their relative order', () => {
+      const noOrderA = { ...mkStep(9, undefined as any), step_id: 'no-a' };
+      const noOrderB = { ...mkStep(8, undefined as any), step_id: 'no-b' };
+      const result = adaptBundle({
+        id: 1,
+        quest_id: 'q',
+        title: 'Q',
+        finale: { text: 'Финал', video_url: null, poster_url: null },
+        city: { name: 'Брест', lat: '52.09', lng: '23.68' },
+        steps: [noOrderA, mkStep(2, 2), noOrderB, mkStep(1, 1)],
+      } as any);
+      expect(result.steps.map((s) => s.id)).toEqual(['step-1', 'step-2', 'no-a', 'no-b']);
     });
   });
 

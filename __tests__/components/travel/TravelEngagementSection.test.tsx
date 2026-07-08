@@ -4,7 +4,7 @@
 
 import React, { Suspense } from 'react';
 import { render, waitFor } from '@testing-library/react-native';
-import { TravelEngagementSection } from '@/components/travel/details/TravelDetailsDeferred';
+import { TravelDetailsFooterSection } from '@/components/travel/details/sections/TravelDetailsFooterSection';
 
 // Stub heavy child components to simple markers
 jest.mock('@/components/travel/TelegramDiscussionSection', () => {
@@ -30,10 +30,10 @@ const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <Suspense fallback={null}>{children}</Suspense>
 );
 
-describe('TravelEngagementSection', () => {
+describe('TravelDetailsFooterSection', () => {
   it('renders Telegram block once on web', async () => {
     const result = render(
-      <TravelEngagementSection travel={baseTravel} isMobile={false} />,
+      <TravelDetailsFooterSection travel={baseTravel} isMobile={false} />,
       { wrapper: Wrapper }
     );
     await waitFor(() => {
@@ -43,7 +43,7 @@ describe('TravelEngagementSection', () => {
 
   it('renders ShareButtons only on desktop/web variant', async () => {
     const desktop = render(
-      <TravelEngagementSection travel={baseTravel} isMobile={false} />,
+      <TravelDetailsFooterSection travel={baseTravel} isMobile={false} />,
       { wrapper: Wrapper }
     );
     await waitFor(() => {
@@ -51,7 +51,7 @@ describe('TravelEngagementSection', () => {
     });
 
     const mobile = render(
-      <TravelEngagementSection travel={baseTravel} isMobile />,
+      <TravelDetailsFooterSection travel={baseTravel} isMobile />,
       { wrapper: Wrapper }
     );
     await waitFor(() => {

@@ -201,6 +201,15 @@ describe('ssg-skeletons', () => {
       expect(skeleton()).not.toBeNull();
     });
 
+    it('removes the travel skeleton when the React first screen is ready', () => {
+      setupDom();
+      runScript();
+      document.getElementById('root')?.setAttribute('data-travel-details-ready', 'true');
+      jest.advanceTimersByTime(500);
+      expect(skeleton()).toBeNull();
+      expect(document.getElementById('ssg-skeleton-css')).toBeNull();
+    });
+
     it('removes travel skeleton after 20s once app-hydrated is set', () => {
       setupDom();
       runScript();

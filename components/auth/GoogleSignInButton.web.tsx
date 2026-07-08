@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
+import { getGoogleSignInButtonTheme } from './googleSignInButtonTheme';
 
 interface GoogleSignInButtonProps {
     onSuccess: (credential: string) => void;
@@ -24,7 +25,7 @@ declare global {
                         parent: HTMLElement,
                         options: {
                             type?: 'standard' | 'icon';
-                            theme?: 'outline' | 'filled_blue' | 'filled_black';
+                            theme?: 'outline' | 'filled_blue' | 'filled_black' | 'outline_dark';
                             size?: 'large' | 'medium' | 'small';
                             text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
                             shape?: 'rectangular' | 'pill' | 'circle' | 'square';
@@ -179,7 +180,7 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
             buttonContainerRef.current.innerHTML = '';
             window.google.accounts.id.renderButton(buttonContainerRef.current, {
                 type: 'standard',
-                theme: isDark ? 'filled_black' : 'outline',
+                theme: getGoogleSignInButtonTheme(isDark),
                 size: 'large',
                 text: 'signin_with',
                 shape: 'rectangular',

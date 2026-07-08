@@ -11,7 +11,6 @@ import { useQuestRatingMutation } from '@/hooks/useQuestRating'
 import { pluralizeRu } from '@/utils/pluralize'
 import QuestPioneerBlock from './QuestPioneerBlock'
 import QuestReviewSection from './QuestReviewSection'
-import QuestFinaleRating from './QuestFinaleRating'
 import type { QuestMapApp } from './questWizardHelpers'
 
 import {
@@ -288,31 +287,19 @@ function QuestFinaleFeedback({
   questId?: string
   questNumericId?: number
 }) {
-  const {
-    userRating,
-    isSubmitting: isRatingSubmitting,
-    canRate,
-    rate,
-  } = useQuestRatingMutation(questNumericId)
+  const { userRating, isSubmitting: isRatingSubmitting, rate } =
+    useQuestRatingMutation(questNumericId)
+
+  if (!questId) return null
 
   return (
-    <>
-      <QuestFinaleRating
-        questNumericId={questNumericId}
-        userRating={userRating}
-        isSubmitting={isRatingSubmitting}
-        canRate={canRate}
-        onRate={rate}
-      />
-
-      {questId ? (
-        <QuestReviewSection
-          questId={questId}
-          questNumericId={questNumericId}
-          initialRating={userRating}
-        />
-      ) : null}
-    </>
+    <QuestReviewSection
+      questId={questId}
+      questNumericId={questNumericId}
+      userRating={userRating}
+      onRate={rate}
+      isRatingSubmitting={isRatingSubmitting}
+    />
   )
 }
 
@@ -354,7 +341,7 @@ export function QuestFinalePanel({
   return (
     <View style={styles.completionScreen}>
       {allCompleted ? (
-        <>
+        <View style={styles.finaleContent}>
           <Text style={styles.completionTitle}>Квест завершен!</Text>
 
           {questId ? (
@@ -438,7 +425,7 @@ export function QuestFinalePanel({
           ) : null}
 
           <QuestFinaleFeedback questId={questId} questNumericId={questNumericId} />
-        </>
+        </View>
       ) : (
         <>
           <Text style={[styles.completionText, { opacity: 0.8 }]}>

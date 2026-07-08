@@ -87,6 +87,16 @@ export const createExcursionsStyles = (colors: QuestColors, isMobile: boolean, s
             } as any,
         }),
     },
+    // Единая центрированная колонка для контента финала: заголовок, бейдж,
+    // видео, текст и блок отзыва идут одной шириной по центру. Без неё дети
+    // расходились по ширине (видео до 960, текст 480, бейдж 460 с прижатием
+    // влево) → перекошенная раскладка на десктопе.
+    finaleContent: {
+        width: '100%',
+        maxWidth: isMobile ? undefined : 600,
+        alignSelf: 'center',
+        alignItems: 'center',
+    },
     completionTitle: {
         fontSize: isMobile ? 22 : 28,
         fontWeight: '800',
@@ -102,6 +112,7 @@ export const createExcursionsStyles = (colors: QuestColors, isMobile: boolean, s
         textAlign: 'center',
         lineHeight: isMobile ? 23 : 26,
         marginBottom: isMobile ? SPACING.lg : SPACING.xl,
-        maxWidth: isMobile ? screenW - 64 : 480,
+        alignSelf: 'stretch',
+        maxWidth: isMobile ? screenW - 64 : undefined,
     },
 } as const);

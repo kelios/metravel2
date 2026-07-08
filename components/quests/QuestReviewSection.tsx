@@ -2,6 +2,7 @@ import { memo, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import StarRating from '@/components/ui/StarRating'
+import { type QuestRating } from '@/api/questRating'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useQuestReview } from '@/hooks/useQuestReview'
@@ -10,20 +11,29 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 type Props = {
   questId: string
   questNumericId: number | undefined
-  initialRating?: number | null
+  // Живая оценка пользователя (из useQuestRatingMutation): единственный источник
+  // звёзд в этом блоке — они же кормят общий рейтинг квеста через onRate.
+  userRating?: number | null
+  onRate?: (rating: QuestRating) => void
+  isRatingSubmitting?: boolean
   testID?: string
 }
 
+const clampRating = (value: number): QuestRating =>
+  Math.max(1, Math.min(5, Math.round(value))) as QuestRating
+
 function QuestReviewSection({
   questNumericId,
-  initialRating,
+  userRating,
+  onRate,
+  isRatingSubmitting = false,
   testID = 'quest-review-section',
 }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const { isAuthenticated, requireAuth } = useRequireAuth({ intent: 'rate' })
 
-  const { review, isSubmitting, isSubmitted, hasError, submit } = useQuestReview({
+  const { review, isSubmitting, isSubmitted, submit } = useQuestReview({
     questId: questNumericId,
     enabled: !!questNumericId,
   })
@@ -31,18 +41,32 @@ function QuestReviewSection({
   const [rating, setRating] = useState(0)
   const [liked, setLiked] = useState('')
   const [disliked, setDisliked] = useState('')
+  const [submittedLocally, setSubmittedLocally] = useState(false)
 
-  const initialReviewRating =
-    typeof initialRating === 'number' && Number.isFinite(initialRating) && initialRating > 0
-      ? Math.max(1, Math.min(5, Math.round(initialRating)))
+  const liveRating =
+    typeof userRating === 'number' && Number.isFinite(userRating) && userRating > 0
+      ? clampRating(userRating)
       : 0
-  const effectiveRating = rating || review?.rating || initialReviewRating
-  const showRatingPrefillNote = !rating && !review?.rating && initialReviewRating > 0
+  const effectiveRating = rating || liveRating || review?.rating || 0
   const alreadyReviewed = !!review && !isSubmitted
-  const showSuccess = isSubmitted || alreadyReviewed
+  // Оценка (/rate/) сохраняется живьём при тапе по звезде, поэтому благодарим,
+  // как только оценка выставлена и пользователь нажал «Отправить» — даже если
+  // текстовый эндпоинт отзывов ещё не на бэке (BE #487).
+  const showSuccess = alreadyReviewed || isSubmitted || (submittedLocally && effectiveRating > 0)
 
   // Оценка обязательна (BE: rating 1..5, NOT NULL). Тексты — опциональны.
   const canSubmit = effectiveRating > 0
+
+  // Тап по звезде сразу сохраняет оценку в общий рейтинг квеста (живой /rate/).
+  const handleRate = (value: number) => {
+    if (!isAuthenticated) {
+      requireAuth()
+      return
+    }
+    const next = clampRating(value)
+    setRating(next)
+    onRate?.(next)
+  }
 
   const handleSubmit = () => {
     if (!isAuthenticated) {
@@ -50,7 +74,10 @@ function QuestReviewSection({
       return
     }
     if (!questNumericId || !canSubmit || isSubmitting) return
+    // Убеждаемся, что оценка сохранена (на случай префилла без ручного тапа).
+    onRate?.(clampRating(effectiveRating))
     submit({ rating: effectiveRating, liked: liked.trim(), disliked: disliked.trim() })
+    setSubmittedLocally(true)
   }
 
   if (showSuccess) {
@@ -58,7 +85,7 @@ function QuestReviewSection({
       <View style={styles.container} testID={testID} nativeID="quest-review-section">
         <Text style={styles.title}>Ваш отзыв о квесте</Text>
         <View style={styles.successBox}>
-          <Text style={styles.successText}>Спасибо за подробный отзыв!</Text>
+          <Text style={styles.successText}>Спасибо за отзыв!</Text>
         </View>
       </View>
     )
@@ -66,28 +93,23 @@ function QuestReviewSection({
 
   return (
     <View style={styles.container} testID={testID} nativeID="quest-review-section">
-      <Text style={styles.title}>Подробный отзыв о квесте</Text>
+      <Text style={styles.title}>Отзыв о квесте</Text>
       <Text style={styles.subtitle}>
-        Здесь можно оставить текстовый отзыв; оценка ниже относится к этому отзыву.
+        Оценка учитывается в общем рейтинге квеста. Текстовый отзыв — по желанию.
       </Text>
 
       <View style={styles.starsRow}>
-        <Text style={styles.fieldLabel}>Оценка в отзыве</Text>
+        <Text style={styles.fieldLabel}>Ваша оценка</Text>
         <StarRating
           rating={effectiveRating}
           userRating={effectiveRating}
           interactive={isAuthenticated}
-          onRate={setRating}
-          disabled={isSubmitting}
+          onRate={handleRate}
+          disabled={isSubmitting || isRatingSubmitting}
           size="large"
           showValue={false}
           showCount={false}
         />
-        {showRatingPrefillNote ? (
-          <Text style={styles.ratingHint}>
-            Подставили вашу быструю оценку. Можно изменить для отзыва.
-          </Text>
-        ) : null}
       </View>
 
       <View style={styles.field}>
@@ -119,10 +141,6 @@ function QuestReviewSection({
           textAlignVertical="top"
         />
       </View>
-
-      {hasError ? (
-        <Text style={styles.errorText}>Не удалось отправить отзыв, попробуйте позже</Text>
-      ) : null}
 
       <Pressable
         onPress={handleSubmit}
@@ -171,11 +189,6 @@ const createStyles = (colors: any) =>
       fontWeight: '600',
       color: colors.textMuted,
     },
-    ratingHint: {
-      fontSize: 12,
-      lineHeight: 16,
-      color: colors.textMuted,
-    },
     input: {
       minHeight: 72,
       borderWidth: 1,
@@ -187,10 +200,6 @@ const createStyles = (colors: any) =>
       color: colors.text,
       backgroundColor: colors.backgroundSecondary,
       ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
-    },
-    errorText: {
-      fontSize: 13,
-      color: colors.error ?? colors.danger ?? colors.warning,
     },
     submitButton: {
       alignSelf: 'flex-start',

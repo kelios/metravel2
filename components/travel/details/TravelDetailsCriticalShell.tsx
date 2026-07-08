@@ -133,6 +133,25 @@ export default function TravelDetailsCriticalShell({
     const stale = document.querySelectorAll('h1[data-ssg-travel-h1], .ssg-travel-h1');
     stale.forEach((node) => node.parentNode?.removeChild(node));
   }, [travel]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const root = document.getElementById('root');
+    if (!root) return;
+
+    // The outer SSG shell cannot reliably observe Safari's replaced LCP image.
+    // Signal only after React's own first-screen skeleton has lifted.
+    if (travel && skeletonPhase !== 'loading') {
+      root.setAttribute('data-travel-details-ready', 'true');
+    } else {
+      root.removeAttribute('data-travel-details-ready');
+    }
+
+    return () => {
+      root.removeAttribute('data-travel-details-ready');
+    };
+  }, [skeletonPhase, travel]);
+
   const showDesktopSidebar = shouldShowTravelDetailsDesktopSidebar(isMobile, screenWidth);
   const showSkeletonOverlay = shouldShowTravelDetailsSkeletonOverlay(travel);
 

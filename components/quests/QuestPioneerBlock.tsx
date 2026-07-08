@@ -73,7 +73,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       alignItems: 'center',
       gap: DESIGN_TOKENS.spacing.md,
       alignSelf: 'stretch',
-      maxWidth: 460,
+      width: '100%',
       marginTop: DESIGN_TOKENS.spacing.sm,
       paddingVertical: DESIGN_TOKENS.spacing.md,
       paddingHorizontal: DESIGN_TOKENS.spacing.lg,

@@ -23,6 +23,8 @@ jest.mock('@/hooks/useQuestReview', () => ({
   }),
 }))
 
+const mockRate = jest.fn()
+
 jest.mock('@/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
@@ -53,7 +55,7 @@ describe('QuestReviewSection', () => {
 
   it('requires a rating before submitting (text alone is not enough)', () => {
     const { getByTestId, getByPlaceholderText } = render(
-      <QuestReviewSection questId="krakow-dragon" questNumericId={1} />,
+      <QuestReviewSection questId="krakow-dragon" questNumericId={1} onRate={mockRate} />,
     )
 
     fireEvent.changeText(
@@ -64,11 +66,24 @@ describe('QuestReviewSection', () => {
     // Submit without a star rating must not call the mutation (BE: rating 1..5 NOT NULL).
     fireEvent.press(getByTestId('quest-review-section-submit'))
     expect(mockSubmit).not.toHaveBeenCalled()
+    expect(mockRate).not.toHaveBeenCalled()
+  })
+
+  it('saves the tapped rating to the overall quest rating immediately', () => {
+    const { getAllByLabelText } = render(
+      <QuestReviewSection questId="krakow-dragon" questNumericId={1} onRate={mockRate} />,
+    )
+
+    const fourStar = getAllByLabelText('Оценить на 4 из 5')
+    fireEvent.press(fourStar[fourStar.length - 1])
+
+    // Тап по звезде сразу кормит общий рейтинг (живой /rate/), без нажатия «Отправить».
+    expect(mockRate).toHaveBeenCalledWith(4)
   })
 
   it('submits the tapped rating together with the text fields', async () => {
     const { getByTestId, getAllByLabelText, getByPlaceholderText } = render(
-      <QuestReviewSection questId="krakow-dragon" questNumericId={1} />,
+      <QuestReviewSection questId="krakow-dragon" questNumericId={1} onRate={mockRate} />,
     )
 
     fireEvent.changeText(
@@ -90,14 +105,18 @@ describe('QuestReviewSection', () => {
     })
   })
 
-  it('prefills review stars from the quick quest rating', async () => {
+  it('prefills stars from the live quest rating and submits it', async () => {
     const { getByText, getByTestId } = render(
-      <QuestReviewSection questId="krakow-dragon" questNumericId={1} initialRating={5} />,
+      <QuestReviewSection
+        questId="krakow-dragon"
+        questNumericId={1}
+        userRating={5}
+        onRate={mockRate}
+      />,
     )
 
-    expect(getByText('Подробный отзыв о квесте')).toBeTruthy()
-    expect(getByText('Оценка в отзыве')).toBeTruthy()
-    expect(getByText('Подставили вашу быструю оценку. Можно изменить для отзыва.')).toBeTruthy()
+    expect(getByText('Отзыв о квесте')).toBeTruthy()
+    expect(getByText('Ваша оценка')).toBeTruthy()
 
     fireEvent.press(getByTestId('quest-review-section-submit'))
 
@@ -114,10 +133,10 @@ describe('QuestReviewSection', () => {
     mockReviewState.review = { id: 7, user: 1, quest: 1, rating: 5, liked: 'x', disliked: '' }
 
     const { getByText, queryByPlaceholderText } = render(
-      <QuestReviewSection questId="krakow-dragon" questNumericId={1} />,
+      <QuestReviewSection questId="krakow-dragon" questNumericId={1} onRate={mockRate} />,
     )
 
-    expect(getByText('Спасибо за подробный отзыв!')).toBeTruthy()
+    expect(getByText('Спасибо за отзыв!')).toBeTruthy()
     expect(queryByPlaceholderText('Расскажите, что было интересно')).toBeNull()
   })
 })

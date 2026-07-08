@@ -212,7 +212,7 @@ describe('Slider (web) blur background', () => {
     expect(firstImage.props.width).toBe('100%')
   })
 
-  it('keeps non-first slides lazy before web prefetch is enabled', async () => {
+  it('keeps the immediate swipe target eager before wider web prefetch is enabled', async () => {
     let tree: renderer.ReactTestRenderer
     await act(async () => {
       tree = renderer.create(
@@ -233,8 +233,8 @@ describe('Slider (web) blur background', () => {
 
     expect(firstImage.props.loading).toBe('eager')
     expect(firstImage.props.fetchPriority).toBe('high')
-    expect(secondImage.props.loading).toBe('lazy')
-    expect(secondImage.props.fetchPriority).toBe('auto')
+    expect(secondImage.props.loading).toBe('eager')
+    expect(secondImage.props.fetchPriority).toBe('high')
   })
 
   it('raises preload count on mobile viewport widths for faster swipe response', async () => {
@@ -257,7 +257,7 @@ describe('Slider (web) blur background', () => {
 
     const secondImage = tree.root.findByProps({ testID: 'slider-image-1' })
     expect(secondImage.props.loading).toBe('eager')
-    expect(secondImage.props.fetchPriority).toBe('auto')
+    expect(secondImage.props.fetchPriority).toBe('high')
   })
 
   it('keeps blur rendering inside slide media instead of a separate shared backdrop track', async () => {

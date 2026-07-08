@@ -7,7 +7,8 @@ import {
     statusCodes,
 } from '@react-native-google-signin/google-signin';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
+import { useTheme, useThemedColors } from '@/hooks/useTheme';
+import { getGoogleSignInButtonTheme } from './googleSignInButtonTheme';
 
 interface GoogleSignInButtonProps {
     onSuccess: (credential: string) => void;
@@ -47,7 +48,7 @@ declare global {
                         parent: HTMLElement,
                         options: {
                             type?: 'standard' | 'icon';
-                            theme?: 'outline' | 'filled_blue' | 'filled_black';
+                            theme?: 'outline' | 'filled_blue' | 'filled_black' | 'outline_dark';
                             size?: 'large' | 'medium' | 'small';
                             text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
                             shape?: 'rectangular' | 'pill' | 'circle' | 'square';
@@ -105,6 +106,7 @@ const configureGoogleSignIn = (webClientId: string, iosClientId: string) => {
 
 function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInButtonProps) {
     const colors = useThemedColors();
+    const { isDark } = useTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
     const [isGoogleButtonRendered, setIsGoogleButtonRendered] = useState(false);
@@ -242,7 +244,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
             buttonContainerRef.current.innerHTML = '';
             window.google.accounts.id.renderButton(buttonContainerRef.current, {
                 type: 'standard',
-                theme: 'outline',
+                theme: getGoogleSignInButtonTheme(isDark),
                 size: 'large',
                 text: 'signin_with',
                 shape: 'rectangular',
@@ -256,7 +258,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
             }
             onErrorRef.current?.('Ошибка отображения кнопки Google Sign-In');
         }
-    }, [googleAvailability.enabled, hasClientId, isGoogleButtonRendered, isGoogleLoaded]);
+    }, [googleAvailability.enabled, hasClientId, isDark, isGoogleButtonRendered, isGoogleLoaded]);
 
     if (Platform.OS !== 'web') {
         return null;

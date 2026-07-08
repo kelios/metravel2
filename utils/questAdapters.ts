@@ -279,6 +279,18 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
             ? JSON.parse(apiBundle.steps)
             : apiBundle.steps;
         rawSteps = Array.isArray(parsedSteps) ? parsedSteps : [];
+        // Порядок шагов должен быть строго последовательным по полю `order`,
+        // не завися от порядка выдачи API. Прогресс ключуется по step_id, а не
+        // по позиции, поэтому пересортировка не затирает прохождение. Шаги без
+        // order уходят в конец, сохраняя исходный относительный порядок (стабильно).
+        rawSteps = rawSteps
+            .map((s, index) => ({ s, index }))
+            .sort((a, b) => {
+                const oa = typeof a.s.order === 'number' ? a.s.order : Number.POSITIVE_INFINITY;
+                const ob = typeof b.s.order === 'number' ? b.s.order : Number.POSITIVE_INFINITY;
+                return oa === ob ? a.index - b.index : oa - ob;
+            })
+            .map((x) => x.s);
         // Адаптируем пошагово: сбой одного шага не должен ронять весь маршрут (квест без точек).
         steps = rawSteps
             .filter((s) => !isIntroStep(s))
