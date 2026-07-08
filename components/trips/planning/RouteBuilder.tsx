@@ -379,7 +379,6 @@ function RouteBuilder({ trip }: Props) {
                         alt={option.title}
                         height={54}
                         fit="cover"
-                        blurBackground={false}
                         borderRadius={8}
                         showLoadingIndicator={false}
                       />

@@ -107,13 +107,6 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       alignSelf: 'center',
     },
 
-    infoBadgeText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      color: colors.text,
-      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-      letterSpacing: -0.2,
-    },
-
     // Упрощенные кнопки управления — скрыты по умолчанию, видны при hover
     adminActionsContainer: {
       position: 'absolute',
@@ -184,44 +177,12 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       zIndex: 20,
     },
 
-    // Компактный контент под изображением
-    contentBelow: {
-      gap: 0,
-      backgroundColor: colors.surface,
-      width: '100%',
-      minWidth: 0,
-      ...(Platform.OS === 'web'
-        ? {
-            paddingHorizontal: 12,
-            paddingTop: 8,
-            paddingBottom: 10,
-          }
-        : {
-            paddingHorizontal: 4,
-            paddingVertical: 4,
-          }),
-    },
-
-    countrySlot: {
-      width: '100%',
-      minWidth: 0,
-    },
-
     cardContentContainer: {
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       paddingTop: Platform.OS === 'web' ? 9 : 10,
       paddingBottom: Platform.OS === 'web' ? 11 : 12,
       borderTopWidth: 1,
       borderTopColor: colors.borderLight,
-    },
-
-    // Современная типографика
-    title: {
-      fontSize: DESIGN_TOKENS.typography.sizes.lg,
-      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-      lineHeight: 22,
-      color: colors.text,
-      marginBottom: 0,
     },
 
     contentStack: {
@@ -361,14 +322,6 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       color: colors.textSecondary,
     },
 
-    metaBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-      flexShrink: 1,
-      minWidth: 0,
-    },
-
     // Точка-разделитель между мета-элементами
     metaDot: {
       width: 3,
@@ -428,14 +381,6 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
 
     // Inline теги стран (без pill-фона)
     tags: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-      flexShrink: 1,
-      minWidth: 0,
-    },
-
-    tag: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 3,

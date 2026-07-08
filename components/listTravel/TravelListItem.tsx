@@ -21,7 +21,7 @@ import {
   getMediaLqipUrl,
 } from '@/utils/travelMediaVariants'
 
-import { getResponsiveCardValues } from './enhancedTravelCardStyles'
+import { getResponsiveCardValues } from './enhancedCardResponsiveValues'
 import { TRAVEL_CARD_IMAGE_HEIGHT } from './utils/listTravelConstants'
 import TravelListItemCountriesList from './TravelListItemCountriesList'
 import TravelListItemEngagementMetrics from './TravelListItemEngagementMetrics'
@@ -170,15 +170,11 @@ function TravelListItem({
   )
 
   const {
-    anchorRef,
     navigationUrl,
     returnToPath,
     handlePress,
-    handlePointerEnter,
     isNavigable,
   } = useTravelListItemNavigation({
-    id,
-    slug,
     travelUrl,
     isMetravel,
     selectable,
@@ -640,14 +636,12 @@ function TravelListItem({
   const wrappedCard =
     IS_WEB && !selectable ? (
       <a
-        ref={anchorRef}
         href={isNavigable ? navigationUrl : undefined}
         style={visualVariant === 'home-featured' ? ANCHOR_FILL_STYLE : (EMPTY_STYLE as any)}
         data-testid="travel-card-link"
         role={isNavigable ? undefined : 'group'}
         tabIndex={isNavigable ? undefined : -1}
         aria-disabled={!isNavigable}
-        onPointerEnter={handlePointerEnter}
         onClick={handleAnchorClick}
         onKeyDown={handleAnchorKeyDown}
       >

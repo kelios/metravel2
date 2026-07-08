@@ -18,20 +18,6 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
 }));
 
-jest.mock('@/components/profile/ProfileCollectionHeader', () => {
-  return function MockProfileCollectionHeader({ title, onBackPress }: any) {
-    const { Pressable, Text, View } = require('react-native');
-    return (
-      <View>
-        <Pressable onPress={onBackPress} accessibilityLabel="Назад">
-          <Text>Назад</Text>
-        </Pressable>
-        <Text>{title}</Text>
-      </View>
-    );
-  };
-});
-
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => mockUseResponsive(),
 }));
@@ -194,8 +180,8 @@ describe('UserPointsScreen', () => {
     expect(screen.queryByText('Добавить')).toBeNull();
   });
 
-  it('returns to profile when opened from profile quick actions', async () => {
-    mockParams = { from: 'profile' };
+  it('has no local title or back button on desktop web because HeaderContextBar breadcrumbs own them', async () => {
+    mockUseResponsive.mockReturnValue({ isHydrated: true, isMobile: false });
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       username: 'testuser',
@@ -218,9 +204,9 @@ describe('UserPointsScreen', () => {
 
     render(<UserPointsScreen />);
 
-    fireEvent.press(await screen.findByLabelText('Назад'));
-
-    expect(mockReplace).toHaveBeenCalledWith('/profile');
+    expect(await screen.findByLabelText('Добавить')).toBeTruthy();
+    expect(screen.queryByText('Мои точки')).toBeNull();
+    expect(screen.queryByLabelText('Назад')).toBeNull();
   });
 
   it('hides local title and back button on mobile web because HeaderContextBar owns them', async () => {

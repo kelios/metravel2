@@ -185,9 +185,9 @@ describe('useBreadcrumbModel', () => {
   });
 
   it('does not build a breadcrumb trail for self-headed cabinet pages', async () => {
-    // /favorites, /history, /calendar, /userpoints render their own
+    // /favorites, /history, /calendar render their own
     // ProfileCollectionHeader — the model must not add a redundant trail.
-    for (const path of ['/favorites', '/history', '/calendar', '/userpoints']) {
+    for (const path of ['/favorites', '/history', '/calendar']) {
       usePathname.mockReturnValue(path);
       useLocalSearchParams.mockReturnValue({});
       const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
@@ -195,6 +195,21 @@ describe('useBreadcrumbModel', () => {
       expect(result.current.showBreadcrumbs).toBe(false);
       expect(result.current.items).toEqual([]);
     }
+  });
+
+  it('builds breadcrumbs for /userpoints under profile (own header removed)', async () => {
+    usePathname.mockReturnValue('/userpoints');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => expect(result.current).toBeTruthy());
+    expect(result.current.showBreadcrumbs).toBe(true);
+    expect(result.current.items).toEqual([
+      { label: 'Профиль', path: '/profile' },
+      { label: 'Мои точки', path: '/userpoints' },
+    ]);
+    expect(result.current.currentTitle).toBe('Мои точки');
   });
 
   it('builds three-level breadcrumbs for security-journal under profile › settings', async () => {

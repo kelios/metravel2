@@ -94,10 +94,12 @@ const SETTINGS_CRUMB: BreadcrumbModelItem = { label: 'Настройки', path:
 // Одноуровневые страницы личного кабинета БЕЗ собственной шапки — крошки строятся
 // через «Профиль» (при необходимости — ещё и через «Настройки»).
 // Экраны с собственной шапкой (ProfileCollectionHeader): /favorites, /history,
-// /calendar, /userpoints — здесь НЕ перечислены, чтобы не было двойной шапки
+// /calendar — здесь НЕ перечислены, чтобы не было двойной шапки
 // (их бар подавляется в customHeaderModel.TOP_LEVEL_PATHS_NO_CONTEXT_BAR).
+// /userpoints свою шапку убрал — крошки «Профиль › Мои точки» показывает бар.
 const CABINET_ROUTE_CRUMBS: Record<string, BreadcrumbModelItem[]> = {
   '/profile': [PROFILE_CRUMB],
+  '/userpoints': [PROFILE_CRUMB, { label: 'Мои точки', path: '/userpoints' }],
   '/settings': [PROFILE_CRUMB, SETTINGS_CRUMB],
   '/messages': [PROFILE_CRUMB, { label: 'Сообщения', path: '/messages' }],
   '/subscriptions': [PROFILE_CRUMB, { label: 'Подписки', path: '/subscriptions' }],

@@ -49,7 +49,6 @@ const TOP_LEVEL_PATHS_NO_CONTEXT_BAR = new Set<string>([
   '/favorites',
   '/history',
   '/calendar',
-  '/userpoints',
 ])
 
 export const shouldShowHeaderContextBar = (pathname: string, isMobile: boolean) => {
@@ -65,8 +64,12 @@ export const shouldShowHeaderContextBar = (pathname: string, isMobile: boolean) 
     return true
   }
 
+  // /userpoints — глобальный контекст-бар с крошками «Главная › Профиль › Мои точки»
+  // на web (mobile + desktop); собственная шапка экрана (ProfileCollectionHeader) убрана.
+  if (isUserPointsRoute) return true
+
   if (isMobile) {
-    if (isUserPointsRoute || isTravelDetailRoute) return true
+    if (isTravelDetailRoute) return true
     if (isMapRoute) return false
     if (TOP_LEVEL_PATHS_NO_CONTEXT_BAR.has(pathname)) return false
     return true

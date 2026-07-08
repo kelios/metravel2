@@ -31,7 +31,11 @@ const hasSameRenderedTravelSnapshot = (prev: Travel, next: Travel) => {
         p.id === n.id &&
         p.slug === n.slug &&
         p.travel_image_thumb_url === n.travel_image_thumb_url &&
+        p.travel_image_thumb_small_url === n.travel_image_thumb_small_url &&
+        p.media?.cover === n.media?.cover &&
         p.name === n.name &&
+        p.year === n.year &&
+        p.monthName === n.monthName &&
         p.countryName === n.countryName &&
         p.userName === n.userName &&
         p.countUnicIpView === n.countUnicIpView &&
@@ -160,8 +164,7 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
 
     // 1. Самые частые изменения (при выборе/скролле)
     if (prev.isSelected !== next.isSelected) return false;
-    if (prev.index !== next.index) return false;
-    
+
     // 2. Пропускаем refresh с новой ссылкой на item, если карточка визуально не меняется.
     if (prev.item !== next.item && !hasSameRenderedTravelSnapshot(prev.item, next.item)) return false;
     

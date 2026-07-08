@@ -38,12 +38,16 @@ describe('shouldShowHeaderContextBar (web)', () => {
       },
     );
 
-    it.each(['/favorites', '/history', '/calendar', '/userpoints'])(
+    it.each(['/favorites', '/history', '/calendar'])(
       'keeps the context bar collapsed on self-headed cabinet page %s',
       (path) => {
         expect(shouldShowHeaderContextBar(path, false)).toBe(false);
       },
     );
+
+    it('shows the context bar with breadcrumbs on /userpoints (no local header)', () => {
+      expect(shouldShowHeaderContextBar('/userpoints', false)).toBe(true);
+    });
 
     it('keeps the context bar hidden on travel detail (own nav)', () => {
       expect(shouldShowHeaderContextBar('/travels/some-slug', false)).toBe(false);
