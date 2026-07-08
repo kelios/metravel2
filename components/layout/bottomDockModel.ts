@@ -1,3 +1,4 @@
+import { Platform } from 'react-native'
 import type { Href } from 'expo-router'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 
@@ -38,6 +39,10 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
   {
     key: 'primary',
     items: [
+      // «Скачать приложение» — только на web (внутри native-приложения пункт бессмысленен).
+      ...(Platform.OS === 'web'
+        ? [{ key: 'app', label: 'Приложение', accessibilityLabel: 'Скачать приложение MeTravel для Android', route: '/app' as Href, iconName: 'smartphone' as BottomDockIconName }]
+        : []),
       { key: 'search', label: 'Беларусь', accessibilityLabel: 'Беларусь', route: '/travelsby', iconName: 'belarus-outline' },
       { key: 'places', label: 'Места', accessibilityLabel: 'Места', route: '/places', iconName: 'map-pin' },
       { key: 'articles', label: 'Статьи', accessibilityLabel: 'Статьи', route: '/articles', iconName: 'file-text' },

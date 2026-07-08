@@ -1,3 +1,4 @@
+import HomeAppPromoSectionDefault from './HomeAppPromoSection'
 import HomeBottomCtaSectionDefault from './HomeBottomCtaSection'
 import HomeFAQSectionDefault from './HomeFAQSection'
 import HomeInspirationSectionsDefault from './HomeInspirationSections'
@@ -6,6 +7,7 @@ import HomePopularRoutesSectionDefault from './HomePopularRoutesSection'
 import HomeQuestsPromoSectionDefault from './HomeQuestsPromoSection'
 import HomeWeekendRoutesSectionDefault from './HomeWeekendRoutesSection'
 
+export const HomeAppPromoSection = HomeAppPromoSectionDefault
 export const HomeFAQSection = HomeFAQSectionDefault
 export const HomeInspirationSections = HomeInspirationSectionsDefault
 export const HomeWeekendRoutesSection = HomeWeekendRoutesSectionDefault

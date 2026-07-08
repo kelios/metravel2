@@ -17,6 +17,7 @@ import { useHomeViewport } from './useHomeViewport'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm'
 import {
+  HomeAppPromoSection,
   HomeBottomCtaSection,
   HomeFAQSection,
   HomeInspirationSections,
@@ -283,6 +284,12 @@ function Home() {
       <DeferredSection marginTop={gap.weekends} container={{}} fallback={<SectionSkeleton />}>
         <HomePopularRoutesSection />
       </DeferredSection>
+
+      {IS_WEB && (
+        <DeferredSection marginTop={gap.sections} fallback={null}>
+          <HomeAppPromoSection />
+        </DeferredSection>
+      )}
 
       <DeferredSection marginTop={gap.sections} fallback={null}>
         <HomeQuestsPromoSection />
