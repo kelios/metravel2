@@ -41,12 +41,16 @@ export const PlaceCard = React.memo(function PlaceCard({
   onOpenMap,
   onOpenTravel,
   containerStyle,
+  priority = false,
 }: {
   place: CatalogPlace
   styles: PlacesStyles
   onOpenMap: (place: CatalogPlace) => void
   onOpenTravel: (place: CatalogPlace) => void
   containerStyle?: StyleProp<ViewStyle>
+  // Above-the-fold cards (first viewport row(s)) decode eagerly with high
+  // priority so the first screen shows sharp photos instead of blur on load.
+  priority?: boolean
 }) {
   const { width: viewportWidth } = useWindowDimensions()
   const isMobileCard = viewportWidth < 760
@@ -266,6 +270,7 @@ export const PlaceCard = React.memo(function PlaceCard({
         addDisabled={!authReady || !normalizedCoord || isAdding}
         isAdding={isAdding}
         imageHeight={isMobileCard ? 240 : 280}
+        eagerImage={priority}
         width={compactCardWidth}
         compact
         popupAligned

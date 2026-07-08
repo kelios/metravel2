@@ -48,6 +48,15 @@ type Props = {
   addLabel?: string;
   width?: number;
   imageHeight?: number;
+  /**
+   * Above-the-fold cards (first viewport rows) decode eagerly with high
+   * fetch-priority so the first screen renders sharp photos instead of blur on
+   * load. Defaults to `false` (lazy/low) so the map / travel-points / user-points
+   * usages keep their existing off-screen-friendly behaviour. Only the reveal
+   * timing gate in `ImageCardMedia` still waits for `onLoad` — this flag never
+   * shows the `<img>` before decode (CLAUDE.md decode-gate rule).
+   */
+  eagerImage?: boolean;
   testID?: string;
   style?: any;
   showActionRow?: boolean;
@@ -228,6 +237,7 @@ const PlaceListCard: React.FC<Props> = ({
   addLabel = 'Мои точки',
   width,
   imageHeight = 140,
+  eagerImage = false,
   testID,
   style,
   showActionRow = true,
@@ -692,8 +702,8 @@ const PlaceListCard: React.FC<Props> = ({
         blurBackground: !!imageUrl,
         allowCriticalWebBlur: IS_WEB,
         blurRadius: 16,
-        loading: 'lazy',
-        priority: 'low',
+        loading: eagerImage ? 'eager' : 'lazy',
+        priority: eagerImage ? 'high' : 'low',
         optimizeWeb: false,
       }}
       contentContainerStyle={styles.contentContainer}
