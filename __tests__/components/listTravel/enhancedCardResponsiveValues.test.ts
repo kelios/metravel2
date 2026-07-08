@@ -1,5 +1,5 @@
 import { describe, test, expect } from '@jest/globals';
-import { getResponsiveCardValues } from '../../../components/listTravel/enhancedTravelCardStyles';
+import { getResponsiveCardValues } from '../../../components/listTravel/enhancedCardResponsiveValues';
 
 describe('getResponsiveCardValues', () => {
   describe('Mobile breakpoints (< 768px)', () => {
