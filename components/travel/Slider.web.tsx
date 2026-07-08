@@ -551,6 +551,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       onImagePress={onImagePress}
                       firstImagePreloaded={firstImagePreloaded}
                       preloadPriority={preloadPriority}
+                      isAdjacent={distanceToCurrent === 1}
                       fit={fit}
                       contentAspectRatio={contentAspectRatio ?? aspectRatio}
                       prepareBlur={prepareBlur}

@@ -287,6 +287,7 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
 
   const utilityLinks: LinkItem[] = [
     { key: 'quests', label: 'Квесты', route: '/quests' as any },
+    { key: 'app', label: 'Приложение', route: '/app' as any },
     { key: 'about', label: 'О сайте', route: '/about' as any },
     { key: 'privacy', label: 'Политика', route: '/privacy' as any },
     { key: 'cookies', label: 'Cookies', route: '/cookies' as any },

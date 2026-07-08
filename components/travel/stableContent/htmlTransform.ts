@@ -133,6 +133,39 @@ const RESPONSIVE_WIDTHS = [320, 480, 640, 720]
 const RESPONSIVE_SIZES = '(max-width: 768px) 100vw, 720px'
 const RESPONSIVE_QUALITY = 72
 
+// Body-article images beyond this lead count are network-gated on web: native
+// loading="lazy" widens its fetch-ahead distance on slow connections (Chrome
+// preloads farther when the link is slow), so ~20 body images all start at once
+// and starve the same-origin hero-swipe request under a narrow mobile pipe. We
+// hold their real src in data-lazy-* and let useWebEffects swap it in via an IO
+// with a tight rootMargin + a concurrency cap. The first EAGER_LEAD keep a real
+// src for LCP/above-the-fold and SSG crawlers.
+const EAGER_LEAD_IMAGE_COUNT = 2
+// 1×1 transparent GIF: reserves nothing itself; the box height comes from the
+// width/height attrs + inline aspect-ratio, so gating adds no layout shift.
+const LAZY_IMAGE_PLACEHOLDER =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+
+const addTokenToImgClass = (tag: string, className: string): string => {
+  if (/\bclass="/i.test(tag)) {
+    return tag.replace(/\bclass="([^"]*)"/i, (_m, current: string) => `class="${`${current} ${className}`.trim()}"`)
+  }
+  return tag.replace(/<img\b/i, `<img class="${className}"`)
+}
+
+// Defer the real download: move src -> data-lazy-src (and srcset -> data-lazy-srcset),
+// paint the transparent placeholder, tag with .rich-lazy-img for the IO gate.
+const deferBodyImageDownload = (tag: string): string => {
+  const src = tag.match(/\bsrc="([^"]*)"/i)?.[1] ?? ''
+  if (!src || src.startsWith('data:')) return tag
+  let next = tag.replace(
+    /\bsrc="[^"]*"/i,
+    `src="${LAZY_IMAGE_PLACEHOLDER}" data-lazy-src="${src}"`
+  )
+  next = next.replace(/\bsrcset="([^"]*)"/i, (_m, value: string) => `data-lazy-srcset="${value}"`)
+  return addTokenToImgClass(next, 'rich-lazy-img')
+}
+
 const isFirstPartyMetravelHost = (host: string): boolean => {
   const value = String(host || '').toLowerCase()
   return value === 'metravel.by' || value === 'cdn.metravel.by' || value === 'api.metravel.by'
@@ -278,6 +311,9 @@ const normalizeImgTags = (html: string): string => {
     }
 
     out = out.replace(/>$/, ' loading="lazy" decoding="async" fetchpriority="low">')
+    if (Platform.OS === 'web' && imgIdx >= EAGER_LEAD_IMAGE_COUNT) {
+      out = deferBodyImageDownload(out)
+    }
     imgIdx += 1
     return out
   })
@@ -399,7 +435,14 @@ const decorateRichImageFrames = (html: string) => {
 
   const decorateAttrs = (attrs: string, src: string, imgMarkup: string) => {
     const nextClassAttrs = appendClass(attrs, 'rich-image-frame')
-    const frameDeclaration = buildRichImageFrameDeclaration(src, imgMarkup)
+    // A network-gated image carries a transparent placeholder as its src; pointing
+    // the blur-backdrop CSS var at the real url here would defeat the gate (the
+    // ::before background would fetch it immediately). Keep only the aspect box —
+    // useWebEffects sets --travel-rich-image on the frame when the image swaps in.
+    const isDeferred = /\bdata-lazy-src="/i.test(imgMarkup)
+    const frameDeclaration = isDeferred
+      ? buildRichImageAspectDeclaration(imgMarkup)
+      : buildRichImageFrameDeclaration(src, imgMarkup)
     return frameDeclaration
       ? appendInlineStyle(nextClassAttrs, frameDeclaration)
       : nextClassAttrs

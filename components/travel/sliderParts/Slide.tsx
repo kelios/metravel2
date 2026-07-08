@@ -87,6 +87,8 @@ interface SlideProps {
   firstImagePreloaded?: boolean;
   /** When true, this slide should preload eagerly on web (near current index). */
   preloadPriority?: boolean;
+  /** When true, this slide is the immediate ±1 neighbour of the active one (swipe target). */
+  isAdjacent?: boolean;
   /** Image fit mode. Defaults to 'contain'. */
   fit?: 'cover' | 'contain';
   contentAspectRatio?: number;
@@ -112,6 +114,7 @@ const Slide = memo(function Slide({
   onImagePress,
   firstImagePreloaded,
   preloadPriority,
+  isAdjacent = false,
   fit = 'contain',
   onSlideLoad,
   prepareBlur = false,
@@ -150,20 +153,16 @@ const Slide = memo(function Slide({
   const loadedStateRef = useRef(isLoaded);
   const shouldPreloadAhead = !!preloadPriority && !isActive && !isFirstSlide;
   const shouldEagerLoad =
-    Platform.OS === 'web'
-      ? isFirstSlide || isActive || shouldPreloadAhead
-      : isFirstSlide || isActive || shouldPreloadAhead;
+    isFirstSlide || isActive || isAdjacent || shouldPreloadAhead;
+  // The immediate ±1 neighbour is the swipe target: raise it to 'high' so it wins
+  // the same-origin metravel.by fetch queue against the flood of body-article
+  // images. Distance-2 preloads stay 'normal'/'low' (they are not the next frame).
   const mainPriority =
-    Platform.OS === 'web'
-      ? isFirstSlide || isActive
-        ? 'high'
-        : 'normal'
-      : isFirstSlide || isActive
-        ? 'high'
-        : // The adjacent neighbour we're about to swipe onto must not sit at the
-          // lowest fetch tier or its decode only starts at the gesture; give the
-          // preloaded neighbour 'normal', everything further out stays 'low'.
-          shouldPreloadAhead
+    isFirstSlide || isActive || isAdjacent
+      ? 'high'
+      : Platform.OS === 'web'
+        ? 'normal'
+        : shouldPreloadAhead
           ? 'normal'
           : 'low';
 
@@ -415,6 +414,7 @@ const Slide = memo(function Slide({
     prev.onImagePress === next.onImagePress &&
     prev.firstImagePreloaded === next.firstImagePreloaded &&
     prev.preloadPriority === next.preloadPriority &&
+    prev.isAdjacent === next.isAdjacent &&
     prev.fit === next.fit &&
     prev.contentAspectRatio === next.contentAspectRatio &&
     prev.onSlideLoad === next.onSlideLoad &&

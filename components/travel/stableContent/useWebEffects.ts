@@ -7,6 +7,28 @@ import { WEB_RICH_TEXT_CLASS, WEB_RICH_TEXT_STYLES_ID } from './webStyles'
 
 type LightboxImage = { src: string; alt: string }
 
+const escapeCssUrl = (value: string) => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+
+// Promote a network-gated body image to its real source and restore the blur
+// backdrop var on its frame (htmlTransform withheld it so the CSS ::before did
+// not fetch the full image eagerly).
+const revealLazyImage = (img: HTMLImageElement) => {
+  if (!img.classList.contains('rich-lazy-img')) return
+  const realSrc = img.getAttribute('data-lazy-src')
+  const realSrcset = img.getAttribute('data-lazy-srcset')
+  if (realSrcset) {
+    img.setAttribute('srcset', realSrcset)
+    img.removeAttribute('data-lazy-srcset')
+  }
+  if (realSrc) {
+    img.setAttribute('src', realSrc)
+    img.removeAttribute('data-lazy-src')
+    const frame = img.closest('.rich-image-frame') as HTMLElement | null
+    frame?.style.setProperty('--travel-rich-image', `url('${escapeCssUrl(realSrc)}')`)
+  }
+  img.classList.remove('rich-lazy-img')
+}
+
 type UseStableContentWebEffectsInput = {
   prepared: string
   lightboxImage: LightboxImage | null
@@ -87,6 +109,81 @@ export function useStableContentWebEffects({
     }
   }, [prepared])
 
+  // Network gate for body-article images (htmlTransform tags deep ones .rich-lazy-img
+  // with the real url parked in data-lazy-src). Native loading="lazy" widens its
+  // fetch-ahead window on slow links and fires ~20 body images at once, starving the
+  // same-origin hero-swipe request. We swap src in only when the image nears the
+  // viewport (tight rootMargin) and cap concurrent in-flight loads.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (typeof window === 'undefined' || typeof document === 'undefined') return
+    if (!('IntersectionObserver' in window)) {
+      document
+        .querySelectorAll<HTMLImageElement>(`.${WEB_RICH_TEXT_CLASS} img.rich-lazy-img`)
+        .forEach((img) => revealLazyImage(img))
+      return
+    }
+
+    const MARGIN = 400
+    const MAX_INFLIGHT = 3
+    let inflight = 0
+    const queue: HTMLImageElement[] = []
+    let io: IntersectionObserver | null = null
+
+    const startLoad = (img: HTMLImageElement) => {
+      inflight += 1
+      const done = () => {
+        img.removeEventListener('load', done)
+        img.removeEventListener('error', done)
+        inflight = Math.max(0, inflight - 1)
+        pump()
+      }
+      img.addEventListener('load', done, { once: true })
+      img.addEventListener('error', done, { once: true })
+      revealLazyImage(img)
+    }
+
+    const pump = () => {
+      while (inflight < MAX_INFLIGHT && queue.length > 0) {
+        const next = queue.shift()
+        if (next && next.isConnected && next.classList.contains('rich-lazy-img')) {
+          startLoad(next)
+        }
+      }
+    }
+
+    const enqueue = (img: HTMLImageElement) => {
+      if (!img.classList.contains('rich-lazy-img')) return
+      if (queue.includes(img)) return
+      queue.push(img)
+      pump()
+    }
+
+    io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return
+          const img = entry.target as HTMLImageElement
+          io?.unobserve(img)
+          enqueue(img)
+        })
+      },
+      { rootMargin: `${MARGIN}px 0px` }
+    )
+
+    const observed = Array.from(
+      document.querySelectorAll<HTMLImageElement>(`.${WEB_RICH_TEXT_CLASS} img.rich-lazy-img`)
+    )
+    observed.forEach((img) => io?.observe(img))
+
+    return () => {
+      io?.disconnect()
+      io = null
+      queue.length = 0
+      inflight = 0
+    }
+  }, [prepared])
+
   useLayoutEffect(() => {
     if (Platform.OS !== 'web') return
     const onClick = (e: any) => {
@@ -149,7 +246,12 @@ export function useStableContentWebEffects({
         return
       }
       e.preventDefault()
-      const src = image.currentSrc || image.getAttribute('src') || ''
+      const rawSrc = image.currentSrc || image.getAttribute('src') || ''
+      // A network-gated image may still hold the transparent placeholder if it was
+      // tapped before the IO swap resolved; fall back to its real deferred source.
+      const src = rawSrc.startsWith('data:')
+        ? image.getAttribute('data-lazy-src') || rawSrc
+        : rawSrc
       if (!src) return
       setLightboxImage({
         src,

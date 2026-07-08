@@ -86,6 +86,7 @@ const pageTranslations: Record<string, string> = {
   trips: 'Поездки',
   plan: 'Планирование',
   create: 'Новая поездка',
+  app: 'Приложение',
 };
 
 const PROFILE_CRUMB: BreadcrumbModelItem = { label: 'Профиль', path: '/profile' };
@@ -118,6 +119,7 @@ const CABINET_ROUTE_CRUMBS: Record<string, BreadcrumbModelItem[]> = {
 
 // Информационные/правовые одноуровневые страницы — одна крошка под «Главная».
 const INFO_ROUTES = new Set<string>([
+  '/app',
   '/about',
   '/contact',
   '/privacy',
