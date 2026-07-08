@@ -13,10 +13,10 @@ import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/uti
 import { openExternalUrl } from '@/utils/externalLinks'
 import { webTouchScrollStyle } from '@/utils'
 
-// Android-приложение MeTravel сейчас доступно через internal testing.
+// Android-приложение MeTravel сейчас доступно через закрытый Alpha-тест.
 // Open testing в Play Console заблокирован до получения production access.
 // Поменять при переходе на прод-релиз на: https://play.google.com/store/apps/details?id=by.metravel.app
-const PLAY_TESTING_URL = 'https://play.google.com/apps/internaltest/4700787969738130132'
+export const PLAY_TESTING_URL = 'https://play.google.com/apps/testing/by.metravel.app'
 
 const APP_ICON = require('@/assets/images/icon.png')
 
@@ -30,7 +30,7 @@ const FEATURES: { icon: FeatherName; title: string; text: string }[] = [
 ]
 
 const STEPS: { title: string; text: string }[] = [
-  { title: 'Нажмите «Скачать»', text: 'Кнопка откроет страницу внутреннего тестирования MeTravel в Google Play.' },
+  { title: 'Нажмите «Скачать»', text: 'Кнопка откроет страницу закрытого Alpha-теста MeTravel в Google Play.' },
   { title: 'Присоединитесь к тесту', text: 'Если ваш аккаунт добавлен в список тестировщиков, нажмите «Стать тестировщиком» — это бесплатно.' },
   { title: 'Установите приложение', text: 'После присоединения появится кнопка «Установить». Обновления приходят автоматически.' },
 ]
@@ -86,7 +86,7 @@ function AppDownloadScreen() {
           </Heading>
           <Body align="center" color={colors.textMuted} style={styles.heroSubtitle}>
             Карта мест, городские квесты и путеводители — офлайн, с сохранением избранного. Сейчас
-            приложение доступно для Android на этапе внутреннего тестирования.
+            приложение доступно для Android на этапе закрытого Alpha-тестирования.
           </Body>
 
           <View style={styles.ctaWrap}>
@@ -105,7 +105,7 @@ function AppDownloadScreen() {
 
           <View style={styles.badge}>
             <Feather name="award" size={14} color={colors.primary} />
-            <Caption color={colors.primary}>Внутреннее тестирование — вы одни из первых</Caption>
+            <Caption color={colors.primary}>Закрытый Alpha-тест — вы одни из первых</Caption>
           </View>
         </View>
 

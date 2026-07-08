@@ -112,4 +112,23 @@ describe('Native compatibility governance (docs/NATIVE_COMPAT_RULES.md)', () => 
     expect(manifest).toContain('android:scheme="https" android:host="metravel.by"');
     expect(manifest).not.toContain('android:scheme="myapp"');
   });
+
+  it('Android 15/16 store readiness: no legacy system-bar color or orientation restrictions', () => {
+    const appConfig = JSON.parse(fs.readFileSync(path.join(ROOT, 'app.json'), 'utf8'));
+    const manifest = fs.readFileSync(
+      path.join(ROOT, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'),
+      'utf8',
+    );
+    const layout = fs.readFileSync(path.join(ROOT, 'app', '_layout.tsx'), 'utf8');
+    const nativeRuntime = fs.readFileSync(
+      path.join(ROOT, 'components', 'layout', 'NativeAppRuntime.native.tsx'),
+      'utf8',
+    );
+
+    expect(appConfig.expo?.orientation).toBe('default');
+    expect(manifest).not.toContain('android:screenOrientation=');
+    expect(manifest).toContain('android:resizeableActivity="true"');
+    expect(layout).not.toMatch(/<RNStatusBar[\s\S]{0,220}\b(backgroundColor|translucent)=/);
+    expect(nativeRuntime).not.toContain('setBackgroundColorAsync');
+  });
 });

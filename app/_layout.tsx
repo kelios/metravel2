@@ -452,8 +452,6 @@ function ThemedContent({
                           {Platform.OS !== 'web' && (
                             <RNStatusBar
                               barStyle={currentColorScheme === 'dark' ? 'light-content' : 'dark-content'}
-                              backgroundColor="transparent"
-                              translucent
                             />
                           )}
                           <RootContainerView style={styles.container}>

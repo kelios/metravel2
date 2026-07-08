@@ -21,6 +21,11 @@ describe('Android Configuration Tests', () => {
       expect(appConfig.expo.android).toBeDefined();
     });
 
+    it('should allow Android large-screen orientation and resizing behavior', () => {
+      const appConfig = readAppConfig();
+      expect(appConfig.expo.orientation).toBe('default');
+    });
+
     it('should have correct package name', () => {
       const appConfig = readAppConfig();
       const packageName = appConfig.expo.android.package;
@@ -116,6 +121,16 @@ describe('Android Configuration Tests', () => {
       expect(Number.isInteger(versionCode)).toBe(true);
     });
 
+    it('Android Gradle versionCode should match app config', () => {
+      const appConfig = readAppConfig();
+      const gradle = fs.readFileSync(
+        path.join(__dirname, '../../android/app/build.gradle'),
+        'utf8'
+      );
+      const match = gradle.match(/versionCode\s+(\d+)/);
+      expect(match?.[1]).toBe(String(appConfig.expo.android.versionCode));
+    });
+
     it('iOS buildNumber should exist for comparison', () => {
       const appConfig = readAppConfig();
       expect(appConfig.expo.ios.buildNumber).toBeDefined();
@@ -206,6 +221,24 @@ describe('Android Configuration Tests', () => {
         filter.data.some((d: any) => d.scheme === 'https')
       );
       expect(hasHttps).toBe(true);
+    });
+  });
+
+  describe('Android large-screen manifest compatibility', () => {
+    const readManifest = () =>
+      fs.readFileSync(
+        path.join(__dirname, '../../android/app/src/main/AndroidManifest.xml'),
+        'utf8'
+      );
+
+    it('does not restrict MainActivity orientation', () => {
+      const manifest = readManifest();
+      expect(manifest).not.toContain('android:screenOrientation=');
+    });
+
+    it('declares MainActivity as resizeable', () => {
+      const manifest = readManifest();
+      expect(manifest).toContain('android:resizeableActivity="true"');
     });
   });
 });
