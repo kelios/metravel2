@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
@@ -22,6 +22,15 @@ import {
 } from '@/components/trips/planning/tripPlanFormatting';
 import { usePlannedTrip } from '@/hooks/usePlannedTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { LAYOUT } from '@/constants/layout';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+
+// Reserve space for the bottom tab bar / web dock so the route builder and
+// bottom controls are never hidden behind it.
+const SCROLL_BOTTOM_RESERVE = Platform.select({
+  web: 'calc(var(--mt-dock-h, 0px) + 24px)' as unknown as number,
+  default: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
+});
 
 export default function PlannedTripScreen() {
   const colors = useThemedColors();
@@ -117,7 +126,12 @@ export default function PlannedTripScreen() {
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 16, alignItems: 'center' },
+    content: {
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: SCROLL_BOTTOM_RESERVE,
+      alignItems: 'center',
+    },
     inner: { width: '100%', maxWidth: 760, gap: 16 },
     loader: { marginVertical: 48 },
     error: { color: colors.danger, fontSize: 14, fontWeight: '600', marginVertical: 24 },

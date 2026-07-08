@@ -38,21 +38,15 @@ import { PRESSED_OPACITY } from './PlacesScreen.helpers'
 export const PlaceCard = React.memo(function PlaceCard({
   place,
   styles,
-  colors: _colors,
   onOpenMap,
   onOpenTravel,
   containerStyle,
-  priority: _priority = false,
 }: {
   place: CatalogPlace
   styles: PlacesStyles
-  colors: ThemedColors
   onOpenMap: (place: CatalogPlace) => void
   onOpenTravel: (place: CatalogPlace) => void
   containerStyle?: StyleProp<ViewStyle>
-  // Above-the-fold cards (first viewport row(s)) decode eagerly with high
-  // priority so the first screen shows sharp photos instead of blur on load.
-  priority?: boolean
 }) {
   const { width: viewportWidth } = useWindowDimensions()
   const isMobileCard = viewportWidth < 760

@@ -191,10 +191,6 @@ export default function PlacesScreen() {
 
   const hasMorePlaces = placesQuery.hasNextPage
   const showLoadedCounts = !facetsQuery.isLoading && !facetsQuery.isError
-  // First grid row(s) are above the fold — decode those eagerly with high
-  // priority so the first screen shows sharp photos instead of blur on load.
-  const gridColumns = isWide ? 3 : isCompact ? 1 : 2
-  const firstScreenCount = gridColumns * 2
 
   const activeCategoryTitle = getActiveCategoryTitle(selectedCategories)
   const pageDescription = selectedCategories.length > 0
@@ -438,15 +434,13 @@ export default function PlacesScreen() {
   } else {
     resultsContent = (
       <View style={styles.cardsGrid}>
-        {visiblePlaces.map((place, index) => (
+        {visiblePlaces.map((place) => (
           <PlaceCard
             key={place.id}
             place={place}
             styles={styles}
-            colors={colors}
             onOpenMap={openOnMap}
             onOpenTravel={openTravel}
-            priority={index < firstScreenCount}
           />
         ))}
         {loadMoreBlock}

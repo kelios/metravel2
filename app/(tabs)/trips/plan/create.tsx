@@ -1,10 +1,19 @@
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import TripCreateForm from '@/components/trips/planning/TripCreateForm';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { buildTripPlanPrefill } from '@/utils/tripPlanLinks';
+import { LAYOUT } from '@/constants/layout';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+
+// Reserve space for the bottom tab bar / web dock so the last form control
+// (the "Запланировать поездку" submit button) is never hidden behind it.
+const SCROLL_BOTTOM_RESERVE = Platform.select({
+  web: 'calc(var(--mt-dock-h, 0px) + 24px)' as unknown as number,
+  default: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
+});
 
 export default function CreateTripScreen() {
   const colors = useThemedColors();
@@ -28,6 +37,11 @@ export default function CreateTripScreen() {
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 16, alignItems: 'center' },
+    content: {
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: SCROLL_BOTTOM_RESERVE,
+      alignItems: 'center',
+    },
     inner: { width: '100%', maxWidth: 640 },
   });

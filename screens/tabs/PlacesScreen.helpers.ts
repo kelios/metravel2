@@ -6,7 +6,7 @@ export const PLACES_PAGE_SIZE = 20
 export const LOAD_MORE_SCROLL_THRESHOLD = 420
 export const PRESSED_OPACITY = { opacity: 0.72 } as const
 
-export const DEFAULT_CATEGORY_SELECTION = [
+const DEFAULT_CATEGORY_SELECTION = [
   'Замок',
   'Руины замка',
   'Дворец',
@@ -18,7 +18,7 @@ export const DEFAULT_CATEGORY_SELECTION = [
   'Река',
   'Ручей',
 ] as const
-export const FEATURED_CATEGORY_LABEL = 'Замки, дворцы, экотропы и вода'
+const FEATURED_CATEGORY_LABEL = 'Замки, дворцы, экотропы и вода'
 
 export type CategoryCollection = {
   id: string
@@ -106,7 +106,7 @@ export const isSameCategorySet = (left: string[], right: readonly string[]): boo
   return left.every((item) => rightSet.has(item))
 }
 
-export const getMatchingCollection = (categories: string[]): CategoryCollection | null =>
+const getMatchingCollection = (categories: string[]): CategoryCollection | null =>
   INTERESTING_CATEGORY_COLLECTIONS.find((collection) =>
     isSameCategorySet(categories, collection.categories),
   ) ?? null
