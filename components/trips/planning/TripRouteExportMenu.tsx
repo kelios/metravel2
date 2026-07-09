@@ -26,6 +26,9 @@ interface Props {
   trip: PlannedTrip;
 }
 
+export const shouldRenderTripRouteExportMenu = (platformOS: typeof Platform.OS): boolean =>
+  platformOS !== 'android';
+
 const TRANSPORT_MODE: Record<TripTransport, TravelMode> = {
   car: 'driving',
   bike: 'cycling',
@@ -53,6 +56,11 @@ function TripRouteExportMenu({ trip }: Props) {
   const mode = TRANSPORT_MODE[trip.transport];
   const disabled = (input.track?.length ?? 0) < 2;
   const isWeb = Platform.OS === 'web';
+  const shouldRender = shouldRenderTripRouteExportMenu(Platform.OS);
+
+  if (!shouldRender) {
+    return null;
+  }
 
   const handleDownloadGpx = () => {
     downloadTextFileWeb(buildGpx(input));

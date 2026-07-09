@@ -2,12 +2,13 @@
 // Форма создания запланированной поездки (Sprint 13 / блок D): заголовок, описание,
 // дата/время старта, транспорт, видимость, число мест и стартовая точка маршрута.
 import React, { useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Link } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import * as yup from 'yup';
 
 import Button from '@/components/ui/Button';
+import MiniCalendar from '@/components/calendar/MiniCalendar';
 import ConsentCheckbox from '@/components/legal/ConsentCheckbox';
 import { useActionConsent } from '@/hooks/useActionConsent';
 import { CONSENT_TYPES } from '@/utils/actionConsent';
@@ -27,6 +28,7 @@ import {
 } from '@/components/trips/planning/tripPlanFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDefaultTripStartDate, type TripPlanPrefill } from '@/utils/tripPlanLinks';
+import { globalFocusStyles } from '@/styles/globalFocus';
 
 interface Props {
   onCreated?: (trip: PlannedTrip) => void;
@@ -38,6 +40,42 @@ const VISIBILITY_OPTIONS: TripVisibility[] = ['public', 'followers', 'private'];
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
+const DATE_MONTHS = [
+  'января',
+  'февраля',
+  'марта',
+  'апреля',
+  'мая',
+  'июня',
+  'июля',
+  'августа',
+  'сентября',
+  'октября',
+  'ноября',
+  'декабря',
+];
+
+export const parseTripCreateIsoDate = (value: string): Date | null => {
+  const match = DATE_RE.exec(value.trim());
+  if (!match) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(year, month - 1, day);
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+  return parsed;
+};
+
+export const formatTripCreateDisplayDate = (value: string): string => {
+  if (!value.trim()) return 'Выберите дату';
+  const parsed = parseTripCreateIsoDate(value);
+  if (!parsed) return value;
+  return `${parsed.getDate()} ${DATE_MONTHS[parsed.getMonth()]} ${parsed.getFullYear()}`;
+};
 
 interface FormValues {
   title: string;
@@ -149,7 +187,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
   const [values, setValues] = useState<FormValues>({
     title: initialValues?.title ?? '',
     description: initialValues?.description ?? '',
-    startDate: getDefaultTripStartDate(),
+    startDate: initialValues?.startDate ?? getDefaultTripStartDate(),
     startTime: '',
     transport: 'car',
     visibility: 'public',
@@ -162,9 +200,21 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [consentChecked, setConsentChecked] = useState(false);
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const startDateDisplay = useMemo(
+    () => formatTripCreateDisplayDate(values.startDate),
+    [values.startDate],
+  );
 
   const setField = <K extends keyof FormValues>(key: K, value: FormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const openStartDatePicker = () => setDatePickerVisible(true);
+  const closeStartDatePicker = () => setDatePickerVisible(false);
+  const handleStartDateSelect = (date: string) => {
+    setField('startDate', date);
+    setDatePickerVisible(false);
   };
 
   const handleSubmit = async () => {
@@ -245,15 +295,74 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
               style={webDateInputStyle}
             />
           ) : (
-            <TextInput
-              value={values.startDate}
-              onChangeText={(t) => setField('startDate', t)}
-              placeholder="ГГГГ-ММ-ДД"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              style={styles.input}
-              testID="trip-create-start-date"
-            />
+            <>
+              <Pressable
+                onPress={openStartDatePicker}
+                accessibilityRole="button"
+                accessibilityLabel="Выбрать дату старта"
+                accessibilityHint="Откроет календарь выбора даты"
+                style={[styles.datePickerTrigger, globalFocusStyles.focusable]}
+                testID="trip-create-start-date"
+              >
+                <Feather name="calendar" size={16} color={colors.primary} />
+                <Text
+                  style={[
+                    styles.datePickerText,
+                    !values.startDate && styles.datePickerPlaceholder,
+                  ]}
+                  numberOfLines={1}
+                  testID="trip-create-start-date-value"
+                >
+                  {startDateDisplay}
+                </Text>
+              </Pressable>
+              <Modal
+                visible={datePickerVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={closeStartDatePicker}
+                statusBarTranslucent
+              >
+                <Pressable
+                  style={styles.datePickerOverlay}
+                  onPress={closeStartDatePicker}
+                  testID="trip-create-date-picker-backdrop"
+                >
+                  <Pressable
+                    style={styles.datePickerSheet}
+                    onPress={() => undefined}
+                    testID="trip-create-date-picker"
+                  >
+                    <View style={styles.datePickerHeader}>
+                      <View style={styles.datePickerTitleRow}>
+                        <Feather name="calendar" size={18} color={colors.primary} />
+                        <Text style={styles.datePickerTitle}>Дата старта</Text>
+                      </View>
+                      <Text style={styles.datePickerHint}>
+                        Выберите день в календаре. Отмена не изменит текущую дату.
+                      </Text>
+                    </View>
+                    <View style={styles.datePickerCalendar}>
+                      <MiniCalendar
+                        entries={[]}
+                        selectedDate={values.startDate || null}
+                        focusDate={values.startDate || getDefaultTripStartDate()}
+                        onDayPress={handleStartDateSelect}
+                        accentColor={colors.primary}
+                        accentSoftColor={colors.primaryLight}
+                      />
+                    </View>
+                    <Button
+                      label="Отмена"
+                      onPress={closeStartDatePicker}
+                      variant="secondary"
+                      fullWidth
+                      testID="trip-create-start-date-cancel"
+                    />
+                  </Pressable>
+                </Pressable>
+              </Modal>
+            </>
           )}
           {errors.startDate ? (
             <Text style={styles.error}>{errors.startDate}</Text>
@@ -458,6 +567,42 @@ const createStyles = (colors: ThemedColors) =>
     },
     row: { flexDirection: 'row', gap: 10 },
     col: { flex: 1, gap: 6 },
+    datePickerTrigger: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      backgroundColor: colors.surface,
+      minHeight: Platform.OS === 'android' ? 48 : 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    datePickerText: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    datePickerPlaceholder: { color: colors.textMuted },
+    datePickerOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: colors.overlay,
+      padding: 16,
+    },
+    datePickerSheet: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 16,
+      gap: 12,
+    },
+    datePickerHeader: { gap: 6 },
+    datePickerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    datePickerTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+    datePickerHint: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
+    datePickerCalendar: { marginHorizontal: -16 },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     chip: {
       borderWidth: 1,

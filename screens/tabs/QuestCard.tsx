@@ -148,9 +148,13 @@ export default function QuestCard({
                     <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.backgroundTertiary }]} />
                 )}
 
-                <View style={styles.questCardVignette} />
-                <View style={[styles.questCardGradient, { pointerEvents: 'none' }]} />
-                <View style={styles.questCardMagicGlow} />
+                {Platform.OS === 'web' && (
+                    <>
+                        <View style={styles.questCardVignette} />
+                        <View style={[styles.questCardGradient, { pointerEvents: 'none' }]} />
+                        <View style={styles.questCardMagicGlow} />
+                    </>
+                )}
 
                 {distanceText && (
                     <View style={styles.questCardBadge}>

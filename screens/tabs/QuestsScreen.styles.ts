@@ -768,6 +768,19 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                 } as any,
             }),
         },
+        questVirtualizedList: {
+            flex: 1,
+            minHeight: 0,
+        },
+        questVirtualizedListContent: {
+            flexGrow: 1,
+            padding: isMobileW ? spacing.md : spacing.lg,
+            paddingTop: isMobileW ? spacing.sm : spacing.md,
+            paddingBottom: isMobileW ? spacing.xl : spacing.lg,
+        },
+        questVirtualizedItem: {
+            marginBottom: spacing.lg,
+        },
 
         /* ---- Skeleton ---- */
         skeletonGrid: {

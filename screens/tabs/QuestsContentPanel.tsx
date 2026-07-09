@@ -1,12 +1,14 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useCallback, useState } from 'react';
 import {
     ActivityIndicator,
+    FlatList,
     Platform,
     Pressable,
     ScrollView,
     Text,
     View,
 } from 'react-native';
+import type { ListRenderItemInfo } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
@@ -63,6 +65,7 @@ type QuestsContentPanelProps = {
 };
 
 const RADIUS_OPTIONS = [5, 10, 20, 50] as const;
+type QuestListItem = QuestMeta & { _distanceKm?: number };
 
 export default function QuestsContentPanel({
     styles,
@@ -147,62 +150,86 @@ export default function QuestsContentPanel({
         </View>
     ) : null;
 
+    const getQuestCityId = useCallback((quest: QuestListItem) => (
+        selectedCityId === nearbyId ? (quest.cityId || '') : (selectedCityId || '')
+    ), [nearbyId, selectedCityId]);
+
+    const renderQuestItem = useCallback(({ item: quest }: ListRenderItemInfo<QuestListItem>) => (
+        <View style={styles.questVirtualizedItem}>
+            <QuestCard
+                styles={styles}
+                cityId={getQuestCityId(quest)}
+                quest={quest}
+                nearby={selectedCityId === nearbyId}
+                cardWidth={questCardWidth}
+            />
+        </View>
+    ), [getQuestCityId, nearbyId, questCardWidth, selectedCityId, styles]);
+
+    const questKeyExtractor = useCallback((quest: QuestListItem) => String(quest.id), []);
+
+    const contentHeader = (
+        <View style={styles.contentHeader}>
+            <View style={styles.contentTitleBlock}>
+                <Text style={styles.contentTitle} numberOfLines={2}>
+                    {selectedCityId === nearbyId
+                        ? (isMapAreaActive ? 'Квесты в этой области' : userLoc ? 'Квесты поблизости' : 'Все квесты')
+                        : selectedCityName || 'Все квесты'}
+                </Text>
+                {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
+            </View>
+            {isMobile && (
+                <View style={styles.headerToggleRow}>
+                    <Pressable
+                        style={[styles.headerIconBtn, viewMode === 'map' && styles.headerIconBtnActive]}
+                        onPress={onToggleViewMode}
+                        accessibilityRole="button"
+                        accessibilityLabel={viewMode === 'map' ? 'Показать список квестов' : 'Показать квесты на карте'}
+                        testID="quests-toggle-view-mode"
+                    >
+                        <Feather
+                            name={viewMode === 'map' ? 'list' : 'map'}
+                            size={17}
+                            color={viewMode === 'map' ? colors.textOnPrimary : colors.text}
+                        />
+                    </Pressable>
+                    <Pressable
+                        style={styles.headerIconBtn}
+                        onPress={onOpenFilterDrawer}
+                        accessibilityRole="button"
+                        accessibilityLabel="Выбрать город"
+                    >
+                        <Feather name="filter" size={17} color={colors.text} />
+                    </Pressable>
+                    <Pressable
+                        style={[styles.headerIconBtn, geoRequesting && styles.headerIconBtnDisabled]}
+                        onPress={onShowNearby}
+                        disabled={geoRequesting}
+                        accessibilityRole="button"
+                        accessibilityLabel={geoRequesting ? 'Ищем квесты рядом со мной' : 'Показать квесты рядом со мной'}
+                        testID="quests-show-nearby"
+                    >
+                        <Feather name="navigation" size={17} color={colors.text} />
+                    </Pressable>
+                </View>
+            )}
+        </View>
+    );
+
+    const geoMessageBlock = isMobile && geoMessage ? (
+        <View style={styles.nearbyCtaBlock}>
+            <Text style={styles.geoMessageText} testID="quests-geo-message">
+                {geoMessage}
+            </Text>
+        </View>
+    ) : null;
+
     const inner = (
         <>
-            <View style={styles.contentHeader}>
-                <View style={styles.contentTitleBlock}>
-                    <Text style={styles.contentTitle} numberOfLines={2}>
-                        {selectedCityId === nearbyId
-                            ? (isMapAreaActive ? 'Квесты в этой области' : userLoc ? 'Квесты поблизости' : 'Все квесты')
-                            : selectedCityName || 'Все квесты'}
-                    </Text>
-                    {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
-                </View>
-                {isMobile && (
-                    <View style={styles.headerToggleRow}>
-                        <Pressable
-                            style={[styles.headerIconBtn, viewMode === 'map' && styles.headerIconBtnActive]}
-                            onPress={onToggleViewMode}
-                            accessibilityRole="button"
-                            accessibilityLabel={viewMode === 'map' ? 'Показать список квестов' : 'Показать квесты на карте'}
-                            testID="quests-toggle-view-mode"
-                        >
-                            <Feather
-                                name={viewMode === 'map' ? 'list' : 'map'}
-                                size={17}
-                                color={viewMode === 'map' ? colors.textOnPrimary : colors.text}
-                            />
-                        </Pressable>
-                        <Pressable
-                            style={styles.headerIconBtn}
-                            onPress={onOpenFilterDrawer}
-                            accessibilityRole="button"
-                            accessibilityLabel="Выбрать город"
-                        >
-                            <Feather name="filter" size={17} color={colors.text} />
-                        </Pressable>
-                        <Pressable
-                            style={[styles.headerIconBtn, geoRequesting && styles.headerIconBtnDisabled]}
-                            onPress={onShowNearby}
-                            disabled={geoRequesting}
-                            accessibilityRole="button"
-                            accessibilityLabel={geoRequesting ? 'Ищем квесты рядом со мной' : 'Показать квесты рядом со мной'}
-                            testID="quests-show-nearby"
-                        >
-                            <Feather name="navigation" size={17} color={colors.text} />
-                        </Pressable>
-                    </View>
-                )}
-            </View>
+            {contentHeader}
 
             <View style={[styles.contentBody, viewMode === 'map' && isMobile && styles.contentBodyMap]}>
-                {isMobile && geoMessage ? (
-                    <View style={styles.nearbyCtaBlock}>
-                        <Text style={styles.geoMessageText} testID="quests-geo-message">
-                            {geoMessage}
-                        </Text>
-                    </View>
-                ) : null}
+                {geoMessageBlock}
 
                 {viewMode === 'map' ? (
                     <View style={styles.mapSection}>
@@ -329,7 +356,7 @@ export default function QuestsContentPanel({
                                     <QuestCard
                                         key={quest.id}
                                         styles={styles}
-                                        cityId={selectedCityId === nearbyId ? (quest.cityId || '') : (selectedCityId || '')}
+                                        cityId={getQuestCityId(quest)}
                                         quest={quest}
                                         nearby={selectedCityId === nearbyId}
                                         cardWidth={questCardWidth}
@@ -342,6 +369,29 @@ export default function QuestsContentPanel({
             </View>
         </>
     );
+
+    if (Platform.OS !== 'web' && isMobile && viewMode === 'list' && dataLoaded && questsAll.length > 0) {
+        return (
+            <View style={styles.content}>
+                {contentHeader}
+                <FlatList
+                    data={questsAll}
+                    keyExtractor={questKeyExtractor}
+                    renderItem={renderQuestItem}
+                    style={styles.questVirtualizedList}
+                    contentContainerStyle={styles.questVirtualizedListContent}
+                    ListHeaderComponent={geoMessageBlock}
+                    initialNumToRender={4}
+                    maxToRenderPerBatch={4}
+                    updateCellsBatchingPeriod={50}
+                    windowSize={5}
+                    removeClippedSubviews={Platform.OS === 'android'}
+                    showsVerticalScrollIndicator={false}
+                    testID="quests-virtualized-list"
+                />
+            </View>
+        );
+    }
 
     // На native в режиме карты НЕ оборачиваем в ScrollView: WebView-Leaflet
     // (scrollEnabled) внутри вертикального ScrollView перехватывает жест, из-за

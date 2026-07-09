@@ -77,7 +77,9 @@ jest.mock('@/components/legal/ConsentCheckbox', () => {
 
 // ── Component import (after mocks) ────────────────────────────────────────────
 
-import TripCreateForm from '@/components/trips/planning/TripCreateForm'
+import TripCreateForm, {
+  formatTripCreateDisplayDate,
+} from '@/components/trips/planning/TripCreateForm'
 
 type RenderedForm = ReturnType<typeof render>
 
@@ -209,5 +211,68 @@ describe('TripCreateForm — validation errors', () => {
     const { getByTestId } = render(<TripCreateForm />)
     const btn = getByTestId('trip-create-submit')
     expect(btn.props.accessibilityState?.disabled).toBe(true)
+  })
+})
+
+describe('TripCreateForm — Android date picker', () => {
+  beforeEach(() => {
+    ;(Platform as { OS: string }).OS = 'android'
+  })
+
+  it('formats picked dates for local display', () => {
+    expect(formatTripCreateDisplayDate('2026-08-15')).toBe('15 августа 2026')
+    expect(formatTripCreateDisplayDate('')).toBe('Выберите дату')
+  })
+
+  it('renders a picker trigger instead of a manual date text input on Android', () => {
+    const { getByTestId } = render(
+      <TripCreateForm initialValues={{ startDate: '2026-08-10' }} />,
+    )
+    const trigger = getByTestId('trip-create-start-date')
+
+    expect(trigger.props.accessibilityRole).toBe('button')
+    expect(trigger.props.onChangeText).toBeUndefined()
+    expect(getByTestId('trip-create-start-date-value').props.children).toBe('10 августа 2026')
+  })
+
+  it('updates visible date and submitted API value after selecting a calendar day', async () => {
+    const { getByTestId, queryByTestId } = render(
+      <TripCreateForm
+        initialValues={{
+          title: 'Тест-поездка',
+          startDate: '2026-08-10',
+        }}
+      />,
+    )
+
+    fireEvent.press(getByTestId('trip-create-start-date'))
+    expect(getByTestId('trip-create-date-picker')).toBeTruthy()
+
+    fireEvent.press(getByTestId('mini-calendar-day-2026-08-15'))
+    expect(queryByTestId('trip-create-date-picker')).toBeNull()
+    expect(getByTestId('trip-create-start-date-value').props.children).toBe('15 августа 2026')
+
+    fireEvent.press(getByTestId('trip-create-consent'))
+    fireEvent.press(getByTestId('trip-create-submit'))
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+    expect(mockMutate.mock.calls[0][0]).toMatchObject({
+      title: 'Тест-поездка',
+      startDate: '2026-08-15',
+      seatsTotal: 4,
+    })
+  })
+
+  it('keeps the current date when the picker is canceled', () => {
+    const { getByTestId, queryByTestId } = render(
+      <TripCreateForm initialValues={{ startDate: '2026-08-10' }} />,
+    )
+
+    fireEvent.press(getByTestId('trip-create-start-date'))
+    expect(getByTestId('trip-create-date-picker')).toBeTruthy()
+
+    fireEvent.press(getByTestId('trip-create-start-date-cancel'))
+    expect(queryByTestId('trip-create-date-picker')).toBeNull()
+    expect(getByTestId('trip-create-start-date-value').props.children).toBe('10 августа 2026')
   })
 })

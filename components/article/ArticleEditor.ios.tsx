@@ -45,6 +45,10 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   }, []);
 
   const [html, setHtml] = useState(() => sanitizeForEditor(content));
+  const initialEditorContentRef = useRef<string | null>(null);
+  if (initialEditorContentRef.current === null) {
+    initialEditorContentRef.current = sanitizeForEditor(content);
+  }
   const [isReady, setIsReady] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [imageUploadRequest, setImageUploadRequest] = useState(0);
@@ -61,9 +65,11 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
     isUserEditingRef.current = false;
   }, ARTICLE_EDITOR_NATIVE_MESSAGE_DEBOUNCE_MS);
 
-  const initialSanitizedContent = useMemo(() => sanitizeForEditor(content), [content, sanitizeForEditor]);
   const safePlaceholder = useMemo(() => safeJsonString(placeholder), [placeholder]);
-  const safeInitialContent = useMemo(() => safeJsonString(initialSanitizedContent), [initialSanitizedContent]);
+  const safeInitialContent = useMemo(
+    () => safeJsonString(initialEditorContentRef.current ?? ''),
+    [],
+  );
 
   useEffect(() => {
     trackArticleEditorViewed({

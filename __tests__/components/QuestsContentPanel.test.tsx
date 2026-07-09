@@ -1,7 +1,8 @@
 import { fireEvent, render } from '@testing-library/react-native';
-import { Platform } from 'react-native';
+import { FlatList, Platform } from 'react-native';
 
 import QuestsContentPanel from '@/screens/tabs/QuestsContentPanel';
+import type { QuestMeta } from '@/utils/questAdapters';
 
 let mockIsMobile = false;
 
@@ -10,6 +11,14 @@ jest.mock('@/hooks/useResponsive', () => ({
 }));
 
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
+jest.mock('@/screens/tabs/QuestCard', () => {
+    const React = require('react');
+    const { Text } = require('react-native');
+
+    return function MockQuestCard({ quest }: { quest: { id: string; title: string } }) {
+        return React.createElement(Text, { testID: `quest-card-${quest.id}` }, quest.title);
+    };
+});
 
 describe('QuestsContentPanel', () => {
     const styles = {
@@ -39,6 +48,9 @@ describe('QuestsContentPanel', () => {
         skeletonGrid: {},
         skeletonCard: {},
         questsGrid: {},
+        questVirtualizedList: {},
+        questVirtualizedListContent: {},
+        questVirtualizedItem: {},
         mapRadiusOverlay: {},
         mapRadiusToggle: {},
         mapRadiusToggleActive: {},
@@ -62,6 +74,24 @@ describe('QuestsContentPanel', () => {
 
     beforeEach(() => {
         mockIsMobile = false;
+    });
+
+    const makeQuest = (index: number): QuestMeta => ({
+        id: `quest-${index}`,
+        title: `Quest ${index}`,
+        points: 3,
+        cityId: 'warsaw',
+        cityName: 'Warsaw',
+        lat: 52.23 + index / 1000,
+        lng: 21.01 + index / 1000,
+        durationMin: 60,
+        difficulty: 'easy',
+        cover: `https://cdn.example.com/quest-${index}.jpg`,
+        ratingAvg: null,
+        ratingCount: 0,
+        completionsCount: 0,
+        isCompletedByMe: false,
+        firstCompleter: null,
     });
 
     it('shows a geolocation-disabled banner and draws the map radius circle at the picked nearby radius', () => {
@@ -267,6 +297,98 @@ describe('QuestsContentPanel', () => {
         fireEvent.press(getByLabelText('Выбрать город'));
 
         expect(onOpenFilterDrawer).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses a virtualized FlatList for Android mobile quest list scrolling', () => {
+        mockIsMobile = true;
+        (Platform as { OS: string }).OS = 'android';
+        const LazyQuestMap = jest.fn(() => null);
+        const quests = Array.from({ length: 12 }, (_, index) => makeQuest(index));
+
+        const { UNSAFE_getByType, getByTestId } = render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="list"
+                selectedCityId="warsaw"
+                selectedCityName="Warsaw"
+                nearbyId="__nearby__"
+                nearbyRadiusKm={15}
+                questsAll={quests}
+                questCardWidth={320}
+                mapPoints={[]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={LazyQuestMap}
+                isMobile
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onSetRadius={() => {}}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />
+        );
+
+        const list = UNSAFE_getByType(FlatList);
+
+        expect(getByTestId('quests-virtualized-list')).toBeTruthy();
+        expect(list.props.data).toHaveLength(12);
+        expect(list.props.initialNumToRender).toBe(4);
+        expect(list.props.maxToRenderPerBatch).toBe(4);
+        expect(list.props.updateCellsBatchingPeriod).toBe(50);
+        expect(list.props.windowSize).toBe(5);
+        expect(list.props.removeClippedSubviews).toBe(true);
+    });
+
+    it('keeps the existing non-virtualized grid path on web', () => {
+        mockIsMobile = true;
+        (Platform as { OS: string }).OS = 'web';
+        const LazyQuestMap = jest.fn(() => null);
+        const quests = Array.from({ length: 2 }, (_, index) => makeQuest(index));
+
+        const { getByTestId, queryByTestId } = render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="list"
+                selectedCityId="warsaw"
+                selectedCityName="Warsaw"
+                nearbyId="__nearby__"
+                nearbyRadiusKm={15}
+                questsAll={quests}
+                questCardWidth={320}
+                mapPoints={[]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={LazyQuestMap}
+                isMobile
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onSetRadius={() => {}}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />
+        );
+
+        expect(queryByTestId('quests-virtualized-list')).toBeNull();
+        expect(getByTestId('quest-card-quest-0')).toBeTruthy();
+        expect(getByTestId('quest-card-quest-1')).toBeTruthy();
     });
 
     it('exposes the mobile nearby CTA and geolocation message in list mode', () => {

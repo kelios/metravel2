@@ -19,10 +19,32 @@ interface Props {
 
 const subscriberUserId = (profile: UserProfileDto): number => profile.user ?? profile.id;
 
-const subscriberName = (profile: UserProfileDto): string => {
+type InviteSubscriberProfile = UserProfileDto & {
+  display_name?: string | null;
+  full_name?: string | null;
+  name?: string | null;
+  username?: string | null;
+  email?: string | null;
+};
+
+export const getTripInviteSubscriberName = (profile: InviteSubscriberProfile): string => {
   const first = String(profile.first_name ?? '').trim();
   const last = String(profile.last_name ?? '').trim();
-  return `${first} ${last}`.trim() || 'Без имени';
+  const firstLast = `${first} ${last}`.trim();
+  const fallbackId = subscriberUserId(profile);
+  const candidates = [
+    profile.display_name,
+    profile.full_name,
+    profile.name,
+    firstLast,
+    profile.username,
+    profile.email,
+  ];
+  const name = candidates
+    .map((value) => String(value ?? '').trim())
+    .find((value) => value.length > 0);
+
+  return name || (fallbackId ? `Пользователь #${fallbackId}` : 'Пользователь');
 };
 
 function TripInvitePanel({ trip }: Props) {
@@ -34,6 +56,15 @@ function TripInvitePanel({ trip }: Props) {
   const [selected, setSelected] = useState<number[]>([]);
   const [invitedCount, setInvitedCount] = useState<number | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
+
+  const selectedNames = useMemo(() => {
+    if (!selected.length) return [];
+    const byUserId = new Map(subscribers.map((profile) => [subscriberUserId(profile), profile]));
+    return selected
+      .map((userId) => byUserId.get(userId))
+      .filter((profile): profile is UserProfileDto => Boolean(profile))
+      .map((profile) => getTripInviteSubscriberName(profile));
+  }, [selected, subscribers]);
 
   if (!trip.isOwner) return null;
 
@@ -95,13 +126,22 @@ function TripInvitePanel({ trip }: Props) {
                   style={[styles.chip, active && styles.chipActive]}
                   testID={`trip-invite-subscriber-${userId}`}
                 >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                    {subscriberName(profile)}
+                  <Text
+                    style={[styles.chipText, active && styles.chipTextActive]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {getTripInviteSubscriberName(profile)}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
+          {selectedNames.length ? (
+            <Text style={styles.selectedNames} numberOfLines={2} testID="trip-invite-selected-names">
+              Выбрано: {selectedNames.join(', ')}
+            </Text>
+          ) : null}
           <Button
             label={`Пригласить выбранных (${selected.length})`}
             onPress={handleInvite}
@@ -151,13 +191,16 @@ const createStyles = (colors: ThemedColors) =>
       paddingHorizontal: 12,
       paddingVertical: 8,
       backgroundColor: colors.surface,
+      maxWidth: '100%',
+      alignSelf: 'flex-start',
     },
     chipActive: {
       borderColor: colors.primary,
       backgroundColor: colors.surfaceMuted,
     },
-    chipText: { fontSize: 13, color: colors.textSecondary },
+    chipText: { fontSize: 13, color: colors.textSecondary, flexShrink: 1, maxWidth: '100%' },
     chipTextActive: { color: colors.primaryText, fontWeight: '600' },
+    selectedNames: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
     success: { fontSize: 13, fontWeight: '600', color: colors.success },
     url: { fontSize: 13, color: colors.textMuted },
   });

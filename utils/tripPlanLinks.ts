@@ -7,6 +7,7 @@ type TravelPlanSource = Pick<Travel, 'id' | 'slug' | 'name' | 'description'>;
 export interface TripPlanPrefill {
   title?: string;
   description?: string;
+  startDate?: string;
 }
 
 export type TripPlanSourceParams = Record<string, string | string[] | undefined>;

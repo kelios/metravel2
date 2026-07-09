@@ -254,6 +254,7 @@ export default function MiniCalendar({
                 accessibilityRole="button"
                 accessibilityLabel={`${cell.day} ${MONTH_NAMES[month - 1]}${isMarked ? ', есть поездки' : ''}`}
                 accessibilityState={{ selected: isSelected }}
+                testID={`mini-calendar-day-${dayStr}`}
               >
                 <Text
                   style={[

@@ -4,7 +4,9 @@ import { useLocalSearchParams } from 'expo-router';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import RouteBuilder from '@/components/trips/planning/RouteBuilder';
-import TripRouteExportMenu from '@/components/trips/planning/TripRouteExportMenu';
+import TripRouteExportMenu, {
+  shouldRenderTripRouteExportMenu,
+} from '@/components/trips/planning/TripRouteExportMenu';
 import TripParticipantsList from '@/components/trips/planning/TripParticipantsList';
 import TripRsvpControl from '@/components/trips/planning/TripRsvpControl';
 import TripInvitePanel from '@/components/trips/planning/TripInvitePanel';
@@ -35,6 +37,7 @@ const SCROLL_BOTTOM_RESERVE = Platform.select({
 export default function PlannedTripScreen() {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const showRouteExportMenu = shouldRenderTripRouteExportMenu(Platform.OS);
   const params = useLocalSearchParams<{ id?: string }>();
   const tripId = Number(params.id);
   const { data: trip, isLoading, isError } = usePlannedTrip(
@@ -80,9 +83,11 @@ export default function PlannedTripScreen() {
               <RouteBuilder trip={trip} />
             </View>
 
-            <View style={styles.section}>
-              <TripRouteExportMenu trip={trip} />
-            </View>
+            {showRouteExportMenu ? (
+              <View style={styles.section} testID="trip-plan-route-export-section">
+                <TripRouteExportMenu trip={trip} />
+              </View>
+            ) : null}
 
             <View style={styles.section}>
               <TripParticipantsList trip={trip} />

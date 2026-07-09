@@ -148,6 +148,45 @@ describe('ArticleEditor.ios Component', () => {
     }, { timeout: 500 });
   });
 
+  it('should keep the native WebView source stable when parent echoes typed content', async () => {
+    const { getByTestId, rerender } = render(
+      <ArticleEditor
+        content="<p>Initial</p>"
+        onChange={mockOnChange}
+        onAutosave={mockOnAutosave}
+        idTravel="123"
+      />
+    );
+
+    const webView = getByTestId('editor-webview');
+    const initialSource = webView.props.source;
+
+    fireEvent(webView, 'message', {
+      nativeEvent: {
+        data: JSON.stringify({
+          type: 'content-change',
+          html: '<p>Initial text</p>',
+          source: 'user',
+        }),
+      },
+    });
+
+    await waitFor(() => {
+      expect(mockOnChange).toHaveBeenCalledWith('<p>Initial text</p>');
+    }, { timeout: 500 });
+
+    rerender(
+      <ArticleEditor
+        content="<p>Initial text</p>"
+        onChange={mockOnChange}
+        onAutosave={mockOnAutosave}
+        idTravel="123"
+      />
+    );
+
+    expect(getByTestId('editor-webview').props.source).toBe(initialSource);
+  });
+
   it('should include anchor insertion snippet in the editor HTML template', () => {
     const { getByTestId } = renderComponent();
 
