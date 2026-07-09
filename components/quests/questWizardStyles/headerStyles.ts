@@ -34,6 +34,7 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         minWidth: 0,
         flexDirection: 'row',
         alignItems: 'center',
+        gap: SPACING.sm,
     },
     title: {
         fontSize: isMobile ? 17 : 20,

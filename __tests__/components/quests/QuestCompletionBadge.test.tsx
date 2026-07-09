@@ -10,12 +10,14 @@ describe('QuestCompletionBadge', () => {
     expect(queryByText('Пройден')).toBeTruthy()
   })
 
-  it('renders the detail marker and pluralized count', () => {
-    const { queryByText } = render(
+  it('renders compact detail chips with count and accessible labels', () => {
+    const { queryByText, queryByLabelText } = render(
       <QuestCompletionBadge isCompleted completionsCount={5} variant="detail" />,
     )
-    expect(queryByText('Вы прошли этот квест')).toBeTruthy()
-    expect(queryByText('Пройдено 5 раз')).toBeTruthy()
+    expect(queryByLabelText('Вы прошли этот квест')).toBeTruthy()
+    expect(queryByLabelText('Пройдено 5 раз')).toBeTruthy()
+    expect(queryByText('5')).toBeTruthy()
+    expect(queryByText('Пройдено 5 раз')).toBeNull()
   })
 
   it('renders only the count when not completed by me', () => {

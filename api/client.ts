@@ -843,13 +843,16 @@ class ApiClient {
                     timeout
                 );
                 if (!retryResponse.ok) {
-                    throw new ApiError(retryResponse.status, `Ошибка загрузки: ${retryResponse.statusText}`);
+                    await this.throwDetailedError(retryResponse);
                 }
                 return await this.parseSuccessResponse<T>(retryResponse);
             }
 
             if (!response.ok) {
-                throw new ApiError(response.status, `Ошибка загрузки: ${response.statusText}`);
+                // Читаем тело ответа (напр. 400 «unsupported file type»), а не пустой
+                // statusText — по HTTP/2 statusText всегда пустой, из-за чего ошибка
+                // выглядела как «Ошибка загрузки:» без причины.
+                await this.throwDetailedError(response);
             }
 
             return await this.parseSuccessResponse<T>(response);

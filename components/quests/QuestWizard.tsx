@@ -72,8 +72,6 @@ export type QuestWizardProps = {
     ratingSlot?: React.ReactNode;
     /** Бейдж «Пройден» + «Пройдено N раз» под заголовком в шапке */
     completionSlot?: React.ReactNode;
-    /** Блок первопроходца под заголовком в шапке */
-    pioneerSlot?: React.ReactNode;
     /** Native: id города/квеста для deep-link локального напоминания о незавершённом квесте */
     questId?: string;
     cityId?: string;
@@ -100,7 +98,7 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, ratingSlot, completionSlot, pioneerSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, ratingSlot, completionSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
     const wizardModel = useQuestWizardResponsiveModel();
@@ -482,7 +480,6 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 offlineMapPointsCount={offlineMapPointsCount}
                                 ratingSlot={ratingSlot}
                                 completionSlot={completionSlot}
-                                pioneerSlot={pioneerSlot}
                                 showExcursions={false}
                             />
 
@@ -524,7 +521,6 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 offlineMapPointsCount={offlineMapPointsCount}
                                 ratingSlot={ratingSlot}
                                 completionSlot={completionSlot}
-                                pioneerSlot={pioneerSlot}
                             />
 
                             {/* Контент */}

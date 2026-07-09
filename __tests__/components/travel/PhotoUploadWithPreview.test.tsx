@@ -10,9 +10,9 @@ jest.mock('@/api/misc');
 jest.mock('react-native-image-picker', () => ({
     launchImageLibrary: jest.fn(),
 }));
-jest.mock('heic2any', () => ({
+jest.mock('heic-to', () => ({
     __esModule: true,
-    default: jest.fn(async () => new Blob([new Uint8Array([9, 8, 7])], { type: 'image/jpeg' })),
+    heicTo: jest.fn(async () => new Blob([new Uint8Array([9, 8, 7])], { type: 'image/jpeg' })),
 }));
 let lastOnDrop: any = null;
 jest.mock('react-dropzone', () => ({

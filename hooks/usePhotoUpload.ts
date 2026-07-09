@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { uploadImage } from '@/api/misc';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
-import { prepareWebImageFileForUpload } from '@/utils/webImageUpload';
+import { prepareWebImageFileForUpload, HeicConversionError } from '@/utils/webImageUpload';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
 
@@ -292,7 +292,14 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       }
     } catch (err) {
       console.error('Ошибка при загрузке:', err);
-      if (mountedRef.current) { setError('Произошла ошибка при загрузке'); setPreviewUrl(null); }
+      if (mountedRef.current) {
+        setError(
+          err instanceof HeicConversionError
+            ? 'Не удалось преобразовать HEIC. Сохраните фото как JPG и загрузите снова.'
+            : 'Произошла ошибка при загрузке'
+        );
+        setPreviewUrl(null);
+      }
     } finally {
       if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null; }
       if (mountedRef.current) { setLoading(false); setUploadProgress(0); }

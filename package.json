@@ -194,7 +194,7 @@
     "expo-splash-screen": "~57.0.2",
     "expo-video": "~57.0.0",
     "expo-web-browser": "~57.0.0",
-    "heic2any": "^0.0.4",
+    "heic-to": "^1.5.2",
     "html2canvas": "^1.4.1",
     "jszip": "^3.10.1",
     "leaflet": "^1.9.4",

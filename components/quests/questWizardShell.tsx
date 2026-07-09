@@ -48,7 +48,6 @@ type QuestCompactSidebarProps = NavigationSharedProps & {
   offlineMapPointsCount: number
   ratingSlot?: React.ReactNode
   completionSlot?: React.ReactNode
-  pioneerSlot?: React.ReactNode
   showExcursions?: boolean
 }
 
@@ -67,7 +66,6 @@ type QuestHeaderPanelProps = NavigationSharedProps & {
   offlineMapPointsCount: number
   ratingSlot?: React.ReactNode
   completionSlot?: React.ReactNode
-  pioneerSlot?: React.ReactNode
 }
 
 type QuestActionButtonProps = {
@@ -211,7 +209,6 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     offlineMapPointsCount,
     ratingSlot,
     completionSlot,
-    pioneerSlot,
     showExcursions = true,
   } = props
   const iconOnlyActions = Platform.OS === 'web'
@@ -220,7 +217,6 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     <View style={styles.compactSidebar}>
       <View style={styles.compactSidebarHeader}>
         <Text style={styles.compactSidebarTitle} numberOfLines={2}>{title}</Text>
-        {pioneerSlot ?? null}
         {ratingSlot ?? null}
         {completionSlot ?? null}
         <View style={styles.compactSidebarActions}>
@@ -359,7 +355,6 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     offlineMapPointsCount,
     ratingSlot,
     completionSlot,
-    pioneerSlot,
   } = props
 
   const wideDesktop = screenW >= 1100
@@ -372,9 +367,8 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           {!isMobile && (
             <Text style={styles.title} numberOfLines={1}>{title}</Text>
           )}
-          {!isMobile && pioneerSlot ? pioneerSlot : null}
-          {!isMobile && ratingSlot ? ratingSlot : null}
-          {!isMobile && completionSlot ? completionSlot : null}
+          {ratingSlot ?? null}
+          {completionSlot ?? null}
         </View>
         <View style={styles.headerActionRow}>
           {Platform.OS === 'web' && (

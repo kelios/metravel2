@@ -1,8 +1,14 @@
-import { isHeicLikeFile, prepareWebImageFileForUpload } from '@/utils/webImageUpload';
+import {
+  isHeicLikeFile,
+  prepareWebImageFileForUpload,
+  HeicConversionError,
+} from '@/utils/webImageUpload';
 
-jest.mock('heic2any', () => ({
+const mockHeicTo = jest.fn(async () => new Blob([new Uint8Array([9, 8, 7])], { type: 'image/jpeg' }));
+
+jest.mock('heic-to', () => ({
   __esModule: true,
-  default: jest.fn(async () => new Blob([new Uint8Array([9, 8, 7])], { type: 'image/jpeg' })),
+  heicTo: (...args: unknown[]) => mockHeicTo(...args),
 }));
 
 describe('webImageUpload', () => {
@@ -29,5 +35,12 @@ describe('webImageUpload', () => {
     const converted = await prepareWebImageFileForUpload(source);
 
     expect(converted).toBe(source);
+  });
+
+  it('throws HeicConversionError instead of returning the raw HEIC when decode fails', async () => {
+    mockHeicTo.mockRejectedValueOnce(new Error('ERR_LIBHEIF format not supported'));
+    const source = new File([new Uint8Array([1, 2, 3])], 'iphone.heic', { type: 'image/heic' });
+
+    await expect(prepareWebImageFileForUpload(source)).rejects.toBeInstanceOf(HeicConversionError);
   });
 });

@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useIsFocused } from 'expo-router';
@@ -7,21 +7,20 @@ import { Feather } from '@expo/vector-icons';
 import { QuestWizard as QuestWizardDirect } from '@/components/quests/QuestWizard';
 import QuestConsentGate from '@/components/quests/QuestConsentGate';
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection';
-import UserAvatar from '@/components/layout/UserAvatar';
-import StarRating from '@/components/ui/StarRating';
 import QuestCompletionBadge from '@/components/quests/QuestCompletionBadge';
+import QuestReviewsModal from '@/components/quests/QuestReviewsModal';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useAuth } from '@/context/AuthContext';
 import { useQuestBundle, useQuestProgressSync } from '@/hooks/useQuestsApi';
 import { useQuestRatingMeta } from '@/hooks/useQuestRatingMeta';
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta';
-import { useQuestPioneerMeta } from '@/hooks/useQuestPioneerMeta';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useActionConsent } from '@/hooks/useActionConsent';
 import { useGuestQuestFlow } from '@/components/quests/useGuestQuestFlow';
 import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
 import { stringifyJsonLd } from '@/utils/jsonLd';
+import { pluralizeRu } from '@/utils/pluralize';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
@@ -309,20 +308,25 @@ export default function QuestByIdScreen() {
     isAuthenticated,
     enabled: shouldLoadQuest,
   });
+  const [reviewsVisible, setReviewsVisible] = useState(false);
   const ratingMeta = useQuestRatingMeta(shouldLoadQuest ? questId : undefined, bundle?.id);
   const ratingSlot = useMemo(() => {
     if (ratingMeta.ratingCount === 0) return null;
+    const avg = (ratingMeta.ratingAvg ?? 0).toFixed(1);
+    const countLabel = `${ratingMeta.ratingCount} ${pluralizeRu(ratingMeta.ratingCount, 'отзыв', 'отзыва', 'отзывов')}`;
     return (
-      <StarRating
-        rating={ratingMeta.ratingAvg}
-        ratingCount={ratingMeta.ratingCount}
-        size="small"
-        showValue
-        showCount
+      <Pressable
+        onPress={() => setReviewsVisible(true)}
+        style={styles.metaChip}
+        accessibilityRole="button"
+        accessibilityLabel={`Отзывы, рейтинг ${avg} из 5, ${countLabel}`}
         testID="quest-detail-rating"
-      />
+      >
+        <Feather name="star" size={13} color={colors.warning} />
+        <Text style={styles.metaChipText}>{avg}</Text>
+      </Pressable>
     );
-  }, [ratingMeta.ratingAvg, ratingMeta.ratingCount]);
+  }, [ratingMeta.ratingAvg, ratingMeta.ratingCount, styles.metaChip, styles.metaChipText, colors.warning]);
 
   const completionMeta = useQuestCompletionMeta(shouldLoadQuest ? questId : undefined, bundle?.id);
   const completionSlot = useMemo(() => {
@@ -335,19 +339,6 @@ export default function QuestByIdScreen() {
       />
     );
   }, [completionMeta.isCompletedByMe, completionMeta.completionsCount]);
-
-  const pioneer = useQuestPioneerMeta(shouldLoadQuest ? questId : undefined, bundle?.id);
-  const pioneerSlot = useMemo(() => {
-    if (!pioneer) return null;
-    return (
-      <View style={styles.pioneerRow}>
-        <UserAvatar uri={pioneer.avatar} size="md" />
-        <Text style={styles.pioneerText}>
-          Первопроходец: <Text style={styles.pioneerName}>{pioneer.name}</Text>
-        </Text>
-      </View>
-    );
-  }, [pioneer, styles.pioneerRow, styles.pioneerText, styles.pioneerName]);
 
   const isLoading =
     isQuestLoading ||
@@ -430,6 +421,10 @@ export default function QuestByIdScreen() {
   // ветках свой InstantSEO (со своим robots/canonical), и отложенный патч его перетирал.
   useQuestHeadSync(isFocused && isAuthenticated && !isLoading && Boolean(bundle), seo, canonical);
 
+  const reviewsModal = (
+    <QuestReviewsModal questId={questId} visible={reviewsVisible} onClose={() => setReviewsVisible(false)} />
+  );
+
   if (isLoading) {
     return <LoadingState canonical={canonical} colors={colors} isFocused={isFocused} styles={styles} />;
   }
@@ -469,7 +464,6 @@ export default function QuestByIdScreen() {
               relatedTravelsSlot={relatedTravelsSlot}
               ratingSlot={ratingSlot}
               completionSlot={completionSlot}
-              pioneerSlot={pioneerSlot}
               questId={questId}
               cityId={cityId}
               questNumericId={bundle.id}
@@ -493,7 +487,6 @@ export default function QuestByIdScreen() {
             relatedTravelsSlot={relatedTravelsSlot}
             ratingSlot={ratingSlot}
             completionSlot={completionSlot}
-            pioneerSlot={pioneerSlot}
             questId={questId}
             cityId={cityId}
             questNumericId={bundle.id}
@@ -503,6 +496,7 @@ export default function QuestByIdScreen() {
             onGuestRegister={guestFlow.goToRegister}
           />
         )}
+        {reviewsModal}
       </View>
     );
   }
@@ -526,10 +520,10 @@ export default function QuestByIdScreen() {
           title={bundle.title}
           coverUrl={bundle.coverUrl}
           onAccept={questConsent.grant}
-          pioneerSlot={pioneerSlot}
           ratingSlot={ratingSlot}
           completionSlot={completionSlot}
         />
+        {reviewsModal}
       </View>
     );
   }
@@ -565,7 +559,6 @@ export default function QuestByIdScreen() {
             relatedTravelsSlot={relatedTravelsSlot}
             ratingSlot={ratingSlot}
             completionSlot={completionSlot}
-            pioneerSlot={pioneerSlot}
             questId={questId}
             cityId={cityId}
             questNumericId={bundle.id}
@@ -587,12 +580,12 @@ export default function QuestByIdScreen() {
           relatedTravelsSlot={relatedTravelsSlot}
           ratingSlot={ratingSlot}
           completionSlot={completionSlot}
-          pioneerSlot={pioneerSlot}
           questId={questId}
           cityId={cityId}
           questNumericId={bundle.id}
         />
       )}
+      {reviewsModal}
     </View>
   );
 }
@@ -659,18 +652,20 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   wizardFallback: {
     padding: 16,
   },
-  pioneerRow: {
+  metaChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceMuted,
   },
-  pioneerText: {
-    flexShrink: 1,
-    color: colors.textMuted,
-    fontWeight: '600',
-  },
-  pioneerName: {
+  metaChipText: {
+    fontSize: 13,
+    fontWeight: '700',
     color: colors.text,
-    fontWeight: '800',
   },
 });

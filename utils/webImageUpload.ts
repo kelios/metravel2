@@ -23,35 +23,44 @@ export function isHeicLikeFile(file: File): boolean {
   return HEIC_EXTENSIONS.some((extension) => normalizedName.endsWith(extension));
 }
 
+// Бросается, когда HEIC не удалось преобразовать в JPEG в браузере.
+// Раньше на этом месте молча возвращался исходный .HEIC, который бэкенд
+// отклонял с 400 (Bad Request) — теперь вызывающий код ловит ошибку и
+// показывает понятное сообщение вместо загрузки заведомо битого файла.
+export class HeicConversionError extends Error {
+  constructor(cause?: unknown) {
+    super('Не удалось преобразовать HEIC в браузере');
+    this.name = 'HeicConversionError';
+    (this as { cause?: unknown }).cause = cause;
+  }
+}
+
 export async function prepareWebImageFileForUpload(file: File): Promise<File> {
   if (typeof File === 'undefined' || !(file instanceof File)) return file;
   if (!isHeicLikeFile(file)) return file;
 
-  const heic2anyModule: any = await import('heic2any');
-  const heic2any =
-    typeof heic2anyModule?.default === 'function'
-      ? heic2anyModule.default
-      : heic2anyModule;
+  // heic-to (libheif-js ~1.18) декодирует современные iPhone HEIC (HEVC),
+  // которые устаревший heic2any@0.0.4 не парсил (ERR_LIBHEIF format not supported).
+  // Ленивый импорт: wasm грузится только при реальной загрузке HEIC.
+  const { heicTo } = await import('heic-to');
 
-  if (typeof heic2any !== 'function') {
-    throw new Error('HEIC conversion is unavailable');
-  }
-
+  let convertedBlob: Blob;
   try {
-    const converted = await heic2any({
+    convertedBlob = await heicTo({
       blob: file,
-      toType: 'image/jpeg',
+      type: 'image/jpeg',
       quality: 0.92,
     });
-
-    const convertedBlob = Array.isArray(converted) ? converted[0] : converted;
-    if (!(convertedBlob instanceof Blob)) return file;
-
-    return new File([convertedBlob], replaceImageExtension(file.name, '.jpg'), {
-      type: 'image/jpeg',
-      lastModified: file.lastModified || Date.now(),
-    });
-  } catch {
-    return file;
+  } catch (error) {
+    throw new HeicConversionError(error);
   }
+
+  if (!(convertedBlob instanceof Blob)) {
+    throw new HeicConversionError('heic-to did not return a Blob');
+  }
+
+  return new File([convertedBlob], replaceImageExtension(file.name, '.jpg'), {
+    type: 'image/jpeg',
+    lastModified: file.lastModified || Date.now(),
+  });
 }
