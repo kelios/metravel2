@@ -815,21 +815,23 @@ test.describe('Группировка параметров (Шаг 5)', () => {
     // Проверяем заголовок группы
     await expect(sectionToggle.first()).toBeVisible();
 
-    // Проверяем счетчик
-    await expect(page.locator('text=/\\d+\\/11/')).toBeVisible();
+    // Проверяем счетчик текущей секции.
+    await expect(sectionToggle.first()).toContainText(/\d+\/10/);
+
+    const groupedField = page.locator('text=Средства передвижения');
 
     // Группа должна быть открыта по умолчанию
-    await expect(page.locator('text=Категории путешествий')).toBeVisible();
+    await expect(groupedField).toBeVisible();
 
     // Кликаем по заголовку группы чтобы закрыть
     await sectionToggle.first().click();
 
     // Проверяем что контент скрылся
-    await expect(page.locator('text=Категории путешествий')).not.toBeVisible({ timeout: 2000 });
+    await expect(groupedField).not.toBeVisible({ timeout: 2000 });
 
     // Открываем обратно
     await sectionToggle.first().click();
-    await expect(page.locator('text=Категории путешествий')).toBeVisible();
+    await expect(groupedField).toBeVisible();
   });
 
   test('должен показывать счетчик заполненных полей', async ({ page }) => {
@@ -854,11 +856,11 @@ test.describe('Группировка параметров (Шаг 5)', () => {
       .or(page.getByRole('button', { name: 'Развернуть секцию Дополнительные параметры' }));
     await expect(sectionToggle.first()).toBeVisible();
 
-    // Проверяем начальный счетчик (может быть 0/11 или больше)
-    const initialCounter = await page.locator('text=/\\d+\\/11/').textContent();
+    // Проверяем начальный счетчик секции (может быть 0/10 или больше).
+    const initialCounter = await sectionToggle.first().textContent();
     const initialCount = parseInt(initialCounter?.match(/\d+/)?.[0] || '0');
 
-    expect(initialCounter ?? '').toMatch(/\d+\/11/);
+    expect(initialCounter ?? '').toMatch(/\d+\/10/);
     expect(initialCount).toBeGreaterThanOrEqual(0);
   });
 });
@@ -958,7 +960,7 @@ test.describe('Разделенный чеклист (Шаг 6)', () => {
     await gotoStep6(page);
 
     // Проверяем прогресс в шапке чеклиста (формат x/y)
-    await expect(page.locator('text=Готовность к публикации')).toBeVisible();
-    await expect(page.locator('text=/\\d+\\/\\d+/').first()).toBeVisible();
+    await expect(page.getByText('Готовность к публикации', { exact: true })).toBeVisible();
+    await expect(page.getByText(/^\d+\/\d+$/).first()).toBeVisible();
   });
 });

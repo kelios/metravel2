@@ -3,6 +3,9 @@ import { render } from '@testing-library/react-native';
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import MultiSelectField from '@/components/forms/MultiSelectField';
 
+const COMPANIONS_LABEL = 'С кем путешествуете';
+const OVERNIGHTS_LABEL = 'Тип ночлега';
+
 jest.mock('@/components/forms/MultiSelectField', () => {
   return {
     __esModule: true,
@@ -121,12 +124,12 @@ describe('FiltersUpsertComponent - filters normalization', () => {
     expect(typeof complexity.items[0].id).toBe('string');
     expect(typeof complexity.items[0].name).toBe('string');
 
-    const companions = getCallByLabel('Путешествуете с...');
+    const companions = getCallByLabel(COMPANIONS_LABEL);
     expect(companions.items.length).toBeGreaterThan(0);
     expect(typeof companions.items[0].id).toBe('string');
     expect(typeof companions.items[0].name).toBe('string');
 
-    const overnights = getCallByLabel('Ночлег...');
+    const overnights = getCallByLabel(OVERNIGHTS_LABEL);
     expect(overnights.items.length).toBeGreaterThan(0);
     expect(typeof overnights.items[0].id).toBe('string');
     expect(typeof overnights.items[0].name).toBe('string');
@@ -174,10 +177,10 @@ describe('FiltersUpsertComponent - filters normalization', () => {
     const complexity = getCallByLabel('Физическая подготовка');
     expect(complexity.items.length).toBeGreaterThan(0);
 
-    const companions = getCallByLabel('Путешествуете с...');
+    const companions = getCallByLabel(COMPANIONS_LABEL);
     expect(companions.items.length).toBeGreaterThan(0);
 
-    const overnights = getCallByLabel('Ночлег...');
+    const overnights = getCallByLabel(OVERNIGHTS_LABEL);
     expect(overnights.items.length).toBeGreaterThan(0);
 
     const month = getCallByLabel('Месяц путешествия');
@@ -220,8 +223,8 @@ describe('FiltersUpsertComponent - filters normalization', () => {
     expect(getCallByLabel('Категории путешествий *').items.length).toBeGreaterThan(0);
     expect(getCallByLabel('Средства передвижения').items.length).toBeGreaterThan(0);
     expect(getCallByLabel('Физическая подготовка').items.length).toBeGreaterThan(0);
-    expect(getCallByLabel('Путешествуете с...').items.length).toBeGreaterThan(0);
-    expect(getCallByLabel('Ночлег...').items.length).toBeGreaterThan(0);
+    expect(getCallByLabel(COMPANIONS_LABEL).items.length).toBeGreaterThan(0);
+    expect(getCallByLabel(OVERNIGHTS_LABEL).items.length).toBeGreaterThan(0);
     expect(getCallByLabel('Месяц путешествия').items.length).toBeGreaterThan(0);
     expect(getCallByLabel('Страны для путешествия *').items.length).toBeGreaterThan(0);
   });
@@ -261,8 +264,8 @@ describe('FiltersUpsertComponent - filters normalization', () => {
     expect(getCallByLabel('Категории путешествий *').items.length).toBeGreaterThan(0);
     expect(getCallByLabel('Средства передвижения').items.length).toBeGreaterThan(0);
     expect(getCallByLabel('Физическая подготовка').items.length).toBeGreaterThan(0);
-    expect(getCallByLabel('Путешествуете с...').items.length).toBeGreaterThan(0);
-    expect(getCallByLabel('Ночлег...').items.length).toBeGreaterThan(0);
+    expect(getCallByLabel(COMPANIONS_LABEL).items.length).toBeGreaterThan(0);
+    expect(getCallByLabel(OVERNIGHTS_LABEL).items.length).toBeGreaterThan(0);
     expect(getCallByLabel('Месяц путешествия').items.length).toBeGreaterThan(0);
     expect(getCallByLabel('Страны для путешествия *').items.length).toBeGreaterThan(0);
   });

@@ -7,10 +7,12 @@ const mockUsePlannedTrip = jest.fn();
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: '853' }),
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
 }));
 
 jest.mock('@/hooks/usePlannedTripsApi', () => ({
   usePlannedTrip: (...args: unknown[]) => mockUsePlannedTrip(...args),
+  useDeletePlannedTrip: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 
 jest.mock('@/hooks/useTheme', () => ({
