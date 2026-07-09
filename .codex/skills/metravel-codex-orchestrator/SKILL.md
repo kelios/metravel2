@@ -80,6 +80,7 @@ Do not leak desired conclusions into QA/reviewer prompts; pass raw scope, diff, 
 
 - Prefer existing components, hooks, services, utilities, and tests before adding abstractions.
 - Keep edits small and local.
+- Treat backend/Django/API/server work as analysis-only in this frontend workspace. Do not route any role to edit backend working trees; create/update `area=back` board tasks for backend blockers.
 - Fix real issues found in the touched scope before handoff.
 - Keep temporary screenshots, logs, traces, and JSON output only in ignored folders such as `.codex-temp/`, `.codex-debug/`, `test-results/`, or `playwright-report/`.
 - Never print secrets from `.env*`, `.env.e2e`, EAS, SSH, Google Play, or server configs.

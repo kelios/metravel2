@@ -1,7 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import Feather from '@expo/vector-icons/Feather';
 
+import Button from '@/components/ui/Button';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import RouteBuilder from '@/components/trips/planning/RouteBuilder';
 import TripRouteExportMenu, {
@@ -22,7 +25,7 @@ import {
   formatTripDateTime,
   planStatusColor,
 } from '@/components/trips/planning/tripPlanFormatting';
-import { usePlannedTrip } from '@/hooks/usePlannedTripsApi';
+import { useDeletePlannedTrip, usePlannedTrip } from '@/hooks/usePlannedTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { LAYOUT } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -38,11 +41,29 @@ export default function PlannedTripScreen() {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const showRouteExportMenu = shouldRenderTripRouteExportMenu(Platform.OS);
+  const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const tripId = Number(params.id);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const { data: trip, isLoading, isError } = usePlannedTrip(
     Number.isFinite(tripId) ? tripId : null,
   );
+  const deleteTrip = useDeletePlannedTrip();
+
+  const handleDelete = () => {
+    if (!trip) return;
+    setDeleteError(null);
+    deleteTrip.mutate(trip.id, {
+      onSuccess: () => {
+        setDeleteConfirmVisible(false);
+        router.replace('/trips/my');
+      },
+      onError: () => {
+        setDeleteError('Не удалось удалить поездку. Попробуйте ещё раз позже.');
+      },
+    });
+  };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -76,6 +97,25 @@ export default function PlannedTripScreen() {
               </Text>
               {trip.description ? (
                 <Text style={styles.description}>{trip.description}</Text>
+              ) : null}
+              {trip.isOwner ? (
+                <View style={styles.ownerActions}>
+                  <Button
+                    label="Удалить поездку"
+                    variant="danger"
+                    size="sm"
+                    onPress={() => setDeleteConfirmVisible(true)}
+                    loading={deleteTrip.isPending}
+                    disabled={deleteTrip.isPending}
+                    icon={<Feather name="trash-2" size={15} color={colors.textOnPrimary} />}
+                    testID="trip-plan-delete"
+                  />
+                  {deleteError ? (
+                    <Text style={styles.deleteError} testID="trip-plan-delete-error">
+                      {deleteError}
+                    </Text>
+                  ) : null}
+                </View>
               ) : null}
             </View>
 
@@ -121,6 +161,18 @@ export default function PlannedTripScreen() {
             <View style={styles.section}>
               <TripAffiliateBlock trip={trip} />
             </View>
+
+            <ConfirmDialog
+              visible={deleteConfirmVisible}
+              onClose={() => setDeleteConfirmVisible(false)}
+              onConfirm={handleDelete}
+              title="Удалить поездку?"
+              message="Поездка исчезнет из каталога и ваших созданных поездок. Действие нельзя отменить."
+              confirmText="Удалить"
+              cancelText="Оставить"
+              confirmTestID="trip-plan-delete-confirm"
+              cancelTestID="trip-plan-delete-cancel"
+            />
           </>
         )}
       </View>
@@ -156,6 +208,12 @@ const createStyles = (colors: ThemedColors) =>
     title: { fontSize: 24, fontWeight: '900', color: colors.text },
     meta: { fontSize: 14, color: colors.textSecondary },
     description: { fontSize: 15, color: colors.text, lineHeight: 21, marginTop: 4 },
+    ownerActions: {
+      alignItems: 'flex-start',
+      gap: 8,
+      marginTop: 8,
+    },
+    deleteError: { fontSize: 13, lineHeight: 18, color: colors.danger, fontWeight: '600' },
     section: {
       gap: 12,
       borderTopWidth: 1,

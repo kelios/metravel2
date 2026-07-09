@@ -9,6 +9,8 @@
 - `docs/README.md` - карта документации и API-справка.
 - `.codex/skills/*/SKILL.md` - специализированные рабочие маршруты Codex.
 
+Backend boundary: в этом frontend workspace Codex не реализует backend/Django/API/server изменения. Backend можно анализировать read-only через `$metravel-backend-diagnostician`, безопасные probes и `area=back` задачи на борде; backend working tree не редактируется.
+
 ## Как выбирать skill
 
 - `$metravel-feature-builder`: используй для фич, багфиксов, рефакторинга, API-логики, hooks, services и SEO.
@@ -80,7 +82,7 @@
 | Domain-specific feature work | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `$metravel-domain-router`, профильный feature-doc при наличии | выбрать domain owner map для travel/map/profile/achievements/quests/PDF/new pages; затем подключить доменного субагента (`$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, `$metravel-quest-expert`) и feature/ui/test/refactor skills по фактическому scope |
 | Hooks / logic extraction | `AGENTS.md`, `docs/RULES.md`, `docs/DEVELOPMENT.md`, профильный feature-doc, ближайшие существующие hooks | выносить focused hook без лишней абстракции, сохранять client/server state boundaries, не добавлять новые `any` |
 | Component split / file complexity | `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, `$metravel-refactor-surgeon`, ближайшие tests | behavior-preserving extraction, explicit props, no business-logic rewrite, targeted checks + browser evidence for visible UI |
-| Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-ticket-board`, `$metravel-task-contract` | новые FE/BE/backend задачи создавай на общем MCP task board через `$metravel-ticket-board` (`metravel_task_create`); заполняй `area=front/back`, active sprint, Task Contract, dependencies/blockers и validation/Done gate; при `HTTP 401` сначала обнови staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md`; локальные `tasks/*.md` используй только как временный fallback после неуспешного token refresh с последующим sync/import |
+| Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-ticket-board`, `$metravel-task-contract`, `$metravel-backend-diagnostician` | backend только analysis-only: безопасно воспроизведи/сверь контракт, но не редактируй backend repo; новые FE/BE/backend задачи создавай на общем MCP task board через `$metravel-ticket-board` (`metravel_task_create`); заполняй `area=front/back`, active sprint, Task Contract, dependencies/blockers и validation/Done gate; при `HTTP 401` сначала обнови staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md`; локальные `tasks/*.md` используй только как временный fallback после неуспешного token refresh с последующим sync/import |
 | Task board FE/BE contract | `docs/TASK_BOARD_MCP.md`, `$metravel-ticket-board`, `$metravel-task-contract`, профильный feature-doc при наличии | каждая FE/BE задача на борде должна иметь `Task Contract`: scope, user-visible result, data/API contract, dependencies, fallback/mock policy, validation и Done gate; без runtime evidence не двигать в `done` |
 | Приёмка спринта / закрытие тикетов | `AGENTS.md`, `docs/RULES.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-sprint-reviewer`, `$metravel-task-contract` | только board acceptance; проход по `review`/`testing` тикетам активного спринта; без Task Contract и runtime evidence не двигать в `done`; проваленные вернуть в `review`/`blocked_by` с evidence |
 | Видимый UI, media, icons, tokens | всё из feature-контекста + `$metravel-ui-guardrails` | проверка в браузере на web, screenshot, отсутствие новых console errors |
@@ -166,6 +168,7 @@ Validation: <expected checks/evidence>.
 
 - BA, QA и reviewer по умолчанию не меняют код.
 - Codex Orchestrator не подменяет профильные роли; он выбирает маршрут, проверяет правила и держит handoff компактным.
+- В этом frontend workspace ни одна роль не редактирует backend/Django/API/server working tree. Backend blockers фиксируются через read-only diagnosis и `area=back` board tasks.
 - Перед передачей роли на deploy, release/build, Android local/EAS build/install, server rebuild/restart, full/preflight tests, Playwright/e2e или Lighthouse orchestrator должен проверить operation gate из `AGENTS.md`/`docs/RULES.md`; если такая операция уже идет для того же target, новый агент не запускает дубль и фиксирует blocker/ожидание.
 - Любая FE/BE задача на общем борде без `Task Contract` считается неготовой к старту и к `done`; ticket-board/оркестратор должны сначала дописать контракт или вернуть задачу в refinement.
 - Любая новая задача должна попасть в текущий active sprint; если board API вернул `401`, ticket-board/оркестратор обязан обновить staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md` до создания локального fallback.

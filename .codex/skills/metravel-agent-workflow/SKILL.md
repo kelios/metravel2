@@ -55,6 +55,7 @@ Default bug loop:
 - Use Codex Orchestrator only to choose and sequence work; route implementation to the relevant specialist skill.
 - Use Project Analyst only for read-only discovery unless the user explicitly asks to update docs or code after the analysis.
 - Use Backend Diagnostician only for read-only backend/API diagnosis and board evidence; do not let it edit backend or frontend code.
+- In this frontend workspace, no role edits backend/Django/API/server working trees; backend fixes are routed to `area=back` board tasks with evidence.
 - Keep Mobile Tester read-only unless the user explicitly asks to update tests.
 - Do not let Android Developer change mobile release/build configs without explicit user approval.
 - Do not let Android Developer or Mobile Tester run Android EAS/cloud builds, Android production builds/submits, or dev-client/export Android QA routes without explicit user approval; Android QA defaults to local build/install on the USB-connected phone.

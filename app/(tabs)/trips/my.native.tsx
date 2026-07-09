@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 
 import Button from '@/components/ui/Button'
+import MyCreatedTripsList from '@/components/trips/MyCreatedTripsList'
 import MyApplicationsList from '@/components/trips/MyApplicationsList'
 import TripNotificationsList from '@/components/trips/TripNotificationsList'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -23,6 +24,9 @@ export default function MyTripsScreen() {
           fullWidth
           testID="my-trips-plan-cta"
         />
+
+        <Text style={styles.section}>Созданные поездки</Text>
+        <MyCreatedTripsList />
 
         <Text style={styles.section}>Уведомления</Text>
         <TripNotificationsList />

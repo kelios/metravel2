@@ -21,6 +21,7 @@ Implement the smallest change that solves the task.
 - Reuse existing components, hooks, helpers, and utilities before creating new ones.
 - Keep functions and components local, readable, and easy to remove or extend later.
 - Remove clearly dead code in the touched area when it is safe to do so.
+- Do not edit backend/Django/API/server repositories, files, migrations, tests, or settings from this frontend workspace. If FE is blocked by backend behavior, diagnose read-only and create/update an `area=back` board task instead.
 - Fix every real issue found in the touched area or validation output before handoff: failing tests, runtime errors, broken UI states, invalid external-link usage, dead imports, and obvious regressions.
 - If a found issue is outside scope, requires unavailable server/secret access, or needs a risky migration, record it as a blocker with the concrete risk and next verification instead of ignoring it.
 - For FE depending on BE, do not call the task done from mocks or unit tests alone; verify the runtime endpoint/field/event from the task contract on the target environment or leave a blocker.

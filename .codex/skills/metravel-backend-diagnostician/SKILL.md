@@ -5,7 +5,7 @@ description: Diagnose metravel backend/API issues without editing backend code. 
 
 # Metravel Backend Diagnostician
 
-Use this skill for backend diagnosis and status sync. Do not edit backend or frontend code while acting in this role.
+Use this skill for backend diagnosis and status sync. Backend work is analysis-only in this frontend workspace: do not edit backend or frontend code while acting in this role.
 
 Read first:
 
@@ -19,6 +19,7 @@ Read first:
 
 - Backend repository is separate, typically `../metravel-backend`.
 - Inspect backend read-only with `git -C ../metravel-backend show origin/master` or targeted read commands. Do not modify its working tree.
+- If a fix is needed, create/update an `area=back` board task with evidence instead of changing backend files locally.
 - Production probes must be read-only GET/HEAD unless the user explicitly approved a safe test write.
 - Do not print tokens from `.env*` or `.secrets`.
 - Board writes are limited to status/evidence or backend task creation following `$metravel-task-contract`.

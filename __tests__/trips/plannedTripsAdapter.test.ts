@@ -206,6 +206,93 @@ describe('fetchMyPlannedTrips backend route_summary mapping', () => {
   })
 })
 
+describe('deletePlannedTrip backend endpoint', () => {
+  afterEach(() => {
+    delete process.env.EXPO_PUBLIC_TRIPS_MOCK
+    jest.dontMock('@/api/client')
+    jest.resetModules()
+  })
+
+  it('uses the generic trip destroy endpoint instead of the planned alias', async () => {
+    delete process.env.EXPO_PUBLIC_TRIPS_MOCK
+    const apiClientMock = {
+      delete: jest.fn(async () => null),
+    }
+
+    jest.resetModules()
+    jest.doMock('@/api/client', () => ({
+      apiClient: apiClientMock,
+      ApiError: class ApiError extends Error {
+        status: number
+        constructor(status: number, message: string) {
+          super(message)
+          this.status = status
+        }
+      },
+    }))
+    jest.doMock('@/stores/authStore', () => ({
+      useAuthStore: { getState: jest.fn(() => ({ userId: '7', isAuthenticated: true })) },
+    }))
+    jest.doMock('@/utils/logger', () => ({
+      devWarn: jest.fn(),
+      devLog: jest.fn(),
+      devError: jest.fn(),
+    }))
+
+    const { deletePlannedTrip } = require('@/api/plannedTrips') as typeof import('@/api/plannedTrips')
+    await expect(deletePlannedTrip(42)).resolves.toEqual({ id: 42 })
+
+    expect(apiClientMock.delete).toHaveBeenCalledWith('/trips/42/')
+  })
+})
+
+describe('fetchRouteTemplates backend endpoint', () => {
+  afterEach(() => {
+    delete process.env.EXPO_PUBLIC_TRIPS_MOCK
+    jest.dontMock('@/api/client')
+    jest.resetModules()
+  })
+
+  it('requests route templates with the authenticated api client', async () => {
+    delete process.env.EXPO_PUBLIC_TRIPS_MOCK
+    const apiClientMock = {
+      get: jest.fn(async () => [
+        {
+          id: 1,
+          title: 'Template',
+          description: 'Route template',
+        },
+      ]),
+    }
+
+    jest.resetModules()
+    jest.doMock('@/api/client', () => ({
+      apiClient: apiClientMock,
+      ApiError: class ApiError extends Error {
+        status: number
+        constructor(status: number, message: string) {
+          super(message)
+          this.status = status
+        }
+      },
+    }))
+    jest.doMock('@/stores/authStore', () => ({
+      useAuthStore: { getState: jest.fn(() => ({ userId: '7', isAuthenticated: true })) },
+    }))
+    jest.doMock('@/utils/logger', () => ({
+      devWarn: jest.fn(),
+      devLog: jest.fn(),
+      devError: jest.fn(),
+    }))
+
+    const { fetchRouteTemplates } = require('@/api/plannedTrips') as typeof import('@/api/plannedTrips')
+    const templates = await fetchRouteTemplates()
+
+    expect(apiClientMock.get).toHaveBeenCalledWith('/trips/route-templates/')
+    expect(templates[0]).toEqual(expect.objectContaining({ id: '1', title: 'Template' }))
+  })
+})
+
 // ── mock fetch functions ──────────────────────────────────────────────────────
 
 describe('fetchMyPlannedTrips (TRIPS_MOCK=true)', () => {
@@ -345,6 +432,54 @@ describe('createTrip (TRIPS_MOCK=true)', () => {
     const trip = await createTrip(input)
     expect(trip.isOwner).toBe(true)
     expect(trip.myRsvp).toBe('going')
+  })
+})
+
+describe('deletePlannedTrip (TRIPS_MOCK=true)', () => {
+  let createTrip: (input: CreateTripInput) => Promise<PlannedTrip>
+  let deletePlannedTrip: (tripId: number | string) => Promise<{ id: number }>
+  let fetchMyPlannedTrips: () => Promise<PlannedTrip[]>
+  let fetchPlannedTrip: (tripId: number | string) => Promise<PlannedTrip>
+
+  beforeAll(() => {
+    process.env.EXPO_PUBLIC_TRIPS_MOCK = 'true'
+    jest.resetModules()
+    jest.mock('@/stores/authStore', () => ({
+      useAuthStore: { getState: jest.fn(() => ({ userId: null, isAuthenticated: false })) },
+    }))
+    jest.mock('@/utils/logger', () => ({
+      devWarn: jest.fn(),
+      devLog: jest.fn(),
+      devError: jest.fn(),
+    }))
+    const mod = require('@/api/plannedTrips')
+    createTrip = mod.createTrip
+    deletePlannedTrip = mod.deletePlannedTrip
+    fetchMyPlannedTrips = mod.fetchMyPlannedTrips
+    fetchPlannedTrip = mod.fetchPlannedTrip
+  })
+
+  afterAll(() => {
+    delete process.env.EXPO_PUBLIC_TRIPS_MOCK
+  })
+
+  it('removes the trip from mock store', async () => {
+    const trip = await createTrip({
+      title: 'Удаляемая тест-поездка',
+      description: 'Описание',
+      startDate: '2026-08-01',
+      startTime: '09:00',
+      transport: 'car',
+      visibility: 'public',
+      seatsTotal: 4,
+      startPoint: null,
+    })
+
+    await expect(deletePlannedTrip(trip.id)).resolves.toEqual({ id: trip.id })
+    await expect(fetchPlannedTrip(trip.id)).rejects.toThrow()
+
+    const remaining = await fetchMyPlannedTrips()
+    expect(remaining.map((item) => item.id)).not.toContain(trip.id)
   })
 })
 

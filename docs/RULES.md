@@ -5,6 +5,8 @@
 - Current project is `metravel2`.
 - The app codebase root is `metravel2/` (the folder that contains `package.json`).
 - Treat `docs/` (this folder) as the source of truth for development rules.
+- Implementation ownership in this workspace is frontend/app/docs only. Backend/Django/API/server work in `../metravel-backend` or `area=back` is analysis-only: read source, run safe read-only probes, and create/update board tasks with evidence, but do not edit backend files, migrations, tests, settings, or server code from this repository.
+- If a frontend task depends on missing or broken backend behavior, leave a concrete blocker and link/create the `area=back` task instead of shipping a mock-only or silently failing frontend path.
 
 ## Development workflow
 

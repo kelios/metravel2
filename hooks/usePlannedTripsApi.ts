@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createTrip,
   decideSuggestion,
+  deletePlannedTrip,
   fetchCommunityTrips,
   fetchMyPlannedTrips,
   fetchPlannedTrip,
@@ -113,6 +114,24 @@ export function useCreateTrip() {
       if (trip.visibility === 'public') {
         void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
       }
+    },
+  });
+}
+
+export function useDeletePlannedTrip() {
+  const qc = useQueryClient();
+  return useMutation<{ id: number }, unknown, number | string>({
+    mutationFn: deletePlannedTrip,
+    onSuccess: (_result, tripId) => {
+      void qc.cancelQueries({ queryKey: queryKeys.plannedTrip(tripId) });
+      void qc.invalidateQueries({
+        queryKey: queryKeys.plannedTrip(tripId),
+        refetchType: 'inactive',
+      });
+      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
+      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsAll() });
+      void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
+      void qc.invalidateQueries({ queryKey: queryKeys.communityTripsAll() });
     },
   });
 }

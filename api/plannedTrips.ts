@@ -682,8 +682,6 @@ export async function fetchRouteTemplates(): Promise<RouteTemplate[]> {
   try {
     const res = await apiClient.get<RouteTemplateDto[]>(
       '/trips/route-templates/',
-      undefined,
-      { skipAuth: true },
     );
     return unwrap(res).map(mapTemplate);
   } catch (error) {
@@ -779,6 +777,23 @@ export async function createTrip(input: CreateTripInput): Promise<PlannedTrip> {
     }
     throw error;
   }
+}
+
+export async function deletePlannedTrip(tripId: number | string): Promise<{ id: number }> {
+  if (USE_MOCK) {
+    const index = mockStore.findIndex((trip) => String(trip.id) === String(tripId));
+    if (index < 0) throw new ApiError(404, 'Trip not found');
+    const [removed] = mockStore.splice(index, 1);
+    for (let i = mockSuggestions.length - 1; i >= 0; i -= 1) {
+      if (String(mockSuggestions[i].tripId) === String(tripId)) {
+        mockSuggestions.splice(i, 1);
+      }
+    }
+    return { id: removed.id };
+  }
+
+  await apiClient.delete<null>(`/trips/${tripId}/`);
+  return { id: Number(tripId) };
 }
 
 export async function updateTripRoute(input: UpdateRouteInput): Promise<PlannedTrip> {

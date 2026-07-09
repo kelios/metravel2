@@ -16,6 +16,8 @@ interface Props {
   trips: PublicTrip[];
   value: PublicTripsFilters;
   onChange: (next: PublicTripsFilters) => void;
+  hasActive?: boolean;
+  onReset?: () => void;
 }
 
 const STATUS_ORDER: PublicTripStatus[] = ['open', 'full', 'completed'];
@@ -24,7 +26,7 @@ function uniq(values: (string | null)[]): string[] {
   return Array.from(new Set(values.filter((v): v is string => !!v)));
 }
 
-function PublicTripFilters({ trips, value, onChange }: Props) {
+function PublicTripFilters({ trips, value, onChange, hasActive, onReset }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -64,6 +66,14 @@ function PublicTripFilters({ trips, value, onChange }: Props) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}
       >
+        {hasActive && onReset ? (
+          <Chip
+            label="Сбросить"
+            active={false}
+            onPress={onReset}
+            testID="trip-filter-reset"
+          />
+        ) : null}
         {STATUS_ORDER.map((s) => (
           <Chip
             key={`status-${s}`}

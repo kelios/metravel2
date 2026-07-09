@@ -8,6 +8,9 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 const MyApplicationsList = React.lazy(
   () => import('@/components/trips/MyApplicationsList'),
 );
+const MyCreatedTripsList = React.lazy(
+  () => import('@/components/trips/MyCreatedTripsList'),
+);
 const TripNotificationsList = React.lazy(
   () => import('@/components/trips/TripNotificationsList'),
 );
@@ -28,6 +31,11 @@ export default function MyTripsScreen() {
           fullWidth
           testID="my-trips-plan-cta"
         />
+
+        <Text style={styles.section}>Созданные поездки</Text>
+        <Suspense fallback={<ActivityIndicator />}>
+          <MyCreatedTripsList />
+        </Suspense>
 
         <Text style={styles.section}>Уведомления</Text>
         <Suspense fallback={<ActivityIndicator />}>

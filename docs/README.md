@@ -91,6 +91,7 @@ yarn lint
 - Redoc: [`http://192.168.50.36/api/schema/redoc/`](http://192.168.50.36/api/schema/redoc/)
 - OpenAPI schema: `${EXPO_PUBLIC_API_URL}/api/schema/`
 - Auth: `Authorization: Token <token>`
+- Backend ownership: this frontend workspace may analyze backend/API behavior read-only and create/update `area=back` board tasks, but must not edit backend code, migrations, tests, settings, or server files.
 - Task tracking: create new frontend/backend tasks on the shared MCP task board through `ticket-board` in the current active sprint; see `docs/TASK_BOARD_MCP.md`. Android/iOS/native app bugs are frontend tasks (`area=front`) with platform context in the title/description; backend/API/server work is `area=back`. If the board returns `401`, refresh the staff token through `.env.e2e` before using any local fallback. Local `tasks/` files are only transitional fallback/templates, not the default workflow.
 
 ### Auth
