@@ -19,8 +19,8 @@ export default function MyTripsScreen() {
         <Text style={styles.h1}>Мои поездки</Text>
 
         <Button
-          label="Запланировать поездку"
-          onPress={() => router.push('/trips/plan')}
+          label="Организовать поездку"
+          onPress={() => router.push('/trips/plan/create')}
           fullWidth
           testID="my-trips-plan-cta"
         />

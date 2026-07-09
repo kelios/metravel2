@@ -119,6 +119,22 @@ describe('TripApplyForm — consent before applying (#439)', () => {
     fireEvent(getByTestId('trip-apply-consent-disclaimer'), 'onToggle', true)
     expect(submit.props.accessibilityState?.disabled).toBe(false)
   })
+
+  it('keeps submit enabled after consents and shows validation for a short message', () => {
+    const trip = { ...baseTrip, myApplicationStatus: null } as never
+    const { getByTestId, getByText } = render(<TripApplyForm trip={trip} />)
+
+    fireEvent.changeText(getByTestId('trip-apply-message'), 'test')
+    fireEvent(getByTestId('trip-apply-consent-rules'), 'onToggle', true)
+    fireEvent(getByTestId('trip-apply-consent-disclaimer'), 'onToggle', true)
+
+    const submit = getByTestId('trip-apply-submit')
+    expect(submit.props.accessibilityState?.disabled).toBe(false)
+
+    fireEvent.press(submit)
+
+    expect(getByText(/минимум 10 символов/i)).toBeTruthy()
+  })
 })
 
 describe('OrganizerApplicationsPanel — unverified socials warning (#442)', () => {

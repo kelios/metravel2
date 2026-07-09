@@ -5,7 +5,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 
-export type ProfileHeaderActionKey = 'messages' | 'userpoints' | 'calendar' | 'newTravel';
+export type ProfileHeaderActionKey = 'messages' | 'trips' | 'userpoints' | 'calendar' | 'newTravel';
 
 export interface ProfileHeaderQuickActionsProps {
   onPress: (key: ProfileHeaderActionKey) => void;
@@ -18,7 +18,7 @@ export interface ProfileHeaderQuickActionsProps {
 
 // Семантический тон на каждое действие — разбивает монотонный «весь зелёный»
 // верх: коммуникация → info, гео → primary, время → warning, создание → brand.
-type QuickActionTone = 'info' | 'primary' | 'warning' | 'brand';
+type QuickActionTone = 'info' | 'primary' | 'success' | 'warning' | 'brand';
 
 const ITEMS: Array<{
   key: ProfileHeaderActionKey;
@@ -35,6 +35,13 @@ const ITEMS: Array<{
     icon: 'message-circle',
     tone: 'info',
     accessibilityHint: 'Перейти к сообщениям и диалогам',
+  },
+  {
+    key: 'trips',
+    label: 'Поездки',
+    icon: 'briefcase',
+    tone: 'success',
+    accessibilityHint: 'Открыть созданные поездки, заявки и уведомления',
   },
   {
     key: 'userpoints',
@@ -72,6 +79,7 @@ export function ProfileHeaderQuickActions({
     () => ({
       info: { fg: colors.info, soft: colors.infoSoft },
       primary: { fg: colors.primary, soft: colors.primarySoft },
+      success: { fg: colors.successDark, soft: colors.successSoft },
       warning: { fg: colors.warning, soft: colors.warningSoft },
       brand: { fg: colors.brand, soft: colors.brandSoft },
     }),

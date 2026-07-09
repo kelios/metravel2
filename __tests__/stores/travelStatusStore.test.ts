@@ -421,6 +421,46 @@ describe('travelStatusStore', () => {
       )
     })
 
+    it('сохраняет месяц и год из серверного travel для visited без точной даты', async () => {
+      fetchUserTravelStatuses.mockResolvedValueOnce([
+        {
+          travel_id: 321,
+          status: 'visited',
+          planned_date: null,
+          visited_date: null,
+          added_at: '2026-05-12T10:00:00Z',
+          updated_at: '2026-05-12T10:00:00Z',
+          travel: {
+            id: 321,
+            name: 'September route',
+            slug: 'september-route',
+            url: '/travels/september-route',
+            travel_image_thumb_url: 'https://example.com/september.webp',
+            countryName: 'Belarus',
+            year: 2024,
+            month: [9],
+            monthName: 'Сентябрь',
+          },
+        },
+      ])
+
+      await act(() => useTravelStatusStore.getState().loadLocal('77'))
+
+      const entry = useTravelStatusStore.getState().entries[0]
+      const date = getTravelStatusCalendarDate(entry)
+
+      expect(entry).toEqual(expect.objectContaining({
+        status: 'visited',
+        visitedDate: undefined,
+        travelYear: '2024',
+        travelMonth: ['9'],
+        travelMonthName: 'Сентябрь',
+      }))
+      expect(date).toMatch(/^2024-09-/)
+      expect([0, 6]).toContain(getIsoDayOfWeek(date))
+      expect(useTravelStatusStore.getState().getByMonth(2024, 9)).toEqual([entry])
+    })
+
     it('не падает и сохраняет локальные статусы, если серверная синхронизация упала (offline)', async () => {
       const stored = [
         { id: 5, type: 'travel', title: 'Локальный поход', url: '/travels/5', status: 'visited', addedAt: 1 },

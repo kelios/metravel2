@@ -61,4 +61,15 @@ describe('ProfileHeader quick actions', () => {
 
     expect(onQuickAction).toHaveBeenCalledWith('calendar');
   });
+
+  it('passes trips press to the profile screen action handler', () => {
+    const onQuickAction = jest.fn();
+    const { getByLabelText } = render(
+      <ProfileHeader {...baseProps} onQuickAction={onQuickAction} />
+    );
+
+    fireEvent.press(getByLabelText('Поездки'));
+
+    expect(onQuickAction).toHaveBeenCalledWith('trips');
+  });
 });

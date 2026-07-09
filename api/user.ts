@@ -103,6 +103,10 @@ export type UserTravelStatusDto = {
         url: string;
         travel_image_thumb_url: string;
         countryName: string;
+        year?: string | number | null;
+        month?: string | number | Array<string | number> | null;
+        monthName?: string | null;
+        month_name?: string | null;
     } | null;
 };
 

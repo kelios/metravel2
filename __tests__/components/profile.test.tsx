@@ -331,6 +331,7 @@ describe('ProfileScreen', () => {
     // Компактная шапка: быстрые действия — icon-only чипы поверх баннера,
     // подпись живёт в accessibilityLabel (правило «шапка ≤20% на мобильном»).
     expect(await findByLabelText('Чаты')).toBeTruthy();
+    expect(await findByLabelText('Поездки')).toBeTruthy();
     expect(await findByLabelText('Меню профиля')).toBeTruthy();
     expect(await findByLabelText('Календарь')).toBeTruthy();
     expect(queryByText('user@example.com')).toBeNull();
@@ -370,6 +371,17 @@ describe('ProfileScreen', () => {
     fireEvent.press(await findByLabelText('Календарь'));
 
     expect(mockPush).toHaveBeenCalledWith('/calendar');
+  });
+
+  it('opens my trips from profile header quick action', async () => {
+    setupAuth({ isAuthenticated: true });
+    setupFavorites(2, 5);
+
+    const { findByLabelText } = renderProfile();
+
+    fireEvent.press(await findByLabelText('Поездки'));
+
+    expect(mockPush).toHaveBeenCalledWith('/trips/my');
   });
 
   it('logout works', async () => {

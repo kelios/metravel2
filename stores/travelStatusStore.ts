@@ -31,6 +31,30 @@ export type TravelStatusEntry = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
+const normalizeOptionalString = (value: unknown): string | undefined => {
+  if (value == null) return undefined
+  const text = String(value).trim()
+  if (!text || text === 'null' || text === 'undefined') return undefined
+  return text
+}
+
+const normalizeTravelMonthItem = (value: unknown): string | undefined => {
+  if (isRecord(value)) {
+    return normalizeTravelMonthItem(value.id ?? value.value ?? value.month ?? value.name ?? value.title)
+  }
+  return normalizeOptionalString(value)
+}
+
+const normalizeTravelMonth = (value: unknown): string | string[] | undefined => {
+  if (Array.isArray(value)) {
+    const items = value
+      .map(normalizeTravelMonthItem)
+      .filter((item): item is string => Boolean(item))
+    return items.length > 0 ? items : undefined
+  }
+  return normalizeTravelMonthItem(value)
+}
+
 export const parseTravelStatusDateParts = (value: unknown): { year: number; month: number; day: number } | null => {
   if (typeof value !== 'string') return null
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
@@ -111,13 +135,9 @@ const normalizeEntry = (item: unknown): TravelStatusEntry | null => {
     plannedDate: typeof item.plannedDate === 'string' ? item.plannedDate : undefined,
     visitedDate: typeof item.visitedDate === 'string' ? item.visitedDate : undefined,
     wishlistDate: typeof item.wishlistDate === 'string' ? item.wishlistDate : undefined,
-    travelYear: typeof item.travelYear === 'string' ? item.travelYear : undefined,
-    travelMonth: Array.isArray(item.travelMonth)
-      ? item.travelMonth.map(String)
-      : typeof item.travelMonth === 'string'
-        ? item.travelMonth
-        : undefined,
-    travelMonthName: typeof item.travelMonthName === 'string' ? item.travelMonthName : undefined,
+    travelYear: normalizeOptionalString(item.travelYear),
+    travelMonth: normalizeTravelMonth(item.travelMonth),
+    travelMonthName: normalizeOptionalString(item.travelMonthName),
   })
 }
 
@@ -162,6 +182,9 @@ const normalizeServerStatusEntry = (item: unknown): TravelStatusEntry | null => 
     country: typeof travel.countryName === 'string' ? travel.countryName : undefined,
     plannedDate: typeof item.planned_date === 'string' ? item.planned_date : undefined,
     visitedDate: typeof item.visited_date === 'string' ? item.visited_date : undefined,
+    travelYear: normalizeOptionalString(travel.year),
+    travelMonth: normalizeTravelMonth(travel.month),
+    travelMonthName: normalizeOptionalString(travel.monthName ?? travel.month_name),
   })
 }
 

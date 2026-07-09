@@ -42,7 +42,6 @@ function TripApplyForm({ trip, onSubmitted }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const canSubmit =
-    message.trim().length >= 10 &&
     agreeRules &&
     agreeDisclaimer &&
     !submit.isPending;

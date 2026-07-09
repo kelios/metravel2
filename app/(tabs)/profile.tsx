@@ -467,6 +467,7 @@ export default function ProfileScreen() {
 
   const handleHeaderAction = useCallback((key: ProfileHeaderActionKey) => {
     if (key === 'messages') router.push('/messages');
+    else if (key === 'trips') router.push('/trips/my' as any);
     else if (key === 'userpoints') router.push({ pathname: '/userpoints', params: { from: 'profile' } } as any);
     else if (key === 'calendar') router.push('/calendar' as any);
     else if (key === 'newTravel') router.push('/travel/new' as any);
