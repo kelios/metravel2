@@ -101,6 +101,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     void showToastMessage({
       type,
       text1: message,
+      position: 'top',
     });
   }, []);
 

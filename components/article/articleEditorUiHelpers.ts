@@ -22,6 +22,7 @@ export const buildArticleEditorToolbarActions = ({
   isWeb,
   openPreview,
   openAnchorModal,
+  compact = false,
 }: {
   quillRef: { current: any }
   toggleHtmlMode: () => void
@@ -33,7 +34,33 @@ export const buildArticleEditorToolbarActions = ({
   isWeb: boolean
   openPreview: () => void
   openAnchorModal: () => void
+  compact?: boolean
 }): ToolbarAction[] => {
+  if (compact) {
+    const actions: ToolbarAction[] = [
+      {
+        name: fullscreen ? 'minimize' : 'maximize',
+        onPress: toggleFullscreen,
+        label: fullscreen ? 'Свернуть' : 'На весь экран',
+      },
+      {
+        name: 'image',
+        onPress: openImagePicker,
+        label: 'Изображение',
+      },
+    ]
+
+    if (showHtml) {
+      actions.unshift({
+        name: 'code',
+        onPress: toggleHtmlMode,
+        label: 'Визуально',
+      })
+    }
+
+    return actions
+  }
+
   const actions: ToolbarAction[] = [
     {
       name: 'rotate-ccw',

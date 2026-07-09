@@ -139,6 +139,21 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     statusChipMuted: { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
     statusChipText: { fontWeight: '700', color: colors.text },
     statusChipHint: { flex: 1, color: colors.textMuted, fontSize: DESIGN_TOKENS.typography.sizes.sm },
+    readinessNote: {
+        marginTop: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 1,
+        borderColor: colors.infoLight,
+        backgroundColor: colors.infoSoft,
+    },
+    readinessNoteText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        lineHeight: 16,
+        fontWeight: '600',
+        color: colors.text,
+    },
     checklistCard: {},
     checklistHeader: {
         flexDirection: 'row',

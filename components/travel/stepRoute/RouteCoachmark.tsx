@@ -20,7 +20,9 @@ export const RouteCoachmark = React.memo(function RouteCoachmark({
     >
       <View style={styles.flexFill}>
         <Text style={styles.coachmarkTitle}>Как добавить первую точку</Text>
-        <Text style={styles.coachmarkBody}>Кликните по карте — точка добавится автоматически.</Text>
+        <Text style={styles.coachmarkBody}>
+          Найдите место, введите координаты вручную или кликните по карте ниже.
+        </Text>
       </View>
       <Button
         mode="text"

@@ -1,5 +1,5 @@
 import type React from 'react'
-import type { View } from 'react-native'
+import type { TextInput, View } from 'react-native'
 
 import type { TravelFilters } from '@/hooks/useTravelFilters'
 import type { MarkerData, TravelFormData } from '@/types/types'
@@ -52,6 +52,8 @@ export interface ManualPointPanelProps {
   state: ManualPointState;
   styles: Styles;
   fileInputRef: React.RefObject<any>;
+  panelRef?: React.RefObject<View | null>;
+  coordsInputRef?: React.RefObject<TextInput | null>;
   onToggle: () => void;
   onPhotoPick: () => void;
   onPhotoSelected: (event: any) => void;

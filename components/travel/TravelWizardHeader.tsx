@@ -301,7 +301,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
 
             <Text
                 style={isMobile ? styles.headerSubtitleMobile : styles.headerSubtitle}
-                numberOfLines={isMobile ? 1 : 2}
+                numberOfLines={isMobile ? 2 : 2}
             >
                 {subtitle}
             </Text>

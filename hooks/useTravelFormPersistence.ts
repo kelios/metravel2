@@ -599,7 +599,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         const normalizedSavedData = normalizeDraftPlaceholders(savedData);
         applySavedData(normalizedSavedData, toSave as TravelFormData);
         autosaveCancelPendingRef.current?.();
-        showToast('Сохранено');
+        if (!dataOverride) {
+          showToast('Сохранено');
+        }
         return savedData;
       } catch (error) {
         // Сохранение не удалось — пользователь остаётся на странице, поэтому снова

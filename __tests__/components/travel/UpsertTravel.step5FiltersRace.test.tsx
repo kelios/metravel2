@@ -254,8 +254,8 @@ describe('UpsertTravel step 5 filters race regression', () => {
         assertNonEmpty('Категории путешествий *');
         assertNonEmpty('Средства передвижения');
         assertNonEmpty('Физическая подготовка');
-        assertNonEmpty('Путешествуете с...');
-        assertNonEmpty('Ночлег...');
+        assertNonEmpty('С кем путешествуете');
+        assertNonEmpty('Тип ночлега');
         assertNonEmpty('Месяц путешествия');
       },
       { timeout: 3000 }
@@ -293,8 +293,8 @@ describe('UpsertTravel step 5 filters race regression', () => {
         assertNonEmpty('Категории путешествий *');
         assertNonEmpty('Средства передвижения');
         assertNonEmpty('Физическая подготовка');
-        assertNonEmpty('Путешествуете с...');
-        assertNonEmpty('Ночлег...');
+        assertNonEmpty('С кем путешествуете');
+        assertNonEmpty('Тип ночлега');
         assertNonEmpty('Месяц путешествия');
       },
       { timeout: 3000 }

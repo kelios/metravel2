@@ -20,6 +20,7 @@ import TripRatingPanel from '@/components/trips/planning/TripRatingPanel';
 import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock';
 import TripTelegramGroupCard from '@/components/trips/communication/TripTelegramGroupCard';
 import TripChatPanel from '@/components/trips/chat/TripChatPanel';
+import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
 import {
   PLAN_STATUS_LABEL,
   formatTripDateTime,
@@ -96,7 +97,12 @@ export default function PlannedTripScreen() {
                 {formatTripDateTime(trip.startDate, trip.startTime)} · {trip.organizer.name}
               </Text>
               {trip.description ? (
-                <Text style={styles.description}>{trip.description}</Text>
+                <TripPlanLinkedText
+                  text={trip.description}
+                  style={styles.description}
+                  linkStyle={styles.descriptionLink}
+                  testID="trip-plan-description"
+                />
               ) : null}
               {trip.isOwner ? (
                 <View style={styles.ownerActions}>
@@ -208,6 +214,7 @@ const createStyles = (colors: ThemedColors) =>
     title: { fontSize: 24, fontWeight: '900', color: colors.text },
     meta: { fontSize: 14, color: colors.textSecondary },
     description: { fontSize: 15, color: colors.text, lineHeight: 21, marginTop: 4 },
+    descriptionLink: { color: colors.primaryDark, fontWeight: '700' },
     ownerActions: {
       alignItems: 'flex-start',
       gap: 8,

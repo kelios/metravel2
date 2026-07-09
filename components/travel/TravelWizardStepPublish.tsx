@@ -4,6 +4,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    Text,
     View,
     findNodeHandle,
     UIManager,
@@ -95,15 +96,12 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     onNavigateToIssue,
     onStepSelect,
     stepMeta,
-    progress = currentStep / totalSteps,
     autosaveBadge,
     onPreview,
     onOpenPublic,
 }) => {
     const colors = useThemedColors();
     const router = useRouter();
-    const progressValue = Math.min(Math.max(progress, 0), 1);
-    const progressPercent = Math.round(progressValue * 100);
     const actionPendingRef = useRef(false);
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
@@ -147,6 +145,10 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         moderationIssuesByKey,
         qualityScore,
     } = useTravelPublishChecklist(formData);
+    const missingRequiredCount = useMemo(
+        () => requiredChecklist.filter((item) => !item.ok).length,
+        [requiredChecklist],
+    );
 
     const [missingForModeration, setMissingForModeration] = useState<ModerationIssue[]>([]);
     const [rejectionComment, setRejectionComment] = useState('');
@@ -695,8 +697,9 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     canGoBack={true}
                     onBack={onGoBack}
                     title={stepMeta?.title ?? 'Публикация путешествия'}
-                    subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
-                    progressPercent={progressPercent}
+                    subtitle={stepMeta?.subtitle ?? 'Черновик можно сохранить; публикация требует обязательные пункты.'}
+                    progressPercent={qualityScore.score}
+                    errorCount={missingRequiredCount}
                     autosaveBadge={autosaveBadge}
                     onPrimary={handlePrimaryAction}
                     primaryLabel={
@@ -706,7 +709,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                               (pendingModeration
                                   ? 'Отправлено на модерацию'
                                   : status === 'draft'
-                                  ? 'Сохранить и выйти'
+                                  ? 'Сохранить черновик'
                                   : 'Отправить на модерацию')
                     }
                     primaryTestID="primary-button"
@@ -718,6 +721,13 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     onStepSelect={onStepSelect}
                     onPreview={onPreview}
                     onOpenPublic={onOpenPublic}
+                    extraBelowProgress={
+                        <View style={styles.readinessNote}>
+                            <Text style={styles.readinessNoteText}>
+                                Вы на последнем шаге мастера. Индикатор показывает готовность к публикации: {qualityScore.score}%.
+                            </Text>
+                        </View>
+                    }
                 />
                 <ScrollView
                     ref={scrollRef}

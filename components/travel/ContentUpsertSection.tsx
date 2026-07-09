@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { View, ScrollView, Text, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
+import { View, ScrollView, Text, TextInput, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -11,7 +11,7 @@ import { validateTravelForm, getFieldError, type ValidationError } from '@/utils
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import Button from '@/components/ui/Button';
-import { appendPlainTextToHtml } from '@/utils/htmlUtils';
+import { appendPlainTextToHtml, plainTextToHtml } from '@/utils/htmlUtils';
 import { useWebSpeechDictation } from '@/hooks/useWebSpeechDictation';
 import { showToast } from '@/utils/toast';
 import { createContentUpsertStyles } from './contentUpsertStyles';
@@ -47,6 +47,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     const [fieldPositions, setFieldPositions] = useState<Record<string, number>>({});
     const scrollRef = useRef<ScrollView>(null);
     const [isDescriptionFullscreen, setIsDescriptionFullscreen] = useState(false);
+    const [areDescriptionToolsVisible, setAreDescriptionToolsVisible] = useState(false);
     const [isImportingDescriptionText, setIsImportingDescriptionText] = useState(false);
     const [isPastingDescriptionText, setIsPastingDescriptionText] = useState(false);
 
@@ -323,6 +324,26 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                     <Text style={styles.descriptionCounterText}>{descriptionPlainLength} символов</Text>
                                 </View>
 
+                                {isMobile ? (
+                                    <TouchableOpacity
+                                        style={styles.descriptionToolsToggle}
+                                        onPress={() => setAreDescriptionToolsVisible(value => !value)}
+                                        accessibilityRole="button"
+                                        accessibilityState={{ expanded: areDescriptionToolsVisible }}
+                                        accessibilityLabel={areDescriptionToolsVisible ? 'Скрыть инструменты описания' : 'Показать инструменты описания'}
+                                    >
+                                        <Text style={styles.descriptionToolsToggleText}>
+                                            {areDescriptionToolsVisible ? 'Скрыть инструменты' : 'Инструменты: диктовка, импорт, вставка'}
+                                        </Text>
+                                        <Feather
+                                            name={areDescriptionToolsVisible ? 'chevron-up' : 'chevron-down'}
+                                            size={16}
+                                            color={colors.primaryText}
+                                        />
+                                    </TouchableOpacity>
+                                ) : null}
+
+                                {(!isMobile || areDescriptionToolsVisible) && (
                                 <View style={styles.descriptionActionsRow}>
                                     {Platform.OS === 'web' && dictation.isSupported ? (
                                         <Button
@@ -366,20 +387,23 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                         style={styles.descriptionActionButton}
                                     />
                                 </View>
+                                )}
 
-                                {Platform.OS === 'web' && dictation.isSupported && dictation.isListening && dictation.interimText ? (
+                                {(!isMobile || areDescriptionToolsVisible) && Platform.OS === 'web' && dictation.isSupported && dictation.isListening && dictation.interimText ? (
                                     <Text style={styles.dictationInterimText}>
                                         {dictation.interimText}
                                     </Text>
                                 ) : null}
 
-                                {Platform.OS !== 'web' ? (
+                                {(!isMobile || areDescriptionToolsVisible) && Platform.OS !== 'web' ? (
                                     <Text style={styles.dictationHint}>
                                         Подсказка: на телефоне можно использовать микрофон на клавиатуре (системная диктовка) и потом нажать «Вставить».
                                     </Text>
                                 ) : null}
 
-                                <Text style={styles.descriptionAnchorHint}>{descriptionAnchorHint}</Text>
+                                {!isMobile ? (
+                                    <Text style={styles.descriptionAnchorHint}>{descriptionAnchorHint}</Text>
+                                ) : null}
                                 {!!error && (
                                     <View style={styles.errorContainer}>
                                         <Text style={styles.errorText}>{error}</Text>
@@ -390,22 +414,29 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                     </View>
                     {isDescription && isMobile ? (
                         <>
+                            <TextInput
+                                style={styles.descriptionMobileInput}
+                                multiline
+                                textAlignVertical="top"
+                                value={descriptionPlainText}
+                                onChangeText={(text) => {
+                                    const next = plainTextToHtml(text);
+                                    descriptionHtmlRef.current = next;
+                                    onChange(next);
+                                }}
+                                placeholder={hint ?? 'Кратко опишите маршрут: для кого он, что главное и чего ожидать.'}
+                                placeholderTextColor={colors.textMuted}
+                                accessibilityLabel="Описание путешествия"
+                                testID="travel-wizard.basic.description.mobile-input"
+                            />
                             <TouchableOpacity
-                                style={styles.descriptionPreview}
-                                activeOpacity={0.9}
+                                style={styles.descriptionAdvancedButton}
                                 onPress={() => setIsDescriptionFullscreen(true)}
+                                accessibilityRole="button"
+                                accessibilityLabel="Открыть расширенный редактор описания"
                             >
-                                <Text style={styles.descriptionPreviewText} numberOfLines={4}>
-                                    {descriptionPlainText.length > 0
-                                        ? descriptionPlainText
-                                        : (hint ?? 'Введите описание…')}
-                                </Text>
-                                <View style={styles.descriptionPreviewFooter}>
-                                    <Text style={styles.descriptionCounterText}>{descriptionPlainLength} символов</Text>
-                                    <View style={styles.descriptionEditChip}>
-                                        <Text style={styles.descriptionEditChipText}>Редактировать</Text>
-                                    </View>
-                                </View>
+                                <Feather name="edit-3" size={16} color={colors.primaryText} />
+                                <Text style={styles.descriptionAdvancedButtonText}>Расширенный редактор</Text>
                             </TouchableOpacity>
 
                             <Modal
@@ -495,7 +526,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                             : undefined}
                                                         placeholder={hint}
                                                         idTravel={idTravelStr}
-                                                        variant="default"
+                                                        variant="compact"
+                                                        chrome="mobile"
                                                     />
                                                 </Suspense>
                                             </View>
@@ -528,6 +560,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                 : undefined}
                             idTravel={idTravelStr}
                             variant={isDescription ? 'default' : 'compact'}
+                            chrome={isMobile ? 'mobile' : 'default'}
                         />
                     )}
                     {isDescription && autosaveStatus && (
@@ -558,6 +591,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             colors.primaryText,
             colors.text,
             colors.textOnPrimary,
+            colors.textMuted,
             descriptionPlainLength,
             descriptionPlainText,
             descriptionProgress,
@@ -573,6 +607,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             isPastingDescriptionText,
             isCompactFullscreenHeader,
             pasteDescriptionText,
+            areDescriptionToolsVisible,
             formData,
             onManualSave,
             styles,

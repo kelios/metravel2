@@ -160,22 +160,30 @@ const renderStep = (override: Partial<TravelFormData> = {}, props: any = {}) => 
 
 describe('TravelWizardStepExtras (Шаг 5)', () => {
   it('renders the grouped filters section with its title and the filters component', () => {
-    const { getByTestId, getByText } = renderStep()
+    const { getByTestId, getAllByTestId, getByText } = renderStep()
 
     expect(getByTestId('grouped-filters')).toBeTruthy()
-    expect(getByTestId('filters-upsert')).toBeTruthy()
+    expect(getAllByTestId('filters-upsert')).toHaveLength(2)
     expect(getByText('Дополнительные параметры')).toBeTruthy()
   })
 
   it('passes the expected display flags to FiltersUpsertComponent', () => {
-    const { getByTestId } = renderStep({}, { isSuperAdmin: true })
+    const { getAllByTestId } = renderStep({}, { isSuperAdmin: true })
 
-    const node = getByTestId('filters-upsert')
-    const jsonText = node.findAllByType(Text)[0].props.children
-    const flags = JSON.parse(jsonText)
+    const [requiredNode, optionalNode] = getAllByTestId('filters-upsert')
+    const requiredFlags = JSON.parse(requiredNode.findAllByType(Text)[0].props.children)
+    const optionalFlags = JSON.parse(optionalNode.findAllByType(Text)[0].props.children)
 
-    expect(flags).toEqual({
+    expect(requiredFlags).toEqual({
       showCategories: true,
+      showCountries: false,
+      showCoverImage: false,
+      showAdditionalFields: false,
+      showSaveButton: false,
+      isSuperAdmin: true,
+    })
+    expect(optionalFlags).toEqual({
+      showCategories: false,
       showCountries: false,
       showCoverImage: false,
       showAdditionalFields: true,
@@ -186,9 +194,9 @@ describe('TravelWizardStepExtras (Шаг 5)', () => {
 
   // The "visa" toggle is a boolean — any defined value (even false) counts as answered,
   // so the baseline filled count is 1 even with an otherwise-empty form.
-  it('reports filled count of 1/11 (visa answered) when no other fields are set', () => {
+  it('reports filled count of 1/10 (visa answered) when no other fields are set', () => {
     const { getByText } = renderStep()
-    expect(getByText('filled:1/11')).toBeTruthy()
+    expect(getByText('filled:1/10')).toBeTruthy()
   })
 
   it('increments the filled count as additional fields get populated', () => {
@@ -198,14 +206,14 @@ describe('TravelWizardStepExtras (Шаг 5)', () => {
       year: '2024',
       budget: '500',
     })
-    // 4 extra fields + the always-answered visa toggle = 5
-    expect(getByText('filled:5/11')).toBeTruthy()
+    // Categories are tracked in the required card, outside this optional counter.
+    expect(getByText('filled:4/10')).toBeTruthy()
   })
 
   it('updates a field through FiltersUpsertComponent onFieldChange', () => {
-    const { getByLabelText, setFormData } = renderStep()
+    const { getAllByLabelText, setFormData } = renderStep()
 
-    fireEvent.press(getByLabelText('set-budget'))
+    fireEvent.press(getAllByLabelText('set-budget')[0])
 
     expect(setFormData).toHaveBeenCalledTimes(1)
     const updater = setFormData.mock.calls[0][0]

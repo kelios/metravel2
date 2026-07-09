@@ -108,10 +108,12 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     idTravel,
     editorRef,
     variant = 'default',
+    chrome = 'default',
 }) => {
     const colors = useThemedColors();
     const { width } = useResponsive();
-    const isCompactViewport = width > 0 && width < 768;
+    const isMobileChrome = chrome === 'mobile';
+    const isCompactViewport = isMobileChrome || (width > 0 && width < 768);
     const isSmallViewport = width > 0 && width < 480;
     const [html, setHtml] = useState(content);
     const [quillMountKey, setQuillMountKey] = useState(0);
@@ -725,10 +727,12 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             isWeb,
             openPreview,
             openAnchorModal,
+            compact: isMobileChrome,
         });
     }, [
         clearFormattingPreservingEmbeds,
         fullscreen,
+        isMobileChrome,
         openAnchorModal,
         openImagePicker,
         openPreview,

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView, Platform, View, StyleSheet, ScrollView, findNodeHandle, UIManager } from 'react-native';
+import { KeyboardAvoidingView, Platform, View, Text, StyleSheet, ScrollView, findNodeHandle, UIManager } from 'react-native';
 
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import GroupedFiltersSection from '@/components/travel/GroupedFiltersSection';
@@ -122,7 +122,6 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
 
     // ✅ УЛУЧШЕНИЕ: Подсчет заполненных полей
     const groupsFilledCounts = useMemo(() => {
-        const hasCategories = Array.isArray(formData.categories) && formData.categories.length > 0;
         const hasTransports = Array.isArray(formData.transports) && formData.transports.length > 0;
         const hasComplexity = Array.isArray(formData.complexity) && formData.complexity.length > 0;
         const hasCompanions = Array.isArray(formData.companions) && formData.companions.length > 0;
@@ -140,9 +139,9 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
             formData.number_days !== null &&
             String(formData.number_days).trim().length > 0;
 
-        // Все поля в одной группе (showAdditionalFields показывает все)
+        // Категории показываем отдельным обязательным блоком выше, поэтому
+        // счетчик группы считает только дополнительные параметры.
         const allFields = [
-            hasCategories,
             hasTransports,
             hasComplexity,
             hasCompanions,
@@ -206,20 +205,11 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                     <View style={styles.contentInner}>
                         <View ref={categoriesAnchorRef} nativeID="travelwizard-extras-categories" />
 
-                        {/* ✅ УЛУЧШЕНИЕ: Группировка параметров с аккордеонами */}
-
-                        {/* Группа 1: Категории и транспорт */}
-                        <GroupedFiltersSection
-                            group={{
-                                id: 'main',
-                                title: 'Дополнительные параметры',
-                                iconName: 'sliders',
-                                description: 'Категории, транспорт, сложность, время путешествия и другие детали',
-                                defaultExpanded: true,
-                            }}
-                            filledCount={groupsFilledCounts.main}
-                            totalCount={11}
-                        >
+                        <View style={styles.requiredCard}>
+                            <Text style={styles.requiredTitle}>Обязательно для публикации</Text>
+                            <Text style={styles.requiredHint}>
+                                Выберите хотя бы одну категорию. Без этого маршрут сохранится как черновик, но не отправится на модерацию.
+                            </Text>
                             <FiltersUpsertComponent
                                 filters={filters}
                                 formData={formData}
@@ -233,6 +223,36 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                                 showPublishControls={false}
                                 showCountries={false}
                                 showCategories={true}
+                                showCoverImage={false}
+                                showAdditionalFields={false}
+                            />
+                        </View>
+
+                        {/* Группа 1: Категории и транспорт */}
+                        <GroupedFiltersSection
+                            group={{
+                                id: 'main',
+                                title: 'Дополнительные параметры',
+                                iconName: 'sliders',
+                                description: 'Категории, транспорт, сложность, время путешествия и другие детали',
+                                defaultExpanded: true,
+                            }}
+                            filledCount={groupsFilledCounts.main}
+                            totalCount={10}
+                        >
+                            <FiltersUpsertComponent
+                                filters={filters}
+                                formData={formData}
+                                setFormData={setFormData}
+                                onFieldChange={handleFieldChange}
+                                travelDataOld={travelDataOld}
+                                isSuperAdmin={isSuperAdmin}
+                                onSave={onManualSave}
+                                showSaveButton={false}
+                                showPreviewButton={false}
+                                showPublishControls={false}
+                                showCountries={false}
+                                showCategories={false}
                                 showCoverImage={false}
                                 showAdditionalFields={true}
                             />
@@ -267,6 +287,29 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     contentInner: {
         width: '100%',
         maxWidth: 980,
+    },
+    requiredCard: {
+        marginBottom: DESIGN_TOKENS.spacing.md,
+        padding: DESIGN_TOKENS.spacing.md,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 1,
+        borderColor: colors.warningLight,
+        backgroundColor: colors.warningSoft,
+        ...(Platform.OS === 'web'
+            ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+            : (DESIGN_TOKENS.shadowsNative.light as any)),
+    },
+    requiredTitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        fontWeight: '700',
+        color: colors.text,
+        marginBottom: DESIGN_TOKENS.spacing.xxs,
+    },
+    requiredHint: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        lineHeight: 20,
+        color: colors.textMuted,
+        marginBottom: DESIGN_TOKENS.spacing.md,
     },
 });
 

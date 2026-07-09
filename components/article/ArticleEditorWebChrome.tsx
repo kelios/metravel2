@@ -55,6 +55,8 @@ const ToolbarIconButton = ({
     label={label}
     size={isCompactViewport ? 'sm' : 'md'}
     style={dynamicStyles.btn}
+    showLabel={isCompactViewport}
+    showTooltip={!isCompactViewport}
   />
 )
 
@@ -102,6 +104,8 @@ export const ArticleEditorToolbar = ({
             }
             size={isCompactViewport ? 'sm' : 'md'}
             style={dynamicStyles.btn}
+            showLabel={isCompactViewport}
+            showTooltip={!isCompactViewport}
             disabled={isManualSaving || isImageUploading}
           />
         )}

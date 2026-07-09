@@ -33,6 +33,20 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
   }
 })
 
+jest.mock('@/components/trips/planning/TripPlanRouteMap', () => {
+  return function TripPlanRouteMap({ onAddPointFromMap }: { onAddPointFromMap?: (coords: { lat: number; lng: number }) => void }) {
+    const { Pressable, Text } = require('react-native')
+    return (
+      <Pressable
+        testID="trip-plan-route-map"
+        onPress={() => onAddPointFromMap?.({ lat: 53.9006, lng: 27.559 })}
+      >
+        <Text>Карта маршрута</Text>
+      </Pressable>
+    )
+  }
+})
+
 const mockedFetchPlacesCatalog = fetchPlacesCatalog as jest.MockedFunction<typeof fetchPlacesCatalog>
 const mockedFetchTravels = fetchTravels as jest.MockedFunction<typeof fetchTravels>
 
@@ -174,6 +188,49 @@ describe('RouteBuilder site search', () => {
       name: 'Маршрут Мир и Несвиж',
       coordinates: [26.4731, 53.4511],
       placeId: 77,
+    })
+  })
+
+  it('edits an existing custom route point before saving', async () => {
+    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+
+    fireEvent.press(getByTestId('route-builder-type-custom'))
+    fireEvent.changeText(getByTestId('route-builder-name'), 'Старая точка')
+    fireEvent.changeText(getByTestId('route-builder-lat'), '53.9')
+    fireEvent.changeText(getByTestId('route-builder-lng'), '27.56')
+    fireEvent.changeText(getByTestId('route-builder-description'), 'old')
+    fireEvent.press(getByTestId('route-builder-add'))
+
+    fireEvent.press(getByTestId('route-builder-edit-0'))
+    fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Новая точка')
+    fireEvent.changeText(getByTestId('route-builder-edit-description'), 'https://example.com/info')
+    fireEvent.press(getByTestId('route-builder-edit-save'))
+    fireEvent.press(getByTestId('route-builder-save'))
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+    expect(mockMutate.mock.calls[0][0].route[0]).toMatchObject({
+      type: 'custom',
+      name: 'Новая точка',
+      description: 'https://example.com/info',
+      coordinates: [27.56, 53.9],
+      placeId: null,
+    })
+  })
+
+  it('adds a custom point from the route map and opens it for editing', async () => {
+    const { getByTestId } = render(<RouteBuilder trip={makeTrip()} />)
+
+    fireEvent.press(getByTestId('trip-plan-route-map'))
+    fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Точка с карты')
+    fireEvent.press(getByTestId('route-builder-edit-save'))
+    fireEvent.press(getByTestId('route-builder-save'))
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+    expect(mockMutate.mock.calls[0][0].route[0]).toMatchObject({
+      type: 'custom',
+      name: 'Точка с карты',
+      coordinates: [27.559, 53.9006],
+      placeId: null,
     })
   })
 })

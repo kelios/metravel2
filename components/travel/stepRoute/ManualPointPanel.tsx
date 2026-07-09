@@ -11,6 +11,8 @@ export const ManualPointPanel = React.memo(function ManualPointPanel({
   state,
   styles,
   fileInputRef,
+  panelRef,
+  coordsInputRef,
   onToggle,
   onPhotoPick,
   onPhotoSelected,
@@ -37,7 +39,9 @@ export const ManualPointPanel = React.memo(function ManualPointPanel({
 
       {isVisible && (
         <View
+          ref={panelRef}
           style={styles.manualPointCard}
+          nativeID="travelwizard-route-manual-panel"
           testID="travel-wizard.step-route.manual.panel"
           accessibilityLabel="Панель добавления точки вручную"
         >
@@ -79,6 +83,7 @@ export const ManualPointPanel = React.memo(function ManualPointPanel({
           <View style={styles.manualCoordsWrapper}>
             <Text style={styles.manualPointLabel}>Координаты (lat, lng)</Text>
             <TextInput
+              ref={coordsInputRef}
               value={state.coords}
               onChangeText={onCoordsChange}
               placeholder="49.609645, 18.845693"

@@ -275,7 +275,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
       <TextInput
         value={values.description}
         onChangeText={(t) => setField('description', t)}
-        placeholder="Идея поездки, что хотите увидеть, ожидания от попутчиков"
+        placeholder="Идея поездки, ссылки, что хотите увидеть, ожидания от попутчиков"
         placeholderTextColor={colors.textMuted}
         multiline
         style={styles.textArea}

@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   KeyboardAvoidingView,
+  findNodeHandle,
   Platform,
   ScrollView,
   Text,
+  TextInput,
+  UIManager,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -12,7 +15,8 @@ import { useRouter } from 'expo-router'
 import LocationSearchInput from '@/components/travel/LocationSearchInput'
 import TravelRouteFilesPanel from '@/components/travel/TravelRouteFilesPanel'
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader'
-import { ValidationSummary } from '@/components/travel/ValidationFeedback'
+import { CollapsibleValidationSummary, ValidationSummary } from '@/components/travel/ValidationFeedback'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { MarkerData, TravelFormData } from '@/types/types'
@@ -83,6 +87,8 @@ function TravelWizardStepRoute({
   const isMountedRef = useRef(true)
   const quickDraftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const addPointSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const manualPanelAnchorRef = useRef<View | null>(null)
+  const manualCoordsInputRef = useRef<TextInput | null>(null)
   // Текущее вертикальное смещение ScrollView — нужно LocationSearchInput, чтобы
   // из window-координат инпута вычислить абсолютную позицию в контенте и поднять
   // его над клавиатурой (F-13).
@@ -115,7 +121,6 @@ function TravelWizardStepRoute({
     setPanelVisible: setManualPointVisible,
     setPhotoCoordinates: setManualPhotoCoordinates,
     setPhotoPreview: setManualPhotoPreview,
-    togglePanel: toggleManualPointPanel,
   } = useManualPointForm()
   const hasPoints = markers.length > 0
   const isCompactLayout = isPhone || isLargePhone
@@ -126,6 +131,47 @@ function TravelWizardStepRoute({
     focusAnchorId,
     onAnchorHandled,
   })
+
+  useEffect(() => {
+    if (!isManualPointVisible) return
+
+    const focusCoordsInput = () => {
+      manualCoordsInputRef.current?.focus?.()
+    }
+
+    const timer = setTimeout(() => {
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        const el = document.getElementById('travelwizard-route-manual-panel')
+        if (el && typeof (el as any).scrollIntoView === 'function') {
+          ;(el as any).scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+        focusCoordsInput()
+        return
+      }
+
+      const scrollNode = scrollRef.current
+      const anchorNode = manualPanelAnchorRef.current
+      const scrollHandle = scrollNode ? findNodeHandle(scrollNode) : null
+      const anchorHandle = anchorNode ? findNodeHandle(anchorNode) : null
+
+      if (!scrollNode || !scrollHandle || !anchorHandle) {
+        focusCoordsInput()
+        return
+      }
+
+      UIManager.measureLayout(
+        anchorHandle,
+        scrollHandle,
+        focusCoordsInput,
+        (_x, y) => {
+          scrollNode.scrollTo({ y: Math.max(y - DESIGN_TOKENS.spacing.md, 0), animated: true })
+          focusCoordsInput()
+        },
+      )
+    }, 80)
+
+    return () => clearTimeout(timer)
+  }, [isManualPointVisible, scrollRef])
 
   const validation = useMemo(() => validateStep(2, {
     coordsMeTravel: markers,
@@ -372,6 +418,10 @@ function TravelWizardStepRoute({
     manualPhotoInputRef.current?.click?.()
   }, [manualPhotoInputRef])
 
+  const handleManualPointToggle = useCallback(() => {
+    setManualPointVisible(!isManualPointVisible)
+  }, [isManualPointVisible, setManualPointVisible])
+
   const handleManualPhotoSelected = useCallback(async (event: any) => {
     if (Platform.OS !== 'web') return
 
@@ -454,14 +504,23 @@ function TravelWizardStepRoute({
           onOpenPublic={onOpenPublic}
         />
 
-        {!isCompactLayout && validation.errors.length > 0 && (
+        {validation.errors.length > 0 && (!isCompactLayout || hasPoints) && (
           <View style={styles.validationSummaryWrapper}>
-            <ValidationSummary
-              errorCount={validation.errors.length}
-              warningCount={validation.warnings.length}
-              errorMessages={validationMessages.errorMessages}
-              warningMessages={validationMessages.warningMessages}
-            />
+            {isCompactLayout ? (
+              <CollapsibleValidationSummary
+                errorCount={validation.errors.length}
+                warningCount={validation.warnings.length}
+                errorMessages={validationMessages.errorMessages}
+                warningMessages={validationMessages.warningMessages}
+              />
+            ) : (
+              <ValidationSummary
+                errorCount={validation.errors.length}
+                warningCount={validation.warnings.length}
+                errorMessages={validationMessages.errorMessages}
+                warningMessages={validationMessages.warningMessages}
+              />
+            )}
           </View>
         )}
 
@@ -496,7 +555,7 @@ function TravelWizardStepRoute({
 
               <LocationSearchInput
                 onLocationSelect={handleLocationSelect}
-                placeholder="Поиск места (например: Эйфелева башня, Париж)"
+                placeholder={isCompactLayout ? 'Поиск места' : 'Поиск места (например: Эйфелева башня, Париж)'}
                 scrollViewRef={scrollRef}
                 scrollOffsetRef={scrollOffsetRef}
               />
@@ -506,7 +565,9 @@ function TravelWizardStepRoute({
                 state={manualPointState}
                 styles={styles}
                 fileInputRef={manualPhotoInputRef}
-                onToggle={toggleManualPointPanel}
+                panelRef={manualPanelAnchorRef}
+                coordsInputRef={manualCoordsInputRef}
+                onToggle={handleManualPointToggle}
                 onPhotoPick={handleManualPhotoPick}
                 onPhotoSelected={handleManualPhotoSelected}
                 onClearPhoto={clearManualPhoto}

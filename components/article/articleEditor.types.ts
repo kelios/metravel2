@@ -1,6 +1,7 @@
 import type { Ref } from 'react';
 
 export type ArticleEditorVariant = 'default' | 'compact';
+export type ArticleEditorChrome = 'default' | 'mobile';
 
 export interface ArticleEditorProps {
   label?: string;
@@ -13,6 +14,7 @@ export interface ArticleEditorProps {
   idTravel?: string;
   editorRef?: Ref<any>;
   variant?: ArticleEditorVariant;
+  chrome?: ArticleEditorChrome;
 }
 
 export type ArticleEditorSelection = {

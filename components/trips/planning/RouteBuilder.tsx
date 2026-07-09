@@ -12,6 +12,8 @@ import type { Travel, TravelAddressItem } from '@/types/types';
 import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import RouteSummaryBar from '@/components/trips/planning/RouteSummaryBar';
+import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
+import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap';
 import {
   estimateRouteSummary,
   type PlannedTrip,
@@ -95,6 +97,31 @@ const compactText = (parts: Array<string | number | null | undefined>): string =
     .filter(Boolean)
     .join(' · ');
 
+const formatCoordinateInput = (value: number): string => {
+  const rounded = value.toFixed(6);
+  return rounded.replace(/\.?0+$/, '');
+};
+
+const coordinatesFromFields = (
+  latValue: string,
+  lngValue: string,
+): { coordinates: [number, number] | null; error: string | null } => {
+  const latText = latValue.trim();
+  const lngText = lngValue.trim();
+  if (!latText && !lngText) return { coordinates: null, error: null };
+
+  const lat = parseNumber(latText);
+  const lng = parseNumber(lngText);
+  if (lat == null || lng == null) {
+    return { coordinates: null, error: 'Укажите широту и долготу числами.' };
+  }
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return { coordinates: null, error: 'Широта должна быть от -90 до 90, долгота от -180 до 180.' };
+  }
+
+  return { coordinates: [lng, lat], error: null };
+};
+
 const move = <T,>(arr: T[], from: number, to: number): T[] => {
   if (to < 0 || to >= arr.length) return arr;
   const next = arr.slice();
@@ -116,6 +143,14 @@ function RouteBuilder({ trip }: Props) {
   const [newLat, setNewLat] = useState('');
   const [newLng, setNewLng] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [newPointError, setNewPointError] = useState<string | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editType, setEditType] = useState<RoutePointType>('custom');
+  const [editName, setEditName] = useState('');
+  const [editLat, setEditLat] = useState('');
+  const [editLng, setEditLng] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
   const [siteQuery, setSiteQuery] = useState('');
   const [siteOptions, setSiteOptions] = useState<SiteRouteOption[]>([]);
   const [siteSearchStatus, setSiteSearchStatus] = useState<SiteSearchStatus>('idle');
@@ -131,17 +166,24 @@ function RouteBuilder({ trip }: Props) {
 
   const handleDelete = (index: number) => {
     setRoute((prev) => prev.filter((_, i) => i !== index));
+    if (editingIndex === index) {
+      setEditingIndex(null);
+    } else if (editingIndex != null && editingIndex > index) {
+      setEditingIndex(editingIndex - 1);
+    }
   };
 
   const handleAdd = () => {
     const name = newName.trim();
     if (!name) return;
-    const lat = parseFloat(newLat.replace(',', '.'));
-    const lng = parseFloat(newLng.replace(',', '.'));
-    const coordinates: [number, number] | null =
-      Number.isFinite(lat) && Number.isFinite(lng) ? [lng, lat] : null;
+    const { coordinates, error } = coordinatesFromFields(newLat, newLng);
+    if (error) {
+      setNewPointError(error);
+      return;
+    }
     const description = newDescription.trim();
 
+    setNewPointError(null);
     setRoute((prev) => [
       ...prev,
       {
@@ -158,6 +200,78 @@ function RouteBuilder({ trip }: Props) {
     setNewLat('');
     setNewLng('');
     setNewDescription('');
+  };
+
+  const handleStartEdit = (point: RoutePoint, index: number) => {
+    setEditingIndex(index);
+    setEditType(point.type);
+    setEditName(point.name);
+    setEditDescription(point.description ?? '');
+    setEditLat(point.coordinates ? formatCoordinateInput(point.coordinates[1]) : '');
+    setEditLng(point.coordinates ? formatCoordinateInput(point.coordinates[0]) : '');
+    setEditError(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingIndex(null);
+    setEditError(null);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingIndex == null) return;
+    const name = editName.trim();
+    if (!name) {
+      setEditError('Введите название точки.');
+      return;
+    }
+
+    const { coordinates, error } = coordinatesFromFields(editLat, editLng);
+    if (error) {
+      setEditError(error);
+      return;
+    }
+
+    setRoute((prev) => {
+      const current = prev[editingIndex];
+      if (!current) return prev;
+      const next = prev.slice();
+      next[editingIndex] = {
+        ...current,
+        type: editType,
+        name,
+        description: editDescription.trim() || null,
+        coordinates,
+        placeId: editType === 'place' ? current.placeId : null,
+      };
+      return next;
+    });
+    setEditingIndex(null);
+    setEditError(null);
+  };
+
+  const handleAddPointFromMap = ({ lat, lng }: { lat: number; lng: number }) => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    setRoute((prev) => {
+      const nextIndex = prev.length;
+      const name = `Точка ${nextIndex + 1}`;
+      const point: RoutePoint = {
+        id: `map-${Date.now()}-${nextIndex}`,
+        type: 'custom',
+        name,
+        description: null,
+        coordinates: [lng, lat],
+        placeId: null,
+      };
+      setEditingIndex(nextIndex);
+      setEditType(point.type);
+      setEditName(point.name);
+      setEditDescription('');
+      setEditLat(formatCoordinateInput(lat));
+      setEditLng(formatCoordinateInput(lng));
+      setEditError(null);
+      return [...prev, point];
+    });
+    trackRoutePointAdded(trip.id, 'custom');
   };
 
   useEffect(() => {
@@ -256,11 +370,29 @@ function RouteBuilder({ trip }: Props) {
         <Text style={styles.pointType}>{ROUTE_POINT_LABEL[point.type]}</Text>
         <Text style={styles.pointName}>{point.name}</Text>
         {point.description ? (
-          <Text style={styles.pointDescription}>{point.description}</Text>
+          <TripPlanLinkedText
+            text={point.description}
+            style={styles.pointDescription}
+            linkStyle={styles.descriptionLink}
+          />
+        ) : null}
+        {point.coordinates ? (
+          <Text style={styles.pointCoordinates}>
+            {formatCoordinateInput(point.coordinates[1])}, {formatCoordinateInput(point.coordinates[0])}
+          </Text>
         ) : null}
       </View>
       {trip.isOwner ? (
         <View style={styles.pointControls}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Редактировать точку"
+            onPress={() => handleStartEdit(point, index)}
+            style={styles.ctrl}
+            testID={`route-builder-edit-${index}`}
+          >
+            <Feather name="edit-2" size={15} color={colors.primaryDark} />
+          </Pressable>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Поднять точку выше"
@@ -296,6 +428,15 @@ function RouteBuilder({ trip }: Props) {
     return (
       <View style={styles.wrap} testID="route-builder">
         <Text style={styles.heading}>Маршрут</Text>
+        <TripPlanRouteMap
+          route={route}
+          readonly
+          activeIndex={editingIndex}
+          onEditPoint={(index) => {
+            const point = route[index];
+            if (point) handleStartEdit(point, index);
+          }}
+        />
         {route.length ? (
           <View style={styles.pointList}>{route.map(renderPoint)}</View>
         ) : (
@@ -311,6 +452,16 @@ function RouteBuilder({ trip }: Props) {
   return (
     <View style={styles.wrap} testID="route-builder">
       <Text style={styles.heading}>Конструктор маршрута</Text>
+
+      <TripPlanRouteMap
+        route={route}
+        activeIndex={editingIndex}
+        onEditPoint={(index) => {
+          const point = route[index];
+          if (point) handleStartEdit(point, index);
+        }}
+        onAddPointFromMap={handleAddPointFromMap}
+      />
 
       {route.length ? (
         <View style={styles.pointList}>{route.map(renderPoint)}</View>
@@ -449,7 +600,89 @@ function RouteBuilder({ trip }: Props) {
             />
           </>
         )}
+        {newPointError ? <Text style={styles.errorText}>{newPointError}</Text> : null}
       </View>
+
+      {editingIndex != null ? (
+        <View style={styles.editForm} testID="route-builder-edit-form">
+          <Text style={styles.label}>Редактировать точку</Text>
+          <View style={styles.chipRow}>
+            {POINT_TYPES.map((type) => {
+              const active = type === editType;
+              return (
+                <Pressable
+                  key={type}
+                  accessibilityRole="button"
+                  onPress={() => setEditType(type)}
+                  style={[styles.typeChip, active && styles.typeChipActive]}
+                  testID={`route-builder-edit-type-${type}`}
+                >
+                  <Feather
+                    name={ROUTE_POINT_ICON_NAME[type] as never}
+                    size={13}
+                    color={active ? colors.textOnPrimary : colors.textSecondary}
+                  />
+                  <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
+                    {ROUTE_POINT_LABEL[type]}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <TextInput
+            value={editName}
+            onChangeText={setEditName}
+            placeholder="Название точки"
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+            testID="route-builder-edit-name"
+          />
+          <View style={styles.coordRow}>
+            <TextInput
+              value={editLat}
+              onChangeText={setEditLat}
+              placeholder="Широта (lat)"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="numbers-and-punctuation"
+              style={[styles.input, styles.coordInput]}
+              testID="route-builder-edit-lat"
+            />
+            <TextInput
+              value={editLng}
+              onChangeText={setEditLng}
+              placeholder="Долгота (lng)"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="numbers-and-punctuation"
+              style={[styles.input, styles.coordInput]}
+              testID="route-builder-edit-lng"
+            />
+          </View>
+          <TextInput
+            value={editDescription}
+            onChangeText={setEditDescription}
+            placeholder="Описание или ссылка (по желанию)"
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+            testID="route-builder-edit-description"
+          />
+          {editError ? <Text style={styles.errorText}>{editError}</Text> : null}
+          <View style={styles.editActions}>
+            <Button
+              label="Сохранить точку"
+              onPress={handleSaveEdit}
+              variant="secondary"
+              disabled={!editName.trim()}
+              testID="route-builder-edit-save"
+            />
+            <Button
+              label="Отмена"
+              onPress={handleCancelEdit}
+              variant="ghost"
+              testID="route-builder-edit-cancel"
+            />
+          </View>
+        </View>
+      ) : null}
 
       {templates.length ? (
         <View style={styles.templates}>
@@ -508,6 +741,8 @@ const createStyles = (colors: ThemedColors) =>
     pointType: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
     pointName: { fontSize: 15, fontWeight: '600', color: colors.text },
     pointDescription: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
+    descriptionLink: { color: colors.primaryDark, fontWeight: '700' },
+    pointCoordinates: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
     pointControls: { flexDirection: 'row', gap: 4 },
     ctrl: {
       width: 32,
@@ -526,6 +761,15 @@ const createStyles = (colors: ThemedColors) =>
       padding: 12,
       backgroundColor: colors.surfaceMuted,
     },
+    editForm: {
+      gap: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 12,
+      backgroundColor: colors.surface,
+    },
+    editActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     typeChip: {
       borderWidth: 1,

@@ -400,7 +400,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     />
 
                     <MultiSelectFieldAny
-                        label="Путешествуете с..."
+                        label="С кем путешествуете"
                     items={resolvedCompanions}
                         value={form.companions ?? []}
                         onChange={handleCompanionsChange}
@@ -409,7 +409,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     />
 
                     <MultiSelectFieldAny
-                        label="Ночлег..."
+                        label="Тип ночлега"
                     items={resolvedOvernights}
                         value={form.over_nights_stay ?? []}
                         onChange={handleOvernightsChange}

@@ -212,6 +212,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                                     onChange={handlePlusChange}
                                     idTravel={idTravelStr}
                                     variant="compact"
+                                    chrome={isMobile ? 'mobile' : 'default'}
                                 />
                             </Suspense>
                         </View>
@@ -226,6 +227,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                                     onChange={handleMinusChange}
                                     idTravel={idTravelStr}
                                     variant="compact"
+                                    chrome={isMobile ? 'mobile' : 'default'}
                                 />
                             </Suspense>
                         </View>
@@ -240,6 +242,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                                     onChange={handleRecommendationChange}
                                     idTravel={idTravelStr}
                                     variant="compact"
+                                    chrome={isMobile ? 'mobile' : 'default'}
                                 />
                             </Suspense>
                         </View>
