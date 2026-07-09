@@ -202,6 +202,7 @@ const createStyles = (colors: ThemedColors) =>
     chipTextActive: { color: colors.primaryText, fontWeight: '600' },
     selectedNames: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
     success: { fontSize: 13, fontWeight: '600', color: colors.success },
+    error: { color: colors.danger, fontSize: 13, fontWeight: '600' },
     url: { fontSize: 13, color: colors.textMuted },
   });
 

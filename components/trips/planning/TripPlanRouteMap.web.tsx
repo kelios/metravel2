@@ -9,6 +9,7 @@ import { buildDropMarkerHtml } from '@/utils/markerSvg';
 
 type LeafletNS = typeof import('leaflet');
 type ReactLeafletNS = typeof import('react-leaflet');
+type MapClickEvent = { latlng: { lat: number; lng: number } };
 
 interface Props {
   route: RoutePoint[];
@@ -59,11 +60,13 @@ function ClickToAdd({
   onAddPointFromMap?: (coords: { lat: number; lng: number }) => void;
   useMapEvents: ReactLeafletNS['useMapEvents'];
 }) {
+  const handleClick = (event: MapClickEvent) => {
+    if (disabled) return;
+    onAddPointFromMap?.({ lat: event.latlng.lat, lng: event.latlng.lng });
+  };
+
   useMapEvents({
-    click: (event) => {
-      if (disabled) return;
-      onAddPointFromMap?.({ lat: event.latlng.lat, lng: event.latlng.lng });
-    },
+    click: handleClick,
   });
 
   return null;
