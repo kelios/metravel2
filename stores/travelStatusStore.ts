@@ -73,7 +73,8 @@ export const getTravelStatusCalendarDate = (
   entry: Pick<
     TravelStatusEntry,
     'id' | 'status' | 'plannedDate' | 'visitedDate' | 'wishlistDate' | 'travelYear' | 'travelMonth' | 'travelMonthName'
-  >
+  >,
+  occupiedDates?: Set<string> | string[]
 ): string | undefined => {
   const value =
     entry.status === 'planned'
@@ -88,6 +89,7 @@ export const getTravelStatusCalendarDate = (
     month: entry.travelMonth,
     monthName: entry.travelMonthName,
     seed: entry.id,
+    occupiedDates,
     allowYearOnly: true,
   })
 }

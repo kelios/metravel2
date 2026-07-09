@@ -36,6 +36,7 @@ import {
   DEFAULT_BUCKETS,
   EMPTY_STATE,
   TAB_HINTS,
+  buildCalendarEntriesWithDates,
   getCalendarDate,
   getEntryKey,
   groupEntriesByStatus,
@@ -142,13 +143,7 @@ export default function CalendarScreen() {
       .find((date): date is string => Boolean(date)) ?? null,
     [activeEntries, activeTab]
   )
-  const calendarEntries = useMemo(() => activeEntries.map((entry) => {
-    const calendarDate = getCalendarDate(entry)
-    if (!calendarDate) return entry
-
-    const dateField = getDateFieldForTravelStatus(entry.status)
-    return entry[dateField] ? entry : { ...entry, [dateField]: calendarDate }
-  }), [activeEntries])
+  const calendarEntries = useMemo(() => buildCalendarEntriesWithDates(activeEntries), [activeEntries])
 
   const tabCounts = useMemo<Record<TravelStatus, number>>(() => ({
     visited: statusEntries.visited.length,
@@ -329,6 +324,9 @@ export default function CalendarScreen() {
   }
 
   const emptyConfig = EMPTY_STATE[activeTab]
+  // Список пуст из-за фильтра по дню (записи в разделе есть, но не на эту дату) —
+  // показываем контекстную подсказку + сброс фильтра, а не «данных нет вовсе».
+  const isDateFilteredEmpty = selectedDate != null && activeEntries.length > 0
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -370,13 +368,23 @@ export default function CalendarScreen() {
 
           <View style={[styles.listContent, styles.listPane]}>
             {visibleEntries.length === 0 ? (
-              <EmptyState
-                icon={emptyConfig.icon}
-                title={emptyConfig.title}
-                description={emptyConfig.description}
-                variant="empty"
-                action={{ label: emptyConfig.actionLabel, onPress: handleSearch }}
-              />
+              isDateFilteredEmpty ? (
+                <EmptyState
+                  icon="calendar"
+                  title="В этот день поездок нет"
+                  description={`За ${selectedDate} записей нет. Всего в разделе: ${activeEntries.length}. Сбросьте фильтр, чтобы увидеть все.`}
+                  variant="empty"
+                  action={{ label: 'Показать все', onPress: handleClearSelectedDate }}
+                />
+              ) : (
+                <EmptyState
+                  icon={emptyConfig.icon}
+                  title={emptyConfig.title}
+                  description={emptyConfig.description}
+                  variant="empty"
+                  action={{ label: emptyConfig.actionLabel, onPress: handleSearch }}
+                />
+              )
             ) : (
               <View style={styles.cardsGrid}>
                 {visibleEntries.map((entry) => (

@@ -8,6 +8,7 @@ import {
   type TravelStatusEntry,
 } from '@/stores/travelStatusStore'
 import {
+  getDateFieldForTravelStatus,
   getExplicitTravelStatusDate,
 } from '@/utils/travelStatusCalendarDisplay'
 
@@ -80,6 +81,48 @@ export const DEFAULT_BUCKETS: StatusBuckets = {
 
 export const getCalendarDate = (entry: CalendarEntry): string | undefined =>
   getExplicitTravelStatusDate(entry) ?? getTravelStatusCalendarDate(entry)
+
+// Стабильный порядок раскладки бездатовых поездок: сначала по числовому id,
+// потом по строковому — чтобы дни на сетке не прыгали между рендерами.
+const compareEntriesForPlacement = (a: CalendarEntry, b: CalendarEntry): number => {
+  const aNum = Number(a.id)
+  const bNum = Number(b.id)
+  if (Number.isFinite(aNum) && Number.isFinite(bNum) && aNum !== bNum) return aNum - bNum
+  return String(a.id).localeCompare(String(b.id))
+}
+
+// Раскладывает записи на календарь с анти-коллизией: сперва фиксируются
+// поездки с явной датой (якоря), затем бездатовые получают fallback-дату
+// последовательно, обходя уже занятые дни (выходные — первыми, см.
+// buildTravelMonthFallbackDate). Дата пишется в поле статуса ТОЛЬКО для
+// маркеров на сетке — это derived-массив, наружу/в стор не персистится.
+export const buildCalendarEntriesWithDates = (entries: CalendarEntry[]): CalendarEntry[] => {
+  const ordered = [...entries].sort(compareEntriesForPlacement)
+  const occupied = new Set<string>()
+  const resolved = new Map<CalendarEntry, string | undefined>()
+
+  for (const entry of ordered) {
+    const explicit = getExplicitTravelStatusDate(entry)
+    if (explicit) {
+      occupied.add(explicit)
+      resolved.set(entry, explicit)
+    }
+  }
+
+  for (const entry of ordered) {
+    if (resolved.has(entry)) continue
+    const date = getTravelStatusCalendarDate(entry, occupied)
+    if (date) occupied.add(date)
+    resolved.set(entry, date)
+  }
+
+  return entries.map((entry) => {
+    const date = resolved.get(entry)
+    if (!date) return entry
+    const dateField = getDateFieldForTravelStatus(entry.status)
+    return entry[dateField] ? entry : { ...entry, [dateField]: date }
+  })
+}
 
 export const getLocationLabel = (entry: CalendarEntry) =>
   [entry.city, entry.country].filter(Boolean).join(', ')
