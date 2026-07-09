@@ -190,3 +190,4 @@ scripts/.index-cache/
 # Отладка native (adb-скриншоты, логи dev-серверов) — не коммитить
 .debug-shots/
 metro-*.log
+.claude/play-testing/evidence/

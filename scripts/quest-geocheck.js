@@ -23,6 +23,10 @@
 
 const DEFAULT_API_URL = 'https://metravel.by';
 const DEFAULT_THRESHOLD_METERS = 60;
+// A hop that moves the player back along the route's main axis by more than this
+// (into already-covered territory) is flagged as backtracking. Small side-steps
+// (e.g. a church one corner north of the start) stay under it.
+const DEFAULT_BACKTRACK_METERS = 150;
 const USER_AGENT = 'metravel-quest-geocheck/1.0';
 
 // Reverse-geocode categories that mean "you placed the point on infrastructure,
@@ -269,6 +273,82 @@ function stripStreetPrefix(value) {
   );
 }
 
+// --- Route-order (anti-backtracking) analysis ---------------------------
+// Pure geometry, no network. Projects the steps (in `order`) onto the route's
+// principal axis (PCA) and flags any hop that jumps back into already-covered
+// territory — the "1→2→3, back to 1, then 4" mistake. Small detours (a point a
+// corner behind the start) stay under DEFAULT_BACKTRACK_METERS.
+function analyzeRouteOrder(steps, backtrackMeters) {
+  const pts = steps
+    .map((s, i) => ({
+      i,
+      order: typeof s.order === 'number' ? s.order : i + 1,
+      id: s.step_id || s.id || String(i + 1),
+      title: s.title || '',
+      lat: toNumber(s.lat),
+      lng: toNumber(s.lng),
+    }))
+    .filter((p) => p.lat != null && p.lng != null && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180)
+    .sort((a, b) => a.order - b.order || a.i - b.i);
+
+  if (pts.length < 3) return { analyzed: false, backtracks: [] };
+
+  const lat0 = pts.reduce((s, p) => s + p.lat, 0) / pts.length;
+  const lng0 = pts.reduce((s, p) => s + p.lng, 0) / pts.length;
+  const mPerLat = 110540;
+  const mPerLng = 111320 * Math.cos((lat0 * Math.PI) / 180);
+  const xy = pts.map((p) => ({ ...p, x: (p.lng - lng0) * mPerLng, y: (p.lat - lat0) * mPerLat }));
+
+  // Principal axis of the point cloud (dominant travel direction).
+  let sxx = 0;
+  let syy = 0;
+  let sxy = 0;
+  for (const p of xy) {
+    sxx += p.x * p.x;
+    syy += p.y * p.y;
+    sxy += p.x * p.y;
+  }
+  const theta = 0.5 * Math.atan2(2 * sxy, sxx - syy);
+  let ax = Math.cos(theta);
+  let ay = Math.sin(theta);
+  // Orient the axis so "forward" points from the first step toward the last.
+  const first = xy[0];
+  const last = xy[xy.length - 1];
+  if ((last.x - first.x) * ax + (last.y - first.y) * ay < 0) {
+    ax = -ax;
+    ay = -ay;
+  }
+  for (const p of xy) p.t = p.x * ax + p.y * ay;
+
+  // Compass label for the forward direction (y = north, x = east).
+  const dir =
+    Math.abs(ay) >= Math.abs(ax)
+      ? ay < 0
+        ? 'север→юг'
+        : 'юг→север'
+      : ax >= 0
+        ? 'запад→восток'
+        : 'восток→запад';
+
+  const backtracks = [];
+  let runMax = xy[0].t;
+  for (let k = 1; k < xy.length; k += 1) {
+    const back = runMax - xy[k].t;
+    if (back > backtrackMeters) {
+      backtracks.push({
+        from: `${xy[k - 1].order} ${xy[k - 1].id}`,
+        to: `${xy[k].order} ${xy[k].id}`,
+        to_title: xy[k].title,
+        back_m: Math.round(back),
+        hop_m: Math.round(Math.hypot(xy[k].x - xy[k - 1].x, xy[k].y - xy[k - 1].y)),
+      });
+    }
+    if (xy[k].t > runMax) runMax = xy[k].t;
+  }
+
+  return { analyzed: true, axis_dir: dir, backtracks };
+}
+
 async function geocheckQuest(bundle, options) {
   const cityName = bundle.city?.name || bundle.city_name || '';
   const steps = parseSteps(bundle);
@@ -469,12 +549,31 @@ async function geocheckQuest(bundle, options) {
     });
   }
 
-  return { quest_id: bundle.quest_id || bundle.title, city: cityName, steps: stepReports };
+  const route = analyzeRouteOrder(steps, options.backtrackMeters);
+
+  return { quest_id: bundle.quest_id || bundle.title, city: cityName, steps: stepReports, route };
+}
+
+function printRouteOrder(route) {
+  if (!route || !route.analyzed) return;
+  if (route.backtracks.length === 0) {
+    console.log(`        route order: OK — последователен (ось ${route.axis_dir}), возвратов нет`);
+    return;
+  }
+  console.log(`        route order: ⚠ ${route.backtracks.length} возврат(а) назад по маршруту (ось ${route.axis_dir}):`);
+  for (const b of route.backtracks) {
+    console.log(
+      `          ⤺ [${b.from}] → [${b.to}] ${b.to_title}: уводит ~${b.back_m}м назад в пройденную зону (переход ${b.hop_m}м). Переставь order (nearest-neighbor).`,
+    );
+  }
 }
 
 function printHuman(report) {
   const issues = report.steps.filter((s) => s.verdict === 'FAIL' || s.verdict === 'WARN');
-  console.log(`\n${report.quest_id} (${report.city}): ${report.steps.length} steps, ${issues.length} to review`);
+  const backtracks = report.route && report.route.analyzed ? report.route.backtracks.length : 0;
+  console.log(
+    `\n${report.quest_id} (${report.city}): ${report.steps.length} steps, ${issues.length} to review${backtracks ? `, ${backtracks} backtrack(s)` : ''}`,
+  );
   for (const s of report.steps) {
     if (s.stored == null) {
       console.log(`  ${s.verdict} [${s.label}] ${s.title}: ${s.reason}`);
@@ -505,6 +604,7 @@ function printHuman(report) {
       );
     }
   }
+  printRouteOrder(report.route);
 }
 
 async function main() {
@@ -516,6 +616,7 @@ async function main() {
         '  --source-file=<path>   read steps from a local quest-data.js (authoring mode)',
         '  --api-url=<url>         API base (default https://metravel.by); ignored with --source-file',
         '  --threshold=<m>        FAIL distance in meters (default 60)',
+        '  --backtrack-m=<m>      route backtrack distance to flag (default 150; 0 disables)',
         '  --limit=<n>            Nominatim candidates per step (default 3)',
         '  --delay-ms=<ms>        pause between Nominatim calls (default 1100, keep >=1100)',
         '  --json                 emit machine-readable JSON instead of the human report',
@@ -528,6 +629,7 @@ async function main() {
   const questId = getArg('quest-id', '');
   const sourceFile = getArg('source-file', '');
   const thresholdMeters = Number(getArg('threshold', DEFAULT_THRESHOLD_METERS));
+  const backtrackMeters = Math.max(0, Number(getArg('backtrack-m', DEFAULT_BACKTRACK_METERS)));
   const limit = Number(getArg('limit', 3));
   const delayMs = Math.max(1100, Number(getArg('delay-ms', 1100)));
   const asJson = hasArg('json');
@@ -538,7 +640,7 @@ async function main() {
 
   const reports = [];
   for (const bundle of bundles) {
-    const report = await geocheckQuest(bundle, { thresholdMeters, limit, delayMs });
+    const report = await geocheckQuest(bundle, { thresholdMeters, backtrackMeters, limit, delayMs });
     reports.push(report);
     if (!asJson) printHuman(report);
   }
@@ -547,16 +649,30 @@ async function main() {
     (sum, r) => sum + r.steps.filter((s) => s.verdict === 'FAIL').length,
     0,
   );
+  const totalBacktracks = reports.reduce(
+    (sum, r) => sum + (r.route && r.route.analyzed ? r.route.backtracks.length : 0),
+    0,
+  );
 
   if (asJson) {
-    console.log(JSON.stringify({ threshold_m: thresholdMeters, reports, fail_count: totalIssues }, null, 2));
+    console.log(
+      JSON.stringify(
+        { threshold_m: thresholdMeters, backtrack_m: backtrackMeters, reports, fail_count: totalIssues, backtrack_count: totalBacktracks },
+        null,
+        2,
+      ),
+    );
   } else {
-    console.log(`\nGeo-check FAIL points: ${totalIssues}`);
+    console.log(`\nGeo-check FAIL points: ${totalIssues} · route backtracks: ${totalBacktracks}`);
   }
-  if (totalIssues > 0) process.exitCode = 1;
+  if (totalIssues > 0 || totalBacktracks > 0) process.exitCode = 1;
 }
 
-main().catch((error) => {
-  console.error(error.message || error);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error.message || error);
+    process.exit(1);
+  });
+}
+
+module.exports = { analyzeRouteOrder, haversineMeters };

@@ -1,0 +1,64 @@
+{
+  "campaign": {
+    "start": "2026-07-09",
+    "end": "2026-07-22",
+    "days": 14,
+    "goal": "Google Play closed testing — ежедневная активность тестера по ВСЕМ установленным приложениям кампании (все установки 2026-07-08/09), без пропуска дней. Взаимное тестирование: мы тестируем чужие приложения, чтобы наши прошли 14-дневное закрытое тестирование."
+  },
+  "device": {
+    "serial": "61020DLCH0086L",
+    "model": "Pixel 10 Pro",
+    "note": "Подключён по USB, adb авторизован. Не отключать до 2026-07-22."
+  },
+  "own_apps": [
+    "by.metravel.app"
+  ],
+  "community_apps": [
+    "com.nadeemgs.apptesters",
+    "com.nadeemgs.testerscommunity",
+    "com.testerscommunity"
+  ],
+  "targets": [
+    "com.unnoyashiro",
+    "com.wordquest.dictionarygame",
+    "com.rockydecodes.rockydecodescalories",
+    "com.xining.bigpic",
+    "com.Animal.Daycare.Pet.Vet.And.Grooming.Care.Games",
+    "com.nadeemgs.brickgame",
+    "com.nadeemgs.campingadventure",
+    "com.guessspellopic",
+    "com.nadeemgs.fashioncompetition",
+    "com.kitchenmatch.game",
+    "com.kouba.carprioritydz",
+    "com.denkleselim.denkleselim",
+    "com.suphiati.marketlistem",
+    "com.manocolor.firsttimedaddy",
+    "com.mocklix.ai.app",
+    "com.lexvorax.juri3yllb",
+    "dev.fruhji.azubicoach",
+    "com.hammadawan.smartbillpos",
+    "com.ja.callofpoker",
+    "com.adventureraldo.praex",
+    "com.ballsort.zen",
+    "com.baremacros.app",
+    "com.kolorino.kolorino",
+    "com.baihaqi.putik",
+    "com.noboman.wow_words",
+    "com.kuralgames.blindsync",
+    "com.brainbolt.app",
+    "com.lumenroot.growthesky",
+    "com.gridart.app",
+    "com.ramkrishna.carunblock",
+    "com.devmr.fuelpricesworld",
+    "com.theneerajsec.theclosedtest",
+    "com.coupe.app",
+    "gospeldaily.app",
+    "com.gamebooster.gamebooster",
+    "org.chromium.webapk.afbed72c41a326ad9_v2"
+  ],
+  "paths": {
+    "log": ".claude/play-testing/LOG.md",
+    "versions": ".claude/play-testing/versions.json",
+    "evidence": ".claude/play-testing/evidence"
+  }
+}
