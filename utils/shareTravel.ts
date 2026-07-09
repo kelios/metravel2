@@ -3,8 +3,7 @@
 // Uses expo-sharing (native) or Web Share API (web) to share a travel link.
 
 import { Platform, Share } from 'react-native';
-
-const BASE_URL = 'https://metravel.by';
+import { buildCanonicalUrl } from '@/utils/seo';
 
 interface ShareTravelParams {
   /** Travel ID or slug */
@@ -22,7 +21,9 @@ interface ShareTravelParams {
  * - On web: uses Web Share API (if available), otherwise copies to clipboard
  */
 export async function shareTravel({ id, title, description }: ShareTravelParams): Promise<boolean> {
-  const url = `${BASE_URL}/travel/${id}`;
+  const safeId = String(id ?? '').trim();
+  if (!safeId) return false;
+  const url = buildCanonicalUrl(`/travels/${encodeURIComponent(safeId)}`);
   const message = description
     ? `${title}\n\n${description}\n\n${url}`
     : `${title}\n\n${url}`;
@@ -55,4 +56,3 @@ export async function shareTravel({ id, title, description }: ShareTravelParams)
     return false;
   }
 }
-

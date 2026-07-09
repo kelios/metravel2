@@ -189,7 +189,16 @@ describe('TripCreateForm — validation errors', () => {
       title: 'Тест-поездка',
       startDate: defaultDate,
       seatsTotal: 4,
+      createTelegramGroup: false,
     })
+  })
+
+  it('shows Telegram group as unavailable instead of offering a broken create checkbox', () => {
+    const { getByTestId, queryByTestId, getByText } = render(<TripCreateForm />)
+
+    expect(getByTestId('trip-create-telegram-unavailable')).toBeTruthy()
+    expect(queryByTestId('trip-create-telegram-group')).toBeNull()
+    expect(getByText(/Telegram-группа для участников появится/i)).toBeTruthy()
   })
 
   it('shows submit-level error when consent is not checked', async () => {

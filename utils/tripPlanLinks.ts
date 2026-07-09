@@ -11,6 +11,11 @@ export interface TripPlanPrefill {
 
 export type TripPlanSourceParams = Record<string, string | string[] | undefined>;
 
+export interface TripPlanShareSource {
+  id: string | number;
+  title?: string | null;
+}
+
 const TITLE_MAX = 96;
 const DESCRIPTION_MAX = 420;
 
@@ -27,6 +32,34 @@ const clip = (value: string, max: number): string => {
   const wordSafe = lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut;
   return `${wordSafe.trimEnd()}...`;
 };
+
+const normalizeTripPlanId = (id: string | number): string => {
+  const value = String(id ?? '').trim();
+  return /^[1-9]\d*$/.test(value) ? value : '';
+};
+
+export function buildTripPlanPath(trip: TripPlanShareSource): string {
+  const id = normalizeTripPlanId(trip.id);
+  return id ? `/trips/plan/${encodeURIComponent(id)}` : '';
+}
+
+export function buildTripPlanUrl(trip: TripPlanShareSource): string {
+  const path = buildTripPlanPath(trip);
+  return path ? buildCanonicalUrl(path) : '';
+}
+
+export function buildTripShareText(trip: TripPlanShareSource): string {
+  const title = clip(String(trip.title ?? '').trim(), TITLE_MAX);
+  return title
+    ? `Присоединяйтесь к поездке «${title}» в MeTravel`
+    : 'Присоединяйтесь к поездке в MeTravel';
+}
+
+export function buildTripTelegramShareUrl(trip: TripPlanShareSource): string {
+  const url = buildTripPlanUrl(trip);
+  if (!url) return '';
+  return `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(buildTripShareText(trip))}`;
+}
 
 export function getDefaultTripStartDate(now = new Date()): string {
   const date = new Date(now);

@@ -1,8 +1,8 @@
 // components/trips/communication/TripTelegramGroupCard.tsx
 // Карточка Telegram-группы поездки (Sprint 15 / блок 6, FE-423).
-// Владелец без группы видит «Создать Telegram-группу»; когда группа включена —
-// все (владелец/участники) видят «Пригласить в Telegram» (invite-link → open) и
-// «Открыть группу». Все ссылки открываются только через openExternalUrl.
+// Владелец без группы видит «Создать Telegram-группу» только когда backend
+// реально доступен. Если endpoint/invite ещё не готовы, карточка показывает
+// disabled fallback и не открывает fake t.me links.
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
@@ -32,6 +32,11 @@ export function TripTelegramGroupCard({ tripId, isOwner }: Props) {
   const handleCreate = () => {
     setActionError(null);
     create.mutate(undefined, {
+      onSuccess: (nextGroup) => {
+        if (!nextGroup.isAvailable) {
+          setActionError(nextGroup.unavailableReason);
+        }
+      },
       onError: () =>
         setActionError('Не удалось создать группу. Попробуйте ещё раз позже.'),
     });
@@ -41,7 +46,16 @@ export function TripTelegramGroupCard({ tripId, isOwner }: Props) {
     setActionError(null);
     invite.mutate(undefined, {
       onSuccess: (link) => {
-        void openExternalUrl(link.url);
+        if (!link.isAvailable || !link.url) {
+          setActionError(link.unavailableReason);
+          return;
+        }
+        void (async () => {
+          const opened = await openExternalUrl(link.url);
+          if (!opened) {
+            setActionError('Не удалось открыть приглашение. Попробуйте позже.');
+          }
+        })();
       },
       onError: () =>
         setActionError('Не удалось получить ссылку-приглашение. Попробуйте позже.'),
@@ -49,7 +63,13 @@ export function TripTelegramGroupCard({ tripId, isOwner }: Props) {
   };
 
   const handleOpenGroup = () => {
-    if (group?.groupUrl) void openExternalUrl(group.groupUrl);
+    if (!group?.groupUrl) return;
+    void (async () => {
+      const opened = await openExternalUrl(group.groupUrl as string);
+      if (!opened) {
+        setActionError('Не удалось открыть Telegram-группу. Попробуйте позже.');
+      }
+    })();
   };
 
   if (isLoading) {
@@ -61,6 +81,29 @@ export function TripTelegramGroupCard({ tripId, isOwner }: Props) {
   }
 
   const enabled = group?.enabled ?? false;
+  const unavailable = group?.isAvailable === false;
+
+  if (unavailable) {
+    return (
+      <View style={styles.card} testID="trip-telegram-unavailable">
+        <View style={styles.header}>
+          <Feather name="send" size={16} color={colors.primaryDark} />
+          <Text style={styles.title}>Telegram-группа поездки</Text>
+        </View>
+        <Text style={styles.hint}>
+          {group?.unavailableReason ??
+            'Telegram-группы поездок пока не подключены. Приглашения появятся позже.'}
+        </Text>
+        <Button
+          label="Скоро будет доступно"
+          disabled
+          fullWidth
+          testID="trip-telegram-disabled"
+        />
+        {actionError ? <Text style={styles.error}>{actionError}</Text> : null}
+      </View>
+    );
+  }
 
   // Группы нет: владельцу — кнопка создания, остальным — ничего не показываем.
   if (!enabled) {

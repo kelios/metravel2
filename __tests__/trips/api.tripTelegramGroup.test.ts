@@ -61,6 +61,8 @@ describe('fetchTripTelegramGroup', () => {
     const group = await fetchTripTelegramGroup(10)
 
     expect(group.tripId).toBe(10)
+    expect(group.isAvailable).toBe(true)
+    expect(group.unavailableReason).toBeNull()
     expect(group.enabled).toBe(true)
     expect(group.groupUrl).toBe('https://t.me/+test_group')
     expect(group.inviteUrl).toBe('https://t.me/+test_invite')
@@ -105,6 +107,8 @@ describe('fetchTripTelegramGroup', () => {
     mockGet.mockRejectedValueOnce(new (ApiError as any)(404))
     const group = await fetchTripTelegramGroup(5)
     expect(group.tripId).toBe(5)
+    expect(group.isAvailable).toBe(false)
+    expect(group.unavailableReason).toContain('Telegram-группы')
     expect(group.enabled).toBe(false)
     expect(group.groupUrl).toBeNull()
     expect(group.inviteUrl).toBeNull()
@@ -180,20 +184,21 @@ describe('createTripTelegramGroup', () => {
     })
   })
 
-  it('mock-fallback create enables group and yields t.me invite url', async () => {
+  it('mock-fallback create does not enable fake t.me group links', async () => {
     ;(global as any).__DEV__ = true
     // Use a unique tripId to avoid state pollution from other DEV-path tests
     const TRIP = 400
     mockPost.mockRejectedValueOnce(new (ApiError as any)(404))
     const group = await createTripTelegramGroup({ tripId: TRIP })
 
-    expect(group.enabled).toBe(true)
-    expect(group.groupUrl).toMatch(/^https:\/\/t\.me\//)
-    expect(group.inviteUrl).toMatch(/^https:\/\/t\.me\//)
-    expect(group.shareText).toContain('https://t.me/')
+    expect(group.isAvailable).toBe(false)
+    expect(group.enabled).toBe(false)
+    expect(group.groupUrl).toBeNull()
+    expect(group.inviteUrl).toBeNull()
+    expect(group.shareText).toBe('')
   })
 
-  it('mock-fallback uses provided groupUrl when supplied', async () => {
+  it('mock-fallback ignores provided groupUrl instead of pretending the group works', async () => {
     ;(global as any).__DEV__ = true
     const TRIP = 401
     mockPost.mockRejectedValueOnce(new (ApiError as any)(404))
@@ -202,7 +207,8 @@ describe('createTripTelegramGroup', () => {
       groupUrl: 'https://t.me/+customgroup',
     })
 
-    expect(group.groupUrl).toBe('https://t.me/+customgroup')
+    expect(group.isAvailable).toBe(false)
+    expect(group.groupUrl).toBeNull()
   })
 
   it('re-throws ApiError when not in DEV', async () => {
@@ -240,28 +246,31 @@ describe('fetchTripInviteLink', () => {
     expect(mockPost).toHaveBeenCalledWith('/trips/10/telegram-group/invite-link/')
   })
 
-  it('returns url and text from mock fallback in __DEV__ on ApiError(404)', async () => {
+  it('returns unavailable invite from mock fallback in __DEV__ on ApiError(404)', async () => {
     ;(global as any).__DEV__ = true
     // Use a fresh tripId so group state starts as disabled
     const TRIP = 500
     mockPost.mockRejectedValueOnce(new (ApiError as any)(404))
     const invite = await fetchTripInviteLink(TRIP)
 
-    expect(invite.url).toMatch(/^https:\/\/t\.me\//)
-    expect(invite.text).toContain('https://t.me/')
+    expect(invite.isAvailable).toBe(false)
+    expect(invite.url).toBe('')
+    expect(invite.text).toBe('')
+    expect(invite.unavailableReason).toContain('Telegram-группы')
   })
 
-  it('invite link url reflects previously created group url in DEV state', async () => {
+  it('invite link stays unavailable after fallback create in DEV state', async () => {
     ;(global as any).__DEV__ = true
     const TRIP = 501
     // First create the group in mock state
     mockPost.mockRejectedValueOnce(new (ApiError as any)(404))
     await createTripTelegramGroup({ tripId: TRIP, groupUrl: 'https://t.me/+thegroup' })
 
-    // Now fetch invite link — should reflect the group url
+    // Now fetch invite link — fallback still must not expose the supplied fake url.
     mockPost.mockRejectedValueOnce(new (ApiError as any)(404))
     const invite = await fetchTripInviteLink(TRIP)
-    expect(invite.url).toBe('https://t.me/+thegroup')
+    expect(invite.isAvailable).toBe(false)
+    expect(invite.url).toBe('')
   })
 
   it('re-throws ApiError when not in DEV', async () => {
@@ -303,11 +312,12 @@ describe('fetchTripTelegramGroup with EXPO_PUBLIC_TRIPS_MOCK=true', () => {
     const { apiClient: mockedClient } = await import('@/api/client')
 
     const group = await fetchWithMock(9999)
+    expect(group.isAvailable).toBe(false)
     expect(group.enabled).toBe(false)
     expect((mockedClient.get as jest.Mock).mock.calls.length).toBe(0)
   })
 
-  it('create then fetch shows enabled group without apiClient', async () => {
+  it('create then fetch stays unavailable without apiClient', async () => {
     jest.mock('@/api/client', () => ({
       apiClient: { get: jest.fn(), post: jest.fn(), patch: jest.fn() },
       ApiError: class ApiError extends Error {
@@ -328,8 +338,9 @@ describe('fetchTripTelegramGroup with EXPO_PUBLIC_TRIPS_MOCK=true', () => {
     await createWithMock({ tripId: 8888 })
     const group = await fetchWithMock(8888)
 
-    expect(group.enabled).toBe(true)
-    expect(group.groupUrl).toMatch(/^https:\/\/t\.me\//)
+    expect(group.isAvailable).toBe(false)
+    expect(group.enabled).toBe(false)
+    expect(group.groupUrl).toBeNull()
     expect((mockedClient.get as jest.Mock).mock.calls.length).toBe(0)
     expect((mockedClient.post as jest.Mock).mock.calls.length).toBe(0)
   })

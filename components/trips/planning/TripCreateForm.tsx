@@ -186,7 +186,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
         visibility: valid.visibility as TripVisibility,
         seatsTotal: Number(valid.seatsTotal),
         startPoint: buildStartPoint(values),
-        createTelegramGroup: values.createTelegramGroup,
+        createTelegramGroup: false,
       };
       create.mutate(input, {
         onSuccess: (trip) => onCreated?.(trip),
@@ -382,14 +382,14 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
         </View>
       </View>
 
-      <ConsentCheckbox
-        checked={values.createTelegramGroup}
-        onToggle={(next) => setField('createTelegramGroup', next)}
-        testID="trip-create-telegram-group"
-        accessibilityLabel="Создать Telegram-группу для участников"
-      >
-        Создать Telegram-группу для участников
-      </ConsentCheckbox>
+      <View style={styles.disabledNotice} testID="trip-create-telegram-unavailable">
+        <Feather name="send" size={15} color={colors.textMuted} />
+        <Text style={styles.hint}>
+          Telegram-группа для участников появится после подключения серверных
+          приглашений. Сейчас поездку можно создать и поделиться ссылкой после
+          сохранения.
+        </Text>
+      </View>
 
       <ConsentCheckbox
         checked={consentChecked}
@@ -483,6 +483,16 @@ const createStyles = (colors: ThemedColors) =>
     chipText: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
     chipTextActive: { color: colors.primaryText, fontWeight: '600' },
     hint: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
+    disabledNotice: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 12,
+      backgroundColor: colors.surfaceMuted,
+    },
     error: { color: colors.danger, fontSize: 13, fontWeight: '600' },
     link: { color: colors.primaryText, fontWeight: '600' },
   });

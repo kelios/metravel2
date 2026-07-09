@@ -4,8 +4,10 @@
 //   GET  /api/trips/{id}/telegram-group/              -> TelegramGroupDto
 //   POST /api/trips/{id}/telegram-group/  {enabled, group_url?, invite_url?} -> TelegramGroupDto (owner-only)
 //   POST /api/trips/{id}/telegram-group/invite-link/  -> { url, text } (owner/participant)
-// BE-эндпоинты ещё НЕ задеплоены → мок-фолбэк (EXPO_PUBLIC_TRIPS_MOCK=true или
-// 0/404/501 в DEV), как в api/publicTrips.ts. Снять после верификации BE на проде.
+// BE-эндпоинты ещё НЕ задеплоены → безопасный unavailable-фолбэк
+// (EXPO_PUBLIC_TRIPS_MOCK=true или 0/404/501 в DEV), как в api/publicTrips.ts.
+// Важно: fallback НЕ должен генерировать fake t.me invite/group links.
+// Снять после верификации BE на проде.
 
 import { apiClient, ApiError } from '@/api/client';
 import { devWarn } from '@/utils/logger';
@@ -14,6 +16,8 @@ import { devWarn } from '@/utils/logger';
 
 export interface TripTelegramGroup {
   tripId: number;
+  isAvailable: boolean;
+  unavailableReason: string | null;
   enabled: boolean;
   groupUrl: string | null;
   inviteUrl: string | null;
@@ -23,6 +27,8 @@ export interface TripTelegramGroup {
 }
 
 export interface TripInviteLink {
+  isAvailable: boolean;
+  unavailableReason: string | null;
   url: string;
   text: string;
 }
@@ -54,6 +60,8 @@ interface InviteLinkDto {
 
 const mapGroup = (dto: TelegramGroupDto): TripTelegramGroup => ({
   tripId: dto.trip,
+  isAvailable: true,
+  unavailableReason: null,
   enabled: dto.enabled,
   groupUrl: dto.group_url,
   inviteUrl: dto.invite_url,
@@ -63,13 +71,17 @@ const mapGroup = (dto: TelegramGroupDto): TripTelegramGroup => ({
 });
 
 const mapInvite = (dto: InviteLinkDto): TripInviteLink => ({
-  url: dto.url,
+  isAvailable: Boolean(dto.url),
+  unavailableReason: dto.url ? null : TELEGRAM_GROUP_UNAVAILABLE_REASON,
+  url: dto.url ?? '',
   text: dto.text ?? '',
 });
 
-// ── Мок-фолбэк (FE-guard: снять после верификации BE на проде + regression) ──
+// ── Безопасный фолбэк (FE-guard: снять после верификации BE на проде + regression) ──
 
 const USE_MOCK = process.env.EXPO_PUBLIC_TRIPS_MOCK === 'true';
+export const TELEGRAM_GROUP_UNAVAILABLE_REASON =
+  'Telegram-группы поездок пока не подключены. Мы включим приглашения, когда серверный invite будет готов.';
 
 /** Бэкенд недоступен → 0/404/501. В DEV или под флагом отдаём мок. */
 const shouldFallbackToMock = (error: unknown): boolean => {
@@ -78,12 +90,10 @@ const shouldFallbackToMock = (error: unknown): boolean => {
   return error instanceof ApiError && [0, 404, 501].includes(error.status);
 };
 
-// In-memory состояние группы по trip — чтобы «создать» визуально включило группу
-// и выдало фейковый t.me invite в рамках сессии.
-const mockGroups = new Map<number, TripTelegramGroup>();
-
-const mockDisabled = (tripId: number): TripTelegramGroup => ({
+const unavailableGroup = (tripId: number): TripTelegramGroup => ({
   tripId,
+  isAvailable: false,
+  unavailableReason: TELEGRAM_GROUP_UNAVAILABLE_REASON,
   enabled: false,
   groupUrl: null,
   inviteUrl: null,
@@ -92,47 +102,26 @@ const mockDisabled = (tripId: number): TripTelegramGroup => ({
   createdAt: null,
 });
 
-const mockGroupState = (tripId: number): TripTelegramGroup =>
-  mockGroups.get(tripId) ?? mockDisabled(tripId);
-
-const mockEnable = (input: CreateTripTelegramGroupInput): TripTelegramGroup => {
-  const groupUrl = input.groupUrl?.trim() || `https://t.me/+metravel_trip_${input.tripId}`;
-  const inviteUrl = input.inviteUrl?.trim() || groupUrl;
-  const group: TripTelegramGroup = {
-    tripId: input.tripId,
-    enabled: true,
-    groupUrl,
-    inviteUrl,
-    shareText: `Присоединяйтесь к Telegram-группе поездки в MeTravel: ${groupUrl}`,
-    createdBy: 0,
-    createdAt: new Date().toISOString(),
-  };
-  mockGroups.set(input.tripId, group);
-  return group;
-};
-
-const mockInvite = (tripId: number): TripInviteLink => {
-  const group = mockGroupState(tripId);
-  const url = group.inviteUrl ?? group.groupUrl ?? `https://t.me/+metravel_trip_${tripId}`;
-  return {
-    url,
-    text: `Присоединяйтесь к Telegram-группе поездки в MeTravel: ${url}`,
-  };
-};
+const unavailableInvite = (): TripInviteLink => ({
+  isAvailable: false,
+  unavailableReason: TELEGRAM_GROUP_UNAVAILABLE_REASON,
+  url: '',
+  text: '',
+});
 
 // ── Публичные функции ───────────────────────────────────────────────────────
 
 export async function fetchTripTelegramGroup(
   tripId: number,
 ): Promise<TripTelegramGroup> {
-  if (USE_MOCK) return mockGroupState(tripId);
+  if (USE_MOCK) return unavailableGroup(tripId);
   try {
     const dto = await apiClient.get<TelegramGroupDto>(`/trips/${tripId}/telegram-group/`);
     return mapGroup(dto);
   } catch (error) {
     if (shouldFallbackToMock(error)) {
-      devWarn('[trip-telegram] group → mock fallback');
-      return mockGroupState(tripId);
+      devWarn('[trip-telegram] group → unavailable fallback');
+      return unavailableGroup(tripId);
     }
     throw error;
   }
@@ -146,7 +135,7 @@ export async function createTripTelegramGroup(
     group_url: input.groupUrl ?? null,
     invite_url: input.inviteUrl ?? null,
   };
-  if (USE_MOCK) return mockEnable(input);
+  if (USE_MOCK) return unavailableGroup(input.tripId);
   try {
     const dto = await apiClient.post<TelegramGroupDto>(
       `/trips/${input.tripId}/telegram-group/`,
@@ -155,15 +144,15 @@ export async function createTripTelegramGroup(
     return mapGroup(dto);
   } catch (error) {
     if (shouldFallbackToMock(error)) {
-      devWarn('[trip-telegram] create → mock fallback');
-      return mockEnable(input);
+      devWarn('[trip-telegram] create → unavailable fallback');
+      return unavailableGroup(input.tripId);
     }
     throw error;
   }
 }
 
 export async function fetchTripInviteLink(tripId: number): Promise<TripInviteLink> {
-  if (USE_MOCK) return mockInvite(tripId);
+  if (USE_MOCK) return unavailableInvite();
   try {
     const dto = await apiClient.post<InviteLinkDto>(
       `/trips/${tripId}/telegram-group/invite-link/`,
@@ -171,8 +160,8 @@ export async function fetchTripInviteLink(tripId: number): Promise<TripInviteLin
     return mapInvite(dto);
   } catch (error) {
     if (shouldFallbackToMock(error)) {
-      devWarn('[trip-telegram] invite-link → mock fallback');
-      return mockInvite(tripId);
+      devWarn('[trip-telegram] invite-link → unavailable fallback');
+      return unavailableInvite();
     }
     throw error;
   }

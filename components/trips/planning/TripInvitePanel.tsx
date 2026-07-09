@@ -10,6 +10,7 @@ import type { UserProfileDto } from '@/api/user';
 import { useInviteParticipants } from '@/hooks/usePlannedTripsApi';
 import { useSubscriptionsData } from '@/hooks/useSubscriptionsData';
 import { openExternalUrl } from '@/utils/externalLinks';
+import { buildTripPlanUrl, buildTripTelegramShareUrl } from '@/utils/tripPlanLinks';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface Props {
@@ -32,10 +33,12 @@ function TripInvitePanel({ trip }: Props) {
 
   const [selected, setSelected] = useState<number[]>([]);
   const [invitedCount, setInvitedCount] = useState<number | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
 
   if (!trip.isOwner) return null;
 
-  const tripUrl = `https://metravel.by/trips/plan/${trip.slug || trip.id}`;
+  const tripUrl = buildTripPlanUrl(trip);
+  const telegramShareUrl = buildTripTelegramShareUrl(trip);
 
   const toggle = (userId: number) => {
     setInvitedCount(null);
@@ -58,7 +61,17 @@ function TripInvitePanel({ trip }: Props) {
   };
 
   const handleShare = () => {
-    void openExternalUrl(`https://t.me/share/url?url=${encodeURIComponent(tripUrl)}`);
+    setShareError(null);
+    if (!telegramShareUrl) {
+      setShareError('Не удалось сформировать ссылку на поездку.');
+      return;
+    }
+    void (async () => {
+      const opened = await openExternalUrl(telegramShareUrl);
+      if (!opened) {
+        setShareError('Не удалось открыть Telegram. Ссылка на поездку доступна ниже.');
+      }
+    })();
   };
 
   return (
@@ -112,9 +125,11 @@ function TripInvitePanel({ trip }: Props) {
         label="Поделиться в Telegram"
         onPress={handleShare}
         variant="outline"
+        disabled={!telegramShareUrl}
         fullWidth
         testID="trip-invite-share"
       />
+      {shareError ? <Text style={styles.error}>{shareError}</Text> : null}
       <Text style={styles.url} selectable testID="trip-invite-url">
         {tripUrl}
       </Text>
