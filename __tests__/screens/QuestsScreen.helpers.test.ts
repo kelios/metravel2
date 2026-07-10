@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+
 import {
   ALLOWED_NEARBY_RADII_KM,
   COUNTRY_NAMES,
@@ -12,6 +15,27 @@ describe('QuestsScreen helpers', () => {
     expect(COUNTRY_NAMES.DE).toBe('Германия');
     expect(COUNTRY_NAMES.FR).toBe('Франция');
     expect(COUNTRY_NAMES.NL).toBe('Нидерланды');
+    // Регресс: раньше эти коды отсутствовали и заголовок группы падал на сырой
+    // код («GR», «HR», …) вместо русского названия страны.
+    expect(COUNTRY_NAMES.GR).toBe('Греция');
+    expect(COUNTRY_NAMES.HR).toBe('Хорватия');
+    expect(COUNTRY_NAMES.IT).toBe('Италия');
+    expect(COUNTRY_NAMES.PT).toBe('Португалия');
+    expect(COUNTRY_NAMES.RO).toBe('Румыния');
+    expect(COUNTRY_NAMES.RS).toBe('Сербия');
+  });
+
+  it('has a Russian name for every country code geoCountry can return', () => {
+    // Любой код из getCountryCodeByCoords должен иметь запись в COUNTRY_NAMES,
+    // иначе заголовок группы в каталоге показывает сырой ISO-код.
+    const source = readFileSync(
+      resolve(__dirname, '../../utils/geoCountry.ts'),
+      'utf8',
+    );
+    const codes = Array.from(source.matchAll(/code:\s*'([A-Z]{2})'/g)).map((m) => m[1]);
+    expect(codes.length).toBeGreaterThan(0);
+    const missing = codes.filter((code) => !COUNTRY_NAMES[code]);
+    expect(missing).toEqual([]);
   });
 
   it('keeps quests inside the visible map bounds when searching this area', () => {

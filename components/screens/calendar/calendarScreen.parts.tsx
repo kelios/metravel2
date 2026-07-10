@@ -13,7 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import Feather from '@expo/vector-icons/Feather'
 
 import { type TravelStatus } from '@/stores/travelStatusStore'
-import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader'
+import ProfileCollectionHeader, {
+  type ProfileCollectionBreadcrumb,
+} from '@/components/profile/ProfileCollectionHeader'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -399,16 +401,33 @@ export function DateEditorModal({
   )
 }
 
-export function CalendarSkeleton({ styles, showHeader, seoBlock, onBackPress }: {
+export function CalendarSkeleton({
+  styles,
+  showHeader,
+  seoBlock,
+  onBackPress,
+  breadcrumbs,
+  onBreadcrumbPress,
+}: {
   styles: CalendarStyles
   showHeader?: boolean
   seoBlock: React.ReactNode
   onBackPress: () => void
+  breadcrumbs?: ProfileCollectionBreadcrumb[]
+  onBreadcrumbPress?: (path: string) => void
 }) {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {seoBlock}
-      {showHeader && <ProfileCollectionHeader title="Мой календарь" onBackPress={onBackPress} />}
+      {showHeader && (
+        <ProfileCollectionHeader
+          title="Мой календарь"
+          onBackPress={onBackPress}
+          breadcrumbs={breadcrumbs}
+          onBreadcrumbPress={onBreadcrumbPress}
+          dense
+        />
+      )}
       <View style={styles.skeletonWrap}>
         {Array.from({ length: 3 }).map((_, index) => (
           <SkeletonLoader key={index} width="100%" height={200} borderRadius={12} />

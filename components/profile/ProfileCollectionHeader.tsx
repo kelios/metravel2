@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ComponentProps } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -7,10 +7,20 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus';
 
+type FeatherIconName = ComponentProps<typeof Feather>['name'];
+
+export type ProfileCollectionBreadcrumb = {
+  label: string;
+  path?: string;
+  icon?: FeatherIconName;
+};
+
 type Props = {
   title: string;
   subtitle?: string;
   onBackPress: () => void;
+  breadcrumbs?: ProfileCollectionBreadcrumb[];
+  onBreadcrumbPress?: (path: string) => void;
   showClearButton?: boolean;
   onClearPress?: () => void;
   clearAccessibilityLabel?: string;
@@ -34,6 +44,8 @@ export default function ProfileCollectionHeader({
   title,
   subtitle = 'Профиль',
   onBackPress,
+  breadcrumbs,
+  onBreadcrumbPress,
   showClearButton = false,
   onClearPress,
   clearAccessibilityLabel = 'Очистить',
@@ -45,6 +57,7 @@ export default function ProfileCollectionHeader({
   const colors = useThemedColors();
   const { isPhone } = useResponsive();
   const stackOnPhone = isPhone && !dense;
+  const visibleBreadcrumbs = breadcrumbs ?? [];
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -63,6 +76,51 @@ export default function ProfileCollectionHeader({
           flexGrow: 1,
           flexShrink: stackOnPhone ? 0 : 1,
           flexBasis: stackOnPhone ? 'auto' : 0,
+        },
+        breadcrumbRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          marginBottom: dense ? 4 : 6,
+          minHeight: 20,
+        },
+        breadcrumbSegment: {
+          flexDirection: 'row',
+          alignItems: 'center',
+        },
+        breadcrumbItem: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          paddingVertical: DESIGN_TOKENS.spacing.xs,
+          paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+          borderRadius: DESIGN_TOKENS.radii.sm,
+          minHeight: 32,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: 'transparent',
+        },
+        breadcrumbItemInteractive: {
+          ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+        },
+        breadcrumbItemLast: {
+          backgroundColor: colors.backgroundSecondary,
+          borderColor: colors.borderLight,
+        },
+        breadcrumbItemPressed: {
+          opacity: 0.7,
+          backgroundColor: colors.surfaceMuted,
+        },
+        breadcrumbSeparator: {
+          marginHorizontal: DESIGN_TOKENS.spacing.xs,
+        },
+        breadcrumbLabel: {
+          fontSize: 13,
+          color: colors.textMuted,
+          fontWeight: '500',
+        },
+        breadcrumbLabelLast: {
+          color: colors.text,
+          fontWeight: '600',
         },
         headerActions: {
           flexDirection: 'row',
@@ -131,6 +189,56 @@ export default function ProfileCollectionHeader({
 
   return (
     <View style={styles.header}>
+      {visibleBreadcrumbs.length > 0 && (
+        <View
+          style={styles.breadcrumbRow}
+          {...(Platform.OS === 'web' ? ({ role: 'navigation', 'aria-label': 'Breadcrumb' } as any) : {})}
+        >
+          {visibleBreadcrumbs.map((item, index) => {
+            const isLast = index === visibleBreadcrumbs.length - 1;
+            const isInteractive = Boolean(item.path && !isLast && onBreadcrumbPress);
+
+            return (
+              <View key={`${item.path ?? item.label}-${index}`} style={styles.breadcrumbSegment}>
+                {index > 0 && (
+                  <Feather
+                    name="chevron-right"
+                    size={14}
+                    color={colors.textMuted}
+                    style={styles.breadcrumbSeparator}
+                  />
+                )}
+                <Pressable
+                  onPress={() => {
+                    if (!item.path || isLast || !onBreadcrumbPress) return;
+                    onBreadcrumbPress(item.path);
+                  }}
+                  disabled={!isInteractive}
+                  accessibilityRole="button"
+                  accessibilityLabel={isLast ? `Текущая страница: ${item.label}` : `Перейти на ${item.label}`}
+                  {...(Platform.OS === 'web' && isLast ? ({ 'aria-current': 'page' } as any) : {})}
+                  style={({ pressed }) => [
+                    styles.breadcrumbItem,
+                    isInteractive && styles.breadcrumbItemInteractive,
+                    isLast && styles.breadcrumbItemLast,
+                    pressed && isInteractive && styles.breadcrumbItemPressed,
+                    globalFocusStyles.focusable,
+                  ]}
+                >
+                  {item.icon ? <Feather name={item.icon} size={13} color={colors.textMuted} /> : null}
+                  <Text
+                    style={[styles.breadcrumbLabel, isLast && styles.breadcrumbLabelLast]}
+                    numberOfLines={1}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
       <View style={styles.headerRow}>
         <View style={styles.headerTitleBlock}>
           <Text style={styles.title}>{title}</Text>

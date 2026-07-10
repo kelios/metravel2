@@ -29,6 +29,20 @@ jest.mock('@/api/user', () => ({
   deleteUserTravelStatus: jest.fn(() => Promise.resolve(null)),
 }))
 
+jest.mock('@/api/travelUserQueries', () => ({
+  fetchMyTravels: jest.fn(() => Promise.resolve({ data: [], total: 0 })),
+  unwrapMyTravelsPayload: jest.fn((payload: any) => {
+    if (Array.isArray(payload)) return { items: payload, total: payload.length, engagementSummary: null }
+    if (Array.isArray(payload?.data)) {
+      return { items: payload.data, total: Number(payload.total ?? payload.count ?? payload.data.length), engagementSummary: null }
+    }
+    if (Array.isArray(payload?.results)) {
+      return { items: payload.results, total: Number(payload.count ?? payload.total ?? payload.results.length), engagementSummary: null }
+    }
+    return { items: [], total: Number(payload?.total ?? payload?.count ?? 0), engagementSummary: null }
+  }),
+}))
+
 import { getTravelStatusCalendarDate, parseTravelStatusDateParts, useTravelStatusStore } from '@/stores/travelStatusStore'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 
@@ -36,6 +50,10 @@ const { fetchUserTravelStatuses, upsertUserTravelStatus, deleteUserTravelStatus 
   fetchUserTravelStatuses: jest.Mock
   upsertUserTravelStatus: jest.Mock
   deleteUserTravelStatus: jest.Mock
+}
+
+const { fetchMyTravels } = require('@/api/travelUserQueries') as {
+  fetchMyTravels: jest.Mock
 }
 
 const getIsoDayOfWeek = (date: string | undefined) => {
@@ -71,6 +89,7 @@ beforeEach(() => {
   })
   deleteUserTravelStatus.mockResolvedValue(null)
   fetchUserTravelStatuses.mockResolvedValue([])
+  fetchMyTravels.mockResolvedValue({ data: [], total: 0 })
   useTravelStatusStore.setState({ entries: [], _userId: null })
 })
 
@@ -459,6 +478,133 @@ describe('travelStatusStore', () => {
       expect(date).toMatch(/^2024-09-/)
       expect([0, 6]).toContain(getIsoDayOfWeek(date))
       expect(useTravelStatusStore.getState().getByMonth(2024, 9)).toEqual([entry])
+    })
+
+    it('добавляет авторские путешествия как default visited и не дублирует explicit status', async () => {
+      fetchUserTravelStatuses.mockResolvedValueOnce([
+        {
+          travel_id: 202,
+          status: 'planned',
+          planned_date: '2026-05-21',
+          visited_date: null,
+          added_at: '2026-05-12T10:00:00Z',
+          updated_at: '2026-05-12T10:00:00Z',
+          travel: {
+            id: 202,
+            name: 'Explicit planned',
+            slug: 'explicit-planned',
+            url: '/travels/explicit-planned',
+            travel_image_thumb_url: '',
+            countryName: 'Польша',
+          },
+        },
+      ])
+      fetchMyTravels.mockResolvedValueOnce({
+        data: [
+          {
+            id: 101,
+            name: 'Authored visited',
+            slug: 'authored-visited',
+            url: '/travels/authored-visited',
+            travel_image_thumb_url: 'https://example.com/a.webp',
+            countryName: 'Италия',
+            year: 2024,
+            month: [7],
+            monthName: 'Июль',
+          },
+          {
+            id: 202,
+            name: 'Authored but planned',
+            slug: 'explicit-planned',
+            url: '/travels/explicit-planned',
+            countryName: 'Польша',
+            year: 2026,
+            month: [5],
+            monthName: 'Май',
+          },
+        ],
+        total: 2,
+      })
+
+      await act(() => useTravelStatusStore.getState().loadLocal('77'))
+
+      expect(fetchMyTravels).toHaveBeenCalledWith({
+        user_id: '77',
+        page: 1,
+        perPage: 9999,
+        throwOnError: true,
+      })
+
+      const entries = useTravelStatusStore.getState().entries
+      expect(entries).toHaveLength(2)
+
+      const byId = Object.fromEntries(entries.map((entry) => [String(entry.id), entry]))
+      expect(byId['101']).toEqual(expect.objectContaining({
+        status: 'visited',
+        title: 'Authored visited',
+        url: '/travels/authored-visited',
+        travelYear: '2024',
+        travelMonth: ['7'],
+        travelMonthName: 'Июль',
+      }))
+      expect(getTravelStatusCalendarDate(byId['101'])).toMatch(/^2024-07-/)
+
+      expect(byId['202']).toEqual(expect.objectContaining({
+        status: 'planned',
+        plannedDate: '2026-05-21',
+        title: 'Explicit planned',
+        travelYear: '2026',
+        travelMonth: ['5'],
+        travelMonthName: 'Май',
+      }))
+    })
+
+    it('обогащает explicit visited без даты годом и месяцем из авторского списка', async () => {
+      fetchUserTravelStatuses.mockResolvedValueOnce([
+        {
+          travel_id: 303,
+          status: 'visited',
+          planned_date: null,
+          visited_date: null,
+          added_at: '2026-05-12T10:00:00Z',
+          updated_at: '2026-05-12T10:00:00Z',
+          travel: {
+            id: 303,
+            name: 'Server status without period',
+            slug: 'server-status-without-period',
+            url: '/travels/server-status-without-period',
+            travel_image_thumb_url: '',
+            countryName: 'Беларусь',
+          },
+        },
+      ])
+      fetchMyTravels.mockResolvedValueOnce({
+        data: [{
+          id: 303,
+          name: 'Authored metadata source',
+          slug: 'server-status-without-period',
+          countryName: 'Беларусь',
+          year: '2025',
+          month: [8],
+          monthName: 'Август',
+        }],
+        total: 1,
+      })
+
+      await act(() => useTravelStatusStore.getState().loadLocal('77'))
+
+      const entry = useTravelStatusStore.getState().entries[0]
+      const date = getTravelStatusCalendarDate(entry)
+
+      expect(entry).toEqual(expect.objectContaining({
+        status: 'visited',
+        title: 'Server status without period',
+        travelYear: '2025',
+        travelMonth: ['8'],
+        travelMonthName: 'Август',
+      }))
+      expect(date).toMatch(/^2025-08-/)
+      expect([0, 6]).toContain(getIsoDayOfWeek(date))
     })
 
     it('не падает и сохраняет локальные статусы, если серверная синхронизация упала (offline)', async () => {

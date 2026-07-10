@@ -7,6 +7,7 @@ import { buildTravelMonthFallbackDate } from '@/utils/travelCalendarDate'
 const TRAVEL_STATUS_KEY = 'metravel_travel_status'
 
 const getUserApi = async () => import('@/api/user')
+const getTravelUserApi = async () => import('@/api/travelUserQueries')
 
 export type TravelStatus = 'visited' | 'planned' | 'wishlist'
 
@@ -53,6 +54,59 @@ const normalizeTravelMonth = (value: unknown): string | string[] | undefined => 
     return items.length > 0 ? items : undefined
   }
   return normalizeTravelMonthItem(value)
+}
+
+const normalizeTravelId = (value: unknown): string | number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim()) {
+    const text = value.trim()
+    const numeric = Number(text)
+    return Number.isInteger(numeric) && String(numeric) === text ? numeric : text
+  }
+  return undefined
+}
+
+const normalizeTravelUrl = (item: Record<string, unknown>, id: string | number): string => {
+  const rawUrl = normalizeOptionalString(item.url ?? item.urlTravel ?? item.href)
+  const rawSlug = normalizeOptionalString(item.slug)
+  if (rawUrl) {
+    const cleanUrl = rawUrl.split('?')[0]?.split('#')[0] || rawUrl
+    if (cleanUrl.includes('/travels/')) return cleanUrl
+    if (cleanUrl.startsWith('/')) return cleanUrl
+  }
+  return rawSlug ? `/travels/${rawSlug}` : `/travels/${String(id)}`
+}
+
+const normalizeAuthoredTravelEntry = (item: unknown): TravelStatusEntry | null => {
+  if (!isRecord(item)) return null
+  const id = normalizeTravelId(item.id ?? item.travel_id ?? item._id)
+  if (id === undefined) return null
+
+  const title = normalizeOptionalString(item.name ?? item.title) ?? `Путешествие ${String(id)}`
+  const imageUrl = normalizeOptionalString(
+    item.travel_image_thumb_url ??
+      item.travel_image_thumb_small_url ??
+      item.travelImageThumbUrl ??
+      item.travelImageThumbSmallUrl ??
+      item.imageUrl
+  )
+  const visitedDate = normalizeOptionalString(item.visitedDate ?? item.visited_date)
+
+  return normalizeStatusDates({
+    id,
+    type: 'travel' as const,
+    title,
+    url: normalizeTravelUrl(item, id),
+    status: 'visited' as const,
+    addedAt: parseServerTimestamp(item.updated_at ?? item.created_at),
+    imageUrl,
+    country: normalizeOptionalString(item.countryName ?? item.country_name ?? item.country),
+    city: normalizeOptionalString(item.cityName ?? item.city_name ?? item.city),
+    visitedDate,
+    travelYear: normalizeOptionalString(item.year),
+    travelMonth: normalizeTravelMonth(item.month),
+    travelMonthName: normalizeOptionalString(item.monthName ?? item.month_name),
+  })
 }
 
 export const parseTravelStatusDateParts = (value: unknown): { year: number; month: number; day: number } | null => {
@@ -190,6 +244,56 @@ const normalizeServerStatusEntry = (item: unknown): TravelStatusEntry | null => 
   })
 }
 
+const mergeStatusAndAuthoredEntries = (
+  explicitEntries: TravelStatusEntry[],
+  authoredEntries: TravelStatusEntry[]
+): TravelStatusEntry[] => {
+  const authoredById = new Map<string, TravelStatusEntry>()
+  authoredEntries.forEach((entry) => {
+    authoredById.set(String(entry.id), entry)
+  })
+
+  const mergedById = new Map<string, TravelStatusEntry>()
+  explicitEntries.forEach((entry) => {
+    const authored = authoredById.get(String(entry.id))
+    mergedById.set(String(entry.id), authored ? {
+      ...authored,
+      ...entry,
+      title: entry.title || authored.title,
+      url: entry.url || authored.url,
+      imageUrl: entry.imageUrl ?? authored.imageUrl,
+      country: entry.country ?? authored.country,
+      city: entry.city ?? authored.city,
+      travelYear: entry.travelYear ?? authored.travelYear,
+      travelMonth: entry.travelMonth ?? authored.travelMonth,
+      travelMonthName: entry.travelMonthName ?? authored.travelMonthName,
+    } : entry)
+  })
+
+  authoredEntries.forEach((entry) => {
+    const key = String(entry.id)
+    if (!mergedById.has(key)) {
+      mergedById.set(key, entry)
+    }
+  })
+
+  return Array.from(mergedById.values())
+}
+
+const fetchAuthoredTravelStatusEntries = async (userId: string | number): Promise<TravelStatusEntry[]> => {
+  const { fetchMyTravels, unwrapMyTravelsPayload } = await getTravelUserApi()
+  const payload = await fetchMyTravels({
+    user_id: userId,
+    page: 1,
+    perPage: 9999,
+    throwOnError: true,
+  })
+  const { items } = unwrapMyTravelsPayload(payload)
+  return items
+    .map(normalizeAuthoredTravelEntry)
+    .filter((item): item is TravelStatusEntry => item !== null)
+}
+
 const getStorageKey = (userId: string | null): string =>
   userId ? `${TRAVEL_STATUS_KEY}_${userId}` : TRAVEL_STATUS_KEY
 
@@ -312,17 +416,30 @@ export const useTravelStatusStore = create<TravelStatusState>((set, get) => ({
 
       if (!userId) return
 
-      const { fetchUserTravelStatuses } = await getUserApi()
-      const serverEntries = (await fetchUserTravelStatuses(userId, { perPage: 9999 }))
-        .map(normalizeServerStatusEntry)
-        .filter((item): item is TravelStatusEntry => item !== null)
+      let explicitEntries = localEntries
+      try {
+        const { fetchUserTravelStatuses } = await getUserApi()
+        explicitEntries = (await fetchUserTravelStatuses(userId, { perPage: 9999 }))
+          .map(normalizeServerStatusEntry)
+          .filter((item): item is TravelStatusEntry => item !== null)
+      } catch (error) {
+        devWarn('Не удалось синхронизировать явные статусы путешествий с сервером:', error)
+      }
+
+      let authoredEntries: TravelStatusEntry[] = []
+      try {
+        authoredEntries = await fetchAuthoredTravelStatusEntries(userId)
+      } catch (error) {
+        devWarn('Не удалось загрузить авторские путешествия для календаря:', error)
+      }
 
       // Пользователь сменился (logout/смена аккаунта) пока шёл серверный фетч —
       // не затираем актуальные записи устаревшим ответом.
       if (get()._userId !== userId) return
 
-      set({ entries: serverEntries, _userId: userId })
-      await persistEntries(serverEntries, userId)
+      const mergedEntries = mergeStatusAndAuthoredEntries(explicitEntries, authoredEntries)
+      set({ entries: mergedEntries, _userId: userId })
+      await persistEntries(mergedEntries, userId)
     } catch (error) {
       // Best-effort серверная синхронизация: локальные статусы уже загружены
       // выше, поэтому сбой фетча не фатален — предупреждение, не ошибка.

@@ -19,7 +19,9 @@ import {
   type TravelStatus,
 } from '@/stores/travelStatusStore'
 import EmptyState from '@/components/ui/EmptyState'
-import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader'
+import ProfileCollectionHeader, {
+  type ProfileCollectionBreadcrumb,
+} from '@/components/profile/ProfileCollectionHeader'
 import MiniCalendar from '@/components/calendar/MiniCalendar'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildLoginHref } from '@/utils/authNavigation'
@@ -72,6 +74,12 @@ function parseStatusParam(value: unknown): TravelStatus | null {
   if (value === 'visited' || value === 'planned' || value === 'wishlist') return value
   return null
 }
+
+const CALENDAR_BREADCRUMBS: ProfileCollectionBreadcrumb[] = [
+  { label: 'Главная', path: '/', icon: 'home' },
+  { label: 'Профиль', path: '/profile' },
+  { label: 'Мой календарь', path: '/calendar' },
+]
 
 export default function CalendarScreen() {
   const router = useRouter()
@@ -162,6 +170,10 @@ export default function CalendarScreen() {
 
   const handleBackToProfile = useCallback(() => {
     router.back()
+  }, [router])
+
+  const handleBreadcrumbPress = useCallback((path: string) => {
+    router.push(path as any)
   }, [router])
 
   const handleChangeTab = useCallback((tab: TravelStatus) => {
@@ -320,7 +332,16 @@ export default function CalendarScreen() {
   }
 
   if (!hasLoadedLocalStatus) {
-    return <CalendarSkeleton styles={styles} showHeader seoBlock={seoBlock} onBackPress={handleBackToProfile} />
+    return (
+      <CalendarSkeleton
+        styles={styles}
+        showHeader
+        seoBlock={seoBlock}
+        onBackPress={handleBackToProfile}
+        breadcrumbs={CALENDAR_BREADCRUMBS}
+        onBreadcrumbPress={handleBreadcrumbPress}
+      />
+    )
   }
 
   const emptyConfig = EMPTY_STATE[activeTab]
@@ -331,7 +352,13 @@ export default function CalendarScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {seoBlock}
-      <ProfileCollectionHeader title="Мой календарь" onBackPress={handleBackToProfile} dense />
+      <ProfileCollectionHeader
+        title="Мой календарь"
+        onBackPress={handleBackToProfile}
+        breadcrumbs={CALENDAR_BREADCRUMBS}
+        onBreadcrumbPress={handleBreadcrumbPress}
+        dense
+      />
 
       <CalendarTabs
         activeTab={activeTab}

@@ -23,7 +23,7 @@ async function setupFakeAuth(page: import('@playwright/test').Page) {
   });
 }
 
-// Helper: mock travels API; календарь больше не должен автоматически подмешивать авторские маршруты.
+// Helper: mock authored travels API; календарь добавляет опубликованные авторские маршруты как default "Был".
 async function mockMyTravels(
   page: import('@playwright/test').Page,
   travels: unknown[] = []
@@ -181,7 +181,7 @@ test.describe('Calendar @smoke', () => {
     }
   });
 
-  test('"Был" tab ignores authored travels without an explicit user status', async ({ page }) => {
+  test('"Был" tab shows authored travels as default visited without an explicit user status', async ({ page }) => {
     const mockTravel = {
       id: 9001,
       name: 'Тестовое путешествие E2E',
@@ -192,6 +192,9 @@ test.describe('Calendar @smoke', () => {
       cityName: 'Минск',
       publish: 1,
       moderation: 1,
+      year: 2026,
+      month: [5],
+      monthName: 'Май',
       created_at: new Date().toISOString(),
     };
 
@@ -232,14 +235,12 @@ test.describe('Calendar @smoke', () => {
     await wasTab.click();
     await page.waitForTimeout(500);
 
-    // Authored travel must not appear automatically without an explicit personal status.
+    // Authored published travel appears in "Был" as a derived default status.
     const travelCard = page.getByText(/Тестовое путешествие E2E/i);
-    await expect(travelCard.first()).toBeHidden({ timeout: 8_000 }).catch(async () => {
-      await expect(travelCard.first()).not.toBeVisible()
-    })
+    await expect(travelCard.first()).toBeVisible({ timeout: 15_000 });
 
-    const emptyState = page.getByText(/Нет посещённых мест|Найти путешествия/i)
-    await expect(emptyState.first()).toBeVisible({ timeout: 8_000 })
+    const cards = page.getByTestId(/^calendar-travel-card-/);
+    await expect(cards).toHaveCount(1);
   });
 
   test('"Планирую" tab shows MiniCalendar grid', async ({ page }) => {

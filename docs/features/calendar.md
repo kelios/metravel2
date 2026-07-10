@@ -1,13 +1,13 @@
 # Фича: Календарь путешествий
 
-**Последняя актуализация:** 2026-05-12
-**Статус:** ✅ v1 реализован — локальное хранение, фронт готов
+**Последняя актуализация:** 2026-07-10
+**Статус:** ✅ реализован — explicit статусы синхронизируются с API, авторские опубликованные путешествия добавляются как default `Был`
 
 ## TL;DR
 
-Персональный календарь, где пользователь видит все свои путешествия по трём статусам: **Был**, **Планирую** (с датой), **Хочу** (без даты). Статус назначается со страницы путешествия.
+Персональный календарь, где пользователь видит все свои авторские путешествия и личные статусы по трём разделам: **Был**, **Планирую** (с датой), **Хочу** (без даты). Авторские опубликованные путешествия по умолчанию считаются **Был**; личный explicit status, выбранный пользователем, имеет приоритет.
 
-Календарь показывает только **явно выбранные статусы пользователя**. Избранное и авторские путешествия не должны попадать сюда автоматически без выбранного статуса.
+Правило дат для **Был**: если есть точная `visited_date`, показываем её; если точной даты нет, но у путешествия есть месяц и год, фронт детерминированно раскладывает запись на выходные этого месяца. Если explicit status отсутствует, опубликованное авторское путешествие попадает в **Был** как default-запись.
 
 ---
 
@@ -61,7 +61,7 @@
 
 ## Данные
 
-### Клиентский стейт (Zustand) — только фронт, v1
+### Клиентский стейт (Zustand + API merge)
 
 ```typescript
 // stores/travelStatusStore.ts
@@ -91,13 +91,19 @@ type TravelStatusEntry = {
 
 Хранилище: `AsyncStorage`, ключ `metravel_travel_status_{userId}`.
 
-### Серверный стейт (React Query) — v2, требует бэкенда
+При загрузке авторизованного пользователя стор объединяет:
+- explicit записи из `GET /api/user/{id}/travel-statuses/`;
+- опубликованные авторские путешествия из списка “Мои путешествия” как default `visited`.
 
-В v1 только локальное хранение. В v2 синхронизация через API (см. раздел «Что нужно от бэкенда»).
+Если один и тот же travel есть в explicit status и в авторском списке, explicit status побеждает, а metadata путешествия (`year`, `month`, `monthName`, обложка, страна) используется для календарного fallback.
+
+### Серверный стейт
+
+Explicit статусы синхронизируются через `GET/POST/PATCH/DELETE /api/user/{id}/travel-statuses/`. Default `visited` для авторских путешествий вычисляется на фронте из существующего списка travel и не требует отдельной backend-миграции.
 
 ---
 
-## Поток данных (v1, только фронт)
+## Поток данных
 
 ```
 Страница путешествия
@@ -108,6 +114,11 @@ type TravelStatusEntry = {
   ← обновление UI во всех подписчиках
 
 Экран /calendar
+  → travelStatusStore.loadLocal(userId)
+     → local cache
+     → /user/{id}/travel-statuses/ explicit statuses
+     → /travels/?where.user_id=... authored travels as default visited
+     → merge: explicit status wins, authored metadata enriches fallback dates
   → travelStatusStore.getByStatus(activeTab)
   → список карточек TabTravelCard
   → MiniCalendar (если activeTab === 'planned')
@@ -119,7 +130,7 @@ type TravelStatusEntry = {
 
 ## Что нужно реализовать на фронтенде
 
-### ✅ Обязательно (v1 — локальное хранение)
+### ✅ Обязательно
 
 - [x] **`stores/travelStatusStore.ts`**
   - Zustand-стор с AsyncStorage-персистом
@@ -169,19 +180,16 @@ type TravelStatusEntry = {
 - [x] **`components/layout/AppProvidersDeferredRuntime.tsx`**
   - `travelStatusStore.loadLocal` вызывается при старте приложения
 
-### 🔁 Опционально (v2 — после появления API)
+### 🔁 Опционально / будущее
 
-- [ ] `api/travelStatus.ts` — клиент для серверных эндпоинтов
-- [ ] `api/travelStatusQueries.ts` — React Query hooks (useQuery + useMutation)
-- [ ] Синхронизация локального состояния с сервером при логине
 - [ ] Конфликт-резолюшн локаль vs. сервер (prefer server)
 - [ ] Offline-queue для изменений статусов
 
 ---
 
-## Что нужно от бэкенда (сейчас отсутствует)
+## Backend contract
 
-### 🔴 Критично для v2 (серверная синхронизация)
+### Explicit status CRUD
 
 #### 1. CRUD для статусов путешествий
 
@@ -269,7 +277,7 @@ POST /api/user/{id}/travel-statuses/bulk-sync/
 
 ---
 
-## Зависимости (v1, только фронт)
+## Зависимости
 
 - Нет новых npm-пакетов
 - `@react-native-community/datetimepicker` — уже в expo (входит в Expo SDK)
@@ -297,16 +305,16 @@ POST /api/user/{id}/travel-statuses/bulk-sync/
 4. app/(tabs)/calendar.tsx                  ← зависит от стора и MiniCalendar
 5. Подключение в _layout.tsx и profile.tsx  ← роутинг и навигация
 6. Встройка TravelStatusButton в детали     ← последнее, чтобы не сломать existing
-7. (v2) api/travelStatus.ts + Queries       ← после появления API на бэке
+7. Серверная синхронизация explicit статусов ← уже реализована через `api/user`
 ```
 
 ---
 
-## Известные ограничения v1
+## Известные ограничения
 
-- Статусы хранятся локально — не синхронизируются между устройствами
-- Без серверного хранения нет истории изменений
-- При разлогине / очистке данных статусы теряются (аналогично текущему поведению `favorites` без auth)
+- Default `Был` для авторских путешествий вычисляется на фронте и не создаёт explicit status на сервере.
+- Если explicit status есть, он побеждает default `Был`.
+- Если у `Был` нет точной `visited_date`, календарь использует детерминированный fallback по месяцу и году путешествия.
 
 ---
 
@@ -318,4 +326,3 @@ POST /api/user/{id}/travel-statuses/bulk-sync/
 - `stores/viewHistoryStore.ts` — образец для travelStatusStore
 - `stores/favoritesStore.ts` — образец оптимистичного обновления + server sync
 - `components/travel/FavoriteButton.tsx` — образец для TravelStatusButton
-

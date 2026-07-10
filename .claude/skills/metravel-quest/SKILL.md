@@ -148,6 +148,15 @@ description: >-
    через веб-поиск. Проверь достоверность фактов, упорядочь в пеший маршрут.
 2. **Напиши данные** — `scripts/<city>-quest-data.js` по образцу
    `warsaw-quest-data.js`, с явным `answer_pattern` на каждом шаге.
+2a. **Русское название страны (иначе в каталоге будет сырой код).** Каталог
+   квестов группирует города по стране и берёт заголовок группы из
+   `COUNTRY_NAMES` в `screens/tabs/QuestsScreen.helpers.ts`, а код страны —
+   из `utils/geoCountry.ts` (`getCountryCodeByCoords` по координатам города).
+   Для новой страны: (а) убедись, что её ISO alpha-2 код с bbox есть в
+   `geoCountry.ts` — иначе добавь; (б) убедись, что этот код есть в
+   `COUNTRY_NAMES` с русским названием — иначе добавь (напр. `GR: 'Греция'`).
+   Без записи в `COUNTRY_NAMES` заголовок группы покажет сырой код («GR», «HR»)
+   вместо «Греция»/«Хорватия». Регресс-страж: `__tests__/screens/QuestsScreen.helpers.test.ts`.
 3. **Напиши/переиспользуй миграцию** — `scripts/migrate-<city>-quest.js`,
    идемпотентную (город→квест→шаги→финал), по образцу
    `scripts/migrate-warsaw-quest.js`. Квест создаётся со `status=1`.
