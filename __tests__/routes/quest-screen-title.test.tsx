@@ -57,6 +57,12 @@ jest.mock('@/hooks/useTheme', () => ({
 jest.mock('@/hooks/useQuestsApi', () => ({
   useQuestBundle: (...args: any[]) => mockUseQuestBundle(...args),
   useQuestProgressSync: (...args: any[]) => mockUseQuestProgressSync(...args),
+  useQuestReviews: () => ({
+    data: [],
+    isLoading: false,
+    isError: false,
+    refetch: jest.fn(),
+  }),
 }))
 
 jest.mock('@/hooks/useQuestRatingMeta', () => ({
