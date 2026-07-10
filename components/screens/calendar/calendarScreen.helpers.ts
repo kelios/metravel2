@@ -4,9 +4,11 @@ import type Feather from '@expo/vector-icons/Feather'
 import {
   getTravelStatusCalendarDate,
   parseTravelStatusDateParts,
+  type TravelModerationState,
   type TravelStatus,
   type TravelStatusEntry,
 } from '@/stores/travelStatusStore'
+import type { ThemedColors } from '@/hooks/useTheme'
 import {
   getDateFieldForTravelStatus,
   getExplicitTravelStatusDate,
@@ -72,6 +74,41 @@ export const TAB_HINTS: Record<TravelStatus, string> = {
 }
 
 export const CARD_META_ICON_STYLE = { marginRight: 4 } as const
+
+export type ModerationBadgeConfig = {
+  label: string
+  icon: IconName
+  background: string
+  border: string
+  text: string
+}
+
+// Бейдж черновика / на-модерации на карточке календаря. Опубликованные
+// путешествия (moderationState === undefined) бейджа не получают.
+export const getModerationBadge = (
+  state: TravelModerationState | undefined,
+  colors: ThemedColors
+): ModerationBadgeConfig | null => {
+  if (state === 'draft') {
+    return {
+      label: 'Черновик',
+      icon: 'edit-3',
+      background: colors.warningLight,
+      border: colors.warning,
+      text: colors.warningDark,
+    }
+  }
+  if (state === 'pending') {
+    return {
+      label: 'На модерации',
+      icon: 'clock',
+      background: colors.infoLight,
+      border: colors.info,
+      text: colors.infoDark,
+    }
+  }
+  return null
+}
 
 export const DEFAULT_BUCKETS: StatusBuckets = {
   visited: [],

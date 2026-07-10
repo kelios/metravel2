@@ -103,6 +103,22 @@ async function collectFromApi() {
     page++
   }
 
+  // Городские квесты: /quests + детальные /quests/{cityId}/{quest_id}
+  const questsIndex = `${SITE}/quests`
+  if (!seen.has(questsIndex)) { seen.add(questsIndex); urls.push(questsIndex) }
+  let questsUrl = `${API_BASE}/api/quests/`
+  while (questsUrl) {
+    const payload = await fetchJson(questsUrl)
+    const items = Array.isArray(payload) ? payload : (payload.results || payload.data || [])
+    for (const q of items) {
+      const cityId = q.city && (q.city.id || q.city) != null ? (q.city.id || q.city) : q.city_id
+      if (!cityId || !q.quest_id) continue
+      const loc = `${SITE}/quests/${cityId}/${q.quest_id}`
+      if (!seen.has(loc)) { seen.add(loc); urls.push(loc) }
+    }
+    questsUrl = !Array.isArray(payload) && payload.next ? payload.next : null
+  }
+
   return urls
 }
 

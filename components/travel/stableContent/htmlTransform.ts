@@ -232,9 +232,15 @@ const escapeHtmlAttr = (value: string) =>
     .replace(/'/g, '&#39;')
 
 const buildRichImageBackdropDeclaration = (src: string) => {
+  // src arrives HTML-escaped (&amp;) from the already-normalized <img> markup. CSS url()
+  // does NOT decode HTML entities, so embedding it verbatim makes the ::before backdrop
+  // fetch a different, malformed URL (literal &amp;) than the foreground <img> — doubling
+  // the weserv request for every eager framed image. Decode entities first so the backdrop
+  // URL matches the foreground exactly (cache hit, zero extra request).
+  const decoded = decodeEntities(String(src || '').trim())
   // CSS-escape for the url('...') context, then HTML-escape so the declaration is safe to
   // place inside a style="..." attribute without breaking out of the attribute or the tag.
-  const cssSafe = String(src || '').trim().replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+  const cssSafe = decoded.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
   if (!cssSafe) return ''
   return escapeHtmlAttr(`--travel-rich-image:url('${cssSafe}')`)
 }

@@ -32,6 +32,7 @@ import {
   getCalendarDate,
   getDateEditorSubtitle,
   getLocationLabel,
+  getModerationBadge,
   getTravelPeriodLabel,
 } from './calendarScreen.helpers'
 
@@ -169,6 +170,7 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
   const calendarDate = getCalendarDate(entry)
   const hasCalendarDate = Boolean(calendarDate)
   const accentColor = badgeColors[entry.status]
+  const moderationBadge = getModerationBadge(entry.moderationState, colors)
   const location = getLocationLabel(entry)
   const travelPeriod = getTravelPeriodLabel(entry)
   const explicitDate = getExplicitTravelStatusDate(entry)
@@ -233,6 +235,22 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
       >
         <Feather name="trash-2" size={15} color={colors.danger} />
       </Pressable>
+
+      {moderationBadge && (
+        <View
+          style={[
+            styles.moderationBadge,
+            { backgroundColor: moderationBadge.background, borderColor: moderationBadge.border },
+          ]}
+          accessibilityLabel={moderationBadge.label}
+          {...(Platform.OS === 'web' ? ({ 'aria-label': moderationBadge.label } as any) : null)}
+        >
+          <Feather name={moderationBadge.icon} size={11} color={moderationBadge.text} />
+          <Text style={[styles.moderationBadgeText, { color: moderationBadge.text }]}>
+            {moderationBadge.label}
+          </Text>
+        </View>
+      )}
 
       <Pressable
         style={[

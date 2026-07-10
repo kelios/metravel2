@@ -9,6 +9,41 @@ type LightboxImage = { src: string; alt: string }
 
 const escapeCssUrl = (value: string) => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
 
+// weserv.nl is a third-party resize proxy: under cold-cache bursts it drops/hangs a large
+// share of requests, leaving body images broken (the alt-text placeholder). Body photos on
+// legacy articles live on the project's own S3 bucket, which serves the un-resized original
+// reliably. On weserv failure/timeout we fall back to that origin URL — heavier, but a shown
+// image beats a broken one. Durable fix (server-side resize of S3 uploads) is a backend task.
+const WESERV_FALLBACK_TIMEOUT_MS = 3500
+
+const originFromWeservSrc = (src: string): string | null => {
+  const match = /images\.weserv\.nl\/\?url=([^&]+)/i.exec(String(src || ''))
+  if (!match) return null
+  try {
+    let decoded = decodeURIComponent(match[1])
+    if (!/^https?:\/\//i.test(decoded)) decoded = `https://${decoded}`
+    return decoded
+  } catch {
+    return null
+  }
+}
+
+const isWeservImage = (img: HTMLImageElement) =>
+  /images\.weserv\.nl/i.test(img.currentSrc || img.getAttribute('src') || '')
+
+const imageLoadedOk = (img: HTMLImageElement) => img.complete && img.naturalWidth > 0
+
+const swapWeservImageToOrigin = (img: HTMLImageElement) => {
+  if (img.dataset.weservFallback === '1') return
+  const origin = originFromWeservSrc(img.currentSrc || img.getAttribute('src') || '')
+  if (!origin) return
+  img.dataset.weservFallback = '1'
+  img.removeAttribute('srcset')
+  img.setAttribute('src', origin)
+  const frame = img.closest('.rich-image-frame') as HTMLElement | null
+  frame?.style.setProperty('--travel-rich-image', `url('${escapeCssUrl(origin)}')`)
+}
+
 // Promote a network-gated body image to its real source and restore the blur
 // backdrop var on its frame (htmlTransform withheld it so the CSS ::before did
 // not fetch the full image eagerly).
@@ -132,15 +167,39 @@ export function useStableContentWebEffects({
 
     const startLoad = (img: HTMLImageElement) => {
       inflight += 1
-      const done = () => {
-        img.removeEventListener('load', done)
-        img.removeEventListener('error', done)
+      let finished = false
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const finish = () => {
+        if (finished) return
+        finished = true
+        if (timer !== undefined) clearTimeout(timer)
+        img.removeEventListener('load', onLoad)
+        img.removeEventListener('error', onError)
         inflight = Math.max(0, inflight - 1)
         pump()
       }
-      img.addEventListener('load', done, { once: true })
-      img.addEventListener('error', done, { once: true })
+      const onLoad = () => finish()
+      const onError = () => {
+        swapWeservImageToOrigin(img)
+        finish()
+      }
+      img.addEventListener('load', onLoad, { once: true })
+      img.addEventListener('error', onError, { once: true })
       revealLazyImage(img)
+      // A hung weserv request fires neither load nor error — it would pin this slot forever
+      // and stall the queue (MAX_INFLIGHT), so images further down never load. After a bounded
+      // wait, fall back to the reliable origin and free the slot (only stalled images pay this).
+      if (isWeservImage(img)) {
+        timer = setTimeout(() => {
+          if (finished) return
+          if (imageLoadedOk(img)) {
+            finish()
+            return
+          }
+          swapWeservImageToOrigin(img)
+          finish()
+        }, WESERV_FALLBACK_TIMEOUT_MS)
+      }
     }
 
     const pump = () => {
@@ -181,6 +240,36 @@ export function useStableContentWebEffects({
       io = null
       queue.length = 0
       inflight = 0
+    }
+  }, [prepared])
+
+  // Eager (above-the-fold, non-gated) body images carry a real weserv src for LCP/SSG, so
+  // they bypass the IO gate's timeout+fallback above. Guard them separately: if a weserv
+  // eager image errors or stalls, swap it to its reliable origin so the top of the article
+  // (the frames the user sees first) never stays broken.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (typeof document === 'undefined') return
+    const eager = Array.from(
+      document.querySelectorAll<HTMLImageElement>(`.${WEB_RICH_TEXT_CLASS} img:not(.rich-lazy-img)`)
+    ).filter((img) => isWeservImage(img) && !imageLoadedOk(img))
+    if (!eager.length) return
+
+    const timers: Array<ReturnType<typeof setTimeout>> = []
+    const cleanups: Array<() => void> = []
+    eager.forEach((img) => {
+      const onError = () => swapWeservImageToOrigin(img)
+      img.addEventListener('error', onError, { once: true })
+      const timer = setTimeout(() => {
+        if (!imageLoadedOk(img)) swapWeservImageToOrigin(img)
+      }, WESERV_FALLBACK_TIMEOUT_MS)
+      timers.push(timer)
+      cleanups.push(() => img.removeEventListener('error', onError))
+    })
+
+    return () => {
+      timers.forEach((t) => clearTimeout(t))
+      cleanups.forEach((fn) => fn())
     }
   }, [prepared])
 

@@ -11,6 +11,10 @@ const getTravelUserApi = async () => import('@/api/travelUserQueries')
 
 export type TravelStatus = 'visited' | 'planned' | 'wishlist'
 
+// Статус модерации авторского путешествия для бейджа в календаре.
+// Опубликованные (publish=1 & moderation=1) бейджа не получают → undefined.
+export type TravelModerationState = 'draft' | 'pending'
+
 export type TravelStatusEntry = {
   id: string | number
   type: 'travel'
@@ -26,6 +30,7 @@ export type TravelStatusEntry = {
   travelYear?: string
   travelMonth?: string | string[]
   travelMonthName?: string
+  moderationState?: TravelModerationState // черновик / на модерации; опубликованные — undefined
   addedAt: number       // timestamp
 }
 
@@ -77,6 +82,46 @@ const normalizeTravelUrl = (item: Record<string, unknown>, id: string | number):
   return rawSlug ? `/travels/${rawSlug}` : `/travels/${String(id)}`
 }
 
+const getStatusDateField = (status: TravelStatus): 'visitedDate' | 'plannedDate' | 'wishlistDate' =>
+  status === 'visited' ? 'visitedDate' : status === 'wishlist' ? 'wishlistDate' : 'plannedDate'
+
+// Локальная «сегодня» в формате ISO YYYY-MM-DD — сравнивается лексикографически.
+const getTodayIsoDate = (): string => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Статус авторского путешествия выводится из даты: прошлое → «Был»,
+// сегодня/будущее или дата не определена → «Планирую».
+export const deriveAuthoredTravelStatus = (calendarDate: string | undefined): TravelStatus => {
+  if (!parseTravelStatusDateParts(calendarDate)) return 'planned'
+  return (calendarDate as string) < getTodayIsoDate() ? 'visited' : 'planned'
+}
+
+const toModerationFlag = (value: unknown): boolean => {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value === 1
+  if (typeof value === 'string') {
+    const text = value.trim().toLowerCase()
+    return text === '1' || text === 'true'
+  }
+  return false
+}
+
+// Бейдж модерации ставим только когда поле присутствует и явно «не готово».
+// Отсутствие поля трактуем как опубликованное — иначе рискуем пометить черновиком всё.
+const resolveModerationState = (item: Record<string, unknown>): TravelModerationState | undefined => {
+  if ('publish' in item && !toModerationFlag(item.publish)) return 'draft'
+  if ('moderation' in item && !toModerationFlag(item.moderation)) return 'pending'
+  return undefined
+}
+
+const normalizeModerationState = (value: unknown): TravelModerationState | undefined =>
+  value === 'draft' || value === 'pending' ? value : undefined
+
 const normalizeAuthoredTravelEntry = (item: unknown): TravelStatusEntry | null => {
   if (!isRecord(item)) return null
   const id = normalizeTravelId(item.id ?? item.travel_id ?? item._id)
@@ -90,22 +135,41 @@ const normalizeAuthoredTravelEntry = (item: unknown): TravelStatusEntry | null =
       item.travelImageThumbSmallUrl ??
       item.imageUrl
   )
-  const visitedDate = normalizeOptionalString(item.visitedDate ?? item.visited_date)
+  const explicitDate = normalizeOptionalString(item.visitedDate ?? item.visited_date)
+  const travelYear = normalizeOptionalString(item.year)
+  const travelMonth = normalizeTravelMonth(item.month)
+  const travelMonthName = normalizeOptionalString(item.monthName ?? item.month_name)
+
+  // Эффективная дата = явная дата ИЛИ вычисленная из года/месяца (выходные).
+  // По ней определяем статус (прошлое → «Был», будущее → «Планирую»).
+  const calendarDate = parseTravelStatusDateParts(explicitDate)
+    ? explicitDate
+    : buildTravelMonthFallbackDate({
+        year: travelYear,
+        month: travelMonth,
+        monthName: travelMonthName,
+        seed: id,
+        allowYearOnly: true,
+      })
+  const status = deriveAuthoredTravelStatus(calendarDate)
 
   return normalizeStatusDates({
     id,
     type: 'travel' as const,
     title,
     url: normalizeTravelUrl(item, id),
-    status: 'visited' as const,
+    status,
     addedAt: parseServerTimestamp(item.updated_at ?? item.created_at),
     imageUrl,
     country: normalizeOptionalString(item.countryName ?? item.country_name ?? item.country),
     city: normalizeOptionalString(item.cityName ?? item.city_name ?? item.city),
-    visitedDate,
-    travelYear: normalizeOptionalString(item.year),
-    travelMonth: normalizeTravelMonth(item.month),
-    travelMonthName: normalizeOptionalString(item.monthName ?? item.month_name),
+    // Явную дату кладём в поле, соответствующее выведенному статусу, иначе
+    // normalizeStatusDates её обнулит; fallback по году/месяцу остаётся derived.
+    [getStatusDateField(status)]: explicitDate,
+    travelYear,
+    travelMonth,
+    travelMonthName,
+    moderationState: resolveModerationState(item),
   })
 }
 
@@ -194,6 +258,7 @@ const normalizeEntry = (item: unknown): TravelStatusEntry | null => {
     travelYear: normalizeOptionalString(item.travelYear),
     travelMonth: normalizeTravelMonth(item.travelMonth),
     travelMonthName: normalizeOptionalString(item.travelMonthName),
+    moderationState: normalizeModerationState(item.moderationState),
   })
 }
 
@@ -241,6 +306,7 @@ const normalizeServerStatusEntry = (item: unknown): TravelStatusEntry | null => 
     travelYear: normalizeOptionalString(travel.year),
     travelMonth: normalizeTravelMonth(travel.month),
     travelMonthName: normalizeOptionalString(travel.monthName ?? travel.month_name),
+    moderationState: resolveModerationState(travel),
   })
 }
 
@@ -267,6 +333,7 @@ const mergeStatusAndAuthoredEntries = (
       travelYear: entry.travelYear ?? authored.travelYear,
       travelMonth: entry.travelMonth ?? authored.travelMonth,
       travelMonthName: entry.travelMonthName ?? authored.travelMonthName,
+      moderationState: entry.moderationState ?? authored.moderationState,
     } : entry)
   })
 
@@ -286,6 +353,7 @@ const fetchAuthoredTravelStatusEntries = async (userId: string | number): Promis
     user_id: userId,
     page: 1,
     perPage: 9999,
+    includeDrafts: true,
     throwOnError: true,
   })
   const { items } = unwrapMyTravelsPayload(payload)

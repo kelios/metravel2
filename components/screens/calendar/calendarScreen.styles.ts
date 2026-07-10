@@ -206,6 +206,26 @@ export function createCalendarStyles(colors: ReturnType<typeof useThemedColors>,
           } as any
         : null),
     },
+    moderationBadge: {
+      position: 'absolute',
+      top: 48,
+      left: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      borderWidth: 1,
+      zIndex: 3,
+      ...(Platform.OS === 'web'
+        ? { boxShadow: DESIGN_TOKENS.shadows.light } as any
+        : null),
+    },
+    moderationBadgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+    },
     dateBadgeText: {
       fontSize: 12,
       fontWeight: '700',

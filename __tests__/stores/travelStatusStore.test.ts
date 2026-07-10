@@ -532,6 +532,7 @@ describe('travelStatusStore', () => {
         user_id: '77',
         page: 1,
         perPage: 9999,
+        includeDrafts: true,
         throwOnError: true,
       })
 
@@ -557,6 +558,113 @@ describe('travelStatusStore', () => {
         travelMonth: ['5'],
         travelMonthName: 'Май',
       }))
+    })
+
+    it('авторское путешествие с будущим годом попадает в «Планирую»', async () => {
+      fetchMyTravels.mockResolvedValueOnce({
+        data: [{
+          id: 501,
+          name: 'Future trip',
+          slug: 'future-trip',
+          countryName: 'Испания',
+          year: 2100,
+          month: [6],
+          monthName: 'Июнь',
+        }],
+        total: 1,
+      })
+
+      await act(() => useTravelStatusStore.getState().loadLocal('77'))
+
+      const entry = useTravelStatusStore.getState().entries[0]
+      expect(entry.status).toBe('planned')
+      expect(getTravelStatusCalendarDate(entry)).toMatch(/^2100-06-/)
+    })
+
+    it('авторское путешествие с явной будущей датой кладёт её в plannedDate', async () => {
+      fetchMyTravels.mockResolvedValueOnce({
+        data: [{
+          id: 502,
+          name: 'Explicit future',
+          slug: 'explicit-future',
+          countryName: 'Грузия',
+          visited_date: '2099-09-09',
+        }],
+        total: 1,
+      })
+
+      await act(() => useTravelStatusStore.getState().loadLocal('77'))
+
+      const entry = useTravelStatusStore.getState().entries[0]
+      expect(entry.status).toBe('planned')
+      expect(entry.plannedDate).toBe('2099-09-09')
+      expect(entry.visitedDate).toBeUndefined()
+    })
+
+    it('помечает черновик (publish=0) moderationState=draft', async () => {
+      fetchMyTravels.mockResolvedValueOnce({
+        data: [{
+          id: 601,
+          name: 'Draft trip',
+          slug: 'draft-trip',
+          countryName: 'Литва',
+          year: 2024,
+          month: [4],
+          monthName: 'Апрель',
+          publish: 0,
+          moderation: 0,
+        }],
+        total: 1,
+      })
+
+      await act(() => useTravelStatusStore.getState().loadLocal('77'))
+
+      const entry = useTravelStatusStore.getState().entries[0]
+      expect(entry.status).toBe('visited')
+      expect(entry.moderationState).toBe('draft')
+    })
+
+    it('помечает непромодерированное (publish=1, moderation=0) moderationState=pending', async () => {
+      fetchMyTravels.mockResolvedValueOnce({
+        data: [{
+          id: 602,
+          name: 'Pending trip',
+          slug: 'pending-trip',
+          countryName: 'Латвия',
+          year: 2024,
+          month: [3],
+          monthName: 'Март',
+          publish: 1,
+          moderation: 0,
+        }],
+        total: 1,
+      })
+
+      await act(() => useTravelStatusStore.getState().loadLocal('77'))
+
+      const entry = useTravelStatusStore.getState().entries[0]
+      expect(entry.moderationState).toBe('pending')
+    })
+
+    it('не помечает опубликованное (publish=1, moderation=1) — moderationState undefined', async () => {
+      fetchMyTravels.mockResolvedValueOnce({
+        data: [{
+          id: 603,
+          name: 'Published trip',
+          slug: 'published-trip',
+          countryName: 'Эстония',
+          year: 2024,
+          month: [2],
+          monthName: 'Февраль',
+          publish: 1,
+          moderation: 1,
+        }],
+        total: 1,
+      })
+
+      await act(() => useTravelStatusStore.getState().loadLocal('77'))
+
+      expect(useTravelStatusStore.getState().entries[0].moderationState).toBeUndefined()
     })
 
     it('обогащает explicit visited без даты годом и месяцем из авторского списка', async () => {

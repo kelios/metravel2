@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -29,10 +29,13 @@ import {
   TRANSPORT_LABEL,
   VISIBILITY_LABEL,
   formatTripDateTime,
+  isRouteApproximate,
   planStatusColor,
+  routeSummaryLine,
 } from '@/components/trips/planning/tripPlanFormatting';
 import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
 import { useDeletePlannedTrip, usePlannedTrip, useUpdatePlannedTrip } from '@/hooks/usePlannedTripsApi';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { LAYOUT } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -45,8 +48,31 @@ const SCROLL_BOTTOM_RESERVE = Platform.select({
   default: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
 });
 
+// Header/cover metadata editing depends on BE #870 (owner PATCH /trips/planned/{id}/
+// + planned-trip cover upload). Until that ships to the target backend — the PATCH
+// endpoint currently returns 405 on dev — keep detail/cover persistence behind a
+// clear notice instead of surfacing a raw error or faking a client-only save. The
+// route builder below does NOT depend on #870 and stays fully editable. Flip to
+// `true` once #870 is deployed and verified on the target environment.
+const TRIP_META_EDIT_ENABLED = false;
+
 const TRANSPORT_OPTIONS: TripTransport[] = ['car', 'bike', 'foot', 'public', 'mixed'];
 const VISIBILITY_OPTIONS: TripVisibility[] = ['public', 'followers', 'private'];
+
+type PlannerTabKey = 'route' | 'people' | 'export' | 'more';
+
+interface PlannerTab {
+  key: PlannerTabKey;
+  label: string;
+  icon: string;
+}
+
+const PLANNER_TABS: PlannerTab[] = [
+  { key: 'route', label: 'Маршрут', icon: 'map' },
+  { key: 'people', label: 'Люди', icon: 'users' },
+  { key: 'export', label: 'Экспорт', icon: 'download' },
+  { key: 'more', label: 'Ещё', icon: 'more-horizontal' },
+];
 
 const toDateInputValue = (value: string): string => {
   const raw = String(value ?? '').trim();
@@ -67,7 +93,8 @@ const initialEditValues = (trip: PlannedTrip) => ({
 
 export default function PlannedTripScreen() {
   const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isMobile } = useResponsive();
+  const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
   const webDateInputStyle = useMemo<CSSProperties>(
     () => ({
       width: '100%',
@@ -94,6 +121,7 @@ export default function PlannedTripScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<ReturnType<typeof initialEditValues> | null>(null);
+  const [activeTab, setActiveTab] = useState<PlannerTabKey>('route');
   const { data: trip, isLoading, isError } = usePlannedTrip(
     Number.isFinite(tripId) ? tripId : null,
   );
@@ -111,6 +139,9 @@ export default function PlannedTripScreen() {
   const coverUrl = typeof trip?.coverUrl === 'string' ? trip.coverUrl.trim() : '';
   const usesFallbackCover = Boolean(trip && coverUrl.length === 0);
   const displayCoverUrl = usesFallbackCover ? (fallbackCover?.uri ?? '') : coverUrl;
+
+  const summaryLine = trip ? routeSummaryLine(trip.routeSummary) : '';
+  const routeApproximate = trip ? isRouteApproximate(trip.routingState) : false;
 
   useEffect(() => {
     if (trip) setEditValues(initialEditValues(trip));
@@ -206,11 +237,12 @@ export default function PlannedTripScreen() {
           <Text style={styles.error}>Не удалось загрузить поездку.</Text>
         ) : (
           <>
+            {/* ── Compact header: identity + route status at a glance ── */}
             <View style={styles.cover} testID="trip-plan-cover">
               <ImageCardMedia
                 src={displayCoverUrl}
                 alt={trip.title}
-                height={220}
+                height={isMobile ? 132 : 188}
                 fit="cover"
                 blurBackground={false}
                 borderRadius={12}
@@ -223,15 +255,48 @@ export default function PlannedTripScreen() {
             </View>
 
             <View style={styles.header}>
-              <View
-                style={[styles.badge, { backgroundColor: planStatusColor(trip.status, colors) }]}
-              >
-                <Text style={styles.badgeText}>{PLAN_STATUS_LABEL[trip.status]}</Text>
+              <View style={styles.badgeRow}>
+                <View
+                  style={[styles.badge, { backgroundColor: planStatusColor(trip.status, colors) }]}
+                >
+                  <Text style={styles.badgeText}>{PLAN_STATUS_LABEL[trip.status]}</Text>
+                </View>
+                <View style={styles.metaChip}>
+                  <Feather
+                    name={TRANSPORT_ICON_NAME[trip.transport] as never}
+                    size={12}
+                    color={colors.textSecondary}
+                  />
+                  <Text style={styles.metaChipText}>{TRANSPORT_LABEL[trip.transport]}</Text>
+                </View>
+                <View style={styles.metaChip}>
+                  <Feather name="eye" size={12} color={colors.textSecondary} />
+                  <Text style={styles.metaChipText}>{VISIBILITY_LABEL[trip.visibility]}</Text>
+                </View>
               </View>
+
               <Text style={styles.title}>{trip.title}</Text>
               <Text style={styles.meta}>
                 {formatTripDateTime(trip.startDate, trip.startTime)} · {trip.organizer.name}
               </Text>
+
+              <View
+                style={[styles.summaryPill, routeApproximate && styles.summaryPillWarning]}
+                testID="trip-plan-summary"
+              >
+                <Feather
+                  name={routeApproximate ? 'alert-triangle' : 'navigation'}
+                  size={13}
+                  color={routeApproximate ? colors.warningDark : colors.primaryDark}
+                />
+                <Text
+                  style={[styles.summaryPillText, routeApproximate && styles.summaryPillTextWarning]}
+                  numberOfLines={1}
+                >
+                  {summaryLine}
+                </Text>
+              </View>
+
               {trip.description ? (
                 <TripPlanLinkedText
                   text={trip.description}
@@ -240,16 +305,19 @@ export default function PlannedTripScreen() {
                   testID="trip-plan-description"
                 />
               ) : null}
+
               {trip.isOwner ? (
                 <View style={styles.ownerActions}>
-                  <Button
-                    label="Редактировать поездку"
-                    variant="secondary"
-                    size="sm"
-                    onPress={handleStartEdit}
-                    icon={<Feather name="edit-2" size={15} color={colors.primaryDark} />}
-                    testID="trip-plan-edit"
-                  />
+                  {TRIP_META_EDIT_ENABLED ? (
+                    <Button
+                      label="Редактировать поездку"
+                      variant="secondary"
+                      size="sm"
+                      onPress={handleStartEdit}
+                      icon={<Feather name="edit-2" size={15} color={colors.primaryDark} />}
+                      testID="trip-plan-edit"
+                    />
+                  ) : null}
                   <Button
                     label="Удалить поездку"
                     variant="danger"
@@ -269,9 +337,22 @@ export default function PlannedTripScreen() {
               ) : null}
             </View>
 
+            {/* Metadata edit panel — gated behind BE #870, opened only via ?edit=1
+                deeplink. Shows a clear non-mock blocker and disables persistence. */}
             {trip.isOwner && isEditing && editValues ? (
               <View style={styles.editPanel} testID="trip-plan-edit-panel">
                 <Text style={styles.editHeading}>Редактировать поездку</Text>
+
+                {!TRIP_META_EDIT_ENABLED ? (
+                  <View style={styles.editBlocker} testID="trip-plan-edit-blocker">
+                    <Feather name="clock" size={16} color={colors.warningDark} />
+                    <Text style={styles.editBlockerText}>
+                      Изменение названия, деталей и обложки поездки скоро появится — готовим
+                      сохранение на сервере. Маршрут во вкладке «Маршрут» уже можно
+                      редактировать и сохранять.
+                    </Text>
+                  </View>
+                ) : null}
 
                 <Text style={styles.label}>Название</Text>
                 <TextInput
@@ -279,7 +360,8 @@ export default function PlannedTripScreen() {
                   onChangeText={(title) => setEditValues((prev) => prev ? { ...prev, title } : prev)}
                   placeholder="Название поездки"
                   placeholderTextColor={colors.textMuted}
-                  style={styles.input}
+                  editable={TRIP_META_EDIT_ENABLED}
+                  style={[styles.input, !TRIP_META_EDIT_ENABLED && styles.inputDisabled]}
                   testID="trip-plan-edit-title"
                 />
 
@@ -289,8 +371,9 @@ export default function PlannedTripScreen() {
                   onChangeText={(description) => setEditValues((prev) => prev ? { ...prev, description } : prev)}
                   placeholder="Описание поездки, ссылки, детали для участников"
                   placeholderTextColor={colors.textMuted}
+                  editable={TRIP_META_EDIT_ENABLED}
                   multiline
-                  style={styles.textArea}
+                  style={[styles.textArea, !TRIP_META_EDIT_ENABLED && styles.inputDisabled]}
                   testID="trip-plan-edit-description"
                 />
 
@@ -308,7 +391,7 @@ export default function PlannedTripScreen() {
                     }
                     placeholder="Перетащите фото обложки"
                     maxSizeMB={10}
-                    disabled={updateTrip.isPending}
+                    disabled={!TRIP_META_EDIT_ENABLED || updateTrip.isPending}
                   />
                   <Text style={styles.coverUploadHint}>
                     Фото будет прикреплено к поездке после загрузки и сохранения изменений.
@@ -325,6 +408,7 @@ export default function PlannedTripScreen() {
                         onChange={(event) => setEditValues((prev) => prev ? { ...prev, startDate: event.currentTarget.value } : prev)}
                         aria-label="Дата поездки"
                         data-testid="trip-plan-edit-start-date"
+                        disabled={!TRIP_META_EDIT_ENABLED}
                         style={webDateInputStyle}
                       />
                     ) : (
@@ -333,7 +417,8 @@ export default function PlannedTripScreen() {
                         onChangeText={(startDate) => setEditValues((prev) => prev ? { ...prev, startDate } : prev)}
                         placeholder="ГГГГ-ММ-ДД"
                         placeholderTextColor={colors.textMuted}
-                        style={styles.input}
+                        editable={TRIP_META_EDIT_ENABLED}
+                        style={[styles.input, !TRIP_META_EDIT_ENABLED && styles.inputDisabled]}
                         testID="trip-plan-edit-start-date"
                       />
                     )}
@@ -346,7 +431,8 @@ export default function PlannedTripScreen() {
                       placeholder="08:00"
                       placeholderTextColor={colors.textMuted}
                       autoCapitalize="none"
-                      style={styles.input}
+                      editable={TRIP_META_EDIT_ENABLED}
+                      style={[styles.input, !TRIP_META_EDIT_ENABLED && styles.inputDisabled]}
                       testID="trip-plan-edit-start-time"
                     />
                   </View>
@@ -362,6 +448,7 @@ export default function PlannedTripScreen() {
                         label={TRANSPORT_LABEL[option]}
                         variant={active ? 'primary' : 'secondary'}
                         size="sm"
+                        disabled={!TRIP_META_EDIT_ENABLED}
                         onPress={() => setEditValues((prev) => prev ? { ...prev, transport: option } : prev)}
                         icon={
                           <Feather
@@ -384,6 +471,7 @@ export default function PlannedTripScreen() {
                       label={VISIBILITY_LABEL[option]}
                       variant={editValues.visibility === option ? 'primary' : 'secondary'}
                       size="sm"
+                      disabled={!TRIP_META_EDIT_ENABLED}
                       onPress={() => setEditValues((prev) => prev ? { ...prev, visibility: option } : prev)}
                       testID={`trip-plan-edit-visibility-${option}`}
                     />
@@ -397,7 +485,8 @@ export default function PlannedTripScreen() {
                   placeholder="4"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
-                  style={styles.input}
+                  editable={TRIP_META_EDIT_ENABLED}
+                  style={[styles.input, !TRIP_META_EDIT_ENABLED && styles.inputDisabled]}
                   testID="trip-plan-edit-seats"
                 />
 
@@ -412,12 +501,12 @@ export default function PlannedTripScreen() {
                     label="Сохранить изменения"
                     onPress={handleSaveDetails}
                     loading={updateTrip.isPending}
-                    disabled={updateTrip.isPending}
+                    disabled={!TRIP_META_EDIT_ENABLED || updateTrip.isPending}
                     size="sm"
                     testID="trip-plan-edit-save"
                   />
                   <Button
-                    label="Отмена"
+                    label="Закрыть"
                     onPress={handleCancelEdit}
                     variant="ghost"
                     size="sm"
@@ -428,48 +517,74 @@ export default function PlannedTripScreen() {
               </View>
             ) : null}
 
-            <View style={styles.section}>
-              <RouteBuilder trip={trip} />
+            {/* ── Workspace tabs: turn the long stack into a planning workspace ── */}
+            <View style={styles.tabBar} testID="trip-plan-tabs">
+              {PLANNER_TABS.map((tabItem) => {
+                const active = tabItem.key === activeTab;
+                return (
+                  <Pressable
+                    key={tabItem.key}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={tabItem.label}
+                    onPress={() => setActiveTab(tabItem.key)}
+                    style={[styles.tab, active && styles.tabActive]}
+                    testID={`trip-plan-tab-${tabItem.key}`}
+                  >
+                    <Feather
+                      name={tabItem.icon as never}
+                      size={16}
+                      color={active ? colors.primaryDark : colors.textSecondary}
+                    />
+                    {!isMobile || active ? (
+                      <Text style={[styles.tabText, active && styles.tabTextActive]}>
+                        {tabItem.label}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
             </View>
 
-            {showRouteExportMenu ? (
-              <View style={styles.section} testID="trip-plan-route-export-section">
-                <TripRouteExportMenu trip={trip} />
+            {activeTab === 'route' ? (
+              <View style={styles.panel} testID="trip-plan-panel-route">
+                <RouteBuilder trip={trip} />
               </View>
             ) : null}
 
-            <View style={styles.section}>
-              <TripParticipantsList trip={trip} />
-              <TripRsvpControl trip={trip} />
-            </View>
-
-            <View style={styles.section}>
-              <TripInvitePanel trip={trip} />
-            </View>
-
-            <View style={styles.section}>
-              <TripTelegramGroupCard tripId={trip.id} isOwner={trip.isOwner} />
-              <TripChatPanel tripId={trip.id} />
-            </View>
-
-            <View style={styles.section}>
-              <TripSuggestPointForm trip={trip} />
-              <TripSuggestionsPanel trip={trip} />
-            </View>
-
-            <View style={styles.section}>
-              <TripReportForm trip={trip} />
-            </View>
-
-            {trip.status === 'completed' ? (
-              <View style={styles.section}>
-                <TripRatingPanel trip={trip} />
+            {activeTab === 'people' ? (
+              <View style={styles.panel} testID="trip-plan-panel-people">
+                <TripParticipantsList trip={trip} />
+                <TripRsvpControl trip={trip} />
+                <TripInvitePanel trip={trip} />
+                <TripSuggestPointForm trip={trip} />
+                <TripSuggestionsPanel trip={trip} />
+                <TripTelegramGroupCard tripId={trip.id} isOwner={trip.isOwner} />
+                <TripChatPanel tripId={trip.id} />
               </View>
             ) : null}
 
-            <View style={styles.section}>
-              <TripAffiliateBlock trip={trip} />
-            </View>
+            {activeTab === 'export' ? (
+              <View style={styles.panel} testID="trip-plan-panel-export">
+                {showRouteExportMenu ? (
+                  <View testID="trip-plan-route-export-section">
+                    <TripRouteExportMenu trip={trip} />
+                  </View>
+                ) : (
+                  <Text style={styles.panelHint} testID="trip-plan-export-unavailable">
+                    Экспорт маршрута доступен в веб-версии и мобильном приложении.
+                  </Text>
+                )}
+              </View>
+            ) : null}
+
+            {activeTab === 'more' ? (
+              <View style={styles.panel} testID="trip-plan-panel-more">
+                <TripReportForm trip={trip} />
+                {trip.status === 'completed' ? <TripRatingPanel trip={trip} /> : null}
+                <TripAffiliateBlock trip={trip} />
+              </View>
+            ) : null}
 
             <ConfirmDialog
               visible={deleteConfirmVisible}
@@ -489,7 +604,7 @@ export default function PlannedTripScreen() {
   );
 }
 
-const createStyles = (colors: ThemedColors) =>
+const createStyles = (colors: ThemedColors, isMobile: boolean) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     content: {
@@ -498,7 +613,7 @@ const createStyles = (colors: ThemedColors) =>
       paddingBottom: SCROLL_BOTTOM_RESERVE,
       alignItems: 'center',
     },
-    inner: { width: '100%', maxWidth: 760, gap: 16 },
+    inner: { width: '100%', maxWidth: 860, gap: 14 },
     loader: { marginVertical: 48 },
     error: { color: colors.danger, fontSize: 14, fontWeight: '600', marginVertical: 24 },
     cover: {
@@ -507,6 +622,7 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surfaceMuted,
     },
     header: { gap: 6 },
+    badgeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
     badge: {
       alignSelf: 'flex-start',
       borderRadius: 999,
@@ -514,8 +630,38 @@ const createStyles = (colors: ThemedColors) =>
       paddingVertical: 4,
     },
     badgeText: { fontSize: 12, fontWeight: '700', color: colors.textOnDark },
-    title: { fontSize: 24, fontWeight: '900', color: colors.text },
+    metaChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      borderRadius: 999,
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      backgroundColor: colors.surfaceMuted,
+    },
+    metaChipText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
+    title: { fontSize: isMobile ? 20 : 24, fontWeight: '900', color: colors.text },
     meta: { fontSize: 14, color: colors.textSecondary },
+    summaryPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      alignSelf: 'flex-start',
+      maxWidth: '100%',
+      marginTop: 2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: colors.surface,
+    },
+    summaryPillWarning: {
+      borderColor: colors.warningLight,
+      backgroundColor: colors.warningSoft,
+    },
+    summaryPillText: { fontSize: 13, fontWeight: '700', color: colors.text, flexShrink: 1 },
+    summaryPillTextWarning: { color: colors.warningDark },
     description: { fontSize: 15, color: colors.text, lineHeight: 21, marginTop: 4 },
     descriptionLink: { color: colors.primaryDark, fontWeight: '700' },
     ownerActions: {
@@ -535,6 +681,18 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surface,
     },
     editHeading: { fontSize: 18, fontWeight: '800', color: colors.text },
+    editBlocker: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
+      borderWidth: 1,
+      borderColor: colors.warningLight,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      backgroundColor: colors.warningSoft,
+    },
+    editBlockerText: { flex: 1, fontSize: 13, lineHeight: 18, color: colors.warningDark, fontWeight: '600' },
     label: { fontSize: 13, fontWeight: '700', color: colors.text, marginTop: 2 },
     input: {
       borderWidth: 1,
@@ -547,6 +705,7 @@ const createStyles = (colors: ThemedColors) =>
       fontSize: 14,
       ...Platform.select({ web: { outlineWidth: 0 as any } }),
     },
+    inputDisabled: { opacity: 0.6, backgroundColor: colors.surfaceMuted },
     textArea: {
       borderWidth: 1,
       borderColor: colors.border,
@@ -567,10 +726,41 @@ const createStyles = (colors: ThemedColors) =>
     optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     editActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
     editError: { fontSize: 13, lineHeight: 18, color: colors.danger, fontWeight: '600' },
-    section: {
-      gap: 12,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-      paddingTop: 16,
+    tabBar: {
+      flexDirection: 'row',
+      gap: 6,
+      padding: 4,
+      borderRadius: 14,
+      backgroundColor: colors.surfaceMuted,
     },
+    tab: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      minHeight: 40,
+      paddingHorizontal: 8,
+      paddingVertical: 8,
+      borderRadius: 10,
+    },
+    tabActive: {
+      backgroundColor: colors.surface,
+      ...Platform.select({
+        web: { boxShadow: '0 1px 3px rgba(0,0,0,0.12)' as any },
+        default: {
+          shadowColor: '#000',
+          shadowOpacity: 0.12,
+          shadowRadius: 3,
+          shadowOffset: { width: 0, height: 1 },
+          elevation: 1,
+        },
+      }),
+    },
+    tabText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary },
+    tabTextActive: { color: colors.primaryDark },
+    panel: {
+      gap: 16,
+    },
+    panelHint: { fontSize: 14, lineHeight: 20, color: colors.textMuted },
   });

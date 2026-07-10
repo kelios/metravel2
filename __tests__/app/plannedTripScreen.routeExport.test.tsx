@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
 
@@ -187,7 +187,9 @@ describe('PlannedTripScreen route export section', () => {
     const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
     const { queryByTestId, getByTestId } = render(<PlannedTripScreen />);
 
+    // Route builder is the default tab; export lives under the "Экспорт" tab.
     expect(getByTestId('route-builder')).toBeTruthy();
+    fireEvent.press(getByTestId('trip-plan-tab-export'));
     expect(getByTestId('trip-plan-route-export-section')).toBeTruthy();
     expect(queryByTestId('trip-route-export')).toBeTruthy();
   });
@@ -198,6 +200,7 @@ describe('PlannedTripScreen route export section', () => {
     const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
     const { getByTestId } = render(<PlannedTripScreen />);
 
+    fireEvent.press(getByTestId('trip-plan-tab-export'));
     expect(getByTestId('trip-plan-route-export-section')).toBeTruthy();
     expect(getByTestId('trip-route-export')).toBeTruthy();
   });
