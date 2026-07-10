@@ -255,10 +255,11 @@ interface Paginated<T> {
 
 /** Вложенный owner/user в PlannedTripSerializer. */
 interface BeUser {
-  id: number;
+  id?: number | string | null;
   username?: string | null;
   avatar?: string | null;
 }
+type BeUserLike = BeUser | number | string | null | undefined;
 
 /** Профиль автора в trip-route-suggestions / public-trips (*_profile). */
 interface ProfileObject {
@@ -269,12 +270,12 @@ interface ProfileObject {
 type ProfileField = ProfileObject | string | null;
 
 interface BeRoutePoint {
-  id: number;
-  place_id?: number | null;
+  id?: number | string | null;
+  place_id?: number | string | null;
   point_type?: string | null;
   order?: number;
-  lat?: number | null;
-  lng?: number | null;
+  lat?: number | string | null;
+  lng?: number | string | null;
   title?: string | null;
   description?: string | null;
 }
@@ -296,31 +297,32 @@ interface BeRoutingState {
 }
 
 interface BeParticipant {
-  id: number;
-  user: BeUser;
-  status: 'pending' | 'accepted' | 'declined';
+  id?: number | string | null;
+  user?: BeUserLike;
+  status?: 'pending' | 'accepted' | 'declined' | string | null;
 }
 
 /** PlannedTripSerializer (GET /trips/planned/me|{id}, POST /trips/planned/, PUT .../route/). */
 interface PlannedTripDto {
-  id: number;
-  title: string;
+  id: number | string;
+  title?: string | null;
   description?: string | null;
   cover_url?: string | null;
   cover?: string | null;
   preview_image_url?: string | null;
   start_date?: string | null;
   end_date?: string | null;
-  status: 'draft' | 'planned' | 'ongoing' | 'completed';
-  owner: BeUser;
-  participants?: BeParticipant[];
-  route?: { points?: BeRoutePoint[] } | null;
+  status?: 'draft' | 'planned' | 'ongoing' | 'completed' | string | null;
+  owner?: BeUserLike;
+  participants?: BeParticipant[] | null;
+  route?: { points?: BeRoutePoint[] | null } | null;
   route_geometry?: unknown;
   route_summary?: BeRouteSummary | null;
   routing_state?: BeRoutingState | null;
   is_public?: boolean;
-  max_participants?: number | null;
+  max_participants?: number | string | null;
   transport_mode?: string | null;
+  created_at?: string | null;
 }
 
 /** TripReportSerializer (POST /trips/{id}/complete/). */
@@ -424,11 +426,28 @@ const mapProfile = (
   avatarUrl: profileAvatar(p),
 });
 
-const mapUser = (u: BeUser): TripPerson => ({
-  id: u.id,
-  name: u.username ?? `#${u.id}`,
-  avatarUrl: u.avatar ?? null,
-});
+const userIdFromBe = (u: BeUserLike): number | null => {
+  if (typeof u === 'number' || typeof u === 'string') return toOptionalNum(u);
+  if (u && typeof u === 'object') return toOptionalNum(u.id);
+  return null;
+};
+
+const mapUser = (
+  u: BeUserLike,
+  fallbackId: number,
+  fallbackName = 'Участник',
+): TripPerson => {
+  const id = userIdFromBe(u) ?? fallbackId;
+  const username =
+    u && typeof u === 'object' && typeof u.username === 'string'
+      ? u.username.trim()
+      : '';
+  return {
+    id,
+    name: username || (Number.isFinite(id) && id > 0 ? `#${id}` : fallbackName),
+    avatarUrl: u && typeof u === 'object' ? (u.avatar ?? null) : null,
+  };
+};
 
 // ── Маппинг enum'ов BE ↔ домен ──────────────────────────────────────────────
 
@@ -452,15 +471,20 @@ const TRANSPORT_TO_BE: Record<TripTransport, string> = {
 };
 const transportToBe = (t: TripTransport): string => TRANSPORT_TO_BE[t] ?? 'car';
 
-const pointTypeFromBe = (t?: string | null): RoutePointType =>
-  t === 'travel' ? 'place' : ((t as RoutePointType) ?? 'custom');
+const pointTypeFromBe = (t?: string | null): RoutePointType => {
+  if (t === 'travel') return 'place';
+  if (t === 'place' || t === 'custom' || t === 'rest' || t === 'overnight') {
+    return t;
+  }
+  return 'custom';
+};
 
 const pointTypeToBe = (t: RoutePointType): string =>
   t === 'place' ? 'travel' : t;
 
 /** PlannedTripSerializer.status → доменный TripPlanStatus. */
 const planStatusFromFacade = (
-  s: PlannedTripDto['status'],
+  s?: PlannedTripDto['status'],
 ): TripPlanStatus => {
   if (s === 'ongoing') return 'active';
   if (s === 'completed') return 'completed';
@@ -469,7 +493,7 @@ const planStatusFromFacade = (
 
 /** Базовый Trip.status (public-trips) → доменный TripPlanStatus. */
 const baseStatusFromBe = (
-  s?: 'planned' | 'active' | 'completed' | null,
+  s?: string | null,
 ): TripPlanStatus => {
   if (s === 'active') return 'active';
   if (s === 'completed') return 'completed';
@@ -490,6 +514,11 @@ const toNum = (v: number | string | null | undefined): number => {
   return Number.isFinite(n as number) ? (n as number) : 0;
 };
 
+const toOptionalNum = (v: number | string | null | undefined): number | null => {
+  const n = typeof v === 'string' ? Number(v) : v;
+  return Number.isFinite(n as number) ? (n as number) : null;
+};
+
 const normalizeRouteGeometry = (value: unknown): RouteGeometry | null => {
   if (!Array.isArray(value)) return null;
   const points: RouteGeometry = [];
@@ -506,15 +535,20 @@ const normalizeRouteGeometry = (value: unknown): RouteGeometry | null => {
 
 // ── Мапперы DTO → домен ─────────────────────────────────────────────────────
 
-const mapPlannedPoint = (p: BeRoutePoint): RoutePoint => ({
-  id: String(p.id),
-  type: p.place_id != null ? 'place' : pointTypeFromBe(p.point_type),
-  name: p.title ?? '',
-  description: p.description || null,
-  coordinates:
-    p.lat != null && p.lng != null ? [p.lng, p.lat] : null,
-  placeId: p.place_id ?? null,
-});
+const mapPlannedPoint = (p: BeRoutePoint, index: number): RoutePoint => {
+  const lat = toOptionalNum(p.lat);
+  const lng = toOptionalNum(p.lng);
+  const placeId = toOptionalNum(p.place_id);
+  const title = typeof p.title === 'string' ? p.title.trim() : '';
+  return {
+    id: p.id != null ? String(p.id) : `point-${index + 1}`,
+    type: placeId != null ? 'place' : pointTypeFromBe(p.point_type),
+    name: title || `Точка ${index + 1}`,
+    description: p.description || null,
+    coordinates: lat != null && lng != null ? [lng, lat] : null,
+    placeId,
+  };
+};
 
 const mapRouteSummary = (summary?: BeRouteSummary | null): RouteSummary | null => {
   if (!summary) return null;
@@ -549,29 +583,38 @@ const mapRoutingState = (state?: BeRoutingState | null): RoutingState | null => 
 
 const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
   const me = currentUserId();
-  const points = dto.route?.points ?? [];
+  const tripId = toNum(dto.id);
+  const owner = mapUser(dto.owner, 0, 'Организатор');
+  const points = Array.isArray(dto.route?.points) ? dto.route.points : [];
   const route = points.map(mapPlannedPoint);
   const transport = transportFromBe(dto.transport_mode);
   const routeGeometry = normalizeRouteGeometry(dto.route_geometry);
-  const participants: TripParticipant[] = (dto.participants ?? []).map((p) => ({
-    ...mapUser(p.user),
-    rsvp: participantRsvpFromBe(p.status),
-    role: p.user.id === dto.owner.id ? 'organizer' : 'participant',
-  }));
-  const mine = (dto.participants ?? []).find((p) => p.user.id === me);
+  const rawParticipants = Array.isArray(dto.participants) ? dto.participants : [];
+  const participants: TripParticipant[] = rawParticipants.map((p, index) => {
+    const participant = mapUser(p?.user, toOptionalNum(p?.id) ?? index + 1);
+    return {
+      ...participant,
+      rsvp: participantRsvpFromBe(p?.status),
+      role: participant.id === owner.id ? 'organizer' : 'participant',
+    };
+  });
+  const mine = rawParticipants.find((p) => userIdFromBe(p?.user) === me);
+  const title = typeof dto.title === 'string' && dto.title.trim()
+    ? dto.title.trim()
+    : `Поездка #${tripId || dto.id}`;
   return {
-    id: dto.id,
+    id: tripId,
     slug: String(dto.id),
-    title: dto.title,
+    title,
     description: dto.description ?? '',
     startDate: dto.start_date ?? '',
     startTime: null,
     transport,
     visibility: dto.is_public ? 'public' : 'private',
-    seatsTotal: dto.max_participants ?? 0,
+    seatsTotal: toNum(dto.max_participants),
     startPoint: null,
     status: planStatusFromFacade(dto.status),
-    organizer: mapUser(dto.owner),
+    organizer: owner,
     route,
     routeGeometry,
     routeSummary:
@@ -583,9 +626,9 @@ const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
     region: '',
     publishedToCommunity: false,
     report: null,
-    isOwner: dto.owner.id === me,
+    isOwner: me != null && owner.id === me,
     myRsvp: mine ? participantRsvpFromBe(mine.status) : null,
-    createdAt: dto.start_date ?? '',
+    createdAt: dto.created_at ?? dto.start_date ?? '',
   };
 };
 

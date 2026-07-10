@@ -145,7 +145,7 @@ describe('TripCreateForm — validation errors', () => {
 
   it('shows title error when submitting with empty title', async () => {
     const view = render(<TripCreateForm />)
-    const { getByTestId, findByText } = view
+    const { getByTestId, findAllByText, queryByText } = view
 
     // Toggle consent so the button is enabled and handleSubmit runs.
     fireEvent.press(getByTestId('trip-create-consent'))
@@ -157,15 +157,32 @@ describe('TripCreateForm — validation errors', () => {
     // Press submit — yup will fire asynchronously and set field errors.
     fireEvent.press(getByTestId('trip-create-submit'))
 
-    // yup hits min(3) before required() for an empty string; the form renders
-    // the first error per path: 'Название должно быть не короче 3 символов'.
-    const err = await findByText(/не короче 3 символов/i)
-    expect(err).toBeTruthy()
+    const errors = await findAllByText(/Введите название поездки/i)
+    expect(errors.length).toBeGreaterThan(0)
+    expect(queryByText(/не короче 3 символов/i)).toBeNull()
+    expect(getByTestId('trip-create-first-error').props.children).toBe('Введите название поездки')
+  })
+
+  it('shows min-length title error when title has one or two characters', async () => {
+    const view = render(<TripCreateForm />)
+    const { getByTestId, findAllByText, queryByText } = view
+
+    fireEvent.press(getByTestId('trip-create-consent'))
+    fireEvent.changeText(getByTestId('trip-create-title'), 'Аб')
+    changeStartDate(view, '2026-08-01')
+    fireEvent.press(getByTestId('trip-create-submit'))
+
+    const errors = await findAllByText(/не короче 3 символов/i)
+    expect(errors.length).toBeGreaterThan(0)
+    expect(queryByText(/Введите название поездки/i)).toBeNull()
+    expect(getByTestId('trip-create-first-error').props.children).toBe(
+      'Название должно быть не короче 3 символов',
+    )
   })
 
   it('shows date error when start date is missing', async () => {
     const view = render(<TripCreateForm />)
-    const { getByTestId, findByText } = view
+    const { getByTestId, findAllByText } = view
 
     // Toggle consent and provide a long enough title, leave date empty.
     fireEvent.press(getByTestId('trip-create-consent'))
@@ -173,8 +190,9 @@ describe('TripCreateForm — validation errors', () => {
     changeStartDate(view, '')
     fireEvent.press(getByTestId('trip-create-submit'))
 
-    const err = await findByText(/Укажите дату старта/i)
-    expect(err).toBeTruthy()
+    const errors = await findAllByText(/Укажите дату старта/i)
+    expect(errors.length).toBeGreaterThan(0)
+    expect(getByTestId('trip-create-first-error').props.children).toBe('Укажите дату старта')
   })
 
   it('submits a valid form using the default start date', async () => {

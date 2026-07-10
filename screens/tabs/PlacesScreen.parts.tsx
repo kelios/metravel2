@@ -251,17 +251,31 @@ export const PlaceCard = React.memo(function PlaceCard({
         onMediaPress={() => onOpenMap(place)}
         mapActions={mapActions}
         inlineActions={
-          place.urlTravel
-            ? [
-                {
-                  key: 'article',
-                  label: 'Статья',
-                  icon: 'book-open',
-                  onPress: () => onOpenTravel(place),
-                  title: 'Открыть статью',
-                },
-              ]
-            : []
+          [
+            ...(normalizedCoord
+              ? [
+                  {
+                    key: 'open-map',
+                    label: 'На карте',
+                    icon: 'map-pin' as const,
+                    onPress: () => onOpenMap(place),
+                    accessibilityLabel: 'Открыть место на карте',
+                    title: 'Открыть на карте',
+                  },
+                ]
+              : []),
+            ...(place.urlTravel
+              ? [
+                  {
+                    key: 'article',
+                    label: 'Статья',
+                    icon: 'book-open' as const,
+                    onPress: () => onOpenTravel(place),
+                    title: 'Открыть статью',
+                  },
+                ]
+              : []),
+          ]
         }
         onCopyCoord={normalizedCoord ? handleCopyCoord : undefined}
         onShare={normalizedCoord ? handleShare : undefined}

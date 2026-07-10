@@ -131,9 +131,9 @@ const DockButton = memo(function DockButton({
 });
 
 function BottomDock({ onDockHeight }: BottomDockProps) {
-  const { isPhone, isLargePhone, isTablet } = useResponsive();
+  const { isMobile: responsiveIsMobile } = useResponsive();
   const { width: viewportWidth } = useWindowDimensions();
-  const isMobile = Platform.OS !== "web" ? true : (isPhone || isLargePhone || isTablet);
+  const isMobile = Platform.OS !== "web" ? true : responsiveIsMobile;
   const isCompactMobileWidth = viewportWidth > 0 && viewportWidth <= 390;
   const [showMore, setShowMore] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);

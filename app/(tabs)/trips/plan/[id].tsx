@@ -32,6 +32,7 @@ import {
   isRouteApproximate,
   planStatusColor,
   routeSummaryLine,
+  routingStateHint,
 } from '@/components/trips/planning/tripPlanFormatting';
 import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
 import { useDeletePlannedTrip, usePlannedTrip, useUpdatePlannedTrip } from '@/hooks/usePlannedTripsApi';
@@ -296,6 +297,13 @@ export default function PlannedTripScreen() {
                   {summaryLine}
                 </Text>
               </View>
+
+              {routeApproximate ? (
+                <Text style={styles.approximateNote} testID="trip-plan-route-approximate">
+                  {routingStateHint(trip.routingState) ??
+                    'Маршрут показан приблизительно — проверьте дорогу или тропу перед поездкой.'}
+                </Text>
+              ) : null}
 
               {trip.description ? (
                 <TripPlanLinkedText
@@ -662,6 +670,7 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
     },
     summaryPillText: { fontSize: 13, fontWeight: '700', color: colors.text, flexShrink: 1 },
     summaryPillTextWarning: { color: colors.warningDark },
+    approximateNote: { fontSize: 12, lineHeight: 16, color: colors.warningDark, fontWeight: '600' },
     description: { fontSize: 15, color: colors.text, lineHeight: 21, marginTop: 4 },
     descriptionLink: { color: colors.primaryDark, fontWeight: '700' },
     ownerActions: {

@@ -95,8 +95,8 @@ const schema = yup.object({
   title: yup
     .string()
     .trim()
-    .min(3, 'Название должно быть не короче 3 символов')
-    .required('Введите название поездки'),
+    .required('Введите название поездки')
+    .min(3, 'Название должно быть не короче 3 символов'),
   description: yup.string().trim(),
   startDate: yup
     .string()
@@ -143,6 +143,15 @@ const schema = yup.object({
       return Number.isFinite(n) && n >= -180 && n <= 180;
     }),
 });
+
+const FIELD_ERROR_ORDER: (keyof FormValues)[] = [
+  'title',
+  'startDate',
+  'startTime',
+  'seatsTotal',
+  'startLat',
+  'startLng',
+];
 
 const buildStartPoint = (values: FormValues): RoutePoint | null => {
   const name = values.startPointName.trim();
@@ -205,6 +214,12 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
     () => formatTripCreateDisplayDate(values.startDate),
     [values.startDate],
   );
+  const firstFieldError = useMemo(() => {
+    for (const key of FIELD_ERROR_ORDER) {
+      if (errors[key]) return errors[key];
+    }
+    return null;
+  }, [errors]);
 
   const setField = <K extends keyof FormValues>(key: K, value: FormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -524,6 +539,12 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
         </Text>
       ) : null}
 
+      {!submitError && firstFieldError ? (
+        <Text style={styles.errorSummary} testID="trip-create-first-error">
+          {firstFieldError}
+        </Text>
+      ) : null}
+
       <Button
         label="Запланировать поездку"
         onPress={handleSubmit}
@@ -639,6 +660,12 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surfaceMuted,
     },
     error: { color: colors.danger, fontSize: 13, fontWeight: '600' },
+    errorSummary: {
+      color: colors.danger,
+      fontSize: 13,
+      fontWeight: '600',
+      lineHeight: 18,
+    },
     link: { color: colors.primaryText, fontWeight: '600' },
   });
 

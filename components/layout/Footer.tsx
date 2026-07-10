@@ -19,10 +19,10 @@ const BottomDockComp = isFooterTestEnv
 const WEB_MOBILE_DOCK_RESERVE_HEIGHT = 56;
 
 const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
-  const { isPhone, isLargePhone, isTablet } = useResponsive();
-  const isMobile = Platform.OS !== "web" ? true : (isPhone || isLargePhone || isTablet);
+  const { isMobile } = useResponsive();
+  const shouldRenderMobileDock = Platform.OS !== "web" ? true : isMobile;
 
-  if (isMobile) {
+  if (shouldRenderMobileDock) {
     return (
       <Suspense
         fallback={

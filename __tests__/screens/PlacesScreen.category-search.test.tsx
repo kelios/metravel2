@@ -211,6 +211,26 @@ describe('PlacesScreen category search', () => {
       },
     })
 
+    mockPush.mockClear()
+    expect(within(placeCard).getByText('На карте')).toBeTruthy()
+    fireEvent.press(within(placeCard).getByLabelText('Открыть место на карте'))
+
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/map',
+      params: {
+        lat: '53.9',
+        lng: '27.56',
+        radius: '5',
+        categories: 'Парковка',
+        placeId: 'place-1',
+        placeTitle: 'Парковка у озера',
+        placeAddress: 'Минск, Беларусь',
+        placeCategory: 'Парковка',
+        placeTravelUrl: '/travels/parking',
+        placeImageUrl: '',
+      },
+    })
+
     // На компактной карточке navigator-действия живут за overflow-шитом
     // «Навигация и действия» — открываем его для этой карточки перед проверкой.
     fireEvent.press(within(placeCard).getByLabelText('Навигация и действия'))

@@ -50,6 +50,50 @@ describe('Footer', () => {
     expect(getByTestId('footer-item-more')).toBeTruthy()
   })
 
+  it('renders the mobile dock on small-phone web widths below 360px', () => {
+    const { Platform } = require('react-native')
+    const prevOS = Platform.OS
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      value: 'web',
+    })
+
+    try {
+      ;(global as any).__mockResponsive = {
+        width: 320,
+        height: 568,
+        isSmallPhone: true,
+        isPhone: false,
+        isLargePhone: false,
+        isTablet: false,
+        isLargeTablet: false,
+        isDesktop: false,
+        isLargeDesktop: false,
+        isMobile: true,
+        isPortrait: true,
+        isLandscape: false,
+        orientation: 'portrait',
+        breakpoints: {},
+        isAtLeast: () => false,
+        isAtMost: () => true,
+        isBetween: () => false,
+      }
+
+      const { getByTestId, queryByTestId } = render(<Footer />)
+      expect(getByTestId('footer-item-home')).toBeTruthy()
+      expect(getByTestId('footer-item-map')).toBeTruthy()
+      expect(getByTestId('footer-item-quests')).toBeTruthy()
+      expect(getByTestId('footer-item-favorites')).toBeTruthy()
+      expect(getByTestId('footer-item-more')).toBeTruthy()
+      expect(queryByTestId('footer-item-community-rules')).toBeNull()
+    } finally {
+      Object.defineProperty(Platform, 'OS', {
+        configurable: true,
+        value: prevOS,
+      })
+    }
+  })
+
   it('calls onDockHeight callback', () => {
     const onDockHeight = jest.fn()
     const { getByTestId } = render(<Footer onDockHeight={onDockHeight} />)

@@ -247,6 +247,18 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
       try {
         const storedDraft = await getStorageItem(draftKey);
         if (cancelled) return;
+        if (!storedDraft) {
+          comparedDraftKeyRef.current = draftKey;
+          setState({
+            hasPendingDraft: false,
+            draftTimestamp: null,
+            isRecovering: false,
+          });
+          return;
+        }
+
+        comparedDraftKeyRef.current = draftKey;
+
         if (storedDraft) {
           const parsed = JSON.parse(storedDraft);
           if (parsed && parsed.data && parsed.timestamp) {
@@ -256,10 +268,10 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
             if (age < maxAge) {
               // If the stored draft is identical to current data, it isn't a recoverable draft.
               // This can happen when we saved drafts during initial load in older versions.
-              // currentData arrives asynchronously (React Query), so only mark the comparison
-              // as done once we actually have it.
+              // This check is the initial storage scan for the key. A draft written later
+              // in the same mounted editor is current-session data and must not reopen the
+              // recovery dialog after a successful save/rehydrate.
               if (currentData) {
-                comparedDraftKeyRef.current = draftKey;
                 if (areDraftsEquivalent(stripUndefinedDeep(parsed.data), stripUndefinedDeep(currentData))) {
                   await removeStorageItem(draftKey);
                   if (cancelled) return;

@@ -1,20 +1,13 @@
-import React, { Suspense, useMemo } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
+import MyApplicationsList from '@/components/trips/MyApplicationsList';
+import MyCreatedTripsList from '@/components/trips/MyCreatedTripsList';
+import TripNotificationsList from '@/components/trips/TripNotificationsList';
 import IconButton from '@/components/ui/IconButton';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-
-const MyApplicationsList = React.lazy(
-  () => import('@/components/trips/MyApplicationsList'),
-);
-const MyCreatedTripsList = React.lazy(
-  () => import('@/components/trips/MyCreatedTripsList'),
-);
-const TripNotificationsList = React.lazy(
-  () => import('@/components/trips/TripNotificationsList'),
-);
 
 export default function MyTripsScreen() {
   const colors = useThemedColors();
@@ -36,19 +29,13 @@ export default function MyTripsScreen() {
           />
         </View>
 
-        <Suspense fallback={<ActivityIndicator />}>
-          <MyCreatedTripsList />
-        </Suspense>
+        <MyCreatedTripsList />
 
         <Text style={styles.section}>Уведомления</Text>
-        <Suspense fallback={<ActivityIndicator />}>
-          <TripNotificationsList />
-        </Suspense>
+        <TripNotificationsList />
 
         <Text style={styles.section}>Мои заявки</Text>
-        <Suspense fallback={<ActivityIndicator />}>
-          <MyApplicationsList />
-        </Suspense>
+        <MyApplicationsList />
       </View>
     </ScrollView>
   );

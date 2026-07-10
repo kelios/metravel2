@@ -377,6 +377,11 @@ describe('useDraftRecovery', () => {
     );
 
     expect(result.current.hasPendingDraft).toBe(false);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(AsyncStorage.getItem).toHaveBeenCalledWith(draftKey);
 
     act(() => {
       result.current.saveDraft({ name: 'draft', optional: undefined } as any);
@@ -399,7 +404,13 @@ describe('useDraftRecovery', () => {
     expect(parsed.data).toEqual({ name: 'draft' });
 
     // Rerender with changed currentData: must not trigger recovery popup.
+    AsyncStorage.getItem.mockClear();
     rerender({ currentData: { name: 'server2' } });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(AsyncStorage.getItem).not.toHaveBeenCalled();
     expect(result.current.hasPendingDraft).toBe(false);
 
     // timers restored in afterEach

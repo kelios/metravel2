@@ -226,6 +226,78 @@ describe('fetchMyPlannedTrips backend route_summary mapping', () => {
       warnings: [],
     })
   })
+
+  it('maps production-like minimal trips without throwing on empty route or partial participants', async () => {
+    delete process.env.EXPO_PUBLIC_TRIPS_MOCK
+    const apiClientMock = {
+      get: jest.fn(async () => [
+        {
+          id: '314',
+          title: '  Minimal planned trip  ',
+          description: null,
+          start_date: '2026-07-11T09:00:00Z',
+          status: 'planned',
+          owner: '7',
+          participants: [{ id: '88', user: null, status: 'accepted' }],
+          route: { points: [] },
+          route_summary: null,
+          routing_state: null,
+          is_public: false,
+          max_participants: '0',
+        },
+      ]),
+    }
+
+    jest.resetModules()
+    jest.doMock('@/api/client', () => ({
+      apiClient: apiClientMock,
+      ApiError: class ApiError extends Error {
+        status: number
+        constructor(status: number, message: string) {
+          super(message)
+          this.status = status
+        }
+      },
+    }))
+    jest.doMock('@/stores/authStore', () => ({
+      useAuthStore: { getState: jest.fn(() => ({ userId: '7', isAuthenticated: true })) },
+    }))
+    jest.doMock('@/utils/logger', () => ({
+      devWarn: jest.fn(),
+      devLog: jest.fn(),
+      devError: jest.fn(),
+    }))
+
+    const { fetchMyPlannedTrips } = require('@/api/plannedTrips') as typeof import('@/api/plannedTrips')
+    const [trip] = await fetchMyPlannedTrips()
+
+    expect(trip).toEqual(expect.objectContaining({
+      id: 314,
+      title: 'Minimal planned trip',
+      description: '',
+      startDate: '2026-07-11T09:00:00Z',
+      transport: 'car',
+      visibility: 'private',
+      seatsTotal: 0,
+      status: 'planning',
+      route: [],
+      routeGeometry: null,
+      routeSummary: null,
+      routingState: null,
+      isOwner: true,
+      myRsvp: null,
+    }))
+    expect(trip.organizer).toEqual({ id: 7, name: '#7', avatarUrl: null })
+    expect(trip.participants).toEqual([
+      {
+        id: 88,
+        name: '#88',
+        avatarUrl: null,
+        rsvp: 'going',
+        role: 'participant',
+      },
+    ])
+  })
 })
 
 describe('deletePlannedTrip backend endpoint', () => {
