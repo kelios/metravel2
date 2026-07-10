@@ -17,7 +17,6 @@ const COUNTRIES: CountryEntry[] = [
     { code: 'TR', bbox: { minLat: 35.82, maxLat: 42.11, minLng: 25.67, maxLng: 44.82 } },
     { code: 'DE', bbox: { minLat: 47.27, maxLat: 55.06, minLng: 5.87,  maxLng: 15.04 } },
     { code: 'FR', bbox: { minLat: 41.34, maxLat: 51.09, minLng: -5.14, maxLng: 9.56  } },
-    { code: 'IT', bbox: { minLat: 35.49, maxLat: 47.09, minLng: 6.63,  maxLng: 18.52 } },
     { code: 'ES', bbox: { minLat: 27.64, maxLat: 43.79, minLng: -18.17,maxLng: 4.33  } },
     { code: 'CZ', bbox: { minLat: 48.55, maxLat: 51.06, minLng: 12.09, maxLng: 18.86 } },
     { code: 'SK', bbox: { minLat: 47.73, maxLat: 49.61, minLng: 16.83, maxLng: 22.57 } },
@@ -34,9 +33,16 @@ const COUNTRIES: CountryEntry[] = [
     { code: 'PT', bbox: { minLat: 36.96, maxLat: 42.15, minLng: -9.52, maxLng: -6.19 } },
     { code: 'GR', bbox: { minLat: 34.80, maxLat: 41.75, minLng: 19.37, maxLng: 29.65 } },
     { code: 'RS', bbox: { minLat: 42.23, maxLat: 46.19, minLng: 18.82, maxLng: 23.01 } },
+    // BA перед HR: Хорватия дугой охватывает Боснию, их bbox сильно
+    // перекрываются (Сараево 18.41 попадает в оба). Босния — «внутренняя»,
+    // поэтому проверяется первой, иначе город с пустым country_code утечёт в HR.
+    { code: 'BA', bbox: { minLat: 42.56, maxLat: 45.28, minLng: 15.74, maxLng: 19.62 } },
     { code: 'HR', bbox: { minLat: 42.39, maxLat: 46.55, minLng: 13.49, maxLng: 19.45 } },
     { code: 'SI', bbox: { minLat: 45.42, maxLat: 46.88, minLng: 13.38, maxLng: 16.61 } },
-    { code: 'BA', bbox: { minLat: 42.56, maxLat: 45.28, minLng: 15.74, maxLng: 19.62 } },
+    // IT ниже балканских/альпийских соседей: его широкий bbox (до lng 18.52)
+    // перекрывает Сараево/Загреб/Любляну/Женеву, поэтому специфичные страны
+    // (CH, AT, SI, HR, BA) должны матчиться раньше, иначе их города утекают в IT.
+    { code: 'IT', bbox: { minLat: 35.49, maxLat: 47.09, minLng: 6.63,  maxLng: 18.52 } },
     { code: 'MK', bbox: { minLat: 40.85, maxLat: 42.36, minLng: 20.45, maxLng: 23.04 } },
     { code: 'AL', bbox: { minLat: 39.64, maxLat: 42.66, minLng: 19.27, maxLng: 21.07 } },
     { code: 'BG', bbox: { minLat: 41.23, maxLat: 44.22, minLng: 22.36, maxLng: 28.61 } },

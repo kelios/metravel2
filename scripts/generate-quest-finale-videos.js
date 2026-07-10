@@ -88,6 +88,19 @@ const QUESTS = [
     { questId: 'brest-lantern', dir: 'brestLantern', city: 'Брест', mood: 'city', finaleId: 51 },
     { questId: 'vitebsk-avangard', dir: 'vitebskAvangard', city: 'Витебск', mood: 'city', finaleId: 52 },
     { questId: 'grodno-gorodnitsa', dir: 'grodnoGorodnitsa', city: 'Гродно', mood: 'city', finaleId: 53 },
+    { questId: 'lisbon-terramoto', dir: 'lisbonTerramoto', city: 'Лиссабон', mood: 'city', finaleId: 54 },
+    { questId: 'porto-port-wine', dir: 'portoPortWine', city: 'Порту', mood: 'city', finaleId: 55 },
+    { questId: 'mersin-cotton-port', dir: 'mersinCottonPort', city: 'Мерсин', mood: 'city', finaleId: 56 },
+    { questId: 'barcelona-barri-gotic', dir: 'barcelonaBarriGotic', city: 'Барселона', mood: 'city', finaleId: 57 },
+    { questId: 'athens-athena-poseidon', dir: 'athensAthenaPoseidon', city: 'Афины', mood: 'epic', finaleId: 58 },
+    { questId: 'limassol-lionheart', dir: 'limassolLionheart', city: 'Лимасол', mood: 'castle', finaleId: 59 },
+    { questId: 'dubrovnik-libertas', dir: 'dubrovnikLibertas', city: 'Дубровник', mood: 'castle', finaleId: 60 },
+    { questId: 'bucharest-curtea-veche', dir: 'bucharestCurteaVeche', city: 'Бухарест', mood: 'city', finaleId: 61 },
+    { questId: 'belgrade-white-city', dir: 'belgradeWhiteCity', city: 'Белград', mood: 'castle', finaleId: 62 },
+    { questId: 'sarajevo-meeting-of-cultures', dir: 'sarajevoMeetingOfCultures', city: 'Сараево', mood: 'city', finaleId: 63 },
+    { questId: 'sofia-serdica-underfoot', dir: 'sofiaSerdicaUnderfoot', city: 'София', mood: 'city', finaleId: 64 },
+    { questId: 'spb-guardians', dir: 'spbGuardians', city: 'Санкт-Петербург', mood: 'epic', finaleId: 65 },
+    { questId: 'malaga-picasso-mar', dir: 'malagaPicassoMar', city: 'Малага', mood: 'city', finaleId: 66 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
@@ -133,10 +146,8 @@ async function fetchBundle(questId) {
 }
 
 async function fetchCoverUrl(questId) {
-    const r = await fetch(`${API_BASE}/api/quests/`);
-    const list = await r.json();
-    const q = list.find(x => x.quest_id === questId);
-    if (!q || !q.cover_url) throw new Error(`no cover_url for ${questId}`);
+    const q = await fetchBundle(questId);
+    if (!q.cover_url) throw new Error(`no cover_url for ${questId}`);
     return q.cover_url;
 }
 

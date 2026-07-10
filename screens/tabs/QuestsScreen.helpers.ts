@@ -34,6 +34,7 @@ export const COUNTRY_NAMES: Record<string, string> = {
     BE: 'Бельгия',
     PT: 'Португалия',
     GR: 'Греция',
+    CY: 'Кипр',
     RS: 'Сербия',
     HR: 'Хорватия',
     SI: 'Словения',
