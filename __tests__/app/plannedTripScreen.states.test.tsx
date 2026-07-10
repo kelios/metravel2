@@ -222,6 +222,28 @@ describe('PlannedTripScreen — planner states', () => {
     expect(queryByTestId('trip-plan-panel-route')).toBeNull();
   });
 
+  it('renders a freshly created empty trip without crashing (regression for #884)', () => {
+    // Shape of a just-created planned trip: empty participants/route, null
+    // summary/geometry/routing, transport defaulted. Must not blank out.
+    mockTrip(
+      makeTrip({
+        route: [],
+        routeGeometry: null,
+        routeSummary: null,
+        routingState: null,
+        participants: [],
+      }),
+    );
+    const { getByTestId } = renderScreen();
+
+    expect(getByTestId('trip-plan-summary')).toBeTruthy();
+    expect(getByTestId('trip-plan-tabs')).toBeTruthy();
+    expect(getByTestId('trip-plan-panel-route')).toBeTruthy();
+    // People tab renders with an empty participant list, no throw.
+    fireEvent.press(getByTestId('trip-plan-tab-people'));
+    expect(getByTestId('trip-plan-panel-people')).toBeTruthy();
+  });
+
   it('renders a compact mobile header with an icon-only inactive tab', () => {
     mockResponsive = { isMobile: true };
     mockTrip(makeTrip());
