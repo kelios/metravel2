@@ -3,7 +3,8 @@
  * Upload only missing quest covers to production.
  *
  * Safety rule: before every PATCH, fetch the quest catalog and skip the quest
- * when cover_url is already present. This script never updates existing covers.
+ * when a non-default cover_url is already present. This script never updates
+ * existing real covers.
  *
  * Usage:
  *   node scripts/upload-missing-quest-covers-prod.js --dry-run --api-url=https://metravel.by
@@ -69,6 +70,12 @@ const QUEST_COVERS = [
   { quest_id: 'brest-lantern', assetsDir: 'brestLantern', cover: 'cover.png' },
   { quest_id: 'vitebsk-avangard', assetsDir: 'vitebskAvangard', cover: 'cover.png' },
   { quest_id: 'grodno-gorodnitsa', assetsDir: 'grodnoGorodnitsa', cover: 'cover.png' },
+  { quest_id: 'baranovichi-dva-goroda', assetsDir: 'baranovichiDvaGoroda', cover: 'cover.png' },
+  { quest_id: 'gervyaty-kostel', assetsDir: 'gervyatyKostel', cover: 'cover.png' },
+  { quest_id: 'lubcha-castle-revival', assetsDir: 'lubchaCastleRevival', cover: 'cover.png' },
+  { quest_id: 'shchuchin-versal', assetsDir: 'shchuchinVersal', cover: 'cover.png' },
+  { quest_id: 'zheludok-palace', assetsDir: 'zheludokPalace', cover: 'cover.png' },
+  { quest_id: 'braslav-mezh-ozyor', assetsDir: 'braslavMezhOzyor', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {
@@ -87,6 +94,14 @@ function sizeMB(filePath) {
 
 function authHeaders() {
   return TOKEN ? { Authorization: `Token ${TOKEN}` } : {};
+}
+
+function isDefaultCoverUrl(url) {
+  return typeof url === 'string' && /\/quest-default-cover\.svg(?:$|[?#])/i.test(url);
+}
+
+function hasExistingCover(quest) {
+  return Boolean(quest?.cover_url) && !isDefaultCoverUrl(quest.cover_url);
 }
 
 async function fetchQuestCatalog() {
@@ -155,7 +170,7 @@ async function main() {
       console.log('  skip: production quest is missing from /api/quests/');
       continue;
     }
-    if (productionQuest.cover_url) {
+    if (hasExistingCover(productionQuest)) {
       console.log('  skip: production cover_url already exists');
       continue;
     }
