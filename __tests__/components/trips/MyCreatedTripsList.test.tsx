@@ -21,13 +21,31 @@ jest.mock('@/hooks/useTheme', () => ({
 }));
 
 jest.mock('@/components/trips/planning/TripPlanCard', () => {
-  const { Text, View } = require('react-native');
+  const { Pressable, Text, View } = require('react-native');
 
-  return function MockTripPlanCard({ trip }: { trip: PlannedTrip }) {
+  return function MockTripPlanCard({
+    trip,
+    onOpenPress,
+    onEditPress,
+    onDeletePress,
+  }: {
+    trip: PlannedTrip;
+    onOpenPress?: (trip: PlannedTrip) => void;
+    onEditPress?: (trip: PlannedTrip) => void;
+    onDeletePress?: (trip: PlannedTrip) => void;
+  }) {
     return (
-      <View testID={`mock-trip-card-${trip.id}`}>
+      <Pressable testID={`mock-trip-card-${trip.id}`} onPress={() => onOpenPress?.(trip)}>
         <Text>{trip.title}</Text>
-      </View>
+        <View>
+          <Pressable testID={`my-created-trip-edit-${trip.id}`} onPress={() => onEditPress?.(trip)}>
+            <Text>edit</Text>
+          </Pressable>
+          <Pressable testID={`my-created-trip-delete-${trip.id}`} onPress={() => onDeletePress?.(trip)}>
+            <Text>delete</Text>
+          </Pressable>
+        </View>
+      </Pressable>
     );
   };
 });
@@ -96,9 +114,17 @@ describe('MyCreatedTripsList', () => {
     expect(getByText('Организуемая поездка')).toBeTruthy();
     expect(queryByText('Чужая поездка')).toBeNull();
 
-    fireEvent.press(getByTestId('my-created-trip-open-1'));
+    fireEvent.press(getByTestId('mock-trip-card-1'));
 
     expect(mockPush).toHaveBeenCalledWith('/trips/plan/1');
+  });
+
+  it('opens an organized trip in edit mode from the compact card action', () => {
+    const { getByTestId } = render(<MyCreatedTripsList />);
+
+    fireEvent.press(getByTestId('my-created-trip-edit-1'));
+
+    expect(mockPush).toHaveBeenCalledWith('/trips/plan/1?edit=1');
   });
 
   it('confirms and deletes an organized trip from the list', async () => {

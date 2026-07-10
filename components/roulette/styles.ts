@@ -46,8 +46,9 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     gap: 12,
   },
   sidebar: {
-    width: 320,
+    width: 336,
     maxWidth: 360,
+    alignSelf: 'flex-start',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.borderLight,
@@ -56,6 +57,7 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   main: {
     flex: 1,
+    minWidth: 0,
     borderRadius: 18,
     backgroundColor: Platform.select({
       web: colors.surfaceMuted,

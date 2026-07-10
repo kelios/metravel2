@@ -26,14 +26,16 @@ export default function PlannedTripsScreen() {
         <View style={styles.inner}>
           <Text style={styles.h1}>Планирование поездок</Text>
           <Text style={styles.lead}>
-            Войдите, чтобы планировать поездки, собирать попутчиков и публиковать маршруты.
+            <Text
+              accessibilityRole="link"
+              onPress={() => router.push(buildLoginHref({ redirect: '/trips/plan' }) as never)}
+              style={styles.loginLink}
+              testID="plan-login-link"
+            >
+              Войдите
+            </Text>
+            , чтобы планировать поездки, собирать попутчиков и публиковать маршруты.
           </Text>
-          <Button
-            label="Войти"
-            onPress={() => router.push(buildLoginHref({ redirect: '/trips/plan' }) as never)}
-            fullWidth
-            testID="plan-login"
-          />
         </View>
       </ScrollView>
     );
@@ -94,6 +96,7 @@ const createStyles = (colors: ThemedColors) =>
     },
     h1: { fontSize: 26, fontWeight: '800', color: colors.text },
     lead: { fontSize: 15, color: colors.textSecondary, lineHeight: 21 },
+    loginLink: { color: colors.primaryText, fontWeight: '700', textDecorationLine: 'underline' },
     communityLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     communityLinkText: { fontSize: 14, fontWeight: '600', color: colors.primaryText },
     list: { gap: 10 },

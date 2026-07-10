@@ -239,6 +239,24 @@ describe('useBreadcrumbModel', () => {
     ]);
   });
 
+  it('uses Russian breadcrumbs for my trips page', async () => {
+    usePathname.mockReturnValue('/trips/my');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.showBreadcrumbs).toBe(true);
+    });
+
+    expect(result.current.backToPath).toBe('/trips');
+    expect(result.current.currentTitle).toBe('Мои поездки');
+    expect(result.current.items).toEqual([
+      { label: 'Поездки', path: '/trips' },
+      { label: 'Мои поездки', path: '/trips/my' },
+    ]);
+  });
+
   it('builds three-level breadcrumbs for security-journal under profile › settings', async () => {
     usePathname.mockReturnValue('/security-journal');
     useLocalSearchParams.mockReturnValue({});

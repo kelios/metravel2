@@ -1,8 +1,9 @@
 import React, { Suspense, useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import Feather from '@expo/vector-icons/Feather';
 
-import Button from '@/components/ui/Button';
+import IconButton from '@/components/ui/IconButton';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 const MyApplicationsList = React.lazy(
@@ -23,16 +24,18 @@ export default function MyTripsScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.inner}>
-        <Text style={styles.h1}>Мои поездки</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.h1}>Мои поездки</Text>
+          <IconButton
+            icon={<Feather name="plus" size={20} color={colors.text} />}
+            label="Организовать поездку"
+            onPress={() => router.push('/trips/plan/create')}
+            size="md"
+            testID="my-trips-plan-cta"
+            style={styles.planIconButton}
+          />
+        </View>
 
-        <Button
-          label="Организовать поездку"
-          onPress={() => router.push('/trips/plan/create')}
-          fullWidth
-          testID="my-trips-plan-cta"
-        />
-
-        <Text style={styles.section}>Созданные поездки</Text>
         <Suspense fallback={<ActivityIndicator />}>
           <MyCreatedTripsList />
         </Suspense>
@@ -56,6 +59,13 @@ const createStyles = (colors: ThemedColors) =>
     screen: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16, alignItems: 'center' },
     inner: { width: '100%', maxWidth: 760, gap: 12 },
-    h1: { fontSize: 26, fontWeight: '800', color: colors.text },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      gap: 12,
+    },
+    h1: { flexShrink: 1, fontSize: 26, fontWeight: '800', color: colors.text },
+    planIconButton: { flexShrink: 0, marginHorizontal: 0 },
     section: { fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 8 },
   });

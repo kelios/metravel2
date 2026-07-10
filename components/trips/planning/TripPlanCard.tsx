@@ -1,12 +1,11 @@
-// components/trips/planning/TripPlanCard.tsx
-// Компактная текстовая карточка запланированной поездки (Sprint 13 / блок D).
-// У поездок нет обложки — это утилитарный list-итем, фото намеренно не добавляем.
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
+import CardActionPressable from '@/components/ui/CardActionPressable';
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import {
   PLAN_STATUS_LABEL,
   TRANSPORT_ICON_NAME,
@@ -15,13 +14,24 @@ import {
   planStatusColor,
   routeSummaryLine,
 } from '@/components/trips/planning/tripPlanFormatting';
+import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface Props {
   trip: PlannedTrip;
+  onOpenPress?: (trip: PlannedTrip) => void;
+  onEditPress?: (trip: PlannedTrip) => void;
+  onDeletePress?: (trip: PlannedTrip) => void;
+  isDeleting?: boolean;
 }
 
-function TripPlanCard({ trip }: Props) {
+function TripPlanCard({
+  trip,
+  onOpenPress,
+  onEditPress,
+  onDeletePress,
+  isDeleting = false,
+}: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
@@ -29,15 +39,68 @@ function TripPlanCard({ trip }: Props) {
   const statusBg = planStatusColor(trip.status, colors);
   const participantsCount = trip.participants.length;
   const goingCount = trip.participants.filter((p) => p.rsvp === 'going').length;
+  const coverUrl = typeof trip.coverUrl === 'string' ? trip.coverUrl.trim() : '';
+  const fallbackCover = useMemo(
+    () =>
+      getTripFallbackCover({
+        id: trip.id,
+        startDate: trip.startDate,
+        title: trip.title,
+        transport: trip.transport,
+        region: trip.region,
+      }),
+    [trip.id, trip.startDate, trip.title, trip.transport, trip.region],
+  );
+  const usesFallbackCover = coverUrl.length === 0;
+  const cardImageUrl = usesFallbackCover ? fallbackCover.uri : coverUrl;
 
-  return (
-    <Pressable
-      onPress={() => router.push(`/trips/plan/${trip.id}`)}
-      style={styles.card}
-      testID={`trip-plan-card-${trip.id}`}
-    >
+  const handleOpen = () => {
+    if (onOpenPress) {
+      onOpenPress(trip);
+      return;
+    }
+    router.push(`/trips/plan/${trip.id}`);
+  };
+
+  const actionSlot = onEditPress || onDeletePress ? (
+    <View style={styles.cardActions} testID={`trip-plan-card-actions-${trip.id}`}>
+      {onEditPress ? (
+        <CardActionPressable
+          accessibilityLabel="Редактировать поездку"
+          title="Редактировать"
+          onPress={() => onEditPress(trip)}
+          style={styles.cardActionButton}
+          disabled={isDeleting}
+          accessibilityState={{ disabled: isDeleting }}
+          testID={`my-created-trip-edit-${trip.id}`}
+        >
+          <Feather name="edit-2" size={15} color={colors.text} />
+        </CardActionPressable>
+      ) : null}
+      {onDeletePress ? (
+        <CardActionPressable
+          accessibilityLabel={isDeleting ? 'Поездка удаляется' : 'Удалить поездку'}
+          title={isDeleting ? 'Удаляется...' : 'Удалить'}
+          onPress={() => onDeletePress(trip)}
+          style={styles.cardActionButton}
+          disabled={isDeleting}
+          accessibilityState={{ disabled: isDeleting, busy: isDeleting }}
+          testID={`my-created-trip-delete-${trip.id}`}
+        >
+          {isDeleting ? (
+            <ActivityIndicator size="small" color={colors.danger} />
+          ) : (
+            <Feather name="trash-2" size={15} color={colors.danger} />
+          )}
+        </CardActionPressable>
+      ) : null}
+    </View>
+  ) : null;
+
+  const contentSlot = (
+    <View style={styles.contentStack}>
       <View style={styles.headerRow}>
-        <View style={[styles.badge, { backgroundColor: statusBg }]}>
+        <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
           <Text style={styles.badgeText}>{PLAN_STATUS_LABEL[trip.status]}</Text>
         </View>
       </View>
@@ -70,22 +133,48 @@ function TripPlanCard({ trip }: Props) {
           {participantsCount} участников · {goingCount} едут
         </Text>
       </View>
-    </Pressable>
+    </View>
+  );
+
+  return (
+    <UnifiedTravelCard
+      title={trip.title}
+      imageUrl={cardImageUrl}
+      onPress={handleOpen}
+      mediaFit="cover"
+      imageHeight={190}
+      heroTitleOverlay={false}
+      contentPosition="belowMedia"
+      contentSlot={contentSlot}
+      contentContainerStyle={styles.contentContainer}
+      rightTopSlot={actionSlot}
+      rightTopSlotScrim
+      mediaProps={{
+        optimizeWeb: !usesFallbackCover,
+        placeholderSrc: usesFallbackCover ? fallbackCover.uri : undefined,
+        recyclingKey: usesFallbackCover ? fallbackCover.key : coverUrl,
+        showImmediately: usesFallbackCover,
+        showLoadingIndicator: !usesFallbackCover,
+      }}
+      mediaPlaceholderSlot={<View style={styles.mediaPlaceholder} />}
+      style={[styles.card, isDeleting ? styles.cardDeleting : null]}
+      testID={`trip-plan-card-${trip.id}`}
+      webAsView={Platform.OS === 'web'}
+      webHoverScale={Platform.OS === 'web'}
+    />
   );
 }
 
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     card: {
-      borderWidth: 1,
-      borderColor: colors.border,
       borderRadius: 14,
-      backgroundColor: colors.surface,
-      padding: 14,
-      gap: 6,
     },
+    cardDeleting: { opacity: 0.6 },
+    contentContainer: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 12 },
+    contentStack: { gap: 6 },
     headerRow: { flexDirection: 'row' },
-    badge: {
+    statusBadge: {
       borderRadius: 999,
       paddingHorizontal: 10,
       paddingVertical: 4,
@@ -104,6 +193,32 @@ const createStyles = (colors: ThemedColors) =>
       borderTopColor: colors.border,
     },
     footerText: { fontSize: 13, fontWeight: '600', color: colors.text },
+    cardActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      padding: 4,
+      borderRadius: 999,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...Platform.select({
+        web: { boxShadow: '0 4px 12px rgba(15, 23, 42, 0.14)' as any },
+      }),
+    },
+    cardActionButton: {
+      width: 34,
+      height: 34,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+    },
+    mediaPlaceholder: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: colors.surfaceMuted,
+    },
   });
 
 export default React.memo(TripPlanCard);

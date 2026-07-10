@@ -7,6 +7,7 @@ import Feather from '@expo/vector-icons/Feather';
 import Button from '@/components/ui/Button';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import RouteBuilder from '@/components/trips/planning/RouteBuilder';
 import TripRouteExportMenu, {
   shouldRenderTripRouteExportMenu,
@@ -30,6 +31,7 @@ import {
   formatTripDateTime,
   planStatusColor,
 } from '@/components/trips/planning/tripPlanFormatting';
+import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
 import { useDeletePlannedTrip, usePlannedTrip, useUpdatePlannedTrip } from '@/hooks/usePlannedTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { LAYOUT } from '@/constants/layout';
@@ -85,7 +87,7 @@ export default function PlannedTripScreen() {
   );
   const showRouteExportMenu = shouldRenderTripRouteExportMenu(Platform.OS);
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string; edit?: string }>();
   const tripId = Number(params.id);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -97,10 +99,29 @@ export default function PlannedTripScreen() {
   );
   const deleteTrip = useDeletePlannedTrip();
   const updateTrip = useUpdatePlannedTrip();
+  const fallbackCover = trip
+    ? getTripFallbackCover({
+        id: trip.id,
+        startDate: trip.startDate,
+        title: trip.title,
+        transport: trip.transport,
+        region: trip.region,
+      })
+    : null;
+  const coverUrl = typeof trip?.coverUrl === 'string' ? trip.coverUrl.trim() : '';
+  const usesFallbackCover = Boolean(trip && coverUrl.length === 0);
+  const displayCoverUrl = usesFallbackCover ? (fallbackCover?.uri ?? '') : coverUrl;
 
   useEffect(() => {
     if (trip) setEditValues(initialEditValues(trip));
   }, [trip]);
+
+  useEffect(() => {
+    if (trip && params.edit === '1') {
+      setEditError(null);
+      setIsEditing(true);
+    }
+  }, [params.edit, trip]);
 
   const handleDelete = () => {
     if (!trip) return;
@@ -187,12 +208,17 @@ export default function PlannedTripScreen() {
           <>
             <View style={styles.cover} testID="trip-plan-cover">
               <ImageCardMedia
-                src={trip.coverUrl}
+                src={displayCoverUrl}
                 alt={trip.title}
                 height={220}
                 fit="cover"
                 blurBackground={false}
                 borderRadius={12}
+                optimizeWeb={!usesFallbackCover}
+                placeholderSrc={usesFallbackCover ? fallbackCover?.uri : undefined}
+                recyclingKey={usesFallbackCover ? fallbackCover?.key : displayCoverUrl}
+                showImmediately={usesFallbackCover}
+                showLoadingIndicator={!usesFallbackCover}
               />
             </View>
 
@@ -269,15 +295,25 @@ export default function PlannedTripScreen() {
                 />
 
                 <Text style={styles.label}>Обложка</Text>
-                <TextInput
-                  value={editValues.coverUrl}
-                  onChangeText={(coverUrl) => setEditValues((prev) => prev ? { ...prev, coverUrl } : prev)}
-                  placeholder="Ссылка на изображение обложки"
-                  placeholderTextColor={colors.textMuted}
-                  autoCapitalize="none"
-                  style={styles.input}
-                  testID="trip-plan-edit-cover"
-                />
+                <View style={styles.coverUpload} testID="trip-plan-edit-cover">
+                  <PhotoUploadWithPreview
+                    collection="plannedTripCover"
+                    idTravel={String(trip.id)}
+                    oldImage={editValues.coverUrl || null}
+                    onUpload={(coverUrl) =>
+                      setEditValues((prev) => (prev ? { ...prev, coverUrl } : prev))
+                    }
+                    onRequestRemove={() =>
+                      setEditValues((prev) => (prev ? { ...prev, coverUrl: '' } : prev))
+                    }
+                    placeholder="Перетащите фото обложки"
+                    maxSizeMB={10}
+                    disabled={updateTrip.isPending}
+                  />
+                  <Text style={styles.coverUploadHint}>
+                    Фото будет прикреплено к поездке после загрузки и сохранения изменений.
+                  </Text>
+                </View>
 
                 <View style={styles.formRow}>
                   <View style={styles.formCol}>
@@ -524,6 +560,8 @@ const createStyles = (colors: ThemedColors) =>
       textAlignVertical: 'top',
       ...Platform.select({ web: { outlineWidth: 0 as any } }),
     },
+    coverUpload: { gap: 6 },
+    coverUploadHint: { fontSize: 12, lineHeight: 17, color: colors.textMuted },
     formRow: { flexDirection: 'row', gap: 10 },
     formCol: { flex: 1, gap: 6 },
     optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

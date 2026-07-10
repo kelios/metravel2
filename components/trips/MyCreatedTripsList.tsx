@@ -1,10 +1,8 @@
 import React, { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Feather from '@expo/vector-icons/Feather';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
-import Button from '@/components/ui/Button';
 import TripPlanCard from '@/components/trips/planning/TripPlanCard';
 import { useDeletePlannedTrip, useMyPlannedTrips } from '@/hooks/usePlannedTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -26,8 +24,14 @@ function MyCreatedTripsList() {
     [data],
   );
   const openTrip = useCallback(
-    (tripId: number) => {
-      router.push(`/trips/plan/${tripId}`);
+    (trip: PlannedTrip) => {
+      router.push(`/trips/plan/${trip.id}`);
+    },
+    [router],
+  );
+  const editTrip = useCallback(
+    (trip: PlannedTrip) => {
+      router.push(`/trips/plan/${trip.id}?edit=1`);
     },
     [router],
   );
@@ -89,31 +93,14 @@ function MyCreatedTripsList() {
   return (
     <View style={styles.list} testID="my-created-trips-list">
       {createdTrips.map((trip) => (
-        <View key={trip.id} style={styles.item}>
-          <TripPlanCard trip={trip} />
-          <View style={styles.actions}>
-            <Button
-              label="Открыть"
-              variant="secondary"
-              size="sm"
-              onPress={() => openTrip(trip.id)}
-              icon={<Feather name="eye" size={15} color={colors.primaryDark} />}
-              style={styles.actionButton}
-              testID={`my-created-trip-open-${trip.id}`}
-            />
-            <Button
-              label="Удалить"
-              variant="danger"
-              size="sm"
-              onPress={() => void handleDeleteTrip(trip)}
-              loading={isDeletingTrip && String(deletingTripId) === String(trip.id)}
-              disabled={isDeletingTrip}
-              icon={<Feather name="trash-2" size={15} color={colors.textOnPrimary} />}
-              style={styles.actionButton}
-              testID={`my-created-trip-delete-${trip.id}`}
-            />
-          </View>
-        </View>
+        <TripPlanCard
+          key={trip.id}
+          trip={trip}
+          onOpenPress={openTrip}
+          onEditPress={editTrip}
+          onDeletePress={handleDeleteTrip}
+          isDeleting={isDeletingTrip && String(deletingTripId) === String(trip.id)}
+        />
       ))}
     </View>
   );
@@ -122,9 +109,6 @@ function MyCreatedTripsList() {
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     list: { gap: 10 },
-    item: { gap: 8 },
-    actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    actionButton: { flexGrow: 1, flexBasis: 136 },
     state: { paddingVertical: 18, alignItems: 'center' },
     empty: { fontSize: 14, lineHeight: 20, color: colors.textMuted },
     error: { fontSize: 14, lineHeight: 20, color: colors.danger, fontWeight: '600' },

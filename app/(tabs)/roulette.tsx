@@ -126,6 +126,7 @@ const FiltersPanel = memo(function FiltersPanel({
       onClose={onClose}
       onApply={onApply}
       optionalHint
+      embeddedSidebar={!onClose}
     />
   );
 });

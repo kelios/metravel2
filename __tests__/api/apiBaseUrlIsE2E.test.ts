@@ -1,7 +1,6 @@
-// Regression for board #745: api/misc.ts and api/articles.ts must forward the
-// EXPO_PUBLIC_E2E flag (isE2E) into resolveApiBaseUrl, otherwise e2e/static
-// self-proxy builds hit the absolute https://metravel.by/api and get blocked by
-// CORS instead of resolving to the relative /api on the current origin.
+// Regression for board #745 and local auth: api modules must forward runtime
+// flags into resolveApiBaseUrl, otherwise e2e/local web builds hit an absolute
+// API origin and get blocked by CORS instead of resolving to same-origin /api.
 
 const mockResolveApiBaseUrl = jest.fn(() => 'https://example.test/api');
 
@@ -9,11 +8,13 @@ jest.mock('@/utils/resolveApiBaseUrl', () => ({
   resolveApiBaseUrl: (...args: unknown[]) => mockResolveApiBaseUrl(...args),
 }));
 
-describe('#745 api modules forward isE2E to resolveApiBaseUrl', () => {
+describe('#745 api modules forward runtime API flags to resolveApiBaseUrl', () => {
   const originalE2E = process.env.EXPO_PUBLIC_E2E;
+  const originalLocalApi = process.env.EXPO_PUBLIC_IS_LOCAL_API;
 
   afterEach(() => {
     process.env.EXPO_PUBLIC_E2E = originalE2E;
+    process.env.EXPO_PUBLIC_IS_LOCAL_API = originalLocalApi;
     jest.resetModules();
     mockResolveApiBaseUrl.mockClear();
   });
@@ -38,6 +39,18 @@ describe('#745 api modules forward isE2E to resolveApiBaseUrl', () => {
     const opts = loadWithE2E('@/api/articles');
     expect(opts).toBeDefined();
     expect(opts?.isE2E).toBe(true);
+  });
+
+  it('api/auth resolves with isLocalApi: true when EXPO_PUBLIC_IS_LOCAL_API=true', () => {
+    process.env.EXPO_PUBLIC_IS_LOCAL_API = 'true';
+    jest.resetModules();
+    mockResolveApiBaseUrl.mockClear();
+    jest.isolateModules(() => {
+      require('@/api/auth');
+    });
+    const opts = mockResolveApiBaseUrl.mock.calls[0]?.[0] as { isLocalApi?: boolean } | undefined;
+    expect(opts).toBeDefined();
+    expect(opts?.isLocalApi).toBe(true);
   });
 
   it('api/misc resolves with isE2E: false when EXPO_PUBLIC_E2E is unset', () => {

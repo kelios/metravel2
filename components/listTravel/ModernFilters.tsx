@@ -141,6 +141,7 @@ interface ModernFiltersProps {
   onApply?: () => void;
   onClose?: () => void;
   optionalHint?: boolean;
+  embeddedSidebar?: boolean;
 }
 
 const ModernFilters: React.FC<ModernFiltersProps> = memo(({
@@ -162,15 +163,18 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   onApply,
   onClose,
   optionalHint = false,
+  embeddedSidebar = false,
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createModernFiltersStyles(colors), [colors]);
 
   const { isNarrowWeb, showsStickyFooter } = getModernFiltersViewportState();
+  const useOverlayChrome = !embeddedSidebar && isNarrowWeb;
+  const shouldShowStickyFooter = !embeddedSidebar && showsStickyFooter;
   const { reserveMinHeight, shouldReserveSpace } = getModernFiltersReserveState({
     filterGroups,
     isLoading,
-    isNarrowWeb,
+    isNarrowWeb: useOverlayChrome,
   });
   const [yearFocused, setYearFocused] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
@@ -222,10 +226,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 
   const activeFiltersCount = useMemo(() => getModernFiltersActiveCount(selectedFilters), [selectedFilters]);
   const { groupsWithoutSort, sortGroup } = useMemo(() => splitModernFilterGroups(filterGroups), [filterGroups]);
-  const useStackedHeader = Platform.OS === 'web' && isNarrowWeb;
+  const useStackedHeader = Platform.OS === 'web' && useOverlayChrome;
   // Icon-only toggle on native: the «Развернуть/Свернуть» label widens headerRight and
   // overlaps the results chip on Android (F-39). Keep the label only on narrow web.
-  const showToggleAllLabel = Platform.OS === 'web' && isNarrowWeb;
+  const showToggleAllLabel = Platform.OS === 'web' && useOverlayChrome;
 
   const allGroupKeys = useMemo(() => groupsWithoutSort.map((g) => g.key), [groupsWithoutSort]);
 
@@ -253,19 +257,25 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         styles.container,
         isCompact && styles.containerCompact,
         Platform.OS !== 'web' && styles.containerMobile,
-        Platform.OS === 'web' && isNarrowWeb && styles.containerWebFull,
+        Platform.OS === 'web' && useOverlayChrome && styles.containerWebFull,
         shouldReserveSpace && { minHeight: reserveMinHeight },
       ]}
     >
       <View
         style={[
           styles.topChrome,
-          (Platform.OS !== 'web' || isNarrowWeb) && styles.topChromeCompact,
+          (Platform.OS !== 'web' || useOverlayChrome) && styles.topChromeCompact,
         ]}
       >
         {/* Header — single compact row */}
         <View style={[styles.header, useStackedHeader && styles.headerStacked]}>
-          <View style={[styles.headerLeft, useStackedHeader && styles.headerLeftStacked]}>
+          <View
+            style={[
+              styles.headerLeft,
+              useStackedHeader && styles.headerLeftStacked,
+              embeddedSidebar && styles.headerLeftEmbeddedSidebar,
+            ]}
+          >
             {Platform.OS !== 'web' && (
               <>
                 <Feather name="filter" size={16} color={colors.primaryDark} />
@@ -274,7 +284,13 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             )}
             {optionalHint && <Text style={styles.optionalHint}>необязательно</Text>}
             {!!resultsText && (
-              <View style={styles.headerCountChip} testID="filters-results-chip">
+              <View
+                style={[
+                  styles.headerCountChip,
+                  embeddedSidebar && styles.headerCountChipEmbeddedSidebar,
+                ]}
+                testID="filters-results-chip"
+              >
                 <Text style={styles.headerCountChipText} numberOfLines={1}>{resultsText}</Text>
               </View>
             )}
@@ -594,7 +610,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
       </ScrollView>
 
       {/* Apply / Reset Buttons (Mobile: native + web-narrow) — sticky footer вне ScrollView */}
-      {showsStickyFooter && (
+      {shouldShowStickyFooter && (
         <View style={styles.applyButtonContainer} testID="filters-apply-footer">
           {activeFiltersCount > 0 && (
             <Pressable

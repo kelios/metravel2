@@ -123,6 +123,9 @@ export const createContainerHeaderStyles = (ctx: StylesCtx) => {
         } as any,
       }),
     },
+    headerCountChipEmbeddedSidebar: {
+      maxWidth: '100%',
+    },
     headerCountChipText: {
       fontSize: typography.sizes.xs,
       color: colors.brandText,
@@ -135,6 +138,12 @@ export const createContainerHeaderStyles = (ctx: StylesCtx) => {
       gap: spacing.xs,
       flex: 1,
       minWidth: 0,
+    },
+    headerLeftEmbeddedSidebar: {
+      flexWrap: 'wrap',
+      alignItems: 'flex-start',
+      rowGap: spacing.xxs,
+      flexShrink: 1,
     },
     headerLeftStacked: {
       flex: 1,

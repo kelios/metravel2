@@ -502,6 +502,22 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       };
     }
 
+    if (p === '/trips/my') {
+      const items: BreadcrumbModelItem[] = [
+        { label: 'Поездки', path: '/trips' },
+        { label: 'Мои поездки', path: '/trips/my' },
+      ];
+
+      return {
+        items,
+        depth: items.length + 1,
+        currentTitle: 'Мои поездки',
+        pageContextTitle: 'Поездки',
+        backToPath: '/trips',
+        showBreadcrumbs: true,
+      };
+    }
+
     const isQuestDetails = p.startsWith('/quests/') && parts.length >= 3;
     if (isQuestDetails) {
       const questSlug = parts[2];
