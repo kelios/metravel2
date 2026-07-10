@@ -340,6 +340,25 @@ const splitSocialLinks = (
   return out;
 };
 
+const DUPLICATE_APPLICATION_ERROR = 'application already exists for this trip';
+
+const collectErrorStrings = (value: unknown): string[] => {
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(collectErrorStrings);
+  if (value && typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).flatMap(collectErrorStrings);
+  }
+  return [];
+};
+
+export const isDuplicateTripApplicationError = (error: unknown): boolean => {
+  if (!(error instanceof ApiError) || error.status !== 400) return false;
+  const messages = [error.message, ...collectErrorStrings(error.data)];
+  return messages.some((message) =>
+    message.toLowerCase().includes(DUPLICATE_APPLICATION_ERROR),
+  );
+};
+
 // ── Мок-фолбэк (FE-guard: снять после верификации BE на проде + regression) ──
 
 const USE_MOCK = process.env.EXPO_PUBLIC_TRIPS_MOCK === 'true';

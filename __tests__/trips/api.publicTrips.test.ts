@@ -29,6 +29,7 @@ import {
   decideApplication,
   fetchPublicTrip,
   fetchPublicTrips,
+  isDuplicateTripApplicationError,
   submitApplication,
 } from '@/api/publicTrips'
 import { MOCK_PUBLIC_TRIPS } from '@/api/publicTripsMock'
@@ -180,6 +181,15 @@ describe('fetchPublicTrip — post-approval reveal (#410)', () => {
 })
 
 describe('application status transitions', () => {
+  it('detects duplicate application validation from DRF field errors', () => {
+    const error = new ApiError(400, 'trip: application already exists for this trip', {
+      trip: ['application already exists for this trip'],
+    })
+
+    expect(isDuplicateTripApplicationError(error)).toBe(true)
+    expect(isDuplicateTripApplicationError(new ApiError(400, 'other', { trip: ['other'] }))).toBe(false)
+  })
+
   it('submitApplication posts trip + message + platform links to /trip-applications/', async () => {
     mockPost.mockResolvedValueOnce({
       id: 10,

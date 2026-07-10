@@ -20,11 +20,14 @@ jest.mock('expo-router', () => ({
 
 const mockUsePublicTrip = jest.fn()
 const mockUseTripApplications = jest.fn()
+const mockUseMyTripApplications = jest.fn()
+const mockSubmitApplicationMutate = jest.fn()
 jest.mock('@/hooks/usePublicTripsApi', () => ({
   usePublicTrip: (...a: unknown[]) => mockUsePublicTrip(...a),
+  useMyTripApplications: (...a: unknown[]) => mockUseMyTripApplications(...a),
   useTripApplications: (...a: unknown[]) => mockUseTripApplications(...a),
   useDecideApplication: () => ({ mutate: jest.fn() }),
-  useSubmitApplication: () => ({ mutate: jest.fn(), isPending: false }),
+  useSubmitApplication: () => ({ mutate: mockSubmitApplicationMutate, isPending: false }),
 }))
 jest.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: { isAuthenticated: boolean }) => unknown) =>
@@ -41,6 +44,7 @@ jest.mock('@/hooks/useTripTelegramGroupApi', () => ({
 import PublicTripDetail from '@/components/trips/PublicTripDetail'
 import OrganizerApplicationsPanel from '@/components/trips/OrganizerApplicationsPanel'
 import TripApplyForm from '@/components/trips/TripApplyForm'
+import { ApiError } from '@/api/client'
 import { CONSENT_TYPES, hasActionConsent, readActionConsentsSync } from '@/utils/actionConsent'
 
 const baseTrip = {
@@ -65,6 +69,8 @@ describe('PublicTripDetail — contact-exchange acknowledgment (#441)', () => {
     window.localStorage.clear()
     mockUsePublicTrip.mockReturnValue({ data: baseTrip, isLoading: false, isError: false })
     mockUseTripApplications.mockReturnValue({ data: [], isLoading: false, isError: false })
+    mockUseMyTripApplications.mockReturnValue({ data: [], isLoading: false, isError: false })
+    mockSubmitApplicationMutate.mockReset()
   })
 
   it('gates approved-participant contacts behind a «Понятно» ack, then reveals', async () => {
@@ -95,12 +101,32 @@ describe('PublicTripDetail — contact-exchange acknowledgment (#441)', () => {
     expect(getByTestId('trip-reveal')).toBeTruthy()
     expect(queryByTestId('trip-contact-ack')).toBeNull()
   })
+
+  it('uses the current user application list to show existing application status', () => {
+    mockUsePublicTrip.mockReturnValue({
+      data: { ...baseTrip, myApplicationStatus: null, isOwner: false },
+      isLoading: false,
+      isError: false,
+    })
+    mockUseMyTripApplications.mockReturnValue({
+      data: [{ id: 77, tripId: 1, status: 'new' }],
+      isLoading: false,
+      isError: false,
+    })
+
+    const { getByText, queryByTestId } = render(<PublicTripDetail tripId={1} />)
+
+    expect(getByText('Ваша заявка')).toBeTruthy()
+    expect(queryByTestId('trip-apply-form')).toBeNull()
+  })
 })
 
 describe('TripApplyForm — consent before applying (#439)', () => {
   beforeEach(() => {
     ;(Platform as { OS: string }).OS = 'web'
     window.localStorage.clear()
+    mockUseMyTripApplications.mockReturnValue({ data: [], isLoading: false, isError: false })
+    mockSubmitApplicationMutate.mockReset()
   })
 
   it('blocks «Отправить заявку» until both consent checkboxes are checked', () => {
@@ -134,6 +160,26 @@ describe('TripApplyForm — consent before applying (#439)', () => {
     fireEvent.press(submit)
 
     expect(getByText(/минимум 10 символов/i)).toBeTruthy()
+  })
+
+  it('shows a duplicate-application message from backend validation', () => {
+    const trip = { ...baseTrip, myApplicationStatus: null } as never
+    mockSubmitApplicationMutate.mockImplementation((_input, options) => {
+      options.onError(
+        new ApiError(400, 'trip: application already exists for this trip', {
+          trip: ['application already exists for this trip'],
+        }),
+      )
+    })
+    const { getAllByText, getByTestId } = render(<TripApplyForm trip={trip} />)
+
+    fireEvent.changeText(getByTestId('trip-apply-message'), 'Хочу поехать с вами')
+    fireEvent(getByTestId('trip-apply-consent-rules'), 'onToggle', true)
+    fireEvent(getByTestId('trip-apply-consent-disclaimer'), 'onToggle', true)
+    fireEvent.press(getByTestId('trip-apply-submit'))
+
+    expect(getAllByText(/Заявка уже отправлена/i).length).toBeGreaterThan(0)
+    expect(getByTestId('trip-apply-submit').props.accessibilityState?.disabled).toBe(true)
   })
 })
 

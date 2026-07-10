@@ -9,6 +9,7 @@ import Feather from '@expo/vector-icons/Feather';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import TripStatusBadge from '@/components/trips/TripStatusBadge';
 import { tripCardMeta } from '@/components/trips/tripFormatting';
+import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
 import type { PublicTrip } from '@/api/publicTrips';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { trackFeaturedClick, trackFeaturedImpression } from '@/utils/tripAnalytics';
@@ -29,6 +30,21 @@ function PublicTripCard({ trip, onPress, width, testID }: Props) {
     if (trip.featured) trackFeaturedImpression(trip.id);
   }, [trip.featured, trip.id]);
 
+  const coverUrl = typeof trip.coverUrl === 'string' ? trip.coverUrl.trim() : '';
+  const fallbackCover = useMemo(
+    () =>
+      getTripFallbackCover({
+        id: trip.id,
+        startDate: trip.startDate,
+        title: trip.title,
+        transport: trip.tripType,
+        region: trip.region,
+      }),
+    [trip.id, trip.startDate, trip.title, trip.tripType, trip.region],
+  );
+  const usesFallbackCover = coverUrl.length === 0;
+  const cardImageUrl = usesFallbackCover ? fallbackCover.uri : coverUrl;
+
   const handlePress = () => {
     if (trip.featured) trackFeaturedClick(trip.id);
     onPress(trip);
@@ -44,7 +60,7 @@ function PublicTripCard({ trip, onPress, width, testID }: Props) {
   return (
     <UnifiedTravelCard
       title={trip.title}
-      imageUrl={trip.coverUrl}
+      imageUrl={cardImageUrl}
       metaText={tripCardMeta(trip)}
       onPress={handlePress}
       width={width}
@@ -57,6 +73,14 @@ function PublicTripCard({ trip, onPress, width, testID }: Props) {
           <TripStatusBadge kind="application" status={trip.myApplicationStatus} />
         ) : null
       }
+      mediaProps={{
+        optimizeWeb: !usesFallbackCover,
+        placeholderSrc: usesFallbackCover ? fallbackCover.uri : undefined,
+        recyclingKey: usesFallbackCover ? fallbackCover.key : cardImageUrl,
+        showImmediately: usesFallbackCover,
+        showLoadingIndicator: !usesFallbackCover,
+      }}
+      mediaPlaceholderSlot={<View style={styles.mediaPlaceholder} />}
       testID={testID ?? `trip-card-${trip.id}`}
     />
   );
@@ -77,6 +101,11 @@ const createStyles = (colors: ThemedColors) =>
       fontSize: 11,
       fontWeight: '700',
       color: colors.textOnPrimary,
+    },
+    mediaPlaceholder: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: colors.surfaceMuted,
     },
   });
 

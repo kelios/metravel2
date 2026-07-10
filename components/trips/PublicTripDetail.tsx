@@ -14,7 +14,8 @@ import TripApplyForm from '@/components/trips/TripApplyForm';
 import OrganizerApplicationsPanel from '@/components/trips/OrganizerApplicationsPanel';
 import TripTelegramGroupCard from '@/components/trips/communication/TripTelegramGroupCard';
 import { formatSeats, formatTripDates } from '@/components/trips/tripFormatting';
-import { usePublicTrip } from '@/hooks/usePublicTripsApi';
+import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
+import { useMyTripApplications, usePublicTrip } from '@/hooks/usePublicTripsApi';
 import { useActionConsent } from '@/hooks/useActionConsent';
 import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { useAuthStore } from '@/stores/authStore';
@@ -45,6 +46,7 @@ function PublicTripDetail({ tripId }: Props) {
   const [justSubmitted, setJustSubmitted] = useState(false);
   const contactConsent = useActionConsent(CONSENT_TYPES.CONTACT_EXCHANGE);
   const { data: trip, isLoading, isError } = usePublicTrip(tripId);
+  const myApplicationsQuery = useMyTripApplications();
 
   useEffect(() => {
     if (trip) trackTripViewed(trip.id, trip.featured);
@@ -66,25 +68,53 @@ function PublicTripDetail({ tripId }: Props) {
     );
   }
 
-  const approved = trip.myApplicationStatus === 'approved';
+  const myApplicationForTrip = myApplicationsQuery.data?.find(
+    (application) => String(application.tripId) === String(trip.id),
+  );
+  const effectiveApplicationStatus =
+    trip.myApplicationStatus ?? myApplicationForTrip?.status ?? null;
+  const approved = effectiveApplicationStatus === 'approved';
   const revealed = approved || trip.isOwner;
   const hasRevealContent = revealed && (!!trip.meetingPoint || !!trip.contactNote);
   // Перед показом контактов/места встречи другого человека участник один раз
   // подтверждает ответственность («Понятно»). Организатору (свои данные) — не нужно.
   const needsContactAck =
     hasRevealContent && approved && !trip.isOwner && contactConsent.hydrated && !contactConsent.granted;
-  const alreadyApplied = trip.myApplicationStatus != null && trip.myApplicationStatus !== 'cancelled';
+  const alreadyApplied =
+    effectiveApplicationStatus != null && effectiveApplicationStatus !== 'cancelled';
+  const isCheckingExistingApplication =
+    isAuthenticated &&
+    !trip.isOwner &&
+    trip.status === 'open' &&
+    trip.myApplicationStatus == null &&
+    myApplicationsQuery.isLoading;
   const canApply = !trip.isOwner && trip.status === 'open' && !alreadyApplied;
+  const coverUrl = typeof trip.coverUrl === 'string' ? trip.coverUrl.trim() : '';
+  const fallbackCover = getTripFallbackCover({
+    id: trip.id,
+    startDate: trip.startDate,
+    title: trip.title,
+    transport: trip.tripType,
+    region: trip.region,
+  });
+  const usesFallbackCover = coverUrl.length === 0;
+  const displayCoverUrl = usesFallbackCover ? fallbackCover.uri : coverUrl;
 
   return (
     <View style={styles.wrap} testID={`trip-detail-${trip.id}`}>
       <View style={styles.hero}>
         <ImageCardMedia
-          src={trip.coverUrl}
+          src={displayCoverUrl}
           alt={trip.title}
           height={240}
           fit="contain"
           blurBackground
+          optimizeWeb={!usesFallbackCover}
+          placeholderSrc={usesFallbackCover ? fallbackCover.uri : undefined}
+          recyclingKey={usesFallbackCover ? fallbackCover.key : displayCoverUrl}
+          showImmediately={usesFallbackCover}
+          showLoadingIndicator={!usesFallbackCover}
+          testID="trip-detail-cover"
         />
       </View>
 
@@ -175,12 +205,16 @@ function PublicTripDetail({ tripId }: Props) {
       {!trip.isOwner && alreadyApplied && !justSubmitted ? (
         <View style={styles.statusBox}>
           <Text style={styles.statusLabel}>Ваша заявка</Text>
-          <TripStatusBadge kind="application" status={trip.myApplicationStatus!} />
+          <TripStatusBadge kind="application" status={effectiveApplicationStatus!} />
         </View>
       ) : null}
 
       {canApply && !justSubmitted ? (
-        isAuthenticated ? (
+        isCheckingExistingApplication ? (
+          <View style={styles.applyBox} testID="trip-apply-status-loading">
+            <ActivityIndicator color={colors.primaryDark} />
+          </View>
+        ) : isAuthenticated ? (
           <View style={styles.applyBox}>
             <TripApplyForm trip={trip} onSubmitted={() => setJustSubmitted(true)} />
           </View>

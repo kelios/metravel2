@@ -8,7 +8,7 @@ import { Link } from 'expo-router';
 import Button from '@/components/ui/Button';
 import ConsentCheckbox from '@/components/legal/ConsentCheckbox';
 import SafetyNotice from '@/components/ui/SafetyNotice';
-import type { PublicTrip } from '@/api/publicTrips';
+import { isDuplicateTripApplicationError, type PublicTrip } from '@/api/publicTrips';
 import { useSubmitApplication } from '@/hooks/usePublicTripsApi';
 import { useActionConsent } from '@/hooks/useActionConsent';
 import { CONSENT_TYPES } from '@/utils/actionConsent';
@@ -21,6 +21,15 @@ interface Props {
 
 const DISCLAIMER =
   'MeTravel не организует поездки и не является их участником. Это площадка для знакомства попутчиков — все договорённости, оплата и ответственность остаются на участниках.';
+const DUPLICATE_APPLICATION_MESSAGE =
+  'Заявка уже отправлена. Статус можно посмотреть в разделе «Мои поездки».';
+const GENERIC_SUBMIT_ERROR_MESSAGE =
+  'Не удалось отправить заявку. Попробуйте ещё раз позже.';
+
+export const getTripApplyErrorMessage = (error: unknown): string =>
+  isDuplicateTripApplicationError(error)
+    ? DUPLICATE_APPLICATION_MESSAGE
+    : GENERIC_SUBMIT_ERROR_MESSAGE;
 
 function parseLinks(raw: string): string[] {
   return raw
@@ -40,11 +49,13 @@ function TripApplyForm({ trip, onSubmitted }: Props) {
   const [agreeRules, setAgreeRules] = useState(false);
   const [agreeDisclaimer, setAgreeDisclaimer] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasExistingApplication, setHasExistingApplication] = useState(false);
 
   const canSubmit =
     agreeRules &&
     agreeDisclaimer &&
-    !submit.isPending;
+    !submit.isPending &&
+    !hasExistingApplication;
 
   const handleSubmit = () => {
     setError(null);
@@ -64,8 +75,12 @@ function TripApplyForm({ trip, onSubmitted }: Props) {
           void tripApplyConsent.grant();
           onSubmitted?.();
         },
-        onError: () =>
-          setError('Не удалось отправить заявку. Попробуйте ещё раз позже.'),
+        onError: (submitError) => {
+          if (isDuplicateTripApplicationError(submitError)) {
+            setHasExistingApplication(true);
+          }
+          setError(getTripApplyErrorMessage(submitError));
+        },
       },
     );
   };
@@ -134,7 +149,7 @@ function TripApplyForm({ trip, onSubmitted }: Props) {
       ) : null}
 
       <Button
-        label="Отправить заявку"
+        label={hasExistingApplication ? 'Заявка уже отправлена' : 'Отправить заявку'}
         onPress={handleSubmit}
         disabled={!canSubmit}
         loading={submit.isPending}

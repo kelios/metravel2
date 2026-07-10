@@ -1,0 +1,7 @@
+- generic [ref=e13]:
+  - link [ref=e18] [cursor=pointer]
+  - generic [ref=e25]:
+    - generic [ref=e26]: Планирование поездок
+    - generic [ref=e27]:
+      - link "Войдите" [ref=e28] [cursor=pointer]
+      - text: ", чтобы планировать поездки, собирать попутчиков и публиковать маршруты."
