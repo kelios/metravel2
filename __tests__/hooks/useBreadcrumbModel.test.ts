@@ -23,6 +23,10 @@ jest.mock('@/api/plannedTrips', () => ({
   fetchPlannedTrip: jest.fn(),
 }));
 
+jest.mock('@/api/publicTrips', () => ({
+  fetchPublicTrip: jest.fn(),
+}));
+
 describe('useBreadcrumbModel', () => {
   const { usePathname, useLocalSearchParams } = jest.requireMock('expo-router') as {
     usePathname: jest.Mock;
@@ -34,6 +38,9 @@ describe('useBreadcrumbModel', () => {
   };
   const { fetchPlannedTrip } = jest.requireMock('@/api/plannedTrips') as {
     fetchPlannedTrip: jest.Mock;
+  };
+  const { fetchPublicTrip } = jest.requireMock('@/api/publicTrips') as {
+    fetchPublicTrip: jest.Mock;
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => {
@@ -236,6 +243,25 @@ describe('useBreadcrumbModel', () => {
       { label: 'Профиль', path: '/profile' },
       { label: 'Мои поездки', path: '/trips/my' },
       { label: 'GR131 Ла-Пальма', path: '/trips/plan/3' },
+    ]);
+  });
+
+  it('uses public trip title for /trips detail breadcrumbs', async () => {
+    usePathname.mockReturnValue('/trips/1');
+    useLocalSearchParams.mockReturnValue({});
+    fetchPublicTrip.mockResolvedValue({ title: 'QA: Поездка на Браславские озёра' });
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.currentTitle).toBe('QA: Поездка на Браславские озёра');
+    });
+
+    expect(result.current.showBreadcrumbs).toBe(true);
+    expect(result.current.backToPath).toBe('/trips');
+    expect(result.current.items).toEqual([
+      { label: 'Поездки', path: '/trips' },
+      { label: 'QA: Поездка на Браславские озёра', path: '/trips/1' },
     ]);
   });
 

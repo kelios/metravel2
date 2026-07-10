@@ -313,17 +313,49 @@ const mapApplication = (dto: TripApplicationDto): TripApplication => ({
   createdAt: dto.created_at,
 });
 
-const mapNotification = (dto: TripNotificationDto): TripNotification => ({
-  id: dto.id,
-  kind: dto.notification_type === 'application_created' ? 'new_application' : 'status_change',
-  tripId: dto.trip ?? 0,
-  tripTitle: dto.trip_title ?? '',
-  applicationId: dto.application ?? null,
-  status: dto.application_status ? mapApplicationStatus(dto.application_status) : null,
-  message: dto.body ?? dto.title ?? '',
-  createdAt: dto.created_at,
-  read: dto.is_read ?? false,
-});
+const tripTitleLabel = (title?: string | null): string => {
+  const normalized = title?.trim();
+  return normalized ? `поездку «${normalized}»` : 'поездку';
+};
+
+const buildNotificationMessage = (
+  dto: TripNotificationDto,
+  status: ApplicationStatus | null,
+): string => {
+  const trip = tripTitleLabel(dto.trip_title);
+  if (dto.notification_type === 'application_created') {
+    return `Новая заявка на ${trip}.`;
+  }
+  switch (status) {
+    case 'new':
+      return `Ваша заявка на ${trip} отправлена.`;
+    case 'pending':
+      return `Ваша заявка на ${trip} на рассмотрении.`;
+    case 'approved':
+      return `Ваша заявка на ${trip} одобрена.`;
+    case 'rejected':
+      return `Ваша заявка на ${trip} отклонена.`;
+    case 'cancelled':
+      return `Ваша заявка на ${trip} отменена.`;
+    default:
+      return dto.body ?? dto.title ?? '';
+  }
+};
+
+const mapNotification = (dto: TripNotificationDto): TripNotification => {
+  const status = dto.application_status ? mapApplicationStatus(dto.application_status) : null;
+  return {
+    id: dto.id,
+    kind: dto.notification_type === 'application_created' ? 'new_application' : 'status_change',
+    tripId: dto.trip ?? 0,
+    tripTitle: dto.trip_title ?? '',
+    applicationId: dto.application ?? null,
+    status,
+    message: buildNotificationMessage(dto, status),
+    createdAt: dto.created_at,
+    read: dto.is_read ?? false,
+  };
+};
 
 /** Разложить произвольные соц-ссылки заявки по полям BE (instagram/facebook/telegram). */
 const splitSocialLinks = (

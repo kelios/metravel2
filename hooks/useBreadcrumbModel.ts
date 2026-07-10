@@ -10,6 +10,7 @@ import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
 import { fetchQuestByQuestId, type ApiQuestBundle } from '@/api/quests';
 import { fetchUserProfile, type UserProfileDto } from '@/api/user';
 import { fetchPlannedTrip, type PlannedTrip } from '@/api/plannedTrips';
+import { fetchPublicTrip, type PublicTrip } from '@/api/publicTrips';
 import { queryKeys } from '@/queryKeys';
 
 type SearchParamsWithReturnTo = { returnTo?: string | string[] };
@@ -349,6 +350,23 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     gcTime: 10 * 60 * 1000,
   });
 
+  const publicTripIdForBreadcrumb = useMemo(() => {
+    const p = resolvedPathname;
+    if (!p || !p.startsWith('/trips/')) return null;
+    const parts = p.split('/').filter(Boolean);
+    if (parts.length < 2 || parts[0] !== 'trips' || parts[1] === 'plan') return null;
+    const n = Number(parts[1]);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [resolvedPathname]);
+
+  const { data: publicTripData } = useQuery<PublicTrip | null>({
+    queryKey: queryKeys.publicTrip(publicTripIdForBreadcrumb),
+    queryFn: () => publicTripIdForBreadcrumb ? fetchPublicTrip(publicTripIdForBreadcrumb) : null,
+    enabled: publicTripIdForBreadcrumb != null,
+    staleTime: 600_000,
+    gcTime: 10 * 60 * 1000,
+  });
+
   return useMemo(() => {
     const p = resolvedPathname;
     const isHome = p === '/';
@@ -502,6 +520,25 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       };
     }
 
+    const isPublicTripDetails =
+      parts[0] === 'trips' && parts.length >= 2 && Number.isFinite(Number(parts[1]));
+    if (isPublicTripDetails) {
+      const currentLabel = truncateLabel(publicTripData?.title || 'Поездка');
+      const items: BreadcrumbModelItem[] = [
+        { label: 'Поездки', path: '/trips' },
+        { label: currentLabel, path: p },
+      ];
+
+      return {
+        items,
+        depth: items.length + 1,
+        currentTitle: currentLabel,
+        pageContextTitle: 'Поездки',
+        backToPath: '/trips',
+        showBreadcrumbs: true,
+      };
+    }
+
     if (p === '/trips/my') {
       const items: BreadcrumbModelItem[] = [
         { label: 'Поездки', path: '/trips' },
@@ -585,7 +622,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [resolvedPathname, normalizedReturnToParam, travelData, travelSlug, questApiTitle, userProfileName, articleTitle, plannedTripData]);
+  }, [resolvedPathname, normalizedReturnToParam, travelData, travelSlug, questApiTitle, userProfileName, articleTitle, plannedTripData, publicTripData]);
 }
 
 export default useBreadcrumbModel;

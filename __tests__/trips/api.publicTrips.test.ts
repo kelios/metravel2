@@ -29,6 +29,7 @@ import {
   decideApplication,
   fetchPublicTrip,
   fetchPublicTrips,
+  fetchTripNotifications,
   isDuplicateTripApplicationError,
   submitApplication,
 } from '@/api/publicTrips'
@@ -177,6 +178,36 @@ describe('fetchPublicTrip — post-approval reveal (#410)', () => {
     )
     const trip = await fetchPublicTrip(6)
     expect(trip.meetingPoint).toBeNull()
+  })
+})
+
+describe('fetchTripNotifications — localization', () => {
+  it('builds Russian status text from structured fields, not English backend body', async () => {
+    mockGet.mockResolvedValueOnce(
+      paged([
+        {
+          id: 7,
+          notification_type: 'application_status_changed',
+          title: 'Application approved',
+          body: 'Your application to join "QA: Поездка на Браславские озёра" was approved.',
+          trip: 1,
+          trip_title: 'QA: Поездка на Браславские озёра',
+          application: 23,
+          application_status: 'approved',
+          is_read: false,
+          created_at: '2026-07-10T10:00:00Z',
+        },
+      ]) as never,
+    )
+
+    const notifications = await fetchTripNotifications()
+
+    expect(notifications[0]).toMatchObject({
+      kind: 'status_change',
+      status: 'approved',
+      message: 'Ваша заявка на поездку «QA: Поездка на Браславские озёра» одобрена.',
+    })
+    expect(notifications[0].message).not.toContain('Your application')
   })
 })
 
