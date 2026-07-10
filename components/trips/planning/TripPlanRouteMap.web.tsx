@@ -1,8 +1,17 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 
-import type { RoutePoint } from '@/api/plannedTrips';
+import type { RouteGeometry, RoutingState, RoutePoint, RouteSummary, TripTransport } from '@/api/plannedTrips';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import {
+  TRANSPORT_ICON_NAME,
+  TRANSPORT_LABEL,
+  formatDistance,
+  formatDuration,
+  isRouteApproximate,
+  routingStateLabel,
+} from '@/components/trips/planning/tripPlanFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 import { buildDropMarkerHtml } from '@/utils/markerSvg';
@@ -13,7 +22,11 @@ type MapClickEvent = { latlng: { lat: number; lng: number } };
 
 interface Props {
   route: RoutePoint[];
+  routeGeometry?: RouteGeometry | null;
+  routingState?: RoutingState | null;
   activeIndex?: number | null;
+  summary?: RouteSummary | null;
+  transport?: TripTransport;
   readonly?: boolean;
   onEditPoint?: (index: number) => void;
   onAddPointFromMap?: (coords: { lat: number; lng: number }) => void;
@@ -21,11 +34,13 @@ interface Props {
 
 const DEFAULT_CENTER: [number, number] = [53.9, 27.5667];
 
-const routePositions = (route: RoutePoint[]): Array<[number, number]> =>
-  route
-    .map((point) => point.coordinates)
+const lngLatPositions = (coordinates: Array<[number, number]>): Array<[number, number]> =>
+  coordinates
     .filter((coords): coords is [number, number] => Array.isArray(coords))
     .map(([lng, lat]) => [lat, lng]);
+
+const routePositions = (route: RoutePoint[]): Array<[number, number]> =>
+  lngLatPositions(route.map((point) => point.coordinates).filter(Boolean) as Array<[number, number]>);
 
 function FitRouteBounds({
   L,
@@ -74,7 +89,11 @@ function ClickToAdd({
 
 export default function TripPlanRouteMap({
   route,
+  routeGeometry,
+  routingState,
   activeIndex,
+  summary,
+  transport,
   readonly = false,
   onEditPoint,
   onAddPointFromMap,
@@ -110,8 +129,12 @@ export default function TripPlanRouteMap({
     };
   }, []);
 
-  const positions = useMemo(() => routePositions(route), [route]);
-  const center = positions[0] ?? DEFAULT_CENTER;
+  const markerPositions = useMemo(() => routePositions(route), [route]);
+  const trackPositions = useMemo(() => (
+    routeGeometry?.length ? lngLatPositions(routeGeometry) : markerPositions
+  ), [markerPositions, routeGeometry]);
+  const center = trackPositions[0] ?? markerPositions[0] ?? DEFAULT_CENTER;
+  const approximate = isRouteApproximate(routingState);
   const markerIcon = useMemo(() => {
     if (!L) return null;
     return L.divIcon({
@@ -168,19 +191,35 @@ export default function TripPlanRouteMap({
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.title}>Карта маршрута</Text>
+          {transport ? (
+            <View style={styles.routeMode}>
+              <Feather name={TRANSPORT_ICON_NAME[transport] as never} size={14} color={colors.primaryDark} />
+              <Text style={styles.routeModeText}>{TRANSPORT_LABEL[transport]}</Text>
+              {summary ? (
+                <Text style={styles.routeModeMeta}>
+                  {formatDistance(summary.distanceKm)} · {formatDuration(summary.durationMin)}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
           <Text style={styles.hint}>
-            {readonly
-              ? 'Точки маршрута показаны на карте.'
-              : 'Нажмите на карту, чтобы добавить точку. После клика можно сразу переименовать её.'}
+            {trackPositions.length >= 2 && routeGeometry?.length
+              ? routingStateLabel(routingState)
+              : readonly
+                ? 'Точки маршрута показаны на карте.'
+                : 'Нажмите на карту, чтобы добавить точку. После клика можно сразу переименовать её.'}
           </Text>
+          {approximate ? (
+            <Text style={styles.warning}>Линия приблизительная: проверьте дорогу или тропу перед поездкой.</Text>
+          ) : null}
         </View>
-        <Text style={styles.counter}>{positions.length}</Text>
+        <Text style={styles.counter}>{markerPositions.length}</Text>
       </View>
 
       <div style={styles.mapShell as React.CSSProperties}>
         <MapContainer
           center={center}
-          zoom={positions.length ? 10 : 5}
+          zoom={trackPositions.length ? 10 : 5}
           keyboard={false}
           key={mapKeyRef.current}
           style={styles.map as React.CSSProperties}
@@ -191,14 +230,15 @@ export default function TripPlanRouteMap({
             onAddPointFromMap={onAddPointFromMap}
             useMapEvents={useMapEvents}
           />
-          {positions.length ? <FitRouteBounds L={L} positions={positions} useMap={useMap} /> : null}
-          {positions.length > 1 ? (
+          {trackPositions.length ? <FitRouteBounds L={L} positions={trackPositions} useMap={useMap} /> : null}
+          {trackPositions.length > 1 ? (
             <Polyline
-              positions={positions}
+              positions={trackPositions}
               pathOptions={{
-                color: colors.primaryDark,
-                weight: 4,
-                opacity: 0.78,
+                color: approximate ? colors.warningDark : colors.primaryDark,
+                weight: routeGeometry?.length ? 5 : 4,
+                opacity: routeGeometry?.length ? 0.86 : 0.58,
+                dashArray: approximate ? '8 8' : undefined,
               }}
             />
           ) : null}
@@ -265,7 +305,16 @@ const createStyles = (colors: ThemedColors) =>
     },
     headerText: { flex: 1, gap: 3 },
     title: { fontSize: 15, fontWeight: '700', color: colors.text },
+    routeMode: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
+    routeModeText: { fontSize: 13, fontWeight: '800', color: colors.text },
+    routeModeMeta: { fontSize: 12, fontWeight: '700', color: colors.textMuted },
     hint: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
+    warning: { fontSize: 12, lineHeight: 16, color: colors.warningDark, fontWeight: '700' },
     counter: {
       minWidth: 32,
       textAlign: 'center',

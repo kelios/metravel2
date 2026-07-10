@@ -18,6 +18,7 @@ import {
   setRsvp,
   submitTripReport,
   suggestPoint,
+  updatePlannedTrip,
   updateTripRoute,
   type CommunityTripsFilters,
   type CreateTripInput,
@@ -29,6 +30,7 @@ import {
   type SubmitReportInput,
   type SuggestPointInput,
   type TripSuggestion,
+  type UpdateTripInput,
   type UpdateRouteInput,
 } from '@/api/plannedTrips';
 import { ApiError, isTimeoutError } from '@/api/client';
@@ -128,6 +130,20 @@ export function useDeletePlannedTrip() {
         queryKey: queryKeys.plannedTrip(tripId),
         refetchType: 'inactive',
       });
+      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
+      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsAll() });
+      void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
+      void qc.invalidateQueries({ queryKey: queryKeys.communityTripsAll() });
+    },
+  });
+}
+
+export function useUpdatePlannedTrip() {
+  const qc = useQueryClient();
+  return useMutation<PlannedTrip, unknown, UpdateTripInput>({
+    mutationFn: updatePlannedTrip,
+    onSuccess: (trip) => {
+      qc.setQueryData<PlannedTrip>(queryKeys.plannedTrip(trip.id), trip);
       void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
       void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsAll() });
       void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });

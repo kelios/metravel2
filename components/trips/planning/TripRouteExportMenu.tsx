@@ -8,6 +8,10 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import Button from '@/components/ui/Button';
 import type { PlannedTrip, TripTransport } from '@/api/plannedTrips';
 import {
+  isRouteApproximate,
+  routingStateHint,
+} from '@/components/trips/planning/tripPlanFormatting';
+import {
   ROUTE_NAVIGATORS,
   buildGpx,
   buildKml,
@@ -27,7 +31,7 @@ interface Props {
 }
 
 export const shouldRenderTripRouteExportMenu = (platformOS: typeof Platform.OS): boolean =>
-  platformOS !== 'android';
+  platformOS === 'web' || platformOS === 'ios' || platformOS === 'android';
 
 const TRANSPORT_MODE: Record<TripTransport, TravelMode> = {
   car: 'driving',
@@ -37,24 +41,37 @@ const TRANSPORT_MODE: Record<TripTransport, TravelMode> = {
   mixed: 'driving',
 };
 
-const buildExportInput = (trip: PlannedTrip): RouteExportInput => {
+export const buildTripRouteExportInput = (trip: PlannedTrip): RouteExportInput => {
   const withCoords = trip.route.filter((p) => p.coordinates);
   const waypoints: RouteWaypoint[] = withCoords.map((p) => ({
     name: p.name,
     description: p.description ?? undefined,
     coordinates: p.coordinates as [number, number],
   }));
-  const track = withCoords.map((p) => p.coordinates as [number, number]);
-  return { name: trip.title, waypoints, track };
+  const waypointTrack = withCoords.map((p) => p.coordinates as [number, number]);
+  const routedTrack = trip.routeGeometry && trip.routeGeometry.length >= 2
+    ? trip.routeGeometry
+    : null;
+  const approximate = isRouteApproximate(trip.routingState);
+  return {
+    name: trip.title,
+    description: approximate
+      ? 'Маршрут экспортирован как приблизительный: проверьте дорогу или тропу перед поездкой.'
+      : trip.description || undefined,
+    waypoints,
+    track: routedTrack ?? waypointTrack,
+  };
 };
 
 function TripRouteExportMenu({ trip }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const input = useMemo(() => buildExportInput(trip), [trip]);
+  const input = useMemo(() => buildTripRouteExportInput(trip), [trip]);
   const mode = TRANSPORT_MODE[trip.transport];
   const disabled = (input.track?.length ?? 0) < 2;
+  const approximate = isRouteApproximate(trip.routingState);
+  const approximateHint = routingStateHint(trip.routingState);
   const isWeb = Platform.OS === 'web';
   const shouldRender = shouldRenderTripRouteExportMenu(Platform.OS);
 
@@ -93,6 +110,11 @@ function TripRouteExportMenu({ trip }: Props) {
       {disabled ? (
         <Text style={styles.hint}>
           Добавьте минимум две точки с координатами, чтобы экспортировать маршрут.
+        </Text>
+      ) : null}
+      {!disabled && approximate ? (
+        <Text style={styles.warning} testID="trip-route-export-approximate">
+          {approximateHint ?? 'Маршрут приблизительный: GPX/KML можно скачать, но линию нужно проверить перед поездкой.'}
         </Text>
       ) : null}
 
@@ -138,6 +160,7 @@ const createStyles = (colors: ThemedColors) =>
     heading: { fontSize: 18, fontWeight: '700', color: colors.text },
     label: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: 4 },
     hint: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
+    warning: { fontSize: 12, color: colors.warningDark, lineHeight: 16, fontWeight: '600' },
     row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   });
 

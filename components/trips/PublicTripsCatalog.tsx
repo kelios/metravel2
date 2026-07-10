@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
+import IconButton from '@/components/ui/IconButton';
 import PublicTripCard from '@/components/trips/PublicTripCard';
 import PublicTripFilters from '@/components/trips/PublicTripFilters';
 import SafetyNotice from '@/components/ui/SafetyNotice';
@@ -66,6 +67,7 @@ function PublicTripsCatalog() {
 
   const contentWidth = Math.min(width, MAX_WIDTH) - 32;
   const compactIntro = contentWidth < 620;
+  const compactControls = contentWidth < 760;
   const showFullIntro = !compactIntro || introExpanded;
   const cols = columnsFor(contentWidth);
   const cardWidth = cols === 1 ? undefined : (contentWidth - GUTTER * (cols - 1)) / cols;
@@ -75,11 +77,82 @@ function PublicTripsCatalog() {
     ((filterOptionTrips.length > 0) || hasActiveFilters || hasActiveSearch);
 
   const openTrip = (trip: PublicTrip) => router.push(`/trips/${trip.id}`);
+  const goBack = () => {
+    if (typeof router.canGoBack === 'function' && router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.push('/');
+  };
   const resetFilters = () => setFilters({});
   const resetSearchAndFilters = () => {
     setSearchQuery('');
     setFilters({});
   };
+
+  const organizeAction = compactIntro ? (
+    <IconButton
+      icon={<Feather name="plus" size={18} color={colors.text} />}
+      label="Организовать мою поездку"
+      onPress={() => router.push('/trips/plan/create')}
+      size="md"
+      style={styles.organizeIconBtn}
+      testID="public-trips-organize"
+    />
+  ) : (
+    <Button
+      label="Организовать мою поездку"
+      onPress={() => router.push('/trips/plan/create')}
+      icon={<Feather name="plus" size={16} color={colors.textOnPrimary} />}
+      size="md"
+      style={styles.organizeBtn}
+      testID="public-trips-organize"
+    />
+  );
+
+  const controls = (
+    <>
+      <View
+        style={[
+          styles.searchBox,
+          compactControls ? styles.searchBoxCompact : styles.searchBoxWide,
+        ]}
+        testID="public-trips-search"
+      >
+        <Feather name="search" size={17} color={colors.textMuted} />
+        <TextInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Поиск по поездкам"
+          placeholderTextColor={colors.textMuted}
+          style={styles.searchInput}
+          returnKeyType="search"
+          autoCapitalize="none"
+          autoCorrect={false}
+          accessibilityLabel="Поиск по поездкам"
+          testID="public-trips-search-input"
+        />
+        {hasActiveSearch ? (
+          <Pressable
+            onPress={() => setSearchQuery('')}
+            style={styles.searchClear}
+            accessibilityRole="button"
+            accessibilityLabel="Очистить поиск"
+            testID="public-trips-search-clear"
+          >
+            <Feather name="x" size={16} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
+      </View>
+      <PublicTripFilters
+        trips={filterOptionTrips}
+        value={filters}
+        onChange={setFilters}
+        hasActive={hasActiveFilters}
+        onReset={resetFilters}
+      />
+    </>
+  );
 
   return (
     <ScrollView
@@ -88,83 +161,80 @@ function PublicTripsCatalog() {
       testID="public-trips-catalog"
     >
       <View style={styles.inner}>
-        <Text style={styles.h1}>Поехали со мной</Text>
+        <View style={styles.breadcrumbBar} testID="public-trips-breadcrumbs">
+          <Pressable
+            onPress={goBack}
+            accessibilityRole="button"
+            accessibilityLabel="Назад"
+            style={styles.backCrumb}
+            testID="public-trips-back"
+          >
+            <Feather name="arrow-left" size={15} color={colors.primaryDark} />
+            <Text style={styles.backCrumbText}>Назад</Text>
+          </Pressable>
+          <View style={styles.crumbTrail}>
+            <Pressable
+              onPress={() => router.push('/')}
+              accessibilityRole="button"
+              accessibilityLabel="Перейти на главную"
+              style={styles.crumbItem}
+            >
+              <Feather name="home" size={13} color={colors.textMuted} />
+              <Text style={styles.crumbText}>Главная</Text>
+            </Pressable>
+            <Feather name="chevron-right" size={14} color={colors.textMuted} />
+            <Text style={styles.crumbCurrent} numberOfLines={1}>
+              Поехали со мной
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.titleRow}>
+          <Text style={styles.h1}>Поехали со мной</Text>
+          {organizeAction}
+        </View>
+
+        <SafetyNotice
+          text="MeTravel не организует поездки — это площадка для поиска попутчиков. Будьте внимательны при договорённостях и обмене контактами."
+          style={styles.notice}
+        />
+
         {showFullIntro ? (
           <Text style={styles.subtitle}>
             Публичные поездки от других путешественников. Нашли компанию по душе —
-            подайте заявку «Хочу поехать». Или организуйте свою и найдите попутчиков.
+            подайте заявку «Хочу поехать». Или организуйте свою поездку и найдите попутчиков.
           </Text>
         ) : null}
 
-        <View style={compactIntro ? styles.mobileActions : styles.desktopActions}>
-          <Button
-            label={compactIntro ? 'Организовать поездку' : 'Организовать свою поездку'}
-            onPress={() => router.push('/trips/plan/create')}
-            icon={<Feather name="plus" size={16} color={colors.textOnPrimary} />}
-            size={compactIntro ? 'sm' : 'md'}
-            style={styles.organizeBtn}
-            testID="public-trips-organize"
-          />
-          {compactIntro ? (
-            <Pressable
-              onPress={() => setIntroExpanded((v) => !v)}
-              style={styles.introToggle}
-              accessibilityRole="button"
-              accessibilityLabel={introExpanded ? 'Скрыть вводную информацию' : 'Показать информацию о безопасности'}
-              testID="public-trips-intro-toggle"
+        {compactIntro ? (
+          <Pressable
+            onPress={() => setIntroExpanded((v) => !v)}
+            style={styles.introToggle}
+            accessibilityRole="button"
+            accessibilityLabel={introExpanded ? 'Скрыть вводную информацию' : 'Показать информацию о поездках'}
+            testID="public-trips-intro-toggle"
+          >
+            <Feather name={introExpanded ? 'chevron-up' : 'info'} size={15} color={colors.primaryDark} />
+            <Text style={styles.introToggleText}>
+              {introExpanded ? 'Скрыть' : 'О поездках'}
+            </Text>
+          </Pressable>
+        ) : null}
+
+        {showControls ? (
+          compactControls ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.controlsScroller}
+              contentContainerStyle={styles.controlsRowMobile}
+              testID="public-trips-controls-scroll"
             >
-              <Feather name={introExpanded ? 'chevron-up' : 'info'} size={15} color={colors.primaryDark} />
-              <Text style={styles.introToggleText}>
-                {introExpanded ? 'Скрыть' : 'О поездках'}
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
-
-        {showFullIntro ? (
-          <SafetyNotice
-            text="MeTravel не организует поездки — это площадка для поиска попутчиков. Будьте внимательны при договорённостях и обмене контактами."
-            style={styles.notice}
-          />
-        ) : null}
-
-        {showControls ? (
-          <View style={styles.searchBox} testID="public-trips-search">
-            <Feather name="search" size={17} color={colors.textMuted} />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Поиск по поездкам"
-              placeholderTextColor={colors.textMuted}
-              style={styles.searchInput}
-              returnKeyType="search"
-              autoCapitalize="none"
-              autoCorrect={false}
-              accessibilityLabel="Поиск по поездкам"
-              testID="public-trips-search-input"
-            />
-            {hasActiveSearch ? (
-              <Pressable
-                onPress={() => setSearchQuery('')}
-                style={styles.searchClear}
-                accessibilityRole="button"
-                accessibilityLabel="Очистить поиск"
-                testID="public-trips-search-clear"
-              >
-                <Feather name="x" size={16} color={colors.textMuted} />
-              </Pressable>
-            ) : null}
-          </View>
-        ) : null}
-
-        {showControls ? (
-          <PublicTripFilters
-            trips={filterOptionTrips}
-            value={filters}
-            onChange={setFilters}
-            hasActive={hasActiveFilters}
-            onReset={resetFilters}
-          />
+              {controls}
+            </ScrollView>
+          ) : (
+            <View style={styles.controlsRow}>{controls}</View>
+          )
         ) : null}
 
         {isLoading ? (
@@ -209,17 +279,60 @@ const createStyles = (colors: ThemedColors) =>
     screen: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16, alignItems: 'center' },
     inner: { width: '100%', maxWidth: MAX_WIDTH, gap: 12 },
-    h1: { fontSize: 26, fontWeight: '800', color: colors.text },
-    subtitle: { fontSize: 15, lineHeight: 21, color: colors.textSecondary },
-    organizeBtn: { alignSelf: 'flex-start', marginVertical: 2 },
-    desktopActions: { alignItems: 'flex-start' },
-    mobileActions: {
+    breadcrumbBar: {
+      minHeight: 34,
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
       flexWrap: 'wrap',
-      gap: 8,
     },
+    backCrumb: {
+      minHeight: 32,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999,
+      backgroundColor: colors.primarySoft,
+      ...Platform.select({ web: { cursor: 'pointer' as any } }),
+    },
+    backCrumbText: { fontSize: 13, fontWeight: '700', color: colors.primaryDark },
+    crumbTrail: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexShrink: 1,
+      minWidth: 0,
+    },
+    crumbItem: {
+      minHeight: 30,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      ...Platform.select({ web: { cursor: 'pointer' as any } }),
+    },
+    crumbText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+    crumbCurrent: {
+      flexShrink: 1,
+      minWidth: 0,
+      fontSize: 13,
+      color: colors.text,
+      fontWeight: '700',
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    h1: { fontSize: 26, fontWeight: '800', color: colors.text },
+    subtitle: { fontSize: 15, lineHeight: 21, color: colors.textSecondary },
+    organizeBtn: { flexShrink: 0, marginVertical: 0 },
+    organizeIconBtn: { flexShrink: 0, marginHorizontal: 0 },
     introToggle: {
+      alignSelf: 'flex-start',
       minHeight: 34,
       flexDirection: 'row',
       alignItems: 'center',
@@ -232,6 +345,27 @@ const createStyles = (colors: ThemedColors) =>
     },
     introToggleText: { fontSize: 13, fontWeight: '700', color: colors.primaryDark },
     notice: { marginVertical: 2 },
+    controlsRow: {
+      position: 'relative',
+      zIndex: 3,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 10,
+    },
+    controlsScroller: {
+      position: 'relative',
+      zIndex: 3,
+      marginHorizontal: -2,
+    },
+    controlsRowMobile: {
+      position: 'relative',
+      zIndex: 3,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
+      paddingHorizontal: 2,
+      paddingBottom: 4,
+    },
     searchBox: {
       minHeight: 42,
       flexDirection: 'row',
@@ -243,6 +377,8 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surface,
       paddingHorizontal: 12,
     },
+    searchBoxWide: { flex: 1, minWidth: 260 },
+    searchBoxCompact: { width: 230 },
     searchInput: {
       flex: 1,
       minWidth: 0,

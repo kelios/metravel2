@@ -34,14 +34,22 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
 })
 
 jest.mock('@/components/trips/planning/TripPlanRouteMap', () => {
-  return function TripPlanRouteMap({ onAddPointFromMap }: { onAddPointFromMap?: (coords: { lat: number; lng: number }) => void }) {
+  return function TripPlanRouteMap({
+    onAddPointFromMap,
+    routeGeometry,
+    routingState,
+  }: {
+    onAddPointFromMap?: (coords: { lat: number; lng: number }) => void
+    routeGeometry?: Array<[number, number]> | null
+    routingState?: { provider: string; isOptimal: boolean } | null
+  }) {
     const { Pressable, Text } = require('react-native')
     return (
       <Pressable
         testID="trip-plan-route-map"
         onPress={() => onAddPointFromMap?.({ lat: 53.9006, lng: 27.559 })}
       >
-        <Text>Карта маршрута</Text>
+        <Text>{`Карта маршрута ${routeGeometry?.length ?? 0} ${routingState?.provider ?? 'none'}`}</Text>
       </Pressable>
     )
   }
@@ -64,7 +72,9 @@ const makeTrip = (): PlannedTrip => ({
   status: 'planning',
   organizer: { id: 1, name: 'Организатор', avatarUrl: null },
   route: [],
+  routeGeometry: null,
   routeSummary: null,
+  routingState: null,
   participants: [],
   coverUrl: null,
   region: 'Минск',
@@ -232,5 +242,38 @@ describe('RouteBuilder site search', () => {
       coordinates: [27.559, 53.9006],
       placeId: null,
     })
+  })
+
+  it('uses saved routed geometry and shows direct fallback as approximate', () => {
+    const trip = makeTrip()
+    trip.route = [
+      { id: 'a', type: 'custom', name: 'A', description: null, coordinates: [27.56, 53.9], placeId: null },
+      { id: 'b', type: 'custom', name: 'B', description: null, coordinates: [26.69, 53.22], placeId: null },
+    ]
+    trip.routeGeometry = [
+      [27.56, 53.9],
+      [27.1, 53.55],
+      [26.69, 53.22],
+    ]
+    trip.routeSummary = {
+      distanceKm: 123.4,
+      durationMin: 321,
+      elevationGainM: 0,
+      stopsCount: 2,
+      provider: 'direct',
+      updatedAt: '2026-07-09T12:00:00Z',
+    }
+    trip.routingState = {
+      provider: 'direct',
+      isOptimal: false,
+      fallbackReason: 'ors_http_404',
+      warnings: [],
+    }
+
+    const { getByTestId, getByText } = render(<RouteBuilder trip={trip} />)
+
+    expect(getByText(/Карта маршрута 3 direct/)).toBeTruthy()
+    expect(getByTestId('route-summary-approximate')).toBeTruthy()
+    expect(getByText('Приблизительный маршрут')).toBeTruthy()
   })
 })

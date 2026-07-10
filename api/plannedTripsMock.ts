@@ -16,7 +16,9 @@ export const cloneTrip = (t: PlannedTrip): PlannedTrip => ({
   startPoint: t.startPoint ? { ...t.startPoint } : null,
   organizer: { ...t.organizer },
   route: t.route.map((p) => ({ ...p })),
+  routeGeometry: t.routeGeometry ? t.routeGeometry.map((p) => [p[0], p[1]]) : null,
   routeSummary: t.routeSummary ? { ...t.routeSummary } : null,
+  routingState: t.routingState ? { ...t.routingState, warnings: [...t.routingState.warnings] } : null,
   participants: t.participants.map((p) => ({ ...p })),
   report: t.report
     ? {
@@ -68,7 +70,16 @@ export const MOCK_PLANNED_TRIPS: PlannedTrip[] = [
       }),
       pt('p3', 'overnight', 'Кемпинг на озере Дривяты', [27.0494, 55.6019]),
     ],
+    routeGeometry: [
+      [27.5709, 53.9091],
+      [27.6201, 54.2350],
+      [27.6857, 55.1369],
+      [27.3180, 55.3820],
+      [27.0419, 55.6206],
+      [27.0494, 55.6019],
+    ],
     routeSummary: { distanceKm: 252.4, durationMin: 252, elevationGainM: 2019, stopsCount: 3 },
+    routingState: { provider: 'ors', isOptimal: true, fallbackReason: null, warnings: [] },
     participants: [
       { id: 0, name: 'Вы', avatarUrl: null, rsvp: 'going', role: 'organizer' },
       { id: 12, name: 'Анна К.', avatarUrl: null, rsvp: 'going', role: 'participant' },
@@ -103,7 +114,9 @@ export const MOCK_PLANNED_TRIPS: PlannedTrip[] = [
       pt('q2', 'rest', 'Кофейня на Зыбицкой', [27.5577, 53.9039]),
       pt('q3', 'place', 'Парк Победы, велодорожка', [27.5394, 53.9268]),
     ],
+    routeGeometry: null,
     routeSummary: { distanceKm: 9.7, durationMin: 36, elevationGainM: 78, stopsCount: 3 },
+    routingState: { provider: 'direct', isOptimal: false, fallbackReason: 'routing_provider_unavailable', warnings: ['Маршрут показан приблизительно.'] },
     participants: [
       { id: 12, name: 'Анна К.', avatarUrl: null, rsvp: 'going', role: 'organizer' },
       { id: 0, name: 'Вы', avatarUrl: null, rsvp: 'maybe', role: 'participant' },
@@ -136,7 +149,15 @@ export const MOCK_PLANNED_TRIPS: PlannedTrip[] = [
       pt('r2', 'rest', 'Обед в Несвиже', [26.6986, 53.2233]),
       pt('r3', 'place', 'Мирский замок', [26.4731, 53.4511], { placeId: 101 }),
     ],
+    routeGeometry: [
+      [27.5615, 53.9023],
+      [27.1800, 53.6800],
+      [26.6906, 53.2225],
+      [26.6986, 53.2233],
+      [26.4731, 53.4511],
+    ],
     routeSummary: { distanceKm: 178.5, durationMin: 178, elevationGainM: 1428, stopsCount: 3 },
+    routingState: { provider: 'ors', isOptimal: true, fallbackReason: null, warnings: [] },
     participants: [
       { id: 0, name: 'Вы', avatarUrl: null, rsvp: 'going', role: 'organizer' },
       { id: 34, name: 'Игорь П.', avatarUrl: null, rsvp: 'going', role: 'participant' },

@@ -146,13 +146,24 @@ describe('fetchMyPlannedTrips backend route_summary mapping', () => {
               },
             ],
           },
+          route_geometry: [
+            [27.56, 53.9],
+            [27.1, 53.55],
+            [26.69, 53.22],
+          ],
           route_summary: {
             distance_km: '123.4',
             duration_min: '321',
             elevation_gain_m: '456',
             stops_count: 9,
-            provider: 'backend',
+            provider: 'ors',
             updated_at: '2026-07-04T12:00:00Z',
+          },
+          routing_state: {
+            provider: 'ors',
+            is_optimal: true,
+            fallback_reason: null,
+            warnings: [],
           },
           participants: [],
           is_public: false,
@@ -200,8 +211,19 @@ describe('fetchMyPlannedTrips backend route_summary mapping', () => {
       durationMin: 321,
       elevationGainM: 456,
       stopsCount: 9,
-      provider: 'backend',
+      provider: 'ors',
       updatedAt: '2026-07-04T12:00:00Z',
+    })
+    expect(trip.routeGeometry).toEqual([
+      [27.56, 53.9],
+      [27.1, 53.55],
+      [26.69, 53.22],
+    ])
+    expect(trip.routingState).toEqual({
+      provider: 'ors',
+      isOptimal: true,
+      fallbackReason: null,
+      warnings: [],
     })
   })
 })

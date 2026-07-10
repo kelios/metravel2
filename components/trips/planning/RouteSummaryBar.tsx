@@ -6,16 +6,23 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
-import type { RouteSummary } from '@/api/plannedTrips';
+import type { RoutingState, RouteSummary, TripTransport } from '@/api/plannedTrips';
 import {
+  TRANSPORT_ICON_NAME,
+  TRANSPORT_LABEL,
   formatDistance,
   formatDuration,
   formatElevation,
+  isRouteApproximate,
+  routingStateHint,
+  routingStateLabel,
 } from '@/components/trips/planning/tripPlanFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface Props {
   summary: RouteSummary | null;
+  routingState?: RoutingState | null;
+  transport?: TripTransport;
 }
 
 interface Chip {
@@ -24,9 +31,12 @@ interface Chip {
   label: string;
 }
 
-function RouteSummaryBar({ summary }: Props) {
+function RouteSummaryBar({ summary, routingState, transport }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const approximate = isRouteApproximate(routingState);
+  const statusLabel = routingStateLabel(routingState);
+  const statusHint = routingStateHint(routingState);
 
   if (!summary) {
     return (
@@ -45,6 +55,29 @@ function RouteSummaryBar({ summary }: Props) {
 
   return (
     <View style={styles.wrap} testID="route-summary">
+      <View
+        style={[styles.status, approximate ? styles.statusWarning : styles.statusReady]}
+        testID={approximate ? 'route-summary-approximate' : 'route-summary-routed'}
+      >
+        <Feather
+          name={approximate ? 'alert-triangle' : 'navigation'}
+          size={14}
+          color={approximate ? colors.warningDark : colors.primaryDark}
+        />
+        <Text style={[styles.statusText, approximate && styles.statusTextWarning]}>
+          {statusLabel}
+        </Text>
+      </View>
+      {statusHint ? <Text style={styles.statusHint}>{statusHint}</Text> : null}
+      {transport ? (
+        <View style={styles.chip}>
+          <View style={styles.chipValueRow}>
+            <Feather name={TRANSPORT_ICON_NAME[transport] as never} size={14} color={colors.primaryDark} />
+            <Text style={styles.chipValue}>{TRANSPORT_LABEL[transport]}</Text>
+          </View>
+          <Text style={styles.chipLabel}>Способ</Text>
+        </View>
+      ) : null}
       {chips.map((chip) => (
         <View key={chip.label} style={styles.chip}>
           <View style={styles.chipValueRow}>
@@ -65,6 +98,32 @@ const createStyles = (colors: ThemedColors) =>
       flexWrap: 'wrap',
       gap: 8,
       alignItems: 'center',
+    },
+    status: {
+      flexBasis: '100%',
+      borderWidth: 1,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    statusReady: {
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    statusWarning: {
+      borderColor: colors.warningLight,
+      backgroundColor: colors.warningSoft,
+    },
+    statusText: { fontSize: 13, fontWeight: '700', color: colors.text },
+    statusTextWarning: { color: colors.warningDark },
+    statusHint: {
+      flexBasis: '100%',
+      fontSize: 12,
+      lineHeight: 16,
+      color: colors.textSecondary,
     },
     chip: {
       flexGrow: 1,

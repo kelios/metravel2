@@ -130,6 +130,23 @@ const move = <T,>(arr: T[], from: number, to: number): T[] => {
   return next;
 };
 
+const routeSignature = (route: RoutePoint[]): string =>
+  route
+    .map((point) => {
+      const coords = point.coordinates
+        ? `${formatCoordinateInput(point.coordinates[0])},${formatCoordinateInput(point.coordinates[1])}`
+        : '';
+      return [
+        point.id,
+        point.type,
+        point.placeId ?? '',
+        point.name,
+        point.description ?? '',
+        coords,
+      ].join('|');
+    })
+    .join('>');
+
 function RouteBuilder({ trip }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -155,9 +172,17 @@ function RouteBuilder({ trip }: Props) {
   const [siteOptions, setSiteOptions] = useState<SiteRouteOption[]>([]);
   const [siteSearchStatus, setSiteSearchStatus] = useState<SiteSearchStatus>('idle');
 
+  const routeMatchesSaved = useMemo(
+    () => routeSignature(route) === routeSignature(trip.route),
+    [route, trip.route],
+  );
+  const routeGeometry = routeMatchesSaved ? trip.routeGeometry : null;
+  const routingState = routeMatchesSaved ? trip.routingState : null;
   const summary = useMemo(
-    () => estimateRouteSummary(route, trip.transport),
-    [route, trip.transport],
+    () => (routeMatchesSaved && trip.routeSummary
+      ? trip.routeSummary
+      : estimateRouteSummary(route, trip.transport)),
+    [route, routeMatchesSaved, trip.routeSummary, trip.transport],
   );
 
   const handleMove = (index: number, delta: number) => {
@@ -358,7 +383,14 @@ function RouteBuilder({ trip }: Props) {
   };
 
   const handleSave = () => {
-    updateTripRoute.mutate({ tripId: trip.id, route });
+    updateTripRoute.mutate(
+      { tripId: trip.id, route },
+      {
+        onSuccess: (updatedTrip) => {
+          setRoute(updatedTrip.route);
+        },
+      },
+    );
   };
 
   const renderPoint = (point: RoutePoint, index: number) => (
@@ -430,6 +462,10 @@ function RouteBuilder({ trip }: Props) {
         <Text style={styles.heading}>Маршрут</Text>
         <TripPlanRouteMap
           route={route}
+          routeGeometry={routeGeometry}
+          routingState={routingState}
+          summary={summary}
+          transport={trip.transport}
           readonly
           activeIndex={editingIndex}
           onEditPoint={(index) => {
@@ -442,7 +478,7 @@ function RouteBuilder({ trip }: Props) {
         ) : (
           <Text style={styles.hint}>Маршрут пока не построен.</Text>
         )}
-        <RouteSummaryBar summary={summary} />
+        <RouteSummaryBar summary={summary} routingState={routingState} transport={trip.transport} />
       </View>
     );
   }
@@ -455,6 +491,10 @@ function RouteBuilder({ trip }: Props) {
 
       <TripPlanRouteMap
         route={route}
+        routeGeometry={routeGeometry}
+        routingState={routingState}
+        summary={summary}
+        transport={trip.transport}
         activeIndex={editingIndex}
         onEditPoint={(index) => {
           const point = route[index];
@@ -704,7 +744,7 @@ function RouteBuilder({ trip }: Props) {
         </View>
       ) : null}
 
-      <RouteSummaryBar summary={summary} />
+      <RouteSummaryBar summary={summary} routingState={routingState} transport={trip.transport} />
 
       <Button
         label="Сохранить маршрут"

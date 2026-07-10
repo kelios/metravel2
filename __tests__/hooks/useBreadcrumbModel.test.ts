@@ -19,6 +19,10 @@ jest.mock('@/api/quests', () => ({
   fetchQuestByQuestId: jest.fn(),
 }));
 
+jest.mock('@/api/plannedTrips', () => ({
+  fetchPlannedTrip: jest.fn(),
+}));
+
 describe('useBreadcrumbModel', () => {
   const { usePathname, useLocalSearchParams } = jest.requireMock('expo-router') as {
     usePathname: jest.Mock;
@@ -27,6 +31,9 @@ describe('useBreadcrumbModel', () => {
 
   const { fetchTravelBySlug } = jest.requireMock('@/api/travelDetailsQueries') as {
     fetchTravelBySlug: jest.Mock;
+  };
+  const { fetchPlannedTrip } = jest.requireMock('@/api/plannedTrips') as {
+    fetchPlannedTrip: jest.Mock;
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => {
@@ -210,6 +217,26 @@ describe('useBreadcrumbModel', () => {
       { label: 'Мои точки', path: '/userpoints' },
     ]);
     expect(result.current.currentTitle).toBe('Мои точки');
+  });
+
+  it('uses planned trip title for /trips/plan detail breadcrumbs', async () => {
+    usePathname.mockReturnValue('/trips/plan/3');
+    useLocalSearchParams.mockReturnValue({});
+    fetchPlannedTrip.mockResolvedValue({ title: 'GR131 Ла-Пальма' });
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.currentTitle).toBe('GR131 Ла-Пальма');
+    });
+
+    expect(result.current.showBreadcrumbs).toBe(true);
+    expect(result.current.backToPath).toBe('/trips/my');
+    expect(result.current.items).toEqual([
+      { label: 'Профиль', path: '/profile' },
+      { label: 'Мои поездки', path: '/trips/my' },
+      { label: 'GR131 Ла-Пальма', path: '/trips/plan/3' },
+    ]);
   });
 
   it('builds three-level breadcrumbs for security-journal under profile › settings', async () => {

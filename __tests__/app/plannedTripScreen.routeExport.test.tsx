@@ -13,6 +13,7 @@ jest.mock('expo-router', () => ({
 jest.mock('@/hooks/usePlannedTripsApi', () => ({
   usePlannedTrip: (...args: unknown[]) => mockUsePlannedTrip(...args),
   useDeletePlannedTrip: () => ({ mutate: jest.fn(), isPending: false }),
+  useUpdatePlannedTrip: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 
 jest.mock('@/hooks/useTheme', () => ({
@@ -25,6 +26,9 @@ jest.mock('@/hooks/useTheme', () => ({
     textMuted: 'gray',
     textOnDark: 'white',
     textSecondary: 'gray',
+    warningDark: 'darkorange',
+    warningLight: 'moccasin',
+    warningSoft: 'papayawhip',
   }),
 }));
 
@@ -150,7 +154,9 @@ const trip: PlannedTrip = {
     { id: '1', type: 'place', name: 'Старт', coordinates: [27.56, 53.9] },
     { id: '2', type: 'place', name: 'Финиш', coordinates: [27.6, 53.91] },
   ],
+  routeGeometry: null,
   routeSummary: null,
+  routingState: null,
   participants: [],
   coverUrl: null,
   region: 'Минск',
@@ -175,15 +181,15 @@ describe('PlannedTripScreen route export section', () => {
     mockUsePlannedTrip.mockReset();
   });
 
-  it('does not leave an empty route export section on Android', () => {
+  it('keeps the route export section on Android with supported actions', () => {
     setPlatformOS('android');
 
     const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
     const { queryByTestId, getByTestId } = render(<PlannedTripScreen />);
 
     expect(getByTestId('route-builder')).toBeTruthy();
-    expect(queryByTestId('trip-plan-route-export-section')).toBeNull();
-    expect(queryByTestId('trip-route-export')).toBeNull();
+    expect(getByTestId('trip-plan-route-export-section')).toBeTruthy();
+    expect(queryByTestId('trip-route-export')).toBeTruthy();
   });
 
   it('keeps the route export section outside Android', () => {

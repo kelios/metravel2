@@ -62,8 +62,17 @@ export interface RouteSummary {
   durationMin: number;
   elevationGainM: number;
   stopsCount: number;
-  provider?: 'backend' | 'fallback' | string;
+  provider?: 'backend' | 'fallback' | 'ors' | 'direct' | string;
   updatedAt?: string | null;
+}
+
+export type RouteGeometry = [number, number][];
+
+export interface RoutingState {
+  provider: string;
+  isOptimal: boolean;
+  fallbackReason: string | null;
+  warnings: string[];
 }
 
 export interface TripParticipant extends TripPerson {
@@ -96,7 +105,10 @@ export interface PlannedTrip {
   status: TripPlanStatus;
   organizer: TripPerson;
   route: RoutePoint[];
+  /** Routed track coordinates in Metravel format: [lng, lat]. */
+  routeGeometry: RouteGeometry | null;
   routeSummary: RouteSummary | null;
+  routingState: RoutingState | null;
   participants: TripParticipant[];
   coverUrl: string | null;
   region: string;
@@ -146,6 +158,18 @@ export interface CreateTripInput {
   seatsTotal: number;
   startPoint: RoutePoint | null;
   createTelegramGroup?: boolean;
+}
+
+export interface UpdateTripInput {
+  tripId: number;
+  title: string;
+  description: string;
+  startDate: string;
+  startTime: string | null;
+  transport: TripTransport;
+  visibility: TripVisibility;
+  seatsTotal: number;
+  coverUrl: string | null;
 }
 
 export interface UpdateRouteInput {
@@ -264,6 +288,13 @@ interface BeRouteSummary {
   updated_at?: string | null;
 }
 
+interface BeRoutingState {
+  provider?: string | null;
+  is_optimal?: boolean | null;
+  fallback_reason?: string | null;
+  warnings?: unknown;
+}
+
 interface BeParticipant {
   id: number;
   user: BeUser;
@@ -284,7 +315,9 @@ interface PlannedTripDto {
   owner: BeUser;
   participants?: BeParticipant[];
   route?: { points?: BeRoutePoint[] } | null;
+  route_geometry?: unknown;
   route_summary?: BeRouteSummary | null;
+  routing_state?: BeRoutingState | null;
   is_public?: boolean;
   max_participants?: number | null;
   transport_mode?: string | null;
@@ -457,6 +490,20 @@ const toNum = (v: number | string | null | undefined): number => {
   return Number.isFinite(n as number) ? (n as number) : 0;
 };
 
+const normalizeRouteGeometry = (value: unknown): RouteGeometry | null => {
+  if (!Array.isArray(value)) return null;
+  const points: RouteGeometry = [];
+  for (const item of value) {
+    if (!Array.isArray(item) || item.length < 2) continue;
+    const lng = Number(item[0]);
+    const lat = Number(item[1]);
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+    points.push([lng, lat]);
+  }
+  return points.length >= 2 ? points : null;
+};
+
 // ── Мапперы DTO → домен ─────────────────────────────────────────────────────
 
 const mapPlannedPoint = (p: BeRoutePoint): RoutePoint => ({
@@ -482,11 +529,30 @@ const mapRouteSummary = (summary?: BeRouteSummary | null): RouteSummary | null =
   };
 };
 
+const mapRoutingState = (state?: BeRoutingState | null): RoutingState | null => {
+  if (!state) return null;
+  const provider = typeof state.provider === 'string' && state.provider.trim()
+    ? state.provider.trim()
+    : 'unknown';
+  const warnings = Array.isArray(state.warnings)
+    ? state.warnings.filter((item): item is string => typeof item === 'string')
+    : [];
+  return {
+    provider,
+    isOptimal: state.is_optimal === true,
+    fallbackReason: typeof state.fallback_reason === 'string' && state.fallback_reason.trim()
+      ? state.fallback_reason.trim()
+      : null,
+    warnings,
+  };
+};
+
 const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
   const me = currentUserId();
   const points = dto.route?.points ?? [];
   const route = points.map(mapPlannedPoint);
   const transport = transportFromBe(dto.transport_mode);
+  const routeGeometry = normalizeRouteGeometry(dto.route_geometry);
   const participants: TripParticipant[] = (dto.participants ?? []).map((p) => ({
     ...mapUser(p.user),
     rsvp: participantRsvpFromBe(p.status),
@@ -507,9 +573,11 @@ const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
     status: planStatusFromFacade(dto.status),
     organizer: mapUser(dto.owner),
     route,
+    routeGeometry,
     routeSummary:
       mapRouteSummary(dto.route_summary) ??
       (route.length ? estimateRouteSummary(route, transport) : null),
+    routingState: mapRoutingState(dto.routing_state),
     participants,
     coverUrl: dto.cover_url ?? dto.cover ?? dto.preview_image_url ?? null,
     region: '',
@@ -555,7 +623,9 @@ const mapCommunityTrip = (dto: CommunityTripDto): PlannedTrip => {
     status: baseStatusFromBe(dto.status),
     organizer: mapProfile(dto.owner_profile, dto.owner),
     route: [],
+    routeGeometry: null,
     routeSummary: null,
+    routingState: null,
     participants: [],
     coverUrl: null,
     region: dto.start_point_name ?? '',
@@ -731,7 +801,9 @@ const buildMockTrip = (input: CreateTripInput): PlannedTrip => {
     status: 'planning',
     organizer: { id: 0, name: 'Вы', avatarUrl: null },
     route: input.startPoint ? [input.startPoint] : [],
+    routeGeometry: null,
     routeSummary: null,
+    routingState: null,
     participants: [
       { id: 0, name: 'Вы', avatarUrl: null, rsvp: 'going', role: 'organizer' },
     ],
@@ -774,6 +846,59 @@ export async function createTrip(input: CreateTripInput): Promise<PlannedTrip> {
       const trip = buildMockTrip(input);
       mockStore.unshift(trip);
       return cloneTrip(trip);
+    }
+    throw error;
+  }
+}
+
+export async function updatePlannedTrip(input: UpdateTripInput): Promise<PlannedTrip> {
+  const body = {
+    title: input.title,
+    description: input.description,
+    start_date: `${input.startDate}T${input.startTime || '09:00'}:00`,
+    is_public: input.visibility === 'public',
+    max_participants: input.seatsTotal,
+    transport_mode: transportToBe(input.transport),
+    cover_url: input.coverUrl,
+  };
+
+  if (USE_MOCK) {
+    const trip = findMock(input.tripId);
+    if (!trip) throw new ApiError(404, 'Trip not found');
+    trip.title = input.title;
+    trip.description = input.description;
+    trip.startDate = input.startDate;
+    trip.startTime = input.startTime;
+    trip.transport = input.transport;
+    trip.visibility = input.visibility;
+    trip.seatsTotal = input.seatsTotal;
+    trip.coverUrl = input.coverUrl;
+    trip.routeSummary = trip.route.length ? estimateRouteSummary(trip.route, input.transport) : null;
+    return cloneTrip(trip);
+  }
+
+  try {
+    const dto = await apiClient.patch<PlannedTripDto>(
+      `/trips/planned/${input.tripId}/`,
+      body,
+    );
+    return mapTrip(dto);
+  } catch (error) {
+    if (shouldFallbackToMock(error)) {
+      devWarn('[planned-trips] update → mock fallback');
+      const trip = findMock(input.tripId);
+      if (trip) {
+        trip.title = input.title;
+        trip.description = input.description;
+        trip.startDate = input.startDate;
+        trip.startTime = input.startTime;
+        trip.transport = input.transport;
+        trip.visibility = input.visibility;
+        trip.seatsTotal = input.seatsTotal;
+        trip.coverUrl = input.coverUrl;
+        trip.routeSummary = trip.route.length ? estimateRouteSummary(trip.route, input.transport) : null;
+        return cloneTrip(trip);
+      }
     }
     throw error;
   }

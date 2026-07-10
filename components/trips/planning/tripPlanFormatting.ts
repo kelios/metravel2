@@ -3,6 +3,7 @@
 // видимости, статуса, типов точек, форматирование сводки маршрута и дат.
 
 import type {
+  RoutingState,
   RoutePointType,
   RouteSummary,
   TripPlanStatus,
@@ -124,6 +125,25 @@ export function routeSummaryLine(summary: RouteSummary | null): string {
     formatDuration(summary.durationMin),
     `${summary.stopsCount} ${pluralStops(summary.stopsCount)}`,
   ].join(' · ');
+}
+
+export function isRouteApproximate(routingState: RoutingState | null | undefined): boolean {
+  if (!routingState) return false;
+  return routingState.provider === 'direct' || routingState.isOptimal === false;
+}
+
+export function routingStateLabel(routingState: RoutingState | null | undefined): string {
+  if (!routingState) return 'Локальная оценка';
+  if (isRouteApproximate(routingState)) return 'Приблизительный маршрут';
+  if (routingState.provider === 'ors') return 'Маршрут построен ORS';
+  return `Маршрут построен: ${routingState.provider}`;
+}
+
+export function routingStateHint(routingState: RoutingState | null | undefined): string | null {
+  if (!routingState || !isRouteApproximate(routingState)) return null;
+  if (routingState.warnings.length) return routingState.warnings[0];
+  if (routingState.fallbackReason) return `Причина: ${routingState.fallbackReason}`;
+  return 'Сервис роутинга не смог построить дорогу или тропу, линия показана приблизительно.';
 }
 
 function pluralStops(n: number): string {
