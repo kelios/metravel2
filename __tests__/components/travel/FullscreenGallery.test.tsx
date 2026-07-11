@@ -52,6 +52,19 @@ describe('FullscreenGallery', () => {
     expect(getByLabelText('Закрыть галерею')).toBeTruthy();
   });
 
+  it('marks gallery images as pinch-zoomable', () => {
+    const { getAllByLabelText } = render(
+      <FullscreenGallery
+        visible={true}
+        images={[{ url: 'https://example.com/1.jpg', alt: 'Горы' }]}
+        initialIndex={0}
+        onClose={jest.fn()}
+      />
+    );
+
+    expect(getAllByLabelText(/Горы.*Увеличение двумя пальцами/).length).toBeGreaterThan(0);
+  });
+
   it('does not show counter for single image', () => {
     const { queryByText } = render(
       <FullscreenGallery
@@ -63,5 +76,17 @@ describe('FullscreenGallery', () => {
     );
     expect(queryByText(/\//)).toBeNull();
   });
-});
 
+  it('shows the caption for the current photo', () => {
+    const { getByText } = render(
+      <FullscreenGallery
+        visible={true}
+        images={[{ url: 'https://example.com/1.jpg', caption: 'Дворец Пусловских' }]}
+        initialIndex={0}
+        onClose={jest.fn()}
+      />
+    );
+
+    expect(getByText('Дворец Пусловских')).toBeTruthy();
+  });
+});

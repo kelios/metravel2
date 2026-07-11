@@ -90,7 +90,13 @@ export default function TravelHeroInteractiveSlider({
             visible={fullscreenVisible}
             images={galleryImages
               .filter((img) => !!img.url)
-              .map((img) => ({ url: img.url! }))}
+              .map((img) => ({
+                url: img.url!,
+                caption: typeof img.caption === 'string' ? img.caption : '',
+                alt: typeof img.caption === 'string' && img.caption.trim()
+                  ? img.caption.trim()
+                  : undefined,
+              }))}
             initialIndex={fullscreenIndex}
             onClose={onCloseFullscreen ?? noop}
           />

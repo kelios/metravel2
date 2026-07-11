@@ -354,6 +354,11 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         gap: DESIGN_TOKENS.spacing.xs,
         flexWrap: 'nowrap',
     },
+    milestonesInlineWrapperMobile: {
+        flex: 1,
+        justifyContent: 'space-between',
+        gap: 0,
+    },
     tipPanel: {
         marginTop: DESIGN_TOKENS.spacing.sm,
         padding: DESIGN_TOKENS.spacing.sm,

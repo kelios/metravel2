@@ -6,7 +6,7 @@
  * silently corrupts the saved photo order users just arranged.
  */
 
-import { reorderGallery } from '@/api/misc';
+import { reorderGallery, updateGalleryCaption } from '@/api/misc';
 import { apiClient } from '@/api/client';
 import { getSecureItem } from '@/utils/secureStorage';
 
@@ -74,5 +74,42 @@ describe('reorderGallery', () => {
 
     const [, options] = mockedApiClient.request.mock.calls[0];
     expect((options as { signal?: AbortSignal }).signal).toBe(controller.signal);
+  });
+});
+
+describe('updateGalleryCaption', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetSecureItem.mockResolvedValue('token-123');
+  });
+
+  it('trims the caption and PATCHes the gallery detail endpoint', async () => {
+    mockedApiClient.request.mockResolvedValue({ id: 44, caption: 'Мирский замок' });
+
+    await expect(updateGalleryCaption('44', '  Мирский замок  ')).resolves.toEqual({
+      id: 44,
+      caption: 'Мирский замок',
+    });
+
+    expect(mockedApiClient.request).toHaveBeenCalledWith(
+      '/gallery/44/',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ caption: 'Мирский замок' }),
+      }),
+      expect.any(Number),
+    );
+  });
+
+  it('allows an empty caption and rejects invalid ids or captions over 500 characters', async () => {
+    mockedApiClient.request.mockResolvedValue({ id: 44, caption: '' });
+
+    await updateGalleryCaption(44, '   ');
+    expect(JSON.parse((mockedApiClient.request.mock.calls[0][1] as { body: string }).body)).toEqual({
+      caption: '',
+    });
+
+    await expect(updateGalleryCaption('temp-1', 'Место')).rejects.toThrow('Некорректный id изображения');
+    await expect(updateGalleryCaption(44, 'x'.repeat(501))).rejects.toThrow('500 символов');
   });
 });

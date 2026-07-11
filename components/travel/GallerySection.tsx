@@ -23,11 +23,15 @@ const GallerySection: React.FC<GallerySectionProps> = ({ images, travelId, onCha
                     return { id: `legacy-${index}`, url: item };
                 }
                 if (item && typeof item === 'object' && 'url' in item) {
-                    return { id: String((item as any).id ?? `legacy-${index}`), url: (item as any).url as string };
+                    return {
+                        id: String((item as any).id ?? `legacy-${index}`),
+                        url: (item as any).url as string,
+                        caption: typeof (item as any).caption === 'string' ? (item as any).caption : '',
+                    };
                 }
                 return null;
             })
-            .filter(Boolean) as { id: string; url: string }[];
+            .filter(Boolean) as { id: string; url: string; caption?: string }[];
     }, [images]);
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами

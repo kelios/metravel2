@@ -375,15 +375,16 @@ export const imageGridStyles = (
 .${cls} .img-grid-portrait {
   width: 100%;
   max-width: 100%;
-  grid-template-columns: repeat(2, minmax(220px, 280px));
-  justify-content: center;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+.${cls} .img-grid-portrait > p {
+  aspect-ratio: 3 / 4;
 }
 .${cls} .img-column-portraits {
   width: 100%;
   max-width: 100%;
-  grid-template-columns: repeat(2, minmax(220px, 280px));
-  justify-content: center;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -451,9 +452,7 @@ export const imageGridStyles = (
 .${cls} .img-portrait-quartet {
   width: 100%;
   max-width: 100%;
-  grid-template-columns: repeat(2, minmax(220px, 280px));
-  justify-content: center;
-  grid-auto-rows: 360px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px clamp(10px, 1.4vw, 18px);
   align-items: stretch;
 }

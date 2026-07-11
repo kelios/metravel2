@@ -1,5 +1,5 @@
 // components/travel/StableContent.tsx
-import React, { memo, Suspense, useEffect, useMemo, useState } from "react";
+import React, { memo, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { View, StyleSheet, Platform } from "react-native";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -17,7 +17,7 @@ import {
 type LightboxImage = { src: string; alt: string };
 type FullscreenGalleryProps = {
   visible: boolean;
-  images: { url: string; thumbUrl?: string }[];
+  images: { url: string; thumbUrl?: string; alt?: string }[];
   initialIndex?: number;
   onClose: () => void;
 };
@@ -47,6 +47,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
   const webRichTextStyles = useMemo(() => getWebRichTextStyles(colors), [colors]);
   const [iframeModel, setIframeModel] = useState<IframeModelType | null>(null);
   const [lightboxImage, setLightboxImage] = useState<LightboxImage | null>(null);
+  const webRootRef = useRef<HTMLDivElement | null>(null);
   const prepared = useMemo(() => prepareStableContentHtml(html, { serverSanitized }), [html, serverSanitized]);
 
   const scrollToHashTarget = (hash: string) => {
@@ -90,6 +91,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
     setLightboxImage,
     webRichTextStyles,
     scrollToHashTarget,
+    rootRef: webRootRef,
   });
 
   const { renderers, baseStyle, tagsStyles, customHTMLElementModels, handleLinkPress } = useStableContentRenderConfig({
@@ -103,71 +105,16 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
   });
 
   const isWeb = (Platform.OS as string) === 'web';
-  const webLightboxPortal =
-    isWeb && lightboxImage && typeof document !== 'undefined'
-      ? ((require('react-dom') as { createPortal: (node: React.ReactNode, container: Element | DocumentFragment) => React.ReactNode }).createPortal(
-          <div
-            data-testid="travel-rich-text-lightbox"
-            role="dialog"
-            aria-modal="true"
-            aria-label={lightboxImage.alt}
-            onClick={() => setLightboxImage(null)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: colors.overlay,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '24px',
-              zIndex: 1000,
-              cursor: 'zoom-out',
-            }}
-          >
-            <button
-              type="button"
-              aria-label="Закрыть изображение"
-              onClick={(event) => {
-                event.stopPropagation();
-                setLightboxImage(null);
-              }}
-              style={{
-                position: 'fixed',
-                top: '20px',
-                right: '20px',
-                width: '44px',
-                height: '44px',
-                borderRadius: '999px',
-                border: `1px solid ${colors.surfaceAlpha40}`,
-                background: colors.overlayLight,
-                color: colors.textOnDark,
-                fontSize: '28px',
-                lineHeight: '1',
-                cursor: 'pointer',
-              }}
-            >
-              ×
-            </button>
-            <img
-              src={lightboxImage.src}
-              alt={lightboxImage.alt}
-              onClick={(event) => event.stopPropagation()}
-              style={{
-                maxWidth: '92vw',
-                maxHeight: '92vh',
-                width: 'auto',
-                height: 'auto',
-                objectFit: 'contain',
-                borderRadius: '16px',
-                background: 'transparent',
-                boxShadow: '0 12px 48px rgba(0, 0, 0, 0.32)',
-                cursor: 'default',
-              }}
-            />
-          </div>,
-          document.body
-        ))
-      : null;
+  const lightboxGallery = lightboxImage ? (
+    <Suspense fallback={null}>
+      <FullscreenGalleryComponent
+        visible
+        images={[{ url: lightboxImage.src, alt: lightboxImage.alt }]}
+        initialIndex={0}
+        onClose={() => setLightboxImage(null)}
+      />
+    </Suspense>
+  ) : null;
 
   if (isWeb) {
     const webRichTextClassName = fullWidth
@@ -176,10 +123,11 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
     return (
       <>
         <div
+          ref={webRootRef}
           className={webRichTextClassName}
           dangerouslySetInnerHTML={{ __html: prepared }}
         />
-        {webLightboxPortal}
+        {lightboxGallery}
       </>
     )
   }
@@ -194,7 +142,8 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
             contentWidth={contentWidth}
             customHTMLElementModels={customHTMLElementModels}
             renderers={renderers}
-            defaultTextProps={{ selectable: !isWeb }}
+            // Android: selectable-текст перехватывает тапы — onPress вложенных <a> не срабатывает (RN #22811)
+            defaultTextProps={{ selectable: Platform.OS === 'ios' }}
             renderersProps={{ a: { onPress: handleLinkPress } } as any}
             baseStyle={baseStyle as any}
             tagsStyles={tagsStyles as any}
@@ -202,16 +151,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
           />
         </Suspense>
       </View>
-      {!isWeb && lightboxImage ? (
-        <Suspense fallback={null}>
-          <FullscreenGalleryComponent
-            visible={Boolean(lightboxImage)}
-            images={[{ url: lightboxImage.src }]}
-            initialIndex={0}
-            onClose={() => setLightboxImage(null)}
-          />
-        </Suspense>
-      ) : null}
+      {lightboxGallery}
     </>
   )
 });

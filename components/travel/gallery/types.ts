@@ -2,6 +2,7 @@ export interface GalleryItem {
   id: string
   stableKey?: string
   url: string
+  caption?: string
   isUploading?: boolean
   uploadProgress?: number
   error?: string | null
@@ -11,6 +12,7 @@ export interface GalleryItem {
 export interface GalleryValueItem {
   id?: string | number
   url: string
+  caption?: string
 }
 
 export interface ImageGalleryComponentProps {

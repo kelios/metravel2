@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo, useContext } 
 import {
   View,
   Platform,
+  useWindowDimensions,
 } from 'react-native'
 import { useDropzone, type FileRejection } from 'react-dropzone'
 import { QueryClientContext } from '@tanstack/react-query'
@@ -34,7 +35,8 @@ interface UploadImageResponse {
   path?: unknown
   file_url?: unknown
   id?: unknown
-  data?: { url?: unknown; id?: unknown }
+  caption?: unknown
+  data?: { url?: unknown; id?: unknown; caption?: unknown }
   [key: string]: unknown
 }
 
@@ -100,8 +102,13 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   onChange,
 }) => {
   const colors = useThemedColors()
+  const { width: viewportWidth } = useWindowDimensions()
   const queryClient = useContext(QueryClientContext)
-  const styles = useMemo(() => createGalleryStyles(colors), [colors])
+  const isMobileWeb = Platform.OS === 'web' && viewportWidth <= 767
+  const styles = useMemo(
+    () => createGalleryStyles(colors, isMobileWeb),
+    [colors, isMobileWeb],
+  )
 
   const [images, setImages] = useState<GalleryItem[]>([])
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true)
@@ -130,10 +137,11 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
         .map((img) => ({
           id: img.id,
           url: img.url,
+          caption: img.caption ?? '',
         }))
         .filter((img) => typeof img.url === 'string' && img.url.trim().length > 0)
 
-      const signature = items.map((img) => `${String(img.id ?? '')}:${img.url}`).join('|')
+      const signature = items.map((img) => `${String(img.id ?? '')}:${img.url}:${img.caption}`).join('|')
       if (signature === lastReportedUrlsRef.current) return
       lastReportedUrlsRef.current = signature
       onChange(items)
@@ -338,6 +346,11 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
             response?.path ||
             response?.file_url
           const uploadedId = response?.id || response?.data?.id || placeholder.id
+          const uploadedCaption = typeof response?.caption === 'string'
+            ? response.caption
+            : typeof response?.data?.caption === 'string'
+              ? response.data.caption
+              : ''
           if (uploadedUrlRaw) {
             const finalUrl = normalizeDisplayUrl(String(uploadedUrlRaw))
 
@@ -355,6 +368,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
                           uploadProgress: 100,
                           error: null,
                           hasLoaded: false,
+                          caption: uploadedCaption,
                         }
                       : img,
                   ),
@@ -371,6 +385,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
                   uploadProgress: 100,
                   error: null,
                   hasLoaded: false,
+                  caption: uploadedCaption,
                 },
               ])
             })
@@ -509,6 +524,15 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     scheduleGalleryReorder()
   }, [reportGalleryItems, scheduleGalleryReorder])
 
+  const handleCaptionChange = useCallback((stableKey: string, caption: string) => {
+    const next = imagesRef.current.map((img) =>
+      (img.stableKey ?? img.id) === stableKey ? { ...img, caption } : img,
+    )
+    imagesRef.current = next
+    setImages(next)
+    reportGalleryItems(next)
+  }, [reportGalleryItems])
+
   const DeleteActionComponent = useMemo(() => DeleteAction, [])
 
   const handleImageError = useCallback((stableKey: string, currentUrl: string) => {
@@ -630,6 +654,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
         onMove={handleMoveImage}
         onImageError={handleImageError}
         onImageLoad={handleImageLoad}
+        onCaptionChange={handleCaptionChange}
         DeleteAction={DeleteActionComponent}
       />
 

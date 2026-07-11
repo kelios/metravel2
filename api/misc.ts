@@ -344,7 +344,46 @@ export interface GalleryReorderImage {
   id: number;
   url: string;
   order: number;
+  caption?: string;
 }
+
+export interface GalleryCaptionResponse {
+  id: number;
+  caption: string;
+  url?: string;
+  order?: number;
+}
+
+export const updateGalleryCaption = async (
+  imageId: string | number,
+  caption: string,
+  signal?: AbortSignal,
+): Promise<GalleryCaptionResponse> => {
+  const token = await getSecureItem('userToken');
+  if (!token) {
+    throw new Error('Пользователь не авторизован');
+  }
+
+  const numericImageId = Number(imageId);
+  if (!Number.isInteger(numericImageId) || numericImageId <= 0) {
+    throw new Error('Некорректный id изображения');
+  }
+
+  const normalizedCaption = String(caption ?? '').trim();
+  if (normalizedCaption.length > 500) {
+    throw new Error('Подпись не должна превышать 500 символов');
+  }
+
+  return await apiClient.request<GalleryCaptionResponse>(
+    `/gallery/${numericImageId}/`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ caption: normalizedCaption }),
+      signal,
+    },
+    DEFAULT_TIMEOUT,
+  );
+};
 
 export const reorderGallery = async (
   travelId: string | number,

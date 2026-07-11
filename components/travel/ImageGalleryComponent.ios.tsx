@@ -19,6 +19,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { compressTravelPhoto } from '@/utils/imageCompressor';
 import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import type { GalleryValueItem } from '@/components/travel/gallery/types';
+import { GalleryCaptionEditor } from '@/components/travel/gallery/GalleryCaptionEditor';
 
 const API_BASE_URL: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
@@ -50,6 +51,7 @@ const ensureAbsoluteUrl = (value: string): string => {
 interface GalleryItem {
   id: string;
   url: string;
+  caption?: string;
 }
 
 interface ImageGalleryComponentProps {
@@ -99,9 +101,9 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   useEffect(() => {
     if (!onChange) return;
     const items = images
-      .map((img) => ({ id: img.id, url: img.url }))
+      .map((img) => ({ id: img.id, url: img.url, caption: img.caption ?? '' }))
       .filter((img) => typeof img.url === 'string' && img.url.trim().length > 0);
-    const signature = items.map((img) => `${String(img.id ?? '')}:${img.url}`).join('|');
+    const signature = items.map((img) => `${String(img.id ?? '')}:${img.url}:${img.caption}`).join('|');
     if (signature === lastReportedUrlsRef.current) return;
     lastReportedUrlsRef.current = signature;
     onChange(items);
@@ -162,11 +164,21 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
             (response as any)?.id ||
             (response as any)?.data?.id ||
             filename;
+          const uploadedCaption =
+            typeof (response as any)?.caption === 'string'
+              ? (response as any).caption
+              : typeof (response as any)?.data?.caption === 'string'
+                ? (response as any).data.caption
+                : '';
 
           if (uploadedUrlRaw) {
             setImages((prev) => [
               ...prev,
-              { id: String(uploadedId), url: ensureAbsoluteUrl(String(uploadedUrlRaw)) },
+              {
+                id: String(uploadedId),
+                url: ensureAbsoluteUrl(String(uploadedUrlRaw)),
+                caption: uploadedCaption,
+              },
             ]);
           }
         } catch (error) {
@@ -263,6 +275,12 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
     });
   }, []);
 
+  const handleCaptionChange = useCallback((imageId: string, caption: string) => {
+    setImages((prev) => prev.map((img) => (
+      img.id === imageId ? { ...img, caption } : img
+    )));
+  }, []);
+
   const confirmDeleteImage = async () => {
     if (!selectedImageId) return;
     const imageToDelete = images.find((img) => img.id === selectedImageId);
@@ -323,11 +341,12 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       ) : images.length > 0 ? (
         <View style={styles.galleryGrid}>
           {images.map((image, index) => (
-            <View key={`${image.id}:${image.url}:${index}`} style={[styles.imageWrapper, { backgroundColor: colors.surfaceMuted }]}>
-              {loading[index] ? (
-                <ShimmerOverlay />
-              ) : (
-                <>
+            <View key={`${image.id}:${image.url}:${index}`} style={styles.imageCard}>
+              <View style={[styles.imageFrame, { backgroundColor: colors.surfaceMuted }]}>
+                {loading[index] ? (
+                  <ShimmerOverlay />
+                ) : (
+                  <>
                   <ImageCardMedia
                     src={image.url}
                     fit="contain"
@@ -367,8 +386,17 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
                       <Feather name="arrow-right" size={15} color={index === images.length - 1 ? colors.textMuted : colors.textInverse} />
                     </TouchableOpacity>
                   </View>
-                </>
-              )}
+                  </>
+                )}
+              </View>
+              {!loading[index] ? (
+                <GalleryCaptionEditor
+                  imageId={image.id}
+                  caption={image.caption ?? ''}
+                  disabled={!isBackendImageId(image.id)}
+                  onCaptionChange={(caption) => handleCaptionChange(image.id, caption)}
+                />
+              ) : null}
             </View>
           ))}
         </View>
@@ -456,10 +484,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: DESIGN_TOKENS.spacing.md,
   },
-  imageWrapper: {
-    width: '30%',
-    aspectRatio: 1,
+  imageCard: {
+    width: '100%',
     borderRadius: 10,
+    overflow: 'hidden',
+  },
+  imageFrame: {
+    width: '100%',
+    aspectRatio: 1,
     overflow: 'hidden',
     position: 'relative',
     justifyContent: 'center',

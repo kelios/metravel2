@@ -24,6 +24,11 @@ describe('resolveInternalHref', () => {
     expect(resolveInternalHref('https://metravel.by')).toBe('/')
   })
 
+  it('about:///path (нормализация относительных href в react-native-render-html) → внутренний путь', () => {
+    expect(resolveInternalHref('about:///travels/oriavskii-zamok')).toBe('/travels/oriavskii-zamok')
+    expect(resolveInternalHref('about:///article/slug?x=1')).toBe('/article/slug?x=1')
+  })
+
   it('внешние ссылки → null', () => {
     expect(resolveInternalHref('https://google.com/x')).toBeNull()
     expect(resolveInternalHref('https://evil-metravel.by/x')).toBeNull()

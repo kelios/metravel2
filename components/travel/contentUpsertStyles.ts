@@ -11,6 +11,7 @@ export const createContentUpsertStyles = (colors: Colors) => StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background },
     container: { padding: DESIGN_TOKENS.spacing.xs, paddingBottom: 40 },
     modalSafeArea: { flex: 1, backgroundColor: colors.background },
+    modalKeyboardAvoiding: { flex: 1 },
     modalShell: { flex: 1, width: '100%', maxWidth: 1200, alignSelf: 'center' },
     modalHeader: {
         paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.sm,
@@ -41,6 +42,9 @@ export const createContentUpsertStyles = (colors: Colors) => StyleSheet.create({
     },
     descriptionMobileInput: {
         minHeight: 150,
+        // Cap the field so the caret never grows below the keyboard on native;
+        // longer text scrolls inside the input, full editing lives in the fullscreen editor.
+        ...(Platform.OS === 'web' ? null : { maxHeight: 240 }),
         borderWidth: 1,
         borderColor: colors.border,
         backgroundColor: colors.background,

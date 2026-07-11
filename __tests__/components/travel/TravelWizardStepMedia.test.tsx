@@ -200,7 +200,7 @@ describe('TravelWizardStepMedia', () => {
     expect(parsed.idTravel).toBe('42');
     expect(parsed.initialImages).toHaveLength(2);
     expect(parsed.initialImages[0]).toEqual({ id: 'legacy-0', url: 'https://example.com/legacy.jpg' });
-    expect(parsed.initialImages[1]).toEqual({ id: '7', url: '/relative/path.jpg' });
+    expect(parsed.initialImages[1]).toEqual({ id: '7', url: '/relative/path.jpg', caption: '' });
   });
 
   it('allows deleting cover when cover exists', async () => {

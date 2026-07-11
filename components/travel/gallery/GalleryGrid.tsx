@@ -9,6 +9,7 @@ import type { ThemedColors } from '@/hooks/useTheme'
 import type { GalleryItem } from './types'
 import type { createGalleryStyles } from './styles'
 import type { DeleteActionStyle } from './DeleteAction'
+import { GalleryCaptionEditor } from './GalleryCaptionEditor'
 
 type GalleryStyles = ReturnType<typeof createGalleryStyles>
 
@@ -21,6 +22,7 @@ export const GalleryGrid: React.FC<{
   onMove: (stableKey: string, direction: -1 | 1) => void
   onImageError: (stableKey: string, url: string) => void
   onImageLoad: (stableKey: string) => void
+  onCaptionChange: (stableKey: string, caption: string) => void
   DeleteAction: React.ComponentType<{
     onActivate: () => void
     style?: DeleteActionStyle
@@ -37,6 +39,7 @@ export const GalleryGrid: React.FC<{
   onMove,
   onImageError,
   onImageLoad,
+  onCaptionChange,
   DeleteAction,
 }) => {
   if (isInitialLoading) {
@@ -44,7 +47,9 @@ export const GalleryGrid: React.FC<{
       <View style={styles.galleryGrid}>
         {[...Array(3)].map((_, i) => (
           <View key={`skeleton-${i}`} style={styles.imageWrapper}>
-            <View style={[styles.skeleton, { backgroundColor: colors.surfaceMuted }]} />
+            <View style={styles.imageFrame}>
+              <View style={[styles.skeleton, { backgroundColor: colors.surfaceMuted }]} />
+            </View>
           </View>
         ))}
       </View>
@@ -96,8 +101,9 @@ export const GalleryGrid: React.FC<{
 
         return (
           <View key={stableKey} style={styles.imageWrapper} testID="gallery-image">
-            {image.isUploading ? (
-              <View style={styles.uploadingImageContainer}>
+            <View style={styles.imageFrame}>
+              {image.isUploading ? (
+                <View style={styles.uploadingImageContainer}>
                 <ShimmerOverlay />
                 <View style={styles.uploadingOverlayImage}>
                   <Text style={[styles.uploadingImageText, { color: colors.textInverse }]}>Загрузка...</Text>
@@ -110,9 +116,9 @@ export const GalleryGrid: React.FC<{
                   <Feather name="x" size={18} color={colors.textInverse} />
                 </DeleteAction>
                 {renderMoveControls()}
-              </View>
-            ) : image.error ? (
-              <View style={styles.errorImageContainer}>
+                </View>
+              ) : image.error ? (
+                <View style={styles.errorImageContainer}>
                 <ImageCardMedia
                   src={image.url}
                   fit="contain"
@@ -143,9 +149,9 @@ export const GalleryGrid: React.FC<{
                   <Feather name="x" size={18} color={colors.textInverse} />
                 </DeleteAction>
                 {renderMoveControls()}
-              </View>
-            ) : !image.url ? (
-              <View style={styles.uploadingImageContainer}>
+                </View>
+              ) : !image.url ? (
+                <View style={styles.uploadingImageContainer}>
                 <ShimmerOverlay />
                 <DeleteAction
                   onActivate={() => onDelete(stableKey)}
@@ -155,9 +161,9 @@ export const GalleryGrid: React.FC<{
                   <Feather name="x" size={18} color={colors.text} />
                 </DeleteAction>
                 {renderMoveControls()}
-              </View>
-            ) : (
-              <>
+                </View>
+              ) : (
+                <>
                 {!image.hasLoaded && (
                   <ShimmerOverlay style={{ zIndex: 0, pointerEvents: 'none' } as any} />
                 )}
@@ -180,8 +186,16 @@ export const GalleryGrid: React.FC<{
                   <Feather name="x" size={18} color={colors.textInverse} />
                 </DeleteAction>
                 {renderMoveControls()}
-              </>
-            )}
+                </>
+              )}
+            </View>
+            {!image.isUploading && /^\d+$/.test(String(image.id)) ? (
+              <GalleryCaptionEditor
+                imageId={String(image.id)}
+                caption={image.caption ?? ''}
+                onCaptionChange={(caption) => onCaptionChange(stableKey, caption)}
+              />
+            ) : null}
           </View>
         )
       })}

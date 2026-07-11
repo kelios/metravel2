@@ -5,7 +5,6 @@ import { QueryClientContext } from '@tanstack/react-query';
 
 import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent.web';
 import {
-  GALLERY_MOBILE_STATIC_FROST_MEDIA,
   createGalleryStyles,
   createMobileWebStaticFrostStyle,
 } from '@/components/travel/gallery/styles';
@@ -99,12 +98,14 @@ jest.mock('@/api/misc', () => {
   const uploadImageMock = jest.fn(async () => ({ id: 'uploaded-1', url: '/uploaded.jpg' }));
   const deleteImageMock = jest.fn(async () => undefined);
   const reorderGalleryMock = jest.fn(async () => ({ gallery: [] }));
+  const updateGalleryCaptionMock = jest.fn(async (_id: string, caption: string) => ({ id: 1, caption }));
   return {
     __esModule: true,
     uploadImage: uploadImageMock,
     deleteImage: deleteImageMock,
     reorderGallery: reorderGalleryMock,
-    __mocks: { uploadImageMock, deleteImageMock, reorderGalleryMock },
+    updateGalleryCaption: updateGalleryCaptionMock,
+    __mocks: { uploadImageMock, deleteImageMock, reorderGalleryMock, updateGalleryCaptionMock },
   };
 });
 
@@ -112,6 +113,7 @@ const { __mocks } = jest.requireMock('@/api/misc') as any;
 const uploadImageMock = __mocks.uploadImageMock as jest.Mock;
 const deleteImageMock = __mocks.deleteImageMock as jest.Mock;
 const reorderGalleryMock = __mocks.reorderGalleryMock as jest.Mock;
+const updateGalleryCaptionMock = __mocks.updateGalleryCaptionMock as jest.Mock;
 const { __mocks: webImageUploadMocks } = jest.requireMock('@/utils/webImageUpload') as any;
 const prepareWebImageFileForUploadMock = webImageUploadMocks.prepareWebImageFileForUpload as jest.Mock;
 
@@ -185,6 +187,7 @@ describe('ImageGalleryComponent.web', () => {
     uploadImageMock.mockClear();
     deleteImageMock.mockClear();
     reorderGalleryMock.mockClear();
+    updateGalleryCaptionMock.mockClear();
     prepareWebImageFileForUploadMock.mockClear();
     prepareWebImageFileForUploadMock.mockImplementation(async (file: File) => file);
   });
@@ -222,6 +225,45 @@ describe('ImageGalleryComponent.web', () => {
     expect(images.length).toBeGreaterThanOrEqual(3);
     const deleteButtons = getAllByTestId('delete-image-button');
     expect(deleteButtons.length).toBeGreaterThanOrEqual(3); // overlay + corner buttons
+  });
+
+  it('saves a place caption for each backend gallery image and reports it to the form', async () => {
+    const onChange = jest.fn();
+    const { getByTestId, getByText } = renderSafe(
+      <ImageGalleryComponent
+        collection="gallery"
+        idTravel="42"
+        initialImages={[{ id: '41', url: 'https://example.com/pic1.jpg', caption: '' }]}
+        maxImages={5}
+        onChange={onChange}
+      />,
+    );
+
+    const input = getByTestId('gallery-caption-input-41');
+    fireEvent.changeText(input, '  Мирский замок  ');
+    fireEvent(input, 'blur');
+
+    await waitFor(() => {
+      expect(updateGalleryCaptionMock).toHaveBeenCalledWith('41', 'Мирский замок');
+      expect(getByText('Сохранено')).toBeTruthy();
+      expect(onChange).toHaveBeenLastCalledWith([
+        expect.objectContaining({ id: '41', caption: 'Мирский замок' }),
+      ]);
+    });
+  });
+
+  it('does not call the caption API for a temporary image id', () => {
+    const { queryByTestId } = renderSafe(
+      <ImageGalleryComponent
+        collection="gallery"
+        idTravel="42"
+        initialImages={[{ id: 'legacy-0', url: 'https://example.com/pic1.jpg', caption: '' }]}
+        maxImages={5}
+      />,
+    );
+
+    expect(queryByTestId('gallery-caption-input-legacy-0')).toBeNull();
+    expect(updateGalleryCaptionMock).not.toHaveBeenCalled();
   });
 
   it('uploads files via dropzone and finalizes', async () => {
@@ -421,24 +463,23 @@ describe('ImageGalleryComponent.web', () => {
     expect(moveButton.borderWidth).toBeGreaterThanOrEqual(2);
   });
 
-  it('uses static frost for gallery buttons on mobile web while preserving desktop blur', () => {
+  it('returns a supported flat static-frost style for mobile web buttons', () => {
     const moveMobileOverride = createMobileWebStaticFrostStyle(MODERN_MATTE_PALETTE.surfaceMuted);
     const deleteMobileOverride = createMobileWebStaticFrostStyle(MODERN_MATTE_PALETTE.danger);
 
-    expect(moveMobileOverride[GALLERY_MOBILE_STATIC_FROST_MEDIA]).toEqual(
-      expect.objectContaining({
-        backgroundColor: MODERN_MATTE_PALETTE.surfaceMuted,
-        backdropFilter: 'none',
-        WebkitBackdropFilter: 'none',
-      }),
-    );
-    expect(deleteMobileOverride[GALLERY_MOBILE_STATIC_FROST_MEDIA]).toEqual(
-      expect.objectContaining({
-        backgroundColor: MODERN_MATTE_PALETTE.danger,
-        backdropFilter: 'none',
-        WebkitBackdropFilter: 'none',
-      }),
-    );
+    expect(moveMobileOverride).toEqual(expect.objectContaining({
+      backgroundColor: MODERN_MATTE_PALETTE.surfaceMuted,
+      backdropFilter: 'none',
+      WebkitBackdropFilter: 'none',
+    }));
+    expect(deleteMobileOverride).toEqual(expect.objectContaining({
+      backgroundColor: MODERN_MATTE_PALETTE.danger,
+      backdropFilter: 'none',
+      WebkitBackdropFilter: 'none',
+    }));
+
+    expect(Object.keys(moveMobileOverride).some((key) => key.startsWith('@media'))).toBe(false);
+    expect(Object.keys(deleteMobileOverride).some((key) => key.startsWith('@media'))).toBe(false);
   });
 
   it('invalidates the travel detail cache after persisted reorder', async () => {
@@ -768,6 +809,7 @@ describe('ImageGalleryComponent.web', () => {
     });
 
     expect(getAllByTestId('delete-image-button').length).toBeGreaterThan(0);
+    expect(getByTestId('gallery-caption-input-3796')).toBeTruthy();
 
     const before = queryAllByTestId('gallery-image').length;
     fireEvent.press(getAllByTestId('delete-image-button')[0]);

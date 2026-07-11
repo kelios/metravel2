@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import ZoomableGalleryImage from '@/components/travel/ZoomableGalleryImage.web';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface FullscreenGalleryProps {
   visible: boolean;
-  images: { url: string; thumbUrl?: string }[];
+  images: { url: string; thumbUrl?: string; alt?: string; caption?: string }[];
   initialIndex?: number;
   onClose: () => void;
 }
@@ -26,10 +26,14 @@ export default function FullscreenGallery({
 }: FullscreenGalleryProps) {
   const colors = useThemedColors();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [zoomedIndex, setZoomedIndex] = useState<number | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (visible) setCurrentIndex(initialIndex);
+    if (visible) {
+      setCurrentIndex(initialIndex);
+      setZoomedIndex(null);
+    }
   }, [visible, initialIndex]);
 
   // Ставим скроллер на стартовый слайд до первой отрисовки, чтобы не мигал
@@ -70,6 +74,8 @@ export default function FullscreenGallery({
     return null;
   }
 
+  const currentCaption = String(images[currentIndex]?.caption ?? '').trim();
+
   return createPortal(
     <div
       data-testid="travel-fullscreen-gallery"
@@ -93,11 +99,11 @@ export default function FullscreenGallery({
             display: 'flex',
             width: '100%',
             height: '100%',
-            overflowX: 'auto',
+            overflowX: zoomedIndex == null ? 'auto' : 'hidden',
             overflowY: 'hidden',
             scrollSnapType: 'x mandatory',
             overscrollBehavior: 'contain',
-            touchAction: 'pan-x pinch-zoom',
+            touchAction: 'pan-x',
             WebkitOverflowScrolling: 'touch',
             scrollbarWidth: 'none',
           } as React.CSSProperties
@@ -116,17 +122,19 @@ export default function FullscreenGallery({
             }}
           >
             {Math.abs(index - currentIndex) <= RENDER_WINDOW ? (
-              <ImageCardMedia
+              <ZoomableGalleryImage
                 src={img.url}
-                style={{ width: '100%', height: '100%' }}
-                fit="contain"
-                blurBackground
-                allowCriticalWebBlur
-                blurRadius={18}
-                loading="eager"
+                width="100%"
+                height="100%"
                 priority={index === currentIndex ? 'high' : 'normal'}
-                transition={200}
-                alt={`Фото маршрута ${index + 1} из ${images.length}`}
+                alt={img.alt || `Фото маршрута ${index + 1} из ${images.length}`}
+                resetKey={`${visible}-${index}`}
+                onInteractionChange={(active) => {
+                  setZoomedIndex((current) => {
+                    if (active) return index;
+                    return current === index ? null : current;
+                  });
+                }}
               />
             ) : null}
           </div>
@@ -179,6 +187,35 @@ export default function FullscreenGallery({
           {currentIndex + 1} / {images.length}
         </div>
       )}
+
+      {currentCaption ? (
+        <div
+          data-testid="travel-fullscreen-gallery-caption"
+          style={{
+            position: 'absolute',
+            bottom: images.length > 1
+              ? 'calc(env(safe-area-inset-bottom, 0px) + 60px)'
+              : 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 'max-content',
+            maxWidth: '88%',
+            boxSizing: 'border-box',
+            background: colors.overlay,
+            borderRadius: 12,
+            padding: '8px 16px',
+            color: colors.textOnDark,
+            fontSize: 14,
+            fontWeight: 600,
+            lineHeight: '20px',
+            textAlign: 'center',
+            zIndex: 10,
+            pointerEvents: 'none',
+          }}
+        >
+          {currentCaption}
+        </div>
+      ) : null}
     </div>,
     document.body,
   );

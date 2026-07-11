@@ -398,7 +398,7 @@ describe('travelFormNormalization', () => {
 
     it('handles object items with url property', () => {
       const gallery = [
-        { id: 77, url: 'https://cdn.com/a.jpg' },
+        { id: 77, url: 'https://cdn.com/a.jpg', caption: '  Несвижский замок  ' },
         { url: '' },
         { url: 'blob:x' },
       ];
@@ -406,6 +406,7 @@ describe('travelFormNormalization', () => {
       expect(result).toHaveLength(1);
       expect((result as any)[0].url).toBe('https://cdn.com/a.jpg');
       expect((result as any)[0].id).toBe(77);
+      expect((result as any)[0].caption).toBe('  Несвижский замок  ');
     });
 
     it('extracts id from gallery URL when id is missing', () => {

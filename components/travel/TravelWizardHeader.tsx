@@ -354,42 +354,47 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                 ) : null}
             </View>
 
-            <View style={[styles.belowProgressRow, isMobile && styles.belowProgressRowMobile]}>
-                <View style={styles.belowProgressLeft}>
-                    {!isMobile ? BackButton : null}
-                    {!isMobile && totalSteps && currentStep && totalSteps > 1 ? (
-                        <View style={styles.milestonesInlineWrapper}>
-                            {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
-                                <Pressable
-                                    key={step}
-                                    onPress={() => onStepSelect?.(step)}
-                                    style={({ pressed }) => [
-                                        styles.milestoneInline,
-                                        step === currentStep && styles.milestoneInlineActive,
-                                        pressed && { opacity: 0.7 }
-                                    ]}
-                                    disabled={!onStepSelect}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`Перейти к шагу ${step}: ${getStepLabel(step)}`}
-                                    accessibilityState={{ selected: step === currentStep, disabled: !onStepSelect }}
-                                >
-                                    {step < currentStep ? (
-                                        <Feather name="check" size={12} color={colors.primaryDark} />
-                                    ) : (
-                                        <Text style={[styles.milestoneInlineNumber, step === currentStep && styles.milestoneInlineNumberActive]}>
-                                            {step}
-                                        </Text>
-                                    )}
-                                </Pressable>
-                            ))}
+            {!isMobile || (totalSteps && currentStep && totalSteps > 1) ? (
+                <View style={[styles.belowProgressRow, isMobile && styles.belowProgressRowMobile]}>
+                    <View style={styles.belowProgressLeft}>
+                        {!isMobile ? BackButton : null}
+                        {totalSteps && currentStep && totalSteps > 1 ? (
+                            <View style={[styles.milestonesInlineWrapper, isMobile && styles.milestonesInlineWrapperMobile]}>
+                                {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
+                                    <Pressable
+                                        key={step}
+                                        onPress={() => onStepSelect?.(step)}
+                                        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                                        style={({ pressed }) => [
+                                            styles.milestoneInline,
+                                            step === currentStep && styles.milestoneInlineActive,
+                                            pressed && { opacity: 0.7 }
+                                        ]}
+                                        disabled={!onStepSelect}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={`Перейти к шагу ${step}: ${getStepLabel(step)}`}
+                                        accessibilityState={{ selected: step === currentStep, disabled: !onStepSelect }}
+                                    >
+                                        {step < currentStep ? (
+                                            <Feather name="check" size={12} color={colors.primaryDark} />
+                                        ) : (
+                                            <Text style={[styles.milestoneInlineNumber, step === currentStep && styles.milestoneInlineNumberActive]}>
+                                                {step}
+                                            </Text>
+                                        )}
+                                    </Pressable>
+                                ))}
+                            </View>
+                        ) : null}
+                    </View>
+
+                    {!isMobile ? (
+                        <View style={styles.belowProgressRight}>
+                            {PrimaryAction}
                         </View>
                     ) : null}
                 </View>
-
-                <View style={styles.belowProgressRight}>
-                    {!isMobile ? PrimaryAction : null}
-                </View>
-            </View>
+            ) : null}
 
             {hasTip && isTipOpen ? (
                 <View style={styles.tipPanel}>

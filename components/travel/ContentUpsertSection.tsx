@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { View, ScrollView, Text, TextInput, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
+import { View, ScrollView, Text, TextInput, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, useWindowDimensions, KeyboardAvoidingView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -446,6 +446,11 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                 onRequestClose={() => setIsDescriptionFullscreen(false)}
                             >
                                 <SafeAreaView style={styles.modalSafeArea}>
+                                    <KeyboardAvoidingView
+                                        style={styles.modalKeyboardAvoiding}
+                                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                                        enabled={Platform.OS !== 'web'}
+                                    >
                                     <View style={styles.modalShell}>
                                         <View style={styles.modalHeader}>
                                             <View style={styles.modalHeaderSide}>
@@ -533,6 +538,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                             </View>
                                         </View>
                                     </View>
+                                    </KeyboardAvoidingView>
                                 </SafeAreaView>
                             </Modal>
                         </>

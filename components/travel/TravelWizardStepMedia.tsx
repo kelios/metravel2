@@ -100,10 +100,11 @@ const getGallerySignature = (items: unknown) => {
         .map((item) => {
             if (typeof item === 'string') return `:${item}`;
             if (item && typeof item === 'object') {
-                const galleryItem = item as { id?: unknown; url?: unknown };
+                const galleryItem = item as { id?: unknown; url?: unknown; caption?: unknown };
                 const id = galleryItem.id != null ? String(galleryItem.id) : '';
                 const url = typeof galleryItem.url === 'string' ? galleryItem.url : '';
-                return `${id}:${url}`;
+                const caption = typeof galleryItem.caption === 'string' ? galleryItem.caption : '';
+                return `${id}:${url}:${caption}`;
             }
             return '';
         })
@@ -116,9 +117,12 @@ const normalizeGalleryItems = (items: GalleryValueItem[]): GalleryValueForForm =
             const url = normalizeUrl(item?.url);
             if (!url) return null;
 
-            const normalizedItem: { url: string; id?: string | number } = { url };
+            const normalizedItem: { url: string; id?: string | number; caption?: string } = { url };
             if (item.id != null && String(item.id).trim().length > 0) {
                 normalizedItem.id = item.id;
+            }
+            if (typeof item.caption === 'string') {
+                normalizedItem.caption = item.caption.slice(0, 500);
             }
             return normalizedItem;
         })

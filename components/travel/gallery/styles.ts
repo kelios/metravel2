@@ -3,19 +3,18 @@ import { Platform, StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { useThemedColors } from '@/hooks/useTheme'
 
-export const GALLERY_MOBILE_STATIC_FROST_MEDIA = '@media (max-width: 767px)'
-
 export function createMobileWebStaticFrostStyle(backgroundColor: string) {
   return {
-    [GALLERY_MOBILE_STATIC_FROST_MEDIA]: {
-      backgroundColor,
-      backdropFilter: 'none',
-      WebkitBackdropFilter: 'none',
-    },
+    backgroundColor,
+    backdropFilter: 'none',
+    WebkitBackdropFilter: 'none',
   }
 }
 
-export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) =>
+export const createGalleryStyles = (
+  colors: ReturnType<typeof useThemedColors>,
+  isMobileWeb = false,
+) =>
   StyleSheet.create({
     container: {
       padding: DESIGN_TOKENS.spacing.xl,
@@ -60,11 +59,10 @@ export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) 
       flexBasis: '32%',
       maxWidth: '32%',
       minWidth: 220,
-      minHeight: 220,
+      minHeight: 290,
       flexGrow: 0,
-      aspectRatio: 1,
       borderRadius: DESIGN_TOKENS.radii.lg,
-      overflow: 'hidden', // ✅ ИСПРАВЛЕНИЕ: overflow hidden для rounded corners
+      overflow: 'hidden',
       position: 'relative',
       backgroundColor: colors.backgroundSecondary,
       borderWidth: 1,
@@ -87,6 +85,13 @@ export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) 
           elevation: 3,
         },
       }),
+    },
+    imageFrame: {
+      width: '100%',
+      aspectRatio: 1,
+      overflow: 'hidden',
+      position: 'relative',
+      backgroundColor: colors.backgroundSecondary,
     },
     image: {
       width: '100%',
@@ -115,7 +120,7 @@ export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) 
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
           transition: 'all 0.2s ease',
-          ...createMobileWebStaticFrostStyle(colors.danger),
+          ...(isMobileWeb ? createMobileWebStaticFrostStyle(colors.danger) : null),
           ':hover': {
             transform: 'scale(1.1)',
             backgroundColor: colors.dangerDark,
@@ -163,7 +168,7 @@ export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) 
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
           transition: 'all 0.2s ease',
-          ...createMobileWebStaticFrostStyle(colors.surfaceMuted),
+          ...(isMobileWeb ? createMobileWebStaticFrostStyle(colors.surfaceMuted) : null),
           ':hover': {
             transform: 'scale(1.05)',
           },

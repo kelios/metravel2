@@ -2,6 +2,7 @@
 export type GalleryItem = string | {
     id: number;
     url: string;
+    caption?: string;
     // Print-grade вариант (≥2500px) для PDF-книги; для старых фото бэк отдаёт == url (BE #307)
     print_url?: string;
     updated_at?: string;

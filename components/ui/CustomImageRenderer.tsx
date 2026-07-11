@@ -64,14 +64,14 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
   const attH = tnode.attributes?.height ? Number(tnode.attributes.height) : undefined;
   const isSmallIcon = (attW && attW <= 32) || (attH && attH <= 32);
   const attrAR = attW && attH && attH > 0 ? attW / attH : null;
-  const { width: screenWidth } = useResponsive();
+  const { width: screenWidth, height: screenHeight } = useResponsive();
   const src = useMemo(() => (raw ? normalizeUrl(raw) : ''), [raw]);
   const maxImageHeight = useMemo(
     () =>
       Platform.OS === 'web' && typeof window !== 'undefined'
         ? Math.max(240, Math.floor(window.innerHeight * 0.7))
-        : MAX_IMAGE_HEIGHT,
-    []
+        : Math.max(MAX_IMAGE_HEIGHT, Math.floor(screenHeight * 0.7)),
+    [screenHeight]
   );
   const maxFrameWidth = useMemo(
     () => Math.min(contentWidth || screenWidth || MAX_WIDTH, MAX_WIDTH, (screenWidth || MAX_WIDTH) - H_PADDING * 2),
@@ -135,10 +135,12 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
 
   const { boxWidth, boxHeight } = useMemo(() => {
     const heightIfFullWidth = maxFrameWidth / aspect;
-    if (heightIfFullWidth > maxImageHeight) {
-      return { boxWidth: maxImageHeight * aspect, boxHeight: maxImageHeight };
-    }
-    return { boxWidth: maxFrameWidth, boxHeight: heightIfFullWidth };
+    return {
+      // Keep the media frame dominant even for very tall photos. The image stays
+      // `contain`, while the shared blurred surround fills the remaining width.
+      boxWidth: maxFrameWidth,
+      boxHeight: Math.min(heightIfFullWidth, maxImageHeight),
+    };
   }, [maxFrameWidth, aspect, maxImageHeight]);
 
   // На web ImageCardMedia сам ресайзит URL под размер (+srcSet по DPR); на native

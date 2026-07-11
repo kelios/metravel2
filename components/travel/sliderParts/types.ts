@@ -3,6 +3,7 @@ import type { TravelMediaImage } from '@/types/types';
 export interface SliderImage {
   url: string;
   id: number | string;
+  caption?: string;
   updated_at?: string;
   width?: number;
   height?: number;

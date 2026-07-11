@@ -18,8 +18,12 @@ const INTERNAL_HOSTS = new Set([baseHost, bareHost, `www.${bareHost}`])
  */
 export function resolveInternalHref(href?: string | null): string | null {
   if (!href) return null
-  const trimmed = href.trim()
+  let trimmed = href.trim()
   if (!trimmed || trimmed.startsWith('#')) return null
+  // react-native-render-html нормализует относительные href как `about:///path`
+  // (нет baseUrl) — разворачиваем обратно в относительный путь
+  const aboutMatch = /^about:\/\/(\/.*)$/i.exec(trimmed)
+  if (aboutMatch) trimmed = aboutMatch[1]
   // спец-схемы (почта/телефон/и т.п.) — это не внутренняя навигация
   if (/^(mailto:|tel:|sms:|geo:|tg:|whatsapp:|javascript:|data:)/i.test(trimmed)) return null
 

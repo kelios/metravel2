@@ -1,4 +1,5 @@
 import { Dispatch, SetStateAction, useEffect, useInsertionEffect, useLayoutEffect } from 'react'
+import type { RefObject } from 'react'
 import { Platform } from 'react-native'
 
 import { buildWeservProxyUrl, extractFirstImgSrc } from '@/components/travel/stableContent/htmlTransform'
@@ -70,6 +71,7 @@ type UseStableContentWebEffectsInput = {
   setLightboxImage: Dispatch<SetStateAction<LightboxImage | null>>
   webRichTextStyles: string
   scrollToHashTarget: (hash: string) => boolean
+  rootRef: RefObject<HTMLDivElement | null>
 }
 
 export function useStableContentWebEffects({
@@ -78,6 +80,7 @@ export function useStableContentWebEffects({
   setLightboxImage,
   webRichTextStyles,
   scrollToHashTarget,
+  rootRef,
 }: UseStableContentWebEffectsInput) {
   useEffect(() => {
     if (Platform.OS !== 'web') return
@@ -142,7 +145,7 @@ export function useStableContentWebEffects({
       }
       if (link?.parentNode) link.parentNode.removeChild(link)
     }
-  }, [prepared])
+  }, [prepared, rootRef])
 
   // Network gate for body-article images (htmlTransform tags deep ones .rich-lazy-img
   // with the real url parked in data-lazy-src). Native loading="lazy" widens its
@@ -153,8 +156,8 @@ export function useStableContentWebEffects({
     if (Platform.OS !== 'web') return
     if (typeof window === 'undefined' || typeof document === 'undefined') return
     if (!('IntersectionObserver' in window)) {
-      document
-        .querySelectorAll<HTMLImageElement>(`.${WEB_RICH_TEXT_CLASS} img.rich-lazy-img`)
+      rootRef.current
+        ?.querySelectorAll<HTMLImageElement>('img.rich-lazy-img')
         .forEach((img) => revealLazyImage(img))
       return
     }
@@ -231,7 +234,7 @@ export function useStableContentWebEffects({
     )
 
     const observed = Array.from(
-      document.querySelectorAll<HTMLImageElement>(`.${WEB_RICH_TEXT_CLASS} img.rich-lazy-img`)
+      rootRef.current?.querySelectorAll<HTMLImageElement>('img.rich-lazy-img') ?? []
     )
     observed.forEach((img) => io?.observe(img))
 
@@ -241,7 +244,7 @@ export function useStableContentWebEffects({
       queue.length = 0
       inflight = 0
     }
-  }, [prepared])
+  }, [prepared, rootRef])
 
   // Eager (above-the-fold, non-gated) body images carry a real weserv src for LCP/SSG, so
   // they bypass the IO gate's timeout+fallback above. Guard them separately: if a weserv
@@ -251,7 +254,7 @@ export function useStableContentWebEffects({
     if (Platform.OS !== 'web') return
     if (typeof document === 'undefined') return
     const eager = Array.from(
-      document.querySelectorAll<HTMLImageElement>(`.${WEB_RICH_TEXT_CLASS} img:not(.rich-lazy-img)`)
+      rootRef.current?.querySelectorAll<HTMLImageElement>('img:not(.rich-lazy-img)') ?? []
     ).filter((img) => isWeservImage(img) && !imageLoadedOk(img))
     if (!eager.length) return
 
@@ -271,7 +274,7 @@ export function useStableContentWebEffects({
       timers.forEach((t) => clearTimeout(t))
       cleanups.forEach((fn) => fn())
     }
-  }, [prepared])
+  }, [prepared, rootRef])
 
   useLayoutEffect(() => {
     if (Platform.OS !== 'web') return
@@ -280,6 +283,7 @@ export function useStableContentWebEffects({
       if (!target) return
 
       const ytRoot = target.closest?.('.yt-lite') as HTMLElement | null
+      if (ytRoot && !rootRef.current?.contains(ytRoot)) return
       if (ytRoot) {
         const vid = ytRoot.getAttribute('data-yt')
         if (!vid) return
@@ -305,6 +309,7 @@ export function useStableContentWebEffects({
 
       const anchor = target.closest?.(`.${WEB_RICH_TEXT_CLASS} a[href^="#"]`) as HTMLAnchorElement | null
       if (!anchor) return
+      if (!rootRef.current?.contains(anchor)) return
       const href = anchor.getAttribute('href') || ''
       if (!href.startsWith('#')) return
       const didScroll = scrollToHashTarget(href)
@@ -320,7 +325,7 @@ export function useStableContentWebEffects({
 
     document.addEventListener('click', onClick)
     return () => document.removeEventListener('click', onClick as any)
-  }, [scrollToHashTarget])
+  }, [rootRef, scrollToHashTarget])
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
@@ -329,6 +334,7 @@ export function useStableContentWebEffects({
       if (!target) return
       const image = target.closest?.(`.${WEB_RICH_TEXT_CLASS} img`) as HTMLImageElement | null
       if (!image) return
+      if (!rootRef.current?.contains(image)) return
       const parentLink = image.closest('a[href]') as HTMLAnchorElement | null
       const href = parentLink?.getAttribute('href') || ''
       if (href && !href.startsWith('#')) {
@@ -360,7 +366,7 @@ export function useStableContentWebEffects({
       document.removeEventListener('click', onClick)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [setLightboxImage])
+  }, [rootRef, setLightboxImage])
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
@@ -526,9 +532,7 @@ export function useStableContentWebEffects({
 
     const collectFacades = () =>
       Array.from(
-        document.querySelectorAll<HTMLElement>(
-          `.${WEB_RICH_TEXT_CLASS} .ig-lite:not([data-ig-mounted="1"])`
-        )
+        rootRef.current?.querySelectorAll<HTMLElement>('.ig-lite:not([data-ig-mounted="1"])') ?? []
       )
 
     const MARGIN = 600
@@ -581,7 +585,7 @@ export function useStableContentWebEffects({
     let mutationObserver: MutationObserver | null = null
     const attachObserver = () => {
       if (mutationObserver) return
-      const richTextContainer = document.querySelector(`.${WEB_RICH_TEXT_CLASS}`)
+      const richTextContainer = rootRef.current
       if (!richTextContainer) return
       mutationObserver = new MutationObserver(() => scheduleScan())
       mutationObserver.observe(richTextContainer, { childList: true, subtree: true })
@@ -606,5 +610,5 @@ export function useStableContentWebEffects({
       mounted.length = 0
       facadeOf.clear()
     }
-  }, [prepared])
+  }, [prepared, rootRef])
 }

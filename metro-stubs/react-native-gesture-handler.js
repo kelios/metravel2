@@ -26,6 +26,8 @@ export const Gesture = {
 
 export const PinchGestureHandler = ({ children }) => <>{children}</>
 
+export const PanGestureHandler = ({ children }) => <>{children}</>
+
 export const State = {
   ACTIVE: 4,
 }
@@ -36,5 +38,6 @@ export default {
   GestureDetector,
   Gesture,
   PinchGestureHandler,
+  PanGestureHandler,
   State,
 }

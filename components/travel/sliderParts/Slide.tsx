@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, TouchableOpacity, View } from 'react-native';
+import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { getMediaLqipUrl } from '@/utils/travelMediaVariants';
@@ -290,6 +290,10 @@ const Slide = memo(function Slide({
     onImagePress?.(index);
   }, [onImagePress, index]);
   const hasRenderableUri = resolvedUri.length > 0;
+  const caption = typeof item.caption === 'string' ? item.caption.trim() : '';
+  const accessibilityLabel = caption
+    ? `${caption}. Фотография путешествия ${index + 1} из ${imagesLength}`
+    : `Фотография путешествия ${index + 1} из ${imagesLength}`;
 
   const slideContent = (
     <View
@@ -349,14 +353,14 @@ const Slide = memo(function Slide({
             }
             transition={isFirstSlide ? 0 : 200}
             style={styles.img}
-            alt={`Фотография путешествия ${index + 1} из ${imagesLength}`}
+            alt={accessibilityLabel}
             imageProps={{
               ...(imageProps || {}),
               contentPosition: 'center',
               testID: `slider-image-${index}`,
               accessibilityIgnoresInvertColors: true,
               accessibilityRole: 'image',
-              accessibilityLabel: `Фотография путешествия ${index + 1} из ${imagesLength}`,
+              accessibilityLabel,
             }}
             onLoad={handleLoad}
             onError={handleError}
@@ -379,6 +383,11 @@ const Slide = memo(function Slide({
           />
         </>
       )}
+      {caption ? (
+        <View style={styles.captionContainer} pointerEvents="none" testID={`slider-caption-${index}`}>
+          <Text style={styles.captionText} numberOfLines={3}>{caption}</Text>
+        </View>
+      ) : null}
     </View>
   );
 
@@ -389,7 +398,9 @@ const Slide = memo(function Slide({
         onPress={handlePress}
         style={{ width: '100%', height: '100%' }}
         accessibilityRole="button"
-        accessibilityLabel={`Открыть фото ${index + 1} на весь экран`}
+        accessibilityLabel={caption
+          ? `Открыть фото «${caption}» на весь экран`
+          : `Открыть фото ${index + 1} на весь экран`}
       >
         {slideContent}
       </TouchableOpacity>

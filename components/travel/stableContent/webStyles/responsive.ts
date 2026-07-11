@@ -15,6 +15,10 @@ export const responsiveStyles = (
   }
   .${cls} img {
     border-radius: 10px;
+    width: 100% !important;
+    min-width: min(60vw, 100%) !important;
+    max-width: 100% !important;
+    max-height: 70vh !important;
   }
   .${cls} h2 {
     font-size: 24px;
@@ -37,32 +41,35 @@ export const responsiveStyles = (
     padding-left: 0;
     padding-right: 0;
   }
-  /* Mobile: 2 images still side by side but smaller */
+  /* Mobile descriptions prioritize legibility: every photo gets its own row. */
   .${cls} .img-row-2 {
     width: 100%;
     position: static;
     left: auto;
     transform: none;
+    grid-template-columns: minmax(0, 1fr) !important;
     gap: 8px;
   }
   .${cls} .img-row-2 img {
-    height: 150px !important;
-    max-height: 150px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 70vh !important;
   }
   .${cls} .img-row-2-landscape img,
   .${cls} .img-row-2-balanced img {
-    height: 160px !important;
-    max-height: 160px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 70vh !important;
   }
   .${cls} .img-row-2-mixed {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .${cls} .img-stack-landscape,
   .${cls} .img-pair-balanced,
   .${cls} .img-pair-portraits,
   .${cls} .img-pair-mixed {
     width: 100%;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .${cls} .img-stack-landscape > p,
   .${cls} .img-pair-balanced > p,
@@ -70,9 +77,9 @@ export const responsiveStyles = (
   .${cls} .img-pair-mixed > p {
     transform: none !important;
   }
-  /* Mobile: grid becomes 2 columns */
+  /* Mobile: image grids become a readable single-column photo stream. */
   .${cls} .img-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     width: 100%;
     position: static;
@@ -80,8 +87,9 @@ export const responsiveStyles = (
     transform: none;
   }
   .${cls} .img-grid img {
-    min-height: 140px !important;
-    max-height: 220px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 70vh !important;
   }
   /* Mobile: mixed grid stacks vertically */
   .${cls} .img-grid-mixed {
@@ -94,7 +102,7 @@ export const responsiveStyles = (
   }
   .${cls} .img-grid-quilt,
   .${cls} .img-grid-balanced {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
   }
   .${cls} .img-pair-grid,
@@ -103,7 +111,7 @@ export const responsiveStyles = (
   .${cls} .img-portrait-triptych,
   .${cls} .img-portrait-quartet {
     width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
   }
   .${cls} .img-grid-quilt > p,
@@ -122,37 +130,37 @@ export const responsiveStyles = (
   }
   .${cls} .img-grid-quilt img,
   .${cls} .img-grid-balanced img {
-    min-height: 150px !important;
-    max-height: 220px !important;
+    min-height: 0 !important;
+    max-height: 70vh !important;
   }
   .${cls} .img-portrait-triptych img,
   .${cls} .img-portrait-quartet img {
-    min-height: 170px !important;
-    max-height: 220px !important;
-    height: 170px !important;
+    min-height: 0 !important;
+    max-height: 70vh !important;
+    height: auto !important;
   }
   .${cls} .img-grid-mixed-stack {
-    flex-direction: row;
+    flex-direction: column;
     gap: 8px;
   }
   .${cls} .img-grid-mixed-stack img {
-    min-height: 120px !important;
-    height: 120px !important;
-    max-height: 120px !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: 70vh !important;
   }
   .${cls} .img-grid-mixed > p img {
-    min-height: 200px !important;
-    max-height: 240px !important;
+    min-height: 0 !important;
+    max-height: 70vh !important;
     object-fit: contain;
   }
   /* Mobile: portrait row heights */
   .${cls} .img-row-2-portrait img {
-    height: 210px !important;
-    max-height: 210px !important;
+    height: auto !important;
+    max-height: 70vh !important;
   }
   .${cls} .img-grid-portrait img {
-    min-height: 180px;
-    max-height: 240px;
+    min-height: 0;
+    max-height: 70vh;
   }
 .${cls} .instagram-wrapper,
 .${cls} .instagram-media,

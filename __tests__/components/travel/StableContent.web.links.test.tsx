@@ -20,6 +20,17 @@ jest.mock('@/hooks/useTheme', () => ({
   }),
 }));
 
+// Jest does not apply Metro's `.web.tsx` resolution for lazy imports.
+jest.mock('@/components/travel/FullscreenGallery', () => ({
+  __esModule: true,
+  default: require('@/components/travel/FullscreenGallery.web').default,
+}));
+
+jest.mock('@/components/ui/ImageCardMedia', () => ({
+  __esModule: true,
+  default: ({ src, alt }: { src?: string; alt?: string }) => <img src={src} alt={alt} />,
+}));
+
 describe('StableContent (web) link styles', () => {
   const originalUserAgent = window.navigator.userAgent;
 
@@ -246,7 +257,7 @@ describe('StableContent (web) link styles', () => {
     });
   });
 
-  it('opens inline image in a lightbox on click and closes it', async () => {
+  it('opens inline image in the zoomable fullscreen gallery and closes it', async () => {
     const { container } = render(
       <StableContent
         html={'<p><img src="https://example.com/photo.jpg" width="800" height="600" alt="Горы" /></p>'}
@@ -264,18 +275,55 @@ describe('StableContent (web) link styles', () => {
     fireEvent.click(inlineImage!);
 
     await waitFor(() => {
-      const lightbox = document.querySelector('[data-testid="travel-rich-text-lightbox"]');
+      const lightbox = document.querySelector('[data-testid="travel-fullscreen-gallery"]');
       expect(lightbox).toBeTruthy();
-      expect(lightbox?.getAttribute('aria-label')).toBe('Горы');
+      const zoomableImage = document.querySelector('[data-testid="travel-zoomable-image"]');
+      expect(zoomableImage?.getAttribute('aria-label')).toContain('Горы');
     });
 
-    const closeButton = document.querySelector('button[aria-label="Закрыть изображение"]') as HTMLButtonElement | null;
+    const zoomableImage = document.querySelector('[data-testid="travel-zoomable-image"]') as HTMLDivElement;
+    const dispatchPointer = (type: string, pointerId: number, clientX: number, clientY: number) => {
+      const event = new MouseEvent(type, { bubbles: true, clientX, clientY });
+      Object.defineProperty(event, 'pointerId', { value: pointerId });
+      fireEvent(zoomableImage, event);
+    };
+    dispatchPointer('pointerdown', 1, 100, 200);
+    dispatchPointer('pointerdown', 2, 200, 200);
+    dispatchPointer('pointermove', 2, 300, 200);
+    expect(Number(zoomableImage.getAttribute('data-zoom-scale'))).toBeGreaterThan(1);
+
+    const closeButton = document.querySelector('button[aria-label="Закрыть галерею"]') as HTMLButtonElement | null;
     expect(closeButton).toBeTruthy();
 
     fireEvent.click(closeButton!);
 
     await waitFor(() => {
-      expect(document.querySelector('[data-testid="travel-rich-text-lightbox"]')).toBeNull();
+      expect(document.querySelector('[data-testid="travel-fullscreen-gallery"]')).toBeNull();
+    });
+  });
+
+  it('opens only one fullscreen gallery when multiple rich-text instances are mounted', async () => {
+    const { container } = render(
+      <>
+        <StableContent
+          html={'<p><img src="https://example.com/one.jpg" width="800" height="600" alt="Первое фото" /></p>'}
+          contentWidth={700}
+        />
+        <StableContent
+          html={'<p><img src="https://example.com/two.jpg" width="800" height="600" alt="Второе фото" /></p>'}
+          contentWidth={700}
+        />
+      </>
+    );
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('.travel-rich-text img')).toHaveLength(2);
+    });
+
+    fireEvent.click(container.querySelector('.travel-rich-text img')!);
+
+    await waitFor(() => {
+      expect(document.querySelectorAll('[data-testid="travel-fullscreen-gallery"]')).toHaveLength(1);
     });
   });
 
@@ -304,6 +352,9 @@ describe('StableContent (web) link styles', () => {
     expect(css).toContain('.travel-rich-text .rich-image-frame::before');
     expect(css).toContain('aspect-ratio: var(--travel-rich-image-aspect, 16 / 9);');
     expect(css).toContain('object-fit: contain;');
+    expect(css).toContain('min-width: min(60vw, 100%) !important;');
+    expect(css).toContain('grid-template-columns: minmax(0, 1fr) !important;');
+    expect(css).toContain('max-height: 70vh !important;');
     expect(css).not.toContain('object-fit: cover;');
   });
 

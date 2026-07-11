@@ -423,6 +423,9 @@ export function normalizeGalleryForSave(gallery: any[] | undefined): any[] | und
                         normalizedItem.id = parsedId;
                     }
                 }
+                if (typeof item.caption === 'string') {
+                    normalizedItem.caption = item.caption.slice(0, 500);
+                }
                 return [normalizedItem];
             }
             return [];

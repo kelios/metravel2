@@ -71,6 +71,15 @@ describe('Slider', () => {
     expect(getByTestId('slider-image-0')).toBeTruthy()
   })
 
+  it('shows the place caption on its gallery slide', async () => {
+    const { getByText, getByLabelText } = await renderSlider([
+      { ...portraitImage, caption: 'Браславские озёра' },
+    ])
+
+    expect(getByText('Браславские озёра')).toBeTruthy()
+    expect(getByLabelText(/Браславские озёра.*Фотография путешествия 1 из 1/)).toBeTruthy()
+  })
+
   it('applies blurred background for both portrait and landscape images when blurBackground is enabled', async () => {
     const portraitRender = await renderSlider([portraitImage])
     expect(portraitRender.getByTestId('slider-image-0')).toBeTruthy()

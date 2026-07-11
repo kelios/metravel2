@@ -13,18 +13,18 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import ZoomableGalleryImage from '@/components/travel/ZoomableGalleryImage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface FullscreenGalleryProps {
   visible: boolean;
-  images: { url: string; thumbUrl?: string }[];
+  images: { url: string; thumbUrl?: string; alt?: string; caption?: string }[];
   initialIndex?: number;
   onClose: () => void;
 }
 
-type GalleryImage = { url: string; thumbUrl?: string };
+type GalleryImage = { url: string; thumbUrl?: string; alt?: string; caption?: string };
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -42,6 +42,7 @@ export default function FullscreenGallery({
   const colors = useThemedColors();
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [zoomedRawIndex, setZoomedRawIndex] = useState<number | null>(null);
   const flatListRef = useRef<FlatList<GalleryImage>>(null);
 
   // Seamless infinite loop: with more than one image, render a clone of the last
@@ -72,6 +73,7 @@ export default function FullscreenGallery({
   useEffect(() => {
     if (visible) {
       setCurrentIndex(initialIndex);
+      setZoomedRawIndex(null);
     }
   }, [visible, initialIndex]);
 
@@ -127,23 +129,25 @@ export default function FullscreenGallery({
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: GalleryImage }) => (
+    ({ item, index }: { item: GalleryImage; index: number }) => (
       <View style={styles.slideContainer}>
-        <ImageCardMedia
+        <ZoomableGalleryImage
           src={item.url}
-          style={styles.image}
-          fit="contain"
-          blurBackground
-          allowCriticalWebBlur
-          blurRadius={18}
-          loading="eager"
+          width={SCREEN_WIDTH}
+          height={SCREEN_HEIGHT}
           priority="high"
-          transition={200}
-          alt="Фото маршрута"
+          alt={item.alt || 'Фото маршрута'}
+          resetKey={`${visible}-${index}`}
+          onInteractionChange={(active) => {
+            setZoomedRawIndex((current) => {
+              if (active) return index;
+              return current === index ? null : current;
+            });
+          }}
         />
       </View>
     ),
-    [],
+    [visible],
   );
 
   const getItemLayout = useCallback(
@@ -164,6 +168,8 @@ export default function FullscreenGallery({
     },
     [],
   );
+
+  const currentCaption = String(images[currentIndex]?.caption ?? '').trim();
 
   // Web: don't render (all hooks already called above)
   if (Platform.OS === 'web') return null;
@@ -186,6 +192,7 @@ export default function FullscreenGallery({
           renderItem={renderItem}
           horizontal
           pagingEnabled
+          scrollEnabled={zoomedRawIndex == null}
           showsHorizontalScrollIndicator={false}
           initialScrollIndex={toRawIndex(initialIndex)}
           getItemLayout={getItemLayout}
@@ -217,6 +224,21 @@ export default function FullscreenGallery({
             </Text>
           </View>
         )}
+
+        {currentCaption ? (
+          <View
+            style={[
+              styles.caption,
+              {
+                bottom: insets.bottom + (images.length > 1 ? 60 : 16),
+                backgroundColor: colors.overlay,
+              },
+            ]}
+            testID="travel-fullscreen-gallery-caption"
+          >
+            <Text style={[styles.captionText, { color: colors.textOnDark }]}>{currentCaption}</Text>
+          </View>
+        ) : null}
       </View>
     </Modal>
   );
@@ -231,10 +253,6 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  image: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
   },
   closeButton: {
     position: 'absolute',
@@ -260,5 +278,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: 0.5,
+  },
+  caption: {
+    position: 'absolute',
+    alignSelf: 'center',
+    maxWidth: '88%',
+    borderRadius: DESIGN_TOKENS.radii.md,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    zIndex: 10,
+  },
+  captionText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '600',
+    lineHeight: 20,
+    textAlign: 'center',
   },
 });
