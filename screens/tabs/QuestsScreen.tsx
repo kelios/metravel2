@@ -152,6 +152,23 @@ export default function QuestsScreen() {
         }
     }, [geoRequesting, isMobile]);
 
+    // Быстрый сброс к «Все квесты»: мягкий дефолт «Рядом» без геолокации
+    // (nearbyExplicit=false) показывает весь каталог — см. баг F-09.
+    const handleResetFilters = useCallback(async () => {
+        setSelectedCityId(NEARBY_ID);
+        setNearbyExplicit(false);
+        setGeoMessage(null);
+        setPendingMapAreaCenter(null);
+        setActiveMapAreaCenter(null);
+        if (isMobile) setFilterDrawerOpen(false);
+        try {
+            await AsyncStorage.setItem(STORAGE_SELECTED_CITY, NEARBY_ID);
+        } catch (error) {
+            const { devError } = await import('@/utils/logger');
+            devError('Error saving selected city:', error);
+        }
+    }, [isMobile]);
+
     const handleSetViewMode = useCallback((mode: 'list' | 'map') => {
         setViewMode(mode);
         if (isMobile) setFilterDrawerOpen(false);
@@ -468,6 +485,14 @@ export default function QuestsScreen() {
         setPendingMapAreaCenter(null);
     }, [pendingMapAreaCenter]);
 
+    // Фильтр «сужает» каталог: выбран конкретный город, явный «Рядом» с радиусом
+    // или область карты. В этих случаях показываем быстрый сброс к «Все квесты».
+    const filtersActive = Boolean(
+        (selectedCityId && selectedCityId !== NEARBY_ID)
+        || (selectedCityId === NEARBY_ID && nearbyExplicit)
+        || activeMapAreaCenter,
+    );
+
     // ── SEO ──
     const selectedCityName =
         selectedCityId === NEARBY_ID ? 'Рядом' : CITIES.find((c) => c.id === selectedCityId)?.name ?? null;
@@ -616,6 +641,8 @@ export default function QuestsScreen() {
                 radiiLg={radii.lg}
                 LazyQuestMap={LazyQuestMap}
                 isMobile={isMobile}
+                filtersActive={filtersActive}
+                onResetFilters={handleResetFilters}
                 onShowNearby={requestNearbyQuests}
                 onOpenFilterDrawer={() => setFilterDrawerOpen(true)}
                 onToggleViewMode={handleToggleViewMode}

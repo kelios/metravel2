@@ -435,6 +435,55 @@ describe('QuestsContentPanel', () => {
         expect(getByText('Разрешите доступ к геолокации.')).toBeTruthy();
     });
 
+    it('shows the reset-filters chip when a filter narrows the catalog and hides it otherwise', () => {
+        mockIsMobile = true;
+        (Platform as { OS: string }).OS = 'web';
+        const LazyQuestMap = jest.fn(() => null);
+        const onResetFilters = jest.fn();
+
+        const baseProps = {
+            styles,
+            colors,
+            dataLoaded: true,
+            viewMode: 'list' as const,
+            selectedCityName: 'Warsaw',
+            nearbyId: '__nearby__',
+            nearbyRadiusKm: 15,
+            questsAll: [makeQuest(0)],
+            questCardWidth: 320,
+            mapPoints: [],
+            mapCenter: { latitude: 52.23, longitude: 21.01 },
+            userLoc: null,
+            isMapAreaActive: false,
+            geoMessage: null,
+            geoRequesting: false,
+            showMapAreaSearch: false,
+            radiiLg: 24,
+            LazyQuestMap,
+            isMobile: true,
+            onResetFilters,
+            onShowNearby: () => {},
+            onOpenFilterDrawer: () => {},
+            onToggleViewMode: () => {},
+            onSetRadius: () => {},
+            onMapUserLocationChange: () => {},
+            onMapMove: () => {},
+            onSearchMapArea: () => {},
+        };
+
+        const { getByTestId, queryByTestId, rerender } = render(
+            <QuestsContentPanel {...baseProps} selectedCityId="warsaw" filtersActive />
+        );
+
+        fireEvent.press(getByTestId('quests-reset-filters'));
+        expect(onResetFilters).toHaveBeenCalledTimes(1);
+
+        rerender(
+            <QuestsContentPanel {...baseProps} selectedCityId="__nearby__" selectedCityName="Рядом" filtersActive={false} />
+        );
+        expect(queryByTestId('quests-reset-filters')).toBeNull();
+    });
+
     it('shows the search-this-area action on the quest map and forwards map moves', () => {
         (Platform as { OS: string }).OS = 'web';
         const LazyQuestMap = jest.fn(() => null);

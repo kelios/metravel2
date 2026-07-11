@@ -7,6 +7,7 @@ import { buildWeservProxyUrl, extractFirstImgSrc } from '@/components/travel/sta
 import { WEB_RICH_TEXT_CLASS, WEB_RICH_TEXT_STYLES_ID } from './webStyles'
 
 type LightboxImage = { src: string; alt: string }
+type LightboxGallery = { images: LightboxImage[]; initialIndex: number }
 
 const escapeCssUrl = (value: string) => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
 
@@ -67,8 +68,8 @@ const revealLazyImage = (img: HTMLImageElement) => {
 
 type UseStableContentWebEffectsInput = {
   prepared: string
-  lightboxImage: LightboxImage | null
-  setLightboxImage: Dispatch<SetStateAction<LightboxImage | null>>
+  lightboxGallery: LightboxGallery | null
+  setLightboxGallery: Dispatch<SetStateAction<LightboxGallery | null>>
   webRichTextStyles: string
   scrollToHashTarget: (hash: string) => boolean
   rootRef: RefObject<HTMLDivElement | null>
@@ -76,8 +77,8 @@ type UseStableContentWebEffectsInput = {
 
 export function useStableContentWebEffects({
   prepared,
-  lightboxImage,
-  setLightboxImage,
+  lightboxGallery,
+  setLightboxGallery,
   webRichTextStyles,
   scrollToHashTarget,
   rootRef,
@@ -341,22 +342,46 @@ export function useStableContentWebEffects({
         return
       }
       e.preventDefault()
-      const rawSrc = image.currentSrc || image.getAttribute('src') || ''
-      // A network-gated image may still hold the transparent placeholder if it was
-      // tapped before the IO swap resolved; fall back to its real deferred source.
-      const src = rawSrc.startsWith('data:')
-        ? image.getAttribute('data-lazy-src') || rawSrc
-        : rawSrc
-      if (!src) return
-      setLightboxImage({
-        src,
-        alt: image.getAttribute('alt') || 'Изображение маршрута',
+      const articleImages = Array.from(
+        rootRef.current?.querySelectorAll<HTMLImageElement>('img') ?? [],
+      ).filter((candidate) => (
+        Boolean(candidate.closest('.rich-image-frame')) &&
+        !candidate.closest('a[href]:not([href^="#"])')
+      ))
+      const galleryImages = articleImages
+        .map((candidate, index) => {
+          const rawSrc = candidate.currentSrc || candidate.getAttribute('src') || ''
+          // Prefer the deferred source whenever currentSrc is the transparent loading
+          // pixel. This is especially important on iOS Safari, where opening a group
+          // of not-yet-visible photos used to produce an apparently empty gallery.
+          const resolvedSrc = rawSrc.startsWith('data:')
+            ? candidate.getAttribute('data-lazy-src') || rawSrc
+            : rawSrc
+          // The fullscreen view is explicitly user-requested, so prefer the
+          // reliable original over the resize proxy. A cold/failed weserv
+          // request otherwise leaves the iOS overlay looking completely empty.
+          const src = originFromWeservSrc(resolvedSrc) || resolvedSrc
+          if (!src || src.startsWith('data:')) return null
+          return {
+            sourceElement: candidate,
+            image: {
+              src,
+              alt: candidate.getAttribute('alt') || `Изображение маршрута ${index + 1}`,
+            },
+          }
+        })
+        .filter((entry): entry is { sourceElement: HTMLImageElement; image: LightboxImage } => Boolean(entry))
+      const initialIndex = galleryImages.findIndex((entry) => entry.sourceElement === image)
+      if (initialIndex < 0) return
+      setLightboxGallery({
+        images: galleryImages.map((entry) => entry.image),
+        initialIndex,
       })
     }
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setLightboxImage(null)
+        setLightboxGallery(null)
       }
     }
 
@@ -366,13 +391,13 @@ export function useStableContentWebEffects({
       document.removeEventListener('click', onClick)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [rootRef, setLightboxImage])
+  }, [rootRef, setLightboxGallery])
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (typeof document === 'undefined') return
     const originalOverflow = document.body.style.overflow
-    if (lightboxImage) {
+    if (lightboxGallery) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = originalOverflow || ''
@@ -380,7 +405,7 @@ export function useStableContentWebEffects({
     return () => {
       document.body.style.overflow = originalOverflow
     }
-  }, [lightboxImage])
+  }, [lightboxGallery])
 
   useLayoutEffect(() => {
     if (Platform.OS !== 'web') return

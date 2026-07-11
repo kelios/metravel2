@@ -41,8 +41,9 @@ describe('ssg-skeletons', () => {
     it('reserves geometry for travel article images before hydration', () => {
       const css = buildSkeletonCSS();
       expect(css).toContain('.ssg-travel-article .img-row-2>p');
+      expect(css).toContain('.ssg-travel-article .img-jrow>p');
       expect(css).toContain('aspect-ratio:16/9');
-      expect(css).toContain('.ssg-travel-article .img-row-2 img,.ssg-travel-article .img-grid img{width:100%;height:100%;max-width:none');
+      expect(css).toContain('.ssg-travel-article .img-row-2 img,.ssg-travel-article .img-grid img,.ssg-travel-article .img-jrow img{width:100%;height:100%;max-width:none');
       expect(css).toContain('.ssg-travel-article p>img:only-child{width:100%;aspect-ratio:16/9');
     });
   });

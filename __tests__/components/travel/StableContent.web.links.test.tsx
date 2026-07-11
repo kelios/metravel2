@@ -302,6 +302,30 @@ describe('StableContent (web) link styles', () => {
     });
   });
 
+  it('opens all rich-text photos and starts on the tapped photo', async () => {
+    const { container } = render(
+      <StableContent
+        html={[
+          '<p><img src="https://example.com/one.jpg" width="800" height="600" alt="Первое фото" /></p>',
+          '<p><img src="https://example.com/two.jpg" width="800" height="600" alt="Второе фото" /></p>',
+          '<p><img src="https://example.com/three.jpg" width="800" height="600" alt="Третье фото" /></p>',
+        ].join('')}
+        contentWidth={700}
+      />
+    );
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('.travel-rich-text img')).toHaveLength(3);
+    });
+
+    fireEvent.click(container.querySelectorAll('.travel-rich-text img')[1]);
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-testid="travel-fullscreen-gallery-counter"]')?.textContent).toContain('2 / 3');
+      expect(document.querySelector('[aria-label*="Второе фото"]')).toBeTruthy();
+    });
+  });
+
   it('opens only one fullscreen gallery when multiple rich-text instances are mounted', async () => {
     const { container } = render(
       <>
@@ -353,7 +377,8 @@ describe('StableContent (web) link styles', () => {
     expect(css).toContain('aspect-ratio: var(--travel-rich-image-aspect, 16 / 9);');
     expect(css).toContain('object-fit: contain;');
     expect(css).toContain('min-width: min(60vw, 100%) !important;');
-    expect(css).toContain('grid-template-columns: minmax(0, 1fr) !important;');
+    // Mobile: justified rows collapse into a single-column photo stream.
+    expect(css).toContain('flex-direction: column;');
     expect(css).toContain('max-height: 70vh !important;');
     expect(css).not.toContain('object-fit: cover;');
   });

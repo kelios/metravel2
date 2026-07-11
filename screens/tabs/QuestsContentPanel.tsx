@@ -55,6 +55,8 @@ type QuestsContentPanelProps = {
     radiiLg: number;
     LazyQuestMap: any;
     isMobile: boolean;
+    filtersActive: boolean;
+    onResetFilters: () => void;
     onShowNearby: () => void;
     onOpenFilterDrawer: () => void;
     onToggleViewMode: () => void;
@@ -88,6 +90,8 @@ export default function QuestsContentPanel({
     radiiLg,
     LazyQuestMap,
     isMobile,
+    filtersActive,
+    onResetFilters,
     onShowNearby,
     onOpenFilterDrawer,
     onToggleViewMode,
@@ -154,7 +158,7 @@ export default function QuestsContentPanel({
         selectedCityId === nearbyId ? (quest.cityId || '') : (selectedCityId || '')
     ), [nearbyId, selectedCityId]);
 
-    const renderQuestItem = useCallback(({ item: quest }: ListRenderItemInfo<QuestListItem>) => (
+    const renderQuestItem = useCallback(({ item: quest, index }: ListRenderItemInfo<QuestListItem>) => (
         <View style={styles.questVirtualizedItem}>
             <QuestCard
                 styles={styles}
@@ -162,6 +166,7 @@ export default function QuestsContentPanel({
                 quest={quest}
                 nearby={selectedCityId === nearbyId}
                 cardWidth={questCardWidth}
+                index={index}
             />
         </View>
     ), [getQuestCityId, nearbyId, questCardWidth, selectedCityId, styles]);
@@ -176,7 +181,22 @@ export default function QuestsContentPanel({
                         ? (isMapAreaActive ? 'Квесты в этой области' : userLoc ? 'Квесты поблизости' : 'Все квесты')
                         : selectedCityName || 'Все квесты'}
                 </Text>
-                {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
+                <View style={styles.contentCountRow}>
+                    {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
+                    {dataLoaded && filtersActive && (
+                        <Pressable
+                            style={styles.resetFiltersChip}
+                            onPress={onResetFilters}
+                            accessibilityRole="button"
+                            accessibilityLabel="Сбросить фильтры и показать все квесты"
+                            hitSlop={8}
+                            testID="quests-reset-filters"
+                        >
+                            <Feather name="x" size={13} color={colors.primary} />
+                            <Text style={styles.resetFiltersChipText}>Все квесты</Text>
+                        </Pressable>
+                    )}
+                </View>
             </View>
             {isMobile && (
                 <View style={styles.headerToggleRow}>
@@ -352,7 +372,7 @@ export default function QuestsContentPanel({
 
                         {dataLoaded && questsAll.length > 0 && (
                             <View style={styles.questsGrid}>
-                                {questsAll.map((quest) => (
+                                {questsAll.map((quest, index) => (
                                     <QuestCard
                                         key={quest.id}
                                         styles={styles}
@@ -360,6 +380,7 @@ export default function QuestsContentPanel({
                                         quest={quest}
                                         nearby={selectedCityId === nearbyId}
                                         cardWidth={questCardWidth}
+                                        index={index}
                                     />
                                 ))}
                             </View>

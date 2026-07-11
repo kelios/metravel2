@@ -25,7 +25,7 @@ type UseStableContentRenderConfigInput = {
   iframeModel: IframeModelType | null
   baseFontSize: number
   baseLineHeight: number
-  setLightboxImage: React.Dispatch<React.SetStateAction<LightboxImage | null>>
+  setLightboxImage: (image: LightboxImage | null) => void
 }
 
 export function useStableContentRenderConfig({

@@ -617,6 +617,32 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             marginTop: 2,
             fontWeight: '500',
         },
+        contentCountRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            flexWrap: 'wrap',
+        },
+        resetFiltersChip: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            marginTop: 2,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: 3,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: colors.primary,
+            backgroundColor: 'transparent',
+            ...Platform.select({
+                web: { cursor: 'pointer' } as any,
+            }),
+        },
+        resetFiltersChipText: {
+            color: colors.primary,
+            fontSize: typography.sizes.sm,
+            fontWeight: '600',
+        },
         contentBody: {
             padding: isMobileW ? spacing.md : spacing.lg,
             paddingTop: isMobileW ? spacing.sm : spacing.md,

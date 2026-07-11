@@ -1,7 +1,27 @@
 /**
- * Smart image layout utilities for rich text content.
- * Groups consecutive image paragraphs into visually appealing layouts.
+ * Justified magazine layout for rich text images.
+ * Groups consecutive image paragraphs into full-width justified rows
+ * (Flickr/Google-Photos style): images are packed into rows by the sum of
+ * their aspect ratios, so any mix of portrait/landscape photos and any
+ * group size produces rows that span the whole content column with a
+ * pleasant height. Row aspect is emitted as a class bucket (not an inline
+ * style) so the markup stays safe for saved drafts and native RNRH.
  */
+
+const DEFAULT_ASPECT = 4 / 3;
+// A row is "full" once the sum of aspect ratios crosses this threshold:
+// two landscapes, landscape+portrait, or three portraits per row.
+const ROW_ASPECT_TARGET = 1.9;
+const MAX_IMAGES_PER_ROW = 3;
+// Row aspect class buckets (`jrow-ar-100` … `jrow-ar-400`, step 0.25).
+// CSS pre-generates a rule per bucket; the blur backdrop of
+// .rich-image-frame absorbs the ±0.125 rounding error.
+const ROW_ASPECT_MIN = 1;
+const ROW_ASPECT_MAX = 4;
+const ROW_ASPECT_STEP = 0.25;
+// Below this aspect an image is an upright frame that must not be left
+// alone in the trailing row (it would balloon to the column width).
+const ORPHAN_ASPECT_LIMIT = 1.2;
 
 function expandMultiImageOnlyParagraphs(html: string): string {
   if (!html || typeof html !== 'string') return html ?? '';
@@ -44,196 +64,65 @@ function extractImageDimensions(imgTag: string): { width: number; height: number
   return null;
 }
 
-/**
- * Checks if image is landscape (horizontal) orientation.
- * Returns true if width > height * 1.2 (clearly horizontal)
- */
-function isLandscapeImage(imgTag: string): boolean {
-  const dims = extractImageDimensions(imgTag);
-  if (!dims) return false;
-  // Consider landscape if width is at least 20% greater than height
-  return dims.width > dims.height * 1.2;
+function imageAspect(imgParagraph: string): number {
+  const dims = extractImageDimensions(imgParagraph);
+  if (!dims || dims.width <= 0 || dims.height <= 0) return DEFAULT_ASPECT;
+  return dims.width / dims.height;
+}
+
+function rowAspectClass(aspectSum: number): string {
+  const clamped = Math.min(ROW_ASPECT_MAX, Math.max(ROW_ASPECT_MIN, aspectSum));
+  const bucket = Math.round(clamped / ROW_ASPECT_STEP) * ROW_ASPECT_STEP;
+  return `jrow-ar-${Math.round(bucket * 100)}`;
 }
 
 /**
- * Checks if image is portrait (vertical) orientation.
- * Returns true if height > width * 1.2 (clearly vertical)
+ * Packs image indices into justified rows: a row closes once its aspect
+ * sum reaches ROW_ASPECT_TARGET or it holds MAX_IMAGES_PER_ROW images.
+ * A lone trailing portrait steals a neighbour from the previous row so it
+ * never renders as a giant single upright frame.
  */
-function isPortraitImage(imgTag: string): boolean {
-  const dims = extractImageDimensions(imgTag);
-  if (!dims) return false;
-  // Consider portrait if height is at least 20% greater than width
-  return dims.height > dims.width * 1.2;
-}
+function packJustifiedRows(aspects: number[]): number[][] {
+  const rows: number[][] = [];
+  let row: number[] = [];
+  let aspectSum = 0;
 
-/**
- * Analyzes orientation composition of image group.
- * Returns counts of landscape, portrait, and square images.
- */
-function analyzeImageGroup(images: string[]): { landscape: number; portrait: number; square: number } {
-  let landscape = 0;
-  let portrait = 0;
-  let square = 0;
-  
-  for (const img of images) {
-    if (isLandscapeImage(img)) {
-      landscape++;
-    } else if (isPortraitImage(img)) {
-      portrait++;
-    } else {
-      square++;
+  aspects.forEach((aspect, index) => {
+    row.push(index);
+    aspectSum += aspect;
+    if (aspectSum >= ROW_ASPECT_TARGET || row.length === MAX_IMAGES_PER_ROW) {
+      rows.push(row);
+      row = [];
+      aspectSum = 0;
     }
-  }
-  
-  return { landscape, portrait, square };
-}
-
-function appendClassToParagraph(paragraphHtml: string, className: string): string {
-  return paragraphHtml.replace(/<p([^>]*)>/i, (match, attrs = '') => {
-    if (/\bclass="/i.test(attrs)) {
-      return `<p${attrs.replace(/class="([^"]*)"/i, (_match: string, current: string) => {
-        const merged = `${current} ${className}`
-          .split(/\s+/)
-          .filter(Boolean)
-          .filter((value, index, values) => values.indexOf(value) === index)
-          .join(' ');
-        return ` class="${merged}"`;
-      })}>`;
-    }
-    return `<p${attrs} class="${className}">`;
   });
+  if (row.length > 0) rows.push(row);
+
+  const last = rows[rows.length - 1];
+  const prev = rows[rows.length - 2];
+  if (last && prev && last.length === 1 && aspects[last[0]] < ORPHAN_ASPECT_LIMIT && prev.length >= 2) {
+    const moved = prev.pop();
+    if (moved !== undefined) last.unshift(moved);
+  }
+
+  return rows;
 }
 
-function wrapImageGroup(wrapperClassName: string, images: string[]): string {
-  return `<div class="${wrapperClassName}">${images.join('')}</div>`;
-}
+function appendJustifiedGroup(result: string[], images: string[]): void {
+  if (images.length === 0) return;
 
-function appendSingleImage(result: string[], imgParagraph: string, floatDirection: number): number {
-  if (isLandscapeImage(imgParagraph)) {
-    const img = appendClassToParagraph(imgParagraph, 'img-single-wide figure-landscape');
-    result.push(img);
-    return floatDirection;
+  const aspects = images.map(imageAspect);
+  for (const rowIndices of packJustifiedRows(aspects)) {
+    const aspectSum = rowIndices.reduce((acc, index) => acc + aspects[index], 0);
+    const cells = rowIndices.map((index) => images[index]).join('');
+    result.push(`<div class="img-jrow ${rowAspectClass(aspectSum)}">${cells}</div>`);
   }
-
-  const floatClass = floatDirection % 2 === 0 ? 'img-float-right' : 'img-float-left';
-  const img = appendClassToParagraph(imgParagraph, `${floatClass} figure-portrait`);
-  result.push(img);
-  return floatDirection + 1;
-}
-
-function buildMixedThreeImageLayout(images: string[]): string | null {
-  if (images.length !== 3) return null;
-
-  const portraitIndex = images.findIndex((image) => isPortraitImage(image));
-  if (portraitIndex < 0) return null;
-
-  const portrait = images[portraitIndex];
-  const supporting = images.filter((_, index) => index !== portraitIndex);
-  if (supporting.length !== 2 || supporting.some((image) => !isLandscapeImage(image))) {
-    return null;
-  }
-
-  if (portraitIndex === 0) {
-    return `<div class="img-quilt-3 img-grid-mixed img-grid-mixed-reverse"><p>${portrait.replace(/^<p[^>]*>|<\/p>$/gi, '')}</p><div class="img-grid-mixed-stack">${supporting.join('')}</div></div>`;
-  }
-
-  return `<div class="img-quilt-3 img-grid-mixed"><div class="img-grid-mixed-stack">${supporting.join('')}</div><p>${portrait.replace(/^<p[^>]*>|<\/p>$/gi, '')}</p></div>`;
-}
-
-function buildBalancedFourImageLayout(images: string[]): string | null {
-  if (images.length !== 4) return null;
-
-  const composition = analyzeImageGroup(images);
-  if (composition.portrait >= 3) {
-    return wrapImageGroup('img-portrait-quartet img-grid img-grid-portrait', images);
-  }
-
-  if (composition.landscape >= 3) {
-    return wrapImageGroup('img-quilt-4 img-grid img-grid-quilt', images);
-  }
-
-  if (composition.landscape === 2 && composition.portrait === 2) {
-    return wrapImageGroup('img-pair-grid img-grid img-grid-balanced', images);
-  }
-
-  return null;
-}
-
-function buildPortraitStoryLayout(images: string[]): string | null {
-  const composition = analyzeImageGroup(images);
-  if (composition.portrait < images.length - composition.portrait) {
-    return null;
-  }
-
-  if (images.length === 3) {
-    return wrapImageGroup('img-portrait-triptych img-grid img-grid-portrait', images);
-  }
-
-  if (images.length === 4) {
-    return wrapImageGroup('img-portrait-quartet img-grid img-grid-portrait', images);
-  }
-
-  return null;
-}
-
-function appendUniformImageGroup(result: string[], images: string[], floatDirection: number): number {
-  if (images.length === 0) return floatDirection;
-
-  if (images.length === 1) {
-    return appendSingleImage(result, images[0], floatDirection);
-  }
-
-  const composition = analyzeImageGroup(images);
-  if (images.length === 2) {
-    if (composition.portrait === 2) {
-      result.push(wrapImageGroup('img-pair-portraits img-row-2 img-row-2-portrait', images));
-      return floatDirection;
-    }
-    if (composition.landscape === 2) {
-      result.push(wrapImageGroup('img-stack-landscape img-row-2 img-row-2-landscape', images));
-      return floatDirection;
-    }
-    if (composition.landscape === 1 && composition.portrait === 1) {
-      result.push(wrapImageGroup('img-pair-mixed img-row-2 img-row-2-mixed', images));
-      return floatDirection;
-    }
-    result.push(wrapImageGroup('img-pair-balanced img-row-2 img-row-2-balanced', images));
-    return floatDirection;
-  }
-
-  const mixedThreeLayout = buildMixedThreeImageLayout(images);
-  if (mixedThreeLayout) {
-    result.push(mixedThreeLayout);
-    return floatDirection;
-  }
-
-  const balancedFourLayout = buildBalancedFourImageLayout(images);
-  if (balancedFourLayout) {
-    result.push(balancedFourLayout);
-    return floatDirection;
-  }
-
-  const portraitStoryLayout = buildPortraitStoryLayout(images);
-  if (portraitStoryLayout) {
-    result.push(portraitStoryLayout);
-    return floatDirection;
-  }
-
-  if (composition.portrait >= images.length - composition.portrait) {
-    result.push(wrapImageGroup('img-column-portraits img-grid img-grid-portrait', images));
-    return floatDirection;
-  }
-
-  result.push(wrapImageGroup('img-editorial-grid img-grid', images));
-  return floatDirection;
 }
 
 /**
- * Groups consecutive image paragraphs into smart layouts:
- * - 2 images → side-by-side row (.img-row-2)
- * - 3+ images → grid layout (.img-grid)
- * - 1 horizontal image → full width centered (.img-single-wide)
- * - 1 vertical/square image → alternating float left/right (.img-float-right/.img-float-left)
+ * Groups consecutive image paragraphs into justified magazine rows
+ * (.img-jrow) that always span the full content width regardless of the
+ * number of images or their orientation mix.
  */
 export function groupConsecutiveImages(html: string): string {
   if (!html || typeof html !== 'string') return html ?? '';
@@ -244,12 +133,10 @@ export function groupConsecutiveImages(html: string): string {
   const parts = normalizedHtml.split(/(<p[^>]*>[\s\S]*?<\/p>)/gi).filter(Boolean);
   const result: string[] = [];
   let imageBuffer: string[] = [];
-  let floatDirection = 0; // 0 = right, 1 = left, alternates
 
   const flushImageBuffer = (): void => {
     if (imageBuffer.length === 0) return;
-
-    floatDirection = appendUniformImageGroup(result, imageBuffer, floatDirection);
+    appendJustifiedGroup(result, imageBuffer);
     imageBuffer = [];
   };
 
@@ -282,10 +169,12 @@ export function removeImageLayoutClasses(html: string): string {
   result = result.replace(/<div\b[^>]*class="[^"]*\bimg-grid-mixed\b[^"]*"[^>]*><div\b[^>]*class="[^"]*\bimg-grid-mixed-stack\b[^"]*"[^>]*>([\s\S]*?)<\/div><p>([\s\S]*?)<\/p><\/div>/gi, '$1<p>$2</p>');
 
   // Remove wrapper divs for image groups, keeping inner content.
-  // Stored HTML may already contain nested smart-layout wrappers from a previous pass.
+  // Stored HTML may contain justified rows from this pass or nested
+  // smart-layout wrappers from previous generations of the algorithm.
   let previous = '';
   while (result !== previous) {
     previous = result;
+    result = result.replace(/<div\b[^>]*class="[^"]*\bimg-jrow\b[^"]*"[^>]*>([\s\S]*?)<\/div>/gi, '$1');
     result = result.replace(/<div\b[^>]*class="[^"]*\bimg-row-2\b[^"]*"[^>]*>([\s\S]*?)<\/div>/gi, '$1');
     result = result.replace(/<div\b[^>]*class="[^"]*\bimg-grid\b[^"]*"[^>]*>([\s\S]*?)<\/div>/gi, '$1');
   }

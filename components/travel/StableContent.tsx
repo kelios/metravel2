@@ -15,6 +15,7 @@ import {
 } from '@/components/travel/stableContent/webStyles';
 
 type LightboxImage = { src: string; alt: string };
+type LightboxGallery = { images: LightboxImage[]; initialIndex: number };
 type FullscreenGalleryProps = {
   visible: boolean;
   images: { url: string; thumbUrl?: string; alt?: string }[];
@@ -46,7 +47,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
   const styles = useMemo(() => createStyles(colors), [colors]);
   const webRichTextStyles = useMemo(() => getWebRichTextStyles(colors), [colors]);
   const [iframeModel, setIframeModel] = useState<IframeModelType | null>(null);
-  const [lightboxImage, setLightboxImage] = useState<LightboxImage | null>(null);
+  const [lightboxGallery, setLightboxGallery] = useState<LightboxGallery | null>(null);
   const webRootRef = useRef<HTMLDivElement | null>(null);
   const prepared = useMemo(() => prepareStableContentHtml(html, { serverSanitized }), [html, serverSanitized]);
 
@@ -87,8 +88,8 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
 
   useStableContentWebEffects({
     prepared,
-    lightboxImage,
-    setLightboxImage,
+    lightboxGallery,
+    setLightboxGallery,
     webRichTextStyles,
     scrollToHashTarget,
     rootRef: webRootRef,
@@ -101,17 +102,19 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
     iframeModel,
     baseFontSize: BASE_FONT_SIZE,
     baseLineHeight: BASE_LINE_HEIGHT,
-    setLightboxImage,
+    setLightboxImage: (image) => {
+      setLightboxGallery(image ? { images: [image], initialIndex: 0 } : null);
+    },
   });
 
   const isWeb = (Platform.OS as string) === 'web';
-  const lightboxGallery = lightboxImage ? (
+  const lightbox = lightboxGallery ? (
     <Suspense fallback={null}>
       <FullscreenGalleryComponent
         visible
-        images={[{ url: lightboxImage.src, alt: lightboxImage.alt }]}
-        initialIndex={0}
-        onClose={() => setLightboxImage(null)}
+        images={lightboxGallery.images.map((image) => ({ url: image.src, alt: image.alt }))}
+        initialIndex={lightboxGallery.initialIndex}
+        onClose={() => setLightboxGallery(null)}
       />
     </Suspense>
   ) : null;
@@ -127,7 +130,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
           className={webRichTextClassName}
           dangerouslySetInnerHTML={{ __html: prepared }}
         />
-        {lightboxGallery}
+        {lightbox}
       </>
     )
   }
@@ -151,7 +154,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
           />
         </Suspense>
       </View>
-      {lightboxGallery}
+      {lightbox}
     </>
   )
 });

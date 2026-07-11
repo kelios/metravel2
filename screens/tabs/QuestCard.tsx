@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { PixelRatio, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
 
@@ -9,6 +9,7 @@ import QuestReviewsModal from '@/components/quests/QuestReviewsModal';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 
 import { pluralizeRu } from '@/utils/pluralize';
 
@@ -31,6 +32,8 @@ type QuestCardProps = {
     cityId: string;
     quest: QuestMeta & { _distanceKm?: number };
     nearby?: boolean;
+    /** Позиция карточки в каталоге: первые получают высокий fetch-приоритет обложки. */
+    index?: number;
 };
 
 export default function QuestCard({
@@ -39,6 +42,7 @@ export default function QuestCard({
     cityId,
     quest,
     nearby,
+    index,
 }: QuestCardProps) {
     const colors = useThemedColors();
     const { isPhone } = useResponsive();
@@ -65,6 +69,9 @@ export default function QuestCard({
     const imageUrl = typeof quest.cover === 'string' ? quest.cover : null;
     const cacheKey = imageUrl ? String(imageUrl).trim() : '';
     const [imageLoaded, setImageLoaded] = useState(() => !!cacheKey && loadedQuestImageCache.has(cacheKey));
+    // Первые карточки каталога — визуальная доминанта экрана: обложке нужен
+    // высокий fetch-приоритет, иначе браузер тянет её последней (fetchPriority=low).
+    const isAboveTheFold = typeof index === 'number' && index < 2;
 
     const handleImageLoad = useCallback(() => {
         if (cacheKey) loadedQuestImageCache.add(cacheKey);
@@ -86,6 +93,21 @@ export default function QuestCard({
 
     const cardHeight = isPhone ? 238 : Math.round((cardWidth / 380) * 260);
     const showOverlayMeta = !isPhone;
+
+    // Native: ImageCardMedia ресайзит URL только в web-ветке, поэтому expo-image
+    // тянул оригинал обложки полного размера. Просим у прокси вариант под размер
+    // карточки с учётом плотности экрана (кап ×2 — дальше разницы не видно).
+    const coverSrc = useMemo(() => {
+        if (Platform.OS === 'web' || !imageUrl) return imageUrl;
+        const dpr = Math.min(PixelRatio.get() || 2, 2);
+        return optimizeImageUrl(imageUrl, {
+            width: Math.round(cardWidth * dpr),
+            height: Math.round(cardHeight * dpr),
+            quality: 60,
+            format: 'auto',
+            fit: 'cover',
+        }) ?? imageUrl;
+    }, [imageUrl, cardWidth, cardHeight]);
 
     return (
         <View
@@ -132,7 +154,7 @@ export default function QuestCard({
 
                 {imageUrl ? (
                     <ImageCardMedia
-                        src={imageUrl}
+                        src={coverSrc}
                         alt={quest.title}
                         width={cardWidth}
                         height={cardHeight}
@@ -140,7 +162,7 @@ export default function QuestCard({
                         blurBackground={false}
                         style={StyleSheet.absoluteFill}
                         loading="eager"
-                        priority="low"
+                        priority={isAboveTheFold ? 'high' : 'low'}
                         onLoad={handleImageLoad}
                         showImmediately={imageLoaded}
                     />
