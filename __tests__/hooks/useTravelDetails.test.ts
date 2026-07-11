@@ -11,6 +11,7 @@ jest.mock('@tanstack/react-query', () => {
   return {
     ...actual,
     useQuery: jest.fn(),
+    useQueryClient: jest.fn(),
   };
 });
 
@@ -25,6 +26,7 @@ jest.mock('@/api/travelsNormalize', () => ({
 
 const useLocalSearchParams = jest.requireMock('expo-router').useLocalSearchParams as jest.Mock;
 const { useQuery } = jest.requireMock('@tanstack/react-query');
+const { useQueryClient } = jest.requireMock('@tanstack/react-query');
 const { fetchTravel, fetchTravelBySlug } = jest.requireMock('@/api/travelDetailsQueries');
 
 // Captures the queryFn passed to useQuery so tests can invoke it directly.
@@ -37,6 +39,7 @@ describe('useTravelDetails', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     capturedQueryFn = null;
+    (useQueryClient as jest.Mock).mockReturnValue({ setQueryData: jest.fn() });
 
     // Default mock: capture queryFn for assertions, return loading state.
     // We don't call queryFn inside the mock to avoid async complexity —
@@ -146,6 +149,67 @@ describe('useTravelDetails', () => {
     await waitFor(() => {
       expect((global as any).window.__metravelTravelPreload).toBeUndefined();
     });
+  });
+
+  it('refreshes a static web preload by id after hydration and updates the query cache', async () => {
+    (Platform.OS as any) = 'web';
+    const requestIdleCallback = jest.fn((callback: () => void) => {
+      callback();
+      return 1;
+    });
+    const setQueryData = jest.fn();
+    (useQueryClient as jest.Mock).mockReturnValue({ setQueryData });
+    (global as any).window = {
+      requestIdleCallback,
+      cancelIdleCallback: jest.fn(),
+      __metravelTravelPreload: {
+        data: {
+          id: 498,
+          slug: 'awesome-trip',
+          name: 'Trip',
+          description: '<p>Static text</p>',
+          gallery: [{ id: 7, url: '/gallery/7.webp', caption: '' }],
+          travelAddress: [],
+          coordsMeTravel: [],
+        },
+        slug: 'awesome-trip',
+        isId: false,
+      },
+    };
+    useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
+    const freshTravel = {
+      id: 498,
+      slug: 'awesome-trip',
+      name: 'Trip',
+      description: '<p>Static text</p>',
+      gallery: [{ id: 7, url: '/gallery/7.webp', caption: 'Fresh caption' }],
+      travelAddress: [],
+      coordsMeTravel: [],
+    };
+    (fetchTravel as jest.Mock).mockResolvedValue(freshTravel);
+    (useQuery as jest.Mock).mockImplementation(({ queryFn, initialData }: any) => {
+      capturedQueryFn = queryFn;
+      return {
+        data: initialData,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      };
+    });
+
+    renderHook(() => useTravelDetails());
+
+    await waitFor(() => {
+      expect(fetchTravel).toHaveBeenCalledWith(498, {
+        signal: expect.any(AbortSignal),
+        forceRefresh: true,
+      });
+    });
+    expect(setQueryData).toHaveBeenCalledWith(
+      ['travel', 'awesome-trip'],
+      freshTravel,
+    );
   });
 
   it('skips preload polling in queryFn once initialData has consumed the preload', async () => {

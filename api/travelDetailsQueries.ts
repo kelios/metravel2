@@ -26,6 +26,7 @@ const travelSlugCache = new Map<string, Travel>();
 const travelInFlight = new Map<string, Promise<Travel>>();
 
 type PublicTravelRequestOptions = { signal?: AbortSignal; skipAuth?: boolean };
+type FetchTravelOptions = { signal?: AbortSignal; forceRefresh?: boolean };
 
 type ResolveTravelSlugResponse = {
     id?: unknown;
@@ -464,30 +465,38 @@ const fetchTravelByResolvedSlug = async (
 
 export const fetchTravel = async (
     id: number,
-    options?: { signal?: AbortSignal }
+    options?: FetchTravelOptions
 ): Promise<Travel> => {
     const token = await getSecureItem(TOKEN_KEY);
     const isAuthenticated = Boolean(token);
     const cacheKey = `id:${id}`;
 
-    if (!isAuthenticated && travelCache.has(id)) {
+    if (!isAuthenticated && !options?.forceRefresh && travelCache.has(id)) {
         return travelCache.get(id) as Travel;
     }
 
     if (!isAuthenticated) {
-        const preloaded = await waitForDirectApiWindowPreload(id, true);
-        if (preloaded) {
-            travelCache.set(id, preloaded);
-            await saveStaleTravelDetail(`/travels/${id}/`, preloaded);
-            return preloaded;
+        if (!options?.forceRefresh) {
+            const preloaded = await waitForDirectApiWindowPreload(id, true);
+            if (preloaded) {
+                travelCache.set(id, preloaded);
+                await saveStaleTravelDetail(`/travels/${id}/`, preloaded);
+                return preloaded;
+            }
         }
 
-        return runSharedGuestTravelRequest(cacheKey, async () => {
+        const fetchFreshTravel = async () => {
             const endpoint = `/travels/${id}/`;
             try {
-                const travel = await apiClient.get<Travel>(endpoint, LONG_TIMEOUT);
+                const travel = await apiClient.get<Travel>(endpoint, LONG_TIMEOUT, {
+                    signal: options?.signal,
+                    ...(options?.forceRefresh ? { skipAuth: true } : {}),
+                });
                 const normalized = normalizeTravelItem(travel);
                 travelCache.set(id, normalized);
+                if (typeof normalized.slug === 'string' && normalized.slug.trim()) {
+                    travelSlugCache.set(getSlugCacheKey(normalized.slug), normalized);
+                }
                 await saveStaleTravelDetail(endpoint, normalized);
                 return normalized;
             } catch (e: unknown) {
@@ -499,7 +508,15 @@ export const fetchTravel = async (
                 devError('Error fetching Travel:', e);
                 throw e;
             }
-        });
+        };
+
+        // Static travel HTML intentionally provides an instant first-paint snapshot.
+        // A post-hydration refresh must bypass both that preload and the in-memory
+        // guest cache, otherwise recently edited captions/content stay invisible
+        // until the next frontend deploy.
+        if (options?.forceRefresh) return fetchFreshTravel();
+
+        return runSharedGuestTravelRequest(cacheKey, fetchFreshTravel);
     }
 
     const endpoint = `/travels/${id}/`;

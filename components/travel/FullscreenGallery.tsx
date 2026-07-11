@@ -232,6 +232,7 @@ export default function FullscreenGallery({
               {
                 bottom: insets.bottom + (images.length > 1 ? 60 : 16),
                 backgroundColor: colors.overlay,
+                shadowColor: colors.text,
               },
             ]}
             testID="travel-fullscreen-gallery-caption"
@@ -285,13 +286,18 @@ const styles = StyleSheet.create({
     maxWidth: '88%',
     borderRadius: DESIGN_TOKENS.radii.md,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: 10,
     zIndex: 10,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   captionText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
-    lineHeight: 20,
+    lineHeight: 22,
+    letterSpacing: -0.1,
     textAlign: 'center',
   },
 });

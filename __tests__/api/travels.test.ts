@@ -783,6 +783,25 @@ describe('src/api/travelsApi.ts', () => {
       expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
     });
 
+    it('fetchTravel forceRefresh обходит гостевой кэш и обновляет detail', async () => {
+      const { fetchTravel } = loadTravelsApi();
+      mockedApiClientGet
+        .mockResolvedValueOnce({ id: 98, slug: 'cached-trip', gallery: [{ id: 1, caption: '' }] } as any)
+        .mockResolvedValueOnce({ id: 98, slug: 'cached-trip', gallery: [{ id: 1, caption: 'Новое место' }] } as any);
+
+      mockedGetSecureItem.mockResolvedValueOnce(null);
+      await fetchTravel(98);
+
+      mockedGetSecureItem.mockResolvedValueOnce(null);
+      const refreshed = await fetchTravel(98, { forceRefresh: true });
+
+      expect(refreshed.gallery?.[0]?.caption).toBe('Новое место');
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(2);
+      expect(mockedApiClientGet.mock.calls[1][2]).toEqual(
+        expect.objectContaining({ skipAuth: true })
+      );
+    });
+
     it('fetchTravel добавляет Authorization и не кэширует авторизованные ответы', async () => {
       const { fetchTravel } = loadTravelsApi();
       const travelPayload = { id: 42 } as any;

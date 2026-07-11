@@ -225,6 +225,7 @@ function TravelHeroSectionInner({
                   <OptimizedLCPHero
                     img={firstImg}
                     alt={heroAlt}
+                    caption={typeof firstImg.caption === 'string' ? firstImg.caption : undefined}
                     height={heroHeight}
                     isMobile={isMobile}
                     containerWidth={heroContainerWidth}

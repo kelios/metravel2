@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { normalizeTravelItem } from '@/api/travelsNormalize';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
@@ -291,6 +291,7 @@ async function waitForTravelPreload(
 }
 
 export function useTravelDetails(): UseTravelDetailsReturn {
+  const queryClient = useQueryClient();
   const { param } = useLocalSearchParams();
   const slug = Array.isArray(param) ? param[0] : (param ?? '');
   const idNum = Number(slug);
@@ -379,6 +380,59 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     // (old gallery flash → skeleton → new content).
     placeholderData: undefined,
   });
+
+  useEffect(() => {
+    if (
+      Platform.OS !== 'web' ||
+      typeof window === 'undefined' ||
+      isMissingParam ||
+      !initialPreloadedTravel?.id
+    ) {
+      return undefined;
+    }
+
+    type IdleWindow = Window & typeof globalThis & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+
+    const win = window as IdleWindow;
+    // Jest has no browser idle scheduler by default. Tests that exercise this
+    // path install one explicitly, avoiding dangling timers in unrelated cases.
+    if (process.env.NODE_ENV === 'test' && typeof win.requestIdleCallback !== 'function') {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+    let idleId: number | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const refresh = () => {
+      void fetchTravel(Number(initialPreloadedTravel.id), {
+        signal: controller.signal,
+        forceRefresh: true,
+      }).then((freshTravel) => {
+        if (cancelled) return;
+        queryClient.setQueryData(queryKeys.travel(cacheKey), freshTravel);
+      }).catch(() => {
+        // The embedded snapshot remains the safe public fallback. A failed
+        // background refresh must not replace a working page with an error state.
+      });
+    };
+
+    if (typeof win.requestIdleCallback === 'function') {
+      idleId = win.requestIdleCallback(refresh, { timeout: 1_500 });
+    } else {
+      timeoutId = setTimeout(refresh, 800);
+    }
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (idleId != null) win.cancelIdleCallback?.(idleId);
+      if (timeoutId != null) clearTimeout(timeoutId);
+    };
+  }, [cacheKey, initialPreloadedTravel?.id, isMissingParam, queryClient]);
 
   const stableRefetch = useCallback(() => {
     refetch();

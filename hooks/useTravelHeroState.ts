@@ -15,6 +15,7 @@ import { findGalleryMediaImage } from '@/utils/travelMediaVariants'
 
 type ImgLike = {
   url: string
+  caption?: string
   width?: number
   height?: number
   updated_at?: string | null

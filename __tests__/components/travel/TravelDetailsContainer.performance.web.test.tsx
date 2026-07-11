@@ -43,6 +43,27 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(lcpImg?.style.objectFit).toBe('contain')
   })
 
+  it('shows the first photo caption while the optimized hero owns the visible image', () => {
+    const { getByTestId, getByText } = render(
+      <__testables.OptimizedLCPHero
+        img={{
+          url: 'https://cdn.example.com/img.jpg',
+          width: 1200,
+          height: 800,
+          id: 1,
+        }}
+        caption="Закат над Браславскими озёрами"
+        alt="Закат над Браславскими озёрами"
+        isMobile={false}
+        height={600}
+        containerWidth={720}
+      />,
+    )
+
+    expect(getByTestId('travel-hero-caption')).toBeTruthy()
+    expect(getByText('Закат над Браславскими озёрами')).toBeTruthy()
+  })
+
   it('renders segmented blur surround immediately with a tiny backdrop URL instead of the full LCP source', () => {
     const { container } = render(
       <__testables.OptimizedLCPHero
