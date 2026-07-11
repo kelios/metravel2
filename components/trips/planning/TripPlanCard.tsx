@@ -40,8 +40,11 @@ function TripPlanCard({
   const [actionsVisible, setActionsVisible] = useState(false);
 
   const statusBg = planStatusColor(trip.status, colors);
-  const participantsCount = trip.participants.length;
-  const goingCount = trip.participants.filter((p) => p.rsvp === 'going').length;
+  const participantsCount = Math.max(trip.participants.length, trip.isOwner ? 1 : 0);
+  const goingCount = Math.max(
+    trip.participants.filter((p) => p.rsvp === 'going').length,
+    trip.isOwner ? 1 : 0,
+  );
   const coverUrl = typeof trip.coverUrl === 'string' ? trip.coverUrl.trim() : '';
   const fallbackCover = useMemo(
     () =>

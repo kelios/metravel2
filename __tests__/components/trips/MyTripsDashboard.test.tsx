@@ -15,6 +15,10 @@ jest.mock('@/hooks/useTheme', () => ({
     new Proxy({}, { get: (_target, key) => String(key) }) as unknown as Record<string, string>,
 }));
 
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => ({ isMobile: false }),
+}));
+
 jest.mock('@/hooks/usePlannedTripsApi', () => ({
   useMyPlannedTrips: () => ({
     data: [{ id: 1, isOwner: true }, { id: 2, isOwner: false }],

@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button';
 import Chip from '@/components/ui/Chip';
 import { useMyPlannedTrips } from '@/hooks/usePlannedTripsApi';
 import { useMyTripApplications } from '@/hooks/usePublicTripsApi';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 type DashboardSection = 'organized' | 'participating' | 'applications';
@@ -31,7 +32,8 @@ const SECTION_COPY: Record<DashboardSection, { title: string; description: strin
 
 export default function MyTripsDashboard() {
   const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isMobile } = useResponsive();
+  const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<DashboardSection>('organized');
   const { data: plannedTrips } = useMyPlannedTrips();
@@ -56,6 +58,7 @@ export default function MyTripsDashboard() {
               label="Найти поездку"
               variant="secondary"
               size="sm"
+              fullWidth={isMobile}
               onPress={() => router.push('/trips')}
               icon={<Feather name="search" size={16} color={colors.primaryDark} />}
               testID="my-trips-find-cta"
@@ -63,6 +66,7 @@ export default function MyTripsDashboard() {
             <Button
               label="Организовать поездку"
               size="sm"
+              fullWidth={isMobile}
               onPress={() => router.push('/trips/plan/create')}
               icon={<Feather name="plus" size={16} color={colors.textOnPrimary} />}
               testID="my-trips-plan-cta"
@@ -79,26 +83,26 @@ export default function MyTripsDashboard() {
         >
           <Chip
             label="Организую"
-            count={organizedCount}
+            count={organizedCount && organizedCount > 0 ? organizedCount : undefined}
             selected={activeSection === 'organized'}
             onPress={() => setActiveSection('organized')}
-            icon={<Feather name="briefcase" size={15} color={colors.primaryDark} />}
+            icon={isMobile ? undefined : <Feather name="briefcase" size={15} color={colors.primaryDark} />}
             testID="my-trips-segment-organized"
           />
           <Chip
             label="Участвую"
-            count={participatingCount}
+            count={participatingCount && participatingCount > 0 ? participatingCount : undefined}
             selected={activeSection === 'participating'}
             onPress={() => setActiveSection('participating')}
-            icon={<Feather name="users" size={15} color={colors.primaryDark} />}
+            icon={isMobile ? undefined : <Feather name="users" size={15} color={colors.primaryDark} />}
             testID="my-trips-segment-participating"
           />
           <Chip
             label="Заявки"
-            count={applications?.length}
+            count={applications?.length ? applications.length : undefined}
             selected={activeSection === 'applications'}
             onPress={() => setActiveSection('applications')}
-            icon={<Feather name="send" size={15} color={colors.primaryDark} />}
+            icon={isMobile ? undefined : <Feather name="send" size={15} color={colors.primaryDark} />}
             testID="my-trips-segment-applications"
           />
         </ScrollView>
@@ -126,7 +130,7 @@ export default function MyTripsDashboard() {
   );
 }
 
-const createStyles = (colors: ThemedColors) =>
+const createStyles = (colors: ThemedColors, isMobile: boolean) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 96, alignItems: 'center' },
@@ -141,7 +145,12 @@ const createStyles = (colors: ThemedColors) =>
     headerCopy: { flex: 1, minWidth: 240, gap: 5 },
     h1: { fontSize: 28, fontWeight: '900', color: colors.text },
     lead: { fontSize: 15, lineHeight: 21, color: colors.textSecondary },
-    headerActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    headerActions: {
+      width: isMobile ? '100%' : undefined,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
     segments: { gap: 8, paddingVertical: 2 },
     sectionHeader: { gap: 4 },
     sectionTitle: { fontSize: 20, lineHeight: 26, fontWeight: '800', color: colors.text },
