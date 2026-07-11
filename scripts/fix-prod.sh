@@ -11,6 +11,10 @@ REMOTE_DIR="${REMOTE_DIR:-/home/sx3/metravel}"
 SITE_URL="${SITE_URL:-https://metravel.by}"
 ENV="${ENV:-prod}"
 FORCE_REBUILD="${FORCE_REBUILD:-1}"
+# Overlay assets older than this only serve HTML cached weeks ago — dead weight
+# on a 15G disk (board #898: _expo grew to 668M/4732 files/82 deploy
+# generations in 12 days; 14 days caps steady-state at ~700M).
+EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"
 
 # Health-check curls MUST be bounded: under `set -e` a hung/slow request (no
 # timeout) silently aborts an otherwise-successful deploy. Bound + retry so a
@@ -119,6 +123,17 @@ if [ -d static/dist/_expo/static ]; then
   mkdir -p static/dist.new/_expo/static
   cp -an static/dist/_expo/static/. static/dist.new/_expo/static/ 2>/dev/null || true
 fi
+# Overlay retention (board #898): the no-clobber overlay accumulates every
+# historical hashed asset forever. Prune overlay files older than the retention
+# window, but never a file present in the fresh payload — so even a stale-built
+# dist (FORCE_REBUILD=0) cannot lose its own chunks to the mtime filter.
+if [ -d static/dist.new/_expo ]; then
+  ( cd static/dist.new/_expo
+    find . -type f -mtime +$EXPO_OVERLAY_RETENTION_DAYS | while IFS= read -r f; do
+      [ -e \"/app/dist/$ENV/_expo/\$f\" ] || rm -f \"\$f\"
+    done
+    find . -type d -empty -delete 2>/dev/null || true )
+fi
 rm -rf static/dist.old 2>/dev/null || true
 mv static/dist static/dist.old 2>/dev/null || true
 mv static/dist.new static/dist
@@ -161,6 +176,13 @@ ssh "$SERVER" "set -euo pipefail
   printf '%s' '$SWAP_B64' | base64 -d | docker exec -i \"\$app_ctr\" sh -s
   docker restart \"\$nginx_ctr\"
   rm -rf dist icons images
+  # Leftovers from the tar+ssh fallback deploy path (board #898): harmless to
+  # remove after a successful release, 90M of dead weight otherwise.
+  rm -f /tmp/dist-prod-upload.tar.gz dist-prod-upload.tar.gz
+  disk_pct=\"\$(df -P / | awk 'NR==2{print \$5}' | tr -d %)\"
+  if [ \"\$disk_pct\" -gt 88 ]; then
+    echo \"WARN: server root disk at \${disk_pct}% — clean old artifacts (see board #898)\"
+  fi
 "
 
 echo "Validating deployed entry chunk..."
