@@ -38,6 +38,7 @@ Behavior:
 - `check:e2e:changed` selects a stable subset of Playwright smoke specs by changed area (travel/search/map/account/messages) and is intended for pre-push / preflight validation;
 - `check:preflight` extends `check:fast` with changed-file complexity validation and selective Playwright smoke coverage, so larger local changes hit both code-level and browser-level gates before push;
 - `check:preflight` resolves changed files once and reuses the same scope for fast checks, complexity guard, and selective e2e;
+- Cross-session quality gate: `check:fast`, `check:changed`, `check:e2e:changed`, `check:preflight`, `test:run`, `e2e`, and `release:check` acquire the same atomic `.codex-temp/ops/quality-gate.lock` through `scripts/run-with-quality-gate-lock.js`. A concurrent session exits immediately with owner PID/name instead of starting another Jest/Playwright/build pipeline. Nested commands in `release:check` reuse the parent lock; dead-owner locks are recovered automatically. Do not bypass this wrapper with direct broad Jest/Playwright commands.
 - the repository `pre-push` hook invokes `check:preflight` against the current upstream diff (`HEAD` vs upstream), so committed changes are still validated even when the working tree itself is clean;
 - without args, the command scans staged, unstaged, and untracked files from the current git working tree;
 - `--base-ref <ref>` compares `HEAD` against `git merge-base HEAD <ref>`;

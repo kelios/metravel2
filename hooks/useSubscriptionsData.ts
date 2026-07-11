@@ -49,10 +49,12 @@ interface UseSubscriptionsDataOptions {
    * чтобы не плодить N+1 фетчей при заходе в профиль (тикет #473 — дешёвый BE-счётчик).
    */
   includeAuthorTravels?: boolean;
+  /** Полностью отключить запросы, когда раздел подписок недоступен в текущем профиле. */
+  enabled?: boolean;
 }
 
 export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) {
-  const { includeAuthorTravels = false } = options;
+  const { includeAuthorTravels = false, enabled = true } = options;
   const { isAuthenticated, authReady } = useAuth();
   const queryClient = useQueryClient();
 
@@ -68,7 +70,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   const subscriptionsQuery = useQuery<UserProfileDto[]>({
     queryKey: queryKeys.mySubscriptions(),
     queryFn: fetchMySubscriptions,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
     staleTime: 5 * 60 * 1000,
     retry: retryFn,
   });
@@ -76,7 +78,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   const subscribersQuery = useQuery<UserProfileDto[]>({
     queryKey: queryKeys.mySubscribers(),
     queryFn: fetchMySubscribers,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
     staleTime: 5 * 60 * 1000,
     retry: retryFn,
   });
@@ -100,7 +102,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   }, []);
 
   useEffect(() => {
-    if (!includeAuthorTravels) return;
+    if (!enabled || !includeAuthorTravels) return;
     if (!subscriptions.length) return;
 
     let cancelled = false;
@@ -163,7 +165,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
     return () => {
       cancelled = true;
     };
-  }, [subscriptions, includeAuthorTravels]);
+  }, [subscriptions, includeAuthorTravels, enabled]);
 
   const authors: AuthorWithTravels[] = useMemo(
     () =>

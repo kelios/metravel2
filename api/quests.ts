@@ -2,6 +2,7 @@
 // API модуль для работы с квестами через бэкенд
 import { apiClient, ApiError } from '@/api/client';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
+import { retry } from '@/utils/retry';
 
 // ===================== ТИПЫ (соответствуют OpenAPI схеме бэкенда) =====================
 
@@ -408,7 +409,16 @@ export async function fetchQuestsByCity(cityId: number): Promise<ApiQuestBundle>
 
 /** Получить полный бандл квеста по quest_id (строковый, напр. "minsk-cmok") */
 export async function fetchQuestByQuestId(questId: string): Promise<ApiQuestBundle> {
-    const bundle = await apiClient.get<ApiQuestBundle>(`/quests/by-quest-id/${questId}/`);
+    const bundle = await retry(
+        () => apiClient.get<ApiQuestBundle>(`/quests/by-quest-id/${questId}/`),
+        {
+            maxAttempts: 2,
+            delay: 300,
+            shouldRetry: (error) =>
+                error instanceof ApiError &&
+                (error.status === 0 || error.status === 502 || error.status === 503 || error.status === 504),
+        },
+    );
     return normalizeQuestBundle(bundle);
 }
 

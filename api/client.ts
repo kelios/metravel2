@@ -211,9 +211,10 @@ class ApiClient {
     private async throwDetailedError(response: Response): Promise<never> {
         const errorText = await response.text().catch(() => 'Unknown error');
         const errorData = this.parseErrorBody(errorText);
+        const fallbackStatusText = response.statusText || `HTTP ${response.status}`;
         throw new ApiError(
             response.status,
-            getApiErrorMessage(errorData, response.statusText),
+            getApiErrorMessage(errorData, fallbackStatusText),
             errorData
         );
     }
@@ -373,7 +374,7 @@ class ApiClient {
                     if (!retryResponse.ok) {
                         throw new ApiError(
                             retryResponse.status,
-                            `Ошибка запроса: ${retryResponse.statusText}`,
+                            `Ошибка запроса: ${retryResponse.statusText || `HTTP ${retryResponse.status}`}`,
                             await retryResponse.text().catch(() => null)
                         );
                     }

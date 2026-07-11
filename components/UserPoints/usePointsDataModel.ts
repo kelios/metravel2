@@ -20,6 +20,11 @@ type Params = {
   defaultPointColors: string[];
 };
 
+type PointsPaginationState = {
+  nextPage: number;
+  complete: boolean;
+};
+
 export const usePointsDataModel = ({
   defaultPerPage,
   filters,
@@ -61,7 +66,16 @@ export const usePointsDataModel = ({
   // list rows appear incrementally without the first paint waiting for all points.
   const pointsQuery = useQuery({
     queryKey: queryKeys.userPointsAll(),
-    queryFn: () => userPointsApi.getPointsPage(1, defaultPerPage).then((r) => r.items),
+    queryFn: async () => {
+      const { items } = await userPointsApi.getPointsPage(1, defaultPerPage);
+      queryClient.setQueryData<PointsPaginationState>(queryKeys.userPointsPagination(), {
+        nextPage: 2,
+        // A short page is the end. An oversized page means the backend ignored
+        // perPage and returned the complete set in one response (#752).
+        complete: items.length !== defaultPerPage,
+      });
+      return items;
+    },
     staleTime: 10 * 60 * 1000,
   });
 
@@ -71,15 +85,22 @@ export const usePointsDataModel = ({
   }, [pointsQuery.data, pointsQuery.error]);
 
   const backgroundLoadRef = useRef<{ running: boolean; token: number }>({ running: false, token: 0 });
-  const firstPageCount = pointsQuery.data?.length ?? 0;
 
   useEffect(() => {
-    // Only start streaming once the first page arrived and it filled exactly a
-    // full batch: a short first page means there is nothing more to load, an
-    // oversized one means the backend ignored perPage (#752) and already
-    // returned the whole set.
+    // Pagination metadata distinguishes accumulated full pages from an
+    // oversized first response. Cache length alone cannot do that. Appended
+    // pages stay outside the dependencies so they do not cancel/restart the
+    // in-flight run — that used to stop loading after page 2.
     if (pointsQuery.isLoading || pointsQuery.error) return;
-    if (firstPageCount !== defaultPerPage) return;
+    const cached = queryClient.getQueryData<ImportedPoint[]>(queryKeys.userPointsAll());
+    const count = Array.isArray(cached) ? cached.length : 0;
+    let pagination = queryClient.getQueryData<PointsPaginationState>(queryKeys.userPointsPagination());
+    if (!pagination) {
+      if (count !== defaultPerPage) return;
+      pagination = { nextPage: 2, complete: false };
+      queryClient.setQueryData(queryKeys.userPointsPagination(), pagination);
+    }
+    if (pagination.complete) return;
     if (backgroundLoadRef.current.running) return;
 
     const token = backgroundLoadRef.current.token + 1;
@@ -88,7 +109,9 @@ export const usePointsDataModel = ({
 
     (async () => {
       try {
-        let page = 2;
+        // Resume from explicit pagination metadata. Cache length alone cannot
+        // distinguish two streamed full pages from one oversized response.
+        let page = pagination.nextPage;
         // Guard against runaway loops on an unexpectedly non-terminating backend.
         const maxPages = 200;
         while (!cancelled && page <= maxPages) {
@@ -107,8 +130,18 @@ export const usePointsDataModel = ({
           // A page that adds nothing new means the backend is not actually
           // paginating (returns the full set every time, see #752) or we are
           // past the end — stop instead of re-downloading the same payload.
-          if (!hasMore || added === 0) break;
+          if (!hasMore || added === 0) {
+            queryClient.setQueryData<PointsPaginationState>(queryKeys.userPointsPagination(), {
+              nextPage: page,
+              complete: true,
+            });
+            break;
+          }
           page += 1;
+          queryClient.setQueryData<PointsPaginationState>(queryKeys.userPointsPagination(), {
+            nextPage: page,
+            complete: false,
+          });
         }
       } finally {
         if (backgroundLoadRef.current.token === token) {
@@ -119,8 +152,14 @@ export const usePointsDataModel = ({
 
     return () => {
       cancelled = true;
+      // Release the slot synchronously: on a fast remount (StrictMode) the new
+      // effect must be able to start without waiting for the aborted loop's
+      // finally block.
+      if (backgroundLoadRef.current.token === token) {
+        backgroundLoadRef.current.running = false;
+      }
     };
-  }, [defaultPerPage, firstPageCount, pointsQuery.error, pointsQuery.isLoading, queryClient]);
+  }, [defaultPerPage, pointsQuery.error, pointsQuery.isLoading, queryClient]);
 
   const pointsWithDerivedCategories = useMemo(() => {
     return (points as any[]).map((p) => {
@@ -241,6 +280,12 @@ export const usePointsDataModel = ({
   return {
     points,
     isLoading: pointsQuery.isLoading,
+    // Загрузка не удалась (ошибка сети/API или offlineFirst-пауза без кэша):
+    // список пуст НЕ потому, что у пользователя нет точек — UI обязан показать
+    // ошибку с «Повторить», а не «У вас пока нет точек».
+    loadFailed:
+      Boolean(pointsQuery.error) ||
+      (pointsQuery.fetchStatus === 'paused' && !Array.isArray(pointsQuery.data)),
     refetch: pointsQuery.refetch,
     categoryIdToName,
     categoryData,

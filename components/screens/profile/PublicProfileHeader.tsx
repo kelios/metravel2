@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Image, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -15,10 +15,13 @@ import PeerBadgeGiveButton from '@/components/achievements/PeerBadgeGiveButton';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import type { UserProfileDto } from '@/api/user';
 import type { PeerBadgeReceived, UserRank } from '@/api/achievements';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { CoverTopoTexture } from '@/components/profile/CoverTopoTexture';
 
-const AVATAR_SIZE = 112;
+const AVATAR_SIZE = 84;
 const COVER_HEIGHT = 132;
-const AVATAR_BORDER = 4;
+const AVATAR_BORDER = 3;
+const DEFAULT_COVER_SOURCE = require('@/assets/images/profile-cover-default.jpg');
 
 const getInitials = (name: string) =>
   name
@@ -63,17 +66,37 @@ export function PublicProfileHeader({
 }: PublicProfileHeaderProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [defaultCoverFailed, setDefaultCoverFailed] = useState(false);
 
   const displayName = fullName || 'Пользователь';
   const rating = profile.participant_rating;
   // Ранг — единственный первичный статус под именем (#847). Компактно: «Ур.5 · Эксперт».
   const rankChipText = rank ? `Ур.${rank.level} · ${rank.title}` : null;
+  const coverPhoto = profile.cover_photo
+    ? optimizeImageUrl(profile.cover_photo, {
+        width: 1024,
+        height: COVER_HEIGHT * 2,
+        quality: 70,
+        format: 'auto',
+        fit: 'cover',
+      }) ?? profile.cover_photo
+    : null;
 
   return (
     <View style={styles.wrapper}>
       <View style={styles.cover}>
-        <View style={styles.coverGlow} pointerEvents="none" />
-        <View style={styles.coverGradient} pointerEvents="none" />
+        {coverPhoto ? (
+          <View style={styles.coverMediaLayer} pointerEvents="none">
+            <ImageCardMedia src={coverPhoto} alt="Обложка профиля" height={COVER_HEIGHT} width="100%" borderRadius={0} fit="cover" priority="high" />
+          </View>
+        ) : !defaultCoverFailed ? (
+          <View style={styles.coverMediaLayer} pointerEvents="none">
+            <ImageCardMedia source={DEFAULT_COVER_SOURCE} alt="Обложка профиля" height={COVER_HEIGHT} width="100%" borderRadius={0} fit="cover" priority="high" onError={() => setDefaultCoverFailed(true)} />
+          </View>
+        ) : (
+          <CoverTopoTexture height={COVER_HEIGHT} />
+        )}
+        <View style={styles.coverScrim} pointerEvents="none" />
         {!isOwnProfile && userId ? (
           <View style={styles.menuWrap}>
             <UserSafetyMenu
@@ -86,7 +109,7 @@ export function PublicProfileHeader({
         ) : null}
       </View>
 
-      <View style={styles.avatarSection}>
+      <View style={styles.identityRow}>
         <View style={styles.avatarRing}>
           <View style={styles.avatar}>
             {profile.avatar && !avatarError ? (
@@ -109,41 +132,23 @@ export function PublicProfileHeader({
             )}
           </View>
         </View>
-      </View>
-
-      <View style={styles.identity}>
-        <View style={styles.nameRow}>
-          <Text style={styles.userName} numberOfLines={2}>
-            {displayName}
-          </Text>
+        <View style={styles.infoColumn}>
+          <View style={styles.nameRow}>
+            <Text style={styles.userName} numberOfLines={2}>{displayName}</Text>
+          </View>
+          {rankChipText ? (
+            <View style={styles.rankChip} accessibilityRole="text" accessibilityLabel={`Уровень ${rank?.level}: ${rank?.title}`}>
+              <Feather name="award" size={12} color={colors.primaryDark} />
+              <Text style={styles.rankChipText} numberOfLines={1}>{rankChipText}</Text>
+            </View>
+          ) : null}
+          {rating && rating.count > 0 ? (
+            <View style={styles.ratingRow}>
+              <StarRating rating={rating.average} ratingCount={rating.count} size="small" showValue showCount testID="participant-rating-aggregate" />
+              <Text style={styles.ratingLabel}>как попутчик</Text>
+            </View>
+          ) : !rankChipText ? <Text style={styles.userSub}>Автор путешествий</Text> : null}
         </View>
-        {rankChipText ? (
-          <View
-            style={styles.rankChip}
-            accessibilityRole="text"
-            accessibilityLabel={`Уровень ${rank?.level}: ${rank?.title}`}
-          >
-            <Feather name="award" size={12} color={colors.primaryDark} />
-            <Text style={styles.rankChipText} numberOfLines={1}>
-              {rankChipText}
-            </Text>
-          </View>
-        ) : null}
-        {rating && rating.count > 0 ? (
-          <View style={styles.ratingRow}>
-            <StarRating
-              rating={rating.average}
-              ratingCount={rating.count}
-              size="small"
-              showValue
-              showCount
-              testID="participant-rating-aggregate"
-            />
-            <Text style={styles.ratingLabel}>как попутчик</Text>
-          </View>
-        ) : !rankChipText ? (
-          <Text style={styles.userSub}>Автор путешествий</Text>
-        ) : null}
       </View>
 
       <View style={styles.actionsRow}>
@@ -183,7 +188,7 @@ export function PublicProfileHeader({
         activeTab={activeTab}
         onChangeTab={onChangeTab}
         counts={tabCounts}
-        tabKeys={['travels', 'overview']}
+        tabKeys={isOwnProfile ? ['travels', 'subscribers', 'subscriptions', 'overview'] : ['travels', 'overview']}
       />
     </View>
   );
@@ -196,49 +201,43 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     cover: {
       height: COVER_HEIGHT,
-      backgroundColor: colors.primaryLight,
+      backgroundColor: colors.surface,
       position: 'relative',
       overflow: 'hidden',
-      ...Platform.select({
-        web: {
-          backgroundImage: `linear-gradient(135deg, ${colors.brand} 0%, ${colors.primary} 55%, ${colors.accent} 100%)`,
-        } as any,
-        default: {},
-      }),
     },
-    coverGradient: {
+    coverMediaLayer: {
+      height: COVER_HEIGHT,
+      width: '100%',
+      position: 'relative',
+      zIndex: 0,
+    },
+    coverScrim: {
       position: 'absolute',
-      bottom: 0,
-      left: 0,
+      top: 0,
       right: 0,
-      height: 80,
+      width: 132,
+      height: 60,
+      zIndex: 1,
       ...Platform.select({
         web: {
-          backgroundImage: `linear-gradient(to bottom, transparent, ${colors.background})`,
+          backgroundImage: 'linear-gradient(to bottom left, rgba(0,0,0,0.36), transparent 70%)',
         } as any,
         default: {
-          backgroundColor: colors.background,
-          opacity: 0.18,
+          backgroundColor: colors.overlay,
+          opacity: 0.24,
         },
       }),
-    },
-    coverGlow: {
-      position: 'absolute',
-      top: -40,
-      right: -40,
-      width: 180,
-      height: 180,
-      borderRadius: 90,
-      backgroundColor: colors.accentSoft,
-      opacity: 0.45,
     },
     menuWrap: {
       position: 'absolute',
       top: DESIGN_TOKENS.spacing.xs,
       right: DESIGN_TOKENS.spacing.xs,
     },
-    avatarSection: {
-      alignItems: 'center',
+    identityRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: DESIGN_TOKENS.spacing.sm,
+      paddingHorizontal: DESIGN_TOKENS.spacing.md,
       marginTop: -(AVATAR_SIZE / 2 + AVATAR_BORDER),
     },
     avatarRing: {
@@ -275,28 +274,25 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       resizeMode: 'cover',
     },
     avatarPlaceholder: {
-      fontSize: 36,
+      fontSize: 28,
       fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
       color: colors.primaryText,
     },
-    identity: {
-      alignItems: 'center',
-      paddingTop: DESIGN_TOKENS.spacing.sm,
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-      gap: 4,
+    infoColumn: {
+      flex: 1,
+      minWidth: 0,
+      paddingTop: AVATAR_SIZE / 2 + AVATAR_BORDER,
+      gap: 3,
     },
     nameRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
       flexWrap: 'wrap',
-      gap: 8,
+      gap: DESIGN_TOKENS.spacing.xxs,
     },
     userName: {
-      ...DESIGN_TOKENS.typography.scale.h1,
+      ...DESIGN_TOKENS.typography.scale.h2,
       color: colors.text,
-      textAlign: 'center',
-      letterSpacing: -0.4,
     },
     userSub: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,

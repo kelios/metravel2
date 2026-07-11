@@ -14,6 +14,7 @@ export const queryKeys = {
   travelFacets: (search: string, params: Record<string, unknown>) =>
     ['travel-facets', search, params] as const,
   userPointsAll: () => ['userPointsAll'] as const,
+  userPointsPagination: () => ['userPointsAll', 'pagination'] as const,
   myTravelsCount: (userId: string | number | null | undefined) =>
     ['my-travels-count', userId] as const,
   exportMyTravelsCount: (userId: string | number | null | undefined) =>

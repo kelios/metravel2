@@ -39,6 +39,16 @@ const PHOTO_URLS = [
   'https://picsum.photos/seed/metravel6/900/1200',
 ]
 
+// Подписи как в реальных данных (#893): часть фото с подписью, часть без.
+const GALLERY_CAPTIONS: (string | undefined)[] = [
+  'Рассвет над озером Нарочь — вид с восточного берега',
+  'Туман над водой в первые минуты после восхода',
+  undefined,
+  'Рыбацкие мостки у деревни Купа',
+  undefined,
+  'Закат в камышах — южная оконечность озера',
+]
+
 const LONG_DESCRIPTION = `
 <h2>Утро у воды</h2>
 <p>Мы выехали затемно, чтобы застать туман над озером. Дорога шла вдоль кромки
@@ -71,7 +81,11 @@ const travel: TravelForBook = {
   userName: 'metravel',
   travel_image_thumb_url: PHOTO_URLS[0],
   travel_image_url: PHOTO_URLS[0],
-  gallery: PHOTO_URLS.map((url, i) => ({ url, id: i + 1 })),
+  gallery: PHOTO_URLS.map((url, i) => ({
+    url,
+    id: i + 1,
+    caption: GALLERY_CAPTIONS[i],
+  })),
   travelAddress: [
     {
       id: '1',

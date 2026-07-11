@@ -243,7 +243,17 @@ export class RuntimeGalleryRenderer {
       })
       .join('')
 
-    return `<div style="width: 100%;">${rowsHtml}</div>`
+    // Вертикальное центрирование в бюджете контента: страница с малым числом фото
+    // выглядит сбалансированно, а не прижатой к шапке. Высота контейнера равна
+    // рассчитанному бюджету, поэтому за пределы печатной страницы он не выходит.
+    return `
+      <div style="
+        width: 100%;
+        height: ${contentHeightMm}mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      ">${rowsHtml}</div>`
   }
 
   private renderJustifiedPhoto(

@@ -81,6 +81,23 @@ describe('src/api/client.ts apiClient', () => {
     expect(devError).toHaveBeenCalled();
   });
 
+  it('показывает HTTP-код, когда сервер не прислал текст статуса и тело ошибки', async () => {
+    mockedGetSecureItem.mockResolvedValueOnce(null);
+    mockedFetchWithTimeout.mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+      statusText: '',
+      text: async () => '',
+    } as any);
+
+    await expect(apiClient.get('/empty-status-text')).rejects.toEqual(
+      expect.objectContaining({
+        status: 502,
+        message: 'Ошибка запроса: HTTP 502',
+      }),
+    );
+  });
+
   it('пробрасывает AbortError без devError логирования', async () => {
     mockedGetSecureItem.mockResolvedValueOnce('token');
     const abortError = new DOMException('signal is aborted without reason', 'AbortError');

@@ -123,6 +123,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const {
     points,
     isLoading,
+    loadFailed,
     refetch,
     categoryIdToName,
     categoryData,
@@ -343,6 +344,19 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   }, [])
 
   const renderEmpty = useCallback(() => {
+    if (loadFailed) {
+      return (
+        <View style={styles.emptyContainer}>
+          <EmptyState
+            icon="wifi-off"
+            variant="error"
+            title="Не удалось загрузить точки"
+            description="Проверьте подключение к интернету и попробуйте ещё раз."
+            action={{ label: 'Повторить', onPress: () => refetch() }}
+          />
+        </View>
+      );
+    }
     return (
       <View style={styles.emptyContainer}>
         <EmptyState
@@ -354,7 +368,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         />
       </View>
     );
-  }, [styles.emptyContainer, openManualAdd]);
+  }, [styles.emptyContainer, openManualAdd, loadFailed, refetch]);
 
 	  return (
 	    <View style={styles.container}>

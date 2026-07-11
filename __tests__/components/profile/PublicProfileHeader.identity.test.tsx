@@ -9,13 +9,18 @@ jest.mock('@/hooks/useTheme', () => ({
 }));
 
 jest.mock('@/components/profile/ProfileStatPills', () => ({ ProfileStatPills: () => null }));
-jest.mock('@/components/profile/ProfileTabs', () => ({ ProfileTabs: () => null }));
+const profileTabsMock = jest.fn(() => null);
+jest.mock('@/components/profile/ProfileTabs', () => ({
+  ProfileTabs: (props: unknown) => profileTabsMock(props),
+}));
 jest.mock('@/components/ui/SubscribeButton', () => () => null);
 jest.mock('@/components/ui/StarRating', () => () => null);
 jest.mock('@/components/profile/UserSafetyMenu', () => () => null);
 jest.mock('@/components/profile/ProtectedContacts', () => () => null);
 jest.mock('@/components/ui/SafetyNotice', () => () => null);
 jest.mock('@/components/achievements/PeerBadgeGiveButton', () => () => null);
+jest.mock('@/components/ui/ImageCardMedia', () => () => null);
+jest.mock('@/components/profile/CoverTopoTexture', () => ({ CoverTopoTexture: () => null }));
 
 const rank: UserRank = {
   level: 5,
@@ -49,6 +54,10 @@ const baseProps = {
 const profile = { is_verified: true, participant_rating: null } as unknown as UserProfileDto;
 
 describe('PublicProfileHeader identity (#847)', () => {
+  beforeEach(() => {
+    profileTabsMock.mockClear();
+  });
+
   it('renders the rank chip and hides the generic subtitle when rank is present', () => {
     const { getByText, queryByText } = render(
       <PublicProfileHeader {...baseProps} profile={profile} rank={rank} />
@@ -66,5 +75,23 @@ describe('PublicProfileHeader identity (#847)', () => {
 
     expect(queryByText('Ур.5 · Эксперт')).toBeNull();
     expect(queryByText('Автор путешествий')).toBeTruthy();
+  });
+
+  it('keeps all own-profile sections under the shared header', () => {
+    render(<PublicProfileHeader {...baseProps} isOwnProfile profile={profile} rank={rank} />);
+
+    expect(profileTabsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        tabKeys: ['travels', 'subscribers', 'subscriptions', 'overview'],
+      })
+    );
+  });
+
+  it('does not expose private subscription sections on another user profile', () => {
+    render(<PublicProfileHeader {...baseProps} profile={profile} rank={rank} />);
+
+    expect(profileTabsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ tabKeys: ['travels', 'overview'] })
+    );
   });
 });

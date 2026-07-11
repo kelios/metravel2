@@ -72,6 +72,28 @@ describe('api/quests', () => {
       expect(mockedGet).toHaveBeenCalledWith('/quests/by-quest-id/krakow-dragon/');
       expect(result).toEqual(bundle);
     });
+
+    it('retries a transient gateway failure once', async () => {
+      const bundle = { id: 1, quest_id: 'krakow-dragon', title: 'Test' };
+      mockedGet
+        .mockRejectedValueOnce(new (ApiError as any)(502, 'Ошибка запроса: HTTP 502'))
+        .mockResolvedValueOnce(bundle);
+
+      await expect(fetchQuestByQuestId('krakow-dragon')).resolves.toEqual(bundle);
+
+      expect(mockedGet).toHaveBeenCalledTimes(2);
+      expect(mockedGet).toHaveBeenNthCalledWith(1, '/quests/by-quest-id/krakow-dragon/');
+      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/by-quest-id/krakow-dragon/');
+    });
+
+    it('does not retry a permanent not-found response', async () => {
+      mockedGet.mockRejectedValueOnce(new (ApiError as any)(404, 'Квест не найден'));
+
+      await expect(fetchQuestByQuestId('missing-quest')).rejects.toThrow('Квест не найден');
+
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+      expect(mockedGet).toHaveBeenCalledWith('/quests/by-quest-id/missing-quest/');
+    });
   });
 
   describe('fetchQuestCities', () => {

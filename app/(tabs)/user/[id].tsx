@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
-import { fetchMySubscriptions, fetchMySubscribers, mapProfileRank, type UserProfileDto } from '@/api/user';
+import { mapProfileRank } from '@/api/user';
 import { ApiError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
 import { webTouchScrollStyle } from '@/utils';
@@ -26,6 +26,8 @@ import { PublicProfileTravelsTab } from '@/components/screens/profile/PublicProf
 import { useUserAchievements } from '@/hooks/useAchievementsApi';
 import { useResponsive } from '@/hooks/useResponsive';
 import type { Travel } from '@/types/types';
+import SubscriptionsTabContent from '@/components/subscriptions/SubscriptionsTabContent';
+import { useSubscriptionsData } from '@/hooks/useSubscriptionsData';
 
 const AUTHOR_TRAVELS_LIMIT = 12;
 
@@ -56,6 +58,12 @@ export default function PublicUserProfileScreen() {
   }, [userId, profile?.avatar]);
 
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
+  const [travelsLimit, setTravelsLimit] = useState(AUTHOR_TRAVELS_LIMIT);
+
+  useEffect(() => {
+    setActiveTab('travels');
+    setTravelsLimit(AUTHOR_TRAVELS_LIMIT);
+  }, [userId]);
 
   const socials = useMemo(
     () =>
@@ -72,30 +80,27 @@ export default function PublicUserProfileScreen() {
     [profile]
   );
 
-  const { isAuthenticated, userId: currentUserId } = useAuth();
+  const { userId: currentUserId } = useAuth();
   // userId уже нормализован (Number→String); нормализуем currentUserId симметрично,
   // иначе разное форматирование (ведущие нули и т.п.) ломает own-profile UI.
   const isOwnProfile =
     currentUserId != null && userId != null && String(Number(currentUserId)) === userId;
 
-  const subscriptionsQuery = useQuery<UserProfileDto[]>({
-    queryKey: queryKeys.mySubscriptions(),
-    queryFn: fetchMySubscriptions,
-    enabled: isAuthenticated && isOwnProfile,
-    staleTime: 5 * 60 * 1000,
-    retry: (fc, err) => !(err instanceof ApiError && (err.status === 401 || err.status === 403)) && fc < 2,
+  const {
+    subscriptions,
+    subscribers,
+    authors,
+    subscriptionsLoading,
+    subscribersLoading,
+    getFullName,
+    handleUnsubscribe,
+  } = useSubscriptionsData({
+    enabled: isOwnProfile,
+    includeAuthorTravels: isOwnProfile && activeTab === 'subscriptions',
   });
 
-  const subscribersQuery = useQuery<UserProfileDto[]>({
-    queryKey: queryKeys.mySubscribers(),
-    queryFn: fetchMySubscribers,
-    enabled: isAuthenticated && isOwnProfile,
-    staleTime: 5 * 60 * 1000,
-    retry: (fc, err) => !(err instanceof ApiError && (err.status === 401 || err.status === 403)) && fc < 2,
-  });
-
-  const subscribersCount = subscribersQuery.data?.length ?? null;
-  const subscriptionsCount = subscriptionsQuery.data?.length ?? null;
+  const subscribersCount = subscribers.length;
+  const subscriptionsCount = subscriptions.length;
 
   const userAchievementsQuery = useUserAchievements(userId);
   const peerReceived = userAchievementsQuery.data?.peerReceived ?? [];
@@ -106,10 +111,10 @@ export default function PublicUserProfileScreen() {
   const headerRank = userAchievementsQuery.data?.rank ?? profileRank;
 
   const authorTravelsQuery = useQuery<{ data: Travel[]; total: number }>({
-    queryKey: queryKeys.userTravels(userId),
+    queryKey: [...queryKeys.userTravels(userId), travelsLimit],
     // F-14: публичная страница автора показывает только опубликованные маршруты
     // (как счётчик в профиле), без черновиков.
-    queryFn: () => fetchTravels(0, AUTHOR_TRAVELS_LIMIT, '', { user_id: userId, publish: 1, moderation: 1 }),
+    queryFn: () => fetchTravels(0, travelsLimit, '', { user_id: userId, publish: 1, moderation: 1 }),
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
     retry: (fc, err) => !(err instanceof ApiError && (err.status === 401 || err.status === 403)) && fc < 2,
@@ -126,21 +131,41 @@ export default function PublicUserProfileScreen() {
     [router]
   );
 
-  const handleViewTravels = useCallback(() => {
-    if (!userId) return;
-    router.push(`/search?user_id=${encodeURIComponent(userId)}` as any);
-  }, [router, userId]);
+  const handleLoadMoreTravels = useCallback(() => {
+    setTravelsLimit((current) => Math.min(current + AUTHOR_TRAVELS_LIMIT, authorTravelsTotal));
+  }, [authorTravelsTotal]);
 
   const handleWriteMessage = useCallback(() => {
     if (!userId) return;
     router.push(routes.messages(userId));
   }, [router, userId]);
 
+  const handleMessageUser = useCallback((messageUserId: number) => {
+    router.push(`/messages?userId=${encodeURIComponent(messageUserId)}` as any);
+  }, [router]);
+
+  const handleOpenSubscribedTravel = useCallback((url: string) => {
+    router.push(url as any);
+  }, [router]);
+
+  const handleOpenSubscribedProfile = useCallback((profileUserId: number) => {
+    router.push(`/user/${profileUserId}` as any);
+  }, [router]);
+
+  const handleFindTravels = useCallback(() => {
+    router.push('/search' as any);
+  }, [router]);
+
   const handleChangeTab = useCallback((tab: ProfileTabKey) => setActiveTab(tab), []);
 
   const tabCounts = useMemo<Partial<Record<ProfileTabKey, number>>>(
-    () => ({ travels: authorTravelsTotal }),
-    [authorTravelsTotal]
+    () => ({
+      travels: authorTravelsTotal,
+      subscribers: subscribersCount,
+      subscriptions: subscriptionsCount,
+      overview: badgesCount,
+    }),
+    [authorTravelsTotal, badgesCount, subscribersCount, subscriptionsCount]
   );
 
   const statPills = useMemo<ProfileStatPill[]>(() => {
@@ -159,10 +184,10 @@ export default function PublicUserProfileScreen() {
       pills.push({
         key: 'subscribers',
         label: 'Подписчики',
-        value: subscribersCount ?? subscriptionsCount ?? 0,
+        value: subscribersCount,
         icon: 'users',
-        onPress: () => router.push('/subscriptions' as any),
-        accessibilityHint: 'Перейти к подпискам и подписчикам',
+        onPress: () => handleChangeTab('subscribers'),
+        accessibilityHint: 'Показать подписчиков под шапкой профиля',
       });
     }
 
@@ -176,7 +201,7 @@ export default function PublicUserProfileScreen() {
     });
 
     return pills;
-  }, [authorTravelsTotal, isOwnProfile, subscribersCount, subscriptionsCount, badgesCount, handleChangeTab, router]);
+  }, [authorTravelsTotal, isOwnProfile, subscribersCount, badgesCount, handleChangeTab]);
 
   if (isLoading) {
     return (
@@ -214,6 +239,7 @@ export default function PublicUserProfileScreen() {
   }
 
   const isOverview = activeTab === 'overview';
+  const isSubscriptionsSection = activeTab === 'subscriptions' || activeTab === 'subscribers';
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -264,6 +290,22 @@ export default function PublicUserProfileScreen() {
 
         {isOverview ? (
           <PublicProfileOverviewTab userId={userId} fullName={fullName || ''} isOwnProfile={isOwnProfile} />
+        ) : isSubscriptionsSection && isOwnProfile ? (
+          <SubscriptionsTabContent
+            activeTab={activeTab}
+            showTabBar={false}
+            subscriptions={subscriptions}
+            subscribers={subscribers}
+            authors={authors}
+            subscriptionsLoading={subscriptionsLoading}
+            subscribersLoading={subscribersLoading}
+            getFullName={getFullName}
+            handleUnsubscribe={handleUnsubscribe}
+            onMessage={handleMessageUser}
+            onOpenTravel={handleOpenSubscribedTravel}
+            onOpenProfile={handleOpenSubscribedProfile}
+            onFindTravels={handleFindTravels}
+          />
         ) : (
           <PublicProfileTravelsTab
             travels={authorTravels}
@@ -272,7 +314,7 @@ export default function PublicUserProfileScreen() {
             isError={authorTravelsQuery.isError}
             isMobile={isMobile}
             onOpenTravel={handleOpenTravel}
-            onViewAll={handleViewTravels}
+            onLoadMore={handleLoadMoreTravels}
           />
         )}
       </ScrollView>

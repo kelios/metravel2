@@ -16,7 +16,7 @@ interface PublicProfileTravelsTabProps {
   isError: boolean;
   isMobile: boolean;
   onOpenTravel: (travel: Travel) => void;
-  onViewAll: () => void;
+  onLoadMore: () => void;
 }
 
 export function PublicProfileTravelsTab({
@@ -26,7 +26,7 @@ export function PublicProfileTravelsTab({
   isError,
   isMobile,
   onOpenTravel,
-  onViewAll,
+  onLoadMore,
 }: PublicProfileTravelsTabProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -84,13 +84,13 @@ export function PublicProfileTravelsTab({
       {total > travels.length ? (
         <Pressable
           style={[styles.viewAllButton, globalFocusStyles.focusable]}
-          onPress={onViewAll}
+          onPress={onLoadMore}
           accessibilityRole="button"
-          accessibilityLabel="Смотреть все путешествия автора"
+          accessibilityLabel="Показать ещё путешествия автора"
           {...Platform.select({ web: { cursor: 'pointer' } })}
         >
-          <Text style={styles.viewAllButtonText}>Смотреть все ({total})</Text>
-          <Feather name="arrow-right" size={16} color={colors.primaryDark} />
+          <Text style={styles.viewAllButtonText}>Показать ещё</Text>
+          <Feather name="chevron-down" size={16} color={colors.primaryDark} />
         </Pressable>
       ) : null}
     </View>
