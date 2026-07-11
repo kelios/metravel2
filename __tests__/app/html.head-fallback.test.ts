@@ -31,4 +31,11 @@ describe('critical head fallback', () => {
     expect(source).toContain("isAssetLikePath(path)")
     expect(source).toContain("upsertMeta('meta[name=\"robots\"]',{name:'robots'},routeMeta.robots||'noindex, nofollow')")
   })
+
+  it('allows large image previews on production pages', () => {
+    const filePath = path.resolve(process.cwd(), 'app/+html.tsx')
+    const source = fs.readFileSync(filePath, 'utf8')
+
+    expect(source).toContain("isProduction ? 'max-image-preview:large' : 'noindex,nofollow'")
+  })
 })

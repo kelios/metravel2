@@ -121,6 +121,51 @@ describe('QuestCard', () => {
         expect(getByTestId('quest-card-pioneer-krakow-dragon')).toBeTruthy();
     });
 
+    it('requests high fetch priority for the first above-the-fold cards', () => {
+        renderWithQueryClient(
+            <QuestCard
+                styles={styles}
+                cardWidth={340}
+                cityId="krakow"
+                quest={makeQuest()}
+                index={0}
+            />,
+        );
+
+        expect(mockImageCardMedia.mock.calls[0]?.[0]).toEqual(
+            expect.objectContaining({ priority: 'high' }),
+        );
+    });
+
+    it('passes a resized proxy cover URL to native image instead of the full-size original', () => {
+        (Platform as { OS: string }).OS = 'android';
+        const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;
+        process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by';
+
+        try {
+            renderWithQueryClient(
+                <QuestCard
+                    styles={styles}
+                    cardWidth={340}
+                    cityId="krakow"
+                    quest={makeQuest({
+                        cover: 'https://metravel.by/quest-cover/quests/1/main/abc.png',
+                    })}
+                    index={5}
+                />,
+            );
+
+            const src = String(mockImageCardMedia.mock.calls[0]?.[0]?.src);
+            expect(src).toContain('https://metravel.by/quest-cover/quests/1/main/abc.png?');
+            expect(src).toContain('w=');
+            expect(src).toContain('h=');
+            expect(src).toContain('q=60');
+            expect(src).toContain('fit=cover');
+        } finally {
+            process.env.EXPO_PUBLIC_API_URL = prevApiUrl;
+        }
+    });
+
     it('opens the quest reviews modal from the mobile reviews CTA', () => {
         const { getByTestId } = renderWithQueryClient(
             <QuestCard

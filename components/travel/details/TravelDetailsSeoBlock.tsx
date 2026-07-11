@@ -29,8 +29,6 @@ export default function TravelDetailsSeoBlock({
         canonical={canonicalUrl}
         image={readyImage}
         imageAlt={readyTitle}
-        imageWidth={readyImage ? 1200 : undefined}
-        imageHeight={readyImage ? 630 : undefined}
         ogType="article"
       />
       {jsonLd && (

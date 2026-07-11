@@ -419,7 +419,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <meta property="og:locale" content="ru_RU" />
       <meta name="twitter:site" content="@metravel_by" />
 
-      {!isProduction && <meta name="robots" content="noindex,nofollow" />}
+      <meta
+        name="robots"
+        content={isProduction ? 'max-image-preview:large' : 'noindex,nofollow'}
+      />
 
       {/* Schema.org structured data */}
       <script
