@@ -6,6 +6,7 @@ import {
   getThemedBaseTileUrl,
   getThemedBaseAttribution,
   getThemedBaseMaxZoom,
+  getOsmTileCrossOrigin,
 } from '@/config/mapWebLayers';
 import { createLeafletLayer, attachTileRetry } from '@/utils/mapWebLayers';
 import { attachOsmCampingOverlay } from '@/utils/mapWebOverlays/osmCampingOverlay';
@@ -44,7 +45,7 @@ export const getThemedBaseLayerOptions = () => ({
   updateWhenZooming: false,
   updateWhenIdle: false,
   fadeAnimation: true,
-  crossOrigin: 'anonymous' as const,
+  crossOrigin: getOsmTileCrossOrigin(),
 });
 
 const createThemedBaseLayer = (L: any) => {

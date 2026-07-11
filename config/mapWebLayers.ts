@@ -629,6 +629,25 @@ export const getOsmTileUrl = (): string => {
 const OSM_PROXY_PUBLIC_ORIGIN = 'https://metravel.by';
 
 /**
+ * crossOrigin для базового OSM-слоя: 'anonymous' нужен канвас-снапшотам карты
+ * и допустим только для same-origin тайлов (прод, относительный путь).
+ * Кросс-доменный dev-фолбэк (metravel.by с localhost) CORS-заголовков не шлёт —
+ * с crossOrigin такие тайлы падают целиком, оставляем обычные <img>.
+ */
+export const getOsmTileCrossOrigin = (): 'anonymous' | undefined => {
+  const url = getOsmTileUrl();
+  if (!/^https?:\/\//i.test(url)) return 'anonymous';
+  if (typeof window !== 'undefined') {
+    try {
+      if (new URL(url).origin === window.location.origin) return 'anonymous';
+    } catch {
+      // noop
+    }
+  }
+  return undefined;
+};
+
+/**
  * Хост, у которого заведомо НЕТ tile-прокси и/или к которому Android WebView
  * не пустит mixed-content: loopback, приватные LAN-подсети (RFC1918) или
  * cleartext `http://`. Для таких origin native обязан фолбэкнуться на прод.

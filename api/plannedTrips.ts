@@ -568,8 +568,18 @@ const mapRoutingState = (state?: BeRoutingState | null): RoutingState | null => 
   const provider = typeof state.provider === 'string' && state.provider.trim()
     ? state.provider.trim()
     : 'unknown';
+  // БЭК шлёт warnings и строками, и объектами {code, message} (routing/services.py) —
+  // нормализуем к кодам, человеческий текст собирает routingStateHint.
   const warnings = Array.isArray(state.warnings)
-    ? state.warnings.filter((item): item is string => typeof item === 'string')
+    ? state.warnings
+        .map((item) => {
+          if (typeof item === 'string') return item;
+          if (item && typeof item === 'object' && typeof (item as { code?: unknown }).code === 'string') {
+            return (item as { code: string }).code;
+          }
+          return null;
+        })
+        .filter((item): item is string => Boolean(item && item.trim()))
     : [];
   return {
     provider,

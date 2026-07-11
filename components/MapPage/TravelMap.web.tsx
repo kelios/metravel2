@@ -24,7 +24,7 @@ import {
 import { LAYOUT } from '@/constants/layout'
 import { normalizePoint } from '@/components/map-core/types'
 import { queryKeys } from '@/api/queryKeys'
-import { getOsmTileUrl, OSM_PROXY_ATTRIBUTION, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers'
+import { getOsmTileUrl, getOsmTileCrossOrigin, OSM_PROXY_ATTRIBUTION, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers'
 
 const IS_WEB = Platform.OS === 'web'
 
@@ -535,7 +535,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           url={getOsmTileUrl()}
           attribution={OSM_PROXY_ATTRIBUTION}
           maxZoom={OSM_PROXY_MAX_ZOOM}
-          crossOrigin="anonymous"
+          crossOrigin={getOsmTileCrossOrigin()}
           keepBuffer={4}
           updateWhenZooming={false}
           updateWhenIdle={false}

@@ -139,10 +139,35 @@ export function routingStateLabel(routingState: RoutingState | null | undefined)
   return `Маршрут построен: ${routingState.provider}`;
 }
 
+// Машинные коды бэка (routing/services.py, trips/views.py) → человеческий текст.
+// Сырые коды вида `not_enough_points` пользователю не показываем.
+const ROUTING_REASON_HINT: Record<string, string> = {
+  not_enough_points: 'Добавьте минимум две точки маршрута — тогда мы построим дорогу.',
+  route_provider_unavailable:
+    'Сервис построения маршрутов временно недоступен — линия показана приблизительно.',
+  routing_provider_unavailable:
+    'Сервис построения маршрутов временно недоступен — линия показана приблизительно.',
+};
+
+function humanizeRoutingReason(reason: string | null | undefined): string | null {
+  const code = (reason ?? '').trim();
+  if (!code) return null;
+  if (ROUTING_REASON_HINT[code]) return ROUTING_REASON_HINT[code];
+  if (/^ors_/.test(code) || /_not_configured$/.test(code)) {
+    return 'Сервис построения маршрутов временно недоступен — линия показана приблизительно.';
+  }
+  // Русский текст (например, из мока) показываем как есть; латинский код/фразу — нет.
+  if (/[а-яё]/i.test(code)) return code;
+  return null;
+}
+
 export function routingStateHint(routingState: RoutingState | null | undefined): string | null {
   if (!routingState || !isRouteApproximate(routingState)) return null;
-  if (routingState.warnings.length) return routingState.warnings[0];
-  if (routingState.fallbackReason) return `Причина: ${routingState.fallbackReason}`;
+  const candidates = [...routingState.warnings, routingState.fallbackReason];
+  for (const candidate of candidates) {
+    const humanized = humanizeRoutingReason(candidate);
+    if (humanized) return humanized;
+  }
   return 'Сервис роутинга не смог построить дорогу или тропу, линия показана приблизительно.';
 }
 

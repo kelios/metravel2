@@ -163,7 +163,12 @@ describe('fetchMyPlannedTrips backend route_summary mapping', () => {
             provider: 'ors',
             is_optimal: true,
             fallback_reason: null,
-            warnings: [],
+            // БЭК шлёт warnings и строками, и объектами {code, message} — адаптер нормализует к кодам.
+            warnings: [
+              { code: 'route_provider_unavailable', message: 'Provider route is unavailable; direct-line fallback was used.' },
+              'custom_warning_code',
+              { message: 'no code — dropped' },
+            ],
           },
           participants: [],
           is_public: false,
@@ -223,7 +228,7 @@ describe('fetchMyPlannedTrips backend route_summary mapping', () => {
       provider: 'ors',
       isOptimal: true,
       fallbackReason: null,
-      warnings: [],
+      warnings: ['route_provider_unavailable', 'custom_warning_code'],
     })
   })
 

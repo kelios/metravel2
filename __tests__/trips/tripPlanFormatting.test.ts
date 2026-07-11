@@ -9,8 +9,9 @@ import {
   formatDuration,
   formatTripDateTime,
   routeSummaryLine,
+  routingStateHint,
 } from '@/components/trips/planning/tripPlanFormatting'
-import type { RouteSummary } from '@/api/plannedTrips'
+import type { RouteSummary, RoutingState } from '@/api/plannedTrips'
 
 // ── formatDistance ────────────────────────────────────────────────────────────
 
@@ -121,6 +122,72 @@ describe('routeSummaryLine', () => {
     const line = routeSummaryLine(summary)
     expect(line).toContain('—')
     expect(line).toContain('0 остановок')
+  })
+})
+
+// ── routingStateHint ──────────────────────────────────────────────────────────
+
+describe('routingStateHint', () => {
+  const direct = (over: Partial<RoutingState> = {}): RoutingState => ({
+    provider: 'direct',
+    isOptimal: false,
+    fallbackReason: null,
+    warnings: [],
+    ...over,
+  })
+
+  it('returns null when route is optimal', () => {
+    expect(
+      routingStateHint({ provider: 'ors', isOptimal: true, fallbackReason: null, warnings: [] }),
+    ).toBeNull()
+  })
+
+  it('translates not_enough_points to actionable Russian text', () => {
+    expect(routingStateHint(direct({ fallbackReason: 'not_enough_points' }))).toBe(
+      'Добавьте минимум две точки маршрута — тогда мы построим дорогу.',
+    )
+  })
+
+  it('translates provider-unavailable codes', () => {
+    for (const code of [
+      'route_provider_unavailable',
+      'routing_provider_unavailable',
+      'ors_not_configured',
+      'ors_http_502',
+      'ors_request_failed',
+      'valhalla_not_configured',
+    ]) {
+      const hint = routingStateHint(direct({ fallbackReason: code }))
+      expect(hint).toContain('Сервис построения маршрутов временно недоступен')
+    }
+  })
+
+  it('never leaks raw machine codes to the user', () => {
+    const hint = routingStateHint(direct({ fallbackReason: 'some_future_unknown_code' }))
+    expect(hint).not.toContain('some_future_unknown_code')
+    expect(hint).toMatch(/[а-яё]/i)
+  })
+
+  it('prefers a known warning code over fallbackReason', () => {
+    const hint = routingStateHint(
+      direct({ warnings: ['route_provider_unavailable'], fallbackReason: 'not_enough_points' }),
+    )
+    expect(hint).toContain('Сервис построения маршрутов временно недоступен')
+  })
+
+  it('passes through human Russian warnings as-is', () => {
+    expect(routingStateHint(direct({ warnings: ['Маршрут показан приблизительно.'] }))).toBe(
+      'Маршрут показан приблизительно.',
+    )
+  })
+
+  it('falls back to generic Russian sentence for English sentences', () => {
+    const hint = routingStateHint(
+      direct({ warnings: ['Provider route is unavailable; direct-line fallback was used.'] }),
+    )
+    expect(hint).toBe(
+      'Сервис роутинга не смог построить дорогу или тропу, линия показана приблизительно.',
+    )
   })
 })
 

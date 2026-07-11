@@ -233,7 +233,7 @@ export class RuntimeGalleryRenderer {
           .join('')
         const marginBottom = rowIndex === rows.length - 1 ? 0 : gapMm
         return `
-          <div style="
+          <div class="gallery-justified-row" style="
             display: flex;
             justify-content: center;
             align-items: flex-start;

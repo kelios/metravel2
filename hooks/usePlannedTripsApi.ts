@@ -64,10 +64,14 @@ export function useMyPlannedTrips() {
 }
 
 export function usePlannedTrip(tripId: string | number | null | undefined) {
+  // Ждём гидрацию authStore: isOwner вычисляется в mapTrip из userId стора,
+  // и запрос до authReady кэширует isOwner=false — владелец теряет кнопки
+  // «Редактировать»/«Удалить» до ручного обновления страницы.
+  const authReady = useAuthStore((s) => s.authReady);
   return useQuery<PlannedTrip>({
     queryKey: queryKeys.plannedTrip(tripId),
     queryFn: () => fetchPlannedTrip(tripId as string | number),
-    enabled: tripId != null && tripId !== '',
+    enabled: authReady && tripId != null && tripId !== '',
     staleTime: STALE_TIME,
     retry,
   });

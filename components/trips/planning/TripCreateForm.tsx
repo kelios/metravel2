@@ -38,7 +38,9 @@ interface Props {
 }
 
 const TRANSPORT_OPTIONS: TripTransport[] = ['car', 'bike', 'foot', 'public', 'mixed'];
-const VISIBILITY_OPTIONS: TripVisibility[] = ['public', 'followers', 'private'];
+// БЭК хранит только is_public: 'followers' молча деградировал в «Личная» —
+// не предлагаем, пока бэк не поддержит уровень видимости.
+const VISIBILITY_OPTIONS: TripVisibility[] = ['public', 'private'];
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;

@@ -2,6 +2,18 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Trips Verify 8079",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        ".claude/prod-server.js",
+        "8079",
+        "/private/tmp/claude-501/-Users-juliasavran-Sites-metravel2-metravel2/686db28d-ca04-4e0a-89c4-5fc829cd4a41/scratchpad/dist-trips",
+        "https://metravel.by"
+      ],
+      "port": 8079,
+      "autoPort": false
+    },
+    {
       "name": "Expo Web ProxyApi 8099",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

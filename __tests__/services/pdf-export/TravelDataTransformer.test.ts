@@ -174,6 +174,26 @@ describe('TravelDataTransformer', () => {
       });
     });
 
+    it('должен переносить caption фото галереи (пустые/пробельные — отбрасывать)', () => {
+      const travels = [
+        {
+          id: 1,
+          name: 'Test',
+          gallery: [
+            { url: 'https://example.com/img1.jpg', id: 1, caption: '  Закат над морем  ' },
+            { url: 'https://example.com/img2.jpg', id: 2, caption: '   ' },
+            { url: 'https://example.com/img3.jpg', id: 3 },
+          ],
+        },
+      ] as any;
+
+      const result = transformer.transform(travels);
+
+      expect(result[0].gallery?.[0].caption).toBe('Закат над морем');
+      expect(result[0].gallery?.[1].caption).toBeUndefined();
+      expect(result[0].gallery?.[2].caption).toBeUndefined();
+    });
+
     it('должен отфильтровать пустые значения из галереи', () => {
       const travels: Travel[] = [
         {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -53,7 +53,9 @@ const SCROLL_BOTTOM_RESERVE = Platform.select({
 });
 
 const TRANSPORT_OPTIONS: TripTransport[] = ['car', 'bike', 'foot', 'public', 'mixed'];
-const VISIBILITY_OPTIONS: TripVisibility[] = ['public', 'followers', 'private'];
+// БЭК хранит только is_public (PlannedTripUpdateSerializer): 'followers' молча
+// деградировал в «Личная» — не предлагаем, пока бэк не поддержит уровень.
+const VISIBILITY_OPTIONS: TripVisibility[] = ['public', 'private'];
 
 type PlannerTabKey = 'route' | 'people' | 'export' | 'more';
 
@@ -142,11 +144,17 @@ export default function PlannedTripScreen() {
   const routeApproximate = trip ? isRouteApproximate(trip.routingState) : false;
 
   useEffect(() => {
-    if (trip) setEditValues(initialEditValues(trip));
-  }, [trip]);
+    // Не сбрасывать значения при фоновых рефетчах открытой формы —
+    // иначе refetchOnWindowFocus стирает несохранённый ввод.
+    if (trip && !isEditing) setEditValues(initialEditValues(trip));
+  }, [trip, isEditing]);
 
+  const editDeeplinkConsumedRef = useRef(false);
   useEffect(() => {
-    if (trip && params.edit === '1') {
+    // Deeplink ?edit=1 открывает панель один раз: без ref каждый рефетч trip
+    // заново включал isEditing — панель «не закрывалась» после сохранения.
+    if (trip && params.edit === '1' && !editDeeplinkConsumedRef.current) {
+      editDeeplinkConsumedRef.current = true;
       setEditError(null);
       setIsEditing(true);
     }
