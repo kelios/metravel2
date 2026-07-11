@@ -25,6 +25,7 @@ export interface TravelForBook {
     url: string;
     id?: number | string;
     updated_at?: string;
+    caption?: string;
   }>;
   travelAddress?: Array<{
     id: string;

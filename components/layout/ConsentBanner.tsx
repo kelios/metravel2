@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, usePathname } from 'expo-router';
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
 import { LAYOUT } from '@/constants/layout';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
@@ -157,7 +158,10 @@ function ConsentBanner() {
         style={[
           styles.container,
           styles.pointerEventsAuto,
-          { backgroundColor: colors.surface },
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.borderLight,
+          },
           isMobile && styles.containerMobile,
           isNarrowMobile && styles.containerNarrow,
           !isMobile && styles.containerDesktop,
@@ -226,9 +230,9 @@ function ConsentBanner() {
 const styles = StyleSheet.create({
   wrapper: {
     position: 'fixed' as any,
-    left: 12,
-    right: 12,
-    bottom: 12,
+    left: DESIGN_TOKENS.spacing.md,
+    right: DESIGN_TOKENS.spacing.md,
+    bottom: DESIGN_TOKENS.spacing.md,
     zIndex: 900,
     alignItems: 'flex-end',
   },
@@ -250,15 +254,16 @@ const styles = StyleSheet.create({
   },
   container: {
     flexDirection: 'column',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    maxWidth: 480,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    borderWidth: 1,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    maxWidth: 520,
     width: '100%',
-    gap: 8 as any,
+    gap: DESIGN_TOKENS.spacing.sm as any,
     ...Platform.select({
       web: {
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+        boxShadow: DESIGN_TOKENS.shadows.modal,
       },
       ios: {
         shadowOpacity: 0.15,
@@ -273,7 +278,10 @@ const styles = StyleSheet.create({
   containerDesktop: {
     flexDirection: 'row',
     alignItems: 'center',
-    maxWidth: 560,
+    maxWidth: 820,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.md as any,
     // Живой backdrop-filter только на десктопе: на мобильном fixed-баннере он
     // жжёт GPU без эффекта (фон и так непрозрачный colors.surface). См. правило
     // backdrop-blur в CLAUDE.md (BottomDock/TravelStickyActions).
@@ -297,11 +305,12 @@ const styles = StyleSheet.create({
   },
   textBlockDesktop: {
     flex: 1,
-    marginRight: 12,
+    minWidth: 260,
   },
   text: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
   },
   textMobile: {
     fontSize: 11,
@@ -309,7 +318,8 @@ const styles = StyleSheet.create({
   },
   buttonsRow: {
     flexDirection: 'row',
-    gap: 6 as any,
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs as any,
     flexShrink: 0,
   },
   buttonsRowMobile: {
@@ -320,9 +330,9 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   button: {
-    borderRadius: 9999,
+    borderRadius: DESIGN_TOKENS.radii.pill,
     paddingVertical: 5,
-    paddingHorizontal: 12,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
     // D-010 / WCAG 2.5.5: the consent buttons use Button size="sm" (minHeight 36);
     // bump only these two to a ≥44px tap target without touching the shared sm variant.
     minHeight: 44,
@@ -332,8 +342,8 @@ const styles = StyleSheet.create({
   },
   detailsLink: {
     minHeight: 44,
-    paddingHorizontal: 12,
-    borderRadius: 9999,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.pill,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

@@ -180,6 +180,10 @@ export class EnhancedPdfGeneratorBase {
     // Генерируем QR коды
     const qrCodes = await this.generateQRCodes(sortedTravels);
 
+    // Замеряем пропорции фото галерей: journal-раскладка страниц «Фотогалерея»
+    // строит ряды от реальных aspect-ratio (заодно прогревает кэш изображений)
+    this.galleryRenderer.setImageAspects(await this.preloadGalleryImageAspects(sortedTravels));
+
     // Собираем метаданные для оглавления
     const meta = this.buildTravelMeta(sortedTravels, gatedSettings);
 
@@ -574,6 +578,58 @@ export class EnhancedPdfGeneratorBase {
 
   private buildSafeImageUrl(url?: string | null): string | undefined {
     return buildSafeImageUrl(url);
+  }
+
+  /**
+   * Замеряет aspect-ratio (width/height) фото галерей через браузерный Image.
+   * Не замеренные фото (таймаут/ошибка/SSR) отсутствуют в карте — рендерер галереи
+   * падает для них на contain+blur letterbox-фолбэк.
+   */
+  private async preloadGalleryImageAspects(travels: TravelForBook[]): Promise<Map<string, number>> {
+    const aspects = new Map<string, number>();
+    if (typeof Image === 'undefined') return aspects;
+    // jsdom (Jest) не грузит изображения — onload/onerror не стреляют, ждать таймаут бессмысленно
+    if (
+      typeof process !== 'undefined' &&
+      (process.env?.JEST_WORKER_ID !== undefined || process.env?.NODE_ENV === 'test')
+    ) {
+      return aspects;
+    }
+
+    const urls = new Set<string>();
+    for (const travel of travels) {
+      for (const item of travel.gallery || []) {
+        const raw = typeof item === 'string' ? item : item?.url;
+        const safe = this.buildSafeImageUrl(raw);
+        if (safe && safe.trim().length) urls.add(safe);
+      }
+    }
+    if (!urls.size) return aspects;
+
+    await Promise.all(
+      Array.from(urls).map(
+        (url) =>
+          new Promise<void>((resolve) => {
+            const img = new Image();
+            const done = () => {
+              clearTimeout(timer);
+              if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                aspects.set(url, img.naturalWidth / img.naturalHeight);
+              }
+              resolve();
+            };
+            const timer = setTimeout(done, 8000);
+            img.onload = done;
+            img.onerror = () => {
+              clearTimeout(timer);
+              resolve();
+            };
+            img.decoding = 'async';
+            img.src = url;
+          })
+      )
+    );
+    return aspects;
   }
 
   private escapeHtml(value: string | null | undefined): string {

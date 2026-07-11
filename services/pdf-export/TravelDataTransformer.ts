@@ -233,6 +233,10 @@ export class TravelDataTransformer {
         ),
         id: typeof g === 'string' ? undefined : (g.id || g.url),
         updated_at: typeof g === 'string' ? undefined : g.updated_at,
+        caption:
+          typeof g === 'string' || typeof g.caption !== 'string' || !g.caption.trim()
+            ? undefined
+            : g.caption.trim(),
       }));
     
     // Если после фильтрации массив пустой, возвращаем undefined

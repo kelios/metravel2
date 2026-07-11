@@ -608,16 +608,18 @@ const getOsmProxyOrigin = (): string | null => {
 
 /**
  * Итоговый tile-URL базового OSM-слоя на web.
- * На localhost/Metro собираем абсолютный публичный URL (origin metravel.by),
- * иначе same-origin путь резолвится сам.
+ * На localhost/Metro собираем абсолютный публичный URL: origin из
+ * EXPO_PUBLIC_API_URL, а если он сам локальный (Metro/прокси без
+ * `/proxy/tiles`) — прод metravel.by, иначе тайлы отдаёт dev-сервер
+ * HTML-ками и карта серая. На проде same-origin путь резолвится сам.
  */
 export const getOsmTileUrl = (): string => {
   if (typeof window !== 'undefined') {
     const host = String(window.location?.hostname || '').toLowerCase();
     const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
     if (isLocalHost) {
-      const origin = getOsmProxyOrigin();
-      if (origin) return `${origin}${OSM_PROXY_TILE_PATH}`;
+      const origin = getOsmProxyOrigin() || OSM_PROXY_PUBLIC_ORIGIN;
+      return `${origin}${OSM_PROXY_TILE_PATH}`;
     }
   }
   return OSM_PROXY_TILE_PATH;
