@@ -60,7 +60,7 @@ export const createHeroShellStyles = (ctx: HeroStyleContext) => {
       ...Platform.select({
         web: showSideSlider
           ? ({
-              backgroundImage: 'url(/assets/images/open-book-bg.png)',
+              backgroundImage: 'var(--image-homeHeroBook)',
               backgroundSize: '100% 100%',
               backgroundRepeat: 'no-repeat',
               aspectRatio: '1040 / 765',

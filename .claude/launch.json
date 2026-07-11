@@ -2,6 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Expo Web GSI 8092",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_ENABLE_GOOGLE_SIGN_IN_LOCAL=true npx expo start --web --port 8092"
+      ],
+      "port": 8092,
+      "autoPort": false
+    },
+    {
       "name": "Trips Verify 8079",
       "runtimeExecutable": "node",
       "runtimeArgs": [

@@ -102,8 +102,8 @@ export const createTypographyStyles = (ctx: HeroStyleContext) => {
     titleAccent: {
       fontSize: isSmallPhone ? 28 : isMobile ? 32 : 36,
       fontWeight: '800',
-      // Страница книги всегда светлая → статичный bookPageAccent; вне книги
-      // themed brandText (яркий brand на светлом фоне не проходит 3:1 large).
+      // Книжная страница использует отдельный тематический токен, чтобы акцент
+      // оставался контрастным и на светлом, и на тёмном варианте подложки.
       // Гейт — showSideSlider, как у serif-ветки title: hasBookLayout ждёт
       // измеренного bookHeight и на первом рендере ещё false.
       color: showSideSlider

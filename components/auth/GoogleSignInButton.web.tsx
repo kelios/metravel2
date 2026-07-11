@@ -223,6 +223,9 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
                     justifyContent: 'center',
                     pointerEvents: disabled ? 'none' : 'auto',
                     opacity: disabled ? 0.6 : 1,
+                    // GSI-iframe светлый: при color-scheme:dark на html Chrome рисует
+                    // под кросс-доменным iframe непрозрачный белый фон
+                    colorScheme: 'light',
                 }}
             />
         </View>
