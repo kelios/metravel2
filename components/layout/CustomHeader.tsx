@@ -94,7 +94,9 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     <View
       style={[styles.container, webStickyStyle]}
       testID="main-header"
+      nativeID="main-navigation"
       onLayout={handleLayout}
+      {...(Platform.OS === 'web' ? ({ tabIndex: -1 } as any) : null)}
     >
       <View style={styles.wrapper}>
         <View style={[styles.inner, isMobile && styles.innerMobile]}>

@@ -4,7 +4,6 @@ import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { stringifyJsonLd } from '@/utils/jsonLd'
 
 type TravelDetailsSeoBlockProps = {
-  backgroundColor: string
   canonicalUrl?: string
   headKey: string
   jsonLd?: Record<string, unknown> | null
@@ -14,7 +13,6 @@ type TravelDetailsSeoBlockProps = {
 }
 
 export default function TravelDetailsSeoBlock({
-  backgroundColor,
   canonicalUrl,
   headKey,
   jsonLd,
@@ -34,7 +32,6 @@ export default function TravelDetailsSeoBlock({
         imageWidth={readyImage ? 1200 : undefined}
         imageHeight={readyImage ? 630 : undefined}
         ogType="article"
-        additionalTags={<meta name="theme-color" content={backgroundColor} />}
       />
       {jsonLd && (
         <Head key={`${headKey}-article-jsonld`}>

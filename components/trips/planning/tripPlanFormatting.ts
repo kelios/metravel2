@@ -159,6 +159,31 @@ const MONTHS = [
   'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
 ];
 
+export function parseTripIsoDate(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const [, yearValue, monthValue, dayValue] = match;
+  const year = Number(yearValue);
+  const month = Number(monthValue);
+  const day = Number(dayValue);
+  const parsed = new Date(year, month - 1, day);
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+  return parsed;
+}
+
+export function formatTripDisplayDate(value: string): string {
+  if (!value.trim()) return 'Выберите дату';
+  const parsed = parseTripIsoDate(value);
+  if (!parsed) return value;
+  return `${parsed.getDate()} ${MONTHS[parsed.getMonth()]} ${parsed.getFullYear()}`;
+}
+
 /** «11 июля 2026» / с временем «11 июля 2026, 08:00». */
 export function formatTripDateTime(dateIso: string, time: string | null): string {
   const d = new Date(dateIso);

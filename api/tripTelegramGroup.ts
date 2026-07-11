@@ -5,7 +5,7 @@
 //   POST /api/trips/{id}/telegram-group/  {enabled, group_url?, invite_url?} -> TelegramGroupDto (owner-only)
 //   POST /api/trips/{id}/telegram-group/invite-link/  -> { url, text } (owner/participant)
 // BE-эндпоинты ещё НЕ задеплоены → безопасный unavailable-фолбэк
-// (EXPO_PUBLIC_TRIPS_MOCK=true или 0/404/501 в DEV), как в api/publicTrips.ts.
+// (EXPO_PUBLIC_TRIPS_MOCK=true, production 404/405/501 или network status 0 в DEV).
 // Важно: fallback НЕ должен генерировать fake t.me invite/group links.
 // Снять после верификации BE на проде.
 
@@ -83,11 +83,13 @@ const USE_MOCK = process.env.EXPO_PUBLIC_TRIPS_MOCK === 'true';
 export const TELEGRAM_GROUP_UNAVAILABLE_REASON =
   'Telegram-группы поездок пока не подключены. Мы включим приглашения, когда серверный invite будет готов.';
 
-/** Бэкенд недоступен → 0/404/501. В DEV или под флагом отдаём мок. */
-const shouldFallbackToMock = (error: unknown): boolean => {
+const ENDPOINT_UNAVAILABLE_STATUSES = [404, 405, 501];
+
+/** Missing production endpoints are a supported disabled state, not a create prompt. */
+const shouldReturnUnavailable = (error: unknown): boolean => {
   if (USE_MOCK) return true;
-  if (!__DEV__) return false;
-  return error instanceof ApiError && [0, 404, 501].includes(error.status);
+  if (!(error instanceof ApiError)) return false;
+  return ENDPOINT_UNAVAILABLE_STATUSES.includes(error.status) || (__DEV__ && error.status === 0);
 };
 
 const unavailableGroup = (tripId: number): TripTelegramGroup => ({
@@ -119,7 +121,7 @@ export async function fetchTripTelegramGroup(
     const dto = await apiClient.get<TelegramGroupDto>(`/trips/${tripId}/telegram-group/`);
     return mapGroup(dto);
   } catch (error) {
-    if (shouldFallbackToMock(error)) {
+    if (shouldReturnUnavailable(error)) {
       devWarn('[trip-telegram] group → unavailable fallback');
       return unavailableGroup(tripId);
     }
@@ -143,7 +145,7 @@ export async function createTripTelegramGroup(
     );
     return mapGroup(dto);
   } catch (error) {
-    if (shouldFallbackToMock(error)) {
+    if (shouldReturnUnavailable(error)) {
       devWarn('[trip-telegram] create → unavailable fallback');
       return unavailableGroup(input.tripId);
     }
@@ -159,7 +161,7 @@ export async function fetchTripInviteLink(tripId: number): Promise<TripInviteLin
     );
     return mapInvite(dto);
   } catch (error) {
-    if (shouldFallbackToMock(error)) {
+    if (shouldReturnUnavailable(error)) {
       devWarn('[trip-telegram] invite-link → unavailable fallback');
       return unavailableInvite();
     }

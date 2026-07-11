@@ -47,35 +47,5 @@ export default function WebAppRuntimeEffects({ pathname }: WebAppRuntimeEffectsP
     }
   }, [pathname])
 
-  useEffect(() => {
-    const originalReplace = window.history.replaceState.bind(window.history)
-    const originalPush = window.history.pushState.bind(window.history)
-
-    window.history.replaceState = function patchedReplaceState(
-      data: any,
-      unused: string,
-      url?: string | URL | null,
-    ) {
-      if (url != null) {
-        const currentPath = window.location.pathname + window.location.search
-        let newPath: string
-        try {
-          const resolved = new URL(String(url), window.location.href)
-          newPath = resolved.pathname + resolved.search
-        } catch {
-          newPath = String(url)
-        }
-        if (newPath !== currentPath) {
-          return originalPush(data, unused, url)
-        }
-      }
-      return originalReplace(data, unused, url)
-    }
-
-    return () => {
-      window.history.replaceState = originalReplace
-    }
-  }, [])
-
   return null
 }

@@ -3,7 +3,6 @@ import { View } from 'react-native'
 
 import { safeLazy } from '@/components/layout/safeLazy'
 
-const SkipLinksLazy = safeLazy(() => import('@/components/layout/SkipLinks'), 'SkipLinks')
 const NetworkStatusLazy = safeLazy(
   () =>
     Promise.resolve(import('@/components/ui/NetworkStatus')).then((m) => {
@@ -48,7 +47,6 @@ export default function RootWebDeferredChrome({
   const [showNetworkStatusChrome, setShowNetworkStatusChrome] = useState(true)
   const [showRuntimeEffects, setShowRuntimeEffects] = useState(true)
   const [showConsentBanner, setShowConsentBanner] = useState(false)
-  const [showSkipLinks, setShowSkipLinks] = useState(false)
   const [showServiceWorkerCleanup, setShowServiceWorkerCleanup] = useState(false)
 
   useEffect(() => {
@@ -90,18 +88,6 @@ export default function RootWebDeferredChrome({
       if (rafId != null) cancelAnimationFrame(rafId)
     }
   }, [isTravelPerformanceRoute])
-
-  useEffect(() => {
-    const revealSkipLinks = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab' || event.shiftKey) return
-      setShowSkipLinks(true)
-    }
-
-    window.addEventListener('keydown', revealSkipLinks, { passive: true, once: true })
-    return () => {
-      window.removeEventListener('keydown', revealSkipLinks)
-    }
-  }, [])
 
   useEffect(() => {
     const revealNetworkStatus = () => {
@@ -150,12 +136,6 @@ export default function RootWebDeferredChrome({
 
   return (
     <>
-      {showSkipLinks && (
-        <React.Suspense fallback={null}>
-          <SkipLinksLazy initiallyVisible />
-        </React.Suspense>
-      )}
-
       {showNetworkStatusChrome && (
         <React.Suspense fallback={null}>
           <NetworkStatusLazy position="top" />

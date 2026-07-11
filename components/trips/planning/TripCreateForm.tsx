@@ -25,6 +25,8 @@ import {
   TRANSPORT_LABEL,
   VISIBILITY_HINT,
   VISIBILITY_LABEL,
+  formatTripDisplayDate,
+  parseTripIsoDate,
 } from '@/components/trips/planning/tripPlanFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDefaultTripStartDate, type TripPlanPrefill } from '@/utils/tripPlanLinks';
@@ -40,42 +42,8 @@ const VISIBILITY_OPTIONS: TripVisibility[] = ['public', 'followers', 'private'];
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
-const DATE_MONTHS = [
-  'января',
-  'февраля',
-  'марта',
-  'апреля',
-  'мая',
-  'июня',
-  'июля',
-  'августа',
-  'сентября',
-  'октября',
-  'ноября',
-  'декабря',
-];
-
-export const parseTripCreateIsoDate = (value: string): Date | null => {
-  const match = DATE_RE.exec(value.trim());
-  if (!match) return null;
-  const [year, month, day] = value.split('-').map(Number);
-  const parsed = new Date(year, month - 1, day);
-  if (
-    parsed.getFullYear() !== year ||
-    parsed.getMonth() !== month - 1 ||
-    parsed.getDate() !== day
-  ) {
-    return null;
-  }
-  return parsed;
-};
-
-export const formatTripCreateDisplayDate = (value: string): string => {
-  if (!value.trim()) return 'Выберите дату';
-  const parsed = parseTripCreateIsoDate(value);
-  if (!parsed) return value;
-  return `${parsed.getDate()} ${DATE_MONTHS[parsed.getMonth()]} ${parsed.getFullYear()}`;
-};
+export const parseTripCreateIsoDate = parseTripIsoDate;
+export const formatTripCreateDisplayDate = formatTripDisplayDate;
 
 interface FormValues {
   title: string;

@@ -2,14 +2,6 @@ import { render, waitFor } from '@testing-library/react-native'
 
 import RootWebDeferredChrome from '@/components/layout/RootWebDeferredChrome'
 
-jest.mock('@/components/layout/SkipLinks', () => ({
-  __esModule: true,
-  default: () => {
-    const { Text } = require('react-native')
-    return <Text testID="skip-links">skip-links</Text>
-  },
-}))
-
 jest.mock('@/components/ui/NetworkStatus', () => ({
   __esModule: true,
   NetworkStatus: () => {

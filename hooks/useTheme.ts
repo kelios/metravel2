@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState, useCallback, createContext, useContext, createElement, type Context } from 'react';
 import { Appearance, Platform, useColorScheme } from 'react-native';
-import { getThemedColors } from '@/constants/designSystem';
+import { DESIGN_COLORS, getThemedColors } from '@/constants/designSystem';
 
 // Re-export helper for callers that historically imported it from this module.
 export { getThemedColors };
@@ -157,6 +157,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const root = document.documentElement;
     root.setAttribute('data-theme', isDark ? 'dark' : 'light');
     root.style.colorScheme = isDark ? 'dark' : 'light';
+    document
+      .getElementById('app-theme-color')
+      ?.setAttribute('content', isDark ? DESIGN_COLORS.themeColorDark : DESIGN_COLORS.themeColorLight);
   }, [isDark]);
 
   const setTheme = useCallback((theme: Theme) => {

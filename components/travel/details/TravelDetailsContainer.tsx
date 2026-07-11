@@ -75,7 +75,6 @@ function useNativeOfflineTravelCache(
 }
 
 function useTravelSeoElement({
-  backgroundColor,
   canonicalUrl,
   headKey,
   jsonLd,
@@ -83,7 +82,6 @@ function useTravelSeoElement({
   readyImage,
   readyTitle,
 }: {
-  backgroundColor: string
   canonicalUrl?: string
   headKey: string
   jsonLd?: Record<string, unknown> | null
@@ -94,7 +92,6 @@ function useTravelSeoElement({
   return useMemo(
     () => (
       <TravelDetailsSeoBlock
-        backgroundColor={backgroundColor}
         canonicalUrl={canonicalUrl}
         headKey={headKey}
         jsonLd={jsonLd}
@@ -103,7 +100,7 @@ function useTravelSeoElement({
         readyTitle={readyTitle}
       />
     ),
-    [backgroundColor, canonicalUrl, headKey, jsonLd, readyDesc, readyImage, readyTitle],
+    [canonicalUrl, headKey, jsonLd, readyDesc, readyImage, readyTitle],
   )
 }
 
@@ -205,7 +202,6 @@ export default function TravelDetailsContainer() {
 
   const { canonicalUrl, jsonLd, readyDesc, readyImage, readyTitle } = seo
   const seoElement = useTravelSeoElement({
-    backgroundColor: colors.background,
     canonicalUrl,
     headKey,
     jsonLd,

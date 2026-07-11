@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
+import MiniCalendar from '@/components/calendar/MiniCalendar';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
@@ -28,6 +29,7 @@ import {
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
   VISIBILITY_LABEL,
+  formatTripDisplayDate,
   formatTripDateTime,
   isRouteApproximate,
   planStatusColor,
@@ -40,6 +42,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { LAYOUT } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus';
 import type { PlannedTrip, TripTransport, TripVisibility } from '@/api/plannedTrips';
 
 // Reserve space for the bottom tab bar / web dock so the route builder and
@@ -48,14 +51,6 @@ const SCROLL_BOTTOM_RESERVE = Platform.select({
   web: 'calc(var(--mt-dock-h, 0px) + 24px)' as unknown as number,
   default: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
 });
-
-// Header/cover metadata editing depends on BE #870 (owner PATCH /trips/planned/{id}/
-// + planned-trip cover upload). Until that ships to the target backend — the PATCH
-// endpoint currently returns 405 on dev — keep detail/cover persistence behind a
-// clear notice instead of surfacing a raw error or faking a client-only save. The
-// route builder below does NOT depend on #870 and stays fully editable. Flip to
-// `true` once #870 is deployed and verified on the target environment.
-const TRIP_META_EDIT_ENABLED = false;
 
 const TRANSPORT_OPTIONS: TripTransport[] = ['car', 'bike', 'foot', 'public', 'mixed'];
 const VISIBILITY_OPTIONS: TripVisibility[] = ['public', 'followers', 'private'];
@@ -122,6 +117,8 @@ export default function PlannedTripScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<ReturnType<typeof initialEditValues> | null>(null);
+  const [editDatePickerVisible, setEditDatePickerVisible] = useState(false);
+  const [coverUploadPending, setCoverUploadPending] = useState(false);
   const [activeTab, setActiveTab] = useState<PlannerTabKey>('route');
   const { data: trip, isLoading, isError } = usePlannedTrip(
     Number.isFinite(tripId) ? tripId : null,
@@ -172,17 +169,25 @@ export default function PlannedTripScreen() {
   const handleStartEdit = () => {
     if (trip) setEditValues(initialEditValues(trip));
     setEditError(null);
+    setCoverUploadPending(false);
     setIsEditing(true);
   };
 
   const handleCancelEdit = () => {
     if (trip) setEditValues(initialEditValues(trip));
     setEditError(null);
+    setEditDatePickerVisible(false);
+    setCoverUploadPending(false);
     setIsEditing(false);
   };
 
+  const handleEditStartDateSelect = (startDate: string) => {
+    setEditValues((prev) => (prev ? { ...prev, startDate } : prev));
+    setEditDatePickerVisible(false);
+  };
+
   const handleSaveDetails = () => {
-    if (!trip || !editValues) return;
+    if (!trip || !editValues || coverUploadPending) return;
     const title = editValues.title.trim();
     const startDate = editValues.startDate.trim();
     const seatsTotal = Number(editValues.seatsTotal);
@@ -220,6 +225,7 @@ export default function PlannedTripScreen() {
       {
         onSuccess: (updatedTrip) => {
           setEditValues(initialEditValues(updatedTrip));
+          setEditDatePickerVisible(false);
           setIsEditing(false);
         },
         onError: () => {
@@ -316,16 +322,14 @@ export default function PlannedTripScreen() {
 
               {trip.isOwner ? (
                 <View style={styles.ownerActions}>
-                  {TRIP_META_EDIT_ENABLED ? (
-                    <Button
-                      label="Редактировать поездку"
-                      variant="secondary"
-                      size="sm"
-                      onPress={handleStartEdit}
-                      icon={<Feather name="edit-2" size={15} color={colors.primaryDark} />}
-                      testID="trip-plan-edit"
-                    />
-                  ) : null}
+                  <Button
+                    label="Редактировать поездку"
+                    variant="secondary"
+                    size="sm"
+                    onPress={handleStartEdit}
+                    icon={<Feather name="edit-2" size={15} color={colors.primaryDark} />}
+                    testID="trip-plan-edit"
+                  />
                   <Button
                     label="Удалить поездку"
                     variant="danger"
@@ -345,22 +349,10 @@ export default function PlannedTripScreen() {
               ) : null}
             </View>
 
-            {/* Metadata edit panel — gated behind BE #870, opened only via ?edit=1
-                deeplink. Shows a clear non-mock blocker and disables persistence. */}
+            {/* Owner-only metadata editor. It also opens from the ?edit=1 deeplink. */}
             {trip.isOwner && isEditing && editValues ? (
               <View style={styles.editPanel} testID="trip-plan-edit-panel">
                 <Text style={styles.editHeading}>Редактировать поездку</Text>
-
-                {!TRIP_META_EDIT_ENABLED ? (
-                  <View style={styles.editBlocker} testID="trip-plan-edit-blocker">
-                    <Feather name="clock" size={16} color={colors.warningDark} />
-                    <Text style={styles.editBlockerText}>
-                      Изменение названия, деталей и обложки поездки скоро появится — готовим
-                      сохранение на сервере. Маршрут во вкладке «Маршрут» уже можно
-                      редактировать и сохранять.
-                    </Text>
-                  </View>
-                ) : null}
 
                 <Text style={styles.label}>Название</Text>
                 <TextInput
@@ -368,8 +360,8 @@ export default function PlannedTripScreen() {
                   onChangeText={(title) => setEditValues((prev) => prev ? { ...prev, title } : prev)}
                   placeholder="Название поездки"
                   placeholderTextColor={colors.textMuted}
-                  editable={TRIP_META_EDIT_ENABLED}
-                  style={[styles.input, !TRIP_META_EDIT_ENABLED && styles.inputDisabled]}
+                  editable={!updateTrip.isPending}
+                  style={styles.input}
                   testID="trip-plan-edit-title"
                 />
 
@@ -379,9 +371,9 @@ export default function PlannedTripScreen() {
                   onChangeText={(description) => setEditValues((prev) => prev ? { ...prev, description } : prev)}
                   placeholder="Описание поездки, ссылки, детали для участников"
                   placeholderTextColor={colors.textMuted}
-                  editable={TRIP_META_EDIT_ENABLED}
+                  editable={!updateTrip.isPending}
                   multiline
-                  style={[styles.textArea, !TRIP_META_EDIT_ENABLED && styles.inputDisabled]}
+                  style={styles.textArea}
                   testID="trip-plan-edit-description"
                 />
 
@@ -397,9 +389,10 @@ export default function PlannedTripScreen() {
                     onRequestRemove={() =>
                       setEditValues((prev) => (prev ? { ...prev, coverUrl: '' } : prev))
                     }
+                    onUploadStateChange={setCoverUploadPending}
                     placeholder="Перетащите фото обложки"
                     maxSizeMB={10}
-                    disabled={!TRIP_META_EDIT_ENABLED || updateTrip.isPending}
+                    disabled={updateTrip.isPending}
                   />
                   <Text style={styles.coverUploadHint}>
                     Фото будет прикреплено к поездке после загрузки и сохранения изменений.
@@ -416,19 +409,76 @@ export default function PlannedTripScreen() {
                         onChange={(event) => setEditValues((prev) => prev ? { ...prev, startDate: event.currentTarget.value } : prev)}
                         aria-label="Дата поездки"
                         data-testid="trip-plan-edit-start-date"
-                        disabled={!TRIP_META_EDIT_ENABLED}
+                        disabled={updateTrip.isPending}
                         style={webDateInputStyle}
                       />
                     ) : (
-                      <TextInput
-                        value={editValues.startDate}
-                        onChangeText={(startDate) => setEditValues((prev) => prev ? { ...prev, startDate } : prev)}
-                        placeholder="ГГГГ-ММ-ДД"
-                        placeholderTextColor={colors.textMuted}
-                        editable={TRIP_META_EDIT_ENABLED}
-                        style={[styles.input, !TRIP_META_EDIT_ENABLED && styles.inputDisabled]}
-                        testID="trip-plan-edit-start-date"
-                      />
+                      <>
+                        <Pressable
+                          onPress={() => setEditDatePickerVisible(true)}
+                          disabled={updateTrip.isPending}
+                          accessibilityRole="button"
+                          accessibilityLabel="Выбрать дату поездки"
+                          accessibilityHint="Откроет календарь выбора даты"
+                          style={[styles.datePickerTrigger, globalFocusStyles.focusable]}
+                          testID="trip-plan-edit-start-date"
+                        >
+                          <Feather name="calendar" size={16} color={colors.primary} />
+                          <Text
+                            style={styles.datePickerText}
+                            numberOfLines={1}
+                            testID="trip-plan-edit-start-date-value"
+                          >
+                            {formatTripDisplayDate(editValues.startDate)}
+                          </Text>
+                        </Pressable>
+                        <Modal
+                          visible={editDatePickerVisible}
+                          transparent
+                          animationType="fade"
+                          onRequestClose={() => setEditDatePickerVisible(false)}
+                          statusBarTranslucent
+                        >
+                          <Pressable
+                            style={styles.datePickerOverlay}
+                            onPress={() => setEditDatePickerVisible(false)}
+                            testID="trip-plan-edit-date-picker-backdrop"
+                          >
+                            <Pressable
+                              style={styles.datePickerSheet}
+                              onPress={() => undefined}
+                              testID="trip-plan-edit-date-picker"
+                            >
+                              <View style={styles.datePickerHeader}>
+                                <View style={styles.datePickerTitleRow}>
+                                  <Feather name="calendar" size={18} color={colors.primary} />
+                                  <Text style={styles.datePickerTitle}>Дата поездки</Text>
+                                </View>
+                                <Text style={styles.datePickerHint}>
+                                  Выберите день в календаре. Отмена не изменит текущую дату.
+                                </Text>
+                              </View>
+                              <View style={styles.datePickerCalendar}>
+                                <MiniCalendar
+                                  entries={[]}
+                                  selectedDate={editValues.startDate || null}
+                                  focusDate={editValues.startDate || undefined}
+                                  onDayPress={handleEditStartDateSelect}
+                                  accentColor={colors.primary}
+                                  accentSoftColor={colors.primaryLight}
+                                />
+                              </View>
+                              <Button
+                                label="Отмена"
+                                onPress={() => setEditDatePickerVisible(false)}
+                                variant="secondary"
+                                fullWidth
+                                testID="trip-plan-edit-start-date-cancel"
+                              />
+                            </Pressable>
+                          </Pressable>
+                        </Modal>
+                      </>
                     )}
                   </View>
                   <View style={styles.formCol}>
@@ -439,8 +489,8 @@ export default function PlannedTripScreen() {
                       placeholder="08:00"
                       placeholderTextColor={colors.textMuted}
                       autoCapitalize="none"
-                      editable={TRIP_META_EDIT_ENABLED}
-                      style={[styles.input, !TRIP_META_EDIT_ENABLED && styles.inputDisabled]}
+                      editable={!updateTrip.isPending}
+                      style={styles.input}
                       testID="trip-plan-edit-start-time"
                     />
                   </View>
@@ -456,7 +506,7 @@ export default function PlannedTripScreen() {
                         label={TRANSPORT_LABEL[option]}
                         variant={active ? 'primary' : 'secondary'}
                         size="sm"
-                        disabled={!TRIP_META_EDIT_ENABLED}
+                        disabled={updateTrip.isPending}
                         onPress={() => setEditValues((prev) => prev ? { ...prev, transport: option } : prev)}
                         icon={
                           <Feather
@@ -479,7 +529,7 @@ export default function PlannedTripScreen() {
                       label={VISIBILITY_LABEL[option]}
                       variant={editValues.visibility === option ? 'primary' : 'secondary'}
                       size="sm"
-                      disabled={!TRIP_META_EDIT_ENABLED}
+                      disabled={updateTrip.isPending}
                       onPress={() => setEditValues((prev) => prev ? { ...prev, visibility: option } : prev)}
                       testID={`trip-plan-edit-visibility-${option}`}
                     />
@@ -493,8 +543,8 @@ export default function PlannedTripScreen() {
                   placeholder="4"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
-                  editable={TRIP_META_EDIT_ENABLED}
-                  style={[styles.input, !TRIP_META_EDIT_ENABLED && styles.inputDisabled]}
+                  editable={!updateTrip.isPending}
+                  style={styles.input}
                   testID="trip-plan-edit-seats"
                 />
 
@@ -509,7 +559,7 @@ export default function PlannedTripScreen() {
                     label="Сохранить изменения"
                     onPress={handleSaveDetails}
                     loading={updateTrip.isPending}
-                    disabled={!TRIP_META_EDIT_ENABLED || updateTrip.isPending}
+                    disabled={updateTrip.isPending || coverUploadPending}
                     size="sm"
                     testID="trip-plan-edit-save"
                   />
@@ -518,7 +568,7 @@ export default function PlannedTripScreen() {
                     onPress={handleCancelEdit}
                     variant="ghost"
                     size="sm"
-                    disabled={updateTrip.isPending}
+                    disabled={updateTrip.isPending || coverUploadPending}
                     testID="trip-plan-edit-cancel"
                   />
                 </View>
@@ -690,18 +740,6 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       backgroundColor: colors.surface,
     },
     editHeading: { fontSize: 18, fontWeight: '800', color: colors.text },
-    editBlocker: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 8,
-      borderWidth: 1,
-      borderColor: colors.warningLight,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      backgroundColor: colors.warningSoft,
-    },
-    editBlockerText: { flex: 1, fontSize: 13, lineHeight: 18, color: colors.warningDark, fontWeight: '600' },
     label: { fontSize: 13, fontWeight: '700', color: colors.text, marginTop: 2 },
     input: {
       borderWidth: 1,
@@ -714,7 +752,6 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       fontSize: 14,
       ...Platform.select({ web: { outlineWidth: 0 as any } }),
     },
-    inputDisabled: { opacity: 0.6, backgroundColor: colors.surfaceMuted },
     textArea: {
       borderWidth: 1,
       borderColor: colors.border,
@@ -732,6 +769,36 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
     coverUploadHint: { fontSize: 12, lineHeight: 17, color: colors.textMuted },
     formRow: { flexDirection: 'row', gap: 10 },
     formCol: { flex: 1, gap: 6 },
+    datePickerTrigger: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      backgroundColor: colors.surface,
+      minHeight: Platform.OS === 'android' ? 48 : 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    datePickerText: { flex: 1, color: colors.text, fontSize: 14, fontWeight: '600' },
+    datePickerOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: colors.overlay,
+      padding: 16,
+    },
+    datePickerSheet: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 16,
+      gap: 12,
+    },
+    datePickerHeader: { gap: 6 },
+    datePickerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    datePickerTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+    datePickerHint: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
+    datePickerCalendar: { marginHorizontal: -16 },
     optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     editActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
     editError: { fontSize: 13, lineHeight: 18, color: colors.danger, fontWeight: '600' },

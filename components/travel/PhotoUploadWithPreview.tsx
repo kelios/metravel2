@@ -1,5 +1,5 @@
 // E5: Refactored — state/logic extracted to usePhotoUpload hook
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Feather from '@expo/vector-icons/Feather';
@@ -15,6 +15,7 @@ interface PhotoUploadWithPreviewProps {
   onUpload?: (imageUrl: string) => void;
   onPreviewChange?: (previewUrl: string | null) => void;
   onRequestRemove?: () => void;
+  onUploadStateChange?: (isUploading: boolean) => void;
   disabled?: boolean;
   placeholder?: string;
   maxSizeMB?: number;
@@ -137,6 +138,7 @@ const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
 
 const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove,
+  onUploadStateChange,
   disabled = false, placeholder = 'Перетащите сюда изображение', maxSizeMB = 10,
 }) => {
   const colors = useThemedColors();
@@ -148,6 +150,13 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     handleUploadImage, handleRemovePress, validateFile,
     handleImageLoadCheck, handleImageError,
   } = usePhotoUpload({ collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove, disabled, maxSizeMB });
+
+  useEffect(() => {
+    onUploadStateChange?.(loading);
+    return () => {
+      if (loading) onUploadStateChange?.(false);
+    };
+  }, [loading, onUploadStateChange]);
 
   const pickImageFromGallery = async () => {
     if (disabled) return;

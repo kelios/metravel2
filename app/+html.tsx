@@ -326,6 +326,8 @@ const getCriticalHeadScript = () => String.raw`
     var r=document.documentElement;
     r.setAttribute('data-theme',d?'dark':'light');
     r.style.colorScheme=d?'dark':'light';
+    var tc=document.getElementById('app-theme-color');
+    if(tc)tc.setAttribute('content',d?'${DESIGN_COLORS.themeColorDark}':'${DESIGN_COLORS.themeColorLight}');
   } catch(_){}
   window.__EXPO_ROUTER_INSPECTOR=false;
   try {
@@ -383,8 +385,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	      <meta charSet="utf-8" />
 	      <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
 	      <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
-	      <meta name="theme-color" content={DESIGN_COLORS.themeColorDark} media="(prefers-color-scheme: dark)" />
-	      <meta name="theme-color" content={DESIGN_COLORS.themeColorLight} media="(prefers-color-scheme: light)" />
+	      <meta id="app-theme-color" name="theme-color" content={DESIGN_COLORS.themeColorLight} />
       <meta name="color-scheme" content="light dark" />
       {/* No static <title> here: React Helmet bakes a per-page title (data-rh="true")
           into the exported HTML, and the inline critical script below sets document.title

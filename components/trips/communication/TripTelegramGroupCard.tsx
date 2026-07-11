@@ -8,6 +8,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
+import { TELEGRAM_GROUP_UNAVAILABLE_REASON } from '@/api/tripTelegramGroup';
 import {
   useCreateTripTelegramGroup,
   useFetchTripInviteLink,
@@ -24,7 +25,7 @@ interface Props {
 export function TripTelegramGroupCard({ tripId, isOwner }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { data: group, isLoading } = useTripTelegramGroup(tripId);
+  const { data: group, isLoading, isError } = useTripTelegramGroup(tripId);
   const create = useCreateTripTelegramGroup(tripId);
   const invite = useFetchTripInviteLink(tripId);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -81,7 +82,7 @@ export function TripTelegramGroupCard({ tripId, isOwner }: Props) {
   }
 
   const enabled = group?.enabled ?? false;
-  const unavailable = group?.isAvailable === false;
+  const unavailable = isError || !group || group.isAvailable === false;
 
   if (unavailable) {
     return (
@@ -91,8 +92,7 @@ export function TripTelegramGroupCard({ tripId, isOwner }: Props) {
           <Text style={styles.title}>Telegram-группа поездки</Text>
         </View>
         <Text style={styles.hint}>
-          {group?.unavailableReason ??
-            'Telegram-группы поездок пока не подключены. Приглашения появятся позже.'}
+          {group?.unavailableReason ?? TELEGRAM_GROUP_UNAVAILABLE_REASON}
         </Text>
         <Button
           label="Скоро будет доступно"

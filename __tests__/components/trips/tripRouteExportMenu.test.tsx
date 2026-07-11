@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
 import TripRouteExportMenu, {
@@ -7,27 +7,60 @@ import TripRouteExportMenu, {
   shouldRenderTripRouteExportMenu,
 } from '@/components/trips/planning/TripRouteExportMenu';
 
+const mockSaveRouteExportFile = jest.fn();
+const mockOpenExternalUrl = jest.fn();
+
+jest.mock('@/utils/routeExport', () => {
+  const actual = jest.requireActual('@/utils/routeExport');
+  return {
+    ...actual,
+    saveRouteExportFile: (...args: unknown[]) => mockSaveRouteExportFile(...args),
+  };
+});
+
+jest.mock('@/utils/externalLinks', () => ({
+  openExternalUrl: (...args: unknown[]) => mockOpenExternalUrl(...args),
+}));
+
+jest.mock('@/utils/tripAnalytics', () => ({
+  trackRouteExported: jest.fn(),
+}));
+
 jest.mock('@/components/ui/Button', () => {
   return function Button({
     label,
+    onPress,
+    disabled,
+    loading,
     testID,
   }: {
     label: string;
+    onPress?: () => void;
+    disabled?: boolean;
+    loading?: boolean;
     testID?: string;
   }) {
-    const { Text, View } = require('react-native');
+    const { Pressable, Text } = require('react-native');
     return (
-      <View testID={testID} accessibilityLabel={label}>
+      <Pressable
+        testID={testID}
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: Boolean(disabled || loading) }}
+        disabled={disabled || loading}
+        onPress={onPress}
+      >
         <Text>{label}</Text>
-      </View>
+      </Pressable>
     );
   };
 });
 
 jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () => ({
+    danger: 'red',
     text: 'black',
     textMuted: 'gray',
+    warningDark: 'darkorange',
   }),
 }));
 
@@ -71,6 +104,12 @@ const trip: PlannedTrip = {
 };
 
 describe('TripRouteExportMenu', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSaveRouteExportFile.mockResolvedValue(true);
+    mockOpenExternalUrl.mockResolvedValue(true);
+  });
+
   afterEach(() => {
     setPlatformOS(originalOS);
   });
@@ -86,6 +125,8 @@ describe('TripRouteExportMenu', () => {
     expect(getByText('Google Maps')).toBeTruthy();
     expect(getByText('Apple Maps')).toBeTruthy();
     expect(getByText('Garmin Connect')).toBeTruthy();
+    expect(getByText('Поделиться GPX')).toBeTruthy();
+    expect(getByTestId('trip-route-export-native-import-hint')).toBeTruthy();
   });
 
   it('keeps the route export menu available outside Android', () => {
@@ -100,6 +141,36 @@ describe('TripRouteExportMenu', () => {
     expect(getByText('Google Maps')).toBeTruthy();
     expect(getByText('Apple Maps')).toBeTruthy();
     expect(getByText('Garmin Connect')).toBeTruthy();
+    expect(getByText('Скачать GPX')).toBeTruthy();
+  });
+
+  it('creates and shares a real GPX before opening Garmin import on Android', async () => {
+    setPlatformOS('android');
+    const { getByTestId } = render(<TripRouteExportMenu trip={trip} />);
+
+    fireEvent.press(getByTestId('trip-route-export-garmin'));
+
+    await waitFor(() => expect(mockSaveRouteExportFile).toHaveBeenCalledTimes(1));
+    expect(mockSaveRouteExportFile.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ filename: expect.stringMatching(/\.gpx$/) }),
+    );
+    expect(mockOpenExternalUrl).toHaveBeenCalledWith(
+      'https://connect.garmin.com/modern/import-data',
+    );
+    expect(mockSaveRouteExportFile.mock.invocationCallOrder[0]).toBeLessThan(
+      mockOpenExternalUrl.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('does not open Komoot import when native GPX handoff fails', async () => {
+    setPlatformOS('android');
+    mockSaveRouteExportFile.mockResolvedValue(false);
+    const { findByTestId, getByTestId } = render(<TripRouteExportMenu trip={trip} />);
+
+    fireEvent.press(getByTestId('trip-route-export-komoot'));
+
+    expect(await findByTestId('trip-route-export-error')).toBeTruthy();
+    expect(mockOpenExternalUrl).not.toHaveBeenCalled();
   });
 
   it('builds GPX/KML input from routed geometry while keeping waypoints', () => {

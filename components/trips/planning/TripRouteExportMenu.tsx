@@ -2,7 +2,7 @@
 // Экспорт маршрута поездки (Sprint 13 / блок D): GPX/KML-скачивание (web) и
 // открытие в навигаторе (Google/Apple — deeplink; Garmin/Komoot — GPX + import).
 // Все внешние ссылки — только через openExternalUrl.
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import Button from '@/components/ui/Button';
@@ -16,7 +16,7 @@ import {
   buildGpx,
   buildKml,
   buildNavigatorUrl,
-  downloadTextFileWeb,
+  saveRouteExportFile,
   type NavigatorDescriptor,
   type RouteExportInput,
   type RouteWaypoint,
@@ -66,6 +66,8 @@ export const buildTripRouteExportInput = (trip: PlannedTrip): RouteExportInput =
 function TripRouteExportMenu({ trip }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [exportingAction, setExportingAction] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const input = useMemo(() => buildTripRouteExportInput(trip), [trip]);
   const mode = TRANSPORT_MODE[trip.transport];
@@ -79,17 +81,31 @@ function TripRouteExportMenu({ trip }: Props) {
     return null;
   }
 
-  const handleDownloadGpx = () => {
-    downloadTextFileWeb(buildGpx(input));
-    trackRouteExported(trip.id, 'gpx');
+  const handleSaveExport = async (format: 'gpx' | 'kml') => {
+    if (exportingAction) return;
+    setExportError(null);
+    setExportingAction(format);
+    try {
+      const file = format === 'gpx' ? buildGpx(input) : buildKml(input);
+      const saved = await saveRouteExportFile(
+        file,
+        format === 'gpx' ? 'Сохранить маршрут GPX' : 'Сохранить маршрут KML',
+      );
+      if (!saved) {
+        setExportError(`Не удалось создать и передать файл ${format.toUpperCase()}.`);
+        return;
+      }
+      trackRouteExported(trip.id, format);
+    } catch {
+      setExportError(`Не удалось создать и передать файл ${format.toUpperCase()}.`);
+    } finally {
+      setExportingAction(null);
+    }
   };
 
-  const handleDownloadKml = () => {
-    downloadTextFileWeb(buildKml(input));
-    trackRouteExported(trip.id, 'kml');
-  };
-
-  const handleNavigator = (descriptor: NavigatorDescriptor) => {
+  const handleNavigator = async (descriptor: NavigatorDescriptor) => {
+    if (exportingAction) return;
+    setExportError(null);
     if (descriptor.kind === 'deeplink') {
       const url = buildNavigatorUrl(descriptor.id, input, { mode });
       if (!url) return;
@@ -97,10 +113,25 @@ function TripRouteExportMenu({ trip }: Props) {
       trackRouteExported(trip.id, descriptor.id);
       return;
     }
-    // kind === 'gpx': скачиваем трек и открываем страницу импорта провайдера.
-    downloadTextFileWeb(buildGpx(input));
-    if (descriptor.importUrl) void openExternalUrl(descriptor.importUrl);
-    trackRouteExported(trip.id, descriptor.id);
+    // Garmin/Komoot consume a GPX file. Produce and hand off the real file first;
+    // only then open the provider import page so native never promises a fake import.
+    setExportingAction(descriptor.id);
+    try {
+      const saved = await saveRouteExportFile(
+        buildGpx(input),
+        `Сохранить GPX для ${descriptor.label}`,
+      );
+      if (!saved) {
+        setExportError(`Не удалось подготовить GPX для ${descriptor.label}.`);
+        return;
+      }
+      if (descriptor.importUrl) await openExternalUrl(descriptor.importUrl);
+      trackRouteExported(trip.id, descriptor.id);
+    } catch {
+      setExportError(`Не удалось подготовить GPX для ${descriptor.label}.`);
+    } finally {
+      setExportingAction(null);
+    }
   };
 
   return (
@@ -118,23 +149,36 @@ function TripRouteExportMenu({ trip }: Props) {
         </Text>
       ) : null}
 
-      {isWeb ? (
-        <View style={styles.row}>
-          <Button
-            label="Скачать GPX"
-            onPress={handleDownloadGpx}
-            variant="secondary"
-            disabled={disabled}
-            testID="trip-route-export-gpx"
-          />
-          <Button
-            label="Скачать KML"
-            onPress={handleDownloadKml}
-            variant="secondary"
-            disabled={disabled}
-            testID="trip-route-export-kml"
-          />
-        </View>
+      <View style={styles.row}>
+        <Button
+          label={isWeb ? 'Скачать GPX' : 'Поделиться GPX'}
+          onPress={() => void handleSaveExport('gpx')}
+          variant="secondary"
+          disabled={disabled || exportingAction !== null}
+          loading={exportingAction === 'gpx'}
+          testID="trip-route-export-gpx"
+        />
+        <Button
+          label={isWeb ? 'Скачать KML' : 'Поделиться KML'}
+          onPress={() => void handleSaveExport('kml')}
+          variant="secondary"
+          disabled={disabled || exportingAction !== null}
+          loading={exportingAction === 'kml'}
+          testID="trip-route-export-kml"
+        />
+      </View>
+
+      {!isWeb ? (
+        <Text style={styles.hint} testID="trip-route-export-native-import-hint">
+          Для Garmin Connect и Komoot сначала откроется системное меню сохранения GPX,
+          затем — страница импорта выбранного сервиса.
+        </Text>
+      ) : null}
+
+      {exportError ? (
+        <Text style={styles.error} testID="trip-route-export-error">
+          {exportError}
+        </Text>
       ) : null}
 
       <Text style={styles.label}>Открыть в навигаторе</Text>
@@ -143,9 +187,10 @@ function TripRouteExportMenu({ trip }: Props) {
           <Button
             key={descriptor.id}
             label={descriptor.label}
-            onPress={() => handleNavigator(descriptor)}
+            onPress={() => void handleNavigator(descriptor)}
             variant="outline"
-            disabled={disabled}
+            disabled={disabled || exportingAction !== null}
+            loading={exportingAction === descriptor.id}
             testID={`trip-route-export-${descriptor.id}`}
           />
         ))}
@@ -161,6 +206,7 @@ const createStyles = (colors: ThemedColors) =>
     label: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: 4 },
     hint: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
     warning: { fontSize: 12, color: colors.warningDark, lineHeight: 16, fontWeight: '600' },
+    error: { fontSize: 12, color: colors.danger, lineHeight: 16, fontWeight: '600' },
     row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   });
 

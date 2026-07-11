@@ -128,9 +128,22 @@ describe('fetchTripTelegramGroup', () => {
     expect(group).toBeDefined()
   })
 
-  it('re-throws ApiError(404) when NOT in __DEV__', async () => {
+  it.each([404, 405, 501])(
+    'returns a disabled explanatory state for unavailable production endpoint %s',
+    async (status) => {
+      ;(global as any).__DEV__ = false
+      mockGet.mockRejectedValueOnce(new (ApiError as any)(status))
+      const group = await fetchTripTelegramGroup(10)
+
+      expect(group.isAvailable).toBe(false)
+      expect(group.enabled).toBe(false)
+      expect(group.unavailableReason).toContain('Telegram-группы')
+    },
+  )
+
+  it('re-throws unexpected production ApiError', async () => {
     ;(global as any).__DEV__ = false
-    mockGet.mockRejectedValueOnce(new (ApiError as any)(404))
+    mockGet.mockRejectedValueOnce(new (ApiError as any)(500))
     await expect(fetchTripTelegramGroup(10)).rejects.toBeInstanceOf(ApiError)
   })
 
@@ -211,10 +224,14 @@ describe('createTripTelegramGroup', () => {
     expect(group.groupUrl).toBeNull()
   })
 
-  it('re-throws ApiError when not in DEV', async () => {
+  it('returns unavailable instead of pretending production can create a missing group', async () => {
     ;(global as any).__DEV__ = false
-    mockPost.mockRejectedValueOnce(new (ApiError as any)(404))
-    await expect(createTripTelegramGroup({ tripId: 10 })).rejects.toBeInstanceOf(ApiError)
+    mockPost.mockRejectedValueOnce(new (ApiError as any)(405))
+    const group = await createTripTelegramGroup({ tripId: 10 })
+
+    expect(group.isAvailable).toBe(false)
+    expect(group.enabled).toBe(false)
+    expect(group.groupUrl).toBeNull()
   })
 })
 
@@ -273,10 +290,14 @@ describe('fetchTripInviteLink', () => {
     expect(invite.url).toBe('')
   })
 
-  it('re-throws ApiError when not in DEV', async () => {
+  it('returns unavailable for a missing production invite endpoint', async () => {
     ;(global as any).__DEV__ = false
     mockPost.mockRejectedValueOnce(new (ApiError as any)(404))
-    await expect(fetchTripInviteLink(10)).rejects.toBeInstanceOf(ApiError)
+    const invite = await fetchTripInviteLink(10)
+
+    expect(invite.isAvailable).toBe(false)
+    expect(invite.url).toBe('')
+    expect(invite.unavailableReason).toContain('Telegram-группы')
   })
 })
 

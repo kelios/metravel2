@@ -2138,9 +2138,13 @@ async function main() {
 
     // Crawlable index of all quests on the /quests listing page so Googlebot can
     // reach detail pages via internal links (sitemap is backend-owned, BE-017).
+    // Also injected into the home page: its quest promo section is lazy-mounted
+    // (IntersectionObserver) and absent from static HTML, so without this the
+    // most-crawled page links to zero quests.
     const questsListVariants = [
       path.join(DIST_DIR, 'quests.html'),
       path.join(DIST_DIR, 'quests', 'index.html'),
+      path.join(DIST_DIR, 'index.html'),
     ];
     for (const variant of questsListVariants) {
       if (!fs.existsSync(variant)) continue;

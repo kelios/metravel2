@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
 import type { UserProfileDto } from '@/api/user';
@@ -6,6 +6,8 @@ import TripInvitePanel, { getTripInviteSubscriberName } from '@/components/trips
 
 const mockSubscribers: UserProfileDto[] = [];
 const mockMutate = jest.fn();
+const mockOpenExternalUrl = jest.fn((_url?: unknown) => Promise.resolve(true));
+const mockShareTripPlan = jest.fn((_trip?: unknown) => Promise.resolve('shared'));
 
 jest.mock('@/hooks/useSubscriptionsData', () => ({
   useSubscriptionsData: () => ({
@@ -22,7 +24,11 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
 }));
 
 jest.mock('@/utils/externalLinks', () => ({
-  openExternalUrl: jest.fn(() => Promise.resolve(true)),
+  openExternalUrl: (...args: unknown[]) => mockOpenExternalUrl(...args),
+}));
+
+jest.mock('@/utils/shareTripPlan', () => ({
+  shareTripPlan: (...args: unknown[]) => mockShareTripPlan(...args),
 }));
 
 jest.mock('@/components/ui/Button', () => {
@@ -110,6 +116,9 @@ describe('TripInvitePanel', () => {
   beforeEach(() => {
     mockSubscribers.splice(0, mockSubscribers.length);
     mockMutate.mockClear();
+    mockOpenExternalUrl.mockClear();
+    mockShareTripPlan.mockClear();
+    mockShareTripPlan.mockResolvedValue('shared');
   });
 
   it('derives invite display names without destructive two-letter truncation', () => {
@@ -165,5 +174,33 @@ describe('TripInvitePanel', () => {
 
     fireEvent.press(getByTestId('trip-invite-subscriber-202'));
     expect(getByTestId('trip-invite-selected-names').props.children.join('')).toContain('trail_friend');
+  });
+
+  it('opens generic system share and remains repeat-safe after cancellation', async () => {
+    mockShareTripPlan.mockResolvedValue('dismissed');
+    const { getByTestId, queryByText } = render(<TripInvitePanel trip={trip} />);
+
+    fireEvent.press(getByTestId('trip-invite-share-system'));
+    await waitFor(() => expect(mockShareTripPlan).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(getByTestId('trip-invite-share-system').props.disabled).toBe(false),
+    );
+
+    fireEvent.press(getByTestId('trip-invite-share-system'));
+    await waitFor(() => expect(mockShareTripPlan).toHaveBeenCalledTimes(2));
+
+    expect(mockShareTripPlan).toHaveBeenNthCalledWith(1, trip);
+    expect(queryByText('Не удалось открыть меню «Поделиться». Попробуйте ещё раз.')).toBeNull();
+  });
+
+  it('keeps Telegram share on the centralized external-link helper', async () => {
+    const { getByTestId } = render(<TripInvitePanel trip={trip} />);
+
+    fireEvent.press(getByTestId('trip-invite-share'));
+
+    await waitFor(() => expect(mockOpenExternalUrl).toHaveBeenCalledTimes(1));
+    const telegramUrl = new URL(mockOpenExternalUrl.mock.calls[0][0] as string);
+    expect(telegramUrl.origin).toBe('https://t.me');
+    expect(telegramUrl.searchParams.get('url')).toBe('https://metravel.by/trips/plan/42');
   });
 });

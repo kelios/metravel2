@@ -18,6 +18,7 @@ import { useThemedColors } from "@/hooks/useTheme";
 import { globalFocusStyles } from "@/styles/globalFocus";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAndroidBackHandler } from "@/hooks/useAndroidBackHandler";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useBottomSheetStore } from "@/stores/bottomSheetStore";
 import { useMapPanelStore } from "@/stores/mapPanelStore";
 import { hapticSelection } from "@/utils/haptics";
@@ -138,11 +139,13 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   const [showMore, setShowMore] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);
   const nativeSheetRef = useRef<any>(null);
+  const webMoreSheetRef = useRef<any>(null);
   const nativeSnapPoints = useMemo(() => ['45%'], []);
   const colors = useThemedColors();
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  useFocusTrap(webMoreSheetRef, { enabled: showMore && Platform.OS === 'web' });
 
   // На iOS учитываем home indicator (safe area bottom)
   // На web используем фиксированную высоту без insets
@@ -187,6 +190,15 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
     }
     const raf = requestAnimationFrame(() => setSheetVisible(true));
     return () => cancelAnimationFrame(raf);
+  }, [showMore]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !showMore) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowMore(false);
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
   }, [showMore]);
 
   const swipeStartY = useRef<number | null>(null);
@@ -347,6 +359,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             accessibilityLabel="Закрыть меню"
           />
           <View
+            ref={webMoreSheetRef}
             testID="footer-more-sheet"
             style={[styles.moreSheet, !sheetVisible && styles.moreSheetHidden]}
             {...({

@@ -772,35 +772,6 @@ export default function PlacesScreen() {
         ) : null}
       </View>
       <View style={styles.compactBarRow}>
-        <Pressable
-          onPress={() => setFiltersOpen((v) => !v)}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: filtersOpen }}
-          style={({ pressed }) => [
-            styles.compactFilterToggle,
-            selectedCategories.length > 0 && styles.compactFilterToggleActive,
-            pressed && PRESSED_OPACITY,
-          ]}
-        >
-          <Feather name="sliders" size={16} color={selectedCategories.length > 0 ? colors.primary : colors.text} />
-          <Text
-            numberOfLines={1}
-            style={[styles.mobileFilterToggleText, selectedCategories.length > 0 && styles.mobileFilterToggleTextActive]}
-          >
-            Категории
-          </Text>
-          {selectedCategories.length > 0 ? (
-            <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{selectedCategories.length}</Text>
-            </View>
-          ) : null}
-          <Feather
-            name={filtersOpen ? 'chevron-up' : 'chevron-down'}
-            size={16}
-            color={colors.textMuted}
-          />
-        </Pressable>
-
         <Menu
           visible={countryMenuVisible}
           onDismiss={() => setCountryMenuVisible(false)}
@@ -861,6 +832,35 @@ export default function PlacesScreen() {
             />
           ))}
         </Menu>
+
+        <Pressable
+          onPress={() => setFiltersOpen((v) => !v)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: filtersOpen }}
+          style={({ pressed }) => [
+            styles.compactFilterToggle,
+            selectedCategories.length > 0 && styles.compactFilterToggleActive,
+            pressed && PRESSED_OPACITY,
+          ]}
+        >
+          <Feather name="sliders" size={16} color={selectedCategories.length > 0 ? colors.primary : colors.text} />
+          <Text
+            numberOfLines={1}
+            style={[styles.mobileFilterToggleText, selectedCategories.length > 0 && styles.mobileFilterToggleTextActive]}
+          >
+            Категории
+          </Text>
+          {selectedCategories.length > 0 ? (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{selectedCategories.length}</Text>
+            </View>
+          ) : null}
+          <Feather
+            name={filtersOpen ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={colors.textMuted}
+          />
+        </Pressable>
 
         {hasActiveFilters ? (
           <Pressable

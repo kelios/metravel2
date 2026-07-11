@@ -1,15 +1,18 @@
 import { render, fireEvent } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
 
 /**
  * Acceptance coverage for the planned-trip planner workspace (FE-trip-planner #876
  * / redesign #874): route-state rendering (routed vs direct fallback), owner vs
- * non-owner controls, metadata-edit backend blocker (#870), and tab navigation.
+ * non-owner controls, metadata/cover editing, and tab navigation.
  * Child domain panels are mocked to keep assertions on the screen's own IA.
  */
 
 const mockUsePlannedTrip = jest.fn();
+const mockUpdateTripMutate = jest.fn();
+const originalOS = Platform.OS;
 let mockSearchParams: Record<string, string> = { id: '8001' };
 let mockResponsive = { isMobile: false };
 
@@ -21,7 +24,7 @@ jest.mock('expo-router', () => ({
 jest.mock('@/hooks/usePlannedTripsApi', () => ({
   usePlannedTrip: (...args: unknown[]) => mockUsePlannedTrip(...args),
   useDeletePlannedTrip: () => ({ mutate: jest.fn(), isPending: false }),
-  useUpdatePlannedTrip: () => ({ mutate: jest.fn(), isPending: false }),
+  useUpdatePlannedTrip: () => ({ mutate: mockUpdateTripMutate, isPending: false }),
 }));
 
 jest.mock('@/hooks/useResponsive', () => ({
@@ -34,8 +37,10 @@ jest.mock('@/hooks/useTheme', () => ({
     border: 'gray',
     danger: 'red',
     info: 'skyblue',
+    overlay: 'rgba(0,0,0,0.5)',
     primary: 'teal',
     primaryDark: 'darkslategray',
+    primaryLight: 'lightcyan',
     success: 'green',
     surface: 'white',
     surfaceMuted: 'whitesmoke',
@@ -49,6 +54,18 @@ jest.mock('@/hooks/useTheme', () => ({
     warningSoft: 'papayawhip',
   }),
 }));
+
+jest.mock('@/components/calendar/MiniCalendar', () => {
+  return function MiniCalendar({ onDayPress }: { onDayPress: (date: string) => void }) {
+    const { Pressable } = require('react-native');
+    return (
+      <Pressable
+        testID="mini-calendar-day-2026-08-20"
+        onPress={() => onDayPress('2026-08-20')}
+      />
+    );
+  };
+});
 
 jest.mock('@/components/ui/ImageCardMedia', () => {
   return function ImageCardMedia({ testID }: { testID?: string }) {
@@ -73,7 +90,33 @@ jest.mock('@/components/trips/planning/TripRatingPanel', () => mockStub('trip-ra
 jest.mock('@/components/trips/planning/TripAffiliateBlock', () => mockStub('trip-affiliate-block'));
 jest.mock('@/components/trips/communication/TripTelegramGroupCard', () => mockStub('trip-telegram-group-card'));
 jest.mock('@/components/trips/chat/TripChatPanel', () => mockStub('trip-chat-panel'));
-jest.mock('@/components/travel/PhotoUploadWithPreview', () => mockStub('photo-upload'));
+jest.mock('@/components/travel/PhotoUploadWithPreview', () => {
+  return function PhotoUploadWithPreview({
+    onUpload,
+    onUploadStateChange,
+  }: {
+    onUpload: (url: string) => void;
+    onUploadStateChange?: (isUploading: boolean) => void;
+  }) {
+    const { Pressable, View } = require('react-native');
+    return (
+      <View>
+        <Pressable
+          testID="photo-upload"
+          onPress={() => onUpload('https://metravel.by/media/planned-trip-cover.jpg')}
+        />
+        <Pressable
+          testID="photo-upload-start"
+          onPress={() => onUploadStateChange?.(true)}
+        />
+        <Pressable
+          testID="photo-upload-finish"
+          onPress={() => onUploadStateChange?.(false)}
+        />
+      </View>
+    );
+  };
+});
 
 jest.mock('@/components/trips/planning/TripRouteExportMenu', () => {
   const actual = jest.requireActual('@/components/trips/planning/TripRouteExportMenu');
@@ -131,9 +174,11 @@ const renderScreen = () => {
 
 describe('PlannedTripScreen — planner states', () => {
   beforeEach(() => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, get: () => originalOS });
     mockSearchParams = { id: '8001' };
     mockResponsive = { isMobile: false };
     mockUsePlannedTrip.mockReset();
+    mockUpdateTripMutate.mockReset();
   });
 
   const mockTrip = (trip: PlannedTrip) =>
@@ -168,13 +213,12 @@ describe('PlannedTripScreen — planner states', () => {
     expect(getByTestId('trip-plan-route-approximate')).toBeTruthy();
   });
 
-  it('shows owner delete control and hides metadata edit until BE #870 ships', () => {
+  it('shows metadata edit and delete controls to the owner', () => {
     mockTrip(makeTrip({ isOwner: true }));
-    const { getByTestId, queryByTestId } = renderScreen();
+    const { getByTestId } = renderScreen();
 
     expect(getByTestId('trip-plan-delete')).toBeTruthy();
-    // Metadata edit trigger stays hidden while persistence is gated.
-    expect(queryByTestId('trip-plan-edit')).toBeNull();
+    expect(getByTestId('trip-plan-edit')).toBeTruthy();
   });
 
   it('hides owner-only controls for a non-owner viewer', () => {
@@ -188,16 +232,89 @@ describe('PlannedTripScreen — planner states', () => {
     expect(getByTestId('trip-suggest-point-form')).toBeTruthy();
   });
 
-  it('surfaces a clear non-mock blocker when the edit deeplink opens', () => {
+  it('opens an enabled metadata editor from the edit deeplink', () => {
     mockSearchParams = { id: '8001', edit: '1' };
+    mockTrip(makeTrip({ isOwner: true }));
+    const { getByTestId, queryByTestId } = renderScreen();
+
+    expect(getByTestId('trip-plan-edit-panel')).toBeTruthy();
+    expect(queryByTestId('trip-plan-edit-blocker')).toBeNull();
+    const saveButton = getByTestId('trip-plan-edit-save');
+    expect(saveButton.props.accessibilityState?.disabled).toBe(false);
+  });
+
+  it('persists edited metadata and the uploaded planned-trip cover URL', () => {
     mockTrip(makeTrip({ isOwner: true }));
     const { getByTestId } = renderScreen();
 
-    expect(getByTestId('trip-plan-edit-panel')).toBeTruthy();
-    expect(getByTestId('trip-plan-edit-blocker')).toBeTruthy();
-    // Persistence must stay disabled — no fake save.
-    const saveButton = getByTestId('trip-plan-edit-save');
-    expect(saveButton.props.accessibilityState?.disabled).toBe(true);
+    fireEvent.press(getByTestId('trip-plan-edit'));
+    fireEvent.changeText(getByTestId('trip-plan-edit-title'), 'Обновлённый маршрут');
+    fireEvent.press(getByTestId('photo-upload'));
+    fireEvent.press(getByTestId('trip-plan-edit-save'));
+
+    expect(mockUpdateTripMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tripId: 8001,
+        title: 'Обновлённый маршрут',
+        coverUrl: 'https://metravel.by/media/planned-trip-cover.jpg',
+      }),
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      }),
+    );
+  });
+
+  it('keeps save and close disabled until the cover upload finishes', () => {
+    mockTrip(makeTrip({ isOwner: true }));
+    const { getByTestId } = renderScreen();
+
+    fireEvent.press(getByTestId('trip-plan-edit'));
+    fireEvent.press(getByTestId('photo-upload-start'));
+
+    expect(getByTestId('trip-plan-edit-save').props.accessibilityState?.disabled).toBe(true);
+    expect(getByTestId('trip-plan-edit-cancel').props.accessibilityState?.disabled).toBe(true);
+    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    expect(mockUpdateTripMutate).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId('photo-upload-finish'));
+    expect(getByTestId('trip-plan-edit-save').props.accessibilityState?.disabled).toBe(false);
+    expect(getByTestId('trip-plan-edit-cancel').props.accessibilityState?.disabled).toBe(false);
+  });
+
+  it('uses the app date picker for native edit and keeps the API date in YYYY-MM-DD', () => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'android' });
+    mockSearchParams = { id: '8001', edit: '1' };
+    mockTrip(makeTrip({ isOwner: true, startDate: '2026-08-15T08:00:00Z' }));
+    const { getByTestId, queryByTestId } = renderScreen();
+
+    const trigger = getByTestId('trip-plan-edit-start-date');
+    expect(trigger.props.accessibilityRole).toBe('button');
+    expect(trigger.props.onChangeText).toBeUndefined();
+    expect(getByTestId('trip-plan-edit-start-date-value').props.children).toBe(
+      '15 августа 2026',
+    );
+
+    fireEvent.press(trigger);
+    expect(getByTestId('trip-plan-edit-date-picker')).toBeTruthy();
+    fireEvent.press(getByTestId('mini-calendar-day-2026-08-20'));
+    expect(queryByTestId('trip-plan-edit-date-picker')).toBeNull();
+    expect(getByTestId('trip-plan-edit-start-date-value').props.children).toBe(
+      '20 августа 2026',
+    );
+
+    fireEvent.press(getByTestId('trip-plan-edit-start-date'));
+    fireEvent.press(getByTestId('trip-plan-edit-start-date-cancel'));
+    expect(queryByTestId('trip-plan-edit-date-picker')).toBeNull();
+    expect(getByTestId('trip-plan-edit-start-date-value').props.children).toBe(
+      '20 августа 2026',
+    );
+
+    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    expect(mockUpdateTripMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ startDate: '2026-08-20' }),
+      expect.any(Object),
+    );
   });
 
   it('navigates the workspace tabs between route, people, export and more', () => {

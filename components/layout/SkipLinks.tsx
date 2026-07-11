@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -17,7 +17,6 @@ interface SkipLinksProps {
 const DEFAULT_LINKS: SkipLink[] = [
   { id: 'skip-main', label: 'Перейти к основному содержимому', targetId: 'main-content' },
   { id: 'skip-nav', label: 'Перейти к навигации', targetId: 'main-navigation' },
-  { id: 'skip-search', label: 'Перейти к поиску', targetId: 'search-input' },
 ];
 
 export default function SkipLinks({
@@ -27,42 +26,24 @@ export default function SkipLinks({
   const colors = useThemedColors();
   const [focusedIndex, setFocusedIndex] = useState(initiallyVisible ? 0 : -1);
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Показываем skip links при нажатии Tab в начале страницы
-      if (e.key === 'Tab' && !e.shiftKey && document.activeElement === document.body) {
-        setFocusedIndex(0);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    if (!initiallyVisible) return;
-    setFocusedIndex(0);
-  }, [initiallyVisible]);
-
   const handleSkip = (targetId: string) => {
     if (Platform.OS !== 'web') return;
 
     const target = document.getElementById(targetId);
     if (target) {
+      if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
       target.focus();
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setFocusedIndex(-1);
     }
   };
 
-  if (Platform.OS !== 'web' || focusedIndex === -1) {
+  if (Platform.OS !== 'web') {
     return null;
   }
 
   return (
-	    <View style={styles.container}>
+	    <View style={[styles.container, focusedIndex === -1 && styles.containerHidden]}>
 	      {links.map((link, index) => (
 	        <Pressable
 	          key={link.id}
@@ -72,20 +53,21 @@ export default function SkipLinks({
 	          ]}
 	          onPress={() => handleSkip(link.targetId)}
 	          onFocus={() => setFocusedIndex(index)}
-	          onBlur={() => {
-            // Скрываем при потере фокуса, если не перешли на другой skip link
+          onBlur={() => {
             setTimeout(() => {
-              if (document.activeElement?.id !== link.targetId) {
+              const active = document.activeElement as HTMLElement | null;
+              if (active?.dataset?.skipLink !== 'true') {
                 setFocusedIndex(-1);
               }
-            }, 100);
+            }, 0);
           }}
-          accessibilityRole="button"
+          accessibilityRole="link"
           accessibilityLabel={link.label}
           {...Platform.select({
             web: {
               // @ts-ignore -- tabIndex is a web-only attribute not in RN Pressable types
               tabIndex: 0,
+              'data-skip-link': 'true',
             },
           })}
         >
@@ -105,6 +87,11 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: DESIGN_TOKENS.spacing.sm,
     padding: DESIGN_TOKENS.spacing.sm,
+  },
+  containerHidden: {
+    opacity: 0,
+    transform: [{ translateY: -160 }],
+    pointerEvents: 'none',
   },
 });
 

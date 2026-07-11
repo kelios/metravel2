@@ -3,6 +3,7 @@
 // мульти-выбор подписчиков для инвайта и шаринг ссылки на поездку. Только владелец.
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
 import type { PlannedTrip } from '@/api/plannedTrips';
@@ -11,6 +12,7 @@ import { useInviteParticipants } from '@/hooks/usePlannedTripsApi';
 import { useSubscriptionsData } from '@/hooks/useSubscriptionsData';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { buildTripPlanUrl, buildTripTelegramShareUrl } from '@/utils/tripPlanLinks';
+import { shareTripPlan } from '@/utils/shareTripPlan';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface Props {
@@ -56,6 +58,7 @@ function TripInvitePanel({ trip }: Props) {
   const [selected, setSelected] = useState<number[]>([]);
   const [invitedCount, setInvitedCount] = useState<number | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
+  const [systemSharePending, setSystemSharePending] = useState(false);
 
   const selectedNames = useMemo(() => {
     if (!selected.length) return [];
@@ -91,7 +94,19 @@ function TripInvitePanel({ trip }: Props) {
     );
   };
 
-  const handleShare = () => {
+  const handleSystemShare = () => {
+    setShareError(null);
+    setSystemSharePending(true);
+    void shareTripPlan(trip)
+      .then((result) => {
+        if (result === 'unavailable') {
+          setShareError('Не удалось открыть меню «Поделиться». Попробуйте ещё раз.');
+        }
+      })
+      .finally(() => setSystemSharePending(false));
+  };
+
+  const handleTelegramShare = () => {
     setShareError(null);
     if (!telegramShareUrl) {
       setShareError('Не удалось сформировать ссылку на поездку.');
@@ -162,8 +177,17 @@ function TripInvitePanel({ trip }: Props) {
 
       <Text style={styles.label}>Поделиться</Text>
       <Button
+        label="Поделиться"
+        onPress={handleSystemShare}
+        loading={systemSharePending}
+        disabled={systemSharePending || !tripUrl}
+        icon={<Feather name="share-2" size={15} color={colors.textOnPrimary} />}
+        fullWidth
+        testID="trip-invite-share-system"
+      />
+      <Button
         label="Поделиться в Telegram"
-        onPress={handleShare}
+        onPress={handleTelegramShare}
         variant="outline"
         disabled={!telegramShareUrl}
         fullWidth

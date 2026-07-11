@@ -87,4 +87,30 @@ test.describe('Footer dock (web mobile) - More modal', () => {
     await page.getByTestId('footer-more-backdrop').click({ position: { x: 10, y: 10 } });
     await expect(page.getByTestId('footer-more-sheet')).toBeHidden();
   });
+
+  test('traps keyboard focus, closes on Escape, and restores focus to the trigger', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await preacceptCookies(page);
+    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
+
+    const trigger = page.getByTestId('footer-item-more');
+    await expect(trigger).toBeVisible();
+    await trigger.focus();
+    await trigger.press('Enter');
+
+    const sheet = page.getByTestId('footer-more-sheet');
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByRole('button', { name: 'Закрыть' })).toBeFocused();
+
+    await page.keyboard.press('Shift+Tab');
+    await expect
+      .poll(() =>
+        page.evaluate(() => Boolean(document.activeElement?.closest('[data-testid="footer-more-sheet"]')))
+      )
+      .toBe(true);
+
+    await page.keyboard.press('Escape');
+    await expect(sheet).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
 });

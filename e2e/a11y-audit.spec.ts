@@ -84,6 +84,23 @@ test.describe('Accessibility (WCAG 2.1 AA) — no regressions', () => {
 test.describe('Accessibility — keyboard', () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
+  test('first Tab reveals a working skip link to main content', async ({ page }) => {
+    await preacceptCookies(page);
+    await gotoWithRetry(page, getTravelsListPath());
+    await waitForMainListRender(page);
+
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press('Tab');
+
+    const skipMain = page.getByRole('link', { name: 'Перейти к основному содержимому' });
+    await expect(skipMain).toBeFocused();
+    await skipMain.press('Enter');
+
+    await expect
+      .poll(() => page.evaluate(() => (document.activeElement as HTMLElement | null)?.id || ''))
+      .toBe('main-content');
+  });
+
   test('keyboard focus reaches an interactive control with a visible focus ring', async ({ page }) => {
     await preacceptCookies(page);
     await gotoWithRetry(page, getTravelsListPath());

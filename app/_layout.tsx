@@ -27,6 +27,7 @@ import { setActiveQueryClient } from "@/api/activeQueryClient";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
+import SkipLinks from '@/components/layout/SkipLinks';
 import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnostics';
 import { installQaDebug } from '@/utils/qaDebug';
 import { useAriaHiddenFocusGuard } from "@/hooks/useAriaHiddenFocusGuard";
@@ -447,6 +448,7 @@ function ThemedContent({
       deferFavoritesProvider={shouldDeferFavoritesProvider}
       favoritesDeferMode={favoritesDeferMode}
     >
+                          {Platform.OS === 'web' ? <SkipLinks /> : null}
                           <NativeAppRuntime />
                           {/* AND-08: Global StatusBar — syncs barStyle with current theme (native only) */}
                           {Platform.OS !== 'web' && (
@@ -468,7 +470,11 @@ function ThemedContent({
                                 <SyncIndicatorComponent />
                               )}
 
-                              <View style={[styles.content]}>
+                              <View
+                                style={[styles.content]}
+                                nativeID="main-content"
+                                {...(Platform.OS === 'web' ? ({ tabIndex: -1 } as any) : null)}
+                              >
                                   <Stack screenOptions={{ headerShown: false }}>
                                       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                                   </Stack>
