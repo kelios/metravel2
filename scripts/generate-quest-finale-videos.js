@@ -101,6 +101,12 @@ const QUESTS = [
     { questId: 'sofia-serdica-underfoot', dir: 'sofiaSerdicaUnderfoot', city: 'София', mood: 'city', finaleId: 64 },
     { questId: 'spb-guardians', dir: 'spbGuardians', city: 'Санкт-Петербург', mood: 'epic', finaleId: 65 },
     { questId: 'malaga-picasso-mar', dir: 'malagaPicassoMar', city: 'Малага', mood: 'city', finaleId: 66 },
+    { questId: 'lubcha-castle-revival', dir: 'lubchaCastleRevival', city: 'Любча', mood: 'castle', finaleId: 67 },
+    { questId: 'baranovichi-dva-goroda', dir: 'baranovichiDvaGoroda', city: 'Барановичи', mood: 'city', finaleId: 68 },
+    { questId: 'gervyaty-kostel', dir: 'gervyatyKostel', city: 'Гервяты', mood: 'epic', finaleId: 69 },
+    { questId: 'zheludok-palace', dir: 'zheludokPalace', city: 'Желудок', mood: 'castle', finaleId: 70 },
+    { questId: 'shchuchin-versal', dir: 'shchuchinVersal', city: 'Щучин', mood: 'castle', finaleId: 71 },
+    { questId: 'braslav-mezh-ozyor', dir: 'braslavMezhOzyor', city: 'Браслав', mood: 'castle', finaleId: 72 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
