@@ -1,7 +1,7 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Pressable, Platform, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import Feather from '@expo/vector-icons/Feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -117,6 +117,7 @@ export default function PublicUserProfileScreen() {
     queryFn: () => fetchTravels(0, travelsLimit, '', { user_id: userId, publish: 1, moderation: 1 }),
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
     retry: (fc, err) => !(err instanceof ApiError && (err.status === 401 || err.status === 403)) && fc < 2,
   });
 

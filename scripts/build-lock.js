@@ -17,7 +17,9 @@ const fs = require('fs')
 const path = require('path')
 
 const repoRoot = path.resolve(__dirname, '..')
-const lockPath = path.join(repoRoot, 'dist', '.prod-build.lock')
+// Keep the lock outside `dist`: Expo may recreate/clean the output directory
+// while exporting, which would silently remove a mutex stored inside it.
+const lockPath = path.join(repoRoot, '.codex-temp', 'ops', 'web-build.lock')
 const STALE_LOCK_MS = 90 * 60 * 1000
 
 let lockOwned = false
@@ -28,7 +30,17 @@ function acquireBuildLock() {
 
   fs.mkdirSync(path.dirname(lockPath), { recursive: true })
 
-  if (fs.existsSync(lockPath)) {
+  try {
+    const fd = fs.openSync(lockPath, 'wx')
+    fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, startedAt: Date.now() }))
+    fs.closeSync(fd)
+    lockOwned = true
+    // Mark for child processes so they treat the lock as already held.
+    process.env.MT_BUILD_LOCK_OWNED = '1'
+    return
+  } catch (error) {
+    if (error?.code !== 'EEXIST') throw error
+
     let info = {}
     try {
       info = JSON.parse(fs.readFileSync(lockPath, 'utf8'))
@@ -36,7 +48,15 @@ function acquireBuildLock() {
       info = {}
     }
     const age = Date.now() - (Number(info.startedAt) || 0)
-    if (age < STALE_LOCK_MS) {
+    const ownerPid = Number(info.pid)
+    let ownerAlive = false
+    try {
+      process.kill(ownerPid, 0)
+      ownerAlive = true
+    } catch (error) {
+      ownerAlive = error?.code === 'EPERM'
+    }
+    if (ownerAlive && age < STALE_LOCK_MS) {
       console.error(
         `ERROR: another web build is already running (pid ${info.pid || '?'}, ` +
           `started ${Math.round(age / 1000)}s ago). Refusing to start a concurrent build.\n` +
@@ -45,11 +65,15 @@ function acquireBuildLock() {
       process.exit(1)
     }
     console.warn(`WARN: removing stale build lock (age ${Math.round(age / 60000)}min): ${lockPath}`)
+    fs.rmSync(lockPath, { force: true })
   }
 
-  fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, startedAt: Date.now() }))
+  // Retry once after removing a confirmed stale owner. `wx` remains atomic if
+  // another session races us between cleanup and recreation.
+  const fd = fs.openSync(lockPath, 'wx')
+  fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, startedAt: Date.now() }))
+  fs.closeSync(fd)
   lockOwned = true
-  // Mark for child processes so they treat the lock as already held.
   process.env.MT_BUILD_LOCK_OWNED = '1'
 }
 

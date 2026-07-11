@@ -9,6 +9,8 @@ const allowListedModules =
 module.exports = {
   ...expoPreset,
   testEnvironment: 'jsdom',
+  globalSetup: '<rootDir>/scripts/jest-quality-gate-setup.js',
+  globalTeardown: '<rootDir>/scripts/jest-quality-gate-teardown.js',
   setupFiles: ['<rootDir>/jest.expo-globals.js', ...setupFiles],
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts', ...setupFilesAfterEnv],
   testMatch: ['**/__tests__/**/*.test.tsx', '**/__tests__/**/*.test.ts'],

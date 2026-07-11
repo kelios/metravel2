@@ -114,7 +114,8 @@
 - Если другой агент уже запустил deploy/build/rebuild/tests для того же target или глобальный full gate, не запускай второй экземпляр. Дождись результата, используй уже идущую проверку либо зафиксируй blocker с PID, командой и target.
 - Не убивай и не перезапускай чужой процесс без явной команды пользователя или документированного safe-wrapper'а. Если lock явно stale, сначала зафиксируй почему он stale, затем аккуратно очисти lock и продолжай.
 - Если запускаешь новую долгую операцию без собственного lock механизма, оставь короткий marker в `.codex-temp/ops/` и удали его после завершения.
-- Основные test/quality команды (`check:fast`, `check:changed`, `check:e2e:changed`, `check:preflight`, `test:run`, `e2e`, `release:check`) обязаны запускаться только через общий `scripts/run-with-quality-gate-lock.js`. Он использует атомарный `.codex-temp/ops/quality-gate.lock`, сообщает PID владельца, блокирует второй запуск из другой сессии и безопасно убирает lock умершего процесса. Не обходи wrapper прямым Jest/Playwright-запуском для широких проверок.
+- `build-prod.sh` удерживает общий `.codex-temp/ops/web-build.lock` до конца полного цикла build + SEO + deploy. Не обходи этот wrapper: прямой `expo export` или запуск `scripts/build-web-safe.js` параллельно с deploy запрещен.
+- Основные test/quality команды (`check:fast`, `check:changed`, `check:e2e:changed`, `check:preflight`, `test:run`, `e2e`, `release:check`) обязаны запускаться только через общий `scripts/run-with-quality-gate-lock.js`. Он использует атомарный `.codex-temp/ops/quality-gate.lock`, сообщает PID владельца, блокирует второй запуск из другой сессии и безопасно убирает lock умершего процесса. Общая Jest-конфигурация дополнительно захватывает тот же lock для прямого `npx jest`, поэтому даже точечные Jest-запуски из разных сессий не должны пересекаться. Не обходи wrapper прямым Playwright-запуском.
 
 ## 4. Обязательные технические правила
 

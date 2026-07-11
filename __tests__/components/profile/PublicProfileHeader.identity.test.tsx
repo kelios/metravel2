@@ -9,9 +9,9 @@ jest.mock('@/hooks/useTheme', () => ({
 }));
 
 jest.mock('@/components/profile/ProfileStatPills', () => ({ ProfileStatPills: () => null }));
-const profileTabsMock = jest.fn(() => null);
+const mockProfileTabs = jest.fn(() => null);
 jest.mock('@/components/profile/ProfileTabs', () => ({
-  ProfileTabs: (props: unknown) => profileTabsMock(props),
+  ProfileTabs: (props: unknown) => mockProfileTabs(props),
 }));
 jest.mock('@/components/ui/SubscribeButton', () => () => null);
 jest.mock('@/components/ui/StarRating', () => () => null);
@@ -55,7 +55,7 @@ const profile = { is_verified: true, participant_rating: null } as unknown as Us
 
 describe('PublicProfileHeader identity (#847)', () => {
   beforeEach(() => {
-    profileTabsMock.mockClear();
+    mockProfileTabs.mockClear();
   });
 
   it('renders the rank chip and hides the generic subtitle when rank is present', () => {
@@ -80,7 +80,7 @@ describe('PublicProfileHeader identity (#847)', () => {
   it('keeps all own-profile sections under the shared header', () => {
     render(<PublicProfileHeader {...baseProps} isOwnProfile profile={profile} rank={rank} />);
 
-    expect(profileTabsMock).toHaveBeenLastCalledWith(
+    expect(mockProfileTabs).toHaveBeenLastCalledWith(
       expect.objectContaining({
         tabKeys: ['travels', 'subscribers', 'subscriptions', 'overview'],
       })
@@ -90,7 +90,7 @@ describe('PublicProfileHeader identity (#847)', () => {
   it('does not expose private subscription sections on another user profile', () => {
     render(<PublicProfileHeader {...baseProps} profile={profile} rank={rank} />);
 
-    expect(profileTabsMock).toHaveBeenLastCalledWith(
+    expect(mockProfileTabs).toHaveBeenLastCalledWith(
       expect.objectContaining({ tabKeys: ['travels', 'overview'] })
     );
   });

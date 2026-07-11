@@ -20,6 +20,10 @@ jest.mock('@/hooks/useTheme', () => ({
     new Proxy({}, { get: (_target, key) => String(key) }) as unknown as Record<string, string>,
 }));
 
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => ({ isDesktop: true }),
+}));
+
 jest.mock('@/components/trips/planning/TripPlanCard', () => {
   const { Pressable, Text, View } = require('react-native');
 
@@ -119,6 +123,18 @@ describe('MyCreatedTripsList', () => {
     expect(mockPush).toHaveBeenCalledWith('/trips/plan/1');
   });
 
+  it('shows only trips where the current user participates in participating mode', () => {
+    const { getByText, queryByText, getByTestId } = render(
+      <MyCreatedTripsList role="participating" />,
+    );
+
+    expect(getByText('Чужая поездка')).toBeTruthy();
+    expect(queryByText('Организуемая поездка')).toBeNull();
+
+    fireEvent.press(getByTestId('mock-trip-card-2'));
+    expect(mockPush).toHaveBeenCalledWith('/trips/plan/2');
+  });
+
   it('opens an organized trip in edit mode from the compact card action', () => {
     const { getByTestId } = render(<MyCreatedTripsList />);
 
@@ -144,5 +160,25 @@ describe('MyCreatedTripsList', () => {
         onError: expect.any(Function),
       }));
     });
+  });
+
+  it('filters organized trips by search and status', () => {
+    mockUseMyPlannedTrips.mockReturnValue({
+      data: [
+        makeTrip({ id: 1, title: 'Поездка в Брест', status: 'planning', isOwner: true }),
+        makeTrip({ id: 2, title: 'Активный Минск', status: 'active', isOwner: true }),
+      ],
+      isLoading: false,
+      isError: false,
+    });
+
+    const { getByTestId, getByText, queryByText } = render(<MyCreatedTripsList />);
+
+    fireEvent.changeText(getByTestId('my-created-trips-search-input'), 'Минск');
+    expect(getByText('Активный Минск')).toBeTruthy();
+    expect(queryByText('Поездка в Брест')).toBeNull();
+
+    fireEvent.press(getByTestId('my-created-trips-filter-planning'));
+    expect(getByTestId('my-created-trips-filtered-empty')).toBeTruthy();
   });
 });

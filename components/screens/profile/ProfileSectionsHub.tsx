@@ -26,16 +26,9 @@ const BASE_ITEMS: HubItem[] = [
   {
     key: 'trips-my',
     title: 'Мои поездки',
-    subtitle: 'Черновики и планы',
+    subtitle: 'Организую и участвую',
     icon: 'briefcase',
     route: '/trips/my',
-  },
-  {
-    key: 'trips-plan',
-    title: 'Планировщик',
-    subtitle: 'Спланировать маршрут',
-    icon: 'map',
-    route: '/trips/plan',
   },
   {
     key: 'trips-community',

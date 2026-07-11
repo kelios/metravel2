@@ -1,15 +1,17 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
 import CardActionPressable from '@/components/ui/CardActionPressable';
+import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import {
   PLAN_STATUS_LABEL,
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
+  VISIBILITY_LABEL,
   formatTripDateTime,
   planStatusColor,
   routeSummaryLine,
@@ -35,6 +37,7 @@ function TripPlanCard({
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
+  const [actionsVisible, setActionsVisible] = useState(false);
 
   const statusBg = planStatusColor(trip.status, colors);
   const participantsCount = trip.participants.length;
@@ -53,6 +56,7 @@ function TripPlanCard({
   );
   const usesFallbackCover = coverUrl.length === 0;
   const cardImageUrl = usesFallbackCover ? fallbackCover.uri : coverUrl;
+  const hasOwnerActions = Boolean(onEditPress || onDeletePress);
 
   const handleOpen = () => {
     if (onOpenPress) {
@@ -62,46 +66,43 @@ function TripPlanCard({
     router.push(`/trips/plan/${trip.id}`);
   };
 
-  const actionSlot = onEditPress || onDeletePress ? (
-    <View style={styles.cardActions} testID={`trip-plan-card-actions-${trip.id}`}>
-      {onEditPress ? (
-        <CardActionPressable
-          accessibilityLabel="Редактировать поездку"
-          title="Редактировать"
-          onPress={() => onEditPress(trip)}
-          style={styles.cardActionButton}
-          disabled={isDeleting}
-          accessibilityState={{ disabled: isDeleting }}
-          testID={`my-created-trip-edit-${trip.id}`}
-        >
-          <Feather name="edit-2" size={15} color={colors.text} />
-        </CardActionPressable>
-      ) : null}
-      {onDeletePress ? (
-        <CardActionPressable
-          accessibilityLabel={isDeleting ? 'Поездка удаляется' : 'Удалить поездку'}
-          title={isDeleting ? 'Удаляется...' : 'Удалить'}
-          onPress={() => onDeletePress(trip)}
-          style={styles.cardActionButton}
-          disabled={isDeleting}
-          accessibilityState={{ disabled: isDeleting, busy: isDeleting }}
-          testID={`my-created-trip-delete-${trip.id}`}
-        >
-          {isDeleting ? (
-            <ActivityIndicator size="small" color={colors.danger} />
-          ) : (
-            <Feather name="trash-2" size={15} color={colors.danger} />
-          )}
-        </CardActionPressable>
-      ) : null}
-    </View>
-  ) : null;
+  const ownerActions = useMemo<ActionListSheetItem[]>(() => {
+    const actions: ActionListSheetItem[] = [];
+    if (onEditPress) {
+      actions.push({
+        key: 'edit',
+        label: 'Редактировать поездку',
+        icon: 'edit-2',
+        onPress: () => {
+          setActionsVisible(false);
+          onEditPress(trip);
+        },
+      });
+    }
+    if (onDeletePress) {
+      actions.push({
+        key: 'delete',
+        label: 'Удалить поездку',
+        icon: 'trash-2',
+        iconColor: colors.danger,
+        onPress: () => {
+          setActionsVisible(false);
+          onDeletePress(trip);
+        },
+      });
+    }
+    return actions;
+  }, [colors.danger, onDeletePress, onEditPress, trip]);
 
   const contentSlot = (
     <View style={styles.contentStack}>
       <View style={styles.headerRow}>
         <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
           <Text style={styles.badgeText}>{PLAN_STATUS_LABEL[trip.status]}</Text>
+        </View>
+        <View style={styles.visibilityBadge}>
+          <Feather name="eye" size={12} color={colors.textSecondary} />
+          <Text style={styles.visibilityText}>{VISIBILITY_LABEL[trip.visibility]}</Text>
         </View>
       </View>
 
@@ -129,9 +130,51 @@ function TripPlanCard({
       </Text>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          {participantsCount} участников · {goingCount} едут
-        </Text>
+        <View style={styles.occupancyRow}>
+          <Feather name="users" size={14} color={colors.textSecondary} />
+          <Text style={styles.footerText}>Едут {goingCount} из {trip.seatsTotal}</Text>
+          <Text style={styles.participantsHint}>· {participantsCount} в списке</Text>
+        </View>
+        <View style={styles.cardActions} testID={`trip-plan-card-actions-${trip.id}`}>
+          <CardActionPressable
+            accessibilityLabel={hasOwnerActions ? 'Управлять поездкой' : 'Открыть поездку'}
+            title={hasOwnerActions ? 'Управлять поездкой' : 'Открыть поездку'}
+            onPress={handleOpen}
+            style={({ pressed }) => [styles.manageButton, pressed && styles.manageButtonPressed]}
+            disabled={isDeleting}
+            testID={`trip-plan-card-manage-${trip.id}`}
+          >
+            <Text style={styles.manageButtonText}>
+              {hasOwnerActions ? 'Управлять поездкой' : 'Открыть поездку'}
+            </Text>
+            <Feather name="arrow-right" size={15} color={colors.textOnPrimary} />
+          </CardActionPressable>
+          {hasOwnerActions ? (
+            <CardActionPressable
+              accessibilityLabel="Другие действия с поездкой"
+              title="Другие действия"
+              onPress={() => setActionsVisible(true)}
+              style={styles.moreButton}
+              disabled={isDeleting}
+              accessibilityState={{ disabled: isDeleting, busy: isDeleting }}
+              testID={`trip-plan-card-more-${trip.id}`}
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color={colors.primaryDark} />
+              ) : (
+                <Feather name="more-horizontal" size={19} color={colors.text} />
+              )}
+            </CardActionPressable>
+          ) : null}
+        </View>
+        {hasOwnerActions ? (
+          <ActionListSheet
+            visible={actionsVisible}
+            onClose={() => setActionsVisible(false)}
+            title={trip.title}
+            actions={ownerActions}
+          />
+        ) : null}
       </View>
     </View>
   );
@@ -142,13 +185,11 @@ function TripPlanCard({
       imageUrl={cardImageUrl}
       onPress={handleOpen}
       mediaFit="cover"
-      imageHeight={190}
+      imageHeight={176}
       heroTitleOverlay={false}
       contentPosition="belowMedia"
       contentSlot={contentSlot}
       contentContainerStyle={styles.contentContainer}
-      rightTopSlot={actionSlot}
-      rightTopSlotScrim
       mediaProps={{
         optimizeWeb: !usesFallbackCover,
         placeholderSrc: usesFallbackCover ? fallbackCover.uri : undefined,
@@ -173,7 +214,7 @@ const createStyles = (colors: ThemedColors) =>
     cardDeleting: { opacity: 0.6 },
     contentContainer: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 12 },
     contentStack: { gap: 6 },
-    headerRow: { flexDirection: 'row' },
+    headerRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
     statusBadge: {
       borderRadius: 999,
       paddingHorizontal: 10,
@@ -181,6 +222,16 @@ const createStyles = (colors: ThemedColors) =>
       alignSelf: 'flex-start',
     },
     badgeText: { fontSize: 12, fontWeight: '700', color: colors.textOnDark },
+    visibilityBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      borderRadius: 999,
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      backgroundColor: colors.surfaceMuted,
+    },
+    visibilityText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
     title: { fontSize: 16, fontWeight: '700', color: colors.text },
     metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
     meta: { fontSize: 13, color: colors.textSecondary },
@@ -192,26 +243,36 @@ const createStyles = (colors: ThemedColors) =>
       borderTopWidth: 1,
       borderTopColor: colors.border,
     },
-    footerText: { fontSize: 13, fontWeight: '600', color: colors.text },
+    occupancyRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5 },
+    footerText: { fontSize: 13, fontWeight: '700', color: colors.text },
+    participantsHint: { fontSize: 12, color: colors.textMuted },
     cardActions: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      padding: 4,
-      borderRadius: 999,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      ...Platform.select({
-        web: { boxShadow: '0 4px 12px rgba(15, 23, 42, 0.14)' as any },
-      }),
+      gap: 8,
+      marginTop: 10,
     },
-    cardActionButton: {
-      width: 34,
-      height: 34,
-      borderRadius: 999,
+    manageButton: {
+      flex: 1,
+      minHeight: 44,
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      gap: 8,
+      borderRadius: 12,
+      backgroundColor: colors.primary,
+      paddingHorizontal: 14,
+    },
+    manageButtonPressed: { opacity: 0.86 },
+    manageButtonText: { fontSize: 14, fontWeight: '800', color: colors.textOnPrimary },
+    moreButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
       backgroundColor: colors.surface,
     },
     mediaPlaceholder: {

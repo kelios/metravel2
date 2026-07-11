@@ -2,6 +2,12 @@
 set -Eeuo pipefail
 IFS=$'\n\t'
 
+# Keep the build mutex for the complete build + SEO + deploy lifecycle. The
+# inner invocation and build-web-safe.js inherit MT_BUILD_LOCK_OWNED=1.
+if [[ "${MT_BUILD_LOCK_OWNED:-0}" != "1" ]]; then
+  exec node scripts/run-with-build-lock.js -- "$0" "$@"
+fi
+
 if [[ -d "$HOME/.local/bin" ]]; then
   export PATH="$HOME/.local/bin:$PATH"
 fi
