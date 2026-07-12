@@ -163,10 +163,8 @@ export const uploadImageAndInsert = async ({
     form.append('file', uploadFile)
     form.append('collection', 'description')
     if (idTravel) form.append('id', String(idTravel))
-    const [res, imageDimensions] = await Promise.all([
-      uploadImage(form),
-      readDimensions(uploadFile),
-    ])
+    const res = await uploadImage(form)
+    const imageDimensions = await readDimensions(uploadFile)
     if (__DEV__) {
       console.info('[ArticleEditor] upload response', res)
     }
@@ -191,7 +189,11 @@ export const uploadImageAndInsert = async ({
     if (__DEV__) {
       console.error('[ArticleEditor] Image upload failed:', err)
     }
-    Alert.alert('Ошибка', 'Не удалось загрузить изображение')
+    const message =
+      err instanceof Error && err.message.trim().length > 0
+        ? err.message
+        : 'Не удалось загрузить изображение'
+    Alert.alert('Ошибка', message)
   } finally {
     setIsImageUploading(false)
   }

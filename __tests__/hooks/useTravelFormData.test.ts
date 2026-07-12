@@ -752,6 +752,61 @@ describe('useTravelFormData', () => {
     expect((result.current.formData as any).gallery).toEqual(localGallery);
   });
 
+  it('keeps current gallery captions when save response echoes empty captions', async () => {
+    const localGallery = [
+      {
+        id: 3796,
+        url: 'https://metravel.by/gallery/3796/conversions/photo.webp',
+        caption: 'Снежные котлы - 1497м',
+      },
+    ];
+
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({
+      ...payload,
+      id: 999,
+      gallery: [
+        {
+          id: 3796,
+          url: 'https://metravel.by/gallery/3796/conversions/photo.webp',
+          caption: '',
+        },
+      ],
+    }));
+
+    const { result } = renderHook(
+      () =>
+      useTravelFormData({
+        travelId: null,
+        isNew: true,
+        userId: '42',
+        isSuperAdmin: false,
+        isAuthenticated: true,
+        authReady: true,
+      }),
+      { concurrentRoot: false }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        id: 999,
+        name: 'Gallery caption test',
+        description: 'A'.repeat(60),
+        gallery: localGallery,
+      } as any);
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave();
+    });
+
+    expect(saveFormData).toHaveBeenCalledTimes(1);
+    expect((saveFormData as jest.Mock).mock.calls[0][0].gallery[0].caption).toBe('Снежные котлы - 1497м');
+    expect((result.current.formData as any).gallery).toEqual(localGallery);
+  });
+
   it('maps gallery image ids into contract fields for upsert payload', async () => {
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 999 }));
 

@@ -1,9 +1,9 @@
 {
-  "description": "Web bundle size budget (KB). Regression guard: критический путь + eager-чанки (__common/entry — тикеты #764 reanimated-стаб, #765 leafletVendor вынесен из __common) и total JS. Снапшот = фактическая сборка 2026-07-05 после #764/#765; допуск на дрейф — tolerancePct. Regenerate: node scripts/guard-bundle-budget.js --update (затем заново курировать ключи). Гоняется в release:check (guard:bundle-budget:fail) после build:web:prod.",
+  "description": "Web bundle size budget (KB). Regression guard: критический путь + eager-чанки (__common/entry — тикеты #764 reanimated-стаб, #765 leafletVendor вынесен из __common), HEIC-конвертер и total JS. Снапшот = фактическая сборка 2026-07-12 после перехода на lazy heic-to; допуск на дрейф — tolerancePct. Regenerate: node scripts/guard-bundle-budget.js --update (затем заново курировать ключи). Гоняется в release:check (guard:bundle-budget:fail) после build:web:prod.",
   "tolerancePct": 5,
   "total": {
-    "maxRawKB": 10122.8,
-    "maxGzipKB": 2614.3
+    "maxRawKB": 11886.5,
+    "maxGzipKB": 3040.2
   },
   "chunks": {
     "entry": {
@@ -25,6 +25,10 @@
     "leafletVendor": {
       "maxRawKB": 203.8,
       "maxGzipKB": 55
+    },
+    "heic-to": {
+      "maxRawKB": 2926.3,
+      "maxGzipKB": 717.4
     },
     "TravelDetailsMapSection": {
       "maxRawKB": 85.3,
