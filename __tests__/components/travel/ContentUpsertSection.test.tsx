@@ -236,4 +236,36 @@ describe('ContentUpsertSection — derived display logic', () => {
     fireEvent.changeText(getByTestId('travel-wizard.basic.description.mobile-input'), 'синий берег')
     expect(getByTestId('travel-wizard.basic.description.mobile-input').props.value).toBe('синий берег')
   })
+
+  it('syncs the latest edit content after the focused Android description blurs', () => {
+    const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
+    useResponsive.mockReturnValue({ isPhone: true, isLargePhone: false })
+    const setFormData = jest.fn()
+
+    const { getByTestId, rerender } = render(
+      <ContentUpsertSection
+        formData={{ ...baseFormData, description: '<p>Старый текст</p>' }}
+        setFormData={setFormData}
+      />,
+    )
+
+    const input = getByTestId('travel-wizard.basic.description.mobile-input')
+    fireEvent(input, 'focus')
+    fireEvent.changeText(input, 'Черновик пользователя ')
+
+    rerender(
+      <ContentUpsertSection
+        formData={{ ...baseFormData, description: '<p>Внешнее обновление</p>' }}
+        setFormData={setFormData}
+      />,
+    )
+
+    expect(getByTestId('travel-wizard.basic.description.mobile-input').props.value)
+      .toBe('Черновик пользователя ')
+
+    fireEvent(getByTestId('travel-wizard.basic.description.mobile-input'), 'blur')
+
+    expect(getByTestId('travel-wizard.basic.description.mobile-input').props.value)
+      .toBe('Внешнее обновление')
+  })
 })

@@ -432,6 +432,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                 }}
                                 onBlur={() => {
                                     isMobileDescriptionFocusedRef.current = false;
+                                    setMobileDescriptionDraft(descriptionPlainText);
                                 }}
                                 onChangeText={(text) => {
                                     // Keep the native input controlled by the exact draft while it is focused.
@@ -617,6 +618,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             colors.textOnPrimary,
             colors.textMuted,
             descriptionPlainLength,
+            descriptionPlainText,
             descriptionProgress,
             descriptionProgressColor,
             descriptionStatusText,
