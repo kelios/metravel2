@@ -134,6 +134,54 @@ describe('useQuestWizardProgress', () => {
     expect(result.current.answers['step-2']).toBe('castle')
   })
 
+  it('does not let optional (any-type) pause points gate the finale', async () => {
+    // Репро бага «пройдено 7 из 9»: необязательные точки-паузы ☕/✨ приходят с
+    // answer_pattern type='any' (checker помечен _isAny) и раньше сидели в
+    // знаменателе гейта — финал был недостижим, пока игрок явно не нажмёт «Далее»
+    // на каждой. Теперь такие шаги исключены из requiredCount/allCompleted.
+    const anyChecker = (() => {
+      const fn = () => true
+      ;(fn as unknown as { _isAny: boolean })._isAny = true
+      return fn
+    })()
+    const realChecker = () => true
+
+    const stepsWithOptional = [
+      { id: 'req-1', answer: realChecker },
+      { id: 'cafe', answer: anyChecker },
+      { id: 'req-2', answer: realChecker },
+    ]
+
+    const initialProgress = {
+      currentIndex: 2,
+      unlockedIndex: 2,
+      // Оба ОБЯЗАТЕЛЬНЫХ шага отвечены; необязательная ☕-точка — нет.
+      answers: { 'req-1': 'a', 'req-2': 'b' },
+      attempts: {},
+      hints: {},
+      showMap: true,
+    }
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps: [{ id: 'intro' }, ...stepsWithOptional],
+        steps: stepsWithOptional,
+        storageKey: 'quest_progress_optional_gate',
+        initialProgress,
+      })
+    )
+
+    await waitFor(() => {
+      expect(result.current.answers['req-2']).toBe('b')
+    })
+
+    // Финал доступен: обязательные шаги — 2 из 2, необязательная точка не блокирует.
+    expect(result.current.requiredCount).toBe(2)
+    expect(result.current.completedSteps).toEqual([{ id: 'req-1', answer: realChecker }, { id: 'req-2', answer: realChecker }])
+    expect(result.current.progress).toBe(1)
+    expect(result.current.allCompleted).toBe(true)
+  })
+
   it('resets persisted progress and state', async () => {
     await AsyncStorage.setItem('quest_progress_reset', JSON.stringify({
       index: 2,

@@ -3,7 +3,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 type QuestProgressStep = {
   id: string
+  answer?: (input: string) => boolean
 }
+
+// Необязательные точки-паузы (☕/✨) приходят с answer_pattern type='any' →
+// checker помечается _isAny. У них нет проверяемого ответа, и они НЕ должны
+// гейтить финал: иначе «пройдено N из M» недостижимо, пока игрок явно не
+// нажмёт «Далее» на каждой такой точке (баг: финал заблокирован на 7/9).
+const isOptionalStep = (step: QuestProgressStep): boolean =>
+  (step.answer as unknown as { _isAny?: boolean } | undefined)?._isAny === true
 
 type QuestWizardProgressPayload = {
   currentIndex: number
@@ -126,6 +134,9 @@ export function useQuestWizardProgress({
     loadProgress()
   }, [initialProgress, storageKey])
 
+  // Только обязательные (проверяемые) шаги гейтят финал и считаются в прогрессе.
+  const requiredSteps = useMemo(() => steps.filter((step) => !isOptionalStep(step)), [steps])
+
   useEffect(() => {
     if (suppressSave.current) return
 
@@ -138,7 +149,7 @@ export function useQuestWizardProgress({
       showMap,
     })).catch((error) => console.error('Error saving progress:', error))
 
-    const completed = steps.length > 0 && steps.every((step) => !!answers[step.id])
+    const completed = requiredSteps.length > 0 && requiredSteps.every((step) => !!answers[step.id])
     onProgressChange?.({
       currentIndex,
       unlockedIndex,
@@ -148,11 +159,12 @@ export function useQuestWizardProgress({
       showMap,
       completed,
     })
-  }, [answers, attempts, currentIndex, hints, onProgressChange, showMap, steps, storageKey, unlockedIndex])
+  }, [answers, attempts, currentIndex, hints, onProgressChange, requiredSteps, showMap, storageKey, unlockedIndex])
 
-  const completedSteps = useMemo(() => steps.filter((step) => answers[step.id]), [answers, steps])
-  const progress = steps.length > 0 ? completedSteps.length / steps.length : 0
-  const allCompleted = steps.length > 0 && completedSteps.length === steps.length
+  const completedSteps = useMemo(() => requiredSteps.filter((step) => answers[step.id]), [answers, requiredSteps])
+  const requiredCount = requiredSteps.length
+  const progress = requiredCount > 0 ? completedSteps.length / requiredCount : 0
+  const allCompleted = requiredCount > 0 && completedSteps.length === requiredCount
 
   const maxAnsweredIndex = useMemo(() => {
     let maxIdx = -1
@@ -201,6 +213,7 @@ export function useQuestWizardProgress({
     showMap,
     setShowMap,
     completedSteps,
+    requiredCount,
     progress,
     allCompleted,
     resetProgress,

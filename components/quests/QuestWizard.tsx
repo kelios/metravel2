@@ -124,6 +124,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         showMap,
         setShowMap,
         completedSteps,
+        requiredCount,
         progress,
         allCompleted,
         resetProgress,
@@ -140,7 +141,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         cityId,
         title,
         completedCount: completedSteps.length,
-        totalCount: steps.length,
+        totalCount: requiredCount,
         allCompleted,
     });
     useQuestGeofence({
@@ -422,7 +423,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         finale={finale}
                         allCompleted={allCompleted}
                         completedCount={completedSteps.length}
-                        stepsCount={steps.length}
+                        stepsCount={requiredCount}
                         frameW={frameW}
                         youtubeEmbedUri={youtubeEmbedUri}
                         videoOk={videoOk}
@@ -463,7 +464,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 title={title}
                                 progress={progress}
                                 completedCount={completedSteps.length}
-                                stepsCount={steps.length}
+                                stepsCount={requiredCount}
                                 allSteps={allSteps}
                                 answers={answers}
                                 currentIndex={currentIndex}
@@ -502,7 +503,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 title={title}
                                 progress={progress}
                                 completedCount={completedSteps.length}
-                                stepsCount={steps.length}
+                                stepsCount={requiredCount}
                                 allSteps={allSteps}
                                 answers={answers}
                                 currentIndex={currentIndex}
