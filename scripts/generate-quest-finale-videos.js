@@ -107,6 +107,12 @@ const QUESTS = [
     { questId: 'zheludok-palace', dir: 'zheludokPalace', city: 'Желудок', mood: 'castle', finaleId: 70 },
     { questId: 'shchuchin-versal', dir: 'shchuchinVersal', city: 'Щучин', mood: 'castle', finaleId: 71 },
     { questId: 'braslav-mezh-ozyor', dir: 'braslavMezhOzyor', city: 'Браслав', mood: 'castle', finaleId: 72 },
+    { questId: 'slavgorod-blue-krinica', dir: 'slavgorodBlueKrinica', city: 'Голубая криница', mood: 'epic', finaleId: 73 },
+    { questId: 'golshany-black-monk', dir: 'golshanyBlackMonk', city: 'Гольшаны', mood: 'castle', finaleId: 74 },
+    { questId: 'svityaz-sunken-city', dir: 'svityazSunkenCity', city: 'озеро Свитязь', mood: 'epic', finaleId: 75 },
+    { questId: 'turov-growing-crosses', dir: 'turovGrowingCrosses', city: 'Туров', mood: 'epic', finaleId: 76 },
+    { questId: 'yelnya-bog-bells', dir: 'yelnyaBogBells', city: 'болото Ельня', mood: 'epic', finaleId: 77 },
+    { questId: 'krevo-walled-maiden', dir: 'krevoWalledMaiden', city: 'Крево', mood: 'castle', finaleId: 78 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
