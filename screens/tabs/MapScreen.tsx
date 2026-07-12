@@ -101,6 +101,7 @@ export default function MapScreen() {
     focusPlace,
     travelsCount,
     centerOnUser,
+    showAllPlaces,
     canSearchThisArea,
     handleSearchThisArea,
     panelRef,
@@ -444,6 +445,7 @@ export default function MapScreen() {
       focusPlace={focusPlace}
       travelsCount={travelsCount}
       centerOnUser={centerOnUser}
+      onShowAllPlaces={showAllPlaces}
       canSearchThisArea={canSearchThisArea}
       onSearchThisArea={handleSearchThisArea}
       handleSelectSearchTab={handleSelectSearchTab}

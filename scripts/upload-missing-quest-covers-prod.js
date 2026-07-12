@@ -76,6 +76,15 @@ const QUEST_COVERS = [
   { quest_id: 'shchuchin-versal', assetsDir: 'shchuchinVersal', cover: 'cover.png' },
   { quest_id: 'zheludok-palace', assetsDir: 'zheludokPalace', cover: 'cover.png' },
   { quest_id: 'braslav-mezh-ozyor', assetsDir: 'braslavMezhOzyor', cover: 'cover.png' },
+  { quest_id: 'slavgorod-blue-krinica', assetsDir: 'slavgorodBlueKrinica', cover: 'cover.png' },
+  { quest_id: 'golshany-black-monk', assetsDir: 'golshanyBlackMonk', cover: 'cover.png' },
+  { quest_id: 'svityaz-sunken-city', assetsDir: 'svityazSunkenCity', cover: 'cover.png' },
+  { quest_id: 'turov-growing-crosses', assetsDir: 'turovGrowingCrosses', cover: 'cover.png' },
+  { quest_id: 'yelnya-bog-bells', assetsDir: 'yelnyaBogBells', cover: 'cover.png' },
+  { quest_id: 'krevo-walled-maiden', assetsDir: 'krevoWalledMaiden', cover: 'cover.png' },
+  { quest_id: 'swiety-krzyz-lysa-gora', assetsDir: 'swietyKrzyzLysaGora', cover: 'cover.png' },
+  { quest_id: 'ojcow-lokietek', assetsDir: 'ojcowLokietek', cover: 'cover.png' },
+  { quest_id: 'niedzica-skarb-inkow', assetsDir: 'niedzicaSkarbInkow', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {

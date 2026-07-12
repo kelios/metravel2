@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { isValidCoordinate } from '@/utils/coordinateValidator'
-import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
+import { DEFAULT_RADIUS_KM, DEFAULT_MAP_CENTER } from '@/constants/mapConfig'
 import { LAYOUT } from '@/constants/layout'
 import { createMapPopupComponent } from './Map/createMapPopupComponent'
 import { useUserLocationSignal } from './Map/userLocationSignal'
@@ -42,6 +42,7 @@ import {
 } from './Map/mapWebGeometry'
 import { queryKeys } from '@/api/queryKeys'
 import { isFallbackMinskCenter } from './Map/fallbackCenter'
+import { beginProgrammaticMapMove } from './Map/programmaticMoveSignal'
 import {
   buildServerClusterRenderData,
   filterServerClusterRenderDataByRadius,
@@ -63,7 +64,7 @@ const MARKER_TAP_GUARD_MS = 350
 // Vertical shift so a selected point is not hidden behind MapPlaceBottomCard when
 // no zoom is applied. Approximates the mobile card height + breathing room.
 const MOBILE_CARD_OFFSET_PX = 200
-const FALLBACK_COORDINATES = { latitude: 53.8828449, longitude: 27.7273595 }
+const FALLBACK_COORDINATES = DEFAULT_MAP_CENTER
 
 type Props = MapProps
 
@@ -381,6 +382,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
       // Record the marker tap so the synthesized map `click` (touch `tap` handler)
       // does not dismiss the card we are about to open.
       lastMarkerTapAtRef.current = Date.now()
+      // Self-induced motion: the cluster viewport snapshot must ignore the
+      // moveend/zoomend this pan/zoom fires (avoids mid-animation cluster churn).
+      beginProgrammaticMapMove()
 
       const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : mapZoomRef.current
       const maxZoom = typeof map.getMaxZoom === 'function' ? map.getMaxZoom() : DEFAULT_MAX_ZOOM
@@ -677,6 +681,29 @@ const MapPageComponent: React.FC<Props> = (props) => {
     [hintCenterLatLng],
   )
 
+  // Desktop «Показать всё»: подогнать карту под все загруженные точки (fit ко всем
+  // маркерам). Тот же расчёт, что и MapUiApi.fitToResults, но локально для плавающих
+  // контролов. На мобильном сброс+fit делает верхний overlay (onShowAllPlaces).
+  const handleFitAllTravels = useCallback(() => {
+    const map = mapRef.current
+    if (!map || !L || typeof (L as any).latLngBounds !== 'function') return
+    const data = Array.isArray(filteredTravelData) ? filteredTravelData : []
+    if (data.length === 0) return
+    try {
+      const latLngs = data
+        .map((p) => strToLatLng(String((p as any)?.coord ?? ''), hintCenterLatLng))
+        .filter((c): c is [number, number] => Array.isArray(c))
+        .map(([lng, lat]) => [lat, lng] as [number, number])
+        .filter(([lat, lng]) => isValidCoordinate(lat, lng))
+      if (latLngs.length === 0) return
+      beginProgrammaticMapMove()
+      const bounds = (L as any).latLngBounds(latLngs.map(([lat, lng]) => (L as any).latLng(lat, lng)))
+      map.fitBounds(bounds.pad(0.2), { animate: true, duration: 0.35 } as any)
+    } catch {
+      ignoreOptionalMapRuntimeError()
+    }
+  }, [L, filteredTravelData, hintCenterLatLng])
+
   const routePointsForRouting = useMemo<[number, number][]>(() => {
     if (!Array.isArray(routePoints) || routePoints.length === 0) return []
     return routePoints.map((p) => normalizeLngLatWithHint(p))
@@ -762,6 +789,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
       const map = mapRef.current
       if (!map) return
       lastMarkerTapAtRef.current = Date.now()
+      beginProgrammaticMapMove()
 
       try {
         const [[south, west], [north, east]] = payload.bounds
@@ -920,6 +948,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         <MapControlsReactive
           userLocation={userLocationLatLng}
           onCenterUserLocation={centerOnUserLocation}
+          onShowAll={mode === 'radius' ? handleFitAllTravels : undefined}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           alignLeft

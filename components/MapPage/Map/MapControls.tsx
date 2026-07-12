@@ -10,6 +10,8 @@ const MOBILE_LAYOUT_MAX_WIDTH = 767
 interface MapControlsProps {
   userLocation: LatLng | null
   onCenterUserLocation: () => void
+  /** «Показать всё»: подогнать карту под все загруженные точки (fit ко всем маркерам). */
+  onShowAll?: () => void
   onZoomIn?: () => void
   onZoomOut?: () => void
   alignLeft?: boolean
@@ -103,6 +105,7 @@ const MapControlButton: React.FC<{
 const MapControls: React.FC<MapControlsProps> = ({
   userLocation,
   onCenterUserLocation,
+  onShowAll,
   onZoomIn,
   onZoomOut,
   alignLeft = false,
@@ -166,6 +169,17 @@ const MapControls: React.FC<MapControlsProps> = ({
         colors={colors}
         isMobile={isMobile}
       />
+      {onShowAll && (
+        <MapControlButton
+          onClick={onShowAll}
+          title={'Показать все места'}
+          ariaLabel={'Показать все места на карте'}
+          icon="maximize"
+          iconSize={20}
+          colors={colors}
+          isMobile={isMobile}
+        />
+      )}
       {(onZoomIn || onZoomOut) && (
         <div style={zoomGroupStyle}>
           {onZoomIn && (

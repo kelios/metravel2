@@ -6,6 +6,7 @@ import {
     Pressable,
     ScrollView,
     Text,
+    TextInput,
     View,
 } from 'react-native';
 import type { ListRenderItemInfo } from 'react-native';
@@ -42,6 +43,8 @@ type QuestsContentPanelProps = {
     selectedCityId: string | null;
     selectedCityName: string | null;
     nearbyId: string;
+    searchQuery: string;
+    onSearchChange: (text: string) => void;
     /** @deprecated Radius selection is no longer shown in the quest catalog. */
     nearbyRadiusKm?: number;
     questsAll: (QuestMeta & { _distanceKm?: number })[];
@@ -78,6 +81,8 @@ export default function QuestsContentPanel({
     selectedCityId,
     selectedCityName,
     nearbyId,
+    searchQuery,
+    onSearchChange,
     questsAll,
     questCardWidth,
     mapPoints,
@@ -126,66 +131,100 @@ export default function QuestsContentPanel({
 
     const questKeyExtractor = useCallback((quest: QuestListItem) => String(quest.id), []);
 
+    const searchActive = searchQuery.trim().length > 0;
+
     const contentHeader = (
         <View style={styles.contentHeader}>
-            <View style={styles.contentTitleBlock}>
-                <Text style={styles.contentTitle} numberOfLines={2}>
-                    {selectedCityId === nearbyId
-                        ? (isMapAreaActive ? 'Квесты в этой области' : userLoc ? 'Квесты поблизости' : 'Все квесты')
-                        : selectedCityName || 'Все квесты'}
-                </Text>
-                <View style={styles.contentCountRow}>
-                    {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
-                    {dataLoaded && filtersActive && (
+            <View style={styles.contentHeaderTopRow}>
+                <View style={styles.contentTitleBlock}>
+                    <Text style={styles.contentTitle} numberOfLines={2}>
+                        {searchActive
+                            ? 'Результаты поиска'
+                            : selectedCityId === nearbyId
+                                ? (isMapAreaActive ? 'Квесты в этой области' : userLoc ? 'Квесты поблизости' : 'Все квесты')
+                                : selectedCityName || 'Все квесты'}
+                    </Text>
+                    <View style={styles.contentCountRow}>
+                        {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
+                        {dataLoaded && !searchActive && filtersActive && (
+                            <Pressable
+                                style={styles.resetFiltersChip}
+                                onPress={onResetFilters}
+                                accessibilityRole="button"
+                                accessibilityLabel="Сбросить фильтры и показать все квесты"
+                                hitSlop={8}
+                                testID="quests-reset-filters"
+                            >
+                                <Feather name="x" size={13} color={colors.primary} />
+                                <Text style={styles.resetFiltersChipText}>Все квесты</Text>
+                            </Pressable>
+                        )}
+                    </View>
+                </View>
+                {isMobile && (
+                    <View style={styles.headerToggleRow}>
                         <Pressable
-                            style={styles.resetFiltersChip}
-                            onPress={onResetFilters}
+                            style={[styles.headerIconBtn, viewMode === 'map' && styles.headerIconBtnActive]}
+                            onPress={onToggleViewMode}
                             accessibilityRole="button"
-                            accessibilityLabel="Сбросить фильтры и показать все квесты"
-                            hitSlop={8}
-                            testID="quests-reset-filters"
+                            accessibilityLabel={viewMode === 'map' ? 'Показать список квестов' : 'Показать квесты на карте'}
+                            testID="quests-toggle-view-mode"
                         >
-                            <Feather name="x" size={13} color={colors.primary} />
-                            <Text style={styles.resetFiltersChipText}>Все квесты</Text>
+                            <Feather
+                                name={viewMode === 'map' ? 'list' : 'map'}
+                                size={17}
+                                color={viewMode === 'map' ? colors.textOnPrimary : colors.text}
+                            />
                         </Pressable>
-                    )}
-                </View>
+                        <Pressable
+                            style={styles.headerIconBtn}
+                            onPress={onOpenFilterDrawer}
+                            accessibilityRole="button"
+                            accessibilityLabel="Выбрать город"
+                        >
+                            <Feather name="filter" size={17} color={colors.text} />
+                        </Pressable>
+                        <Pressable
+                            style={[styles.headerIconBtn, geoRequesting && styles.headerIconBtnDisabled]}
+                            onPress={onShowNearby}
+                            disabled={geoRequesting}
+                            accessibilityRole="button"
+                            accessibilityLabel={geoRequesting ? 'Ищем квесты рядом со мной' : 'Показать квесты рядом со мной'}
+                            testID="quests-show-nearby"
+                        >
+                            <Feather name="navigation" size={17} color={colors.text} />
+                        </Pressable>
+                    </View>
+                )}
             </View>
-            {isMobile && (
-                <View style={styles.headerToggleRow}>
+
+            <View style={styles.searchRow}>
+                <Feather name="search" size={16} color={colors.textMuted} />
+                <TextInput
+                    style={styles.searchInput}
+                    value={searchQuery}
+                    onChangeText={onSearchChange}
+                    placeholder="Поиск по названию или городу"
+                    placeholderTextColor={colors.textMuted}
+                    returnKeyType="search"
+                    autoCorrect={false}
+                    clearButtonMode="never"
+                    accessibilityLabel="Поиск квестов по названию или городу"
+                    testID="quests-search-input"
+                />
+                {searchActive && (
                     <Pressable
-                        style={[styles.headerIconBtn, viewMode === 'map' && styles.headerIconBtnActive]}
-                        onPress={onToggleViewMode}
+                        style={styles.searchClearBtn}
+                        onPress={() => onSearchChange('')}
                         accessibilityRole="button"
-                        accessibilityLabel={viewMode === 'map' ? 'Показать список квестов' : 'Показать квесты на карте'}
-                        testID="quests-toggle-view-mode"
+                        accessibilityLabel="Очистить поиск"
+                        hitSlop={8}
+                        testID="quests-search-clear"
                     >
-                        <Feather
-                            name={viewMode === 'map' ? 'list' : 'map'}
-                            size={17}
-                            color={viewMode === 'map' ? colors.textOnPrimary : colors.text}
-                        />
+                        <Feather name="x" size={16} color={colors.textMuted} />
                     </Pressable>
-                    <Pressable
-                        style={styles.headerIconBtn}
-                        onPress={onOpenFilterDrawer}
-                        accessibilityRole="button"
-                        accessibilityLabel="Выбрать город"
-                    >
-                        <Feather name="filter" size={17} color={colors.text} />
-                    </Pressable>
-                    <Pressable
-                        style={[styles.headerIconBtn, geoRequesting && styles.headerIconBtnDisabled]}
-                        onPress={onShowNearby}
-                        disabled={geoRequesting}
-                        accessibilityRole="button"
-                        accessibilityLabel={geoRequesting ? 'Ищем квесты рядом со мной' : 'Показать квесты рядом со мной'}
-                        testID="quests-show-nearby"
-                    >
-                        <Feather name="navigation" size={17} color={colors.text} />
-                    </Pressable>
-                </View>
-            )}
+                )}
+            </View>
         </View>
     );
 
@@ -293,7 +332,17 @@ export default function QuestsContentPanel({
                     </View>
                 ) : (
                     <>
-                        {selectedCityId === nearbyId && userLoc && questsAll.length === 0 && dataLoaded && (
+                        {searchActive && questsAll.length === 0 && dataLoaded && (
+                            <EmptyState
+                                icon="search"
+                                title="Ничего не найдено"
+                                description="Попробуйте другое название или город"
+                                variant="empty"
+                                iconSize={48}
+                            />
+                        )}
+
+                        {!searchActive && selectedCityId === nearbyId && userLoc && questsAll.length === 0 && dataLoaded && (
                             <EmptyState
                                 icon="map-pin"
                                 title="Рядом ничего не найдено"
@@ -303,7 +352,7 @@ export default function QuestsContentPanel({
                             />
                         )}
 
-                        {!selectedCityId && dataLoaded && (
+                        {!searchActive && !selectedCityId && dataLoaded && (
                             <EmptyState
                                 icon="compass"
                                 title="Выберите город"

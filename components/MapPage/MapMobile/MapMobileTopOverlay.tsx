@@ -78,12 +78,16 @@ interface MapMobileTopOverlayProps {
   onToggleLayers: () => void
   onClosePopover: () => void
   onOpenFilters: () => void
-  /** True when category/search filters are active — reveals the quick reset button. */
+  /** True when category/search filters are active — highlights the «Показать всё» button. */
   hasActiveFilters?: boolean
-  /** Reset all filters (same canonical clear-all as the filters sheet). */
-  onResetFilters?: () => void
   /** Recenter the map on the user's location. */
   onCenterOnUser: () => void
+  /**
+   * Always-visible «Показать всё»: reset filters + fit the map to ALL loaded
+   * markers. Also the escape-hatch when the map is stuck on the Minsk fallback
+   * (geolocation denied/timeout).
+   */
+  onShowAllPlaces?: () => void
   /** Open the «Места рядом» list sheet. */
   onOpenList: () => void
   /** Count of nearby places shown as a badge on the list button (e.g. "12"). */
@@ -129,7 +133,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   onClosePopover,
   onOpenFilters,
   hasActiveFilters,
-  onResetFilters,
+  onShowAllPlaces,
   onCenterOnUser,
   onOpenList,
   listBadge,
@@ -309,16 +313,24 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             )}
           </Pressable>
 
-          {hasActiveFilters && onResetFilters && (
+          {/* «Показать всё»: сбрасывает фильтры И подгоняет карту под все точки.
+              Всегда видима в radius-режиме — заодно escape-hatch, когда карта
+              «застряла» на Минск-fallback (геолокация отклонена/таймаут). Отдельная
+              кнопка «сбросить фильтры» больше не нужна: она была подмножеством этой. */}
+          {!isRouteMode && onShowAllPlaces && (
             <Pressable
-              testID="map-mobile-reset-filters"
-              onPress={onResetFilters}
+              testID="map-mobile-show-all"
+              onPress={onShowAllPlaces}
               accessibilityRole="button"
-              accessibilityLabel="Сбросить фильтры"
+              accessibilityLabel="Показать все места на карте и сбросить фильтры"
               hitSlop={6}
-              style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+              style={({ pressed }) => [
+                styles.iconButton,
+                hasActiveFilters && styles.iconButtonActive,
+                pressed && styles.iconButtonPressed,
+              ]}
             >
-              <Feather name="rotate-ccw" size={20} color={colors.text} />
+              <Feather name="maximize" size={20} color={colors.text} />
             </Pressable>
           )}
 

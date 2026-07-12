@@ -40,6 +40,10 @@ interface MapMobileLayoutProps {
   focusPlace?: (item: any) => void
   totalCount?: number
   onCenterOnUser: () => void
+  // Всегда видимая кнопка «Показать всё»: сбрасывает фильтры и подгоняет карту под
+  // все точки (fit ко всем маркерам). Escape-hatch, когда карта «застряла» на
+  // Минск-fallback (геолокация отклонена/таймаут).
+  onShowAllPlaces?: () => void
   // F-49 — Google-Maps-style "Search this area" affordance.
   canSearchThisArea?: boolean
   onSearchThisArea?: () => void
@@ -83,6 +87,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   focusPlace,
   totalCount,
   onCenterOnUser,
+  onShowAllPlaces,
   canSearchThisArea,
   onSearchThisArea,
   onOpenFilters,
@@ -575,7 +580,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             onClosePopover={closePopover}
             onOpenFilters={openFiltersSheet}
             hasActiveFilters={hasActiveFilters}
-            onResetFilters={onResetFilters}
+            onShowAllPlaces={onShowAllPlaces}
             onCenterOnUser={onCenterOnUser}
             onOpenList={openList}
             listBadge={listBadge}

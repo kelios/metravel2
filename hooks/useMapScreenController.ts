@@ -17,6 +17,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { getStyles } from '@/screens/tabs/map.styles';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { mapCategoryNamesToIds, isCategoryFilterUnresolved } from '@/utils/filterQuery';
+import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
 
 // Модульные хуки для карты
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates';
@@ -566,6 +567,27 @@ export function useMapScreenController() {
     useRouteStore.getState().clearRouteAndSetMode('radius');
   }, [resetFiltersBase, resetOverlays]);
 
+  // «Показать всё»: сбросить фильтры/область поиска/маршрут и подогнать карту под
+  // ВСЕ загруженные точки (fit ко всем маркерам). Служит и явной кнопкой сброса,
+  // и escape-hatch на случай, когда геолокация отклонена/таймаут и карта «застряла»
+  // на Минск-fallback — пользователь одним тапом видит все места.
+  const showAllPlaces = useCallback(() => {
+    resetFilters();
+    // Даем сбросу отрисоваться, затем подгоняем карту под все точки на карте.
+    const fitAll = () => {
+      try {
+        mapUiApi?.fitToResults?.();
+      } catch {
+        // noop
+      }
+    };
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(fitAll);
+    } else {
+      fitAll();
+    }
+  }, [resetFilters, mapUiApi]);
+
   // Center on user location
   const centerOnUser = useCallback(() => {
     // F-49 — returning to the GPS anchor clears the explicit "search this area"
@@ -636,8 +658,9 @@ export function useMapScreenController() {
           // noop
         }
       }
-      // Fallback to Minsk when no cached or current location is available.
-      return { latitude: 53.9006, longitude: 27.559 };
+      // Fallback to the canonical default center when no cached or current
+      // location is available (single source, see constants/mapConfig).
+      return { latitude: DEFAULT_MAP_CENTER.latitude, longitude: DEFAULT_MAP_CENTER.longitude };
     }
     return { latitude: source.latitude, longitude: source.longitude };
   }, [coordinates, queryCoordinates]);
@@ -923,6 +946,7 @@ export function useMapScreenController() {
     buildRouteTo: buildRouteToStable,
     focusPlace: focusPlaceStable,
     centerOnUser,
+    showAllPlaces,
     zoomIn,
     zoomOut,
 
@@ -986,6 +1010,7 @@ export function useMapScreenController() {
     buildRouteToStable,
     focusPlaceStable,
     centerOnUser,
+    showAllPlaces,
     zoomIn,
     zoomOut,
     canSearchThisArea,

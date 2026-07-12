@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import type { LatLng } from '@/types/coordinates';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { strToLatLng } from './utils';
+import { beginProgrammaticMapMove } from './programmaticMoveSignal';
 
 const isTestEnv =
   typeof process !== 'undefined' &&
@@ -266,6 +267,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     if (mode === 'route') {
       if (!hasInitializedRef.current && hasValidCoords) {
         try {
+          beginProgrammaticMapMove();
           map.setView([coordinates.lat, coordinates.lng], 13, { animate: false });
         } catch {
           // Pane may not be ready yet
@@ -296,6 +298,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       if (preCenter && preFitKey && lastPreFitKeyRef.current !== preFitKey) {
         lastPreFitKeyRef.current = preFitKey;
         try {
+          beginProgrammaticMapMove();
           map.setView(
             [preCenter.lat, preCenter.lng],
             getInitialRadiusZoom(radiusInMeters),
@@ -347,6 +350,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
 
       if (hasValidCircleCenter) {
         try {
+          beginProgrammaticMapMove();
           map.setView([circleCenter!.lat, circleCenter!.lng], radiusZoom, { animate: false });
         } catch {
           // Pane may not be ready yet
@@ -355,6 +359,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         hasInitializedRef.current = true;
       } else if (hasValidUserLocation) {
         try {
+          beginProgrammaticMapMove();
           map.setView([userLocation.lat, userLocation.lng], radiusZoom, { animate: false });
         } catch {
           // Pane may not be ready yet
@@ -363,6 +368,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         hasInitializedRef.current = true;
       } else if (hasValidCoords) {
         try {
+          beginProgrammaticMapMove();
           map.setView([coordinates.lat, coordinates.lng], radiusZoom, { animate: false });
         } catch {
           // Pane may not be ready yet
@@ -537,6 +543,10 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         const padFactor = mode === 'radius' ? 0.1 : 0.12;
         try {
           const animate = !isTestEnv && hasCompletedAutoFitRef.current;
+          // Mark this as self-induced motion so the cluster viewport snapshot
+          // ignores the moveend/zoomend it fires (prevents the fit⇄data flicker
+          // loop). Cover the animated flyTo duration when animating.
+          beginProgrammaticMapMove(animate ? 700 : 500);
           map.fitBounds(bounds.pad(padFactor), {
             animate,
             duration: animate ? 0.35 : undefined,

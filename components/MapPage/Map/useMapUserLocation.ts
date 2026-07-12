@@ -5,6 +5,7 @@ import { CoordinateConverter } from '@/utils/coordinateConverter'
 import { isValidCoordinate } from '@/utils/coordinateValidator'
 import { showGeolocationErrorToast } from '@/utils/mapToasts'
 
+import { beginProgrammaticMapMove } from './programmaticMoveSignal'
 import type { Coordinates } from './types'
 
 const MOBILE_WEB_USER_FOCUS_MAX_WIDTH = 768
@@ -150,6 +151,7 @@ export function useMapUserLocation({
   const focusOnUserLocation = useCallback((target: { lat: number; lng: number }) => {
     if (!mapRef.current) return
     try {
+      beginProgrammaticMapMove()
       mapRef.current.setView(
         CoordinateConverter.toLeaflet(target),
         USER_LOCATION_FOCUS_ZOOM,

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 import { logError, logMessage } from '@/utils/logger';
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader';
+import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
 
 export interface Coordinates {
   latitude: number;
@@ -16,7 +17,10 @@ export interface Coordinates {
  */
 export type CoordinatesSource = 'geolocation' | 'cache' | 'default';
 
-export const DEFAULT_COORDINATES: Coordinates = { latitude: 53.9006, longitude: 27.559 };
+export const DEFAULT_COORDINATES: Coordinates = {
+  latitude: DEFAULT_MAP_CENTER.latitude,
+  longitude: DEFAULT_MAP_CENTER.longitude,
+};
 const WEB_LAST_COORDS_KEY = 'metravel:lastKnownCoords';
 const NATIVE_LOCATION_TIMEOUT_MS = 12000;
 

@@ -101,6 +101,27 @@ describe('QuestFullMap native marker status', () => {
     expect(html).toContain('settled: settled');
   });
 
+  it('embeds the injectable PNG renderer so native export is no longer a stub', () => {
+    const { getByTestId } = render(
+      <QuestFullMap steps={steps} title="Карта квеста" height={420} />
+    );
+
+    const html = getByTestId('quest-map-webview').props.source.html;
+    expect(html).toContain('window.__qmExportPng');
+    expect(html).toContain("canvas.toDataURL('image/png')");
+    expect(html).toContain('quest-map-png');
+  });
+
+  it('offers PNG export in the native share menu', () => {
+    const { getByLabelText, getByText } = render(
+      <QuestFullMap steps={steps} title="Карта квеста" height={420} />
+    );
+
+    fireEvent.press(getByLabelText('Скачать маршрут (PNG, GPX, GeoJSON)'));
+
+    expect(getByText('Поделиться PNG')).toBeTruthy();
+  });
+
   it('keeps a safe native height when callers pass the compact mobile size', () => {
     const rendered = render(
       <QuestFullMap steps={steps} title="Карта квеста" height={360} />

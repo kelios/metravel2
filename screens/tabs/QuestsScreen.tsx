@@ -41,6 +41,9 @@ const LazyQuestMap = React.lazy(() => import('@/components/MapPage/Map.web'));
 
 export default function QuestsScreen() {
     const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
+    // Свободный текстовый поиск по всему каталогу (название/город/страна/теги).
+    // Пока строка непустая — перекрывает выбор города и «Рядом», ищем по ВСЕМ квестам.
+    const [searchQuery, setSearchQuery] = useState('');
     // true только когда пользователь сам выбрал «Рядом» — тогда включаем
     // геолокацию и фильтрацию по радиусу. По умолчанию «Рядом» = все квесты.
     const [nearbyExplicit, setNearbyExplicit] = useState(false);
@@ -328,8 +331,23 @@ export default function QuestsScreen() {
         });
     }, [areAllCountryGroupsCollapsed, citiesByCountry]);
 
+    const searchTerm = searchQuery.trim().toLowerCase();
+
     const questsAll: (QuestMeta & { _distanceKm?: number })[] = useMemo(() => {
-        if (!selectedCityId || !dataLoaded) return [];
+        if (!dataLoaded) return [];
+        // Свободный поиск перекрывает город/«Рядом»: ищем по всему каталогу.
+        if (searchTerm) {
+            return ALL_QUESTS
+                .filter((q) => {
+                    const haystack = [q.title, q.cityName, q.countryName, ...(q.tags || [])]
+                        .filter(Boolean)
+                        .join(' ')
+                        .toLowerCase();
+                    return haystack.includes(searchTerm);
+                })
+                .map((q) => ({ ...q }));
+        }
+        if (!selectedCityId) return [];
         if (selectedCityId === NEARBY_ID) {
             if (activeMapAreaCenter) {
                 // «Искать в этой области» должен фиксировать именно видимый viewport,
@@ -347,16 +365,19 @@ export default function QuestsScreen() {
                 .sort((a, b) => a._distanceKm! - b._distanceKm!);
         }
         return (CITY_QUESTS[selectedCityId] || []).map((q) => ({ ...q }));
-    }, [selectedCityId, userLoc, nearbyRadiusKm, ALL_QUESTS, CITY_QUESTS, dataLoaded, nearbyExplicit, activeMapAreaCenter]);
+    }, [selectedCityId, userLoc, nearbyRadiusKm, ALL_QUESTS, CITY_QUESTS, dataLoaded, nearbyExplicit, activeMapAreaCenter, searchTerm]);
 
     const catalogModel = useQuestCatalogResponsiveModel(questsAll.length);
     const questCardWidth = catalogModel.cardWidth;
 
     const mapPoints = useMemo<MapPoint[]>(() => {
-        if (!dataLoaded || !selectedCityId) return [];
-        const source = selectedCityId === NEARBY_ID
-            ? (userLoc || activeMapAreaCenter ? questsAll : ALL_QUESTS)
-            : questsAll;
+        if (!dataLoaded) return [];
+        if (!searchTerm && !selectedCityId) return [];
+        const source = searchTerm
+            ? questsAll
+            : selectedCityId === NEARBY_ID
+                ? (userLoc || activeMapAreaCenter ? questsAll : ALL_QUESTS)
+                : questsAll;
 
         return source
             .filter((q) => Number.isFinite(q.lat) && Number.isFinite(q.lng) && !!q.id)
@@ -390,7 +411,7 @@ export default function QuestsScreen() {
                     },
                 };
             });
-    }, [dataLoaded, selectedCityId, userLoc, activeMapAreaCenter, questsAll, ALL_QUESTS]);
+    }, [dataLoaded, selectedCityId, userLoc, activeMapAreaCenter, questsAll, ALL_QUESTS, searchTerm]);
 
     const mapCenter = useMemo(() => {
         if (activeMapAreaCenter && Number.isFinite(activeMapAreaCenter.latitude) && Number.isFinite(activeMapAreaCenter.longitude)) {
@@ -601,6 +622,8 @@ export default function QuestsScreen() {
                 selectedCityId={selectedCityId}
                 selectedCityName={selectedCityName}
                 nearbyId={NEARBY_ID}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
                 questsAll={questsAll}
                 questCardWidth={questCardWidth}
                 mapPoints={mapPoints}

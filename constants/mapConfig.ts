@@ -16,10 +16,22 @@ export const RADIUS_OPTIONS = [
   { id: '200', name: '200' },
 ] as const;
 
+// Единый Минск-fallback центр карты для случаев «нет реальной геолокации»
+// (permission denied / timeout / SSR). ВАЖНО: это один канонический центр —
+// раньше разные модули использовали два близких, но разных Минск-центра
+// (53.9006/27.559 и 53.8828449/27.7273595), из-за чего «вы здесь» и радиус-круг
+// расходились, а fallback мог ошибочно классифицироваться как реальная позиция.
+// Все fallback-центры теперь ссылаются сюда.
 export const DEFAULT_MAP_CENTER = {
   latitude: 53.9006,
-  longitude: 27.5590,
-} as const;
+  longitude: 27.559,
+} as const
+
+/** Тот же дефолтный центр в формате Leaflet [lat, lng]. */
+export const DEFAULT_MAP_CENTER_TUPLE: [number, number] = [
+  DEFAULT_MAP_CENTER.latitude,
+  DEFAULT_MAP_CENTER.longitude,
+];
 
 /**
  * Единый формат подписи радиуса («50 км»). Единственный источник форматирования —

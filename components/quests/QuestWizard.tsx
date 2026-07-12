@@ -40,6 +40,7 @@ import { exportQuestOfflineMap, getQuestOfflineMapPoints, openQuestOfflineMapInA
 
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useQuestFontScaleStore } from '@/stores/questFontScaleStore';
 import { useQuestWizardResponsiveModel } from './hooks/useQuestWizardResponsiveModel';
 import { createQuestWizardStyles } from './questWizardStyles';
 
@@ -94,7 +95,8 @@ const SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 };
 
 const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     const colors = useThemedColors();
-    const styles = useMemo(() => createQuestWizardStyles(colors, isMobile, screenW), [colors, isMobile, screenW]);
+    const fontScale = useQuestFontScaleStore((s) => s.fontScale);
+    const styles = useMemo(() => createQuestWizardStyles(colors, isMobile, screenW, fontScale), [colors, isMobile, screenW, fontScale]);
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================

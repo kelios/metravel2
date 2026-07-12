@@ -23,6 +23,11 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { buildQuestOfflineMapGpx } from './questOfflineMapExport';
+import {
+    isQuestMapPngMessage,
+    QUEST_MAP_PNG_RENDERER_SCRIPT,
+    saveAndShareQuestMapPng,
+} from './questNativeMapPng';
 import { openQuestMap, type QuestMapApp } from './questWizardHelpers';
 import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
 
@@ -106,7 +111,10 @@ function QuestFullMap({
     // touch-responder успел получить UP/CANCEL до размонтирования (RN touch-deadlock).
     const [fullscreenClosing, setFullscreenClosing] = useState(false);
     const [markerStatus, setMarkerStatus] = useState<MarkerStatus | null>(null);
+    const [isExportingPng, setIsExportingPng] = useState(false);
     const webViewRef = useRef<WebView>(null);
+    const pngResolverRef = useRef<((dataUrl: string | null) => void) | null>(null);
+    const pngTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { height: viewportHeight } = useWindowDimensions();
     const insets = useSafeAreaInsets();
     const colors = useThemedColors();
@@ -365,6 +373,7 @@ function QuestFullMap({
 
         window.__qmZoomIn = function () { try { map.zoomIn(); } catch (e) {} };
         window.__qmZoomOut = function () { try { map.zoomOut(); } catch (e) {} };
+${QUEST_MAP_PNG_RENDERER_SCRIPT}
 
         window.setActiveStep = function (activeIndex) {
           grouped.forEach(function (gp, i) {
@@ -477,7 +486,19 @@ function QuestFullMap({
                 lat?: number;
                 lng?: number;
                 title?: string;
+                ok?: boolean;
+                dataUrl?: string | null;
             };
+            if (isQuestMapPngMessage(data)) {
+                const resolver = pngResolverRef.current;
+                pngResolverRef.current = null;
+                if (pngTimeoutRef.current) {
+                    clearTimeout(pngTimeoutRef.current);
+                    pngTimeoutRef.current = null;
+                }
+                resolver?.(data.ok ? (data.dataUrl ?? null) : null);
+                return;
+            }
             if (data.type === 'quest-map-nav') {
                 if (
                     data.app &&
@@ -513,6 +534,50 @@ function QuestFullMap({
         const fn = direction === 'in' ? '__qmZoomIn' : '__qmZoomOut';
         webViewRef.current?.injectJavaScript(`window.${fn} && window.${fn}(); true;`);
     };
+
+    // Просим WebView отрисовать off-DOM canvas и вернуть PNG data-URL.
+    // Мост injectJavaScript → postMessage: резолвер держим в ref, страхуем таймаутом,
+    // чтобы зависший рендер не блокировал экспорт навсегда.
+    const requestQuestMapPng = useCallback(() => {
+        return new Promise<string | null>(resolve => {
+            if (pngTimeoutRef.current) clearTimeout(pngTimeoutRef.current);
+            pngResolverRef.current = resolve;
+            pngTimeoutRef.current = setTimeout(() => {
+                pngResolverRef.current = null;
+                pngTimeoutRef.current = null;
+                resolve(null);
+            }, 15000);
+            webViewRef.current?.injectJavaScript('window.__qmExportPng && window.__qmExportPng(); true;');
+        });
+    }, []);
+
+    const shareAsPNG = async () => {
+        if (isExportingPng) return;
+        setIsExportingPng(true);
+        try {
+            const dataUrl = await requestQuestMapPng();
+            const ok = await saveAndShareQuestMapPng({ dataUrl, title });
+            if (!ok && dataUrl == null) {
+                Alert.alert(
+                    'Экспорт PNG',
+                    'Не удалось сформировать изображение карты. Попробуйте GPX или GeoJSON.'
+                );
+            } else if (!ok) {
+                Alert.alert('Экспорт PNG', 'Не удалось поделиться изображением карты');
+            }
+        } catch {
+            Alert.alert('Экспорт PNG', 'Не удалось сформировать изображение карты');
+        } finally {
+            setIsExportingPng(false);
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            if (pngTimeoutRef.current) clearTimeout(pngTimeoutRef.current);
+            pngResolverRef.current = null;
+        };
+    }, []);
 
     const shareAsGPX = async () => {
         try {
@@ -658,6 +723,15 @@ function QuestFullMap({
                             style={styles.modalOption}
                             onPress={() => {
                                 setExportMenuVisible(false);
+                                void shareAsPNG();
+                            }}
+                        >
+                            <Text style={styles.modalOptionText}>Поделиться PNG</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.modalOption}
+                            onPress={() => {
+                                setExportMenuVisible(false);
                                 void shareAsGPX();
                             }}
                         >
@@ -729,6 +803,13 @@ function QuestFullMap({
                         : 'Откройте карту на весь экран, чтобы перемещать её'}
                 </Text>
             </View>
+
+            {isExportingPng ? (
+                <View style={styles.pngOverlay} pointerEvents="auto">
+                    <ActivityIndicator size="large" color={colors.primaryDark} />
+                    <Text style={styles.loadingText}>Готовим изображение карты...</Text>
+                </View>
+            ) : null}
         </View>
     );
 }
@@ -859,6 +940,14 @@ const createStyles = (colors: ThemedColors) =>
             gap: 8,
             zIndex: 10,
             backgroundColor: colors.surface,
+        },
+        pngOverlay: {
+            ...StyleSheet.absoluteFillObject,
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 8,
+            zIndex: 20,
+            backgroundColor: colors.overlay,
         },
         loadingText: {
             textAlign: 'center',

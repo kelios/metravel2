@@ -9,6 +9,10 @@ import {
   QuestStepPill,
 } from './questWizardNavigation'
 import { QuestCompactExcursions } from './questWizardSections'
+import {
+  QUEST_FONT_SCALE_STEPS,
+  useQuestFontScaleStore,
+} from '@/stores/questFontScaleStore'
 
 type QuestNavigationStep = {
   id: string
@@ -220,6 +224,11 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
         {ratingSlot ?? null}
         {completionSlot ?? null}
         <View style={styles.compactSidebarActions}>
+          <QuestFontScaleControl
+            styles={styles}
+            colors={colors}
+            showLabel={!iconOnlyActions}
+          />
           <QuestActionButton
             styles={styles}
             label="Печать"
@@ -329,6 +338,52 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
   )
 }
 
+function QuestFontScaleControl({
+  styles,
+  colors,
+  showLabel,
+}: {
+  styles: any
+  colors: any
+  showLabel: boolean
+}) {
+  const fontScale = useQuestFontScaleStore((s) => s.fontScale)
+  const increase = useQuestFontScaleStore((s) => s.increase)
+  const decrease = useQuestFontScaleStore((s) => s.decrease)
+
+  const atMin = fontScale <= QUEST_FONT_SCALE_STEPS[0]
+  const atMax = fontScale >= QUEST_FONT_SCALE_STEPS[QUEST_FONT_SCALE_STEPS.length - 1]
+
+  return (
+    <>
+      <QuestActionButton
+        styles={styles}
+        label="Меньше шрифт"
+        accessibilityLabel="Уменьшить шрифт"
+        iconName="zoom-out"
+        iconColor={atMin ? colors.disabled : colors.textMuted}
+        onPress={decrease}
+        disabled={atMin}
+        baseStyle={styles.actionLabelButton}
+        showLabel={showLabel}
+        textStyle={[styles.actionLabelText, atMin && { color: colors.disabled }]}
+      />
+      <QuestActionButton
+        styles={styles}
+        label="Больше шрифт"
+        accessibilityLabel="Увеличить шрифт"
+        iconName="zoom-in"
+        iconColor={atMax ? colors.disabled : colors.textMuted}
+        onPress={increase}
+        disabled={atMax}
+        baseStyle={styles.actionLabelButton}
+        showLabel={showLabel}
+        textStyle={[styles.actionLabelText, atMax && { color: colors.disabled }]}
+      />
+    </>
+  )
+}
+
 export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
   const {
     colors,
@@ -371,6 +426,11 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           {completionSlot ?? null}
         </View>
         <View style={styles.headerActionRow}>
+          <QuestFontScaleControl
+            styles={styles}
+            colors={colors}
+            showLabel={showActionLabels}
+          />
           {Platform.OS === 'web' && (
             <QuestActionButton
               styles={styles}

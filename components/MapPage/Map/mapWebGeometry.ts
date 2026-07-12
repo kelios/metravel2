@@ -1,9 +1,10 @@
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import { isValidCoordinate } from '@/utils/coordinateValidator'
+import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig'
 
 export function getSafeCenter(coordinates?: { latitude?: number; longitude?: number } | null): [number, number] {
-  const DEFAULT_LAT = 53.8828449
-  const DEFAULT_LNG = 27.7273595
+  const DEFAULT_LAT = DEFAULT_MAP_CENTER.latitude
+  const DEFAULT_LNG = DEFAULT_MAP_CENTER.longitude
 
   if (!coordinates) {
     return [DEFAULT_LAT, DEFAULT_LNG]

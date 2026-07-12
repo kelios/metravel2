@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { type QuestColors, SPACING, QUEST_DESIGN } from './shared';
 
-export const createCardStyles = (colors: QuestColors, isMobile: boolean, _screenW: number) => ({
+export const createCardStyles = (colors: QuestColors, isMobile: boolean, _screenW: number, fontScale = 1) => ({
     card: {
         backgroundColor: colors.surface,
         borderRadius: isMobile ? 14 : 16,
@@ -54,12 +54,12 @@ export const createCardStyles = (colors: QuestColors, isMobile: boolean, _screen
     stepNumberText: { fontSize: isMobile ? 14 : 17, fontWeight: '800', color: colors.brandText },
     headerContent: { flex: 1 },
     stepTitle: {
-        fontSize: isMobile ? 17 : 20,
+        fontSize: Math.round((isMobile ? 17 : 20) * fontScale),
         fontWeight: '800',
         color: colors.text,
         marginBottom: 4,
         letterSpacing: -0.4,
-        lineHeight: isMobile ? 23 : 26,
+        lineHeight: Math.round((isMobile ? 23 : 26) * fontScale),
     },
     location: {
         fontSize: 14,
@@ -98,8 +98,8 @@ export const createCardStyles = (colors: QuestColors, isMobile: boolean, _screen
         letterSpacing: 1.2,
     },
     storyText: {
-        fontSize: isMobile ? 14 : QUEST_DESIGN.bodySize,
-        lineHeight: isMobile ? 22 : 24,
+        fontSize: Math.round((isMobile ? 14 : QUEST_DESIGN.bodySize) * fontScale),
+        lineHeight: Math.round((isMobile ? 22 : 24) * fontScale),
         color: colors.text,
         letterSpacing: -0.1,
     },

@@ -19,6 +19,7 @@ type MapScreenMobileProps = {
   focusPlace?: (item: any) => void
   travelsCount: number
   centerOnUser: () => void
+  onShowAllPlaces?: () => void
   canSearchThisArea?: boolean
   onSearchThisArea?: () => void
   handleSelectSearchTab: () => void
@@ -55,6 +56,7 @@ export function MapScreenMobile({
   focusPlace,
   travelsCount,
   centerOnUser,
+  onShowAllPlaces,
   canSearchThisArea,
   onSearchThisArea,
   handleSelectSearchTab,
@@ -107,6 +109,7 @@ export function MapScreenMobile({
           focusPlace={focusPlace}
           totalCount={travelsCount}
           onCenterOnUser={centerOnUser}
+          onShowAllPlaces={onShowAllPlaces}
           canSearchThisArea={canSearchThisArea}
           onSearchThisArea={onSearchThisArea}
           onOpenFilters={() => {

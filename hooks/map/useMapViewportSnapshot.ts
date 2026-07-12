@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { MapClusterBBox } from '@/api/map';
+import { programmaticMapMoveRemainingMs } from '@/components/MapPage/Map/programmaticMoveSignal';
 
 export interface MapViewportSnapshot {
   bbox: MapClusterBBox | null;
@@ -85,11 +86,7 @@ export function useMapViewportSnapshot(
     }
 
     let frameId: number | null = null;
-    const readAndStore = () => {
-      frameId = null;
-      const next = readMapViewportSnapshot(map, initialSnapshot.zoom);
-      setSnapshot((prev) => (sameSnapshot(prev, next) ? prev : next));
-    };
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
 
     const scheduleRead = () => {
       if (frameId != null) return;
@@ -100,6 +97,27 @@ export function useMapViewportSnapshot(
       }
     };
 
+    const readAndStore = () => {
+      frameId = null;
+      // Ignore viewport churn caused by our own programmatic map motion (auto-fit /
+      // flyTo / setView). Reading here would refetch clusters for the in-flight
+      // animated viewport and could feed a fit⇄data flicker loop on mobile. Instead
+      // schedule a single trailing read once the self-induced move settles, so the
+      // cluster query still matches the final viewport.
+      const remaining = programmaticMapMoveRemainingMs();
+      if (remaining > 0) {
+        if (settleTimer == null && typeof setTimeout === 'function') {
+          settleTimer = setTimeout(() => {
+            settleTimer = null;
+            scheduleRead();
+          }, remaining + 48);
+        }
+        return;
+      }
+      const next = readMapViewportSnapshot(map, initialSnapshot.zoom);
+      setSnapshot((prev) => (sameSnapshot(prev, next) ? prev : next));
+    };
+
     scheduleRead();
     map.on('moveend', scheduleRead);
     map.on('zoomend', scheduleRead);
@@ -107,6 +125,10 @@ export function useMapViewportSnapshot(
     return () => {
       if (frameId != null && typeof cancelAnimationFrame === 'function') {
         cancelAnimationFrame(frameId);
+      }
+      if (settleTimer != null) {
+        clearTimeout(settleTimer);
+        settleTimer = null;
       }
       try {
         map.off?.('moveend', scheduleRead);

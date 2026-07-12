@@ -7,6 +7,7 @@ import type { LatLng } from '@/types/coordinates';
 import { buildGpx, buildKml, downloadTextFileWeb } from '@/utils/routeExport';
 import { WEB_MAP_BASE_LAYERS } from '@/config/mapWebLayers';
 import { createLeafletLayer } from '@/utils/mapWebLayers';
+import { beginProgrammaticMapMove } from './programmaticMoveSignal';
 import type { OsmPoiCategory } from '@/utils/overpass';
 
 const MOBILE_WEB_USER_FOCUS_MAX_WIDTH = 768;
@@ -55,6 +56,7 @@ export function useMapApi({
     if (!map) return;
     try {
       const target = CoordinateConverter.toLeaflet(targetLocation);
+      beginProgrammaticMapMove();
       map.setView(target, zoom, { animate: true });
 
       const containerWidth = Number(map?.getContainer?.()?.clientWidth ?? 0);
@@ -213,6 +215,7 @@ export function useMapApi({
             // noop
           }
 
+          beginProgrammaticMapMove();
           if (typeof map.flyTo === 'function') {
             map.flyTo(CoordinateConverter.toLeaflet(parsed), targetZoom, { animate: true, duration: 0.35 } as any);
             return;
@@ -323,6 +326,7 @@ export function useMapApi({
           const bounds = (L as any).latLngBounds(
             coords.map((c) => CoordinateConverter.toLeaflet(c))
           );
+          beginProgrammaticMapMove();
           map.fitBounds(bounds.pad(0.2), { animate: false });
         } catch {
           // noop

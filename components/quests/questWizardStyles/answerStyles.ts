@@ -2,13 +2,13 @@ import { Platform } from 'react-native';
 import { type QuestColors, SPACING, QUEST_DESIGN } from './shared';
 import { globalFocusStyles } from '@/styles/globalFocus';
 
-export const createAnswerStyles = (colors: QuestColors, isMobile: boolean, _screenW: number) => ({
+export const createAnswerStyles = (colors: QuestColors, isMobile: boolean, _screenW: number, fontScale = 1) => ({
     taskText: {
-        fontSize: isMobile ? 15 : 17,
+        fontSize: Math.round((isMobile ? 15 : 17) * fontScale),
         fontWeight: '700',
         color: colors.text,
         marginBottom: isMobile ? SPACING.md : SPACING.lg,
-        lineHeight: isMobile ? 22 : 25,
+        lineHeight: Math.round((isMobile ? 22 : 25) * fontScale),
         letterSpacing: -0.3,
     },
     input: {
@@ -16,7 +16,7 @@ export const createAnswerStyles = (colors: QuestColors, isMobile: boolean, _scre
         borderRadius: 14,
         paddingHorizontal: SPACING.lg,
         paddingVertical: 14,
-        fontSize: 16,
+        fontSize: Math.round(16 * fontScale),
         marginBottom: SPACING.sm,
         color: colors.text,
         minHeight: 52,
@@ -51,7 +51,7 @@ export const createAnswerStyles = (colors: QuestColors, isMobile: boolean, _scre
         borderWidth: 1,
         borderColor: 'rgba(239,68,68,0.15)',
     },
-    errorText: { color: colors.danger, fontSize: 13, fontWeight: '600', flex: 1 },
+    errorText: { color: colors.danger, fontSize: Math.round(13 * fontScale), fontWeight: '600', flex: 1 },
 
     primaryButton: {
         paddingHorizontal: SPACING.xl,
@@ -71,7 +71,7 @@ export const createAnswerStyles = (colors: QuestColors, isMobile: boolean, _scre
             default: { backgroundColor: colors.brand },
         }),
     },
-    buttonText: { color: colors.textOnPrimary, fontWeight: '700', textAlign: 'center', fontSize: 16 },
+    buttonText: { color: colors.textOnPrimary, fontWeight: '700', textAlign: 'center', fontSize: Math.round(16 * fontScale) },
 
     inputRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: isMobile ? SPACING.sm : SPACING.md },
     checkButton: {
@@ -113,7 +113,7 @@ export const createAnswerStyles = (colors: QuestColors, isMobile: boolean, _scre
         borderWidth: 1,
         borderColor: colors.successLight,
     },
-    hintText: { color: colors.text, fontSize: 14, lineHeight: 20 },
+    hintText: { color: colors.text, fontSize: Math.round(14 * fontScale), lineHeight: Math.round(20 * fontScale) },
     answerMapSplit: {
         flexDirection: 'column',
         gap: SPACING.md,
@@ -149,5 +149,5 @@ export const createAnswerStyles = (colors: QuestColors, isMobile: boolean, _scre
         borderColor: colors.successLight,
     },
     answerLabel: { fontSize: 11, color: colors.textMuted, marginBottom: 4, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8 },
-    answerValue: { fontSize: 15, fontWeight: '700', color: colors.text },
+    answerValue: { fontSize: Math.round(15 * fontScale), fontWeight: '700', color: colors.text },
 } as const);
