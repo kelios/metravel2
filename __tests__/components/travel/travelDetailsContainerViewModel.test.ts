@@ -16,7 +16,9 @@ describe('getTravelDetailsSeoViewModel', () => {
     expect(seo.readyTitle).toBe('Трек в Хохоловской долине | Metravel');
   });
 
-  it('uses slug/id based title and description fallbacks while travel data is incomplete', () => {
+  it('keeps head untouched (null title/desc) while travel data is incomplete', () => {
+    // Слаг-фолбэк затирал корректный SSG-<title> транслитом, и Метрика/GA4
+    // снимали hit с «Marshrut oden usadba…» — пока данных нет, head не трогаем.
     const seo = getTravelDetailsSeoViewModel(
       {
         id: 628,
@@ -26,7 +28,14 @@ describe('getTravelDetailsSeoViewModel', () => {
       'vitebsk-chto-mozhno-posmotret',
     );
 
-    expect(seo.readyTitle).toBe('Vitebsk chto mozhno posmotret | Metravel');
-    expect(seo.readyDesc).toContain('Маршрут Vitebsk chto mozhno posmotret на Metravel');
+    expect(seo.readyTitle).toBeNull();
+    expect(seo.readyDesc).toBeNull();
+  });
+
+  it('keeps head untouched while travel is undefined (initial load)', () => {
+    const seo = getTravelDetailsSeoViewModel(undefined, 'marshrut-na-oden-usadba-linovo');
+
+    expect(seo.readyTitle).toBeNull();
+    expect(seo.readyDesc).toBeNull();
   });
 });

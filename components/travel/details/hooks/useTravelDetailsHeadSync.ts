@@ -6,9 +6,9 @@ import { ensureSingleTitleTag } from '@/utils/seo'
 type UseTravelDetailsHeadSyncArgs = {
   canonicalUrl?: string
   isFocused: boolean
-  readyDesc: string
+  readyDesc: string | null
   readyImage: string
-  readyTitle: string
+  readyTitle: string | null
   syncNavigationTitle: (title: string) => void
 }
 

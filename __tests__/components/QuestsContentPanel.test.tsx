@@ -51,16 +51,6 @@ describe('QuestsContentPanel', () => {
         questVirtualizedList: {},
         questVirtualizedListContent: {},
         questVirtualizedItem: {},
-        mapRadiusOverlay: {},
-        mapRadiusToggle: {},
-        mapRadiusToggleActive: {},
-        mapRadiusToggleText: {},
-        mapRadiusToggleTextActive: {},
-        mapRadiusPopover: {},
-        radiusChip: {},
-        radiusChipActive: {},
-        radiusChipText: {},
-        radiusChipTextActive: {},
     };
 
     const colors = {
@@ -94,7 +84,7 @@ describe('QuestsContentPanel', () => {
         firstCompleter: null,
     });
 
-    it('shows a geolocation-disabled banner and draws the map radius circle at the picked nearby radius', () => {
+    it('shows a geolocation-disabled banner without a radius circle', () => {
         (Platform as { OS: string }).OS = 'web';
         const LazyQuestMap = jest.fn(() => null);
 
@@ -143,18 +133,18 @@ describe('QuestsContentPanel', () => {
         expect(LazyQuestMap).toHaveBeenCalledWith(
             expect.objectContaining({
                 coordinates: { latitude: 53.9, longitude: 27.56 },
-                radius: '20',
+                userLocation: null,
+                showRadiusCircle: false,
             }),
             undefined,
         );
     });
 
-    it('exposes only the compact 5/10/20/50 radius options in the map overlay popover', () => {
+    it('shows the real user location marker instead of a radius selector', () => {
         (Platform as { OS: string }).OS = 'web';
         const LazyQuestMap = jest.fn(() => null);
-        const onSetRadius = jest.fn();
 
-        const { getByTestId, queryByTestId } = render(
+        const { queryByTestId } = render(
             <QuestsContentPanel
                 styles={styles}
                 colors={colors}
@@ -176,7 +166,7 @@ describe('QuestsContentPanel', () => {
                     },
                 ]}
                 mapCenter={{ latitude: 53.9, longitude: 27.56 }}
-                userLoc={null}
+                userLoc={{ lat: 53.91, lng: 27.57 }}
                 isMapAreaActive={false}
                 geoMessage={null}
                 geoRequesting={false}
@@ -187,30 +177,21 @@ describe('QuestsContentPanel', () => {
                 onShowNearby={() => {}}
                 onOpenFilterDrawer={() => {}}
                 onToggleViewMode={() => {}}
-                onSetRadius={onSetRadius}
+                onSetRadius={() => {}}
                 onMapUserLocationChange={() => {}}
                 onMapMove={() => {}}
                 onSearchMapArea={() => {}}
             />
         );
 
-        // Overlay is collapsed by default: options hidden until the toggle is tapped.
-        expect(queryByTestId('quests-map-radius-10')).toBeNull();
-
-        fireEvent.press(getByTestId('quests-map-radius-toggle'));
-
-        expect(getByTestId('quests-map-radius-5')).toBeTruthy();
-        expect(getByTestId('quests-map-radius-10')).toBeTruthy();
-        expect(getByTestId('quests-map-radius-20')).toBeTruthy();
-        expect(getByTestId('quests-map-radius-50')).toBeTruthy();
-        // Legacy radii are gone.
-        expect(queryByTestId('quests-map-radius-15')).toBeNull();
-        expect(queryByTestId('quests-map-radius-30')).toBeNull();
-
-        // Picking a value applies it and closes the popover.
-        fireEvent.press(getByTestId('quests-map-radius-20'));
-        expect(onSetRadius).toHaveBeenCalledWith(20);
-        expect(queryByTestId('quests-map-radius-20')).toBeNull();
+        expect(queryByTestId('quests-map-radius-toggle')).toBeNull();
+        expect(LazyQuestMap).toHaveBeenCalledWith(
+            expect.objectContaining({
+                userLocation: { latitude: 53.91, longitude: 27.57 },
+                showRadiusCircle: false,
+            }),
+            undefined,
+        );
     });
 
     it('keeps the map mounted with zero results and shows no full empty-state in map mode', () => {

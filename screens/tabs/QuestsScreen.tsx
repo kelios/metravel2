@@ -25,10 +25,8 @@ import { getStyles } from './QuestsScreen.styles';
 import {
     COUNTRY_NAMES,
     STORAGE_SELECTED_CITY,
-    STORAGE_NEARBY_RADIUS,
     DEFAULT_NEARBY_RADIUS_KM,
     NEARBY_ID,
-    normalizeNearbyRadiusKm,
     filterQuestsByMapSearchArea,
     loadExpoLocation,
     type QuestMapArea,
@@ -49,7 +47,7 @@ export default function QuestsScreen() {
     const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
     const [geoRequesting, setGeoRequesting] = useState(false);
     const [geoMessage, setGeoMessage] = useState<string | null>(null);
-    const [nearbyRadiusKm, setNearbyRadiusKm] = useState<number>(DEFAULT_NEARBY_RADIUS_KM);
+    const nearbyRadiusKm = DEFAULT_NEARBY_RADIUS_KM;
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
     const [pendingMapAreaCenter, setPendingMapAreaCenter] = useState<QuestMapArea | null>(null);
@@ -181,16 +179,6 @@ export default function QuestsScreen() {
         if (isMobile) setFilterDrawerOpen(false);
     }, [isMobile]);
 
-    const handleSetRadius = useCallback(async (km: number) => {
-        setNearbyRadiusKm(km);
-        try {
-            await AsyncStorage.setItem(STORAGE_NEARBY_RADIUS, String(km));
-        } catch (error) {
-            const { devError } = await import('@/utils/logger');
-            devError('Error saving radius:', error);
-        }
-    }, []);
-
     // Без сохранённого/валидного выбора показываем «Все квесты» (мягкий дефолт
     // «Рядом» без геолокации = весь каталог), а не ближайший по гео единственный
     // город (иначе по умолчанию виден лишь 1 город из многих — баг F-09).
@@ -202,16 +190,6 @@ export default function QuestsScreen() {
         if (isValid) return;
         setSelectedCityId(NEARBY_ID);
     }, [CITIES, dataLoaded, selectedCityId]);
-
-    // Nearby radius persistence
-    useEffect(() => {
-        (async () => {
-            try {
-                const saved = await AsyncStorage.getItem(STORAGE_NEARBY_RADIUS);
-                if (saved != null) setNearbyRadiusKm(normalizeNearbyRadiusKm(Number(saved)));
-            } catch (error) { console.warn('Error reading nearby radius storage', error); }
-        })();
-    }, []);
 
     // Geolocation only when Nearby is explicitly chosen, or on the map view.
     useEffect(() => {
@@ -262,11 +240,6 @@ export default function QuestsScreen() {
             body.style.touchAction = previousBodyTouchAction;
         };
     }, [filterDrawerOpen]);
-
-    // Радиус-контрол теперь живёт у карты и задаёт окружность видимой области.
-    // Смена радиуса при активном «Искать в этой области» НЕ сбрасывает область —
-    // фильтр (зависит от nearbyRadiusKm) просто пересчитывает квесты вокруг того
-    // же центра, синхронно с окружностью, которую перерисовывает карта.
 
     // ── Derived data ──
     const citiesWithNearby: (City | NearbyCity)[] = useMemo(
@@ -507,14 +480,14 @@ export default function QuestsScreen() {
                 return 'Квесты: все города | MeTravel';
             }
             const suffix = userLoc
-                ? nearbyCount > 0 ? ` — ${nearbyCount} поблизости • радиус ${nearbyRadiusKm} км` : ' — рядом ничего не найдено'
+                ? nearbyCount > 0 ? ` — ${nearbyCount} поблизости` : ' — рядом ничего не найдено'
                 : ' — геолокация отключена';
             return `Квесты: Рядом${suffix} | MeTravel`;
         }
         return selectedCityName
             ? `Квесты: ${selectedCityName} | MeTravel`
             : 'Все квесты | MeTravel';
-    }, [selectedCityId, selectedCityName, nearbyCount, nearbyRadiusKm, userLoc, activeMapAreaCenter, questsAll.length]);
+    }, [selectedCityId, selectedCityName, nearbyCount, userLoc, activeMapAreaCenter, questsAll.length]);
 
     const descText = useMemo(() => {
         if (selectedCityId === NEARBY_ID) {
@@ -524,7 +497,7 @@ export default function QuestsScreen() {
             if (!userLoc) {
                 return 'Каталог офлайн-квестов во всех доступных городах. Разрешите геолокацию, чтобы увидеть приключения рядом с вами.';
             }
-            return 'Офлайн-квесты рядом с вами. Выбирайте радиус и исследуйте парки и улицы поблизости.';
+            return 'Офлайн-квесты рядом с вами и ваше текущее местоположение на карте.';
         }
         if (selectedCityName) return `Офлайн-квесты в городе ${selectedCityName}. Прогулки по точкам, задания и маршруты.`;
         return 'Исследуйте города и парки с офлайн-квестами — приключения на карте рядом с вами.';
@@ -628,7 +601,6 @@ export default function QuestsScreen() {
                 selectedCityId={selectedCityId}
                 selectedCityName={selectedCityName}
                 nearbyId={NEARBY_ID}
-                nearbyRadiusKm={nearbyRadiusKm}
                 questsAll={questsAll}
                 questCardWidth={questCardWidth}
                 mapPoints={mapPoints}
@@ -646,7 +618,6 @@ export default function QuestsScreen() {
                 onShowNearby={requestNearbyQuests}
                 onOpenFilterDrawer={() => setFilterDrawerOpen(true)}
                 onToggleViewMode={handleToggleViewMode}
-                onSetRadius={handleSetRadius}
                 onMapUserLocationChange={handleMapUserLocationChange}
                 onMapMove={handleMapMove}
                 onSearchMapArea={handleSearchMapArea}

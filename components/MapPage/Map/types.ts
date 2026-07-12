@@ -30,6 +30,8 @@ export interface MapProps {
   setRoutingLoading?: (loading: boolean) => void;
   setRoutingError?: (error: string | null) => void;
   radius?: string;
+  /** Keep radius-based filtering without drawing the search circle. */
+  showRadiusCircle?: boolean;
   mapClusterFilters?: MapClustersFilters;
   /**
    * True when a category filter is active but its names did not resolve to

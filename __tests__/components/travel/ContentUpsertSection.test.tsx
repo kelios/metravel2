@@ -1,5 +1,5 @@
 import React from 'react'
-import { render } from '@testing-library/react-native'
+import { fireEvent, render } from '@testing-library/react-native'
 
 // Make React.lazy render synchronously: instead of suspending on the dynamic
 // import, eagerly require the (mocked) module and render its default export.
@@ -70,7 +70,7 @@ jest.mock('@/hooks/useTheme', () => {
 })
 
 jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => ({ isPhone: false, isLargePhone: false }),
+  useResponsive: jest.fn(() => ({ isPhone: false, isLargePhone: false })),
 }))
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -129,6 +129,11 @@ const renderSection = (override: Partial<TravelFormData> = {}) =>
   )
 
 describe('ContentUpsertSection — derived display logic', () => {
+  afterEach(() => {
+    const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
+    useResponsive.mockReturnValue({ isPhone: false, isLargePhone: false })
+  })
+
   it('prompts for a minimum description when empty', () => {
     const { getByText } = renderSection({ description: '' })
     expect(getByText(/Минимум 50 символов/)).toBeTruthy()
@@ -206,5 +211,29 @@ describe('ContentUpsertSection — derived display logic', () => {
     expect(getByText('Название')).toBeTruthy()
     expect(queryByText('Плюсы')).toBeNull()
     expect(queryByText('Минусы')).toBeNull()
+  })
+
+  it('preserves a trailing space in the focused Android description until the next word is typed', () => {
+    const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
+    useResponsive.mockReturnValue({ isPhone: true, isLargePhone: false })
+
+    const Harness = () => {
+      const [formData, setFormData] = React.useState<TravelFormData>({
+        ...baseFormData,
+        description: '',
+      })
+
+      return <ContentUpsertSection formData={formData} setFormData={setFormData} />
+    }
+
+    const { getByTestId } = render(<Harness />)
+    const input = getByTestId('travel-wizard.basic.description.mobile-input')
+
+    fireEvent(input, 'focus')
+    fireEvent.changeText(input, 'синий ')
+    expect(getByTestId('travel-wizard.basic.description.mobile-input').props.value).toBe('синий ')
+
+    fireEvent.changeText(getByTestId('travel-wizard.basic.description.mobile-input'), 'синий берег')
+    expect(getByTestId('travel-wizard.basic.description.mobile-input').props.value).toBe('синий берег')
   })
 })

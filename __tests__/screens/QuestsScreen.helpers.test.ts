@@ -2,12 +2,10 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 import {
-  ALLOWED_NEARBY_RADII_KM,
   COUNTRY_NAMES,
   DEFAULT_NEARBY_RADIUS_KM,
   filterQuestsByMapSearchArea,
   isCoordinateInMapViewport,
-  normalizeNearbyRadiusKm,
 } from '@/screens/tabs/QuestsScreen.helpers';
 
 describe('QuestsScreen helpers', () => {
@@ -84,27 +82,8 @@ describe('QuestsScreen helpers', () => {
     expect(result.map((quest) => quest.id)).toEqual(['inBboxFarFromCenter']);
   });
 
-  it('normalizes legacy persisted radii to the compact allowed set', () => {
-    // Allowed options are exactly 5/10/20/50 with a 10 km default.
-    expect(ALLOWED_NEARBY_RADII_KM).toEqual([5, 10, 20, 50]);
+  it('uses a single nearby distance threshold', () => {
     expect(DEFAULT_NEARBY_RADIUS_KM).toBe(10);
-
-    // Legacy values 15/30 are no longer selectable → snap to nearest allowed.
-    expect(normalizeNearbyRadiusKm(15)).toBe(10);
-    expect(normalizeNearbyRadiusKm(30)).toBe(20);
-
-    // Already-valid values pass through untouched.
-    expect(normalizeNearbyRadiusKm(5)).toBe(5);
-    expect(normalizeNearbyRadiusKm(50)).toBe(50);
-
-    // Garbage / empty storage falls back to the default.
-    expect(normalizeNearbyRadiusKm(NaN)).toBe(10);
-    expect(normalizeNearbyRadiusKm(null)).toBe(10);
-    expect(normalizeNearbyRadiusKm(undefined)).toBe(10);
-
-    // Out-of-range values clamp to the nearest allowed edge.
-    expect(normalizeNearbyRadiusKm(1)).toBe(5);
-    expect(normalizeNearbyRadiusKm(999)).toBe(50);
   });
 
   it('falls back to the selected radius only when map bounds are unavailable', () => {

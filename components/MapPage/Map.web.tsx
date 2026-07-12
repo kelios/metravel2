@@ -125,6 +125,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     // letting useMapUserLocation fall back to legacy Minsk coordinate-matching.
     // Only an explicit true/false from the controller overrides that.
     coordinatesAreFallback,
+    userLocation: providedUserLocation,
     routePoints,
     fullRouteCoords,
     onMapClick,
@@ -137,6 +138,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     setRoutingLoading,
     setRoutingError,
     radius,
+    showRadiusCircle = true,
     mapClusterFilters,
     categoryFilterUnresolved = false,
     onUserLocationChange,
@@ -257,6 +259,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const { centerOnUserLocation, userLocationLatLng } = useMapUserLocation({
     coordinates,
+    providedUserLocation,
     coordinatesAreFallback,
     mapRef,
     onUserLocationChange,
@@ -659,8 +662,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
   )
 
   const circleCenterLatLng = useMemo(
-    () => (circleCenter ? { lat: circleCenter[0], lng: circleCenter[1] } : null),
-    [circleCenter],
+    () => (showRadiusCircle && circleCenter ? { lat: circleCenter[0], lng: circleCenter[1] } : null),
+    [circleCenter, showRadiusCircle],
   )
 
   const hintCenterLatLng = useMemo(

@@ -2,7 +2,6 @@ import { Platform } from 'react-native'
 import { DEFAULT_OG_IMAGE_PATH, buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
 import {
   buildTravelSeoFallbackDescription,
-  buildTravelSeoFallbackTitle,
   buildTravelSeoTitle,
   createTravelStructuredData,
   getTravelSeoDescription,
@@ -19,14 +18,17 @@ export function getTravelDetailsSeoViewModel(travel: any, slug: string) {
       : typeof travel?.title === 'string' && travel.title.trim()
         ? travel.title
         : null
-  const fallbackKey = travel?.slug || travel?.id || slug
-  const title = displayTitle
-    ? buildTravelSeoTitle(displayTitle)
-    : buildTravelSeoFallbackTitle(fallbackKey)
+  // Пока данные статьи не загружены — title/description не трогаем (null):
+  // слаг-фолбэк («Marshrut oden usadba…») затирал корректный SSG-<title>,
+  // и Метрика/GA4 успевали снять hit с транслитом (см. Метрика 12.07.2026).
+  // Анти-generic фолбэк для не-пререндеренных страниц живёт в app/+html.tsx.
+  const title = displayTitle ? buildTravelSeoTitle(displayTitle) : null
   const desc =
     typeof travel?.description === 'string' && travel.description.trim()
       ? getTravelSeoDescription(travel.description)
-      : buildTravelSeoFallbackDescription(displayTitle || fallbackKey)
+      : displayTitle
+        ? buildTravelSeoFallbackDescription(displayTitle)
+        : null
   const canonical =
     typeof travel?.slug === 'string' && travel.slug
       ? buildCanonicalUrl(`/travels/${travel.slug}`)

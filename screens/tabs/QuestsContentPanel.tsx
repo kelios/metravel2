@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useState } from 'react';
+import { Suspense, useCallback } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -42,7 +42,8 @@ type QuestsContentPanelProps = {
     selectedCityId: string | null;
     selectedCityName: string | null;
     nearbyId: string;
-    nearbyRadiusKm: number;
+    /** @deprecated Radius selection is no longer shown in the quest catalog. */
+    nearbyRadiusKm?: number;
     questsAll: (QuestMeta & { _distanceKm?: number })[];
     questCardWidth: number;
     mapPoints: MapPoint[];
@@ -60,13 +61,13 @@ type QuestsContentPanelProps = {
     onShowNearby: () => void;
     onOpenFilterDrawer: () => void;
     onToggleViewMode: () => void;
-    onSetRadius: (km: number) => void;
+    /** @deprecated Radius selection is no longer shown in the quest catalog. */
+    onSetRadius?: (km: number) => void;
     onMapUserLocationChange: (loc: { latitude: number; longitude: number } | null) => void;
     onMapMove: (center: MapMovePayload) => void;
     onSearchMapArea: () => void;
 };
 
-const RADIUS_OPTIONS = [5, 10, 20, 50] as const;
 type QuestListItem = QuestMeta & { _distanceKm?: number };
 
 export default function QuestsContentPanel({
@@ -77,7 +78,6 @@ export default function QuestsContentPanel({
     selectedCityId,
     selectedCityName,
     nearbyId,
-    nearbyRadiusKm,
     questsAll,
     questCardWidth,
     mapPoints,
@@ -95,64 +95,17 @@ export default function QuestsContentPanel({
     onShowNearby,
     onOpenFilterDrawer,
     onToggleViewMode,
-    onSetRadius,
     onMapUserLocationChange,
     onMapMove,
     onSearchMapArea,
 }: QuestsContentPanelProps) {
     const router = useRouter();
-    const [radiusMenuOpen, setRadiusMenuOpen] = useState(false);
 
     const openQuestFromPoint = (point?: { questMeta?: MapPoint['questMeta'] }) => {
         const meta = point?.questMeta;
         if (!meta?.cityId || !meta?.id) return;
         router.push(`/quests/${meta.cityId}/${meta.id}`);
     };
-
-    // Радиус — компактный overlay поверх карты (иконка + текущее значение). Тап по
-    // иконке раскрывает segmented-popover 5/10/20/50, повторный тап или выбор
-    // значения закрывает его. При активной «Искать в этой области» радиус не
-    // показываем: там первичен видимый viewport (bbox), а не радиус.
-    const showRadiusControl = viewMode === 'map' && selectedCityId === nearbyId && !isMapAreaActive;
-    const radiusOverlay = showRadiusControl ? (
-        <View style={styles.mapRadiusOverlay} pointerEvents="box-none">
-            <Pressable
-                onPress={() => setRadiusMenuOpen((open) => !open)}
-                style={[styles.mapRadiusToggle, radiusMenuOpen && styles.mapRadiusToggleActive]}
-                accessibilityRole="button"
-                accessibilityLabel={`Радиус поиска: ${nearbyRadiusKm} км`}
-                accessibilityState={{ expanded: radiusMenuOpen }}
-                testID="quests-map-radius-toggle"
-            >
-                <Feather name="disc" size={15} color={radiusMenuOpen ? colors.textOnPrimary : colors.text} />
-                <Text style={[styles.mapRadiusToggleText, radiusMenuOpen && styles.mapRadiusToggleTextActive]}>
-                    {nearbyRadiusKm} км
-                </Text>
-            </Pressable>
-            {radiusMenuOpen && (
-                <View style={styles.mapRadiusPopover}>
-                    {RADIUS_OPTIONS.map((km) => (
-                        <Pressable
-                            key={km}
-                            onPress={() => {
-                                onSetRadius(km);
-                                setRadiusMenuOpen(false);
-                            }}
-                            style={[styles.radiusChip, nearbyRadiusKm === km && styles.radiusChipActive]}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Радиус ${km} км`}
-                            accessibilityState={{ selected: nearbyRadiusKm === km }}
-                            testID={`quests-map-radius-${km}`}
-                        >
-                            <Text style={[styles.radiusChipText, nearbyRadiusKm === km && styles.radiusChipTextActive]}>
-                                {km} км
-                            </Text>
-                        </Pressable>
-                    ))}
-                </View>
-            )}
-        </View>
-    ) : null;
 
     const getQuestCityId = useCallback((quest: QuestListItem) => (
         selectedCityId === nearbyId ? (quest.cityId || '') : (selectedCityId || '')
@@ -273,7 +226,6 @@ export default function QuestsContentPanel({
                             пользователь двигает область и повторяет «Искать в этой области». */}
                         {dataLoaded && Platform.OS === 'web' && (
                             <View style={styles.mapContainer}>
-                                {radiusOverlay}
                                 {showMapAreaSearch && (
                                     <Pressable
                                         style={styles.mapSearchAreaBtn}
@@ -290,9 +242,10 @@ export default function QuestsContentPanel({
                                     <LazyQuestMap
                                         travel={{ data: mapPoints as any }}
                                         coordinates={mapCenter}
+                                        userLocation={userLoc ? { latitude: userLoc.lat, longitude: userLoc.lng } : null}
                                         pointsOnly
                                         mode="radius"
-                                        radius={selectedCityId === nearbyId ? String(nearbyRadiusKm) : '30'}
+                                        showRadiusCircle={false}
                                         routePoints={[]}
                                         transportMode="foot"
                                         onMapClick={() => {}}
@@ -307,7 +260,6 @@ export default function QuestsContentPanel({
 
                         {dataLoaded && Platform.OS !== 'web' && (
                             <View style={styles.mapContainer}>
-                                {radiusOverlay}
                                 {showMapAreaSearch && (
                                     <Pressable
                                         style={styles.mapSearchAreaBtn}
@@ -323,9 +275,10 @@ export default function QuestsContentPanel({
                                 <Map
                                     travel={{ data: mapPoints as any }}
                                     coordinates={mapCenter}
+                                    userLocation={userLoc ? { latitude: userLoc.lat, longitude: userLoc.lng } : null}
                                     pointsOnly
                                     mode="radius"
-                                    radius={selectedCityId === nearbyId ? String(nearbyRadiusKm) : '30'}
+                                    showRadiusCircle={false}
                                     routePoints={[]}
                                     transportMode="foot"
                                     onMapClick={() => {}}
@@ -344,7 +297,7 @@ export default function QuestsContentPanel({
                             <EmptyState
                                 icon="map-pin"
                                 title="Рядом ничего не найдено"
-                                description="Попробуйте увеличить радиус поиска"
+                                description="Посмотрите квесты в других городах или выберите область на карте"
                                 variant="empty"
                                 iconSize={48}
                             />

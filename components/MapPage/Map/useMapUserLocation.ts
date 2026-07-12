@@ -23,6 +23,7 @@ async function loadExpoLocation() {
 
 type UseMapUserLocationArgs = {
   coordinates: any
+  providedUserLocation?: Coordinates | null
   /**
    * Explicit origin flag from useMapCoordinates: true when `coordinates` is the
    * non-user DEFAULT center. Preferred over isFallbackMinskCenter so a user
@@ -37,6 +38,7 @@ type UseMapUserLocationArgs = {
 
 export function useMapUserLocation({
   coordinates,
+  providedUserLocation,
   coordinatesAreFallback,
   mapRef,
   onUserLocationChange,
@@ -45,6 +47,18 @@ export function useMapUserLocation({
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
   const geoRequestedRef = useRef(false)
   const pendingFocusRef = useRef(false)
+
+  useEffect(() => {
+    if (providedUserLocation === undefined) return
+    if (
+      providedUserLocation &&
+      isValidCoordinate(providedUserLocation.latitude, providedUserLocation.longitude)
+    ) {
+      setUserLocation(providedUserLocation)
+      return
+    }
+    setUserLocation(null)
+  }, [providedUserLocation])
 
   useEffect(() => {
     try {
@@ -68,6 +82,7 @@ export function useMapUserLocation({
   )
 
   useEffect(() => {
+    if (providedUserLocation !== undefined) return
     const lat = Number((coordinates as any)?.latitude)
     const lng = Number((coordinates as any)?.longitude)
     if (!coordinatesAreRealUser(lat, lng)) return
@@ -82,7 +97,7 @@ export function useMapUserLocation({
       }
       return { latitude: lat, longitude: lng }
     })
-  }, [coordinates, coordinatesAreRealUser])
+  }, [coordinates, coordinatesAreRealUser, providedUserLocation])
 
   const requestUserLocation = useCallback(async (notifyOnFailure = false) => {
     if (geoRequestedRef.current) return

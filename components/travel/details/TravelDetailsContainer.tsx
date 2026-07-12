@@ -85,21 +85,24 @@ function useTravelSeoElement({
   canonicalUrl?: string
   headKey: string
   jsonLd?: Record<string, unknown> | null
-  readyDesc: string
+  readyDesc: string | null
   readyImage: string
-  readyTitle: string
+  readyTitle: string | null
 }) {
   return useMemo(
-    () => (
-      <TravelDetailsSeoBlock
-        canonicalUrl={canonicalUrl}
-        headKey={headKey}
-        jsonLd={jsonLd}
-        readyDesc={readyDesc}
-        readyImage={readyImage}
-        readyTitle={readyTitle}
-      />
-    ),
+    () =>
+      // Без данных статьи head не трогаем: SSG-<title>/description корректны,
+      // а слаг-фолбэк отдавал транслит в Метрику/GA4.
+      readyTitle ? (
+        <TravelDetailsSeoBlock
+          canonicalUrl={canonicalUrl}
+          headKey={headKey}
+          jsonLd={jsonLd}
+          readyDesc={readyDesc ?? ''}
+          readyImage={readyImage}
+          readyTitle={readyTitle}
+        />
+      ) : null,
     [canonicalUrl, headKey, jsonLd, readyDesc, readyImage, readyTitle],
   )
 }

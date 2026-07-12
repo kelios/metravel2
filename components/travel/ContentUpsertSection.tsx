@@ -97,6 +97,14 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     }, [formData.description]);
 
     const descriptionPlainLength = descriptionPlainText.length;
+    const [mobileDescriptionDraft, setMobileDescriptionDraft] = useState(descriptionPlainText);
+    const isMobileDescriptionFocusedRef = useRef(false);
+
+    useEffect(() => {
+        if (!isMobileDescriptionFocusedRef.current) {
+            setMobileDescriptionDraft(descriptionPlainText);
+        }
+    }, [descriptionPlainText]);
 
     const descriptionStatusText = useMemo(() => {
         if (descriptionPlainLength === 0) {
@@ -418,8 +426,18 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                 style={styles.descriptionMobileInput}
                                 multiline
                                 textAlignVertical="top"
-                                value={descriptionPlainText}
+                                value={mobileDescriptionDraft}
+                                onFocus={() => {
+                                    isMobileDescriptionFocusedRef.current = true;
+                                }}
+                                onBlur={() => {
+                                    isMobileDescriptionFocusedRef.current = false;
+                                }}
                                 onChangeText={(text) => {
+                                    // Keep the native input controlled by the exact draft while it is focused.
+                                    // The HTML serializer trims a trailing space, so deriving value directly from
+                                    // formData made Android remove that space before the next word was entered.
+                                    setMobileDescriptionDraft(text);
                                     const next = plainTextToHtml(text);
                                     descriptionHtmlRef.current = next;
                                     onChange(next);
@@ -599,7 +617,6 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             colors.textOnPrimary,
             colors.textMuted,
             descriptionPlainLength,
-            descriptionPlainText,
             descriptionProgress,
             descriptionProgressColor,
             descriptionStatusText,
@@ -610,6 +627,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             isDescriptionFullscreen,
             isImportingDescriptionText,
             isMobile,
+            mobileDescriptionDraft,
             isPastingDescriptionText,
             isCompactFullscreenHeader,
             pasteDescriptionText,
