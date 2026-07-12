@@ -71,7 +71,7 @@ function countMetaTags(html: string, attribute: 'name' | 'property', value: stri
 }
 
 test.describe('SEO: travel detail page meta tags', () => {
-  const TRAVEL_SLUG = 'tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele';
+  const TRAVEL_SLUG = 'kostel-svyatogo-antoniya-paduanskogo';
   const TRAVEL_PATH = `/travels/${TRAVEL_SLUG}`;
   let html = '';
 
@@ -248,7 +248,7 @@ test.describe('SEO: static pages meta tags', () => {
  * the canonical in the initial HTML response is never the bare homepage URL.
  */
 test.describe('SEO: travel page canonical is never the homepage (regression)', () => {
-  const TRAVEL_SLUG = 'tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele';
+  const TRAVEL_SLUG = 'kostel-svyatogo-antoniya-paduanskogo';
   const TRAVEL_PATH = `/travels/${TRAVEL_SLUG}`;
 
   test('raw static HTML canonical is not the bare homepage URL @smoke', async ({ browser }) => {

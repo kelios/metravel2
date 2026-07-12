@@ -84,6 +84,13 @@ export function useTravelDetailsHeadSync({
     }
 
     applyAll()
-    return undefined
+    const observer = new MutationObserver(applyAll)
+    observer.observe(document.head, { childList: true })
+    const timeout = window.setTimeout(() => observer.disconnect(), 5000)
+
+    return () => {
+      window.clearTimeout(timeout)
+      observer.disconnect()
+    }
   }, [canonicalUrl, isFocused, readyDesc, readyImage, readyTitle, syncNavigationTitle])
 }

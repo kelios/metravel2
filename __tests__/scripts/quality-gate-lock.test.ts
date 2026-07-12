@@ -1,7 +1,5 @@
-import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
-import { spawnSync } from 'node:child_process'
+import { makeTempDir, removeDir, runNodeCli } from './cli-test-utils'
 
 const lockModule = require('@/scripts/quality-gate-lock')
 
@@ -33,7 +31,7 @@ describe('quality-gate-lock', () => {
   })
 
   it('blocks a second process and releases the atomic lock for the next run', () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'quality-gate-lock-'))
+    const tempDir = makeTempDir('quality-gate-lock-')
     const lockPath = path.join(tempDir, 'quality-gate.lock')
     const modulePath = require.resolve('@/scripts/quality-gate-lock')
     delete process.env.MT_QUALITY_GATE_LOCK_OWNED
@@ -41,20 +39,14 @@ describe('quality-gate-lock', () => {
     lockModule.acquireQualityGateLock({ name: 'owner', lockPath, detectProcesses: false })
 
     const attempt = (name: string) =>
-      spawnSync(
-        process.execPath,
+      runNodeCli(
         [
           '-e',
           `const lock=require(${JSON.stringify(modulePath)});` +
             `try{lock.acquireQualityGateLock({name:${JSON.stringify(name)},lockPath:${JSON.stringify(lockPath)},detectProcesses:false});lock.releaseQualityGateLock();}` +
             `catch(error){console.error(error.message);process.exit(73)}`,
         ],
-        {
-          encoding: 'utf8',
-          env: Object.fromEntries(
-            Object.entries(process.env).filter(([key]) => key !== 'MT_QUALITY_GATE_LOCK_OWNED')
-          ),
-        }
+        { MT_QUALITY_GATE_LOCK_OWNED: '' }
       )
 
     const blocked = attempt('blocked')
@@ -65,6 +57,6 @@ describe('quality-gate-lock', () => {
     const allowed = attempt('allowed')
     expect(allowed.status).toBe(0)
 
-    fs.rmSync(tempDir, { recursive: true, force: true })
+    removeDir(tempDir)
   })
 })

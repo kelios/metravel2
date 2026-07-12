@@ -113,13 +113,9 @@ test.describe('Trip planner — happy path', () => {
     await seedConsent(page)
     await page.goto('/trips/plan', { waitUntil: 'domcontentloaded' })
 
-    await expect(page.locator('body')).toBeVisible({ timeout: 15_000 })
-    await expect(
-      page
-        .getByTestId('plan-login')
-        .or(page.getByTestId('plan-create-cta'))
-        .or(page.getByTestId('trips-empty-state')),
-    ).toBeVisible({ timeout: 15_000 })
+    await expect(page).toHaveURL(/\/trips\/my(?:\?.*)?$/, { timeout: 15_000 })
+    await expect(page.getByTestId('my-trips-plan-cta')).toBeVisible()
+    await expect(page.getByTestId('my-trips-segments')).toBeVisible()
   })
 
   test('creates a trip via the form and navigates to the plan page', async ({ browser }) => {
