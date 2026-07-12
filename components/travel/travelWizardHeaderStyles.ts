@@ -324,10 +324,6 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         justifyContent: 'space-between',
         gap: DESIGN_TOKENS.spacing.md,
     },
-    belowProgressRowMobile: {
-        marginTop: DESIGN_TOKENS.spacing.xs,
-        gap: DESIGN_TOKENS.spacing.sm,
-    },
     belowProgressLeft: {
         flex: 1,
         minWidth: 0,
@@ -353,11 +349,6 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         alignItems: 'center',
         gap: DESIGN_TOKENS.spacing.xs,
         flexWrap: 'nowrap',
-    },
-    milestonesInlineWrapperMobile: {
-        flex: 1,
-        justifyContent: 'space-between',
-        gap: 0,
     },
     tipPanel: {
         marginTop: DESIGN_TOKENS.spacing.sm,
