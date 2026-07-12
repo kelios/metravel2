@@ -113,7 +113,18 @@ export type QuestMapArea = {
     zoom?: number;
 };
 
+export type QuestMapCenter = {
+    latitude: number;
+    longitude: number;
+};
+
+type QuestMapCenterCity = {
+    lat?: number | null;
+    lng?: number | null;
+};
+
 const BOUNDS_EPSILON = 0.000001;
+const DEFAULT_QUEST_MAP_CENTER: QuestMapCenter = { latitude: 53.9, longitude: 27.56 };
 
 export function isValidMapViewportBounds(bounds: MapViewportBounds | null | undefined): bounds is MapViewportBounds {
     if (!bounds) return false;
@@ -168,4 +179,69 @@ export function filterQuestsByMapSearchArea<T extends { lat: number; lng: number
         : withDistance.filter((quest) => quest._distanceKm <= fallbackRadiusKm);
 
     return filtered.sort((a, b) => a._distanceKm - b._distanceKm);
+}
+
+export function getAverageQuestMapPointCenter(mapPoints: Pick<MapPoint, 'coord'>[]): QuestMapCenter | null {
+    const coords = mapPoints
+        .map((point) => {
+            const [latStr, lngStr] = point.coord.split(',').map((value) => value.trim());
+            return { lat: Number(latStr), lng: Number(lngStr) };
+        })
+        .filter(({ lat, lng }) => Number.isFinite(lat) && Number.isFinite(lng));
+
+    if (!coords.length) return null;
+
+    const sum = coords.reduce(
+        (acc, coord) => ({
+            lat: acc.lat + coord.lat,
+            lng: acc.lng + coord.lng,
+        }),
+        { lat: 0, lng: 0 },
+    );
+
+    return {
+        latitude: sum.lat / coords.length,
+        longitude: sum.lng / coords.length,
+    };
+}
+
+export function resolveQuestMapCenter({
+    searchTerm,
+    mapPoints,
+    activeMapAreaCenter,
+    userLoc,
+    selectedCity,
+}: {
+    searchTerm: string;
+    mapPoints: Pick<MapPoint, 'coord'>[];
+    activeMapAreaCenter: QuestMapArea | null;
+    userLoc: { lat: number; lng: number } | null;
+    selectedCity: QuestMapCenterCity | null | undefined;
+}): QuestMapCenter {
+    const averageMapPointCenter = getAverageQuestMapPointCenter(mapPoints);
+
+    if (searchTerm.trim() && averageMapPointCenter) {
+        return averageMapPointCenter;
+    }
+
+    if (
+        activeMapAreaCenter &&
+        Number.isFinite(activeMapAreaCenter.latitude) &&
+        Number.isFinite(activeMapAreaCenter.longitude)
+    ) {
+        return {
+            latitude: activeMapAreaCenter.latitude,
+            longitude: activeMapAreaCenter.longitude,
+        };
+    }
+
+    if (userLoc && Number.isFinite(userLoc.lat) && Number.isFinite(userLoc.lng)) {
+        return { latitude: userLoc.lat, longitude: userLoc.lng };
+    }
+
+    if (selectedCity && Number.isFinite(selectedCity.lat) && Number.isFinite(selectedCity.lng)) {
+        return { latitude: Number(selectedCity.lat), longitude: Number(selectedCity.lng) };
+    }
+
+    return averageMapPointCenter ?? DEFAULT_QUEST_MAP_CENTER;
 }

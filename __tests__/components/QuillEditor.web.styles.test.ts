@@ -14,4 +14,12 @@ describe('QuillEditor.web styles', () => {
     expect(ARTICLE_EDITOR_QUILL_WEB_CSS).toContain('overflow-y: auto;')
     expect(ARTICLE_EDITOR_QUILL_WEB_CSS).toContain('overflow: hidden;')
   })
+
+  it('keeps inactive toolbar controls visible in dark editor surfaces', () => {
+    expect(ARTICLE_EDITOR_QUILL_WEB_CSS).toContain('[data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-stroke')
+    expect(ARTICLE_EDITOR_QUILL_WEB_CSS).toContain('stroke: var(--color-textMuted);')
+    expect(ARTICLE_EDITOR_QUILL_WEB_CSS).toContain('fill: var(--color-textMuted);')
+    expect(ARTICLE_EDITOR_QUILL_WEB_CSS).toContain('button[disabled]')
+    expect(ARTICLE_EDITOR_QUILL_WEB_CSS).toContain('stroke: var(--color-textSubtle);')
+  })
 })

@@ -6,6 +6,7 @@ import {
   DEFAULT_NEARBY_RADIUS_KM,
   filterQuestsByMapSearchArea,
   isCoordinateInMapViewport,
+  resolveQuestMapCenter,
 } from '@/screens/tabs/QuestsScreen.helpers';
 
 describe('QuestsScreen helpers', () => {
@@ -114,5 +115,33 @@ describe('QuestsScreen helpers', () => {
     expect(
       isCoordinateInMapViewport(10, 0, { south: 0, west: 170, north: 20, east: -170 }),
     ).toBe(false);
+  });
+
+  it('centers the map on text search results instead of the previous city or map area', () => {
+    const center = resolveQuestMapCenter({
+      searchTerm: 'минск',
+      mapPoints: [
+        { coord: '53.9,27.56' },
+        { coord: '53.92,27.58' },
+      ],
+      activeMapAreaCenter: { latitude: 50.06, longitude: 19.94 },
+      userLoc: { lat: 52.23, lng: 21.01 },
+      selectedCity: { lat: 50.06, lng: 19.94 },
+    });
+
+    expect(center.latitude).toBeCloseTo(53.91);
+    expect(center.longitude).toBeCloseTo(27.57);
+  });
+
+  it('keeps the map-area center first when there is no text search', () => {
+    const center = resolveQuestMapCenter({
+      searchTerm: '',
+      mapPoints: [{ coord: '53.9,27.56' }],
+      activeMapAreaCenter: { latitude: 50.06, longitude: 19.94 },
+      userLoc: { lat: 52.23, lng: 21.01 },
+      selectedCity: { lat: 53.9, lng: 27.56 },
+    });
+
+    expect(center).toEqual({ latitude: 50.06, longitude: 19.94 });
   });
 });

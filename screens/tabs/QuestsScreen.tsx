@@ -29,6 +29,7 @@ import {
     NEARBY_ID,
     filterQuestsByMapSearchArea,
     loadExpoLocation,
+    resolveQuestMapCenter,
     type QuestMapArea,
     type MapPoint,
 } from './QuestsScreen.helpers';
@@ -414,40 +415,15 @@ export default function QuestsScreen() {
     }, [dataLoaded, selectedCityId, userLoc, activeMapAreaCenter, questsAll, ALL_QUESTS, searchTerm]);
 
     const mapCenter = useMemo(() => {
-        if (activeMapAreaCenter && Number.isFinite(activeMapAreaCenter.latitude) && Number.isFinite(activeMapAreaCenter.longitude)) {
-            return activeMapAreaCenter;
-        }
-
-        if (userLoc && Number.isFinite(userLoc.lat) && Number.isFinite(userLoc.lng)) {
-            return { latitude: userLoc.lat, longitude: userLoc.lng };
-        }
-
         const selectedCity = CITIES.find((c) => c.id === selectedCityId);
-        if (selectedCity && Number.isFinite(selectedCity.lat) && Number.isFinite(selectedCity.lng)) {
-            return { latitude: Number(selectedCity.lat), longitude: Number(selectedCity.lng) };
-        }
-
-        if (mapPoints.length > 0) {
-            const sum = mapPoints.reduce(
-                (acc, p) => {
-                    const [latStr, lngStr] = p.coord.split(',').map((v) => v.trim());
-                    const lat = Number(latStr);
-                    const lng = Number(lngStr);
-                    return {
-                        lat: acc.lat + (Number.isFinite(lat) ? lat : 0),
-                        lng: acc.lng + (Number.isFinite(lng) ? lng : 0),
-                    };
-                },
-                { lat: 0, lng: 0 },
-            );
-            return {
-                latitude: sum.lat / mapPoints.length,
-                longitude: sum.lng / mapPoints.length,
-            };
-        }
-
-        return { latitude: 53.9, longitude: 27.56 };
-    }, [CITIES, mapPoints, selectedCityId, userLoc, activeMapAreaCenter]);
+        return resolveQuestMapCenter({
+            searchTerm,
+            mapPoints,
+            activeMapAreaCenter,
+            userLoc,
+            selectedCity,
+        });
+    }, [CITIES, mapPoints, searchTerm, selectedCityId, userLoc, activeMapAreaCenter]);
 
     const handleMapUserLocationChange = useCallback((loc: { latitude: number; longitude: number } | null) => {
         if (!loc) return;
