@@ -30,7 +30,7 @@ import {
 } from './questNativeMapPng';
 import { openQuestMap, type QuestMapApp } from './questWizardHelpers';
 import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
-import { LEAFLET_JS, LEAFLET_CSS } from './leafletInlineAsset';
+import { LEAFLET_JS, LEAFLET_CSS } from '@/utils/leafletInlineAsset';
 
 const QUEST_NAV_PROVIDERS: Array<{ app: QuestMapApp; label: string }> = [
     { app: 'google', label: 'Google' },

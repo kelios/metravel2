@@ -9,6 +9,7 @@ import { DESIGN_COLORS } from '@/constants/designSystem'
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { getSiteBaseUrl } from '@/utils/seo'
+import { LEAFLET_JS, LEAFLET_CSS } from '@/utils/leafletInlineAsset'
 import { normalizePoint } from '@/components/map-core/types'
 import MapPlaceBottomCard from '@/components/MapPage/MapPlaceBottomCard'
 import ToastHost from '@/components/ui/ToastHost'
@@ -158,8 +159,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+      <style>${LEAFLET_CSS}</style>
+      <script>${LEAFLET_JS}</script>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; }
