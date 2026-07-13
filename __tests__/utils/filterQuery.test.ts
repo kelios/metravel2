@@ -21,13 +21,13 @@ describe('buildTravelQueryParams', () => {
     expect(params.countries).toEqual([3, 20])
   })
 
-  it('shows only published travels by default for personal /metravel area (F-14)', () => {
+  it('includes drafts by default for personal /metravel area', () => {
     const params = buildTravelQueryParams(
       {},
       { isMeTravel: true, userId: '42' },
     )
 
-    expect(params).toEqual({ moderation: 1, publish: 1, user_id: '42' })
+    expect(params).toEqual({ includeDrafts: true, user_id: '42' })
   })
 
   it('adds draft status filters for personal draft mode', () => {
@@ -40,6 +40,19 @@ describe('buildTravelQueryParams', () => {
       includeDrafts: true,
       moderation: 0,
       publish: 0,
+      user_id: '42',
+    })
+  })
+
+  it('adds published status filters for personal published mode', () => {
+    const params = buildTravelQueryParams(
+      { publishedOnly: true },
+      { isMeTravel: true, userId: '42' },
+    )
+
+    expect(params).toEqual({
+      moderation: 1,
+      publish: 1,
       user_id: '42',
     })
   })

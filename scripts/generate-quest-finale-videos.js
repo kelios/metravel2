@@ -113,6 +113,10 @@ const QUESTS = [
     { questId: 'turov-growing-crosses', dir: 'turovGrowingCrosses', city: 'Туров', mood: 'epic', finaleId: 76 },
     { questId: 'yelnya-bog-bells', dir: 'yelnyaBogBells', city: 'болото Ельня', mood: 'epic', finaleId: 77 },
     { questId: 'krevo-walled-maiden', dir: 'krevoWalledMaiden', city: 'Крево', mood: 'castle', finaleId: 78 },
+    { questId: 'zhirovichi-icon-pear', dir: 'zhirovichiIconPear', city: 'Жировичи', mood: 'epic', finaleId: 86 },
+    { questId: 'lepel-tsmok', dir: 'lepelTsmok', city: 'Лепель', mood: 'epic', finaleId: 87 },
+    { questId: 'vyaloe-tyshkevich-curse', dir: 'vyaloeTyshkevichCurse', city: 'урочище Вялое', mood: 'castle', finaleId: 88 },
+    { questId: 'kamenets-white-tower', dir: 'kamenetsWhiteTower', city: 'Каменец', mood: 'castle', finaleId: 89 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

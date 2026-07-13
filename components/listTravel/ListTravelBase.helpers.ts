@@ -343,6 +343,14 @@ export const buildActiveConditionChips = ({
     })
   }
 
+  if (filter.publishedOnly === true) {
+    chips.push({
+      key: 'publishedOnly',
+      label: 'Опубликованные',
+      onRemove: () => onSelect('publishedOnly', undefined),
+    })
+  }
+
   return chips
 }
 
@@ -403,6 +411,8 @@ export const buildEmptyStateMessage = ({
   if (Array.isArray(filter.over_nights_stay) && filter.over_nights_stay.length > 0) activeFilters.push('ночлег')
   if (filter.year) activeFilters.push(`год ${filter.year}`)
   if (filter.sort) activeFilters.push('сортировка')
+  if (filter.draftsOnly === true) activeFilters.push('черновики')
+  if (filter.publishedOnly === true) activeFilters.push('опубликованные')
   if (debSearch) activeFilters.push(`поиск "${debSearch}"`)
 
   // Формируем сообщение

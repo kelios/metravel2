@@ -25,6 +25,9 @@ interface ProfileTravelGridProps {
   removingTravelId: number | null;
 }
 
+const isOwnTravelTab = (tab: string) =>
+  tab === 'travels' || tab === 'publishedTravels' || tab === 'draftTravels';
+
 export function ProfileTravelGrid({
   currentData,
   styles,
@@ -93,7 +96,7 @@ export function ProfileTravelGrid({
                       isFirst={rowIndex === 0 && itemIndex === 0}
                       currentUserId={userId}
                       isSuperuser={isSuperuser}
-                      onDeletePress={activeTab === 'travels' ? handleDeleteMyTravel : undefined}
+                      onDeletePress={isOwnTravelTab(activeTab) ? handleDeleteMyTravel : undefined}
                       viewportWidth={width}
                        isDeleting={removingTravelId === travel.id}
                     />

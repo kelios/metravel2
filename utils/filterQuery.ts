@@ -115,8 +115,10 @@ export const buildTravelQueryParams = (
   const moderationValue = normalized.moderation !== undefined ? normalized.moderation : filter.moderation
   const publishValue = normalized.publish !== undefined ? normalized.publish : filter.publish
   const draftsOnly = filter.draftsOnly === true || normalized.draftsOnly === true
+  const publishedOnly = filter.publishedOnly === true || normalized.publishedOnly === true
 
   delete params.draftsOnly
+  delete params.publishedOnly
 
   if (!(isMeTravel || isExport)) {
     const hasExplicitModeration = 'moderation' in normalized || 'moderation' in filter
@@ -161,11 +163,13 @@ export const buildTravelQueryParams = (
       params.publish = 0
       params.moderation = 0
       params.includeDrafts = true
-    } else {
-      // F-14: основной список /metravel показывает только опубликованные маршруты
-      // (как счётчик в профиле). Черновики — через тогл «Черновики» (draftsOnly).
+    } else if (publishedOnly) {
       params.publish = 1
       params.moderation = 1
+    } else {
+      delete params.publish
+      delete params.moderation
+      params.includeDrafts = true
     }
   }
 

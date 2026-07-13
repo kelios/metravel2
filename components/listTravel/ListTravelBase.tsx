@@ -42,6 +42,7 @@ import { useRecommendationsVisibility } from './hooks/useRecommendationsVisibili
 import { createListTravelBaseStyles } from './ListTravelBase.styles'
 import { useListViewStore } from '@/stores/listViewStore'
 import { getCatalogHeaderSortingOptions } from './utils/sortings'
+import type { ListStatusMode } from './ListCatalogToolbar'
 import {
   applyListDensity,
   buildCardsGridDynamicStyle,
@@ -504,6 +505,29 @@ function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
       [onSelect, sortValue]
     );
 
+    const travelStatusMode = useMemo<ListStatusMode>(() => {
+      if (filter.draftsOnly === true) return 'drafts';
+      if (filter.publishedOnly === true) return 'published';
+      return 'all';
+    }, [filter.draftsOnly, filter.publishedOnly]);
+
+    const handleTravelStatusModeChange = useCallback(
+      (mode: ListStatusMode) => {
+        if (!isMeTravel) return;
+        if (mode === 'drafts') {
+          onSelect('draftsOnly', true);
+          return;
+        }
+        if (mode === 'published') {
+          onSelect('publishedOnly', true);
+          return;
+        }
+        onSelect('draftsOnly', undefined);
+        onSelect('publishedOnly', undefined);
+      },
+      [isMeTravel, onSelect],
+    );
+
     const activeConditionChips = useMemo<ActiveConditionChip[]>(() => {
       return buildActiveConditionChips({
         debSearch,
@@ -521,6 +545,8 @@ function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
       filter.companions,
       filter.complexity,
       filter.countries,
+      filter.draftsOnly,
+      filter.publishedOnly,
       filter.month,
       filter.over_nights_stay,
       filter.sort,
@@ -791,6 +817,9 @@ function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
         density,
         onDensityChange: setDensity,
         showDensityToggle: true,
+        statusMode: travelStatusMode,
+        onStatusModeChange: isMeTravel ? handleTravelStatusModeChange : undefined,
+        showStatusModeToggle: isMeTravel,
         testID: 'travels-list',
         primaryAction,
       }}

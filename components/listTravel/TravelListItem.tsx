@@ -16,6 +16,7 @@ import { globalFocusStyles } from '@/styles/globalFocus'
 import { formatViewCount } from '@/components/travel/utils/travelHelpers'
 import { hasAnyTravelEngagementStats } from '@/utils/travelEngagementStats'
 import { appendReturnToParam } from '@/utils/navigationReturnPath'
+import { isTravelDraft } from '@/utils/travelPublicationStatus'
 import {
   buildResponsiveImagePropsFromMedia,
   getMediaLqipUrl,
@@ -137,6 +138,7 @@ function TravelListItem({
   const views = Number(countUnicIpView) || 0
   const viewsFormatted = formatViewCount(views)
   const travelKey = slug?.trim() || String(id)
+  const isDraft = isTravelDraft(travel)
   const cardTestId = selectable
     ? `travel-card-selectable-${travelKey}`
     : `travel-card-${travelKey}`
@@ -161,12 +163,15 @@ function TravelListItem({
 
   const travelUrl = useMemo(
     () =>
+      isDraft
+        ? `/travel/${id}`
+        :
       resolveTravelUrl({
         id: Number(id) || 0,
         slug,
         url: typeof (travel as any)?.url === 'string' ? (travel as any).url : undefined,
       } as any),
-    [id, slug, travel],
+    [id, isDraft, slug, travel],
   )
 
   const {
@@ -313,6 +318,7 @@ function TravelListItem({
 
   const a11yLabel =
     `Путешествие: ${title}` +
+    (isDraft ? '. Статус: черновик' : '') +
     (countries.length ? `. Страны: ${countries.join(', ')}` : '') +
     (displayYear ? `. Год: ${displayYear}` : '') +
     (views > 0 ? `. Просмотров: ${viewsFormatted}` : '')
@@ -527,6 +533,7 @@ function TravelListItem({
 
   const hasSecondaryMeta =
     topRowItems.length > 0 ||
+    isDraft ||
     hasEngagementStats ||
     hasRating ||
     displayYear != null
@@ -535,6 +542,12 @@ function TravelListItem({
     <View style={styles.metaRow}>
       <View style={styles.inlineMetaGroup}>{topRowItems}</View>
       <View style={styles.metaBadgesRow}>
+        {isDraft && (
+          <View style={styles.draftStatusBadge} testID="draft-status-badge">
+            <Feather name="edit-3" size={VIEW_ICON_SIZE} color={colors.warning} />
+            <Text style={styles.draftStatusText}>Черновик</Text>
+          </View>
+        )}
         {displayYear != null && (
           <View style={styles.metaYear} testID="year-meta">
             <Feather name="calendar" size={VIEW_ICON_SIZE} color={colors.textMuted} />

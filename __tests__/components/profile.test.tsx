@@ -365,13 +365,21 @@ describe('ProfileScreen', () => {
     );
   });
 
-  it('shows saved drafts in profile and opens the draft editor', async () => {
+  it('shows draft travels as regular cards in profile routes', async () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(0, 0);
     mockFetchMyTravels.mockResolvedValue({
-      total: 1,
-      count: 1,
+      total: 2,
+      count: 2,
       data: [
+        {
+          id: 776,
+          title: 'Опубликованный Алтай',
+          countryName: 'Россия',
+          publish: 1,
+          moderation: 1,
+          publication_status: 'published',
+        },
         {
           id: 777,
           title: 'Черновик Кавказа',
@@ -383,16 +391,28 @@ describe('ProfileScreen', () => {
       ],
     });
 
-    const { findByLabelText, findByTestId, findByText } = renderProfile();
+    const { findByLabelText, findByText, queryByText } = renderProfile();
 
-    fireEvent.press(await findByLabelText('Мои маршруты: 1'));
+    fireEvent.press(await findByLabelText('Мои маршруты: 2'));
 
-    expect(await findByTestId('profile-draft-resume-panel')).toBeTruthy();
-    expect(await findByText('Черновики маршрутов')).toBeTruthy();
+    expect(await findByText('Опубликованный Алтай')).toBeTruthy();
+    expect(await findByText('Черновик Кавказа')).toBeTruthy();
+    expect(await findByText('Черновик')).toBeTruthy();
 
-    fireEvent.press(await findByLabelText('Открыть черновик Черновик Кавказа'));
+    fireEvent.press(await findByLabelText('Черновики маршрутов: 1'));
+    expect(await findByText('Черновик Кавказа')).toBeTruthy();
+    await waitFor(() => {
+      expect(queryByText('Опубликованный Алтай')).toBeNull();
+    });
 
-    expect(mockPush).toHaveBeenCalledWith('/travel/777');
+    fireEvent.press(await findByLabelText('Опубликованные маршруты: 1'));
+    expect(await findByText('Опубликованный Алтай')).toBeTruthy();
+    await waitFor(() => {
+      expect(queryByText('Черновик Кавказа')).toBeNull();
+    });
+
+    fireEvent.press(await findByLabelText('Мои маршруты: 2'));
+    expect(await findByLabelText('Открыть маршрут «Черновик Кавказа»')).toBeTruthy();
   });
 
   it('opens calendar from profile header quick action', async () => {

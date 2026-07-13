@@ -31,7 +31,6 @@ import { ProfileStatsTab } from '@/components/screens/profile/ProfileStatsTab';
 import { ProfileCountriesTab } from '@/components/screens/profile/ProfileCountriesTab';
 import { ProfileWorldMapTab } from '@/components/screens/profile/ProfileWorldMapTab';
 import { ProfileTravelGrid } from '@/components/screens/profile/ProfileTravelGrid';
-import ProfileDraftResumePanel from '@/components/screens/profile/ProfileDraftResumePanel';
 import SubscriptionsTabContent from '@/components/subscriptions/SubscriptionsTabContent';
 import { type ProfileHeaderActionKey } from '@/components/profile/ProfileHeaderQuickActions';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -57,6 +56,7 @@ import { hapticImpact } from '@/utils/haptics';
 import { computeTravelEngagementSummary } from '@/utils/travelEngagementStats'
 import { useTravelStatusStore } from '@/stores/travelStatusStore'
 import { showToastMessage } from '@/utils/toast'
+import { isTravelDraft } from '@/utils/travelPublicationStatus'
 import { createProfileScreenStyles } from '@/components/screens/profile/profileScreen.styles';
 import {
   keyExtractor,
@@ -64,6 +64,9 @@ import {
   withVisibleEngagementStats,
   type UserStats,
 } from '@/components/screens/profile/profileScreen.helpers';
+
+const isProfileTravelTab = (tab: ProfileTabKey) =>
+  tab === 'travels' || tab === 'publishedTravels' || tab === 'draftTravels';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -174,12 +177,12 @@ export default function ProfileScreen() {
   }, [loadTravels, userId]);
 
   const loadMoreTravels = useCallback(async () => {
-    if (activeTab !== 'travels') return;
+    if (!isProfileTravelTab(activeTab)) return;
     await loadMoreTravelsHook();
   }, [activeTab, loadMoreTravelsHook]);
 
   const handleListEndReached = useCallback(() => {
-    if (activeTab !== 'travels') return;
+    if (!isProfileTravelTab(activeTab)) return;
     if (travelsLoading || travelsLoadingMore || !travelsHasMore) return;
     if (myTravels.length === 0) return;
 
@@ -191,7 +194,7 @@ export default function ProfileScreen() {
   }, [activeTab, loadMoreTravels, myTravels.length, travelsHasMore, travelsLoading, travelsLoadingMore]);
 
   const handleWebScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (activeTab !== 'travels') return;
+    if (!isProfileTravelTab(activeTab)) return;
 
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
     const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y;
@@ -210,7 +213,7 @@ export default function ProfileScreen() {
     webViewportHeightRef.current = event.nativeEvent.layout.height;
   }, []);
   const handleWebContentSizeChange = useCallback((_contentWidth: number, contentHeight: number) => {
-    if (activeTab !== 'travels') return;
+    if (!isProfileTravelTab(activeTab)) return;
     const viewport = webViewportHeightRef.current;
     if (viewport > 0 && contentHeight <= viewport + 4) {
       // handleListEndReached сам гардит hasMore/loading/throttle.
@@ -265,7 +268,7 @@ export default function ProfileScreen() {
   // Если пользователь открыл вкладку, которой реально нужен список/метрики,
   // загружаем немедленно (не ждём idle).
   useEffect(() => {
-    if (activeTab === 'travels' || activeTab === 'stats' || activeTab === 'countries' || activeTab === 'worldmap' || activeTravelMetric) {
+    if (isProfileTravelTab(activeTab) || activeTab === 'stats' || activeTab === 'countries' || activeTab === 'worldmap' || activeTravelMetric) {
       ensureTravelsLoaded();
     }
   }, [activeTab, activeTravelMetric, ensureTravelsLoaded]);
@@ -320,18 +323,31 @@ export default function ProfileScreen() {
   )
 
   const draftTravels = useMemo<Travel[]>(
-    () =>
-      profileTravels.filter((travel) => {
-        const status = String(travel.publication_status ?? '').toLowerCase();
-        if (status === 'draft') return true;
-        const { publish } = travel;
-        return publish === false || publish === 0;
-      }),
+    () => profileTravels.filter(isTravelDraft),
+    [profileTravels],
+  );
+
+  const publishedTravels = useMemo<Travel[]>(
+    () => profileTravels.filter((travel) => !isTravelDraft(travel)),
     [profileTravels],
   );
 
   useEffect(() => {
     if (activeTab !== 'countries' && activeTab !== 'worldmap') return;
+    if (travelsLoading || travelsLoadingMore || !travelsHasMore) return;
+    if (profileTravels.length === 0) return;
+    void loadMoreTravelsHook();
+  }, [
+    activeTab,
+    loadMoreTravelsHook,
+    profileTravels.length,
+    travelsHasMore,
+    travelsLoading,
+    travelsLoadingMore,
+  ]);
+
+  useEffect(() => {
+    if (activeTab !== 'publishedTravels' && activeTab !== 'draftTravels') return;
     if (travelsLoading || travelsLoadingMore || !travelsHasMore) return;
     if (profileTravels.length === 0) return;
     void loadMoreTravelsHook();
@@ -400,6 +416,8 @@ export default function ProfileScreen() {
   const currentData = useMemo<Travel[]>(() => {
     if (activeTravelMetric) return authoredMetricTravels;
     if (activeTab === 'travels') return profileTravels;
+    if (activeTab === 'publishedTravels') return publishedTravels;
+    if (activeTab === 'draftTravels') return draftTravels;
     if (activeTab === 'favorites') return normalizedFavorites.map(withVisibleEngagementStats);
     if (activeTab === 'history') return normalizedHistory.map(withVisibleEngagementStats);
     return [];
@@ -407,8 +425,10 @@ export default function ProfileScreen() {
     activeTab,
     activeTravelMetric,
     authoredMetricTravels,
+    draftTravels,
     normalizedFavorites,
     normalizedHistory,
+    publishedTravels,
     profileTravels,
   ]);
 
@@ -457,6 +477,28 @@ export default function ProfileScreen() {
           action: { label: 'Создать маршрут', onPress: () => router.push('/travel/new' as any) },
           secondaryAction: { label: 'Начать квест', onPress: () => router.push('/quests' as any) },
         };
+      case 'publishedTravels':
+        return {
+          icon: 'check-circle',
+          title: 'Опубликованных маршрутов пока нет',
+          description: 'Когда черновик будет опубликован, он появится здесь обычной карточкой.',
+          variant: 'empty' as const,
+          action: { label: 'Создать маршрут', onPress: () => router.push('/travel/new' as any) },
+          secondaryAction: draftTravels.length > 0
+            ? { label: 'Открыть черновики', onPress: () => setActiveTab('draftTravels') }
+            : undefined,
+        };
+      case 'draftTravels':
+        return {
+          icon: 'edit-3',
+          title: 'Черновиков пока нет',
+          description: 'Сохранённые без публикации путешествия будут лежать здесь.',
+          variant: 'empty' as const,
+          action: { label: 'Создать маршрут', onPress: () => router.push('/travel/new' as any) },
+          secondaryAction: publishedTravels.length > 0
+            ? { label: 'Открыть опубликованные', onPress: () => setActiveTab('publishedTravels') }
+            : undefined,
+        };
       case 'favorites':
         return {
           icon: 'heart',
@@ -475,7 +517,7 @@ export default function ProfileScreen() {
         };
       default: return { icon: 'layers', title: 'Пусто', description: '' };
     }
-  }, [activeTab, activeTravelMetric, router]);
+  }, [activeTab, activeTravelMetric, draftTravels.length, publishedTravels.length, router]);
 
   const displayName = useMemo(
     () => (fullName || userInfo.name || 'Пользователь').trim(),
@@ -548,12 +590,16 @@ export default function ProfileScreen() {
   const tabCounts = useMemo(() => ({
     overview: badgesCount,
     travels: stats.travelsCount,
+    publishedTravels: publishedTravels.length,
+    draftTravels: draftTravels.length,
     subscribers: subscribersCount,
     subscriptions: subscriptionsCount,
     favorites: stats.favoritesCount,
     history: stats.viewsCount,
   }), [
     badgesCount,
+    draftTravels.length,
+    publishedTravels.length,
     stats.travelsCount,
     subscribersCount,
     subscriptionsCount,
@@ -577,10 +623,6 @@ export default function ProfileScreen() {
 
   const handleCreateFirstRoute = useCallback(() => {
     router.push('/travel/new' as any)
-  }, [router])
-
-  const handleOpenDraft = useCallback((travelId: number) => {
-    router.push(`/travel/${encodeURIComponent(String(travelId))}` as any)
   }, [router])
 
   const handleStartFirstQuest = useCallback(() => {
@@ -786,15 +828,6 @@ export default function ProfileScreen() {
     () => (
       <>
         {Header}
-        {activeTab === 'travels' && !activeTravelMetric && !travelsLoading ? (
-          <View style={styles.fullRow}>
-            <ProfileDraftResumePanel
-              drafts={draftTravels}
-              onOpenDraft={handleOpenDraft}
-              onCreateTravel={handleCreateFirstRoute}
-            />
-          </View>
-        ) : null}
         {isOverview ? overviewContent : null}
         {isStats ? statsContent : null}
         {isCountries ? countriesContent : null}
@@ -804,22 +837,15 @@ export default function ProfileScreen() {
     ),
     [
       Header,
-      activeTab,
-      activeTravelMetric,
       countriesContent,
-      draftTravels,
-      handleCreateFirstRoute,
-      handleOpenDraft,
       worldmapContent,
       isCountries,
       isWorldmap,
       isOverview,
       isStats,
       overviewContent,
-      styles.fullRow,
       statsContent,
       subscriptionsContent,
-      travelsLoading,
     ],
   );
 
@@ -831,7 +857,7 @@ export default function ProfileScreen() {
       isFirst={index === 0}
       currentUserId={userId}
       isSuperuser={isSuperuser}
-      onDeletePress={activeTab === 'travels' ? handleDeleteMyTravel : undefined}
+      onDeletePress={isProfileTravelTab(activeTab) ? handleDeleteMyTravel : undefined}
       viewportWidth={width}
       isDeleting={removingTravelId === item.id}
     />
@@ -873,7 +899,7 @@ export default function ProfileScreen() {
     );
   }
 
-  const isTravelsTabLoading = activeTab === 'travels' && travelsLoading;
+  const isTravelsTabLoading = isProfileTravelTab(activeTab) && travelsLoading;
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -918,7 +944,7 @@ export default function ProfileScreen() {
               />
             )
           )}
-          {activeTab === 'travels' && travelsLoadingMore ? (
+          {isProfileTravelTab(activeTab) && travelsLoadingMore ? (
             <View style={styles.footerLoader}>
               <ActivityIndicator color={colors.primaryDark} />
             </View>
@@ -946,13 +972,13 @@ export default function ProfileScreen() {
             )
           }
           ListFooterComponent={
-            activeTab === 'travels' && travelsLoadingMore ? (
+            isProfileTravelTab(activeTab) && travelsLoadingMore ? (
               <View style={styles.footerLoader}>
                 <ActivityIndicator color={colors.primaryDark} />
               </View>
             ) : null
           }
-          onEndReached={activeTab === 'travels' ? handleListEndReached : undefined}
+          onEndReached={isProfileTravelTab(activeTab) ? handleListEndReached : undefined}
           onEndReachedThreshold={0.5}
         />
       )}

@@ -33,6 +33,7 @@ import {
   TravelCardSkeletonComponent,
 } from '@/components/listTravel/RightColumn.parts'
 import ListCatalogToolbar, {
+  type ListStatusMode,
   type ListSortOption,
 } from '@/components/listTravel/ListCatalogToolbar'
 import type { ListDensity } from '@/stores/listViewStore'
@@ -93,6 +94,9 @@ interface RightColumnProps {
   density?: ListDensity
   onDensityChange?: (density: ListDensity) => void
   showDensityToggle?: boolean
+  statusMode?: ListStatusMode
+  onStatusModeChange?: (mode: ListStatusMode) => void
+  showStatusModeToggle?: boolean
   primaryAction?: {
     accessibilityHint?: string
     iconName: React.ComponentProps<typeof Feather>['name']
@@ -144,6 +148,9 @@ const RightColumn: React.FC<RightColumnProps> = (
      density = 'comfortable',
      onDensityChange,
      showDensityToggle = false,
+     statusMode = 'all',
+     onStatusModeChange,
+     showStatusModeToggle = false,
      primaryAction,
    }) => {
     const colors = useThemedColors()
@@ -546,6 +553,9 @@ const RightColumn: React.FC<RightColumnProps> = (
             density={density}
             onDensityChange={onDensityChange ?? (() => {})}
             showDensityToggle={showDensityToggle && !!onDensityChange}
+            statusMode={statusMode}
+            onStatusModeChange={onStatusModeChange}
+            showStatusModeToggle={showStatusModeToggle && !!onStatusModeChange}
             contentPadding={contentPadding}
             resultsCount={isError ? undefined : total}
             showResultsCount={isMobileViewport && !isSearchPending}

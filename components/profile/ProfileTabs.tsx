@@ -12,6 +12,8 @@ export type ProfileTabKey =
   | 'countries'
   | 'worldmap'
   | 'travels'
+  | 'publishedTravels'
+  | 'draftTravels'
   | 'favorites'
   | 'history'
   | 'subscribers'
@@ -31,6 +33,8 @@ const TAB_ICONS: Record<ProfileTabKey, React.ComponentProps<typeof Feather>['nam
   countries: 'flag',
   worldmap: 'globe',
   travels: 'map',
+  publishedTravels: 'check-circle',
+  draftTravels: 'edit-3',
   favorites: 'heart',
   history: 'clock',
   subscribers: 'users',
@@ -159,7 +163,9 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
   );
 
   const allTabs: Array<{ key: ProfileTabKey; label: string; a11yLabel: string; hint: string }> = [
-    { key: 'travels', label: 'Маршруты', a11yLabel: 'Мои маршруты', hint: 'Показать ваши опубликованные путешествия' },
+    { key: 'travels', label: 'Маршруты', a11yLabel: 'Мои маршруты', hint: 'Показать все ваши путешествия' },
+    { key: 'publishedTravels', label: 'Опубл.', a11yLabel: 'Опубликованные маршруты', hint: 'Показать опубликованные путешествия' },
+    { key: 'draftTravels', label: 'Черновики', a11yLabel: 'Черновики маршрутов', hint: 'Показать сохранённые черновики путешествий' },
     { key: 'subscribers', label: 'Подписчики', a11yLabel: 'Подписчики', hint: 'Открыть список подписчиков' },
     { key: 'subscriptions', label: 'Подписки', a11yLabel: 'Подписки', hint: 'Открыть список подписок' },
     {

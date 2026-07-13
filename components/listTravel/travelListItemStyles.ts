@@ -238,6 +238,24 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       paddingTop: Platform.OS === 'web' ? 1 : 0,
     },
 
+    draftStatusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      flexShrink: 0,
+      paddingHorizontal: 6,
+      paddingVertical: Platform.OS === 'web' ? 2 : 3,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.warningSoft,
+    },
+
+    draftStatusText: {
+      fontSize: META_TEXT_FONT_SIZE,
+      lineHeight: META_TEXT_LINE_HEIGHT,
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+      color: colors.warning,
+    },
+
     engagementMetricsRow: {
       flexDirection: 'row',
       alignItems: 'center',

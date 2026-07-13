@@ -8,6 +8,7 @@ import { getTravelLabel } from '@/utils/pluralize'
 import type { ListDensity } from '@/stores/listViewStore'
 
 export type ListSortOption = { id: string; name: string }
+export type ListStatusMode = 'all' | 'published' | 'drafts'
 
 interface ListCatalogToolbarProps {
   sortOptions: ListSortOption[]
@@ -31,6 +32,9 @@ interface ListCatalogToolbarProps {
    */
   resultsCount?: number
   showResultsCount?: boolean
+  statusMode?: ListStatusMode
+  onStatusModeChange?: (mode: ListStatusMode) => void
+  showStatusModeToggle?: boolean
 }
 
 const spacing = DESIGN_TOKENS.spacing
@@ -53,6 +57,9 @@ function ListCatalogToolbar({
   resultsCount,
   showResultsCount = false,
   showSort = true,
+  statusMode = 'all',
+  onStatusModeChange,
+  showStatusModeToggle = false,
 }: ListCatalogToolbarProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
@@ -68,7 +75,9 @@ function ListCatalogToolbar({
   const sortEnabled = showSort && !compactLayout
   const sortVisible = sortEnabled && sortOptions.length > 0
 
-  if (!sortVisible && !showDensityToggle && !countVisible) return null
+  const statusVisible = showStatusModeToggle && !!onStatusModeChange
+
+  if (!sortVisible && !showDensityToggle && !countVisible && !statusVisible) return null
 
   const countNode = countVisible ? (
     <Text style={styles.countText} numberOfLines={1} testID="toolbar-results-count">
@@ -153,16 +162,53 @@ function ListCatalogToolbar({
     </View>
   ) : null
 
+  const statusNode = statusVisible ? (
+    <View
+      style={styles.densityGroup}
+      accessibilityRole={Platform.OS === 'web' ? undefined : ('radiogroup' as any)}
+      accessibilityLabel="Статус моих путешествий"
+    >
+      {STATUS_BUTTONS.map((button) => {
+        const isActive = statusMode === button.value
+        return (
+          <Pressable
+            key={button.value}
+            testID={`travel-status-${button.value}`}
+            onPress={() => onStatusModeChange?.(button.value)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isActive }}
+            accessibilityLabel={button.label}
+            style={[styles.densityButton, isActive && styles.densityButtonActive]}
+            {...Platform.select({ web: { title: button.label } as any })}
+          >
+            <Feather
+              name={button.icon}
+              size={15}
+              color={isActive ? colors.primary : colors.textMuted}
+            />
+          </Pressable>
+        )
+      })}
+    </View>
+  ) : null
+
+  const controlsNode = statusNode || densityNode ? (
+    <View style={styles.iconControlsRow}>
+      {statusNode}
+      {densityNode}
+    </View>
+  ) : null
+
   if (isNative || isCompactWeb) {
     return (
       <View
         style={[styles.container, styles.compactContainer, { paddingHorizontal: contentPadding }]}
         accessibilityRole="toolbar"
       >
-        {(countNode || densityNode) ? (
+        {(countNode || controlsNode) ? (
           <View style={styles.compactTopRow}>
             {countNode}
-            {densityNode}
+            {controlsNode}
           </View>
         ) : null}
         {sortNode}
@@ -177,10 +223,20 @@ function ListCatalogToolbar({
     >
       {countNode}
       {sortNode}
-      {densityNode}
+      {controlsNode}
     </View>
   )
 }
+
+const STATUS_BUTTONS: Array<{
+  value: ListStatusMode
+  icon: keyof typeof Feather.glyphMap
+  label: string
+}> = [
+  { value: 'all', icon: 'layers', label: 'Все мои путешествия' },
+  { value: 'published', icon: 'check-circle', label: 'Опубликованные' },
+  { value: 'drafts', icon: 'edit-3', label: 'Черновики' },
+]
 
 const DENSITY_BUTTONS: Array<{
   value: ListDensity
@@ -210,6 +266,12 @@ const getStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: spacing.sm,
+    },
+    iconControlsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      flexShrink: 0,
     },
     sortScroll: {
       flex: 1,

@@ -206,7 +206,14 @@ export function useListTravelFilters({
         delete newFilter[field as keyof FilterState];
         return newFilter;
       }
-      return { ...prev, [field]: value };
+      const next = { ...prev, [field]: value };
+      if (field === 'draftsOnly' && value === true) {
+        delete next.publishedOnly;
+      }
+      if (field === 'publishedOnly' && value === true) {
+        delete next.draftsOnly;
+      }
+      return next;
     });
   }, []);
 

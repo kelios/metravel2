@@ -29,8 +29,8 @@ export const GET_TRAVEL_FACETS = `${URLAPI}/travels/facets/`;
 export const filterPublished = (items: Travel[]): Travel[] =>
     items.filter((t) => {
         const withStatus = t as Travel & { publish?: unknown; moderation?: unknown };
-        const pub = withStatus.publish;
-        const mod = withStatus.moderation;
+        const pub: unknown = withStatus.publish;
+        const mod: unknown = withStatus.moderation;
         const pubOk = pub === undefined || pub === null || pub === true || pub === 1 || pub === '1';
         const modOk = mod === undefined || mod === null || mod === true || mod === 1 || mod === '1';
         return pubOk && modOk;
