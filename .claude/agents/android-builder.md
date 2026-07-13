@@ -36,7 +36,7 @@ model: sonnet
    - `npx expo-doctor` без критичных замечаний.
 2. **Тестовый билд перед прод-релизом — БЕЗ EAS.** НЕ жги EAS-квоту на dev/preview ради проверки: тест native делается **локальной** сборкой (`cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`) на подключённый телефон через adb. Прод (EAS) собирать только после успешного локального теста И по явной команде владельца (см. Гейт №0).
 3. **Релиз:** `npm run release:check` → `npm run android:build:prod` → дождаться AAB (следи за build URL/логами EAS).
-4. **Submit:** нужен gitignored ключ сервис-аккаунта Google Play. Проверь `git check-ignore .secrets/google-play-service-account.json` и что путь прописан в `eas.json submit.production.android.serviceAccountKeyPath`. Затем `npm run android:submit:latest`. Первый релиз — на track `internal`, промоут в `production` после проверки на устройствах.
+4. **Submit:** нужен gitignored ключ сервис-аккаунта Google Play. Проверь `git check-ignore .secrets/google-play-service-account.json` и что путь прописан в `eas.json submit.production.android.serviceAccountKeyPath`. Затем `npm run android:submit:latest` → трек `alpha` (закрытое тестирование, где реальные тестировщики; задан в `eas.json`, исправлено с `internal` 2026-07-13). После submit ОБЯЗАТЕЛЬНО read-only сверь по Play API, что versionCode лёг в `alpha`; при промахе промоутни существующий versionCode (не пересобирай). Промоут в `production` (публичный релиз) — только по явной команде владельца. Детали пайплайна и промоута — агент `android-publisher`.
 
 ## Правила
 

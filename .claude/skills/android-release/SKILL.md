@@ -72,9 +72,12 @@ location/camera/media, adaptive+monochrome icon, splash, deep links на
 
 9. `android-builder`: `npm run release:check` (lint/typecheck/tests).
 10. **По явной команде владельца** — `npm run android:build:prod` → AAB (versionCode поднимется autoIncrement). Сам сборку не инициируешь.
-11. `npm run android:submit:latest` → track **internal** → проверить на реальных
-    устройствах.
-12. Промоут в **production** track после проверки.
+11. `npm run android:submit:latest` → трек **`alpha`** (закрытое тестирование, где реальные
+    тестировщики; задан в `eas.json`). После submit ОБЯЗАТЕЛЬНО read-only проверить по Play
+    API, что новый versionCode лёг в `alpha` (не верить строке «трек тот же»); при промахе —
+    промоут существующего versionCode в `alpha` (не пересобирать; повторный submit упадёт
+    «versionCode already used»). Детали — агент `android-publisher`.
+12. Промоут в **production** (публичный релиз) — отдельно, ТОЛЬКО по явной команде владельца.
 
 ## Правила
 
