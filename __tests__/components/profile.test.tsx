@@ -360,6 +360,39 @@ describe('ProfileScreen', () => {
     expect(await findByLabelText('Сохранили: 8')).toBeTruthy();
     expect((await findAllByLabelText('Были: 3')).length).toBeGreaterThan(0);
     expect((await findAllByLabelText('Планируют: 7')).length).toBeGreaterThan(0);
+    expect(mockFetchMyTravels).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: '123', includeDrafts: true })
+    );
+  });
+
+  it('shows saved drafts in profile and opens the draft editor', async () => {
+    setupAuth({ isAuthenticated: true });
+    setupFavorites(0, 0);
+    mockFetchMyTravels.mockResolvedValue({
+      total: 1,
+      count: 1,
+      data: [
+        {
+          id: 777,
+          title: 'Черновик Кавказа',
+          countryName: 'Грузия',
+          publish: 0,
+          moderation: 0,
+          updated_at: '2026-07-10T12:00:00Z',
+        },
+      ],
+    });
+
+    const { findByLabelText, findByTestId, findByText } = renderProfile();
+
+    fireEvent.press(await findByLabelText('Мои маршруты: 1'));
+
+    expect(await findByTestId('profile-draft-resume-panel')).toBeTruthy();
+    expect(await findByText('Черновики маршрутов')).toBeTruthy();
+
+    fireEvent.press(await findByLabelText('Открыть черновик Черновик Кавказа'));
+
+    expect(mockPush).toHaveBeenCalledWith('/travel/777');
   });
 
   it('opens calendar from profile header quick action', async () => {

@@ -281,6 +281,31 @@ describe('ImageGalleryComponent.web', () => {
     expect(images.length).toBeGreaterThan(0);
   });
 
+  it('compresses oversized web gallery files instead of rejecting them before upload', async () => {
+    const largeFile = new File([new Uint8Array(10 * 1024 * 1024 + 128)], 'large-trip-photo.jpg', {
+      type: 'image/jpeg',
+    });
+    const compressedFile = new File(['compressed'], 'large-trip-photo.jpg', {
+      type: 'image/jpeg',
+    });
+
+    prepareWebImageFileForUploadMock.mockResolvedValueOnce(compressedFile);
+
+    renderSafe(
+      <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
+    );
+
+    await runDrop([largeFile]);
+
+    await waitFor(() => {
+      expect(uploadImageMock).toHaveBeenCalled();
+    });
+
+    expect(prepareWebImageFileForUploadMock).toHaveBeenCalledWith(largeFile);
+    const formData = uploadImageMock.mock.calls[0][0] as FormData;
+    expect(formData.get('file')).toBe(compressedFile);
+  });
+
   it('registers HEIC and HEIF in the web dropzone accept list', () => {
     renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,

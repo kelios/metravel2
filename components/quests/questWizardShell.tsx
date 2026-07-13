@@ -171,20 +171,24 @@ function QuestProgressSummary({
   progress,
   completedCount,
   stepsCount,
+  showText = true,
 }: {
   styles: any
   progress: number
   completedCount: number
   stepsCount: number
+  showText?: boolean
 }) {
   return (
     <View style={styles.progressContainer}>
       <View style={styles.progressBar}>
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
-      <Text style={styles.progressText}>
-        {completedCount} / {stepsCount}
-      </Text>
+      {showText && (
+        <Text style={styles.progressText}>
+          {completedCount} / {stepsCount}
+        </Text>
+      )}
     </View>
   )
 }
@@ -414,18 +418,33 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
 
   const wideDesktop = screenW >= 1100
   const showActionLabels = Platform.OS !== 'web' && !isMobile
+  const hasHeaderMeta = Boolean(ratingSlot || completionSlot)
 
   return (
     <View style={styles.header}>
       <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
-        <View style={styles.headerIdentity}>
-          {!isMobile && (
-            <Text style={styles.title} numberOfLines={1}>{title}</Text>
-          )}
-          {ratingSlot ?? null}
-          {completionSlot ?? null}
-        </View>
-        <View style={styles.headerActionRow}>
+        {(!isMobile || hasHeaderMeta) && (
+          <View
+            style={[
+              styles.headerIdentity,
+              isMobile && styles.headerIdentityMobile,
+            ]}
+          >
+            {!isMobile && (
+              <Text style={styles.title} numberOfLines={1}>
+                {title}
+              </Text>
+            )}
+            {ratingSlot ?? null}
+            {completionSlot ?? null}
+          </View>
+        )}
+        <View
+          style={[
+            styles.headerActionRow,
+            isMobile && styles.headerActionRowMobile,
+          ]}
+        >
           <QuestFontScaleControl
             styles={styles}
             colors={colors}
@@ -481,6 +500,11 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             hitSlop={12}
             iconSize={13}
           />
+          {isMobile && (
+            <Text style={styles.progressCompact} numberOfLines={1}>
+              {completedCount} / {stepsCount}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -497,6 +521,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
         progress={progress}
         completedCount={completedCount}
         stepsCount={stepsCount}
+        showText={!isMobile}
       />
 
       {wideDesktop ? (

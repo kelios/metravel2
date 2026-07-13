@@ -84,7 +84,7 @@ describe('webImageUpload', () => {
       } as unknown as HTMLCanvasElement;
     });
 
-    const source = new File([new Uint8Array(10 * 1024 * 1024 + 128)], 'waterfall.JPG', {
+    const source = new File([new Uint8Array(10 * 1024 * 1024 + 128)], 'waterfall.jpg', {
       type: 'image/jpeg',
     });
 
@@ -96,6 +96,55 @@ describe('webImageUpload', () => {
     expect(converted.type).toBe('image/jpeg');
     expect(converted.size).toBeLessThan(source.size);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:test-large-photo');
+  });
+
+  it('compresses oversized web PNGs to JPEG before upload validation', async () => {
+    URL.createObjectURL = jest.fn(() => 'blob:test-large-png');
+    URL.revokeObjectURL = jest.fn();
+
+    class MockImage {
+      naturalWidth = 4032;
+      naturalHeight = 3024;
+      onload: null | (() => void) = null;
+      onerror: null | (() => void) = null;
+
+      set src(_value: string) {
+        setTimeout(() => this.onload?.(), 0);
+      }
+    }
+
+    global.Image = MockImage as unknown as typeof Image;
+
+    const createElementSpy = jest.spyOn(document, 'createElement');
+    createElementSpy.mockImplementation((tagName: string) => {
+      if (tagName.toLowerCase() !== 'canvas') {
+        return originalDocumentCreateElement(tagName);
+      }
+
+      return {
+        width: 0,
+        height: 0,
+        getContext: () => ({ drawImage: jest.fn() }),
+        toBlob: (callback: (blob: Blob | null) => void, type: string, quality: number) => {
+          expect(type).toBe('image/jpeg');
+          expect(quality).toBeLessThan(1);
+          callback(new Blob([new Uint8Array([4, 5, 6])], { type: 'image/jpeg' }));
+        },
+      } as unknown as HTMLCanvasElement;
+    });
+
+    const source = new File([new Uint8Array(10 * 1024 * 1024 + 128)], 'map-capture.png', {
+      type: 'image/png',
+    });
+
+    const converted = await prepareWebImageFileForUpload(source);
+
+    expect(converted).toBeInstanceOf(File);
+    expect(converted).not.toBe(source);
+    expect(converted.name).toBe('map-capture.jpg');
+    expect(converted.type).toBe('image/jpeg');
+    expect(converted.size).toBeLessThan(source.size);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:test-large-png');
   });
 
   it('throws HeicConversionError instead of returning the raw HEIC when decode fails', async () => {

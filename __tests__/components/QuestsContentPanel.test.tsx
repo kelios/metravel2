@@ -329,6 +329,63 @@ describe('QuestsContentPanel', () => {
         expect(list.props.removeClippedSubviews).toBe(true);
     });
 
+    it('keeps the FlatList root (and search field) mounted when Android search narrows to zero results', () => {
+        // Регрессия: раньше нативная ветка списка гейтилась на questsAll.length > 0,
+        // поэтому «0 результатов» переключало корень View(FlatList) → ScrollView и
+        // перемонтировало шапку с TextInput — поле теряло фокус, клавиатура
+        // закрывалась при наборе. Ветка обязана оставаться FlatList в обоих состояниях.
+        mockIsMobile = true;
+        (Platform as { OS: string }).OS = 'android';
+        const LazyQuestMap = jest.fn(() => null);
+
+        const baseProps = {
+            styles,
+            colors,
+            dataLoaded: true,
+            viewMode: 'list' as const,
+            selectedCityId: 'warsaw',
+            selectedCityName: 'Warsaw',
+            nearbyId: '__nearby__',
+            searchQuery: 'quest',
+            onSearchChange: () => {},
+            nearbyRadiusKm: 15,
+            questCardWidth: 320,
+            mapPoints: [],
+            mapCenter: { latitude: 52.23, longitude: 21.01 },
+            userLoc: null,
+            isMapAreaActive: false,
+            geoMessage: null,
+            geoRequesting: false,
+            showMapAreaSearch: false,
+            radiiLg: 24,
+            LazyQuestMap,
+            isMobile: true,
+            filtersActive: false,
+            onResetFilters: () => {},
+            onShowNearby: () => {},
+            onOpenFilterDrawer: () => {},
+            onToggleViewMode: () => {},
+            onSetRadius: () => {},
+            onMapUserLocationChange: () => {},
+            onMapMove: () => {},
+            onSearchMapArea: () => {},
+        };
+
+        const { getByTestId, queryByText, rerender } = render(
+            <QuestsContentPanel {...baseProps} questsAll={[makeQuest(0), makeQuest(1)]} />
+        );
+
+        expect(getByTestId('quests-virtualized-list')).toBeTruthy();
+        expect(getByTestId('quests-search-input')).toBeTruthy();
+
+        // Набор сузил результат до нуля — корень НЕ должен переключиться на ScrollView.
+        rerender(<QuestsContentPanel {...baseProps} questsAll={[]} />);
+
+        expect(getByTestId('quests-virtualized-list')).toBeTruthy();
+        expect(getByTestId('quests-search-input')).toBeTruthy();
+        expect(queryByText('Ничего не найдено')).toBeTruthy();
+    });
+
     it('keeps the existing non-virtualized grid path on web', () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';

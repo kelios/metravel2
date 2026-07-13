@@ -31,6 +31,7 @@ import { ProfileStatsTab } from '@/components/screens/profile/ProfileStatsTab';
 import { ProfileCountriesTab } from '@/components/screens/profile/ProfileCountriesTab';
 import { ProfileWorldMapTab } from '@/components/screens/profile/ProfileWorldMapTab';
 import { ProfileTravelGrid } from '@/components/screens/profile/ProfileTravelGrid';
+import ProfileDraftResumePanel from '@/components/screens/profile/ProfileDraftResumePanel';
 import SubscriptionsTabContent from '@/components/subscriptions/SubscriptionsTabContent';
 import { type ProfileHeaderActionKey } from '@/components/profile/ProfileHeaderQuickActions';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -152,7 +153,12 @@ export default function ProfileScreen() {
     load: loadTravels,
     loadMore: loadMoreTravelsHook,
     remove: removeMyTravel,
-  } = useMyTravels({ userId, perPage: PROFILE_TRAVELS_PER_PAGE, onTotalChange: handleTotalChange });
+  } = useMyTravels({
+    userId,
+    perPage: PROFILE_TRAVELS_PER_PAGE,
+    includeDrafts: true,
+    onTotalChange: handleTotalChange,
+  });
   const personalTravelStatusEntries = useTravelStatusStore((state) => state.entries)
   const loadPersonalTravelStatuses = useTravelStatusStore((state) => state.loadLocal)
 
@@ -312,6 +318,17 @@ export default function ProfileScreen() {
     myTravels.map(withVisibleEngagementStats),
     [myTravels]
   )
+
+  const draftTravels = useMemo<Travel[]>(
+    () =>
+      profileTravels.filter((travel) => {
+        const status = String(travel.publication_status ?? '').toLowerCase();
+        if (status === 'draft') return true;
+        const { publish } = travel;
+        return publish === false || publish === 0;
+      }),
+    [profileTravels],
+  );
 
   useEffect(() => {
     if (activeTab !== 'countries' && activeTab !== 'worldmap') return;
@@ -562,6 +579,10 @@ export default function ProfileScreen() {
     router.push('/travel/new' as any)
   }, [router])
 
+  const handleOpenDraft = useCallback((travelId: number) => {
+    router.push(`/travel/${encodeURIComponent(String(travelId))}` as any)
+  }, [router])
+
   const handleStartFirstQuest = useCallback(() => {
     router.push('/quests' as any)
   }, [router])
@@ -765,6 +786,15 @@ export default function ProfileScreen() {
     () => (
       <>
         {Header}
+        {activeTab === 'travels' && !activeTravelMetric && !travelsLoading ? (
+          <View style={styles.fullRow}>
+            <ProfileDraftResumePanel
+              drafts={draftTravels}
+              onOpenDraft={handleOpenDraft}
+              onCreateTravel={handleCreateFirstRoute}
+            />
+          </View>
+        ) : null}
         {isOverview ? overviewContent : null}
         {isStats ? statsContent : null}
         {isCountries ? countriesContent : null}
@@ -774,15 +804,22 @@ export default function ProfileScreen() {
     ),
     [
       Header,
+      activeTab,
+      activeTravelMetric,
       countriesContent,
+      draftTravels,
+      handleCreateFirstRoute,
+      handleOpenDraft,
       worldmapContent,
       isCountries,
       isWorldmap,
       isOverview,
       isStats,
       overviewContent,
+      styles.fullRow,
       statsContent,
       subscriptionsContent,
+      travelsLoading,
     ],
   );
 

@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
     View, Pressable, Platform,
+    Dimensions,
     ViewStyle,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,7 +14,7 @@ import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/util
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { haversineKm } from '@/utils/geo';
 import { useIsFocused } from 'expo-router';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useBreakpoints } from '@/hooks/useResponsive';
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestsList, useQuestCities } from '@/hooks/useQuestsApi';
@@ -83,14 +84,22 @@ export default function QuestsScreen() {
 
     const isFocused = useIsFocused();
     const colors = useThemedColors();
-    const responsive = useResponsive();
+    // Ширинно-ориентированная подписка (без ре-рендера на изменение высоты).
+    // На мобильном вебе открытие клавиатуры/схлопывание адресной строки меняет
+    // высоту вьюпорта покадрово; подписка на высоту (useResponsive) дёргала бы
+    // ре-рендер всего экрана во время набора и рвала ввод в поле поиска.
+    const { width: bpWidth, isMobile: bpIsMobile } = useBreakpoints();
     const [layoutHydrated, setLayoutHydrated] = useState(Platform.OS !== 'web');
     useEffect(() => {
         setLayoutHydrated(true);
     }, []);
-    const width = layoutHydrated ? responsive.width : 0;
-    const height = layoutHydrated ? responsive.height : 0;
-    const isMobile = layoutHydrated ? responsive.isMobile : true;
+    const width = layoutHydrated ? bpWidth : 0;
+    const isMobile = layoutHydrated ? bpIsMobile : true;
+    // Высота нужна только для размеров карты на native/desktop и берётся
+    // НЕреактивным снапшотом: в стилях мобильного веба она не используется
+    // (карта = 100dvh через CSS), поэтому отсутствие подписки на высоту ничего
+    // не ломает, но убирает keyboard/address-bar-джиттер при вводе.
+    const height = layoutHydrated ? Dimensions.get('window').height : 0;
     const s = useMemo(() => getStyles(colors, width, height), [colors, width, height]);
 
     // ── Persistent city selection ──

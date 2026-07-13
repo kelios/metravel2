@@ -9,14 +9,14 @@ const HEIC_EXTENSIONS = ['.heic', '.heif', '.heics', '.heifs'];
 const WEB_UPLOAD_MAX_SIDE = 2560;
 const WEB_UPLOAD_JPEG_QUALITY = 0.86;
 const WEB_UPLOAD_COMPRESS_ABOVE_BYTES = 9 * 1024 * 1024;
-const WEB_COMPRESSIBLE_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/webp']);
+const WEB_COMPRESSIBLE_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 
 function replaceImageExtension(name: string, nextExtension: string): string {
   const trimmed = String(name || '').trim();
   if (!trimmed) return `image${nextExtension}`;
-  return trimmed.replace(/\.[^.]+$/u, nextExtension) === trimmed
-    ? `${trimmed}${nextExtension}`
-    : trimmed.replace(/\.[^.]+$/u, nextExtension);
+  return /\.[^.]+$/u.test(trimmed)
+    ? trimmed.replace(/\.[^.]+$/u, nextExtension)
+    : `${trimmed}${nextExtension}`;
 }
 
 function canUseCanvasCompression(): boolean {
@@ -146,8 +146,10 @@ export async function prepareWebImageFileForUpload(file: File): Promise<File> {
     throw new HeicConversionError('heic-to did not return a Blob');
   }
 
-  return new File([convertedBlob], replaceImageExtension(file.name, '.jpg'), {
+  const convertedFile = new File([convertedBlob], replaceImageExtension(file.name, '.jpg'), {
     type: 'image/jpeg',
     lastModified: file.lastModified || Date.now(),
   });
+
+  return await compressWebRasterImage(convertedFile);
 }

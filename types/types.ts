@@ -124,6 +124,9 @@ export type Travel = {
     }
     created_at?: string
     updated_at?: string
+    publish?: boolean | number | null
+    moderation?: boolean | number | null
+    publication_status?: 'draft' | 'approved' | 'published' | string | null
     engagementStats?: {
         favoritesCount: number | null
         wishlistCount: number | null

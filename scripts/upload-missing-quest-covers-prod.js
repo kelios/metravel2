@@ -85,6 +85,17 @@ const QUEST_COVERS = [
   { quest_id: 'swiety-krzyz-lysa-gora', assetsDir: 'swietyKrzyzLysaGora', cover: 'cover.png' },
   { quest_id: 'ojcow-lokietek', assetsDir: 'ojcowLokietek', cover: 'cover.png' },
   { quest_id: 'niedzica-skarb-inkow', assetsDir: 'niedzicaSkarbInkow', cover: 'cover.png' },
+  { quest_id: 'zakopane-spiacy-rycerze', assetsDir: 'zakopaneSpiacyRycerze', cover: 'cover.png' },
+  { quest_id: 'kruszwica-mysia-wieza', assetsDir: 'kruszwicaMysiaWieza', cover: 'cover.png' },
+  { quest_id: 'karpacz-duch-gor', assetsDir: 'karpaczDuchGor', cover: 'cover.png' },
+  { quest_id: 'leczyca-boruta', assetsDir: 'leczycaBoruta', cover: 'cover.png' },
+  { quest_id: 'zhirovichi-icon-pear', assetsDir: 'zhirovichiIconPear', cover: 'cover.png' },
+  { quest_id: 'lepel-tsmok', assetsDir: 'lepelTsmok', cover: 'cover.png' },
+  { quest_id: 'vyaloe-tyshkevich-curse', assetsDir: 'vyaloeTyshkevichCurse', cover: 'cover.png' },
+  { quest_id: 'kamenets-white-tower', assetsDir: 'kamenetsWhiteTower', cover: 'cover.png' },
+  { quest_id: 'malbork-marienburg', assetsDir: 'malborkMarienburg', cover: 'cover.png' },
+  { quest_id: 'kazimierz-dolny-kogut', assetsDir: 'kazimierzDolnyKogut', cover: 'cover.png' },
+  { quest_id: 'sleza-swieta-gora', assetsDir: 'slezaSwietaGora', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {
@@ -189,7 +200,17 @@ async function main() {
       continue;
     }
 
-    await uploadCover(productionQuest.id, coverPath);
+    const freshQuest = (await fetchQuestCatalog()).get(quest.quest_id);
+    if (!freshQuest?.id) {
+      console.log('  skip: production quest disappeared before upload');
+      continue;
+    }
+    if (hasExistingCover(freshQuest)) {
+      console.log('  skip: production cover_url appeared before upload');
+      continue;
+    }
+
+    await uploadCover(freshQuest.id, coverPath);
     console.log(`  uploaded cover (${sizeMB(coverPath)} MB)`);
   }
 

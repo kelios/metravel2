@@ -37,6 +37,21 @@ const getMonthName = (item: Record<string, unknown>): string => {
   return firstMonth == null ? '' : String(firstMonth).trim();
 };
 
+const toStatusFlag = (value: unknown): boolean | number | null | undefined => {
+  if (value === null) return null;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 0 ? 0 : value === 1 ? 1 : value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return undefined;
+    if (normalized === 'true') return true;
+    if (normalized === 'false') return false;
+    if (normalized === '0') return 0;
+    if (normalized === '1') return 1;
+  }
+  return undefined;
+};
+
 export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
   const idRaw = item?.id ?? item?._id ?? 0;
   const id = typeof idRaw === 'number' ? idRaw : Number(idRaw) || 0;
@@ -57,6 +72,8 @@ export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
   const countryName = String(item?.countryName ?? item?.country ?? '').trim();
   const cityName = String(item?.cityName ?? item?.city ?? '').trim();
   const countUnicIpView = String(item?.countUnicIpView ?? item?.views ?? '0');
+
+  const publicationStatus = item?.publication_status ?? item?.publicationStatus;
 
   return attachTravelEngagementStats({
     id,
@@ -86,5 +103,8 @@ export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
     user: item?.user as Travel['user'],
     created_at: item?.created_at as string | undefined,
     updated_at: item?.updated_at as string | undefined,
+    publish: toStatusFlag(item?.publish),
+    moderation: toStatusFlag(item?.moderation),
+    publication_status: publicationStatus == null ? undefined : String(publicationStatus),
   }, item)
 };

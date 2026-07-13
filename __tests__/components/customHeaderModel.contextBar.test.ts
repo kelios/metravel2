@@ -38,7 +38,7 @@ describe('shouldShowHeaderContextBar (web)', () => {
       },
     );
 
-    it.each(['/favorites', '/history', '/calendar'])(
+    it.each(['/favorites', '/history', '/calendar', '/profile'])(
       'keeps the context bar collapsed on self-headed cabinet page %s',
       (path) => {
         expect(shouldShowHeaderContextBar(path, false)).toBe(false);
@@ -63,7 +63,7 @@ describe('shouldShowHeaderContextBar (web)', () => {
       },
     );
 
-    it.each(['/', '/search', '/travelsby', '/quests', '/trips', '/favorites', '/history', '/calendar'])(
+    it.each(['/', '/search', '/travelsby', '/quests', '/trips', '/favorites', '/history', '/calendar', '/profile'])(
       'keeps the bar collapsed on nav / self-headed page %s',
       (path) => {
         expect(shouldShowHeaderContextBar(path, true)).toBe(false);

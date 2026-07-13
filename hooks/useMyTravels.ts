@@ -9,6 +9,7 @@ import { showToastMessage } from '@/utils/toast'
 interface UseMyTravelsArgs {
   userId?: string | null;
   perPage: number;
+  includeDrafts?: boolean;
   onTotalChange?: (total: number) => void;
 }
 
@@ -94,7 +95,7 @@ const getDeleteErrorCopy = (error: unknown) => {
   }
 }
 
-export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArgs): UseMyTravelsResult {
+export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalChange }: UseMyTravelsArgs): UseMyTravelsResult {
   const [myTravels, setMyTravels] = useState<Travel[]>([]);
   const [engagementSummary, setEngagementSummary] = useState<TravelEngagementStats | null>(null)
   const [isLoading, setIsLoading] = useState(true);
@@ -131,7 +132,7 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
     setIsLoading(true);
     setIsLoadingMore(false);
     try {
-      const payload = await fetchMyTravels({ user_id: uid, page: 1, perPage });
+      const payload = await fetchMyTravels({ user_id: uid, page: 1, perPage, includeDrafts });
       // Запрос вытеснен более новым load/loadMore или хук размонтирован — не коммитим.
       if (!mountedRef.current || seq !== requestSeqRef.current) return;
       const { items, total, engagementSummary: nextEngagementSummary } = unwrapMyTravelsPayload(payload);
@@ -155,7 +156,7 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
     } finally {
       if (mountedRef.current && seq === requestSeqRef.current) setIsLoading(false);
     }
-  }, [userId, perPage, onTotalChange]);
+  }, [userId, perPage, includeDrafts, onTotalChange]);
 
   const loadMore = useCallback(async () => {
     const uid = userId;
@@ -167,7 +168,7 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
     const seq = ++requestSeqRef.current;
     setIsLoadingMore(true);
     try {
-      const payload = await fetchMyTravels({ user_id: uid, page: nextPage, perPage });
+      const payload = await fetchMyTravels({ user_id: uid, page: nextPage, perPage, includeDrafts });
       // Вытеснен более новым load (onRefresh) / loadMore или unmount — не коммитим,
       // иначе устаревший merged затрёт свежую страницу 1.
       if (!mountedRef.current || seq !== requestSeqRef.current) return;
@@ -191,7 +192,7 @@ export function useMyTravels({ userId, perPage, onTotalChange }: UseMyTravelsArg
     } finally {
       if (mountedRef.current && seq === requestSeqRef.current) setIsLoadingMore(false);
     }
-  }, [userId, perPage, page, isLoading, isLoadingMore, hasMore, myTravels, onTotalChange]);
+  }, [userId, perPage, includeDrafts, page, isLoading, isLoadingMore, hasMore, myTravels, onTotalChange]);
 
   const remove = useCallback(
     async (travelId: number) => {

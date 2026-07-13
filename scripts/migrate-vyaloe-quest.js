@@ -1,16 +1,13 @@
 #!/usr/bin/env node
 /**
- * Миграция квестов «Легенды Польши» на прод:
- *   - swiety-krzyz-lysa-gora (Нова-Слупя)
- *   - ojcow-lokietek (Ойцув)
- *   - niedzica-skarb-inkow (Недзица)
+ * Миграция квеста «Город между двух озёр» (Вялое) на прод.
  * Идемпотентно: переиспользует существующий квест по quest_id, не дублирует шаги.
  *
- * NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/migrate-poland-legend-quests.js \
+ * NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/migrate-vyaloe-quest.js \
  *   --api-url=https://metravel.by --token=YOUR_TOKEN
  *
  * Dry run (без записи):
- *   node scripts/migrate-poland-legend-quests.js --dry-run
+ *   node scripts/migrate-vyaloe-quest.js --dry-run
  */
 
 const fs = require('fs');
@@ -21,7 +18,6 @@ const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
 const apiUrlArg = args.find(a => a.startsWith('--api-url='));
 const tokenArg = args.find(a => a.startsWith('--token='));
-const onlyArg = args.find(a => a.startsWith('--only='));
 const API_BASE = apiUrlArg ? apiUrlArg.split('=')[1] : 'https://metravel.by';
 
 function resolveToken() {
@@ -80,21 +76,10 @@ function serializeAnswer(step) {
     return JSON.stringify(ap);
 }
 
-const QUESTS = [
-    ...require('./swiety-krzyz-quest-data.js'),
-    ...require('./ojcow-quest-data.js'),
-    ...require('./niedzica-quest-data.js'),
-    ...require('./zakopane-quest-data.js'),
-    ...require('./kruszwica-quest-data.js'),
-    ...require('./karpacz-quest-data.js'),
-    ...require('./leczyca-quest-data.js'),
-    ...require('./malbork-quest-data.js'),
-    ...require('./kazimierz-dolny-quest-data.js'),
-    ...require('./sleza-quest-data.js'),
-].filter(q => !onlyArg || onlyArg.split('=')[1] === q.quest_id);
+const QUESTS = require('./vyaloe-quest-data.js');
 
 async function main() {
-    console.log(`🚀 Миграция квестов «Легенды Польши» → ${API_BASE} (${isDryRun ? 'DRY RUN' : 'LIVE'})\n`);
+    console.log(`🚀 Миграция квеста (Вялое) → ${API_BASE} (${isDryRun ? 'DRY RUN' : 'LIVE'})\n`);
 
     for (const q of QUESTS) {
         console.log(`\n📋 ${q.quest_id}: "${q.title}"`);
@@ -158,9 +143,9 @@ async function main() {
         );
 
         // 3. Intro step
-        const hasIntro = Boolean(existingBundle?.intro) || (Array.isArray(existingBundle?.steps)
+        const hasIntro = Array.isArray(existingBundle?.steps)
             ? existingBundle.steps.some(s => s?.is_intro === true || s?.step_id === 'intro')
-            : false);
+            : false;
         if (q.intro && !hasIntro) {
             try {
                 await apiPost('/api/quest-steps/', {
@@ -230,6 +215,7 @@ async function main() {
         }
 
         console.log(`\n🎉 Квест "${q.title}" готов!`);
+        console.log(`   URL: https://metravel.by/quests/x/${q.quest_id}`);
     }
 
     console.log('\n✅ Миграция завершена');

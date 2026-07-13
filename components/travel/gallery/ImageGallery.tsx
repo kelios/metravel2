@@ -14,7 +14,7 @@ import { devError } from '@/utils/logger'
 import { queryKeys } from '@/queryKeys'
 import { useThemedColors } from '@/hooks/useTheme'
 import { validateImageFile } from '@/utils/aiValidation'
-import { prepareWebImageFileForUpload } from '@/utils/webImageUpload'
+import { HeicConversionError, prepareWebImageFileForUpload } from '@/utils/webImageUpload'
 
 import type { GalleryItem, ImageGalleryComponentProps } from './types'
 import { GalleryControls } from './GalleryControls'
@@ -92,6 +92,21 @@ const getDropRejectionError = (rejection: FileRejection): string => {
 
   const validation = validateImageFile(rejection.file)
   return validation.error || 'Этот файл не удалось добавить в галерею.'
+}
+
+const getUploadErrorMessage = (error: unknown): string => {
+  if (typeof HeicConversionError === 'function' && error instanceof HeicConversionError) {
+    return 'Не удалось преобразовать HEIC в браузере. Попробуйте другой файл.'
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    const message = error.message.trim()
+    if (/размер файла|файл пустой|неподдерживаемый формат/i.test(message)) {
+      return message
+    }
+  }
+
+  return 'Ошибка загрузки'
 }
 
 const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
@@ -197,9 +212,12 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   }, [persistGalleryOrder])
 
   const validateUploadFile = useCallback((file: File): string | null => {
-    const validation = validateImageFile(file)
-    if (!validation.valid) {
-      return validation.error || 'Ошибка загрузки'
+    if (!file) {
+      return 'Файл не выбран'
+    }
+
+    if (file.size === 0) {
+      return 'Файл пустой'
     }
 
     const normalizedType = String(file.type || '').toLowerCase()
@@ -208,6 +226,13 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
 
     if (Platform.OS === 'web' && normalizedType && !WEB_SUPPORTED_UPLOAD_TYPES.has(normalizedType) && !hasSupportedExtension) {
       return 'Этот формат пока не загружается в веб-галерею. Используйте JPG, PNG, WEBP, GIF или HEIC.'
+    }
+
+    if (Platform.OS !== 'web') {
+      const validation = validateImageFile(file)
+      if (!validation.valid) {
+        return validation.error || 'Ошибка загрузки'
+      }
     }
 
     return null
@@ -392,10 +417,11 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
           } else {
             throw new Error('No URL in response')
           }
-        } catch (_error) {
+        } catch (error) {
+          const message = getUploadErrorMessage(error)
           setImages((prev) =>
             prev.map((img) =>
-              img.stableKey === placeholder.stableKey ? { ...img, isUploading: false, error: 'Ошибка загрузки' } : img,
+              img.stableKey === placeholder.stableKey ? { ...img, isUploading: false, error: message } : img,
             ),
           )
         }

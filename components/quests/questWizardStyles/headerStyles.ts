@@ -36,6 +36,13 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         alignItems: 'center',
         gap: SPACING.sm,
     },
+    headerIdentityMobile: {
+        flexBasis: '100%',
+        flexGrow: 0,
+        flexShrink: 1,
+        justifyContent: 'flex-end',
+        marginBottom: SPACING.xs,
+    },
     title: {
         fontSize: isMobile ? 17 : 20,
         fontWeight: '700',
@@ -84,9 +91,9 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         }),
     },
     actionIconButton: {
-        width: 38,
-        minHeight: 38,
-        height: 38,
+        width: isMobile ? 36 : 38,
+        minHeight: isMobile ? 36 : 38,
+        height: isMobile ? 36 : 38,
         paddingHorizontal: 0,
         justifyContent: 'center',
     },
@@ -148,10 +155,12 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
     },
     progressCompact: {
         fontSize: 11,
-        fontWeight: '600',
+        lineHeight: 36,
+        fontWeight: '700',
         color: colors.textMuted,
         letterSpacing: -0.1,
-        marginTop: 1,
+        marginLeft: SPACING.xs,
+        flexShrink: 0,
     },
 
     headerActionRow: {
@@ -162,5 +171,11 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         flexWrap: 'wrap',
         justifyContent: 'flex-end',
         gap: SPACING.xs,
+    },
+    headerActionRowMobile: {
+        width: '100%',
+        flexGrow: 1,
+        flexShrink: 0,
+        flexWrap: 'nowrap',
     },
 } as const);

@@ -393,17 +393,67 @@ export default function QuestsContentPanel({
         </>
     );
 
-    if (Platform.OS !== 'web' && isMobile && viewMode === 'list' && dataLoaded && questsAll.length > 0) {
+    // Пустые/загрузочные состояния списка для нативного FlatList. Держим их в
+    // ListEmptyComponent, чтобы корневой узел (и шапка с TextInput) не менялся
+    // между «есть результаты» и «0 результатов» — иначе поддерево с полем поиска
+    // перемонтируется, поле теряет фокус и клавиатура закрывается при наборе.
+    const listEmptyContent = (
+        <>
+            {searchActive && dataLoaded && (
+                <EmptyState
+                    icon="search"
+                    title="Ничего не найдено"
+                    description="Попробуйте другое название или город"
+                    variant="empty"
+                    iconSize={48}
+                />
+            )}
+
+            {!searchActive && selectedCityId === nearbyId && userLoc && dataLoaded && (
+                <EmptyState
+                    icon="map-pin"
+                    title="Рядом ничего не найдено"
+                    description="Посмотрите квесты в других городах или выберите область на карте"
+                    variant="empty"
+                    iconSize={48}
+                />
+            )}
+
+            {!searchActive && !selectedCityId && dataLoaded && (
+                <EmptyState
+                    icon="compass"
+                    title="Выберите город"
+                    description={isMobile ? 'Нажмите «Город» чтобы выбрать' : 'Выберите город из списка слева'}
+                    variant="empty"
+                    iconSize={48}
+                />
+            )}
+
+            {!dataLoaded && (
+                <View style={styles.skeletonGrid}>
+                    {Array.from({ length: isMobile ? 2 : 4 }).map((_, i) => (
+                        <View key={i} style={styles.skeletonCard}>
+                            <SkeletonLoader width="100%" height={180} borderRadius={radiiLg} />
+                        </View>
+                    ))}
+                </View>
+            )}
+        </>
+    );
+
+    if (Platform.OS !== 'web' && isMobile && viewMode === 'list') {
         return (
             <View style={styles.content}>
                 {contentHeader}
                 <FlatList
-                    data={questsAll}
+                    data={dataLoaded ? questsAll : []}
                     keyExtractor={questKeyExtractor}
                     renderItem={renderQuestItem}
                     style={styles.questVirtualizedList}
                     contentContainerStyle={styles.questVirtualizedListContent}
                     ListHeaderComponent={geoMessageBlock}
+                    ListEmptyComponent={listEmptyContent}
+                    keyboardShouldPersistTaps="handled"
                     initialNumToRender={4}
                     maxToRenderPerBatch={4}
                     updateCellsBatchingPeriod={50}
@@ -430,6 +480,7 @@ export default function QuestsContentPanel({
             style={styles.content}
             contentContainerStyle={{ flexGrow: 1 }}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
         >
             {inner}
         </ScrollView>
