@@ -1,7 +1,8 @@
-// components/quests/leafletInlineAsset.ts
+// utils/leafletInlineAsset.ts
 // СГЕНЕРИРОВАННЫЙ вендорный ассет — НЕ редактировать вручную.
 // Инлайн-исходники Leaflet 1.9.4 (leaflet.js + leaflet.css из node_modules/leaflet/dist)
-// для офлайн-инициализации движка карты квеста в WebView (QuestFullMap.native.tsx).
+// для офлайн-инициализации движка карты в WebView всех native-карт:
+// QuestFullMap.native.tsx, MapPage/Map.ios.tsx, MapPage/TravelMap.native.tsx.
 // Раньше движок тянулся с cdnjs.cloudflare.com → без сети карта не запускалась вовсе.
 // Тайлы остаются сетевыми (getOsmNativeTileUrl) — офлайн-кэш тайлов НЕ делаем.
 // Обновление: пересобрать из node_modules при апгрейде leaflet (версия 1.9.4).

@@ -7,6 +7,7 @@ import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { resolveInternalTravelRoute } from '@/utils/relatedTravel';
+import { LEAFLET_JS, LEAFLET_CSS } from '@/utils/leafletInlineAsset';
 import { useMapClusters } from '@/hooks/map/useMapClusters';
 import type { MapClusterBBox, MapClustersFilters } from '@/api/map';
 import {
@@ -522,8 +523,8 @@ const Map: React.FC<TravelProps> = ({
     <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+      <style>${LEAFLET_CSS}</style>
+      <script>${LEAFLET_JS}</script>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; }
