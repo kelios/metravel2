@@ -23,6 +23,11 @@ interface MarkersListComponentProps {
 }
 const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
 
+const hasMarkerImage = (image?: string | null) => {
+    if (typeof image !== 'string') return false;
+    const value = image.trim();
+    return value.length > 0 && value !== 'null' && value !== 'undefined';
+};
 
 const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                                                markers,
@@ -49,16 +54,18 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
         setActiveIndex?.(index);
     }, [setEditingIndex, setActiveIndex]);
 
+    const searchQuery = search.trim();
+
     const filteredMarkers = useMemo(
         () =>
             markers
                 .map((marker, index) => ({ marker, index }))
                 .filter(({ marker }) => {
-                    if (!search.trim()) return true;
+                    if (!searchQuery) return true;
                     const q = search.toLowerCase();
                     return (marker.address || '').toLowerCase().includes(q);
                 }),
-        [markers, search],
+        [markers, search, searchQuery],
     );
 
     useEffect(() => {
@@ -268,7 +275,19 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                 </>
             ) : (
                 <div style={styles.list}>
-                    {filteredMarkers.map(({ marker, index }) => {
+                    {filteredMarkers.length === 0 ? (
+                        <div style={styles.emptySearchState}>
+                            <div style={styles.emptySearchTitle}>Ничего не найдено</div>
+                            <div style={styles.emptySearchText}>Проверьте адрес или очистите поиск.</div>
+                            <button
+                                type="button"
+                                onClick={() => setSearch('')}
+                                style={styles.clearSearchButton}
+                            >
+                                Очистить поиск
+                            </button>
+                        </div>
+                    ) : filteredMarkers.map(({ marker, index }) => {
                         const isEditing = editingIndex === index;
 
                         const hasCategories = marker.categories && marker.categories.length > 0;
@@ -283,8 +302,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                   .slice(0, 2)
                                   .join(', ') || 'Категории выбраны')
                             : 'Категории не выбраны';
-                        // Проверяем, что image не пустая строка
-                        const hasImage = marker.image && marker.image.trim().length > 0;
+                        const hasImage = hasMarkerImage(marker.image);
 
                         const isActive = activeIndex === index;
 

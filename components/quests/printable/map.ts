@@ -1,5 +1,7 @@
 import {
   MAP_IMAGE_HEIGHT,
+  MAP_IMAGE_FIT_PADDING_FACTOR,
+  MAP_IMAGE_MAX_ZOOM,
   MAP_IMAGE_WIDTH,
   MAP_IMAGE_ZOOM,
   MAP_VIEWBOX_HEIGHT,
@@ -33,6 +35,8 @@ export async function buildPrintableCanvasMapDataUrl(points: PrintableMapPoint[]
       {
         width: MAP_IMAGE_WIDTH,
         height: MAP_IMAGE_HEIGHT,
+        maxZoom: MAP_IMAGE_MAX_ZOOM,
+        fitPaddingFactor: MAP_IMAGE_FIT_PADDING_FACTOR,
         routeLine: points.map((point) => [point.lat, point.lng] as [number, number]),
       },
     );
@@ -57,6 +61,7 @@ export async function buildPrintableLeafletMapDataUrl(points: PrintableMapPoint[
         width: MAP_IMAGE_WIDTH,
         height: MAP_IMAGE_HEIGHT,
         zoom: MAP_IMAGE_ZOOM,
+        maxFitZoom: MAP_IMAGE_MAX_ZOOM,
         routeLine: points.map((point) => [point.lat, point.lng] as [number, number]),
       },
     );

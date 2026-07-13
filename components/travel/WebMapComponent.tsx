@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo, useId } from 'react';
-import Feather from '@expo/vector-icons/Feather';
 import MarkersListComponent from '@/components/map/MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -575,7 +574,7 @@ const WebMapComponent = ({
                                 >
                                     {isExpanded
                                         ? `Скрыть точки (${localMarkers.length})`
-                                        : `Точки (${localMarkers.length})`}
+                                        : `Показать точки (${localMarkers.length})`}
                                 </button>
                             )}
 
@@ -635,49 +634,32 @@ const WebMapComponent = ({
                                 ))}
                             </MapContainer>
 
-                            {!isWideLayout && isExpanded && (
-                                <div style={styles.mobileSheet}>
-                                    <div style={styles.mobileSheetHandleRow}>
-                                        <div style={styles.mobileSheetHandle} />
-                                    </div>
-                                    <div style={styles.mobileSheetHeader}>
-                                        <div style={styles.mobileSheetTitle}>Точки</div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsExpanded(false)}
-                                            style={styles.mobileSheetClose}
-                                            aria-label="Закрыть"
-                                        >
-                                            <Feather name="x" size={18} color={colors.textMuted} />
-                                        </button>
-                                    </div>
-                                    <div id="markers-scroll-container" style={styles.mobileSheetBody}>
-                                        <MarkersListComponent
-                                            markers={localMarkers}
-                                            categoryTravelAddress={categoryTravelAddress}
-                                            handleMarkerChange={handleMarkerChange}
-                                            handleImageUpload={handleImageUpload}
-                                            handleMarkerSave={handleMarkerSave}
-                                            handleMarkerRemove={handleMarkerRemove}
-                                            editingIndex={editingIndex}
-                                            setEditingIndex={setEditingIndex}
-                                            activeIndex={activeIndex}
-                                            setActiveIndex={setActiveIndex}
-                                            onAddMarkerFromPhoto={handleAddMarkerFromPhoto}
-                                        />
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
 
                 <div
-                    id="markers-list-root"
-                    style={isWideLayout ? styles.listPane : { marginTop: DESIGN_TOKENS.spacing.lg }}
+                    id="markers-list-panel"
+                    style={isWideLayout ? styles.listPane : (isExpanded ? styles.mobileListPanel : { marginTop: DESIGN_TOKENS.spacing.lg })}
                 >
                     {isWideLayout ? (
                         <div id="markers-scroll-container" style={styles.listScrollArea}>
+                            <MarkersListComponent
+                                markers={localMarkers}
+                                categoryTravelAddress={categoryTravelAddress}
+                                handleMarkerChange={handleMarkerChange}
+                                handleImageUpload={handleImageUpload}
+                                handleMarkerSave={handleMarkerSave}
+                                handleMarkerRemove={handleMarkerRemove}
+                                editingIndex={editingIndex}
+                                setEditingIndex={setEditingIndex}
+                                activeIndex={activeIndex}
+                                setActiveIndex={setActiveIndex}
+                                onAddMarkerFromPhoto={handleAddMarkerFromPhoto}
+                            />
+                        </div>
+                    ) : isExpanded ? (
+                        <div id="markers-scroll-container" style={styles.mobileListBody}>
                             <MarkersListComponent
                                 markers={localMarkers}
                                 categoryTravelAddress={categoryTravelAddress}

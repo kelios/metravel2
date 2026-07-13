@@ -9,8 +9,9 @@ import {
 } from './shared'
 
 const MAP_COLORS = {
-  route: '#e07840',
-  routeHalo: 'rgba(255,255,255,0.92)',
+  route: '#0f5ea8',
+  routeHalo: 'rgba(255,255,255,0.96)',
+  routeShadow: 'rgba(12,37,68,0.28)',
   pinStart: '#3a8a5c',
   pinEnd: '#c0504d',
   pinMid: '#4a7fb5',
@@ -26,12 +27,20 @@ const MAP_COLORS = {
  */
 export async function generateCanvasMapSnapshot(
   points: { lat: number; lng: number; label?: string }[],
-  options: { width?: number; height?: number; routeLine?: Array<[number, number]> } = {},
+  options: {
+    width?: number
+    height?: number
+    routeLine?: Array<[number, number]>
+    maxZoom?: number
+    fitPaddingFactor?: number
+  } = {},
 ): Promise<string | null> {
   if (typeof document === 'undefined' || typeof window === 'undefined') return null
 
   const width = options.width ?? 800
   const height = options.height ?? 480
+  const maxZoom = options.maxZoom ?? 15
+  const fitPaddingFactor = options.fitPaddingFactor ?? 1.3
   const routeLine = filterValidRouteLine(options.routeLine ?? [])
   const validPoints = filterValidCoords(points)
 
@@ -48,7 +57,7 @@ export async function generateCanvasMapSnapshot(
   const minLng = Math.min(...lngs)
   const maxLng = Math.max(...lngs)
 
-  const zoom = Math.min(15, calculateFitZoom(minLat, maxLat, minLng, maxLng, width, height))
+  const zoom = Math.min(maxZoom, calculateFitZoom(minLat, maxLat, minLng, maxLng, width, height, fitPaddingFactor, maxZoom))
   const centerLat = (minLat + maxLat) / 2
   const centerLng = (minLng + maxLng) / 2
 
@@ -99,8 +108,21 @@ export async function generateCanvasMapSnapshot(
   const toCanvasY = (lat: number) => latToTileY(lat, zoom) * 256 - (cyPx - height / 2)
 
   if (routeLine.length >= 2) {
+    ctx.strokeStyle = MAP_COLORS.routeShadow
+    ctx.lineWidth = 12
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.beginPath()
+    routeLine.forEach(([lat, lng], i) => {
+      const px = toCanvasX(lng),
+        py = toCanvasY(lat)
+      if (i === 0) ctx.moveTo(px, py)
+      else ctx.lineTo(px, py)
+    })
+    ctx.stroke()
+
     ctx.strokeStyle = MAP_COLORS.routeHalo
-    ctx.lineWidth = 7
+    ctx.lineWidth = 9
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
     ctx.beginPath()
@@ -113,7 +135,7 @@ export async function generateCanvasMapSnapshot(
     ctx.stroke()
 
     ctx.strokeStyle = MAP_COLORS.route
-    ctx.lineWidth = 4
+    ctx.lineWidth = 5
     ctx.beginPath()
     routeLine.forEach(([lat, lng], i) => {
       const px = toCanvasX(lng),
@@ -123,6 +145,8 @@ export async function generateCanvasMapSnapshot(
     })
     ctx.stroke()
   }
+
+  const labelRects: Array<{ x: number; y: number; w: number; h: number }> = []
 
   validPoints.forEach((point, index) => {
     const px = toCanvasX(point.lng)
@@ -163,12 +187,39 @@ export async function generateCanvasMapSnapshot(
 
     const rawLabel = typeof point.label === 'string' ? point.label : ''
     const firstSegment = rawLabel.split(' · ')[0].trim()
-    const label = firstSegment.length > 30 ? firstSegment.slice(0, 28) + '…' : firstSegment
+    const label = firstSegment.length > 34 ? firstSegment.slice(0, 32) + '…' : firstSegment
     if (label) {
       ctx.font = '600 12px -apple-system, BlinkMacSystemFont, sans-serif'
-      const labelW = ctx.measureText(label).width + 16
-      const lx = px + 18
-      const ly = py - 22
+      const labelW = Math.min(220, ctx.measureText(label).width + 16)
+      const labelH = 24
+      const candidates = [
+        { x: px + 20, y: py - 33, pointer: 'left' as const },
+        { x: px - labelW - 20, y: py - 33, pointer: 'right' as const },
+        { x: px + 20, y: py + 4, pointer: 'left' as const },
+        { x: px - labelW - 20, y: py + 4, pointer: 'right' as const },
+        { x: px - labelW / 2, y: py - 58, pointer: 'bottom' as const },
+        { x: px - labelW / 2, y: py + 18, pointer: 'top' as const },
+      ]
+      const padding = 6
+      const clampRect = (candidate: (typeof candidates)[number]) => ({
+        ...candidate,
+        x: Math.max(padding, Math.min(width - labelW - padding, candidate.x)),
+        y: Math.max(padding, Math.min(height - labelH - padding, candidate.y)),
+      })
+      const intersects = (rect: { x: number; y: number; w: number; h: number }) =>
+        labelRects.some(
+          (placed) =>
+            rect.x < placed.x + placed.w + 4 &&
+            rect.x + rect.w + 4 > placed.x &&
+            rect.y < placed.y + placed.h + 4 &&
+            rect.y + rect.h + 4 > placed.y,
+        )
+      const placement =
+        candidates.map(clampRect).find((candidate) => !intersects({ x: candidate.x, y: candidate.y, w: labelW, h: labelH })) ??
+        clampRect(candidates[index % candidates.length])
+      const lx = placement.x
+      const ly = placement.y
+      labelRects.push({ x: lx, y: ly, w: labelW, h: labelH })
 
       ctx.shadowColor = 'rgba(0,0,0,0.12)'
       ctx.shadowBlur = 4
@@ -186,9 +237,23 @@ export async function generateCanvasMapSnapshot(
       ctx.shadowOffsetY = 0
 
       ctx.beginPath()
-      ctx.moveTo(lx, ly + 8)
-      ctx.lineTo(lx - 7, ly + 12)
-      ctx.lineTo(lx, ly + 16)
+      if (placement.pointer === 'right') {
+        ctx.moveTo(lx + labelW, ly + 8)
+        ctx.lineTo(lx + labelW + 7, ly + 12)
+        ctx.lineTo(lx + labelW, ly + 16)
+      } else if (placement.pointer === 'top') {
+        ctx.moveTo(lx + labelW / 2 - 7, ly)
+        ctx.lineTo(lx + labelW / 2, ly - 7)
+        ctx.lineTo(lx + labelW / 2 + 7, ly)
+      } else if (placement.pointer === 'bottom') {
+        ctx.moveTo(lx + labelW / 2 - 7, ly + labelH)
+        ctx.lineTo(lx + labelW / 2, ly + labelH + 7)
+        ctx.lineTo(lx + labelW / 2 + 7, ly + labelH)
+      } else {
+        ctx.moveTo(lx, ly + 8)
+        ctx.lineTo(lx - 7, ly + 12)
+        ctx.lineTo(lx, ly + 16)
+      }
       ctx.fillStyle = MAP_COLORS.labelBg
       ctx.fill()
 

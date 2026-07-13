@@ -79,6 +79,22 @@ describe('MarkersListComponent - Edit modal categories', () => {
         expect(screen.queryByTestId('photo-upload-mock')).toBeNull();
     });
 
+    it('does not show the photo badge for empty or serialized-empty image values', () => {
+        render(
+            <MarkersListComponent
+                markers={[{ ...baseMarker, image: 'null' }]}
+                categoryTravelAddress={[{ id: 1, name: 'Кафе' }]}
+                handleMarkerChange={jest.fn()}
+                handleImageUpload={jest.fn()}
+                handleMarkerRemove={jest.fn()}
+                editingIndex={null}
+                setEditingIndex={jest.fn()}
+            />,
+        );
+
+        expect(screen.queryByText('Есть фото')).toBeNull();
+    });
+
     it('renders photo upload when marker has id (saved point)', () => {
         render(
             <MarkersListComponent
@@ -93,6 +109,32 @@ describe('MarkersListComponent - Edit modal categories', () => {
         );
 
         expect(screen.queryByTestId('photo-upload-mock')).toBeTruthy();
+    });
+
+    it('shows an empty search state and can reset the point filter', () => {
+        render(
+            <MarkersListComponent
+                markers={[{ ...baseMarker, address: 'Минск, Беларусь' }]}
+                categoryTravelAddress={[{ id: 1, name: 'Кафе' }]}
+                handleMarkerChange={jest.fn()}
+                handleImageUpload={jest.fn()}
+                handleMarkerRemove={jest.fn()}
+                editingIndex={null}
+                setEditingIndex={jest.fn()}
+            />,
+        );
+
+        fireEvent.change(screen.getByPlaceholderText('Поиск по адресу'), {
+            target: { value: 'Тбилиси' },
+        });
+
+        expect(screen.getByText('Ничего не найдено')).toBeTruthy();
+        expect(screen.queryByText('Минск, Беларусь')).toBeNull();
+
+        fireEvent.click(screen.getByText('Очистить поиск'));
+
+        expect(screen.getByText('Минск, Беларусь')).toBeTruthy();
+        expect(screen.queryByText('Ничего не найдено')).toBeNull();
     });
 
     it('persists uploaded image URL on modal save (regression: preview should show on reopen without reload)', async () => {

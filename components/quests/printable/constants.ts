@@ -4,7 +4,9 @@ export const MAP_VIEWBOX_WIDTH = 960;
 export const MAP_VIEWBOX_HEIGHT = 380;
 export const MAP_IMAGE_WIDTH = 1200;
 export const MAP_IMAGE_HEIGHT = 520;
-export const MAP_IMAGE_ZOOM = 13;
+export const MAP_IMAGE_ZOOM = 15;
+export const MAP_IMAGE_MAX_ZOOM = 17;
+export const MAP_IMAGE_FIT_PADDING_FACTOR = 1.08;
 
 export const PRINT_COLORS = {
   brand: '#1a6b8a',

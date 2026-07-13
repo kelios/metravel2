@@ -78,13 +78,15 @@ export function calculateFitZoom(
   maxLng: number,
   width: number,
   height: number,
+  paddingFactor: number = 1.3,
+  maxCandidateZoom: number = 16,
 ): number {
-  for (let z = 16; z >= 2; z--) {
+  for (let z = maxCandidateZoom; z >= 2; z--) {
     const x1 = lngToTileX(minLng, z) * 256
     const x2 = lngToTileX(maxLng, z) * 256
     const y1 = latToTileY(maxLat, z) * 256
     const y2 = latToTileY(minLat, z) * 256
-    if ((x2 - x1) * 1.3 <= width && (y2 - y1) * 1.3 <= height) return z
+    if ((x2 - x1) * paddingFactor <= width && (y2 - y1) * paddingFactor <= height) return z
   }
   return 2
 }

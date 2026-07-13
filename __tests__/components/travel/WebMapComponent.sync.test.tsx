@@ -93,6 +93,11 @@ describe('WebMapComponent marker sync', () => {
   beforeEach(() => {
     lastMapEvents = null;
     jest.clearAllMocks();
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 1200,
+    });
     (getPendingImageFile as jest.Mock).mockReturnValue(new Blob(['point'], { type: 'image/webp' }));
 
     // Mock reverse geocode network calls.
@@ -110,6 +115,47 @@ describe('WebMapComponent marker sync', () => {
     }));
     (global as any).fetch = mockFetch;
 
+  });
+
+  it('renders the narrow marker list as an inline panel instead of a clipped map overlay', async () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 800,
+    });
+
+    render(
+      <WebMapComponent
+        {...baseProps}
+        markers={[
+          {
+            id: 1,
+            lat: 10,
+            lng: 20,
+            address: 'Тбилиси, Грузия',
+            categories: [1],
+            image: '',
+            country: 268,
+          },
+        ] as any}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText('Загрузка карты…')).toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Показать точки (1)' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Тбилиси, Грузия').length).toBeGreaterThan(0);
+    });
+
+    const listRoot = document.getElementById('markers-list-panel') as HTMLElement | null;
+    expect(listRoot).not.toBeNull();
+    expect(listRoot?.style.position).toBe('');
+    expect(listRoot?.style.maxHeight).toBe('');
+    expect(listRoot?.style.overflow).toBe('hidden');
   });
 
   it('updates marker preview when marker props change without length change', async () => {

@@ -1,4 +1,7 @@
+const mockGenerateCanvasMapSnapshot = jest.fn(async () => '');
+
 jest.mock('@/utils/mapImageGenerator', () => ({
+  generateCanvasMapSnapshot: mockGenerateCanvasMapSnapshot,
   generateStaticMapUrl: jest.fn(async () => ''),
   generateLeafletRouteSnapshot: jest.fn(async () => ''),
 }));
@@ -47,5 +50,43 @@ describe('QuestPrintable', () => {
     expect(html).toContain('class="cover has-cover-image"');
     expect(html).toContain('class="cover-image-backdrop"');
     expect(html).toContain('https://img.example.com/cover.jpg');
+  });
+
+  it('requests a close printable map snapshot so short quest routes stay readable', async () => {
+    await generatePrintableQuest({
+      title: 'Урочище Вялое',
+      steps: [
+        {
+          id: 'step-1',
+          title: 'Шаг 1',
+          location: 'Опушка урочища Вялое, поляна у лесной дороги из Рудни',
+          story: 'История',
+          task: 'Задание',
+          answer: () => true,
+          lat: 53.9756,
+          lng: 26.6891,
+          mapsUrl: 'https://maps.google.com/maps?q=53.9756,26.6891',
+        },
+        {
+          id: 'step-2',
+          title: 'Шаг 2',
+          location: 'Корпуса заброшенного санатория «Лесное»',
+          story: 'История',
+          task: 'Задание',
+          answer: () => true,
+          lat: 53.9768,
+          lng: 26.6901,
+          mapsUrl: 'https://maps.google.com/maps?q=53.9768,26.6901',
+        },
+      ],
+    });
+
+    expect(mockGenerateCanvasMapSnapshot).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({
+        maxZoom: 17,
+        fitPaddingFactor: 1.08,
+      }),
+    );
   });
 });

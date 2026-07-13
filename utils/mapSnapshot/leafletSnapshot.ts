@@ -13,7 +13,7 @@ const leafletRouteSnapshotCache = new Map<string, Promise<string | null>>()
 function buildCacheKey(
   points: { lat: number; lng: number; label?: string }[],
   routeLine: Array<[number, number]>,
-  options: { width: number; height: number; zoom: number },
+  options: { width: number; height: number; zoom: number; maxFitZoom: number },
 ): string {
   const normalizedPoints = points
     .map((p) => {
@@ -26,7 +26,7 @@ function buildCacheKey(
     .map(([lat, lng]) => normalizeCoordPair(lat, lng))
     .join('|')
 
-  return `${options.width}x${options.height}@${options.zoom}:p=${normalizedPoints}:r=${normalizedRouteLine}`
+  return `${options.width}x${options.height}@${options.zoom}-${options.maxFitZoom}:p=${normalizedPoints}:r=${normalizedRouteLine}`
 }
 
 function escapeHtml(value: string): string {
@@ -136,6 +136,115 @@ function buildMarkerIconHtml(
   const pinStroke = DESIGN_TOKENS.colors.surface
   const pinShadow = 'drop-shadow(0 6px 14px rgba(0,0,0,0.22))'
   const numberColor = DESIGN_TOKENS.colors.textOnPrimary
+  const labelPlacements = [
+    { top: '-18px', left: '34px', arrowSide: 'left' },
+    { top: '-18px', right: '34px', arrowSide: 'right' },
+    { top: '22px', left: '34px', arrowSide: 'left' },
+    { top: '22px', right: '34px', arrowSide: 'right' },
+    { bottom: '48px', left: '-64px', arrowSide: 'bottom' },
+    { top: '48px', left: '-64px', arrowSide: 'top' },
+  ] as const
+  const labelPlacement = labelPlacements[index % labelPlacements.length]
+  const labelPosition = Object.entries(labelPlacement)
+    .filter(([key]) => key !== 'arrowSide')
+    .map(([key, value]) => `${key}: ${value};`)
+    .join('\n')
+  const labelArrow =
+    labelPlacement.arrowSide === 'right'
+      ? `
+          <div style="
+            position: absolute;
+            right: -7px;
+            top: 12px;
+            width: 0;
+            height: 0;
+            border-top: 7px solid transparent;
+            border-bottom: 7px solid transparent;
+            border-left: 7px solid ${labelBorder};
+          "></div>
+          <div style="
+            position: absolute;
+            right: -6px;
+            top: 12px;
+            width: 0;
+            height: 0;
+            border-top: 7px solid transparent;
+            border-bottom: 7px solid transparent;
+            border-left: 7px solid ${labelBg};
+          "></div>
+        `
+      : labelPlacement.arrowSide === 'top'
+        ? `
+          <div style="
+            position: absolute;
+            left: 50%;
+            top: -7px;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-bottom: 7px solid ${labelBorder};
+          "></div>
+          <div style="
+            position: absolute;
+            left: 50%;
+            top: -6px;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-bottom: 7px solid ${labelBg};
+          "></div>
+        `
+        : labelPlacement.arrowSide === 'bottom'
+          ? `
+          <div style="
+            position: absolute;
+            left: 50%;
+            bottom: -7px;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-top: 7px solid ${labelBorder};
+          "></div>
+          <div style="
+            position: absolute;
+            left: 50%;
+            bottom: -6px;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-top: 7px solid ${labelBg};
+          "></div>
+        `
+          : `
+          <div style="
+            position: absolute;
+            left: -7px;
+            top: 12px;
+            width: 0;
+            height: 0;
+            border-top: 7px solid transparent;
+            border-bottom: 7px solid transparent;
+            border-right: 7px solid ${labelBorder};
+          "></div>
+          <div style="
+            position: absolute;
+            left: -6px;
+            top: 12px;
+            width: 0;
+            height: 0;
+            border-top: 7px solid transparent;
+            border-bottom: 7px solid transparent;
+            border-right: 7px solid ${labelBg};
+          "></div>
+        `
 
   return `
     <div style="position: relative; width: 28px; height: 42px;">
@@ -179,9 +288,8 @@ function buildMarkerIconHtml(
           ? `
         <div style="
           position: absolute;
-          top: -4px;
-          left: 34px;
-          max-width: 150px;
+          ${labelPosition}
+          width: 150px;
           padding: 5px 8px;
           border-radius: 10px;
           background: ${labelBg};
@@ -201,26 +309,7 @@ function buildMarkerIconHtml(
           text-rendering: geometricPrecision;
           -webkit-font-smoothing: antialiased;
         ">
-          <div style="
-            position: absolute;
-            left: -7px;
-            top: 10px;
-            width: 0;
-            height: 0;
-            border-top: 7px solid transparent;
-            border-bottom: 7px solid transparent;
-            border-right: 7px solid ${labelBorder};
-          "></div>
-          <div style="
-            position: absolute;
-            left: -6px;
-            top: 10px;
-            width: 0;
-            height: 0;
-            border-top: 7px solid transparent;
-            border-bottom: 7px solid transparent;
-            border-right: 7px solid ${labelBg};
-          "></div>
+          ${labelArrow}
           ${escapeHtml(label)}
         </div>
       `
@@ -239,6 +328,7 @@ export async function generateLeafletRouteSnapshot(
     width?: number
     height?: number
     zoom?: number
+    maxFitZoom?: number
     routeLine?: Array<[number, number]>
   } = {},
 ): Promise<string | null> {
@@ -248,6 +338,7 @@ export async function generateLeafletRouteSnapshot(
   const width = options.width ?? 800
   const height = options.height ?? 480
   const zoom = options.zoom ?? 10
+  const maxFitZoom = options.maxFitZoom ?? 15
   const routeLine = options.routeLine ?? []
 
   // Пробуем захватить уже отрендеренную карту
@@ -263,7 +354,7 @@ export async function generateLeafletRouteSnapshot(
     if (domCapture) return domCapture
   }
 
-  const cacheKey = buildCacheKey(points, routeLine, { width, height, zoom })
+  const cacheKey = buildCacheKey(points, routeLine, { width, height, zoom, maxFitZoom })
   const cached = leafletRouteSnapshotCache.get(cacheKey)
   if (cached) return cached
 
@@ -352,15 +443,15 @@ export async function generateLeafletRouteSnapshot(
         if (routeLatLngs.length >= 2) {
           L.polyline(routeLatLngs, {
             color: DESIGN_TOKENS.colors.surface,
-            weight: 8,
+            weight: 10,
             opacity: 0.95,
             lineCap: 'round',
             lineJoin: 'round',
           }).addTo(map)
 
           L.polyline(routeLatLngs, {
-            color: DESIGN_TOKENS.colors.accent,
-            weight: 5,
+            color: DESIGN_TOKENS.colors.primary,
+            weight: 6,
             opacity: 1,
             lineCap: 'round',
             lineJoin: 'round',
@@ -382,7 +473,7 @@ export async function generateLeafletRouteSnapshot(
             typeof (bounds as { pad?: (padding: number) => unknown }).pad === 'function'
               ? bounds.pad(0.15)
               : bounds
-          map.fitBounds(paddedBounds, { animate: false, maxZoom: 15 })
+          map.fitBounds(paddedBounds, { animate: false, maxZoom: maxFitZoom })
         }
       }
 
