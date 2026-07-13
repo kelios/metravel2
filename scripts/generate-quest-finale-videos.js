@@ -117,6 +117,7 @@ const QUESTS = [
     { questId: 'lepel-tsmok', dir: 'lepelTsmok', city: 'Лепель', mood: 'epic', finaleId: 87 },
     { questId: 'vyaloe-tyshkevich-curse', dir: 'vyaloeTyshkevichCurse', city: 'урочище Вялое', mood: 'castle', finaleId: 88 },
     { questId: 'kamenets-white-tower', dir: 'kamenetsWhiteTower', city: 'Каменец', mood: 'castle', finaleId: 89 },
+    { questId: 'myadel-obet-i-ozernicy', dir: 'myadelObetIOzernicy', city: 'Мядель', mood: 'epic', finaleId: 93 },
     // Волна «Польские легенды» — финалы-видео (finaleId == числовой id квеста)
     { questId: 'swiety-krzyz-lysa-gora', dir: 'swietyKrzyzLysaGora', city: 'Лыса-Гура', mood: 'epic', finaleId: 79 },
     { questId: 'ojcow-lokietek', dir: 'ojcowLokietek', city: 'Ойцув', mood: 'castle', finaleId: 80 },
