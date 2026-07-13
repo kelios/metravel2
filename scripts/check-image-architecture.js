@@ -12,7 +12,13 @@ const ALLOW_OPTIMIZED_IMAGE_IMPORT_FILES = new Set([
   path.join(ROOT, 'components', 'ui', 'ImageCardMedia.tsx'),
 ]);
 
-const ALLOW_BLUR_DISABLED_FILES = new Set([]);
+const ALLOW_BLUR_DISABLED_FILES = new Set([
+  // Full-bleed profile covers (fit="cover", borderRadius=0): the image fills the
+  // whole area so there is no visible blur backdrop, and it must stay sharp
+  // above the fold on iOS Safari.
+  path.join(ROOT, 'components', 'profile', 'ProfileHeader.tsx'),
+  path.join(ROOT, 'components', 'screens', 'profile', 'PublicProfileHeader.tsx'),
+]);
 
 const TEXT_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx']);
 
