@@ -117,6 +117,17 @@ const QUESTS = [
     { questId: 'lepel-tsmok', dir: 'lepelTsmok', city: 'Лепель', mood: 'epic', finaleId: 87 },
     { questId: 'vyaloe-tyshkevich-curse', dir: 'vyaloeTyshkevichCurse', city: 'урочище Вялое', mood: 'castle', finaleId: 88 },
     { questId: 'kamenets-white-tower', dir: 'kamenetsWhiteTower', city: 'Каменец', mood: 'castle', finaleId: 89 },
+    // Волна «Польские легенды» — финалы-видео (finaleId == числовой id квеста)
+    { questId: 'swiety-krzyz-lysa-gora', dir: 'swietyKrzyzLysaGora', city: 'Лыса-Гура', mood: 'epic', finaleId: 79 },
+    { questId: 'ojcow-lokietek', dir: 'ojcowLokietek', city: 'Ойцув', mood: 'castle', finaleId: 80 },
+    { questId: 'niedzica-skarb-inkow', dir: 'niedzicaSkarbInkow', city: 'Недзица', mood: 'castle', finaleId: 81 },
+    { questId: 'zakopane-spiacy-rycerze', dir: 'zakopaneSpiacyRycerze', city: 'Закопане', mood: 'epic', finaleId: 82 },
+    { questId: 'kruszwica-mysia-wieza', dir: 'kruszwicaMysiaWieza', city: 'Крушвица', mood: 'castle', finaleId: 83 },
+    { questId: 'karpacz-duch-gor', dir: 'karpaczDuchGor', city: 'Карпач', mood: 'epic', finaleId: 84 },
+    { questId: 'leczyca-boruta', dir: 'leczycaBoruta', city: 'Ленчица', mood: 'castle', finaleId: 85 },
+    { questId: 'malbork-marienburg', dir: 'malborkMarienburg', city: 'Мальборк', mood: 'castle', finaleId: 90 },
+    { questId: 'kazimierz-dolny-kogut', dir: 'kazimierzDolnyKogut', city: 'Казимеж-Дольны', mood: 'city', finaleId: 91 },
+    { questId: 'sleza-swieta-gora', dir: 'slezaSwietaGora', city: 'Сленжа', mood: 'epic', finaleId: 92 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
