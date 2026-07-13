@@ -176,7 +176,7 @@ describe('TravelListItem - Action Buttons', () => {
     expect(router.push).toHaveBeenCalledWith('/travels/test-travel');
   });
 
-  it('should open view mode from metravel even for drafts', () => {
+  it('should open draft editor route from metravel for drafts', () => {
     const { router } = require('expo-router');
 
     const draftTravel = {
@@ -196,8 +196,8 @@ describe('TravelListItem - Action Buttons', () => {
     const card = screen.getByTestId('travel-card-test-travel');
     fireEvent.press(card);
 
-    expect(router.push).toHaveBeenCalledWith('/travels/test-travel?returnTo=%2Fmetravel');
-    expect(router.push).not.toHaveBeenCalledWith('/travel/1');
+    expect(router.push).toHaveBeenCalledWith('/travel/1?returnTo=%2Fmetravel');
+    expect(router.push).not.toHaveBeenCalledWith('/travels/test-travel?returnTo=%2Fmetravel');
   });
 
   it('should handle events correctly with stopPropagation and preventDefault', () => {

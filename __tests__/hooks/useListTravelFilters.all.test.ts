@@ -479,9 +479,10 @@ describe('useListTravelFilters - All Filters', () => {
       });
 
       expect(result.current.queryParams.user_id).toBe('123');
-      // F-14: /metravel по умолчанию показывает только опубликованные
-      expect(result.current.queryParams.moderation).toBe(1);
-      expect(result.current.queryParams.publish).toBe(1);
+      // /metravel includes drafts by default; explicit status toggles narrow the list.
+      expect(result.current.queryParams.includeDrafts).toBe(true);
+      expect(result.current.queryParams.moderation).toBeUndefined();
+      expect(result.current.queryParams.publish).toBeUndefined();
     });
 
     it('should handle isTravelBy context', () => {
