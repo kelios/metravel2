@@ -14,6 +14,7 @@ import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { pluralizeRu } from '@/utils/pluralize';
 
 import { pluralizePoints, type QuestMeta } from './questsShared';
+import { isKidsQuest } from './QuestsScreen.helpers';
 
 const loadedQuestImageCache = new Set<string>();
 
@@ -53,6 +54,7 @@ export default function QuestCard({
     const pointsText = pluralizePoints(quest.points ?? 0);
     const categoryLabel = quest.cityName || quest.countryName || null;
     const difficultyInfo = getDifficultyInfo(quest.difficulty);
+    const isKids = isKidsQuest(quest.tags);
     const distanceText = nearby && typeof quest._distanceKm === 'number'
         ? quest._distanceKm < 1
             ? `${Math.round(quest._distanceKm * 1000)} м`
@@ -206,6 +208,16 @@ export default function QuestCard({
                     <View style={styles.questCardDifficultyBadge}>
                         <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: difficultyInfo.color }} />
                         <Text style={styles.questCardDifficultyText}>{difficultyInfo.label}</Text>
+                    </View>
+                )}
+
+                {isKids && (
+                    <View
+                        style={[styles.questCardKidsBadge, difficultyInfo ? { top: 44 } : null]}
+                        testID={`quest-card-kids-${quest.id}`}
+                    >
+                        <Feather name="smile" size={12} color={colors.textOnDark} />
+                        <Text style={styles.questCardKidsText}>Детский</Text>
                     </View>
                 )}
 

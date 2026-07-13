@@ -76,6 +76,16 @@ export async function loadExpoLocation() {
     return expoLocationModulePromise;
 }
 
+// Тег детских/семейных квестов в meta.tags (adaptMeta → string[]). Держим в
+// одном месте: бейдж «Детский» на карточке и синонимы для русского поиска
+// («детский»/«семейный») опираются на него.
+export const KIDS_QUEST_TAG = 'kids'
+
+export function isKidsQuest(tags?: string[] | null): boolean {
+    if (!tags || !tags.length) return false
+    return tags.some((tag) => typeof tag === 'string' && tag.trim().toLowerCase() === KIDS_QUEST_TAG)
+}
+
 export type MapPoint = {
     id?: string | number;
     coord: string;

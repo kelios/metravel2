@@ -6,6 +6,7 @@ import {
   DEFAULT_NEARBY_RADIUS_KM,
   filterQuestsByMapSearchArea,
   isCoordinateInMapViewport,
+  isKidsQuest,
   resolveQuestMapCenter,
 } from '@/screens/tabs/QuestsScreen.helpers';
 
@@ -85,6 +86,25 @@ describe('QuestsScreen helpers', () => {
 
   it('uses a single nearby distance threshold', () => {
     expect(DEFAULT_NEARBY_RADIUS_KM).toBe(10);
+  });
+
+  describe('isKidsQuest', () => {
+    it('detects the kids tag among other tags', () => {
+      expect(isKidsQuest(['family', 'kids', 'city'])).toBe(true);
+      expect(isKidsQuest(['kids'])).toBe(true);
+    });
+
+    it('is case- and whitespace-insensitive', () => {
+      expect(isKidsQuest([' Kids '])).toBe(true);
+      expect(isKidsQuest(['KIDS'])).toBe(true);
+    });
+
+    it('returns false without the kids tag or without tags', () => {
+      expect(isKidsQuest(['family', 'city'])).toBe(false);
+      expect(isKidsQuest([])).toBe(false);
+      expect(isKidsQuest(undefined)).toBe(false);
+      expect(isKidsQuest(null)).toBe(false);
+    });
   });
 
   it('falls back to the selected radius only when map bounds are unavailable', () => {

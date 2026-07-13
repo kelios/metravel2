@@ -29,6 +29,7 @@ import {
     DEFAULT_NEARBY_RADIUS_KM,
     NEARBY_ID,
     filterQuestsByMapSearchArea,
+    isKidsQuest,
     loadExpoLocation,
     resolveQuestMapCenter,
     type QuestMapArea,
@@ -349,7 +350,15 @@ export default function QuestsScreen() {
         if (searchTerm) {
             return ALL_QUESTS
                 .filter((q) => {
-                    const haystack = [q.title, q.cityName, q.countryName, ...(q.tags || [])]
+                    const haystack = [
+                        q.title,
+                        q.cityName,
+                        q.countryName,
+                        ...(q.tags || []),
+                        // Русский поиск по тегу 'kids': добавляем синонимы, чтобы
+                        // «детский»/«семейный» находили детские квесты.
+                        ...(isKidsQuest(q.tags) ? ['детский', 'семейный'] : []),
+                    ]
                         .filter(Boolean)
                         .join(' ')
                         .toLowerCase();
