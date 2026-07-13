@@ -328,10 +328,9 @@ export function ProfileHeader({
               width="100%"
               borderRadius={0}
               fit="cover"
-              // Above-fold шапка: priority=high снимает reveal-гейт (по умолчанию
-              // sharp-<img> ждёт onLoad; если показ подвисал — оставался blur-слой).
-              // Теперь sharp-кадр показывается сразу; shared-source blur остаётся в DOM
-              // как фон под ним и перекрывается финальным cover-кадром.
+              blurBackground={false}
+              // Above-fold cover must stay sharp on iOS Safari; a blur backdrop
+              // can remain visible there if the final frame is delayed.
               priority="high"
             />
           </View>
@@ -348,6 +347,7 @@ export function ProfileHeader({
               width="100%"
               borderRadius={0}
               fit="cover"
+              blurBackground={false}
               priority="high"
               onError={() => setDefaultCoverFailed(true)}
             />

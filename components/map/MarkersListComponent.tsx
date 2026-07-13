@@ -3,7 +3,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { MarkerData } from "@/types/types";
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
-import { normalizeMediaUrl } from '@/utils/mediaUrl';
+import { getTravelPointImageUrl } from '@/utils/travelPointImages';
 import { EXIF_IMAGE_INPUT_ACCEPT } from '@/utils/exifGps';
 import { useStyles } from './markersListStyles';
 import EditMarkerModal from './EditMarkerModal';
@@ -21,14 +21,6 @@ interface MarkersListComponentProps {
     setActiveIndex?: (index: number | null) => void;
     onAddMarkerFromPhoto?: (file: File) => void | Promise<void>;
 }
-const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
-
-const hasMarkerImage = (image?: string | null) => {
-    if (typeof image !== 'string') return false;
-    const value = image.trim();
-    return value.length > 0 && value !== 'null' && value !== 'undefined';
-};
-
 const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                                                markers,
                                                                categoryTravelAddress,
@@ -302,7 +294,8 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                   .slice(0, 2)
                                   .join(', ') || 'Категории выбраны')
                             : 'Категории не выбраны';
-                        const hasImage = hasMarkerImage(marker.image);
+                        const imageUrl = getTravelPointImageUrl(marker.image);
+                        const hasImage = imageUrl.length > 0;
 
                         const isActive = activeIndex === index;
 
@@ -322,7 +315,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                     <div style={styles.thumbnailWrapper}>
                                         {hasImage ? (
                                             <ImageCardMedia
-                                                src={normalizeImageUrl(marker.image)}
+                                                src={imageUrl}
                                                 fit="contain"
                                                 blurBackground
                                                 allowCriticalWebBlur

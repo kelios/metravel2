@@ -46,6 +46,10 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
       : ((colors.shadows?.light ?? {}) as any)),
     overflow: 'hidden',
   },
+  cardCompact: {
+    marginTop: DESIGN_TOKENS.spacing.sm,
+    padding: DESIGN_TOKENS.spacing.md,
+  },
   mapHeader: {
     paddingTop: 2,
     paddingBottom: 10,

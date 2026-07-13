@@ -13,13 +13,14 @@ const mockProfileTabs = jest.fn(() => null);
 jest.mock('@/components/profile/ProfileTabs', () => ({
   ProfileTabs: (props: unknown) => mockProfileTabs(props),
 }));
+const mockImageCardMedia = jest.fn(() => null);
 jest.mock('@/components/ui/SubscribeButton', () => () => null);
 jest.mock('@/components/ui/StarRating', () => () => null);
 jest.mock('@/components/profile/UserSafetyMenu', () => () => null);
 jest.mock('@/components/profile/ProtectedContacts', () => () => null);
 jest.mock('@/components/ui/SafetyNotice', () => () => null);
 jest.mock('@/components/achievements/PeerBadgeGiveButton', () => () => null);
-jest.mock('@/components/ui/ImageCardMedia', () => () => null);
+jest.mock('@/components/ui/ImageCardMedia', () => (props: any) => mockImageCardMedia(props));
 jest.mock('@/components/profile/CoverTopoTexture', () => ({ CoverTopoTexture: () => null }));
 
 const rank: UserRank = {
@@ -56,6 +57,20 @@ const profile = { is_verified: true, participant_rating: null } as unknown as Us
 describe('PublicProfileHeader identity (#847)', () => {
   beforeEach(() => {
     mockProfileTabs.mockClear();
+    mockImageCardMedia.mockClear();
+  });
+
+  it('renders the public profile cover as a sharp image without blur backdrop', () => {
+    render(<PublicProfileHeader {...baseProps} profile={profile} rank={rank} />);
+
+    expect(mockImageCardMedia).toHaveBeenCalledWith(
+      expect.objectContaining({
+        alt: 'Обложка профиля',
+        fit: 'cover',
+        blurBackground: false,
+        priority: 'high',
+      })
+    );
   });
 
   it('renders the rank chip and hides the generic subtitle when rank is present', () => {

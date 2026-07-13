@@ -536,7 +536,7 @@ function TravelWizardStepRoute({
           testID="travel-wizard.step-route.scroll"
         >
           <View style={styles.contentInner}>
-            <View style={styles.card}>
+            <View style={[styles.card, isCompactLayout && styles.cardCompact]}>
               <View style={[styles.mapHeader, isCompactLayout && styles.mapHeaderCompact]}>
                 <View style={styles.flexFill}>
                   <Text style={styles.mapTitle}>Ключевые точки маршрута</Text>

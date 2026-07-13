@@ -1,8 +1,6 @@
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { normalizeMediaUrl } from '@/utils/mediaUrl';
-
-const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
+import { getTravelPointImageUrl } from '@/utils/travelPointImages';
 
 type WebMapMarkerPopupProps = {
     marker: any;
@@ -21,9 +19,11 @@ export default function WebMapMarkerPopup({
     onEdit,
     onRemove,
 }: WebMapMarkerPopupProps) {
+    const imageUrl = getTravelPointImageUrl(marker.image);
+
     return (
         <div style={{ width: '100%', maxWidth: 320, padding: 0 }}>
-            {marker.image && (
+            {imageUrl && (
                 <div
                     style={{
                         width: '100%',
@@ -35,7 +35,7 @@ export default function WebMapMarkerPopup({
                     }}
                 >
                     <ImageCardMedia
-                        src={normalizeImageUrl(marker.image)}
+                        src={imageUrl}
                         alt="Фото"
                         fit="contain"
                         blurBackground

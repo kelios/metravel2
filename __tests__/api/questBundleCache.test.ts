@@ -2,12 +2,15 @@
 // пишем сырой JSON → при «офлайн» фейле fetch читаем из кэша → adaptBundle
 // на клиенте даёт рабочий квест с работающим чекером ответа.
 import { apiClient } from '@/api/client'
-import { fetchQuestByQuestId } from '@/api/quests'
-import type { ApiQuestBundle } from '@/api/quests'
+import { fetchQuestByQuestId, fetchQuestsList } from '@/api/quests'
+import type { ApiQuestBundle, ApiQuestMeta } from '@/api/quests'
 import {
   readCachedQuestBundle,
   writeCachedQuestBundle,
+  readCachedQuestsList,
+  writeCachedQuestsList,
   QUEST_BUNDLE_CACHE_PREFIX,
+  QUEST_LIST_CACHE_KEY,
 } from '@/api/questBundleCache'
 import { adaptBundle } from '@/utils/questAdapters'
 
@@ -108,5 +111,75 @@ describe('questBundleCache offline round-trip', () => {
   it('rethrows when the fetch fails and there is no cache', async () => {
     mockedGet.mockRejectedValue(new Error('offline'))
     await expect(fetchQuestByQuestId('uncached-quest')).rejects.toThrow('offline')
+  })
+})
+
+const makeRawMeta = (): ApiQuestMeta[] => [
+  {
+    id: 777,
+    quest_id: QUEST_ID,
+    title: 'Тест-квест',
+    points: '5',
+    city_id: '1',
+    city_name: 'Минск',
+    lat: '53.9',
+    lng: '27.56',
+    duration_min: 60,
+    difficulty: 'easy',
+    tags: null,
+    pet_friendly: false,
+    cover_url: 'https://metravel.by/cover.jpg',
+    rating_avg: 4.5,
+    rating_count: 10,
+    user_rating: null,
+    completions_count: 3,
+    is_completed_by_me: false,
+    first_completer: null,
+  },
+]
+
+describe('questsList offline round-trip', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    AsyncStorage.__reset?.()
+  })
+
+  it('writes and reads back the raw list unchanged', async () => {
+    const list = makeRawMeta()
+    await writeCachedQuestsList(list, 1_700_000_000_000)
+
+    const stored = await AsyncStorage.getItem(QUEST_LIST_CACHE_KEY)
+    expect(stored).toContain('"version":1')
+
+    expect(await readCachedQuestsList()).toEqual(list)
+  })
+
+  it('returns null when nothing is cached', async () => {
+    expect(await readCachedQuestsList()).toBeNull()
+  })
+
+  it('caches the raw list on a successful fetch', async () => {
+    mockedGet.mockResolvedValue(makeRawMeta())
+
+    await fetchQuestsList()
+    // Даём отработать fire-and-forget записи в кэш.
+    await Promise.resolve()
+
+    const cached = await readCachedQuestsList()
+    expect(cached?.[0]?.quest_id).toBe(QUEST_ID)
+  })
+
+  it('falls back to the cached list when the network fetch fails', async () => {
+    await writeCachedQuestsList(makeRawMeta())
+    mockedGet.mockRejectedValue(new Error('offline'))
+
+    const list = await fetchQuestsList()
+    expect(list).toHaveLength(1)
+    expect(list[0].quest_id).toBe(QUEST_ID)
+  })
+
+  it('rethrows when the list fetch fails and there is no cache', async () => {
+    mockedGet.mockRejectedValue(new Error('offline'))
+    await expect(fetchQuestsList()).rejects.toThrow('offline')
   })
 })

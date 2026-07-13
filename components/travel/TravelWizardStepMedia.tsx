@@ -459,7 +459,9 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
 }) => {
     const colors = useThemedColors();
     const insets = useSafeAreaInsets();
-    const styles = useMemo(() => createStyles(colors), [colors]);
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
+    const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
     // На native нижний таб-бар (BottomDock) — фиксированный оверлей высотой
     // tabBarHeight + safe-area-inset-bottom, поэтому к статическому отступу
     // добавляем реальный inset, иначе CTA «Загрузить фото» уходит под док.
@@ -467,7 +469,6 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
         () => (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl + (Platform.OS === 'web' ? 0 : insets.bottom),
         [insets.bottom],
     );
-    const { isPhone, isLargePhone } = useResponsive();
     const { scrollRef, coverAnchorRef } = useMediaAnchorScroll(focusAnchorId, onAnchorHandled);
 
     const travelId = formData.id ?? null;
@@ -477,7 +478,6 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     const oldCoverFullUrl = travelDataOld?.travel_image_thumb_url ?? null;
     const gallery = formData.gallery ?? [];
     const youtubeLink = formData.youtube_link ?? '';
-    const isMobile = isPhone || isLargePhone;
 
     const {
         isCoverDeleted,
@@ -633,7 +633,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     );
 };
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile = false) => StyleSheet.create({
     safeContainer: {
         flex: 1,
         backgroundColor: colors.background,
@@ -660,8 +660,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         maxWidth: 980,
     },
     section: {
-        marginTop: DESIGN_TOKENS.spacing.lg,
-        padding: DESIGN_TOKENS.spacing.lg,
+        marginTop: isMobile ? DESIGN_TOKENS.spacing.sm : DESIGN_TOKENS.spacing.lg,
+        padding: isMobile ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg,
         backgroundColor: colors.surface,
         borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,

@@ -3,6 +3,11 @@ import { StyleSheet } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 
+const mockImageCardMedia = jest.fn((_props: any) => {
+  const { View } = require('react-native');
+  return <View testID="mock-image-card-media" />;
+});
+
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ isMobile: false, isHydrated: true, width: 1280, height: 900 }),
 }));
@@ -12,11 +17,7 @@ jest.mock('@/hooks/useTheme', () => ({
 }));
 
 jest.mock('@/components/ui/ImageCardMedia', () => {
-  const { View } = require('react-native');
-
-  return function MockImageCardMedia() {
-    return <View testID="mock-image-card-media" />;
-  };
+  return (props: any) => mockImageCardMedia(props);
 });
 
 jest.mock('@/components/profile/ProfileMenu', () => ({ ProfileMenu: () => null }));
@@ -33,6 +34,37 @@ const baseProps = {
 describe('ProfileHeader quick actions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('renders the profile cover as a sharp image without blur backdrop', () => {
+    render(<ProfileHeader {...baseProps} />);
+
+    expect(mockImageCardMedia).toHaveBeenCalledWith(
+      expect.objectContaining({
+        alt: 'Обложка профиля',
+        fit: 'cover',
+        blurBackground: false,
+        priority: 'high',
+      })
+    );
+  });
+
+  it('renders uploaded profile cover without blur backdrop', () => {
+    render(
+      <ProfileHeader
+        {...baseProps}
+        profile={{ cover_photo: 'https://metravel.by/media/profile-cover.jpg' } as any}
+      />
+    );
+
+    expect(mockImageCardMedia).toHaveBeenCalledWith(
+      expect.objectContaining({
+        src: expect.stringContaining('profile-cover.jpg'),
+        fit: 'cover',
+        blurBackground: false,
+        priority: 'high',
+      })
+    );
   });
 
   it('keeps cover media decorative so web quick actions receive clicks', () => {

@@ -3,7 +3,12 @@
 import { apiClient, ApiError } from '@/api/client';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { retry } from '@/utils/retry';
-import { readCachedQuestBundle, writeCachedQuestBundle } from '@/api/questBundleCache';
+import {
+    readCachedQuestBundle,
+    writeCachedQuestBundle,
+    readCachedQuestsList,
+    writeCachedQuestsList,
+} from '@/api/questBundleCache';
 
 // ===================== ТИПЫ (соответствуют OpenAPI схеме бэкенда) =====================
 
@@ -336,10 +341,22 @@ async function fetchAllPages<T>(path: string, maxPages = 20): Promise<T[]> {
     return out;
 }
 
-/** Получить список всех квестов (метаданные) */
+/**
+ * Получить список всех квестов (метаданные).
+ * При успехе кэширует сырой список в AsyncStorage (fire-and-forget) для офлайна.
+ * При сетевом фейле возвращает кэш, если он есть, — иначе пробрасывает ошибку.
+ */
 export async function fetchQuestsList(): Promise<ApiQuestMeta[]> {
-    const list = await fetchAllPages<ApiQuestMeta>('/quests/');
-    return list.map(withQuestMetaDefaults);
+    try {
+        const list = await fetchAllPages<ApiQuestMeta>('/quests/');
+        const withDefaults = list.map(withQuestMetaDefaults);
+        void writeCachedQuestsList(withDefaults);
+        return withDefaults;
+    } catch (err) {
+        const cached = await readCachedQuestsList();
+        if (cached) return cached;
+        throw err;
+    }
 }
 
 /** Параметры гео-рекомендаций (город/страна и/или координаты). */

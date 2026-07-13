@@ -90,6 +90,14 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         return colors.primary;
     }, [clamped, colors.primary, colors.success]);
     const hasErrors = errorCount > 0;
+    // На мобильном убираем дублирующий счётчик «(шаг X из 6)» из подписи кнопки —
+    // он уже показан в мета-строке «Шаг X/Y • Z%». Кнопка становится короче.
+    const compactPrimaryLabel = useMemo(
+        () => (isMobile && primaryLabel
+            ? primaryLabel.replace(/\s*\(шаг[^)]*\)\s*/i, '').trim()
+            : primaryLabel),
+        [isMobile, primaryLabel],
+    );
     const progressA11yLabel = useMemo(() => {
         const stepText = currentStep && totalSteps ? `Шаг ${currentStep} из ${totalSteps}` : 'Прогресс заполнения';
         const statusText = hasErrors
@@ -189,6 +197,26 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         </Pressable>
     ) : null;
 
+    // Компактная icon-only «Назад» для мобильной шапки (подпись — в accessibilityLabel).
+    const BackButtonIcon = canGoBack ? (
+        <Pressable
+            onPress={onBack}
+            style={({ pressed }) => [
+                styles.iconButton,
+                styles.iconButtonMobile,
+                globalFocusStyles.focusable,
+                Platform.OS === 'web' && { cursor: 'pointer' },
+                pressed && { opacity: 0.8 },
+            ]}
+            testID="travel-wizard-back"
+            accessibilityRole="button"
+            accessibilityLabel="Назад"
+            disabled={!onBack}
+        >
+            <Feather name="arrow-left" size={18} color={colors.text} />
+        </Pressable>
+    ) : null;
+
     const PrimaryAction = onPrimary && primaryLabel ? (
         <Pressable
             onPress={onPrimary}
@@ -207,7 +235,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
             accessibilityLabel={primaryLabel}
         >
             <Text style={styles.actionButtonPrimaryText} numberOfLines={1}>
-                {primaryLabel}
+                {compactPrimaryLabel}
             </Text>
             <Feather name="arrow-right" size={16} color={colors.textOnPrimary} />
         </Pressable>
@@ -273,25 +301,101 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         </View>
     ) : null;
 
-    return (
-        <View style={[styles.headerWrapper, isMobile && styles.headerWrapperMobile]}>
-            {isMobile ? (
-                <View style={styles.topNavRow}>
-                    <View style={styles.leftNav}>
-                        {BackButton}
-                    </View>
-                    <View style={styles.rightNav}>{PrimaryAction}</View>
-                </View>
-            ) : null}
+    const ProgressBar = (
+        <View
+            style={styles.progressBarTrack}
+            accessibilityRole="progressbar"
+            accessibilityLabel={progressA11yLabel}
+            accessibilityValue={{
+                min: 0,
+                max: 100,
+                now: clamped,
+                text: progressA11yLabel,
+            }}
+            {...(Platform.OS === 'web'
+                ? ({
+                    'aria-valuemin': 0,
+                    'aria-valuemax': 100,
+                    'aria-valuenow': clamped,
+                    'aria-valuetext': progressA11yLabel,
+                } as any)
+                : null)}
+            testID="travel-wizard-progress"
+        >
+            <View style={[styles.progressBarFill, { width: `${clamped}%`, backgroundColor: progressColor }]} />
+        </View>
+    );
 
-            <View style={[styles.titleRow, isMobile && styles.titleRowMobile]}>
+    const StepMetaText = (
+        <Text style={styles.progressMetaText} numberOfLines={1}>
+            Шаг {currentStep ?? 1}/{totalSteps ?? 1} • {clamped}%
+        </Text>
+    );
+
+    const ErrorBadge = hasErrors ? (
+        <View style={styles.progressErrorBadge}>
+            <Feather name="alert-circle" size={12} color={colors.danger} />
+            <Text style={styles.progressErrorText} numberOfLines={1}>
+                Ошибки: {errorCount}
+            </Text>
+        </View>
+    ) : null;
+
+    const AutosaveText = autosaveBadge ? (
+        <Text style={styles.autosaveBadgeText} numberOfLines={1} accessibilityLiveRegion="polite">
+            {autosaveBadge}
+        </Text>
+    ) : null;
+
+    if (isMobile) {
+        // Компактная мобильная шапка: 3 ряда вместо 5.
+        // Ряд 1: [←] Заголовок · [сохранить] · [⋯]  Ряд 2: прогресс  Ряд 3: мета+статус · [Далее →]
+        return (
+            <View style={[styles.headerWrapper, styles.headerWrapperMobile]}>
+                <View style={styles.mobileTopRow}>
+                    {BackButtonIcon}
+                    <Text style={styles.headerTitleMobileInline} numberOfLines={1}>
+                        {title}
+                    </Text>
+                    {SaveButton}
+                    {MoreMenuTrigger}
+                </View>
+
+                {MoreMenuPanel}
+
+                {ProgressBar}
+
+                <View style={styles.mobileMetaActionRow}>
+                    <View style={styles.mobileMetaLeft}>
+                        {StepMetaText}
+                        {ErrorBadge}
+                        {AutosaveText}
+                    </View>
+                    {PrimaryAction}
+                </View>
+
+                {hasTip && isTipOpen ? (
+                    <View style={styles.tipPanel}>
+                        <Text style={styles.tipPanelTitle}>{resolvedTipTitle}</Text>
+                        <Text style={styles.tipPanelBody}>{tipBody}</Text>
+                    </View>
+                ) : null}
+
+                {extraBelowProgress}
+            </View>
+        );
+    }
+
+    return (
+        <View style={styles.headerWrapper}>
+            <View style={styles.titleRow}>
                 <View style={styles.titleColumn}>
-                    <Text style={isMobile ? styles.headerTitleMobile : styles.headerTitle} numberOfLines={isMobile ? 2 : 1}>
+                    <Text style={styles.headerTitle} numberOfLines={1}>
                         {title}
                     </Text>
                 </View>
 
-                <View style={[styles.titleActionsRow, isMobile && styles.titleActionsRowMobile]}>
+                <View style={styles.titleActionsRow}>
                     {SaveButton}
                     {MoreMenuTrigger}
                 </View>
@@ -299,62 +403,21 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
 
             {MoreMenuPanel}
 
-            <Text
-                style={isMobile ? styles.headerSubtitleMobile : styles.headerSubtitle}
-                numberOfLines={isMobile ? 2 : 2}
-            >
+            <Text style={styles.headerSubtitle} numberOfLines={2}>
                 {subtitle}
             </Text>
 
-            <View
-                style={styles.progressBarTrack}
-                accessibilityRole="progressbar"
-                accessibilityLabel={progressA11yLabel}
-                accessibilityValue={{
-                    min: 0,
-                    max: 100,
-                    now: clamped,
-                    text: progressA11yLabel,
-                }}
-                {...(Platform.OS === 'web'
-                    ? ({
-                        'aria-valuemin': 0,
-                        'aria-valuemax': 100,
-                        'aria-valuenow': clamped,
-                        'aria-valuetext': progressA11yLabel,
-                    } as any)
-                    : null)}
-                testID="travel-wizard-progress"
-            >
-                <View style={[styles.progressBarFill, { width: `${clamped}%`, backgroundColor: progressColor }]} />
-            </View>
+            {ProgressBar}
 
             <View style={[styles.progressMetaRow, styles.progressMetaRowInline]}>
                 <View style={styles.progressStatusGroup}>
-                    <Text style={styles.progressMetaText} numberOfLines={1}>
-                        Шаг {currentStep ?? 1}/{totalSteps ?? 1} • {clamped}%
-                    </Text>
-                    {hasErrors ? (
-                        <View style={styles.progressErrorBadge}>
-                            <Feather name="alert-circle" size={12} color={colors.danger} />
-                            <Text style={styles.progressErrorText} numberOfLines={1}>
-                                Ошибки: {errorCount}
-                            </Text>
-                        </View>
-                    ) : null}
+                    {StepMetaText}
+                    {ErrorBadge}
                 </View>
-                {autosaveBadge ? (
-                    <Text
-                        style={styles.autosaveBadgeText}
-                        numberOfLines={1}
-                        accessibilityLiveRegion="polite"
-                    >
-                        {autosaveBadge}
-                    </Text>
-                ) : null}
+                {AutosaveText}
             </View>
 
-            {!isMobile && totalSteps && currentStep && totalSteps > 1 ? (
+            {totalSteps && currentStep && totalSteps > 1 ? (
                 <View style={styles.belowProgressRow}>
                     <View style={styles.belowProgressLeft}>
                         {BackButton}

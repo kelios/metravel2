@@ -87,11 +87,30 @@ export function PublicProfileHeader({
       <View style={styles.cover}>
         {coverPhoto ? (
           <View style={styles.coverMediaLayer} pointerEvents="none">
-            <ImageCardMedia src={coverPhoto} alt="Обложка профиля" height={COVER_HEIGHT} width="100%" borderRadius={0} fit="cover" priority="high" />
+            <ImageCardMedia
+              src={coverPhoto}
+              alt="Обложка профиля"
+              height={COVER_HEIGHT}
+              width="100%"
+              borderRadius={0}
+              fit="cover"
+              blurBackground={false}
+              priority="high"
+            />
           </View>
         ) : !defaultCoverFailed ? (
           <View style={styles.coverMediaLayer} pointerEvents="none">
-            <ImageCardMedia source={DEFAULT_COVER_SOURCE} alt="Обложка профиля" height={COVER_HEIGHT} width="100%" borderRadius={0} fit="cover" priority="high" onError={() => setDefaultCoverFailed(true)} />
+            <ImageCardMedia
+              source={DEFAULT_COVER_SOURCE}
+              alt="Обложка профиля"
+              height={COVER_HEIGHT}
+              width="100%"
+              borderRadius={0}
+              fit="cover"
+              blurBackground={false}
+              priority="high"
+              onError={() => setDefaultCoverFailed(true)}
+            />
           </View>
         ) : (
           <CoverTopoTexture height={COVER_HEIGHT} />

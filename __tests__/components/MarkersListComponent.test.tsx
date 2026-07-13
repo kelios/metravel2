@@ -79,10 +79,10 @@ describe('MarkersListComponent - Edit modal categories', () => {
         expect(screen.queryByTestId('photo-upload-mock')).toBeNull();
     });
 
-    it('does not show the photo badge for empty or serialized-empty image values', () => {
+    it('does not show the photo badge for empty or system-fallback image values', () => {
         render(
             <MarkersListComponent
-                markers={[{ ...baseMarker, image: 'null' }]}
+                markers={[{ ...baseMarker, image: 'https://metravel.by/og-default.png' }]}
                 categoryTravelAddress={[{ id: 1, name: 'Кафе' }]}
                 handleMarkerChange={jest.fn()}
                 handleImageUpload={jest.fn()}

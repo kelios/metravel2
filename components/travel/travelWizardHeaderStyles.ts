@@ -44,6 +44,34 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         gap: DESIGN_TOKENS.spacing.xs,
         flexShrink: 0,
     },
+    // --- Компактная мобильная шапка (3 ряда) ---
+    mobileTopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.xs,
+    },
+    headerTitleMobileInline: {
+        flex: 1,
+        minWidth: 0,
+        fontSize: 16,
+        fontWeight: '700',
+        color: colors.text,
+    },
+    mobileMetaActionRow: {
+        marginTop: DESIGN_TOKENS.spacing.xs,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: DESIGN_TOKENS.spacing.sm,
+    },
+    mobileMetaLeft: {
+        flex: 1,
+        minWidth: 0,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.xs,
+        flexWrap: 'wrap',
+    },
     titleRow: {
         flexDirection: 'row',
         alignItems: 'center',
