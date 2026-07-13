@@ -73,6 +73,33 @@ describe('useTravelWizard step persistence', () => {
     }
   });
 
+  // Контракт save ≠ moderate (docs/TRAVEL_SAVE_MODERATION_CONTRACT.md):
+  // переход между шагами НИКОГДА не блокируется валидацией полноты — обязательные
+  // поля проверяются ровно один раз, при явной отправке на модерацию.
+  it('advances to the next step even when required fields are empty (free navigation)', async () => {
+    const emptyFormData = { name: '', description: '' } as any;
+    const { result } = renderHook(() =>
+      useTravelWizard({
+        totalSteps: 6,
+        hasUnsavedChanges: false,
+        canSave: true,
+        onSave: jest.fn(async () => ({ publish: false, moderation: false })),
+        getFormData: () => emptyFormData,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.currentStep).toBe(1);
+    });
+
+    act(() => {
+      result.current.handleNext();
+    });
+
+    expect(result.current.currentStep).toBe(2);
+    expect(result.current.step1SubmitErrors).toEqual([]);
+  });
+
   it('restores currentStep from persisted JSON payload', async () => {
     await AsyncStorage.setItem(
       stepKey,

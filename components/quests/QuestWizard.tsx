@@ -38,6 +38,8 @@ import {
 } from './questWizardHelpers';
 import { exportQuestOfflineMap, getQuestOfflineMapPoints, openQuestOfflineMapInApp } from './questOfflineMapExport';
 
+import { fetchQuestByQuestId } from '@/api/quests';
+import { prefetchQuestImages } from '@/utils/questImagePrefetch';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestFontScaleStore } from '@/stores/questFontScaleStore';
@@ -170,9 +172,17 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     const currentStep = allSteps[currentIndex];
 
+    // Каждый шаг (и финал) открываем сверху — иначе на Android контент-ScrollView
+    // сохраняет прошлый offset и новый шаг открывается прокрученным вниз.
+    const contentScrollRef = useRef<ScrollView>(null);
+
     useEffect(() => {
         setDesktopNavExpanded(false);
-    }, [currentStep?.id]);
+        const id = requestAnimationFrame(() => {
+            contentScrollRef.current?.scrollTo({ y: 0, animated: false });
+        });
+        return () => cancelAnimationFrame(id);
+    }, [currentStep?.id, showFinaleOnly]);
 
     const openCurrentStepInMap = useCallback((app: QuestMapApp) => {
         if (!currentStep) return;
@@ -338,6 +348,38 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         })();
     }, [steps, title]);
 
+    // Скачать весь квест для офлайна: персистим сырой бандл в кэш и прогреваем
+    // дисковый кэш фото (шаги + обложка + постер финала), чтобы квест открывался
+    // без сети. Частичные фейлы фото не считаем провалом.
+    const [offlineQuestState, setOfflineQuestState] = useState<'idle' | 'downloading' | 'done'>('idle');
+
+    const handleOfflineQuestDownload = useCallback(() => {
+        if (offlineQuestState === 'downloading') return;
+        void (async () => {
+            setOfflineQuestState('downloading');
+            try {
+                if (questId) {
+                    // Перезапрашиваем бандл — fetchQuestByQuestId кэширует сырой JSON.
+                    await fetchQuestByQuestId(questId).catch(() => undefined);
+                }
+                const { total, ok } = await prefetchQuestImages([
+                    coverUrl,
+                    finale.poster,
+                    ...steps.map((step) => step.image),
+                ]);
+                setOfflineQuestState('done');
+                notifyQuest(
+                    total > 0
+                        ? `Квест сохранён для офлайна — фото ${ok}/${total}`
+                        : 'Квест сохранён для офлайна',
+                );
+            } catch {
+                setOfflineQuestState('idle');
+                notifyQuest('Не удалось сохранить квест для офлайна');
+            }
+        })();
+    }, [coverUrl, finale.poster, offlineQuestState, questId, steps]);
+
     const mainContent = (
         <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
             {/* Левая колонка: шаги + карта + финал */}
@@ -481,12 +523,15 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 onOfflineMapDownload={handleOfflineMapDownload}
                                 onOfflineMapOpenInApp={handleOfflineMapOpenInApp}
                                 offlineMapPointsCount={offlineMapPointsCount}
+                                onOfflineQuestDownload={handleOfflineQuestDownload}
+                                offlineQuestState={offlineQuestState}
                                 ratingSlot={ratingSlot}
                                 completionSlot={completionSlot}
                                 showExcursions={false}
                             />
 
                             <ScrollView
+                                ref={contentScrollRef}
                                 style={[styles.content, styles.compactMainContent]}
                                 showsVerticalScrollIndicator={false}
                                 keyboardShouldPersistTaps="handled"
@@ -522,12 +567,15 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 onOfflineMapDownload={handleOfflineMapDownload}
                                 onOfflineMapOpenInApp={handleOfflineMapOpenInApp}
                                 offlineMapPointsCount={offlineMapPointsCount}
+                                onOfflineQuestDownload={handleOfflineQuestDownload}
+                                offlineQuestState={offlineQuestState}
                                 ratingSlot={ratingSlot}
                                 completionSlot={completionSlot}
                             />
 
                             {/* Контент */}
                             <ScrollView
+                                ref={contentScrollRef}
                                 style={styles.content}
                                 showsVerticalScrollIndicator={false}
                                 keyboardShouldPersistTaps="handled"

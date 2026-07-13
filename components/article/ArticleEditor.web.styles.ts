@@ -26,12 +26,15 @@ export const getArticleEditorWebStyles = (
     bar: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: options.isCompactViewport ? 'flex-start' : 'center',
+      alignItems: 'center',
       flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.xs,
       paddingHorizontal: options.isCompactViewport
         ? DESIGN_TOKENS.spacing.sm
         : DESIGN_TOKENS.spacing.md,
-      paddingVertical: DESIGN_TOKENS.spacing.sm,
+      paddingVertical: options.isCompactViewport
+        ? DESIGN_TOKENS.spacing.xs
+        : DESIGN_TOKENS.spacing.sm,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
       backgroundColor: colors.surfaceElevated,
@@ -44,22 +47,20 @@ export const getArticleEditorWebStyles = (
       fontSize: DESIGN_TOKENS.typography.sizes.md,
       fontWeight: '600' as const,
       color: colors.text,
-      width: options.isCompactViewport ? '100%' : undefined,
-      marginBottom: options.isCompactViewport ? DESIGN_TOKENS.spacing.xs : 0,
+      flexShrink: 1,
       paddingRight: DESIGN_TOKENS.spacing.sm,
     },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: options.isCompactViewport ? 'flex-start' : 'flex-end',
+      justifyContent: 'flex-end',
       flexWrap: 'wrap',
-      flexShrink: 1,
-      width: options.isCompactViewport ? '100%' : undefined,
+      flexShrink: 0,
       overflow: Platform.OS === 'web' ? ('visible' as any) : undefined,
     },
     btn: {
-      marginLeft: options.isCompactViewport ? 0 : DESIGN_TOKENS.spacing.sm,
-      marginTop: options.isCompactViewport ? DESIGN_TOKENS.spacing.xs : 0,
+      marginLeft: options.isCompactViewport ? DESIGN_TOKENS.spacing.xs : DESIGN_TOKENS.spacing.sm,
+      marginTop: 0,
     },
     editorArea: {
       flex: 1,

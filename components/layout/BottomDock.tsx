@@ -99,7 +99,14 @@ const DockButton = memo(function DockButton({
           onPress();
           return;
         }
-        router.push(href as any);
+        // Табы дока — это ПЕРЕКЛЮЧЕНИЕ вкладок навигатора Tabs, а не пуш новых
+        // экранов. `router.push` каждый раз монтировал целевой экран заново
+        // (lazy-mount) → лаг «контент отстаёт на таб», реинициализация Leaflet-
+        // WebView карты (белый экран на 2–4с) и Reanimated
+        // `SurfaceMountingManager`-ошибки при разрыве surface во время анимации.
+        // `router.navigate` дедуплицирует по маршруту и делает jump на уже
+        // смонтированный таб без пересборки.
+        router.navigate(href as any);
       }}
       accessibilityRole="tab"
       accessibilityLabel={accessibilityLabel}

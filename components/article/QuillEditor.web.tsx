@@ -253,7 +253,7 @@ export const ARTICLE_EDITOR_QUILL_WEB_CSS = `
   [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow {
     padding: 8px;
   }
-  [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-formats {
+  [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-formats:has(.ql-picker) {
     width: 100%;
   }
   [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-font,

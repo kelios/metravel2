@@ -235,12 +235,19 @@ export function resolveQuestMapCenter({
         };
     }
 
-    if (userLoc && Number.isFinite(userLoc.lat) && Number.isFinite(userLoc.lng)) {
-        return { latitude: userLoc.lat, longitude: userLoc.lng };
-    }
-
+    // Явный выбор города в меню приоритетнее геолокации: карта должна
+    // центрироваться на квестах города, даже если пользователь далеко.
+    // «Рядом» города не даёт (его нет в CITIES) — тогда падаем на userLoc ниже.
     if (selectedCity && Number.isFinite(selectedCity.lat) && Number.isFinite(selectedCity.lng)) {
         return { latitude: Number(selectedCity.lat), longitude: Number(selectedCity.lng) };
+    }
+
+    if (selectedCity && averageMapPointCenter) {
+        return averageMapPointCenter;
+    }
+
+    if (userLoc && Number.isFinite(userLoc.lat) && Number.isFinite(userLoc.lng)) {
+        return { latitude: userLoc.lat, longitude: userLoc.lng };
     }
 
     return averageMapPointCenter ?? DEFAULT_QUEST_MAP_CENTER;

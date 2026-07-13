@@ -421,6 +421,7 @@ const Map: React.FC<TravelProps> = ({
       mode,
       center: { lat: centerLat, lng: centerLng },
       usesServerClusters: shouldUseServerClusterData,
+      pointsOnly,
     }),
     [
       renderedNativePoints,
@@ -431,6 +432,7 @@ const Map: React.FC<TravelProps> = ({
       centerLat,
       centerLng,
       shouldUseServerClusterData,
+      pointsOnly,
     ],
   );
 
@@ -790,6 +792,7 @@ const Map: React.FC<TravelProps> = ({
             const routeLine = Array.isArray(data.routeLine) ? data.routeLine : routePoints;
             const routeMode = data.mode || 'radius';
             const usesServerClusters = data.usesServerClusters === true;
+            const pointsOnly = data.pointsOnly === true;
             window.__metravelMapMode = routeMode;
             if (data.center && isFinite(data.center.lat) && isFinite(data.center.lng)) {
               map.__userCenter = [data.center.lat, data.center.lng];
@@ -905,6 +908,23 @@ const Map: React.FC<TravelProps> = ({
                 try {
                   map.setView(routeBounds.getCenter(), Math.max(map.getZoom ? map.getZoom() : 13, 14));
                 } catch (e) {}
+              }
+            } else if (pointsOnly) {
+              // Каталог квестов (pointsOnly): рефит при СМЕНЕ набора точек — выбор
+              // города меняет маркеры, карта обязана перелететь на них. Зеркало web
+              // keyed-рефита (dataKey по id/coord): ручной пан не меняет набор точек,
+              // поэтому не дёргает карту. Radius-режим сюда не заходит и сохраняет
+              // одноразовую защёлку ниже.
+              var dataKey = points
+                .map(function (p) { return p && p.id != null ? ('id:' + p.id) : ('c:' + (p && p.coord)); })
+                .join('|');
+              if (bounds.isValid() && map.__lastPointsFitKey !== dataKey) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+                map.__lastPointsFitKey = dataKey;
+                __metravelDidInitialRadiusPosition = true;
+              } else if (!__metravelDidInitialRadiusPosition && !bounds.isValid() && map.__userCenter) {
+                map.setView(map.__userCenter, map.getZoom ? map.getZoom() : 10);
+                __metravelDidInitialRadiusPosition = true;
               }
             } else if (!__metravelDidInitialRadiusPosition && bounds.isValid() && !usesServerClusters) {
               map.fitBounds(bounds, { padding: [50, 50] });

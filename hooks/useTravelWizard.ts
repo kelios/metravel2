@@ -4,7 +4,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useNavigation, useLocalSearchParams } from 'expo-router';
 import { trackWizardEvent } from '@/utils/analytics';
 import type { ValidationError, ModerationIssue } from '@/utils/formValidation';
-import { validateStep } from '@/utils/travelWizardValidation';
 import type { TravelFormData } from '@/types/types';
 import { showToastMessage } from '@/utils/toast';
 import { getErrorMessage } from '@/utils/errorHelpers';
@@ -158,7 +157,6 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     hasUnsavedChanges,
     canSave,
     onSave,
-    getFormData,
     stepStorageKey,
     stepStorageTtlMs = 7 * 24 * 60 * 60 * 1000,
   } = options;
@@ -185,8 +183,6 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   const exitGuardPromptVisibleRef = useRef(false);
   const hasRestoredRef = useRef(false);
   const isLeavingRef = useRef(false);
-  const getFormDataRef = useRef(getFormData);
-  getFormDataRef.current = getFormData;
 
   const normalizeStep = useCallback(
     (value: unknown) => {
@@ -282,22 +278,11 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   const handleNext = useCallback(() => {
     if (currentStep >= totalSteps) return;
 
-    const formData = getFormDataRef.current?.();
-    if (formData) {
-      const { errors } = validateStep(currentStep, formData);
-      if (errors.length > 0) {
-        setStep1SubmitErrors(errors);
-        const firstAnchor = errors.find(e => e.anchorId)?.anchorId;
-        pendingIssueNavRef.current = { step: currentStep, anchorId: firstAnchor };
-        setFocusAnchorId(firstAnchor ?? null);
-        trackWizardEvent('wizard_step_next_blocked', {
-          step: currentStep,
-          errors: errors.length,
-        });
-        return;
-      }
-    }
-
+    // Свободная навигация между шагами: переход «Далее» НИКОГДА не блокируется
+    // валидацией полноты. Проверка обязательных полей выполняется ровно один раз —
+    // при явной отправке на модерацию/публикацию (см.
+    // docs/TRAVEL_SAVE_MODERATION_CONTRACT.md). Инлайн-подсказки по незаполненным
+    // полям шаг показывает сам, но переходу они не мешают.
     setStep1SubmitErrors([]);
     trackWizardEvent('wizard_step_next', { step: currentStep });
     setCurrentStep(prev => prev + 1);

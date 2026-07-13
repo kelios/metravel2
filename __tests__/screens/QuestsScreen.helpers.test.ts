@@ -144,4 +144,31 @@ describe('QuestsScreen helpers', () => {
 
     expect(center).toEqual({ latitude: 50.06, longitude: 19.94 });
   });
+
+  it('centers on the explicitly selected city over the user location', () => {
+    // Регресс: выбор города в боковом меню не двигал карту, потому что
+    // геолокация пользователя (далеко от города) была приоритетнее — маркер
+    // города не появлялся.
+    const center = resolveQuestMapCenter({
+      searchTerm: '',
+      mapPoints: [{ coord: '53.14,29.22' }],
+      activeMapAreaCenter: null,
+      userLoc: { lat: 50.06, lng: 19.94 },
+      selectedCity: { lat: 53.14, lng: 29.22 },
+    });
+
+    expect(center).toEqual({ latitude: 53.14, longitude: 29.22 });
+  });
+
+  it('falls back to the user location when no city is selected (Рядом)', () => {
+    const center = resolveQuestMapCenter({
+      searchTerm: '',
+      mapPoints: [{ coord: '53.9,27.56' }],
+      activeMapAreaCenter: null,
+      userLoc: { lat: 50.06, lng: 19.94 },
+      selectedCity: null,
+    });
+
+    expect(center).toEqual({ latitude: 50.06, longitude: 19.94 });
+  });
 });

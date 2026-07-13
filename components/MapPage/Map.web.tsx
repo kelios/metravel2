@@ -277,7 +277,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, [userLocationLatLng, coordinatesLatLng])
 
   const filteredTravelData = useMemo(() => {
-    if (mode !== 'radius') return travelData
+    // pointsOnly (каталог квестов) = «показать ровно эти точки»: родитель уже
+    // отобрал их по выбранному городу/поиску, поэтому радиусный отсев вокруг
+    // геолокации пользователя не должен выкидывать далёкие маркеры города.
+    if (mode !== 'radius' || pointsOnly) return travelData
     if (!Array.isArray(travelData) || travelData.length === 0) return travelData
 
     const center = filterCenter ?? coordinatesLatLng
@@ -303,7 +306,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     })
     // filterCenter.lat/lng used instead of filterCenter object to avoid recompute on identity churn
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, radiusInMeters, travelData, filterCenter?.lat, filterCenter?.lng, coordinatesLatLng])
+  }, [mode, pointsOnly, radiusInMeters, travelData, filterCenter?.lat, filterCenter?.lng, coordinatesLatLng])
 
   // When the marker dataset changes identity, the cluster layer rebuilds its
   // markers. The cleanup runs before children re-register on the next commit,

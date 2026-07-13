@@ -39,6 +39,8 @@ type NavigationSharedProps = {
   onShowFinale: () => void
 }
 
+export type OfflineQuestDownloadState = 'idle' | 'downloading' | 'done'
+
 type QuestCompactSidebarProps = NavigationSharedProps & {
   title: string
   progress: number
@@ -50,6 +52,8 @@ type QuestCompactSidebarProps = NavigationSharedProps & {
   onOfflineMapDownload: () => void
   onOfflineMapOpenInApp: () => void
   offlineMapPointsCount: number
+  onOfflineQuestDownload: () => void
+  offlineQuestState: OfflineQuestDownloadState
   ratingSlot?: React.ReactNode
   completionSlot?: React.ReactNode
   showExcursions?: boolean
@@ -68,6 +72,8 @@ type QuestHeaderPanelProps = NavigationSharedProps & {
   onOfflineMapDownload: () => void
   onOfflineMapOpenInApp: () => void
   offlineMapPointsCount: number
+  onOfflineQuestDownload: () => void
+  offlineQuestState: OfflineQuestDownloadState
   ratingSlot?: React.ReactNode
   completionSlot?: React.ReactNode
 }
@@ -85,6 +91,7 @@ type QuestActionButtonProps = {
   showLabel: boolean
   textStyle?: any
   iconSize?: number
+  isMobile?: boolean
 }
 
 function QuestActionButton({
@@ -100,9 +107,10 @@ function QuestActionButton({
   showLabel,
   textStyle,
   iconSize = 15,
+  isMobile,
 }: QuestActionButtonProps) {
   const [tooltipVisible, setTooltipVisible] = useState(false)
-  const showTooltip = Platform.OS === 'web' && !showLabel && tooltipVisible
+  const showTooltip = Platform.OS === 'web' && !isMobile && !showLabel && tooltipVisible
 
   return (
     <Pressable
@@ -125,6 +133,54 @@ function QuestActionButton({
         </Text>
       )}
     </Pressable>
+  )
+}
+
+function QuestOfflineDownloadButton({
+  styles,
+  colors,
+  state,
+  onPress,
+  showLabel,
+  isMobile,
+}: {
+  styles: any
+  colors: any
+  state: OfflineQuestDownloadState
+  onPress: () => void
+  showLabel: boolean
+  isMobile?: boolean
+}) {
+  const iconName: React.ComponentProps<typeof Feather>['name'] =
+    state === 'done' ? 'check-circle' : 'download-cloud'
+  const label =
+    state === 'downloading'
+      ? 'Сохраняем…'
+      : state === 'done'
+        ? 'Сохранено офлайн'
+        : 'Скачать офлайн'
+  const accessibilityLabel =
+    state === 'downloading'
+      ? 'Идёт сохранение квеста для офлайна'
+      : state === 'done'
+        ? 'Квест сохранён для офлайна'
+        : 'Скачать квест для офлайна'
+  const iconColor = state === 'done' ? colors.success : colors.textMuted
+
+  return (
+    <QuestActionButton
+      styles={styles}
+      label={label}
+      accessibilityLabel={accessibilityLabel}
+      iconName={iconName}
+      iconColor={iconColor}
+      onPress={onPress}
+      disabled={state === 'downloading'}
+      baseStyle={styles.actionLabelButton}
+      showLabel={showLabel}
+      isMobile={isMobile}
+      textStyle={styles.actionLabelText}
+    />
   )
 }
 
@@ -215,6 +271,8 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     onOfflineMapDownload,
     onOfflineMapOpenInApp,
     offlineMapPointsCount,
+    onOfflineQuestDownload,
+    offlineQuestState,
     ratingSlot,
     completionSlot,
     showExcursions = true,
@@ -267,6 +325,13 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
             baseStyle={styles.actionLabelButton}
             showLabel={!iconOnlyActions}
             textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
+          />
+          <QuestOfflineDownloadButton
+            styles={styles}
+            colors={colors}
+            state={offlineQuestState}
+            onPress={onOfflineQuestDownload}
+            showLabel={!iconOnlyActions}
           />
           <QuestActionButton
             styles={styles}
@@ -346,10 +411,12 @@ function QuestFontScaleControl({
   styles,
   colors,
   showLabel,
+  isMobile,
 }: {
   styles: any
   colors: any
   showLabel: boolean
+  isMobile?: boolean
 }) {
   const fontScale = useQuestFontScaleStore((s) => s.fontScale)
   const increase = useQuestFontScaleStore((s) => s.increase)
@@ -370,6 +437,7 @@ function QuestFontScaleControl({
         disabled={atMin}
         baseStyle={styles.actionLabelButton}
         showLabel={showLabel}
+        isMobile={isMobile}
         textStyle={[styles.actionLabelText, atMin && { color: colors.disabled }]}
       />
       <QuestActionButton
@@ -382,6 +450,7 @@ function QuestFontScaleControl({
         disabled={atMax}
         baseStyle={styles.actionLabelButton}
         showLabel={showLabel}
+        isMobile={isMobile}
         textStyle={[styles.actionLabelText, atMax && { color: colors.disabled }]}
       />
     </>
@@ -412,6 +481,8 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     onOfflineMapDownload,
     onOfflineMapOpenInApp,
     offlineMapPointsCount,
+    onOfflineQuestDownload,
+    offlineQuestState,
     ratingSlot,
     completionSlot,
   } = props
@@ -449,6 +520,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             styles={styles}
             colors={colors}
             showLabel={showActionLabels}
+            isMobile={isMobile}
           />
           {Platform.OS === 'web' && (
             <QuestActionButton
@@ -460,6 +532,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
               onPress={onPrintDownload}
               baseStyle={styles.actionLabelButton}
               showLabel={showActionLabels}
+              isMobile={isMobile}
               textStyle={styles.actionLabelText}
             />
           )}
@@ -473,6 +546,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             disabled={offlineMapPointsCount === 0}
             baseStyle={styles.actionLabelButton}
             showLabel={showActionLabels}
+            isMobile={isMobile}
             textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
           />
           <QuestActionButton
@@ -485,7 +559,16 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             disabled={offlineMapPointsCount === 0}
             baseStyle={styles.actionLabelButton}
             showLabel={showActionLabels}
+            isMobile={isMobile}
             textStyle={[styles.actionLabelText, offlineMapPointsCount === 0 && { color: colors.disabled }]}
+          />
+          <QuestOfflineDownloadButton
+            styles={styles}
+            colors={colors}
+            state={offlineQuestState}
+            onPress={onOfflineQuestDownload}
+            showLabel={showActionLabels}
+            isMobile={isMobile}
           />
           <QuestActionButton
             styles={styles}
@@ -496,6 +579,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             onPress={onReset}
             baseStyle={styles.resetButton}
             showLabel={showActionLabels}
+            isMobile={isMobile}
             textStyle={styles.resetText}
             hitSlop={12}
             iconSize={13}

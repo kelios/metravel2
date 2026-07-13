@@ -3,6 +3,7 @@
 import { apiClient, ApiError } from '@/api/client';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { retry } from '@/utils/retry';
+import { readCachedQuestBundle, writeCachedQuestBundle } from '@/api/questBundleCache';
 
 // ===================== ТИПЫ (соответствуют OpenAPI схеме бэкенда) =====================
 
@@ -407,19 +408,31 @@ export async function fetchQuestsByCity(cityId: number): Promise<ApiQuestBundle>
     return normalizeQuestBundle(bundle);
 }
 
-/** Получить полный бандл квеста по quest_id (строковый, напр. "minsk-cmok") */
+/**
+ * Получить полный бандл квеста по quest_id (строковый, напр. "minsk-cmok").
+ * При успехе кэширует сырой бандл в AsyncStorage (fire-and-forget) для офлайна.
+ * При сетевом фейле возвращает кэш, если он есть, — иначе пробрасывает ошибку.
+ */
 export async function fetchQuestByQuestId(questId: string): Promise<ApiQuestBundle> {
-    const bundle = await retry(
-        () => apiClient.get<ApiQuestBundle>(`/quests/by-quest-id/${questId}/`),
-        {
-            maxAttempts: 2,
-            delay: 300,
-            shouldRetry: (error) =>
-                error instanceof ApiError &&
-                (error.status === 0 || error.status === 502 || error.status === 503 || error.status === 504),
-        },
-    );
-    return normalizeQuestBundle(bundle);
+    try {
+        const bundle = await retry(
+            () => apiClient.get<ApiQuestBundle>(`/quests/by-quest-id/${questId}/`),
+            {
+                maxAttempts: 2,
+                delay: 300,
+                shouldRetry: (error) =>
+                    error instanceof ApiError &&
+                    (error.status === 0 || error.status === 502 || error.status === 503 || error.status === 504),
+            },
+        );
+        const normalized = normalizeQuestBundle(bundle);
+        void writeCachedQuestBundle(questId, normalized);
+        return normalized;
+    } catch (err) {
+        const cached = await readCachedQuestBundle(questId);
+        if (cached) return cached;
+        throw err;
+    }
 }
 
 /** Получить полный бандл квеста по числовому ID */

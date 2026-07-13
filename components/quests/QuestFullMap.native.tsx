@@ -30,6 +30,7 @@ import {
 } from './questNativeMapPng';
 import { openQuestMap, type QuestMapApp } from './questWizardHelpers';
 import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
+import { LEAFLET_JS, LEAFLET_CSS } from './leafletInlineAsset';
 
 const QUEST_NAV_PROVIDERS: Array<{ app: QuestMapApp; label: string }> = [
     { app: 'google', label: 'Google' },
@@ -176,8 +177,8 @@ function QuestFullMap({
     <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+      <style>${LEAFLET_CSS}</style>
+      <script>${LEAFLET_JS}</script>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; }
