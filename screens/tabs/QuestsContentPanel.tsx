@@ -43,6 +43,7 @@ type QuestsContentPanelProps = {
     selectedCityId: string | null;
     selectedCityName: string | null;
     nearbyId: string;
+    kidsFilterId?: string;
     searchQuery: string;
     onSearchChange: (text: string) => void;
     /** @deprecated Radius selection is no longer shown in the quest catalog. */
@@ -61,6 +62,7 @@ type QuestsContentPanelProps = {
     isMobile: boolean;
     filtersActive: boolean;
     onResetFilters: () => void;
+    onShowKids?: () => void;
     onShowNearby: () => void;
     onOpenFilterDrawer: () => void;
     onToggleViewMode: () => void;
@@ -81,6 +83,7 @@ export default function QuestsContentPanel({
     selectedCityId,
     selectedCityName,
     nearbyId,
+    kidsFilterId = '__kids__',
     searchQuery = '',
     onSearchChange = () => {},
     questsAll,
@@ -97,6 +100,7 @@ export default function QuestsContentPanel({
     isMobile,
     filtersActive,
     onResetFilters,
+    onShowKids = () => {},
     onShowNearby,
     onOpenFilterDrawer,
     onToggleViewMode,
@@ -113,8 +117,10 @@ export default function QuestsContentPanel({
     };
 
     const getQuestCityId = useCallback((quest: QuestListItem) => (
-        selectedCityId === nearbyId ? (quest.cityId || '') : (selectedCityId || '')
-    ), [nearbyId, selectedCityId]);
+        selectedCityId === nearbyId || selectedCityId === kidsFilterId
+            ? (quest.cityId || '')
+            : (selectedCityId || '')
+    ), [kidsFilterId, nearbyId, selectedCityId]);
 
     const renderQuestItem = useCallback(({ item: quest, index }: ListRenderItemInfo<QuestListItem>) => (
         <View style={styles.questVirtualizedItem}>
@@ -142,7 +148,9 @@ export default function QuestsContentPanel({
                             ? 'Результаты поиска'
                             : selectedCityId === nearbyId
                                 ? (isMapAreaActive ? 'Квесты в этой области' : userLoc ? 'Квесты поблизости' : 'Все квесты')
-                                : selectedCityName || 'Все квесты'}
+                                : selectedCityId === kidsFilterId
+                                    ? 'Детские сказки'
+                                    : selectedCityName || 'Все квесты'}
                     </Text>
                     <View style={styles.contentCountRow}>
                         {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
@@ -185,6 +193,20 @@ export default function QuestsContentPanel({
                             <Feather name="filter" size={17} color={colors.text} />
                         </Pressable>
                         <Pressable
+                            style={[styles.headerIconBtn, selectedCityId === kidsFilterId && styles.headerIconBtnActive]}
+                            onPress={onShowKids}
+                            accessibilityRole="button"
+                            accessibilityLabel="Показать детские сказки"
+                            accessibilityState={{ selected: selectedCityId === kidsFilterId }}
+                            testID="quests-show-kids"
+                        >
+                            <Feather
+                                name="book-open"
+                                size={17}
+                                color={selectedCityId === kidsFilterId ? colors.textOnPrimary : colors.text}
+                            />
+                        </Pressable>
+                        <Pressable
                             style={[styles.headerIconBtn, geoRequesting && styles.headerIconBtnDisabled]}
                             onPress={onShowNearby}
                             disabled={geoRequesting}
@@ -204,12 +226,12 @@ export default function QuestsContentPanel({
                     style={styles.searchInput}
                     value={searchQuery}
                     onChangeText={onSearchChange}
-                    placeholder="Поиск по названию или городу"
+                    placeholder="Поиск по названию, городу или сюжету"
                     placeholderTextColor={colors.textMuted}
                     returnKeyType="search"
                     autoCorrect={false}
                     clearButtonMode="never"
-                    accessibilityLabel="Поиск квестов по названию или городу"
+                    accessibilityLabel="Поиск квестов по названию, городу или сюжету"
                     testID="quests-search-input"
                 />
                 {searchActive && (

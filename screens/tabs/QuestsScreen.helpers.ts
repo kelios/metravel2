@@ -66,6 +66,7 @@ export const STORAGE_SELECTED_CITY = 'quests_selected_city_v2';
 // селектора и окружности радиуса на карте.
 export const DEFAULT_NEARBY_RADIUS_KM = 10;
 export const NEARBY_ID = '__nearby__';
+export const KIDS_FILTER_ID = '__kids__';
 
 let expoLocationModulePromise: Promise<typeof import('expo-location')> | null = null;
 
@@ -77,13 +78,21 @@ export async function loadExpoLocation() {
 }
 
 // Тег детских/семейных квестов в meta.tags (adaptMeta → string[]). Держим в
-// одном месте: бейдж «Детский» на карточке и синонимы для русского поиска
+// одном месте: бейдж «Детская сказка» на карточке и синонимы для русского поиска
 // («детский»/«семейный») опираются на него.
-export const KIDS_QUEST_TAG = 'kids'
+export const KIDS_QUEST_TAG = 'kids';
 
 export function isKidsQuest(tags?: string[] | null): boolean {
-    if (!tags || !tags.length) return false
-    return tags.some((tag) => typeof tag === 'string' && tag.trim().toLowerCase() === KIDS_QUEST_TAG)
+    if (!tags || !tags.length) return false;
+    return tags.some((tag) => typeof tag === 'string' && tag.trim().toLowerCase() === KIDS_QUEST_TAG);
+}
+
+export function filterRegularQuests<T extends { tags?: string[] | null }>(quests: T[]): T[] {
+    return quests.filter((quest) => !isKidsQuest(quest.tags));
+}
+
+export function filterKidsQuests<T extends { tags?: string[] | null }>(quests: T[]): T[] {
+    return quests.filter((quest) => isKidsQuest(quest.tags));
 }
 
 export type MapPoint = {

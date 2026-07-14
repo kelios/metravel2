@@ -4,7 +4,9 @@ import { resolve } from 'path';
 import {
   COUNTRY_NAMES,
   DEFAULT_NEARBY_RADIUS_KM,
+  filterKidsQuests,
   filterQuestsByMapSearchArea,
+  filterRegularQuests,
   isCoordinateInMapViewport,
   isKidsQuest,
   resolveQuestMapCenter,
@@ -104,6 +106,29 @@ describe('QuestsScreen helpers', () => {
       expect(isKidsQuest([])).toBe(false);
       expect(isKidsQuest(undefined)).toBe(false);
       expect(isKidsQuest(null)).toBe(false);
+    });
+  });
+
+  describe('quest audience filters', () => {
+    const quests = [
+      { id: 'regular-minsk', tags: ['city'] },
+      { id: 'kids-minsk', tags: ['kids', 'family'] },
+      { id: 'regular-brest', tags: null },
+      { id: 'kids-grodno', tags: [' Kids '] },
+    ];
+
+    it('keeps kids quests out of the regular catalog', () => {
+      expect(filterRegularQuests(quests).map((quest) => quest.id)).toEqual([
+        'regular-minsk',
+        'regular-brest',
+      ]);
+    });
+
+    it('collects kids quests for the separate fairytale filter', () => {
+      expect(filterKidsQuests(quests).map((quest) => quest.id)).toEqual([
+        'kids-minsk',
+        'kids-grodno',
+      ]);
     });
   });
 

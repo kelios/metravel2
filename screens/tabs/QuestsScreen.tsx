@@ -28,7 +28,11 @@ import {
     STORAGE_SELECTED_CITY,
     DEFAULT_NEARBY_RADIUS_KM,
     NEARBY_ID,
+    KIDS_FILTER_ID,
+    filterKidsQuests,
     filterQuestsByMapSearchArea,
+    filterRegularQuests,
+    getAverageQuestMapPointCenter,
     isKidsQuest,
     loadExpoLocation,
     resolveQuestMapCenter,
@@ -61,7 +65,7 @@ export default function QuestsScreen() {
     const [collapsedCountryCodes, setCollapsedCountryCodes] = useState<Record<string, boolean>>({});
 
     // API data
-    const { quests: ALL_QUESTS, cityQuestsIndex: CITY_QUESTS, loading: questsLoading } = useQuestsList();
+    const { quests: ALL_QUESTS, loading: questsLoading } = useQuestsList();
     const { cities: apiCities, loading: citiesLoading } = useQuestCities();
     const dataLoaded = !questsLoading && !citiesLoading;
     const cityCountryMetaById = useMemo(() => {
@@ -129,6 +133,10 @@ export default function QuestsScreen() {
             devError('Error saving selected city:', error);
         }
     }, [isMobile]);
+
+    const handleShowKidsQuests = useCallback(() => {
+        void handleSelectCity(KIDS_FILTER_ID);
+    }, [handleSelectCity]);
 
     const requestNearbyQuests = useCallback(async () => {
         if (geoRequesting) return;
@@ -200,7 +208,9 @@ export default function QuestsScreen() {
     useEffect(() => {
         if (!dataLoaded || !CITIES.length) return;
         const validIds = new Set(CITIES.map((c) => c.id));
-        const isValid = selectedCityId === NEARBY_ID || (selectedCityId ? validIds.has(selectedCityId) : false);
+        const isValid = selectedCityId === NEARBY_ID
+            || selectedCityId === KIDS_FILTER_ID
+            || (selectedCityId ? validIds.has(selectedCityId) : false);
         if (isValid) return;
         setSelectedCityId(NEARBY_ID);
     }, [CITIES, dataLoaded, selectedCityId]);
@@ -256,6 +266,17 @@ export default function QuestsScreen() {
     }, [filterDrawerOpen]);
 
     // ── Derived data ──
+    const regularQuests = useMemo(() => filterRegularQuests(ALL_QUESTS), [ALL_QUESTS]);
+    const kidsQuests = useMemo(() => filterKidsQuests(ALL_QUESTS), [ALL_QUESTS]);
+    const regularCityQuests = useMemo(() => {
+        const index: Record<string, QuestMeta[]> = {};
+        for (const quest of regularQuests) {
+            if (!quest.cityId) continue;
+            (index[quest.cityId] ||= []).push(quest);
+        }
+        return index;
+    }, [regularQuests]);
+
     const citiesWithNearby: (City | NearbyCity)[] = useMemo(
         () => [{ id: NEARBY_ID, name: 'Рядом', country: 'BY', isNearby: true } as NearbyCity, ...CITIES],
         [CITIES],
@@ -266,20 +287,21 @@ export default function QuestsScreen() {
     }, [citiesWithNearby]);
 
     const nearbyCount = useMemo(() => {
-        if (!userLoc || !ALL_QUESTS.length) return 0;
-        return ALL_QUESTS.reduce((acc, q) => {
+        if (!userLoc || !regularQuests.length) return 0;
+        return regularQuests.reduce((acc, q) => {
             const d = haversineKm(userLoc.lat, userLoc.lng, q.lat, q.lng);
             return acc + (d <= nearbyRadiusKm ? 1 : 0);
         }, 0);
-    }, [userLoc, nearbyRadiusKm, ALL_QUESTS]);
+    }, [userLoc, nearbyRadiusKm, regularQuests]);
 
     const cityQuestCountById = useMemo(() => {
         const counts: Record<string, number> = {};
         for (const city of citiesWithNearby) {
-            counts[city.id] = city.id === NEARBY_ID ? nearbyCount : (CITY_QUESTS[city.id]?.length || 0);
+            counts[city.id] = city.id === NEARBY_ID ? nearbyCount : (regularCityQuests[city.id]?.length || 0);
         }
+        counts[KIDS_FILTER_ID] = kidsQuests.length;
         return counts;
-    }, [citiesWithNearby, nearbyCount, CITY_QUESTS]);
+    }, [citiesWithNearby, nearbyCount, regularCityQuests, kidsQuests.length]);
 
     // Filter to show only cities with quests (plus Nearby always visible)
     const visibleCities = useMemo(() => {
@@ -367,24 +389,39 @@ export default function QuestsScreen() {
                 .map((q) => ({ ...q }));
         }
         if (!selectedCityId) return [];
+        if (selectedCityId === KIDS_FILTER_ID) {
+            return kidsQuests.map((q) => ({ ...q }));
+        }
         if (selectedCityId === NEARBY_ID) {
             if (activeMapAreaCenter) {
                 // «Искать в этой области» должен фиксировать именно видимый viewport,
                 // а не повторно резать уже показанную карту маленьким nearby-радиусом.
-                return filterQuestsByMapSearchArea(ALL_QUESTS, activeMapAreaCenter, nearbyRadiusKm);
+                return filterQuestsByMapSearchArea(regularQuests, activeMapAreaCenter, nearbyRadiusKm);
             }
             // Радиусную фильтрацию применяем только при явном выборе «Рядом»;
             // мягкий дефолт «Рядом» показывает весь каталог.
             if (!userLoc || !nearbyExplicit) {
-                return ALL_QUESTS.map((q) => ({ ...q }));
+                return regularQuests.map((q) => ({ ...q }));
             }
-            return ALL_QUESTS
+            return regularQuests
                 .map((q) => ({ ...q, _distanceKm: haversineKm(userLoc.lat, userLoc.lng, q.lat, q.lng) }))
                 .filter((q) => (q._distanceKm ?? Infinity) <= nearbyRadiusKm)
                 .sort((a, b) => a._distanceKm! - b._distanceKm!);
         }
-        return (CITY_QUESTS[selectedCityId] || []).map((q) => ({ ...q }));
-    }, [selectedCityId, userLoc, nearbyRadiusKm, ALL_QUESTS, CITY_QUESTS, dataLoaded, nearbyExplicit, activeMapAreaCenter, searchTerm]);
+        return (regularCityQuests[selectedCityId] || []).map((q) => ({ ...q }));
+    }, [
+        selectedCityId,
+        userLoc,
+        nearbyRadiusKm,
+        ALL_QUESTS,
+        dataLoaded,
+        nearbyExplicit,
+        activeMapAreaCenter,
+        searchTerm,
+        regularQuests,
+        regularCityQuests,
+        kidsQuests,
+    ]);
 
     const catalogModel = useQuestCatalogResponsiveModel(questsAll.length);
     const questCardWidth = catalogModel.cardWidth;
@@ -395,13 +432,15 @@ export default function QuestsScreen() {
         const source = searchTerm
             ? questsAll
             : selectedCityId === NEARBY_ID
-                ? (userLoc || activeMapAreaCenter ? questsAll : ALL_QUESTS)
+                ? (userLoc || activeMapAreaCenter ? questsAll : regularQuests)
                 : questsAll;
 
         return source
             .filter((q) => Number.isFinite(q.lat) && Number.isFinite(q.lng) && !!q.id)
             .map((q) => {
-                const citySegmentRaw = selectedCityId === NEARBY_ID ? (q.cityId || '') : selectedCityId;
+                const citySegmentRaw = selectedCityId === NEARBY_ID || selectedCityId === KIDS_FILTER_ID
+                    ? (q.cityId || '')
+                    : selectedCityId;
                 const citySegment = encodeURIComponent(String(citySegmentRaw || 'city'));
                 const questSegment = encodeURIComponent(String(q.id));
                 const questUrl = buildCanonicalUrl(`/quests/${citySegment}/${questSegment}`);
@@ -430,10 +469,13 @@ export default function QuestsScreen() {
                     },
                 };
             });
-    }, [dataLoaded, selectedCityId, userLoc, activeMapAreaCenter, questsAll, ALL_QUESTS, searchTerm]);
+    }, [dataLoaded, selectedCityId, userLoc, activeMapAreaCenter, questsAll, regularQuests, searchTerm]);
 
     const mapCenter = useMemo(() => {
-        const selectedCity = CITIES.find((c) => c.id === selectedCityId);
+        const kidsCenter = selectedCityId === KIDS_FILTER_ID ? getAverageQuestMapPointCenter(mapPoints) : null;
+        const selectedCity = kidsCenter
+            ? { lat: kidsCenter.latitude, lng: kidsCenter.longitude }
+            : CITIES.find((c) => c.id === selectedCityId);
         return resolveQuestMapCenter({
             searchTerm,
             mapPoints,
@@ -483,7 +525,11 @@ export default function QuestsScreen() {
 
     // ── SEO ──
     const selectedCityName =
-        selectedCityId === NEARBY_ID ? 'Рядом' : CITIES.find((c) => c.id === selectedCityId)?.name ?? null;
+        selectedCityId === NEARBY_ID
+            ? 'Рядом'
+            : selectedCityId === KIDS_FILTER_ID
+                ? 'Детские сказки'
+                : CITIES.find((c) => c.id === selectedCityId)?.name ?? null;
 
     const titleText = useMemo(() => {
         if (!selectedCityId) return 'Квесты | MeTravel';
@@ -499,10 +545,13 @@ export default function QuestsScreen() {
                 : ' — геолокация отключена';
             return `Квесты: Рядом${suffix} | MeTravel`;
         }
+        if (selectedCityId === KIDS_FILTER_ID) {
+            return `Детские сказки: ${kidsQuests.length} ${kidsQuests.length === 1 ? 'квест' : 'квестов'} | MeTravel`;
+        }
         return selectedCityName
             ? `Квесты: ${selectedCityName} | MeTravel`
             : 'Все квесты | MeTravel';
-    }, [selectedCityId, selectedCityName, nearbyCount, userLoc, activeMapAreaCenter, questsAll.length]);
+    }, [selectedCityId, selectedCityName, nearbyCount, userLoc, activeMapAreaCenter, questsAll.length, kidsQuests.length]);
 
     const descText = useMemo(() => {
         if (selectedCityId === NEARBY_ID) {
@@ -513,6 +562,9 @@ export default function QuestsScreen() {
                 return 'Каталог офлайн-квестов во всех доступных городах. Разрешите геолокацию, чтобы увидеть приключения рядом с вами.';
             }
             return 'Офлайн-квесты рядом с вами и ваше текущее местоположение на карте.';
+        }
+        if (selectedCityId === KIDS_FILTER_ID) {
+            return 'Детские квесты в сказочном акварельном стиле: семейные прогулки, добрые герои, загадки и городские легенды.';
         }
         if (selectedCityName) return `Офлайн-квесты в городе ${selectedCityName}. Прогулки по точкам, задания и маршруты.`;
         return 'Исследуйте города и парки с офлайн-квестами — приключения на карте рядом с вами.';
@@ -573,6 +625,7 @@ export default function QuestsScreen() {
                             viewMode={viewMode}
                             selectedCityId={selectedCityId}
                             nearbyId={NEARBY_ID}
+                            kidsFilterId={KIDS_FILTER_ID}
                             areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
                             collapsedCountryCodes={collapsedCountryCodes}
                             citiesByCountry={citiesByCountry}
@@ -596,6 +649,7 @@ export default function QuestsScreen() {
                     viewMode={viewMode}
                     selectedCityId={selectedCityId}
                     nearbyId={NEARBY_ID}
+                    kidsFilterId={KIDS_FILTER_ID}
                     areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
                     collapsedCountryCodes={collapsedCountryCodes}
                     citiesByCountry={citiesByCountry}
@@ -616,6 +670,7 @@ export default function QuestsScreen() {
                 selectedCityId={selectedCityId}
                 selectedCityName={selectedCityName}
                 nearbyId={NEARBY_ID}
+                kidsFilterId={KIDS_FILTER_ID}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 questsAll={questsAll}
@@ -632,6 +687,7 @@ export default function QuestsScreen() {
                 isMobile={isMobile}
                 filtersActive={filtersActive}
                 onResetFilters={handleResetFilters}
+                onShowKids={handleShowKidsQuests}
                 onShowNearby={requestNearbyQuests}
                 onOpenFilterDrawer={() => setFilterDrawerOpen(true)}
                 onToggleViewMode={handleToggleViewMode}

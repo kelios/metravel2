@@ -107,6 +107,7 @@ type QuestsSidebarProps = {
     viewMode: 'list' | 'map';
     selectedCityId: string | null;
     nearbyId: string;
+    kidsFilterId: string;
     areAllCountryGroupsCollapsed: boolean;
     collapsedCountryCodes: Record<string, boolean>;
     citiesByCountry: CountryGroup[];
@@ -125,6 +126,7 @@ export default function QuestsSidebar({
     viewMode,
     selectedCityId,
     nearbyId,
+    kidsFilterId,
     areAllCountryGroupsCollapsed,
     collapsedCountryCodes,
     citiesByCountry,
@@ -140,6 +142,7 @@ export default function QuestsSidebar({
     const iconSize = isMobile ? 16 : 18;
     const hasCountryGroups = citiesByCountry.length > 0;
     const isNearbySelected = selectedCityId === nearbyId;
+    const isKidsSelected = selectedCityId === kidsFilterId;
     const mapActionActive = viewMode === 'map';
     const mapActionLabel = viewMode === 'map' ? 'Показать квесты списком' : 'Показать квесты на карте';
     const toggleAllLabel = areAllCountryGroupsCollapsed ? 'Развернуть все страны' : 'Свернуть все страны';
@@ -188,6 +191,18 @@ export default function QuestsSidebar({
                         accessibilityLabel={`Рядом со мной, ${pluralizeQuest(cityQuestCountById[nearbyId] || 0)}`}
                         accessibilityState={{ selected: isNearbySelected }}
                         testID="quests-sidebar-nearby-button"
+                    />
+                    <SidebarActionButton
+                        styles={styles}
+                        colors={colors}
+                        isMobile={isMobile}
+                        icon="book-open"
+                        label="Детские сказки"
+                        active={isKidsSelected}
+                        onPress={() => onSelectCity(kidsFilterId)}
+                        accessibilityLabel={`Детские сказки, ${pluralizeQuest(cityQuestCountById[kidsFilterId] || 0)}`}
+                        accessibilityState={{ selected: isKidsSelected }}
+                        testID="quests-sidebar-kids-button"
                     />
                     <SidebarActionButton
                         styles={styles}
