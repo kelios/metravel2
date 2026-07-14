@@ -1450,18 +1450,18 @@ test.describe('Валидация и ошибки', () => {
     await page.goto('/');
   });
 
-  test('должен показать ошибку при попытке сохранить без названия', async ({ page }) => {
+  test('должен перейти к маршруту и показать ошибки текущего шага без обязательных данных', async ({ page }) => {
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
 
-    // Не заполняем название, пытаемся перейти дальше
+    // Навигация по шагам свободная: неполный шаг 1 не блокирует переход.
     await clickNext(page);
 
-    // Приложение остается на первом шаге и показывает ошибки по незаполненным обязательным полям.
+    // После перехода на маршрут показываются ошибки текущего шага.
     await expect(page.locator('text=/\\d+ (ошибка|ошибки)/i')).toBeVisible();
-    await expect(page.getByText('Название путешествия обязательно для заполнения')).toBeVisible();
-    await expect(page.getByText('Описание обязательно для заполнения')).toBeVisible();
-    await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toBeVisible();
+    await expect(page.getByText('Точки маршрута обязательны для заполнения')).toBeVisible();
+    await expect(page.getByText('Страны маршрута обязательны для заполнения')).toBeVisible();
+    await expect(page.getByPlaceholder(/Поиск места/)).toBeVisible();
   });
 
   test('должен показать предупреждения на шаге публикации', async ({ page }) => {
