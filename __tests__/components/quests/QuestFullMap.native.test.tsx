@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, within } from '@testing-library/react-native';
 import { View } from 'react-native';
 
 jest.mock('expo-file-system/legacy', () => ({
@@ -120,6 +120,19 @@ describe('QuestFullMap native marker status', () => {
     fireEvent.press(getByLabelText('Скачать маршрут (PNG, GPX, GeoJSON)'));
 
     expect(getByText('Поделиться PNG')).toBeTruthy();
+  });
+
+  it('keeps the fullscreen title, export, and close actions in one toolbar', () => {
+    const { getByLabelText, getByTestId } = render(
+      <QuestFullMap steps={steps} title="Карта квеста" height={420} />
+    );
+
+    fireEvent.press(getByLabelText('Открыть карту квеста на весь экран'));
+
+    const fullscreenToolbar = within(getByTestId('quest-fullscreen-toolbar'));
+    expect(fullscreenToolbar.getAllByText('Карта квеста')).toHaveLength(1);
+    expect(fullscreenToolbar.getByLabelText('Скачать маршрут (PNG, GPX, GeoJSON)')).toBeTruthy();
+    expect(fullscreenToolbar.getByLabelText('Закрыть полноэкранную карту квеста')).toBeTruthy();
   });
 
   it('keeps a safe native height when callers pass the compact mobile size', () => {

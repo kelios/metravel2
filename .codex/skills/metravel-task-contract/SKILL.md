@@ -46,6 +46,7 @@ Done gate:
 - For FE tasks depending on BE, require browser/API evidence against the same target; unit tests and mock fallback alone are not enough.
 - If board status says BE is done but runtime contract probes fail, keep FE in `review` or `blocked_by`, add evidence, and create or reopen a BE/deploy blocker.
 - Keep secrets out of contract text and logs.
+- For visible UI/UX work, add `Design evidence` next to the contract: a tracked `docs/` mock path or stable Figma URL, the normative states/platforms, parity expectations, and runtime comparison in `Validation`/`Done gate`. Do not use `.codex-temp/` as a board attachment.
 
 ## Output
 

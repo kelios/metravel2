@@ -152,6 +152,7 @@ function QuestFullMap({
                                          title = 'Карта квеста',
                                          activeStepIndex,
                                          allowFullscreen = true,
+                                         onClose,
                                          // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                          interactive = true,
                                      }: {
@@ -160,6 +161,7 @@ function QuestFullMap({
     title?: string;
     activeStepIndex?: number;
     allowFullscreen?: boolean;
+    onClose?: () => void;
     interactive?: boolean;
 }) {
     const [mods, setMods] = useState<Mods | null>(null);
@@ -170,7 +172,7 @@ function QuestFullMap({
     const { height: viewportHeight } = useWindowDimensions();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
-    const fullscreenMapHeight = Math.max(360, Math.round(viewportHeight - 72));
+    const fullscreenMapHeight = Math.max(360, Math.round(viewportHeight - insets.top));
     const bounds = useMemo(() => {
         if (!steps?.length) return undefined;
         const coords = steps
@@ -452,7 +454,10 @@ function QuestFullMap({
     return (
         <View style={[styles.wrap, { height }]}>
             {/* Mobile-friendly toolbar */}
-            <View style={[styles.toolbar, { paddingTop: insets.top + 8 }]}>
+            <View
+                style={[styles.toolbar, { paddingTop: insets.top + 8 }]}
+                testID={onClose ? 'quest-fullscreen-toolbar' : 'quest-map-toolbar'}
+            >
                 <Text style={styles.toolbarTitle} numberOfLines={1}>
                     {title}
                 </Text>
@@ -476,30 +481,30 @@ function QuestFullMap({
                     >
                         <Feather name="download" size={18} color={colors.textOnPrimary} />
                     </TouchableOpacity>
+                    {onClose && (
+                        <TouchableOpacity
+                            style={styles.fullscreenClose}
+                            onPress={onClose}
+                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Закрыть полноэкранную карту квеста"
+                        >
+                            <Feather name="x" size={20} color={colors.text} />
+                        </TouchableOpacity>
+                    )}
                 </View>
             </View>
 
             {fullscreenVisible
                 ? renderFullscreenOverlay(
-                      <View style={[styles.fullscreenOverlay, { paddingTop: insets.top }]} pointerEvents="auto">
-                          <View style={styles.fullscreenHeader}>
-                              <Text style={styles.fullscreenTitle} numberOfLines={1}>{title}</Text>
-                              <TouchableOpacity
-                                  style={styles.fullscreenClose}
-                                  onPress={() => setFullscreenVisible(false)}
-                                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                                  accessibilityRole="button"
-                                  accessibilityLabel="Закрыть полноэкранную карту квеста"
-                              >
-                                  <Feather name="x" size={20} color={colors.text} />
-                              </TouchableOpacity>
-                          </View>
+                      <View style={styles.fullscreenOverlay} pointerEvents="auto">
                           <QuestFullMap
                               steps={steps}
                               height={fullscreenMapHeight}
                               title={title}
                               activeStepIndex={activeStepIndex}
                               allowFullscreen={false}
+                              onClose={() => setFullscreenVisible(false)}
                           />
                       </View>
                   )
@@ -720,22 +725,6 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
         bottom: 0,
         zIndex: 1000,
         backgroundColor: colors.background,
-    },
-    fullscreenHeader: {
-        minHeight: 56,
-        paddingHorizontal: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-        backgroundColor: colors.surface,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    fullscreenTitle: {
-        flex: 1,
-        color: colors.text,
-        fontSize: 16,
-        fontWeight: '800',
     },
     fullscreenClose: {
         width: 44,

@@ -94,6 +94,7 @@ function QuestFullMap({
     title = 'Карта квеста',
     activeStepIndex,
     allowFullscreen = true,
+    onClose,
     interactive = true,
     pointerFrozen = false,
 }: {
@@ -102,6 +103,7 @@ function QuestFullMap({
     title?: string;
     activeStepIndex?: number;
     allowFullscreen?: boolean;
+    onClose?: () => void;
     interactive?: boolean;
     pointerFrozen?: boolean;
 }) {
@@ -121,7 +123,7 @@ function QuestFullMap({
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const resolvedHeight = Math.max(MIN_INLINE_MAP_HEIGHT, Math.round(height));
-    const fullscreenMapHeight = Math.max(360, Math.round(viewportHeight - 72));
+    const fullscreenMapHeight = Math.max(360, Math.round(viewportHeight - insets.top));
 
     // Двухфазное закрытие fullscreen-карты. Синхронный unmount WebView во время
     // активного жеста пана оставляет JSResponder залоченным (DOWN без UP/CANCEL) —
@@ -623,7 +625,10 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
 
     return (
         <View style={[styles.wrap, { height: resolvedHeight }]}>
-            <View style={styles.toolbar}>
+            <View
+                style={styles.toolbar}
+                testID={onClose ? 'quest-fullscreen-toolbar' : 'quest-map-toolbar'}
+            >
                 <Text style={styles.toolbarTitle} numberOfLines={1}>
                     {title}
                 </Text>
@@ -646,6 +651,17 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
                     >
                         <Feather name="download" size={18} color={colors.textOnPrimary} />
                     </TouchableOpacity>
+                    {onClose && (
+                        <TouchableOpacity
+                            style={styles.fullscreenClose}
+                            onPress={onClose}
+                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Закрыть полноэкранную карту квеста"
+                        >
+                            <Feather name="x" size={20} color={colors.text} />
+                        </TouchableOpacity>
+                    )}
                 </View>
             </View>
 
@@ -658,24 +674,13 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
                     onRequestClose={closeFullscreen}
                 >
                     <View style={[styles.fullscreenModal, { paddingTop: insets.top }]}>
-                        <View style={styles.fullscreenHeader}>
-                            <Text style={styles.fullscreenTitle} numberOfLines={1}>{title}</Text>
-                            <TouchableOpacity
-                                style={styles.fullscreenClose}
-                                onPress={closeFullscreen}
-                                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                                accessibilityRole="button"
-                                accessibilityLabel="Закрыть полноэкранную карту квеста"
-                            >
-                                <Feather name="x" size={20} color={colors.text} />
-                            </TouchableOpacity>
-                        </View>
                         <QuestFullMap
                             steps={steps}
                             height={fullscreenMapHeight}
                             title={title}
                             activeStepIndex={activeStepIndex}
                             allowFullscreen={false}
+                            onClose={closeFullscreen}
                             pointerFrozen={fullscreenClosing}
                         />
                     </View>
@@ -858,22 +863,6 @@ const createStyles = (colors: ThemedColors) =>
         fullscreenModal: {
             flex: 1,
             backgroundColor: colors.background,
-        },
-        fullscreenHeader: {
-            minHeight: 56,
-            paddingHorizontal: 12,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.border,
-            backgroundColor: colors.surface,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
-        },
-        fullscreenTitle: {
-            flex: 1,
-            color: colors.text,
-            fontSize: 16,
-            fontWeight: '800',
         },
         fullscreenClose: {
             width: 44,

@@ -32,6 +32,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/features/places.md` — каталог отдельных точек `/places`
 - `docs/features/user.md` — профиль, collections, calendar statuses, author stats
 - `docs/features/social-trips-gamification-roadmap.md` — product backlog для геймификации, совместных поездок, trust и privacy
+- `docs/features/map-current-location-route-mobile-mock.svg` — UI contract mock for current location, route-from-me, denied-location, and route-ready states on mobile web and Android
 
 ## Governance templates
 

@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1160" viewBox="0 0 1600 1160" role="img" aria-labelledby="title desc">
+  <title id="title">MeTravel — текущее положение и маршрут на мобильной карте</title>
+  <desc id="desc">Четыре мобильных состояния: геолокация доступна, выбор финиша, доступ запрещён и готовый маршрут. Макет одинаков для mobile web и Android.</desc>
+  <defs>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#2d2d2d" flood-opacity="0.14"/>
+    </filter>
+    <filter id="cardShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#2d2d2d" flood-opacity="0.13"/>
+    </filter>
+    <pattern id="mapGrid" width="72" height="72" patternUnits="userSpaceOnUse">
+      <rect width="72" height="72" fill="#eef1ec"/>
+      <path d="M0 18 L72 46 M10 72 L44 0 M0 58 L72 28" stroke="#ffffff" stroke-width="7" opacity="0.92"/>
+      <path d="M0 18 L72 46 M10 72 L44 0 M0 58 L72 28" stroke="#d4dad3" stroke-width="1.5" opacity="0.9"/>
+      <rect x="8" y="8" width="18" height="15" rx="3" fill="#d9e5d8"/>
+      <rect x="48" y="52" width="17" height="12" rx="3" fill="#d9e5d8"/>
+    </pattern>
+    <clipPath id="p1"><rect x="60" y="188" width="340" height="760" rx="38"/></clipPath>
+    <clipPath id="p2"><rect x="440" y="188" width="340" height="760" rx="38"/></clipPath>
+    <clipPath id="p3"><rect x="820" y="188" width="340" height="760" rx="38"/></clipPath>
+    <clipPath id="p4"><rect x="1200" y="188" width="340" height="760" rx="38"/></clipPath>
+    <style>
+      .title { font: 700 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #3a3a3a; }
+      .subtitle { font: 400 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #636363; }
+      .frameTitle { font: 700 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #3a3a3a; }
+      .frameMeta { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #636363; }
+      .ui { font: 600 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #3a3a3a; }
+      .uiSmall { font: 500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #636363; }
+      .uiTiny { font: 500 10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #636363; }
+      .button { font: 700 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #111827; }
+      .buttonInverse { font: 700 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #ffffff; }
+      .callout { font: 600 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #547769; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1160" fill="#f9f8f6"/>
+  <text id="titleText" x="60" y="68" class="title">Карта: «Маршрут от меня» и честное состояние геолокации</text>
+  <text x="60" y="102" class="subtitle">Один UX-контракт для mobile web и Android · не использовать координаты центра карты как положение человека</text>
+
+  <g transform="translate(60,136)">
+    <rect width="178" height="34" rx="17" fill="#f0f5f3" stroke="#7a9d8f"/>
+    <circle cx="20" cy="17" r="6" fill="#2563eb"/>
+    <text x="34" y="22" class="callout">GPS подтверждён</text>
+  </g>
+  <g transform="translate(254,136)">
+    <rect width="222" height="34" rx="17" fill="#fff8f3" stroke="#f5842c"/>
+    <circle cx="20" cy="17" r="6" fill="#f5842c"/>
+    <text x="34" y="22" class="callout" fill="#b35900">Требуется действие</text>
+  </g>
+
+  <!-- Phone 1 -->
+  <text x="60" y="176" class="frameTitle">1. Точка выбрана</text>
+  <text x="60" y="982" class="frameMeta"><tspan x="60" dy="0">GPS доступен · главный CTA</tspan><tspan x="60" dy="19">понятен без обучения</tspan></text>
+  <rect x="48" y="176" width="364" height="784" rx="48" fill="#242827" filter="url(#shadow)"/>
+  <g clip-path="url(#p1)">
+    <rect x="60" y="188" width="340" height="760" fill="url(#mapGrid)"/>
+    <rect x="60" y="188" width="340" height="62" fill="#ffffff" opacity="0.96"/>
+    <text x="86" y="226" class="ui">Места рядом</text>
+    <g transform="translate(334,202)"><circle cx="16" cy="16" r="16" fill="#ffffff" stroke="#d9dad8"/><path d="M16 9v14M9 16h14" stroke="#3a3a3a" stroke-width="2"/></g>
+    <g transform="translate(86,278)">
+      <rect width="118" height="34" rx="17" fill="#ffffff" filter="url(#cardShadow)"/>
+      <circle cx="18" cy="17" r="6" fill="#2563eb"/><text x="32" y="22" class="uiSmall">Вы здесь</text>
+    </g>
+    <circle cx="175" cy="417" r="18" fill="#ffffff" opacity="0.72"/>
+    <circle cx="175" cy="417" r="10" fill="#2563eb" stroke="#ffffff" stroke-width="4"/>
+    <path d="M306 351c0-17-14-31-31-31s-31 14-31 31c0 27 31 54 31 54s31-27 31-54z" fill="#f5842c" stroke="#ffffff" stroke-width="4"/>
+    <circle cx="275" cy="350" r="9" fill="#ffffff"/>
+    <rect x="72" y="548" width="316" height="386" rx="26" fill="#ffffff" filter="url(#cardShadow)"/>
+    <rect x="90" y="566" width="280" height="112" rx="18" fill="#e8ece7"/>
+    <path d="M90 655 L154 608 L210 646 L264 598 L370 666" fill="#d3ded2"/>
+    <text x="94" y="708" class="frameTitle">Усадьба в Слободе</text>
+    <text x="94" y="734" class="uiSmall">1,8 км · около 6 мин от вас</text>
+    <g transform="translate(94,750)"><rect width="94" height="28" rx="14" fill="#f0f5f3"/><text x="13" y="19" class="uiSmall" fill="#547769">Хочу поехать</text></g>
+    <rect x="94" y="796" width="274" height="46" rx="14" fill="#7a9d8f"/>
+    <path d="M116 812l12 7-12 7z" fill="#111827"/><text x="146" y="825" class="button">Маршрут от меня</text>
+    <rect x="94" y="854" width="132" height="46" rx="14" fill="#f5f4f2"/>
+    <path d="M112 871l13-6-6 13-5-5z" fill="none" stroke="#3a3a3a" stroke-width="2"/><text x="136" y="883" class="ui">Навигация</text>
+    <rect x="236" y="854" width="132" height="46" rx="14" fill="#f5f4f2"/>
+    <path d="M254 868h14v14h-14z" fill="none" stroke="#3a3a3a" stroke-width="2"/><text x="278" y="883" class="ui">Страница</text>
+  </g>
+
+  <!-- Phone 2 -->
+  <text x="440" y="176" class="frameTitle">2. Выберите финиш</text>
+  <text x="440" y="982" class="frameMeta"><tspan x="440" dy="0">Старт добавлен автоматически</tspan><tspan x="440" dy="19">счётчик уже 1/2</tspan></text>
+  <rect x="428" y="176" width="364" height="784" rx="48" fill="#242827" filter="url(#shadow)"/>
+  <g clip-path="url(#p2)">
+    <rect x="440" y="188" width="340" height="760" fill="url(#mapGrid)"/>
+    <rect x="440" y="188" width="340" height="62" fill="#ffffff" opacity="0.96"/>
+    <text x="466" y="226" class="ui">Маршрут</text>
+    <g transform="translate(694,203)"><rect width="60" height="32" rx="16" fill="#f0f5f3"/><text x="18" y="21" class="ui">1/2</text></g>
+    <rect x="458" y="266" width="304" height="76" rx="18" fill="#ffffff" filter="url(#cardShadow)"/>
+    <circle cx="484" cy="292" r="8" fill="#2563eb"/>
+    <text x="504" y="296" class="ui">Старт: моё местоположение</text>
+    <text x="484" y="322" class="uiSmall">Коснитесь места назначения на карте</text>
+    <circle cx="566" cy="506" r="18" fill="#ffffff" opacity="0.72"/>
+    <circle cx="566" cy="506" r="10" fill="#2563eb" stroke="#ffffff" stroke-width="4"/>
+    <path d="M566 506 C610 474, 654 450, 706 424" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-dasharray="2 14"/>
+    <path d="M566 506 C610 474, 654 450, 706 424" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 14"/>
+    <circle cx="706" cy="424" r="22" fill="#ffffff" stroke="#7a9d8f" stroke-width="3"/>
+    <path d="M697 424h18M706 415v18" stroke="#547769" stroke-width="2.5"/>
+    <rect x="458" y="774" width="304" height="70" rx="18" fill="#ffffff" filter="url(#cardShadow)"/>
+    <text x="480" y="804" class="ui">Не знаете точку на карте?</text>
+    <text x="480" y="828" class="uiSmall" fill="#547769">Найти место по названию</text>
+    <rect x="458" y="860" width="304" height="46" rx="14" fill="#f5f4f2"/>
+    <text x="541" y="889" class="button">Изменить старт</text>
+  </g>
+
+  <!-- Phone 3 -->
+  <text x="820" y="176" class="frameTitle">3. GPS недоступен</text>
+  <text x="820" y="982" class="frameMeta"><tspan x="820" dy="0">Нет ложной синей точки</tspan><tspan x="820" dy="19">расстояния и маршрута из Минска</tspan></text>
+  <rect x="808" y="176" width="364" height="784" rx="48" fill="#242827" filter="url(#shadow)"/>
+  <g clip-path="url(#p3)">
+    <rect x="820" y="188" width="340" height="760" fill="url(#mapGrid)"/>
+    <rect x="820" y="188" width="340" height="62" fill="#ffffff" opacity="0.96"/>
+    <text x="846" y="226" class="ui">Места рядом</text>
+    <rect x="838" y="266" width="304" height="130" rx="20" fill="#fff8f3" stroke="#f5842c" stroke-width="1.5" filter="url(#cardShadow)"/>
+    <circle cx="866" cy="296" r="10" fill="none" stroke="#b35900" stroke-width="2"/>
+    <path d="M866 288v10M866 304v1" stroke="#b35900" stroke-width="2" stroke-linecap="round"/>
+    <text x="886" y="300" class="ui" fill="#b35900">Местоположение не определено</text>
+    <text x="858" y="326" class="uiSmall">Разрешите доступ или задайте старт вручную.</text>
+    <rect x="856" y="344" width="144" height="36" rx="12" fill="#f5842c"/>
+    <text x="876" y="367" class="buttonInverse">Разрешить доступ</text>
+    <text x="1018" y="367" class="uiSmall" fill="#547769">Указать старт</text>
+    <path d="M1080 470c0-17-14-31-31-31s-31 14-31 31c0 27 31 54 31 54s31-27 31-54z" fill="#f5842c" stroke="#ffffff" stroke-width="4"/>
+    <circle cx="1049" cy="469" r="9" fill="#ffffff"/>
+    <rect x="832" y="566" width="316" height="344" rx="26" fill="#ffffff" filter="url(#cardShadow)"/>
+    <rect x="850" y="584" width="280" height="105" rx="18" fill="#e8ece7"/>
+    <text x="854" y="720" class="frameTitle">Усадьба в Слободе</text>
+    <text x="854" y="746" class="uiSmall">Расстояние появится после выбора старта</text>
+    <rect x="854" y="778" width="274" height="46" rx="14" fill="#7a9d8f"/>
+    <text x="923" y="807" class="button">Указать старт</text>
+    <rect x="854" y="838" width="132" height="46" rx="14" fill="#f5f4f2"/>
+    <text x="881" y="867" class="ui">Навигация</text>
+    <rect x="996" y="838" width="132" height="46" rx="14" fill="#f5f4f2"/>
+    <text x="1023" y="867" class="ui">Страница</text>
+  </g>
+
+  <!-- Phone 4 -->
+  <text x="1200" y="176" class="frameTitle">4. Маршрут готов</text>
+  <text x="1200" y="982" class="frameMeta"><tspan x="1200" dy="0">Тот же результат и порядок</tspan><tspan x="1200" dy="19">действий на обеих платформах</tspan></text>
+  <rect x="1188" y="176" width="364" height="784" rx="48" fill="#242827" filter="url(#shadow)"/>
+  <g clip-path="url(#p4)">
+    <rect x="1200" y="188" width="340" height="760" fill="url(#mapGrid)"/>
+    <rect x="1200" y="188" width="340" height="62" fill="#ffffff" opacity="0.96"/>
+    <text x="1226" y="226" class="ui">Маршрут</text>
+    <g transform="translate(1454,203)"><rect width="60" height="32" rx="16" fill="#f0f5f3"/><text x="18" y="21" class="ui">2/2</text></g>
+    <path d="M1270 618 C1304 568, 1290 508, 1348 472 S1440 420, 1474 342" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round"/>
+    <path d="M1270 618 C1304 568, 1290 508, 1348 472 S1440 420, 1474 342" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="1270" cy="618" r="11" fill="#2563eb" stroke="#ffffff" stroke-width="4"/>
+    <path d="M1500 326c0-14-12-26-26-26s-26 12-26 26c0 23 26 46 26 46s26-23 26-46z" fill="#f5842c" stroke="#ffffff" stroke-width="4"/>
+    <circle cx="1474" cy="325" r="8" fill="#ffffff"/>
+    <rect x="1218" y="684" width="304" height="218" rx="24" fill="#ffffff" filter="url(#cardShadow)"/>
+    <text x="1240" y="720" class="frameTitle">Маршрут готов</text>
+    <text x="1240" y="748" class="ui">11,4 км · 27 мин · на автомобиле</text>
+    <rect x="1240" y="774" width="260" height="46" rx="14" fill="#7a9d8f"/>
+    <text x="1304" y="803" class="button">Открыть маршрут</text>
+    <rect x="1240" y="834" width="124" height="44" rx="14" fill="#f5f4f2"/>
+    <text x="1267" y="862" class="ui">Очистить</text>
+    <rect x="1376" y="834" width="124" height="44" rx="14" fill="#f5f4f2"/>
+    <text x="1400" y="862" class="ui">Навигация</text>
+  </g>
+
+  <rect x="60" y="1024" width="1480" height="92" rx="24" fill="#ffffff" stroke="#e5e5e3"/>
+  <text x="88" y="1056" class="frameTitle">Общий UI-контракт</text>
+  <text x="88" y="1084" class="ui">Одинаковые компоненты, порядок действий, подписи и touch-target ≥ 44 px на mobile web и Android.</text>
+  <text x="88" y="1106" class="uiSmall">«Был / Хочу / Планирую» видны текстом · fallback-центр карты не считается GPS · live-позиция обновляется только после разрешения.</text>
+</svg>
