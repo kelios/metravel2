@@ -79,6 +79,7 @@ export interface MapProps {
 export type MapMovePayload = Coordinates & {
   bbox?: MapClusterBBox;
   zoom?: number;
+  userInitiated?: boolean;
 };
 
 export interface ClusterData {

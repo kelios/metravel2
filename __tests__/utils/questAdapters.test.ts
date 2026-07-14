@@ -186,6 +186,24 @@ describe('questAdapters', () => {
       expect(result.answer('3')).toBe(false);
     });
 
+    it('supports legacy string answer_pattern from backend serializer', () => {
+      const result = adaptStep({
+        id: 15,
+        step_id: 'legacy-any',
+        title: 'Legacy',
+        location: 'Place',
+        story: 'Story',
+        task: 'Task',
+        lat: 53.9,
+        lng: 27.56,
+        maps_url: 'https://maps.google.com',
+        answer_pattern: '{"type":"exact","value":"дракон"}',
+      });
+
+      expect(result.answer('Дракон')).toBe(true);
+      expect(result.answer('кот')).toBe(false);
+    });
+
     it('treats textual answer patterns as text even when backend sends input_type=number', () => {
       const step = adaptStep({
         id: 10,
@@ -366,6 +384,85 @@ describe('questAdapters', () => {
         steps: [noOrderA, mkStep(2, 2), noOrderB, mkStep(1, 1)],
       } as any);
       expect(result.steps.map((s) => s.id)).toEqual(['step-1', 'step-2', 'no-a', 'no-b']);
+    });
+
+    it('adapts the current production bundle shape with object intro and array steps', () => {
+      const result = adaptBundle({
+        id: 109,
+        quest_id: 'vitebsk-teens-street-art-map',
+        title: 'Город как галерея: код восьми стен',
+        cover_url: 'https://metravel.by/quest-cover/quests/109/main/cover.png',
+        storage_key: 'quest_vitebsk_teens_street_art_map_v1',
+        rating_avg: 4.5,
+        rating_count: 2,
+        user_rating: 5,
+        completions_count: 7,
+        is_completed_by_me: true,
+        first_completer: { id: 3, name: 'Анна', avatar: null },
+        city: {
+          id: 13,
+          name: 'Витебск',
+          lat: 55.1904,
+          lng: 30.2049,
+          country_code: 'by',
+        },
+        intro: {
+          id: 1065,
+          step_id: 'intro',
+          title: 'Карта без подписей',
+          location: 'Маршрут уличного искусства Витебска',
+          story: 'Intro story',
+          task: 'Начните маршрут.',
+          hint: null,
+          answer_pattern: { type: 'any', value: '' },
+          lat: 55.193333,
+          lng: 30.190798,
+          geo_verify: { enabled: false, radius_m: 40 },
+          poi_info: null,
+          maps_url: 'https://maps.google.com/?q=55.1933329,30.1907976',
+          image_url: null,
+          input_type: 'text',
+          order: 0,
+          is_intro: true,
+          country_code: 'by',
+        },
+        steps: [
+          {
+            id: 1066,
+            step_id: '1-scale',
+            title: 'Улика 1: масштаб',
+            location: 'Большой мурал',
+            story: 'Story',
+            task: 'Какое животное стало главным образом?',
+            hint: 'Морское млекопитающее.',
+            answer_pattern: { type: 'exact_any', value: '["кит","кита"]' },
+            lat: 55.193333,
+            lng: 30.190798,
+            geo_verify: { enabled: false, radius_m: 40 },
+            poi_info: null,
+            maps_url: 'https://maps.google.com/?q=55.1933329,30.1907976',
+            image_url: null,
+            input_type: 'text',
+            order: 1,
+            is_intro: false,
+            country_code: 'by',
+          },
+        ],
+        finale: { text: 'Финал', video_url: null, poster_url: null },
+      });
+
+      expect(result.questId).toBe('vitebsk-teens-street-art-map');
+      expect(result.coverUrl).toBe('https://metravel.by/quest-cover/quests/109/main/cover.png');
+      expect(result.city?.countryCode).toBe('BY');
+      expect(result.intro?.id).toBe('intro');
+      expect(result.steps).toHaveLength(1);
+      expect(result.steps[0].answer('Кит')).toBe(true);
+      expect(result.ratingAvg).toBe(4.5);
+      expect(result.ratingCount).toBe(2);
+      expect(result.userRating).toBe(5);
+      expect(result.completionsCount).toBe(7);
+      expect(result.isCompletedByMe).toBe(true);
+      expect(result.firstCompleter?.name).toBe('Анна');
     });
   });
 

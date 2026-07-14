@@ -4,6 +4,7 @@ import { useLocalSearchParams, usePathname } from 'expo-router';
 
 import { useRouteStore } from '@/stores/routeStore';
 import type { Point as MapPoint } from '@/components/MapPage/Map/types';
+import type { MapMovePayload } from '@/components/MapPage/Map/types';
 import type { MapUiApi } from '@/types/mapUi';
 import type { TravelCoords } from '@/types/types';
 import {
@@ -74,7 +75,13 @@ export function useMapScreenController() {
   }, []);
 
   // Coordinates
-  const { coordinates, coordinatesSource, coordinatesAreFallback, error: geoError } = useMapCoordinates();
+  const {
+    coordinates,
+    coordinatesSource,
+    coordinatesAreFallback,
+    error: geoError,
+    refreshLocation,
+  } = useMapCoordinates();
 
   // Actual current user location reported by the map implementation (web Leaflet).
   // This should be the primary source for radius-mode queries.
@@ -100,9 +107,13 @@ export function useMapScreenController() {
   const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number } | null>(
     null
   );
-  const handleMapMove = useCallback((center: { latitude: number; longitude: number }) => {
+  const [isFollowingUser, setIsFollowingUser] = useState(false);
+  const handleMapMove = useCallback((center: MapMovePayload) => {
     if (!Number.isFinite(center.latitude) || !Number.isFinite(center.longitude)) return;
     setMapCenter({ latitude: center.latitude, longitude: center.longitude });
+    if (center.userInitiated) {
+      setIsFollowingUser(false);
+    }
   }, []);
 
   // URL params → initial filter values
@@ -593,12 +604,24 @@ export function useMapScreenController() {
     // F-49 — returning to the GPS anchor clears the explicit "search this area"
     // pick so the nearby query revolves around the user again.
     setSearchAreaCenter(null);
+    setIsFollowingUser(true);
+    void refreshLocation?.();
     try {
       mapUiApi?.centerOnUser?.();
     } catch {
       // noop
     }
-  }, [mapUiApi]);
+  }, [mapUiApi, refreshLocation]);
+
+  useEffect(() => {
+    if (!isFollowingUser) return;
+    if (!userLocation) return;
+    try {
+      mapUiApi?.centerOnUser?.();
+    } catch {
+      // noop
+    }
+  }, [isFollowingUser, mapUiApi, userLocation]);
 
   // #211 — не терять контекст карты при возврате в режим «Места» (radius).
   // Режим «Маршрут» уводит вьюпорт к общереспубликанскому виду (fit по маршруту).

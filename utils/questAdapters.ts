@@ -9,6 +9,7 @@ import type {
     ApiQuestStep,
     ApiQuestCity,
     ApiQuestFinale,
+    ApiQuestFirstCompleter,
 } from '@/api/quests';
 import { getCountryCodeByCoords } from '@/utils/geoCountry';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
@@ -73,12 +74,13 @@ export type QuestMeta = {
     ratingCount: number;
     completionsCount: number;
     isCompletedByMe: boolean;
-    firstCompleter: { id: number; name: string; avatar: string | null } | null;
+    firstCompleter: ApiQuestFirstCompleter | null;
 };
 
 /** Тип бандла для фронтенда (совместим с QuestWizardProps) */
 export type FrontendQuestBundle = {
     id: number;
+    questId: string;
     title: string;
     steps: QuestStep[];
     finale: QuestFinale;
@@ -86,6 +88,12 @@ export type FrontendQuestBundle = {
     storageKey?: string;
     city?: QuestCity;
     coverUrl?: string;
+    ratingAvg: number | null;
+    ratingCount: number;
+    userRating: number | null;
+    completionsCount: number;
+    isCompletedByMe: boolean;
+    firstCompleter: ApiQuestFirstCompleter | null;
 };
 
 const INTRO_STEP_ID = 'intro';
@@ -209,6 +217,26 @@ function resolveStepInputType(
     }
 }
 
+function resolveAnswerPattern(pattern: ApiQuestStep['answer_pattern']): { type?: string; value?: unknown } {
+    if (!pattern) return {};
+    if (typeof pattern === 'string') {
+        try {
+            const parsed = JSON.parse(pattern) as unknown;
+            if (parsed && typeof parsed === 'object') {
+                const record = parsed as Record<string, unknown>;
+                return {
+                    type: typeof record.type === 'string' ? record.type : undefined,
+                    value: record.value,
+                };
+            }
+        } catch {
+            // Backend returns a raw string only for non-JSON legacy values.
+        }
+        return { type: pattern, value: '' };
+    }
+    return pattern;
+}
+
 /** Исправляет URL медиа, если бэкенд приклеил свой хост перед S3/CDN URL */
 export function fixMediaUrl(url: string | null | undefined): string | undefined {
     const normalized = normalizeMediaUrl(url);
@@ -218,8 +246,9 @@ export function fixMediaUrl(url: string | null | undefined): string | undefined 
 /** Конвертирует шаг из API формата во фронтенд формат */
 export function adaptStep(apiStep: ApiQuestStep): QuestStep {
     // answer_pattern (новый формат) или answer_type/answer_value (старый)
-    const answerType = apiStep.answer_pattern?.type ?? apiStep.answer_type ?? 'any';
-    const rawAnswerValue = apiStep.answer_pattern?.value ?? apiStep.answer_value ?? '';
+    const answerPattern = resolveAnswerPattern(apiStep.answer_pattern);
+    const answerType = answerPattern.type ?? apiStep.answer_type ?? 'any';
+    const rawAnswerValue = answerPattern.value ?? apiStep.answer_value ?? '';
     // Бэкенд может прислать value числом/объектом (напр. exact -> 2). buildAnswerChecker
     // ждёт строку (.toLowerCase / JSON.parse), иначе бросает и роняет ВЕСЬ список шагов.
     const answerValue = typeof rawAnswerValue === 'string'
@@ -240,7 +269,7 @@ export function adaptStep(apiStep: ApiQuestStep): QuestStep {
         answer: buildAnswerChecker(answerType, answerValue),
         lat: coordNum(apiStep.lat),
         lng: coordNum(apiStep.lng),
-        mapsUrl: apiStep.maps_url,
+        mapsUrl: apiStep.maps_url || '',
         image: fixMediaUrl(apiStep.image_url),
         inputType: resolveStepInputType(answerType, answerValue, apiStep.input_type),
         poiInfo: adaptPoiInfo(apiStep),
@@ -369,6 +398,7 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
 
     return {
         id: apiBundle.id,
+        questId: apiBundle.quest_id,
         title: apiBundle.title,
         steps,
         finale: adaptFinale(apiBundle.finale),
@@ -376,6 +406,12 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
         storageKey: apiBundle.storage_key,
         city: adaptCity(apiBundle.city),
         coverUrl: fixMediaUrl(apiBundle.cover_url),
+        ratingAvg: apiBundle.rating_avg ?? null,
+        ratingCount: apiBundle.rating_count ?? 0,
+        userRating: apiBundle.user_rating ?? null,
+        completionsCount: apiBundle.completions_count ?? 0,
+        isCompletedByMe: apiBundle.is_completed_by_me ?? false,
+        firstCompleter: apiBundle.first_completer ?? null,
     };
 }
 

@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react-native'
 
 const mockUpdateCoordinates = jest.fn()
+const mockRefreshLocation = jest.fn()
 const mockBuildRouteTo = jest.fn()
 const mockUseRouteController = jest.fn()
 
@@ -19,6 +20,7 @@ jest.mock('@/hooks/map/useMapCoordinates', () => ({
     coordinatesSource: 'default',
     coordinatesAreFallback: true,
     updateCoordinates: mockUpdateCoordinates,
+    refreshLocation: mockRefreshLocation,
   }),
 }))
 
@@ -131,6 +133,7 @@ import { useMapScreenController } from '@/hooks/useMapScreenController'
 describe('useMapScreenController.buildRouteTo', () => {
   beforeEach(() => {
     mockUpdateCoordinates.mockClear()
+    mockRefreshLocation.mockClear()
     mockUseRouteController.mockClear()
     mockUseRouteController.mockReturnValue({
       mode: 'radius',
@@ -193,5 +196,55 @@ describe('useMapScreenController.buildRouteTo', () => {
         originCoordinates: null,
       }),
     )
+  })
+
+  it('keeps following live location after recenter until the user moves the map', async () => {
+    const centerOnUser = jest.fn()
+    const { result } = renderHook(() => useMapScreenController())
+
+    act(() => {
+      result.current.mapPanelProps.onMapUiApiReady?.({
+        centerOnUser,
+        zoomIn: jest.fn(),
+        zoomOut: jest.fn(),
+        fitToResults: jest.fn(),
+        exportGpx: jest.fn(),
+        exportKml: jest.fn(),
+        setBaseLayer: jest.fn(),
+        setOverlayEnabled: jest.fn(),
+        capabilities: {
+          canCenterOnUser: true,
+          canFitToResults: true,
+          canExportRoute: false,
+        },
+      })
+    })
+
+    act(() => {
+      result.current.centerOnUser()
+    })
+    expect(mockRefreshLocation).toHaveBeenCalledTimes(1)
+    expect(centerOnUser).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      result.current.mapPanelProps.onUserLocationChange?.({
+        latitude: 52.2,
+        longitude: 20.98,
+      })
+    })
+    expect(centerOnUser).toHaveBeenCalledTimes(2)
+
+    act(() => {
+      result.current.mapPanelProps.onMapMove?.({
+        latitude: 52.201,
+        longitude: 20.981,
+        userInitiated: true,
+      })
+      result.current.mapPanelProps.onUserLocationChange?.({
+        latitude: 52.202,
+        longitude: 20.982,
+      })
+    })
+    expect(centerOnUser).toHaveBeenCalledTimes(2)
   })
 })

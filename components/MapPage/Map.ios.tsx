@@ -124,7 +124,7 @@ interface TravelProps {
    * F-49 — fired (debounced) on map pan/zoom end with the new center, so the
    * screen can offer a Google-Maps-style "Search this area" action.
    */
-  onMapMove?: (center: Coordinates) => void;
+  onMapMove?: (center: MapMovePayload) => void;
   mapClusterFilters?: MapClustersFilters;
   /**
    * Категория выбрана, но её имя не смапилось в числовой backend-ID → серверные
@@ -207,6 +207,9 @@ const parseNativeMapMovePayload = (parsed: { [key: string]: unknown }): MapMoveP
   const zoom = Number(parsed?.zoom);
   if (Number.isFinite(zoom)) {
     payload.zoom = zoom;
+  }
+  if (parsed?.userInitiated === true) {
+    payload.userInitiated = true;
   }
 
   const rawBbox = parsed?.bbox as { [key: string]: unknown } | null | undefined;
@@ -718,6 +721,14 @@ const Map: React.FC<TravelProps> = ({
         // почти не сдвинулся относительно последнего отправленного (jitter-гард).
         var __metravelMoveTimer = null;
         var __metravelLastSentCenter = null;
+        var __metravelUserGesturePending = false;
+        var __metravelProgrammaticMoveUntil = 0;
+        function __metravelMarkUserGesture() {
+          try {
+            if (Date.now() < __metravelProgrammaticMoveUntil) return;
+            __metravelUserGesturePending = true;
+          } catch (e) {}
+        }
         function __metravelViewportPayload(type) {
           try {
             var c = map.getCenter ? map.getCenter() : null;
@@ -726,7 +737,7 @@ const Map: React.FC<TravelProps> = ({
             var ne = b && b.getNorthEast ? b.getNorthEast() : null;
             var zoom = map.getZoom ? Number(map.getZoom()) : NaN;
             if (!c || !isFinite(c.lat) || !isFinite(c.lng) || !sw || !ne || !isFinite(zoom)) return null;
-            return {
+            var payload = {
               type: type,
               lat: c.lat,
               lng: c.lng,
@@ -738,6 +749,10 @@ const Map: React.FC<TravelProps> = ({
                 east: Math.max(sw.lng, ne.lng)
               }
             };
+            if (type === 'MAP_MOVED' && __metravelUserGesturePending) {
+              payload.userInitiated = true;
+            }
+            return payload;
           } catch (e) { return null; }
         }
         function __metravelPostViewport(type) {
@@ -755,9 +770,14 @@ const Map: React.FC<TravelProps> = ({
             if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
               window.ReactNativeWebView.postMessage(JSON.stringify(payload));
             }
+            if (type === 'MAP_MOVED') {
+              __metravelUserGesturePending = false;
+            }
           } catch (e) {}
         }
         function __metravelEmitMapMove() { __metravelPostViewport('MAP_MOVED'); }
+        map.on('dragstart', __metravelMarkUserGesture);
+        map.on('zoomstart', __metravelMarkUserGesture);
         map.on('moveend', function() {
           try {
             window.__metravelScheduleInvalidate('moveend');
@@ -786,6 +806,7 @@ const Map: React.FC<TravelProps> = ({
           try {
             const target = map.__realUserLocation;
             if (!target) return;
+            __metravelProgrammaticMoveUntil = Date.now() + 700;
             map.setView(target, Math.max(map.getZoom ? map.getZoom() : 10, 13));
           } catch (e) {}
         };

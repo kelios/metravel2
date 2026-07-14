@@ -42,7 +42,7 @@ import {
 } from './Map/mapWebGeometry'
 import { queryKeys } from '@/api/queryKeys'
 import { isFallbackMinskCenter } from './Map/fallbackCenter'
-import { beginProgrammaticMapMove } from './Map/programmaticMoveSignal'
+import { beginProgrammaticMapMove, isProgrammaticMapMoveActive } from './Map/programmaticMoveSignal'
 import {
   buildServerClusterRenderData,
   filterServerClusterRenderDataByRadius,
@@ -575,6 +575,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
     let timer: ReturnType<typeof setTimeout> | null = null
     let lastSent: { lat: number; lng: number } | null = null
+    let userGesturePending = false
 
     const emit = () => {
       try {
@@ -613,6 +614,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
         if (Number.isFinite(zoom)) {
           payload.zoom = zoom
         }
+        if (userGesturePending && !isProgrammaticMapMoveActive()) {
+          payload.userInitiated = true
+        }
+        userGesturePending = false
         onMapMoveRef.current?.(payload)
       } catch {
         ignoreOptionalMapRuntimeError()
@@ -623,11 +628,20 @@ const MapPageComponent: React.FC<Props> = (props) => {
       if (timer) clearTimeout(timer)
       timer = setTimeout(emit, 300)
     }
+    const markUserGesture = () => {
+      if (!isProgrammaticMapMoveActive()) {
+        userGesturePending = true
+      }
+    }
 
+    map.on('dragstart', markUserGesture)
+    map.on('zoomstart', markUserGesture)
     map.on('moveend', onMoveEnd)
     return () => {
       if (timer) clearTimeout(timer)
       try {
+        map.off?.('dragstart', markUserGesture)
+        map.off?.('zoomstart', markUserGesture)
         map.off?.('moveend', onMoveEnd)
       } catch {
         ignoreOptionalMapRuntimeError()

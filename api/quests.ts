@@ -12,12 +12,36 @@ import {
 
 // ===================== ТИПЫ (соответствуют OpenAPI схеме бэкенда) =====================
 
+type ApiQuestCoordinate = number | string;
+
+export type ApiQuestFirstCompleter = {
+    id: number;
+    name: string;
+    avatar: string | null;
+};
+
+type ApiQuestRatingSnapshot = {
+    rating_avg: number | null;
+    rating_count: number;
+    user_rating: 1 | 2 | 3 | 4 | 5 | null;
+    completions_count: number;
+    is_completed_by_me: boolean;
+    first_completer: ApiQuestFirstCompleter | null;
+};
+
+type ApiQuestOptionalRatingSnapshot = Partial<ApiQuestRatingSnapshot>;
+
+export type ApiQuestAnswerPattern = {
+    type: string;
+    value: unknown;
+} | string | null;
+
 /** Город квеста (из бэкенда) */
 export type ApiQuestCity = {
     id: number;
     name: string | null;
-    lat: string; // decimal string from backend
-    lng: string;
+    lat: ApiQuestCoordinate;
+    lng: ApiQuestCoordinate;
     country_code?: string | null;
 };
 
@@ -28,27 +52,31 @@ export type ApiQuestFinale = {
     poster_url: string | null;
 };
 
-/** Шаг квеста (из бэкенда — JSON поле steps) */
+/** Шаг квеста (из бэкенда) */
 export type ApiQuestStep = {
     id: number | string;
-    step_id?: string;
+    step_id?: string | null;
     title: string;
     location: string;
     story: string;
     task: string;
-    hint?: string;
-    // Новый формат: answer_pattern объект
-    answer_pattern?: { type: string; value: string };
+    hint?: string | null;
+    answer_pattern?: ApiQuestAnswerPattern;
     // Старый формат (для обратной совместимости)
     answer_type?: string;
     answer_value?: string;
-    lat: number;
-    lng: number;
+    lat: ApiQuestCoordinate;
+    lng: ApiQuestCoordinate;
+    geo_verify?: {
+        enabled?: boolean;
+        radius_m?: number;
+    } | null;
     maps_url: string;
     image_url?: string | null;
     input_type?: 'number' | 'text';
     order?: number;
     is_intro?: boolean;
+    country_code?: string | null;
     poi_info?: {
         is_museum: boolean;
         opening_hours?: string | null;
@@ -62,26 +90,20 @@ export type ApiQuestMeta = {
     id: number;
     quest_id: string;
     title: string;
-    points: string; // readOnly from backend
+    points: number | string; // readOnly from backend
     city_id: string; // readOnly
     city_name: string; // readOnly
     country_id?: string | null;
     country_name?: string | null;
     country_code?: string | null;
-    lat: string;
-    lng: string;
+    lat: ApiQuestCoordinate;
+    lng: ApiQuestCoordinate;
     duration_min: number | null;
     difficulty: 'easy' | 'medium' | 'hard' | '' | null;
     tags: Record<string, unknown> | null;
     pet_friendly: boolean;
     cover_url: string | null;
-    rating_avg: number | null;
-    rating_count: number;
-    user_rating: 1 | 2 | 3 | 4 | 5 | null;
-    completions_count: number;
-    is_completed_by_me: boolean;
-    first_completer: { id: number; name: string; avatar: string | null } | null;
-};
+} & ApiQuestRatingSnapshot;
 
 /**
  * DEV-only мок прохождений (#363): бэк теперь отдаёт реальные
@@ -122,12 +144,12 @@ export type ApiQuestBundle = {
     quest_id: string;
     title: string;
     cover_url?: string | null;
-    steps: string; // JSON string — массив ApiQuestStep[]
+    steps: ApiQuestStep[] | string;
     finale: ApiQuestFinale;
-    intro: string | null; // JSON string — ApiQuestStep | null
+    intro: ApiQuestStep | string | null;
     storage_key: string;
     city: ApiQuestCity;
-};
+} & ApiQuestOptionalRatingSnapshot;
 
 function normalizeQuestStep(step: ApiQuestStep): ApiQuestStep {
     return {
@@ -143,7 +165,7 @@ function normalizeQuestBundle(bundle: ApiQuestBundle): ApiQuestBundle {
     try {
         const parsedSteps = typeof bundle.steps === 'string' ? JSON.parse(bundle.steps) : bundle.steps;
         if (Array.isArray(parsedSteps)) {
-            normalizedSteps = JSON.stringify(parsedSteps.map((step) => normalizeQuestStep(step as ApiQuestStep)));
+            normalizedSteps = parsedSteps.map((step) => normalizeQuestStep(step as ApiQuestStep));
         }
     } catch {
         normalizedSteps = bundle.steps;
@@ -152,7 +174,9 @@ function normalizeQuestBundle(bundle: ApiQuestBundle): ApiQuestBundle {
     try {
         if (typeof bundle.intro === 'string' && bundle.intro.trim()) {
             const parsedIntro = JSON.parse(bundle.intro) as ApiQuestStep;
-            normalizedIntro = JSON.stringify(normalizeQuestStep(parsedIntro));
+            normalizedIntro = normalizeQuestStep(parsedIntro);
+        } else if (bundle.intro && typeof bundle.intro === 'object') {
+            normalizedIntro = normalizeQuestStep(bundle.intro);
         }
     } catch {
         normalizedIntro = bundle.intro;
