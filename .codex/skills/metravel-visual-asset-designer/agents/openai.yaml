@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Visual Asset Designer"
+  short_description: "Generate branded raster icons and art"
+  default_prompt: "Use $metravel-visual-asset-designer to specify, generate, integrate, and verify the requested branded raster asset."

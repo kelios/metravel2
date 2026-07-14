@@ -25,6 +25,7 @@ Maintain skills in `.codex/skills/<skill-name>/`:
 - Do not add README, CHANGELOG, or other auxiliary files inside a skill folder.
 - Add `references/` only for detailed material that should be loaded on demand.
 - Keep `agents/openai.yaml` aligned with the skill name, purpose, and default prompt.
+- Use `$metravel-prompt-maintainer` when the main scope is reusable prompt specs, asset-level `PROMPT.md` files, or a project-wide audit of skill default prompts.
 
 Avoid documentation drift:
 
@@ -39,5 +40,6 @@ Avoid documentation drift:
 Validation for docs-only changes:
 
 - Check changed Markdown/YAML files for readable structure and valid frontmatter.
+- Run `npm run audit:prompts` when prompt specs, asset prompts, skill descriptions, or `agents/openai.yaml` changed.
 - Run the skill validator for changed skills when the `skill-creator` scripts are available.
 - Run broader project checks only when documentation changes also alter code, commands, governance behavior, or release policy.

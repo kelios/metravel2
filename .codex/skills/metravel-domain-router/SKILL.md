@@ -23,7 +23,7 @@ Read first:
 | Map and places | `components/MapPage/**`, `components/map/**`, `app/map*`, `hooks/useMap*`, `screens/tabs/PlacesScreen.tsx`, `api/places.ts` | Use `$metravel-map-expert`; add `$metravel-ui-guardrails` for visible map/popups; keep web Leaflet and native map imports separated by platform files. |
 | Profile and settings | `app/(tabs)/profile.tsx`, `app/(tabs)/user/[id].tsx`, `app/(tabs)/settings.tsx`, `components/profile/**`, `components/settings/**` | Use `$metravel-profile-expert`; preserve profile information architecture, tabs, counters, settings flows, auth boundaries, and integrated feature sections. |
 | Achievements and badges | `api/achievements.ts`, `api/achievementsMock.ts`, `hooks/useAchievementsApi.ts`, `components/achievements/**`, `__tests__/achievements/**` | Use `$metravel-achievements-expert`; treat `api/achievements.ts` as BE contract. Keep mock fallback explicit, React Query keys stable, peer-badge optimistic updates rollback-safe, and badge media via `ImageCardMedia`. |
-| Quests | `components/quests/**`, `app/(tabs)/quests/**`, `api/quests.ts`, `utils/questAdapters.ts`, `hooks/useQuestsApi.ts`, `scripts/*quest*` | Use `$metravel-quest-expert`; separate quest code fixes from quest content editing (`$metravel-quest-editor`) and coordinate validation (`$metravel-quest-geo-verifier`). |
+| Quests | `components/quests/**`, `app/(tabs)/quests/**`, `api/quests.ts`, `utils/questAdapters.ts`, `hooks/useQuestsApi.ts`, `scripts/*quest*` | Use `$metravel-quest-expert` for code, `$metravel-quest-writer` for new authored quests, `$metravel-quest-editor` for existing content, and `$metravel-quest-geo-verifier` for coordinate validation. |
 | SEO/index/content | `components/seo/**`, `utils/seo/**`, article/travel rich text, `docs/GROWTH_PLAN.md` | Use `$metravel-seo-index-operator` for GSC/indexing routines and `$metravel-article-editor-agent` for article API content edits. |
 | PDF/export | travel export/PDF components, print preview, book settings/templates | Preserve print behavior and browser verification. If the task is only visual export UI, use `$metravel-ui-guardrails`; if it is data/logic, use `$metravel-feature-builder`. |
 | New page or redesign | `app/**`, screen components, `components/ui`, design tokens | Reuse existing primitives, `useResponsive`, `useThemedColors`, `DESIGN_TOKENS`, SEO helpers, and browser verification. |
@@ -35,6 +35,7 @@ Read first:
 3. If a board ticket is involved, read its Task Contract before editing.
 4. Choose the smallest specialist set:
    - domain code: `$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, `$metravel-quest-expert`
+   - quest content: `$metravel-quest-writer` for new quests, `$metravel-quest-editor` for existing copy, `$metravel-quest-geo-verifier` for coordinates
    - general code: `$metravel-feature-builder`
    - visible UI: `$metravel-ui-guardrails`
    - tests: `$metravel-test-writer` / `$metravel-test-runner`

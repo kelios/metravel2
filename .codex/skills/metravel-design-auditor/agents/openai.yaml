@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Design Auditor"
+  short_description: "Audit cross-screen design consistency"
+  default_prompt: "Use $metravel-design-auditor to inspect the requested screens for evidence-backed design-system and mobile parity drift."

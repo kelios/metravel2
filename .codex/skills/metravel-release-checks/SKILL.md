@@ -29,6 +29,7 @@ Keep release and performance validation aligned with repo policy:
 
 - Build web for production checks with `npm run build:web:prod`.
 - Android release/store builds are not part of ordinary release checks: do not run Android EAS/cloud builds, Android production builds/submits, or dev-client/export Android QA routes unless the user explicitly asks for that exact Android path. Android QA uses local build/install on the USB-connected phone by default.
+- Route explicit Google Play build/submit/track work to `$metravel-google-play-operator`; release-checks may prepare gates but must not infer store mutation authority.
 - Treat deploy execution and rollback as `$metravel-devops-agent` work, not release-checks work.
 - For production deploy command selection, defer to `docs/RELEASE.md` and `$metravel-devops-agent`.
 - On this Windows/Codex machine the final production deploy command is `bash /d/metravel/ops/deploy-frontend.sh`, not repeated retries of `./build-prod.sh prod`.

@@ -7,7 +7,7 @@ description: Deploy metravel web builds to dev, preprod, or production through t
 
 Use this skill for deploy preparation, deployment execution, and post-deploy verification. Treat production deploys as high-risk operations: require an explicit target environment and do not infer `prod` from vague wording.
 
-This skill intentionally follows the legacy Claude deploy contract: use existing scripts, do not write ad-hoc `rsync`/`scp`/SSH deploy commands, take a health baseline, let build guards fail closed, swap static assets atomically, verify production, and keep a rollback path visible.
+Follow the project-owned deploy contract: use existing scripts, do not write ad-hoc `rsync`/`scp`/SSH deploy commands, take a health baseline, let build guards fail closed, swap static assets atomically, verify production, and keep a rollback path visible.
 
 Read first:
 
@@ -73,7 +73,7 @@ Deploy:
 ./build-prod.sh prod
 ```
 
-Dev server deploy is the Claude-proven `./build-dev.sh` path: it performs a clean dependency reinstall, builds `dist/dev`, uploads frontend static assets to `192.168.50.36`, swaps `static/dist`, and restarts `app` + `nginx`. Do not use `./build-prod.sh dev` as a substitute for the LAN dev-server deploy unless project docs have been updated to define that target.
+Dev server deploy uses the documented `./build-dev.sh` path: it performs a clean dependency reinstall, builds `dist/dev`, uploads frontend static assets to `192.168.50.36`, swaps `static/dist`, and restarts `app` + `nginx`. Do not use `./build-prod.sh dev` as a substitute for the LAN dev-server deploy unless project docs have been updated to define that target.
 
 ### Production deploy from this Windows/Codex machine
 

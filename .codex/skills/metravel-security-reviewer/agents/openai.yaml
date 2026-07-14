@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Security Reviewer"
+  short_description: "Review frontend security with PoC evidence"
+  default_prompt: "Use $metravel-security-reviewer to audit the requested frontend security scope and report evidence-backed findings."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Quest Writer"
+  short_description: "Create researched city and family quest routes"
+  default_prompt: "Use $metravel-quest-writer to research and design an age-matched city or family quest after confirming authored-text permission, then validate its story arc, route, safety, questions, answers, and coordinates before any explicitly requested publication."

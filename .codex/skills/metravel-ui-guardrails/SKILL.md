@@ -1,6 +1,6 @@
 ---
 name: metravel-ui-guardrails
-description: Apply metravel UI guardrails for screens, cards, interactions, images, icons, and styling across web and native. Use when Codex changes visible UI, layout, placeholders, media rendering, design tokens, external links, or interaction behavior and must preserve the repository's web/mobile contracts while fixing all real UI issues found in scope.
+description: Apply metravel UI guardrails for new pages, screen redesigns, design-system cleanup, cards, interactions, images, icons, and styling across web and native. Use when Codex changes visible UI, layout, placeholders, media rendering, design tokens, external links, or interaction behavior and must preserve the repository's web/mobile contracts while fixing all real UI issues found in scope.
 ---
 
 # Metravel UI Guardrails
@@ -31,6 +31,13 @@ Build UI by extending existing primitives first:
   icon without visible meaning.
 - Fix all real UI problems found while working in the touched flow: overlap, broken mobile/desktop layout, invalid icons, non-neutral placeholders, console errors, broken interactions, and direct external-link violations.
 - If a UI problem cannot be fixed safely in the current scope, document the blocker and exact scenario instead of leaving it implicit.
+
+For a new page or redesign:
+
+- Define the route goal and section hierarchy before implementation; reuse `ResponsiveContainer`, `ResponsiveStack`, typography, SEO helpers, and feature components.
+- Verify mobile, tablet, and desktop layouts, light/dark theme, loading/empty/error states, keyboard/focus, and native parity when the screen is shared.
+- Use `$metravel-design-auditor` for a cross-screen consistency matrix; use this skill for the implementation contract and `$metravel-browser-reviewer` for the final browser fix/reverify loop.
+- Use `$metravel-visual-asset-designer` only when an existing primitive, Feather icon, local asset, or real/photorealistic media cannot satisfy the requested slot.
 
 Enforce the repository's UI contracts:
 

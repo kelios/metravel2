@@ -155,7 +155,8 @@ skill `android-native-audit` (семантические).
 |---|---|
 | Автостраж (CI) | `__tests__/config/native-compat-governance.test.ts` |
 | Codex Android developer | `.codex/skills/metravel-android-developer/SKILL.md` |
+| Codex iOS developer | `.codex/skills/metravel-ios-developer/SKILL.md` |
 | Codex mobile tester | `.codex/skills/metravel-mobile-tester/SKILL.md` |
 | Legacy Claude агент-эксперт | `.claude/agents/android-expert.md` |
 | Legacy Claude скилл-аудит | `.claude/skills/android-native-audit/SKILL.md` |
-| Карта проекта | `CLAUDE.md` → «Android / native» |
+| Каноническая карта проекта | `AGENTS.md` + `docs/CODEX.md` |

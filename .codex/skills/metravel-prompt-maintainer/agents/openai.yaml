@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Prompt Maintainer"
+  short_description: "Audit and maintain project prompt artifacts"
+  default_prompt: "Use $metravel-prompt-maintainer to audit or update metravel prompt specs, asset prompts, and skill default prompts while preserving project rules and reproducibility."

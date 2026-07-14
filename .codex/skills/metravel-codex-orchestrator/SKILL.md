@@ -47,8 +47,10 @@ If the branch is not `main`, stop before editing and ask how to proceed.
 - Use `$metravel-hook-builder` when the main work is hook extraction or hook-boundary cleanup.
 - Use `$metravel-refactor-surgeon` for behavior-preserving extraction of large components or file-complexity guard failures.
 - Use `$metravel-ui-guardrails` for visible UI, layout, icons, images, placeholders, tokens, or external-link interaction.
+- Use `$metravel-design-auditor` for cross-screen design consistency audits and `$metravel-visual-asset-designer` for requested branded raster assets.
 - Use `$metravel-browser-reviewer` for visible web diff review, browser evidence, console/network checks, and fix/reverify loops.
 - Use `$metravel-android-developer` for Android/native implementation, crashes, Expo modules, permissions, SecureStore, push, platform files, or local USB Android build/install verification.
+- Use `$metravel-ios-developer` for iPhone/iPad, WebKit/WKWebView, safe-area, APNs, Face ID, ATS, Universal Links, or `.ios.tsx` work.
 - Use `$metravel-mobile-tester` for read-only mobile web or Android/native QA evidence and retest; Android evidence requires a local build installed on the USB-connected phone unless the user explicitly approved another route.
 - Use `$metravel-test-runner` to choose and run targeted checks; `$metravel-test-writer` to add stable tests.
 - Use `$metravel-e2e-runner` for Playwright/browser flows and `.env.e2e` auth.
@@ -57,9 +59,12 @@ If the branch is not `main`, stop before editing and ask how to proceed.
 - Use `$metravel-release-checks` for validation planning and `$metravel-devops-agent` for deploy execution, rollback, approved deploy-command selection, Windows/Codex wrapper use, and emergency frontend recovery.
 - Use `$metravel-production-smoke` for read-only production health checks and route failures to the right owner.
 - Use `$metravel-docs-maintainer` for docs, AGENTS, CODEX, or skill changes.
+- Use `$metravel-prompt-maintainer` for prompt specs, asset prompt instances, `agents/openai.yaml`, stale model-specific wording, and prompt reproducibility audits.
 - Use `$metravel-backend-diagnostician` for read-only backend/API diagnosis and backend board follow-up.
 - Use `$metravel-sprint-reviewer` for task-board acceptance and Done-gate verification.
 - Use `$metravel-code-reviewer` before handoff when review findings, residual risk, or rule compliance matter.
+- Use `$metravel-security-reviewer` for XSS, sanitizer, URL, secret/token, WebView/deep-link, or dependency security review.
+- Use `$metravel-google-play-operator` only for explicit Android store build/submit/track work; use `$metravel-play-campaign-tester` only for the configured closed-testing reciprocity campaign.
 - Use `$metravel-quality-fixer` when the task is explicitly to run/fix the full quality gate.
 
 ## Role Prompt Pattern

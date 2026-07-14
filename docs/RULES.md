@@ -15,6 +15,7 @@
   - check the current branch before editing;
   - do not create or switch to another branch unless the user gives a new explicit instruction;
   - if the current branch is not `main`, stop before making changes and ask how to proceed.
+- Protected project/release files (`eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml`, `entry.js`) require an explicit user request that puts the file or its behavior in scope. Do not change them as incidental cleanup.
 - Before deploying to production, validate the local code in production-like conditions:
   - build a production web export (`dist/prod`)
   - run checks against that build (not against a dev server)
@@ -54,6 +55,7 @@ npm run test:run
   - Android device QA requires a locally built Android app installed over USB on the connected phone, for example `cd android && ./gradlew :app:installDebug` or `:app:assembleDebug` plus `adb install -r ...`;
   - do not substitute mobile web viewport evidence, Expo web export, EAS preview/development/production builds, or dev-client/export flows for Android device validation without explicit user approval;
   - if local build/install is blocked, report the exact command, result, and next safe step instead of claiming Android verification passed.
+- iOS EAS/cloud builds and submits also require an explicit request for that exact build/submit in the current task; do not start them as an implicit QA path or claim iOS verification from web/Android evidence.
 - Task-board token recovery (mandatory):
   - if `/api/tasks/`, `/api/tasks/board/`, `/api/sprints/`, or the MCP `ticket-board` tools return `HTTP 401`, first refresh the staff DRF token with a programmatic login using the credentials from `.env.e2e` and the procedure in `docs/TASK_BOARD_MCP.md`;
   - write the refreshed token only to `.secrets/metravel-task-board.env`, never to chat, screenshots, committed files, or shell logs, then retry the board endpoints;
@@ -226,6 +228,7 @@ npx serve dist/prod -l 3000 -s
   - Do not remove, downgrade, or defer the hero/slider blur backdrop just to improve Lighthouse or LCP metrics.
   - If a test expects the web hero slider/background to appear only after user interaction, the test is wrong and must be updated to assert the immediate-mount contract instead.
   - Do not re-introduce interaction-gated hero slider activation on web.
+- Travel hero swipe and travel-details performance are one bilateral release contract. Any change in `components/travel/sliderParts/**`, `components/travel/details/**`, `ImageCardMedia`, hero overlays/decode gates, travel-details lazy/content-visibility behavior, or responsive image layout must pass both `npm run verify:slider` and `npm run verify:slider-perf`, each started through `scripts/run-with-quality-gate-lock.js`; one green side is not enough for handoff.
 - When using preload scripts and React Query together, avoid duplicate first-load API requests.
   - Reuse the in-flight preload promise or preloaded payload instead of firing a second request for the same travel route.
 - If a bug is visible only on web, verify it in a real browser flow.

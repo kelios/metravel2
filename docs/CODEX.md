@@ -20,10 +20,13 @@ Backend boundary: в этом frontend workspace Codex не реализует b
 - `$metravel-profile-expert`: используй для личного/публичного профиля, settings, подписок, счётчиков, profile IA и profile embeds.
 - `$metravel-achievements-expert`: используй для achievements/badges, рангов, XP, peer-наград, achievement mocks и profile/AuthorCard embeds.
 - `$metravel-quest-expert`: используй для quest feature code: список/деталь/прохождение, адаптеры, answer checker, карты и печать.
+- `$metravel-quest-writer`: используй для research и написания нового городского квеста, проектирования связного пешего маршрута, intro/steps/finale, заданий, hints и answer patterns; творческий текст начинай только после отдельного confirmation question.
 - `$metravel-quest-editor`: используй для редактирования существующего quest content: тексты шагов, задания, подсказки и answer patterns.
 - `$metravel-quest-geo-verifier`: используй для read-only сверки координат quest points с реальными объектами через OSM/Nominatim/geocheck.
 - `$metravel-hook-builder`: используй, когда основная задача — вынести, спроектировать или упростить focused React hooks в `hooks/` или рядом с фичей, сохранив контракты и не добавляя новые `any`.
 - `$metravel-ui-guardrails`: добавляй при любых видимых UI-изменениях, работе с media, icons, placeholders, tokens или external links.
+- `$metravel-design-auditor`: используй для read-only сквозного аудита нескольких экранов, consistency matrix, design-token drift, responsive/mobile parity и UI-state/accessibility evidence.
+- `$metravel-visual-asset-designer`: используй для брендовых raster icons, badge/app/marketing art и наборов ассетов через imagegen; обычные UI-actions остаются на существующих primitives/Feather, published travel/article media — только real/licensed/local или photorealistic raster.
 - `$metravel-browser-reviewer`: используй для review/fix цикла видимых web-изменений в реальном браузере: diff, snapshot, screenshot, console/network, исправления и reverify.
 - `$metravel-refactor-surgeon`: используй для распила god-components, file-complexity guard failures и behavior-preserving extraction без изменения бизнес-логики.
 - `$metravel-release-checks`: используй при выборе проверок, подготовке PR, release/deploy и production web validation.
@@ -35,19 +38,24 @@ Backend boundary: в этом frontend workspace Codex не реализует b
 - `$metravel-growth-analyst`: используй для анализа GA4/GSC/Yandex/affiliate-цифр, SEO/organic роста, пользовательского поведения, drop-off, регистрации, auth и создания маршрутов/статей.
 - `$metravel-seo-index-operator`: используй для ежедневной SEO/index рутины, GSC digest, URL Inspection/index status, IndexNow backup, SEO-аудита статей и списка URL для ручной индексации.
 - `$metravel-code-reviewer`: используй для focused review diff'а, поиска рисков, rule violations, validation gaps и остаточных проблем перед handoff или approve.
+- `$metravel-security-reviewer`: используй для frontend security review по XSS/sanitization, URLs/redirects, secrets/tokens, WebView/deep links и production dependencies; review остаётся read-only без явного запроса на fix.
 - `$metravel-devops-agent`: используй для подготовки, запуска и проверки deploy на `dev`, `preprod` или `prod`, включая preflight, secret hygiene, server-path safety, approved deploy-command selection, rollback/recovery и post-deploy validation.
+- `$metravel-google-play-operator`: используй только для явного Android Google Play build/submit/track status/promotion запроса; closed testing проверяется в `alpha`, public production требует отдельного explicit gate.
 - `$metravel-production-smoke`: используй для read-only production health check `metravel.by` после deploy, при 502/white screen/static/API/sitemap подозрениях или регулярном smoke.
 - `$metravel-docs-maintainer`: используй при изменении `docs/`, `AGENTS.md`, `.codex/skills` или правил работы Codex.
+- `$metravel-prompt-maintainer`: используй для аудита и обновления `docs/*PROMPTS.md`, `assets/**/PROMPT.md`, skill UI metadata/default prompts, prompt-template consistency и воспроизводимости generated assets; сам creative article/quest content остаётся у профильного content skill.
 - `$metravel-task-contract`: используй при создании или ревью FE/BE задач на борде, чтобы заполнить обязательный `Task Contract` и проверить, можно ли двигать задачу в `todo`/`done`.
 - `$metravel-ticket-board`: используй как оператора общего MCP task board для list/create/update/sync задач и спринтов; он не пишет feature code.
 - `$metravel-sprint-reviewer`: используй для приёмки тикетов активного спринта на MCP task board: проверить Task Contract/Done gate реальными тестами/browser/API evidence и двигать только подтвержденное в `done`.
 - `$metravel-backend-diagnostician`: используй для read-only диагностики backend/API/5xx/contract mismatch, сверки backend status с бордом и оформления back-задач без правки backend-кода.
-- `$metravel-article-editor-agent`: используй для публикации/проверки статей через `/api/articles`, добавления generated images и безопасной работы с токеном из `.secrets`; любые творческие правки текста статьи сначала подтверждай отдельным вопросом.
+- `$metravel-article-editor-agent`: используй для article и travel-guide API, photo-folder drafts, media, author/publish verification и безопасной работы с токеном из `.secrets`; любые творческие правки текста статьи сначала подтверждай отдельным вопросом.
 - `$metravel-codex-orchestrator`: используй как верхний self-check для сложных или многошаговых задач: triage, минимальный набор skills, role prompts, validation plan, handoff и final self-check по правилам проекта.
 - `$metravel-agent-workflow`: используй для координации ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
 - `$metravel-project-analyst`: используй для read-only анализа структуры проекта, активных фич, зависимостей, validation surface, risk hotspots и выбора следующих агентов перед крупной задачей.
 - `$metravel-android-developer`: используй для Android/native разработки и отладки Expo/React Native: platform files, native crashes, Expo modules, permissions, SecureStore, push, native map, web-first код в Android bundle; после фиксов сверяй Android device coverage с `docs/MANUAL_TEST_CASES.md` `AND-USB-*` на локально собранной и установленной по USB сборке; не запускай Android EAS/production builds без явного запроса.
-- `$metravel-mobile-tester`: используй для read-only QA мобильных сценариев на mobile web и Android/native: responsive layout, touch targets, navigation, USB device local-build smoke, Maestro flows, screenshots/logs/evidence и retest; не подменяй Android device QA dev-client/export/EAS route без явного запроса.
+- `$metravel-ios-developer`: используй для iPhone/iPad, `.ios.tsx`, WebKit/WKWebView, safe-area, APNs, Face ID, ATS, Universal Links, iOS permissions и native-map parity; не заявляй iOS-ready без simulator/device evidence и не запускай EAS iOS build/submit без явного запроса.
+- `$metravel-mobile-tester`: используй для read-only QA мобильных сценариев на mobile web, Android и доступном iOS simulator/device: responsive layout, touch targets, navigation, USB Android local-build smoke, Maestro flows, screenshots/logs/evidence и retest; не подменяй device QA web/EAS evidence без явного запроса.
+- `$metravel-play-campaign-tester`: используй для настроенной Google Play reciprocity campaign: ежедневный USB-device pass, community assignments, app updates, screenshots/crash evidence и общий campaign log; не выполняй покупки, отзывы, удаления, смену аккаунта или переписку без отдельного разрешения.
 - `$metravel-business-analyst`: используй для превращения продуктовой идеи в feature brief, user stories, acceptance criteria, non-goals, metrics и risks.
 - `$metravel-system-architect`: используй для technical design, review diff, risk mapping, validation plan и безопасного разбиения работ.
 - `$metravel-qa-agent`: используй для read-only тестирования, browser/e2e exploration, bug reports и re-test фиксов.
@@ -60,17 +68,64 @@ Backend boundary: в этом frontend workspace Codex не реализует b
 
 | Класс задачи | Стартовый маршрут | Когда повышать уровень |
 | --- | --- | --- |
-| Документация, правила, skills | `$metravel-docs-maintainer` | Добавь `$metravel-codex-orchestrator`, если меняется workflow нескольких ролей, правила проверок или skill-selection policy. |
+| Документация, правила, skills | `$metravel-docs-maintainer`; добавь `$metravel-prompt-maintainer` только для prompt specs, asset prompts или `agents/openai.yaml` | Добавь `$metravel-codex-orchestrator`, если меняется workflow нескольких ролей, правила проверок или skill-selection policy. |
 | Простая автоматизация и проверки | `$metravel-test-runner` для узких тестов; `$metravel-release-checks` для выбора gate; `$metravel-ticket-board` + `$metravel-task-contract` для задач на борде | `$metravel-quality-fixer` только для полного quality-gate/fix цикла; `$metravel-devops-agent` только для явного build/deploy/release target. |
 | Read-only анализ проекта | `$metravel-project-analyst` | `$metravel-agent-workflow` нужен только если анализ сразу передается в BA/architect/implementation/QA/review цепочку. |
-| Product/growth/performance анализ | `$metravel-business-analyst`, `$metravel-growth-analyst` или `$metravel-performance-analyst` по домену | Добавь architect/reviewer только когда из анализа сразу рождается high-risk implementation plan. |
+| Product/growth/performance/security/design анализ | `$metravel-business-analyst`, `$metravel-growth-analyst`, `$metravel-performance-analyst`, `$metravel-security-reviewer` или `$metravel-design-auditor` по домену | Добавь architect/implementation только когда анализ явно должен перейти в правки; review-запрос сам по себе остаётся read-only. |
 | Обычная разработка, bugfix, refactor | `$metravel-domain-router` для доменного scope, затем профильный доменный субагент (`$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, `$metravel-quest-expert`) и `$metravel-feature-builder`; добавь `$metravel-ui-guardrails`, `$metravel-hook-builder`, `$metravel-refactor-surgeon` или `$metravel-test-writer` только по затронутой области | `$metravel-codex-orchestrator` для широкого/неясного scope; `$metravel-agent-workflow` для раздельных BA/architect/QA/reviewer стадий. |
 | Статьи и article media | `$metravel-article-editor-agent` | Добавь orchestrator для bulk/high-risk правок, publish/unpublish серий или связанных SEO/API/UI проверок. |
-| Mobile/Android | `$metravel-mobile-tester` для read-only QA на mobile web и локально установленной Android USB-сборке; `$metravel-android-developer` для фиксов | `$metravel-agent-workflow` для цикла reproduce -> fix -> retest -> review или когда затронуты web + native одновременно. Android EAS/production builds не запускать без явного запроса пользователя. |
+| Новый квест или полная переработка quest content | `$metravel-quest-writer`; после отдельного подтверждения творческого текста добавь `$metravel-quest-geo-verifier`, а `$metravel-quest-expert` только для data/migration/code scope | Добавь orchestrator для нескольких городов, production publication или связанного media/code workflow. |
+| Mobile/Android/iOS | `$metravel-mobile-tester` для read-only QA, `$metravel-android-developer` или `$metravel-ios-developer` для platform fixes; `$metravel-play-campaign-tester` только для reciprocity campaign | `$metravel-agent-workflow` для reproduce -> fix -> retest -> review или web + native scope. EAS/store actions — только explicit request через `$metravel-google-play-operator`/DevOps. |
+| Google Play release | `$metravel-google-play-operator` + `$metravel-release-checks` | Build/submit/promotion требуют явного exact target; `production` не выводится из общего слова «релиз». |
 | SEO/index operations | `$metravel-seo-index-operator` | Добавь `$metravel-growth-analyst` для месячной стратегии; `$metravel-article-editor-agent` или `$metravel-feature-builder` только когда из аудита следует content/code change. |
 | Production smoke | `$metravel-production-smoke` | `$metravel-devops-agent` нужен только для deploy/rollback; `$metravel-backend-diagnostician` — для подтвержденных API/backend failures. |
 
 Не запускай "всех агентов" для обычной задачи. BA, Project Analyst, Growth Analyst, QA, Mobile Tester и reviewer по умолчанию read-only и должны возвращать компактный артефакт, а не менять код. Для docs-only изменений достаточно структурно перечитать Markdown/YAML; для простой автоматизации запускай самый узкий надежный command и сначала проверь operation gate, если команда относится к долгим эксклюзивным операциям.
+
+## Совместимость Claude → Codex
+
+Claude-конфигурация остаётся историческим источником отдельных operational facts, но новые маршруты должны запускаться через Codex skills и канонические project docs. Не копируй модель-специфичные `tools`, `model`, permissions или preview-названия буквально.
+
+| Claude agents / skills | Codex маршрут |
+| --- | --- |
+| `android-expert`, `android-native-audit`, `android-qa-sweep` | `$metravel-android-developer` + `$metravel-mobile-tester` |
+| `ios-expert` | `$metravel-ios-developer` |
+| `android-builder`, `android-publisher`, `android-release` | `$metravel-google-play-operator` + `$metravel-release-checks`; web/server deploy остаётся у `$metravel-devops-agent` |
+| `play-tester`, `play-update-watcher` | `$metravel-play-campaign-tester`; общий operational state пока живёт в `.claude/play-testing/` без дублирования |
+| `metravel-design-audit`, `metravel-design-system`, `review-uiux` | `$metravel-design-auditor` для read-only evidence, `$metravel-ui-guardrails` для implementation contract, `$metravel-browser-reviewer` для fix/reverify |
+| `metravel-page-new`, `metravel-screen-redesign` | `$metravel-domain-router` + `$metravel-feature-builder` + `$metravel-ui-guardrails` |
+| `metravel-icon-art` | `$metravel-visual-asset-designer` + `$metravel-prompt-maintainer` + built-in `imagegen` |
+| `review-security` | `$metravel-security-reviewer` |
+| `review-performance`, `metravel-slider-perf-guard` | `$metravel-performance-analyst`; slider/perf bilateral gate включён в skill |
+| `review-code`, `review-architecture`, `review-auditor` | `$metravel-code-reviewer` и `$metravel-system-architect` |
+| `metravel-badge`, `metravel-achievements-audit`, `achievements-expert` | `$metravel-achievements-expert`; artwork при необходимости через `$metravel-visual-asset-designer` |
+| `travel-expert`, `metravel-travel-pdf` | `$metravel-travel-expert` |
+| `travel-writer`, `metravel-travel-article` | `$metravel-article-editor-agent`; creative prose только после отдельного confirmation gate из `AGENTS.md` |
+| `quest-expert`, `metravel-quest`, `metravel-quest-finale` | `$metravel-quest-expert` для code/data и `$metravel-quest-writer` для нового authored content |
+| `quest-editor`, `quest-geo-verifier`, `metravel-quest-geocheck` | `$metravel-quest-editor` и `$metravel-quest-geo-verifier` |
+| `backend-expert`, `backend-status-sync` | `$metravel-backend-diagnostician` + `$metravel-ticket-board`, backend read-only |
+| `ticket-board`, `task-author`, `metravel-issue`, `ticket-flow`, `board-reviewer`, `sprint-review` | `$metravel-ticket-board`, `$metravel-task-contract`, `$metravel-sprint-reviewer` |
+| `growth-analyst`, `metravel-seo-expert`, `index-doctor`, `seo-daily`, `metravel-seo-audit` | `$metravel-growth-analyst` и `$metravel-seo-index-operator` |
+| `dev-loop`, `guard-enforcer`, `test-author`, `browser-reviewer`, `prod-smoke`, deploy agents | `$metravel-quality-fixer`, `$metravel-test-writer`, `$metravel-browser-reviewer`, `$metravel-production-smoke`, `$metravel-devops-agent` |
+
+Claude slash-команды переносятся как skill-routes, а не как второй набор дублирующих prompt-файлов:
+
+| Claude command | Codex route |
+| --- | --- |
+| `/auto-dev`, `/bugfix` | `$metravel-codex-orchestrator`/`$metravel-agent-workflow` + domain skill + `$metravel-feature-builder` + QA/review |
+| `/changed-summary` | `$metravel-code-reviewer` или обычный read-only `git status`/`git diff` summary |
+| `/check-fast`, `/guard-all`, `/preflight` | `$metravel-test-runner` / `$metravel-release-checks`; запускать repository scripts через quality-gate lock |
+| `/growth-review` | `$metravel-growth-analyst` |
+| `/seo-daily` | `$metravel-seo-index-operator` |
+| `/split-component` | `$metravel-refactor-surgeon` |
+| `/task-new` | устаревший local-task route заменён `$metravel-ticket-board` + `$metravel-task-contract` |
+| `/ticket` | `$metravel-ticket-board` + профильный implementation/test/review route |
+
+Остальная инфраструктура:
+
+- `CLAUDE.md` и `.claude/settings.json` rules перенесены в `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, skills и repository validation commands. Claude hooks не копируются как недоступный Codex-механизм; их инварианты обеспечивают инструкции и quality-gate wrappers.
+- `.mcp.json` task-board server уже настроен для Codex в пользовательском `~/.codex/config.toml`; не дублируй secret-loading command в project config.
+- Reusable prompt specs и `agents/openai.yaml` поддерживает `$metravel-prompt-maintainer`; проверка — `npm run audit:prompts`.
 
 ## Быстрый triage задачи
 
@@ -90,6 +145,10 @@ Backend boundary: в этом frontend workspace Codex не реализует b
 | Browser review / visible regression fix | всё из UI-контекста + `$metravel-browser-reviewer` | diff review + browser snapshot/screenshot/console/network; исправить real issues и reverify |
 | External links | `docs/RULES.md`, `docs/TESTING.md`, `utils/externalLinks.ts` | никаких direct `window.open(...)` и `Linking.openURL(...)` вне chokepoint |
 | Article editing / generated article images | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/DEVELOPMENT.md`, `$metravel-article-editor-agent` | токен только из `.secrets`/env без вывода значения; backup перед write; самостоятельная работа только с images/media; творческий текст статьи/квеста - только после отдельного confirmation question; не использовать интернет-картинки; generated images только как фотореалистичные raster-файлы через `imagegen`/licensed-local source; никаких SVG/Playwright/схематичных placeholder-картинок; verify через API и страницу |
+| Frontend security review | `AGENTS.md`, `docs/RULES.md`, `$metravel-security-reviewer`, sanitizer/link/storage/deep-link code in scope | concrete PoC/data flow before finding; no secret output; read-only unless fixes explicitly requested; backend/infra → `area=back` evidence |
+| Cross-screen design audit | `AGENTS.md`, `docs/RULES.md`, `$metravel-design-auditor`, design tokens/components, feature docs | screenshot/DOM evidence, consistency matrix, no taste-only findings; implementation only when explicitly requested |
+| Branded raster asset | `AGENTS.md`, `docs/ICON_ART_PROMPTS.md`, `$metravel-visual-asset-designer`, `$metravel-prompt-maintainer` | reuse first; imagegen for new raster; exact prompt beside tracked asset; no raster replacement for standard Feather UI actions; media-slot restrictions stay authoritative |
+| New quest authoring / full quest rewrite | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `$metravel-quest-writer`, текущие quest data/API contracts | отдельный confirmation question до creative text; duplicate check; проверенные факты и onsite tasks; anti-backtracking route; `$metravel-quest-geo-verifier` до publication; API write/publish только по явному запросу |
 | Test running | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, профильный feature-doc при наличии | выбрать самый узкий надёжный test command, сначала проверить operation gate, не дублировать активный full/preflight/e2e run, не оставлять `.skip`, после фикса rerun обязателен |
 | Repo-wide quality fix | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, `docs/DEVELOPMENT.md`, `docs/RELEASE.md` | запустить lint + Jest + Playwright, исправить реальные падения, повторить проверки и явно отметить только несвязанные блокеры |
 | Test writing | `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, профильный feature-doc, ближайшие существующие тесты | писать тест на ближайшем подходящем уровне, фиксировать реальный контракт, избегать flaky assertions |
@@ -138,8 +197,8 @@ Validation: <expected checks/evidence>.
 5. `$metravel-system-architect` формирует `Technical Design`: reuse points, affected modules, API/data/UI/external-link impact, implementation steps, validation plan.
 6. `$metravel-ui-guardrails` формирует UI contract для видимых web/mobile состояний, если задача затрагивает интерфейс.
 7. `$metravel-domain-router` выбирает feature-owner map для travel/map/profile/achievements/quests/PDF/new pages, если scope доменный.
-8. Доменный субагент уточняет ограничения и проверки: `$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert` или `$metravel-quest-expert`; для quest content используй `$metravel-quest-editor`, для координат — `$metravel-quest-geo-verifier`.
-9. `$metravel-android-developer` подключай для Android/native поведения, native crashes, Expo modules, platform files и device-specific fixes; Android QA выполняй через локальную сборку, установленную на USB-телефон.
+8. Доменный субагент уточняет ограничения и проверки: `$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert` или `$metravel-quest-expert`; для нового quest content используй `$metravel-quest-writer`, для правки существующего — `$metravel-quest-editor`, для координат — `$metravel-quest-geo-verifier`.
+9. `$metravel-android-developer` или `$metravel-ios-developer` подключай для platform-specific поведения, native crashes, Expo modules и platform files; Android QA выполняй через локальную USB-сборку, iOS не объявляй verified без simulator/device evidence.
 10. `$metravel-hook-builder` подключай дополнительно, если основной объём работы — вынос локальной логики в hooks или cleanup hook boundaries.
 11. `$metravel-refactor-surgeon` подключай для behavior-preserving split больших компонентов и file-complexity violations.
 12. `$metravel-feature-builder` реализует минимальный diff по утвержденному design/brief.
@@ -154,7 +213,8 @@ Validation: <expected checks/evidence>.
 21. `$metravel-sprint-reviewer` принимает тикеты активного спринта по Done gate и двигает только evidence-backed задачи в `done`.
 22. `$metravel-production-smoke` выполняет read-only smoke `metravel.by` после deploy или при аварийной проверке.
 23. `$metravel-system-architect` в review mode проверяет findings, diff, проверки, known risks и соответствие правилам, когда нужен архитектурный review.
-24. `$metravel-devops-agent` готовит и выполняет deploy/build/release только при явном запросе на deploy/release, с environment gate, preflight и post-deploy validation.
+24. `$metravel-google-play-operator` выполняет только явно запрошенный Android store build/submit/track step и подтверждает фактический track/versionCode.
+25. `$metravel-devops-agent` готовит и выполняет deploy/build/release только при явном запросе на deploy/release, с environment gate, preflight и post-deploy validation.
 
 Стандартный bug loop:
 
@@ -174,8 +234,10 @@ Validation: <expected checks/evidence>.
 - Любая новая задача должна попасть в текущий active sprint; если board API вернул `401`, ticket-board/оркестратор обязан обновить staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md` до создания локального fallback.
 - Project Analyst только анализирует и не меняет файлы, если пользователь отдельно не попросил перейти к docs/code changes.
 - Backend Diagnostician не правит backend/frontend код; он дает диагноз, read-only probes и board follow-up.
-- Mobile Tester по умолчанию не меняет код; он дает evidence и баг-репорты для `$metravel-android-developer`, `$metravel-feature-builder` или `$metravel-ui-guardrails`. Для Android evidence использует локально собранную и установленную по USB сборку; dev-client/export/EAS route допустим только по явному запросу пользователя.
+- Mobile Tester по умолчанию не меняет код; он дает evidence и баг-репорты для `$metravel-android-developer`, `$metravel-ios-developer`, `$metravel-feature-builder` или `$metravel-ui-guardrails`. Для Android evidence использует локально собранную и установленную по USB сборку; для iOS нужен доступный simulator/device; dev-client/export/EAS route допустим только по явному запросу пользователя.
 - Android Developer не меняет release/build configs (`app.json`, `eas.json`, `plugins/**`, `scripts/**`) без явного запроса, не запускает Android EAS/cloud/production builds или submits без явной команды пользователя и не заявляет Android-ready без local-build device evidence.
+- iOS Developer соблюдает те же config/EAS gates и не заявляет iOS-ready без simulator/device evidence.
+- Google Play Operator не запускает build/submit/promotion и не меняет track без явного запроса на точное действие; `alpha` и public `production` не взаимозаменяемы.
 - Programmer не начинает реализацию без bug report, feature brief или явного user request.
 - Refactor Surgeon не меняет бизнес-логику и не делает редизайн; только behavior-preserving extraction.
 - Sprint Reviewer не пишет feature code и не двигает `done` без runtime evidence.
@@ -278,6 +340,8 @@ deploys with `tar+ssh`, performs an atomic server swap, verifies health, and rol
 - Рекомендуемый UI metadata-файл: `agents/openai.yaml`.
 - Не добавляй README/CHANGELOG внутри папки skill: инструкции должны быть в `SKILL.md`, а длинные справки - в `references/` только при реальной необходимости.
 - Описывай в `description`, когда skill должен срабатывать. Тело `SKILL.md` должно быть коротким и операционным.
+- Для prompt specs, asset-level `PROMPT.md` и `agents/openai.yaml` используй `$metravel-prompt-maintainer`; сохраняй точный prompt рядом с ассетом и не считай chat/commit history единственным источником воспроизводимости.
+- После изменений prompt/skill metadata запускай `npm run audit:prompts`.
 - После изменения skill проверяй структуру валидатором `skill-creator`, если он доступен.
 
 ## Правила обновления документации

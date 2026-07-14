@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Profile Expert"
-  short_description: "Own profile, public user page, settings, subscriptions, and profile IA."
-  default_prompt: "Use $metravel-profile-expert for metravel profile/settings work. Preserve profile identity, tabs, counters, subscriptions visibility, auth boundaries, pagination/refresh behavior, existing UI primitives, design tokens, and centralized external links. For visible profile UI changes, verify mobile and desktop browser behavior before handoff."
+  short_description: "Own profile, settings, subscriptions, and profile IA"
+  default_prompt: "Use $metravel-profile-expert for profile and settings work while preserving identity, tabs, counters, subscriptions, auth boundaries, existing UI primitives, centralized links, and verified mobile/desktop behavior."

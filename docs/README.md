@@ -25,13 +25,15 @@ See `INDEX.md` for full docs map.
 
 Полная карта skills, экономичный route и критерии повышения до multi-agent workflow живут в `CODEX.md`. Для быстрого запуска начинай с одного профильного skill:
 
-- Документация, правила, skills: `$metravel-docs-maintainer`.
+- Документация, правила, skills: `$metravel-docs-maintainer`; prompt specs, asset prompts и skill default prompts: `$metravel-prompt-maintainer`.
 - Обычная разработка: `$metravel-domain-router` для travel/map/profile/achievements/quests/PDF/new pages, затем профильный доменный субагент (`$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, `$metravel-quest-expert`) и `$metravel-feature-builder`; добавляй `$metravel-ui-guardrails`, `$metravel-hook-builder`, `$metravel-refactor-surgeon` или `$metravel-test-writer` только если затронуты UI, hooks, large component split или тесты.
-- Анализ: `$metravel-project-analyst`, `$metravel-business-analyst`, `$metravel-growth-analyst`, `$metravel-performance-analyst`, `$metravel-seo-index-operator` или `$metravel-backend-diagnostician` по домену.
+- Анализ: `$metravel-project-analyst`, `$metravel-business-analyst`, `$metravel-growth-analyst`, `$metravel-performance-analyst`, `$metravel-security-reviewer`, `$metravel-design-auditor`, `$metravel-seo-index-operator` или `$metravel-backend-diagnostician` по домену.
 - Проверки и автоматизация: `$metravel-test-runner` для узких команд, `$metravel-release-checks` для выбора gate, `$metravel-quality-fixer` для полного fix-and-rerun цикла.
 - Browser/e2e и QA: `$metravel-e2e-runner`, `$metravel-browser-reviewer`, `$metravel-qa-agent`, `$metravel-mobile-tester`.
-- Android/native: `$metravel-android-developer`; mobile evidence — `$metravel-mobile-tester`.
-- Статьи и article media: `$metravel-article-editor-agent`.
+- Native/store: `$metravel-android-developer`, `$metravel-ios-developer`; mobile evidence — `$metravel-mobile-tester`; explicit Google Play operations — `$metravel-google-play-operator`; reciprocity campaign — `$metravel-play-campaign-tester`.
+- Generated raster assets: `$metravel-visual-asset-designer` + `$metravel-prompt-maintainer`; стандартные UI icons остаются на primitives/Feather.
+- Статьи, travel-guide drafts и media: `$metravel-article-editor-agent` (creative prose — только после отдельного подтверждения).
+- Квесты: `$metravel-quest-writer` для нового квеста, `$metravel-quest-editor` для существующего контента, `$metravel-quest-geo-verifier` для координат, `$metravel-quest-expert` для feature code.
 - Board tasks: `$metravel-ticket-board` для операций с MCP task board; `$metravel-task-contract` для обязательного Task Contract; `$metravel-sprint-reviewer` для приёмки active sprint.
 - Review/release: `$metravel-code-reviewer`, `$metravel-system-architect`, `$metravel-production-smoke`, `$metravel-devops-agent`.
 - Сложные цепочки: `$metravel-codex-orchestrator` для triage; `$metravel-agent-workflow` только когда нужны отдельные роли discovery/design/implementation/QA/review/deploy.

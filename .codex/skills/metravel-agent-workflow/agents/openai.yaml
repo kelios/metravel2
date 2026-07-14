@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Agent Workflow"
-  short_description: "Coordinate Codex route, specialists, QA, review, and deploy."
-  default_prompt: "Use $metravel-agent-workflow to coordinate a metravel role-based workflow. Start with $metravel-codex-orchestrator for broad task triage and role prompts, check the operation gate before assigning deploy/build/Android-install/rebuild/full-test/e2e work, use $metravel-project-analyst for read-only project analysis, keep backend/Django/API/server work analysis-only with area=back board follow-up, $metravel-android-developer for Android/native fixes, $metravel-mobile-tester for mobile web or native QA evidence, keep QA and analysis read-only, validate Android through local USB build/install unless explicitly approved otherwise, route confirmed bugs to the right implementation skill, use $metravel-ui-guardrails for visible UI, and use $metravel-devops-agent only for explicit deploy, build, release, or post-deploy verification requests."
+  short_description: "Coordinate specialists, native QA, review, and release"
+  default_prompt: "Use $metravel-agent-workflow to coordinate the minimal analyst, domain, Android/iOS, design/security review, QA, Google Play, and DevOps roles while preserving authority and validation gates."

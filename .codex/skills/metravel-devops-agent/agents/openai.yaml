@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel DevOps Agent"
-  short_description: "Deploy metravel to dev, preprod, or prod safely through the approved frontend deploy paths."
-  default_prompt: "Use $metravel-devops-agent to prepare, run, and verify a metravel deploy for the requested environment. Follow the Claude-proven deploy contract: explicit target, branch/status and operation gate first, no ad-hoc rsync/scp/SSH deploy commands, no secrets printed, baseline health before mutating deploys, canonical build guards, the documented Windows/Codex production wrapper when on that machine, scripts/fix-prod.sh only for justified emergency frontend recovery, post-deploy SEO/static/API health checks, and a clear rollback path. Do not run Android EAS/cloud/prod builds or submits unless the user explicitly requested that mobile build/submit target."
+  short_description: "Deploy through approved project release paths"
+  default_prompt: "Use $metravel-devops-agent to prepare, run, and verify a metravel deploy through approved project scripts with explicit target and operation gates, secret hygiene, baseline and post-deploy checks, rollback readiness, the documented Windows wrapper when applicable, and no Android EAS/cloud/production build or submit unless explicitly requested."

@@ -1,6 +1,9 @@
 ---
 name: metravel-ticket-board
-description: Operate the shared metravel MCP task board: list, create, update, sync, and audit tasks/sprints. Use when the user asks to create a ticket, show the board, update task status, import task drafts, split human/agent work, assign active sprint, or sync board evidence. Does not write feature code.
+description: >-
+  Operate the shared metravel MCP task board: list, create, update, sync, and audit tasks/sprints.
+  Use when the user asks to create a ticket, show the board, update task status, import task drafts,
+  split human/agent work, assign active sprint, or sync board evidence. Does not write feature code.
 ---
 
 # Metravel Ticket Board

@@ -1,6 +1,6 @@
 ---
 name: metravel-achievements-expert
-description: Expert for metravel achievements, badges, ranks, XP progress, peer badge toggles, achievement mocks, and profile/author integrations. Use for `api/achievements.ts`, `api/achievementsMock.ts`, `hooks/useAchievementsApi.ts`, `components/achievements/**`, `__tests__/achievements/**`, and achievement embeds in profile, public user pages, or AuthorCard.
+description: Expert for metravel achievements, badge authoring and audits, ranks, XP progress, peer badge toggles, achievement mocks, and profile/author integrations. Use for `api/achievements.ts`, `api/achievementsMock.ts`, `hooks/useAchievementsApi.ts`, `components/achievements/**`, `__tests__/achievements/**`, new badge definitions/media, full achievement UI audits, and embeds in profile, public user pages, or AuthorCard.
 ---
 
 # Metravel Achievements Expert
@@ -32,6 +32,8 @@ Read first:
 - Do not duplicate server state in Zustand.
 - Do not add new `any` in `api/` or `hooks/`.
 - Backend contract gaps become board tasks, not frontend assumptions.
+- For a new badge, define stable id/code, title, concise earned-state description, measurable unlock rule, rarity/category, and a real media plan. Do not invent a fake backend id or URL.
+- Route generated badge art through `$metravel-visual-asset-designer`; keep backend persistence/upload as an explicit contract or board dependency.
 - If a board ticket id is part of the task, update only that ticket: `in_progress` at start, `review` with evidence at handoff; do not move it to `done`.
 
 ## Workflow
@@ -41,6 +43,8 @@ Read first:
 3. If visuals change, check `badgeVisuals` and visual tests.
 4. For visible UI, verify profile, public profile, and AuthorCard states.
 5. Validate with targeted achievement tests and `npm run check:fast` for a finished local block.
+
+For a full audit, verify rank/XP states, badge grid/detail, peer toggle rollback, empty/loading/error states, mock-vs-live behavior, profile/public-profile/AuthorCard integration, mobile layout, browser console, and relevant network requests.
 
 ## Output
 

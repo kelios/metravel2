@@ -1,11 +1,11 @@
 ---
 name: metravel-article-editor-agent
-description: Publish, unpublish, verify, and add media to metravel articles through the production or local article API, including photorealistic generated article/travel images, backups, secret-token hygiene, and browser/API verification. Use when Codex is asked to add images to articles, operate /api/articles, or make article content changes that have explicit text confirmation.
+description: Create, edit, publish, unpublish, verify, and add media to metravel articles and travel-guide records through the production or local APIs, including photo-folder travel drafts, photorealistic generated article/travel images, backups, author identity, secret-token hygiene, and browser/API verification. Use for `/api/articles`, `/api/travels/upsert`, travel guides, article photo uploads, or content changes that have explicit text confirmation.
 ---
 
 # Metravel Article Editor Agent
 
-Use this skill for article content operations: generated illustrations/photos for article bodies, HTML/media insertion, publish/unpublish actions, and verification of `/article/...` pages. Do not independently write or creatively edit article prose.
+Use this skill for article and travel-guide content operations: photo-folder drafts, HTML/media insertion, publish/unpublish actions, and verification of article/travel pages. Do not independently write or creatively edit prose.
 
 Read first:
 
@@ -22,6 +22,7 @@ This agent may operate the article API when the user explicitly asks for article
 - Public read: `GET /api/articles/`, `GET /api/articles/{id}/`.
 - Admin writes: `POST /api/articles/`, `PUT/PATCH /api/articles/{id}/`, `POST /api/articles/{id}/publish/`, `POST /api/articles/{id}/unpublish/`.
 - Article fields: `name`, `description`, `article_type_id`, `publish`.
+- Travel article read/write: `GET /api/travels/{id}/`, `PUT /api/travels/upsert/`, existing `scripts/seo-edit.js`, and project-owned guide scripts when they match the task.
 - For rich-text images inside article/travel descriptions, use `POST /api/upload` with `collection=description` when a travel id is the target container. For pure article records, confirm the supported backend media path before uploading; do not invent a collection name.
 
 ## Text Authority
@@ -29,6 +30,8 @@ This agent may operate the article API when the user explicitly asks for article
 Codex may independently add, generate, upload, and insert images/media for articles, route points, and quests when requested.
 
 Codex must not independently write, expand, rewrite, or creatively improve article/quest prose, tasks, hints, titles, SEO text, or other authored text. If the task appears to require new or changed authored text, ask the user for explicit confirmation before doing the text work, even when the original request sounds direct.
+
+For a new travel article, use the designated Julia author credentials already stored in `.env.e2e`, verify the created author is user id `1`, and default to `publish=false` unless publication was explicitly requested. Never print the author credential or token. If the record is created under the wrong author, stop and use the documented rollback/recreate path rather than trying to spoof authorship in the payload.
 
 ## Secrets
 
@@ -58,6 +61,8 @@ When a script needs the token, load it inside the script/process and pass only t
 7. Re-fetch the article and compare the intended fields.
 8. Verify the public page or API response. For visible article body changes, use browser verification and a screenshot when feasible.
 9. If publish state, article type, title, or body regresses unexpectedly, restore from the rollback snapshot before handoff.
+
+For photo-folder/travel-guide work, add duplicate detection, EXIF/GPS and visible-photo verification, exact place-name research, deliberate cover selection from inspected images, and final `GET` verification of points, country/categories, cover, gallery, author, and publish state. Do not guess a place from filename or coordinates alone.
 
 ## Generated Images
 

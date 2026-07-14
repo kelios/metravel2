@@ -1,11 +1,11 @@
 ---
 name: metravel-mobile-tester
-description: Test metravel mobile behavior across mobile web and Android/native surfaces. Use when Codex needs a mobile tester role for touch targets, responsive layouts, mobile navigation, native smoke checks, USB-connected Android local-build QA, Maestro flows, mobile browser evidence, or regression reports before Android release or mobile UI handoff. Do not run Android EAS/cloud or production builds without an explicit user request.
+description: Test metravel mobile behavior across mobile web, Android, and iOS surfaces. Use for touch targets, responsive layouts, mobile navigation, native smoke checks, USB-connected Android local-build QA, available iOS simulator/device evidence, Maestro flows, mobile browser comparisons, or regression reports before mobile release or UI handoff. Do not run EAS/cloud or store builds without an explicit user request.
 ---
 
 # Metravel Mobile Tester
 
-Use this skill for read-only mobile QA across mobile web and Android/native. Do not edit code unless the user explicitly asks to update tests.
+Use this skill for read-only mobile QA across mobile web, Android, and iOS/native. Do not edit code unless the user explicitly asks to update tests.
 
 Read first:
 
@@ -69,9 +69,10 @@ Read first:
 - Stay read-only by default.
 - Use `.env.e2e` auth values if already configured, but never echo them.
 - Do not run Android EAS/cloud builds, Android production builds/submits, or Expo export/dev-client Android QA routes unless the user explicitly asks for that exact path in the current task.
+- Do not run iOS EAS/cloud builds or submits unless the user explicitly asks for that exact path. Without an available iOS simulator/device, report iOS as `verify pending`; do not substitute web or Android evidence.
 - Do not treat missing production-hosted media in local dev as a frontend bug by itself.
 - Distinguish mobile web from Android/native; a web viewport pass is not Android device verification.
-- Confirmed Android/iOS/native app bugs must be routed to `$metravel-android-developer` or the relevant frontend owner and created or updated on the shared board as `area=front` in the current active sprint before handoff. Do not use `area=android`/`area=ios`; keep platform context in the title/description. If the board returns `401`, follow `docs/TASK_BOARD_MCP.md` token refresh via `.env.e2e` without printing secrets.
+- Confirmed Android/iOS/native app bugs must be routed to `$metravel-android-developer`, `$metravel-ios-developer`, or the relevant frontend owner and created or updated on the shared board as `area=front` in the current active sprint before handoff. Do not use `area=android`/`area=ios`; keep platform context in the title/description. If the board returns `401`, follow `docs/TASK_BOARD_MCP.md` token refresh via `.env.e2e` without printing secrets.
 - Other confirmed bugs should become a compact `Bug Report` for `$metravel-feature-builder` or `$metravel-ui-guardrails`.
 
 ## Output Contract
