@@ -26,6 +26,7 @@ Create an evidence-based walking quest that reads as one story and can be repres
 
 - Writing or creatively rewriting quest prose, titles, stories, tasks, hints, or finale requires a separate explicit confirmation question under `AGENTS.md`, even if the initial request appears direct. Stop before authoring until that confirmation is received.
 - Research, duplicate checks, contract inspection, route analysis, and a non-creative outline may proceed before confirmation.
+- Before confirmation, express an outline only as functional labels: audience, role type, goal type, stakes type, beat purpose, clue mechanic, route cluster, and finale function. Do not coin quest titles, character names, dialogue, story prose, task wording, hints, or finale copy.
 - Treat draft creation, repository changes, API publication, and media upload as separate actions. Do not publish, patch production, or upload media unless the user explicitly requests that action.
 - Keep tokens in approved env/secret files and never print them. Take an ignored rollback snapshot before changing an existing remote quest.
 
