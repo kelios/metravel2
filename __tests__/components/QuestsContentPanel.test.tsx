@@ -15,8 +15,8 @@ jest.mock('@/screens/tabs/QuestCard', () => {
     const React = require('react');
     const { Text } = require('react-native');
 
-    return function MockQuestCard({ quest }: { quest: { id: string; title: string } }) {
-        return React.createElement(Text, { testID: `quest-card-${quest.id}` }, quest.title);
+    return function MockQuestCard({ cityId, quest }: { cityId: string; quest: { id: string; title: string } }) {
+        return React.createElement(Text, { testID: `quest-card-${quest.id}`, accessibilityLabel: cityId }, quest.title);
     };
 });
 
@@ -471,6 +471,94 @@ describe('QuestsContentPanel', () => {
 
         expect(onShowNearby).toHaveBeenCalledTimes(1);
         expect(getByText('Разрешите доступ к геолокации.')).toBeTruthy();
+    });
+
+    it('presents kids quests as an audience filter rather than fairytales', () => {
+        mockIsMobile = true;
+        (Platform as { OS: string }).OS = 'web';
+        const onShowKids = jest.fn();
+
+        const { getByLabelText, getByText, queryByText } = render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="list"
+                selectedCityId="__kids__"
+                selectedCityName="Для детей"
+                nearbyId="__nearby__"
+                kidsFilterId="__kids__"
+                questsAll={[makeQuest(0)]}
+                questCardWidth={320}
+                mapPoints={[]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={() => null}
+                isMobile
+                filtersActive
+                onResetFilters={() => {}}
+                onShowKids={onShowKids}
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />,
+        );
+
+        fireEvent.press(getByLabelText('Показать квесты для детей'));
+
+        expect(onShowKids).toHaveBeenCalledTimes(1);
+        expect(getByText('Квесты для детей')).toBeTruthy();
+        expect(queryByText('Детские сказки')).toBeNull();
+    });
+
+    it('keeps each quest city route when search spans the full catalog', () => {
+        (Platform as { OS: string }).OS = 'web';
+        const quest = makeQuest(0);
+        quest.cityId = 'warsaw';
+
+        const { getByTestId } = render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="list"
+                selectedCityId="minsk"
+                selectedCityName="Минск"
+                nearbyId="__nearby__"
+                searchQuery="quest"
+                onSearchChange={() => {}}
+                questsAll={[quest]}
+                questCardWidth={320}
+                mapPoints={[]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={() => null}
+                isMobile={false}
+                filtersActive
+                onResetFilters={() => {}}
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />,
+        );
+
+        expect(getByTestId('quest-card-quest-0').props.accessibilityLabel).toBe('warsaw');
     });
 
     it('shows the reset-filters chip when a filter narrows the catalog and hides it otherwise', () => {

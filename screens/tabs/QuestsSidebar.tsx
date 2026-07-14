@@ -196,11 +196,11 @@ export default function QuestsSidebar({
                         styles={styles}
                         colors={colors}
                         isMobile={isMobile}
-                        icon="book-open"
-                        label="Детские сказки"
+                        icon="smile"
+                        label="Для детей"
                         active={isKidsSelected}
                         onPress={() => onSelectCity(kidsFilterId)}
-                        accessibilityLabel={`Детские сказки, ${pluralizeQuest(cityQuestCountById[kidsFilterId] || 0)}`}
+                        accessibilityLabel={`Квесты для детей, ${pluralizeQuest(cityQuestCountById[kidsFilterId] || 0)}`}
                         accessibilityState={{ selected: isKidsSelected }}
                         testID="quests-sidebar-kids-button"
                     />

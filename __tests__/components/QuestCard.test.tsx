@@ -137,6 +137,22 @@ describe('QuestCard', () => {
         );
     });
 
+    it('marks a kids quest clearly without replacing its city label', () => {
+        const { getByTestId, getByText, queryByText } = renderWithQueryClient(
+            <QuestCard
+                styles={styles}
+                cardWidth={340}
+                cityId="krakow"
+                quest={makeQuest({ tags: ['kids', 'family'] })}
+            />,
+        );
+
+        expect(getByTestId('quest-card-kids-krakow-dragon')).toBeTruthy();
+        expect(getByText('Для детей')).toBeTruthy();
+        expect(getByText('Kraków')).toBeTruthy();
+        expect(queryByText('Детская сказка')).toBeNull();
+    });
+
     it('passes a resized proxy cover URL to native image instead of the full-size original', () => {
         (Platform as { OS: string }).OS = 'android';
         const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;

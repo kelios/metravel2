@@ -54,7 +54,7 @@ export default function QuestCard({
     const pointsText = pluralizePoints(quest.points ?? 0);
     const difficultyInfo = getDifficultyInfo(quest.difficulty);
     const isKids = isKidsQuest(quest.tags);
-    const categoryLabel = isKids ? 'Детская сказка' : quest.cityName || quest.countryName || null;
+    const categoryLabel = quest.cityName || quest.countryName || null;
     const distanceText = nearby && typeof quest._distanceKm === 'number'
         ? quest._distanceKm < 1
             ? `${Math.round(quest._distanceKm * 1000)} м`
@@ -216,8 +216,8 @@ export default function QuestCard({
                         style={[styles.questCardKidsBadge, difficultyInfo ? { top: 44 } : null]}
                         testID={`quest-card-kids-${quest.id}`}
                     >
-                        <Feather name="book-open" size={12} color={colors.textOnDark} />
-                        <Text style={styles.questCardKidsText}>Детская сказка</Text>
+                        <Feather name="smile" size={12} color={colors.textOnDark} />
+                        <Text style={styles.questCardKidsText}>Для детей</Text>
                     </View>
                 )}
 

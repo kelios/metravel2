@@ -78,7 +78,7 @@ export async function loadExpoLocation() {
 }
 
 // Тег детских/семейных квестов в meta.tags (adaptMeta → string[]). Держим в
-// одном месте: бейдж «Детская сказка» на карточке и синонимы для русского поиска
+// одном месте: бейдж «Для детей» на карточке и синонимы для русского поиска
 // («детский»/«семейный») опираются на него.
 export const KIDS_QUEST_TAG = 'kids';
 
@@ -87,12 +87,17 @@ export function isKidsQuest(tags?: string[] | null): boolean {
     return tags.some((tag) => typeof tag === 'string' && tag.trim().toLowerCase() === KIDS_QUEST_TAG);
 }
 
-export function filterRegularQuests<T extends { tags?: string[] | null }>(quests: T[]): T[] {
-    return quests.filter((quest) => !isKidsQuest(quest.tags));
-}
-
 export function filterKidsQuests<T extends { tags?: string[] | null }>(quests: T[]): T[] {
     return quests.filter((quest) => isKidsQuest(quest.tags));
+}
+
+export function groupQuestsByCity<T extends { cityId?: string | null }>(quests: T[]): Record<string, T[]> {
+    const index: Record<string, T[]> = {};
+    for (const quest of quests) {
+        if (!quest.cityId) continue;
+        (index[quest.cityId] ||= []).push(quest);
+    }
+    return index;
 }
 
 export type MapPoint = {

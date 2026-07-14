@@ -6,7 +6,7 @@ import {
   DEFAULT_NEARBY_RADIUS_KM,
   filterKidsQuests,
   filterQuestsByMapSearchArea,
-  filterRegularQuests,
+  groupQuestsByCity,
   isCoordinateInMapViewport,
   isKidsQuest,
   resolveQuestMapCenter,
@@ -111,20 +111,21 @@ describe('QuestsScreen helpers', () => {
 
   describe('quest audience filters', () => {
     const quests = [
-      { id: 'regular-minsk', tags: ['city'] },
-      { id: 'kids-minsk', tags: ['kids', 'family'] },
-      { id: 'regular-brest', tags: null },
-      { id: 'kids-grodno', tags: [' Kids '] },
+      { id: 'regular-minsk', cityId: 'minsk', tags: ['city'] },
+      { id: 'kids-minsk', cityId: 'minsk', tags: ['kids', 'family'] },
+      { id: 'regular-brest', cityId: 'brest', tags: null },
+      { id: 'kids-grodno', cityId: 'grodno', tags: [' Kids '] },
     ];
 
-    it('keeps kids quests out of the regular catalog', () => {
-      expect(filterRegularQuests(quests).map((quest) => quest.id)).toEqual([
-        'regular-minsk',
-        'regular-brest',
-      ]);
+    it('keeps kids quests in their city catalog', () => {
+      const byCity = groupQuestsByCity(quests);
+
+      expect(byCity.minsk.map((quest) => quest.id)).toEqual(['regular-minsk', 'kids-minsk']);
+      expect(byCity.brest.map((quest) => quest.id)).toEqual(['regular-brest']);
+      expect(byCity.grodno.map((quest) => quest.id)).toEqual(['kids-grodno']);
     });
 
-    it('collects kids quests for the separate fairytale filter', () => {
+    it('also collects kids quests for the audience filter', () => {
       expect(filterKidsQuests(quests).map((quest) => quest.id)).toEqual([
         'kids-minsk',
         'kids-grodno',

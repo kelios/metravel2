@@ -31,8 +31,8 @@ import {
     KIDS_FILTER_ID,
     filterKidsQuests,
     filterQuestsByMapSearchArea,
-    filterRegularQuests,
     getAverageQuestMapPointCenter,
+    groupQuestsByCity,
     isKidsQuest,
     loadExpoLocation,
     resolveQuestMapCenter,
@@ -266,16 +266,10 @@ export default function QuestsScreen() {
     }, [filterDrawerOpen]);
 
     // ── Derived data ──
-    const regularQuests = useMemo(() => filterRegularQuests(ALL_QUESTS), [ALL_QUESTS]);
     const kidsQuests = useMemo(() => filterKidsQuests(ALL_QUESTS), [ALL_QUESTS]);
-    const regularCityQuests = useMemo(() => {
-        const index: Record<string, QuestMeta[]> = {};
-        for (const quest of regularQuests) {
-            if (!quest.cityId) continue;
-            (index[quest.cityId] ||= []).push(quest);
-        }
-        return index;
-    }, [regularQuests]);
+    // Детские квесты — часть каталога своего города. Фильтр «Для детей»
+    // даёт дополнительный срез, но не заменяет городскую группировку.
+    const cityQuests = useMemo(() => groupQuestsByCity<QuestMeta>(ALL_QUESTS), [ALL_QUESTS]);
 
     const citiesWithNearby: (City | NearbyCity)[] = useMemo(
         () => [{ id: NEARBY_ID, name: 'Рядом', country: 'BY', isNearby: true } as NearbyCity, ...CITIES],
@@ -287,21 +281,21 @@ export default function QuestsScreen() {
     }, [citiesWithNearby]);
 
     const nearbyCount = useMemo(() => {
-        if (!userLoc || !regularQuests.length) return 0;
-        return regularQuests.reduce((acc, q) => {
+        if (!userLoc || !ALL_QUESTS.length) return 0;
+        return ALL_QUESTS.reduce((acc, q) => {
             const d = haversineKm(userLoc.lat, userLoc.lng, q.lat, q.lng);
             return acc + (d <= nearbyRadiusKm ? 1 : 0);
         }, 0);
-    }, [userLoc, nearbyRadiusKm, regularQuests]);
+    }, [userLoc, nearbyRadiusKm, ALL_QUESTS]);
 
     const cityQuestCountById = useMemo(() => {
         const counts: Record<string, number> = {};
         for (const city of citiesWithNearby) {
-            counts[city.id] = city.id === NEARBY_ID ? nearbyCount : (regularCityQuests[city.id]?.length || 0);
+            counts[city.id] = city.id === NEARBY_ID ? nearbyCount : (cityQuests[city.id]?.length || 0);
         }
         counts[KIDS_FILTER_ID] = kidsQuests.length;
         return counts;
-    }, [citiesWithNearby, nearbyCount, regularCityQuests, kidsQuests.length]);
+    }, [citiesWithNearby, nearbyCount, cityQuests, kidsQuests.length]);
 
     // Filter to show only cities with quests (plus Nearby always visible)
     const visibleCities = useMemo(() => {
@@ -379,7 +373,7 @@ export default function QuestsScreen() {
                         ...(q.tags || []),
                         // Русский поиск по тегу 'kids': добавляем синонимы, чтобы
                         // «детский»/«семейный» находили детские квесты.
-                        ...(isKidsQuest(q.tags) ? ['детский', 'семейный'] : []),
+                        ...(isKidsQuest(q.tags) ? ['детский', 'для детей', 'семейный'] : []),
                     ]
                         .filter(Boolean)
                         .join(' ')
@@ -396,19 +390,19 @@ export default function QuestsScreen() {
             if (activeMapAreaCenter) {
                 // «Искать в этой области» должен фиксировать именно видимый viewport,
                 // а не повторно резать уже показанную карту маленьким nearby-радиусом.
-                return filterQuestsByMapSearchArea(regularQuests, activeMapAreaCenter, nearbyRadiusKm);
+                return filterQuestsByMapSearchArea(ALL_QUESTS, activeMapAreaCenter, nearbyRadiusKm);
             }
             // Радиусную фильтрацию применяем только при явном выборе «Рядом»;
             // мягкий дефолт «Рядом» показывает весь каталог.
             if (!userLoc || !nearbyExplicit) {
-                return regularQuests.map((q) => ({ ...q }));
+                return ALL_QUESTS.map((q) => ({ ...q }));
             }
-            return regularQuests
+            return ALL_QUESTS
                 .map((q) => ({ ...q, _distanceKm: haversineKm(userLoc.lat, userLoc.lng, q.lat, q.lng) }))
                 .filter((q) => (q._distanceKm ?? Infinity) <= nearbyRadiusKm)
                 .sort((a, b) => a._distanceKm! - b._distanceKm!);
         }
-        return (regularCityQuests[selectedCityId] || []).map((q) => ({ ...q }));
+        return (cityQuests[selectedCityId] || []).map((q) => ({ ...q }));
     }, [
         selectedCityId,
         userLoc,
@@ -418,8 +412,7 @@ export default function QuestsScreen() {
         nearbyExplicit,
         activeMapAreaCenter,
         searchTerm,
-        regularQuests,
-        regularCityQuests,
+        cityQuests,
         kidsQuests,
     ]);
 
@@ -432,7 +425,7 @@ export default function QuestsScreen() {
         const source = searchTerm
             ? questsAll
             : selectedCityId === NEARBY_ID
-                ? (userLoc || activeMapAreaCenter ? questsAll : regularQuests)
+                ? (userLoc || activeMapAreaCenter ? questsAll : ALL_QUESTS)
                 : questsAll;
 
         return source
@@ -469,7 +462,7 @@ export default function QuestsScreen() {
                     },
                 };
             });
-    }, [dataLoaded, selectedCityId, userLoc, activeMapAreaCenter, questsAll, regularQuests, searchTerm]);
+    }, [dataLoaded, selectedCityId, userLoc, activeMapAreaCenter, questsAll, ALL_QUESTS, searchTerm]);
 
     const mapCenter = useMemo(() => {
         const kidsCenter = selectedCityId === KIDS_FILTER_ID ? getAverageQuestMapPointCenter(mapPoints) : null;
@@ -528,7 +521,7 @@ export default function QuestsScreen() {
         selectedCityId === NEARBY_ID
             ? 'Рядом'
             : selectedCityId === KIDS_FILTER_ID
-                ? 'Детские сказки'
+                ? 'Для детей'
                 : CITIES.find((c) => c.id === selectedCityId)?.name ?? null;
 
     const titleText = useMemo(() => {
@@ -546,7 +539,7 @@ export default function QuestsScreen() {
             return `Квесты: Рядом${suffix} | MeTravel`;
         }
         if (selectedCityId === KIDS_FILTER_ID) {
-            return `Детские сказки: ${kidsQuests.length} ${kidsQuests.length === 1 ? 'квест' : 'квестов'} | MeTravel`;
+            return `Квесты для детей: ${kidsQuests.length} ${kidsQuests.length === 1 ? 'квест' : 'квестов'} | MeTravel`;
         }
         return selectedCityName
             ? `Квесты: ${selectedCityName} | MeTravel`
@@ -564,7 +557,7 @@ export default function QuestsScreen() {
             return 'Офлайн-квесты рядом с вами и ваше текущее местоположение на карте.';
         }
         if (selectedCityId === KIDS_FILTER_ID) {
-            return 'Детские квесты в сказочном акварельном стиле: семейные прогулки, добрые герои, загадки и городские легенды.';
+            return 'Городские квесты для детей: прогулки с заданиями, загадками и точками на карте.';
         }
         if (selectedCityName) return `Офлайн-квесты в городе ${selectedCityName}. Прогулки по точкам, задания и маршруты.`;
         return 'Исследуйте города и парки с офлайн-квестами — приключения на карте рядом с вами.';

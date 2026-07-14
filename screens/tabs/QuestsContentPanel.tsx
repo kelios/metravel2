@@ -109,6 +109,7 @@ export default function QuestsContentPanel({
     onSearchMapArea,
 }: QuestsContentPanelProps) {
     const router = useRouter();
+    const searchActive = searchQuery.trim().length > 0;
 
     const openQuestFromPoint = (point?: { questMeta?: MapPoint['questMeta'] }) => {
         const meta = point?.questMeta;
@@ -117,10 +118,10 @@ export default function QuestsContentPanel({
     };
 
     const getQuestCityId = useCallback((quest: QuestListItem) => (
-        selectedCityId === nearbyId || selectedCityId === kidsFilterId
+        searchActive || selectedCityId === nearbyId || selectedCityId === kidsFilterId
             ? (quest.cityId || '')
             : (selectedCityId || '')
-    ), [kidsFilterId, nearbyId, selectedCityId]);
+    ), [kidsFilterId, nearbyId, searchActive, selectedCityId]);
 
     const renderQuestItem = useCallback(({ item: quest, index }: ListRenderItemInfo<QuestListItem>) => (
         <View style={styles.questVirtualizedItem}>
@@ -137,8 +138,6 @@ export default function QuestsContentPanel({
 
     const questKeyExtractor = useCallback((quest: QuestListItem) => String(quest.id), []);
 
-    const searchActive = searchQuery.trim().length > 0;
-
     const contentHeader = (
         <View style={styles.contentHeader}>
             <View style={styles.contentHeaderTopRow}>
@@ -149,7 +148,7 @@ export default function QuestsContentPanel({
                             : selectedCityId === nearbyId
                                 ? (isMapAreaActive ? 'Квесты в этой области' : userLoc ? 'Квесты поблизости' : 'Все квесты')
                                 : selectedCityId === kidsFilterId
-                                    ? 'Детские сказки'
+                                    ? 'Квесты для детей'
                                     : selectedCityName || 'Все квесты'}
                     </Text>
                     <View style={styles.contentCountRow}>
@@ -196,12 +195,12 @@ export default function QuestsContentPanel({
                             style={[styles.headerIconBtn, selectedCityId === kidsFilterId && styles.headerIconBtnActive]}
                             onPress={onShowKids}
                             accessibilityRole="button"
-                            accessibilityLabel="Показать детские сказки"
+                            accessibilityLabel="Показать квесты для детей"
                             accessibilityState={{ selected: selectedCityId === kidsFilterId }}
                             testID="quests-show-kids"
                         >
                             <Feather
-                                name="book-open"
+                                name="smile"
                                 size={17}
                                 color={selectedCityId === kidsFilterId ? colors.textOnPrimary : colors.text}
                             />
