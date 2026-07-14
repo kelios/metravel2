@@ -105,7 +105,7 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
   }
 
   const factItems: React.ReactNode[] = [];
-  const iconSize = Platform.select({ default: 14, web: 15 });
+  const iconSize = Platform.select({ default: 13, web: 14 });
   const iconColor = colors.textMuted;
 
   if (whenLine) {
@@ -186,12 +186,12 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     gap: Platform.select({
-      default: 10,
-      web: 12,
+      default: 6,
+      web: 8,
     }),
     paddingVertical: Platform.select({
-      default: 12,
-      web: 14,
+      default: 8,
+      web: 10,
     }),
     paddingHorizontal: 0,
     backgroundColor: 'transparent',
@@ -200,31 +200,31 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderColor: 'transparent',
   },
   containerMobile: {
-    paddingVertical: 10,
+    paddingVertical: 6,
     paddingHorizontal: 0,
-    gap: 8,
+    gap: 6,
   },
   factsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: Platform.select({
-      default: 6,
-      web: 8,
+      default: 5,
+      web: 6,
     }),
   },
   factItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     maxWidth: '100%',
     paddingVertical: Platform.select({
-      default: 8,
-      web: 10,
+      default: 6,
+      web: 7,
     }),
     paddingHorizontal: Platform.select({
-      default: 12,
-      web: 14,
+      default: 10,
+      web: 12,
     }),
     borderRadius: DESIGN_TOKENS.radii.sm,
     backgroundColor: colors.surface,
@@ -232,8 +232,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderColor: colors.borderLight,
     borderStyle: 'solid',
     minHeight: Platform.select({
-      default: 38,
-      web: 40,
+      default: 32,
+      web: 34,
     }),
     ...(Platform.OS === 'web'
       ? ({
@@ -244,33 +244,33 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   factText: {
     flexShrink: 1,
     fontSize: Platform.select({
-      default: 14,
-      web: 14,
+      default: 13,
+      web: 13,
     }),
     fontWeight: '500',
     color: colors.text,
     letterSpacing: 0,
-    lineHeight: 20,
+    lineHeight: 18,
   },
   categoriesContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: DESIGN_TOKENS.spacing.xs,
+    gap: 6,
     width: '100%',
   },
   categoriesHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: 4,
     minHeight: Platform.select({
-      default: 30,
-      web: 32,
+      default: 26,
+      web: 28,
     }),
-    paddingHorizontal: 2,
+    paddingHorizontal: 0,
   },
   categoriesLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: colors.textMuted,
     letterSpacing: 0.1,
@@ -278,26 +278,26 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   categoriesWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.xs,
+    gap: 5,
     flex: 1,
   },
   categoryTag: {
     backgroundColor: colors.surface,
     paddingHorizontal: Platform.select({
-      default: 12,
-      web: 14,
+      default: 10,
+      web: 12,
     }),
     paddingVertical: Platform.select({
-      default: 6,
-      web: 7,
+      default: 4,
+      web: 5,
     }),
     borderRadius: DESIGN_TOKENS.radii.sm,
     borderWidth: 1,
     borderColor: colors.borderLight,
     borderStyle: 'solid',
     minHeight: Platform.select({
-      default: 30,
-      web: 32,
+      default: 26,
+      web: 28,
     }),
     alignItems: 'center',
     justifyContent: 'center',
@@ -314,10 +314,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     }),
   },
   categoryText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: colors.text,
     letterSpacing: 0,
+    lineHeight: 16,
   },
 });
 

@@ -79,11 +79,11 @@ describe('TravelHeroFavoriteToggle', () => {
     expect(queryByText('Хочу поехать')).toBeNull()
   })
 
-  it('uses mobile label text as a11y label and shows text', () => {
+  it('uses mobile label text as a11y label and hides visible text', () => {
     Platform.OS = 'ios' as any
     mockIsFavorite.mockReturnValue(true)
 
-    const { getByLabelText, getByText } = render(
+    const { getByLabelText, queryByText } = render(
       <TravelHeroFavoriteToggle
         travel={{ id: 2, slug: 'mobile', name: 'Mobile travel' } as any}
         isMobile
@@ -91,7 +91,7 @@ describe('TravelHeroFavoriteToggle', () => {
     )
 
     expect(getByLabelText('В «Хочу поехать»')).toBeTruthy()
-    expect(getByText('В «Хочу поехать»')).toBeTruthy()
+    expect(queryByText('В «Хочу поехать»')).toBeNull()
   })
 
   it('saves web guest favorite locally without requiring auth', async () => {

@@ -48,6 +48,17 @@ describe('MapPanel native map rendering', () => {
                 "children": null,
                 "type": "View",
               },
+              {
+                "children": [
+                  {
+                    "children": [
+                      "download-cloud",
+                    ],
+                    "type": "Text",
+                  },
+                ],
+                "type": "View",
+              },
             ],
             "type": "View",
           },

@@ -46,7 +46,7 @@ export const TravelHeroFavoriteToggle: React.FC<{
         size={20}
         color={isFavorite ? colors.textOnPrimary : colors.textOnDark}
       />
-      {isMobile || Platform.OS !== 'web' ? (
+      {!isMobile && Platform.OS !== 'web' ? (
         <Text
           style={[
             styles.heroFavoriteBtnLabel,

@@ -52,7 +52,7 @@ Prefer provider-neutral wording unless a provider-specific feature is essential.
 - Standard production UI actions use existing primitives and Feather icons; do not generate raster icons as a default substitute.
 - Published travel/article media must be real licensed/local photos or photorealistic generated raster images. Do not route illustration, SVG, screenshots, or placeholder art into those slots.
 - Quest covers and campaign art may use the explicit style allowed by the relevant canonical prompt spec.
-- Route raster generation, post-processing, and app integration to `$metravel-visual-asset-designer`; this skill owns the prompt contract and audit layer.
+- Route raster generation, post-processing, and app integration to `$metravel-visual-asset-designer`; this skill owns the prompt contract and audit layer. For children's, family, fairy-tale, park, or teen quest covers, also use `$metravel-child-quest-visuals`; it owns the age mode and illustrated story contract.
 - Never use an internet image without explicit permission and verified licensing.
 - Keep generated text, letters, logos, and watermarks out of image prompts unless the user explicitly requests them and the destination supports them.
 - Treat prompt editing, asset generation, upload, and publication as separate actions. A prompt change does not authorize a production write.
