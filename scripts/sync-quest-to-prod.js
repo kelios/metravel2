@@ -18,6 +18,9 @@ const isDryRun = args.includes('--dry-run');
 const apiUrlArg = args.find(a => a.startsWith('--api-url='));
 const tokenArg = args.find(a => a.startsWith('--token='));
 const sourceArg = args.find(a => a.startsWith('--source-file='));
+// Порядок шагов на проде мог быть изменён после миграции, а локальный data-файл — устареть.
+// Поэтому order переносим ТОЛЬКО по явному --reorder (иначе затрём правильный прод-порядок).
+const doReorder = args.includes('--reorder');
 const API_BASE = apiUrlArg ? apiUrlArg.split('=')[1] : 'https://metravel.by';
 
 if (!sourceArg) { console.error('❌ Нужен --source-file=…'); process.exit(1); }
@@ -54,14 +57,15 @@ const QUESTS = require(SOURCE_FILE);
 function stepPayload(s, order) {
     const apType = (s.answer_pattern || {}).type;
     const inputType = s.inputType || (apType === 'range' || apType === 'exact' || apType === 'any_number' ? 'number' : 'text');
-    return {
+    const payload = {
         title: s.title, location: s.location, story: s.story, task: s.task,
         hint: s.hint || null, answer_pattern: serAnswer(s),
         lat: dec(s.lat), lng: dec(s.lng),
         maps_url: s.mapsUrl || `https://maps.google.com/?q=${s.lat},${s.lng}`,
         input_type: inputType,
-        order,
     };
+    if (order !== undefined) payload.order = order;
+    return payload;
 }
 
 async function main() {
@@ -83,19 +87,23 @@ async function main() {
                 console.log('  ⚠️ intro id не найден — пропуск');
             }
         }
-        // steps — двухфазно по order во избежание коллизий unique(quest, order):
-        // фаза 1 — временные order 900+i; фаза 2 — контент + финальный order i+1.
-        const present = q.steps.filter(s => byStepId.get(s.step_id));
-        for (let i = 0; i < present.length; i++) {
-            const db = byStepId.get(present[i].step_id);
-            await apiPatch(`/api/quest-steps/${db.id}/`, { order: 900 + i });
+        // steps. ВАЖНО: по умолчанию order НЕ трогаем — локальный data-файл может
+        // содержать устаревший порядок, а на проде квест уже переупорядочен
+        // (см. brest-lantern). Реордер — только по явному --reorder.
+        if (doReorder) {
+            // двухфазно во избежание коллизий unique(quest, order)
+            const present = q.steps.filter(s => byStepId.get(s.step_id));
+            for (let i = 0; i < present.length; i++) {
+                const db = byStepId.get(present[i].step_id);
+                await apiPatch(`/api/quest-steps/${db.id}/`, { order: 900 + i });
+            }
         }
         for (const s of q.steps) {
             const db = byStepId.get(s.step_id);
             if (!db) { console.log(`  ⚠️ step ${s.step_id} нет на проде — пропуск (структура не совпадает)`); continue; }
-            const finalOrder = q.steps.indexOf(s) + 1;
+            const finalOrder = doReorder ? q.steps.indexOf(s) + 1 : undefined;
             await apiPatch(`/api/quest-steps/${db.id}/`, stepPayload(s, finalOrder));
-            console.log(`  ✅ step ${s.step_id} (order ${finalOrder})`);
+            console.log(`  ✅ step ${s.step_id}${doReorder ? ` (order ${finalOrder})` : ''}`);
         }
         // finale — OneToOne с квестом: finale id == numeric quest id (bundle.id).
         // Список финалов скрывает id, но detail /api/quest-finales/<id>/ доступен по id квеста.
