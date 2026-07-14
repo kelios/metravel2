@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Platform } from 'react-native'
+import { DeviceEventEmitter, Platform } from 'react-native'
 
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import { isValidCoordinate } from '@/utils/coordinateValidator'
@@ -106,6 +106,9 @@ export function useMapUserLocation({
     try {
       const Location = await loadExpoLocation()
       const { status } = await Location.requestForegroundPermissionsAsync()
+      // Системный диалог гео закрыт (granted/denied) — будим Leaflet, чтобы карта дозапросила
+      // тайлы под текущий вью на чистой установке (см. F-17b в Map.ios).
+      if (Platform.OS !== 'web') DeviceEventEmitter.emit('metravel:map-layout-invalidate')
       if (status !== 'granted') {
         geoRequestedRef.current = false
         if (notifyOnFailure) showGeolocationErrorToast()

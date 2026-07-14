@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { DeviceEventEmitter, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import Feather from '@expo/vector-icons/Feather'
 import type { ComponentProps } from 'react'
@@ -297,6 +297,9 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
   const handleComplete = useCallback(() => {
     saveOnboardingCompleted()
     setVisible(false)
+    // На native будим Leaflet: пока онбординг висел поверх карты при первом открытии
+    // на чистой установке, WebView не дозапросил тайлы под текущий вью (см. F-17b в Map.ios).
+    if (!IS_WEB) DeviceEventEmitter.emit('metravel:map-layout-invalidate')
     onComplete?.()
   }, [onComplete])
 

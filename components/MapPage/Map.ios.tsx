@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Platform, DeviceEventEmitter } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useRouter } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -410,6 +410,23 @@ const Map: React.FC<TravelProps> = ({
 
     return () => onMapUiApiReady(null);
   }, [injectMapCommand, onMapUiApiReady, setOverlayEnabled]);
+
+  // F-17b — на чистой установке при первом открытии «Карты» сверху висят
+  // онбординг-коачмарки + системный диалог геолокации, пока WebView инициализируется.
+  // После их закрытия геометрия контейнера не меняется (оверлеи — absoluteFill поверх
+  // стабильного хоста), поэтому onLayout/DOM-resize не стреляют, а Leaflet не дозапрашивает
+  // тайлы под текущий вью → серый фон до первого ручного пана/зума. Ловим детерминированный
+  // сигнал «оверлей закрылся» (эмитят MapOnboarding и useMapUserLocation) и дёргаем тот же
+  // идемпотентный __metravelScheduleInvalidate — лишний invalidateSize безвреден.
+  useEffect(() => {
+    if (Platform.OS === 'web') return undefined;
+    const sub = DeviceEventEmitter.addListener('metravel:map-layout-invalidate', () => {
+      injectMapCommand(
+        'window.__metravelScheduleInvalidate && window.__metravelScheduleInvalidate("rn-overlay-dismiss")',
+      );
+    });
+    return () => sub.remove();
+  }, [injectMapCommand]);
 
   // Полезная нагрузка для WebView: точки/маршрут/режим/центр. Меняется по приходу
   // данных, но HTML при этом НЕ пересобирается — маркеры дорисовываются injectJavaScript.
