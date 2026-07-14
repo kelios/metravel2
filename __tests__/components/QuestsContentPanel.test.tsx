@@ -519,7 +519,7 @@ describe('QuestsContentPanel', () => {
         expect(queryByText('Детские сказки')).toBeNull();
     });
 
-    it('keeps each quest city route when search spans the full catalog', () => {
+    it('keeps each quest backend city route inside a merged city catalog', () => {
         (Platform as { OS: string }).OS = 'web';
         const quest = makeQuest(0);
         quest.cityId = 'warsaw';
@@ -533,8 +533,6 @@ describe('QuestsContentPanel', () => {
                 selectedCityId="minsk"
                 selectedCityName="Минск"
                 nearbyId="__nearby__"
-                searchQuery="quest"
-                onSearchChange={() => {}}
                 questsAll={[quest]}
                 questCardWidth={320}
                 mapPoints={[]}

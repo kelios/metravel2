@@ -4,9 +4,9 @@ import { resolve } from 'path';
 import {
   COUNTRY_NAMES,
   DEFAULT_NEARBY_RADIUS_KM,
+  buildQuestCityCatalog,
   filterKidsQuests,
   filterQuestsByMapSearchArea,
-  groupQuestsByCity,
   isCoordinateInMapViewport,
   isKidsQuest,
   resolveQuestMapCenter,
@@ -117,12 +117,27 @@ describe('QuestsScreen helpers', () => {
       { id: 'kids-grodno', cityId: 'grodno', tags: [' Kids '] },
     ];
 
-    it('keeps kids quests in their city catalog', () => {
-      const byCity = groupQuestsByCity(quests);
+    it('keeps kids quests in their city and merges duplicate backend city ids', () => {
+      const catalog = buildQuestCityCatalog(
+        [
+          { id: 'minsk-main', name: 'Минск', countryCode: 'BY' },
+          { id: 'minsk-kids', name: ' минск ', countryCode: 'BY' },
+          { id: 'brest', name: 'Брест', countryCode: 'BY' },
+          { id: 'grodno', name: 'Гродно', countryCode: 'BY' },
+        ],
+        quests.map((quest) => ({
+          ...quest,
+          cityId: quest.id === 'kids-minsk' ? 'minsk-kids' : quest.cityId === 'minsk' ? 'minsk-main' : quest.cityId,
+          cityName: quest.cityId === 'minsk' ? 'Минск' : undefined,
+          countryCode: 'BY',
+        })),
+      );
 
-      expect(byCity.minsk.map((quest) => quest.id)).toEqual(['regular-minsk', 'kids-minsk']);
-      expect(byCity.brest.map((quest) => quest.id)).toEqual(['regular-brest']);
-      expect(byCity.grodno.map((quest) => quest.id)).toEqual(['kids-grodno']);
+      expect(catalog.cities.map((city) => city.id)).toEqual(['minsk-main', 'brest', 'grodno']);
+      expect(catalog.questsByCityId['minsk-main'].map((quest) => quest.id)).toEqual(['regular-minsk', 'kids-minsk']);
+      expect(catalog.questsByCityId.brest.map((quest) => quest.id)).toEqual(['regular-brest']);
+      expect(catalog.questsByCityId.grodno.map((quest) => quest.id)).toEqual(['kids-grodno']);
+      expect(catalog.canonicalCityIdById['minsk-kids']).toBe('minsk-main');
     });
 
     it('also collects kids quests for the audience filter', () => {

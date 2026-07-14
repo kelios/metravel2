@@ -117,11 +117,10 @@ export default function QuestsContentPanel({
         router.push(`/quests/${meta.cityId}/${meta.id}`);
     };
 
-    const getQuestCityId = useCallback((quest: QuestListItem) => (
-        searchActive || selectedCityId === nearbyId || selectedCityId === kidsFilterId
-            ? (quest.cityId || '')
-            : (selectedCityId || '')
-    ), [kidsFilterId, nearbyId, searchActive, selectedCityId]);
+    const getQuestCityId = useCallback(
+        (quest: QuestListItem) => quest.cityId || selectedCityId || '',
+        [selectedCityId],
+    );
 
     const renderQuestItem = useCallback(({ item: quest, index }: ListRenderItemInfo<QuestListItem>) => (
         <View style={styles.questVirtualizedItem}>

@@ -29,10 +29,10 @@ import {
     DEFAULT_NEARBY_RADIUS_KM,
     NEARBY_ID,
     KIDS_FILTER_ID,
+    buildQuestCityCatalog,
     filterKidsQuests,
     filterQuestsByMapSearchArea,
     getAverageQuestMapPointCenter,
-    groupQuestsByCity,
     isKidsQuest,
     loadExpoLocation,
     resolveQuestMapCenter,
@@ -79,13 +79,19 @@ export default function QuestsScreen() {
         return meta;
     }, [ALL_QUESTS]);
 
-    const CITIES = useMemo<City[]>(() => apiCities.map(c => ({
+    const rawCities = useMemo<City[]>(() => apiCities.map(c => ({
         id: c.id,
         name: c.name,
         lat: c.lat,
         lng: c.lng,
         countryCode: cityCountryMetaById[c.id]?.countryCode || c.countryCode,
     })), [apiCities, cityCountryMetaById]);
+    const cityCatalog = useMemo(
+        () => buildQuestCityCatalog<City, QuestMeta>(rawCities, ALL_QUESTS),
+        [ALL_QUESTS, rawCities],
+    );
+    const CITIES = cityCatalog.cities;
+    const cityQuests = cityCatalog.questsByCityId;
 
     const isFocused = useIsFocused();
     const colors = useThemedColors();
@@ -207,13 +213,19 @@ export default function QuestsScreen() {
     // Гео-фильтрация по радиусу включается только при ЯВНОМ выборе «Рядом».
     useEffect(() => {
         if (!dataLoaded || !CITIES.length) return;
+        const canonicalCityId = selectedCityId ? cityCatalog.canonicalCityIdById[selectedCityId] : null;
+        if (canonicalCityId && canonicalCityId !== selectedCityId) {
+            setSelectedCityId(canonicalCityId);
+            void AsyncStorage.setItem(STORAGE_SELECTED_CITY, canonicalCityId);
+            return;
+        }
         const validIds = new Set(CITIES.map((c) => c.id));
         const isValid = selectedCityId === NEARBY_ID
             || selectedCityId === KIDS_FILTER_ID
             || (selectedCityId ? validIds.has(selectedCityId) : false);
         if (isValid) return;
         setSelectedCityId(NEARBY_ID);
-    }, [CITIES, dataLoaded, selectedCityId]);
+    }, [CITIES, cityCatalog.canonicalCityIdById, dataLoaded, selectedCityId]);
 
     // Geolocation only when Nearby is explicitly chosen, or on the map view.
     useEffect(() => {
@@ -269,7 +281,6 @@ export default function QuestsScreen() {
     const kidsQuests = useMemo(() => filterKidsQuests(ALL_QUESTS), [ALL_QUESTS]);
     // Детские квесты — часть каталога своего города. Фильтр «Для детей»
     // даёт дополнительный срез, но не заменяет городскую группировку.
-    const cityQuests = useMemo(() => groupQuestsByCity<QuestMeta>(ALL_QUESTS), [ALL_QUESTS]);
 
     const citiesWithNearby: (City | NearbyCity)[] = useMemo(
         () => [{ id: NEARBY_ID, name: 'Рядом', country: 'BY', isNearby: true } as NearbyCity, ...CITIES],
@@ -431,9 +442,7 @@ export default function QuestsScreen() {
         return source
             .filter((q) => Number.isFinite(q.lat) && Number.isFinite(q.lng) && !!q.id)
             .map((q) => {
-                const citySegmentRaw = selectedCityId === NEARBY_ID || selectedCityId === KIDS_FILTER_ID
-                    ? (q.cityId || '')
-                    : selectedCityId;
+                const citySegmentRaw = q.cityId || selectedCityId || '';
                 const citySegment = encodeURIComponent(String(citySegmentRaw || 'city'));
                 const questSegment = encodeURIComponent(String(q.id));
                 const questUrl = buildCanonicalUrl(`/quests/${citySegment}/${questSegment}`);

@@ -91,13 +91,51 @@ export function filterKidsQuests<T extends { tags?: string[] | null }>(quests: T
     return quests.filter((quest) => isKidsQuest(quest.tags));
 }
 
-export function groupQuestsByCity<T extends { cityId?: string | null }>(quests: T[]): Record<string, T[]> {
-    const index: Record<string, T[]> = {};
+export function buildQuestCityCatalog<
+    TCity extends { id: string; name: string; countryCode?: string },
+    TQuest extends { cityId?: string | null; cityName?: string | null; countryCode?: string | null },
+>(cities: TCity[], quests: TQuest[]): {
+    cities: TCity[];
+    questsByCityId: Record<string, TQuest[]>;
+    canonicalCityIdById: Record<string, string>;
+} {
+    const questByCityId = new Map<string, TQuest>();
+    for (const quest of quests) {
+        if (quest.cityId && !questByCityId.has(quest.cityId)) {
+            questByCityId.set(quest.cityId, quest);
+        }
+    }
+
+    const canonicalCityIdByGroup = new Map<string, string>();
+    const canonicalCityIdById: Record<string, string> = {};
+    const mergedCities: TCity[] = [];
+
+    for (const city of cities) {
+        const questMeta = questByCityId.get(city.id);
+        const normalizedName = (city.name || questMeta?.cityName || '')
+            .trim()
+            .toLocaleLowerCase('ru')
+            .replace(/ё/g, 'е')
+            .replace(/\s+/g, ' ');
+        const countryCode = (city.countryCode || questMeta?.countryCode || '').trim().toUpperCase();
+        const groupKey = normalizedName ? `${countryCode}:${normalizedName}` : `id:${city.id}`;
+        const canonicalId = canonicalCityIdByGroup.get(groupKey) || city.id;
+
+        canonicalCityIdById[city.id] = canonicalId;
+        if (!canonicalCityIdByGroup.has(groupKey)) {
+            canonicalCityIdByGroup.set(groupKey, canonicalId);
+            mergedCities.push(city);
+        }
+    }
+
+    const questsByCityId: Record<string, TQuest[]> = {};
     for (const quest of quests) {
         if (!quest.cityId) continue;
-        (index[quest.cityId] ||= []).push(quest);
+        const canonicalId = canonicalCityIdById[quest.cityId] || quest.cityId;
+        (questsByCityId[canonicalId] ||= []).push(quest);
     }
-    return index;
+
+    return { cities: mergedCities, questsByCityId, canonicalCityIdById };
 }
 
 export type MapPoint = {
