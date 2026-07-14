@@ -778,12 +778,14 @@ const Map: React.FC<TravelProps> = ({
         window.__metravelMapZoomOut = function() {
           try { map.zoomOut(); } catch (e) {}
         };
-        // Центрируем на реальной точке пользователя, если она есть
-        // (__metravelRenderUserLocation её выставляет), иначе на дефолтном центре.
+        // Центрируем только на реальной точке пользователя, если она есть
+        // (__metravelRenderUserLocation её выставляет). Дефолтный/viewport center
+        // не должен выглядеть как текущее положение пользователя.
         map.__realUserLocation = null;
         window.__metravelMapCenterOnUser = function() {
           try {
-            const target = map.__realUserLocation || map.__userCenter;
+            const target = map.__realUserLocation;
+            if (!target) return;
             map.setView(target, Math.max(map.getZoom ? map.getZoom() : 10, 13));
           } catch (e) {}
         };

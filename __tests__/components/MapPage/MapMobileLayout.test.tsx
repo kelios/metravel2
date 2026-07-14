@@ -15,6 +15,7 @@ const mockTravelListPanel = jest.fn((props: any) => {
     </View>
   )
 })
+const mockMapPlaceBottomCard = jest.fn()
 
 const mockMapBottomSheet = jest.fn()
 const mockSnapToCollapsed = jest.fn()
@@ -62,7 +63,9 @@ jest.mock('@/components/MapPage/MapPlaceBottomCard', () => {
   const React = require('react')
   const { View } = require('react-native')
 
-  return function MockMapPlaceBottomCard({ point }: any) {
+  return function MockMapPlaceBottomCard(props: any) {
+    mockMapPlaceBottomCard(props)
+    const { point } = props
     return point
       ? React.createElement(View, { testID: 'map-place-bottom-card' })
       : null
@@ -91,6 +94,7 @@ describe('MapMobileLayout', () => {
   beforeEach(() => {
     mockTravelListPanel.mockClear()
     mockMapBottomSheet.mockClear()
+    mockMapPlaceBottomCard.mockClear()
     mockSnapToCollapsed.mockClear()
     mockSnapToQuarter.mockClear()
     mockSnapToHalf.mockClear()
@@ -285,12 +289,35 @@ describe('MapMobileLayout', () => {
       )
 
       expect(screen.getByTestId('map-place-bottom-card')).toBeTruthy()
+      expect(mockMapPlaceBottomCard.mock.calls.at(-1)?.[0]?.userLocation).toBeNull()
       expect(hardwareBackHandler?.()).toBe(true)
       expect(clearSelectedPlace).toHaveBeenCalledTimes(1)
     } finally {
       addEventListenerSpy.mockRestore()
       ;(Platform as any).OS = originalPlatform
     }
+  })
+
+  it('passes only trusted user location to the selected place bottom card', () => {
+    render(
+      <MapMobileLayout
+        mapComponent={<View testID="mock-map" />}
+        travelsData={[]}
+        coordinates={{ latitude: 53.9, longitude: 27.56 }}
+        transportMode="car"
+        buildRouteTo={jest.fn()}
+        onCenterOnUser={jest.fn()}
+        onOpenFilters={jest.fn()}
+        filtersPanelProps={null}
+        selectedPlace={{ id: 'place-1', coord: '53.9,27.56', address: 'Test place' }}
+        selectedPlaceUserLocation={{ latitude: 52.2, longitude: 20.98 }}
+      />,
+    )
+
+    expect(mockMapPlaceBottomCard.mock.calls.at(-1)?.[0]?.userLocation).toEqual({
+      latitude: 52.2,
+      longitude: 20.98,
+    })
   })
 
   it('keeps the web search-this-area button close to the mobile footer dock', () => {

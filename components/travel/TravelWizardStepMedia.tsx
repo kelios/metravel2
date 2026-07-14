@@ -52,6 +52,7 @@ interface TravelWizardStepMediaProps {
     };
     progress?: number;
     autosaveBadge?: string;
+    isSaveInFlight?: boolean;
     focusAnchorId?: string | null;
     onAnchorHandled?: () => void;
     onStepSelect?: (step: number) => void;
@@ -451,6 +452,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     stepMeta,
     progress = currentStep / totalSteps,
     autosaveBadge,
+    isSaveInFlight,
     focusAnchorId,
     onAnchorHandled,
     onStepSelect,
@@ -570,6 +572,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                     errorCount={validation.errors.length}
                     warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
+                    isSaveInFlight={isSaveInFlight}
                     onPrimary={onNext}
                     primaryLabel={stepMeta?.nextLabel ?? 'К деталям'}
                     onSave={onManualSave}

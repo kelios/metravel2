@@ -22,6 +22,7 @@ export interface MapMobileSheetBodyProps {
   isLoading?: boolean
   isRefreshing?: boolean
   coordinates: { latitude: number; longitude: number } | null
+  userLocation?: { latitude: number; longitude: number } | null
   transportMode: 'car' | 'bike' | 'foot'
   onToggleFavorite?: (id: string | number) => void
   favorites?: Set<string | number>
@@ -48,7 +49,7 @@ const MapMobileSheetBodyInner: React.FC<MapMobileSheetBodyProps> = ({
   onRefresh,
   isLoading,
   isRefreshing,
-  coordinates,
+  userLocation,
   transportMode,
   onToggleFavorite,
   favorites,
@@ -76,7 +77,7 @@ const MapMobileSheetBodyInner: React.FC<MapMobileSheetBodyProps> = ({
         isLoading={isLoading}
         isRefreshing={isRefreshing}
         currentRadiusKm={filtersContextProps?.filterValue?.radius ?? null}
-        userLocation={coordinates}
+        userLocation={userLocation ?? null}
         transportMode={transportMode}
         onToggleFavorite={onToggleFavorite}
         favorites={favorites}

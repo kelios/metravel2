@@ -28,10 +28,9 @@ interface MapPanelProps {
     travelsData: any[];
     coordinates: LatLng | null;
     /**
-     * True when `coordinates` is the non-user DEFAULT center (no real geolocation
-     * and no cached/explicit anchor). The map must not draw a real "you are here"
-     * marker in that case. Explicit origin flag — replaces brittle Minsk
-     * coordinate-matching so a user physically near Minsk is still treated as real.
+     * True when `coordinates` is not a trusted current geolocation fix. Cached,
+     * default and explicit viewport anchors must not draw a real "you are here"
+     * marker. Explicit origin flag replaces brittle Minsk coordinate-matching.
      */
     coordinatesAreFallback?: boolean;
     routePoints?: [number, number][];
@@ -128,17 +127,16 @@ const MapPanel: React.FC<MapPanelProps> = ({
     }, [coordinates]);
 
     // Реальная гео пользователя для нативного маркера «вы здесь». coordinates на
-    // native приходит из useMapCoordinates и при denied/timeout = дефолтный Минск.
-    // Источник координат теперь приходит явным флагом (coordinatesAreFallback) —
-    // пользователь, физически находящийся у Минска, больше не считается fallback.
-    // isFallbackMinskCenter оставлен defensive-only на случай отсутствия флага.
+    // native приходит из useMapCoordinates и при denied/timeout/cache не является
+    // current user position. Явный флаг имеет приоритет; isFallbackMinskCenter
+    // оставлен defensive-only на случай отсутствия флага.
     // null → синяя точка не рисуется.
     const nativeUserLocation = useMemo<LatLng | null>(() => {
         if (!coordinates) return null;
         const { latitude, longitude } = coordinates;
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-        if (coordinatesAreFallback) return null;
-        if (isFallbackMinskCenter(latitude, longitude)) return null;
+        if (coordinatesAreFallback === true) return null;
+        if (coordinatesAreFallback === undefined && isFallbackMinskCenter(latitude, longitude)) return null;
         return { latitude, longitude };
     }, [coordinates, coordinatesAreFallback]);
 

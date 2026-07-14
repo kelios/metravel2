@@ -20,6 +20,7 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 const { injectSkeletonShell } = require('./ssg-skeletons');
+const { buildQuestSeoMetadata } = require('../utils/questSeo');
 
 // ---------------------------------------------------------------------------
 // CLI args
@@ -1050,22 +1051,12 @@ function questRouteKey(quest) {
 }
 
 function buildQuestSeoDescription(quest) {
-  const title = String(quest?.title || 'Городской квест').trim();
-  const city = String(quest?.city_name || quest?.cityName || quest?.city?.name || '').trim();
-  const points = Number(quest?.points) || 0;
-  const durationMin = Number(quest?.duration_min) || 0;
-
-  const parts = [];
-  parts.push(city ? `${title} — пеший квест-маршрут по городу ${city}` : `${title} — пеший квест-маршрут`);
-  if (points > 0) parts.push(`${points} ${pluralizeRu(points, 'точка', 'точки', 'точек')}`);
-  if (durationMin > 0) {
-    const hours = Math.floor(durationMin / 60);
-    const mins = durationMin % 60;
-    const duration = hours > 0 ? (mins > 0 ? `${hours} ч ${mins} мин` : `${hours} ч`) : `${mins} мин`;
-    parts.push(`≈${duration}`);
-  }
-  parts.push('загадки, легенды и финал — прямо со смартфона');
-  return clampDescriptionForAttr(parts.join(' · '));
+  return buildQuestSeoMetadata({
+    title: quest?.title,
+    cityName: quest?.city_name || quest?.cityName || quest?.city?.name,
+    points: quest?.points,
+    durationMin: quest?.duration_min ?? quest?.durationMin,
+  }).description;
 }
 
 function normalizeLocationText(value) {
@@ -2101,8 +2092,13 @@ async function main() {
       if (!route) continue;
 
       const name = String(quest.title || 'Городской квест').trim();
-      const title = buildSeoTitle(name);
-      const description = buildQuestSeoDescription(quest);
+      const questSeo = buildQuestSeoMetadata({
+        title: name,
+        cityName: quest.city_name || quest.cityName || quest.city?.name,
+        points: quest.points,
+        durationMin: quest.duration_min ?? quest.durationMin,
+      });
+      const { title, description } = questSeo;
       const canonical = `${SITE_URL}${route.path}`;
       const cover = String(quest.cover_url || quest.coverUrl || '').trim();
       const image = cover ? toAbsoluteUrl(cover) : OG_IMAGE;
@@ -2331,6 +2327,7 @@ if (typeof module !== 'undefined' && module.exports) {
     buildRedirectStubHtml,
     questRouteKey,
     buildQuestSeoDescription,
+    buildQuestSeoMetadata,
     buildQuestJsonLd,
     buildQuestPromoCatalog,
     findTravelQuestPromoMatches,

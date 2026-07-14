@@ -207,11 +207,17 @@ export function useListTravelFilters({
         return newFilter;
       }
       const next = { ...prev, [field]: value };
+      if (field === 'moderation' && value !== undefined && value !== null) {
+        delete next.draftsOnly;
+        delete next.publishedOnly;
+      }
       if (field === 'draftsOnly' && value === true) {
         delete next.publishedOnly;
+        delete next.moderation;
       }
       if (field === 'publishedOnly' && value === true) {
         delete next.draftsOnly;
+        delete next.moderation;
       }
       return next;
     });

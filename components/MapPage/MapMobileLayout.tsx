@@ -60,6 +60,7 @@ interface MapMobileLayoutProps {
   selectedPlace?: any | null
   clearSelectedPlace?: () => void
   selectedPlaceUserLocation?: { latitude: number; longitude: number } | null
+  userLocation?: { latitude: number; longitude: number } | null
 }
 
 const IS_WEB = Platform.OS === 'web'
@@ -100,6 +101,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   selectedPlace,
   clearSelectedPlace,
   selectedPlaceUserLocation,
+  userLocation,
 }) => {
   const colors = useThemedColors()
   const insets = useSafeAreaInsets()
@@ -528,6 +530,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           isLoading={isLoading}
           isRefreshing={isRefreshing}
           coordinates={coordinates}
+          userLocation={userLocation}
           transportMode={transportMode}
           onToggleFavorite={onToggleFavorite}
           favorites={favorites}
@@ -636,7 +639,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         {hasSelectedPlace && (
           <MapPlaceBottomCard
             point={selectedPlace}
-            userLocation={selectedPlaceUserLocation ?? coordinates}
+            userLocation={selectedPlaceUserLocation ?? null}
             onClose={handleClearSelectedPlace}
             topInset={insets?.top ?? 0}
             bottomInset={selectedPlaceBottomInset}

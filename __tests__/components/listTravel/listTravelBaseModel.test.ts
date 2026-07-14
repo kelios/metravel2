@@ -81,4 +81,16 @@ describe('buildListTravelFallbackSteps', () => {
       search: '',
     })
   })
+
+  it('does not relax pending-review moderation queue filters', () => {
+    const steps = buildListTravelFallbackSteps({
+      queryParams: {
+        publication_status: 'pending_review',
+        categories: [4],
+      },
+      search: 'минск',
+    })
+
+    expect(steps).toEqual([])
+  })
 })

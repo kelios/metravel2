@@ -27,6 +27,7 @@ export interface CommonStepProps {
   stepMeta: StepMeta;
   progress: number;
   autosaveBadge?: string;
+  isSaveInFlight?: boolean;
   onExit: Wizard['handleExit'];
 }
 

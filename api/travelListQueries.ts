@@ -28,6 +28,7 @@ import {
     hasKnownListArrays,
     isAbortError,
     applyPublishModeration,
+    isPendingReviewQuery,
 } from './travelQueryShared';
 
 export type TravelFacetItem = {
@@ -56,6 +57,7 @@ export const fetchTravelFacets = async (
 ): Promise<TravelFacetsResponse> => {
     try {
         const whereObject: Record<string, unknown> = {};
+        const isPendingReview = isPendingReviewQuery(urlParams);
 
         const isUserScoped = urlParams?.user_id !== undefined && urlParams?.user_id !== null;
         if (isUserScoped) {
@@ -87,7 +89,7 @@ export const fetchTravelFacets = async (
         }
 
         const handledKeys = new Set<string>([
-            ...arrayFields, 'year', 'moderation', 'publish', 'includeDrafts', 'sort', 'sortBy', 'sortOrder', 'ordering',
+            ...arrayFields, 'year', 'moderation', 'publish', 'publication_status', 'includeDrafts', 'sort', 'sortBy', 'sortOrder', 'ordering',
         ]);
         Object.entries(urlParams || {}).forEach(([key, value]) => {
             if (handledKeys.has(key)) return;
@@ -104,11 +106,16 @@ export const fetchTravelFacets = async (
         }
 
         const url = `${GET_TRAVEL_FACETS}?${new URLSearchParams(searchParams).toString()}`;
+        const authToken = isPendingReview ? await getSecureItem(TOKEN_KEY) : null;
+        const init: RequestInit = {
+            ...(authToken ? { headers: { Authorization: `Token ${authToken}` } } : {}),
+            ...(options?.signal ? { signal: options.signal } : {}),
+        };
 
         const res = options?.signal
-            ? await fetchWithTimeout(url, { signal: options.signal }, LONG_TIMEOUT)
+            ? await fetchWithTimeout(url, init, LONG_TIMEOUT)
             : await retry(
-                async () => await fetchWithTimeout(url, {}, LONG_TIMEOUT),
+                async () => await fetchWithTimeout(url, init, LONG_TIMEOUT),
                 { maxAttempts: 2, delay: 1000, shouldRetry: (error) => isRetryableError(error) }
             );
 
@@ -167,6 +174,7 @@ export const fetchTravels = async (
         const sortQuery = extractSortQueryParams(urlParams || {});
 
         const isUserScoped = urlParams?.user_id !== undefined && urlParams?.user_id !== null;
+        const isPendingReview = isPendingReviewQuery(urlParams);
         const includeDraftsRequested = urlParams?.includeDrafts === true || urlParams?.includeDrafts === 'true';
         const allowDrafts =
             isUserScoped &&
@@ -199,7 +207,7 @@ export const fetchTravels = async (
         }
 
         const handledKeys = new Set<string>([
-            ...arrayFields, 'year', 'moderation', 'publish', 'includeDrafts', 'sort', 'sortBy', 'sortOrder', 'ordering',
+            ...arrayFields, 'year', 'moderation', 'publish', 'publication_status', 'includeDrafts', 'sort', 'sortBy', 'sortOrder', 'ordering',
         ]);
         Object.entries(urlParams || {}).forEach(([key, value]) => {
             if (handledKeys.has(key)) return;
@@ -210,10 +218,11 @@ export const fetchTravels = async (
 
         const params = buildWhereQueryParams({ page, perPage: itemsPerPage, query: search, where: whereObject, sortQuery });
         const urlTravel = `${GET_TRAVELS}?${params}`;
-        publicStaleEndpoint = !isUserScoped ? urlTravel : '';
+        publicStaleEndpoint = !isUserScoped && !isPendingReview ? urlTravel : '';
 
-        const authToken = allowDrafts ? await getSecureItem(TOKEN_KEY) : null;
+        const authToken = allowDrafts || isPendingReview ? await getSecureItem(TOKEN_KEY) : null;
         const canIncludeDrafts = allowDrafts && !!authToken;
+        const canIncludePendingReview = isPendingReview && !!authToken;
         const baseInit: RequestInit = {
             ...(authToken ? { headers: { Authorization: `Token ${authToken}` } } : {}),
             ...(options?.signal ? { signal: options.signal } : {}),
@@ -266,7 +275,7 @@ export const fetchTravels = async (
 
         const normalized = items.map(normalizeTravelItem);
         const freshPayload = {
-            data: canIncludeDrafts ? normalized : filterPublished(normalized),
+            data: canIncludeDrafts || canIncludePendingReview ? normalized : filterPublished(normalized),
             total: coerceTotal(total, 0),
         };
 

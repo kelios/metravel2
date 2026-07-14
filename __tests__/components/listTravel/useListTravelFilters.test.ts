@@ -169,6 +169,41 @@ describe('useListTravelFilters', () => {
     });
   });
 
+  it('builds staff-wide pending queue params for "Мои путешествия" admin moderation toggle', () => {
+    const { result } = setup({ isMeTravel: true, userId: '42' });
+
+    act(() => {
+      result.current.onSelect('moderation', 0);
+    });
+
+    expect(result.current.filter).toEqual({ moderation: 0 });
+    expect(result.current.queryParams).toEqual({
+      publication_status: 'pending_review',
+    });
+  });
+
+  it('keeps moderation queue mutually exclusive with draft and published modes', () => {
+    const { result } = setup({ isMeTravel: true, userId: '42' });
+
+    act(() => {
+      result.current.onSelect('draftsOnly', true);
+      result.current.onSelect('moderation', 0);
+    });
+
+    expect(result.current.filter).toEqual({ moderation: 0 });
+
+    act(() => {
+      result.current.onSelect('publishedOnly', true);
+    });
+
+    expect(result.current.filter).toEqual({ publishedOnly: true });
+    expect(result.current.queryParams).toEqual({
+      moderation: 1,
+      publish: 1,
+      user_id: '42',
+    });
+  });
+
   describe('initialFilter', () => {
     it('uses INITIAL_FILTER (empty) when initialFilter is not provided', () => {
       const { result } = setup();

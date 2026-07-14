@@ -451,6 +451,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
       stepMeta: controller.currentStepMeta,
       progress: controller.progress,
       autosaveBadge: controller.autosaveBadge,
+      isSaveInFlight: controller.isManualSaveInFlight,
       onExit: wizard.handleExit,
     }),
     [
@@ -458,6 +459,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
       controller.currentStepMeta,
       controller.formData,
       controller.handleManualSave,
+      controller.isManualSaveInFlight,
       controller.progress,
       handleOpenPublic,
       previewState.showPreview,

@@ -33,6 +33,7 @@ export interface TravelWizardStepRouteProps {
   stepMeta?: StepMeta;
   progress?: number;
   autosaveBadge?: string;
+  isSaveInFlight?: boolean;
   focusAnchorId?: string | null;
   onAnchorHandled?: () => void;
   onStepSelect?: (step: number) => void;

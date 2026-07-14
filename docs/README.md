@@ -31,7 +31,7 @@ See `INDEX.md` for full docs map.
 - Проверки и автоматизация: `$metravel-test-runner` для узких команд, `$metravel-release-checks` для выбора gate, `$metravel-quality-fixer` для полного fix-and-rerun цикла.
 - Browser/e2e и QA: `$metravel-e2e-runner`, `$metravel-browser-reviewer`, `$metravel-qa-agent`, `$metravel-mobile-tester`.
 - Native/store: `$metravel-android-developer`, `$metravel-ios-developer`; mobile evidence — `$metravel-mobile-tester`; explicit Google Play operations — `$metravel-google-play-operator`; reciprocity campaign — `$metravel-play-campaign-tester`.
-- Generated raster assets: `$metravel-visual-asset-designer` + `$metravel-prompt-maintainer`; стандартные UI icons остаются на primitives/Feather.
+- Generated raster assets: `$metravel-visual-asset-designer` + `$metravel-prompt-maintainer`; для детских/семейных/подростковых quest covers добавляй `$metravel-child-quest-visuals`; стандартные UI icons остаются на primitives/Feather.
 - Статьи, travel-guide drafts и media: `$metravel-article-editor-agent` (creative prose — только после отдельного подтверждения).
 - Квесты: `$metravel-quest-writer` для нового квеста, `$metravel-quest-editor` для существующего контента, `$metravel-quest-geo-verifier` для координат, `$metravel-quest-expert` для feature code.
 - Board tasks: `$metravel-ticket-board` для операций с MCP task board; `$metravel-task-contract` для обязательного Task Contract; `$metravel-sprint-reviewer` для приёмки active sprint.

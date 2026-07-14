@@ -130,7 +130,8 @@ export const buildTravelQueryParams = (
     } else {
       if (hasExplicitModeration && !hasExplicitPublish) {
         if (moderationValue === 0 || moderationValue === '0') {
-          params.publish = 0
+          delete params.moderation
+          params.publication_status = 'pending_review'
         } else if (moderationValue === 1 || moderationValue === '1') {
           params.publish = 1
         }
@@ -159,16 +160,25 @@ export const buildTravelQueryParams = (
   }
 
   if (isMeTravel) {
-    if (draftsOnly) {
+    if (!draftsOnly && !publishedOnly && (moderationValue === 0 || moderationValue === '0')) {
+      delete params.user_id
+      delete params.publish
+      delete params.moderation
+      delete params.includeDrafts
+      params.publication_status = 'pending_review'
+    } else if (draftsOnly) {
       params.publish = 0
       params.moderation = 0
+      delete params.publication_status
       params.includeDrafts = true
     } else if (publishedOnly) {
       params.publish = 1
       params.moderation = 1
+      delete params.publication_status
     } else {
       delete params.publish
       delete params.moderation
+      delete params.publication_status
       params.includeDrafts = true
     }
   }

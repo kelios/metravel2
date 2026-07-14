@@ -33,6 +33,7 @@ interface TravelWizardStepExtrasProps {
     };
     progress?: number;
     autosaveBadge?: string;
+    isSaveInFlight?: boolean;
     focusAnchorId?: string | null;
     onAnchorHandled?: () => void;
     onStepSelect?: (step: number) => void;
@@ -54,6 +55,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
     stepMeta,
     progress = currentStep / totalSteps,
     autosaveBadge,
+    isSaveInFlight,
     focusAnchorId,
     onAnchorHandled,
     onStepSelect,
@@ -175,6 +177,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                     errorCount={validation.errors.length}
                     warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
+                    isSaveInFlight={isSaveInFlight}
                     onPrimary={onNext}
                     primaryLabel={stepMeta?.nextLabel ?? 'К публикации'}
                     onSave={onManualSave}

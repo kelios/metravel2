@@ -22,6 +22,7 @@ import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { pluralizeRu } from '@/utils/pluralize';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
+import { buildQuestSeoMetadata } from '@/utils/questSeo';
 
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
@@ -85,11 +86,16 @@ const getQuestSeo = (bundle: FrontendQuestBundle | null, questId: string, isLoad
     };
   }
 
-  return {
+  const metadata = buildQuestSeoMetadata({
     title: bundle.title,
-    description: `${bundle.title} — точки на карте, задания и подсказки. Проходите прямо со смартфона.`,
+    cityName: bundle.city?.name,
+    points: bundle.steps.length,
+  });
+
+  return {
+    ...metadata,
     headKey: `quest-${bundle.storageKey ?? questId}`,
-    ogType: 'article',
+    ogType: 'website',
   };
 };
 
@@ -132,7 +138,11 @@ const upsertCanonical = (href: string) => {
   if (element.getAttribute('href') !== href) element.setAttribute('href', href);
 };
 
-const patchQuestHead = (seo: QuestSeoModel, canonical: string) => {
+const removeMeta = (selector: string) => {
+  document.querySelectorAll(selector).forEach((node) => node.remove());
+};
+
+const patchQuestHead = (seo: QuestSeoModel, canonical: string, image: string) => {
   document.title = seo.title;
   upsertMetaContent('meta[name="description"]', seo.description);
   upsertMetaContent('meta[property="og:title"]', seo.title);
@@ -141,16 +151,19 @@ const patchQuestHead = (seo: QuestSeoModel, canonical: string) => {
   upsertMetaContent('meta[property="og:type"]', seo.ogType);
   upsertMetaContent('meta[name="twitter:title"]', seo.title);
   upsertMetaContent('meta[name="twitter:description"]', seo.description);
+  upsertMetaContent('meta[property="og:image"]', image);
+  upsertMetaContent('meta[name="twitter:image"]', image);
+  removeMeta('meta[name="robots"]');
   upsertCanonical(canonical);
 };
 
-const useQuestHeadSync = (enabled: boolean, seo: QuestSeoModel, canonical: string) => {
+const useQuestHeadSync = (enabled: boolean, seo: QuestSeoModel, canonical: string, image: string) => {
   useEffect(() => {
     if (!enabled || Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
 
-    const timers = HEAD_PATCH_DELAYS_MS.map((delay) => setTimeout(() => patchQuestHead(seo, canonical), delay));
+    const timers = HEAD_PATCH_DELAYS_MS.map((delay) => setTimeout(() => patchQuestHead(seo, canonical, image), delay));
     return () => timers.forEach(clearTimeout);
-  }, [canonical, enabled, seo]);
+  }, [canonical, enabled, image, seo]);
 };
 
 const Icon = ({ name, color, size = 18 }: { name: IconName; color: string; size?: number }) => (
@@ -419,7 +432,7 @@ export default function QuestByIdScreen() {
 
   // Императивный патч head — только для успешной страницы квеста. На gate/loading/error
   // ветках свой InstantSEO (со своим robots/canonical), и отложенный патч его перетирал.
-  useQuestHeadSync(isFocused && isAuthenticated && !isLoading && Boolean(bundle), seo, canonical);
+  useQuestHeadSync(isFocused && !isLoading && Boolean(bundle), seo, canonical, seoImage);
 
   const reviewsModal = (
     <QuestReviewsModal questId={questId} visible={reviewsVisible} onClose={() => setReviewsVisible(false)} />

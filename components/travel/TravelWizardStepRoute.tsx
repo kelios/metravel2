@@ -74,6 +74,7 @@ function TravelWizardStepRoute({
   stepMeta,
   progress = currentStep / totalSteps,
   autosaveBadge,
+  isSaveInFlight,
   focusAnchorId,
   onAnchorHandled,
   onStepSelect,
@@ -490,6 +491,7 @@ function TravelWizardStepRoute({
           errorCount={validation.errors.length}
           warningCount={validation.warnings.length}
           autosaveBadge={autosaveBadge}
+          isSaveInFlight={isSaveInFlight}
           onPrimary={onNext}
           primaryLabel={stepMeta?.nextLabel ?? DEFAULT_NEXT_LABEL}
           onSave={onManualSave}

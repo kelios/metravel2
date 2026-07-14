@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable, Platform } from 'react-native';
+import { ActivityIndicator, View, Text, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -22,6 +22,7 @@ type TravelWizardHeaderProps = {
     primaryDisabled?: boolean;
     onSave?: () => void;
     saveLabel?: string;
+    isSaveInFlight?: boolean;
     onQuickDraft?: () => void;
     quickDraftLabel?: string;
     extraBelowProgress?: React.ReactNode;
@@ -68,6 +69,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     primaryDisabled = false,
     onSave,
     saveLabel = 'Сохранить',
+    isSaveInFlight = false,
     onQuickDraft,
     quickDraftLabel = 'Быстрый черновик',
     extraBelowProgress,
@@ -90,6 +92,9 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         return colors.primary;
     }, [clamped, colors.primary, colors.success]);
     const hasErrors = errorCount > 0;
+    const saveA11yLabel = isSaveInFlight ? 'Сохраняем изменения' : saveLabel;
+    const saveButtonLabel = isSaveInFlight ? 'Сохраняем...' : saveLabel;
+    const saveStatusBadge = isSaveInFlight ? 'Сохраняем изменения...' : autosaveBadge;
     // На мобильном убираем дублирующий счётчик «(шаг X из 6)» из подписи кнопки —
     // он уже показан в мета-строке «Шаг X/Y • Z%». Кнопка становится короче.
     const compactPrimaryLabel = useMemo(
@@ -244,36 +249,50 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     const SaveButton = onSave ? (
         isMobile ? (
             <Pressable
-                onPress={onSave}
+                onPress={isSaveInFlight ? undefined : onSave}
+                disabled={isSaveInFlight}
                 style={({ pressed }) => [
                     styles.iconButton,
                     styles.iconButtonMobile,
                     globalFocusStyles.focusable,
-                    Platform.OS === 'web' && { cursor: 'pointer' },
-                    pressed && { opacity: 0.8 },
+                    Platform.OS === 'web' && { cursor: isSaveInFlight ? 'default' : 'pointer' },
+                    isSaveInFlight && styles.iconButtonActive,
+                    pressed && !isSaveInFlight && { opacity: 0.8 },
                 ]}
                 testID="travel-wizard-save"
                 accessibilityRole="button"
-                accessibilityLabel={saveLabel}
+                accessibilityLabel={saveA11yLabel}
+                accessibilityState={{ disabled: isSaveInFlight, busy: isSaveInFlight }}
             >
-                <Feather name="save" size={18} color={colors.textMuted} />
+                {isSaveInFlight ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                    <Feather name="save" size={18} color={colors.textMuted} />
+                )}
             </Pressable>
         ) : (
             <Pressable
-                onPress={onSave}
+                onPress={isSaveInFlight ? undefined : onSave}
+                disabled={isSaveInFlight}
                 style={({ pressed }) => [
                     styles.actionButton,
                     styles.actionButtonSecondary,
                     globalFocusStyles.focusable,
-                    Platform.OS === 'web' && { cursor: 'pointer' },
-                    pressed && { opacity: 0.9 },
+                    Platform.OS === 'web' && { cursor: isSaveInFlight ? 'default' : 'pointer' },
+                    isSaveInFlight && styles.actionButtonSaving,
+                    pressed && !isSaveInFlight && { opacity: 0.9 },
                 ]}
                 testID="travel-wizard-save"
                 accessibilityRole="button"
-                accessibilityLabel={saveLabel}
+                accessibilityLabel={saveA11yLabel}
+                accessibilityState={{ disabled: isSaveInFlight, busy: isSaveInFlight }}
             >
-                <Feather name="save" size={16} color={colors.text} />
-                <Text style={styles.actionButtonText} numberOfLines={1}>{saveLabel}</Text>
+                {isSaveInFlight ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                    <Feather name="save" size={16} color={colors.text} />
+                )}
+                <Text style={styles.actionButtonText} numberOfLines={1}>{saveButtonLabel}</Text>
             </Pressable>
         )
     ) : null;
@@ -341,9 +360,9 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         </View>
     ) : null;
 
-    const AutosaveText = autosaveBadge ? (
+    const AutosaveText = saveStatusBadge ? (
         <Text style={styles.autosaveBadgeText} numberOfLines={1} accessibilityLiveRegion="polite">
-            {autosaveBadge}
+            {saveStatusBadge}
         </Text>
     ) : null;
 

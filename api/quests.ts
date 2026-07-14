@@ -49,6 +49,12 @@ export type ApiQuestStep = {
     input_type?: 'number' | 'text';
     order?: number;
     is_intro?: boolean;
+    poi_info?: {
+        is_museum: boolean;
+        opening_hours?: string | null;
+        ticket_price?: string | null;
+        website?: string | null;
+    } | null;
 };
 
 /** Метаданные квеста для каталога */

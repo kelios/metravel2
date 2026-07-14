@@ -4,6 +4,13 @@ import { Platform, StyleSheet } from 'react-native';
 const renderer = require('react-test-renderer');
 
 const mockImageCardMedia = jest.fn((props: any) => React.createElement('mock-image-card-media', props));
+const mockRelatedTravelActionStack = jest.fn((props: any) =>
+  React.createElement(
+    'related-travel-action-stack',
+    props,
+    props.variant === 'inline' ? 'Был / Хочу / Планирую' : 'overlay status',
+  ),
+);
 
 jest.mock('react-dom', () => ({
   createPortal: (node: any) => node,
@@ -30,6 +37,11 @@ jest.mock('@/components/ui/CardActionPressable', () => {
     default: ({ children, ...props }: any) => React.createElement(Pressable, props, children),
   };
 });
+
+jest.mock('@/components/travel/RelatedTravelActionStack', () => ({
+  __esModule: true,
+  default: (props: any) => mockRelatedTravelActionStack(props),
+}));
 
 const PlacePopupCard = require('@/components/MapPage/Map/PlacePopupCard').default;
 const mockColors = {
@@ -62,6 +74,7 @@ describe('PlacePopupCard', () => {
   beforeEach(() => {
     (Platform as any).OS = 'web';
     mockImageCardMedia.mockClear();
+    mockRelatedTravelActionStack.mockClear();
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 1024, height: 768, scale: 1, fontScale: 1 }));
   });
 
@@ -272,6 +285,65 @@ describe('PlacePopupCard', () => {
     expect(preventDefault).toHaveBeenCalled();
     expect(lastCall?.visible).toBe(true);
     fullscreenSpy.mockRestore();
+  });
+
+  it('renders related travel status inline with visible text in bottom-card layout', () => {
+    require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
+
+    let tree: any;
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          imageUrl="https://example.com/photo.jpg"
+          relatedTravelUrl="/travel/42"
+          width={390}
+          compactLayout
+        />
+      );
+    });
+
+    expect(mockRelatedTravelActionStack).toHaveBeenCalledTimes(1);
+    expect(mockRelatedTravelActionStack.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        variant: 'inline',
+      }),
+    );
+    expect(JSON.stringify(tree.toJSON())).toContain('Был / Хочу / Планирую');
+  });
+
+  it('uses shared bottom-card action geometry on web and Android', () => {
+    const { getStyles } = require('@/components/MapPage/Map/PlacePopupCard/styles');
+    const originalOs = Platform.OS;
+
+    try {
+      (Platform as any).OS = 'web';
+      const webStyles = getStyles(mockColors as any, 'compact', 390, 220, true, false, true);
+      const webBubble = StyleSheet.flatten(webStyles.iconActionBubble);
+      const webLabel = StyleSheet.flatten(webStyles.iconActionLabel);
+      const webNavGrid = StyleSheet.flatten(webStyles.navGrid);
+      const webNavItem = StyleSheet.flatten(webStyles.navGridItem);
+
+      (Platform as any).OS = 'android';
+      const androidStyles = getStyles(mockColors as any, 'compact', 390, 220, true, false, true);
+      const androidBubble = StyleSheet.flatten(androidStyles.iconActionBubble);
+      const androidLabel = StyleSheet.flatten(androidStyles.iconActionLabel);
+      const androidNavGrid = StyleSheet.flatten(androidStyles.navGrid);
+      const androidNavItem = StyleSheet.flatten(androidStyles.navGridItem);
+
+      expect(androidBubble.width).toBe(webBubble.width);
+      expect(androidBubble.height).toBe(webBubble.height);
+      expect(androidBubble.width).toBeGreaterThanOrEqual(44);
+      expect(androidLabel.fontSize).toBe(webLabel.fontSize);
+      expect(androidLabel.lineHeight).toBe(webLabel.lineHeight);
+      expect(androidNavGrid.rowGap).toBe(webNavGrid.rowGap);
+      expect(androidNavGrid.paddingTop).toBe(webNavGrid.paddingTop);
+      expect(androidNavItem.gap).toBe(webNavItem.gap);
+      expect(androidNavItem.paddingVertical).toBe(webNavItem.paddingVertical);
+    } finally {
+      (Platform as any).OS = originalOs;
+    }
   });
 
   it('opens the fullscreen image viewer from capture handlers before Leaflet popup event guards', () => {

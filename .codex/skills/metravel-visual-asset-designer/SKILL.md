@@ -7,11 +7,13 @@ description: Specify, generate, post-process, integrate, and verify branded rast
 
 Read `AGENTS.md`, `docs/RULES.md`, `docs/ICON_ART_PROMPTS.md`, `constants/modernMattePalette.ts`, and neighboring assets before generating.
 
+For children's, family, fairy-tale, park, or teen quest covers, also use `$metravel-child-quest-visuals`; it owns age-band selection and the illustrated story contract.
+
 ## Decide the Asset Class
 
 - Prefer Feather or an existing vector/component for a simple monochrome UI glyph.
 - Use raster generation for multicolor, dimensional, illustrative, badge, app-icon, or marketing art.
-- Published travel/article covers, galleries, description images, and map-point photos must be real, licensed/local, or photorealistic generated raster media. Do not substitute icon art, vector-like scenes, cartoons, screenshots, or placeholders.
+- Published travel/article covers, galleries, description images, and map-point photos must be real, licensed/local, or photorealistic generated raster media. Quest covers may use the illustrated style explicitly selected by `$metravel-child-quest-visuals`. Do not substitute icon art, screenshots, or placeholders.
 
 ## Workflow
 

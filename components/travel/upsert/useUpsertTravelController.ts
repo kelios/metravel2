@@ -30,6 +30,7 @@ export interface UpsertTravelController {
 
   autosave: ReturnType<typeof useTravelFormData>['autosave'];
   autosaveBadge?: string;
+  isManualSaveInFlight: ReturnType<typeof useTravelFormData>['isManualSaveInFlight'];
 
   wizard: ReturnType<typeof useTravelWizard>;
   progress: number;
@@ -219,6 +220,7 @@ export function useUpsertTravelController(): UpsertTravelController {
 
       autosave: form.autosave,
       autosaveBadge,
+      isManualSaveInFlight: form.isManualSaveInFlight,
 
       wizard,
       progress,
@@ -249,6 +251,7 @@ export function useUpsertTravelController(): UpsertTravelController {
       form.travelDataOld,
       form.autosave,
       autosaveBadge,
+      form.isManualSaveInFlight,
       wizard,
       progress,
       currentStepMeta,

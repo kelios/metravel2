@@ -20,6 +20,7 @@ Create an evidence-based walking quest that reads as one story and can be repres
 - `docs/README.md`
 - `.claude/skills/metravel-quest/SKILL.md` when present; use it as the detailed legacy authoring reference, while newer project rules and this skill win on conflicts.
 - `references/child-quest-design.md` for any child, family, fairy-tale, park, amusement, or teen quest; select one primary age band before route or story design.
+- `$metravel-child-quest-visuals` when the request includes a child or teen cover, image prompt, or visual series.
 - The nearest current `scripts/*-quest-data.js`, migration script, quest API types, and `utils/questAdapters.ts` before producing repository data.
 
 ## Authority gate
@@ -37,6 +38,7 @@ Create an evidence-based walking quest that reads as one story and can be repres
 - Check real pedestrian feasibility, access restrictions, opening hours, unsafe crossings, seasonal closures, and whether a place can actually be observed from the public route. State accessibility or schedule limitations instead of hiding them.
 - Give the quest one narrative thread. The intro establishes the theme and direction, each step advances it with a transition to the next place, and the finale closes the arc.
 - Write as an engaged human guide: concrete, concise, on `ты`, without boilerplate, bureaucratic phrasing, emoji, or generic headings.
+- For children, use words the selected age band can say, picture, and act on. Describe what an object does, resembles, or wants before naming its material, architectural category, or adult historical term. Keep unavoidable terms out of the task answer unless the story teaches them first.
 - Distinguish verified history from local legend. Do not invent quotations, people, events, etymologies, architectural details, or visible features.
 - Verify current facts with web research. Prefer official venue/city sources, heritage registers, museums, primary documentation, and reputable reference sources; keep source URLs in an ignored working artifact.
 - Optional museums, viewpoints, cafes, or themed stops must include verified hours and an official site when available. Mark hours as time-sensitive and recheck them before publication.

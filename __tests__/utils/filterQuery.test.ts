@@ -44,6 +44,15 @@ describe('buildTravelQueryParams', () => {
     })
   })
 
+  it('uses staff-wide pending_review filter for personal admin moderation queue', () => {
+    const params = buildTravelQueryParams(
+      { moderation: 0 },
+      { isMeTravel: true, userId: '42' },
+    )
+
+    expect(params).toEqual({ publication_status: 'pending_review' })
+  })
+
   it('adds published status filters for personal published mode', () => {
     const params = buildTravelQueryParams(
       { publishedOnly: true },
@@ -66,9 +75,9 @@ describe('buildTravelQueryParams', () => {
     expect(params.countries).toEqual([3])
   })
 
-  it('adds publish=0 when moderation=0 is explicitly requested', () => {
+  it('uses pending_review publication status when moderation=0 is explicitly requested', () => {
     const params = buildTravelQueryParams({ moderation: 0 }, {})
-    expect(params).toEqual({ moderation: 0, publish: 0 })
+    expect(params).toEqual({ publication_status: 'pending_review' })
   })
 })
 

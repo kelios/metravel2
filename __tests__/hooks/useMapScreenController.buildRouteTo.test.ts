@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react-native'
 
 const mockUpdateCoordinates = jest.fn()
 const mockBuildRouteTo = jest.fn()
+const mockUseRouteController = jest.fn()
 
 jest.mock('expo-router', () => ({
   usePathname: () => '/map',
@@ -15,6 +16,8 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('@/hooks/map/useMapCoordinates', () => ({
   useMapCoordinates: () => ({
     coordinates: { latitude: 53.9, longitude: 27.5667 },
+    coordinatesSource: 'default',
+    coordinatesAreFallback: true,
     updateCoordinates: mockUpdateCoordinates,
   }),
 }))
@@ -69,26 +72,7 @@ jest.mock('@/hooks/map/useMapDataController', () => ({
 }))
 
 jest.mock('@/hooks/map/useRouteController', () => ({
-  useRouteController: () => ({
-    mode: 'radius',
-    setMode: jest.fn(),
-    transportMode: 'car',
-    setTransportMode: jest.fn(),
-    routeStorePoints: [],
-    startAddress: null,
-    endAddress: null,
-    routeDistance: null,
-    fullRouteCoords: [],
-    routingLoading: false,
-    routingError: null,
-    handleMapClick: jest.fn(),
-    buildRouteTo: mockBuildRouteTo,
-    handleClearRoute: jest.fn(),
-    handleAddressSelect: jest.fn(),
-    handleAddressClear: jest.fn(),
-    onRemoveRoutePoint: jest.fn(),
-    swapStartEnd: jest.fn(),
-  }),
+  useRouteController: (options: any) => mockUseRouteController(options),
 }))
 
 jest.mock('@/hooks/useRouteStoreAdapter', () => ({
@@ -147,6 +131,40 @@ import { useMapScreenController } from '@/hooks/useMapScreenController'
 describe('useMapScreenController.buildRouteTo', () => {
   beforeEach(() => {
     mockUpdateCoordinates.mockClear()
+    mockUseRouteController.mockClear()
+    mockUseRouteController.mockReturnValue({
+      mode: 'radius',
+      setMode: jest.fn(),
+      transportMode: 'car',
+      setTransportMode: jest.fn(),
+      routePoints: [],
+      routeStorePoints: [],
+      startAddress: null,
+      endAddress: null,
+      routeDistance: null,
+      routeDuration: null,
+      routeElevationGain: null,
+      routeElevationLoss: null,
+      fullRouteCoords: [],
+      setRoutePoints: jest.fn(),
+      setRouteDistance: jest.fn(),
+      setRouteDuration: jest.fn(),
+      setFullRouteCoords: jest.fn(),
+      setRouteElevationStats: jest.fn(),
+      setRoutingLoading: jest.fn(),
+      setRoutingError: jest.fn(),
+      routingLoading: false,
+      routingError: null,
+      handleMapClick: jest.fn(),
+      buildRouteTo: mockBuildRouteTo,
+      handleClearRoute: jest.fn(),
+      handleAddressSelect: jest.fn(),
+      handleAddressClear: jest.fn(),
+      onRemoveRoutePoint: jest.fn(),
+      swapStartEnd: jest.fn(),
+      addRoutePointFromTravel: jest.fn(),
+      focusPlace: jest.fn(),
+    })
     jest.useFakeTimers()
   })
 
@@ -165,5 +183,15 @@ describe('useMapScreenController.buildRouteTo', () => {
 
     // Critical regression guard: we must not update global search coordinates
     expect(mockUpdateCoordinates).not.toHaveBeenCalled()
+  })
+
+  it('does not pass fallback viewport coordinates as route origin', () => {
+    renderHook(() => useMapScreenController())
+
+    expect(mockUseRouteController).toHaveBeenCalledWith(
+      expect.objectContaining({
+        originCoordinates: null,
+      }),
+    )
   })
 })

@@ -210,6 +210,17 @@ describe('Map.ios Component', () => {
     );
   });
 
+  it('does not center on the fallback viewport when real user location is absent', () => {
+    const rendered = render(
+      <Map travel={mockTravel} coordinates={mockCoordinates} />
+    );
+
+    const html = getWebViewHtml(rendered);
+    expect(html).toContain('const target = map.__realUserLocation;');
+    expect(html).toContain('if (!target) return;');
+    expect(html).not.toContain('map.__realUserLocation || map.__userCenter');
+  });
+
   it('should render route polyline payload in route mode', () => {
     const rendered = render(
       <Map

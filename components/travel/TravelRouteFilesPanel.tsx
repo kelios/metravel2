@@ -43,6 +43,9 @@ const resolveFileExt = (file: TravelRouteFile): string => {
 
 const isSupportedRoute = (file: TravelRouteFile): boolean => SUPPORTED_EXTENSIONS.has(resolveFileExt(file));
 
+const getRouteFileExt = (fileName: string): string =>
+  String(fileName.split('.').pop() ?? '').toLowerCase();
+
 export default function TravelRouteFilesPanel({
   travelId,
   allowUpload = false,
@@ -57,9 +60,11 @@ export default function TravelRouteFilesPanel({
   const [routes, setRoutes] = useState<TravelRouteFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDraggingRouteFile, setIsDraggingRouteFile] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const webInputRef = useRef<HTMLInputElement | null>(null);
+  const containerRef = useRef<View | null>(null);
   const lastPreviewRouteIdRef = useRef<number | null>(null);
 
   const canManage = Boolean(allowUpload && travelId);
@@ -137,7 +142,15 @@ export default function TravelRouteFilesPanel({
       setError(null);
 
       try {
-        await uploadTravelRouteFile(travelId, file);
+        const uploaded = await uploadTravelRouteFile(travelId, file);
+        if (uploaded) {
+          setRoutes((currentRoutes) => {
+            return [
+              uploaded,
+              ...currentRoutes.filter((route) => route.id !== uploaded.id),
+            ];
+          });
+        }
         await loadRoutes();
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Не удалось загрузить файл маршрута';
@@ -147,6 +160,21 @@ export default function TravelRouteFilesPanel({
       }
     },
     [travelId, loadRoutes],
+  );
+
+  const handleWebFileSelected = useCallback(
+    async (file: File | null) => {
+      if (!file) return;
+
+      const ext = getRouteFileExt(file.name);
+      if (!SUPPORTED_EXTENSIONS.has(ext)) {
+        setError('Поддерживаются только файлы .gpx и .kml');
+        return;
+      }
+
+      await handleUpload(file);
+    },
+    [handleUpload],
   );
 
   const pickNativeFile = useCallback(async () => {
@@ -175,21 +203,75 @@ export default function TravelRouteFilesPanel({
   const handleWebInputChange = useCallback(
     async (event: any) => {
       const file = (event?.target?.files?.[0] as File | undefined) ?? null;
-      if (!file) return;
-
-      const ext = String(file.name.split('.').pop() ?? '').toLowerCase();
-      if (!SUPPORTED_EXTENSIONS.has(ext)) {
-        setError('Поддерживаются только файлы .gpx и .kml');
-        return;
-      }
-
-      await handleUpload(file);
+      await handleWebFileSelected(file);
       if (event?.target) {
         event.target.value = '';
       }
     },
-    [handleUpload],
+    [handleWebFileSelected],
   );
+
+  const handleWebDragEvent = useCallback((event: any, isActive: boolean) => {
+    if (!canManage || Platform.OS !== 'web') return;
+
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    if (event?.dataTransfer) {
+      event.dataTransfer.dropEffect = 'copy';
+    }
+    setIsDraggingRouteFile(isActive);
+  }, [canManage]);
+
+  const handleWebDrop = useCallback(
+    async (event: any) => {
+      if (!canManage || Platform.OS !== 'web') return;
+      if (event?.__metravelRouteDropHandled) return;
+      event.__metravelRouteDropHandled = true;
+
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      setIsDraggingRouteFile(false);
+
+      const file = (event?.dataTransfer?.files?.[0] as File | undefined) ?? null;
+      await handleWebFileSelected(file);
+    },
+    [canManage, handleWebFileSelected],
+  );
+
+  useEffect(() => {
+    if (!canManage || Platform.OS !== 'web') return;
+
+    const node = containerRef.current as any;
+    if (!node || typeof node.addEventListener !== 'function') return;
+
+    const onDragEnter = (event: DragEvent) => handleWebDragEvent(event, true);
+    const onDragOver = (event: DragEvent) => handleWebDragEvent(event, true);
+    const onDragLeave = (event: DragEvent) => handleWebDragEvent(event, false);
+    const onDrop = (event: DragEvent) => {
+      void handleWebDrop(event);
+    };
+
+    node.addEventListener('dragenter', onDragEnter);
+    node.addEventListener('dragover', onDragOver);
+    node.addEventListener('dragleave', onDragLeave);
+    node.addEventListener('drop', onDrop);
+
+    return () => {
+      node.removeEventListener('dragenter', onDragEnter);
+      node.removeEventListener('dragover', onDragOver);
+      node.removeEventListener('dragleave', onDragLeave);
+      node.removeEventListener('drop', onDrop);
+    };
+  }, [canManage, handleWebDragEvent, handleWebDrop]);
+
+  const webDropProps = Platform.OS === 'web' && canManage
+    ? {
+        onDragEnter: (event: any) => handleWebDragEvent(event, true),
+        onDragOver: (event: any) => handleWebDragEvent(event, true),
+        onDragLeave: (event: any) => handleWebDragEvent(event, false),
+        onDrop: handleWebDrop,
+      }
+    : null;
 
   const handlePickUpload = useCallback(async () => {
     if (!canManage) return;
@@ -234,7 +316,12 @@ export default function TravelRouteFilesPanel({
   );
 
   return (
-    <View style={styles.container}>
+    <View
+      ref={containerRef}
+      testID="travel-route-files-panel"
+      style={[styles.container, isDraggingRouteFile && styles.containerDragActive]}
+      {...(webDropProps as any)}
+    >
       <View style={styles.headerRow}>
         <Text style={styles.title}>{title}</Text>
         {canManage ? (
@@ -262,6 +349,10 @@ export default function TravelRouteFilesPanel({
 
       {!travelId ? (
         <Text style={styles.hint}>Сначала сохраните черновик путешествия, затем загрузите GPX/KML файл маршрута.</Text>
+      ) : null}
+
+      {canManage && Platform.OS === 'web' ? (
+        <Text style={styles.hint}>Перетащите GPX/KML файл сюда или используйте кнопку загрузки.</Text>
       ) : null}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -316,6 +407,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.surface,
       padding: DESIGN_TOKENS.spacing.md,
+    },
+    containerDragActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft,
     },
     headerRow: {
       flexDirection: 'row',

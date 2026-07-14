@@ -123,6 +123,7 @@ export function MapScreenMobile({
           selectedPlace={selectedPlace}
           clearSelectedPlace={clearSelectedPlace}
           selectedPlaceUserLocation={selectedPlaceUserLocation}
+          userLocation={selectedPlaceUserLocation}
         />
       </Suspense>
 

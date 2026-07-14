@@ -27,6 +27,16 @@ Adjust distance downward for crowds, heat, snow, hills, ticket queues, mobility 
 
 Keep prose proportional to the band: short read-aloud beats for 5–7, compact paragraphs for 8–10, and richer but scannable evidence for 11–14. Prefer dialogue, sensory detail, decisions, and visible consequences over long exposition.
 
+## Use a child's language and attention
+
+- Start each task with one action the child can perform now: find, choose, match, follow, point, imagine, whisper, show, or decode.
+- Name the visible role or behavior before the adult category. Prefer “лев, который охраняет дорожку” to “бронзовая скульптура”, “дом с башенкой” to an unexplained architectural term, and “герой держит круг” to a material-identification quiz.
+- Do not ask younger children what an object is made of unless material is unmistakable, story-critical, and taught in the same step. Words such as “бронза”, “фасад”, “барельеф”, “композиция”, and style-period labels are adult guide vocabulary by default.
+- Keep one new idea per sentence for ages 5–7 and one task verb per question for ages 5–10. Read every task aloud; if the child must parse the grammar before looking around, rewrite it.
+- Give information because it changes the mission. Remove dates, names, and definitions that do not unlock a clue, explain a helper, raise the stakes, or prepare the finale.
+- Let fantasy create agency, not confusion. The child may help a lion find a ball or return a song to a garden, while the observable answer still comes from a real stable feature.
+- For ages 11–14, allow richer terms only when they act as evidence in a mystery and are explained through context. Never turn the route into a simplified adult lecture.
+
 ## Choose themes without copying franchises
 
 - Use public-domain fairy tales, verified local folklore, nature, transport, science, animals, city mysteries, crafts, and local urban culture as theme families.

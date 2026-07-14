@@ -225,6 +225,78 @@ describe('questAdapters', () => {
       expect(step.answer('холодная вода')).toBe(false);
     });
 
+    it('maps filled poi_info to frontend visitor info', () => {
+      const step = adaptStep({
+        id: 12,
+        step_id: 'museum',
+        title: 'Музей',
+        location: 'Музей',
+        story: 'История',
+        task: 'Задание',
+        lat: 50.061,
+        lng: 19.938,
+        maps_url: 'https://maps.google.com',
+        answer_pattern: { type: 'any', value: '' },
+        poi_info: {
+          is_museum: true,
+          opening_hours: '10:00-18:00',
+          ticket_price: '20 PLN',
+          website: 'https://museum.example',
+        },
+      } as any);
+
+      expect(step.poiInfo).toEqual({
+        isMuseum: true,
+        openingHours: '10:00-18:00',
+        ticketPrice: '20 PLN',
+        website: 'https://museum.example',
+      });
+    });
+
+    it('keeps only present poi_info optional fields', () => {
+      const step = adaptStep({
+        id: 13,
+        step_id: 'partial',
+        title: 'Место',
+        location: 'Место',
+        story: 'История',
+        task: 'Задание',
+        lat: 50.061,
+        lng: 19.938,
+        maps_url: 'https://maps.google.com',
+        answer_pattern: { type: 'any', value: '' },
+        poi_info: {
+          is_museum: false,
+          opening_hours: '  ',
+          ticket_price: 'Бесплатно',
+          website: null,
+        },
+      } as any);
+
+      expect(step.poiInfo).toEqual({
+        isMuseum: false,
+        ticketPrice: 'Бесплатно',
+      });
+    });
+
+    it('maps null poi_info to null visitor info', () => {
+      const step = adaptStep({
+        id: 14,
+        step_id: 'plain',
+        title: 'Место',
+        location: 'Место',
+        story: 'История',
+        task: 'Задание',
+        lat: 50.061,
+        lng: 19.938,
+        maps_url: 'https://maps.google.com',
+        answer_pattern: { type: 'any', value: '' },
+        poi_info: null,
+      } as any);
+
+      expect(step.poiInfo).toBeNull();
+    });
+
     it('parses lat/lng from numbers', () => {
       const step = adaptStep({
         id: 2,

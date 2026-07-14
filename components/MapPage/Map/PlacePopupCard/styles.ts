@@ -493,10 +493,6 @@ export const getStyles = (
     },
     actionsStack: {
       gap: bottomCardLayout ? 8 : splitLayout ? 8 : 10,
-      // #844 — tighten the native action stack so the default card fits without a
-      // mandatory scroll (was paddingTop:6 / gap:18, which pushed the action row off
-      // a 390×844 screen). Mobile web keeps its own spacing above.
-      ...(bottomCardLayout && Platform.OS !== 'web' ? { paddingTop: 4, gap: 10 } : null),
     },
     iconActionRow: {
       flexDirection: 'row',
@@ -510,16 +506,13 @@ export const getStyles = (
       flexBasis: 0,
       minWidth: 0,
       alignItems: 'center',
-      // #844 — trim the native per-action vertical footprint (gap 10→6, padding 8→6)
-      // so the action row + labels fit under the (now ~10% smaller) hero without scroll.
-      gap: bottomCardLayout && Platform.OS !== 'web' ? 6 : 6,
-      paddingVertical: bottomCardLayout && Platform.OS !== 'web' ? 6 : 2,
+      gap: 6,
+      paddingVertical: bottomCardLayout ? 4 : 2,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     iconActionBubble: {
-      // #844 — native bottom-card bubble trimmed 50→46 to reclaim vertical budget.
-      width: bottomCardLayout ? (Platform.OS !== 'web' ? 46 : 38) : compactLayout ? 44 : 46,
-      height: bottomCardLayout ? (Platform.OS !== 'web' ? 46 : 38) : compactLayout ? 44 : 46,
+      width: bottomCardLayout ? 44 : compactLayout ? 44 : 46,
+      height: bottomCardLayout ? 44 : compactLayout ? 44 : 46,
       borderRadius: DESIGN_TOKENS.radii.full,
       alignItems: 'center',
       justifyContent: 'center',
@@ -552,8 +545,8 @@ export const getStyles = (
       paddingHorizontal: bottomCardLayout ? 2 : 0,
     },
     iconActionLabel: {
-      fontSize: bottomCardLayout && Platform.OS !== 'web' ? 13 : compactLayout ? 11 : 12,
-      lineHeight: (bottomCardLayout && Platform.OS !== 'web' ? 13 : compactLayout ? 11 : 12) * 1.2,
+      fontSize: bottomCardLayout ? 12 : compactLayout ? 11 : 12,
+      lineHeight: (bottomCardLayout ? 12 : compactLayout ? 11 : 12) * 1.2,
       fontWeight: '600',
       color: colors.text,
       textAlign: 'center',
@@ -564,19 +557,19 @@ export const getStyles = (
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'flex-start',
-      rowGap: bottomCardLayout && Platform.OS !== 'web' ? 14 : 8,
+      rowGap: 8,
       marginTop: 0,
-      paddingTop: bottomCardLayout && Platform.OS !== 'web' ? 10 : 6,
+      paddingTop: bottomCardLayout ? 8 : 6,
     },
     navSection: {
-      gap: bottomCardLayout && Platform.OS !== 'web' ? 10 : 6,
-      paddingTop: bottomCardLayout && Platform.OS !== 'web' ? 14 : 8,
+      gap: bottomCardLayout ? 8 : 6,
+      paddingTop: 8,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.borderLight ?? colors.border,
     },
     navSectionTitle: {
-      fontSize: bottomCardLayout && Platform.OS !== 'web' ? 13 : compactLayout ? fs.small - 1 : fs.small,
-      lineHeight: (bottomCardLayout && Platform.OS !== 'web' ? 13 : compactLayout ? fs.small - 1 : fs.small) * 1.25,
+      fontSize: bottomCardLayout ? fs.small : compactLayout ? fs.small - 1 : fs.small,
+      lineHeight: (bottomCardLayout ? fs.small : compactLayout ? fs.small - 1 : fs.small) * 1.25,
       fontWeight: '700',
       color: colors.textMuted,
     },
@@ -584,8 +577,8 @@ export const getStyles = (
       width: '25%',
       minWidth: 0,
       alignItems: 'center',
-      gap: bottomCardLayout && Platform.OS !== 'web' ? 10 : 6,
-      paddingVertical: bottomCardLayout && Platform.OS !== 'web' ? 8 : 2,
+      gap: 6,
+      paddingVertical: bottomCardLayout ? 4 : 2,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     actionSummaryText: {

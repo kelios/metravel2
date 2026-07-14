@@ -1,0 +1,4 @@
+interface:
+  display_name: "MeTravel Child Quest Visuals"
+  short_description: "Сказочные обложки детских квестов по возрасту"
+  default_prompt: "Use $metravel-child-quest-visuals to create an age-appropriate illustrated cover for a MeTravel children’s quest."

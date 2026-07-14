@@ -74,7 +74,7 @@ export function useMapScreenController() {
   }, []);
 
   // Coordinates
-  const { coordinates, coordinatesAreFallback, error: geoError } = useMapCoordinates();
+  const { coordinates, coordinatesSource, coordinatesAreFallback, error: geoError } = useMapCoordinates();
 
   // Actual current user location reported by the map implementation (web Leaflet).
   // This should be the primary source for radius-mode queries.
@@ -227,7 +227,7 @@ export function useMapScreenController() {
   // Route Controller
   const routeController = useRouteController({
     mapUiApi,
-    originCoordinates: userLocation ?? coordinates,
+    originCoordinates: userLocation,
   });
   const {
     mode,
@@ -845,7 +845,7 @@ export function useMapScreenController() {
       isMobile,
       mapUiApi,
       closeMenu: closeRightPanel,
-      userLocation: queryCoordinates,
+      userLocation,
       onPlaceSelect: buildRouteToStable,
       onPlaceFocus: focusPlaceStable,
       onOpenList: selectTravelsTab,
@@ -864,7 +864,7 @@ export function useMapScreenController() {
       isMobile,
       mapUiApi,
       closeRightPanel,
-      queryCoordinates,
+      userLocation,
       buildRouteToStable,
       focusPlaceStable,
       selectTravelsTab,
@@ -963,6 +963,7 @@ export function useMapScreenController() {
 
     // Additional data for mobile layout
     coordinates,
+    coordinatesSource,
     transportMode,
 
     // #207 — selected single marker for the mobile bottom card.
@@ -1019,6 +1020,7 @@ export function useMapScreenController() {
     geoError,
     userLocation,
     coordinates,
+    coordinatesSource,
     transportMode,
     selectedPlace,
     clearSelectedPlace,

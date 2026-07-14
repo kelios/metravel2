@@ -112,4 +112,32 @@ describe('TravelWizardHeader', () => {
     fireEvent.press(getByTestId('travel-wizard-save'));
     expect(onSave).toHaveBeenCalledTimes(1);
   });
+
+  it('shows an in-progress save state and blocks duplicate save presses', () => {
+    const onSave = jest.fn();
+    const { getByTestId, getByText } = render(
+      <TravelWizardHeader
+        title="Маршрут"
+        subtitle="Шаг 2 из 6"
+        progressPercent={34}
+        currentStep={2}
+        totalSteps={6}
+        onSave={onSave}
+        isSaveInFlight
+      />
+    );
+
+    expect(getByText('Сохраняем...')).toBeTruthy();
+    expect(getByText('Сохраняем изменения...')).toBeTruthy();
+
+    const saveButton = getByTestId('travel-wizard-save');
+    expect(saveButton.props.accessibilityLabel).toBe('Сохраняем изменения');
+    expect(saveButton.props.accessibilityState).toEqual({
+      disabled: true,
+      busy: true,
+    });
+
+    fireEvent.press(saveButton);
+    expect(onSave).not.toHaveBeenCalled();
+  });
 });

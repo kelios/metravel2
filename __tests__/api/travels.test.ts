@@ -635,17 +635,22 @@ describe('src/api/travelsApi.ts', () => {
       expect(devError).not.toHaveBeenCalledWith('Error fetching travel facets:', abortError);
     });
 
-    it('добавляет publish=0 к facets when moderation=0 requested', async () => {
+    it('использует publication_status=pending_review для facets moderation queue', async () => {
       const { fetchTravelFacets } = loadTravelsApi();
+      mockedGetSecureItem.mockResolvedValueOnce('staff-token');
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ total: 0, facets: {} } as any);
 
       await fetchTravelFacets('', { moderation: 0 }, {} as any);
 
       const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      const init = mockedFetchWithTimeout.mock.calls[0][1] as RequestInit;
       const urlObj = new URL(url);
       const where = JSON.parse(urlObj.searchParams.get('where') || '{}');
-      expect(where).toEqual(expect.objectContaining({ moderation: 0, publish: 0 }));
+      expect(where).toEqual(expect.objectContaining({ publication_status: 'pending_review' }));
+      expect(where.moderation).toBeUndefined();
+      expect(where.publish).toBeUndefined();
+      expect(init.headers).toEqual({ Authorization: 'Token staff-token' });
     });
   });
 
@@ -743,17 +748,51 @@ describe('src/api/travelsApi.ts', () => {
   });
 
   describe('fetchTravels moderation/public contract', () => {
-    it('добавляет publish=0 when moderation=0 requested for public/admin listing', async () => {
+    it('использует publication_status=pending_review и staff auth для moderation queue', async () => {
       const { fetchTravels } = loadTravelsApi();
+      mockedGetSecureItem.mockResolvedValueOnce('staff-token');
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ results: [], count: 0 } as any);
 
       await fetchTravels(0, 20, '', { moderation: 0 }, {} as any);
 
       const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      const init = mockedFetchWithTimeout.mock.calls[0][1] as RequestInit;
       const urlObj = new URL(url);
       const where = JSON.parse(urlObj.searchParams.get('where') || '{}');
-      expect(where).toEqual(expect.objectContaining({ moderation: 0, publish: 0 }));
+      expect(where).toEqual(expect.objectContaining({ publication_status: 'pending_review' }));
+      expect(where.moderation).toBeUndefined();
+      expect(where.publish).toBeUndefined();
+      expect(init.headers).toEqual({ Authorization: 'Token staff-token' });
+    });
+
+    it('не отбрасывает pending-review записи client-side filterPublished', async () => {
+      const { fetchTravels } = loadTravelsApi();
+      mockedGetSecureItem.mockResolvedValueOnce('staff-token');
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        results: [
+          {
+            id: 77,
+            name: 'Pending travel',
+            publish: true,
+            moderation: false,
+            publication_status: 'pending_review',
+          },
+        ],
+        count: 1,
+      } as any);
+
+      const result = await fetchTravels(0, 20, '', { publication_status: 'pending_review' }, {} as any);
+      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      const where = JSON.parse(new URL(url).searchParams.get('where') || '{}');
+
+      expect(where).toEqual({ publication_status: 'pending_review' });
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).toEqual(expect.objectContaining({
+        id: 77,
+        publication_status: 'pending_review',
+      }));
     });
   });
 

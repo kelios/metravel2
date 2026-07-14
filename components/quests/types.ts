@@ -1,3 +1,10 @@
+export type QuestPoiInfo = {
+  isMuseum: boolean;
+  openingHours?: string;
+  ticketPrice?: string;
+  website?: string;
+};
+
 export type QuestStep = {
   id: string;
   title: string;
@@ -11,6 +18,7 @@ export type QuestStep = {
   mapsUrl: string;
   image?: any;
   inputType?: 'number' | 'text';
+  poiInfo?: QuestPoiInfo | null;
 };
 
 export type QuestCity = {

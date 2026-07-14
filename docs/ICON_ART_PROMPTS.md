@@ -120,6 +120,10 @@ no busy background scenery, no multiple disconnected objects
 - FRAMING: под слот (1:1, 4:3 квест-обложка, 16:9 hero/соцсети); прозрачный — только если
   ассет ляжет поверх фона, иначе `brandLight`/тёплый фон.
 - Выход: PNG/WEBP под слот; использовать существующий media-компонент конкретной фичи.
+- Для детских, семейных и подростковых quest covers обязательно подключать
+  `$metravel-child-quest-visuals`: он выбирает отдельный возрастной режим — мягкая акварельная
+  сказка 5–7, анимационное приключение 8–10 или cinematic graphic-novel fantasy 11–14.
+  Обложка должна показывать роль, цель и подсказку сюжета, а не выглядеть взрослой travel-фотографией.
 - Для опубликованных travel/article cover, rich-text, gallery и point media этот illustration
   preset запрещён: там нужны реальные licensed/local фото или фотореалистичные generated
   raster images по `AGENTS.md` и `docs/RULES.md`.

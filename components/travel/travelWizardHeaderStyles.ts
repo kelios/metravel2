@@ -171,6 +171,10 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         backgroundColor: colors.surfaceMuted,
         borderColor: colors.border,
     },
+    actionButtonSaving: {
+        backgroundColor: colors.primarySoft,
+        borderColor: colors.primaryAlpha40,
+    },
     actionButtonPrimary: {
         backgroundColor: colors.primary,
         borderColor: colors.primary,

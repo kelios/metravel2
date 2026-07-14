@@ -158,6 +158,7 @@ describe('Quest screen title sync', () => {
       '<meta property="og:type" content="article">',
       '<meta name="twitter:title" content="Energylandia - польский Диснейленд.">',
       '<meta name="twitter:description" content="old desc">',
+      '<meta name="robots" content="noindex, nofollow">',
       '<link rel="canonical" href="https://metravel.by/travels/energylandia-polskiy-disneylend">',
     ].join('')
   })
@@ -179,13 +180,20 @@ describe('Quest screen title sync', () => {
       await Promise.resolve()
     })
 
-    expect(document.title).toBe('Тайна Свислочского Цмока: Легенда оживает')
+    expect(document.title).toBe('Минск: что посмотреть — Тайна Свислочского… | Metravel')
     expect(
       document.querySelector('meta[property="og:title"]')?.getAttribute('content')
-    ).toBe('Тайна Свислочского Цмока: Легенда оживает')
+    ).toBe('Минск: что посмотреть — Тайна Свислочского… | Metravel')
+    expect(
+      document.querySelector('meta[name="description"]')?.getAttribute('content')
+    ).toContain('Город Минск: бесплатный пеший маршрут')
+    expect(
+      document.querySelector('meta[property="og:description"]')?.getAttribute('content')
+    ).toContain('по достопримечательностям')
     expect(
       document.querySelector('link[rel="canonical"]')?.getAttribute('href')
     ).toBe('https://metravel.by/quests/4/minsk-cmok')
+    expect(document.querySelector('meta[name="robots"]')).toBeNull()
   })
 
   it('does not load quest data or progress while the quest screen is not focused', () => {
@@ -230,6 +238,7 @@ describe('Quest screen title sync', () => {
     render(<QuestScreen />)
 
     await act(async () => {
+      jest.advanceTimersByTime(500)
       await Promise.resolve()
     })
 
@@ -242,5 +251,7 @@ describe('Quest screen title sync', () => {
     expect(wizardProps.storageKey).toBe('guest_minsk-cmok')
     expect(typeof wizardProps.onGuestLogin).toBe('function')
     expect(typeof wizardProps.onGuestRegister).toBe('function')
+    expect(document.title).toBe('Минск: что посмотреть — Тайна Свислочского… | Metravel')
+    expect(document.querySelector('meta[name="robots"]')).toBeNull()
   })
 })

@@ -41,6 +41,7 @@ interface TravelWizardStepBasicProps {
   firstErrorField?: string | null;
   autosaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
   autosaveBadge?: string;
+  isSaveInFlight?: boolean;
   focusAnchorId?: string | null;
   onAnchorHandled?: () => void;
   stepMeta?: StepMeta;
@@ -98,6 +99,7 @@ function TravelWizardStepBasic({
   firstErrorField,
   autosaveStatus,
   autosaveBadge,
+  isSaveInFlight,
   focusAnchorId,
   onAnchorHandled,
   stepMeta,
@@ -203,6 +205,7 @@ function TravelWizardStepBasic({
           errorCount={validation.errors.length}
           warningCount={validation.warnings.length}
           autosaveBadge={autosaveBadge}
+          isSaveInFlight={isSaveInFlight}
           onPrimary={onGoNext}
           primaryLabel={stepMeta?.nextLabel ?? DEFAULT_NEXT_LABEL}
           onSave={onManualSave}

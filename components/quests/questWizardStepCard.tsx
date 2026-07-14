@@ -14,10 +14,12 @@ import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { globalFocusStyles } from '@/styles/globalFocus'
+import { openExternalUrl } from '@/utils/externalLinks'
 import { hapticNotification } from '@/utils/haptics'
 
 import QuestPointNavigator from './QuestPointNavigator'
 import { copyQuestCoords, openQuestMap, type QuestMapApp } from './questWizardHelpers'
+import type { QuestPoiInfo } from './types'
 
 const SHOULD_USE_NATIVE_DRIVER = false
 
@@ -33,6 +35,7 @@ type QuestStepLike = {
   lng: number
   image?: any
   inputType?: 'number' | 'text'
+  poiInfo?: QuestPoiInfo | null
 }
 
 type StepCardProps = {
@@ -50,6 +53,20 @@ type StepCardProps = {
   showMap: boolean
   onToggleMap: () => void
   showLocationControls?: boolean
+}
+
+const normalizeVisitorWebsiteUrl = (value: string | undefined): string | undefined => {
+  const trimmed = value?.trim()
+  if (!trimmed) return undefined
+
+  const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+  try {
+    const parsed = new URL(candidate)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined
+    return parsed.toString()
+  } catch {
+    return undefined
+  }
 }
 
 function ImageZoomModal({
@@ -195,6 +212,21 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     Number.isFinite(step.lng) &&
     !(step.lat === 0 && step.lng === 0)
   const showPointNavigator = step.id !== 'intro' && !isPassed && hasValidCoords
+  const visitorWebsiteUrl = useMemo(() => normalizeVisitorWebsiteUrl(step.poiInfo?.website), [step.poiInfo?.website])
+  const visitorInfoRows = useMemo(() => {
+    const poiInfo = step.poiInfo
+    if (!poiInfo) return []
+    return [
+      poiInfo.isMuseum ? { key: 'type', label: 'Тип', value: 'Музей' } : null,
+      poiInfo.openingHours ? { key: 'hours', label: 'Часы работы', value: poiInfo.openingHours } : null,
+      poiInfo.ticketPrice ? { key: 'price', label: 'Билеты', value: poiInfo.ticketPrice } : null,
+    ].filter((row): row is { key: string; label: string; value: string } => Boolean(row))
+  }, [step.poiInfo])
+  const showVisitorInfo = visitorInfoRows.length > 0 || Boolean(visitorWebsiteUrl)
+  const openVisitorWebsite = useCallback(() => {
+    if (!visitorWebsiteUrl) return
+    void openExternalUrl(visitorWebsiteUrl, { allowedProtocols: ['http:', 'https:'] })
+  }, [visitorWebsiteUrl])
 
   const handleCheck = useCallback(() => {
     const trimmed = value.trim()
@@ -257,6 +289,33 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       </View>
 
       <View style={styles.section}><Text style={styles.storyText}>{step.story}</Text></View>
+
+      {showVisitorInfo && (
+        <View style={[styles.section, styles.visitorInfoCard]} testID="quest-step-visitor-info">
+          <View style={styles.visitorInfoHeader}>
+            <Feather name="info" size={16} color={colors.brandText} />
+            <Text style={styles.visitorInfoTitle}>Информация для посетителей</Text>
+          </View>
+          {visitorInfoRows.map((row) => (
+            <View key={row.key} style={styles.visitorInfoRow}>
+              <Text style={styles.visitorInfoLabel}>{row.label}</Text>
+              <Text style={styles.visitorInfoValue}>{row.value}</Text>
+            </View>
+          ))}
+          {visitorWebsiteUrl && (
+            <Pressable
+              style={styles.visitorInfoLink}
+              onPress={openVisitorWebsite}
+              accessibilityRole="link"
+              accessibilityLabel="Открыть сайт места"
+              hitSlop={6}
+            >
+              <Feather name="external-link" size={14} color={colors.brandText} />
+              <Text style={styles.visitorInfoLinkText}>Сайт места</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
       <View style={styles.section}>
         <Text style={styles.taskText}>{step.task}</Text>

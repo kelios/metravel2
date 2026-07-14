@@ -25,6 +25,20 @@ export const TOKEN_KEY = 'userToken';
 export const GET_TRAVELS = `${URLAPI}/travels/`;
 export const GET_RANDOM_TRAVELS = `${URLAPI}/travels/random/`;
 export const GET_TRAVEL_FACETS = `${URLAPI}/travels/facets/`;
+export const PENDING_REVIEW_PUBLICATION_STATUS = 'pending_review';
+
+const isZeroLike = (value: unknown): boolean => value === 0 || value === '0';
+
+export const isPendingReviewQuery = (source: Record<string, unknown> | undefined | null): boolean => {
+    if (!source) return false;
+    const status = typeof source.publication_status === 'string'
+        ? source.publication_status.trim().toLowerCase()
+        : '';
+    return status === PENDING_REVIEW_PUBLICATION_STATUS || (
+        isZeroLike(source.moderation) &&
+        source.publish === undefined
+    );
+};
 
 export const filterPublished = (items: Travel[]): Travel[] =>
     items.filter((t) => {
@@ -188,20 +202,24 @@ export const applyPublishModeration = (
         }
         return;
     }
-    if (source.moderation === undefined && source.publish === undefined && defaults) {
+    if (source.moderation === undefined && source.publish === undefined && source.publication_status === undefined && defaults) {
         if (defaults.publish !== undefined) target.publish = defaults.publish;
         if (defaults.moderation !== undefined) target.moderation = defaults.moderation;
     }
     if (source.publish !== undefined) {
         target.publish = source.publish;
     }
+    if (source.publication_status !== undefined) {
+        target.publication_status = source.publication_status;
+    }
     if (source.moderation !== undefined) {
         target.moderation = source.moderation;
     }
 
     if (source.moderation !== undefined && source.publish === undefined) {
-        if (source.moderation === 0 || source.moderation === '0') {
-            target.publish = 0;
+        if (isZeroLike(source.moderation)) {
+            delete target.moderation;
+            target.publication_status = PENDING_REVIEW_PUBLICATION_STATUS;
         } else if (source.moderation === 1 || source.moderation === '1') {
             target.publish = 1;
         }

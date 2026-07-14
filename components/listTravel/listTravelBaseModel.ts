@@ -221,6 +221,9 @@ export function buildListTravelFallbackSteps({
   search: string
 }): TravelFallbackStep[] {
   const normalizedParams = sortObjectKeys(queryParams || {})
+  if (normalizedParams.publication_status === 'pending_review') {
+    return []
+  }
   const normalizedSearch = String(search || '').trim()
   const steps: TravelFallbackStep[] = []
 

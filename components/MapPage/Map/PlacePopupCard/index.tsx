@@ -412,10 +412,8 @@ const PlacePopupCard: React.FC<Props> = ({
     useCompactLayout,
   ]);
 
-  // The desktop Leaflet popup overlay keeps this ♥ favorite + «Был/Хочу/Планирую»
-  // status stack (rendered via `relatedTravelOverlays`). On the bottom card (mobile
-  // web + native) this inline stack is NOT rendered — both ♥ and the (compact) status
-  // icon live in the hero corner instead (see `heroActionOverlay`).
+  // Desktop Leaflet popup keeps this as a hero overlay. Bottom cards render the
+  // same stack inline in the footer so trip statuses stay visible as text.
   const relatedTravelActionStack = useMemo(() => {
     if (!relatedTravelUrl) return null;
     return (
@@ -439,13 +437,10 @@ const PlacePopupCard: React.FC<Props> = ({
     title,
   ]);
 
-  // Bottom card (mobile web + native): ♥ favorite AND the compact trip-status icon both
-  // live in the hero photo top-LEFT corner (a vertical stack — `RelatedTravelActionStack`'s
-  // default `overlay` variant renders both as compact icon circles, column gap 6),
-  // away from the ✕ (top-right) and ⤢ expand (bottom-right). This frees the whole
-  // «Статус поездки» row (no more full-width «Был/Хочу/Планирую» text pill).
+  // Desktop overlay only. Bottom-card status controls are rendered inline below
+  // the title/meta so the labels remain visible on mobile web and native.
   const heroActionOverlay = useMemo(() => {
-    if (!useBottomCardChrome || !relatedTravelUrl) return null;
+    if (isBottomCardLayout || !useBottomCardChrome || !relatedTravelUrl) return null;
     return (
       <View style={styles.heroFavoriteOverlay} pointerEvents="box-none">
         <RelatedTravelActionStack
@@ -465,6 +460,7 @@ const PlacePopupCard: React.FC<Props> = ({
     relatedTravelUrl,
     styles.heroFavoriteOverlay,
     title,
+    isBottomCardLayout,
     useBottomCardChrome,
   ]);
 
@@ -508,11 +504,11 @@ const PlacePopupCard: React.FC<Props> = ({
           </CardActionPressable>
         ) : (
           <>
-            {/* Bottom card (mobile web + native): ♥ + compact trip-status icon live in
-                the hero corner (heroActionOverlay), so the dedicated «Статус поездки»
-                row is dropped entirely — reclaiming a full row of height. Only the
-                desktop Leaflet popup keeps its own inline status placement (handled by
-                relatedTravelOverlays, not here). */}
+            {isBottomCardLayout && relatedTravelActionStack ? (
+              <View style={styles.relatedTravelInlineSection}>
+                {relatedTravelActionStack}
+              </View>
+            ) : null}
             {useNavSheet ? <View style={styles.blockDivider} /> : null}
             <View style={styles.actionGroup}>
               <View style={styles.iconActionRow}>
@@ -716,6 +712,7 @@ const PlacePopupCard: React.FC<Props> = ({
     isSaved,
     navExpanded,
     navSheetVisible,
+    relatedTravelActionStack,
     useNavSheet,
     onAddPoint,
     onBuildRoute,

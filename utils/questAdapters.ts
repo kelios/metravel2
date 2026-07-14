@@ -27,6 +27,28 @@ const coordNum = (value: unknown): number => {
     return n;
 };
 
+const optionalText = (value: unknown): string | undefined => {
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    return trimmed || undefined;
+};
+
+function adaptPoiInfo(apiStep: ApiQuestStep): QuestStep['poiInfo'] {
+    const raw = apiStep.poi_info;
+    if (!raw) return null;
+
+    const openingHours = optionalText(raw.opening_hours);
+    const ticketPrice = optionalText(raw.ticket_price);
+    const website = optionalText(raw.website);
+
+    return {
+        isMuseum: Boolean(raw.is_museum),
+        ...(openingHours ? { openingHours } : {}),
+        ...(ticketPrice ? { ticketPrice } : {}),
+        ...(website ? { website } : {}),
+    };
+}
+
 // ===================== ТИПЫ ФРОНТЕНДА =====================
 
 /** Метаданные квеста для каталогов/поиска (фронтенд формат) */
@@ -219,6 +241,7 @@ export function adaptStep(apiStep: ApiQuestStep): QuestStep {
         mapsUrl: apiStep.maps_url,
         image: fixMediaUrl(apiStep.image_url),
         inputType: resolveStepInputType(answerType, answerValue, apiStep.input_type),
+        poiInfo: adaptPoiInfo(apiStep),
     };
 }
 

@@ -20,6 +20,7 @@ Read first:
 - `docs/README.md`
 - Quest content docs/skills when present.
 - `../metravel-quest-writer/references/child-quest-design.md` when the audience includes children or families.
+- `$metravel-child-quest-visuals` when the requested edit also changes a child/teen cover or image prompt.
 
 ## Scope
 
@@ -41,7 +42,7 @@ Read first:
 ## Workflow
 
 1. Load the quest source: production API, local data file, or explicit user-provided content.
-2. Audit each step for story, task, hint, answer pattern, and consistency with the described place. For child/family quests, also audit the declared age band, reading load, agency, escalation, final meta-payoff, safe route, and adult role.
+2. Audit each step for story, task, hint, answer pattern, and consistency with the described place. For child/family quests, also audit the declared age band, reading load, agency, escalation, final meta-payoff, safe route, adult role, and vocabulary: remove material/architecture jargon from tasks unless it is taught and essential.
 3. If writing changes, save a local rollback snapshot in an ignored folder and patch only the intended fields.
 4. Re-fetch and verify the changed quest content.
 5. Report any coordinate uncertainty as handoff for `$metravel-quest-geo-verifier`.

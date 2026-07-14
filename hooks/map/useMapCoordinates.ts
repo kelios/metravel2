@@ -10,10 +10,10 @@ export interface Coordinates {
 }
 
 /**
- * Where the current coordinates came from. Used downstream to decide whether to
- * draw the real "you are here" marker and center-on-self: a fallback/default
- * center must NOT masquerade as a real user position even if it happens to sit
- * near Minsk. This replaces brittle coordinate-matching (isFallbackMinskCenter).
+ * Where the current viewport coordinates came from. Used downstream to decide
+ * whether to draw the real "you are here" marker and center-on-self: cached and
+ * default centers are useful anchors, but they must NOT masquerade as current
+ * user position. This replaces brittle coordinate-matching (isFallbackMinskCenter).
  */
 export type CoordinatesSource = 'geolocation' | 'cache' | 'default';
 
@@ -91,9 +91,8 @@ export function useMapCoordinates() {
     })() : null;
     return cached ?? DEFAULT_COORDINATES;
   });
-  // Origin of the current coordinates. Cache is treated as a real (prior) user
-  // position so the map can immediately center on it without flicker; only the
-  // hard DEFAULT center is a non-user fallback.
+  // Origin of the current viewport coordinates. Cache is last-known viewport
+  // only: it may center the map, but it is not a trusted current user position.
   const [coordinatesSource, setCoordinatesSource] = useState<CoordinatesSource>(() => {
     if (Platform.OS !== 'web') return 'default';
     if (typeof window === 'undefined') return 'default';
@@ -140,6 +139,7 @@ export function useMapCoordinates() {
           const next = { latitude, longitude };
           setCoordinates(next);
           setCoordinatesSource('geolocation');
+          setError(null);
           try {
             if (typeof window !== 'undefined') {
               window.localStorage.setItem(WEB_LAST_COORDS_KEY, JSON.stringify(next));
@@ -164,6 +164,7 @@ export function useMapCoordinates() {
           setCoordinates(DEFAULT_COORDINATES);
           setCoordinatesSource('default');
         }
+        setError('Местоположение не определено');
         resolve();
       };
 
@@ -200,6 +201,7 @@ export function useMapCoordinates() {
         });
         setCoordinates(DEFAULT_COORDINATES);
         setCoordinatesSource('default');
+        setError('Местоположение не определено');
         setIsLoading(false);
         return;
       }
@@ -218,6 +220,7 @@ export function useMapCoordinates() {
       if (isValidCoordinate(latitude, longitude)) {
         setCoordinates({ latitude, longitude });
         setCoordinatesSource('geolocation');
+        setError(null);
       } else {
         logMessage('[map] Invalid coordinates from location service', 'warning', {
           scope: 'map',
@@ -272,10 +275,10 @@ export function useMapCoordinates() {
     }
   }, []);
 
-  // True only when the current coordinates are the hard DEFAULT center (no real
-  // geolocation and no cached prior position). Downstream uses this to avoid a
-  // false "you are here" marker / center-on-self at the default location.
-  const coordinatesAreFallback = coordinatesSource === 'default';
+  // True when coordinates are not a live/current geolocation fix. Downstream
+  // uses this to avoid false "you are here", distance, and route-origin states
+  // from default or cached viewport anchors.
+  const coordinatesAreFallback = coordinatesSource !== 'geolocation';
 
   return useMemo(() => ({
     coordinates,

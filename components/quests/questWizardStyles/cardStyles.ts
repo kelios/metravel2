@@ -103,4 +103,53 @@ export const createCardStyles = (colors: QuestColors, isMobile: boolean, _screen
         color: colors.text,
         letterSpacing: -0.1,
     },
+    visitorInfoCard: {
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: 14,
+        padding: isMobile ? SPACING.md : SPACING.lg,
+        borderWidth: 1,
+        borderColor: colors.border,
+        gap: SPACING.sm,
+    },
+    visitorInfoHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.xs,
+    },
+    visitorInfoTitle: {
+        fontSize: Math.round((isMobile ? 14 : 15) * fontScale),
+        lineHeight: Math.round((isMobile ? 20 : 22) * fontScale),
+        fontWeight: '800',
+        color: colors.text,
+    },
+    visitorInfoRow: {
+        gap: 2,
+    },
+    visitorInfoLabel: {
+        fontSize: Math.round(12 * fontScale),
+        lineHeight: Math.round(16 * fontScale),
+        fontWeight: '700',
+        color: colors.textMuted,
+        textTransform: 'uppercase',
+        letterSpacing: 0.6,
+    },
+    visitorInfoValue: {
+        fontSize: Math.round(14 * fontScale),
+        lineHeight: Math.round(20 * fontScale),
+        color: colors.text,
+    },
+    visitorInfoLink: {
+        minHeight: 44,
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        gap: SPACING.xs,
+        ...Platform.select({ web: { cursor: 'pointer' } as any }),
+    },
+    visitorInfoLinkText: {
+        fontSize: Math.round(14 * fontScale),
+        lineHeight: Math.round(20 * fontScale),
+        fontWeight: '700',
+        color: colors.brandText,
+    },
 } as const);
