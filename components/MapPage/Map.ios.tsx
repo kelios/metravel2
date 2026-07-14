@@ -1507,7 +1507,9 @@ const Map: React.FC<TravelProps> = ({
         scrollEnabled={true}
       />
       {enableOfflineDownload && !pointsOnly && (
-        <MapOfflineDownloadControl bbox={offlineBBox} />
+        // bottomInset поднимает FAB над нижним доком навигации (иначе тап уходит в
+        // «Ещё»/«Профиль», а сам FAB не виден). ~90dp клирит док+safe-area на телефоне.
+        <MapOfflineDownloadControl bbox={offlineBBox} bottomInset={90} />
       )}
     </View>
   );
