@@ -180,6 +180,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                     onMarkerSelect={onMarkerSelect}
                     onMapMove={onMapMove}
                     onMapUiApiReady={onMapUiApiReady}
+                    enableOfflineDownload
                 />
             </View>
         );

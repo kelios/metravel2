@@ -21,6 +21,13 @@ import {
   getThemedBaseMaxZoom,
   getThemedBaseAttribution,
 } from '@/config/mapWebLayers';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import {
+  downloadTileToDisk,
+  getCachedTileDataUrl,
+  type OfflineBBox,
+} from '@/utils/mapTileCache';
+import { MapOfflineDownloadControl } from './MapOfflineDownloadControl';
 import type { MapMovePayload } from './Map/types';
 
 // Overpass endpoint mirrors utils/overpass/fetchOverpass.ts. Inlined as a plain
@@ -130,6 +137,11 @@ interface TravelProps {
    * кластер-эндпоинт. Для карты квестов (`/quests`), где показываем только квесты.
    */
   pointsOnly?: boolean;
+  /**
+   * Показывать контрол «Скачать эту область» офлайн-карты. Только для главной
+   * карты (MapPanel передаёт true). Каталог квестов (pointsOnly) его не включает.
+   */
+  enableOfflineDownload?: boolean;
   onMapUiApiReady?: (api: {
     zoomIn: () => void;
     zoomOut: () => void;
@@ -246,6 +258,7 @@ const Map: React.FC<TravelProps> = ({
   mapClusterFilters,
   categoryFilterUnresolved = false,
   pointsOnly = false,
+  enableOfflineDownload = false,
   onMapUiApiReady,
 }) => {
   const router = useRouter();
@@ -347,6 +360,21 @@ const Map: React.FC<TravelProps> = ({
   const renderedNativePointsRef = useRef(renderedNativePoints);
   renderedNativePointsRef.current = renderedNativePoints;
 
+  // Текущий bbox видимой области для контрола «Скачать эту область».
+  const offlineBBox = useMemo<OfflineBBox | null>(() => {
+    const b = viewportSnapshot?.bbox;
+    if (!b) return null;
+    if (
+      !Number.isFinite(b.south) ||
+      !Number.isFinite(b.west) ||
+      !Number.isFinite(b.north) ||
+      !Number.isFinite(b.east)
+    ) {
+      return null;
+    }
+    return { south: b.south, west: b.west, north: b.north, east: b.east };
+  }, [viewportSnapshot?.bbox]);
+
   const injectMapCommand = useCallback((script: string) => {
     try {
       webViewRef.current?.injectJavaScript?.(`${script}; true;`);
@@ -354,6 +382,88 @@ const Map: React.FC<TravelProps> = ({
       // noop
     }
   }, []);
+
+  // ─────────────── Офлайн-кэш тайлов (Фаза 0: прозрачный кэш) ───────────────
+  // Онлайн-статус для TILE_REQ: держим в ref, чтобы async-обработчик не читал
+  // устаревшее замыкание. Default true до первого ответа NetInfo — онлайн-путь.
+  const { isConnected } = useNetworkStatus();
+  const isOnlineRef = useRef(true);
+  isOnlineRef.current = isConnected;
+
+  // Шаблон URL базовой подложки ({z}/{x}/{y} подставляем при сетевом промахе).
+  const nativeTileTemplate = useMemo(() => getThemedNativeBaseTileUrl(), []);
+
+  // Семафор на сетевые загрузки тайлов: #807 nginx zone режет бурст → 429/серо.
+  // Промахи кэша при онлайне качаем ограниченным пулом, попадания идут мимо.
+  const tileFetchActiveRef = useRef(0);
+  const tileFetchQueueRef = useRef<Array<() => void>>([]);
+  const MAX_TILE_FETCH = 3;
+
+  const acquireTileSlot = useCallback((): Promise<void> => {
+    if (tileFetchActiveRef.current < MAX_TILE_FETCH) {
+      tileFetchActiveRef.current += 1;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      tileFetchQueueRef.current.push(() => {
+        tileFetchActiveRef.current += 1;
+        resolve();
+      });
+    });
+  }, []);
+
+  const releaseTileSlot = useCallback(() => {
+    tileFetchActiveRef.current = Math.max(0, tileFetchActiveRef.current - 1);
+    const next = tileFetchQueueRef.current.shift();
+    if (next) next();
+  }, []);
+
+  const setWebViewTile = useCallback(
+    (key: string, dataUrl: string) => {
+      injectMapCommand(
+        `window.__metravelSetTile && window.__metravelSetTile(${JSON.stringify(key)}, ${JSON.stringify(dataUrl)})`,
+      );
+    },
+    [injectMapCommand],
+  );
+
+  const handleTileRequest = useCallback(
+    async (z: number, x: number, y: number, key: string) => {
+      try {
+        const cached = await getCachedTileDataUrl(z, x, y);
+        if (cached) {
+          setWebViewTile(key, cached);
+          return;
+        }
+        // Офлайн и нет в кэше → прозрачный тайл (серый фон подложки).
+        if (!isOnlineRef.current) {
+          setWebViewTile(key, '');
+          return;
+        }
+        // Онлайн-промах: качаем реальный тайл (и попутно кэшируем), затем отдаём
+        // как data-URL. Картинка онлайн не меняется — те же тайлы прокси.
+        await acquireTileSlot();
+        try {
+          const url = nativeTileTemplate
+            .replace('{z}', String(z))
+            .replace('{x}', String(x))
+            .replace('{y}', String(y));
+          const bytes = await downloadTileToDisk(z, x, y, url);
+          if (bytes != null) {
+            const dataUrl = await getCachedTileDataUrl(z, x, y);
+            setWebViewTile(key, dataUrl ?? '');
+          } else {
+            setWebViewTile(key, '');
+          }
+        } finally {
+          releaseTileSlot();
+        }
+      } catch {
+        setWebViewTile(key, '');
+      }
+    },
+    [acquireTileSlot, nativeTileTemplate, releaseTileSlot, setWebViewTile],
+  );
 
   // F-17 — RN-layout → Leaflet invalidateSize bridge. Когда контейнер карты
   // получает финальную высоту ПОСЛЕ инициализации WebView (карта смонтирована на
@@ -679,11 +789,52 @@ const Map: React.FC<TravelProps> = ({
         };
 
         // Базовая подложка всегда светлая (OSM-прокси, без {s}), независимо от
-        // темы приложения — обычный цвет карты. На native нет same-origin,
-        // поэтому URL абсолютный. Тёмными остаются только панели/контролы/маркеры.
-        L.tileLayer(${JSON.stringify(getThemedNativeBaseTileUrl())}, {
+        // темы приложения — обычный цвет карты. Тёмными остаются только панели/
+        // контролы/маркеры.
+        //
+        // Офлайн-карта (Фаза 0): вместо прямого L.tileLayer (который грузит <img>
+        // из сети) используем мост TileBridge → RN. Каждый тайл createTile постит
+        // TILE_REQ наружу; RN читает дисковый кэш (офлайн-показ), а при онлайн-
+        // промахе качает реальный тайл через прокси И кэширует его. Онлайн-картинка
+        // не меняется — те же тайлы, просто через RN-мост (прозрачный кэш).
+        window.__metravelTilePending = {};
+        var TileBridge = L.GridLayer.extend({
+          createTile: function(coords, done) {
+            var img = document.createElement('img');
+            img.alt = '';
+            var key = coords.z + '/' + coords.x + '/' + coords.y;
+            window.__metravelTilePending[key] = { img: img, done: done };
+            try {
+              if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                  type: 'TILE_REQ', z: coords.z, x: coords.x, y: coords.y, key: key
+                }));
+              }
+            } catch (e) {}
+            return img;
+          }
+        });
+        // RN отдаёт результат сюда: data-URL → рисуем тайл; пусто → прозрачный
+        // тайл (офлайн + не в кэше), карта не виснет в ожидании.
+        window.__metravelSetTile = function(key, dataUrl) {
+          try {
+            var pending = window.__metravelTilePending[key];
+            if (!pending) return;
+            delete window.__metravelTilePending[key];
+            var img = pending.img, done = pending.done;
+            if (dataUrl) {
+              img.onload = function() { try { done(null, img); } catch (e) {} };
+              img.onerror = function() { try { done(null, img); } catch (e) {} };
+              img.src = dataUrl;
+            } else {
+              try { done(null, img); } catch (e) {}
+            }
+          } catch (e) {}
+        };
+        new TileBridge({
           attribution: ${JSON.stringify(getThemedBaseAttribution())},
           maxZoom: ${getThemedBaseMaxZoom()},
+          tileSize: 256,
           updateWhenIdle: false,
           updateWhenZooming: false,
           keepBuffer: 1
@@ -1271,6 +1422,16 @@ const Map: React.FC<TravelProps> = ({
               handleReady();
               return;
             }
+            if (parsed?.type === 'TILE_REQ') {
+              const z = Number(parsed?.z);
+              const x = Number(parsed?.x);
+              const y = Number(parsed?.y);
+              const key = typeof parsed?.key === 'string' ? parsed.key : `${z}/${x}/${y}`;
+              if (Number.isFinite(z) && Number.isFinite(x) && Number.isFinite(y)) {
+                void handleTileRequest(z, x, y, key);
+              }
+              return;
+            }
             if (parsed?.type === 'MAP_CLICK') {
               const lat = Number(parsed?.lat);
               const lng = Number(parsed?.lng);
@@ -1345,6 +1506,9 @@ const Map: React.FC<TravelProps> = ({
         }}
         scrollEnabled={true}
       />
+      {enableOfflineDownload && !pointsOnly && (
+        <MapOfflineDownloadControl bbox={offlineBBox} />
+      )}
     </View>
   );
 };

@@ -69,6 +69,11 @@ export interface MapProps {
    * /travel/[id] keep their server-clustered travel layer.
    */
   pointsOnly?: boolean;
+  /**
+   * Показывать контрол офлайн-загрузки текущей области карты. Реализован только
+   * на native (Map.ios) — web игнорирует проп (тайлы кэширует браузер/сеть).
+   */
+  enableOfflineDownload?: boolean;
 }
 
 export type MapMovePayload = Coordinates & {
