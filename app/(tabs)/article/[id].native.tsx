@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   StyleSheet,
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -13,16 +12,15 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
 import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
-import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
-import RenderHTML from 'react-native-render-html'
-import { WebView } from 'react-native-webview'
+import ArticleAuthorBanner from '@/components/article/ArticleAuthorBanner'
+import StableContent from '@/components/travel/StableContent'
 import { Card, Title } from '@/ui/paper'
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles'
 import { SafeHtml } from '@/components/article/SafeHtml'
+import { useFavorites } from '@/context/FavoritesContext'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
-import { handleRichTextLinkPress } from '@/utils/internalLinks'
 import { normalizeArticleReturnHref } from '@/utils/articleNavigation'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 
@@ -31,6 +29,7 @@ export default function ArticleDetails() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const router = useRouter()
+  const { addToHistory } = useFavorites()
 
   const params = useLocalSearchParams()
   const routeParam = Array.isArray(params.id) ? String(params.id[0] ?? '') : String(params.id ?? '')
@@ -49,6 +48,13 @@ export default function ArticleDetails() {
   const [article, setArticle] = useState<Article | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const articlePath = useMemo(() => {
+    if (article?.slug) return `/article/${article.slug}`
+    if (numericId) return `/article/${numericId}`
+    if (normalizedSlug) return `/article/${normalizedSlug}`
+    if (article?.id) return `/article/${article.id}`
+    return undefined
+  }, [article?.id, article?.slug, normalizedSlug, numericId])
 
   const handleBack = useCallback(() => {
     if (returnHref) {
@@ -127,6 +133,18 @@ export default function ArticleDetails() {
     }
   }, [numericId, normalizedSlug])
 
+  useEffect(() => {
+    if (!article || !articlePath) return
+
+    void addToHistory({
+      id: article.id ?? article.slug ?? articlePath,
+      type: 'article',
+      title: article.name,
+      imageUrl: article.article_image_thumb_url || article.article_image_thumb_small_url,
+      url: articlePath,
+    })
+  }, [addToHistory, article, articlePath])
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -152,7 +170,6 @@ export default function ArticleDetails() {
 
   // #709: canonical rich_text.description.safe_html с бэка, description — fallback
   const articleContent = resolveServerRichTextHtml(article.rich_text?.description, article.description)
-  const articlePath = numericId ? `/article/${numericId}` : normalizedSlug ? `/article/${normalizedSlug}` : undefined
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
@@ -165,46 +182,14 @@ export default function ArticleDetails() {
           <Card style={styles.card}>
             <Card.Content>
               <Title>{article.name}</Title>
-              {Platform.select({
-                web: (
-                  <SafeHtml html={articleContent.html} serverSanitized={articleContent.serverSanitized} style={{ marginTop: 16 }} />
-                ),
-                default: (
-                  <RenderHTML
-                    source={{ html: articleContent.html }}
-                    contentWidth={width - 50}
-                    renderers={{ iframe: IframeRenderer }}
-                    customHTMLElementModels={{ iframe: iframeModel }}
-                    WebView={WebView}
-                    defaultWebViewProps={{}}
-                    renderersProps={{
-                      iframe: {
-                        scalesPageToFit: true,
-                        webViewProps: {
-                          allowsFullScreen: true,
-                        },
-                      },
-                      a: {
-                        // Внутренние ссылки открываем в приложении, внешние — в браузере
-                        onPress: (_event: any, href: string) => handleRichTextLinkPress(href),
-                      },
-                    }}
-                    baseStyle={{ color: colors.text }}
-                    tagsStyles={{
-                      p: { marginTop: 15, marginBottom: 0 },
-                      a: { color: colors.primaryText },
-                      iframe: {
-                        height: 1500,
-                        width: 680,
-                        overflow: 'hidden',
-                        marginTop: 15,
-                        borderRadius: 5,
-                        marginHorizontal: 0,
-                      },
-                    }}
-                  />
-                ),
-              })}
+              <ArticleAuthorBanner article={article} />
+              <View style={styles.richTextWrap}>
+                <StableContent
+                  html={articleContent.html}
+                  serverSanitized={articleContent.serverSanitized}
+                  contentWidth={Math.max(width - 50, 240)}
+                />
+              </View>
               <ArticleActivationCtaSection article={article} redirectPath={articlePath} />
             </Card.Content>
           </Card>
@@ -299,5 +284,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       maxWidth: 800,
       borderWidth: 1,
       borderColor: colors.border,
+    },
+    richTextWrap: {
+      marginTop: 16,
     },
   })

@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -139,6 +139,11 @@ const MapPanel: React.FC<MapPanelProps> = ({
         if (coordinatesAreFallback === undefined && isFallbackMinskCenter(latitude, longitude)) return null;
         return { latitude, longitude };
     }, [coordinates, coordinatesAreFallback]);
+
+    useEffect(() => {
+        if (isWeb) return;
+        onUserLocationChange?.(nativeUserLocation);
+    }, [isWeb, nativeUserLocation, onUserLocationChange]);
 
     // ✅ ИСПРАВЛЕНИЕ: Функция для обработки ошибок и регенерации ключа карты
     const handleMapError = useCallback(() => {

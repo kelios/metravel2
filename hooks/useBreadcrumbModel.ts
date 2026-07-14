@@ -63,7 +63,7 @@ const pageTranslations: Record<string, string> = {
   about: 'О сайте',
   export: 'Экспорт',
   settings: 'Настройки',
-  history: 'История просмотров',
+  history: 'Вы смотрели',
   favorites: 'Избранное',
   accountconfirmation: 'Подтверждение аккаунта',
   'set-password': 'Установка пароля',

@@ -85,4 +85,69 @@ describe('useMapCoordinates live location updates', () => {
     unmount()
     expect(clearWatch).toHaveBeenCalledWith(77)
   })
+
+  it('ignores stationary web watch jitter instead of refreshing coordinates on interval ticks', async () => {
+    ;(Platform as any).OS = 'web'
+
+    let watchSuccess: ((position: GeolocationPosition) => void) | null = null
+    const getCurrentPosition = jest.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          latitude: 50.0614,
+          longitude: 19.9366,
+          accuracy: 14,
+        },
+        timestamp: 1000,
+      } as GeolocationPosition)
+    })
+    const watchPosition = jest.fn((success: PositionCallback) => {
+      watchSuccess = success
+      return 78
+    })
+    const clearWatch = jest.fn()
+
+    Object.defineProperty(global, 'navigator', {
+      configurable: true,
+      value: {
+        geolocation: {
+          getCurrentPosition,
+          watchPosition,
+          clearWatch,
+        },
+      },
+    })
+    const webGlobal = typeof window !== 'undefined' ? window : null
+    if (webGlobal) {
+      Object.defineProperty(webGlobal, 'localStorage', {
+        configurable: true,
+        value: {
+          getItem: jest.fn(() => null),
+          setItem: jest.fn(),
+        },
+      })
+    }
+
+    const { result, unmount } = renderHook(() => useMapCoordinates())
+
+    await waitFor(() => {
+      expect(result.current.coordinates).toEqual({ latitude: 50.0614, longitude: 19.9366 })
+      expect(result.current.coordinatesAreFallback).toBe(false)
+    })
+
+    act(() => {
+      watchSuccess?.({
+        coords: {
+          latitude: 50.061405,
+          longitude: 19.936605,
+          accuracy: 13,
+        },
+        timestamp: 7000,
+      } as GeolocationPosition)
+    })
+
+    expect(result.current.coordinates).toEqual({ latitude: 50.0614, longitude: 19.9366 })
+
+    unmount()
+    expect(clearWatch).toHaveBeenCalledWith(78)
+  })
 })

@@ -60,6 +60,7 @@ jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => ({
     isFavorite: jest.fn(() => false),
     addFavorite: jest.fn(),
+    addToHistory: jest.fn(),
   }),
 }))
 

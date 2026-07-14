@@ -341,7 +341,7 @@ export default function HistoryScreen() {
 
             return (
                 <ProfileCollectionHeader
-                    title="История"
+                    title="Вы смотрели"
                     dense
                     onBackPress={handleBackToProfile}
                     showClearButton={showClear}
@@ -364,10 +364,10 @@ export default function HistoryScreen() {
                         </View>
 
                         <View style={styles.summaryCopy}>
-                            <Text style={styles.summaryEyebrow}>Недавние открытия</Text>
+                            <Text style={styles.summaryEyebrow}>Вы смотрели</Text>
                             <Text style={styles.summaryTitle}>Быстрый возврат к тому, что уже смотрел</Text>
                             <Text style={styles.summaryDescription}>
-                                История помогает не терять интересные маршруты и продолжать поиск с того места, где ты остановился.
+                                После сворачивания или перезапуска приложения здесь остаются последние маршруты и статьи.
                             </Text>
                         </View>
                     </View>
@@ -392,8 +392,12 @@ export default function HistoryScreen() {
 
                     <View style={styles.summaryActions}>
                         <Button
-                            label="Продолжить поиск"
-                            onPress={() => router.push('/search')}
+                            label={latestHistoryItem ? 'Продолжить с последнего' : 'Продолжить поиск'}
+                            onPress={() =>
+                                latestHistoryItem
+                                    ? router.push(latestHistoryItem.url as any)
+                                    : router.push('/search')
+                            }
                             variant="secondary"
                             size="md"
                             style={styles.summaryActionButton}
@@ -409,7 +413,7 @@ export default function HistoryScreen() {
                 </View>
             </View>
         ),
-        [colors.primaryDark, data.length, latestHistoryTitle, router, styles]
+        [colors.primaryDark, data.length, latestHistoryItem, latestHistoryTitle, router, styles]
     );
 
     const isLoading = !authReady || (isInitialSyncing && data.length === 0);
@@ -486,7 +490,7 @@ export default function HistoryScreen() {
             {isFocused && (
                 <InstantSEO
                     headKey="history"
-                    title="История просмотров | Metravel"
+                    title="Вы смотрели | Metravel"
                     description="История просмотренных путешествий"
                     canonical={buildCanonicalUrl('/history')}
                     robots="noindex, nofollow"

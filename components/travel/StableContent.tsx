@@ -95,7 +95,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
     rootRef: webRootRef,
   });
 
-  const { renderers, baseStyle, tagsStyles, customHTMLElementModels, handleLinkPress } = useStableContentRenderConfig({
+  const { renderers, baseStyle, tagsStyles, classesStyles, customHTMLElementModels, renderersProps } = useStableContentRenderConfig({
     colors,
     styles,
     contentWidth,
@@ -147,9 +147,10 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
             renderers={renderers}
             // Android: selectable-текст перехватывает тапы — onPress вложенных <a> не срабатывает (RN #22811)
             defaultTextProps={{ selectable: Platform.OS === 'ios' }}
-            renderersProps={{ a: { onPress: handleLinkPress } } as any}
+            renderersProps={renderersProps as any}
             baseStyle={baseStyle as any}
             tagsStyles={tagsStyles as any}
+            classesStyles={classesStyles as any}
             ignoredDomTags={['script', 'style']}
           />
         </Suspense>

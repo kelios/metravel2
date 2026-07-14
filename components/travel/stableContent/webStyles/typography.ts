@@ -54,6 +54,15 @@ export const typographyStyles = (
   margin-bottom: 0.5em;
   line-height: 1.7;
 }
+.${cls} li.ql-indent-1 {
+  margin-left: 1.5em;
+}
+.${cls} li.ql-indent-2 {
+  margin-left: 3em;
+}
+.${cls} li.ql-indent-3 {
+  margin-left: 4.5em;
+}
 .${cls} li::marker {
   color: ${colors.primary};
 }

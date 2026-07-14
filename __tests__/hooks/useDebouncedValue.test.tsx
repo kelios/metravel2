@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react-native'
-import { deepEqual, useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { deepEqual, useDebouncedValue, useDebouncedValueWithPending } from '@/hooks/useDebouncedValue'
 
 describe('useDebouncedValue', () => {
   afterEach(() => {
@@ -48,6 +48,44 @@ describe('useDebouncedValue', () => {
       jest.advanceTimersByTime(60)
     })
     expect(result.current).toEqual({ term: 'minsk' })
+  })
+
+  it('does not cancel a pending debounced update on a deep-equal rerender', () => {
+    jest.useFakeTimers()
+    const { result, rerender } = renderHook(
+      ({ value, delay }: { value: { term: string }; delay: number }) => useDebouncedValue(value, delay),
+      { initialProps: { value: { term: 'moscow' }, delay: 200 } }
+    )
+
+    rerender({ value: { term: 'minsk' }, delay: 200 })
+    rerender({ value: { term: 'minsk' }, delay: 200 })
+
+    act(() => {
+      jest.advanceTimersByTime(210)
+    })
+
+    expect(result.current).toEqual({ term: 'minsk' })
+  })
+
+  it('clears pending after a deep-equal rerender during debounce', () => {
+    jest.useFakeTimers()
+    const { result, rerender } = renderHook(
+      ({ value, delay }: { value: { latitude: number; longitude: number }; delay: number }) =>
+        useDebouncedValueWithPending(value, delay),
+      { initialProps: { value: { latitude: 53.9006, longitude: 27.559 }, delay: 200 } }
+    )
+
+    rerender({ value: { latitude: 50.0614, longitude: 19.9366 }, delay: 200 })
+    expect(result.current[1]).toBe(true)
+
+    rerender({ value: { latitude: 50.0614, longitude: 19.9366 }, delay: 200 })
+
+    act(() => {
+      jest.advanceTimersByTime(210)
+    })
+
+    expect(result.current[0]).toEqual({ latitude: 50.0614, longitude: 19.9366 })
+    expect(result.current[1]).toBe(false)
   })
 
   it('treats deep-equal objects as equal even with different references', () => {

@@ -6,6 +6,7 @@ import { View, Text, StyleSheet, Platform } from 'react-native';
 import { normalizeArticleEditorHtmlForInput } from '@/components/article/articleEditorConfig';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getInstagramCardStyles, replaceInstagramEmbedsWithCards } from '@/utils/instagramRichText';
+import { normalizeRichTextListFragments } from '@/utils/richTextLists';
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml';
 
@@ -35,12 +36,37 @@ export function SafeHtml({ html, serverSanitized = false, style, className, test
         if (!trimmed) return '';
         if (serverSanitized) {
             // canonical safe_html с бэка (#709): без normalize+sanitize, только guard
-            return replaceInstagramEmbedsWithCards(guardServerSafeHtml(html));
+            return normalizeRichTextListFragments(replaceInstagramEmbedsWithCards(guardServerSafeHtml(html)));
         }
-        return sanitizeRichText(replaceInstagramEmbedsWithCards(normalizeArticleEditorHtmlForInput(html)));
+        return normalizeRichTextListFragments(
+            sanitizeRichText(replaceInstagramEmbedsWithCards(normalizeArticleEditorHtmlForInput(html)))
+        );
     }, [html, trimmed, serverSanitized]);
     const richTextStyles = useMemo(
-        () => getInstagramCardStyles(`.${SAFE_HTML_RICH_TEXT_CLASS}`, colors),
+        () => `
+${getInstagramCardStyles(`.${SAFE_HTML_RICH_TEXT_CLASS}`, colors)}
+.${SAFE_HTML_RICH_TEXT_CLASS} ul,
+.${SAFE_HTML_RICH_TEXT_CLASS} ol {
+    margin: 1em 0 1.25em 1.75em;
+    padding: 0;
+}
+.${SAFE_HTML_RICH_TEXT_CLASS} li {
+    margin-bottom: 0.5em;
+    line-height: 1.65;
+}
+.${SAFE_HTML_RICH_TEXT_CLASS} li.ql-indent-1 {
+    margin-left: 1.5em;
+}
+.${SAFE_HTML_RICH_TEXT_CLASS} li.ql-indent-2 {
+    margin-left: 3em;
+}
+.${SAFE_HTML_RICH_TEXT_CLASS} li.ql-indent-3 {
+    margin-left: 4.5em;
+}
+.${SAFE_HTML_RICH_TEXT_CLASS} li::marker {
+    color: ${colors.primary};
+}
+`,
         [colors]
     );
     const webRootRef = useRef<HTMLElement | null>(null);

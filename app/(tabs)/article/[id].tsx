@@ -10,11 +10,13 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
 import ArticleRatingSection from '@/components/article/ArticleRatingSection'
 import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
+import ArticleAuthorBanner from '@/components/article/ArticleAuthorBanner'
 import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
 import RenderHTML from 'react-native-render-html'
 import { Card, Title } from '@/ui/paper'
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles'
 import { SafeHtml } from '@/components/article/SafeHtml'
+import { useFavorites } from '@/context/FavoritesContext'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
@@ -23,6 +25,7 @@ export default function ArticleDetails() {
   const { width } = useResponsive()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
+  const { addToHistory } = useFavorites()
 
   const NativeWebView = useMemo(() => {
     if (Platform.OS === 'web') return null
@@ -45,6 +48,13 @@ export default function ArticleDetails() {
   const [article, setArticle] = useState<Article | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const articlePath = useMemo(() => {
+    if (article?.slug) return `/article/${article.slug}`
+    if (numericId) return `/article/${numericId}`
+    if (normalizedSlug) return `/article/${normalizedSlug}`
+    if (article?.id) return `/article/${article.id}`
+    return undefined
+  }, [article?.id, article?.slug, normalizedSlug, numericId])
 
   useEffect(() => {
     let cancelled = false
@@ -95,6 +105,18 @@ export default function ArticleDetails() {
     }
   }, [numericId, normalizedSlug])
 
+  useEffect(() => {
+    if (!article || !articlePath) return
+
+    void addToHistory({
+      id: article.id ?? article.slug ?? articlePath,
+      type: 'article',
+      title: article.name,
+      imageUrl: article.article_image_thumb_url || article.article_image_thumb_small_url,
+      url: articlePath,
+    })
+  }, [addToHistory, article, articlePath])
+
   if (isLoading) {
     return <ActivityIndicator />
   }
@@ -112,7 +134,6 @@ export default function ArticleDetails() {
 
   // #709: canonical rich_text.description.safe_html с бэка, description — fallback
   const articleContent = resolveServerRichTextHtml(article.rich_text?.description, article.description)
-  const articlePath = numericId ? `/article/${numericId}` : normalizedSlug ? `/article/${normalizedSlug}` : undefined
 
   return (
       <SafeAreaView style={{ flex: 1 }}>
@@ -125,6 +146,7 @@ export default function ArticleDetails() {
               <Card style={styles.card}>
                 <Card.Content>
                   {/* Заголовок даёт навигационный header (headerTitle) — в теле не дублируем (F-4). */}
+                  <ArticleAuthorBanner article={article} />
                   {Platform.select({
                     web: (
                         <SafeHtml

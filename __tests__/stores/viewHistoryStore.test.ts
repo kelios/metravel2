@@ -69,14 +69,22 @@ describe('viewHistoryStore', () => {
       expect(history[0].viewedAt).toBeGreaterThan(0);
     });
 
-    it('skips adding for authenticated user (server-side tracking)', async () => {
+    it('adds and caches item for authenticated user', async () => {
       await act(() =>
         useViewHistoryStore.getState().addToHistory(makeItem(1), {
           isAuthenticated: true,
           userId: '42',
         }),
       );
-      expect(useViewHistoryStore.getState().viewHistory).toHaveLength(0);
+      expect(useViewHistoryStore.getState().viewHistory).toHaveLength(1);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        'metravel_view_history_42',
+        expect.any(String),
+      );
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        'metravel_view_history_server_42',
+        expect.any(String),
+      );
     });
 
     it('deduplicates by id+type, keeping most recent first', async () => {
@@ -194,6 +202,30 @@ describe('viewHistoryStore', () => {
       expect(history).toHaveLength(1);
       expect(history[0].id).toBe(10);
       expect(history[0].title).toBe('Trip');
+    });
+
+    it('merges server history with local article history', async () => {
+      const article = {
+        id: 'a-1',
+        type: 'article' as const,
+        title: 'Article',
+        url: '/article/a-1',
+        viewedAt: new Date('2025-01-02T00:00:00Z').getTime(),
+      };
+      useViewHistoryStore.setState({ viewHistory: [article] });
+      fetchUserHistory.mockResolvedValue([
+        { id: 10, name: 'Trip', slug: 'trip', updated_at: '2025-01-01T00:00:00Z' },
+      ]);
+
+      await act(() => useViewHistoryStore.getState().refreshFromServer('42'));
+
+      const history = useViewHistoryStore.getState().viewHistory;
+      expect(history).toHaveLength(2);
+      expect(history.map((item) => item.type)).toEqual(['article', 'travel']);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        'metravel_view_history_server_42',
+        JSON.stringify(history),
+      );
     });
 
     it('does not overwrite local data when server returns empty', async () => {

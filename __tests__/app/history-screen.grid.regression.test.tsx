@@ -1,4 +1,4 @@
-import { render, act } from '@testing-library/react-native';
+import { render, act, fireEvent } from '@testing-library/react-native';
 import { FlashList } from '@shopify/flash-list';
 
 import HistoryScreen from '@/app/(tabs)/history';
@@ -109,5 +109,16 @@ describe('HistoryScreen grid regression', () => {
 
     expect(utils.getByText('1 элемент в истории')).toBeTruthy();
     expect(utils.getByText('Последнее: T1')).toBeTruthy();
+  });
+
+  it('opens the latest viewed item from the summary CTA', async () => {
+    const { router } = require('expo-router');
+    (global as any).__mockResponsive = { width: 900 };
+
+    const utils = await renderLoaded();
+
+    fireEvent.press(utils.getByLabelText('Продолжить с последнего'));
+
+    expect(router.push).toHaveBeenCalledWith('/travels/1');
   });
 });

@@ -207,6 +207,27 @@ export type Article = {
     rating?: number | null
     rating_count?: number
     user_rating?: number | null
+    userName?: string | null
+    user_name?: string | null
+    authorName?: string | null
+    author_name?: string | null
+    ownerName?: string | null
+    owner_name?: string | null
+    userId?: number | string | null
+    user_id?: number | string | null
+    authorId?: number | string | null
+    author_id?: number | string | null
+    ownerId?: number | string | null
+    owner_id?: number | string | null
+    userIds?: number | string | Array<number | string> | null
+    user_ids?: number | string | Array<number | string> | null
+    user?: {
+        id?: number | string | null
+        name?: string | null
+        first_name?: string | null
+        last_name?: string | null
+        avatar?: string | null
+    } | null
 }
 
 export type ArticleType = {

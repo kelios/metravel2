@@ -2,6 +2,7 @@ import { Platform } from 'react-native'
 
 import { normalizeArticleEditorHtmlForInput } from '@/components/article/articleEditorConfig'
 import { replaceInstagramEmbedsWithCards } from '@/utils/instagramRichText'
+import { normalizeRichTextListFragments } from '@/utils/richTextLists'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
 import { applySmartImageLayout } from '@/utils/richTextImageLayout'
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml'
@@ -492,5 +493,6 @@ export const prepareStableContentHtml = (html: string, options?: PrepareStableCo
     .replace(/<\s*h1(\b[^>]*)>/gi, '<h2$1>')
     .replace(/<\s*\/\s*h1\s*>/gi, '</h2>')
   const truncated = truncateInstagramCaptions(demoted)
-  return injectAutoHeadingAnchors(decorateRichImageFrames(applySmartImageLayout(truncated)))
+  const normalizedLists = normalizeRichTextListFragments(truncated)
+  return injectAutoHeadingAnchors(decorateRichImageFrames(applySmartImageLayout(normalizedLists)))
 }

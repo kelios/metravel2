@@ -9,8 +9,10 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
 import { Card, Title } from '@/ui/paper'
 import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
+import ArticleAuthorBanner from '@/components/article/ArticleAuthorBanner'
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles'
 import { SafeHtml } from '@/components/article/SafeHtml'
+import { useFavorites } from '@/context/FavoritesContext'
 import { useThemedColors } from '@/hooks/useTheme'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { buildCanonicalUrl } from '@/utils/seo'
@@ -21,6 +23,7 @@ import { webTouchScrollStyle } from '@/utils'
 export default function ArticleDetails() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
+  const { addToHistory } = useFavorites()
 
   const params = useLocalSearchParams()
   const routeParam = Array.isArray(params.id) ? String(params.id[0] ?? '') : String(params.id ?? '')
@@ -42,6 +45,12 @@ export default function ArticleDetails() {
   const [article, setArticle] = useState<Article | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const articlePath = useMemo(() => {
+    if (article?.slug) return `/article/${article.slug}`
+    if (routeKey) return `/article/${routeKey}`
+    if (article?.id) return `/article/${article.id}`
+    return undefined
+  }, [article?.id, article?.slug, routeKey])
 
   useEffect(() => {
     let cancelled = false
@@ -91,6 +100,18 @@ export default function ArticleDetails() {
       cancelled = true
     }
   }, [numericId, normalizedSlug])
+
+  useEffect(() => {
+    if (!article || !articlePath) return
+
+    void addToHistory({
+      id: article.id ?? article.slug ?? articlePath,
+      type: 'article',
+      title: article.name,
+      imageUrl: article.article_image_thumb_url || article.article_image_thumb_small_url,
+      url: articlePath,
+    })
+  }, [addToHistory, article, articlePath])
 
   const seo = useMemo(() => {
     const hasResolvedArticle = Boolean(article?.id) && !errorMessage
@@ -165,7 +186,6 @@ export default function ArticleDetails() {
 
   // #709: canonical rich_text.description.safe_html с бэка, description — fallback
   const articleContent = resolveServerRichTextHtml(article.rich_text?.description, article.description)
-  const articlePath = routeKey ? `/article/${routeKey}` : undefined
 
   return (
     <>
@@ -177,6 +197,7 @@ export default function ArticleDetails() {
             <Card style={styles.card}>
               <Card.Content>
                 <h1 style={{ fontSize: 18, fontWeight: '700', margin: 0 } as any}>{article.name}</h1>
+                <ArticleAuthorBanner article={article} />
                 <SafeHtml html={articleContent.html} serverSanitized={articleContent.serverSanitized} style={{ marginTop: 16 }} />
                 <ArticleActivationCtaSection article={article} redirectPath={articlePath} />
               </Card.Content>

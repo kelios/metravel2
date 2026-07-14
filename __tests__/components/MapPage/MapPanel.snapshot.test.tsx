@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native'
+import { render, waitFor } from '@testing-library/react-native'
 
 import { createQueryWrapper } from '@/__tests__/helpers/testQueryClient'
 import MapPanel from '@/components/MapPage/MapPanel'
@@ -88,5 +88,46 @@ describe('MapPanel native map rendering', () => {
         centerOnUser: expect.any(Function),
       }),
     )
+  })
+
+  it('reports trusted native coordinates as the current user location', async () => {
+    const onUserLocationChange = jest.fn()
+
+    renderWithQueryClient(
+      <MapPanel
+        travelsData={[]}
+        coordinates={{ latitude: 52.2, longitude: 20.98 }}
+        coordinatesAreFallback={false}
+        setRouteDistance={jest.fn()}
+        setFullRouteCoords={jest.fn()}
+        onUserLocationChange={onUserLocationChange}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(onUserLocationChange).toHaveBeenCalledWith({
+        latitude: 52.2,
+        longitude: 20.98,
+      })
+    })
+  })
+
+  it('does not report fallback native coordinates as the current user location', async () => {
+    const onUserLocationChange = jest.fn()
+
+    renderWithQueryClient(
+      <MapPanel
+        travelsData={[]}
+        coordinates={{ latitude: 53.9006, longitude: 27.559 }}
+        coordinatesAreFallback
+        setRouteDistance={jest.fn()}
+        setFullRouteCoords={jest.fn()}
+        onUserLocationChange={onUserLocationChange}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(onUserLocationChange).toHaveBeenCalledWith(null)
+    })
   })
 })

@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo } from 'react'
+import React, { Suspense, useCallback, useMemo } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 import type { TDefaultRendererProps } from 'react-native-render-html'
 
@@ -139,11 +139,11 @@ export function useStableContentRenderConfig({
       },
       ul: {
         marginVertical: 12,
-        paddingLeft: DESIGN_TOKENS.spacing.md,
+        paddingLeft: DESIGN_TOKENS.spacing.xl,
       },
       ol: {
         marginVertical: 12,
-        paddingLeft: DESIGN_TOKENS.spacing.md,
+        paddingLeft: DESIGN_TOKENS.spacing.xl,
       },
       li: {
         marginVertical: DESIGN_TOKENS.spacing.xs,
@@ -185,19 +185,72 @@ export function useStableContentRenderConfig({
     [baseFontSize, contentWidth, colors]
   )
 
+  const classesStyles = useMemo(
+    () => ({
+      'ql-indent-1': {
+        marginLeft: DESIGN_TOKENS.spacing.lg,
+      },
+      'ql-indent-2': {
+        marginLeft: DESIGN_TOKENS.spacing.lg * 2,
+      },
+      'ql-indent-3': {
+        marginLeft: DESIGN_TOKENS.spacing.lg * 3,
+      },
+    }),
+    []
+  )
+
   const customHTMLElementModels = useMemo(() => (iframeModel ? { iframe: iframeModel } : undefined), [iframeModel])
 
   // Внутренние ссылки (metravel.by / относительные) открываем внутри приложения,
   // внешние — во внешнем браузере (см. handleRichTextLinkPress).
-  const handleLinkPress = (_: any, href?: string) => {
+  const handleLinkPress = useCallback((_: any, href?: string) => {
     handleRichTextLinkPress(href)
-  }
+  }, [])
+
+  const renderersProps = useMemo(
+    () => ({
+      a: {
+        onPress: handleLinkPress,
+      },
+      ol: {
+        enableDynamicMarkerBoxWidth: true,
+        markerBoxStyle: {
+          paddingRight: DESIGN_TOKENS.spacing.sm,
+          minWidth: DESIGN_TOKENS.spacing.lg,
+          alignItems: 'flex-end',
+        },
+        markerTextStyle: {
+          color: colors.primary,
+          fontSize: baseFontSize,
+          lineHeight: Math.round(baseFontSize * 1.6),
+          fontWeight: '600',
+        },
+      },
+      ul: {
+        markerBoxStyle: {
+          paddingRight: DESIGN_TOKENS.spacing.sm,
+          minWidth: DESIGN_TOKENS.spacing.lg,
+          alignItems: 'flex-end',
+        },
+        markerTextStyle: {
+          color: colors.primary,
+          fontSize: baseFontSize,
+          lineHeight: Math.round(baseFontSize * 1.6),
+          fontWeight: '600',
+        },
+      },
+    }),
+    [baseFontSize, colors.primary, handleLinkPress]
+  )
 
   return {
     renderers,
     baseStyle,
     tagsStyles,
+    classesStyles,
     customHTMLElementModels,
     handleLinkPress,
+    renderersProps,
   }
 }

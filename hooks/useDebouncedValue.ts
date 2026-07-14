@@ -48,6 +48,7 @@ export function deepEqual(a: unknown, b: unknown): boolean {
 export function useDebouncedValueWithPending<T>(value: T, delay: number): [T, boolean] {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   const prevValueRef = useRef<T>(value);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
@@ -56,17 +57,27 @@ export function useDebouncedValueWithPending<T>(value: T, delay: number): [T, bo
     }
 
     prevValueRef.current = value;
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     setPending(true);
 
-    const handler = setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       setDebouncedValue(value);
       setPending(false);
+      timeoutRef.current = null;
     }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
   }, [value, delay]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, []);
 
   return [debouncedValue, pending];
 }
@@ -74,6 +85,7 @@ export function useDebouncedValueWithPending<T>(value: T, delay: number): [T, bo
 export function useDebouncedValue<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   const prevValueRef = useRef<T>(value);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // ✅ ИСПРАВЛЕНИЕ: Используем глубокое сравнение для объектов и массивов
@@ -83,15 +95,25 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
     }
     
     prevValueRef.current = value;
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     
-    const handler = setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       setDebouncedValue(value);
+      timeoutRef.current = null;
     }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
   }, [value, delay]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, []);
 
   return debouncedValue;
 }

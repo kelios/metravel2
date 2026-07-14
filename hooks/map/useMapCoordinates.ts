@@ -24,7 +24,6 @@ export const DEFAULT_COORDINATES: Coordinates = {
 const WEB_LAST_COORDS_KEY = 'metravel:lastKnownCoords';
 const NATIVE_LOCATION_TIMEOUT_MS = 12000;
 const LIVE_LOCATION_MIN_DISTANCE_M = 12;
-const LIVE_LOCATION_MIN_INTERVAL_MS = 3000;
 const LIVE_LOCATION_MAXIMUM_AGE_MS = 15000;
 
 type LocationSnapshot = Coordinates & {
@@ -163,9 +162,7 @@ export function useMapCoordinates() {
 
     if (!options.force && prev) {
       const movedEnough = distanceMeters(prev, next) >= LIVE_LOCATION_MIN_DISTANCE_M;
-      const elapsedEnough =
-        (next.timestamp ?? 0) - (prev.timestamp ?? 0) >= LIVE_LOCATION_MIN_INTERVAL_MS;
-      if (!movedEnough && !elapsedEnough) return false;
+      if (!movedEnough) return false;
     }
 
     lastTrustedLocationRef.current = next;

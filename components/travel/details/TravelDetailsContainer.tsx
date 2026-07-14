@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router'
 
 import { useResponsive } from '@/hooks/useResponsive'
 import { METRICS } from '@/constants/layout'
+import { useFavorites } from '@/context/FavoritesContext'
 import { useAccessibilityAnnounce } from '@/hooks/useAccessibilityAnnounce'
 import { useSkeletonPhase } from '@/hooks/useSkeletonPhase'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -115,6 +116,7 @@ export default function TravelDetailsContainer() {
   const isFocused = useIsFocused()
   const navigation = useNavigation()
   const router = useRouter()
+  const { addToHistory } = useFavorites()
   const [, startTransition] = useTransition()
 
   const { announcement, priority: announcementPriority } = useAccessibilityAnnounce()
@@ -141,6 +143,32 @@ export default function TravelDetailsContainer() {
     scroll
 
   useNativeOfflineTravelCache(travel, isLoading, isError)
+
+  useEffect(() => {
+    const travelId = travel?.id ?? travel?.slug
+    if (!travelId) return
+
+    const travelUrl = travel?.slug ? `/travels/${travel.slug}` : `/travels/${travelId}`
+
+    void addToHistory({
+      id: travelId,
+      type: 'travel',
+      title: travel?.name || 'Маршрут',
+      imageUrl: travel?.travel_image_thumb_url || travel?.travel_image_thumb_small_url,
+      url: travelUrl,
+      country: travel?.countryName || undefined,
+      city: travel?.cityName || undefined,
+    })
+  }, [
+    addToHistory,
+    travel?.cityName,
+    travel?.countryName,
+    travel?.id,
+    travel?.name,
+    travel?.slug,
+    travel?.travel_image_thumb_small_url,
+    travel?.travel_image_thumb_url,
+  ])
 
   const isWebAutomation = isWebAutomationRuntime()
   const isFirstScreenReady = isTravelDetailsFirstScreenReady(travel, lcpLoaded)

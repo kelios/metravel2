@@ -8,6 +8,11 @@ const SERVER_HISTORY_CACHE_KEY = 'metravel_view_history_server';
 const MAX_HISTORY_ITEMS = 50;
 const getUserApi = async () => import('@/api/user');
 
+const getLocalHistoryKey = (userId: string | null): string =>
+    userId ? `${VIEW_HISTORY_KEY}_${userId}` : VIEW_HISTORY_KEY;
+
+const getServerHistoryCacheKey = (userId: string): string => `${SERVER_HISTORY_CACHE_KEY}_${userId}`;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -45,6 +50,43 @@ const normalizeCachedHistoryItem = (item: unknown): ViewHistoryItem | null => {
     };
 };
 
+const normalizeCachedHistoryItems = (data: string | null): ViewHistoryItem[] => {
+    if (!data) return [];
+    const parsed = safeJsonParseString(data, []);
+    return (Array.isArray(parsed) ? parsed : [])
+        .map(normalizeCachedHistoryItem)
+        .filter((item): item is ViewHistoryItem => item !== null);
+};
+
+const getHistoryIdentity = (item: Pick<ViewHistoryItem, 'id' | 'type'>): string =>
+    `${item.type}:${String(item.id)}`;
+
+const mergeHistoryItems = (items: ViewHistoryItem[]): ViewHistoryItem[] => {
+    const byIdentity = new Map<string, ViewHistoryItem>();
+
+    for (const item of items) {
+        const key = getHistoryIdentity(item);
+        const existing = byIdentity.get(key);
+        if (!existing || item.viewedAt >= existing.viewedAt) {
+            byIdentity.set(key, item);
+        }
+    }
+
+    return Array.from(byIdentity.values())
+        .sort((a, b) => b.viewedAt - a.viewedAt)
+        .slice(0, MAX_HISTORY_ITEMS);
+};
+
+const persistHistoryCache = async (
+    history: ViewHistoryItem[],
+    { isAuthenticated, userId }: { isAuthenticated: boolean; userId: string | null }
+) => {
+    await AsyncStorage.setItem(getLocalHistoryKey(userId), JSON.stringify(history));
+    if (isAuthenticated && userId) {
+        await AsyncStorage.setItem(getServerHistoryCacheKey(userId), JSON.stringify(history));
+    }
+};
+
 export type ViewHistoryItem = {
     id: string | number;
     type: 'travel' | 'article';
@@ -76,10 +118,6 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
     _userId: null,
 
     addToHistory: async (item, { isAuthenticated, userId }) => {
-        if (isAuthenticated && userId) {
-            return;
-        }
-
         const historyItem: ViewHistoryItem = {
             ...item,
             viewedAt: Date.now(),
@@ -87,18 +125,12 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
 
         let newHistory: ViewHistoryItem[] = [];
         set((s) => {
-            newHistory = [
-                historyItem,
-                ...s.viewHistory.filter(
-                    (h) => !(h.id === historyItem.id && h.type === historyItem.type)
-                ),
-            ].slice(0, MAX_HISTORY_ITEMS);
+            newHistory = mergeHistoryItems([historyItem, ...s.viewHistory]);
             return { viewHistory: newHistory };
         });
 
         try {
-            const key = userId ? `${VIEW_HISTORY_KEY}_${userId}` : VIEW_HISTORY_KEY;
-            await AsyncStorage.setItem(key, JSON.stringify(newHistory));
+            await persistHistoryCache(newHistory, { isAuthenticated, userId });
         } catch (error) {
             devError('Ошибка сохранения истории:', error);
         }
@@ -109,23 +141,19 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
             const { clearUserHistory } = await getUserApi();
             await clearUserHistory(userId);
             set({ viewHistory: [] });
-            await AsyncStorage.setItem(`${SERVER_HISTORY_CACHE_KEY}_${userId}`, JSON.stringify([]));
+            await AsyncStorage.setItem(getLocalHistoryKey(userId), JSON.stringify([]));
+            await AsyncStorage.setItem(getServerHistoryCacheKey(userId), JSON.stringify([]));
             return;
         }
-        const key = userId ? `${VIEW_HISTORY_KEY}_${userId}` : VIEW_HISTORY_KEY;
-        await AsyncStorage.setItem(key, JSON.stringify([]));
+        await AsyncStorage.setItem(getLocalHistoryKey(userId), JSON.stringify([]));
         set({ viewHistory: [] });
     },
 
     loadLocal: async (userId) => {
         try {
-            const key = userId ? `${VIEW_HISTORY_KEY}_${userId}` : VIEW_HISTORY_KEY;
-            const data = await AsyncStorage.getItem(key);
-            if (data) {
-                const parsed = safeJsonParseString(data, []);
-                const normalized = (Array.isArray(parsed) ? parsed : [])
-                    .map(normalizeCachedHistoryItem)
-                    .filter((item): item is ViewHistoryItem => item !== null);
+            const data = await AsyncStorage.getItem(getLocalHistoryKey(userId));
+            const normalized = normalizeCachedHistoryItems(data);
+            if (normalized.length > 0) {
                 set({ viewHistory: normalized });
             }
         } catch (error) {
@@ -136,13 +164,15 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
     loadServerCached: async (userId) => {
         if (!userId) return;
         try {
-            const key = `${SERVER_HISTORY_CACHE_KEY}_${userId}`;
-            const raw = await AsyncStorage.getItem(key);
-            if (raw) {
-                const parsed = safeJsonParseString(raw, []);
-                const normalized = (Array.isArray(parsed) ? parsed : [])
-                    .map(normalizeCachedHistoryItem)
-                    .filter((item): item is ViewHistoryItem => item !== null);
+            const [serverRaw, localRaw] = await Promise.all([
+                AsyncStorage.getItem(getServerHistoryCacheKey(userId)),
+                AsyncStorage.getItem(getLocalHistoryKey(userId)),
+            ]);
+            const normalized = mergeHistoryItems([
+                ...normalizeCachedHistoryItems(serverRaw),
+                ...normalizeCachedHistoryItems(localRaw),
+            ]);
+            if (normalized.length > 0) {
                 set({ viewHistory: normalized });
             }
         } catch (error) {
@@ -169,19 +199,14 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
                 country: t.countryName ?? undefined,
             }));
 
-            // Пустой ответ сервера при непустой локальной истории трактуем как
-            // ненадёжный и сохраняем текущие данные. Кеш должен совпадать с тем,
-            // что реально приняли, иначе на следующем старте loadServerCached
-            // прочитает [] и потеряет сохранённую гардом историю.
-            let adopted = userHistory;
-            set((s) => {
-                if (userHistory.length === 0 && s.viewHistory.length > 0) {
-                    adopted = s.viewHistory;
-                    return s;
-                }
-                return { viewHistory: userHistory };
-            });
-            await AsyncStorage.setItem(`${SERVER_HISTORY_CACHE_KEY}_${userId}`, JSON.stringify(adopted));
+            const currentHistory = get().viewHistory;
+            // Сервер сейчас отдаёт только travel-историю, а локально могут быть
+            // статьи и свежий просмотр до синка. Мержим вместо replace.
+            const adopted = userHistory.length === 0 && currentHistory.length > 0
+                ? currentHistory
+                : mergeHistoryItems([...userHistory, ...currentHistory]);
+            set({ viewHistory: adopted });
+            await persistHistoryCache(adopted, { isAuthenticated: true, userId });
             return true;
         } catch (error) {
             devError('Ошибка обновления истории с сервера:', error);
