@@ -5,6 +5,7 @@ import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 
 import { TravelHeroSection } from './TravelDetailsSections'
 import type { AnchorsMap } from './TravelDetailsTypes'
+import TravelAuthorQuickLink from './TravelAuthorQuickLink'
 import { TravelDetailsContentSection } from './sections/TravelDetailsContentSection'
 
 type TravelDetailsHeroDeferredColumnProps = {
@@ -125,6 +126,8 @@ const TravelDetailsPrimaryColumn = memo(function TravelDetailsPrimaryColumn({
           containing block for the sticky sub-nav inside the hero, clipping it to the hero block so
           it scrolls away with the gallery (#341). Keeping the hero + content sections as direct
           fragment siblings lets `position: sticky` pin across the whole article. */}
+      {isMobile ? <TravelAuthorQuickLink travel={travel} /> : null}
+
       <TravelDetailsHeroBlock
         travel={travel}
         anchors={anchors}

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 
 const renderer = require('react-test-renderer')
 
@@ -8,7 +8,29 @@ import {
   useUserLocationSignal,
 } from '@/components/MapPage/Map/userLocationSignal'
 
+let isRendering = false
+
+function SignalProbe({
+  value,
+  onNotify,
+}: {
+  value: { lat: number; lng: number } | null
+  onNotify: (rendering: boolean) => void
+}) {
+  isRendering = true
+  const signal = useUserLocationSignal(value)
+  isRendering = false
+
+  useEffect(() => signal.subscribe(() => onNotify(isRendering)), [onNotify, signal])
+
+  return null
+}
+
 describe('userLocationSignal', () => {
+  beforeEach(() => {
+    isRendering = false
+  })
+
   it('starts with no location and no subscriber churn', () => {
     const signal = createUserLocationSignal(null)
     expect(signal.hasLocation()).toBe(false)
@@ -81,6 +103,22 @@ describe('userLocationSignal', () => {
     const signal = instances[0] as ReturnType<typeof createUserLocationSignal>
     expect(signal.hasLocation()).toBe(true)
     expect(signal.current).toEqual({ lat: 53.9, lng: 27.56 })
+  })
+
+  it('does not notify subscribers while rendering a new location value', () => {
+    const onNotify = jest.fn()
+    let tree: any
+
+    renderer.act(() => {
+      tree = renderer.create(<SignalProbe value={null} onNotify={onNotify} />)
+    })
+
+    renderer.act(() => {
+      tree.update(<SignalProbe value={{ lat: 50.0895, lng: 19.82779 }} onNotify={onNotify} />)
+    })
+
+    expect(onNotify).toHaveBeenCalledWith(false)
+    expect(onNotify).not.toHaveBeenCalledWith(true)
   })
 
   it('a popup consumer re-renders exactly once when the location arrives after mount', () => {

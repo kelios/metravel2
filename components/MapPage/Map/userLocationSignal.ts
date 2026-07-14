@@ -1,4 +1,4 @@
-import { useRef, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
 
 export type LatLng = { lat: number; lng: number }
 
@@ -65,10 +65,13 @@ export function useUserLocationSignal(
   const ref = useRef<UserLocationSignal | null>(null)
   if (!ref.current) {
     ref.current = createUserLocationSignal(value)
-  } else {
-    ref.current.set(value)
   }
-  return ref.current
+  const signal = ref.current
+
+  useEffect(() => {
+    signal.set(value)
+  }, [signal, value])
+  return signal
 }
 
 /** Reactive coarse boolean: re-renders the caller only when location null↔present. */

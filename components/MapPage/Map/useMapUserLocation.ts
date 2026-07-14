@@ -12,6 +12,7 @@ const MOBILE_WEB_USER_FOCUS_MAX_WIDTH = 768
 const MOBILE_WEB_USER_FOCUS_OFFSET: [number, number] = [84, -92]
 const USER_LOCATION_FOCUS_ZOOM = 14
 const GEO_REQUEST_TIMEOUT_MS = 15000
+const SAME_LOCATION_EPSILON = 0.00001
 
 let expoLocationModulePromise: Promise<typeof import('expo-location')> | null = null
 
@@ -20,6 +21,15 @@ async function loadExpoLocation() {
     expoLocationModulePromise = Promise.resolve(import('expo-location'))
   }
   return expoLocationModulePromise
+}
+
+const isSameCoordinates = (a: Coordinates | null, b: Coordinates | null): boolean => {
+  if (a === b) return true
+  if (!a || !b) return false
+  return (
+    Math.abs(a.latitude - b.latitude) < SAME_LOCATION_EPSILON &&
+    Math.abs(a.longitude - b.longitude) < SAME_LOCATION_EPSILON
+  )
 }
 
 type UseMapUserLocationArgs = {
@@ -55,10 +65,12 @@ export function useMapUserLocation({
       providedUserLocation &&
       isValidCoordinate(providedUserLocation.latitude, providedUserLocation.longitude)
     ) {
-      setUserLocation(providedUserLocation)
+      setUserLocation((prev) =>
+        isSameCoordinates(prev, providedUserLocation) ? prev : providedUserLocation,
+      )
       return
     }
-    setUserLocation(null)
+    setUserLocation((prev) => (prev === null ? prev : null))
   }, [providedUserLocation])
 
   useEffect(() => {
@@ -91,8 +103,8 @@ export function useMapUserLocation({
     setUserLocation((prev) => {
       if (
         prev &&
-        Math.abs(prev.latitude - lat) < 0.00001 &&
-        Math.abs(prev.longitude - lng) < 0.00001
+        Math.abs(prev.latitude - lat) < SAME_LOCATION_EPSILON &&
+        Math.abs(prev.longitude - lng) < SAME_LOCATION_EPSILON
       ) {
         return prev
       }

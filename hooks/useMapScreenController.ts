@@ -53,6 +53,7 @@ const getFirstParamText = (value: unknown): string => {
 // query anchor to surface the "Search this area" affordance, so a cheap
 // haversine is plenty (no need for the full CoordinateConverter on this path).
 const EARTH_RADIUS_KM = 6371;
+const SAME_LOCATION_EPSILON = 0.00001;
 const distanceKm = (
   a: { latitude: number; longitude: number },
   b: { latitude: number; longitude: number },
@@ -90,7 +91,17 @@ export function useMapScreenController() {
   );
   const handleUserLocationChange = useCallback(
     (loc: { latitude: number; longitude: number } | null) => {
-      setUserLocation(loc);
+      setUserLocation((prev) => {
+        if (!loc) return prev === null ? prev : null;
+        if (
+          prev &&
+          Math.abs(prev.latitude - loc.latitude) < SAME_LOCATION_EPSILON &&
+          Math.abs(prev.longitude - loc.longitude) < SAME_LOCATION_EPSILON
+        ) {
+          return prev;
+        }
+        return loc;
+      });
     },
     []
   );

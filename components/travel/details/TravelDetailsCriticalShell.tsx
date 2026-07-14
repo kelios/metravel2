@@ -24,6 +24,7 @@ import {
 
 import type { AnchorsMap } from './TravelDetailsTypes';
 import TravelDetailsSkeletonOverlay from './TravelDetailsSkeletonOverlay';
+import TravelAuthorQuickLink from './TravelAuthorQuickLink';
 import TravelDetailsHeroDeferredColumn, {
   TravelDetailsContentBlock,
   TravelDetailsHeroBlock,
@@ -251,6 +252,7 @@ export default function TravelDetailsCriticalShell({
       ? [
           <View key="hero" style={contentWrapperStyle} collapsable={false}>
             {topNotice}
+            <TravelAuthorQuickLink travel={travel} />
             <TravelDetailsHeroBlock
               travel={travel}
               anchors={anchors}
