@@ -350,15 +350,89 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const routeTransportMode = storeTransportMode as TransportMode
   const storeSetMode = useRouteStore((s) => s.setMode)
   const storeSetTransportMode = useRouteStore((s) => s.setTransportMode)
+  const addRoutePoint = useRouteStore((s) => s.addPoint)
   const clearRouteAndSetMode = useRouteStore((s) => s.clearRouteAndSetMode)
   const routePointCount = useRouteStore((s) => s.points.length)
+  const trustedUserLocation = useMemo(() => {
+    const lat = Number(userLocation?.latitude)
+    const lng = Number(userLocation?.longitude)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null
+    return { latitude: lat, longitude: lng }
+  }, [userLocation?.latitude, userLocation?.longitude])
+  const [routeAutoStartPending, setRouteAutoStartPending] = useState(false)
+  const [routeManualStartActive, setRouteManualStartActive] = useState(false)
+
+  const seedRouteStartFromUser = useCallback(() => {
+    if (!trustedUserLocation) return false
+    const currentPoints = useRouteStore.getState().points
+    if (currentPoints.length > 0) return false
+
+    clearRouteAndSetMode('route')
+    addRoutePoint(
+      { lat: trustedUserLocation.latitude, lng: trustedUserLocation.longitude },
+      'Моё местоположение',
+    )
+    setFiltersMode?.('route')
+    setRouteAutoStartPending(false)
+    setRouteManualStartActive(false)
+    return true
+  }, [addRoutePoint, clearRouteAndSetMode, setFiltersMode, trustedUserLocation])
 
   const enterRouteMode = useCallback(() => {
     clearSelectedPlace?.()
     setActivePopover(null)
-    storeSetMode('route')
+    const currentPoints = useRouteStore.getState().points
+    if (currentPoints.length === 0 && seedRouteStartFromUser()) {
+      return
+    }
+
+    if (currentPoints.length === 0) {
+      clearRouteAndSetMode('route')
+      setRouteAutoStartPending(true)
+      setRouteManualStartActive(false)
+    } else {
+      storeSetMode('route')
+      setRouteAutoStartPending(false)
+      setRouteManualStartActive(true)
+    }
     setFiltersMode?.('route')
-  }, [clearSelectedPlace, storeSetMode, setFiltersMode])
+  }, [clearRouteAndSetMode, clearSelectedPlace, seedRouteStartFromUser, storeSetMode, setFiltersMode])
+
+  const requestLocationForRoute = useCallback(() => {
+    setRouteAutoStartPending(true)
+    setRouteManualStartActive(false)
+    onCenterOnUser()
+  }, [onCenterOnUser])
+
+  const startManualRoute = useCallback(() => {
+    if (useRouteStore.getState().points.length === 0) {
+      clearRouteAndSetMode('route')
+    } else {
+      storeSetMode('route')
+    }
+    setFiltersMode?.('route')
+    setRouteAutoStartPending(false)
+    setRouteManualStartActive(true)
+  }, [clearRouteAndSetMode, setFiltersMode, storeSetMode])
+
+  useEffect(() => {
+    if (!routeAutoStartPending) return
+    if (storeMode !== 'route') return
+    if (!trustedUserLocation) return
+    if (seedRouteStartFromUser()) return
+    setRouteAutoStartPending(false)
+  }, [routeAutoStartPending, seedRouteStartFromUser, storeMode, trustedUserLocation])
+
+  useEffect(() => {
+    if (routePointCount > 0) {
+      setRouteAutoStartPending(false)
+    }
+    if (storeMode !== 'route') {
+      setRouteAutoStartPending(false)
+      setRouteManualStartActive(false)
+    }
+  }, [routePointCount, storeMode])
 
   const toggleTransportPopover = useCallback(() => {
     setActivePopover((prev) => (prev === 'transport' ? null : 'transport'))
@@ -598,6 +672,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             mode={routeMode}
             transportMode={routeTransportMode}
             onEnterRouteMode={enterRouteMode}
+            hasUserLocation={!!trustedUserLocation}
+            routeManualStartActive={routeManualStartActive}
+            onRequestLocation={requestLocationForRoute}
+            onStartManualRoute={startManualRoute}
             onToggleTransport={toggleTransportPopover}
             onTransportSelect={handleTransportSelect}
             onClearRoute={handleClearRoute}

@@ -532,7 +532,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
                 {onBuildRoute && (
                   <CardActionPressable
-                    accessibilityLabel="Построить маршрут сюда"
+                    accessibilityLabel="Построить маршрут от моего местоположения"
                     onPress={onBuildRoute}
                     title={POPUP_TOOLTIPS.buildRoute}
                     testID="popup-primary-action"
@@ -543,7 +543,7 @@ const PlacePopupCard: React.FC<Props> = ({
                       <Feather name="corner-up-right" size={20} color={colors.textOnPrimary ?? colors.textOnDark} />
                     </View>
                     <View style={styles.iconActionLabelRow}>
-                      <Text style={styles.iconActionLabel} numberOfLines={1}>Маршрут</Text>
+                      <Text style={styles.iconActionLabel} numberOfLines={2}>Маршрут от меня</Text>
                     </View>
                   </CardActionPressable>
                 )}

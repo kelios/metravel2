@@ -359,7 +359,8 @@ describe('MapMobileLayout', () => {
       useRouteStore.getState().clearRouteAndSetMode('radius')
     })
 
-    it('enters route mode and reveals contextual transport/clear icons + hint', () => {
+    it('enters route mode without faking a start when current location is unavailable', () => {
+      const centerOnUser = jest.fn()
       const { filtersPanelProps } = buildFiltersProps()
       const screen = render(
         <MapMobileLayout
@@ -368,7 +369,7 @@ describe('MapMobileLayout', () => {
           coordinates={{ latitude: 53.9, longitude: 27.56 }}
           transportMode="car"
           buildRouteTo={jest.fn()}
-          onCenterOnUser={jest.fn()}
+          onCenterOnUser={centerOnUser}
           onOpenFilters={jest.fn()}
           filtersPanelProps={filtersPanelProps}
         />,
@@ -387,7 +388,83 @@ describe('MapMobileLayout', () => {
       expect(screen.getByTestId('map-mobile-route-clear-button')).toBeTruthy()
       expect(screen.getByTestId('map-mobile-route-hint')).toBeTruthy()
       expect(screen.getByText('0/2')).toBeTruthy()
+      expect(screen.getByText('Текущее положение не определено. Разрешите геолокацию или укажите старт вручную.')).toBeTruthy()
+      expect(useRouteStore.getState().points).toHaveLength(0)
+      fireEvent.press(screen.getByTestId('map-mobile-route-request-location'))
+      expect(centerOnUser).toHaveBeenCalledTimes(1)
+      fireEvent.press(screen.getByTestId('map-mobile-route-manual-start'))
+      expect(screen.getByText('Коснитесь карты: 1-я точка — старт, 2-я — финиш')).toBeTruthy()
       expect(mockSnapToHalf).not.toHaveBeenCalled()
+    })
+
+    it('seeds route mode with trusted current location as 1/2 start', () => {
+      const { filtersPanelProps } = buildFiltersProps()
+      const screen = render(
+        <MapMobileLayout
+          mapComponent={<View testID="mock-map" />}
+          travelsData={[]}
+          coordinates={{ latitude: 53.9, longitude: 27.56 }}
+          userLocation={{ latitude: 52.2, longitude: 20.98 }}
+          transportMode="car"
+          buildRouteTo={jest.fn()}
+          onCenterOnUser={jest.fn()}
+          onOpenFilters={jest.fn()}
+          filtersPanelProps={filtersPanelProps}
+        />,
+      )
+
+      fireEvent.press(screen.getByTestId('map-mobile-route-button'))
+
+      const points = useRouteStore.getState().points
+      expect(useRouteStore.getState().mode).toBe('route')
+      expect(points).toHaveLength(1)
+      expect(points[0]).toEqual(
+        expect.objectContaining({
+          coordinates: { lat: 52.2, lng: 20.98 },
+          address: 'Моё местоположение',
+          type: 'start',
+        }),
+      )
+      expect(screen.getByText('1/2')).toBeTruthy()
+      expect(screen.getByText('Старт задан: Моё местоположение. Выберите место назначения на карте.')).toBeTruthy()
+      expect(screen.queryByTestId('map-mobile-route-request-location')).toBeNull()
+      expect(mockSnapToHalf).not.toHaveBeenCalled()
+    })
+
+    it('auto-seeds the pending route start when current location arrives later', async () => {
+      const { filtersPanelProps } = buildFiltersProps()
+      const baseProps = {
+        mapComponent: <View testID="mock-map" />,
+        travelsData: [],
+        coordinates: { latitude: 53.9, longitude: 27.56 },
+        transportMode: 'car' as const,
+        buildRouteTo: jest.fn(),
+        onCenterOnUser: jest.fn(),
+        onOpenFilters: jest.fn(),
+        filtersPanelProps,
+      }
+      const screen = render(<MapMobileLayout {...baseProps} />)
+
+      fireEvent.press(screen.getByTestId('map-mobile-route-button'))
+      expect(useRouteStore.getState().points).toHaveLength(0)
+
+      screen.rerender(
+        <MapMobileLayout
+          {...baseProps}
+          userLocation={{ latitude: 52.2, longitude: 20.98 }}
+        />,
+      )
+
+      await waitFor(() => {
+        expect(useRouteStore.getState().points).toEqual([
+          expect.objectContaining({
+            coordinates: { lat: 52.2, lng: 20.98 },
+            address: 'Моё местоположение',
+            type: 'start',
+          }),
+        ])
+      })
+      expect(screen.getByText('1/2')).toBeTruthy()
     })
 
     it('shows transport selector + clear + hint when already in route mode', () => {

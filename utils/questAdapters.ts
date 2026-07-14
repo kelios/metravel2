@@ -13,6 +13,7 @@ import type {
 import { getCountryCodeByCoords } from '@/utils/geoCountry';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { devError } from '@/utils/logger';
+import { getQuestAgeCategory, type QuestAgeCategory } from '@/utils/questAudience';
 
 /**
  * Парсит координату из API (число или строка).
@@ -67,6 +68,7 @@ export type QuestMeta = {
     tags?: string[];
     petFriendly?: boolean;
     cover?: any;
+    ageCategory?: QuestAgeCategory;
     ratingAvg: number | null;
     ratingCount: number;
     completionsCount: number;
@@ -382,6 +384,7 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
     const lat = coordNum(apiMeta.lat);
     const lng = coordNum(apiMeta.lng);
     const normalizedCountryCode = normalizeQuestCountryCode(apiMeta.country_code, lat, lng);
+    const tags = apiMeta.tags ? Object.keys(apiMeta.tags) : undefined;
 
     return {
         id: apiMeta.quest_id,
@@ -395,9 +398,10 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
         lng,
         durationMin: apiMeta.duration_min ?? undefined,
         difficulty: (apiMeta.difficulty as 'easy' | 'medium' | 'hard') || undefined,
-        tags: apiMeta.tags ? Object.keys(apiMeta.tags) : undefined,
+        tags,
         petFriendly: apiMeta.pet_friendly,
         cover: fixMediaUrl(apiMeta.cover_url),
+        ageCategory: getQuestAgeCategory(tags) ?? undefined,
         ratingAvg: apiMeta.rating_avg ?? null,
         ratingCount: apiMeta.rating_count ?? 0,
         completionsCount: apiMeta.completions_count ?? 0,

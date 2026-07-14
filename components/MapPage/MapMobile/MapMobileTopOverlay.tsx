@@ -99,6 +99,10 @@ interface MapMobileTopOverlayProps {
   transportMode?: TransportMode
   /** Enter route mode (tap the map to drop start/end points). */
   onEnterRouteMode?: () => void
+  hasUserLocation?: boolean
+  routeManualStartActive?: boolean
+  onRequestLocation?: () => void
+  onStartManualRoute?: () => void
   onToggleTransport?: () => void
   onTransportSelect?: (mode: TransportMode) => void
   /** Clear the route and return to radius mode. */
@@ -148,6 +152,10 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   mode = 'radius',
   transportMode = 'car',
   onEnterRouteMode,
+  hasUserLocation = false,
+  routeManualStartActive = false,
+  onRequestLocation,
+  onStartManualRoute,
   onToggleTransport,
   onTransportSelect,
   onClearRoute,
@@ -161,9 +169,18 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   const { width: viewportWidth } = useWindowDimensions()
   const isRouteMode = mode === 'route'
   const routeProgressLabel = isRouteMode ? `${Math.min(routePointCount, 2)}/2` : ''
+  const needsRouteStartChoice =
+    isRouteMode && routePointCount === 0 && !hasUserLocation && !routeManualStartActive
   const routeAccessibilityLabel = isRouteMode
-    ? `Построить маршрут: выбрано ${Math.min(routePointCount, 2)} из 2 точек`
+    ? routePointCount === 1
+      ? 'Маршрут от меня: выберите место назначения'
+      : `Построить маршрут: выбрано ${Math.min(routePointCount, 2)} из 2 точек`
     : 'Построить маршрут'
+  const routeHintText = routePointCount === 1
+    ? 'Старт задан: Моё местоположение. Выберите место назначения на карте.'
+    : needsRouteStartChoice
+      ? 'Текущее положение не определено. Разрешите геолокацию или укажите старт вручную.'
+      : 'Коснитесь карты: 1-я точка — старт, 2-я — финиш'
 
   // Inline hint shown when entering route mode; auto-hides after a couple of
   // taps (2 points dropped) or a short timeout so it never blocks the map.
@@ -174,9 +191,10 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
       return
     }
     setHintVisible(true)
+    if (needsRouteStartChoice) return
     const timer = setTimeout(() => setHintVisible(false), ROUTE_HINT_TIMEOUT_MS)
     return () => clearTimeout(timer)
-  }, [isRouteMode])
+  }, [isRouteMode, needsRouteStartChoice])
   useEffect(() => {
     if (routePointCount >= 2) setHintVisible(false)
   }, [routePointCount])
@@ -492,13 +510,51 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
       {isRouteMode && hintVisible && !activePopover && (
         <View
           style={[styles.routeHint, { top: routePopoverTop }]}
-          pointerEvents="none"
+          pointerEvents={needsRouteStartChoice ? 'box-none' : 'none'}
           testID="map-mobile-route-hint"
         >
           <Feather name="map-pin" size={13} color={colors.primaryDark} />
           <RNText style={styles.routeHintText} numberOfLines={2}>
-            Коснитесь карты: 1-я точка — старт, 2-я — финиш
+            {routeHintText}
           </RNText>
+          {needsRouteStartChoice && (
+            <View style={styles.routeHintActions} pointerEvents="auto">
+              {!!onRequestLocation && (
+                <Pressable
+                  testID="map-mobile-route-request-location"
+                  onPress={onRequestLocation}
+                  accessibilityRole="button"
+                  accessibilityLabel="Разрешить геолокацию для маршрута"
+                  hitSlop={6}
+                  style={({ pressed }) => [
+                    styles.routeHintActionPrimary,
+                    pressed && styles.routeHintActionPressed,
+                  ]}
+                >
+                  <RNText style={styles.routeHintActionPrimaryText} numberOfLines={1}>
+                    Разрешить
+                  </RNText>
+                </Pressable>
+              )}
+              {!!onStartManualRoute && (
+                <Pressable
+                  testID="map-mobile-route-manual-start"
+                  onPress={onStartManualRoute}
+                  accessibilityRole="button"
+                  accessibilityLabel="Указать старт маршрута вручную"
+                  hitSlop={6}
+                  style={({ pressed }) => [
+                    styles.routeHintActionSecondary,
+                    pressed && styles.routeHintActionPressed,
+                  ]}
+                >
+                  <RNText style={styles.routeHintActionSecondaryText} numberOfLines={1}>
+                    Указать старт
+                  </RNText>
+                </Pressable>
+              )}
+            </View>
+          )}
         </View>
       )}
     </View>

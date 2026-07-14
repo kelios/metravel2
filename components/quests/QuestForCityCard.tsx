@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { getQuestAgeCategory } from '@/utils/questAudience'
 import type { QuestMeta } from '@/utils/questAdapters'
 
 const CARD_MEDIA_SIZE = 132
@@ -57,6 +58,8 @@ export function QuestForCityCard({
   if (quest.points) chips.push({ key: 'points', icon: 'map-pin', label: formatPoints(quest.points) })
   if (quest.durationMin)
     chips.push({ key: 'duration', icon: 'clock', label: formatDuration(quest.durationMin) })
+  const ageCategory = quest.ageCategory ?? getQuestAgeCategory(quest.tags)
+  if (ageCategory) chips.push({ key: 'age', icon: 'users', label: ageCategory.label })
   if (quest.difficulty && DIFFICULTY_LABEL[quest.difficulty])
     chips.push({
       key: 'difficulty',

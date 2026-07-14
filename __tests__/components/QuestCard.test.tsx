@@ -153,6 +153,21 @@ describe('QuestCard', () => {
         expect(queryByText('Детская сказка')).toBeNull();
     });
 
+    it('shows an explicit age category when age tags are present', () => {
+        const { getByTestId, getByText, queryByText } = renderWithQueryClient(
+            <QuestCard
+                styles={styles}
+                cardWidth={340}
+                cityId="vitebsk"
+                quest={makeQuest({ id: 'vitebsk-teens', tags: ['kids', 'age-11-14'] })}
+            />,
+        );
+
+        expect(getByTestId('quest-card-kids-vitebsk-teens')).toBeTruthy();
+        expect(getByText('11-14 лет')).toBeTruthy();
+        expect(queryByText('Для детей')).toBeNull();
+    });
+
     it('passes a resized proxy cover URL to native image instead of the full-size original', () => {
         (Platform as { OS: string }).OS = 'android';
         const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;

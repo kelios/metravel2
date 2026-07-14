@@ -13,6 +13,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { haversineKm } from '@/utils/geo';
+import { getQuestAgeSearchTerms } from '@/utils/questAudience';
 import { useIsFocused } from 'expo-router';
 import { useBreakpoints } from '@/hooks/useResponsive';
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel';
@@ -33,7 +34,6 @@ import {
     filterKidsQuests,
     filterQuestsByMapSearchArea,
     getAverageQuestMapPointCenter,
-    isKidsQuest,
     loadExpoLocation,
     resolveQuestMapCenter,
     type QuestMapArea,
@@ -382,9 +382,7 @@ export default function QuestsScreen() {
                         q.cityName,
                         q.countryName,
                         ...(q.tags || []),
-                        // Русский поиск по тегу 'kids': добавляем синонимы, чтобы
-                        // «детский»/«семейный» находили детские квесты.
-                        ...(isKidsQuest(q.tags) ? ['детский', 'для детей', 'семейный'] : []),
+                        ...(getQuestAgeSearchTerms(q.tags)),
                     ]
                         .filter(Boolean)
                         .join(' ')

@@ -94,6 +94,10 @@ describe('QuestsScreen helpers', () => {
     it('detects the kids tag among other tags', () => {
       expect(isKidsQuest(['family', 'kids', 'city'])).toBe(true);
       expect(isKidsQuest(['kids'])).toBe(true);
+      expect(isKidsQuest(['age-5-7'])).toBe(true);
+      expect(isKidsQuest(['age-8-10'])).toBe(true);
+      expect(isKidsQuest(['age-11-14'])).toBe(true);
+      expect(isKidsQuest(['teens'])).toBe(true);
     });
 
     it('is case- and whitespace-insensitive', () => {
@@ -115,6 +119,7 @@ describe('QuestsScreen helpers', () => {
       { id: 'kids-minsk', cityId: 'minsk', tags: ['kids', 'family'] },
       { id: 'regular-brest', cityId: 'brest', tags: null },
       { id: 'kids-grodno', cityId: 'grodno', tags: [' Kids '] },
+      { id: 'teens-vitebsk', cityId: 'vitebsk', tags: ['age-11-14', 'teens'] },
     ];
 
     it('keeps kids quests in their city and merges duplicate backend city ids', () => {
@@ -124,6 +129,7 @@ describe('QuestsScreen helpers', () => {
           { id: 'minsk-kids', name: ' минск ', countryCode: 'BY' },
           { id: 'brest', name: 'Брест', countryCode: 'BY' },
           { id: 'grodno', name: 'Гродно', countryCode: 'BY' },
+          { id: 'vitebsk', name: 'Витебск', countryCode: 'BY' },
         ],
         quests.map((quest) => ({
           ...quest,
@@ -133,10 +139,11 @@ describe('QuestsScreen helpers', () => {
         })),
       );
 
-      expect(catalog.cities.map((city) => city.id)).toEqual(['minsk-main', 'brest', 'grodno']);
+      expect(catalog.cities.map((city) => city.id)).toEqual(['minsk-main', 'brest', 'grodno', 'vitebsk']);
       expect(catalog.questsByCityId['minsk-main'].map((quest) => quest.id)).toEqual(['regular-minsk', 'kids-minsk']);
       expect(catalog.questsByCityId.brest.map((quest) => quest.id)).toEqual(['regular-brest']);
       expect(catalog.questsByCityId.grodno.map((quest) => quest.id)).toEqual(['kids-grodno']);
+      expect(catalog.questsByCityId.vitebsk.map((quest) => quest.id)).toEqual(['teens-vitebsk']);
       expect(catalog.canonicalCityIdById['minsk-kids']).toBe('minsk-main');
     });
 
@@ -144,6 +151,7 @@ describe('QuestsScreen helpers', () => {
       expect(filterKidsQuests(quests).map((quest) => quest.id)).toEqual([
         'kids-minsk',
         'kids-grodno',
+        'teens-vitebsk',
       ]);
     });
   });

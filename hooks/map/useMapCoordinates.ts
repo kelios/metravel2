@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Platform } from 'react-native';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { AppState, Platform } from 'react-native';
 import { logError, logMessage } from '@/utils/logger';
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
@@ -23,6 +23,14 @@ export const DEFAULT_COORDINATES: Coordinates = {
 };
 const WEB_LAST_COORDS_KEY = 'metravel:lastKnownCoords';
 const NATIVE_LOCATION_TIMEOUT_MS = 12000;
+const LIVE_LOCATION_MIN_DISTANCE_M = 12;
+const LIVE_LOCATION_MIN_INTERVAL_MS = 3000;
+const LIVE_LOCATION_MAXIMUM_AGE_MS = 15000;
+
+type LocationSnapshot = Coordinates & {
+  accuracy?: number | null;
+  timestamp?: number;
+};
 
 class LocationTimeoutError extends Error {
   constructor() {
@@ -53,11 +61,29 @@ function isValidCoordinate(lat: number, lng: number): boolean {
   );
 }
 
+function distanceMeters(a: Coordinates, b: Coordinates): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const earthRadiusM = 6371000;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLng = toRad(b.longitude - a.longitude);
+  const lat1 = toRad(a.latitude);
+  const lat2 = toRad(b.latitude);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * earthRadiusM * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
 /**
  * Хук для управления координатами пользователя.
  * На web стартует с кеша/дефолта и запрашивает геолокацию только по явному действию.
  */
 export function useMapCoordinates() {
+  const lastTrustedLocationRef = useRef<LocationSnapshot | null>(null);
+  const liveWatchCleanupRef = useRef<(() => void) | null>(null);
+  const liveWatchActiveRef = useRef(false);
+  const liveWatchStartingRef = useRef(false);
+
   const readWebCachedCoordinates = useCallback((): Coordinates | null => {
     if (Platform.OS !== 'web') return null;
     if (typeof window === 'undefined') return null;
@@ -110,6 +136,153 @@ export function useMapCoordinates() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const cacheWebCoordinates = useCallback((next: Coordinates) => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(WEB_LAST_COORDS_KEY, JSON.stringify(next));
+    } catch {
+      // noop
+    }
+  }, []);
+
+  const applyTrustedLocation = useCallback((
+    location: LocationSnapshot,
+    options: { force?: boolean } = {},
+  ) => {
+    const latitude = Number(location.latitude);
+    const longitude = Number(location.longitude);
+    if (!isValidCoordinate(latitude, longitude)) return false;
+
+    const next: LocationSnapshot = {
+      latitude,
+      longitude,
+      accuracy: typeof location.accuracy === 'number' ? location.accuracy : null,
+      timestamp: typeof location.timestamp === 'number' ? location.timestamp : Date.now(),
+    };
+    const prev = lastTrustedLocationRef.current;
+
+    if (!options.force && prev) {
+      const movedEnough = distanceMeters(prev, next) >= LIVE_LOCATION_MIN_DISTANCE_M;
+      const elapsedEnough =
+        (next.timestamp ?? 0) - (prev.timestamp ?? 0) >= LIVE_LOCATION_MIN_INTERVAL_MS;
+      if (!movedEnough && !elapsedEnough) return false;
+    }
+
+    lastTrustedLocationRef.current = next;
+    const coords = { latitude, longitude };
+    setCoordinates(coords);
+    setCoordinatesSource('geolocation');
+    setError(null);
+    cacheWebCoordinates(coords);
+    return true;
+  }, [cacheWebCoordinates]);
+
+  const clearLocationWatch = useCallback(() => {
+    const cleanup = liveWatchCleanupRef.current;
+    liveWatchCleanupRef.current = null;
+    liveWatchActiveRef.current = false;
+    liveWatchStartingRef.current = false;
+    if (cleanup) {
+      try {
+        cleanup();
+      } catch {
+        // noop
+      }
+    }
+  }, []);
+
+  const startWebLocationWatch = useCallback(() => {
+    if (Platform.OS !== 'web') return;
+    if (liveWatchActiveRef.current) return;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+
+    try {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude, accuracy } = position.coords;
+          applyTrustedLocation({
+            latitude,
+            longitude,
+            accuracy,
+            timestamp: position.timestamp,
+          });
+        },
+        () => {
+          // Temporary watch failures keep the last trusted point visible; fallback
+          // centers must still never become current user position.
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: NATIVE_LOCATION_TIMEOUT_MS,
+          maximumAge: LIVE_LOCATION_MAXIMUM_AGE_MS,
+        },
+      );
+
+      liveWatchActiveRef.current = true;
+      liveWatchCleanupRef.current = () => {
+        navigator.geolocation.clearWatch(watchId);
+      };
+    } catch {
+      liveWatchActiveRef.current = false;
+      liveWatchCleanupRef.current = null;
+    }
+  }, [applyTrustedLocation]);
+
+  const startNativeLocationWatch = useCallback(async () => {
+    if (Platform.OS === 'web') return;
+    if (liveWatchActiveRef.current) return;
+    if (liveWatchStartingRef.current) return;
+
+    liveWatchStartingRef.current = true;
+    try {
+      const Location = await loadExpoLocation();
+      if (typeof Location.watchPositionAsync !== 'function') {
+        liveWatchStartingRef.current = false;
+        return;
+      }
+      if (!liveWatchStartingRef.current) return;
+
+      const subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 5000,
+          distanceInterval: LIVE_LOCATION_MIN_DISTANCE_M,
+        },
+        (location) => {
+          const { latitude, longitude, accuracy } = location.coords;
+          applyTrustedLocation({
+            latitude,
+            longitude,
+            accuracy,
+            timestamp: location.timestamp,
+          });
+        },
+      );
+
+      if (!liveWatchStartingRef.current) {
+        subscription.remove();
+        return;
+      }
+      liveWatchStartingRef.current = false;
+      liveWatchActiveRef.current = true;
+      liveWatchCleanupRef.current = () => {
+        subscription.remove();
+      };
+    } catch {
+      liveWatchStartingRef.current = false;
+      liveWatchActiveRef.current = false;
+      liveWatchCleanupRef.current = null;
+    }
+  }, [applyTrustedLocation]);
+
+  const startLocationWatch = useCallback(() => {
+    if (Platform.OS === 'web') {
+      startWebLocationWatch();
+      return;
+    }
+    void startNativeLocationWatch();
+  }, [startNativeLocationWatch, startWebLocationWatch]);
+
   const requestWebLocation = useCallback(async (signal?: AbortSignal) => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       const cached = readWebCachedCoordinates();
@@ -135,19 +308,13 @@ export function useMapCoordinates() {
           return;
         }
         const { latitude, longitude } = position.coords;
-        if (isValidCoordinate(latitude, longitude)) {
-          const next = { latitude, longitude };
-          setCoordinates(next);
-          setCoordinatesSource('geolocation');
-          setError(null);
-          try {
-            if (typeof window !== 'undefined') {
-              window.localStorage.setItem(WEB_LAST_COORDS_KEY, JSON.stringify(next));
-            }
-          } catch {
-            // noop
-          }
-        }
+        applyTrustedLocation({
+          latitude,
+          longitude,
+          accuracy: position.coords.accuracy,
+          timestamp: position.timestamp,
+        }, { force: true });
+        startLocationWatch();
         resolve();
       };
 
@@ -164,6 +331,7 @@ export function useMapCoordinates() {
           setCoordinates(DEFAULT_COORDINATES);
           setCoordinatesSource('default');
         }
+        clearLocationWatch();
         setError('Местоположение не определено');
         resolve();
       };
@@ -174,7 +342,7 @@ export function useMapCoordinates() {
         maximumAge: 60000,
       });
     });
-  }, [readWebCachedCoordinates]);
+  }, [applyTrustedLocation, clearLocationWatch, readWebCachedCoordinates, startLocationWatch]);
 
   const requestLocation = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
@@ -203,6 +371,7 @@ export function useMapCoordinates() {
         setCoordinatesSource('default');
         setError('Местоположение не определено');
         setIsLoading(false);
+        clearLocationWatch();
         return;
       }
 
@@ -215,12 +384,16 @@ export function useMapCoordinates() {
 
       if (signal?.aborted) return;
 
-      const { latitude, longitude } = location.coords;
+      const { latitude, longitude, accuracy } = location.coords;
 
       if (isValidCoordinate(latitude, longitude)) {
-        setCoordinates({ latitude, longitude });
-        setCoordinatesSource('geolocation');
-        setError(null);
+        applyTrustedLocation({
+          latitude,
+          longitude,
+          accuracy,
+          timestamp: location.timestamp,
+        }, { force: true });
+        startLocationWatch();
       } else {
         logMessage('[map] Invalid coordinates from location service', 'warning', {
           scope: 'map',
@@ -244,12 +417,13 @@ export function useMapCoordinates() {
       setError('Не удалось определить местоположение');
       setCoordinates(DEFAULT_COORDINATES);
       setCoordinatesSource('default');
+      clearLocationWatch();
     } finally {
       if (!signal?.aborted) {
         setIsLoading(false);
       }
     }
-  }, [requestWebLocation]);
+  }, [applyTrustedLocation, clearLocationWatch, requestWebLocation, startLocationWatch]);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -257,15 +431,46 @@ export function useMapCoordinates() {
 
     return () => {
       abortController.abort();
+      clearLocationWatch();
     };
-  }, [requestLocation]);
+  }, [clearLocationWatch, requestLocation]);
+
+  useEffect(() => {
+    if (coordinatesSource !== 'geolocation') return;
+
+    if (Platform.OS === 'web') {
+      if (typeof document === 'undefined') return;
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'hidden') {
+          clearLocationWatch();
+          return;
+        }
+        startLocationWatch();
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
+    }
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        startLocationWatch();
+        return;
+      }
+      clearLocationWatch();
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [clearLocationWatch, coordinatesSource, startLocationWatch]);
 
   const updateCoordinates = useCallback((lat: number, lng: number) => {
     if (isValidCoordinate(lat, lng)) {
-      setCoordinates({ latitude: lat, longitude: lng });
       // An explicit programmatic pin is a deliberate position choice, not a
       // silent default — treat it as a real location for marker/centering.
-      setCoordinatesSource('geolocation');
+      applyTrustedLocation({ latitude: lat, longitude: lng }, { force: true });
     } else {
       logMessage('[map] Attempted to set invalid coordinates', 'warning', {
         scope: 'map',
@@ -273,7 +478,7 @@ export function useMapCoordinates() {
         lng,
       });
     }
-  }, []);
+  }, [applyTrustedLocation]);
 
   // True when coordinates are not a live/current geolocation fix. Downstream
   // uses this to avoid false "you are here", distance, and route-origin states

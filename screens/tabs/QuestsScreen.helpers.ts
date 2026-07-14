@@ -1,6 +1,7 @@
 // src/screens/tabs/QuestsScreen.helpers.ts
 
 import { haversineKm } from '@/utils/geo';
+import { isQuestForChildrenOrTeens } from '@/utils/questAudience';
 
 // Русские названия стран для заголовков групп в каталоге квестов. Ключи —
 // ISO alpha-2 коды из utils/geoCountry.ts (getCountryCodeByCoords). Держи в
@@ -77,14 +78,13 @@ export async function loadExpoLocation() {
     return expoLocationModulePromise;
 }
 
-// Тег детских/семейных квестов в meta.tags (adaptMeta → string[]). Держим в
-// одном месте: бейдж «Для детей» на карточке и синонимы для русского поиска
-// («детский»/«семейный») опираются на него.
+// Тег детских квестов в meta.tags (adaptMeta → string[]). Возрастные теги
+// (`age-5-7`, `age-8-10`, `age-11-14`) и `teens` тоже считаем детско-
+// подростковой аудиторией для фильтра каталога.
 export const KIDS_QUEST_TAG = 'kids';
 
 export function isKidsQuest(tags?: string[] | null): boolean {
-    if (!tags || !tags.length) return false;
-    return tags.some((tag) => typeof tag === 'string' && tag.trim().toLowerCase() === KIDS_QUEST_TAG);
+    return isQuestForChildrenOrTeens(tags);
 }
 
 export function filterKidsQuests<T extends { tags?: string[] | null }>(quests: T[]): T[] {

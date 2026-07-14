@@ -115,11 +115,11 @@ export function usePopupActions({
     }
     if (onBuildRoute) {
       return {
-        label: 'Маршрут сюда',
+        label: 'Маршрут от меня',
         icon: SEMANTIC_ACTION_ICON.buildRoute,
         onPress: onBuildRoute,
         tooltip: POPUP_TOOLTIPS.buildRoute,
-        accessibilityLabel: 'Построить маршрут сюда',
+        accessibilityLabel: 'Построить маршрут от моего местоположения',
       };
     }
 

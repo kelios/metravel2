@@ -74,4 +74,25 @@ describe('QuestForCityCard', () => {
     const props = mockImageCardMedia.mock.calls[0]?.[0]
     expect(props.loading).toBe('lazy')
   })
+
+  it('shows the age category in the quest meta row', () => {
+    const { getByText } = render(
+      <QuestForCityCard
+        quest={{
+          id: 'vitebsk-teens',
+          title: 'Город как галерея',
+          points: 8,
+          cityId: '13',
+          cityName: 'Витебск',
+          lat: 55.19,
+          lng: 30.2,
+          durationMin: 105,
+          difficulty: 'medium',
+          tags: ['teens', 'age-11-14'],
+        }}
+      />,
+    )
+
+    expect(getByText('11-14 лет')).toBeTruthy()
+  })
 })

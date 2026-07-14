@@ -12,9 +12,9 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 
 import { pluralizeRu } from '@/utils/pluralize';
+import { getQuestAgeCategory } from '@/utils/questAudience';
 
 import { pluralizePoints, type QuestMeta } from './questsShared';
-import { isKidsQuest } from './QuestsScreen.helpers';
 
 const loadedQuestImageCache = new Set<string>();
 
@@ -53,7 +53,7 @@ export default function QuestCard({
     const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 ч';
     const pointsText = pluralizePoints(quest.points ?? 0);
     const difficultyInfo = getDifficultyInfo(quest.difficulty);
-    const isKids = isKidsQuest(quest.tags);
+    const ageCategory = quest.ageCategory ?? getQuestAgeCategory(quest.tags);
     const categoryLabel = quest.cityName || quest.countryName || null;
     const distanceText = nearby && typeof quest._distanceKm === 'number'
         ? quest._distanceKm < 1
@@ -211,13 +211,13 @@ export default function QuestCard({
                     </View>
                 )}
 
-                {isKids && (
+                {ageCategory && (
                     <View
                         style={[styles.questCardKidsBadge, difficultyInfo ? { top: 44 } : null]}
                         testID={`quest-card-kids-${quest.id}`}
                     >
                         <Feather name="smile" size={12} color={colors.textOnDark} />
-                        <Text style={styles.questCardKidsText}>Для детей</Text>
+                        <Text style={styles.questCardKidsText}>{ageCategory.label}</Text>
                     </View>
                 )}
 

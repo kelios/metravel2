@@ -396,7 +396,7 @@ describe('questAdapters', () => {
         lng: '19.94',
         duration_min: 60,
         difficulty: 'medium',
-        tags: { history: true, walking: true },
+        tags: { history: true, walking: true, 'age-8-10': true },
         pet_friendly: true,
         cover_url: 'https://img.com/cover.jpg',
       } as any);
@@ -404,7 +404,8 @@ describe('questAdapters', () => {
       expect(result.id).toBe('krakow-dragon');
       expect(result.title).toBe('Тайна дракона');
       expect(result.points).toBe(100);
-      expect(result.tags).toEqual(['history', 'walking']);
+      expect(result.tags).toEqual(['history', 'walking', 'age-8-10']);
+      expect(result.ageCategory?.label).toBe('8-10 лет');
       expect(result.petFriendly).toBe(true);
       expect(result.cover).toBe('https://img.com/cover.jpg');
     });
