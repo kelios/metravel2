@@ -1,4 +1,4 @@
-// krakow-dragon — восстановлено из прод-состояния для Opus-ревью (single source of truth = прод).
+// krakow-dragon — data-файл (порядок шагов приведён к маршруту без возвратов).
 
 module.exports = [
     {
@@ -50,18 +50,6 @@ module.exports = [
                 lat: 50.061721,
                 lng: 19.939094,
                 mapsUrl: "https://maps.google.com/?q=St%20Mary%27s%20Basilica%20Krakow",
-            },
-            {
-                step_id: "cafe",
-                title: "☕ Good Day Coffee & Cake (по желанию)",
-                location: "Good Day Coffee & Cake",
-                story: "Необязательная остановка для удовольствия, а не для загадок. Лучшие открытия в путешествии часто случаются за чашкой кофе.\n\nРядом — «Good Day Coffee & Cake». Загляни, переведи дух, обсуди увиденное и поделись впечатлением — а потом продолжай маршрут (или заверши его здесь).",
-                task: "Необязательная точка ☕. Просто сделай паузу: выпей кофе и отметься, когда будешь готов. Можно и пропустить.",
-                hint: null,
-                answer_pattern: {"type":"any","value":""},
-                lat: 50.0573148,
-                lng: 19.9407374,
-                mapsUrl: "https://maps.google.com/?q=50.0573148,19.9407374",
             },
             {
                 step_id: "3-sukiennice",
@@ -134,6 +122,18 @@ module.exports = [
                 lat: 50.053175,
                 lng: 19.933599,
                 mapsUrl: "https://maps.google.com/?q=Smocza%20Jama%20Krakow",
+            },
+            {
+                step_id: "cafe",
+                title: "☕ Good Day Coffee & Cake (по желанию)",
+                location: "Good Day Coffee & Cake",
+                story: "Необязательная остановка для удовольствия, а не для загадок. Лучшие открытия в путешествии часто случаются за чашкой кофе.\n\nРядом — «Good Day Coffee & Cake». Загляни, переведи дух, обсуди увиденное и поделись впечатлением — а потом продолжай маршрут (или заверши его здесь).",
+                task: "Необязательная точка ☕. Просто сделай паузу: выпей кофе и отметься, когда будешь готов. Можно и пропустить.",
+                hint: null,
+                answer_pattern: {"type":"any","value":""},
+                lat: 50.0573148,
+                lng: 19.9407374,
+                mapsUrl: "https://maps.google.com/?q=50.0573148,19.9407374",
             },
         ],
         finale: {
