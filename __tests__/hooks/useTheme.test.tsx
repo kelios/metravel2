@@ -43,7 +43,7 @@ describe('useTheme web contract', () => {
 
     await waitFor(() => expect(result.current.theme).toBe('dark'))
     expect(result.current.isDark).toBe(true)
-    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
     expect(document.documentElement.style.colorScheme).toBe('dark')
   })
 

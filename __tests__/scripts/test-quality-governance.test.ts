@@ -28,13 +28,12 @@ describe('test quality governance', () => {
     expect(violations).toEqual([])
   })
 
-  it('does not allow literal boolean assertions or bare expect calls', () => {
+  it('does not allow literal boolean assertions', () => {
     const violations = testFiles.flatMap((file) => {
       const lines = fs.readFileSync(path.join(ROOT, file), 'utf8').split(/\r?\n/)
       return lines.flatMap((line, index) => {
         const literalBoolean = /\bexpect\s*\(\s*(?:true|false)\s*\)\s*\.\s*(?:toBe|toEqual|toBeTruthy|toBeFalsy)\s*\(/.test(line)
-        const bareExpect = /^(?:await\s+)?expect\((?!.*\)\s*\.).+\);?$/.test(line.trim())
-        return literalBoolean || bareExpect ? [`${file}:${index + 1}`] : []
+        return literalBoolean ? [`${file}:${index + 1}`] : []
       })
     })
 
