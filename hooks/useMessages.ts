@@ -85,7 +85,29 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
         setThreads((prev) => prev.map((t) => (t.id === threadId ? { ...t, unread_count: unreadCount } : t)));
     }, []);
 
-    return { threads, loading, error, refresh: load, setThreadUnreadCount };
+    const optimisticRemove = useCallback((threadId: number) => {
+        const snapshot: { removed: MessageThread | null; index: number } = { removed: null, index: -1 };
+        setThreads((prev) => {
+            const index = prev.findIndex((thread) => thread.id === threadId);
+            if (index === -1) return prev;
+            snapshot.removed = prev[index];
+            snapshot.index = index;
+            return prev.filter((thread) => thread.id !== threadId);
+        });
+
+        return () => {
+            const { removed, index } = snapshot;
+            if (!removed) return;
+            setThreads((prev) => {
+                if (prev.some((thread) => thread.id === removed.id)) return prev;
+                const next = [...prev];
+                next.splice(Math.min(index, next.length), 0, removed);
+                return next;
+            });
+        };
+    }, []);
+
+    return { threads, loading, error, refresh: load, setThreadUnreadCount, optimisticRemove };
 }
 
 // ---- useThreadMessages ----

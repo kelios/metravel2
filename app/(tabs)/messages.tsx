@@ -13,6 +13,7 @@ import {
     fetchThreadByUser,
     getMessagingUserDisplayName,
     getMessagingUserId,
+    isOrphanedMessageThread,
 } from '@/api/messages';
 import { fetchUserProfile, resolveProfileFullName } from '@/api/user';
 import type { MessageThread } from '@/api/messages';
@@ -90,6 +91,7 @@ function MessagesScreenContent() {
         error: threadsError,
         refresh: refreshThreads,
         setThreadUnreadCount,
+        optimisticRemove: optimisticRemoveThread,
     } = useThreads(canFetch, isFocused);
     const { messages, loading: messagesLoading, refresh: refreshMessages, hasMore, loadMore, optimisticRemove } = useThreadMessages(
         selectedThread?.id ?? null, isFocused
@@ -206,8 +208,11 @@ function MessagesScreenContent() {
         if (otherUserId != null && mergedNames.has(otherUserId)) {
             return mergedNames.get(otherUserId)!;
         }
+        if (isOrphanedMessageThread(selectedThread, Number(userId))) {
+            return i18nT('errorsStatic:api.messages.deletedUser');
+        }
         return i18nT('messages:app.tabs.messages.polzovatel_3baf520c');
-    }, [otherUserId, mergedNames]);
+    }, [otherUserId, mergedNames, selectedThread, userId]);
 
     const otherUserAvatar = useMemo(() => {
         if (otherUserId != null && mergedAvatars.has(otherUserId)) {
@@ -241,8 +246,8 @@ function MessagesScreenContent() {
 
                 if (res.thread_id != null) {
                     const existing = threads.find((t) => t.id === res.thread_id);
-                    if (existing) {
-                        setSelectedThread(existing);
+                    if (res.thread || existing) {
+                        setSelectedThread(res.thread ?? existing ?? null);
                     } else {
                         setSelectedThread({
                             id: res.thread_id,
@@ -359,8 +364,8 @@ function MessagesScreenContent() {
                 const res = await fetchThreadByUser(targetUserId);
                 if (res.thread_id != null) {
                     const existing = threads.find((t) => t.id === res.thread_id);
-                    if (existing) {
-                        setSelectedThread(existing);
+                    if (res.thread || existing) {
+                        setSelectedThread(res.thread ?? existing ?? null);
                     } else {
                         setSelectedThread({
                             id: res.thread_id,
@@ -441,15 +446,21 @@ function MessagesScreenContent() {
 
     const handleDeleteThread = useCallback(
         async (threadId: number) => {
+            const deletedSelectedThread = selectedThread?.id === threadId ? selectedThread : null;
+            const rollback = optimisticRemoveThread(threadId);
+            if (deletedSelectedThread) {
+                setSelectedThread(null);
+            }
+
             const ok = await removeThread(threadId);
-            if (ok) {
-                if (selectedThread?.id === threadId) {
-                    setSelectedThread(null);
+            if (!ok) {
+                rollback();
+                if (deletedSelectedThread) {
+                    setSelectedThread((current) => current ?? deletedSelectedThread);
                 }
-                refreshThreads();
             }
         },
-        [removeThread, selectedThread, refreshThreads]
+        [removeThread, selectedThread, optimisticRemoveThread]
     );
 
     // Пользователь не авторизован

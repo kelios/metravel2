@@ -37,6 +37,9 @@ if (!['debug', 'production'].includes(mode)) {
 
 const gradleExecutable = process.platform === 'win32' ? 'gradlew.bat' : './gradlew'
 const task = mode === 'production' ? ':app:bundleRelease' : ':app:assembleDebug'
+const gradleArgs = mode === 'production'
+  ? [task, '--no-parallel', '--max-workers=2']
+  : [task]
 let buildEnvironment = { ...process.env }
 
 if (mode === 'production') {
@@ -53,7 +56,7 @@ if (mode === 'production') {
   }
 }
 
-const result = spawnSync(gradleExecutable, [task], {
+const result = spawnSync(gradleExecutable, gradleArgs, {
   cwd: ANDROID_DIR,
   env: buildEnvironment,
   shell: process.platform === 'win32',

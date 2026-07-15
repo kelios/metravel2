@@ -1,4 +1,5 @@
 import { render, fireEvent } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import ThreadList from '@/components/messages/ThreadList';
 import type { MessageThread } from '@/api/messages';
 
@@ -107,12 +108,61 @@ describe('ThreadList', () => {
         expect(getByLabelText('Диалог с Иван Петров')).toBeTruthy();
     });
 
+    it('announces unread count and caps the visible badge at 99+', () => {
+        const unreadThread: MessageThread = {
+            ...mockThreads[0],
+            unread_count: 150,
+        };
+        const { getByLabelText, getByText } = render(
+            <ThreadList {...defaultProps} threads={[unreadThread]} />
+        );
+
+        expect(getByLabelText('Диалог с Иван Петров, 150 непрочитанных')).toBeTruthy();
+        expect(getByText('99+')).toBeTruthy();
+    });
+
     it('shows explicit delete button for a thread', () => {
         const { getByLabelText } = render(
             <ThreadList {...defaultProps} onDeleteThread={jest.fn()} />
         );
 
         expect(getByLabelText('Удалить диалог с Иван Петров')).toBeTruthy();
+    });
+
+    it('renders the web confirmation and confirms thread deletion', () => {
+        const originalPlatform = Platform.OS;
+        Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+        const onDeleteThread = jest.fn();
+
+        try {
+            const { getByLabelText } = render(
+                <ThreadList {...defaultProps} onDeleteThread={onDeleteThread} />
+            );
+
+            fireEvent.press(getByLabelText('Удалить диалог с Иван Петров'));
+            fireEvent.press(getByLabelText('Подтвердить удаление диалога'));
+
+            expect(onDeleteThread).toHaveBeenCalledWith(1);
+        } finally {
+            Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+        }
+    });
+
+    it('labels a persisted thread with no remaining peer as a deleted user', () => {
+        const orphanedThread: MessageThread = {
+            ...mockThreads[0],
+            participants: [1],
+        };
+        const { getByText, queryByText } = render(
+            <ThreadList
+                {...defaultProps}
+                threads={[orphanedThread]}
+                participantNames={new Map()}
+            />
+        );
+
+        expect(getByText('Удалённый пользователь')).toBeTruthy();
+        expect(queryByText('Пользователь')).toBeNull();
     });
 
     // Regression (prod bug: list showed generic «Пользователь»): ThreadList has NO

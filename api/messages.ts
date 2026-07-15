@@ -95,6 +95,14 @@ export const getParticipantPreviewDisplayName = (preview: ParticipantPreview): s
 export const threadHasParticipantPreviews = (thread: MessageThread): boolean =>
     Array.isArray(thread.participant_previews);
 
+export const isOrphanedMessageThread = (
+    thread: MessageThread | null | undefined,
+    currentUserId: number | null,
+): boolean => {
+    if (!thread || currentUserId == null || thread.id < 0) return false;
+    return !thread.participants.some((participantId) => participantId !== currentUserId);
+};
+
 export type ParticipantPreviewInfo = { name: string | null; avatar: string | null };
 
 // Канонический мэппинг previews -> имена/аватары для списка диалогов и шапки чата.
@@ -212,6 +220,7 @@ interface RawPaginatedMessages {
 
 export interface ThreadByUserResponse {
     thread_id: number | null;
+    thread?: MessageThread | null;
 }
 
 // ---- API functions ----

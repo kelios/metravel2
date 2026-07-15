@@ -5,7 +5,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
-import type { MessageThread } from '@/api/messages';
+import { isOrphanedMessageThread, type MessageThread } from '@/api/messages';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -105,6 +105,9 @@ function ThreadList({
             const otherId = getOtherParticipantId(thread);
             if (otherId != null && participantNames.has(otherId)) {
                 return participantNames.get(otherId)!;
+            }
+            if (isOrphanedMessageThread(thread, currentUserIdNum)) {
+                return i18nT('errorsStatic:api.messages.deletedUser');
             }
             return i18nT('messages:components.messages.ThreadList.polzovatel_3206a1df');
         },
@@ -352,7 +355,7 @@ function ThreadList({
     return (
         <FlatList
             data={filteredThreads}
-            extraData={search}
+            extraData={[search, confirmDeleteId]}
             keyExtractor={(item) => String(item.id)}
             renderItem={renderItem}
             contentContainerStyle={styles.list}

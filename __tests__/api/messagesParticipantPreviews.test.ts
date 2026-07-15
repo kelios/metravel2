@@ -2,6 +2,7 @@ import {
     collectLegacyPeerIds,
     collectParticipantPreviews,
     getParticipantPreviewDisplayName,
+    isOrphanedMessageThread,
     threadHasParticipantPreviews,
     type MessageThread,
     type ParticipantPreview,
@@ -106,6 +107,17 @@ describe('participant_previews mapping (#708)', () => {
         it('detects canonical vs legacy payload', () => {
             expect(threadHasParticipantPreviews(thread({ participant_previews: [] }))).toBe(true);
             expect(threadHasParticipantPreviews(thread())).toBe(false);
+        });
+    });
+
+    describe('isOrphanedMessageThread', () => {
+        it('detects a persisted thread whose only remaining participant is the current user', () => {
+            expect(isOrphanedMessageThread(thread({ participants: [1] }), 1)).toBe(true);
+        });
+
+        it('keeps normal and virtual conversations out of the orphan fallback', () => {
+            expect(isOrphanedMessageThread(thread({ participants: [1, 2] }), 1)).toBe(false);
+            expect(isOrphanedMessageThread(thread({ id: -1, participants: [1] }), 1)).toBe(false);
         });
     });
 });

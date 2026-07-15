@@ -8,6 +8,7 @@ const mockFetchAvailableUsers = jest.fn();
 const mockFetchThreadByUser = jest.fn();
 const mockSendMessage = jest.fn();
 const mockDeleteMessage = jest.fn();
+const mockDeleteThread = jest.fn();
 const mockMarkThreadRead = jest.fn();
 const mockFetchUnreadCount = jest.fn();
 
@@ -18,6 +19,7 @@ jest.mock('@/api/messages', () => ({
   fetchThreadByUser: (...args: any[]) => mockFetchThreadByUser(...args),
   sendMessage: (...args: any[]) => mockSendMessage(...args),
   deleteMessage: (...args: any[]) => mockDeleteMessage(...args),
+  deleteThread: (...args: any[]) => mockDeleteThread(...args),
   markThreadRead: (...args: any[]) => mockMarkThreadRead(...args),
   fetchUnreadCount: (...args: any[]) => mockFetchUnreadCount(...args),
 }));
@@ -31,6 +33,7 @@ import {
   useThreadMessages,
   useSendMessage,
   useDeleteMessage,
+  useDeleteThread,
   useAvailableUsers,
   useThreadByUser,
   useMarkThreadRead,
@@ -127,6 +130,22 @@ describe('useThreads', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.threads).toEqual([]);
+  });
+
+  it('optimistically removes a thread and can roll it back in the original position', async () => {
+    mockFetchMessageThreads.mockResolvedValueOnce([THREAD_1, THREAD_2]);
+
+    const { result } = renderHook(() => useThreads(true, false));
+    await waitFor(() => expect(result.current.threads).toHaveLength(2));
+
+    let rollback: () => void;
+    act(() => {
+      rollback = result.current.optimisticRemove(THREAD_1.id);
+    });
+    expect(result.current.threads.map((thread) => thread.id)).toEqual([THREAD_2.id]);
+
+    act(() => rollback());
+    expect(result.current.threads.map((thread) => thread.id)).toEqual([THREAD_1.id, THREAD_2.id]);
   });
 });
 
@@ -318,6 +337,36 @@ describe('useDeleteMessage', () => {
     let success: boolean | undefined;
     await act(async () => {
       success = await result.current.remove(5);
+    });
+
+    expect(success).toBe(false);
+  });
+});
+
+describe('useDeleteThread', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('deletes a thread successfully', async () => {
+    mockDeleteThread.mockResolvedValueOnce(null);
+    const { result } = renderHook(() => useDeleteThread());
+
+    let success: boolean | undefined;
+    await act(async () => {
+      success = await result.current.remove(7);
+    });
+
+    expect(success).toBe(true);
+    expect(result.current.deleting).toBe(false);
+    expect(mockDeleteThread).toHaveBeenCalledWith(7);
+  });
+
+  it('reports failure so the screen can roll back its optimistic removal', async () => {
+    mockDeleteThread.mockRejectedValueOnce(new Error('Delete failed'));
+    const { result } = renderHook(() => useDeleteThread());
+
+    let success: boolean | undefined;
+    await act(async () => {
+      success = await result.current.remove(7);
     });
 
     expect(success).toBe(false);

@@ -51,9 +51,10 @@ const { getSecureItem, setSecureItem } = require('@/utils/secureStorage') as {
   getSecureItem: jest.Mock;
   setSecureItem: jest.Mock;
 };
-const { getStorageBatch, removeStorageBatch } = require('@/utils/storageBatch') as {
+const { getStorageBatch, removeStorageBatch, setStorageBatch } = require('@/utils/storageBatch') as {
   getStorageBatch: jest.Mock;
   removeStorageBatch: jest.Mock;
+  setStorageBatch: jest.Mock;
 };
 const { fetchUserProfile } = require('@/api/user') as { fetchUserProfile: jest.Mock };
 
@@ -281,6 +282,31 @@ describe('authStore', () => {
       expect(s.userId).toBe('5');
       expect(s.username).toBe('Юлия');
       expect(s.userAvatar).toBe('https://img/a.jpg');
+    });
+
+    it('sanitizes profile URL values before persisting the display name', async () => {
+      loginApi.mockResolvedValue({
+        token: 'abc',
+        id: 5,
+        name: 'https://metravel.by/profile',
+        email: 'j@test.com',
+        is_superuser: false,
+      });
+      fetchUserProfile.mockResolvedValue({
+        first_name: 'https://metravel.by/Julia',
+        last_name: 'https://metravel.by/Sauran',
+        avatar: null,
+      });
+
+      const result = await act(() => useAuthStore.getState().login('j@test.com', 'pass'));
+
+      expect(result).toBe(true);
+      expect(useAuthStore.getState().username).toBe('Julia Sauran');
+      expect(setStorageBatch).toHaveBeenCalledWith([
+        ['userId', '5'],
+        ['userName', 'Julia Sauran'],
+        ['isSuperuser', 'false'],
+      ]);
     });
 
     it('does not persist access or refresh tokens on web login', async () => {

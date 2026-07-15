@@ -88,5 +88,6 @@ describe('Android release safety contract', () => {
     );
     expect(gradleRunner).toContain("NODE_ENV: 'production'");
     expect(gradleRunner).toContain('PROD_ENV_PATH');
+    expect(gradleRunner).toContain("[task, '--no-parallel', '--max-workers=2']");
   });
 });
