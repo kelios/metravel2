@@ -16,6 +16,8 @@ jest.mock('@/api/user', () => ({
     fetchMySubscriptions: jest.fn(),
     fetchMySubscribers: jest.fn(),
     unsubscribeFromUser: jest.fn(),
+    resolveProfileFullName: (profile: { first_name?: string | null; last_name?: string | null }) =>
+        [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim(),
 }));
 
 jest.mock('@/api/travelUserQueries', () => ({

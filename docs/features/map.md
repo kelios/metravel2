@@ -170,7 +170,9 @@ Backend-facing map adapter — `api/map.ts`; React Query ownership находи�
 - `__tests__/integration/map-route.integration.test.ts` — routing integration;
 - `e2e/map-page.spec.ts`, `e2e/map-mobile-panel-content.spec.ts`,
   `e2e/map-mobile-route-toolbar.spec.ts`, `e2e/points-map-popup.spec.ts`,
-  `e2e/map-route-visual.spec.ts` — browser flows.
+  `e2e/map-popup-close.spec.ts` — deterministic browser flows. Route behavior is
+  asserted from DOM/API state; artifact-only screenshots without a baseline are
+  not treated as regression tests.
 
 Минимальный выбор проверки:
 

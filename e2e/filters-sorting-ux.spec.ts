@@ -137,7 +137,9 @@ test.describe('@smoke Filters and sorting — deterministic catalog integration'
     });
 
     await page.getByRole('radio', { name: 'Популярные ↓', exact: true }).click();
-    await expect(page.getByRole('button', { name: /Сортировка: Популярные ↓/i })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Сортировка: Популярные ↓', exact: true }),
+    ).toBeVisible();
     await expect(page.getByRole('radio', { name: 'Сначала старые', exact: true })).toHaveCount(0);
 
     await expect
@@ -155,8 +157,10 @@ test.describe('@smoke Filters and sorting — deterministic catalog integration'
   test('selecting and clearing a category updates both UI state and API query', async ({ page }) => {
     const requests = await openCatalog(page);
 
-    await page.getByRole('button', { name: /^Развернуть Категории$/i }).click();
     const mountains = page.getByRole('checkbox', { name: 'Горы', exact: true });
+    if (!(await mountains.isVisible())) {
+      await page.getByRole('button', { name: /^Развернуть Категории$/i }).click();
+    }
     await expect(mountains).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     await mountains.click();
     await expect(mountains).toHaveAttribute('aria-checked', 'true');

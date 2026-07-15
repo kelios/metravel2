@@ -3,7 +3,7 @@ import { getTravelsListPath } from './helpers/routes';
 import { preacceptCookies } from './helpers/navigation';
 
 test.describe('Footer dock (web mobile) - More modal', () => {
-  test('shows More (Ещё), opens modal with legal + support links, and aligns dock item', async ({ page }) => {
+  test('shows More (Ещё), keeps it inside the dock, and opens legal + support links', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
 
     await preacceptCookies(page);
@@ -35,19 +35,16 @@ test.describe('Footer dock (web mobile) - More modal', () => {
     const moreInDock = dock.getByTestId('footer-item-more');
     await expect(moreInDock).toBeVisible({ timeout: 15_000 });
 
-    // Layout invariant: "Ещё" should stay near the visual center in minimal state.
-    // Allow proportional tolerance for responsive spacing changes across mobile widths.
+    // Layout invariant: the action remains fully contained in the responsive dock.
+    // Its horizontal position depends on the number of visible navigation items.
     const [bb, dockBb] = await Promise.all([moreInDock.boundingBox(), dock.boundingBox()]);
     expect(bb, 'More action must have a measurable box').not.toBeNull();
     expect(dockBb, 'Footer dock must have a measurable box').not.toBeNull();
     if (!bb || !dockBb) throw new Error('Footer dock bounding boxes are unavailable');
-    const itemCenterX = bb.x + bb.width / 2;
-    const dockCenterX = dockBb.x + dockBb.width / 2;
-    const maxAllowedOffset = Math.max(110, dockBb.width * 0.35);
-    expect(
-      Math.abs(itemCenterX - dockCenterX),
-      `expected "Ещё" to stay near center within ${Math.round(maxAllowedOffset)}px`,
-    ).toBeLessThanOrEqual(maxAllowedOffset);
+    expect(bb.x).toBeGreaterThanOrEqual(dockBb.x - 1);
+    expect(bb.x + bb.width).toBeLessThanOrEqual(dockBb.x + dockBb.width + 1);
+    expect(bb.y).toBeGreaterThanOrEqual(dockBb.y - 1);
+    expect(bb.y + bb.height).toBeLessThanOrEqual(dockBb.y + dockBb.height + 1);
 
     // Open More modal.
     await moreInDock.click();
@@ -55,12 +52,13 @@ test.describe('Footer dock (web mobile) - More modal', () => {
     await expect(page.getByTestId('footer-more-sheet')).toBeVisible();
     await expect(page.getByTestId('footer-more-list')).toBeVisible();
 
-    // Legal links must be available in the modal.
-    await expect(page.getByText('Политика конфиденциальности')).toBeVisible();
-    await expect(page.getByText('Настройки cookies')).toBeVisible();
+    // Legal links exposed by the current mobile information architecture.
+    const moreSheet = page.getByTestId('footer-more-sheet');
+    await expect(moreSheet.getByRole('link', { name: 'Пользовательское соглашение' })).toBeVisible();
+    await expect(moreSheet.getByRole('link', { name: 'Отказ от ответственности' })).toBeVisible();
 
     // Support channel: email.
-    await expect(page.getByText('Связаться с нами')).toBeVisible();
+    await expect(moreSheet.getByRole('link', { name: 'Связаться с нами' })).toBeVisible();
 
     // Close modal by clicking backdrop.
     await page.getByTestId('footer-more-backdrop').click({ position: { x: 10, y: 10 } });

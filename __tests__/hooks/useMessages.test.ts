@@ -147,6 +147,32 @@ describe('useThreads', () => {
     act(() => rollback());
     expect(result.current.threads.map((thread) => thread.id)).toEqual([THREAD_1.id, THREAD_2.id]);
   });
+
+  it('does not restore an optimistically deleted thread from a stale refresh response', async () => {
+    mockFetchMessageThreads.mockResolvedValueOnce([THREAD_1, THREAD_2]);
+    const { result } = renderHook(() => useThreads(true, false));
+    await waitFor(() => expect(result.current.threads).toHaveLength(2));
+
+    let resolveRefresh: (threads: Array<typeof THREAD_1>) => void = () => undefined;
+    mockFetchMessageThreads.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRefresh = resolve;
+      })
+    );
+
+    let refreshPromise: Promise<void>;
+    act(() => {
+      refreshPromise = result.current.refresh();
+      result.current.optimisticRemove(THREAD_1.id);
+    });
+
+    await act(async () => {
+      resolveRefresh([THREAD_1, THREAD_2]);
+      await refreshPromise!;
+    });
+
+    expect(result.current.threads.map((thread) => thread.id)).toEqual([THREAD_2.id]);
+  });
 });
 
 describe('useThreadMessages', () => {

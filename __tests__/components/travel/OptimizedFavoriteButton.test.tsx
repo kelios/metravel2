@@ -82,7 +82,7 @@ describe('OptimizedFavoriteButton', () => {
       />
     )
 
-    expect(StyleSheet.flatten(screen.getByTestId('favorite-button').props.style)).toMatchObject({
+    expect(StyleSheet.flatten(screen.getByLabelText('Добавить в «Хочу поехать»').props.style)).toMatchObject({
       height: 44,
       width: 44,
     })

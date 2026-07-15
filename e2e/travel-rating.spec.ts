@@ -64,7 +64,11 @@ async function setupRating(
   await preacceptCookies(page);
 
   // Keep unrelated deferred travel-detail requests deterministic.
-  await page.route('**/api/**', (route) => fulfillJson(route, 200, {}));
+  await page.route('**/api/**', (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('.bundle') || pathname.endsWith('.map')) return route.fallback();
+    return fulfillJson(route, 200, {});
+  });
   if (options.authenticated) await mockFakeAuthApis(page);
 
   const travelHandler = (route: import('@playwright/test').Route) =>
@@ -99,9 +103,9 @@ async function setupRating(
 async function openRating(page: import('@playwright/test').Page) {
   await page.goto(`/travels/${SLUG}`, { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#root')).toHaveAttribute('data-travel-details-ready', 'true');
-  const ratingSlot = page.locator('[data-section-key="rating"]');
-  await expect(ratingSlot).toBeAttached();
-  await ratingSlot.scrollIntoViewIfNeeded();
+  const ratingRegion = page.getByRole('region', { name: 'Рейтинг путешествия' });
+  await expect(ratingRegion).toBeVisible({ timeout: 20_000 });
+  await ratingRegion.scrollIntoViewIfNeeded();
   const section = page.getByTestId('travel-rating-section');
   await expect(section).toBeVisible({ timeout: 20_000 });
   return section;

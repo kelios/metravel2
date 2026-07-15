@@ -35,6 +35,7 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
     const [error, setError] = useState<string | null>(null);
     const mountedRef = useRef(true);
     const consecutiveFailuresRef = useRef(0);
+    const hiddenThreadIdsRef = useRef(new Set<number>());
 
     useEffect(() => {
         mountedRef.current = true;
@@ -48,7 +49,11 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
         try {
             const data = await fetchMessageThreads();
             if (mountedRef.current) {
-                setThreads(Array.isArray(data) ? data : []);
+                setThreads(
+                    Array.isArray(data)
+                        ? data.filter((thread) => !hiddenThreadIdsRef.current.has(thread.id))
+                        : [],
+                );
             }
         } catch (e: unknown) {
             devError('useThreads load error:', e);
@@ -66,7 +71,11 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
             const data = await fetchMessageThreads();
             if (mountedRef.current) {
                 consecutiveFailuresRef.current = 0;
-                setThreads(Array.isArray(data) ? data : []);
+                setThreads(
+                    Array.isArray(data)
+                        ? data.filter((thread) => !hiddenThreadIdsRef.current.has(thread.id))
+                        : [],
+                );
             }
         } catch {
             consecutiveFailuresRef.current += 1;
@@ -86,6 +95,7 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
     }, []);
 
     const optimisticRemove = useCallback((threadId: number) => {
+        hiddenThreadIdsRef.current.add(threadId);
         const snapshot: { removed: MessageThread | null; index: number } = { removed: null, index: -1 };
         setThreads((prev) => {
             const index = prev.findIndex((thread) => thread.id === threadId);
@@ -96,6 +106,7 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
         });
 
         return () => {
+            hiddenThreadIdsRef.current.delete(threadId);
             const { removed, index } = snapshot;
             if (!removed) return;
             setThreads((prev) => {

@@ -19,7 +19,7 @@ const AXE_PATH = require.resolve('axe-core/axe.min.js');
 // hard-to-fix violation appears, add its rule id here with a tracking note.
 const KNOWN_DEBT = new Set<string>([]);
 
-type Violation = { id: string; impact: string | null; nodes: number };
+type Violation = { id: string; impact: string | null; nodes: number; targets: string[] };
 
 async function runAxe(page: import('@playwright/test').Page): Promise<Violation[]> {
   await page.addScriptTag({ path: AXE_PATH });
@@ -28,7 +28,12 @@ async function runAxe(page: import('@playwright/test').Page): Promise<Violation[
     const result = await window.axe.run(document, {
       runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] },
     });
-    return result.violations.map((v: any) => ({ id: v.id, impact: v.impact, nodes: v.nodes.length }));
+    return result.violations.map((v: any) => ({
+      id: v.id,
+      impact: v.impact,
+      nodes: v.nodes.length,
+      targets: v.nodes.slice(0, 3).map((node: any) => node.target.join(' ')),
+    }));
   });
 }
 
@@ -68,7 +73,7 @@ test.describe('Accessibility (WCAG 2.1 AA) — no regressions', () => {
   test('travel detail', async ({ page }) => {
     await preacceptCookies(page);
     expect(await openFallbackTravelDetails(page)).toBe(true);
-    await page.waitForTimeout(1500);
+    await expect(page.getByRole('progressbar')).toHaveCount(0, { timeout: 20_000 });
     assertNoNewViolations(await runAxe(page), 'travel detail');
   });
 });
@@ -81,16 +86,29 @@ test.describe('Accessibility — keyboard', () => {
     await gotoWithRetry(page, getTravelsListPath());
     await waitForMainListRender(page);
 
-    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.evaluate(() => {
+      document.body.setAttribute('tabindex', '-1');
+      document.body.focus();
+      document.body.removeAttribute('tabindex');
+    });
     await page.keyboard.press('Tab');
 
     const skipMain = page.getByRole('link', { name: 'Перейти к основному содержимому' });
-    await expect(skipMain).toBeFocused();
+    const focusedElement = await page.evaluate(() => {
+      const element = document.activeElement as HTMLElement | null;
+      return element?.outerHTML.slice(0, 500) || '<none>';
+    });
+    expect(
+      await skipMain.evaluate((element) => element === document.activeElement),
+      `first Tab focused ${focusedElement}`,
+    ).toBe(true);
     await skipMain.press('Enter');
 
-    await expect
-      .poll(() => page.evaluate(() => (document.activeElement as HTMLElement | null)?.id || ''))
-      .toBe('main-content');
+    const activeAfterSkip = await page.evaluate(() => {
+      const element = document.activeElement as HTMLElement | null;
+      return { id: element?.id || '', html: element?.outerHTML.slice(0, 500) || '<none>' };
+    });
+    expect(activeAfterSkip.id, `skip activation focused ${activeAfterSkip.html}`).toBe('main-content');
   });
 
   test('keyboard focus reaches an interactive control with a visible focus ring', async ({ page }) => {

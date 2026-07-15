@@ -70,6 +70,11 @@ export default function SkipLinks({
               // @ts-ignore -- tabIndex is a web-only attribute not in RN Pressable types
               tabIndex: 0,
               'data-skip-link': 'true',
+              onKeyDown: (event: { key: string; preventDefault: () => void }) => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                handleSkip(link.targetId);
+              },
             },
           })}
         >

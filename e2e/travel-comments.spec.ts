@@ -105,7 +105,11 @@ async function setupComments(page: import('@playwright/test').Page, authenticate
   await preacceptCookies(page);
 
   // Catch unrelated travel-detail requests before registering specific routes.
-  await page.route('**/api/**', (route) => json(route, 200, {}));
+  await page.route('**/api/**', (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('.bundle') || pathname.endsWith('.map')) return route.fallback();
+    return json(route, 200, {});
+  });
   if (authenticated) await mockFakeAuthApis(page);
 
   const travelHandler = (route: any) => json(route, 200, mockedTravel);
@@ -231,19 +235,11 @@ async function openComments(page: import('@playwright/test').Page) {
   await expect(commentsSlot).toBeAttached();
   const commentsButton = page.getByRole('button', { name: 'Перейти к разделу Комментарии' });
   await expect(commentsButton).toBeVisible();
-  const treeResponsePromise = page.waitForResponse((response) => {
-    const url = new URL(response.url());
-    return (
-      response.request().method() === 'GET' &&
-      url.pathname.endsWith('/travel-comments/tree/') &&
-      url.searchParams.get('travel_id') === String(TRAVEL_ID)
-    );
-  });
   await commentsButton.click();
   await commentsSlot.scrollIntoViewIfNeeded();
-  const treeResponse = await treeResponsePromise;
-  expect(treeResponse.status()).toBe(200);
-
+  // The deferred section may request its tree before the quick-nav click on a
+  // warm production bundle. Rendering the seeded fixture is the stable proof
+  // that the strict tree route was consumed successfully.
   await expect(commentsSlot.getByText('Seed comment', { exact: true })).toBeVisible();
 }
 
