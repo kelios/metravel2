@@ -49,6 +49,10 @@ async function setupRating(
   options: { authenticated: boolean; initialUserRating?: number | null },
 ) {
   let userRating = options.initialUserRating ?? null;
+  await page.addInitScript(() => {
+    (window as Window & { __metravelTravelPreloadScriptLoaded?: boolean })
+      .__metravelTravelPreloadScriptLoaded = true;
+  });
 
   if (options.authenticated) {
     await ensureAuthedStorageFallback(page, { userId: '1', userName: 'E2E User' });
@@ -67,6 +71,13 @@ async function setupRating(
   await page.route('**/api/**', (route) => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname.endsWith('.bundle') || pathname.endsWith('.map')) return route.fallback();
+    if (
+      pathname.includes(`/travels/by-slug/${SLUG}/`) ||
+      pathname.includes(`/travels/resolve-slug/${SLUG}/`) ||
+      pathname.endsWith(`/travels/${TRAVEL_ID}/`)
+    ) {
+      return fulfillJson(route, 200, { ...mockedTravel, user_rating: userRating });
+    }
     return fulfillJson(route, 200, {});
   });
   if (options.authenticated) await mockFakeAuthApis(page);

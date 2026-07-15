@@ -50,6 +50,15 @@ const mockFetchUserCountryProgress = jest.fn();
 
 jest.mock('@/api/user', () => ({
   mapProfileRank: jest.fn().mockReturnValue(null),
+  normalizeProfileName: (raw: unknown) => {
+    const value = String(raw ?? '').trim();
+    return value === 'null' || value === 'undefined' ? '' : value;
+  },
+  resolveProfileFullName: (profile: { first_name?: unknown; last_name?: unknown }) =>
+    [profile.first_name, profile.last_name]
+      .map((part) => String(part ?? '').trim())
+      .filter((part) => part && part !== 'null' && part !== 'undefined')
+      .join(' '),
   fetchUserProfile: jest.fn().mockResolvedValue({
     id: '123',
     first_name: 'Test',

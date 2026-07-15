@@ -59,6 +59,12 @@ const json = (route: any, status: number, value: unknown) =>
   });
 
 async function setupComments(page: import('@playwright/test').Page, authenticated: boolean) {
+  // Production HTML starts a raw travel-detail preload before React mounts.
+  // Disable it so every request in this contract goes through the test routes.
+  await page.addInitScript(() => {
+    (window as Window & { __metravelTravelPreloadScriptLoaded?: boolean })
+      .__metravelTravelPreloadScriptLoaded = true;
+  });
   const now = '2026-07-15T12:00:00.000Z';
   let nextId = 920_100;
   let comments: MockComment[] = [
@@ -108,6 +114,13 @@ async function setupComments(page: import('@playwright/test').Page, authenticate
   await page.route('**/api/**', (route) => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname.endsWith('.bundle') || pathname.endsWith('.map')) return route.fallback();
+    if (
+      pathname.includes(`/travels/by-slug/${SLUG}/`) ||
+      pathname.includes(`/travels/resolve-slug/${SLUG}/`) ||
+      pathname.endsWith(`/travels/${TRAVEL_ID}/`)
+    ) {
+      return json(route, 200, mockedTravel);
+    }
     return json(route, 200, {});
   });
   if (authenticated) await mockFakeAuthApis(page);

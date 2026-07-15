@@ -1,22 +1,27 @@
 import React from 'react';
-import { Pressable, Text } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import SidebarFilters from '@/components/listTravel/SidebarFilters';
 
-jest.mock('@/components/listTravel/ModernFilters', () => ({
-  __esModule: true,
-  default: () => <Text testID="modern-filters">filters</Text>,
-}));
+jest.mock('@/components/listTravel/ModernFilters', () => {
+  const { Text } = require('react-native');
+  return {
+    __esModule: true,
+    default: () => <Text testID="modern-filters">filters</Text>,
+  };
+});
 
-jest.mock('@/components/ui/ErrorDisplay', () => ({
-  __esModule: true,
-  default: ({ message, onRetry }: { message: string; onRetry?: () => void }) => (
-    <Pressable testID="filters-error-retry" onPress={onRetry}>
-      <Text>{message}</Text>
-    </Pressable>
-  ),
-}));
+jest.mock('@/components/ui/ErrorDisplay', () => {
+  const { Pressable, Text } = require('react-native');
+  return {
+    __esModule: true,
+    default: ({ message, onRetry }: { message: string; onRetry?: () => void }) => (
+      <Pressable testID="filters-error-retry" onPress={onRetry}>
+        <Text>{message}</Text>
+      </Pressable>
+    ),
+  };
+});
 
 const baseProps = {
   isMobile: false,
