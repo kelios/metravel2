@@ -10,6 +10,24 @@ Production automation технически ограничена track `productio
 менять `alpha`, `internal`, `beta`, testers, countries или текущую сборку
 закрытого тестирования.
 
+## Temporary Google Play upload freeze
+
+15 июля 2026 года Google Play принял запрос на сброс upload key. Новый ключ
+начнёт действовать **17 июля 2026 года в 12:44 UTC (14:44 Europe/Warsaw)**.
+
+До этого момента:
+
+- локальные Gradle-сборки и установка на USB-устройство разрешены;
+- Google Play не принимает новые AAB/APK ни в один track, включая closed
+  testing и `production`;
+- текущая closed-testing сборка с `versionCode 11` и 12 подключёнными
+  тестировщиками продолжают работать без изменений;
+- запрос на сброс не отменяется и повторная загрузка не запускается.
+
+После указанного времени store upload выполняется только с новым локальным
+upload key. Обновление closed testing остаётся отдельной явно поставленной
+задачей; production-only automation не изменяет protected tracks.
+
 ## Current project contract
 
 | Параметр | Значение |

@@ -1020,6 +1020,21 @@ describe('src/api/travelsApi.ts', () => {
       expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
     });
 
+    it('fetchTravelBySlug не превращает transient legacy 503 в canonical not-found', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
+      const unavailableError = Object.assign(new Error('service unavailable'), { status: 503 });
+      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // resolve-slug
+      mockedApiClientGet.mockRejectedValueOnce(unavailableError); // legacy exact by-slug
+
+      await expect(fetchTravelBySlug('temporarily-unavailable')).rejects.toMatchObject({
+        status: 503,
+      });
+
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(2);
+      expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
+    });
+
     it('fetchTravelBySlug возвращает item из canonical resolve-slug без fan-out', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       mockedApiClientGet.mockResolvedValueOnce({
@@ -1230,7 +1245,6 @@ describe('src/api/travelsApi.ts', () => {
 
       expect(devError).toHaveBeenCalled();
       expect(result).toEqual({
-        countries: [],
         categories: [],
         categoryTravelAddress: [],
         companions: [],
@@ -1239,7 +1253,6 @@ describe('src/api/travelsApi.ts', () => {
         over_nights_stay: [],
         sortings: [],
         transports: [],
-        year: '',
       } as any);
     });
 

@@ -23,8 +23,7 @@ export function usePointListCategoryDictionaryModel() {
         queryKey: queryKeys.filters(),
         queryFn: async () => {
           const data = await fetchFiltersOptimized();
-          const raw = (data as any)?.categoryTravelAddress ?? (data as any)?.category_travel_address;
-          return normalizeCategoryDictionary(raw);
+          return normalizeCategoryDictionary(data.categoryTravelAddress);
         },
         ...queryConfigs.static,
         select: (data) => (Array.isArray(data) ? data : []),
@@ -41,8 +40,11 @@ export function usePointListCategoryDictionaryModel() {
     const loadDictionary = async () => {
       try {
         const data = await fetchFiltersOptimized();
-        const raw = (data as any)?.categoryTravelAddress ?? (data as any)?.category_travel_address;
-        if (active) setSiteCategoryDictionaryFallback(normalizeCategoryDictionary(raw));
+        if (active) {
+          setSiteCategoryDictionaryFallback(
+            normalizeCategoryDictionary(data.categoryTravelAddress),
+          );
+        }
       } catch {
         if (active) setSiteCategoryDictionaryFallback([]);
       }

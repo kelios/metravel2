@@ -13,7 +13,7 @@ const leafletRouteSnapshotCache = new Map<string, Promise<string | null>>()
 function buildCacheKey(
   points: { lat: number; lng: number; label?: string }[],
   routeLine: Array<[number, number]>,
-  options: { width: number; height: number; zoom: number; maxFitZoom: number },
+  options: { width: number; height: number; zoom: number; maxFitZoom: number; showLabels: boolean },
 ): string {
   const normalizedPoints = points
     .map((p) => {
@@ -26,7 +26,7 @@ function buildCacheKey(
     .map(([lat, lng]) => normalizeCoordPair(lat, lng))
     .join('|')
 
-  return `${options.width}x${options.height}@${options.zoom}-${options.maxFitZoom}:p=${normalizedPoints}:r=${normalizedRouteLine}`
+  return `${options.width}x${options.height}@${options.zoom}-${options.maxFitZoom}:labels=${options.showLabels}:p=${normalizedPoints}:r=${normalizedRouteLine}`
 }
 
 function escapeHtml(value: string): string {
@@ -330,6 +330,7 @@ export async function generateLeafletRouteSnapshot(
     zoom?: number
     maxFitZoom?: number
     routeLine?: Array<[number, number]>
+    showLabels?: boolean
   } = {},
 ): Promise<string | null> {
   if (typeof document === 'undefined' || typeof window === 'undefined') return null
@@ -339,12 +340,13 @@ export async function generateLeafletRouteSnapshot(
   const height = options.height ?? 480
   const zoom = options.zoom ?? 10
   const maxFitZoom = options.maxFitZoom ?? 15
+  const showLabels = options.showLabels ?? true
   const routeLine = options.routeLine ?? []
 
   // Пробуем захватить уже отрендеренную карту
   const mapSection = document.querySelector('[data-map-for-pdf="1"]') as HTMLElement | null
   const existingLeafletEl = mapSection?.querySelector('.leaflet-container') as HTMLElement | null
-  if (existingLeafletEl && existingLeafletEl.clientWidth > 0 && existingLeafletEl.clientHeight > 0) {
+  if (showLabels && existingLeafletEl && existingLeafletEl.clientWidth > 0 && existingLeafletEl.clientHeight > 0) {
     const domCapture = await generateMapImageFromDOM(
       existingLeafletEl,
       existingLeafletEl.clientWidth,
@@ -354,7 +356,7 @@ export async function generateLeafletRouteSnapshot(
     if (domCapture) return domCapture
   }
 
-  const cacheKey = buildCacheKey(points, routeLine, { width, height, zoom, maxFitZoom })
+  const cacheKey = buildCacheKey(points, routeLine, { width, height, zoom, maxFitZoom, showLabels })
   const cached = leafletRouteSnapshotCache.get(cacheKey)
   if (cached) return cached
 
@@ -423,7 +425,11 @@ export async function generateLeafletRouteSnapshot(
                 .trim()
             : ''
         const firstSegment = labelFull.split(' · ')[0].trim()
-        const label = firstSegment.length > 35 ? firstSegment.slice(0, 33) + '…' : firstSegment
+        const label = showLabels
+          ? firstSegment.length > 35
+            ? firstSegment.slice(0, 33) + '…'
+            : firstSegment
+          : ''
 
         const iconHtml = buildMarkerIconHtml(index, latLngs.length, label)
 

@@ -1,7 +1,7 @@
 import { EnhancedPdfGenerator } from '@/services/pdf-export/generators/EnhancedPdfGenerator'
 import type { TravelForBook } from '@/types/pdf-export'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
-import { generateCanvasMapSnapshot } from '@/utils/mapImageGenerator'
+import { generateCanvasMapSnapshot, generateLeafletRouteSnapshot } from '@/utils/mapImageGenerator'
 import {
   buildMapPlaceholder,
   buildRouteSvg,
@@ -90,6 +90,7 @@ describe('EnhancedPdfGenerator helpers', () => {
   const generator = new EnhancedPdfGenerator('minimal') as any
 
   beforeEach(() => {
+    jest.clearAllMocks()
     generator.currentSettings = baseSettings
   })
 
@@ -126,6 +127,10 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(mapPage).not.toContain('height: 125mm')
     expect(mapPage).toContain('alt="QR точки 1"')
     expect(mapPage).toContain('width: 34px; height: 34px;')
+    expect(generateCanvasMapSnapshot).toHaveBeenCalledWith(
+      [{ lat: 53.9, lng: 27.56, label: 'Минск, Беларусь' }],
+      expect.objectContaining({ showLabels: false }),
+    )
   })
 
   it('falls back to leaflet when canvas snapshot is unavailable', async () => {
@@ -136,6 +141,10 @@ describe('EnhancedPdfGenerator helpers', () => {
 
     expect(mapPage).toContain('leaflet-snapshot')
     expect(mapPage).not.toContain('Недостаточно данных')
+    expect(generateLeafletRouteSnapshot).toHaveBeenCalledWith(
+      [{ lat: 53.9, lng: 27.56, label: 'Минск, Беларусь' }],
+      expect.objectContaining({ showLabels: false }),
+    )
   })
 
   it('renders long separator titles without aggressive word breaking', () => {
@@ -213,8 +222,10 @@ describe('EnhancedPdfGenerator helpers', () => {
     const normalized = normalizeLocations(travelA)
     expect(normalized[0].lat).toBeCloseTo(53.9)
 
-    const svg = buildRouteSvg(normalized, generator.theme)
+    const svg = buildRouteSvg(normalized, generator.theme, { showLabels: false })
     expect(svg).toContain('<svg')
+    expect(svg).toMatch(/>\s*1\s*<\/text>/)
+    expect(svg).not.toContain('Минск')
     expect(buildMapPlaceholder(generator.theme)).toContain('Недостаточно данных')
 
     expect(generator.formatDays(1)).toBe('1 день')

@@ -1,12 +1,9 @@
 import { test, expect } from './fixtures';
-import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
 import { preacceptCookies, tid } from './helpers/navigation';
 
-test.describe('Travel points -> map popup', () => {
-  test('clicking point card opens map popup without navigation', async ({ page }) => {
+test.describe('Travel points -> map marker', () => {
+  test('point card focuses its marker without navigation or an implicit popup', async ({ page }) => {
     await preacceptCookies(page);
-    await mockFakeAuthApis(page);
-    await ensureAuthedStorageFallback(page);
 
     const slug = 'e2e-points-map-popup';
     const image =
@@ -83,68 +80,26 @@ test.describe('Travel points -> map popup', () => {
 
     await page.route('**/api/travels/by-slug/**', routeHandler);
     await page.route('**/travels/by-slug/**', routeHandler);
-    const createdUserPoints: any[] = [];
-    await page.route('**/api/user-points/**', async (route: any) => {
-      const request = route.request();
-      if (request.method() !== 'POST') {
-        await route.continue();
-        return;
-      }
-      const payload = request.postDataJSON?.() ?? {};
-      createdUserPoints.push(payload);
-      await route.fulfill({
-        status: 201,
-        contentType: 'application/json',
-        body: JSON.stringify({ id: 123456, ...payload }),
-      });
-    });
-
     await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector(tid('travel-details-page'), { timeout: 20_000 });
 
     const scrollContainer = page.locator(tid('travel-details-scroll')).first();
-    if (await scrollContainer.isVisible()) {
-      await scrollContainer.evaluate((node: Element) => {
-        const el = node as HTMLElement;
-        el.scrollTop = el.scrollHeight;
-      });
-    } else {
-      await page.evaluate(() => {
-        const el = document.scrollingElement || document.documentElement;
-        if (el) el.scrollTop = el.scrollHeight;
-      });
-    }
+    await expect(scrollContainer).toBeVisible();
+    await scrollContainer.evaluate((node: Element) => {
+      const el = node as HTMLElement;
+      el.scrollTop = el.scrollHeight;
+      el.dispatchEvent(new Event('scroll', { bubbles: true }));
+    });
 
+    await page
+      .getByRole('button', { name: /Перейти к разделу Координаты мест/i })
+      .click();
     const pointsSection = page.locator(tid('travel-details-points')).first();
-    const pointsSectionVisible = await pointsSection
-      .waitFor({ state: 'visible', timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-    if (!pointsSectionVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Travel points section is not rendered for this payload; skipping popup assertions.',
-      });
-      return;
-    }
-
+    await expect(pointsSection).toBeVisible({ timeout: 20_000 });
     await pointsSection.scrollIntoViewIfNeeded();
 
     const pointCards = pointsSection.locator('[data-testid^="travel-point-card-"]');
-    if ((await pointCards.count()) === 0) {
-      const toggleButton = pointsSection.getByRole('button', { name: /координат/i });
-      if (await toggleButton.isVisible()) {
-        await toggleButton.click();
-      }
-    }
-
-    if ((await pointCards.count()) === 0) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'No point cards available after toggling; skipping click assertions.',
-      });
-      return;
-    }
+    await expect(pointCards).toHaveCount(1, { timeout: 20_000 });
 
     const currentUrl = page.url();
     const popupPromise = page.waitForEvent('popup', { timeout: 1500 }).catch(() => null);
@@ -160,76 +115,13 @@ test.describe('Travel points -> map popup', () => {
     await expect(mapSection).toBeVisible();
 
     const leafletContainer = mapSection.locator('.leaflet-container').first();
-    const hasLeafletContainer = await leafletContainer
-      .waitFor({ state: 'visible', timeout: 7_500 })
-      .then(() => true)
-      .catch(() => false);
+    await expect(leafletContainer).toBeVisible({ timeout: 20_000 });
 
-    if (!hasLeafletContainer) {
-      const mapToggle = mapSection.getByRole('button', { name: /карту|подгружаем карту/i }).first();
-      if (await mapToggle.isVisible().catch(() => false)) {
-        await mapToggle.click().catch(() => null);
-      }
-    }
-
-    const mapVisible = await leafletContainer
-      .waitFor({ state: 'visible', timeout: 12_500 })
-      .then(() => true)
-      .catch(() => false);
-    if (!mapVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Leaflet container did not mount in this environment; skipping popup assertions.',
-      });
-      return;
-    }
-
-    // Main assertion: clicking a point card should open a Leaflet popup (no navigation).
+    // Selecting the point card must focus/highlight the marker without opening
+    // its popup. The popup is reserved for an explicit marker click.
     const leafletPopup = mapSection.locator('.leaflet-popup').first();
-    const popupVisible = await leafletPopup
-      .waitFor({ state: 'visible', timeout: 20_000 })
-      .then(() => true)
-      .catch(() => false);
-    if (!popupVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Leaflet popup did not become visible; skipping map-center assertion for this environment',
-      });
-      return;
-    }
-
-    const saveAction = leafletPopup.getByRole('button', { name: 'Сохранить', exact: true }).first();
-    const saveVisible = await saveAction
-      .waitFor({ state: 'visible', timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-    if (!saveVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Leaflet popup save action is not visible in this environment; skipping save assertion.',
-      });
-      return;
-    }
-
-    await saveAction.click();
-
-    await expect
-      .poll(() => createdUserPoints.length, { timeout: 10_000 })
-      .toBe(1);
-    expect(createdUserPoints[0]).toEqual(
-      expect.objectContaining({
-        name: 'Гомель',
-        latitude: 52.4238936,
-        longitude: 31.0131698,
-      }),
-    );
-
-    // Optional: if the app exposes the Leaflet instance, verify it exists (best-effort).
-    await page
-      .waitForFunction(() => {
-        const w = window as any;
-        return Boolean(w.__metravelLeafletMap && typeof w.__metravelLeafletMap.getCenter === 'function');
-      }, { timeout: 2000 })
-      .catch(() => null);
+    await expect(leafletPopup).toHaveCount(0);
+    const highlightedMarker = mapSection.locator('.metravel-travel-highlighted-marker');
+    await expect(highlightedMarker).toHaveCount(1, { timeout: 10_000 });
   });
 });

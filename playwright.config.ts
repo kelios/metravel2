@@ -116,7 +116,6 @@ export default defineConfig({
           EXPO_PUBLIC_E2E: 'true',
           EXPO_PUBLIC_IS_LOCAL_API: 'false',
           EXPO_PUBLIC_API_URL: E2E_API_URL,
-          EXPO_PUBLIC_IS_LOCAL_API: 'false',
           NODE_OPTIONS: process.env.NODE_OPTIONS || '--max-old-space-size=8192',
         },
       },

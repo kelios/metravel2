@@ -58,8 +58,10 @@ function pickDefaultCountryIds(countries: unknown): number[] {
 
   for (const entry of countries) {
     const country = entry as Record<string, unknown>;
-    const name = String(country?.name || country?.title || '').toLowerCase();
-    const id = toCountryId(country?.id ?? country?.pk);
+    const name = String(
+      country?.title_ru ?? country?.name ?? country?.title ?? '',
+    ).toLowerCase();
+    const id = toCountryId(country?.country_id ?? country?.id ?? country?.pk);
     if (id == null) continue;
     if (belarusId == null && (name.includes('беларус') || name.includes('belarus'))) {
       belarusId = id;
@@ -84,19 +86,21 @@ export function useRoulette() {
 
   const { data: allCountries } = useQuery({
     queryKey: queryKeys.allCountries(),
-    queryFn: ({ signal }) => fetchAllCountries({ signal }),
+    queryFn: ({ signal }) => fetchAllCountries({ signal, throwOnError: true }),
     ...queryConfigs.static,
   });
 
   const options: FilterOptions | undefined = useMemo(() => {
     if (!rawOptions) return undefined;
-    const transformed = { countries: rawOptions.countries || [] } as FilterOptions;
+    const transformed: FilterOptions = { countries: rawOptions.countries };
 
     STRING_ARRAY_FIELDS.forEach((field) => {
       const value = (rawOptions as Record<string, unknown>)[field];
       if (!Array.isArray(value)) return;
-      (transformed as Record<string, unknown>)[field] = value.map((item: unknown) => {
-        if (item && typeof item === 'object' && 'id' in item && 'name' in item) return item;
+      transformed[field] = value.map((item: unknown) => {
+        if (item && typeof item === 'object' && 'id' in item && 'name' in item) {
+          return { id: String(item.id), name: String(item.name) };
+        }
         return { id: String(item), name: String(item) };
       });
     });

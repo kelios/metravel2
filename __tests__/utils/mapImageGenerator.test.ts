@@ -182,6 +182,29 @@ describe('generateLeafletRouteSnapshot', () => {
     expect(mockFitBounds).toHaveBeenCalled()
   })
 
+  it('renders numbered markers without text callouts when labels are disabled', async () => {
+    jest.useFakeTimers()
+    ;(window as any).L = mockLeaflet
+    ;(window as any).html2canvas = jest.fn(() =>
+      Promise.resolve({
+        toDataURL: () => 'data:image/png;base64,number-only',
+      })
+    )
+
+    const divIconCallIndex = mockLeaflet.divIcon.mock.calls.length
+    const promise = generateLeafletRouteSnapshot(
+      [{ lat: 10, lng: 20, label: 'This label must not be rendered' }],
+      { width: 323, height: 183, zoom: 9, showLabels: false },
+    )
+
+    await jest.advanceTimersByTimeAsync(7000)
+    expect(await promise).toBe('data:image/png;base64,number-only')
+
+    const iconHtml = mockLeaflet.divIcon.mock.calls[divIconCallIndex]?.[0]?.html
+    expect(iconHtml).toContain('>1</div>')
+    expect(iconHtml).not.toContain('This label must not be rendered')
+  })
+
   it('does not reuse cache when routeLine changes for same points', async () => {
     jest.useFakeTimers()
     ;(window as any).L = mockLeaflet

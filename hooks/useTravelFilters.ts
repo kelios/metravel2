@@ -284,7 +284,7 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
 
       const [filtersData, countryData] = await Promise.all([
         fetchFiltersOptimized(),
-        fetchAllCountries(),
+        fetchAllCountries({ throwOnError: true }),
       ]);
 
       if (!mountedRef.current) return;
@@ -298,9 +298,7 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
       const normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(
         filtersData?.categoryTravelAddress || []
       );
-      const normalizedCountries = normalizeCountries(
-        filtersData?.countries?.length ? filtersData.countries : countryData || []
-      );
+      const normalizedCountries = normalizeCountries(countryData);
 
       setFilters({
         categories: normalizedCategories,
@@ -355,7 +353,7 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
   const refetchCountries = useCallback(async () => {
     try {
       beginLoading();
-      const countryData = await fetchAllCountries();
+      const countryData = await fetchAllCountries({ throwOnError: true });
 
       if (!mountedRef.current) return;
 

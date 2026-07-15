@@ -156,7 +156,12 @@ function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
     }, [usesOverlaySidebar, showFilters, hasInitialFilter]);
 
     /* Filters options - оптимизированный запрос с кэшированием */
-    const { data: rawOptions, isLoading: filterOptionsLoading } = useQuery({
+    const {
+      data: rawOptions,
+      isLoading: filterOptionsLoading,
+      isError: hasFilterOptionsQueryError,
+      refetch: refetchFilterOptions,
+    } = useQuery({
         queryKey: queryKeys.filterOptions(),
         queryFn: ({ signal }) => fetchAllFiltersOptimized({ signal }),
         enabled: shouldFetchFilterOptions,
@@ -164,6 +169,7 @@ function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
     });
 
     const options = useMemo(() => normalizeFilterOptions(rawOptions), [rawOptions]);
+    const hasFilterOptionsError = hasFilterOptionsQueryError && !rawOptions;
 
     const {
         filter,
@@ -738,6 +744,8 @@ function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
         resetFilters,
         isVisible: !usesOverlaySidebar || showFilters,
         isLoading: filterOptionsLoading,
+        isError: hasFilterOptionsError,
+        onRetry: () => { void refetchFilterOptions(); },
         onClose: usesOverlaySidebar ? handleCloseFilters : undefined,
         containerStyle: sidebarContainerStyle,
       }}

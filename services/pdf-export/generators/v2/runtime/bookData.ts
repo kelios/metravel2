@@ -204,8 +204,9 @@ export function parseCoordinates(coord?: string | null): { lat: number; lng: num
 export function buildRouteSvg(
   locations: NormalizedLocation[],
   theme: Pick<PdfThemeConfig, 'colors'>,
-  options: { routeLineCoords?: Array<[number, number]> } = {}
+  options: { routeLineCoords?: Array<[number, number]>; showLabels?: boolean } = {}
 ): string {
+  const showLabels = options.showLabels ?? true;
   const points = locations
     .map((location) => {
       if (typeof location.lat !== 'number' || typeof location.lng !== 'number') return null;
@@ -316,7 +317,7 @@ export function buildRouteSvg(
           ${point.index + 1}
         </text>
         ${
-          point.label
+          showLabels && point.label
             ? `
         <g transform="translate(${Math.min(77, point.x + 3.4).toFixed(2)} ${Math.max(4.8, point.y - 2.2).toFixed(2)})">
           <rect

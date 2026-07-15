@@ -38,7 +38,6 @@ describe('run-e2e-changed', () => {
       'e2e/messages.spec.ts',
       'e2e/seo-travel-detail.spec.ts',
       'e2e/travel-detail-page.spec.ts',
-      'e2e/travels.spec.ts',
     ])
   })
 

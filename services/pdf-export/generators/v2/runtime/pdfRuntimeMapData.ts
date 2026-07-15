@@ -10,7 +10,7 @@ type BuildPdfMapRuntimeDataParams = {
   locations: NormalizedLocation[]
   buildRouteSvg: (
     locations: NormalizedLocation[],
-    options?: { routeLineCoords?: RouteLineCoord[] }
+    options?: { routeLineCoords?: RouteLineCoord[]; showLabels?: boolean }
   ) => string
   calculateRouteDistanceFromPreview: (preview: ParsedRoutePreview) => number
   generateLocationQRCodes: (locations: NormalizedLocation[]) => Promise<string[]>
@@ -18,7 +18,7 @@ type BuildPdfMapRuntimeDataParams = {
   getLeafletRouteSnapshot: () => Promise<
     (
       points: Array<{ lat: number; lng: number; label?: string }>,
-      options: { width: number; height: number; routeLine?: RouteLineCoord[] }
+      options: { width: number; height: number; routeLine?: RouteLineCoord[]; showLabels?: boolean }
     ) => Promise<string | null>
   >
 }
@@ -93,7 +93,7 @@ export async function buildPdfMapRuntimeData({
     // Ignore route-file loading errors and fall back to point-only rendering.
   }
 
-  const mapSvg = buildRouteSvg(locations, { routeLineCoords })
+  const mapSvg = buildRouteSvg(locations, { routeLineCoords, showLabels: false })
   const hasRouteLineForMap = routeLineCoords.length >= 2
   const mapPoints = pointsWithCoords.map((location) => ({
     lat: location.lat as number,
@@ -111,6 +111,7 @@ export async function buildPdfMapRuntimeData({
         width: 1600,
         height: 1040,
         routeLine: mapRouteOpts,
+        showLabels: false,
       })
     } catch {
       snapshotDataUrl = null
@@ -124,6 +125,7 @@ export async function buildPdfMapRuntimeData({
         width: 1600,
         height: 1040,
         routeLine: mapRouteOpts,
+        showLabels: false,
       })
     } catch {
       snapshotDataUrl = null

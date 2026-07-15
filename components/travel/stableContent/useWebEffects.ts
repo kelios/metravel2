@@ -43,28 +43,6 @@ const swapWeservImageToOrigin = (img: HTMLImageElement) => {
   img.dataset.weservFallback = '1'
   img.removeAttribute('srcset')
   img.setAttribute('src', origin)
-  const frame = img.closest('.rich-image-frame') as HTMLElement | null
-  frame?.style.setProperty('--travel-rich-image', `url('${escapeCssUrl(origin)}')`)
-}
-
-// Promote a network-gated body image to its real source and restore the blur
-// backdrop var on its frame (htmlTransform withheld it so the CSS ::before did
-// not fetch the full image eagerly).
-const revealLazyImage = (img: HTMLImageElement) => {
-  if (!img.classList.contains('rich-lazy-img')) return
-  const realSrc = img.getAttribute('data-lazy-src')
-  const realSrcset = img.getAttribute('data-lazy-srcset')
-  if (realSrcset) {
-    img.setAttribute('srcset', realSrcset)
-    img.removeAttribute('data-lazy-srcset')
-  }
-  if (realSrc) {
-    img.setAttribute('src', realSrc)
-    img.removeAttribute('data-lazy-src')
-    const frame = img.closest('.rich-image-frame') as HTMLElement | null
-    frame?.style.setProperty('--travel-rich-image', `url('${escapeCssUrl(realSrc)}')`)
-  }
-  img.classList.remove('rich-lazy-img')
 }
 
 type UseStableContentWebEffectsInput = {
@@ -149,132 +127,87 @@ export function useStableContentWebEffects({
     }
   }, [prepared, rootRef])
 
-  // Network gate for body-article images (htmlTransform tags deep ones .rich-lazy-img
-  // with the real url parked in data-lazy-src). Native loading="lazy" widens its
-  // fetch-ahead window on slow links and fires ~20 body images at once, starving the
-  // same-origin hero-swipe request. We swap src in only when the image nears the
-  // viewport (tight rootMargin) and cap concurrent in-flight loads.
+  // Arm the decorative blur backdrop only after the foreground image has loaded.
+  // Keeping the URL out of markup preserves native loading="lazy": a CSS background
+  // would otherwise start a second eager request for every photo in the description.
   useEffect(() => {
     if (Platform.OS !== 'web') return
-    if (typeof window === 'undefined' || typeof document === 'undefined') return
-    if (!('IntersectionObserver' in window)) {
-      rootRef.current
-        ?.querySelectorAll<HTMLImageElement>('img.rich-lazy-img')
-        .forEach((img) => revealLazyImage(img))
-      return
-    }
-
-    const MARGIN = 400
-    const MAX_INFLIGHT = 3
-    let inflight = 0
-    const queue: HTMLImageElement[] = []
-    let io: IntersectionObserver | null = null
-
-    const startLoad = (img: HTMLImageElement) => {
-      inflight += 1
-      let finished = false
-      let timer: ReturnType<typeof setTimeout> | undefined
-      const finish = () => {
-        if (finished) return
-        finished = true
-        if (timer !== undefined) clearTimeout(timer)
-        img.removeEventListener('load', onLoad)
-        img.removeEventListener('error', onError)
-        inflight = Math.max(0, inflight - 1)
-        pump()
+    const images = Array.from(rootRef.current?.querySelectorAll<HTMLImageElement>('img') ?? [])
+    const cleanups = images.map((img) => {
+      const applyBackdrop = () => {
+        const src = img.currentSrc || img.getAttribute('src') || ''
+        if (!src || src.startsWith('data:')) return
+        const frame = img.closest('.rich-image-frame') as HTMLElement | null
+        frame?.style.setProperty('--travel-rich-image', `url('${escapeCssUrl(src)}')`)
       }
-      const onLoad = () => finish()
-      const onError = () => {
-        swapWeservImageToOrigin(img)
-        finish()
-      }
-      img.addEventListener('load', onLoad, { once: true })
-      img.addEventListener('error', onError, { once: true })
-      revealLazyImage(img)
-      // A hung weserv request fires neither load nor error — it would pin this slot forever
-      // and stall the queue (MAX_INFLIGHT), so images further down never load. After a bounded
-      // wait, fall back to the reliable origin and free the slot (only stalled images pay this).
-      if (isWeservImage(img)) {
-        timer = setTimeout(() => {
-          if (finished) return
-          if (imageLoadedOk(img)) {
-            finish()
-            return
-          }
-          swapWeservImageToOrigin(img)
-          finish()
-        }, WESERV_FALLBACK_TIMEOUT_MS)
-      }
-    }
-
-    const pump = () => {
-      while (inflight < MAX_INFLIGHT && queue.length > 0) {
-        const next = queue.shift()
-        if (next && next.isConnected && next.classList.contains('rich-lazy-img')) {
-          startLoad(next)
-        }
-      }
-    }
-
-    const enqueue = (img: HTMLImageElement) => {
-      if (!img.classList.contains('rich-lazy-img')) return
-      if (queue.includes(img)) return
-      queue.push(img)
-      pump()
-    }
-
-    io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return
-          const img = entry.target as HTMLImageElement
-          io?.unobserve(img)
-          enqueue(img)
-        })
-      },
-      { rootMargin: `${MARGIN}px 0px` }
-    )
-
-    const observed = Array.from(
-      rootRef.current?.querySelectorAll<HTMLImageElement>('img.rich-lazy-img') ?? []
-    )
-    observed.forEach((img) => io?.observe(img))
-
-    return () => {
-      io?.disconnect()
-      io = null
-      queue.length = 0
-      inflight = 0
-    }
-  }, [prepared, rootRef])
-
-  // Eager (above-the-fold, non-gated) body images carry a real weserv src for LCP/SSG, so
-  // they bypass the IO gate's timeout+fallback above. Guard them separately: if a weserv
-  // eager image errors or stalls, swap it to its reliable origin so the top of the article
-  // (the frames the user sees first) never stays broken.
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    if (typeof document === 'undefined') return
-    const eager = Array.from(
-      rootRef.current?.querySelectorAll<HTMLImageElement>('img:not(.rich-lazy-img)') ?? []
-    ).filter((img) => isWeservImage(img) && !imageLoadedOk(img))
-    if (!eager.length) return
-
-    const timers: Array<ReturnType<typeof setTimeout>> = []
-    const cleanups: Array<() => void> = []
-    eager.forEach((img) => {
-      const onError = () => swapWeservImageToOrigin(img)
-      img.addEventListener('error', onError, { once: true })
-      const timer = setTimeout(() => {
-        if (!imageLoadedOk(img)) swapWeservImageToOrigin(img)
-      }, WESERV_FALLBACK_TIMEOUT_MS)
-      timers.push(timer)
-      cleanups.push(() => img.removeEventListener('error', onError))
+      img.addEventListener('load', applyBackdrop)
+      if (imageLoadedOk(img)) applyBackdrop()
+      return () => img.removeEventListener('load', applyBackdrop)
     })
 
     return () => {
-      timers.forEach((t) => clearTimeout(t))
-      cleanups.forEach((fn) => fn())
+      cleanups.forEach((cleanup) => cleanup())
+    }
+  }, [prepared, rootRef])
+
+  // Keep the reliable-origin fallback for legacy S3 photos, but arm its timeout only
+  // near the viewport. Starting 3.5s timers for all native-lazy images would otherwise
+  // replace every optimized URL with a heavy origin image before the browser needs it.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (typeof window === 'undefined') return
+    const candidates = Array.from(rootRef.current?.querySelectorAll<HTMLImageElement>('img') ?? [])
+      .filter((img) => isWeservImage(img) && !imageLoadedOk(img))
+    if (!candidates.length) return
+
+    const timers = new Map<HTMLImageElement, ReturnType<typeof setTimeout>>()
+    const clearTimer = (img: HTMLImageElement) => {
+      const timer = timers.get(img)
+      if (timer !== undefined) clearTimeout(timer)
+      timers.delete(img)
+    }
+    const armTimeout = (img: HTMLImageElement) => {
+      if (timers.has(img) || imageLoadedOk(img)) return
+      timers.set(img, setTimeout(() => {
+        timers.delete(img)
+        if (!imageLoadedOk(img)) swapWeservImageToOrigin(img)
+      }, WESERV_FALLBACK_TIMEOUT_MS))
+    }
+    const listeners = candidates.map((img) => {
+      const onLoad = () => clearTimer(img)
+      const onError = () => {
+        clearTimer(img)
+        swapWeservImageToOrigin(img)
+      }
+      img.addEventListener('load', onLoad)
+      img.addEventListener('error', onError, { once: true })
+      return () => {
+        img.removeEventListener('load', onLoad)
+        img.removeEventListener('error', onError)
+      }
+    })
+
+    let observer: IntersectionObserver | null = null
+    if ('IntersectionObserver' in window) {
+      const scrollRoot = rootRef.current?.closest('[data-testid="travel-details-scroll"]') ?? null
+      observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return
+          const img = entry.target as HTMLImageElement
+          observer?.unobserve(img)
+          armTimeout(img)
+        })
+      }, { root: scrollRoot, rootMargin: '1200px 0px' })
+      candidates.forEach((img) => observer?.observe(img))
+    } else {
+      candidates.forEach(armTimeout)
+    }
+
+    return () => {
+      observer?.disconnect()
+      timers.forEach((timer) => clearTimeout(timer))
+      timers.clear()
+      listeners.forEach((cleanup) => cleanup())
     }
   }, [prepared, rootRef])
 
@@ -351,13 +284,7 @@ export function useStableContentWebEffects({
       ))
       const galleryImages = articleImages
         .map((candidate, index) => {
-          const rawSrc = candidate.currentSrc || candidate.getAttribute('src') || ''
-          // Prefer the deferred source whenever currentSrc is the transparent loading
-          // pixel. This is especially important on iOS Safari, where opening a group
-          // of not-yet-visible photos used to produce an apparently empty gallery.
-          const resolvedSrc = rawSrc.startsWith('data:')
-            ? candidate.getAttribute('data-lazy-src') || rawSrc
-            : rawSrc
+          const resolvedSrc = candidate.currentSrc || candidate.getAttribute('src') || ''
           // The fullscreen view is explicitly user-requested, so prefer the
           // reliable original over the resize proxy. A cold/failed weserv
           // request otherwise leaves the iOS overlay looking completely empty.

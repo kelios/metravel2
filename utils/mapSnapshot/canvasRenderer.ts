@@ -33,6 +33,7 @@ export async function generateCanvasMapSnapshot(
     routeLine?: Array<[number, number]>
     maxZoom?: number
     fitPaddingFactor?: number
+    showLabels?: boolean
   } = {},
 ): Promise<string | null> {
   if (typeof document === 'undefined' || typeof window === 'undefined') return null
@@ -41,6 +42,7 @@ export async function generateCanvasMapSnapshot(
   const height = options.height ?? 480
   const maxZoom = options.maxZoom ?? 15
   const fitPaddingFactor = options.fitPaddingFactor ?? 1.3
+  const showLabels = options.showLabels ?? true
   const routeLine = filterValidRouteLine(options.routeLine ?? [])
   const validPoints = filterValidCoords(points)
 
@@ -188,7 +190,7 @@ export async function generateCanvasMapSnapshot(
     const rawLabel = typeof point.label === 'string' ? point.label : ''
     const firstSegment = rawLabel.split(' · ')[0].trim()
     const label = firstSegment.length > 34 ? firstSegment.slice(0, 32) + '…' : firstSegment
-    if (label) {
+    if (showLabels && label) {
       ctx.font = '600 12px -apple-system, BlinkMacSystemFont, sans-serif'
       const labelW = Math.min(220, ctx.measureText(label).width + 16)
       const labelH = 24

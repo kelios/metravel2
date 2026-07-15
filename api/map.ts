@@ -1,4 +1,4 @@
-import { Filters, TravelsForMap, TravelsMap } from '@/types/types';
+import { TravelsForMap, TravelsMap } from '@/types/types';
 import { normalizeNumericArray } from '@/utils/filterQuery';
 import { devError, devWarn } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
@@ -721,42 +721,33 @@ export const fetchTravelsNearRoute = async (
   }
 };
 
-export const fetchFiltersMap = async (options?: ApiOptions): Promise<Filters> => {
+type MapFiltersResponse = {
+  categories: unknown[];
+  categoryTravelAddress: unknown[];
+};
+
+export const fetchFiltersMap = async (options?: ApiOptions): Promise<MapFiltersResponse> => {
   try {
     const res = await fetchWithTimeout(GET_FILTER_FOR_MAP, { signal: options?.signal }, DEFAULT_TIMEOUT);
     // Возвращаем пустой объект фильтров вместо неправильного типа assertion
-    const emptyFilters: Filters = {
-      countries: [],
+    const emptyFilters: MapFiltersResponse = {
       categories: [],
       categoryTravelAddress: [],
-      companions: [],
-      complexity: [],
-      month: [],
-      over_nights_stay: [],
-      transports: [],
-      year: ''
     };
     if (!res.ok) {
       const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
       if (options?.throwOnError) throw err;
       return emptyFilters;
     }
-    return await safeJsonParse<Filters>(res, emptyFilters);
+    return await safeJsonParse<MapFiltersResponse>(res, emptyFilters);
   } catch (e: unknown) {
     if (e instanceof Error && e.name === 'AbortError') {
       throw e;
     }
     devWarn('Error fetching filters:', e);
-    const emptyFilters: Filters = {
-      countries: [],
+    const emptyFilters: MapFiltersResponse = {
       categories: [],
       categoryTravelAddress: [],
-      companions: [],
-      complexity: [],
-      month: [],
-      over_nights_stay: [],
-      transports: [],
-      year: ''
     };
     if (options?.throwOnError) throw e;
     return emptyFilters;

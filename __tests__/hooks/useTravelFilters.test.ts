@@ -110,9 +110,10 @@ describe('useTravelFilters', () => {
     mockFetchFilters.mockResolvedValue({
       categories: [{ id: 1, name: 'Горы' }],
       transports: [{ id: 1, name: 'Авто' }],
-      countries: [{ country_id: 112, title_ru: 'Беларусь', code: 'by' }],
     });
-    mockFetchAllCountries.mockResolvedValue([]);
+    mockFetchAllCountries.mockResolvedValue([
+      { country_id: 112, title_ru: 'Беларусь' },
+    ]);
 
     const { result } = renderHook(() => useTravelFilters());
 
@@ -125,23 +126,28 @@ describe('useTravelFilters', () => {
     expect(result.current.filters.countries[0]).toMatchObject({
       country_id: '112',
       title_ru: 'Беларусь',
-      country_code: 'BY',
     });
+    expect(mockFetchAllCountries).toHaveBeenCalledTimes(1);
   });
 
-  it('falls back to fetchAllCountries when filters payload has no countries', async () => {
-    mockFetchFilters.mockResolvedValue({ categories: [] });
-    mockFetchAllCountries.mockResolvedValue([{ id: 1, name: 'Грузия', iso2: 'ge' }]);
+  it('uses the dedicated countries endpoint instead of legacy inline countries', async () => {
+    mockFetchFilters.mockResolvedValue({
+      categories: [],
+      countries: [{ country_id: 1, title_ru: 'Устаревшая страна' }],
+    });
+    mockFetchAllCountries.mockResolvedValue([
+      { country_id: 2, title_ru: 'Грузия' },
+    ]);
 
     const { result } = renderHook(() => useTravelFilters());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.filters.countries[0]).toMatchObject({
-      country_id: '1',
+      country_id: '2',
       title_ru: 'Грузия',
-      country_code: 'GE',
     });
+    expect(result.current.filters.countries).toHaveLength(1);
   });
 
   it('captures error and keeps default filters when API fails', async () => {

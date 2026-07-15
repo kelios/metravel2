@@ -747,6 +747,53 @@ test.describe('@perf Travel Details — Performance Budget (prod build, mobile)'
     ).toBeLessThanOrEqual(CLS_MAX);
   });
 
+  test('Description photos keep real native-lazy sources during fast scrolling', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await preacceptCookies(page);
+
+    await page.goto(travelUrl(TRAVEL_SLUG), {
+      waitUntil: 'load',
+      timeout: 60_000,
+    });
+
+    const richImages = page.locator('.travel-rich-text img');
+    await page.locator('.travel-rich-text').first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null);
+    const count = await richImages.count();
+    if (count < 3) {
+      test.info().annotations.push({
+        type: 'note',
+        description: `Only ${count} rich-text images rendered (upstream content unavailable); skipping the deep-image scroll assertion.`,
+      });
+      return;
+    }
+
+    const assertNativeLazySources = async () => {
+      const states = await richImages.evaluateAll((images) => images.map((image) => ({
+        src: image.getAttribute('src') || '',
+        loading: image.getAttribute('loading'),
+        hasDeferredSource: image.hasAttribute('data-lazy-src') || image.hasAttribute('data-lazy-srcset'),
+      })));
+      expect(states.every((state) => state.src.length > 0 && !state.src.startsWith('data:'))).toBe(true);
+      expect(states.every((state) => state.loading === 'lazy')).toBe(true);
+      expect(states.every((state) => !state.hasDeferredSource)).toBe(true);
+    };
+
+    await assertNativeLazySources();
+
+    const scrollRoot = page.locator('[data-testid="travel-details-scroll"]').first();
+    await scrollRoot.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+      element.dispatchEvent(new Event('scroll', { bubbles: true }));
+    });
+    await page.waitForTimeout(100);
+    await scrollRoot.evaluate((element) => {
+      element.scrollTop = 0;
+      element.dispatchEvent(new Event('scroll', { bubbles: true }));
+    });
+
+    await assertNativeLazySources();
+  });
+
   test('Hero image preload works on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await preacceptCookies(page);

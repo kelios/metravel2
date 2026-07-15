@@ -13,7 +13,7 @@ import { prepareStableContentHtml } from '@/components/travel/stableContent/html
 const buildImg = (n: number) =>
   `<p><img src="https://metravel.by/gallery/540/gallery/pic${n}.JPG" /></p>`
 
-describe('normalizeImgTags network gate for deep body images (web)', () => {
+describe('normalizeImgTags native lazy loading for body images', () => {
   const setPlatformOs = (os: string) => {
     Object.defineProperty(Platform, 'OS', { value: os, configurable: true })
   }
@@ -22,33 +22,35 @@ describe('normalizeImgTags network gate for deep body images (web)', () => {
   beforeEach(() => setPlatformOs('web'))
   afterEach(() => setPlatformOs(originalOs))
 
-  it('keeps the first two images eager (real src) and gates the rest on web', () => {
+  it('keeps real responsive sources on every web image', () => {
     const html = Array.from({ length: 5 }, (_, i) => buildImg(i)).join('')
     const out = prepareStableContentHtml(html)
 
-    expect(out).toContain('src="https://metravel.by/gallery/540/gallery/pic0.JPG?w=720')
-    expect(out).toContain('src="https://metravel.by/gallery/540/gallery/pic1.JPG?w=720')
-
-    expect(out).toContain('data-lazy-src="https://metravel.by/gallery/540/gallery/pic2.JPG?w=720')
-    expect(out).toContain('rich-lazy-img')
-    expect(out).toContain('data:image/gif;base64')
-
-    const lazyCount = (out.match(/data-lazy-src="/g) || []).length
-    expect(lazyCount).toBe(3)
+    for (let i = 0; i < 5; i += 1) {
+      expect(out).toContain(
+        `src="https://metravel.by/gallery/540/gallery/pic${i}.JPG?w=720`,
+      )
+    }
+    expect(out).toContain('pic4.JPG?w=320&amp;q=72&amp;fit=contain 320w')
+    expect(out).not.toContain('data-lazy-src')
+    expect(out).not.toContain('rich-lazy-img')
+    expect(out).not.toContain('data:image/gif;base64')
+    expect(out.match(/loading="lazy"/g) || []).toHaveLength(5)
   })
 
-  it('does not eagerly reference the gated image url in the blur backdrop var', () => {
+  it('does not eagerly reference image URLs in blur backdrop CSS', () => {
     const html = Array.from({ length: 3 }, (_, i) => buildImg(i)).join('')
     const out = prepareStableContentHtml(html)
-    expect(out).not.toContain("--travel-rich-image:url('https://metravel.by/gallery/540/gallery/pic2.JPG")
-    expect(out).toContain('data-lazy-src="https://metravel.by/gallery/540/gallery/pic2.JPG?w=720')
+    expect(out).not.toContain('--travel-rich-image:url')
+    expect(out).toContain('--travel-rich-image-aspect:800/450')
   })
 
-  it('does not gate on native (react-native-render-html cannot swap data-lazy-src)', () => {
+  it('keeps the same real-source contract on native', () => {
     setPlatformOs('ios')
     const html = Array.from({ length: 5 }, (_, i) => buildImg(i)).join('')
     const out = prepareStableContentHtml(html)
     expect(out).not.toContain('data-lazy-src')
     expect(out).not.toContain('rich-lazy-img')
+    expect(out).toContain('pic4.JPG?w=720')
   })
 })

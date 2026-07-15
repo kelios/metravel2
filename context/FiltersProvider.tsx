@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
-import type { Filters, FiltersContextType } from '@/types/types';
+import type { FilterSelectionState, FiltersContextType } from '@/types/types';
 
 const FiltersContext = createContext<FiltersContextType | undefined>(undefined);
 
@@ -17,7 +17,7 @@ interface FiltersProviderProps {
 
 export function FiltersProvider({ children }: FiltersProviderProps) {
     // Хук useState вызываем на верхнем уровне компонента
-    const [filters, setFilters] = useState<Filters>({
+    const [filters, setFilters] = useState<FilterSelectionState>({
         countries: [],
         categories: [],
         categoryTravelAddress: [],
@@ -29,7 +29,7 @@ export function FiltersProvider({ children }: FiltersProviderProps) {
         year: ''
     });
 
-    const updateFilters = useCallback((newFilters: Partial<Filters>) => {
+    const updateFilters = useCallback((newFilters: Partial<FilterSelectionState>) => {
         setFilters((prevFilters) => ({
             ...prevFilters,
             ...newFilters,

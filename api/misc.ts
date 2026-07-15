@@ -1,4 +1,4 @@
-import { Filters, TravelFormData } from '@/types/types';
+import type { FilterCountryOption, FilterDictionaries, TravelFormData } from '@/types/types';
 import { devError } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { sanitizeInput } from '@/utils/security';
@@ -14,6 +14,7 @@ import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import { validateReadyForModeration } from '@/utils/travelWizardValidation';
 import { hasUsableAuthCredential, shouldUseStoredAuthToken } from '@/utils/authPlatform';
 import { translate as i18nT } from '@/i18n';
+import { normalizeFilterCountries, normalizeFilterDictionaries } from '@/api/filterDictionaries';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
@@ -42,8 +43,7 @@ const SEND_FEEDBACK = `${URLAPI}/feedback/`;
 const SUBSCRIBE_EMAIL = `${URLAPI}/subscribe/`;
 const SEND_AI_QUESTION = `${URLAPI}/chat`;
 
-const EMPTY_FILTERS: Filters = {
-  countries: [],
+const EMPTY_FILTER_DICTIONARIES: FilterDictionaries = {
   categories: [],
   categoryTravelAddress: [],
   companions: [],
@@ -52,7 +52,6 @@ const EMPTY_FILTERS: Filters = {
   over_nights_stay: [],
   sortings: [],
   transports: [],
-  year: '',
 };
 
 const isAbortError = (error: unknown): boolean => error instanceof Error && error.name === 'AbortError';
@@ -469,29 +468,31 @@ export const createPointCategory = async (
   return { id, name: typeof result?.name === 'string' && result.name.trim() ? result.name : name };
 };
 
-export const fetchFilters = async (options?: { signal?: AbortSignal; throwOnError?: boolean }): Promise<Filters> => {
+export const fetchFilters = async (
+  options?: { signal?: AbortSignal; throwOnError?: boolean },
+): Promise<FilterDictionaries> => {
   try {
     const res = await fetchWithTimeout(GET_FILTERS, { signal: options?.signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
       const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
       if (options?.throwOnError) throw err;
-      return EMPTY_FILTERS;
+      return EMPTY_FILTER_DICTIONARIES;
     }
-    const parsed = await safeJsonParse<Filters>(res, EMPTY_FILTERS);
-    return parsed;
+    const parsed = await safeJsonParse<unknown>(res);
+    return normalizeFilterDictionaries(parsed);
   } catch (e: unknown) {
     devError('Error fetching filters:', e);
     if (isAbortError(e)) {
       throw e;
     }
     if (options?.throwOnError) throw e;
-    return EMPTY_FILTERS;
+    return EMPTY_FILTER_DICTIONARIES;
   }
 };
 
 export const fetchFiltersCountry = async (
   options?: { signal?: AbortSignal; throwOnError?: boolean }
-): Promise<unknown[]> => {
+): Promise<FilterCountryOption[]> => {
   try {
     const res = await fetchWithTimeout(GET_FILTERS_COUNTRY, { signal: options?.signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
@@ -499,7 +500,8 @@ export const fetchFiltersCountry = async (
       if (options?.throwOnError) throw err;
       return [];
     }
-    return await safeJsonParse<unknown[]>(res, []);
+    const parsed = await safeJsonParse<unknown>(res);
+    return normalizeFilterCountries(parsed);
   } catch (e: unknown) {
     devError('Error fetching filters country:', e);
     if (isAbortError(e)) {
@@ -512,7 +514,7 @@ export const fetchFiltersCountry = async (
 
 export const fetchAllCountries = async (
   options?: { signal?: AbortSignal; throwOnError?: boolean }
-): Promise<unknown[]> => {
+): Promise<FilterCountryOption[]> => {
   try {
     const res = await fetchWithTimeout(GET_ALL_COUNTRY, { signal: options?.signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
@@ -520,8 +522,8 @@ export const fetchAllCountries = async (
       if (options?.throwOnError) throw err;
       return [];
     }
-    const parsed = await safeJsonParse<unknown[]>(res, []);
-    return parsed;
+    const parsed = await safeJsonParse<unknown>(res);
+    return normalizeFilterCountries(parsed);
   } catch (e: unknown) {
     devError('Error fetching all countries:', e);
     if (isAbortError(e)) {

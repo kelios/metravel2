@@ -113,6 +113,7 @@ const DockButton = memo(function DockButton({
       accessibilityRole="tab"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected: isActive }}
+      aria-selected={Platform.OS === 'web' ? isActive : undefined}
       hitSlop={10}
       testID={testID}
       android_ripple={{ color: 'rgba(0,0,0,0.12)', borderless: false }}

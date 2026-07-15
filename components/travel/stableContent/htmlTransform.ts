@@ -136,39 +136,6 @@ const RESPONSIVE_WIDTHS = [320, 480, 640, 720]
 const RESPONSIVE_SIZES = '(max-width: 768px) 100vw, 720px'
 const RESPONSIVE_QUALITY = 72
 
-// Body-article images beyond this lead count are network-gated on web: native
-// loading="lazy" widens its fetch-ahead distance on slow connections (Chrome
-// preloads farther when the link is slow), so ~20 body images all start at once
-// and starve the same-origin hero-swipe request under a narrow mobile pipe. We
-// hold their real src in data-lazy-* and let useWebEffects swap it in via an IO
-// with a tight rootMargin + a concurrency cap. The first EAGER_LEAD keep a real
-// src for LCP/above-the-fold and SSG crawlers.
-const EAGER_LEAD_IMAGE_COUNT = 2
-// 1×1 transparent GIF: reserves nothing itself; the box height comes from the
-// width/height attrs + inline aspect-ratio, so gating adds no layout shift.
-const LAZY_IMAGE_PLACEHOLDER =
-  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
-
-const addTokenToImgClass = (tag: string, className: string): string => {
-  if (/\bclass="/i.test(tag)) {
-    return tag.replace(/\bclass="([^"]*)"/i, (_m, current: string) => `class="${`${current} ${className}`.trim()}"`)
-  }
-  return tag.replace(/<img\b/i, `<img class="${className}"`)
-}
-
-// Defer the real download: move src -> data-lazy-src (and srcset -> data-lazy-srcset),
-// paint the transparent placeholder, tag with .rich-lazy-img for the IO gate.
-const deferBodyImageDownload = (tag: string): string => {
-  const src = tag.match(/\bsrc="([^"]*)"/i)?.[1] ?? ''
-  if (!src || src.startsWith('data:')) return tag
-  let next = tag.replace(
-    /\bsrc="[^"]*"/i,
-    `src="${LAZY_IMAGE_PLACEHOLDER}" data-lazy-src="${src}"`
-  )
-  next = next.replace(/\bsrcset="([^"]*)"/i, (_m, value: string) => `data-lazy-srcset="${value}"`)
-  return addTokenToImgClass(next, 'rich-lazy-img')
-}
-
 const isFirstPartyMetravelHost = (host: string): boolean => {
   const value = String(host || '').toLowerCase()
   return value === 'metravel.by' || value === 'cdn.metravel.by' || value === 'api.metravel.by'
@@ -234,20 +201,6 @@ const escapeHtmlAttr = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
-const buildRichImageBackdropDeclaration = (src: string) => {
-  // src arrives HTML-escaped (&amp;) from the already-normalized <img> markup. CSS url()
-  // does NOT decode HTML entities, so embedding it verbatim makes the ::before backdrop
-  // fetch a different, malformed URL (literal &amp;) than the foreground <img> — doubling
-  // the weserv request for every eager framed image. Decode entities first so the backdrop
-  // URL matches the foreground exactly (cache hit, zero extra request).
-  const decoded = decodeEntities(String(src || '').trim())
-  // CSS-escape for the url('...') context, then HTML-escape so the declaration is safe to
-  // place inside a style="..." attribute without breaking out of the attribute or the tag.
-  const cssSafe = decoded.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
-  if (!cssSafe) return ''
-  return escapeHtmlAttr(`--travel-rich-image:url('${cssSafe}')`)
-}
-
 const buildRichImageAspectDeclaration = (imgMarkup: string) => {
   const width = Number(imgMarkup.match(/\bwidth="(\d+)"/i)?.[1] ?? 0)
   const height = Number(imgMarkup.match(/\bheight="(\d+)"/i)?.[1] ?? 0)
@@ -255,12 +208,6 @@ const buildRichImageAspectDeclaration = (imgMarkup: string) => {
     return ''
   }
   return `--travel-rich-image-aspect:${width}/${height}`
-}
-
-const buildRichImageFrameDeclaration = (src: string, imgMarkup: string) => {
-  return [buildRichImageBackdropDeclaration(src), buildRichImageAspectDeclaration(imgMarkup)]
-    .filter(Boolean)
-    .join(';')
 }
 
 const normalizeImgTags = (html: string): string => {
@@ -320,9 +267,6 @@ const normalizeImgTags = (html: string): string => {
     }
 
     out = out.replace(/>$/, ' loading="lazy" decoding="async" fetchpriority="low">')
-    if (Platform.OS === 'web' && imgIdx >= EAGER_LEAD_IMAGE_COUNT) {
-      out = deferBodyImageDownload(out)
-    }
     imgIdx += 1
     return out
   })
@@ -442,16 +386,12 @@ const replaceStandaloneInstagramLinks = (html: string) =>
 const decorateRichImageFrames = (html: string) => {
   if (!html) return html
 
-  const decorateAttrs = (attrs: string, src: string, imgMarkup: string) => {
+  const decorateAttrs = (attrs: string, imgMarkup: string) => {
     const nextClassAttrs = appendClass(attrs, 'rich-image-frame')
-    // A network-gated image carries a transparent placeholder as its src; pointing
-    // the blur-backdrop CSS var at the real url here would defeat the gate (the
-    // ::before background would fetch it immediately). Keep only the aspect box —
-    // useWebEffects sets --travel-rich-image on the frame when the image swaps in.
-    const isDeferred = /\bdata-lazy-src="/i.test(imgMarkup)
-    const frameDeclaration = isDeferred
-      ? buildRichImageAspectDeclaration(imgMarkup)
-      : buildRichImageFrameDeclaration(src, imgMarkup)
+    // Keep the source URL out of inline CSS. A background-image reference would make
+    // the browser fetch every description photo eagerly even when the foreground <img>
+    // uses loading="lazy". useWebEffects arms the blur backdrop after the image loads.
+    const frameDeclaration = buildRichImageAspectDeclaration(imgMarkup)
     return frameDeclaration
       ? appendInlineStyle(nextClassAttrs, frameDeclaration)
       : nextClassAttrs
@@ -460,11 +400,11 @@ const decorateRichImageFrames = (html: string) => {
   return html
     .replace(
       /<p([^>]*)>(\s*<img\b[^>]*\bsrc="([^"]+)"[^>]*>\s*(?:<br\s*\/?>\s*)?)<\/p>/gi,
-      (match, attrs = '', inner = '', src = '') => `<p${decorateAttrs(attrs, src, inner)}>${inner}</p>`
+      (match, attrs = '', inner = '') => `<p${decorateAttrs(attrs, inner)}>${inner}</p>`
     )
     .replace(
       /<figure([^>]*)>([\s\S]*?<img\b[^>]*\bsrc="([^"]+)"[^>]*>[\s\S]*?)<\/figure>/gi,
-      (match, attrs = '', inner = '', src = '') => `<figure${decorateAttrs(attrs, src, inner)}>${inner}</figure>`
+      (match, attrs = '', inner = '') => `<figure${decorateAttrs(attrs, inner)}>${inner}</figure>`
     )
 }
 

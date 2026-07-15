@@ -50,6 +50,7 @@ async function seedAuthAndFavorites(
   page: import('@playwright/test').Page,
   favorites: Array<{ id: number; title: string; url: string }>
 ) {
+  let serverFavorites = [...favorites];
   const token = xorEncrypt('e2e-fake-token', ENCRYPTION_KEY);
   const refresh = xorEncrypt('e2e-fake-refresh-token', ENCRYPTION_KEY);
   const userId = '1';
@@ -97,7 +98,7 @@ async function seedAuthAndFavorites(
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(
-        favorites.map((f) => ({
+        serverFavorites.map((f) => ({
           id: f.id,
           name: f.title,
           url: f.url,
@@ -106,6 +107,20 @@ async function seedAuthAndFavorites(
           updated_at: '2025-01-01T00:00:00.000Z',
         }))
       ),
+    });
+  });
+  await page.route('**/api/travels/*/unmark-as-favorite/**', async (route) => {
+    if (route.request().method() !== 'PATCH') {
+      await route.continue();
+      return;
+    }
+    const match = new URL(route.request().url()).pathname.match(/\/travels\/(\d+)\/unmark-as-favorite\//);
+    const removedId = Number(match?.[1]);
+    serverFavorites = serverFavorites.filter((favorite) => favorite.id !== removedId);
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ favorite: false }),
     });
   });
 }
@@ -164,14 +179,7 @@ test.describe('@smoke Favorites', () => {
       });
 
       const removeBtn = page.getByLabel('Удалить из «Хочу поехать»').first();
-      if (!(await removeBtn.isVisible().catch(() => false))) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Remove control not rendered in this environment; skipping removal assertion.',
-        });
-        return;
-      }
-
+      await expect(removeBtn).toBeVisible();
       await removeBtn.click();
       await expect(page.getByText(favorite.title, { exact: true })).toHaveCount(0, {
         timeout: 15_000,

@@ -351,7 +351,7 @@ describe('StableContent (web) link styles', () => {
     });
   });
 
-  it('renders description image containers with blur backdrop styles and contain fit', async () => {
+  it('adds the blur backdrop only after a description image loads', async () => {
     const { container } = render(
       <StableContent
         html={[
@@ -366,8 +366,15 @@ describe('StableContent (web) link styles', () => {
       const richText = container.querySelector('.travel-rich-text');
       expect(richText).toBeTruthy();
       expect(richText?.innerHTML).toContain('class="rich-image-frame');
-      expect(richText?.innerHTML).toContain("--travel-rich-image:url('https://images.weserv.nl/?url=example.com%2Fone.jpg");
+      expect(richText?.innerHTML).not.toContain('--travel-rich-image:url');
       expect(richText?.innerHTML).toContain('--travel-rich-image-aspect:800/600');
+    });
+
+    const firstImage = container.querySelector('.travel-rich-text img') as HTMLImageElement;
+    const firstFrame = firstImage.closest('.rich-image-frame') as HTMLElement;
+    fireEvent.load(firstImage);
+    await waitFor(() => {
+      expect(firstFrame.style.getPropertyValue('--travel-rich-image')).toContain('images.weserv.nl');
     });
 
     const styleEl = document.getElementById('travel-rich-text-styles') as HTMLStyleElement | null;

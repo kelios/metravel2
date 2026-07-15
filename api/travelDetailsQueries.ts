@@ -634,6 +634,11 @@ export const fetchTravelBySlug = async (
                     if (hasAnyTravelIdentity(legacyTravel)) return legacyTravel;
                 } catch (legacyError: unknown) {
                     if (isAbortError(legacyError)) throw legacyError;
+                    // The resolver can legitimately answer 404 while the legacy
+                    // exact endpoint is temporarily unavailable. Preserve that
+                    // transient failure so React Query/UI can retry it instead of
+                    // presenting a false permanent "not found" state.
+                    if (getErrorStatus(legacyError) !== 404) throw legacyError;
                 }
                 const notFoundError = Object.assign(
                     new Error(`Travel not found by slug: ${slug}`),

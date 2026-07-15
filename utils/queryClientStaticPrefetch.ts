@@ -6,13 +6,13 @@ import { queryKeys } from '@/queryKeys'
 export function runStaticQueryClientPrefetch(client: QueryClient) {
   client.prefetchQuery({
     queryKey: queryKeys.filters(),
-    queryFn: () => fetchFilters(),
+    queryFn: () => fetchFilters({ throwOnError: true }),
     staleTime: 30 * 60 * 1000,
   })
 
   client.prefetchQuery({
     queryKey: queryKeys.countries(),
-    queryFn: () => fetchAllCountries(),
+    queryFn: () => fetchAllCountries({ throwOnError: true }),
     staleTime: 30 * 60 * 1000,
   })
 }

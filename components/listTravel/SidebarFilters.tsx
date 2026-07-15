@@ -1,6 +1,7 @@
 import React, { memo, useCallback } from 'react'
 import { Modal, Platform, Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native'
 import ModernFilters from './ModernFilters'
+import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import type { FilterState as ModernFilterState } from './ModernFilters'
 import type { FilterState } from './utils/listTravelTypes'
 import type { TravelFilterGroup } from './utils/filterGroups'
@@ -19,6 +20,8 @@ interface SidebarFiltersProps {
   resetFilters: () => void
   isVisible?: boolean
   isLoading?: boolean
+  isError?: boolean
+  onRetry?: () => void
   onClose?: () => void
   containerStyle?: StyleProp<ViewStyle>
 }
@@ -36,6 +39,8 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
     resetFilters,
     isVisible = true,
     isLoading = false,
+    isError = false,
+    onRetry,
     onClose,
     containerStyle,
   }) => {
@@ -78,7 +83,13 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
       onSelect('draftsOnly', filter.draftsOnly ? undefined : true)
     }, [filter.draftsOnly, onSelect])
 
-    const filtersElement = (
+    const filtersElement = isError ? (
+      <ErrorDisplay
+        message={i18nT('map:hooks.map.useMapFilters.ne_udalos_zagruzit_filtry_4d480f39')}
+        onRetry={onRetry}
+        showContact={false}
+      />
+    ) : (
       <ModernFilters
         filterGroups={filterGroups}
         selectedFilters={filter as unknown as ModernFilterState}

@@ -136,6 +136,7 @@ Zustand/context остаются для client/UI state.
 | `api/travelListQueries.ts` | `GET /api/travels/`, `/facets/`, `/random/`, `/near-location/` |
 | `api/travelUserQueries.ts` | `GET /api/travels/` с user/status `where` contract |
 | `api/travelDetailsQueries.ts` | `/api/travels/{id}/`, `/by-slug/{slug}/`, `/resolve-slug/{slug}/` |
+| `api/misc.ts`, `api/miscOptimized.ts` | `GET /api/getFiltersTravel/` — семь массивов `{ id: number, name: string }` плюс `sortings`; страны отдельно из `/countriesforsearch/` или `/countries/` как `{ country_id: number, title_ru: string }` |
 | `api/misc.ts` | `PUT /api/travels/upsert/` |
 | `api/travelsMutations.ts` | `DELETE /api/travels/{id}/` |
 | `api/travelsFavorites.ts` | mark/unmark favorite actions |
@@ -143,6 +144,12 @@ Zustand/context остаются для client/UI state.
 | `api/comments.ts` | `/api/travel-comments/` tree/CRUD/like/reply |
 | `api/travelRoutes.ts` | `/api/travels/{id}/routes/` list/upload/delete/download |
 | `api/instagramPublish.ts` | optional Instagram publish integration |
+
+`getFiltersTravel` не содержит `countries` или `year`: `countries` объединяются
+клиентом только после отдельной runtime-валидации country endpoint, а `year`
+остаётся пользовательским selection/input state. Невалидный обязательный массив
+или item не считается пустым успешным справочником и должен попасть в query
+error/retry path; кэшировать можно только последнюю валидную структуру.
 
 ### Backend-dependent границы
 
@@ -201,7 +208,7 @@ fallback. Backend blockers оформляются как `area=back` задач�
 - map/route points: `__tests__/components/travel/TravelDetailsMapSection.test.tsx`,
   `__tests__/components/travel/TravelRouteMapBlock.test.tsx`,
   `__tests__/components/travel/TravelMap.native.test.tsx`;
-- browser: `e2e/travels.spec.ts`, `e2e/travel-detail-page.spec.ts`,
+- browser: `e2e/travel-detail-page.spec.ts`,
   `e2e/travel-full-flow.spec.ts`, `e2e/travel-crud.spec.ts`,
   `e2e/travel-wizard.spec.ts`, `e2e/travel-route-line.spec.ts`.
 

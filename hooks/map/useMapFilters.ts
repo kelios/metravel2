@@ -120,7 +120,7 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
           categories,
           categoryTravelAddress,
           radius: [...RADIUS_OPTIONS],
-          address: data.categoryTravelAddress?.[0] || '',
+          address: '',
         });
       } catch (err) {
         if (isMounted) {
@@ -209,4 +209,3 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
     resetFilters,
   ]);
 }
-

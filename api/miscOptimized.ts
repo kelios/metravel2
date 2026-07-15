@@ -1,6 +1,6 @@
 import { fetchFilters, fetchFiltersCountry, fetchAllCountries } from './misc';
 import { devWarn } from '@/utils/logger';
-import type { Filters } from '@/types/types';
+import type { FilterCountryOption, FilterDictionaries, Filters } from '@/types/types';
 
 // Кэш для хранения результатов запросов
 interface CacheEntry<T> {
@@ -14,12 +14,14 @@ const cacheTimeout = 10 * 60 * 1000; // 10 минут
 const inFlightRequests = new Map<string, Promise<unknown>>();
 
 // Оптимизированная функция для получения фильтров с кэшированием
-export const fetchFiltersOptimized = async (options?: { signal?: AbortSignal }): Promise<Filters> => {
+export const fetchFiltersOptimized = async (
+  options?: { signal?: AbortSignal },
+): Promise<FilterDictionaries> => {
   const cacheKey = 'filters';
   const now = Date.now();
   
   // Проверяем кэш
-  const cached = filtersCache.get(cacheKey) as CacheEntry<Filters> | undefined;
+  const cached = filtersCache.get(cacheKey) as CacheEntry<FilterDictionaries> | undefined;
   if (cached && (now - cached.timestamp) < cacheTimeout) {
     return cached.data;
   }
@@ -27,13 +29,13 @@ export const fetchFiltersOptimized = async (options?: { signal?: AbortSignal }):
   // Проверяем, есть ли уже in-flight запрос
   const inFlight = inFlightRequests.get(cacheKey);
   if (inFlight) {
-    return inFlight as Promise<Filters>;
+    return inFlight as Promise<FilterDictionaries>;
   }
   
   // Если нет в кэше и нет in-flight, делаем запрос
   const request = (async () => {
     try {
-      const data = await fetchFilters({ signal: options?.signal });
+      const data = await fetchFilters({ signal: options?.signal, throwOnError: true });
       filtersCache.set(cacheKey, {
         data,
         timestamp: Date.now()
@@ -56,12 +58,14 @@ export const fetchFiltersOptimized = async (options?: { signal?: AbortSignal }):
 };
 
 // Оптимизированная функция для получения стран с кэшированием
-export const fetchFiltersCountryOptimized = async (options?: { signal?: AbortSignal }): Promise<unknown[]> => {
+export const fetchFiltersCountryOptimized = async (
+  options?: { signal?: AbortSignal },
+): Promise<FilterCountryOption[]> => {
   const cacheKey = 'countries';
   const now = Date.now();
   
   // Проверяем кэш
-  const cached = filtersCache.get(cacheKey) as CacheEntry<unknown[]> | undefined;
+  const cached = filtersCache.get(cacheKey) as CacheEntry<FilterCountryOption[]> | undefined;
   if (cached && (now - cached.timestamp) < cacheTimeout) {
     return cached.data;
   }
@@ -69,13 +73,13 @@ export const fetchFiltersCountryOptimized = async (options?: { signal?: AbortSig
   // Проверяем, есть ли уже in-flight запрос
   const inFlight = inFlightRequests.get(cacheKey);
   if (inFlight) {
-    return inFlight as Promise<unknown[]>;
+    return inFlight as Promise<FilterCountryOption[]>;
   }
   
   // Если нет в кэше и нет in-flight, делаем запрос
   const request = (async () => {
     try {
-      const data = await fetchFiltersCountry({ signal: options?.signal });
+      const data = await fetchFiltersCountry({ signal: options?.signal, throwOnError: true });
       filtersCache.set(cacheKey, {
         data,
         timestamp: Date.now()
@@ -122,7 +126,7 @@ export const fetchAllFiltersOptimized = async (options?: { signal?: AbortSignal 
         fetchFiltersCountryOptimized(options)
       ]);
       
-      const result: Filters = { ...base, countries: countries as string[] };
+      const result: Filters = { ...base, countries };
       filtersCache.set(cacheKey, {
         data: result,
         timestamp: Date.now()

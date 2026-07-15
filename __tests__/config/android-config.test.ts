@@ -77,33 +77,13 @@ describe('Android Configuration Tests', () => {
     });
   });
 
-  describe('eas.json Android Build Configuration', () => {
-    it('should have Android build profiles', () => {
-      expect(easConfig.build.development.android).toBeDefined();
-      expect(easConfig.build.preview.android).toBeDefined();
-      expect(easConfig.build.production.android).toBeDefined();
+  describe('eas.json Android cloud-build guard', () => {
+    it.each(['development', 'preview', 'production'])('%s profile does not enable Android EAS', (profile) => {
+      expect(easConfig.build[profile].android).toBeUndefined();
     });
 
-    it('development profile should build APK', () => {
-      expect(easConfig.build.development.android.buildType).toBe('apk');
-    });
-
-    it('preview profile should build APK', () => {
-      expect(easConfig.build.preview.android.buildType).toBe('apk');
-    });
-
-    it('production profile should build AAB', () => {
-      expect(easConfig.build.production.android.buildType).toBe('app-bundle');
-    });
-
-    it('production profile should have autoIncrement', () => {
-      expect(easConfig.build.production.android.autoIncrement).toBe(true);
-    });
-
-    it('should have Android submit configuration', () => {
-      expect(easConfig.submit.production.android).toBeDefined();
-      expect(easConfig.submit.production.android.serviceAccountKeyPath).toBeDefined();
-      expect(easConfig.submit.production.android.track).toBeDefined();
+    it('does not enable Android EAS submit', () => {
+      expect(easConfig.submit.production.android).toBeUndefined();
     });
   });
 
@@ -121,14 +101,15 @@ describe('Android Configuration Tests', () => {
       expect(Number.isInteger(versionCode)).toBe(true);
     });
 
-    it('Android Gradle versionCode should match app config', () => {
-      const appConfig = readAppConfig();
+    it('Android Gradle versionCode should be sourced from app config', () => {
       const gradle = fs.readFileSync(
         path.join(__dirname, '../../android/app/build.gradle'),
         'utf8'
       );
-      const match = gradle.match(/versionCode\s+(\d+)/);
-      expect(match?.[1]).toBe(String(appConfig.expo.android.versionCode));
+      expect(gradle).toMatch(
+        /def androidVersionCode = appConfig\.expo\.android\.versionCode as Integer/
+      );
+      expect(gradle).toMatch(/versionCode\s+androidVersionCode/);
     });
 
     it('iOS buildNumber should exist for comparison', () => {

@@ -67,7 +67,13 @@ describe('Android release safety contract', () => {
 
   it('never configures the release build with the debug signing key', () => {
     const gradle = fs.readFileSync(path.join(ROOT, 'android/app/build.gradle'), 'utf8');
-    const releaseBlock = gradle.slice(gradle.indexOf('release {'));
+    const buildTypesStart = gradle.indexOf('buildTypes {');
+    const packagingOptionsStart = gradle.indexOf('packagingOptions {', buildTypesStart);
+    expect(buildTypesStart).toBeGreaterThan(-1);
+    expect(packagingOptionsStart).toBeGreaterThan(buildTypesStart);
+
+    const buildTypesBlock = gradle.slice(buildTypesStart, packagingOptionsStart);
+    const releaseBlock = buildTypesBlock.slice(buildTypesBlock.indexOf('release {'));
 
     expect(releaseBlock).not.toMatch(/signingConfig\s+signingConfigs\.debug/);
     expect(gradle).toContain('METRAVEL_ANDROID_KEYSTORE_PATH');

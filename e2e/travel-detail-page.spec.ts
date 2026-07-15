@@ -1,619 +1,118 @@
-/**
- * E2E тесты: Детальная страница путешествия (/travels/[id])
- *
- * Каноническая ручная матрица: docs/MANUAL_TEST_CASES.md
- *
- * Приоритет P1: Критичные сценарии
- * Приоритет P2: Важные сценарии
- * Приоритет P3: Дополнительные сценарии
- */
-
 import { test, expect } from './fixtures';
-import { preacceptCookies, navigateToFirstTravel } from './helpers/navigation';
+import {
+  FALLBACK_TRAVEL_SLUG,
+  gotoWithRetry,
+  mockFallbackTravelDetails,
+  openFallbackTravelDetails,
+  preacceptCookies,
+} from './helpers/navigation';
 
-/**
- * Navigate to a travel details page. Returns false if no travel is available.
- * Parallel-safe: each test calls this independently.
- */
-async function goToDetails(page: import('@playwright/test').Page): Promise<boolean> {
+const FALLBACK_TRAVEL_NAME = 'E2E stable travel details';
+
+async function openStableTravel(page: import('@playwright/test').Page) {
   await preacceptCookies(page);
-  return navigateToFirstTravel(page);
+  expect(await openFallbackTravelDetails(page), 'stable travel fixture must load').toBe(true);
+
+  const root = page.getByTestId('travel-details-page');
+  await expect(root).toBeVisible({ timeout: 30_000 });
+  return root;
 }
 
-/**
- * TC-TRAVEL-DETAIL-001: Загрузка детальной страницы (P1)
- */
-test.describe('Travel Details Page - Loading and Display', () => {
-  test('TC-001: успешная загрузка детальной страницы', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
+async function mockTravelError(
+  page: import('@playwright/test').Page,
+  slug: string,
+  status: number,
+  detail: string,
+) {
+  const handler = (route: import('@playwright/test').Route) => route.fulfill({
+    status,
+    contentType: 'application/json',
+    body: JSON.stringify({ detail }),
+  });
+  await page.route(`**/api/travels/by-slug/${slug}/**`, handler);
+  await page.route(`**/travels/by-slug/${slug}/**`, handler);
+}
 
-    // Проверяем наличие основного контейнера
-    const mainContent = page.locator('[data-testid="travel-details-page"], [testID="travel-details-page"]');
-    await expect(mainContent.first()).toBeVisible({ timeout: 30_000 });
+test.describe('Travel details — deterministic product contracts', () => {
+  test('renders the core route content and semantic main region', async ({ page }) => {
+    const root = await openStableTravel(page);
 
-    // Проверяем, что страница содержит контент
-    await expect(page.locator('body')).toContainText(/./);
+    await expect(root).toHaveAttribute('role', 'main');
+    await expect(page.getByRole('heading', { level: 1, name: FALLBACK_TRAVEL_NAME })).toBeVisible();
 
-    // Проверяем отсутствие ошибок в консоли (критичные)
-    const consoleErrors: string[] = [];
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        consoleErrors.push(msg.text());
-      }
-    });
-
-    // Wait for async errors to surface
-    await page.waitForLoadState('networkidle').catch(() => null);
-
-    // Не должно быть критичных ошибок
-    const hasCriticalErrors = consoleErrors.some((err) =>
-      err.includes('TypeError') || err.includes('ReferenceError')
-    );
-    expect(hasCriticalErrors).toBe(false);
+    const description = page.getByTestId('travel-details-description');
+    await expect(description).toBeVisible({ timeout: 20_000 });
+    await expect(description).toContainText('Тестовое описание стабильного маршрута');
   });
 
-  /**
-   * TC-TRAVEL-DETAIL-002: Отображение галереи изображений (P1)
-   */
-  test('TC-002: галерея изображений отображается и работает', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
-
-    // Проверяем наличие секции с галереей
-    const gallerySection = page.locator('[testid="travel-details-section-gallery"]');
-
-    // Галерея может быть не у всех путешествий
-    const hasGallery = await gallerySection.isVisible().catch(() => false);
-
-    if (hasGallery) {
-      // Проверяем, что изображения загружаются
-      const images = page.locator('[testid="travel-details-section-gallery"] img');
-      const imageCount = await images.count();
-
-      if (imageCount > 0) {
-        // Проверяем, что хотя бы одно изображение загрузилось
-        await expect(images.first()).toBeVisible({ timeout: 10_000 });
-
-        // Проверяем наличие атрибутов alt для a11y
-        const firstImgAlt = await images.first().getAttribute('alt');
-        expect(firstImgAlt).toBeTruthy();
-      }
-    }
-  });
-
-  /**
-   * TC-TRAVEL-DETAIL-020: 404 для несуществующего путешествия (P1)
-   */
-  test('TC-020: обработка 404 для несуществующего путешествия', async ({ page }) => {
-    await preacceptCookies(page);
-    await page.goto('/travels/non-existent-travel-99999', { waitUntil: 'domcontentloaded' });
-
-    // Wait for error state to render (API proxy may be slow to return 404).
-    // Поднимаем таймаут до 60s — внешний backend может тормозить с ответом.
-    const errorLocator = page.getByText(/не найдено|не удалось|ошибка|not found/i).first();
-    await errorLocator.waitFor({ state: 'visible', timeout: 60_000 });
-
-    // Проверяем наличие сообщения об ошибке
-    const errorMessages = [
-      'не найдено',
-      'не удалось загрузить',
-      'не существует',
-      'ошибка',
-      'not found',
-    ];
-
-    const bodyText = await page.locator('body').textContent();
-    const hasErrorMessage = errorMessages.some((msg) =>
-      bodyText?.toLowerCase().includes(msg)
-    );
-
-    expect(hasErrorMessage).toBe(true);
-
-    // Приложение не должно упасть
-    const mainContent = page.locator('body');
-    await expect(mainContent).toBeVisible();
-  });
-});
-
-/**
- * TC-TRAVEL-DETAIL-003: Просмотр точек маршрута на карте (P1)
- */
-test.describe('Travel Details - Map and Routes', () => {
-  test('TC-003: карта и точки маршрута отображаются', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
-
-    // Прокручиваем вниз, чтобы загрузить отложенные секции
-    await page.evaluate(() => window.scrollBy(0, 1000));
-    await page.waitForLoadState('domcontentloaded').catch(() => null);
-
-    // Проверяем наличие секции с картой
-    const mapSection = page.locator('[testid="travel-details-map"]');
-    const hasMap = await mapSection.isVisible().catch(() => false);
-
-    if (hasMap) {
-      // Карта должна быть интерактивной
-      await expect(mapSection).toBeVisible();
-
-      // Проверяем наличие точек маршрута
-      const pointsSection = page.locator('[testid="travel-details-points"]');
-      const hasPoints = await pointsSection.isVisible().catch(() => false);
-
-      if (hasPoints) {
-        await expect(pointsSection).toBeVisible();
-      }
-    }
-  });
-
-  /**
-   * TC-TRAVEL-DETAIL-004: Список точек маршрута (P2)
-   */
-  test('TC-004: список точек маршрута корректен', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
-
-    // Прокручиваем до секции с точками
-    await page.evaluate(() => window.scrollBy(0, 1500));
-    await page.waitForLoadState('domcontentloaded').catch(() => null);
-
-    const pointsSection = page.locator('[testid="travel-details-points"]');
-    const hasPoints = await pointsSection.isVisible().catch(() => false);
-
-    if (hasPoints) {
-      // Проверяем, что есть хотя бы одна точка
-      const pointElements = pointsSection.locator('[role="listitem"], li, [class*="point"]');
-      const pointCount = await pointElements.count();
-
-      // Если есть точки, проверяем их структуру
-      if (pointCount > 0) {
-        expect(pointCount).toBeGreaterThan(0);
-      }
-    }
-  });
-});
-
-/**
- * TC-TRAVEL-DETAIL-005: Информационные блоки (Quick Facts) (P2)
- * TC-TRAVEL-DETAIL-006: Секции контента (P1)
- */
-test.describe('Travel Details - Content and Info', () => {
-  test('TC-005: информационные блоки (Quick Facts) отображаются', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
-
-    // Проверяем наличие Quick Facts секции
-    const quickFactsSection = page.locator('[testid="travel-details-quick-facts"]');
-    const hasQuickFacts = await quickFactsSection.isVisible().catch(() => false);
-
-    if (hasQuickFacts) {
-      await expect(quickFactsSection).toBeVisible();
-
-      // Проверяем, что есть хотя бы один факт
-      const bodyText = await page.locator('body').textContent();
-      const hasContent = bodyText && bodyText.length > 100;
-      expect(hasContent).toBe(true);
-    }
-  });
-
-  test('TC-006: секции контента отображаются корректно', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
-
-    // Проверяем наличие секции описания
-    const descriptionSection = page.locator('[testid="travel-details-description"]');
-    const hasDescription = await descriptionSection.isVisible().catch(() => false);
-
-    if (hasDescription) {
-      await expect(descriptionSection).toBeVisible();
-
-      // Описание должно содержать текст
-      const descText = await descriptionSection.textContent();
-      expect(descText?.length).toBeGreaterThan(10);
-    }
-
-    // Прокручиваем для загрузки дополнительных секций
-    await page.evaluate(() => window.scrollBy(0, 2000));
-    await page.waitForLoadState('domcontentloaded').catch(() => null);
-  });
-
-  /**
-   * TC-TRAVEL-DETAIL-010: Информация об авторе (P2)
-   */
-  test('TC-010: информация об авторе отображается', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
-
-    // Проверяем наличие информации об авторе
-    const authorSection = page.locator('[testid="travel-details-author"]');
-    const hasAuthor = await authorSection.isVisible().catch(() => false);
-
-    if (hasAuthor) {
-      await expect(authorSection).toBeVisible();
-
-      // Автор должен иметь имя
-      const authorText = await authorSection.textContent();
-      expect(authorText).toBeTruthy();
-      expect(authorText?.length).toBeGreaterThan(0);
-    }
-  });
-});
-
-/**
- * TC-TRAVEL-DETAIL-007: Добавление в избранное (P1)
- * TC-TRAVEL-DETAIL-009: Попытка добавить без авторизации (P2)
- */
-test.describe('Travel Details - Favorites', () => {
-  test('TC-007 & TC-009: кнопка избранного корректно обрабатывает неавторизованных', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
-
-    // Ищем кнопку избранного
-    const favoriteButton = page.locator('[data-testid="favorite-button"]');
-    const hasFavoriteButton = await favoriteButton.isVisible().catch(() => false);
-
-    if (hasFavoriteButton) {
-      await expect(favoriteButton).toBeVisible();
-
-      // Кнопка должна быть доступна для клика
-      await expect(favoriteButton).toBeEnabled();
-
-      // При клике неавторизованного пользователя должна быть реакция
-      // (редирект на логин или модальное окно)
-      // Проверяем, что кнопка существует и кликабельна
-      const buttonCount = await favoriteButton.count();
-      expect(buttonCount).toBeGreaterThan(0);
-    }
-  });
-});
-
-/**
- * TC-TRAVEL-DETAIL-014: Боковое меню навигации (Desktop) (P2)
- */
-test.describe('Travel Details - Navigation', () => {
-  test('TC-014: боковое меню навигации работает на Desktop', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
-    if (!(await goToDetails(page))) return;
-
-    // Проверяем наличие бокового меню на больших экранах
-    const sideMenu = page.locator('[testid="travel-details-side-menu"]');
-    const hasSideMenu = await sideMenu.isVisible().catch(() => false);
-
-    if (hasSideMenu) {
-      await expect(sideMenu).toBeVisible();
-
-      // Боковое меню должно содержать навигационные элементы
-      const menuContent = await sideMenu.textContent();
-      expect(menuContent).toBeTruthy();
-    }
-  });
-
-  /**
-   * TC-TRAVEL-DETAIL-015: Компактное меню секций (Mobile) (P2)
-   */
-  test('TC-015: компактное меню работает на Mobile', async ({ page }) => {
+  test('keeps the mobile layout within the viewport and renders one author section', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    if (!(await goToDetails(page))) return;
+    await openStableTravel(page);
 
-    // Проверяем наличие компактного меню на мобильных
-    const sectionsSheet = page.locator('[testid="travel-sections-sheet-wrapper"]');
-    const hasSectionsSheet = await sectionsSheet.isVisible().catch(() => false);
-
-    if (hasSectionsSheet) {
-      await expect(sectionsSheet).toBeVisible();
-    }
-  });
-
-  /**
-   * TC-TRAVEL-DETAIL-019: Breadcrumbs (хлебные крошки) (P3)
-   */
-  test('TC-019: breadcrumbs отображаются и работают', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
-
-    // Проверяем наличие breadcrumbs
-    const breadcrumbs = page.locator('[aria-label*="Breadcrumb"], [role="navigation"] nav');
-    const hasBreadcrumbs = await breadcrumbs.isVisible().catch(() => false);
-
-    if (hasBreadcrumbs) {
-      // Breadcrumbs должны содержать ссылки
-      const links = breadcrumbs.locator('a');
-      const linkCount = await links.count();
-
-      if (linkCount > 0) {
-        expect(linkCount).toBeGreaterThan(0);
-      }
-    }
-  });
-});
-
-/**
- * TC-TRAVEL-DETAIL-016: Поделиться путешествием (P2)
- */
-test.describe('Travel Details - Sharing', () => {
-  test('TC-016: кнопка "Поделиться" работает', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
-
-    // Ищем кнопку "Поделиться"
-    const shareButton = page.locator('[testid="travel-details-share"]');
-    const hasShareButton = await shareButton.isVisible().catch(() => false);
-
-    if (hasShareButton) {
-      await expect(shareButton).toBeVisible();
-      await expect(shareButton).toBeEnabled();
-
-      // Клик по кнопке должен открыть модальное окно или меню
-      await shareButton.click();
-      await page.waitForLoadState('domcontentloaded').catch(() => null);
-
-      // После клика должно появиться модальное окно или меню шаринга
-      const body = await page.locator('body').textContent();
-      expect(body).toBeTruthy();
-    }
-  });
-});
-
-/**
- * TC-TRAVEL-DETAIL-017: Похожие путешествия (P3)
- * TC-TRAVEL-DETAIL-018: Путешествия этого автора (P3)
- */
-test.describe('Travel Details - Related Content', () => {
-  test('TC-017: похожие путешествия загружаются', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
-
-    // Прокручиваем до конца страницы для загрузки похожих путешествий
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForLoadState('networkidle').catch(() => null);
+    await expect(page.getByTestId('travel-details-author-mobile')).toHaveCount(1);
 
-    // Проверяем наличие секции с похожими путешествиями
-    const bodyText = await page.locator('body').textContent();
-    const hasRelatedSection =
-      bodyText?.includes('Похожие') ||
-      bodyText?.includes('Рекомендуем') ||
-      bodyText?.includes('Другие путешествия');
-
-    // Это опциональная функция, поэтому не требуем обязательного наличия
-    if (hasRelatedSection) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Related travels section found',
-      });
-    }
-  });
-});
-
-/**
- * TC-TRAVEL-DETAIL-021: Мобильная версия детальной страницы (P1)
- */
-test.describe('Travel Details - Mobile Responsiveness', () => {
-  test('TC-021: мобильная версия корректно адаптирована', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-    if (!(await goToDetails(page))) return;
-
-    // Проверяем, что основной контент загружен
-    const mainContent = page.locator('[testid="travel-details-page"]');
-    const mainExists = await mainContent.count();
-
-    if (mainExists > 0) {
-      await expect(mainContent).toBeVisible({ timeout: 10_000 });
-    }
-
-    // Проверяем, что контент видим на мобильном
-    const scrollView = page.locator('[testid="travel-details-scroll"]');
-    const scrollExists = await scrollView.count();
-
-    if (scrollExists > 0) {
-      await expect(scrollView).toBeVisible();
-    }
-
-    // Проверяем адаптивность текста
-    const bodyText = await page.locator('body').textContent();
-    expect(bodyText?.length).toBeGreaterThan(50);
-
-    // Проверяем, что нет значительного горизонтального скролла
-    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
-    const overflow = scrollWidth - clientWidth;
-
-    // Допускаем небольшой overflow (до 10px)
-    expect(overflow).toBeLessThan(10);
-  });
-});
-
-/**
- * TC-TRAVEL-DETAIL-022: SEO метатеги детальной страницы (P1)
- */
-test.describe('Travel Details - SEO', () => {
-	  test('TC-022: SEO метатеги присутствуют и корректны', async ({ page }) => {
-	    if (!(await goToDetails(page))) return;
-
-    // Проверяем наличие title
-    const title = await page.title();
-    expect(title).toBeTruthy();
-    expect(title.length).toBeGreaterThan(0);
-    expect(title).toMatch(/metravel/i);
-
-    // Проверяем наличие meta description
-    const description = await page
-      .locator('meta[name="description"]')
-      .first()
-      .getAttribute('content');
-    expect(description).toBeTruthy();
-
-	    // Проверяем наличие canonical URL
-	    const canonicalLocator = page.locator('link[rel="canonical"]').first();
-	    await expect
-	      .poll(async () => {
-	        const href = await canonicalLocator.getAttribute('href').catch(() => null);
-	        return href || '';
-	      }, { timeout: 10_000 })
-	      .toContain('/travels/');
-
-	    // Проверяем наличие Open Graph метатегов
-	    const ogTitle = await page
-	      .locator('meta[property="og:title"]')
-      .getAttribute('content')
-      .catch(() => null);
-
-    if (ogTitle) {
-      expect(ogTitle).toBeTruthy();
-    }
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, 'travel details must not create horizontal mobile overflow').toBeLessThanOrEqual(1);
   });
 
-  /**
-   * TC-TRAVEL-DETAIL-023: Schema.org разметка (P2)
-   */
-  test('TC-023: Schema.org разметка присутствует', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
+  test('publishes canonical metadata and valid Schema.org JSON-LD', async ({ page }) => {
+    await openStableTravel(page);
 
-    // Проверяем наличие JSON-LD разметки
-    const jsonLdScript = page.locator('script[type="application/ld+json"]');
-    const hasJsonLd = (await jsonLdScript.count()) > 0;
+    await expect(page).toHaveTitle(new RegExp(FALLBACK_TRAVEL_NAME, 'i'));
+    const canonical = page.locator('link[rel="canonical"]').first();
+    await expect
+      .poll(() => canonical.getAttribute('href'), { timeout: 10_000 })
+      .toContain(`/travels/${FALLBACK_TRAVEL_SLUG}`);
 
-    if (hasJsonLd) {
-      const jsonLdContent = await jsonLdScript.first().textContent();
-      expect(jsonLdContent).toBeTruthy();
-
-      // Проверяем, что это валидный JSON
-      const jsonLdData = JSON.parse(jsonLdContent!);
-      expect(jsonLdData).toBeTruthy();
-      expect(jsonLdData['@context']).toBe('https://schema.org');
-    }
+    const jsonLdScripts = page.locator('script[type="application/ld+json"]');
+    await expect.poll(() => jsonLdScripts.count(), { timeout: 10_000 }).toBeGreaterThan(0);
+    const documents = await jsonLdScripts.allTextContents();
+    const parsed = documents.map((document) => JSON.parse(document));
+    expect(parsed.some((document) => document?.['@context'] === 'https://schema.org')).toBe(true);
   });
-});
 
-/**
- * TC-TRAVEL-DETAIL-025: Обработка ошибки загрузки данных (P1)
- */
-test.describe('Travel Details - Error Handling', () => {
-  test('TC-025: graceful degradation при ошибке загрузки', async ({ page }) => {
+  test('renders an explicit not-found state for a 404 response', async ({ page }) => {
+    const slug = 'e2e-missing-travel';
     await preacceptCookies(page);
+    await mockTravelError(page, slug, 404, 'Not found.');
 
-    // Блокируем API запросы для имитации ошибки
-    await page.route('**/api/travels/**', (route) => {
-      route.abort('failed');
-    });
+    await gotoWithRetry(page, `/travels/${slug}`);
 
-    await page.goto('/travels/1', { waitUntil: 'domcontentloaded' }).catch(() => {
-      // Игнорируем ошибки навигации
-    });
-
-    // Wait for error state to render
-    await page.waitForSelector('text=/ошибк|не удалось|не найдено/i', { timeout: 15_000 }).catch(() => null);
-
-    // Приложение не должно упасть - проверяем, что body существует
-    const body = page.locator('body');
-    const bodyExists = await body.count();
-    expect(bodyExists).toBeGreaterThan(0);
-
-    // Проверяем, что есть какой-то контент (даже если это просто layout)
-    const bodyText = await body.textContent().catch(() => '');
-
-    // Должно быть хоть какое-то содержимое или сообщение об ошибке
-    const hasContent = bodyText && bodyText.length > 10;
-    const hasErrorHandling =
-      bodyText?.includes('ошибк') ||
-      bodyText?.includes('не удалось') ||
-      bodyText?.includes('загруз') ||
-      bodyText?.includes('не найдено');
-
-    // Хотя бы одно из условий должно выполняться
-    expect(hasContent || hasErrorHandling).toBe(true);
-
-    if (!hasErrorHandling) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Error handling UI may not be visible, but app did not crash',
-      });
-    }
-  });
-});
-
-/**
- * TC-TRAVEL-DETAIL-027: Accessibility (a11y) детальной страницы (P2)
- */
-test.describe('Travel Details - Accessibility', () => {
-  test('TC-027: keyboard navigation работает', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
-
-    // Проверяем, что можно использовать Tab для навигации
-    await page.keyboard.press('Tab');
-
-    // Проверяем наличие фокуса на интерактивном элементе
-    const focusedElement = await page.evaluate(() => {
-      const el = document.activeElement;
-      return el?.tagName.toLowerCase();
-    });
-
-    // Должен быть фокус на кнопке, ссылке или другом интерактивном элементе
-    const interactiveTags = ['button', 'a', 'input', 'textarea', 'select'];
-    const hasFocus = focusedElement && interactiveTags.includes(focusedElement);
-
-    // Это мягкая проверка, так как фокус может быть на body при первой загрузке
-    if (hasFocus) {
-      test.info().annotations.push({
-        type: 'note',
-        description: `Focus on: ${focusedElement}`,
-      });
-    }
+    const alert = page.getByRole('alert');
+    await expect(alert).toBeVisible({ timeout: 30_000 });
+    await expect(alert).toContainText('Путешествие не найдено');
+    await expect(alert.getByRole('button', { name: 'Повторить' })).toHaveCount(0);
+    await expect(alert.getByRole('button', { name: 'На главную' })).toBeVisible();
   });
 
-  test('TC-027: семантический HTML и ARIA атрибуты', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
+  test('recovers after a transient 503 when the user retries', async ({ page }) => {
+    await preacceptCookies(page);
+    await mockFallbackTravelDetails(page);
 
-    // Проверяем наличие role="main"
-    const mainContent = page.locator('[role="main"]');
-    const hasMainRole = await mainContent.isVisible().catch(() => false);
-
-    if (hasMainRole) {
-      await expect(mainContent).toBeVisible();
-    }
-
-    // Проверяем наличие heading структуры
-    const headings = page.locator('h1, h2, h3, h4, h5, h6');
-    const headingCount = await headings.count();
-
-    // Если headings нет, это не критично для теста
-    if (headingCount > 0) {
-      expect(headingCount).toBeGreaterThan(0);
-
-      // Должен быть хотя бы один h1
-      const h1Elements = page.locator('h1');
-      const h1Count = await h1Elements.count();
-      expect(h1Count).toBeGreaterThan(0);
-    } else {
-      test.info().annotations.push({
-        type: 'warning',
-        description: 'No headings found on page - page might not be fully loaded',
-      });
-    }
-  });
-});
-
-/**
- * TC-TRAVEL-DETAIL-026: Ленивая загрузка изображений (P2)
- */
-test.describe('Travel Details - Performance', () => {
-  test('TC-026: изображения загружаются лениво', async ({ page }) => {
-    // Отслеживаем загрузку изображений
-    const loadedImages: string[] = [];
-    page.on('response', (response) => {
-      if (response.request().resourceType() === 'image') {
-        loadedImages.push(response.url());
+    let shouldFail = true;
+    await page.route('**/api/travels/**', async (route) => {
+      if (!shouldFail) {
+        await route.fallback();
+        return;
       }
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ detail: 'Service unavailable' }),
+      });
     });
 
-    if (!(await goToDetails(page))) return;
+    await gotoWithRetry(page, `/travels/${FALLBACK_TRAVEL_SLUG}`);
 
-    // Wait for initial images to load
-    await page.waitForLoadState('networkidle').catch(() => null);
+    const alert = page.getByRole('alert');
+    await expect(alert).toContainText('Не удалось загрузить путешествие', { timeout: 30_000 });
+    shouldFail = false;
+    await alert.getByRole('button', { name: 'Повторить' }).click();
 
-    const imagesBeforeScroll = loadedImages.length;
-
-    // Прокручиваем страницу вниз
-    await page.evaluate(() => window.scrollBy(0, 2000));
-    await page.waitForLoadState('networkidle').catch(() => null);
-
-    const imagesAfterScroll = loadedImages.length;
-
-    // После прокрутки может загрузиться больше изображений (lazy loading)
-    // Но это не строгое требование, зависит от контента
-    test.info().annotations.push({
-      type: 'note',
-      description: `Images before scroll: ${imagesBeforeScroll}, after: ${imagesAfterScroll}`,
-    });
-
-    expect(imagesAfterScroll).toBeGreaterThanOrEqual(imagesBeforeScroll);
+    await expect(page.getByTestId('travel-details-page')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { level: 1, name: FALLBACK_TRAVEL_NAME })).toBeVisible();
   });
 });

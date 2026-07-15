@@ -677,77 +677,68 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
   });
 
   test('desktop: applying category filter updates markers and sends category filters', async ({ page }) => {
+    const mapPoints = [
+      {
+        id: 22001,
+        coord: '53.900600,27.559000',
+        address: 'Тестовый замок',
+        travelImageThumbUrl: '',
+        categoryName: 'Замки',
+        articleUrl: '',
+        urlTravel: '/travels/e2e-category-filter',
+      },
+    ];
+
+    await page.route('**/api/filterformap/**', (route: any) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        countries: [],
+        categories: [],
+        categoryTravelAddress: [{ id: 84, name: 'Замки' }],
+        companions: [],
+        complexity: [],
+        month: [],
+        over_nights_stay: [],
+        transports: [],
+        year: [],
+      }),
+    }));
+    await page.route('**/api/travels/search_travels_for_map/**', (route: any) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ results: mapPoints, total: mapPoints.length }),
+    }));
+
     await gotoMapWithRecovery(page);
 
     await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
 
-    // Ensure at least one successful map search response happened.
-    await page
-      .waitForResponse((resp: any) => resp.ok() && /\/api\/travels\/search_travels_for_map\//.test(resp.url()), {
-        timeout: 90_000,
-      })
-      .catch(() => null);
-
-    // Make sure Categories section is opened (some UIs use different copy).
-    const categoriesHeader = page.getByText(/Категор/i);
-    if (await categoriesHeader.isVisible().catch(() => false)) {
-      await categoriesHeader.click({ force: true }).catch(() => null);
-    }
-
     const panel = page.getByTestId('filters-panel');
     const categoryOption = panel.locator('[data-testid^="category-option-"]').first();
-    const categoryOptionVisible = await categoryOption.isVisible({ timeout: 5_000 }).catch(() => false);
-    if (!categoryOptionVisible) return;
+    await expect(categoryOption).toBeVisible({ timeout: 20_000 });
 
-    // Some builds refetch instantly on filter change, others wait until radius/viewport changes.
-    // We treat both as valid: always assert the UI can toggle a filter, and if a request happens
-    // we also validate it contains where.categories.
-    const maybeResponsePromise = page
-      .waitForResponse(
-        async (resp: any) => {
-          if (!resp.ok()) return false;
-          const url = resp.url();
-          if (!/\/api\/travels\/search_travels_for_map\//.test(url)) return false;
-
-          try {
-            const u = new URL(url);
-            const where = u.searchParams.get('where');
-            if (!where) return false;
-            const parsed = JSON.parse(where);
-            return (
-              (Array.isArray(parsed?.categories) && parsed.categories.length > 0) ||
-              (Array.isArray(parsed?.categoryTravelAddress) && parsed.categoryTravelAddress.length > 0)
-            );
-          } catch {
-            return false;
-          }
-        },
-        { timeout: 12_000 }
-      )
-      .catch(() => null);
+    const filteredRequestPromise = page.waitForRequest((request: any) => {
+      if (!/\/api\/travels\/search_travels_for_map\//.test(request.url())) return false;
+      const where = new URL(request.url()).searchParams.get('where');
+      if (!where) return false;
+      try {
+        const parsed = JSON.parse(where);
+        return Array.isArray(parsed?.categoryTravelAddress) && parsed.categoryTravelAddress.length > 0;
+      } catch {
+        return false;
+      }
+    }, { timeout: 20_000 });
 
     await categoryOption.click({ force: true });
     await expect(categoryOption).toHaveAttribute('aria-pressed', 'true', {
       timeout: 5_000,
     });
 
-    await maybeResponsePromise;
-
-    // Markers should remain present (either same count or updated); basic sanity.
-    const marker = page.locator('.leaflet-marker-icon');
-    const markerCount = await marker.count().catch(() => 0);
-    if (markerCount > 0) {
-      await expect(marker.first()).toBeVisible({ timeout: 60_000 });
-      return;
-    }
-
-    // Valid empty state: some API responses legitimately return no points.
-    // Don't lock to a specific UI copy; treat "no markers" as a valid outcome.
-    test.info().annotations.push({
-      type: 'note',
-      description: 'No markers rendered after category toggle; treating as valid empty dataset for this environment',
-    });
-    return;
+    const filteredRequest = await filteredRequestPromise;
+    const filteredWhere = JSON.parse(new URL(filteredRequest.url()).searchParams.get('where') || '{}');
+    expect(filteredWhere.categoryTravelAddress).toContain(84);
+    await expect(page.locator('.leaflet-marker-icon').first()).toBeVisible({ timeout: 30_000 });
   });
 
   test('desktop: SEO title and canonical are set for /map', async ({ page }) => {

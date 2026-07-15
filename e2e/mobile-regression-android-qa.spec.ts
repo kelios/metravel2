@@ -8,11 +8,12 @@
  *  BUG-CLASS-1  – Active tab-bar state (правильный таб подсвечен)
  *  BUG-CLASS-2  – Шапка ≤20% высоты вьюпорта на мобильном
  *  BUG-CLASS-3  – Back-навигация возвращает на источник, не на Главную
- *  BUG-CLASS-4  – Единый шаблон попапа точки (координаты, навигация, копировать)
  *  BUG-CLASS-7  – Дубли секций на странице деталей / мёртвые ссылки
  *  BUG-CLASS-8  – Layout-артефакты на мобильном (белый блок внизу /places)
  *
- * Класс BUG-CLASS-6 (нормализация обёрток API) покрыт юнит-тестами:
+ * BUG-CLASS-4 (действия карточки точки) покрыт
+ * __tests__/components/travel/PointList.web.test.tsx.
+ * BUG-CLASS-6 (нормализация обёрток API) покрыт юнит-тестами:
  *   __tests__/components/listTravel/listTravelHelpers.api-envelope.test.ts
  *   __tests__/api/messages.test.ts  (уже есть: results/data/bare-array)
  */
@@ -41,6 +42,10 @@ function isTravelDetailsPath(pathname: string) {
   return /^\/travels\/[^/]+/.test(pathname);
 }
 
+async function getDockTabBackground(tab: import('@playwright/test').Locator) {
+  return tab.evaluate((element) => window.getComputedStyle(element).backgroundColor);
+}
+
 async function installEmptyTravelListMock(page: import('@playwright/test').Page) {
   await page.route('**/api/travels/**', async (route) => {
     const request = route.request();
@@ -66,11 +71,6 @@ test.describe('@mobile BUG-CLASS-1: active tab-bar state', () => {
 
     const dock = page.getByTestId('footer-dock-wrapper');
     await expect(dock).toBeVisible({ timeout: 30_000 });
-
-    // On the home/root screen, none of the primary tabs should be highlighted.
-    // The dock must render, but the "Маршруты" item (/search) should NOT carry
-    // an active/selected aria attribute when the user is on the landing page.
-    // We assert the active-indicator is absent or points to a non-route item.
     await expect(dock.getByTestId('footer-item-home')).toHaveAttribute('aria-selected', 'false');
   });
 
@@ -81,8 +81,14 @@ test.describe('@mobile BUG-CLASS-1: active tab-bar state', () => {
     const dock = page.getByTestId('footer-dock-wrapper');
     await expect(dock).toBeVisible({ timeout: 30_000 });
 
+    const mapTab = dock.getByTestId('footer-item-map');
+    const homeTab = dock.getByTestId('footer-item-home');
+    await expect(mapTab).toBeVisible();
+    await expect(mapTab).toHaveAttribute('aria-selected', 'true');
+    await expect(homeTab).toHaveAttribute('aria-selected', 'false');
+    expect(await getDockTabBackground(mapTab)).not.toBe(await getDockTabBackground(homeTab));
+
     // The dock itself must be visible and not have zero height (regression: full-screen dock)
-    await expect(dock.getByTestId('footer-item-map')).toHaveAttribute('aria-selected', 'true');
     const dockBox = await dock.boundingBox();
     expect(dockBox, 'dock must have a bounding box on /map').not.toBeNull();
     expect(dockBox!.height, 'dock must be compact on /map').toBeLessThanOrEqual(120);
@@ -96,8 +102,12 @@ test.describe('@mobile BUG-CLASS-1: active tab-bar state', () => {
     await expect(dock).toBeVisible({ timeout: 30_000 });
 
     await expect(page).toHaveURL(/\/quests(?:[/?#]|$)/);
-    await expect(dock.getByTestId('footer-item-quests')).toHaveAttribute('aria-selected', 'true');
-    await expect(dock.getByTestId('footer-item-map')).toHaveAttribute('aria-selected', 'false');
+    const questsTab = dock.getByTestId('footer-item-quests');
+    const mapTab = dock.getByTestId('footer-item-map');
+    await expect(questsTab).toBeVisible();
+    await expect(questsTab).toHaveAttribute('aria-selected', 'true');
+    await expect(mapTab).toHaveAttribute('aria-selected', 'false');
+    expect(await getDockTabBackground(questsTab)).not.toBe(await getDockTabBackground(mapTab));
 
     const dockBox = await dock.boundingBox();
     expect(dockBox).not.toBeNull();
@@ -220,27 +230,6 @@ test.describe('@mobile BUG-CLASS-3: back navigation returns to source', () => {
   });
 });
 
-// ─── BUG-CLASS-4: Unified point popup actions ────────────────────────────────
-
-test.describe('@mobile BUG-CLASS-4: unified point popup has copy/nav actions', () => {
-  test('travel detail point list shows copy-coordinates action', async ({ page }) => {
-    await setMobileViewport(page);
-
-    const opened = await openFallbackTravelDetails(page);
-    expect(opened, 'fallback travel details must load').toBe(true);
-
-    // Scroll to the points/coordinates section
-    const pointsSection = page.getByTestId('travel-details-points');
-    await pointsSection.scrollIntoViewIfNeeded();
-    await expect(pointsSection).toBeVisible({ timeout: 20_000 });
-
-    // Verify that coordinate copy is reachable from the points section
-    // (the button with copy semantics must exist inside the points section)
-    await expect(pointsSection.getByRole('button', { name: /скопировать координаты/i }).first())
-      .toBeVisible({ timeout: 10_000 });
-  });
-});
-
 // ─── BUG-CLASS-7: Duplicate sections in travel details ───────────────────────
 
 test.describe('@mobile BUG-CLASS-7: no duplicate sections in travel details', () => {
@@ -271,10 +260,9 @@ test.describe('@mobile BUG-CLASS-8: no layout artifacts on mobile', () => {
     await setMobileViewport(page);
     await gotoWithRetry(page, '/places');
 
-    // Wait for the page to load something meaningful
-    await expect(
-      page.locator('[data-testid="places-category-chip-all"], [data-testid="places-category-search-input"]').first(),
-    ).toBeVisible({ timeout: 30_000 });
+    // The layout invariant is valid for success and recoverable API-error states.
+    await expect(page.getByRole('heading', { name: 'Места', level: 1 })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('textbox', { name: 'Найти место' })).toBeVisible();
 
     // Scroll to bottom
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));

@@ -238,7 +238,42 @@ export type ArticleType = {
     updated_at: number
 }
 
-export type Filters = {
+export type FilterDictionaryOption = {
+    id: number
+    name: string
+}
+
+export type FilterSortingOption = {
+    id: string
+    name: string
+    sortBy: string
+    sortOrder: 'asc' | 'desc'
+}
+
+export type FilterCountryOption = {
+    country_id: number
+    title_ru: string
+}
+
+/** Runtime contract of GET /api/getFiltersTravel/. */
+export type FilterDictionaries = {
+    categories: FilterDictionaryOption[]
+    categoryTravelAddress: FilterDictionaryOption[]
+    companions: FilterDictionaryOption[]
+    complexity: FilterDictionaryOption[]
+    month: FilterDictionaryOption[]
+    over_nights_stay: FilterDictionaryOption[]
+    sortings: FilterSortingOption[]
+    transports: FilterDictionaryOption[]
+}
+
+/** Filter dictionaries after merging the separately validated countries endpoint. */
+export type Filters = FilterDictionaries & {
+    countries: FilterCountryOption[]
+}
+
+/** User-selected filter values sent to search/list contracts. */
+export type FilterSelectionState = {
     countries: string[]
     categories: string[]
     categoryTravelAddress: string[]
@@ -246,12 +281,6 @@ export type Filters = {
     complexity: string[]
     month: string[]
     over_nights_stay: string[]
-    sortings?: Array<{
-        id: string
-        name: string
-        sortBy?: string
-        sortOrder?: 'asc' | 'desc'
-    }>
     transports: string[]
     year: string
     user_id?: number
@@ -264,8 +293,8 @@ export type FeedbackData = {
 }
 
 export type FiltersContextType = {
-    filters: Filters;
-    updateFilters: (newFilters: Partial<Filters>) => void;
+    filters: FilterSelectionState;
+    updateFilters: (newFilters: Partial<FilterSelectionState>) => void;
 }
 
 export interface FormValues {

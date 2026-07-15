@@ -11,35 +11,20 @@ test.describe('Travel detail — share', () => {
 
   test('share panel exposes social + copy actions', async ({ page }) => {
     await preacceptCookies(page);
-
-    const opened = await openFallbackTravelDetails(page);
-    if (!opened) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Fallback travel details did not render in this environment; skipping share assertions.',
-      });
-      return;
-    }
+    expect(await openFallbackTravelDetails(page)).toBe(true);
 
     // The share panel lives in the footer section — scroll it into view so the
     // deferred section mounts.
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const scroll = page.locator('[data-testid="travel-details-scroll"]');
+    await expect(scroll).toBeVisible();
+    await scroll.evaluate((node: HTMLElement) => {
+      node.scrollTop = node.scrollHeight;
+      node.dispatchEvent(new Event('scroll', { bubbles: true }));
+    });
 
-    const telegram = page.getByLabel('Поделиться в Telegram').first();
-    const appeared = await telegram
-      .waitFor({ state: 'visible', timeout: 20_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!appeared) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Share panel not present on this build/environment; skipping share assertions.',
-      });
-      return;
-    }
-
-    await expect(telegram).toBeVisible();
+    const sharePanel = page.getByRole('region', { name: 'Поделиться маршрутом' });
+    await expect(sharePanel).toBeVisible({ timeout: 20_000 });
+    await expect(sharePanel.getByLabel('Поделиться в Telegram')).toBeVisible();
     await expect(page.getByLabel('Поделиться во ВКонтакте').first()).toBeVisible();
     await expect(page.getByLabel('Поделиться в WhatsApp').first()).toBeVisible();
     await expect(page.getByLabel('Копировать ссылку').first()).toBeVisible();

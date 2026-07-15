@@ -313,7 +313,6 @@ describe('api/misc', () => {
     const result = await fetchFilters()
 
     expect(result).toEqual({
-      countries: [],
       categories: [],
       categoryTravelAddress: [],
       companions: [],
@@ -322,9 +321,59 @@ describe('api/misc', () => {
       over_nights_stay: [],
       sortings: [],
       transports: [],
-      year: '',
     })
     expect(mockSafeJsonParse).not.toHaveBeenCalled()
+  })
+
+  it('fetchFilters validates the deployed response and does not require countries or year', async () => {
+    const payload = {
+      categories: [{ id: 1, name: 'Category' }],
+      categoryTravelAddress: [],
+      companions: [],
+      complexity: [],
+      month: [],
+      over_nights_stay: [],
+      transports: [],
+      sortings: [
+        { id: 'new', name: 'Newest', sortBy: 'created_at', sortOrder: 'desc' },
+      ],
+    }
+    mockFetchWithTimeout.mockResolvedValue({ ok: true })
+    mockSafeJsonParse.mockResolvedValue(payload)
+
+    await expect(fetchFilters({ throwOnError: true })).resolves.toEqual(payload)
+    expect(mockSafeJsonParse).toHaveBeenCalledWith(expect.anything())
+  })
+
+  it('fetchFilters propagates invalid JSON, malformed dictionaries, and 502 with throwOnError', async () => {
+    mockFetchWithTimeout.mockResolvedValueOnce({ ok: true })
+    mockSafeJsonParse.mockRejectedValueOnce(new Error('Invalid JSON'))
+    await expect(fetchFilters({ throwOnError: true })).rejects.toThrow('Invalid JSON')
+
+    mockFetchWithTimeout.mockResolvedValueOnce({ ok: true })
+    mockSafeJsonParse.mockResolvedValueOnce({ categories: [] })
+    await expect(fetchFilters({ throwOnError: true })).rejects.toThrow(
+      'categoryTravelAddress',
+    )
+
+    mockFetchWithTimeout.mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+      statusText: 'Bad Gateway',
+    })
+    await expect(fetchFilters({ throwOnError: true })).rejects.toThrow('HTTP 502')
+  })
+
+  it('fetchFiltersCountry validates the dedicated country option shape', async () => {
+    mockFetchWithTimeout.mockResolvedValue({ ok: true })
+    mockSafeJsonParse.mockResolvedValue([{ country_id: 1, title_ru: 'Беларусь' }])
+
+    await expect(fetchFiltersCountry({ throwOnError: true })).resolves.toEqual([
+      { country_id: 1, title_ru: 'Беларусь' },
+    ])
+
+    mockSafeJsonParse.mockResolvedValueOnce([{ id: 1, name: 'Беларусь' }])
+    await expect(fetchFiltersCountry({ throwOnError: true })).rejects.toThrow('country_id')
   })
 
   it('fetchAllCountries returns fallback without JSON parsing on non-ok response', async () => {
@@ -377,7 +426,6 @@ describe('api/misc', () => {
     const countries = await fetchFiltersCountry()
     const all = await fetchAllCountries()
     expect(filters).toEqual({
-      countries: [],
       categories: [],
       categoryTravelAddress: [],
       companions: [],
@@ -386,7 +434,6 @@ describe('api/misc', () => {
       over_nights_stay: [],
       sortings: [],
       transports: [],
-      year: '',
     })
     expect(countries).toEqual([])
     expect(all).toEqual([])
