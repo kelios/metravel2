@@ -103,7 +103,7 @@ Do not leak desired conclusions into QA/reviewer prompts; pass raw scope, diff, 
 - For Android/native, do not claim device readiness without local-build evidence from the USB-connected phone.
 - Do not run Android EAS/cloud builds, Android production builds/submits, or Expo export/dev-client Android QA routes unless the user explicitly asks for that exact path in the current task.
 - For production deploy or submit, require explicit target environment and clean gates. Do not let roles invent deploy commands; route mutating deploy/rollback work through `$metravel-devops-agent`.
-- Before assigning or running deploy, build, Android install, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; do not launch duplicates for the same target.
+- Before assigning or running deploy, build, Android install, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; do not launch duplicates for the same target. For an active test/quality gate, end the new validation attempt immediately as `validation skipped: active gate pid/name` without waiting, polling, bypassing, or retrying; the owner handles failures and reruns, and `SKIPPED` is not `passed`.
 
 ## Final Self-Check
 

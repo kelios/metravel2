@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Release Checks"
   short_description: "Pick the right metravel validation flow."
-  default_prompt: "Use $metravel-release-checks to choose locked validation for the affected web/Android/iOS and RU/BE/UK/PL/EN contract, fixing failures in scope and preserving explicit release authority gates."
+  default_prompt: "Use $metravel-release-checks to map web/Android/iOS and RU/BE/UK/PL/EN impact, choose locked validation, stop without waiting or retrying on a busy gate, and fix only this task's failures."

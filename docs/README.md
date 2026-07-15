@@ -55,6 +55,11 @@ yarn build:web:prod
 Перед full/preflight/e2e/build/deploy/Lighthouse/Android install проверьте
 operation gate из `AGENTS.md` и `RULES.md`.
 
+Если test/quality gate уже принадлежит другому живому процессу, текущий чат
+сразу получает `SKIPPED`: не ждёт, не перезапускает проверку после освобождения
+lock и не запускает обходной тест. Владелец активного gate исправляет его
+падения; `SKIPPED` указывается в handoff и не считается `passed`.
+
 ## Backend boundary
 
 Этот workspace не содержит backend implementation. Backend/Django/API/server

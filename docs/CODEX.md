@@ -135,7 +135,7 @@ Claude slash-команды переносятся как skill-routes, а не 
 | --- | --- |
 | `/auto-dev`, `/bugfix` | `$metravel-codex-orchestrator`/`$metravel-agent-workflow` + domain skill + `$metravel-feature-builder` + QA/review |
 | `/changed-summary` | `$metravel-code-reviewer` или обычный read-only `git status`/`git diff` summary |
-| `/check-fast`, `/guard-all`, `/preflight` | `$metravel-test-runner` / `$metravel-release-checks`; запускать repository scripts через quality-gate lock |
+| `/check-fast`, `/guard-all`, `/preflight` | `$metravel-test-runner` / `$metravel-release-checks`; запускать repository scripts через quality-gate lock, а при `SKIPPED` из-за живого владельца сразу завершать validation без ожидания и повторного запуска |
 | `/growth-review` | `$metravel-growth-analyst` |
 | `/seo-daily` | `$metravel-seo-index-operator` |
 | `/split-component` | `$metravel-refactor-surgeon` |
@@ -253,7 +253,7 @@ Validation: <expected checks/evidence>.
 - BA, QA и reviewer по умолчанию не меняют код.
 - Codex Orchestrator не подменяет профильные роли; он выбирает маршрут, проверяет правила и держит handoff компактным.
 - В этом frontend workspace ни одна роль не редактирует backend/Django/API/server working tree. Backend blockers фиксируются через read-only diagnosis и `area=back` board tasks.
-- Перед передачей роли на deploy, release/build, Android local/EAS build/install, server rebuild/restart, full/preflight tests, Playwright/e2e или Lighthouse orchestrator должен проверить operation gate из `AGENTS.md`/`docs/RULES.md`; если такая операция уже идет для того же target, новый агент не запускает дубль и фиксирует blocker/ожидание.
+- Перед передачей роли на deploy, release/build, Android local/EAS build/install, server rebuild/restart, full/preflight tests, Playwright/e2e или Lighthouse orchestrator должен проверить operation gate из `AGENTS.md`/`docs/RULES.md`. Для занятого test/quality gate новый агент сразу фиксирует `validation skipped: active gate pid/name`, не ждёт, не poll'ит и не перезапускает проверку; падения исправляет владелец активного gate. Для остальных операций применяется их обычный blocker/wait contract.
 - Любая FE/BE задача на общем борде без `Task Contract` считается неготовой к старту и к `done`; ticket-board/оркестратор должны сначала дописать контракт или вернуть задачу в refinement.
 - Любая новая задача должна попасть в текущий active sprint; если board API вернул `401`, ticket-board/оркестратор обязан обновить staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md` до создания локального fallback.
 - Project Analyst только анализирует и не меняет файлы, если пользователь отдельно не попросил перейти к docs/code changes.
@@ -281,7 +281,7 @@ Validation: <expected checks/evidence>.
 1. Сначала зафиксируй scope: какие user-facing сценарии, файлы и project rules могут быть затронуты.
 2. Найди существующий путь реализации через поиск по компонентам, hooks, services, utils и тестам.
 3. Перед правкой проверь текущую ветку и `git status --short`; работай только на `main`, а если текущая ветка не `main`, остановись и уточни дальнейшие действия.
-4. Перед долгими эксклюзивными операциями проверь operation gate: не запускай дубль deploy/build/Android install/rebuild/full tests/e2e/Lighthouse, если другой агент уже выполняет ту же операцию для того же target.
+4. Перед долгими эксклюзивными операциями проверь operation gate: не запускай дубль deploy/build/Android install/rebuild/full tests/e2e/Lighthouse. Если занят именно test/quality gate, сразу заверши свою validation как `skipped` без ожидания, polling, обходного теста или позднего ретрая; результат и исправление падений принадлежат владельцу активного запуска.
 5. Вноси маленький diff, который решает задачу без побочных рефакторингов.
 6. Складывай временную отладочную информацию только в игнорируемые локальные папки (`.codex-temp/`, `.codex-debug/`) и удаляй всё ненужное перед передачей результата.
 7. Чини все реальные проблемы, которые нашёл в затронутой зоне или проверках: падающие тесты, runtime errors, broken UI states, direct external-link нарушения, dead imports и очевидные регрессии. Не оставляй их на потом.

@@ -18,7 +18,7 @@ Use this skill when the task is to validate the repository broadly and fix what 
 ## Workflow
 
 1. Start from repo root and check branch + `git status --short`.
-2. Apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if another full/preflight/e2e gate is already active in this workspace, do not start a duplicate.
+2. Apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if another full/preflight/e2e gate is active, record `validation skipped: active gate pid/name` and stop immediately. Do not wait, poll, rerun after release, or start a narrower bypass. The active owner fixes and reruns its failures; `SKIPPED` is not `passed`.
 3. Run the full gate requested by the user (`npm run lint`, `npm run test:run`, `npm run e2e`) unless docs or a blocker require a narrower first pass.
 4. Fix real failures in the touched or failing scope; do not mask them with skips, retries-only hacks, or allowlist drift.
 5. After each fix, rerun the failing command first, then rerun the broader confidence check that still matches the task scope.

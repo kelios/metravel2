@@ -5,6 +5,8 @@
 const { spawn } = require('node:child_process')
 const {
   acquireQualityGateLock,
+  formatQualityGateSkipMessage,
+  isQualityGateBusyError,
   releaseQualityGateLock,
 } = require('./quality-gate-lock')
 
@@ -36,6 +38,10 @@ try {
     console.log(`quality-gate-lock: acquired for ${name} (pid=${process.pid})`)
   }
 } catch (error) {
+  if (isQualityGateBusyError(error)) {
+    console.log(formatQualityGateSkipMessage(error))
+    process.exit(0)
+  }
   console.error(`quality-gate-lock: BLOCKED — ${String(error?.message || error)}`)
   process.exit(73)
 }

@@ -77,8 +77,8 @@ describe('useRouletteLogic', () => {
     });
 
     fetchAllCountries.mockResolvedValue([
-      { id: 1, name: 'Беларусь' },
-      { id: 2, name: 'Польша' },
+      { country_id: 1, title_ru: 'Беларусь' },
+      { country_id: 2, title_ru: 'Польша' },
     ]);
 
     fetchTravelFacets.mockReturnValue({
@@ -125,6 +125,7 @@ describe('useRouletteLogic', () => {
       name: 'Беларусь',
       count: 3,
     });
+    expect(fetchAllCountries).toHaveBeenCalledWith({ signal: undefined, throwOnError: true });
   });
 
   it('hides facet options with zero count unless they are selected', () => {

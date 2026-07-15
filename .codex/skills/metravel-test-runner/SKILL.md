@@ -11,7 +11,7 @@ Use this skill when the main job is to run tests rather than write product code.
 
 ## Command selection
 
-- Before running tests, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; do not duplicate an active full/preflight/e2e run or another test command using the same shared server/build/output.
+- Before running tests, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. If a live quality gate already exists, record `validation skipped: active gate pid/name` and stop immediately: do not wait, poll, monitor it, retry after release, or run a narrower bypass check. `SKIPPED` is not a passing result.
 - Start with the narrowest reliable command for the touched scope.
 - Prefer targeted `npm run test:run -- <path-or-pattern>` when a single area already has focused coverage.
 - Use `npm run check:fast` for a finished small logical block.
@@ -24,6 +24,7 @@ Use this skill when the main job is to run tests rather than write product code.
 ## Failure handling
 
 - Treat failures in the touched scope as part of the task and rerun after fixing them.
+- The chat that starts a gate owns its failures and rerun. Do not take over or duplicate failures from another chat's active gate.
 - Do not accept `.skip`, `it.skip`, `test.skip`, `describe.skip`, `xit`, or `xtest` as a workaround.
 - If a failure is clearly unrelated, report the exact command, failing test, risk, and why it was not fixed.
 - Keep logs and ad-hoc output only in ignored local folders such as `.codex-temp/` or `.codex-debug/`.

@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Quality Fixer"
   short_description: "Run lint, Jest, and Playwright end to end and fix the failures."
-  default_prompt: "Use $metravel-quality-fixer to run the requested metravel quality gates, check the operation gate before starting broad gates, fix real failures in scope, rerun the affected checks, and report any unrelated blocker explicitly."
+  default_prompt: "Use $metravel-quality-fixer to map web/Android/iOS and RU/BE/UK/PL/EN impact, run and repair the requested gates, and stop without waiting or retrying when another task owns the active gate."

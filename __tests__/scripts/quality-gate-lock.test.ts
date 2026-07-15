@@ -44,13 +44,14 @@ describe('quality-gate-lock', () => {
           '-e',
           `const lock=require(${JSON.stringify(modulePath)});` +
             `try{lock.acquireQualityGateLock({name:${JSON.stringify(name)},lockPath:${JSON.stringify(lockPath)},detectProcesses:false});lock.releaseQualityGateLock();}` +
-            `catch(error){console.error(error.message);process.exit(73)}`,
+            `catch(error){console.error(error.code+':'+error.message);process.exit(73)}`,
         ],
         { MT_QUALITY_GATE_LOCK_OWNED: '' }
       )
 
     const blocked = attempt('blocked')
     expect(blocked.status).toBe(73)
+    expect(blocked.stderr).toContain('QUALITY_GATE_BUSY')
     expect(blocked.stderr).toContain(`pid=${process.pid}`)
 
     lockModule.releaseQualityGateLock()
@@ -58,5 +59,32 @@ describe('quality-gate-lock', () => {
     expect(allowed.status).toBe(0)
 
     removeDir(tempDir)
+  })
+
+  it('returns a neutral skipped result instead of waiting or rerunning through the wrapper', () => {
+    const wrapperPath = require.resolve('@/scripts/run-with-quality-gate-lock')
+    const result = runNodeCli(
+      [wrapperPath, 'concurrent-test', '--', process.execPath, '-e', 'process.exit(41)'],
+      { MT_QUALITY_GATE_LOCK_OWNED: '' }
+    )
+
+    expect(result.status).toBe(0)
+    expect(result.stdout).toContain('quality-gate-lock: SKIPPED')
+    expect(result.stdout).toContain('do not wait, poll, or rerun this command')
+  })
+
+  it('returns the same skipped result for direct Jest setup contention', () => {
+    const setupPath = require.resolve('@/scripts/jest-quality-gate-setup')
+    const result = runNodeCli(
+      [
+        '-e',
+        `Promise.resolve(require(${JSON.stringify(setupPath)})()).then(()=>process.exit(41))`,
+      ],
+      { MT_QUALITY_GATE_LOCK_OWNED: '' }
+    )
+
+    expect(result.status).toBe(0)
+    expect(result.stdout).toContain('quality-gate-lock: SKIPPED')
+    expect(result.stdout).toContain('active gate owner is responsible for failures')
   })
 })

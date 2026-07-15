@@ -8,6 +8,7 @@ const repoRoot = path.resolve(__dirname, '..')
 const defaultLockPath = path.join(repoRoot, '.codex-temp', 'ops', 'quality-gate.lock')
 const ownerFileName = 'owner.json'
 const MALFORMED_LOCK_STALE_MS = 90 * 60 * 1000
+const QUALITY_GATE_BUSY_CODE = 'QUALITY_GATE_BUSY'
 
 const QUALITY_PROCESS_PATTERNS = [
   /node_modules[\\/](?:\.bin[\\/])?jest(?:\s|$|[\\/])/i,
@@ -19,6 +20,23 @@ const QUALITY_PROCESS_PATTERNS = [
 ]
 
 let ownedLockPath = null
+
+function createQualityGateBusyError(message) {
+  const error = new Error(message)
+  error.code = QUALITY_GATE_BUSY_CODE
+  return error
+}
+
+function isQualityGateBusyError(error) {
+  return error?.code === QUALITY_GATE_BUSY_CODE
+}
+
+function formatQualityGateSkipMessage(error) {
+  return (
+    `quality-gate-lock: SKIPPED — ${String(error?.message || error)}. ` +
+    'The active gate owner is responsible for failures; do not wait, poll, or rerun this command.'
+  )
+}
 
 function isProcessAlive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false
@@ -145,7 +163,7 @@ function acquireQualityGateLock({
       const stale = ownerPid > 0 ? !isProcessAlive(ownerPid) : malformedAge > MALFORMED_LOCK_STALE_MS
       if (!stale) {
         const started = owner?.startedAt ? new Date(owner.startedAt).toISOString() : 'unknown'
-        throw new Error(
+        throw createQualityGateBusyError(
           `another quality gate is already running` +
             ` (pid=${ownerPid || '?'}, name=${owner?.name || 'unknown'}, started=${started})`
         )
@@ -171,7 +189,9 @@ function acquireQualityGateLock({
         .slice(0, 5)
         .map((row) => `pid=${row.pid} command=${row.command}`)
         .join('\n')
-      throw new Error(`quality test process already exists in this workspace:\n${summary}`)
+      throw createQualityGateBusyError(
+        `quality test process already exists in this workspace:\n${summary}`
+      )
     }
   }
 
@@ -180,9 +200,12 @@ function acquireQualityGateLock({
 
 module.exports = {
   QUALITY_PROCESS_PATTERNS,
+  QUALITY_GATE_BUSY_CODE,
   acquireQualityGateLock,
   defaultLockPath,
   findConflictingQualityProcesses,
+  formatQualityGateSkipMessage,
+  isQualityGateBusyError,
   isProcessAlive,
   parseProcessTable,
   releaseQualityGateLock,

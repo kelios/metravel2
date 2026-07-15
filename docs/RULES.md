@@ -107,10 +107,13 @@ npm run test:run
 - Long-running operation coordination is mandatory:
   - deploys, release/build commands, production web builds, Android local/EAS builds or installs, server rebuilds/restarts, full/preflight checks, Playwright/e2e, Lighthouse, and any command that writes shared build/test artifacts are exclusive by operation type and target;
   - before starting one, check active processes and known locks for the same target, for example `ps`/`pgrep -af` matches for `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `docker compose`, `nginx`, `systemctl`, plus lock files such as `dist/.prod-build.lock` or `.codex-temp/ops/*.lock`;
-  - if another agent or terminal already runs the same target operation, do not start a duplicate. Wait for it, reuse its result when visible, or report a blocker with PID, command, target, and the next safe action;
+  - if another agent or terminal already runs the same deploy/build/rebuild target, do not start a duplicate. Reuse the active operation, wait only when its result is required by your scope, or report a blocker with PID, command, target, and the next safe action;
+  - test/quality gates use a stricter non-waiting contract: when a live `.codex-temp/ops/quality-gate.lock` or active quality process exists, stop the attempted validation immediately. Do not wait, poll, monitor completion, retry after the lock is released, or start a narrower bypass test;
+  - report this case as `validation skipped: active gate pid/name`, never as a passed test. The chat that started the active gate owns its result, fixes real failures, and reruns only its own failed check after the fix; other chats do not duplicate that work;
   - do not kill, restart, or replace another agent's process unless the user explicitly asked for it or a documented safe wrapper owns that cleanup;
   - if a lock is stale, confirm the process is gone or the lock exceeded its documented stale window before removing it;
   - broad gates (`npm run release:check`, `npm run check:preflight`, full `npm run test:run`, Playwright/e2e) are exclusive per workspace. Narrow unit tests may run only when they do not share the same server/build/output and no broad gate is already active.
+  - project-owned test wrappers return exit code `0` with an explicit `SKIPPED` message when a live owner already holds the quality gate. This zero code is a coordination outcome, not green validation evidence.
 - Store temporary debugging artifacts only in ignored local folders such as `.codex-temp/` or `.codex-debug/`.
   - Do not put ad-hoc screenshots, traces, logs, JSON reports, or throwaway QA output in tracked project folders.
   - Keep only artifacts that are still useful for the current task, and delete stale or unnecessary debug output before handoff.
