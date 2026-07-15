@@ -11,6 +11,7 @@ import { queryKeys } from '@/api/queryKeys';
 import type { UserProfileDto } from '@/api/user';
 import { shouldUseStoredAuthToken } from '@/utils/authPlatform';
 import { normalizeAvatarUrl } from '@/utils/mediaUrl';
+import { normalizeProfileName, resolveProfileFullName } from '@/utils/profileName';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -53,6 +54,16 @@ const normalizeAvatar = (raw: unknown): string | null => {
     const lower = str.toLowerCase();
     if (lower === 'null' || lower === 'undefined') return null;
     return normalizeAvatarUrl(str) || null;
+};
+
+const resolveAuthDisplayName = (
+    profile: UserProfileDto | null | undefined,
+    fallbackName?: unknown,
+    fallbackEmail?: unknown,
+): string => {
+    const profileName = resolveProfileFullName(profile);
+    const safeFallbackName = normalizeProfileName(fallbackName);
+    return profileName || safeFallbackName || String(fallbackEmail ?? '').trim();
 };
 
 // Roll back credentials persisted during an in-flight login that lost the
@@ -201,12 +212,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             }
 
             const verifiedAvatar = normalizeAvatar(verifiedWebProfile?.avatar);
-            const verifiedName = String(verifiedWebProfile?.first_name ?? '').trim();
+            const verifiedName = resolveProfileFullName(verifiedWebProfile);
+            const storedName = normalizeProfileName(storageData.userName);
 
             set({
                 isAuthenticated: true,
                 userId: storageData.userId,
-                username: verifiedName || storageData.userName || '',
+                username: verifiedName || storedName || '',
                 isSuperuser: storageData.isSuperuser === 'true',
                 userAvatar: verifiedAvatar ?? restoredAvatar,
                 isPremium: verifiedWebProfile?.is_premium ?? false,
@@ -219,7 +231,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 fetchUserProfileViaCache(storageData.userId)
                     .then((profile) => {
                         if (epochAtStart !== authEpoch) return;
-                        set({ isPremium: profile?.is_premium ?? false });
+                        const profileName = resolveProfileFullName(profile);
+                        set((s) => ({
+                            isPremium: profile?.is_premium ?? false,
+                            username: profileName || s.username,
+                        }));
+                        if (profileName) {
+                            setStorageBatch([['userName', profileName]]).catch(() => undefined);
+                        }
                         const avatar = normalizeAvatar(profile?.avatar);
                         if (avatar) {
                             set((s) => ({
@@ -284,8 +303,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 return false;
             }
 
-            const normalizedFirstName = String(profile?.first_name ?? '').trim();
-            const displayName = normalizedFirstName || userData.name?.trim() || userData.email;
+            const displayName = resolveAuthDisplayName(profile, userData.name, userData.email);
             const avatar = normalizeAvatar(profile?.avatar);
 
             const items: Array<[string, string]> = [
@@ -358,8 +376,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 return false;
             }
 
-            const normalizedFirstName = String(profile?.first_name ?? '').trim();
-            const displayName = normalizedFirstName || userData.name?.trim() || userData.email;
+            const displayName = resolveAuthDisplayName(profile, userData.name, userData.email);
             const avatar = normalizeAvatar(profile?.avatar);
 
             const items: Array<[string, string]> = [

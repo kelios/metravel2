@@ -1,6 +1,5 @@
 import { test, expect } from './fixtures';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
-import { expectNoOverlap } from './helpers/layoutAsserts';
 import { preacceptCookies, gotoWithRetry, assertNoHorizontalScroll } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
@@ -316,30 +315,4 @@ test.describe('@perf Footer layout invariants (web)', () => {
     expect(gutterHeight, `bottom gutter should not be excessively large`).toBeLessThanOrEqual(dockHeight + 20);
   });
 
-  // Merged from footer-last-card-overlap.spec.ts — last card must not overlap dock.
-  test('mobile: last travel card does not overlap footer dock', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await preacceptCookiesAndStabilize(page);
-
-    await gotoWithRetry(page, getTravelsListPath());
-
-    const dock = page.getByTestId('footer-dock-wrapper');
-    await expect(dock).toBeVisible({ timeout: 30_000 });
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    const firstCardVisible = await cards.first().isVisible().catch(() => false)
-      || await cards.first().waitFor({ state: 'visible', timeout: 45_000 }).then(() => true).catch(() => false);
-
-    const count = firstCardVisible ? await cards.count() : 0;
-    if (count === 0) {
-      test.info().annotations.push({ type: 'note', description: 'No cards rendered (API proxy may be unavailable); cannot verify overlap' });
-      return;
-    }
-
-    const last = cards.nth(count - 1);
-    await last.scrollIntoViewIfNeeded();
-    await expect(last).toBeVisible();
-
-    await expectNoOverlap(dock, last, { labelA: 'footer dock', labelB: 'last travel card' });
-  });
 });

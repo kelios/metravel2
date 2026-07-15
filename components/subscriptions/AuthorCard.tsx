@@ -6,6 +6,7 @@ import { View, Text, Pressable, Platform, Image, ScrollView, StyleSheet } from '
 import Feather from '@expo/vector-icons/Feather';
 
 import type { AuthorWithTravels } from '@/hooks/useSubscriptionsData';
+import { resolveProfileFullName } from '@/api/user';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -46,18 +47,17 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
   const [avatarError, setAvatarError] = useState(false);
 
   const fullName = useMemo(() => {
-    const first = String(profile.first_name ?? '').trim();
-    const last = String(profile.last_name ?? '').trim();
-    return `${first} ${last}`.trim() || i18nT('sharedStatic:user.fallbackName');
+    return resolveProfileFullName(profile) || i18nT('sharedStatic:user.fallbackName');
   }, [profile.first_name, profile.last_name]);
 
   const initials = useMemo(() => {
-    const first = String(profile.first_name ?? '').trim();
-    const last = String(profile.last_name ?? '').trim();
-    const firstInitial = first[0] || '';
-    const lastInitial = last[0] || '';
-    return (firstInitial + lastInitial).toUpperCase() || null;
-  }, [profile.first_name, profile.last_name]);
+    return fullName
+      .split(' ')
+      .map((part) => part[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || null;
+  }, [fullName]);
 
   const authorUserId = profile.user ?? profile.id;
 

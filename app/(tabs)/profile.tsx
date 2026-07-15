@@ -48,7 +48,7 @@ import { buildCanonicalUrl } from '@/utils/seo';
 import { useIsFocused } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { mapProfileRank } from '@/api/user';
+import { mapProfileRank, normalizeProfileName } from '@/api/user';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { getStorageBatch } from '@/utils/storageBatch';
 import { hapticImpact } from '@/utils/haptics';
@@ -327,11 +327,12 @@ export default function ProfileScreen() {
     setWorldMapGestureActive(active);
   }, []);
 
+  const safeStoredUserName = useMemo(() => normalizeProfileName(userInfo.name), [userInfo.name]);
   const displayName = useMemo(
-    () => (fullName || userInfo.name || i18nT('profile:app.tabs.profile.defaultUserName')).trim(),
-    [fullName, userInfo.name],
+    () => (fullName || safeStoredUserName || i18nT('profile:app.tabs.profile.defaultUserName')).trim(),
+    [fullName, safeStoredUserName],
   );
-  const hasDisplayName = Boolean(fullName?.trim() || userInfo.name?.trim());
+  const hasDisplayName = Boolean(fullName?.trim() || safeStoredUserName);
 
   const handleHeaderAction = useCallback((key: ProfileHeaderActionKey) => {
     if (key === 'messages') router.push('/messages');

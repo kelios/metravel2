@@ -1,6 +1,5 @@
 import { test, expect } from './fixtures';
-import { gotoWithRetry, preacceptCookies } from './helpers/navigation';
-import { getTravelsListPath } from './helpers/routes';
+import { openFallbackTravelDetails, preacceptCookies } from './helpers/navigation';
 
 type WebVitalsResult = {
   clsTotal: number;
@@ -161,31 +160,8 @@ async function setupVitalsCollection(page: any) {
   });
 }
 
-async function openFirstTravelFromList(page: any) {
-  await gotoWithRetry(page, getTravelsListPath());
-
-  await page.waitForSelector('[data-testid="travel-card-link"]', { timeout: 30_000 }).catch(() => null);
-
-  const cards = page.locator('[data-testid="travel-card-link"]');
-  const count = await cards.count();
-  if (count === 0) {
-    test.info().annotations.push({
-      type: 'note',
-      description: 'No travel cards available in this environment; cannot open details page',
-    });
-    return false;
-  }
-
-  await cards.first().click();
-  await page.waitForURL((url: URL) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-  await Promise.race([
-    page.waitForSelector('[data-testid="travel-details-page"]', { timeout: 30_000 }),
-    page.waitForSelector('[data-testid="travel-details-scroll"]', { timeout: 30_000 }),
-    page.waitForSelector('[data-testid="travel-details-hero"]', { timeout: 30_000 }),
-  ]);
-
-  return true;
+async function openDeterministicTravel(page: any) {
+  expect(await openFallbackTravelDetails(page)).toBe(true);
 }
 
 async function collectAndAssert(page: any) {
@@ -277,8 +253,7 @@ test.describe('@perf Web Vitals (CLS/LCP/INP) - travel details', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await setupVitalsCollection(page);
 
-    const ok = await openFirstTravelFromList(page);
-    if (!ok) return;
+    await openDeterministicTravel(page);
 
     await collectAndAssert(page);
   });
@@ -287,8 +262,7 @@ test.describe('@perf Web Vitals (CLS/LCP/INP) - travel details', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await setupVitalsCollection(page);
 
-    const ok = await openFirstTravelFromList(page);
-    if (!ok) return;
+    await openDeterministicTravel(page);
 
     await collectAndAssert(page);
   });

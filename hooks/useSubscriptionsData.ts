@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/context/AuthContext';
-import { fetchMySubscriptions, fetchMySubscribers, unsubscribeFromUser, type UserProfileDto } from '@/api/user';
+import { fetchMySubscriptions, fetchMySubscribers, resolveProfileFullName, unsubscribeFromUser, type UserProfileDto } from '@/api/user';
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries';
 import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
@@ -185,9 +185,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   );
 
   const getFullName = useCallback((p: UserProfileDto) => {
-    const first = String(p.first_name ?? '').trim();
-    const last = String(p.last_name ?? '').trim();
-    return `${first} ${last}`.trim().toLowerCase();
+    return resolveProfileFullName(p).toLowerCase();
   }, []);
 
   const handleUnsubscribe = useCallback(

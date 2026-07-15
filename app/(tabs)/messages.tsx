@@ -14,7 +14,7 @@ import {
     getMessagingUserDisplayName,
     getMessagingUserId,
 } from '@/api/messages';
-import { fetchUserProfile } from '@/api/user';
+import { fetchUserProfile, resolveProfileFullName } from '@/api/user';
 import type { MessageThread } from '@/api/messages';
 import ThreadList from '@/components/messages/ThreadList';
 import ChatView from '@/components/messages/ChatView';
@@ -154,7 +154,7 @@ function MessagesScreenContent() {
             peerIdsToResolve.map(async (id) => {
                 try {
                     const p = await fetchUserProfile(id);
-                    const name = [p.first_name, p.last_name].filter(Boolean).join(' ').trim();
+                    const name = resolveProfileFullName(p);
                     return [id, { name, avatar: p.avatar ?? null }] as const;
                 } catch {
                     return null;

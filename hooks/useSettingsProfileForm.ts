@@ -88,7 +88,7 @@ export function useSettingsProfileForm({
     const first = normalizeProfileName(firstName);
     const last = normalizeProfileName(lastName);
     const full = `${first} ${last}`.trim();
-    return full || username || i18nT('profile:app.tabs.profile.defaultUserName');
+    return full || normalizeProfileName(username) || i18nT('profile:app.tabs.profile.defaultUserName');
   }, [firstName, lastName, username]);
 
   const hasUnsavedChanges = useMemo(() => {
@@ -118,8 +118,8 @@ export function useSettingsProfileForm({
     setProfileSaving(true);
     try {
       const payload: UpdateUserProfilePayload = {
-        first_name: firstName,
-        last_name: lastName,
+        first_name: normalizeProfileName(firstName),
+        last_name: normalizeProfileName(lastName),
         youtube,
         instagram,
         twitter,

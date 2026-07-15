@@ -1,5 +1,10 @@
 import { test, expect } from './fixtures';
-import { preacceptCookies, assertNoHorizontalScroll, tid } from './helpers/navigation';
+import {
+  preacceptCookies,
+  assertNoHorizontalScroll,
+  tid,
+  openFallbackTravelDetails,
+} from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
 // Alias for backward compat within this file
@@ -154,35 +159,7 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
       await preacceptCookiesAndStabilize(page);
       await installClsAfterRenderMeter(page);
 
-      // Go to list, open first card if available.
-      await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-      await waitForAppShell(page);
-
-      const cards = page.locator('[data-testid="travel-card-link"]');
-      const count = await cards.count();
-      if (count === 0) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'No travel cards available in this environment',
-        });
-        return;
-      }
-
-      await expect(cards.first()).toBeVisible({ timeout: 30_000 });
-      await cards.first().click();
-      await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 45_000 });
-
-      // Either error state or the page shell must render.
-      await Promise.race([
-        page.waitForSelector(tid('travel-details-page'), { timeout: 45_000 }),
-        page.waitForSelector('text=Не удалось загрузить путешествие', { timeout: 45_000 }),
-      ]);
-
-      // If error state, stop here (still validates render).
-      if (await page.locator('text=Не удалось загрузить путешествие').isVisible().catch(() => false)) {
-        await assertNoHorizontalScroll(page);
-        return;
-      }
+      expect(await openFallbackTravelDetails(page)).toBe(true);
 
       // Must-have blocks (successful render)
       await expect(page.locator(tid('travel-details-page'))).toBeVisible();

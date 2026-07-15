@@ -7,7 +7,7 @@ import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
 import type { PlannedTrip } from '@/api/plannedTrips';
-import type { UserProfileDto } from '@/api/user';
+import { normalizeProfileName, resolveProfileFullName, type UserProfileDto } from '@/api/user';
 import { useInviteParticipants } from '@/hooks/usePlannedTripsApi';
 import { useSubscriptionsData } from '@/hooks/useSubscriptionsData';
 import { openExternalUrl } from '@/utils/externalLinks';
@@ -32,9 +32,7 @@ type InviteSubscriberProfile = UserProfileDto & {
 };
 
 export const getTripInviteSubscriberName = (profile: InviteSubscriberProfile): string => {
-  const first = String(profile.first_name ?? '').trim();
-  const last = String(profile.last_name ?? '').trim();
-  const firstLast = `${first} ${last}`.trim();
+  const firstLast = resolveProfileFullName(profile);
   const fallbackId = subscriberUserId(profile);
   const candidates = [
     profile.display_name,
@@ -45,7 +43,7 @@ export const getTripInviteSubscriberName = (profile: InviteSubscriberProfile): s
     profile.email,
   ];
   const name = candidates
-    .map((value) => String(value ?? '').trim())
+    .map((value) => normalizeProfileName(value))
     .find((value) => value.length > 0);
 
   return name || (fallbackId ? i18nT('trips:components.trips.planning.TripInvitePanel.polzovatel_value1_1a204f34', { value1: fallbackId }) : i18nT('trips:components.trips.planning.TripInvitePanel.polzovatel_2c7bb1ec'));

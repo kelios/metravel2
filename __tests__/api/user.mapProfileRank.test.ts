@@ -1,4 +1,4 @@
-import { mapProfileRank, normalizeProfileName, type UserProfileDto } from '@/api/user';
+import { mapProfileRank, normalizeProfileName, resolveProfileFullName, type UserProfileDto } from '@/api/user';
 
 const baseProfile = {
   id: 1,
@@ -55,5 +55,21 @@ describe('normalizeProfileName', () => {
   it('recovers names polluted by the metravel.by media URL normalizer', () => {
     expect(normalizeProfileName('https://metravel.by/Елена')).toBe('Елена');
     expect(normalizeProfileName('https://metravel.by/%D0%95%D0%BB%D0%B5%D0%BD%D0%B0')).toBe('Елена');
+    expect(normalizeProfileName('metravel.by/Julia?utm_source=test')).toBe('Julia');
+  });
+
+  it('drops non-profile URLs instead of rendering domains as names', () => {
+    expect(normalizeProfileName('https://metravel.by/user/7')).toBe('');
+    expect(normalizeProfileName('https://metravel.by/travels/demo')).toBe('');
+    expect(normalizeProfileName('https://example.com/Julia')).toBe('');
+  });
+
+  it('builds a clean full name from polluted profile fields', () => {
+    expect(
+      resolveProfileFullName({
+        first_name: 'https://metravel.by/Julia',
+        last_name: 'https://metravel.by/Sauran',
+      }),
+    ).toBe('Julia Sauran');
   });
 });

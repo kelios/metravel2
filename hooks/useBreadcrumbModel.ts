@@ -8,7 +8,7 @@ import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles';
 import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
 import { fetchQuestByQuestId, type ApiQuestBundle } from '@/api/quests';
-import { fetchUserProfile, type UserProfileDto } from '@/api/user';
+import { fetchUserProfile, resolveProfileFullName, type UserProfileDto } from '@/api/user';
 import { fetchPlannedTrip, type PlannedTrip } from '@/api/plannedTrips';
 import { fetchPublicTrip, type PublicTrip } from '@/api/publicTrips';
 import { queryKeys } from '@/queryKeys';
@@ -327,12 +327,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     gcTime: 10 * 60 * 1000,
   });
   const userProfileName = useMemo(() => {
-    if (!userProfileData) return '';
-    const clean = (v: unknown) => {
-      const s = String(v ?? '').trim();
-      return s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined' ? '' : s;
-    };
-    return `${clean(userProfileData.first_name)} ${clean(userProfileData.last_name)}`.trim();
+    return resolveProfileFullName(userProfileData);
   }, [userProfileData]);
 
   const plannedTripIdForBreadcrumb = useMemo(() => {

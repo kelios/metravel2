@@ -4,6 +4,7 @@ import { getSecureItem } from '@/utils/secureStorage';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { getApiRequestCredentials, shouldUseStoredAuthToken } from '@/utils/authPlatform';
+import { normalizeProfileName, resolveProfileFullName } from '@/utils/profileName';
 import { translate as i18nT } from '@/i18n';
 
 // ---------------------------------------------------------------------------
@@ -163,10 +164,10 @@ export interface MessagingUser {
 }
 
 export function getMessagingUserDisplayName(u: MessagingUser): string {
-    const name = u.name?.trim();
+    const name = normalizeProfileName(u.name);
     if (name) return name;
-    const parts = [u.first_name, u.last_name].map((p) => p?.trim()).filter(Boolean);
-    if (parts.length > 0) return parts.join(' ');
+    const fullName = resolveProfileFullName(u);
+    if (fullName) return fullName;
     return i18nT('errorsStatic:api.messages.userFallback');
 }
 

@@ -5,7 +5,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, Platform, Image, StyleSheet } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
-import type { UserProfileDto } from '@/api/user';
+import { resolveProfileFullName, type UserProfileDto } from '@/api/user';
 import SubscribeButton from '@/components/ui/SubscribeButton';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -29,18 +29,17 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
   const [avatarError, setAvatarError] = useState(false);
 
   const fullName = useMemo(() => {
-    const first = String(profile.first_name ?? '').trim();
-    const last = String(profile.last_name ?? '').trim();
-    return `${first} ${last}`.trim() || i18nT('sharedStatic:user.fallbackName');
+    return resolveProfileFullName(profile) || i18nT('sharedStatic:user.fallbackName');
   }, [profile.first_name, profile.last_name]);
 
   const initials = useMemo(() => {
-    const first = String(profile.first_name ?? '').trim();
-    const last = String(profile.last_name ?? '').trim();
-    const firstInitial = first[0] || '';
-    const lastInitial = last[0] || '';
-    return (firstInitial + lastInitial).toUpperCase() || null;
-  }, [profile.first_name, profile.last_name]);
+    return fullName
+      .split(' ')
+      .map((part) => part[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || null;
+  }, [fullName]);
 
   const userId = profile.user ?? profile.id;
 

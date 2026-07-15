@@ -336,6 +336,30 @@ describe('Messages API', () => {
             expect(getMessagingUserDisplayName(user)).toBe('John Doe');
         });
 
+        it('should not render profile URL values as display names', () => {
+            expect(
+                getMessagingUserDisplayName({
+                    id: 1,
+                    name: 'https://metravel.by/Julia',
+                    first_name: null,
+                    last_name: null,
+                    avatar: null,
+                    user: null,
+                }),
+            ).toBe('Julia');
+
+            expect(
+                getMessagingUserDisplayName({
+                    id: 2,
+                    name: '',
+                    first_name: 'https://metravel.by/Julia',
+                    last_name: 'https://metravel.by/Sauran',
+                    avatar: null,
+                    user: null,
+                }),
+            ).toBe('Julia Sauran');
+        });
+
         it('should return fallback when no name at all', () => {
             const user: MessagingUser = { id: 1, name: '', first_name: null, last_name: null, avatar: null, user: null };
             expect(getMessagingUserDisplayName(user)).toBe('Пользователь');

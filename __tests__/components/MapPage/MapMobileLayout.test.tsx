@@ -445,7 +445,7 @@ describe('MapMobileLayout', () => {
       fireEvent.press(screen.getByTestId('map-mobile-route-request-location'))
       expect(centerOnUser).toHaveBeenCalledTimes(1)
       fireEvent.press(screen.getByTestId('map-mobile-route-manual-start'))
-      expect(screen.getByText('Коснитесь карты: 1-я точка — старт, 2-я — финиш')).toBeTruthy()
+      expect(screen.getByText('Коснитесь карты, чтобы выбрать новый старт маршрута.')).toBeTruthy()
       expect(mockSnapToHalf).not.toHaveBeenCalled()
     })
 
@@ -468,7 +468,7 @@ describe('MapMobileLayout', () => {
         useRouteStore.getState().clearRouteAndSetMode('route')
       })
 
-      expect(screen.getByText('Коснитесь карты: 1-я точка — старт, 2-я — финиш')).toBeTruthy()
+      expect(screen.getByText('Коснитесь карты, чтобы выбрать новый старт маршрута.')).toBeTruthy()
       expect(screen.queryByTestId('map-mobile-route-request-location')).toBeNull()
       expect(useRouteStore.getState().points).toHaveLength(0)
     })
@@ -705,13 +705,13 @@ describe('MapMobileLayout', () => {
       fireEvent.press(screen.getByTestId('map-mobile-radius-button'))
       expect(
         StyleSheet.flatten(screen.getByTestId('map-mobile-radius-popover-card').props.style).right,
-      ).toBe(116)
+      ).toBe(98)
 
       fireEvent.press(screen.getByTestId('map-mobile-layers-button'))
       const layersCardStyle = StyleSheet.flatten(
         screen.getByTestId('map-mobile-layers-popover-card').props.style,
       )
-      expect(layersCardStyle.right).toBe(64)
+      expect(layersCardStyle.right).toBe(54)
       expect(layersCardStyle.width).toBe(360)
 
       fireEvent.press(screen.getByTestId('map-mobile-layers-popover-backdrop'))
@@ -720,7 +720,7 @@ describe('MapMobileLayout', () => {
       const transportCardStyle = StyleSheet.flatten(
         screen.getByTestId('map-mobile-transport-popover-card').props.style,
       )
-      expect(transportCardStyle.right).toBe(64)
+      expect(transportCardStyle.right).toBe(54)
       expect(transportCardStyle.width).toBe(204)
     })
 

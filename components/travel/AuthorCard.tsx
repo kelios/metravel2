@@ -7,6 +7,7 @@ import type { Travel } from '@/types/types'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { useAuth } from '@/context/AuthContext'
 import { useUserProfileCached } from '@/hooks/useUserProfileCached'
+import { normalizeProfileName, resolveProfileFullName } from '@/api/user'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -46,11 +47,10 @@ function cleanName(value: unknown, placeholder: RegExp, prefixKey: 'strict' | 'l
 function resolveAuthorName(travel: any): string {
   const user = travel?.user
   if (user) {
-    const firstName = (user.first_name || user.name || '').toString().trim()
-    if (firstName) {
-      const lastName = (user.last_name || '').toString().trim()
-      return lastName ? `${firstName} ${lastName}` : firstName
-    }
+    const fullName = resolveProfileFullName(user)
+    if (fullName) return fullName
+    const name = normalizeProfileName(user.name)
+    if (name) return name
   }
   const direct =
     travel?.author_name || travel?.authorName || travel?.owner_name || travel?.ownerName

@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
     fetchUserProfile,
     normalizeAvatar,
-    normalizeProfileName,
+    resolveProfileFullName,
     type UserProfileDto,
 } from '@/api/user';
 import { ApiError, isTimeoutError } from '@/api/client';
@@ -101,8 +101,7 @@ export function useUserProfile() {
     }, [query]);
 
     const fullName = useMemo(() => {
-        if (!profile) return '';
-        return `${normalizeProfileName(profile.first_name)} ${normalizeProfileName(profile.last_name)}`.trim();
+        return resolveProfileFullName(profile);
     }, [profile]);
 
     return {
