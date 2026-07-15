@@ -780,7 +780,10 @@ describe('travel SSR SEO helpers', () => {
       duration_min: 90,
     }
     const bundle = {
-      intro: JSON.stringify({ location: 'Вавельский холм' }),
+      intro: JSON.stringify({
+        location: 'Вавельский холм',
+        story: 'Первая часть существующего вступления.\n\nВторая часть существующего вступления.',
+      }),
       steps: JSON.stringify([{ location: 'Вавельский холм' }]),
     }
 
@@ -805,6 +808,8 @@ describe('travel SSR SEO helpers', () => {
     expect(second).toContain('Маршрут: 7 точек')
     expect(second).toContain('Время: примерно 1 ч 30 мин')
     expect(second).toContain('Старт: Вавельский холм')
+    expect(second).toContain('Первая часть существующего вступления.')
+    expect(second).toContain('Вторая часть существующего вступления.')
     expect(second).toContain('Обновлённое описание квеста.')
     expect(second).not.toContain('Пеший квест по Кракову с легендами и заданиями.')
     expect(second).toContain('html.rnw-styles-ready [data-ssg-quest-intro="true"]')

@@ -278,9 +278,13 @@ function parseArgs(argv) {
     if (value === '--commit') {
       options.commit = true
     } else if (value === '--aab') {
-      options.aab = rest[++index]
+      const aab = rest[++index]
+      if (!aab) fail('--aab requires a path')
+      options.aab = aab
     } else if (value === '--service-account') {
-      options.serviceAccount = rest[++index]
+      const serviceAccount = rest[++index]
+      if (!serviceAccount) fail('--service-account requires a path')
+      options.serviceAccount = serviceAccount
     } else {
       fail(`unsupported argument: ${value}`)
     }
@@ -304,8 +308,8 @@ async function runStatus(accessToken, packageName) {
       )
     )
     tracks.forEach(printTrack)
-    process.stdout.write('[android-play] Read-only status complete; temporary edit deleted.\n')
   })
+  process.stdout.write('[android-play] Read-only status complete; temporary edit deleted.\n')
 }
 
 async function runProductionEdit(accessToken, appContract, options) {
@@ -388,6 +392,9 @@ async function main(argv = process.argv.slice(2)) {
       await runStatus(accessToken, appContract.packageName)
     } else {
       await runProductionEdit(accessToken, appContract, options)
+      if (options.commit) {
+        await runStatus(accessToken, appContract.packageName)
+      }
     }
   } finally {
     releaseLock()

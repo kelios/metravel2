@@ -34,6 +34,28 @@ async function installTravelsOfMonthMock(page: import('@playwright/test').Page) 
   await page.route('**/travels/of-month/**', fulfillFixture)
 }
 
+async function installPublicTravelListMock(page: import('@playwright/test').Page) {
+  const fulfillList = async (route: import('@playwright/test').Route) => {
+    const pathname = new URL(route.request().url()).pathname
+    if (!pathname.endsWith('/api/travels/') && !pathname.endsWith('/travels/')) {
+      await route.fallback()
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: travelsOfMonthFixture,
+        total: travelsOfMonthFixture.length,
+      }),
+    })
+  }
+
+  await page.route('**/api/travels/**', fulfillList)
+  await page.route('**/travels/**', fulfillList)
+}
+
 async function getWeeklyHighlightsStackState(
   page: import('@playwright/test').Page,
 ): Promise<StackState | null> {
@@ -90,6 +112,7 @@ test.describe('Mobile web recommendation card stacks', () => {
         // noop
       }
     })
+    await installPublicTravelListMock(page)
     await installTravelsOfMonthMock(page)
 
     await gotoWithRetry(page, '/travelsby')

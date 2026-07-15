@@ -107,10 +107,9 @@ command -v node >/dev/null 2>&1 || fail "Node.js is required"
 acquire_lock
 trap cleanup EXIT INT TERM
 
-cd "$ROOT_DIR/android"
 if [[ "$mode" == "debug" ]]; then
   printf '[android-build] Building local debug APK (no EAS cloud)…\n'
-  ./gradlew :app:assembleDebug
+  node "$ROOT_DIR/scripts/android-gradle-build.js" debug
   printf '[android-build] Artifact: %s\n' "$ROOT_DIR/android/app/build/outputs/apk/debug/app-debug.apk"
   exit 0
 fi
@@ -118,5 +117,5 @@ fi
 load_macos_keychain_signing
 require_release_signing
 printf '[android-build] Building signed local production AAB (no EAS cloud)…\n'
-./gradlew :app:bundleRelease
+node "$ROOT_DIR/scripts/android-gradle-build.js" production
 printf '[android-build] Artifact: %s\n' "$ROOT_DIR/android/app/build/outputs/bundle/release/app-release.aab"

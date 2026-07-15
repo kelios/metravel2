@@ -32,6 +32,7 @@ describe('Android release safety contract', () => {
     expect(() => parseArgs(['upload-production', '--track', 'alpha'])).toThrow(
       'unsupported argument: --track'
     );
+    expect(() => parseArgs(['upload-production', '--aab'])).toThrow('--aab requires a path');
   });
 
   it('detects any change to a protected track snapshot', () => {
@@ -74,5 +75,12 @@ describe('Android release safety contract', () => {
     const buildScript = fs.readFileSync(path.join(ROOT, 'scripts/android-build.sh'), 'utf8');
     expect(buildScript).toContain('metravel-android-upload-store-password');
     expect(buildScript).not.toMatch(/METRAVEL_ANDROID_KEYSTORE_PASSWORD=["'][^$]/);
+
+    const gradleRunner = fs.readFileSync(
+      path.join(ROOT, 'scripts/android-gradle-build.js'),
+      'utf8'
+    );
+    expect(gradleRunner).toContain("NODE_ENV: 'production'");
+    expect(gradleRunner).toContain('PROD_ENV_PATH');
   });
 });

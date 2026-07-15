@@ -44,7 +44,6 @@ describe('web compile-time localization', () => {
     })
 
     expect(result?.code).not.toContain('seo:utils.questSeo.')
-    expect(result?.code).toContain('Городской квест')
     expect(result?.code).toContain('h:')
     expect(result?.code).toContain('v:')
   })

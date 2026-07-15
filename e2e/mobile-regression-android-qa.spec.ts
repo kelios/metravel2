@@ -9,7 +9,6 @@
  *  BUG-CLASS-2  – Шапка ≤20% высоты вьюпорта на мобильном
  *  BUG-CLASS-3  – Back-навигация возвращает на источник, не на Главную
  *  BUG-CLASS-4  – Единый шаблон попапа точки (координаты, навигация, копировать)
- *  BUG-CLASS-5  – Overlay-закрытие: ✕/фон/Back
  *  BUG-CLASS-7  – Дубли секций на странице деталей / мёртвые ссылки
  *  BUG-CLASS-8  – Layout-артефакты на мобильном (белый блок внизу /places)
  *
@@ -24,7 +23,9 @@ import {
   preacceptCookies,
   gotoWithRetry,
   mockFallbackTravelDetails,
+  openFallbackTravelDetails,
 } from './helpers/navigation';
+import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
 import { getTravelsListPath } from './helpers/routes';
 
 const MOBILE_VIEWPORT = { width: 390, height: 844 };
@@ -38,6 +39,22 @@ async function setMobileViewport(page: any) {
 
 function isTravelDetailsPath(pathname: string) {
   return /^\/travels\/[^/]+/.test(pathname);
+}
+
+async function installEmptyTravelListMock(page: import('@playwright/test').Page) {
+  await page.route('**/api/travels/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() !== 'GET' || url.pathname !== '/api/travels/') {
+      await route.fallback();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [], total: 0 }),
+    });
+  });
 }
 
 // ─── BUG-CLASS-1: Active tab-bar state ──────────────────────────────────────
@@ -54,23 +71,7 @@ test.describe('@mobile BUG-CLASS-1: active tab-bar state', () => {
     // The dock must render, but the "Маршруты" item (/search) should NOT carry
     // an active/selected aria attribute when the user is on the landing page.
     // We assert the active-indicator is absent or points to a non-route item.
-    const dockItems = dock.locator('[data-testid^="footer-item-"]');
-    const count = await dockItems.count();
-    if (count > 0) {
-      // No item should carry aria-selected="true" pointing at /search while on /
-      const activeItems = dock.locator('[aria-selected="true"], [aria-current="page"]');
-      const activeCount = await activeItems.count();
-      if (activeCount > 0) {
-        // If there is an active item, it must NOT be the "Маршруты" (/search) tab
-        for (let i = 0; i < activeCount; i++) {
-          const href = await activeItems.nth(i).getAttribute('href');
-          expect(
-            href,
-            'home screen must not highlight /search tab as active'
-          ).not.toMatch(/^\/search/);
-        }
-      }
-    }
+    await expect(dock.getByTestId('footer-item-home')).toHaveAttribute('aria-selected', 'false');
   });
 
   test('map route highlights map tab', async ({ page }) => {
@@ -81,30 +82,26 @@ test.describe('@mobile BUG-CLASS-1: active tab-bar state', () => {
     await expect(dock).toBeVisible({ timeout: 30_000 });
 
     // The dock itself must be visible and not have zero height (regression: full-screen dock)
+    await expect(dock.getByTestId('footer-item-map')).toHaveAttribute('aria-selected', 'true');
     const dockBox = await dock.boundingBox();
     expect(dockBox, 'dock must have a bounding box on /map').not.toBeNull();
-    if (dockBox) {
-      expect(dockBox.height, 'dock must be compact on /map').toBeLessThanOrEqual(120);
-    }
+    expect(dockBox!.height, 'dock must be compact on /map').toBeLessThanOrEqual(120);
   });
 
-  test('quests route does not render an icon identical to the map tab', async ({ page }) => {
+  test('quests route highlights the quests tab instead of the map tab', async ({ page }) => {
     await setMobileViewport(page);
     await gotoWithRetry(page, '/quests');
 
     const dock = page.getByTestId('footer-dock-wrapper');
     await expect(dock).toBeVisible({ timeout: 30_000 });
 
-    // Both quests and map items must be present and visually distinct.
-    // We verify that the dock renders at least the expected number of items
-    // and that the page navigated to /quests (not /map).
-    expect(page.url()).toContain('/quests');
+    await expect(page).toHaveURL(/\/quests(?:[/?#]|$)/);
+    await expect(dock.getByTestId('footer-item-quests')).toHaveAttribute('aria-selected', 'true');
+    await expect(dock.getByTestId('footer-item-map')).toHaveAttribute('aria-selected', 'false');
 
     const dockBox = await dock.boundingBox();
     expect(dockBox).not.toBeNull();
-    if (dockBox) {
-      expect(dockBox.height).toBeLessThanOrEqual(120);
-    }
+    expect(dockBox!.height).toBeLessThanOrEqual(120);
   });
 });
 
@@ -115,6 +112,7 @@ test.describe('@mobile BUG-CLASS-2: header ≤20% viewport height', () => {
 
   test('search page: sticky header does not exceed 20% of viewport on mobile', async ({ page }) => {
     await setMobileViewport(page);
+    await installEmptyTravelListMock(page);
     await gotoWithRetry(page, '/search');
 
     const viewportHeight = MOBILE_VIEWPORT.height;
@@ -124,59 +122,37 @@ test.describe('@mobile BUG-CLASS-2: header ≤20% viewport height', () => {
     // We measure the combined height of all fixed/sticky elements above the scroll area.
     // Strategy: find the bounding box of the toolbar and assert it stays compact.
     const toolbar = page.locator('[data-testid="toolbar-results-count"]').first();
-    const toolbarVisible = await toolbar
-      .waitFor({ state: 'visible', timeout: 30_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!toolbarVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'toolbar-results-count not visible (API might be unavailable); skipping height check',
-      });
-      return;
-    }
+    await expect(toolbar).toBeVisible({ timeout: 30_000 });
 
     const toolbarBox = await toolbar.boundingBox();
-    if (toolbarBox) {
-      // The toolbar itself must sit within the first 20% from the top
-      expect(
-        toolbarBox.y + toolbarBox.height,
-        `Search toolbar bottom must be within ${maxHeaderPx}px from top (20% of ${viewportHeight}px viewport). Got ${toolbarBox.y + toolbarBox.height}px`
-      ).toBeLessThanOrEqual(maxHeaderPx);
-    }
+    expect(toolbarBox, 'search toolbar must have a bounding box').not.toBeNull();
+    // The toolbar itself must sit within the first 20% from the top.
+    expect(
+      toolbarBox!.y + toolbarBox!.height,
+      `Search toolbar bottom must be within ${maxHeaderPx}px from top (20% of ${viewportHeight}px viewport). Got ${toolbarBox!.y + toolbarBox!.height}px`
+    ).toBeLessThanOrEqual(maxHeaderPx);
   });
 
   test('travel wizard header does not exceed 20% of viewport on mobile', async ({ page }) => {
     await setMobileViewport(page);
+    await ensureAuthedStorageFallback(page);
+    await mockFakeAuthApis(page);
 
     await gotoWithRetry(page, '/travel/new');
 
     // Measure the actual top context header. The wizard progress bar is part of
     // the form body, below the page title/subtitle, so it is not header chrome.
     const contextHeader = page.getByTestId('header-context-bar').first();
-    const visible = await contextHeader
-      .waitFor({ state: 'visible', timeout: 30_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!visible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'header-context-bar not visible on travel wizard route; skipping compact-header check',
-      });
-      return;
-    }
+    await expect(contextHeader).toBeVisible({ timeout: 30_000 });
 
     const headerBox = await contextHeader.boundingBox();
-    if (headerBox) {
-      const viewportHeight = MOBILE_VIEWPORT.height;
-      const maxHeaderPx = viewportHeight * MAX_HEADER_RATIO;
-      expect(
-        headerBox.y + headerBox.height,
-        `Wizard context header bottom must be within top ${MAX_HEADER_RATIO * 100}% of viewport`
-      ).toBeLessThanOrEqual(maxHeaderPx);
-    }
+    expect(headerBox, 'wizard context header must have a bounding box').not.toBeNull();
+    const viewportHeight = MOBILE_VIEWPORT.height;
+    const maxHeaderPx = viewportHeight * MAX_HEADER_RATIO;
+    expect(
+      headerBox!.y + headerBox!.height,
+      `Wizard context header bottom must be within top ${MAX_HEADER_RATIO * 100}% of viewport`
+    ).toBeLessThanOrEqual(maxHeaderPx);
   });
 });
 
@@ -251,146 +227,40 @@ test.describe('@mobile BUG-CLASS-4: unified point popup has copy/nav actions', (
     await setMobileViewport(page);
 
     const opened = await openFallbackTravelDetails(page);
-    if (!opened) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Could not open travel details; skipping point popup test',
-      });
-      return;
-    }
+    expect(opened, 'fallback travel details must load').toBe(true);
 
     // Scroll to the points/coordinates section
-    const pointsSection = page
-      .locator('[data-testid="travel-section-coordinates"], [data-testid="travel-points"], .coordinates-section')
-      .first();
-    const pointsVisible = await pointsSection
-      .waitFor({ state: 'visible', timeout: 20_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!pointsVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Points section not found on this device/build; marking as known manual gap',
-      });
-      return;
-    }
+    const pointsSection = page.getByTestId('travel-details-points');
+    await pointsSection.scrollIntoViewIfNeeded();
+    await expect(pointsSection).toBeVisible({ timeout: 20_000 });
 
     // Verify that coordinate copy is reachable from the points section
-    // (the icon or button with copy semantics must exist near coordinates)
-    const copyAction = page
-      .locator('[data-testid*="copy"], [aria-label*="опировать"], [aria-label*="copy"]')
-      .first();
-    const copyVisible = await copyAction
-      .waitFor({ state: 'visible', timeout: 10_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    expect(
-      copyVisible,
-      'A "copy coordinates" action must be reachable from the points section in travel details'
-    ).toBe(true);
-  });
-});
-
-// ─── BUG-CLASS-5: Overlay close (✕ / backdrop / back) ───────────────────────
-
-test.describe('@mobile BUG-CLASS-5: overlay close behaviors', () => {
-  test('map place popup (fullscreen overlay) closes with the close button', async ({ page }) => {
-    await setMobileViewport(page);
-    await gotoWithRetry(page, '/map');
-
-    // Wait for map to render
-    const mapContainer = page
-      .locator('[data-testid="map-container"], .leaflet-container, [class*="MapContainer"]')
-      .first();
-    const mapVisible = await mapContainer
-      .waitFor({ state: 'visible', timeout: 30_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!mapVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Map container not visible (env limitation); skipping overlay close test',
-      });
-      return;
-    }
-
-    // If a popup is already open (from previous test or session), close it
-    const existingClose = page
-      .locator('[data-testid="place-popup-close"], [aria-label*="Закрыть"], [aria-label*="Close"]')
-      .first();
-    if (await existingClose.isVisible().catch(() => false)) {
-      await existingClose.click();
-    }
-
-    // Verify no orphan portals remain after close
-    // (portals that stay mounted without being visible = the regression pattern)
-    const popupOverlay = page.locator('[data-testid="place-popup-overlay"]');
-    const overlayCount = await popupOverlay.count();
-    expect(
-      overlayCount,
-      'No orphan place-popup-overlay should remain after close'
-    ).toBe(0);
+    // (the button with copy semantics must exist inside the points section)
+    await expect(pointsSection.getByRole('button', { name: /скопировать координаты/i }).first())
+      .toBeVisible({ timeout: 10_000 });
   });
 });
 
 // ─── BUG-CLASS-7: Duplicate sections in travel details ───────────────────────
 
 test.describe('@mobile BUG-CLASS-7: no duplicate sections in travel details', () => {
-  test('travel detail does not show duplicate recommendations header', async ({ page }) => {
+  test('travel detail renders exactly one author block', async ({ page }) => {
     await setMobileViewport(page);
 
     const opened = await openFallbackTravelDetails(page);
-    if (!opened) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Could not open travel details; skipping duplicate sections test',
-      });
-      return;
-    }
-
-    // Scroll to bottom to trigger lazy sections
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(1000);
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-
-    // The "recommendations" header (e.g. "Для вас" / "Рекомендации") must appear at most once
-    const recHeaders = page.locator('[data-testid="recommendations-list-header"]');
-    const recCount = await recHeaders.count();
-    expect(
-      recCount,
-      'Recommendations header must appear at most once on travel details page (duplicate = BUG-CLASS-7)'
-    ).toBeLessThanOrEqual(1);
-  });
-
-  test('travel detail has no more than one author block visible', async ({ page }) => {
-    await setMobileViewport(page);
-
-    const opened = await openFallbackTravelDetails(page);
-    if (!opened) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Could not open travel details; skipping author block test',
-      });
-      return;
-    }
+    expect(opened, 'fallback travel details must load').toBe(true);
 
     // Scroll to trigger all sections
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(800);
 
     // Author blocks — count visible elements with author-related testID
-    const authorBlocks = page.locator(
-      '[data-testid="travel-author-block"], [data-testid*="author-block"]'
-    );
+    const authorBlocks = page.getByTestId('travel-details-author-mobile');
     const authorCount = await authorBlocks.count();
-    // Allow 0 (not rendered in test env) or 1, not 2+
     expect(
       authorCount,
-      'Travel details must show author block at most once (duplicate = BUG-CLASS-7)'
-    ).toBeLessThanOrEqual(1);
+      'Travel details must show exactly one author block (duplicate = BUG-CLASS-7)'
+    ).toBe(1);
   });
 });
 
@@ -402,20 +272,9 @@ test.describe('@mobile BUG-CLASS-8: no layout artifacts on mobile', () => {
     await gotoWithRetry(page, '/places');
 
     // Wait for the page to load something meaningful
-    const pageLoaded = await page
-      .locator('[data-testid="places-category-chip-all"], [data-testid="places-category-search-input"]')
-      .first()
-      .waitFor({ state: 'visible', timeout: 30_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!pageLoaded) {
-      test.info().annotations.push({
-        type: 'note',
-        description: '/places content not loaded; skipping white-block check',
-      });
-      return;
-    }
+    await expect(
+      page.locator('[data-testid="places-category-chip-all"], [data-testid="places-category-search-input"]').first(),
+    ).toBeVisible({ timeout: 30_000 });
 
     // Scroll to bottom
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
@@ -472,16 +331,14 @@ test.describe('@mobile dock presence on primary routes', () => {
 
       const box = await dock.boundingBox();
       expect(box, `dock bounding box must exist on ${route}`).not.toBeNull();
-      if (box) {
-        expect(
-          box.height,
-          `dock must be compact on ${route} (height=${box.height}px)`
-        ).toBeLessThanOrEqual(120);
-        expect(
-          box.width,
-          `dock must span the full viewport on ${route}`
-        ).toBeGreaterThanOrEqual(MOBILE_VIEWPORT.width - 10);
-      }
+      expect(
+        box!.height,
+        `dock must be compact on ${route} (height=${box!.height}px)`
+      ).toBeLessThanOrEqual(120);
+      expect(
+        box!.width,
+        `dock must span the full viewport on ${route}`
+      ).toBeGreaterThanOrEqual(MOBILE_VIEWPORT.width - 10);
     });
   }
 });

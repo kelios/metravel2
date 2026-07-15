@@ -6,6 +6,8 @@
  *   node scripts/indexnow-submit.js              # submit all URLs
  *   node scripts/indexnow-submit.js --dry-run    # print URLs, no HTTP POST
  *   node scripts/indexnow-submit.js --sitemap    # parse sitemap.xml instead of API
+ *   node scripts/indexnow-submit.js --sitemap --recent-days 2
+ *                                                  # submit URLs changed today/yesterday
  *
  * Submits to: api.indexnow.org (→ Bing/Yandex/etc.) + yandex.com/indexnow separately
  */
@@ -24,6 +26,18 @@ const STATIC_ROUTES = ['/', '/search', '/map', '/travelsby', '/about', '/contact
 
 const DRY_RUN = process.argv.includes('--dry-run')
 const USE_SITEMAP = process.argv.includes('--sitemap')
+
+function parseRecentDays(argv) {
+  const index = argv.indexOf('--recent-days')
+  if (index === -1) return null
+  const value = Number(argv[index + 1])
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error('--recent-days expects a positive integer')
+  }
+  return value
+}
+
+const RECENT_DAYS = parseRecentDays(process.argv)
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
@@ -122,10 +136,36 @@ async function collectFromApi() {
   return urls
 }
 
-async function collectFromSitemap() {
+function parseSitemapEntries(xml) {
+  return [...String(xml).matchAll(/<url>([\s\S]*?)<\/url>/g)]
+    .map((match) => {
+      const block = match[1]
+      const loc = block.match(/<loc>([\s\S]*?)<\/loc>/)?.[1]?.trim() || ''
+      const lastmod = block.match(/<lastmod>([\s\S]*?)<\/lastmod>/)?.[1]?.trim() || ''
+      return { loc, lastmod }
+    })
+    .filter((entry) => entry.loc)
+}
+
+function filterRecentSitemapEntries(entries, recentDays, now = new Date()) {
+  if (!recentDays) return entries
+  const cutoff = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() - (recentDays - 1),
+  ))
+
+  return entries.filter((entry) => {
+    if (!entry.lastmod) return false
+    const changedAt = new Date(entry.lastmod)
+    return !Number.isNaN(changedAt.getTime()) && changedAt >= cutoff
+  })
+}
+
+async function collectFromSitemap({ recentDays = RECENT_DAYS, now = new Date() } = {}) {
   const xml = await fetchText(`${SITE}/sitemap.xml`)
-  const matches = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)]
-  return matches.map((m) => m[1].trim()).filter(Boolean)
+  const entries = filterRecentSitemapEntries(parseSitemapEntries(xml), recentDays, now)
+  return entries.map((entry) => entry.loc)
 }
 
 // ── Submit ────────────────────────────────────────────────────────────────────
@@ -147,12 +187,23 @@ async function submit(endpoint, urlList) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
+  if (RECENT_DAYS && !USE_SITEMAP) {
+    throw new Error('--recent-days requires --sitemap because API records do not expose lastmod')
+  }
   console.log('[indexnow] Collecting URLs…')
   const urls = USE_SITEMAP ? await collectFromSitemap() : await collectFromApi()
   console.log(`[indexnow] ${urls.length} URLs collected`)
+  if (RECENT_DAYS) {
+    console.log(`[indexnow] Filter: sitemap lastmod within ${RECENT_DAYS} day(s)`)
+  }
 
   if (DRY_RUN) {
     urls.forEach((u) => console.log(' ', u))
+  }
+
+  if (urls.length === 0) {
+    console.log('[indexnow] No recent URL changes to submit.')
+    return
   }
 
   // IndexNow batch limit = 10 000, chunk just in case
@@ -168,4 +219,12 @@ async function main() {
   console.log('[indexnow] Done.')
 }
 
-main().catch((e) => { console.error('[indexnow] Fatal:', e.message); process.exit(1) })
+if (require.main === module) {
+  main().catch((e) => { console.error('[indexnow] Fatal:', e.message); process.exit(1) })
+}
+
+module.exports = {
+  filterRecentSitemapEntries,
+  parseRecentDays,
+  parseSitemapEntries,
+}

@@ -1370,7 +1370,12 @@ function buildQuestIntroSectionModel(quest, bundle) {
   if (durationLabel) facts.push(`Время: примерно ${durationLabel}`);
   if (startLocation) facts.push(`Старт: ${startLocation}`);
 
-  return { city, points, durationLabel, startLocation, facts };
+  const introParagraphs = String(intro?.story || '')
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  return { city, points, durationLabel, startLocation, facts, introParagraphs };
 }
 
 function injectQuestIntroSection(baseHtml, { title, description, quest, bundle }) {
@@ -1411,6 +1416,9 @@ function injectQuestIntroSection(baseHtml, { title, description, quest, bundle }
     'color:var(--color-text,#22332c)',
   ].join(';');
   const textStyle = 'margin:0 0 14px;color:var(--color-text,#22332c)';
+  const introParagraphs = model.introParagraphs
+    .map((paragraph) => `<p style="${textStyle}">${escapeAttr(paragraph)}</p>`)
+    .join('');
   const listStyle = [
     'display:grid',
     'grid-template-columns:repeat(auto-fit,minmax(180px,1fr))',
@@ -1433,6 +1441,7 @@ function injectQuestIntroSection(baseHtml, { title, description, quest, bundle }
     `<p style="${kickerStyle}">Городской квест Metravel</p>`,
     `<h1 style="${titleStyle}">${escapeAttr(cleanTitle)}</h1>`,
     `<p style="${textStyle}">${escapeAttr(lead)}</p>`,
+    introParagraphs,
     facts ? `<ul style="${listStyle}">${facts}</ul>` : '',
     '</section>',
   ].join('');

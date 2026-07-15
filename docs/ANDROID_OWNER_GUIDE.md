@@ -108,6 +108,10 @@ npm run android:build:prod
 - сертификат соответствует зарегистрированному Play upload key;
 - commit/source соответствует release.
 
+Для JS/native bundle `.env.prod` загружается как authoritative environment с
+`NODE_ENV=production` и `EXPO_ENV=prod`; локальная `.env.local` не должна
+переопределять production API/config.
+
 ## 6. Safe Google Play flow
 
 Read-only status создаёт временный edit, читает tracks и удаляет edit:
