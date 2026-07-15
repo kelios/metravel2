@@ -1,5 +1,5 @@
 import { render, fireEvent } from '@testing-library/react-native';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import ThreadList from '@/components/messages/ThreadList';
 import type { MessageThread } from '@/api/messages';
 
@@ -144,6 +144,35 @@ describe('ThreadList', () => {
 
             expect(onDeleteThread).toHaveBeenCalledWith(1);
         } finally {
+            Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+        }
+    });
+
+    it('uses the native destructive confirmation before deleting a thread', () => {
+        const originalPlatform = Platform.OS;
+        Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+        const onDeleteThread = jest.fn();
+        const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+
+        try {
+            const { getByLabelText } = render(
+                <ThreadList {...defaultProps} onDeleteThread={onDeleteThread} />
+            );
+
+            fireEvent.press(getByLabelText('Удалить диалог с Иван Петров'));
+            expect(onDeleteThread).not.toHaveBeenCalled();
+            expect(alertSpy).toHaveBeenCalledWith(
+                'Удалить диалог',
+                'Вы уверены, что хотите удалить этот диалог?',
+                expect.any(Array),
+            );
+
+            const buttons = alertSpy.mock.calls[0]?.[2];
+            const destructiveButton = buttons?.find((button) => button.style === 'destructive');
+            destructiveButton?.onPress?.();
+            expect(onDeleteThread).toHaveBeenCalledWith(1);
+        } finally {
+            alertSpy.mockRestore();
             Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
         }
     });

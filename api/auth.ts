@@ -13,6 +13,7 @@ import { retry, isRetryableError } from '@/utils/retry';
 import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import { getCsrfHeader } from '@/utils/csrf';
+import { setStorageBatch } from '@/utils/storageBatch';
 import {
     getApiRequestCredentials,
     hasUsableAuthCredential,
@@ -388,12 +389,20 @@ export const confirmAccount = async (hash: string) => {
         const jsonResponse = await safeJsonParse<{
             userToken?: string;
             userName?: string;
+            userId?: string | number;
             refreshToken?: string;
         }>(response, {});
 
         if (jsonResponse.userToken) {
+            const userId = jsonResponse.userId;
+            if ((typeof userId !== 'string' && typeof userId !== 'number') || String(userId).trim() === '') {
+                throw new Error(i18nT('errorsStatic:api.auth.confirmationFailed'));
+            }
             await persistNativeAuthTokens(jsonResponse.userToken, jsonResponse.refreshToken);
-            await AsyncStorage.setItem('userName', jsonResponse.userName || '');
+            await setStorageBatch([
+                ['userName', jsonResponse.userName || ''],
+                ['userId', String(userId)],
+            ]);
         }
         return jsonResponse;
     } catch (error: unknown) {

@@ -56,7 +56,7 @@ describe('language selection surfaces', () => {
   })
 
   it('opens the header picker and selects Ukrainian without authentication', () => {
-    const { getByTestId, getByLabelText } = render(<LanguageSwitcher />)
+    const { getByTestId, getByLabelText, getByText } = render(<LanguageSwitcher />)
 
     fireEvent.press(getByTestId('header-language-switcher'))
     expect(getByLabelText('Русский')).toBeTruthy()
@@ -64,16 +64,18 @@ describe('language selection surfaces', () => {
     expect(getByLabelText('Українська')).toBeTruthy()
     expect(getByLabelText('Polski')).toBeTruthy()
     expect(getByLabelText('English')).toBeTruthy()
+    expect(getByText('BY')).toBeTruthy()
 
     fireEvent.press(getByTestId('header-language-option-uk'))
     expect(localeState.setLocale).toHaveBeenCalledWith('uk')
   })
 
   it('offers explicit languages and opt-in system mode in account settings', () => {
-    const { getByLabelText } = render(
+    const { getAllByText, getByLabelText } = render(
       <LanguageSection colors={colors} styles={styles} />,
     )
 
+    expect(getAllByText('BY')).toHaveLength(2)
     fireEvent.press(getByLabelText('Беларуская'))
     expect(localeState.setLocale).toHaveBeenCalledWith('be')
 

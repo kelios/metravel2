@@ -135,7 +135,7 @@ Claude slash-команды переносятся как skill-routes, а не 
 | --- | --- |
 | `/auto-dev`, `/bugfix` | `$metravel-codex-orchestrator`/`$metravel-agent-workflow` + domain skill + `$metravel-feature-builder` + QA/review |
 | `/changed-summary` | `$metravel-code-reviewer` или обычный read-only `git status`/`git diff` summary |
-| `/check-fast`, `/guard-all`, `/preflight` | `$metravel-test-runner` / `$metravel-release-checks`; запускать repository scripts через quality-gate lock, а при `SKIPPED` из-за живого владельца сразу завершать validation без ожидания и повторного запуска |
+| `/check-fast`, `/guard-all`, `/preflight` | `$metravel-test-runner` / `$metravel-release-checks`; запускать repository scripts через quality-gate lock, а при `SKIPPED` из-за живого владельца завершать собственный запуск без ожидания/ретрая и выбирать `validation delegated` или `validation skipped` по scope и оставшемуся Done gate |
 | `/growth-review` | `$metravel-growth-analyst` |
 | `/seo-daily` | `$metravel-seo-index-operator` |
 | `/split-component` | `$metravel-refactor-surgeon` |
@@ -253,7 +253,7 @@ Validation: <expected checks/evidence>.
 - BA, QA и reviewer по умолчанию не меняют код.
 - Codex Orchestrator не подменяет профильные роли; он выбирает маршрут, проверяет правила и держит handoff компактным.
 - В этом frontend workspace ни одна роль не редактирует backend/Django/API/server working tree. Backend blockers фиксируются через read-only diagnosis и `area=back` board tasks.
-- Перед передачей роли на deploy, release/build, Android local/EAS build/install, server rebuild/restart, full/preflight tests, Playwright/e2e или Lighthouse orchestrator должен проверить operation gate из `AGENTS.md`/`docs/RULES.md`. Для занятого test/quality gate новый агент сразу фиксирует `validation skipped: active gate pid/name`, не ждёт, не poll'ит и не перезапускает проверку; падения исправляет владелец активного gate. Для остальных операций применяется их обычный blocker/wait contract.
+- Перед передачей роли на deploy, release/build, Android local/EAS build/install, server rebuild/restart, full/preflight tests, Playwright/e2e или Lighthouse orchestrator должен проверить operation gate из `AGENTS.md`/`docs/RULES.md`. Для занятого test/quality gate новый агент не ждёт, не poll'ит и не перезапускает проверку: если gate покрывает нужный scope и тесты — единственный оставшийся Done-gate шаг, фиксирует `validation delegated: active gate pid/name` и может завершить задачу; иначе фиксирует `validation skipped: active gate pid/name` и оставляет её открытой. Падения исправляет владелец активного gate. Для остальных операций применяется их обычный blocker/wait contract.
 - Любая FE/BE задача на общем борде без `Task Contract` считается неготовой к старту и к `done`; ticket-board/оркестратор должны сначала дописать контракт или вернуть задачу в refinement.
 - Любая новая задача должна попасть в текущий active sprint; если board API вернул `401`, ticket-board/оркестратор обязан обновить staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md` до создания локального fallback.
 - Project Analyst только анализирует и не меняет файлы, если пользователь отдельно не попросил перейти к docs/code changes.

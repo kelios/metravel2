@@ -195,23 +195,21 @@ test.describe('User points', () => {
 
     // Search + recommendations live in the Filters tab.
     await openFiltersPanelTab(page);
-    await expect(page.getByRole('textbox', { name: 'Поиск по названию...' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('textbox', { name: 'Поиск по точкам', exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('button', { name: '3 случайные точки' })).toBeVisible({ timeout: 30_000 });
 
     // List item card should also expose the same coordinate actions.
     await openListPanelTab(page);
     const listPanel = page.getByTestId('userpoints-panel-content-list').first();
     await expect(listPanel.getByText(pointName).first()).toBeVisible({ timeout: 30_000 });
-    await expect(listPanel.getByRole('textbox', { name: 'Поиск по названию...' })).toBeVisible({ timeout: 30_000 });
+    await expect(listPanel.getByTestId('userpoints-list-search')).toBeVisible({ timeout: 30_000 });
     await expect(listPanel.getByRole('button', { name: 'Фильтры' }).first()).toBeVisible({ timeout: 30_000 });
     await expect(listPanel.getByRole('button', { name: 'Сбросить фильтры' }).first()).toBeVisible({ timeout: 30_000 });
     await expect(listPanel.getByRole('button', { name: 'Копировать координаты' }).first()).toBeVisible({ timeout: 30_000 });
     await expect(listPanel.getByRole('button', { name: 'Поделиться в Telegram' }).first()).toBeVisible({ timeout: 30_000 });
-    // Individual map provider buttons (Google/Apple/Яндекс/OSM) live in the popup, not in the list card.
-    // The list card exposes a single "Открыть в картах" action.
+    // Individual map providers live behind the shared navigation disclosure.
     await expect(
-      listPanel.getByRole('button', { name: /открыть в картах/i }).first()
-        .or(listPanel.getByRole('button', { name: 'Google' }).first())
+      listPanel.getByRole('button', { name: 'Навигация и действия', exact: true }).first()
     ).toBeVisible({ timeout: 30_000 });
   });
 
@@ -301,7 +299,7 @@ test.describe('User points', () => {
       .toBeTruthy();
   });
 
-  test('clicking a list card opens the corresponding map popup', async ({ page }) => {
+  test('clicking a list card focuses its marker and marker click opens the popup', async ({ page }) => {
     await preacceptCookies(page);
     await page.addInitScript(() => {
       try {
@@ -356,6 +354,10 @@ test.describe('User points', () => {
     await expect(listPanel.getByText(pointName).first()).toBeVisible({ timeout: 30_000 });
     await listPanel.getByText(pointName).first().click({ timeout: 30_000 });
 
+    const marker = page.locator('.leaflet-marker-icon').first();
+    await expect(marker).toHaveAttribute('aria-label', pointName, { timeout: 30_000 });
+    await marker.click({ timeout: 30_000 });
+
     const popup = page.locator('.leaflet-popup').first();
     await expect(popup).toBeVisible({ timeout: 30_000 });
     await expect(popup.getByText(pointName).first()).toBeVisible({ timeout: 30_000 });
@@ -401,7 +403,7 @@ test.describe('User points', () => {
     await expect(page.locator('.leaflet-container').first()).toBeVisible({ timeout: 30_000 });
 
     await openFiltersPanelTab(page);
-    const searchBox = page.getByRole('textbox', { name: 'Поиск по названию...' });
+    const searchBox = page.getByRole('textbox', { name: 'Поиск по точкам', exact: true });
     await searchBox.fill('Warsaw');
 
     // Wait for debounce + fetch.
@@ -735,7 +737,7 @@ test.describe('User points', () => {
     await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
 
     // Bulk edit: set status to archived
-    await page.getByRole('button', { name: 'Изменить' }).click();
+    await page.getByRole('button', { name: 'Изменить', exact: true }).click();
     await expect(page.getByText('Изменить выбранные', { exact: true })).toBeVisible({ timeout: 30_000 });
 
     // Open Status select (2nd SimpleMultiSelect trigger) and choose 'archived'

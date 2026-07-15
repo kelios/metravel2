@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Codex Orchestrator"
   short_description: "Choose skills, prompts, rules, validation, and handoff."
-  default_prompt: "Use $metravel-codex-orchestrator to classify the task, record web/Android/iOS and RU/BE/UK/PL/EN impact, choose minimal skills, enforce authority gates, and skip busy quality gates without waiting or retrying."
+  default_prompt: "Use $metravel-codex-orchestrator to classify the task, record web/Android/iOS and RU/BE/UK/PL/EN impact, choose minimal skills, enforce authority gates, and choose validation delegated or validation skipped for busy quality gates without waiting or retrying."

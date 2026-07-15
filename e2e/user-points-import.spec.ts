@@ -33,7 +33,7 @@ test.describe('User points import (mock API)', () => {
   async function openFiltersPanelTab(page: any) {
     const legacyTabButton = page.getByTestId('userpoints-panel-tab-filters').first();
     const segmentedTabButton = page.getByTestId('segmented-filters').first();
-    const searchBox = page.getByRole('textbox', { name: 'Поиск по названию...' });
+    const searchBox = page.getByRole('textbox', { name: 'Поиск по точкам', exact: true });
 
     for (let attempt = 0; attempt < 3; attempt++) {
       const tabButton = (await segmentedTabButton.count()) > 0 ? segmentedTabButton : legacyTabButton;
@@ -68,7 +68,7 @@ test.describe('User points import (mock API)', () => {
       .first();
     await actionsDialog.waitFor({ state: 'visible', timeout: 30_000 });
 
-    await actionsDialog.getByRole('button', { name: 'Импорт', exact: true }).click();
+    await actionsDialog.getByRole('button', { name: 'Импортировать точки', exact: true }).click();
 
     // ImportWizard modal
     await expect(page.getByText('Импорт точек', { exact: true }).first()).toBeVisible({ timeout: 30_000 });

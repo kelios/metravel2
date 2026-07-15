@@ -95,7 +95,7 @@ test.describe('Messages — deterministic user flows', () => {
     await expect(page.getByLabel('Назад к списку диалогов')).toHaveCount(0);
   });
 
-  test('desktop confirms and optimistically removes an active thread after 204', async ({ page }) => {
+  test('desktop confirms and optimistically removes an active thread after 204', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     const tracker = await openAuthenticatedMessages(page, '/messages', {
       deferThreadDelete: true,
@@ -109,6 +109,16 @@ test.describe('Messages — deterministic user flows', () => {
     await page.getByLabel('Удалить диалог с Алексей Петров').click();
     const confirm = page.getByLabel('Подтвердить удаление диалога');
     await expect(confirm).toBeVisible();
+    await testInfo.attach('messages-delete-confirm', {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
+
+    const deletionConsoleErrors: string[] = [];
+    page.on('pageerror', (error) => deletionConsoleErrors.push(error.message));
+    page.on('console', (message) => {
+      if (message.type() === 'error') deletionConsoleErrors.push(message.text());
+    });
     await confirm.click();
 
     await expect.poll(() => tracker.deletedThreadIds).toContain(10);
@@ -117,6 +127,7 @@ test.describe('Messages — deterministic user flows', () => {
 
     tracker.releaseThreadDelete();
     await expect(alexey).toHaveCount(0);
+    expect(deletionConsoleErrors).toEqual([]);
   });
 
   test('desktop restores an optimistically removed thread after delete failure', async ({ page }) => {

@@ -9,7 +9,7 @@ Read `docs/RULES.md`, `docs/DEVELOPMENT.md`, `docs/TESTING.md`, and `docs/RELEAS
 
 Select checks by change scope instead of defaulting to the heaviest run every time:
 
-- Before starting release/build/test commands, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. When a test/quality gate is already active, record `validation skipped: active gate pid/name` and stop without waiting, polling, bypassing, or retrying after release; the active owner handles failures and reruns. Do not report `SKIPPED` as passed.
+- Before starting release/build/test commands, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. When a test/quality gate is already active, stop your own test launch without waiting, polling, bypassing, or retrying. If it covers the required scope and tests are the only remaining Done-gate step, record `validation delegated: active gate pid/name` and allow task completion without reporting `passed`; otherwise record `validation skipped: active gate pid/name` and keep the task open. Deploy/build/browser/API/device gates are never satisfied by delegation to a test process. The active owner fixes failures and reruns.
 - Small finished logical block: prefer `npm run check:fast`.
 - Need to inspect the selective plan first: use `npm run check:fast:dry`, `npm run check:changed:dry`, or `npm run check:e2e:changed:dry`.
 - Medium change touching a bounded area: run the relevant targeted tests plus the matching selective checks.

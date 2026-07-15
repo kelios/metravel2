@@ -48,7 +48,7 @@ Done gate:
   required browser/device evidence. `Localization impact` must name affected
   locales or `none`; localization work includes namespaces/keys and `npm run test:i18n`.
 - Do not move a task to `todo` for implementation until the contract has concrete, testable acceptance.
-- Do not move a task to `done` unless the `Done gate` evidence exists.
+- Do not move a task to `done` unless the `Done gate` evidence exists. If automated tests are the only remaining step and an active shared gate covers them, `validation delegated: active gate pid/name` is acceptable coordination evidence for Done without being reported as `passed`; deploy/browser/API/device evidence cannot be delegated to a test gate.
 - For BE tasks that unblock FE, require deploy-target API evidence for the exact endpoints/fields/events.
 - For FE tasks depending on BE, require browser/API evidence against the same target; unit tests and mock fallback alone are not enough.
 - If board status says BE is done but runtime contract probes fail, keep FE in `review` or `blocked_by`, add evidence, and create or reopen a BE/deploy blocker.

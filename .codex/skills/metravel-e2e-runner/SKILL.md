@@ -16,7 +16,7 @@ Read `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, and `docs/CODEX.md` before
 
 ## Execution rules
 
-- Before Playwright/e2e/browser-smoke runs, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. If an e2e/full/preflight quality gate is active, record `validation skipped: active gate pid/name` and stop without waiting, polling, bypassing, or retrying after release. Its owner handles failures and reruns; `SKIPPED` is not `passed`.
+- Before Playwright/e2e/browser-smoke runs, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. If an e2e/full/preflight quality gate is active, stop your own launch without waiting, polling, bypassing, or retrying. Use `validation delegated: active gate pid/name` only when that gate covers the required scenario and it is the sole remaining Done-gate step; the task may then close without claiming `passed`. Otherwise use `validation skipped: active gate pid/name` and keep the task open. Its owner fixes failures and reruns.
 - Use `.env.e2e` credentials when present and never print secrets.
 - Prefer the narrowest Playwright spec or `--grep` scope that proves the scenario.
 - For visible web UI, check browser console errors and confirm the final state with screenshot or trace evidence when useful.

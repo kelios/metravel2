@@ -21,7 +21,7 @@ Read first:
 - If board endpoints return `HTTP 401`, refresh the staff token through `.env.e2e` using `docs/TASK_BOARD_MCP.md`; never print the token.
 - Review only the requested ticket or active sprint scope.
 - Do not create new feature code while acting as reviewer.
-- Do not move a task to `done` without real evidence for its Done gate.
+- Do not move a task to `done` without real evidence for its Done gate. A live shared gate may satisfy only the remaining automated-test step as `validation delegated: active gate pid/name` when its scope covers the task; it is not `passed` and cannot replace deploy/browser/API/device evidence.
 
 ## Acceptance Loop
 
@@ -37,8 +37,9 @@ Read first:
    - browser/API probes against the target environment
    - device/mobile evidence when the contract requires it
    - `npm run test:i18n` and affected RU/BE/UK/PL/EN evidence when localization is impacted
+   - when the required automated gate is already owned by another live session, apply the delegated-validation contract from `AGENTS.md`: accept only if it covers the task and no non-test Done-gate step remains; otherwise reject with `validation skipped`
 5. Append evidence to the task description without erasing prior history.
-6. Move passing tasks to `done`. Move failing tasks back to `review` or `blocked_by` with a concise blocker.
+6. Move passing tasks, and tasks whose sole remaining automated gate is validly delegated, to `done`. Move failing or incompletely covered tasks back to `review` or `blocked_by` with a concise blocker. The active gate owner must reopen a delegated task or record a blocker if it cannot fix a discovered failure.
 
 ## Output
 

@@ -1,4 +1,5 @@
 import {
+  confirmAccount,
   googleAuthApi,
   loginApi,
   registration,
@@ -14,6 +15,7 @@ import { sanitizeInput } from '@/utils/security';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { devError } from '@/utils/logger';
 import { setSecureItem } from '@/utils/secureStorage';
+import { setStorageBatch } from '@/utils/storageBatch';
 
 jest.mock('react-native', () => ({
   Alert: {
@@ -44,6 +46,10 @@ jest.mock('@/utils/logger', () => ({
 
 jest.mock('@/utils/secureStorage', () => ({
   setSecureItem: jest.fn(),
+}));
+
+jest.mock('@/utils/storageBatch', () => ({
+  setStorageBatch: jest.fn(),
 }));
 
 const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;
@@ -110,6 +116,67 @@ describe('src/api/auth.ts auth/password API', () => {
 
       expect(result).toBeNull();
       expect(devError).toHaveBeenCalled();
+    });
+  });
+
+  describe('confirmAccount', () => {
+    it('persists non-secret identity metadata for web cookie-session reload', async () => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        userToken: 'opaque-token',
+        userName: 'Pending User',
+        userId: 42,
+      } as any);
+
+      await expect(confirmAccount('activation-hash')).resolves.toMatchObject({ userId: 42 });
+
+      expect(mockedFetchWithTimeout).toHaveBeenCalledWith(
+        expect.stringContaining('/user/confirm-registration/'),
+        expect.objectContaining({
+          method: 'POST',
+          credentials: 'include',
+          body: JSON.stringify({ hash: 'activation-hash' }),
+        }),
+        expect.any(Number),
+      );
+      expect(setStorageBatch).toHaveBeenCalledWith([
+        ['userName', 'Pending User'],
+        ['userId', '42'],
+      ]);
+      expect(setSecureItem).not.toHaveBeenCalled();
+    });
+
+    it('preserves native token storage and also persists the confirmation user id', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        userToken: 'native-token',
+        refreshToken: 'native-refresh',
+        userName: 'Native User',
+        userId: '73',
+      } as any);
+
+      await confirmAccount('activation-hash');
+
+      expect(setSecureItem).toHaveBeenNthCalledWith(1, 'userToken', 'native-token');
+      expect(setSecureItem).toHaveBeenNthCalledWith(2, 'refreshToken', 'native-refresh');
+      expect(setStorageBatch).toHaveBeenCalledWith([
+        ['userName', 'Native User'],
+        ['userId', '73'],
+      ]);
+    });
+
+    it('rejects a token response without the required non-secret user id', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        userToken: 'opaque-token',
+        userName: 'Incomplete User',
+      } as any);
+
+      await expect(confirmAccount('activation-hash')).rejects.toThrow();
+
+      expect(setSecureItem).not.toHaveBeenCalled();
+      expect(setStorageBatch).not.toHaveBeenCalled();
     });
   });
 

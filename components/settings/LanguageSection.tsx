@@ -3,7 +3,7 @@ import { Platform, Pressable, Text, View } from 'react-native'
 
 import { translate as i18nT } from '@/i18n'
 import { useLocale } from '@/i18n/LocaleProvider'
-import { getLocaleDisplayName } from '@/i18n/localeLabels'
+import { getLocaleDisplayCode, getLocaleDisplayName } from '@/i18n/localeLabels'
 import type { useThemedColors } from '@/hooks/useTheme'
 import type { createSettingsStyles } from '@/components/screens/settings/settings.styles'
 
@@ -97,8 +97,8 @@ export default function LanguageSection({ colors, styles }: LanguageSectionProps
           renderOption({
             key: supportedLocale,
             label: getLocaleDisplayName(supportedLocale),
-            description: supportedLocale.toUpperCase(),
-            code: supportedLocale.toUpperCase(),
+            description: getLocaleDisplayCode(supportedLocale),
+            code: getLocaleDisplayCode(supportedLocale),
             selected:
               preference.mode === 'explicit' && locale === supportedLocale,
             onPress: () => void setLocale(supportedLocale),

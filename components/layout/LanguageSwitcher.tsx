@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { useLocale } from '@/i18n/LocaleProvider'
-import { getLocaleDisplayName } from '@/i18n/localeLabels'
+import { getLocaleDisplayCode, getLocaleDisplayName } from '@/i18n/localeLabels'
 import { translate as i18nT } from '@/i18n'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DialogMenu } from '@/ui/paper'
@@ -53,7 +53,7 @@ export default function LanguageSwitcher({ compact = false }: LanguageSwitcherPr
             : {})}
         >
           <Feather name="globe" size={17} color={colors.textMuted} />
-          <Text style={styles.code}>{locale.toUpperCase()}</Text>
+          <Text style={styles.code}>{getLocaleDisplayCode(locale)}</Text>
           {!compact ? (
             <Feather
               name={visible ? 'chevron-up' : 'chevron-down'}
@@ -84,7 +84,7 @@ export default function LanguageSwitcher({ compact = false }: LanguageSwitcherPr
             >
               <View style={styles.optionCodeSlot}>
                 <Text style={[styles.optionCode, selected && styles.optionCodeSelected]}>
-                  {supportedLocale.toUpperCase()}
+                  {getLocaleDisplayCode(supportedLocale)}
                 </Text>
               </View>
               <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>
