@@ -37,11 +37,10 @@ export default function BelarusTravelHub() {
     const description = item.descriptionKey ? t(item.descriptionKey) : null
 
     return (
-      <Link key={item.href} href={item.href} asChild>
+      <Link key={item.href} href={item.href} asChild style={styles.themeCard}>
         <Pressable
           accessibilityRole="link"
           accessibilityLabel={title}
-          style={({ pressed }) => [styles.themeCard, pressed && styles.linkPressed]}
         >
           <View style={styles.linkTitleRow}>
             <Text style={styles.themeCardTitle}>{title}</Text>
@@ -57,11 +56,10 @@ export default function BelarusTravelHub() {
     const title = t(item.titleKey)
 
     return (
-      <Link key={item.href} href={item.href} asChild>
+      <Link key={item.href} href={item.href} asChild style={styles.cityLink}>
         <Pressable
           accessibilityRole="link"
           accessibilityLabel={title}
-          style={({ pressed }) => [styles.cityLink, pressed && styles.linkPressed]}
         >
           <Text style={styles.cityLinkText}>{title}</Text>
           <Feather name="chevron-right" size={16} color={colors.primaryText} />
@@ -166,9 +164,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: colors.backgroundSecondary,
       gap: DESIGN_TOKENS.spacing.xs,
       cursor: 'pointer',
-    },
-    linkPressed: {
-      opacity: 0.76,
     },
     linkTitleRow: {
       flexDirection: 'row',
