@@ -2,6 +2,8 @@ import React, { useMemo } from 'react'
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 const MOBILE_LAYOUT_MAX_WIDTH = 767
 
@@ -25,8 +27,7 @@ interface WeatherScale {
  * clouds_new. Точные значения не критичны — легенда объясняет
  * качественную связь «цвет → величина», иначе heatmap нечитаем.
  */
-const TEMP_SCALE: WeatherScale = {
-  title: 'Температура, °C',
+const TEMP_SCALE: Omit<WeatherScale, 'title'> = {
   stops: [
     { offset: 0, color: '#7c2bd6' }, // −40
     { offset: 0.25, color: '#3b6ce0' }, // −20
@@ -38,19 +39,16 @@ const TEMP_SCALE: WeatherScale = {
   ticks: ['−40', '−20', '0', '+20', '+40'],
 }
 
-const PRECIP_SCALE: WeatherScale = {
-  title: 'Осадки, мм/ч',
+const PRECIP_SCALE: Omit<WeatherScale, 'title' | 'ticks'> = {
   stops: [
     { offset: 0, color: 'rgba(120,180,255,0.15)' },
     { offset: 0.35, color: '#5aa9f2' },
     { offset: 0.7, color: '#2f5fe0' },
     { offset: 1, color: '#7c2bd6' },
   ],
-  ticks: ['нет', 'слабые', 'сильные'],
 }
 
-const CLOUDS_SCALE: WeatherScale = {
-  title: 'Облачность, %',
+const CLOUDS_SCALE: Omit<WeatherScale, 'title'> = {
   stops: [
     { offset: 0, color: 'rgba(255,255,255,0.1)' },
     { offset: 1, color: 'rgba(120,130,150,0.95)' },
@@ -68,9 +66,29 @@ const resolveScale = (
   enabled: Record<string, boolean> | null | undefined,
 ): WeatherScale | null => {
   if (!enabled) return null
-  if (enabled[TEMP_ID] || enabled[TEMP_LABELS_ID]) return TEMP_SCALE
-  if (enabled[PRECIP_ID]) return PRECIP_SCALE
-  if (enabled[CLOUDS_ID]) return CLOUDS_SCALE
+  if (enabled[TEMP_ID] || enabled[TEMP_LABELS_ID]) {
+    return {
+      ...TEMP_SCALE,
+      title: i18nT('map:components.MapPage.WeatherLegend.temperatura_c_adac082a'),
+    }
+  }
+  if (enabled[PRECIP_ID]) {
+    return {
+      ...PRECIP_SCALE,
+      title: i18nT('map:components.MapPage.WeatherLegend.osadki_mm_ch_53d78d8f'),
+      ticks: [
+        i18nT('map:components.MapPage.WeatherLegend.net_650340b5'),
+        i18nT('map:components.MapPage.WeatherLegend.slabye_e84dd490'),
+        i18nT('map:components.MapPage.WeatherLegend.silnye_ea342e61'),
+      ],
+    }
+  }
+  if (enabled[CLOUDS_ID]) {
+    return {
+      ...CLOUDS_SCALE,
+      title: i18nT('map:components.MapPage.WeatherLegend.oblachnost_protsent_f61c0456'),
+    }
+  }
   return null
 }
 
@@ -96,7 +114,7 @@ function WeatherLegend({ enabledOverlays }: WeatherLegendProps) {
   return (
     <View
       style={styles.container}
-      accessibilityLabel={`Легенда: ${scale.title}`}
+      accessibilityLabel={i18nT('map:components.MapPage.WeatherLegend.legenda_value1_bfe44549', { value1: scale.title })}
       testID="weather-legend"
       {...({ role: 'region' } as object)}
     >

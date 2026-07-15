@@ -1,5 +1,7 @@
 import type { BBox } from '@/utils/overpass';
 import { bboxAreaKm2, fetchOsmCamping, overpassToPoints, type OSMPointFeature } from '@/utils/overpass';
+import { translate as i18nT } from '@/i18n'
+
 
 type LeafletMap = any;
 
@@ -107,16 +109,16 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
       const website = p.tags.website || p.tags.url || '';
 
       const metaLines: string[] = [];
-      if (operator) metaLines.push(`Оператор: ${escapeHtml(operator)}`);
-      if (capacity) metaLines.push(`Вместимость: ${escapeHtml(capacity)}`);
+      if (operator) metaLines.push(i18nT('shared:utils.mapWebOverlays.osmCampingOverlay.operator_value1_3714d55f', { value1: escapeHtml(operator) }));
+      if (capacity) metaLines.push(i18nT('shared:utils.mapWebOverlays.osmCampingOverlay.vmestimost_value1_3c640e03', { value1: escapeHtml(capacity) }));
 
       const html = `
         <div style="max-width:260px">
           <div style="font-weight:800;margin-bottom:4px">${escapeHtml(p.title)}</div>
           <div style="font-size:12px;opacity:0.8">${escapeHtml(typeLabel)}</div>
           ${metaLines.length ? `<div style="margin-top:6px;font-size:12px;opacity:0.85">${metaLines.map((l) => `<div>${l}</div>`).join('')}</div>` : ''}
-          ${website ? `<div style="margin-top:6px"><a href="${escapeAttr(website)}" target="_blank" rel="noopener noreferrer">Сайт</a></div>` : ''}
-          ${p.osmUrl ? `<div style="margin-top:6px"><a href="${p.osmUrl}" target="_blank" rel="noopener noreferrer">Открыть в OpenStreetMap</a></div>` : ''}
+          ${website ? `<div style="margin-top:6px"><a href="${escapeAttr(website)}" target="_blank" rel="noopener noreferrer">${i18nT("shared:utils.mapWebOverlays.osmCampingOverlay.div_style_margin_top_6px_a_href_value1_targe_bbf8da6a.text01")}</a></div>` : ''}
+          ${p.osmUrl ? `<div style="margin-top:6px"><a href="${p.osmUrl}" target="_blank" rel="noopener noreferrer">${i18nT("shared:utils.mapWebOverlays.osmCampingOverlay.div_style_margin_top_6px_a_href_value1_targe_256a0746.text01")}</a></div>` : ''}
         </div>
       `;
 
@@ -261,11 +263,11 @@ const kindLabelRu = (tags: Record<string, string>) => {
   const tourism = tags.tourism;
   const amenity = tags.amenity;
 
-  if (tourism === 'camp_site') return 'Кемпинг';
-  if (tourism === 'camp_pitch') return 'Место под палатку';
-  if (tourism === 'wilderness_hut') return 'Лесной домик';
-  if (amenity === 'shelter') return 'Укрытие';
+  if (tourism === 'camp_site') return i18nT('shared:utils.mapWebOverlays.osmCampingOverlay.kemping_37890f3f');
+  if (tourism === 'camp_pitch') return i18nT('shared:utils.mapWebOverlays.osmCampingOverlay.mesto_pod_palatku_14d849c7');
+  if (tourism === 'wilderness_hut') return i18nT('shared:utils.mapWebOverlays.osmCampingOverlay.lesnoy_domik_8c7ccf82');
+  if (amenity === 'shelter') return i18nT('shared:utils.mapWebOverlays.osmCampingOverlay.ukrytie_1214da33');
 
   // fallback
-  return tourism || amenity || 'Ночёвка';
+  return tourism || amenity || i18nT('sharedStatic:map.campingFallback');
 };

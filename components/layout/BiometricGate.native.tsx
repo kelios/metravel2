@@ -10,6 +10,8 @@ import { Feather } from '@expo/vector-icons';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useBiometricAuth } from '@/hooks/useBiometricAuth';
 import { useAuth } from '@/context/AuthContext';
+import { translate as i18nT } from '@/i18n'
+
 
 type GatePhase = 'idle' | 'prompting' | 'unlocked' | 'failed';
 
@@ -35,7 +37,7 @@ export default function BiometricGate() {
     if (triggeredRef.current && phase === 'prompting') return;
     triggeredRef.current = true;
     setPhase('prompting');
-    const ok = await authenticate('Разблокируйте MeTravel');
+    const ok = await authenticate(i18nT('navigation:components.layout.BiometricGate.razblokiruyte_metravel_e8f80743'));
     setPhase(ok ? 'unlocked' : 'failed');
   }, [authenticate, phase]);
 
@@ -63,17 +65,16 @@ export default function BiometricGate() {
     <View style={styles.overlay} pointerEvents="auto">
       <View style={styles.card}>
         <Feather name="lock" size={48} color={colors.primaryDark} />
-        <Text style={styles.title}>MeTravel заблокирован</Text>
+        <Text style={styles.title}>{i18nT('navigation:components.layout.BiometricGate.metravel_zablokirovan_8dcb0074')}</Text>
         <Text style={styles.subtitle}>
-          Подтвердите вход с помощью биометрии, чтобы продолжить.
-        </Text>
+          {i18nT('navigation:components.layout.BiometricGate.podtverdite_vhod_s_pomoschyu_biometrii_chtob_3fa03608')}</Text>
 
         {isPrompting ? (
           <ActivityIndicator color={colors.primaryDark} style={styles.spinner} />
         ) : (
           <Pressable style={styles.primaryButton} onPress={() => void runAuth()}>
             <Feather name="unlock" size={18} color={colors.textOnPrimary} />
-            <Text style={styles.primaryButtonText}>Разблокировать</Text>
+            <Text style={styles.primaryButtonText}>{i18nT('navigation:components.layout.BiometricGate.razblokirovat_f1634eec')}</Text>
           </Pressable>
         )}
 
@@ -84,7 +85,7 @@ export default function BiometricGate() {
               void logout();
             }}
           >
-            <Text style={styles.secondaryButtonText}>Выйти из аккаунта</Text>
+            <Text style={styles.secondaryButtonText}>{i18nT('navigation:components.layout.BiometricGate.vyyti_iz_akkaunta_22641000')}</Text>
           </Pressable>
         ) : null}
       </View>

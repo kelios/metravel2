@@ -12,17 +12,19 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 
 import { pluralizeRu } from '@/utils/pluralize';
-import { getQuestAgeCategory } from '@/utils/questAudience';
+import { getQuestAgeBadgeLabel, getQuestAgeCategory } from '@/utils/questAudience';
 
 import { pluralizePoints, type QuestMeta } from './questsShared';
+import { translate as i18nT } from '@/i18n'
+
 
 const loadedQuestImageCache = new Set<string>();
 
 const getDifficultyInfo = (difficulty?: 'easy' | 'medium' | 'hard') => {
     switch (difficulty) {
-        case 'easy': return { label: 'Легко', color: 'rgba(129, 199, 132, 0.9)' };
-        case 'medium': return { label: 'Средне', color: 'rgba(255, 213, 79, 0.9)' };
-        case 'hard': return { label: 'Сложно', color: 'rgba(239, 154, 154, 0.9)' };
+        case 'easy': return { label: i18nT('quests:screens.tabs.QuestCard.legko_3e670625'), color: 'rgba(129, 199, 132, 0.9)' };
+        case 'medium': return { label: i18nT('quests:screens.tabs.QuestCard.sredne_4ab6d3e0'), color: 'rgba(255, 213, 79, 0.9)' };
+        case 'hard': return { label: i18nT('quests:screens.tabs.QuestCard.slozhno_9a98f059'), color: 'rgba(239, 154, 154, 0.9)' };
         default: return null;
     }
 };
@@ -50,23 +52,24 @@ export default function QuestCard({
     const [isHovered, setIsHovered] = useState(false);
     const [reviewsOpen, setReviewsOpen] = useState(false);
 
-    const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 ч';
+    const durationText = quest.durationMin ? i18nT('quests:screens.tabs.QuestCard.value1_min_1c47c0c7', { value1: Math.round((quest.durationMin ?? 60) / 5) * 5 }) : i18nT('quests:screens.tabs.QuestCard.1_2_ch_59b7a35e');
     const pointsText = pluralizePoints(quest.points ?? 0);
     const difficultyInfo = getDifficultyInfo(quest.difficulty);
     const ageCategory = quest.ageCategory ?? getQuestAgeCategory(quest.tags);
+    const ageBadgeLabel = getQuestAgeBadgeLabel(ageCategory);
     const categoryLabel = quest.cityName || quest.countryName || null;
     const distanceText = nearby && typeof quest._distanceKm === 'number'
         ? quest._distanceKm < 1
-            ? `${Math.round(quest._distanceKm * 1000)} м`
-            : `${quest._distanceKm.toFixed(1)} км`
+            ? i18nT('quests:screens.tabs.QuestCard.value1_m_b93b13fa', { value1: Math.round(quest._distanceKm * 1000) })
+            : i18nT('quests:screens.tabs.QuestCard.value1_km_9154fdca', { value1: quest._distanceKm.toFixed(1) })
         : null;
     const isPioneerQuest = (quest.completionsCount ?? 0) <= 0;
     // Паритет с native: на устройстве чип «Посмотреть отзывы (0)» виден всегда —
     // web (включая mobile web) ведёт себя так же.
     const showReviewsAction = true;
     const reviewsLabel = quest.ratingCount > 0
-        ? `${quest.ratingCount} ${pluralizeRu(quest.ratingCount, 'отзыв', 'отзыва', 'отзывов')}`
-        : '0 отзывов';
+        ? `${quest.ratingCount} ${pluralizeRu(quest.ratingCount, i18nT('quests:screens.tabs.QuestCard.otzyv_9b980975'), i18nT('quests:screens.tabs.QuestCard.otzyva_7e8267a2'), i18nT('quests:screens.tabs.QuestCard.otzyvov_5a06b55c'))}`
+        : i18nT('quests:screens.tabs.QuestCard.0_otzyvov_d0eb25eb');
 
     const imageUrl = typeof quest.cover === 'string' ? quest.cover : null;
     const cacheKey = imageUrl ? String(imageUrl).trim() : '';
@@ -128,7 +131,7 @@ export default function QuestCard({
                     onMouseLeave: () => setIsHovered(false),
                     role: 'link',
                     tabIndex: 0,
-                    'aria-label': `Начать приключение: ${quest.title}`,
+                    'aria-label': i18nT('quests:screens.tabs.QuestCard.nachat_priklyuchenie_value1_43ad4b32', { value1: quest.title }),
                     onKeyDown: (e: any) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
@@ -145,7 +148,7 @@ export default function QuestCard({
                     style={[StyleSheet.absoluteFill, { zIndex: 20 }]}
                     onPress={handlePress}
                     accessibilityRole="button"
-                    accessibilityLabel={`Начать приключение: ${quest.title}`}
+                    accessibilityLabel={i18nT('quests:screens.tabs.QuestCard.nachat_priklyuchenie_value1_43ad4b32', { value1: quest.title })}
                 />
             )}
 
@@ -190,7 +193,7 @@ export default function QuestCard({
                 {quest.isCompletedByMe && (
                     <View style={[styles.questCardCompletedBadge, distanceText ? { top: 44 } : null]}>
                         <Feather name="check-circle" size={12} color={colors.textOnDark} />
-                        <Text style={styles.questCardCompletedText}>Пройден</Text>
+                        <Text style={styles.questCardCompletedText}>{i18nT('quests:screens.tabs.QuestCard.proyden_73ced70e')}</Text>
                     </View>
                 )}
 
@@ -200,7 +203,7 @@ export default function QuestCard({
                         testID={`quest-card-pioneer-${quest.id}`}
                     >
                         <Feather name="flag" size={12} color={colors.textOnDark} />
-                        <Text style={styles.questCardCompletedText}>Ещё никто не проходил</Text>
+                        <Text style={styles.questCardCompletedText}>{i18nT('quests:screens.tabs.QuestCard.esche_nikto_ne_prohodil_341ee9f0')}</Text>
                     </View>
                 )}
 
@@ -211,13 +214,15 @@ export default function QuestCard({
                     </View>
                 )}
 
-                {ageCategory && (
+                {ageBadgeLabel && (
                     <View
                         style={[styles.questCardKidsBadge, difficultyInfo ? { top: 44 } : null]}
                         testID={`quest-card-kids-${quest.id}`}
                     >
                         <Feather name="smile" size={12} color={colors.textOnDark} />
-                        <Text style={styles.questCardKidsText}>{ageCategory.label}</Text>
+                        <Text style={styles.questCardKidsText} numberOfLines={1}>
+                            {ageBadgeLabel}
+                        </Text>
                     </View>
                 )}
 
@@ -265,7 +270,7 @@ export default function QuestCard({
                                     >
                                         <Feather name="check-circle" size={13} color="rgba(255,255,255,0.9)" />
                                         <Text style={styles.questCardMetaText}>
-                                            Пройдено {quest.completionsCount} {pluralizeRu(quest.completionsCount, 'раз', 'раза', 'раз')}
+                                            {i18nT('quests:screens.tabs.QuestCard.proydeno_5cec53cc')}{quest.completionsCount} {pluralizeRu(quest.completionsCount, i18nT('quests:screens.tabs.QuestCard.raz_cb5ff63c'), i18nT('quests:screens.tabs.QuestCard.raza_7014923e'), i18nT('quests:screens.tabs.QuestCard.raz_cb5ff63c'))}
                                         </Text>
                                     </View>
                                 )}
@@ -276,7 +281,7 @@ export default function QuestCard({
                         <View style={styles.questCardPioneerRow}>
                             <UserAvatar uri={quest.firstCompleter.avatar} size="sm" />
                             <Text style={styles.questCardPioneerText} numberOfLines={1}>
-                                Первым прошёл: {quest.firstCompleter.name}
+                                {i18nT('quests:screens.tabs.QuestCard.pervym_proshel_0647d9f1')}{quest.firstCompleter.name}
                             </Text>
                         </View>
                     )}
@@ -314,8 +319,8 @@ export default function QuestCard({
                                     Platform.OS !== 'web' && styles.questCardReviewsChipNativeInline,
                                 ]}
                                 accessibilityRole="button"
-                                accessibilityLabel={`Посмотреть отзывы: ${reviewsLabel}`}
-                                accessibilityHint="Открывает отзывы к квесту"
+                                accessibilityLabel={i18nT('quests:screens.tabs.QuestCard.posmotret_otzyvy_value1_0859ae2d', { value1: reviewsLabel })}
+                                accessibilityHint={i18nT('quests:screens.tabs.QuestCard.otkryvaet_otzyvy_k_kvestu_02dd3527')}
                                 testID={`quest-card-reviews-${quest.id}`}
                                 hitSlop={6}
                             >
@@ -345,8 +350,8 @@ export default function QuestCard({
                         { top: cardHeight - 36 },
                     ]}
                     accessibilityRole="button"
-                    accessibilityLabel={`Посмотреть отзывы: ${reviewsLabel}`}
-                    accessibilityHint="Открывает отзывы к квесту"
+                    accessibilityLabel={i18nT('quests:screens.tabs.QuestCard.posmotret_otzyvy_value1_0859ae2d', { value1: reviewsLabel })}
+                    accessibilityHint={i18nT('quests:screens.tabs.QuestCard.otkryvaet_otzyvy_k_kvestu_02dd3527')}
                     testID={`quest-card-reviews-${quest.id}`}
                     hitSlop={6}
                     {...Platform.select({
@@ -364,7 +369,7 @@ export default function QuestCard({
                 >
                     <Feather name="message-circle" size={13} color={colors.textOnDark} />
                     <Text style={styles.questCardReviewsChipText}>
-                        {Platform.OS === 'web' ? quest.ratingCount : `Посмотреть отзывы (${quest.ratingCount})`}
+                        {Platform.OS === 'web' ? quest.ratingCount : i18nT('quests:screens.tabs.QuestCard.posmotret_otzyvy_value1_4dd71d0d', { value1: quest.ratingCount })}
                     </Text>
                 </Pressable>
             )}

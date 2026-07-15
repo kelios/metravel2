@@ -41,4 +41,16 @@ describe('quest SEO metadata', () => {
     expect(encodedAttributeLength(seo.description)).toBeLessThanOrEqual(160)
     expect(seo.description).not.toMatch(/[\s.,;:!?·–—-]$/u)
   })
+
+  it('builds native quest metadata when Intl.PluralRules is unavailable', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(Intl, 'PluralRules')
+    Object.defineProperty(Intl, 'PluralRules', { configurable: true, value: undefined })
+
+    try {
+      const seo = buildQuestSeoMetadata({ cityName: 'Минск', points: 2 })
+      expect(seo.description).toContain('2 точки.')
+    } finally {
+      if (descriptor) Object.defineProperty(Intl, 'PluralRules', descriptor)
+    }
+  })
 })

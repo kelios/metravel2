@@ -1,307 +1,225 @@
 # Фича: map
 
-**Последняя актуализация:** 2026-04-17
-**Ответственный:** team
+**Последняя актуализация:** 2026-07-14
+
+**Ответственный домен:** frontend map/places
+
+**Канонический обзор проекта:** [Архитектура и функциональность Metravel](../ARCHITECTURE.md)
+
+## Назначение документа
+
+Этот файл описывает текущие frontend-границы map-фичи: маршруты, движки,
+platform adapters, data flow и минимальную проверку. Он не является
+production-readiness отчётом. Реальная доступность результатов, кластеров,
+маршрутизации и внешних слоёв зависит от backend/external services и должна
+подтверждаться runtime evidence для конкретной задачи.
 
 ## TL;DR
 
-Интерактивная карта путешествий с кросс-платформенной поддержкой: Leaflet на web, react-native-maps на iOS/Android. Фильтрация по локации/радиусу, кластеризация маркеров, попапы точек, построение маршрутов через OpenRouteService.
-
-## Точки входа
-
-| Путь | Назначение |
-|------|-----------|
-| `app/(tabs)/map.tsx` | Таб-навигация, основной экран |
-| `components/MapPage/Map.web.tsx` | Web (Leaflet) |
-| `components/MapPage/Map.ios.tsx` | iOS (react-native-maps) |
-| `components/MapPage/Map.android.tsx` | Android (react-native-maps) |
-
-## Дерево компонентов
-
-```
-<MapPage>
- └─ <TravelMap> (1015 LOC) 🔴 — корневой контейнер
-     ├─ <Map.web|ios|android> — платформенная реализация
-     │   ├─ <MapWebCanvas> (378) — Leaflet холст
-     │   ├─ <MapLogicComponent> (546) — общая логика
-     │   ├─ <MarkerClusterGroup> (470) — кластеризация
-     │   ├─ <MapLayers> — WFS + основной фон
-     │   ├─ <MapRoute> — отрисовка маршрута
-     │   ├─ <PlacePopupCard> (1300) 🔴 — попап места
-     │   └─ <LazyPopup> — асинк загрузка попапов
-     ├─ <MapMobileLayout> (624) — раскладка мобайла
-     ├─ <MapPanel>, <FiltersPanel> — фильтры/настройки
-     ├─ <TravelListPanel> (322) — список
-     ├─ <MapQuickFilters> (367) — быстрые фильтры
-     ├─ <RoutingMachine> — режим построения маршрутов
-     └─ <MapFAB>, <QuickActions>, <MapOnboarding>
-```
-
-🔴 — кандидаты на распил (см. ниже).
-
-## Кросс-платформенность
-
-| Слой | Web | Native |
-|------|-----|--------|
-| Движок | Leaflet 1.9 + react-leaflet | react-native-maps (Apple/Google) |
-| Корень | `Map.web.tsx` (632) | `Map.ios.tsx` (281) / `Map.android.tsx` |
-| Холст | `Map/MapWebCanvas.tsx` (378) | — |
-| Слои | `mapWebLayers.ts` (WFS) | — |
-| Panel | `MapBottomSheet.web.tsx`, `SwipeablePanel.web.tsx` | `MapMobileLayout.tsx` |
-| Загрузка движка | `hooks/useLeafletLoader.ts` (dynamic import) | нативная сборка |
-
-Выбор платформы: `components/MapPage/Map/useMapInstance.ts`, условные web-эффекты в `useMapWebLayoutEffects.ts`.
-
-## Mobile parity contract
-
-- Mobile web, Android and iOS map/place UX must look and behave the same for the
-  same scenario. Platform-specific files may swap Leaflet, WebView or native map
-  engines, but the card structure, action order, hero proportions and tap
-  semantics must stay aligned.
-- A marker popup/card on mobile opens fullscreen inside the available app content
-  area: app header/footer remain visible, the hero image occupies about 70% of
-  the card, then title/meta, coordinates with copy, article/page action,
-  expandable navigation choices and existing save/add/share/route actions.
-- The expandable navigation choices must show the full map-app set when
-  coordinates exist: Google Maps, Apple Maps, Organic Maps/offline, Waze,
-  Яндекс Карты, Яндекс Навигатор, and OpenStreetMap. Telegram/share is optional
-  extra, not a substitute for those choices.
-- Related travel state must be explicit in the same surface: users need to see a
-  clear "Был / Хочу / Планирую" action that opens the "Был здесь",
-  "Хочу поехать", and "Планирую" choices.
-- `/places`, `/map`, and travel details route-point map cards should reuse the
-  same point/place template with optional fields instead of separate visual
-  patterns.
-- On travel details, a tap on a route-point card focuses/highlights the marker on
-  the map only. It must not auto-open the popup; only a direct marker tap opens
-  the fullscreen point card.
-
-### Как держим и проверяем паритет
-
-Паритет держится **общими компонентами**, а не совпадающими по случайности реализациями:
-окружение карты и карточка места — `MapMobileLayout`, `MapMobileTopOverlay`,
-`MapBottomSheet`, `MapPlaceBottomCard`, `PlacePopupCard` (через `createMapPopupComponent`) —
-рендерятся и на web, и на native; платформенные файлы (`Map.web.tsx` vs
-`Map.ios.tsx`/`Map.android.tsx`) меняют только движок, инсеты под dock/tab-bar/safe-area
-и тени. Новый `.web`/`.native`-форк вёрстки/порядка действий/пропорций = нарушение паритета.
-
-Проверяется при любой правке этих компонентов:
-- **web** — вживую в браузере на mobile ≤560px (`preview_start` + скрин карточки места и
-  тулбара, light+dark);
-- **native** — device-verify (`adb exec-out screencap` на Android / iOS-симулятор); нет
-  устройства → `verify pending` с указанием, что именно свериться;
-- **сквозной кросс-платформенный** визуальный аудит — skill `metravel-design-audit`
-  (ось «устройство-эталон»); владелец карты — агент `map-expert`, native — `android-expert`/`ios-expert`.
-
-## Данные
-
-### React Query (`api/map.ts`, 541 LOC)
-
-| Функция | Endpoint |
-|---------|----------|
-| `fetchTravelsForMap` | `GET /travels/search_travels_for_map/?page=X&where=...` |
-| `fetchTravelsNearRoute` | `POST /travels/near-route/` |
-| `fetchTravelsNear` | `GET /travels/:id/near/` |
-| `fetchTravelsPopular` | `GET /travels/popular/` |
-| `fetchTravelsOfMonth` | `GET /travels/of-month/` |
-| `fetchFiltersMap` | `GET /filterformap/` |
-
-Retry: `fetchWithTransientRetry` — на 502/503/504 с 350ms задержкой. Таймауты 10s (default) / 30s (long).
-
-### Zustand
-
-| Store | Файл | Роль |
-|-------|------|------|
-| `useMapPanelStore` | `stores/mapPanelStore.ts` | Открытие/закрытие панели, таб (`filters`/`list`), nonce для реактивности, toggle с throttle 300ms |
-
-## Hooks
-
-| Хук | Назначение |
-|-----|-----------|
-| `useMapScreenController` | Главный facade (координаты, фильтры, UI) |
-| `useMapMarkers` | Кластеризация + видимость маркеров |
-| `useMapMarkerData` | Данные → `Point[]` |
-| `useMapLazyLoad` | Ленивая подгрузка при панорамировании |
-| `useLeafletLoader` | Dynamic import Leaflet (web only) |
-| `useMapApi` | API Leaflet/RN Maps |
-| `useMapInstance` | Выбор платформы |
-| `useMapCleanup` | Сброс listeners, AbortController |
-| `useMapLogic` | Фильтрация, фокус, зум |
-| `useMapUserLocation` | Геолокация |
-| `useMapPopupAutoPan` | Авто-панирование на попап |
-| `useRouting` | Построение маршрутов через ORS |
-
-## Утилиты
-
-- `utils/mapClustering.ts` — алгоритм кластеризации по зуму
-- `utils/mapWebLayers.ts` — WFS слои (LASY), Tile, Attribution
-- `utils/mapToasts.ts` — уведомления ошибок
-- `utils/coordinateConverter.ts`, `coordinateValidator.ts`
-- `utils/mapImageGenerator.ts` — превью путешествий
-- `utils/routingApiKey.ts` — резолв ORS ключа
-
-**Routing (ORS + OSRM fallback):** поддержка car/foot/bike, mock режим через `EXPO_PUBLIC_OSRM_MOCK`.
-
-## Env
-
-```
-EXPO_PUBLIC_ORS_API_KEY           ORS ключ
-EXPO_PUBLIC_ROUTE_SERVICE_KEY     альтернативный ключ
-EXPO_PUBLIC_ROUTE_SERVICE         URL сервиса
-EXPO_PUBLIC_LASY_WFS_URL          WFS URL (Беларусь)
-EXPO_PUBLIC_LASY_ATTRIBUTION      attribution WFS
-EXPO_PUBLIC_LASY_WFS_TYPENAME     имя типа
-EXPO_PUBLIC_LASY_WFS_VERSION      версия (2.0.0)
-EXPO_PUBLIC_LASY_WFS_OUTPUT       формат (GEOJSON)
-EXPO_PUBLIC_LASY_WFS_SRS          SRS (EPSG:4326)
-EXPO_PUBLIC_DEBUG_ROUTING         debug routing
-EXPO_PUBLIC_FORCE_OSRM            принудить OSRM
-EXPO_PUBLIC_OSRM_MOCK             mock OSRM (тесты)
-```
-
-## Тесты
-
-### Unit (22 файла в `__tests__/components/MapPage/`)
-
-- `Map.web.test.tsx`, `OptimizedMap.web.test.tsx`
-- `MapMarkers.test.tsx`, `ClusterLayer.test.tsx`
-- `MapLogicComponent.test.tsx`, `MapLogicComponent.zoom-radius.test.tsx`
-- `TravelMap.web.test.tsx`, `PlacePopupCard.test.tsx`
-- `FiltersPanel.test.tsx`, `FiltersPanel.controls.test.tsx`
-- `MapQuickFilters.test.tsx`, `TravelListPanel.test.tsx`
-- `SwipeablePanel.web.test.tsx`, `AddressListItem.native.test.tsx`, `.web.test.tsx`
-- `useMapPopupAutoPan.test.ts`, `useMapApi.test.ts`
-- `map-mobile-layout.test.tsx`
-
-Интеграционные: `__tests__/integration/map-route.integration.test.ts`, `__tests__/config/mapWebLayers.test.ts`, `__tests__/routes/map-screen.test.tsx`, `__tests__/utils/mapFiltersStorage.test.ts`.
-
-### E2E
-
-- `e2e/map-page.spec.ts` — основной сценарий
-- `e2e/points-map-popup.spec.ts` — попапы
-- `e2e/map-route-visual.spec.ts` — маршруты (визуал)
-- `e2e/map-popup-close.spec.ts`
-- `e2e/map-travel-card-no-image.spec.ts`
-
-### Coverage исключения (`jest.config.js`)
-
-- `components/Map`
-- `components/MapPage/`
-- `components/MapUploadComponent`
-
-После распила критичных файлов эти исключения нужно пересмотреть.
-
-## Большие файлы (>800 LOC)
-
-| Файл | LOC | Приоритет |
-|------|-----|-----------|
-| `components/MapPage/Map/PlacePopupCard.tsx` | 1300 | 🔴 1 |
-| `components/MapPage/TravelMap.tsx` | 1015 | 🔴 2 |
-
-## Известные боли
-
-- **PlacePopupCard.tsx (1300)** — план распила в открытом спринте (header/gallery/metadata/actions).
-- **TravelMap.tsx (1015)** — много логики в одном файле, кандидат на вынесение хуков-контроллеров.
-- **Coverage** — целые папки исключены, нужны unit-тесты после распила.
-- **WFS слои** медленно грузятся на мобайле — возможна оптимизация чанкированием.
-- **Sync Web↔Native state** — аккуратная работа с refs при переключении платформ.
-
-## Mobile UX audit — first-time discovery flow
-
-**Дата аудита:** 2026-05-12
-
-Цель аудита: посмотреть на мобильную карту как на первый вход пользователя, который ещё не знает продукт и хочет быстро понять, куда можно поехать.
-
-### Проверенные сценарии
-
-- Первый вход на `/map` в mobile web.
-- Collapsed-state карты до открытия панели.
-- Открытие bottom sheet и переход между табами `search` / `route` / `list`.
-- Поиск мест по радиусу и категориям.
-- Список найденных мест и empty state.
-- Построение маршрута после выбора стартовой и конечной точки.
-
-### Что уже работает хорошо
-
-- Базовый mobile flow не сломан: список, поиск по радиусу и route-builder доступны и покрыты e2e.
-- У списка есть понятный summary-блок `Места рядом` и быстрый переход к фильтрам.
-- В collapsed-state появился явный стартовый CTA `Найти места рядом`, который даёт понятную первую точку входа.
-- В mobile sheet и panel header список переименован из `Точки` в `Места`.
-- Контекст результатов стал явнее: mobile summary теперь может показывать радиус и близость к пользователю (`в радиусе 60 км`, `рядом с вами`).
-- Empty state не тупиковый: пользователь может увеличить радиус, сбросить фильтры или вернуться к карте.
-- Route mode хорошо объясняет следующий шаг, когда точек маршрута ещё недостаточно.
-
-### Главные UX-проблемы
-
-#### 1. Первый экран слишком инструментальный, а не сценарный
-
-- На mobile web onboarding фактически выключен, хотя именно здесь он полезнее всего для первого визита.
-- Collapsed overlay показывает в первую очередь compact controls, но не даёт явного ответа на вопрос `с чего начать`.
-
-Следствие: новый пользователь видит карту и набор контролов, но не получает понятный первый шаг вроде `Найти места рядом`.
-
-#### 2. Язык интерфейса местами говорит языком карты, а не языком выбора поездки
-
-- `Радиус`, `Оверлеи`, `Точки` — понятные термины для опытного пользователя, но слабые entry points для discovery.
-- Для первого визита важнее формулировки уровня `Подобрать`, `Места`, `Недалеко`, `На выходные`, `Природа`, `Замки`.
-
-#### 3. Tabs в mobile sheet равноправны, хотя пользовательские намерения не равноправны
-
-- Для первого визита основной путь — `подобрать место`, затем `посмотреть список`, и только потом `строить маршрут`.
-- Сейчас `route` выглядит слишком рано и конкурирует за внимание с discovery-сценарием.
-
-#### 4. Collapsed state перегружен icon-first логикой
-
-- Compact overlay экономит место, но требует догадки: что открывает список, что меняет фильтры, а что просто центрирует карту.
-- Для нового пользователя нужно хотя бы одно явное primary действие текстом, а не только набор иконок и коротких чипов.
-
-#### 5. Контекст результатов выражен недостаточно явно
-
-- В списке есть `Места рядом`, но не всегда очевидно, рядом с чем именно: с геолокацией, центром карты или в текущем радиусе.
-- Пользователю полезнее видеть контекст вида `3 места в радиусе 60 км` или `3 места рядом с вами`.
-
-#### 6. Карточка места на мобильном делает слишком много сразу
-
-- Для первого выбора пользователю важнее быстро понять `что это`, `насколько далеко`, `подходит ли мне`.
-- Secondary actions полезны, но в discovery-сценарии они должны быть менее заметны, чем основной CTA.
-
-### Приоритетный план улучшений
-
-#### P1 — обязательные улучшения
-
-1. [x] Вернуть для mobile web лёгкий first-visit onboarding или coachmark.
-2. [x] Добавить в collapsed state явный стартовый CTA: `Найти места рядом`.
-3. [x] Переименовать tab `Точки` в более человеко-понятное `Места`.
-4. [x] Явно показывать контекст результатов: радиус / геолокация / центр карты.
-
-Статус: P1 закрыт — mobile web снова показывает лёгкий first-visit coachmark, а collapsed state и список уже поддерживают discovery-first вход.
-
-#### P2 — сильные UX-улучшения без смены архитектуры
-
-1. В search-tab добавить блок `С чего начать` с intent-based chips.
-2. Сделать discovery-path визуально приоритетнее route-path на первом визите.
-3. Упростить верхнюю часть mobile travel-card под быстрый выбор направления.
-
-#### P3 — polishing
-
-1. Добавить микро-подсказку `Нажмите на маркер, чтобы посмотреть место`.
-2. Усилить quick recommendations как отдельный discovery-блок.
-3. Для first-visit режима временно показывать text+icon controls вместо максимально compact icon-only панели.
-
-### Рекомендуемый целевой first-time flow
-
-1. Пользователь открывает `/map`.
-2. Видит понятный стартовый CTA `Найти места рядом`.
-3. Получает небольшую подборку ближайших мест.
-4. Быстро уточняет подборку через категории/намерения.
-5. Открывает карточку места.
-6. Только после этого переходит к построению маршрута.
-
-### Вывод
-
-Текущая мобильная карта уже хорошо работает как инструмент карты, фильтров и маршрутов. Основной следующий шаг для UX — сделать её более понятной именно как интерфейс выбора направления для нового пользователя, а не только как набор картографических контролов.
+- Web-карта использует Leaflet и React Leaflet.
+- Основная карта на Android и iOS использует Leaflet внутри
+  `react-native-webview`; `react-native-maps` в текущем map path не используется.
+- Общий screen/controller слой выбирает platform adapter через `MapPanel`.
+- Встроенная карта деталей travel имеет отдельные реализации
+  `TravelMap.web.tsx` и `TravelMap.native.tsx`; это не тот же renderer, что
+  основная `/map`.
+- Общими должны оставаться DTO точек, координатная валидация, popup/card model,
+  navigation actions и UX-контракт. Web React Leaflet и native WebView renderers
+  не нужно сливать в один cross-platform god-component.
+
+## Статус по поверхностям
+
+| Поверхность | Реализация в репозитории | Что требует отдельной проверки |
+| --- | --- | --- |
+| `/map` на web | React Leaflet, filters, radius/route modes, panels, overlays | browser flow, console/network, backend payloads |
+| `/map` на Android/iOS | Leaflet HTML/JS в WebView, RN bridge, offline tile cache | локальная device build, permissions, WebView messages, tiles/offline |
+| Embedded travel map | React Leaflet на web, Leaflet-in-WebView на native | travel detail interaction и route-point parity |
+| `/places` | отдельный places catalog поверх нормализованных map points | см. `docs/features/places.md`; backend-dependent |
+| Quest maps | отдельные quest adapters | не принадлежат основной map renderer; проверяются quest-сценарием |
+
+Наличие компонента или unit-теста не подтверждает доступность backend endpoint,
+API key, WFS/Overpass/OWM provider либо корректную работу на реальном устройстве.
+
+## Маршруты и точки входа
+
+| Route / surface | Файл | Ответственность |
+| --- | --- | --- |
+| `/map` web | `app/(tabs)/map.web.tsx` | hydration gate, SEO, Leaflet CSS, lazy screen shell |
+| `/map` native | `app/(tabs)/map.tsx` | тонкий route к `screens/tabs/MapScreen.tsx` |
+| Map screen | `screens/tabs/MapScreen.tsx` | композиция map canvas, desktop/mobile chrome и screen states |
+| `/places` | `app/(tabs)/places.tsx` | каталог точек; отдельный owner, общий point/place contract |
+| `/travels/:param` map section | `components/travel/details/sections/TravelDetailsMapSection.tsx` | встроенная карта и route points на detail page |
+| `/quests/map` | `app/(tabs)/quests/map.tsx` | quest map route, не основной `/map` renderer |
+
+## Ownership и слои
+
+| Слой | Основные файлы | Что ему принадлежит |
+| --- | --- | --- |
+| Route | `app/(tabs)/map.tsx`, `app/(tabs)/map.web.tsx` | entry point, SEO/hydration shell |
+| Screen composition | `screens/tabs/MapScreen.tsx`, `screens/tabs/map.styles.ts`, `screens/tabs/mapScreenHelpers.ts` | desktop/mobile composition, screen-level state wiring |
+| Facade | `hooks/useMapScreenController.ts` | объединение coordinates, filters, data, route и panel controllers |
+| Focused controllers | `hooks/map/` | `useMapCoordinates`, `useMapFilters`, `useMapDataController`, `useMapTravels`, `useMapClusters`, `useRouteController` |
+| Engine boundary | `components/MapPage/MapPanel.tsx` | выбор web/native renderer и общий prop contract |
+| Web renderer | `components/MapPage/Map.web.tsx`, `components/MapPage/Map/*` | React Leaflet canvas, markers, clusters, layers, popups, route line |
+| Native renderer | `components/MapPage/Map.ios.tsx`, `components/MapPage/Map.android.tsx` | Leaflet WebView, RN↔WebView bridge, native tiles/offline, native map UI API |
+| Shared map chrome | `components/MapPage/MapCanvas.tsx`, `MapScreenParts/`, `MapMobile/`, `MapBottomSheet*`, `MapMobileLayout.tsx` | loading, panels, mobile sheet, floating controls |
+| Place surface | `components/MapPage/Map/createMapPopupComponent.tsx`, `Map/PlacePopupCard/`, `MapPlaceBottomCard.tsx` | единый content/action model для popup и mobile bottom card |
+| Embedded travel renderer | `components/MapPage/TravelMap.web.tsx`, `components/MapPage/TravelMap.native.tsx` | карта внутри travel details, отдельный platform adapter |
+
+`components/MapPage/Map.android.tsx` переэкспортирует `Map.ios.tsx`: обе native
+платформы используют один WebView renderer. `components/MapPage/Map.tsx` остаётся
+generic web fallback; platform resolution выбирает `.web`, `.ios` или `.android`
+файлы для соответствующей сборки.
+
+## Platform engines
+
+| Concern | Web | Android/iOS |
+| --- | --- | --- |
+| Движок | Leaflet + React Leaflet | Leaflet внутри `react-native-webview` |
+| Runtime loading | `useLeafletLoader`, web CSS/runtime loaders | inline Leaflet assets из `utils/leafletInlineAsset.ts` |
+| Markers/clusters | React components/layers | сериализованный payload, injected JS, server cluster data |
+| Overlays | `config/mapWebLayers.ts`, `utils/mapWebOverlays/*` | сериализуемое подмножество layers; weather labels остаются web-only |
+| View commands | Leaflet refs/API | `injectJavaScript` через `MapUiApi` |
+| Map events | React Leaflet handlers | `WebView.onMessage` |
+| Offline tiles | web tile/network path | `utils/mapTileCache.ts`, `MapOfflineDownloadControl.tsx` |
+
+### Native bridge ownership
+
+`components/MapPage/Map.ios.tsx` владеет протоколом основной native-карты:
+
+- RN → WebView: render points/clusters, user location, zoom, center, overlays,
+  resize invalidation и tile responses;
+- WebView → RN: `READY`, `SELECT_PLACE`, `MAP_CLICK`, `MAP_MOVED`,
+  `MAP_VIEWPORT`, `TILE_REQ`;
+- dynamic payload передаётся через безопасную JSON-сериализацию и
+  `injectJavaScript`, а не через пересборку HTML на каждое изменение данных.
+
+`TravelMap.native.tsx` имеет более узкий отдельный bridge для embedded travel
+map (`POINT_SELECT`, `CLEAR_SELECTED_POINT`, `OPEN_URL`, `RESIZE`). Изменение
+одного bridge не означает автоматический parity второго.
+
+При развитии bridge нужно выносить typed DTO, message validation, coordinate
+normalization и escaping в общие модули, сохраняя renderers раздельными.
+
+## Данные и backend contracts
+
+Backend-facing map adapter — `api/map.ts`; React Query ownership находится в
+`hooks/map/*` и использует ключи из `api/queryKeys.ts`.
+
+| Функция | Endpoint family | Примечание |
+| --- | --- | --- |
+| `fetchTravelsForMap` | `GET /api/travels/search_travels_for_map/` | paginated radius/filter/search data |
+| `fetchMapClusters` | `GET /api/map/clusters/` | bbox/zoom, optional query/category/radius; backend-dependent |
+| `fetchTravelsNearRoute` | `POST /api/travels/near-route/` | GeoJSON route + tolerance |
+| `fetchFiltersMap` | `GET /api/filterformap/` | map filter dictionaries |
+| `fetchTravelsNear` | `GET /api/travels/{id}/near/` | `404` нормализуется в empty result |
+| popular/month/random | `/api/travels/popular/`, `/of-month/`, `/random/` | discovery data used around map surfaces |
+
+Карта также зависит от:
+
+- `config/mapWebLayers.ts` и `utils/mapWebOverlays/*` для OSM/Overpass,
+  WFS и weather overlays;
+- `api/external/serverRouting.ts` (`POST /api/routing/route/`) как
+  канонического routing path;
+- client-side ORS/OSRM/Valhalla adapters как compatibility/failure fallback;
+- geolocation permissions и platform network state;
+- env key names из runtime config. Значения ключей в документацию и логи не
+  копируются.
+
+Некоторые API adapters возвращают empty payload при recoverable/expected error.
+Поэтому пустая карта должна диагностироваться по network/API evidence, а не
+объявляться успешным backend contract только потому, что UI не упал.
+
+## Client state
+
+| Owner | Роль |
+| --- | --- |
+| React Query | map travels, server clusters, filters и cache invalidation |
+| `stores/mapPanelStore.ts` | active panel/tab и screen commands |
+| `stores/routeStore.ts` | route points, geometry и route state |
+| `hooks/useMapScreenController.ts` | screen-level derived state и stable callbacks |
+| component state | selected place, WebView readiness, local popup/layout state |
+
+## Point/place mobile contract
+
+- Mobile web, Android и iOS сохраняют одинаковый порядок данных и действий.
+- Маркер открывает point/place surface; travel detail point-card tap только
+  фокусит/подсвечивает marker, но не открывает popup автоматически.
+- Карточка использует общий `PlacePopupCard` content model через
+  `createMapPopupComponent`; mobile wrapper — `MapPlaceBottomCard`.
+- Координаты доступны для копирования; internal article/travel routes остаются
+  внутренней навигацией, external map apps открываются через централизованные
+  external-link helpers.
+- Navigation choices при наличии координат: Google Maps, Apple Maps,
+  Organic Maps, Waze, Яндекс Карты, Яндекс Навигатор и OpenStreetMap.
+- Travel status должен быть понятен текстом (`Был здесь`, `Хочу поехать`,
+  `Планирую`), а не только безымянной иконкой.
+
+Канонические UI-правила находятся в [docs/RULES.md](../RULES.md).
+
+## Проверки по scope
+
+Ближайшие test surfaces:
+
+- `__tests__/components/MapPage/` — renderers, panels, popup/card, markers,
+  clusters и bridge-adjacent helpers;
+- `__tests__/hooks/useMap*` и `__tests__/hooks/useMapScreenController*` —
+  data/filter/route controller behavior;
+- `__tests__/api/fetchMapClusters.test.ts` и
+  `__tests__/api/fetchTravelsForMap.whereEncoding.test.ts` — backend adapter;
+- `__tests__/integration/map-route.integration.test.ts` — routing integration;
+- `e2e/map-page.spec.ts`, `e2e/map-mobile-panel-content.spec.ts`,
+  `e2e/map-mobile-route-toolbar.spec.ts`, `e2e/points-map-popup.spec.ts`,
+  `e2e/map-route-visual.spec.ts` — browser flows.
+
+Минимальный выбор проверки:
+
+- docs-only изменение: structural Markdown/link/path check;
+- map logic/API change: ближайшие targeted Jest tests + `npm run check:fast`;
+- видимый web map change: targeted checks + browser screenshot,
+  console/network review;
+- native renderer/bridge/offline change: targeted Jest + локальная Android
+  build/install на USB device; iOS-ready только с simulator/device evidence;
+- широкий cross-platform map change: `npm run check:preflight` после проверки
+  operation gate.
+
+Все Jest/Playwright/full gates запускаются с учётом общего quality-gate lock из
+`docs/TESTING.md`.
+
+## Технический долг
+
+- `Map.ios.tsx`, `Map.web.tsx` и `useMapScreenController.ts` остаются крупными
+  orchestration/bridge hotspots; актуальный список см. в
+  [архитектурном аудите](../ARCHITECTURE.md#p2--архитектурный-и-типовой-долг).
+- Main map, embedded travel map и quest maps частично дублируют HTML/JS bridge,
+  marker, resize, popup и escaping logic.
+- Необходимо расширять typed bridge DTO и coverage до снятия широких map
+  exclusions из `jest.config.js`.
+- Backend cluster/search/route contracts и external overlay providers требуют
+  runtime verification; dev/test fallback не является production evidence.
+
+## Исторический UX-аудит
+
+Аудит first-time mobile discovery от **2026-05-12** — исторический snapshot, а
+не текущий readiness baseline. Его выводы использовались для onboarding,
+discovery CTA, terminology и result-context work. Статусы старых чекбоксов и
+формулировки «уже работает» не следует переносить в новые задачи без повторного
+browser/device прогона.
+
+Сохраняющийся продуктовый ориентир:
+
+1. первый экран объясняет сценарий выбора места, а не только инструменты карты;
+2. discovery/search path визуально предшествует route-building для нового
+   пользователя;
+3. результат явно показывает anchor и radius;
+4. marker/card flow остаётся понятным без icon-only догадок.
 
 ## Связанные документы
 
-- `docs/features/travel.md` — деталь travel использует map-секцию
-- `docs/OPTIMIZATION_AND_FIX_PLAN.md`
+- [Архитектура и функциональность](../ARCHITECTURE.md)
+- [Project rules](../RULES.md)
+- [Testing guide](../TESTING.md)
+- [Places feature map](./places.md)
+- [Travel feature map](./travel.md)
+- [Optimization and fix plan](../OPTIMIZATION_AND_FIX_PLAN.md) — плановый
+  документ; его даты и статусы проверяются отдельно перед использованием.

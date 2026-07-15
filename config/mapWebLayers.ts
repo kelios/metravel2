@@ -1,3 +1,5 @@
+import { translate as i18nT } from '@/i18n';
+
 export type WebMapLayerKind =
   | 'tile'
   | 'wms'
@@ -10,13 +12,14 @@ export type WebMapLayerKind =
 
 /** Категория для группировки оверлеев по секциям в UI. */
 export type WebMapLayerCategory =
-  | 'Подложки'
-  | 'Природа'
-  | 'Достопримечательности'
-  | 'Сервисы'
-  | 'Маршруты'
-  | 'Погода'
-  | 'Польша';
+  | 'base'
+  | 'nature'
+  | 'sights'
+  | 'services'
+  | 'routes'
+  | 'weather'
+  | 'poland'
+  | 'other';
 
 /**
  * Overpass-фильтр для kind 'osm-overpass-features'. Каждая запись — пара
@@ -90,17 +93,40 @@ export interface WebMapLayerDefinition {
  * (FiltersPanelMapSettings).
  */
 export const OVERLAY_CATEGORY_ORDER = [
-  'Подложки',
-  'Маршруты',
-  'Природа',
-  'Достопримечательности',
-  'Сервисы',
-  'Польша',
-  'Погода',
+  'base',
+  'routes',
+  'nature',
+  'sights',
+  'services',
+  'poland',
+  'weather',
 ] as const;
 
 /** Категория для оверлеев без заданной category (попадают в конец списка). */
-export const OVERLAY_FALLBACK_CATEGORY = 'Другое';
+export const OVERLAY_FALLBACK_CATEGORY: WebMapLayerCategory = 'other';
+
+const getOverlayCategoryTitle = (category: string): string => {
+  switch (category) {
+    case 'base':
+      return i18nT('map:config.mapWebLayers.category.base');
+    case 'routes':
+      return i18nT('map:config.mapWebLayers.category.routes');
+    case 'nature':
+      return i18nT('map:config.mapWebLayers.category.nature');
+    case 'sights':
+      return i18nT('map:config.mapWebLayers.category.sights');
+    case 'services':
+      return i18nT('map:config.mapWebLayers.category.services');
+    case 'poland':
+      return i18nT('map:config.mapWebLayers.category.poland');
+    case 'weather':
+      return i18nT('map:config.mapWebLayers.category.weather');
+    case 'other':
+      return i18nT('map:config.mapWebLayers.category.other');
+    default:
+      return category;
+  }
+};
 
 interface OverlayCategorizable {
   id: string;
@@ -113,7 +139,7 @@ interface OverlayCategorizable {
  */
 export const groupOverlaysByCategory = <T extends OverlayCategorizable>(
   items: ReadonlyArray<T>,
-): Array<{ category: string; items: T[] }> => {
+): Array<{ category: string; title: string; items: T[] }> => {
   const byCategory = new Map<string, T[]>();
   for (const item of items) {
     const category =
@@ -123,16 +149,18 @@ export const groupOverlaysByCategory = <T extends OverlayCategorizable>(
     else byCategory.set(category, [item]);
   }
 
-  const ordered: Array<{ category: string; items: T[] }> = [];
+  const ordered: Array<{ category: string; title: string; items: T[] }> = [];
   for (const category of OVERLAY_CATEGORY_ORDER) {
     const bucket = byCategory.get(category);
     if (bucket && bucket.length) {
-      ordered.push({ category, items: bucket });
+      ordered.push({ category, title: getOverlayCategoryTitle(category), items: bucket });
       byCategory.delete(category);
     }
   }
   for (const [category, bucket] of byCategory) {
-    if (bucket.length) ordered.push({ category, items: bucket });
+    if (bucket.length) {
+      ordered.push({ category, title: getOverlayCategoryTitle(category), items: bucket });
+    }
   }
   return ordered;
 };
@@ -166,12 +194,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   // ───────────────────────────── Подложки (opaque tile) ─────────────────────────────
   {
     id: 'base-satellite',
-    title: 'Спутник',
+    get title() { return i18nT('map:config.mapWebLayers.layer.baseSatellite.title'); },
     kind: 'tile',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Источник: Esri, Maxar, Earthstar Geographics, GIS User Community',
-    category: 'Подложки',
-    subtitle: 'Спутниковые снимки Esri World Imagery',
+    get attribution() { return i18nT('map:config.mapWebLayers.layer.baseSatellite.attribution'); },
+    category: 'base',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.baseSatellite.subtitle'); },
     badge: 'Esri',
     opacity: 1,
     maxZoom: 19,
@@ -180,13 +208,13 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   },
   {
     id: 'base-topo',
-    title: 'Топографическая',
+    get title() { return i18nT('map:config.mapWebLayers.layer.baseTopo.title'); },
     kind: 'tile',
     url: 'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
     attribution:
       'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)',
-    category: 'Подложки',
-    subtitle: 'OpenTopoMap (рельеф, горизонтали)',
+    category: 'base',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.baseTopo.subtitle'); },
     badge: 'Topo',
     opacity: 1,
     maxZoom: 17,
@@ -195,12 +223,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   },
   {
     id: 'overlay-hillshade',
-    title: 'Рельеф (отмывка)',
+    get title() { return i18nT('map:config.mapWebLayers.layer.hillshade.title'); },
     kind: 'tile',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Источник: Esri, USGS, NOAA | World Hillshade',
-    category: 'Подложки',
-    subtitle: 'Полупрозрачная отмывка рельефа',
+    get attribution() { return i18nT('map:config.mapWebLayers.layer.hillshade.attribution'); },
+    category: 'base',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.hillshade.subtitle'); },
     badge: 'Esri',
     opacity: 0.45,
     maxZoom: 19,
@@ -211,12 +239,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   // ───────────────────────────── Природа (Overpass features) ─────────────────────────────
   {
     id: 'nature-water',
-    title: 'Водоёмы и источники',
+    get title() { return i18nT('map:config.mapWebLayers.layer.natureWater.title'); },
     kind: 'osm-overpass-features',
     url: '',
     attribution: '© OpenStreetMap contributors (ODbL)',
-    category: 'Природа',
-    subtitle: 'Озёра, родники, водопады (OSM)',
+    category: 'nature',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.natureWater.subtitle'); },
     badge: 'OSM',
     markerColor: '#0a84ff',
     overpassFilters: [
@@ -230,12 +258,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   },
   {
     id: 'nature-viewpoint',
-    title: 'Смотровые площадки',
+    get title() { return i18nT('map:config.mapWebLayers.layer.natureViewpoint.title'); },
     kind: 'osm-overpass-features',
     url: '',
     attribution: '© OpenStreetMap contributors (ODbL)',
-    category: 'Природа',
-    subtitle: 'Видовые точки (OSM)',
+    category: 'nature',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.natureViewpoint.subtitle'); },
     badge: 'OSM',
     markerColor: '#34c759',
     overpassFilters: [{ key: 'tourism', value: 'viewpoint', elements: ['node', 'way'] }],
@@ -246,12 +274,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   },
   {
     id: 'nature-peak',
-    title: 'Вершины',
+    get title() { return i18nT('map:config.mapWebLayers.layer.naturePeak.title'); },
     kind: 'osm-overpass-features',
     url: '',
     attribution: '© OpenStreetMap contributors (ODbL)',
-    category: 'Природа',
-    subtitle: 'Горные вершины с высотой (OSM)',
+    category: 'nature',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.naturePeak.subtitle'); },
     badge: 'OSM',
     markerColor: '#8e6b3a',
     overpassFilters: [{ key: 'natural', value: 'peak', elements: ['node'] }],
@@ -262,12 +290,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   },
   {
     id: 'nature-shelter',
-    title: 'Укрытия и навесы',
+    get title() { return i18nT('map:config.mapWebLayers.layer.natureShelter.title'); },
     kind: 'osm-overpass-features',
     url: '',
     attribution: '© OpenStreetMap contributors (ODbL)',
-    category: 'Природа',
-    subtitle: 'Туристические укрытия (OSM)',
+    category: 'nature',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.natureShelter.subtitle'); },
     badge: 'OSM',
     markerColor: '#5e5ce6',
     overpassFilters: [
@@ -283,12 +311,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   // ───────────────────────────── Достопримечательности (Overpass features) ─────────────────────────────
   {
     id: 'sights-historic',
-    title: 'Исторические объекты',
+    get title() { return i18nT('map:config.mapWebLayers.layer.sightsHistoric.title'); },
     kind: 'osm-overpass-features',
     url: '',
     attribution: '© OpenStreetMap contributors (ODbL)',
-    category: 'Достопримечательности',
-    subtitle: 'Замки, усадьбы, руины (OSM)',
+    category: 'sights',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.sightsHistoric.subtitle'); },
     badge: 'OSM',
     markerColor: '#ff9f0a',
     overpassFilters: [
@@ -306,12 +334,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   },
   {
     id: 'sights-museum',
-    title: 'Музеи',
+    get title() { return i18nT('map:config.mapWebLayers.layer.sightsMuseum.title'); },
     kind: 'osm-overpass-features',
     url: '',
     attribution: '© OpenStreetMap contributors (ODbL)',
-    category: 'Достопримечательности',
-    subtitle: 'Музеи и галереи (OSM)',
+    category: 'sights',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.sightsMuseum.subtitle'); },
     badge: 'OSM',
     markerColor: '#bf5af2',
     overpassFilters: [{ key: 'tourism', value: 'museum', elements: ['node', 'way'] }],
@@ -324,12 +352,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   // ───────────────────────────── Сервисы (Overpass features, minZoom 12) ─────────────────────────────
   {
     id: 'service-fuel',
-    title: 'Заправки',
+    get title() { return i18nT('map:config.mapWebLayers.layer.serviceFuel.title'); },
     kind: 'osm-overpass-features',
     url: '',
     attribution: '© OpenStreetMap contributors (ODbL)',
-    category: 'Сервисы',
-    subtitle: 'АЗС (OSM)',
+    category: 'services',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.serviceFuel.subtitle'); },
     badge: 'OSM',
     markerColor: '#ff453a',
     overpassFilters: [{ key: 'amenity', value: 'fuel', elements: ['node', 'way'] }],
@@ -340,12 +368,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   },
   {
     id: 'service-aid',
-    title: 'Аптеки и медпомощь',
+    get title() { return i18nT('map:config.mapWebLayers.layer.serviceAid.title'); },
     kind: 'osm-overpass-features',
     url: '',
     attribution: '© OpenStreetMap contributors (ODbL)',
-    category: 'Сервисы',
-    subtitle: 'Аптеки, больницы, медпункты (OSM)',
+    category: 'services',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.serviceAid.subtitle'); },
     badge: 'OSM',
     markerColor: '#30d158',
     overpassFilters: [
@@ -358,12 +386,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   },
   {
     id: 'service-transit',
-    title: 'Транспорт',
+    get title() { return i18nT('map:config.mapWebLayers.layer.serviceTransit.title'); },
     kind: 'osm-overpass-features',
     url: '',
     attribution: '© OpenStreetMap contributors (ODbL)',
-    category: 'Сервисы',
-    subtitle: 'Вокзалы и остановки (OSM)',
+    category: 'services',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.serviceTransit.subtitle'); },
     badge: 'OSM',
     markerColor: '#64d2ff',
     overpassFilters: [
@@ -379,37 +407,37 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   // ───────────────────────────── Маршруты ─────────────────────────────
   {
     id: 'waymarked-hiking',
-    title: 'Пешие маршруты (Waymarked Trails)',
+    get title() { return i18nT('map:config.mapWebLayers.layer.waymarkedHiking.title'); },
     kind: 'tile',
     url: 'https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',
     attribution: '© waymarkedtrails.org, © OpenStreetMap contributors (ODbL)',
-    category: 'Маршруты',
+    category: 'routes',
     subtitle: 'Waymarked Trails: hiking',
-    badge: 'Треки',
+    get badge() { return i18nT('map:config.mapWebLayers.badge.tracks'); },
     opacity: 0.95,
     zIndex: 520,
     defaultEnabled: false,
   },
   {
     id: 'waymarked-cycling',
-    title: 'Веломаршруты (Waymarked Trails)',
+    get title() { return i18nT('map:config.mapWebLayers.layer.waymarkedCycling.title'); },
     kind: 'tile',
     url: 'https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png',
     attribution: '© waymarkedtrails.org, © OpenStreetMap contributors (ODbL)',
-    category: 'Маршруты',
+    category: 'routes',
     subtitle: 'Waymarked Trails: cycling',
-    badge: 'Треки',
+    get badge() { return i18nT('map:config.mapWebLayers.badge.tracks'); },
     opacity: 0.95,
     zIndex: 515,
     defaultEnabled: false,
   },
   {
     id: 'osm-camping',
-    title: 'Ночёвки/кемпинги (OSM: camp/shelter)',
+    get title() { return i18nT('map:config.mapWebLayers.layer.osmCamping.title'); },
     kind: 'osm-overpass-camping',
     url: '',
     attribution: '© OpenStreetMap contributors (ODbL)',
-    category: 'Природа',
+    category: 'nature',
     subtitle: 'OSM: camp / shelter',
     badge: 'OSM',
     opacity: 1,
@@ -419,12 +447,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   },
   {
     id: 'osm-poi',
-    title: 'Достопримечательности (OSM)',
+    get title() { return i18nT('map:config.mapWebLayers.layer.osmPoi.title'); },
     kind: 'osm-overpass-poi',
     url: '',
     attribution: '© OpenStreetMap contributors (ODbL)',
-    category: 'Достопримечательности',
-    subtitle: 'Интересные места из OSM',
+    category: 'sights',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.osmPoi.subtitle'); },
     badge: 'OSM',
     opacity: 1,
     minZoom: 11,
@@ -433,11 +461,11 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   },
   {
     id: 'osm-routes',
-    title: 'Маршруты сообщества (OSM)',
+    get title() { return i18nT('map:config.mapWebLayers.layer.osmRoutes.title'); },
     kind: 'osm-overpass-routes',
     url: '',
     attribution: '© OpenStreetMap contributors (ODbL)',
-    category: 'Маршруты',
+    category: 'routes',
     subtitle: 'OSM: hiking / bicycle',
     badge: 'OSM',
     opacity: 1,
@@ -449,12 +477,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   // ───────────────────────────── Погода (OWM, требует ключа) ─────────────────────────────
   {
     id: 'weather-clouds',
-    title: 'Облачность',
+    get title() { return i18nT('map:config.mapWebLayers.layer.weatherClouds.title'); },
     kind: 'tile',
     url: owmTileUrl('clouds_new'),
     attribution: 'Weather data © OpenWeatherMap',
-    category: 'Погода',
-    subtitle: 'OpenWeatherMap: облачность',
+    category: 'weather',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.weatherClouds.subtitle'); },
     badge: 'OWM',
     requiresEnv: OWM_API_KEY_ENV,
     exclusiveGroup: 'weather-heatmap',
@@ -465,12 +493,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   },
   {
     id: 'weather-precip',
-    title: 'Осадки',
+    get title() { return i18nT('map:config.mapWebLayers.layer.weatherPrecip.title'); },
     kind: 'tile',
     url: owmTileUrl('precipitation_new'),
     attribution: 'Weather data © OpenWeatherMap',
-    category: 'Погода',
-    subtitle: 'OpenWeatherMap: осадки',
+    category: 'weather',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.weatherPrecip.subtitle'); },
     badge: 'OWM',
     requiresEnv: OWM_API_KEY_ENV,
     exclusiveGroup: 'weather-heatmap',
@@ -481,12 +509,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   },
   {
     id: 'weather-temp',
-    title: 'Температура',
+    get title() { return i18nT('map:config.mapWebLayers.layer.weatherTemp.title'); },
     kind: 'tile',
     url: owmTileUrl('temp_new'),
     attribution: 'Weather data © OpenWeatherMap',
-    category: 'Погода',
-    subtitle: 'OpenWeatherMap: температура',
+    category: 'weather',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.weatherTemp.subtitle'); },
     badge: 'OWM',
     requiresEnv: OWM_API_KEY_ENV,
     exclusiveGroup: 'weather-heatmap',
@@ -497,12 +525,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   },
   {
     id: 'weather-temp-labels',
-    title: 'Температура °C (подписи)',
+    get title() { return i18nT('map:config.mapWebLayers.layer.weatherTempLabels.title'); },
     kind: 'weather-temp-labels',
     url: '',
     attribution: 'Weather data © OpenWeatherMap',
-    category: 'Погода',
-    subtitle: 'OpenWeatherMap: числовая температура по видимой области',
+    category: 'weather',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.weatherTempLabels.subtitle'); },
     badge: 'OWM',
     requiresEnv: OWM_API_KEY_ENV,
     opacity: 1,
@@ -514,7 +542,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   // ───────────────────────────── Польша ─────────────────────────────
   {
     id: 'lasy-zanocuj-wfs',
-    title: 'Польша: места палаток (Zanocuj w lesie)',
+    get title() { return i18nT('map:config.mapWebLayers.layer.lasyZanocuj.title'); },
     kind: 'wfs-geojson',
     url:
       process.env.EXPO_PUBLIC_LASY_WFS_URL ||
@@ -522,8 +550,8 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     attribution:
       process.env.EXPO_PUBLIC_LASY_ATTRIBUTION ||
       'Źródło: Bank Danych o Lasach (BDL) – Program „Zanocuj w lesie”',
-    category: 'Польша',
-    subtitle: 'Программа Zanocuj w lesie',
+    category: 'poland',
+    get subtitle() { return i18nT('map:config.mapWebLayers.layer.lasyZanocuj.subtitle'); },
     badge: 'PL',
     wfsParams: {
       typeName:
@@ -547,7 +575,12 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
 /** Подставляет {owmApiKey} в URL из env (вызывается только для активных слоёв). */
 const resolveLayerUrl = (layer: WebMapLayerDefinition): WebMapLayerDefinition => {
   if (layer.requiresEnv === OWM_API_KEY_ENV && layer.url.includes('{owmApiKey}')) {
-    return { ...layer, url: layer.url.replace('{owmApiKey}', getOwmApiKey()) };
+    const resolved = Object.create(
+      Object.getPrototypeOf(layer),
+      Object.getOwnPropertyDescriptors(layer),
+    ) as WebMapLayerDefinition;
+    resolved.url = layer.url.replace('{owmApiKey}', getOwmApiKey());
+    return resolved;
   }
   return layer;
 };

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { translate as i18nT } from '@/i18n'
+
 
 type ZoomableGalleryImageProps = {
   src: string;
@@ -183,7 +185,7 @@ export default function ZoomableGalleryImage({
       ref={viewportRef}
       data-testid="travel-zoomable-image"
       data-zoom-scale={transform.scale.toFixed(3)}
-      aria-label={`${alt}. Увеличение двумя пальцами`}
+      aria-label={i18nT('travel:components.travel.ZoomableGalleryImage.value1_uvelichenie_dvumya_paltsami_1ef063e7', { value1: alt })}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={finishPointer}

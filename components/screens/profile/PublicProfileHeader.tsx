@@ -17,6 +17,8 @@ import type { UserProfileDto } from '@/api/user';
 import type { PeerBadgeReceived, UserRank } from '@/api/achievements';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { CoverTopoTexture } from '@/components/profile/CoverTopoTexture';
+import { translate as i18nT } from '@/i18n'
+
 
 const AVATAR_SIZE = 84;
 const COVER_HEIGHT = 132;
@@ -68,10 +70,10 @@ export function PublicProfileHeader({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [defaultCoverFailed, setDefaultCoverFailed] = useState(false);
 
-  const displayName = fullName || 'Пользователь';
+  const displayName = fullName || i18nT('profile:components.screens.profile.PublicProfileHeader.defaultUserName');
   const rating = profile.participant_rating;
   // Ранг — единственный первичный статус под именем (#847). Компактно: «Ур.5 · Эксперт».
-  const rankChipText = rank ? `Ур.${rank.level} · ${rank.title}` : null;
+  const rankChipText = rank ? i18nT('profile:components.screens.profile.PublicProfileHeader.ur_value1_value2_8cacab38', { value1: rank.level, value2: rank.title }) : null;
   const coverPhoto = profile.cover_photo
     ? optimizeImageUrl(profile.cover_photo, {
         width: 1024,
@@ -89,7 +91,7 @@ export function PublicProfileHeader({
           <View style={styles.coverMediaLayer} pointerEvents="none">
             <ImageCardMedia
               src={coverPhoto}
-              alt="Обложка профиля"
+              alt={i18nT('profile:components.screens.profile.PublicProfileHeader.oblozhka_profilya_bebc7e97')}
               height={COVER_HEIGHT}
               width="100%"
               borderRadius={0}
@@ -102,7 +104,7 @@ export function PublicProfileHeader({
           <View style={styles.coverMediaLayer} pointerEvents="none">
             <ImageCardMedia
               source={DEFAULT_COVER_SOURCE}
-              alt="Обложка профиля"
+              alt={i18nT('profile:components.screens.profile.PublicProfileHeader.oblozhka_profilya_bebc7e97')}
               height={COVER_HEIGHT}
               width="100%"
               borderRadius={0}
@@ -156,7 +158,7 @@ export function PublicProfileHeader({
             <Text style={styles.userName} numberOfLines={2}>{displayName}</Text>
           </View>
           {rankChipText ? (
-            <View style={styles.rankChip} accessibilityRole="text" accessibilityLabel={`Уровень ${rank?.level}: ${rank?.title}`}>
+            <View style={styles.rankChip} accessibilityRole="text" accessibilityLabel={i18nT('profile:components.screens.profile.PublicProfileHeader.uroven_value1_value2_509cab7b', { value1: rank?.level, value2: rank?.title })}>
               <Feather name="award" size={12} color={colors.primaryDark} />
               <Text style={styles.rankChipText} numberOfLines={1}>{rankChipText}</Text>
             </View>
@@ -164,9 +166,9 @@ export function PublicProfileHeader({
           {rating && rating.count > 0 ? (
             <View style={styles.ratingRow}>
               <StarRating rating={rating.average} ratingCount={rating.count} size="small" showValue showCount testID="participant-rating-aggregate" />
-              <Text style={styles.ratingLabel}>как попутчик</Text>
+              <Text style={styles.ratingLabel}>{i18nT('profile:components.screens.profile.PublicProfileHeader.kak_poputchik_cb66e518')}</Text>
             </View>
-          ) : !rankChipText ? <Text style={styles.userSub}>Автор путешествий</Text> : null}
+          ) : !rankChipText ? <Text style={styles.userSub}>{i18nT('profile:components.screens.profile.PublicProfileHeader.avtor_puteshestviy_bce7467f')}</Text> : null}
         </View>
       </View>
 
@@ -177,11 +179,11 @@ export function PublicProfileHeader({
             style={[styles.secondaryButton, globalFocusStyles.focusable]}
             onPress={onWriteMessage}
             accessibilityRole="button"
-            accessibilityLabel={`Написать ${fullName || 'пользователю'}`}
+            accessibilityLabel={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_value1_1156a332', { value1: fullName || i18nT('profile:components.screens.profile.PublicProfileHeader.defaultUserReference') })}
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
             <Feather name="mail" size={16} color={colors.primaryDark} />
-            <Text style={styles.secondaryButtonText}>Написать</Text>
+            <Text style={styles.secondaryButtonText}>{i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_6e0d896e')}</Text>
           </Pressable>
         ) : null}
         {!isOwnProfile ? (

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravelBase';
 
 const mockRouterPush = jest.fn();
+const mockUseHydrationReady = jest.fn(() => true);
 
 // Базовый мок для AuthContext и маршрута, который можно перенастраивать в тестах
 const mockUseAuth: jest.Mock<any, any> = jest.fn(() => ({
@@ -27,6 +28,10 @@ const mockUseRoute = jest.fn(() => ({ name: 'travels' }));
 // Mock AuthContext, чтобы не требовать реальный AuthProvider
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
+}));
+
+jest.mock('@/hooks/useHydrationReady', () => ({
+  useHydrationReady: () => mockUseHydrationReady(),
 }));
 
 // Mock dependencies
@@ -155,6 +160,8 @@ describe('ListTravel', () => {
 
     // значения по умолчанию для большинства тестов
     mockUseAuth.mockReset();
+    mockUseHydrationReady.mockReset();
+    mockUseHydrationReady.mockReturnValue(true);
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
       authReady: true,
@@ -268,6 +275,49 @@ describe('ListTravel', () => {
     expect(await screen.findByText('Войдите в аккаунт')).toBeTruthy();
     expect(screen.getByText(/видеть свои путешествия/i)).toBeTruthy();
     expect(screen.queryByText(/Пока нет путешествий/i)).toBeNull();
+  });
+
+  it('keeps own-user routes neutral while auth is bootstrapping', () => {
+    mockUseRoute.mockReturnValue({ name: 'metravel' });
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      authReady: false,
+      username: '',
+      isSuperuser: false,
+      userId: null,
+    });
+
+    renderComponent();
+
+    expect(screen.getByTestId('list-travel-auth-bootstrap')).toBeTruthy();
+    expect(screen.queryByText('Войдите в аккаунт')).toBeNull();
+    expect(screen.queryByText(/Пока нет путешествий/i)).toBeNull();
+  });
+
+  it('keeps personalized content neutral through the first hydration render', async () => {
+    mockUseHydrationReady.mockReturnValue(false);
+    mockUseRoute.mockReturnValue({ name: 'metravel' });
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      authReady: true,
+      username: 'User',
+      isSuperuser: false,
+      userId: '123',
+    });
+
+    const rendered = renderComponent();
+
+    expect(screen.getByTestId('list-travel-auth-bootstrap')).toBeTruthy();
+    expect(screen.queryByPlaceholderText('Найти путешествия...')).toBeNull();
+
+    mockUseHydrationReady.mockReturnValue(true);
+    rendered.rerender(
+      <QueryClientProvider client={queryClient}>
+        <ListTravel />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByPlaceholderText('Найти путешествия...')).toBeTruthy();
   });
 
   it('shows timeout error message when deleteTravel fails with timeout on web', async () => {

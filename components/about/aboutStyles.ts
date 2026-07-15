@@ -145,6 +145,9 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
     ...DESIGN_TOKENS.typography.scale.bodySmall,
     color: colors.textMuted,
   },
+  versionInfoBlock: {
+    gap: 2,
+  },
   contactLabel: {
     ...DESIGN_TOKENS.typography.scale.bodyStrong,
     color: colors.text,

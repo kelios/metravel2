@@ -10,6 +10,8 @@ import type { GalleryItem } from './types'
 import type { createGalleryStyles } from './styles'
 import type { DeleteActionStyle } from './DeleteAction'
 import { GalleryCaptionEditor } from './GalleryCaptionEditor'
+import { translate as i18nT } from '@/i18n'
+
 
 type GalleryStyles = ReturnType<typeof createGalleryStyles>
 
@@ -61,11 +63,9 @@ export const GalleryGrid: React.FC<{
       <View style={styles.emptyGalleryContainer}>
         <Feather name="image" size={48} color={colors.textMuted} style={{ opacity: 0.5 }} />
         <Text style={[styles.noImagesText, { color: colors.textMuted }]}>
-          Нет загруженных изображений
-        </Text>
+          {i18nT('travel:components.travel.gallery.GalleryGrid.net_zagruzhennyh_izobrazheniy_d6199483')}</Text>
         <Text style={[styles.emptyGalleryHint, { color: colors.textMuted }]}>
-          Перетащите файлы или нажмите на зону выше
-        </Text>
+          {i18nT('travel:components.travel.gallery.GalleryGrid.peretaschite_fayly_ili_nazhmite_na_zonu_vysh_beb2acf5')}</Text>
       </View>
     )
   }
@@ -84,7 +84,7 @@ export const GalleryGrid: React.FC<{
               onActivate={() => canMoveLeft && onMove(stableKey, -1)}
               style={[styles.moveButton, !canMoveLeft && styles.moveButtonDisabled]}
               testID="gallery-move-left-button"
-              accessibilityLabel="Переместить фото левее"
+              accessibilityLabel={i18nT('travel:components.travel.gallery.GalleryGrid.peremestit_foto_levee_80430f4e')}
             >
               <Feather name="arrow-left" size={16} color={canMoveLeft ? moveButtonColor : disabledMoveButtonColor} />
             </DeleteAction>
@@ -92,7 +92,7 @@ export const GalleryGrid: React.FC<{
               onActivate={() => canMoveRight && onMove(stableKey, 1)}
               style={[styles.moveButton, !canMoveRight && styles.moveButtonDisabled]}
               testID="gallery-move-right-button"
-              accessibilityLabel="Переместить фото правее"
+              accessibilityLabel={i18nT('travel:components.travel.gallery.GalleryGrid.peremestit_foto_pravee_b568179e')}
             >
               <Feather name="arrow-right" size={16} color={canMoveRight ? moveButtonColor : disabledMoveButtonColor} />
             </DeleteAction>
@@ -106,7 +106,7 @@ export const GalleryGrid: React.FC<{
                 <View style={styles.uploadingImageContainer}>
                 <ShimmerOverlay />
                 <View style={styles.uploadingOverlayImage}>
-                  <Text style={[styles.uploadingImageText, { color: colors.textInverse }]}>Загрузка...</Text>
+                  <Text style={[styles.uploadingImageText, { color: colors.textInverse }]}>{i18nT('travel:components.travel.gallery.GalleryGrid.zagruzka_048d94b8')}</Text>
                 </View>
                 <DeleteAction
                   onActivate={() => onDelete(stableKey)}
@@ -125,7 +125,7 @@ export const GalleryGrid: React.FC<{
                   blurBackground
                   allowCriticalWebBlur
                   loading="lazy"
-                  alt={`Изображение галереи ${index + 1}`}
+                  alt={i18nT('travel:components.travel.gallery.GalleryGrid.izobrazhenie_galerei_value1_57b84c61', { value1: index + 1 })}
                   style={[styles.image, styles.errorImage]}
                   onError={() => onImageError(stableKey, image.url)}
                   onLoad={() => onImageLoad(stableKey)}
@@ -138,7 +138,7 @@ export const GalleryGrid: React.FC<{
                     style={[styles.errorActionButton, { backgroundColor: colors.primary }]}
                     testID="delete-image-button"
                   >
-                    <Text style={[styles.errorActionText, { color: colors.textInverse }]}>Удалить</Text>
+                    <Text style={[styles.errorActionText, { color: colors.textInverse }]}>{i18nT('travel:components.travel.gallery.GalleryGrid.udalit_d2e753de')}</Text>
                   </DeleteAction>
                 </View>
                 <DeleteAction
@@ -173,7 +173,7 @@ export const GalleryGrid: React.FC<{
                   blurBackground
                   allowCriticalWebBlur
                   loading="lazy"
-                  alt={`Изображение галереи ${index + 1}`}
+                  alt={i18nT('travel:components.travel.gallery.GalleryGrid.izobrazhenie_galerei_value1_57b84c61', { value1: index + 1 })}
                   style={[styles.image, !image.hasLoaded && ({ opacity: 0 } as any)]}
                   onError={() => onImageError(stableKey, image.url)}
                   onLoad={() => onImageLoad(stableKey)}

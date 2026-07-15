@@ -189,7 +189,7 @@
 
 ```bash
 # Node.js
-node >= 20.19.4
+node >= 22.13.1
 
 # Package manager
 yarn@1.22.x

@@ -18,6 +18,8 @@ import RecentAwardsTab from '@/components/achievements/RecentAwardsTab'
 import ActivityProgressionSection from '@/components/achievements/ActivityProgressionSection'
 import CharacterProfileCard from '@/components/achievements/CharacterProfileCard'
 import RareAwardsSection from '@/components/achievements/RareAwardsSection'
+import { translate as i18nT } from '@/i18n'
+
 
 type TabKey = 'recent' | 'all' | 'path' | 'rare'
 
@@ -29,11 +31,11 @@ interface Props {
   requestedTab?: { key: TabKey; token: number } | null
 }
 
-const TABS: AwardsTab[] = [
-  { key: 'path', label: 'Развитие' },
-  { key: 'all', label: 'Все награды' },
-  { key: 'recent', label: 'Последние' },
-  { key: 'rare', label: 'Особые' },
+const createTabs = (): AwardsTab[] => [
+  { key: 'path', label: i18nT('achievements:components.achievements.AwardsHub.tabs.path') },
+  { key: 'all', label: i18nT('achievements:components.achievements.AwardsHub.tabs.all') },
+  { key: 'recent', label: i18nT('achievements:components.achievements.AwardsHub.tabs.recent') },
+  { key: 'rare', label: i18nT('achievements:components.achievements.AwardsHub.tabs.rare') },
 ]
 
 /**
@@ -44,6 +46,7 @@ function AwardsHub({ testID, style, requestedTab }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
   const [activeKey, setActiveKey] = useState<TabKey>('path')
+  const tabs = createTabs()
 
   const requestedToken = requestedTab?.token
   useEffect(() => {
@@ -57,12 +60,11 @@ function AwardsHub({ testID, style, requestedTab }: Props) {
       <View style={styles.header}>
         <Feather name="award" size={18} color={colors.primaryDark} />
         <Text style={styles.title} numberOfLines={1}>
-          Награды
-        </Text>
+          {i18nT('achievements:components.achievements.AwardsHub.nagrady_7e8e8808')}</Text>
       </View>
 
       <AwardsTabBar
-        tabs={TABS}
+        tabs={tabs}
         activeKey={activeKey}
         onChange={(k) => setActiveKey(k as TabKey)}
         testID="awards-tabbar"

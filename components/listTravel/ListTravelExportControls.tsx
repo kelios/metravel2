@@ -14,6 +14,8 @@ import SelectedTravelOrderCard from './SelectedTravelOrderCard';
 import { createStyles } from './listTravelStyles';
 import { getTravelLabel } from '@/utils/pluralize';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
   isMobile: boolean;
@@ -165,8 +167,8 @@ function ListTravelExportControls({
   const isWeb = Platform.OS === 'web';
 
   const selectionText = selectionCount
-    ? `Выбрано ${selectionCount} ${getTravelLabel(selectionCount)}`
-    : 'Выберите путешествия для экспорта';
+    ? i18nT('travel:components.listTravel.ListTravelExportControls.vybrano_value1_value2_1c5754d6', { value1: selectionCount, value2: getTravelLabel(selectionCount) })
+    : i18nT('travel:components.listTravel.ListTravelExportControls.vyberite_puteshestviya_dlya_eksporta_2c59c1c5');
 
   const selectedOrderListStyle = useMemo(
     () => [asViewStyle(s.selectedOrderList)] as StyleProp<ViewStyle>,
@@ -272,14 +274,14 @@ function ListTravelExportControls({
           <View style={asViewStyle(s.exportBarTitleRow)}>
             <Text style={asTextStyle(s.exportBarInfoTitle)}>{selectionText}</Text>
             <CompactActionLink
-              label={selectionCount === travels.length && travels.length > 0 ? 'Снять все' : 'Выбрать все'}
+              label={selectionCount === travels.length && travels.length > 0 ? i18nT('travel:components.listTravel.ListTravelExportControls.snyat_vse_8f382aa8') : i18nT('travel:components.listTravel.ListTravelExportControls.vybrat_vse_445c36d4')}
               onPress={toggleSelectAll}
               icon={selectionCount === travels.length && travels.length > 0 ? 'minus-circle' : 'check-circle'}
               style={asTextStyle(s.linkButton)}
             />
             {hasSelection && (
               <CompactActionLink
-                label="Очистить"
+                label={i18nT('travel:components.listTravel.ListTravelExportControls.ochistit_d4174991')}
                 onPress={clearSelection}
                 icon="x"
                 style={asTextStyle(s.linkButtonDanger)}
@@ -290,14 +292,14 @@ function ListTravelExportControls({
           <View style={[asViewStyle(s.exportBarButtons), isMobile ? asViewStyle(s.exportBarButtonsMobile) : null]}>
             {hasSelection && (
               <CompactActionLink
-                label="Настройки"
+                label={i18nT('travel:components.listTravel.ListTravelExportControls.nastroyki_bd33425d')}
                 onPress={handleOpenSettings}
                 icon="sliders"
                 style={asTextStyle(s.linkButton)}
               />
             )}
             <UIButton
-              label={pdfExport.isGenerating ? `Генерация... ${pdfExport.progress || 0}%` : 'Сохранить PDF'}
+              label={pdfExport.isGenerating ? i18nT('travel:components.listTravel.ListTravelExportControls.generatsiya_value1_d0b1497e', { value1: pdfExport.progress || 0 }) : i18nT('travel:components.listTravel.ListTravelExportControls.sohranit_pdf_b1a871f7')}
               onPress={handleImmediateSave}
               disabled={!hasSelection || pdfExport.isGenerating}
               size="sm"
@@ -313,21 +315,21 @@ function ListTravelExportControls({
               progress={pdfExport.progress ?? 0}
               stage={
                 (pdfExport.progress ?? 0) < 30
-                  ? 'Подготовка данных...'
+                  ? i18nT('travel:components.listTravel.ListTravelExportControls.podgotovka_dannyh_88f47b77')
                   : (pdfExport.progress ?? 0) < 60
-                    ? 'Генерация содержимого...'
+                    ? i18nT('travel:components.listTravel.ListTravelExportControls.generatsiya_soderzhimogo_97269a7a')
                     : (pdfExport.progress ?? 0) < 90
-                      ? 'Обработка изображений...'
-                      : 'Создание PDF...'
+                      ? i18nT('travel:components.listTravel.ListTravelExportControls.obrabotka_izobrazheniy_65854409')
+                      : i18nT('travel:components.listTravel.ListTravelExportControls.sozdanie_pdf_01d71353')
               }
               message={
                 (pdfExport.progress ?? 0) < 30
-                  ? 'Проверка выбранных путешествий'
+                  ? i18nT('travel:components.listTravel.ListTravelExportControls.proverka_vybrannyh_puteshestviy_7a4fb482')
                   : (pdfExport.progress ?? 0) < 60
-                    ? 'Формирование макета'
+                    ? i18nT('travel:components.listTravel.ListTravelExportControls.formirovanie_maketa_af8f576b')
                     : (pdfExport.progress ?? 0) < 90
-                      ? 'Оптимизация изображений'
-                      : 'Финальная обработка'
+                      ? i18nT('travel:components.listTravel.ListTravelExportControls.optimizatsiya_izobrazheniy_b0a01f28')
+                      : i18nT('travel:components.listTravel.ListTravelExportControls.finalnaya_obrabotka_ee356100')
               }
               showPercentage
             />
@@ -342,7 +344,7 @@ function ListTravelExportControls({
               <View style={asViewStyle(s.selectedOrderStripHeader)}>
                 <Feather name="layers" size={13} color={undefined} style={s.selectedOrderStripIcon as any} />
                 <Caption style={asTextStyle(s.selectedOrderStripLabel)}>
-                  {`Порядок в книге${Platform.OS === 'web' ? ' · перетащите для сортировки' : ''}`}
+                  {i18nT('travel:components.listTravel.ListTravelExportControls.poryadok_v_knige_value1_986eceab', { value1: Platform.OS === 'web' ? i18nT('travel:components.listTravel.ListTravelExportControls.dragToSortSuffix') : '' })}
                 </Caption>
               </View>
               <View style={asViewStyle(s.selectedOrderScroller)}>

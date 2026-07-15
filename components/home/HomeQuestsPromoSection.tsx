@@ -9,6 +9,8 @@ import { useQuestsList } from '@/hooks/useQuestsApi'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
+import { translate as i18nT } from '@/i18n'
+
 
 const IS_WEB = Platform.OS === 'web'
 const MAX_QUESTS = 2
@@ -41,11 +43,10 @@ function HomeQuestsPromoSection() {
             accessibilityRole="header"
             {...({ 'aria-level': 2 } as any)}
           >
-            <Text style={styles.title}>Городские квесты</Text>
+            <Text style={styles.title}>{i18nT('quests:components.home.HomeQuestsPromoSection.gorodskie_kvesty_6436f91c')}</Text>
           </View>
           <Text style={styles.subtitle}>
-            Пешие маршруты по легендам и загадкам — прямо со смартфона
-          </Text>
+            {i18nT('quests:components.home.HomeQuestsPromoSection.peshie_marshruty_po_legendam_i_zagadkam_prya_84e2c2fb')}</Text>
         </View>
 
         <View style={styles.grid}>
@@ -60,7 +61,7 @@ function HomeQuestsPromoSection() {
           <Pressable
             onPress={handleViewAll}
             accessibilityRole={IS_WEB ? ('link' as any) : 'button'}
-            accessibilityLabel="Открыть все городские квесты"
+            accessibilityLabel={i18nT('quests:components.home.HomeQuestsPromoSection.otkryt_vse_gorodskie_kvesty_24fef732')}
             style={[styles.ctaButton, hovered && styles.ctaButtonHover]}
             {...(IS_WEB
               ? ({
@@ -69,7 +70,7 @@ function HomeQuestsPromoSection() {
                 } as any)
               : {})}
           >
-            <Text style={styles.ctaText}>Все квесты</Text>
+            <Text style={styles.ctaText}>{i18nT('quests:components.home.HomeQuestsPromoSection.vse_kvesty_db15d13b')}</Text>
             <Feather name="arrow-right" size={16} color={colors.primaryDark} />
           </Pressable>
         </View>

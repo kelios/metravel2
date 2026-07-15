@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 
 import type { Travel } from '@/types/types'
+import { translate as i18nT } from '@/i18n'
+
 
 export function useTravelDetailsMapSectionHintsModel(travel: Travel) {
   const hasEmbeddedCoords = (travel.coordsMeTravel?.length ?? 0) > 0
@@ -26,13 +28,19 @@ export function useTravelDetailsMapSectionHintsModel(travel: Travel) {
       (travel as any)?.transportMode ??
       null
     const values = Array.isArray(raw) ? raw : raw != null ? [raw] : []
+    const includesLocalizedToken = (token: string, key: Parameters<typeof i18nT>[0]) =>
+      i18nT(key)
+        .split('|')
+        .map((part) => part.trim().toLocaleLowerCase())
+        .filter(Boolean)
+        .some((part) => token.includes(part))
     const labels = values
       .map((value) => String(value ?? '').toLowerCase().trim())
       .map((token) => {
         if (!token) return ''
-        if (token.includes('car') || token.includes('маш')) return 'Машина'
-        if (token.includes('bike') || token.includes('вело')) return 'Велосипед'
-        if (token.includes('foot') || token.includes('walk') || token.includes('пеш')) return 'Пешком'
+        if (token.includes('car') || includesLocalizedToken(token, 'travel:components.travel.details.hooks.useTravelDetailsMapSectionHintsModel.carTokens')) return i18nT('travel:components.travel.details.hooks.useTravelDetailsMapSectionHintsModel.mashina_f182c544')
+        if (token.includes('bike') || includesLocalizedToken(token, 'travel:components.travel.details.hooks.useTravelDetailsMapSectionHintsModel.bikeTokens')) return i18nT('travel:components.travel.details.hooks.useTravelDetailsMapSectionHintsModel.velosiped_6b66f61b')
+        if (token.includes('foot') || token.includes('walk') || includesLocalizedToken(token, 'travel:components.travel.details.hooks.useTravelDetailsMapSectionHintsModel.walkTokens')) return i18nT('travel:components.travel.details.hooks.useTravelDetailsMapSectionHintsModel.peshkom_7ac67a67')
         return String(token).charAt(0).toUpperCase() + String(token).slice(1)
       })
       .filter(Boolean)

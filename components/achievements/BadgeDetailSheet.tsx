@@ -16,6 +16,8 @@ import BadgeMedal from '@/components/achievements/BadgeMedal'
 import ShareBadgeSheet from '@/components/achievements/ShareBadgeSheet'
 import { TIER_VISUALS, tierLabel } from '@/components/achievements/badgeVisuals'
 import { formatRelativeTime } from '@/utils/relativeTime'
+import { translate as i18nT } from '@/i18n'
+
 
 export interface BadgeDetail {
   badge: Badge
@@ -195,7 +197,7 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
       <Pressable
         style={styles.backdrop}
         onPress={onClose}
-        accessibilityLabel="Закрыть"
+        accessibilityLabel={i18nT('achievements:components.achievements.BadgeDetailSheet.zakryt_f1ccd424')}
       >
         <Pressable
           style={styles.sheet}
@@ -207,7 +209,7 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
               style={styles.closeBtn}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть"
+              accessibilityLabel={i18nT('achievements:components.achievements.BadgeDetailSheet.zakryt_f1ccd424')}
             >
               <Feather name="x" size={20} color={colors.text} />
             </Pressable>
@@ -225,7 +227,7 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
               ) : null}
               <View style={styles.chip}>
                 <Feather name="star" size={12} color={colors.primaryDark} />
-                <Text style={styles.chipText}>{badge.points} XP</Text>
+                <Text style={styles.chipText}>{badge.points} {i18nT('achievements:components.achievements.BadgeDetailSheet.xp_3878de4b')}</Text>
               </View>
             </View>
           </View>
@@ -233,7 +235,7 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
           {badge.description ? (
             <View style={styles.block}>
               <Text style={styles.blockLabel}>
-                {earned ? 'За что получен' : 'Как получить'}
+                {earned ? i18nT('achievements:components.achievements.BadgeDetailSheet.za_chto_poluchen_504e69c3') : i18nT('achievements:components.achievements.BadgeDetailSheet.kak_poluchit_d0b3d9d4')}
               </Text>
               <Text style={styles.criteria}>{badge.description}</Text>
             </View>
@@ -241,13 +243,13 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
 
           {showProgress ? (
             <View style={styles.block}>
-              <Text style={styles.blockLabel}>Прогресс</Text>
+              <Text style={styles.blockLabel}>{i18nT('achievements:components.achievements.BadgeDetailSheet.progress_638229b7')}</Text>
               <View style={styles.progressNumbers}>
                 <Text style={styles.progressCount}>
                   {progress.current} / {progress.threshold}
                 </Text>
                 <Text style={styles.progressRemaining}>
-                  осталось {remaining}
+                  {i18nT('achievements:components.achievements.BadgeDetailSheet.ostalos_9237468c')}{remaining}
                 </Text>
               </View>
               <View style={styles.track}>
@@ -266,8 +268,8 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
               <Feather name="check-circle" size={16} color={colors.success} />
               <Text style={styles.earnedText}>
                 {earnedAtLabel
-                  ? `Получен ${earnedAtLabel}`
-                  : 'Значок получен'}
+                  ? i18nT('achievements:components.achievements.BadgeDetailSheet.poluchen_value1_0c966f04', { value1: earnedAtLabel })
+                  : i18nT('achievements:components.achievements.BadgeDetailSheet.znachok_poluchen_66bd211f')}
               </Text>
             </View>
           ) : null}
@@ -277,10 +279,10 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
               style={styles.shareBtn}
               onPress={() => setShareOpen(true)}
               accessibilityRole="button"
-              accessibilityLabel="Поделиться достижением"
+              accessibilityLabel={i18nT('achievements:components.achievements.BadgeDetailSheet.podelitsya_dostizheniem_52b86d7a')}
             >
               <Feather name="share-2" size={16} color={colors.textOnPrimary ?? '#fff'} />
-              <Text style={styles.shareBtnText}>Поделиться</Text>
+              <Text style={styles.shareBtnText}>{i18nT('achievements:components.achievements.BadgeDetailSheet.podelitsya_00be0478')}</Text>
             </Pressable>
           ) : null}
         </Pressable>

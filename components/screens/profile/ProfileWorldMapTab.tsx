@@ -39,6 +39,8 @@ import {
   getCountryGeometry,
   getWorldMapUnvisitedFill,
 } from './worldMap/worldGeometry'
+import { selectPlural, translate as i18nT } from '@/i18n'
+
 
 interface ProfileWorldMapTabProps {
   userId: string | number | null | undefined
@@ -49,19 +51,21 @@ interface ProfileWorldMapTabProps {
 }
 
 const formatCountriesLabel = (count: number) => {
-  const mod10 = count % 10
-  const mod100 = count % 100
-  if (mod10 === 1 && mod100 !== 11) return `${count} страна`
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} страны`
-  return `${count} стран`
+  return selectPlural(count, {
+    one: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_strana_e6f0e1db', { value1: count }),
+    few: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_strany_376fa642', { value1: count }),
+    many: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_stran_c44237e0', { value1: count }),
+    other: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_stran_c44237e0', { value1: count }),
+  })
 }
 
 const formatRoutesLabel = (count: number) => {
-  const mod10 = count % 10
-  const mod100 = count % 100
-  if (mod10 === 1 && mod100 !== 11) return `${count} маршрут`
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} маршрута`
-  return `${count} маршрутов`
+  return selectPlural(count, {
+    one: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_marshrut_63e26e9c', { value1: count }),
+    few: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_marshruta_64d72f90', { value1: count }),
+    many: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_marshrutov_9be4e19a', { value1: count }),
+    other: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_marshrutov_9be4e19a', { value1: count }),
+  })
 }
 
 export function ProfileWorldMapTab({
@@ -425,7 +429,7 @@ export function ProfileWorldMapTab({
           <Pressable
             onPress={() => zoom.zoomByCentered(1.5)}
             accessibilityRole="button"
-            accessibilityLabel="Приблизить карту"
+            accessibilityLabel={i18nT('profile:components.screens.profile.ProfileWorldMapTab.priblizit_kartu_437e65c8')}
             hitSlop={6}
             style={styles.zoomButton}
           >
@@ -434,7 +438,7 @@ export function ProfileWorldMapTab({
           <Pressable
             onPress={() => zoom.zoomByCentered(1 / 1.5)}
             accessibilityRole="button"
-            accessibilityLabel="Отдалить карту"
+            accessibilityLabel={i18nT('profile:components.screens.profile.ProfileWorldMapTab.otdalit_kartu_46122c74')}
             hitSlop={6}
             style={styles.zoomButton}
           >
@@ -443,7 +447,7 @@ export function ProfileWorldMapTab({
           <Pressable
             onPress={() => zoom.reset()}
             accessibilityRole="button"
-            accessibilityLabel="Сбросить масштаб карты"
+            accessibilityLabel={i18nT('profile:components.screens.profile.ProfileWorldMapTab.sbrosit_masshtab_karty_502994d5')}
             hitSlop={6}
             style={styles.zoomButton}
           >
@@ -453,7 +457,7 @@ export function ProfileWorldMapTab({
             <Pressable
               onPress={openMapFullscreen}
               accessibilityRole="button"
-              accessibilityLabel="Открыть карту во весь экран"
+              accessibilityLabel={i18nT('profile:components.screens.profile.ProfileWorldMapTab.otkryt_kartu_vo_ves_ekran_b743e70f')}
               hitSlop={6}
               style={styles.zoomButton}
             >
@@ -481,8 +485,8 @@ export function ProfileWorldMapTab({
   return (
     <View>
       <ProfileSectionHeader
-        title="Карта мира"
-        subtitle="Серым — куда ещё не добрались, цветом — где уже были"
+        title={i18nT('profile:components.screens.profile.ProfileWorldMapTab.karta_mira_562a96c2')}
+        subtitle={i18nT('profile:components.screens.profile.ProfileWorldMapTab.serym_kuda_esche_ne_dobralis_tsvetom_gde_uzh_b4b218b6')}
         onBack={onBackToOverview}
       />
 
@@ -490,15 +494,15 @@ export function ProfileWorldMapTab({
         <View style={styles.metricsRow}>
           <View style={styles.metric}>
             <Text style={styles.metricValue}>{visitedCount}</Text>
-            <Text style={styles.metricLabel}>Посетили</Text>
+            <Text style={styles.metricLabel}>{i18nT('profile:components.screens.profile.ProfileWorldMapTab.posetili_1380bcdf')}</Text>
           </View>
           <View style={styles.metric}>
             <Text style={styles.metricValue}>{remainingCount}</Text>
-            <Text style={styles.metricLabel}>Осталось</Text>
+            <Text style={styles.metricLabel}>{i18nT('profile:components.screens.profile.ProfileWorldMapTab.ostalos_ac89d2ac')}</Text>
           </View>
           <View style={styles.metric}>
             <Text style={styles.metricValue}>{totalCount}</Text>
-            <Text style={styles.metricLabel}>Всего</Text>
+            <Text style={styles.metricLabel}>{i18nT('profile:components.screens.profile.ProfileWorldMapTab.vsego_8d74e949')}</Text>
           </View>
         </View>
 
@@ -513,8 +517,8 @@ export function ProfileWorldMapTab({
         {!isLoading ? (
           <Text style={styles.hint}>
             {isMobile
-              ? 'Двумя пальцами — масштаб, перетаскивание — сдвиг, тап по стране — детали'
-              : 'Колесо — масштаб, перетаскивание — сдвиг, клик по стране — детали'}
+              ? i18nT('profile:components.screens.profile.ProfileWorldMapTab.dvumya_paltsami_masshtab_peretaskivanie_sdvi_ab64f87b')
+              : i18nT('profile:components.screens.profile.ProfileWorldMapTab.koleso_masshtab_peretaskivanie_sdvig_klik_po_e0db776f')}
           </Text>
         ) : null}
 
@@ -527,7 +531,7 @@ export function ProfileWorldMapTab({
               <Pressable
                 onPress={() => setSelectedCode(null)}
                 accessibilityRole="button"
-                accessibilityLabel="Закрыть"
+                accessibilityLabel={i18nT('profile:components.screens.profile.ProfileWorldMapTab.zakryt_62507eb9')}
                 hitSlop={8}
                 style={styles.infoClose}
               >
@@ -536,16 +540,15 @@ export function ProfileWorldMapTab({
             </View>
             {selected.visited ? (
               <Text style={styles.infoMeta}>
-                Посещено
-                {selected.visitedTravelsCount > 0
+                {i18nT('profile:components.screens.profile.ProfileWorldMapTab.posescheno_cc5df481')}{selected.visitedTravelsCount > 0
                   ? ` · ${formatRoutesLabel(selected.visitedTravelsCount)}`
                   : ''}
                 {selected.firstVisitedDate
-                  ? ` · с ${selected.firstVisitedDate.slice(0, 4)}`
+                  ? i18nT('profile:components.screens.profile.ProfileWorldMapTab.s_value1_ffc67c78', { value1: selected.firstVisitedDate.slice(0, 4) })
                   : ''}
               </Text>
             ) : (
-              <Text style={styles.infoMeta}>Ещё не посещено</Text>
+              <Text style={styles.infoMeta}>{i18nT('profile:components.screens.profile.ProfileWorldMapTab.esche_ne_posescheno_e8d56073')}</Text>
             )}
 
             {selected.travels.length > 0 ? (
@@ -558,7 +561,7 @@ export function ProfileWorldMapTab({
                 />
               </View>
             ) : (
-              <Text style={styles.emptyTravels}>Нет маршрутов в этой стране</Text>
+              <Text style={styles.emptyTravels}>{i18nT('profile:components.screens.profile.ProfileWorldMapTab.net_marshrutov_v_etoy_strane_0d2e3533')}</Text>
             )}
           </View>
         ) : null}
@@ -567,12 +570,12 @@ export function ProfileWorldMapTab({
           <View style={styles.legendItem}>
             <View style={[styles.legendSwatch, { backgroundColor: colors.primary }]} />
             <Text style={styles.legendText}>
-              Посещено · {formatCountriesLabel(visitedCount)}
+              {i18nT('profile:components.screens.profile.ProfileWorldMapTab.posescheno_c0485db4')}{formatCountriesLabel(visitedCount)}
             </Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendSwatch, { backgroundColor: getWorldMapUnvisitedFill(isDark), borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]} />
-            <Text style={styles.legendText}>Не посещено</Text>
+            <Text style={styles.legendText}>{i18nT('profile:components.screens.profile.ProfileWorldMapTab.ne_posescheno_2882e15a')}</Text>
           </View>
         </View>
       </View>
@@ -586,12 +589,11 @@ export function ProfileWorldMapTab({
         <SafeAreaView style={styles.fullscreenRoot}>
           <View style={styles.fullscreenHeader}>
             <Text style={styles.fullscreenTitle} numberOfLines={1}>
-              Карта мира
-            </Text>
+              {i18nT('profile:components.screens.profile.ProfileWorldMapTab.karta_mira_562a96c2')}</Text>
             <Pressable
               onPress={closeMapFullscreen}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть полноэкранную карту"
+              accessibilityLabel={i18nT('profile:components.screens.profile.ProfileWorldMapTab.zakryt_polnoekrannuyu_kartu_5b8e0903')}
               hitSlop={8}
               style={styles.fullscreenCloseButton}
             >
@@ -611,7 +613,7 @@ export function ProfileWorldMapTab({
                   <Pressable
                     onPress={() => setSelectedCode(null)}
                     accessibilityRole="button"
-                    accessibilityLabel="Закрыть"
+                    accessibilityLabel={i18nT('profile:components.screens.profile.ProfileWorldMapTab.zakryt_62507eb9')}
                     hitSlop={8}
                     style={styles.infoClose}
                   >
@@ -620,16 +622,12 @@ export function ProfileWorldMapTab({
                 </View>
                 <Text style={styles.infoMeta}>
                   {selected.visited
-                    ? `Посещено${
-                        selected.visitedTravelsCount > 0
+                    ? i18nT('profile:components.screens.profile.ProfileWorldMapTab.posescheno_value1_value2_13f06767', { value1: selected.visitedTravelsCount > 0
                           ? ` · ${formatRoutesLabel(selected.visitedTravelsCount)}`
-                          : ''
-                      }${
-                        selected.firstVisitedDate
-                          ? ` · с ${selected.firstVisitedDate.slice(0, 4)}`
-                          : ''
-                      }`
-                    : 'Ещё не посещено'}
+                          : '', value2: selected.firstVisitedDate
+                          ? i18nT('profile:components.screens.profile.ProfileWorldMapTab.sinceYearSuffix', { value1: selected.firstVisitedDate.slice(0, 4) })
+                          : '' })
+                    : i18nT('profile:components.screens.profile.ProfileWorldMapTab.esche_ne_posescheno_e8d56073')}
                 </Text>
 
                 {selected.travels.length > 0 ? (
@@ -642,7 +640,7 @@ export function ProfileWorldMapTab({
                     />
                   </View>
                 ) : selected.visited ? (
-                  <Text style={styles.emptyTravels}>Нет маршрутов в этой стране</Text>
+                  <Text style={styles.emptyTravels}>{i18nT('profile:components.screens.profile.ProfileWorldMapTab.net_marshrutov_v_etoy_strane_0d2e3533')}</Text>
                 ) : null}
               </View>
             ) : null}

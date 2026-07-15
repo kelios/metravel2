@@ -10,6 +10,8 @@ import EmptyState from '@/components/ui/EmptyState'
 import { useAuth } from '@/context/AuthContext'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import { buildLoginHref } from '@/utils/authNavigation'
+import { translate as i18nT } from '@/i18n'
+
 
 export default function ExportScreen() {
   const isFocused = useIsFocused()
@@ -57,14 +59,14 @@ export default function ExportScreen() {
       <ResponsiveContainer maxWidth="lg" padding>
         <EmptyState
           icon="lock"
-          title="Войдите, чтобы собрать PDF‑книгу"
-          description="Экспорт в PDF доступен после авторизации."
+          title={i18nT('export:app.tabs.export.voydite_chtoby_sobrat_pdf_knigu_03c34a03')}
+          description={i18nT('export:app.tabs.export.eksport_v_pdf_dostupen_posle_avtorizatsii_ab9dcd89')}
           action={{
-            label: 'Войти',
+            label: i18nT('export:app.tabs.export.voyti_c0048a7c'),
             onPress: () => router.push(buildLoginHref({ redirect: '/export', intent: 'build-pdf' }) as any),
           }}
           secondaryAction={{
-            label: 'Открыть Поиск',
+            label: i18nT('export:app.tabs.export.otkryt_poisk_45548088'),
             onPress: () => router.push('/search' as any),
           }}
           variant="empty"
@@ -78,14 +80,14 @@ export default function ExportScreen() {
       <ResponsiveContainer maxWidth="lg" padding>
         <EmptyState
           icon="file-text"
-          title="Чтобы собрать PDF‑книгу, добавьте хотя бы одно путешествие"
-          description="Добавьте первое путешествие — и сможете собрать книгу и сохранить её в PDF."
+          title={i18nT('export:app.tabs.export.chtoby_sobrat_pdf_knigu_dobavte_hotya_by_odn_fa3a25bc')}
+          description={i18nT('export:app.tabs.export.dobavte_pervoe_puteshestvie_i_smozhete_sobra_1745dc75')}
           action={{
-            label: 'Добавить путешествие',
+            label: i18nT('export:app.tabs.export.dobavit_puteshestvie_7414bbc8'),
             onPress: () => router.push('/travel/new' as any),
           }}
           secondaryAction={{
-            label: 'Открыть Поиск',
+            label: i18nT('export:app.tabs.export.otkryt_poisk_45548088'),
             onPress: () => router.push('/search' as any),
           }}
           variant="empty"

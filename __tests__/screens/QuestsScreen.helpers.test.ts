@@ -2,11 +2,12 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 import {
-  COUNTRY_NAMES,
+  COUNTRY_NAME_KEYS,
   DEFAULT_NEARBY_RADIUS_KM,
   buildQuestCityCatalog,
   filterKidsQuests,
   filterQuestsByMapSearchArea,
+  getQuestCountryName,
   isCoordinateInMapViewport,
   isKidsQuest,
   resolveQuestMapCenter,
@@ -14,17 +15,17 @@ import {
 
 describe('QuestsScreen helpers', () => {
   it('maps quest country codes shown in the catalog to country names', () => {
-    expect(COUNTRY_NAMES.DE).toBe('Германия');
-    expect(COUNTRY_NAMES.FR).toBe('Франция');
-    expect(COUNTRY_NAMES.NL).toBe('Нидерланды');
+    expect(getQuestCountryName('DE')).toBe('Германия');
+    expect(getQuestCountryName('FR')).toBe('Франция');
+    expect(getQuestCountryName('NL')).toBe('Нидерланды');
     // Регресс: раньше эти коды отсутствовали и заголовок группы падал на сырой
     // код («GR», «HR», …) вместо русского названия страны.
-    expect(COUNTRY_NAMES.GR).toBe('Греция');
-    expect(COUNTRY_NAMES.HR).toBe('Хорватия');
-    expect(COUNTRY_NAMES.IT).toBe('Италия');
-    expect(COUNTRY_NAMES.PT).toBe('Португалия');
-    expect(COUNTRY_NAMES.RO).toBe('Румыния');
-    expect(COUNTRY_NAMES.RS).toBe('Сербия');
+    expect(getQuestCountryName('GR')).toBe('Греция');
+    expect(getQuestCountryName('HR')).toBe('Хорватия');
+    expect(getQuestCountryName('IT')).toBe('Италия');
+    expect(getQuestCountryName('PT')).toBe('Португалия');
+    expect(getQuestCountryName('RO')).toBe('Румыния');
+    expect(getQuestCountryName('RS')).toBe('Сербия');
   });
 
   it('has a Russian name for every country code geoCountry can return', () => {
@@ -36,7 +37,7 @@ describe('QuestsScreen helpers', () => {
     );
     const codes = Array.from(source.matchAll(/code:\s*'([A-Z]{2})'/g)).map((m) => m[1]);
     expect(codes.length).toBeGreaterThan(0);
-    const missing = codes.filter((code) => !COUNTRY_NAMES[code]);
+    const missing = codes.filter((code) => !COUNTRY_NAME_KEYS[code]);
     expect(missing).toEqual([]);
   });
 

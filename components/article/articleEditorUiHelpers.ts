@@ -1,6 +1,8 @@
 import { Alert } from 'react-native'
 
 import { escapeHtml, normalizeAnchorId } from '@/utils/htmlUtils'
+import { translate as i18nT } from '@/i18n'
+
 
 type HtmlSelection = { start: number; end: number }
 type EditorSelection = { index: number; length: number }
@@ -41,12 +43,12 @@ export const buildArticleEditorToolbarActions = ({
       {
         name: fullscreen ? 'minimize' : 'maximize',
         onPress: toggleFullscreen,
-        label: fullscreen ? 'Свернуть' : 'На весь экран',
+        label: fullscreen ? i18nT('shared:components.article.articleEditorUiHelpers.svernut_da962db5') : i18nT('shared:components.article.articleEditorUiHelpers.na_ves_ekran_7f0bfab2'),
       },
       {
         name: 'image',
         onPress: openImagePicker,
-        label: 'Изображение',
+        label: i18nT('shared:components.article.articleEditorUiHelpers.izobrazhenie_a7123dea'),
       },
     ]
 
@@ -54,7 +56,7 @@ export const buildArticleEditorToolbarActions = ({
       actions.unshift({
         name: 'code',
         onPress: toggleHtmlMode,
-        label: 'Визуально',
+        label: i18nT('shared:components.article.articleEditorUiHelpers.vizualno_eb1d89cc'),
       })
     }
 
@@ -65,32 +67,32 @@ export const buildArticleEditorToolbarActions = ({
     {
       name: 'rotate-ccw',
       onPress: () => quillRef.current?.getEditor().history.undo(),
-      label: 'Отменить последнее действие',
+      label: i18nT('shared:components.article.articleEditorUiHelpers.otmenit_poslednee_deystvie_0195723d'),
     },
     {
       name: 'rotate-cw',
       onPress: () => quillRef.current?.getEditor().history.redo(),
-      label: 'Повторить действие',
+      label: i18nT('shared:components.article.articleEditorUiHelpers.povtorit_deystvie_198fd1da'),
     },
     {
       name: 'code',
       onPress: toggleHtmlMode,
-      label: showHtml ? 'Скрыть HTML-код' : 'Показать HTML-код',
+      label: showHtml ? i18nT('shared:components.article.articleEditorUiHelpers.skryt_html_kod_4232e09c') : i18nT('shared:components.article.articleEditorUiHelpers.pokazat_html_kod_d7c4b2c8'),
     },
     {
       name: fullscreen ? 'minimize' : 'maximize',
       onPress: toggleFullscreen,
-      label: fullscreen ? 'Выйти из полноэкранного режима' : 'Перейти в полноэкранный режим',
+      label: fullscreen ? i18nT('shared:components.article.articleEditorUiHelpers.vyyti_iz_polnoekrannogo_rezhima_aad1f4e2') : i18nT('shared:components.article.articleEditorUiHelpers.pereyti_v_polnoekrannyy_rezhim_c0a207e4'),
     },
     {
       name: 'delete',
       onPress: clearFormattingPreservingEmbeds,
-      label: 'Очистить форматирование',
+      label: i18nT('shared:components.article.articleEditorUiHelpers.ochistit_formatirovanie_2b4eecb3'),
     },
     {
       name: 'image',
       onPress: openImagePicker,
-      label: 'Вставить изображение',
+      label: i18nT('shared:components.article.articleEditorUiHelpers.vstavit_izobrazhenie_28818f8f'),
     },
   ]
 
@@ -98,14 +100,14 @@ export const buildArticleEditorToolbarActions = ({
     actions.push({
       name: 'external-link',
       onPress: openPreview,
-      label: 'Открыть превью',
+      label: i18nT('shared:components.article.articleEditorUiHelpers.otkryt_prevyu_5ddef1e1'),
     })
   }
 
   actions.push({
     name: 'bookmark',
     onPress: openAnchorModal,
-    label: 'Вставить якорь',
+    label: i18nT('shared:components.article.articleEditorUiHelpers.vstavit_yakor_8649e9ae'),
   })
 
   return actions
@@ -253,7 +255,7 @@ export const confirmAnchorEditorModal = ({
   if (showHtml) {
     const id = normalizeAnchorId(anchorValue)
     if (!id) {
-      Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)')
+      Alert.alert(i18nT('shared:components.article.articleEditorUiHelpers.yakor_e4219338'), i18nT('shared:components.article.articleEditorUiHelpers.vvedite_korrektnyy_identifikator_naprimer_da_095e84b3'))
       return
     }
 

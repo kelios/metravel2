@@ -24,6 +24,8 @@ import {
   useUnblockUser,
 } from '@/hooks/useUserSafety'
 import { isMockBlocked, isMockReported, type ReportReasonKey } from '@/api/userSafety'
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   targetUserId: string | number
@@ -71,7 +73,7 @@ function UserSafetyMenu({
   if (!isAuthenticated) return null
 
   const reasons = reasonsQuery.data ?? []
-  const name = targetName?.trim() || 'пользователя'
+  const name = targetName?.trim() || i18nT('profile:components.profile.UserSafetyMenu.defaultTargetName')
 
   const close = () => {
     setOpen(false)
@@ -119,7 +121,7 @@ function UserSafetyMenu({
         style={[styles.trigger, style]}
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`Действия с профилем: пожаловаться или заблокировать`}
+        accessibilityLabel={i18nT('profile:components.profile.UserSafetyMenu.deystviya_s_profilem_pozhalovatsya_ili_zablo_183409de')}
         testID={testID ?? 'user-safety-menu'}
         {...Platform.select({ web: { cursor: 'pointer' } })}
       >
@@ -127,17 +129,17 @@ function UserSafetyMenu({
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
-        <Pressable style={styles.backdrop} onPress={close} accessibilityLabel="Закрыть">
+        <Pressable style={styles.backdrop} onPress={close} accessibilityLabel={i18nT('profile:components.profile.UserSafetyMenu.zakryt_ef39ec99')}>
           <Pressable style={styles.sheet} onPress={() => {}}>
             <View style={styles.header}>
               <Text style={styles.title}>
-                {view === 'report' ? 'Пожаловаться' : 'Действия'}
+                {view === 'report' ? i18nT('profile:components.profile.UserSafetyMenu.pozhalovatsya_74862dca') : i18nT('profile:components.profile.UserSafetyMenu.deystviya_c3b5aca9')}
               </Text>
               <Pressable
                 style={styles.closeBtn}
                 onPress={close}
                 accessibilityRole="button"
-                accessibilityLabel="Закрыть"
+                accessibilityLabel={i18nT('profile:components.profile.UserSafetyMenu.zakryt_ef39ec99')}
               >
                 <Feather name="x" size={20} color={colors.text} />
               </Pressable>
@@ -150,12 +152,12 @@ function UserSafetyMenu({
                   onPress={() => setView('report')}
                   disabled={reported}
                   accessibilityRole="button"
-                  accessibilityLabel="Пожаловаться на пользователя"
+                  accessibilityLabel={i18nT('profile:components.profile.UserSafetyMenu.pozhalovatsya_na_polzovatelya_d482039d')}
                   testID="user-safety-report"
                 >
                   <Feather name="flag" size={18} color={reported ? colors.textMuted : colors.danger} />
                   <Text style={[styles.menuRowText, reported && styles.menuRowTextMuted]}>
-                    {reported ? 'Жалоба отправлена' : 'Пожаловаться'}
+                    {reported ? i18nT('profile:components.profile.UserSafetyMenu.zhaloba_otpravlena_9e4e7626') : i18nT('profile:components.profile.UserSafetyMenu.pozhalovatsya_74862dca')}
                   </Text>
                 </Pressable>
 
@@ -164,7 +166,7 @@ function UserSafetyMenu({
                   onPress={handleToggleBlock}
                   disabled={blockPending}
                   accessibilityRole="button"
-                  accessibilityLabel={blocked ? 'Разблокировать пользователя' : 'Заблокировать пользователя'}
+                  accessibilityLabel={blocked ? i18nT('profile:components.profile.UserSafetyMenu.razblokirovat_polzovatelya_b505b9f9') : i18nT('profile:components.profile.UserSafetyMenu.zablokirovat_polzovatelya_ef045da2')}
                   testID="user-safety-block"
                 >
                   {blockPending ? (
@@ -177,17 +179,16 @@ function UserSafetyMenu({
                     />
                   )}
                   <Text style={[styles.menuRowText, blocked && styles.menuRowTextPrimary]}>
-                    {blocked ? 'Разблокировать' : 'Заблокировать'}
+                    {blocked ? i18nT('profile:components.profile.UserSafetyMenu.razblokirovat_784643ec') : i18nT('profile:components.profile.UserSafetyMenu.zablokirovat_eaf65817')}
                   </Text>
                 </Pressable>
 
                 <Text style={styles.hint}>
-                  Заблокированный {name} не сможет видеть ваш контент и писать вам.
-                </Text>
+                  {i18nT('profile:components.profile.UserSafetyMenu.zablokirovannyy_b2a4a460')}{name} {i18nT('profile:components.profile.UserSafetyMenu.ne_smozhet_videt_vash_kontent_i_pisat_vam_6d3e590b')}</Text>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.sectionLabel}>Причина</Text>
+                <Text style={styles.sectionLabel}>{i18nT('profile:components.profile.UserSafetyMenu.prichina_4da0c07b')}</Text>
                 {reasonsQuery.isLoading ? (
                   <View style={styles.loading}>
                     <ActivityIndicator color={colors.primaryDark} />
@@ -218,11 +219,11 @@ function UserSafetyMenu({
                   })
                 )}
 
-                <Text style={styles.sectionLabel}>Комментарий (необязательно)</Text>
+                <Text style={styles.sectionLabel}>{i18nT('profile:components.profile.UserSafetyMenu.kommentariy_neobyazatelno_1eec9e99')}</Text>
                 <TextInput
                   value={comment}
                   onChangeText={(t) => setComment(t.slice(0, COMMENT_MAX))}
-                  placeholder="Что произошло?"
+                  placeholder={i18nT('profile:components.profile.UserSafetyMenu.chto_proizoshlo_3ea080bd')}
                   placeholderTextColor={colors.textMuted}
                   multiline
                   style={styles.commentInput}
@@ -231,8 +232,7 @@ function UserSafetyMenu({
 
                 {reportMutation.isError ? (
                   <Text style={styles.error} testID="report-error">
-                    Не удалось отправить жалобу. Попробуйте ещё раз.
-                  </Text>
+                    {i18nT('profile:components.profile.UserSafetyMenu.ne_udalos_otpravit_zhalobu_poprobuyte_esche__7f967ba2')}</Text>
                 ) : null}
 
                 <Pressable
@@ -240,13 +240,13 @@ function UserSafetyMenu({
                   onPress={handleSubmitReport}
                   disabled={!reason || reportMutation.isPending}
                   accessibilityRole="button"
-                  accessibilityLabel="Отправить жалобу"
+                  accessibilityLabel={i18nT('profile:components.profile.UserSafetyMenu.otpravit_zhalobu_bc67938a')}
                   testID="report-submit"
                 >
                   {reportMutation.isPending ? (
                     <ActivityIndicator size="small" color={colors.textOnPrimary} />
                   ) : (
-                    <Text style={styles.submitBtnText}>Отправить жалобу</Text>
+                    <Text style={styles.submitBtnText}>{i18nT('profile:components.profile.UserSafetyMenu.otpravit_zhalobu_bc67938a')}</Text>
                   )}
                 </Pressable>
                 <View style={styles.footerSpace} />

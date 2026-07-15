@@ -1,20 +1,21 @@
-export type BreakpointKey = 'narrow' | 'compact' | 'default';
+import { translate as i18nT } from '@/i18n';
 
-export const POPUP_TOOLTIPS = {
-  openPhoto: 'Открыть фото на весь экран',
-  copyCoords: 'Скопировать координаты',
-  openGoogleMaps: 'Открыть точку в Google Maps',
-  openAppleMaps: 'Открыть точку в Apple Maps',
-  openOrganicMaps: 'Открыть точку в Organic Maps',
-  openWaze: 'Маршрут в Waze',
-  openYandexMaps: 'Открыть точку в Яндекс Картах',
-  openYandexNavi: 'Маршрут в Яндекс Навигаторе',
-  openOpenStreetMap: 'Открыть точку в OpenStreetMap',
-  shareTelegram: 'Поделиться точкой в Telegram',
-  openArticle: 'Открыть статью по точке',
-  buildRoute: 'Построить маршрут сюда',
-  moreNavigation: 'Открыть в навигаторе или поделиться',
-} as const;
+export type BreakpointKey = 'narrow' | 'compact' | 'default';
+export const getPopupTooltips = () => ({
+  openPhoto: i18nT('map:components.MapPage.Map.PlacePopupCard.constants.otkryt_foto_na_ves_ekran_01da0d6d'),
+  copyCoords: i18nT('map:components.MapPage.Map.PlacePopupCard.constants.skopirovat_koordinaty_e9a43836'),
+  openGoogleMaps: i18nT('map:components.MapPage.Map.PlacePopupCard.constants.otkryt_tochku_v_google_maps_52bffb98'),
+  openAppleMaps: i18nT('map:components.MapPage.Map.PlacePopupCard.constants.otkryt_tochku_v_apple_maps_3aaef9e0'),
+  openOrganicMaps: i18nT('map:components.MapPage.Map.PlacePopupCard.constants.otkryt_tochku_v_organic_maps_655e5ec5'),
+  openWaze: i18nT('map:components.MapPage.Map.PlacePopupCard.constants.marshrut_v_waze_c6bb83a0'),
+  openYandexMaps: i18nT('map:components.MapPage.Map.PlacePopupCard.constants.otkryt_tochku_v_yandeks_kartah_19fd5c6f'),
+  openYandexNavi: i18nT('map:components.MapPage.Map.PlacePopupCard.constants.marshrut_v_yandeks_navigatore_b3082200'),
+  openOpenStreetMap: i18nT('map:components.MapPage.Map.PlacePopupCard.constants.otkryt_tochku_v_openstreetmap_545ab72e'),
+  shareTelegram: i18nT('map:components.MapPage.Map.PlacePopupCard.constants.podelitsya_tochkoy_v_telegram_7c64d8cb'),
+  openArticle: i18nT('map:components.MapPage.Map.PlacePopupCard.constants.otkryt_statyu_po_tochke_80517a01'),
+  buildRoute: i18nT('map:components.MapPage.Map.PlacePopupCard.constants.postroit_marshrut_syuda_424cb120'),
+  moreNavigation: i18nT('map:components.MapPage.Map.PlacePopupCard.constants.otkryt_v_navigatore_ili_podelitsya_916a0803'),
+})
 
 export const escapeCssUrlString = (value: string): string =>
   value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');

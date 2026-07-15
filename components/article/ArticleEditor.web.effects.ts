@@ -6,6 +6,8 @@ import { Alert } from 'react-native'
 
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { normalizeArticleEditorHtmlForOutput } from './articleEditorConfig'
+import { translate as i18nT } from '@/i18n'
+
 
 export async function openArticleEditorPreview({
   isWeb,
@@ -18,7 +20,7 @@ export async function openArticleEditorPreview({
 }): Promise<void> {
   if (!isWeb || !windowObject) return
   if (!idTravel) {
-    Alert.alert('Превью', 'Сначала сохраните путешествие, чтобы открыть превью')
+    Alert.alert(i18nT('shared:components.article.ArticleEditor_web_effects.prevyu_bed49b2d'), i18nT('shared:components.article.ArticleEditor_web_effects.snachala_sohranite_puteshestvie_chtoby_otkry_7961d502'))
     return
   }
 

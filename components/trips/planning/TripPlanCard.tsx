@@ -18,6 +18,8 @@ import {
 } from '@/components/trips/planning/tripPlanFormatting';
 import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   trip: PlannedTrip;
@@ -74,7 +76,7 @@ function TripPlanCard({
     if (onEditPress) {
       actions.push({
         key: 'edit',
-        label: 'Редактировать поездку',
+        label: i18nT('trips:components.trips.planning.TripPlanCard.redaktirovat_poezdku_548d7f17'),
         icon: 'edit-2',
         onPress: () => {
           setActionsVisible(false);
@@ -85,7 +87,7 @@ function TripPlanCard({
     if (onDeletePress) {
       actions.push({
         key: 'delete',
-        label: 'Удалить поездку',
+        label: i18nT('trips:components.trips.planning.TripPlanCard.udalit_poezdku_33c7dfe4'),
         icon: 'trash-2',
         iconColor: colors.danger,
         onPress: () => {
@@ -135,27 +137,27 @@ function TripPlanCard({
       <View style={styles.footer}>
         <View style={styles.occupancyRow}>
           <Feather name="users" size={14} color={colors.textSecondary} />
-          <Text style={styles.footerText}>Едут {goingCount} из {trip.seatsTotal}</Text>
-          <Text style={styles.participantsHint}>· {participantsCount} в списке</Text>
+          <Text style={styles.footerText}>{i18nT('trips:components.trips.planning.TripPlanCard.edut_f472215c')}{goingCount} {i18nT('trips:components.trips.planning.TripPlanCard.iz_b3249d51')}{trip.seatsTotal}</Text>
+          <Text style={styles.participantsHint}>· {participantsCount} {i18nT('trips:components.trips.planning.TripPlanCard.v_spiske_e0d50d93')}</Text>
         </View>
         <View style={styles.cardActions} testID={`trip-plan-card-actions-${trip.id}`}>
           <CardActionPressable
-            accessibilityLabel={hasOwnerActions ? 'Управлять поездкой' : 'Открыть поездку'}
-            title={hasOwnerActions ? 'Управлять поездкой' : 'Открыть поездку'}
+            accessibilityLabel={hasOwnerActions ? i18nT('trips:components.trips.planning.TripPlanCard.upravlyat_poezdkoy_80d7b0d2') : i18nT('trips:components.trips.planning.TripPlanCard.otkryt_poezdku_4ed54163')}
+            title={hasOwnerActions ? i18nT('trips:components.trips.planning.TripPlanCard.upravlyat_poezdkoy_80d7b0d2') : i18nT('trips:components.trips.planning.TripPlanCard.otkryt_poezdku_4ed54163')}
             onPress={handleOpen}
             style={({ pressed }) => [styles.manageButton, pressed && styles.manageButtonPressed]}
             disabled={isDeleting}
             testID={`trip-plan-card-manage-${trip.id}`}
           >
             <Text style={styles.manageButtonText}>
-              {hasOwnerActions ? 'Управлять поездкой' : 'Открыть поездку'}
+              {hasOwnerActions ? i18nT('trips:components.trips.planning.TripPlanCard.upravlyat_poezdkoy_80d7b0d2') : i18nT('trips:components.trips.planning.TripPlanCard.otkryt_poezdku_4ed54163')}
             </Text>
             <Feather name="arrow-right" size={15} color={colors.textOnPrimary} />
           </CardActionPressable>
           {hasOwnerActions ? (
             <CardActionPressable
-              accessibilityLabel="Другие действия с поездкой"
-              title="Другие действия"
+              accessibilityLabel={i18nT('trips:components.trips.planning.TripPlanCard.drugie_deystviya_s_poezdkoy_9a8b5df9')}
+              title={i18nT('trips:components.trips.planning.TripPlanCard.drugie_deystviya_4b60e2d6')}
               onPress={() => setActionsVisible(true)}
               style={styles.moreButton}
               disabled={isDeleting}

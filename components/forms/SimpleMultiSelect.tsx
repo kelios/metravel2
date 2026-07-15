@@ -5,6 +5,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { FlashList } from '@shopify/flash-list';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 type MultiSelectValue = string | number;
 type MultiSelectItem = Record<string, unknown>;
@@ -36,14 +38,14 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   onChange,
   labelField,
   valueField,
-  placeholder = 'Выберите...',
-  searchPlaceholder = 'Поиск...',
+  placeholder = i18nT('shared:components.forms.SimpleMultiSelect.vyberite_e8f53759'),
+  searchPlaceholder = i18nT('shared:components.forms.SimpleMultiSelect.poisk_2a7a56c6'),
   search = true,
   style,
   disabled = false,
   allowCreate = false,
   onCreateItem,
-  createLabel = 'Добавить',
+  createLabel = i18nT('shared:components.forms.SimpleMultiSelect.dobavit_0aef7a5e'),
 }) => {
   const colors = useThemedColors(); // ✅ УЛУЧШЕНИЕ: Поддержка темной темы
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -109,7 +111,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
         setSearchQuery('');
       }
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : 'Не удалось добавить категорию');
+      setCreateError(e instanceof Error ? e.message : i18nT('shared:components.forms.SimpleMultiSelect.ne_udalos_dobavit_kategoriyu_57014980'));
     } finally {
       setIsCreating(false);
     }
@@ -204,7 +206,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
         onPress={handleOpen}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel="Открыть выбор"
+        accessibilityLabel={i18nT('shared:components.forms.SimpleMultiSelect.otkryt_vybor_1a60a3a2')}
       >
         <View style={styles.triggerContent}>
           {selectedItems.length > 0 ? (
@@ -240,14 +242,14 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
             style={styles.modalBackdrop}
             onPress={handleClose}
             accessibilityRole="button"
-            accessibilityLabel="Закрыть"
+            accessibilityLabel={i18nT('shared:components.forms.SimpleMultiSelect.zakryt_2edf8c7d')}
           />
 
           <View style={styles.modalContentWrap}>
             <View style={styles.modalContent}> 
             <View style={styles.modalHeader}> 
               <Text style={styles.modalTitle}>
-                Выбрано: {selectedItems.length}
+                {i18nT('shared:components.forms.SimpleMultiSelect.vybrano_12c5cecd')}{selectedItems.length}
               </Text>
               <Pressable onPress={handleClose} hitSlop={8}>
                 <Feather name="x" size={24} color={colors.text} />
@@ -287,7 +289,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
                   color={colors.primaryDark}
                 />
                 <Text style={styles.createText} numberOfLines={1}>
-                  {isCreating ? 'Добавление…' : `${createLabel} «${trimmedQuery}»`}
+                  {isCreating ? i18nT('shared:components.forms.SimpleMultiSelect.dobavlenie_54e6158b') : `${createLabel} «${trimmedQuery}»`}
                 </Text>
               </Pressable>
             )}
@@ -304,7 +306,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={true}
               ListEmptyComponent={
-                <Text style={styles.emptyText}>Ничего не найдено</Text>
+                <Text style={styles.emptyText}>{i18nT('shared:components.forms.SimpleMultiSelect.nichego_ne_naydeno_488dcd8f')}</Text>
               }
               drawDistance={Platform.OS === 'web' ? 900 : 600}
             />
@@ -314,7 +316,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
                 style={styles.doneButton}
                 onPress={handleClose}
               >
-                <Text style={styles.doneButtonText}>Готово</Text>
+                <Text style={styles.doneButtonText}>{i18nT('shared:components.forms.SimpleMultiSelect.gotovo_c5a2436b')}</Text>
               </Pressable>
             </View>
             </View>

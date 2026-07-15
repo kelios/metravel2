@@ -12,7 +12,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 import MapIcon from '../MapIcon'
-import { TRANSPORT_MODES, type TransportMode } from '../transportModes'
+import { getTransportModes, type TransportMode } from '../transportModes'
 import { MapMobilePopover } from './MapMobilePopover'
 
 interface MapMobileTransportPopoverProps {
@@ -47,7 +47,7 @@ const MapMobileTransportPopoverInner: React.FC<MapMobileTransportPopoverProps> =
       testID="map-mobile-transport-popover"
     >
       <View accessibilityRole="radiogroup" testID="map-mobile-transport-options">
-        {TRANSPORT_MODES.map((option) => {
+        {getTransportModes().map((option) => {
           const selected = option.key === currentValue
           return (
             <Pressable

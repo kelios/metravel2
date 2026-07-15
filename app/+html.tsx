@@ -6,36 +6,20 @@ import { getAnalyticsInlineScript } from '@/utils/analyticsInlineScript';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCriticalCSS } from '@/utils/criticalCSSBuilder';
 import { getRootVisibilityGateCss, getTravelRouteClassScript } from '@/utils/htmlShell';
-import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo';
+import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo';
+import { translate as i18nT } from '@/i18n'
+import { getActiveLocaleDefinition } from '@/i18n/format'
+
 export { getAnalyticsInlineScript };
 
 const METRIKA_ID = process.env.EXPO_PUBLIC_METRIKA_ID ? parseInt(process.env.EXPO_PUBLIC_METRIKA_ID, 10) : 0;
 const GA_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4 || '';
 const SITE_BRAND = 'Metravel';
-const HOME_TITLE = 'Идеи поездок на выходные и книга путешествий | Metravel';
-const HOME_DESCRIPTION = 'Подбирайте маршруты по расстоянию и формату отдыха, сохраняйте поездки с фото и заметками и собирайте личную книгу путешествий в PDF.';
-const DEFAULT_DESCRIPTION = 'Маршруты, заметки и фото путешествий по Беларуси и не только. Ищите идеи поездок, сохраняйте места и делитесь своими маршрутами в Metravel.';
-const SEARCH_TITLE = 'Поиск маршрутов и идей путешествий по Беларуси | Metravel';
-const SEARCH_DESCRIPTION = 'Ищите путешествия по странам, категориям и сложности. Фильтруйте маршруты и сохраняйте лучшие идеи в свою книгу путешествий.';
 // Single source of truth for /map title + description (also used by the runtime
 // Helmet SEO via screens/tabs/MapScreen). Keeping the pre-hydration fallback in
 // sync prevents og:title / document.title divergence on /map.
-const MAP_TITLE = MAP_SEO_TITLE;
-const MAP_DESCRIPTION = MAP_SEO_DESCRIPTION;
-const ARTICLES_TITLE = 'Статьи о путешествиях, маршрутах и советах в дорогу | Metravel';
-const ARTICLES_DESCRIPTION = 'Читайте статьи Metravel о поездках, маршрутах, интересных местах и полезных советах для путешествий по Беларуси и не только.';
-const ABOUT_TITLE = 'О проекте MeTravel — сообщество путешественников | Metravel';
-const ABOUT_DESCRIPTION = 'Проект MeTravel — сообщество путешественников по Беларуси и не только. Делитесь маршрутами, пишите статьи, сохраняйте впечатления и вдохновляйтесь идеями.';
-const CONTACT_TITLE = 'Контакты и обратная связь | Metravel';
-const CONTACT_DESCRIPTION = 'Свяжитесь с командой Metravel: вопросы, предложения, идеи партнерства и обратная связь по маршрутам, статьям и сервису.';
-const TRAVELSBY_TITLE = 'Маршруты по Беларуси, идеи поездок и маршрутов | Metravel';
-const TRAVELSBY_DESCRIPTION = 'Подборка маршрутов и мест по Беларуси: идеи для выходных и больших поездок. Фото, точки на карте и советы путешественников.';
-const QUESTS_TITLE = 'Городские квесты и маршруты с заданиями | Metravel';
-const QUESTS_DESCRIPTION = 'Проходите городские квесты Metravel: маршруты с заданиями, точками на карте и идеями для прогулок и поездок.';
-const ROULETTE_TITLE = 'Рулетка идей для спонтанной поездки | Metravel';
-const ROULETTE_DESCRIPTION = 'Откройте случайный маршрут для спонтанного выезда и найдите новую идею путешествия на Metravel.';
-const ARTICLE_FALLBACK_TITLE = 'Статья | Metravel';
-const ARTICLE_FALLBACK_DESCRIPTION = 'Страница статьи в Metravel. Открывайте материалы о путешествиях, маршрутах и полезных находках.';
+const MAP_TITLE = getMapSeoTitle();
+const MAP_DESCRIPTION = getMapSeoDescription();
 const TRAVEL_HERO_PRELOAD_SCRIPT_SRC = '/travel-hero-preload-v2.js';
 
 if (!METRIKA_ID && typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
@@ -222,7 +206,28 @@ const getLegacyParamRedirectScript = () => String.raw`
 `;
 
 // Contract anchor for tests: p.indexOf('/article/')===0
-const getCriticalHeadScript = () => String.raw`
+const getCriticalHeadScript = () => {
+  const HOME_TITLE = i18nT('seoStatic:root.home.title');
+  const HOME_DESCRIPTION = i18nT('seoStatic:root.home.description');
+  const DEFAULT_DESCRIPTION = i18nT('seoStatic:root.default.description');
+  const SEARCH_TITLE = i18nT('seoStatic:root.search.title');
+  const SEARCH_DESCRIPTION = i18nT('seoStatic:root.search.description');
+  const ARTICLES_TITLE = i18nT('seoStatic:root.articles.title');
+  const ARTICLES_DESCRIPTION = i18nT('seoStatic:root.articles.description');
+  const ABOUT_TITLE = i18nT('seoStatic:root.about.title');
+  const ABOUT_DESCRIPTION = i18nT('seoStatic:root.about.description');
+  const CONTACT_TITLE = i18nT('seoStatic:root.contact.title');
+  const CONTACT_DESCRIPTION = i18nT('seoStatic:root.contact.description');
+  const TRAVELSBY_TITLE = i18nT('seoStatic:root.travelsBy.title');
+  const TRAVELSBY_DESCRIPTION = i18nT('seoStatic:root.travelsBy.description');
+  const QUESTS_TITLE = i18nT('seoStatic:root.quests.title');
+  const QUESTS_DESCRIPTION = i18nT('seoStatic:root.quests.description');
+  const ROULETTE_TITLE = i18nT('seoStatic:root.roulette.title');
+  const ROULETTE_DESCRIPTION = i18nT('seoStatic:root.roulette.description');
+  const ARTICLE_FALLBACK_TITLE = i18nT('seoStatic:root.article.title');
+  const ARTICLE_FALLBACK_DESCRIPTION = i18nT('seoStatic:root.article.description');
+
+  return String.raw`
 (function(){
   try {
     function decode(v){try{return decodeURIComponent(v)}catch(_){return v}}
@@ -242,7 +247,7 @@ const getCriticalHeadScript = () => String.raw`
       if(!text)return'';
       text=decode(text).replace(/\.(html?|php)$/i,'').replace(/[-_+]+/g,' ').replace(/\s+/g,' ').trim();
       if(!text)return'';
-      if(/^\d+$/.test(text))return'Путешествие '+text;
+      if(/^\d+$/.test(text))return${JSON.stringify(i18nT('seoStatic:critical.travel'))}+' '+text;
       return text.charAt(0).toUpperCase()+text.slice(1);
     }
     function isAssetLikePath(path){
@@ -254,11 +259,11 @@ const getCriticalHeadScript = () => String.raw`
     }
     function isGenericTitle(value){
       var t=String(value||'').trim();
-      return !t||t===${JSON.stringify(SITE_BRAND)}||t==='MeTravel'||t==='Путешествие | Metravel'||t==='MeTravel — Путешествие'||t==='Загрузка... | Metravel';
+      return !t||t===${JSON.stringify(SITE_BRAND)}||t==='MeTravel'||t===${JSON.stringify(i18nT('seoStatic:critical.generic.travelTitle'))}||t===${JSON.stringify(i18nT('seoStatic:critical.generic.meTravelTitle'))}||t===${JSON.stringify(i18nT('seoStatic:critical.generic.loadingTitle'))};
     }
     function isGenericDescription(value){
       var d=String(value||'').trim();
-      return !d||d===${JSON.stringify(DEFAULT_DESCRIPTION)}||d===${JSON.stringify('Найди место для путешествия и поделись своим опытом.')}||d==='Загружаем описание путешествия…'||d==='Путешествие на Metravel.'||d.indexOf('MeTravel — платформа, где ты легко найдёшь вдохновение')===0;
+      return !d||d===${JSON.stringify(DEFAULT_DESCRIPTION)}||d===${JSON.stringify(i18nT('seoStatic:critical.generic.findPlaceDescription'))}||d===${JSON.stringify(i18nT('seoStatic:critical.generic.loadingDescription'))}||d===${JSON.stringify(i18nT('seoStatic:critical.generic.travelDescription'))}||d.indexOf(${JSON.stringify(i18nT('seoStatic:critical.generic.platformDescriptionPrefix'))})===0;
     }
     function getRouteMeta(path){
       var normalized=normalizePath(path);
@@ -272,13 +277,13 @@ const getCriticalHeadScript = () => String.raw`
       if(normalized==='/travelsby')return{title:${JSON.stringify(TRAVELSBY_TITLE)},description:${JSON.stringify(TRAVELSBY_DESCRIPTION)},ogType:'website'};
       if(normalized==='/quests')return{title:${JSON.stringify(QUESTS_TITLE)},description:${JSON.stringify(QUESTS_DESCRIPTION)},ogType:'website'};
       if(normalized==='/roulette')return{title:${JSON.stringify(ROULETTE_TITLE)},description:${JSON.stringify(ROULETTE_DESCRIPTION)},ogType:'website'};
-      if(normalized.indexOf('/travels/')===0)return{title:(lastSegment?lastSegment+' | ':'Путешествие | ')+${JSON.stringify(SITE_BRAND)},description:lastSegment?('Маршрут '+lastSegment+' в Metravel. Смотрите описание поездки, фото, карту и советы путешественников.'):${JSON.stringify(DEFAULT_DESCRIPTION)},ogType:'article',robots:normalized==='/travels/create'?'noindex, nofollow':undefined};
-      if(normalized.indexOf('/travel/')===0)return{title:(lastSegment?('Редактирование: '+lastSegment+' | '):'Редактирование путешествия | ')+${JSON.stringify(SITE_BRAND)},description:'Служебная страница редактирования путешествия в Metravel.',ogType:'website',robots:'noindex, nofollow'};
-      if(normalized==='/travel/new')return{title:'Создать путешествие | Metravel',description:'Служебная страница создания путешествия в Metravel.',ogType:'website',robots:'noindex, nofollow'};
-      if(normalized.indexOf('/article/')===0)return{title:lastSegment?(lastSegment+' | '+${JSON.stringify(SITE_BRAND)}):${JSON.stringify(ARTICLE_FALLBACK_TITLE)},description:lastSegment?('Статья '+lastSegment+' в Metravel. Открывайте материалы о путешествиях, маршрутах и полезных находках.'):${JSON.stringify(ARTICLE_FALLBACK_DESCRIPTION)},ogType:'article'};
+      if(normalized.indexOf('/travels/')===0)return{title:(lastSegment?lastSegment+' | ':${JSON.stringify(i18nT('seoStatic:critical.travel.titleFallback'))})+${JSON.stringify(SITE_BRAND)},description:lastSegment?(${JSON.stringify(i18nT('seoStatic:critical.travel.descriptionPrefix'))}+lastSegment+${JSON.stringify(i18nT('seoStatic:critical.travel.descriptionSuffix'))}):${JSON.stringify(DEFAULT_DESCRIPTION)},ogType:'article',robots:normalized==='/travels/create'?'noindex, nofollow':undefined};
+      if(normalized.indexOf('/travel/')===0)return{title:(lastSegment?(${JSON.stringify(i18nT('seoStatic:critical.edit.titlePrefix'))}+lastSegment+' | '):${JSON.stringify(i18nT('seoStatic:critical.edit.titleFallback'))})+${JSON.stringify(SITE_BRAND)},description:${JSON.stringify(i18nT('seoStatic:critical.edit.description'))},ogType:'website',robots:'noindex, nofollow'};
+      if(normalized==='/travel/new')return{title:${JSON.stringify(i18nT('seoStatic:critical.create.title'))},description:${JSON.stringify(i18nT('seoStatic:critical.create.description'))},ogType:'website',robots:'noindex, nofollow'};
+      if(normalized.indexOf('/article/')===0)return{title:lastSegment?(lastSegment+' | '+${JSON.stringify(SITE_BRAND)}):${JSON.stringify(ARTICLE_FALLBACK_TITLE)},description:lastSegment?(${JSON.stringify(i18nT('seoStatic:critical.article.descriptionPrefix'))}+lastSegment+${JSON.stringify(i18nT('seoStatic:critical.article.descriptionSuffix'))}):${JSON.stringify(ARTICLE_FALLBACK_DESCRIPTION)},ogType:'article'};
       if(normalized.indexOf('/quests/')===0)return{title:${JSON.stringify(HOME_TITLE)},description:${JSON.stringify(HOME_DESCRIPTION)},ogType:'website'};
-      if(normalized==='/registration'||normalized==='/register')return{title:'Регистрация | Metravel',description:'Создание аккаунта Metravel.',ogType:'website',robots:'noindex, nofollow'};
-      if(isAssetLikePath(normalized))return{title:'Служебный файл | Metravel',description:'Служебный URL Metravel.',ogType:'website',robots:'noindex, nofollow'};
+      if(normalized==='/registration'||normalized==='/register')return{title:${JSON.stringify(i18nT('seoStatic:critical.registration.title'))},description:${JSON.stringify(i18nT('seoStatic:critical.registration.description'))},ogType:'website',robots:'noindex, nofollow'};
+      if(isAssetLikePath(normalized))return{title:${JSON.stringify(i18nT('seoStatic:critical.asset.title'))},description:${JSON.stringify(i18nT('seoStatic:critical.asset.description'))},ogType:'website',robots:'noindex, nofollow'};
       return{title:${JSON.stringify(SITE_BRAND)},description:${JSON.stringify(DEFAULT_DESCRIPTION)},ogType:'website',robots:shouldNoindexPath(normalized)?'noindex, nofollow':undefined};
     }
     function upsertMeta(selector,attrs,content){
@@ -373,14 +378,16 @@ const getCriticalHeadScript = () => String.raw`
   } catch(_){}
 })();
 `;
+}
 
 export default function Root({ children }: { children: React.ReactNode }) {
+  const locale = getActiveLocaleDefinition();
   const isProduction = typeof process !== 'undefined' && 
     (process.env.EXPO_PUBLIC_SITE_URL === 'https://metravel.by' || 
      process.env.NODE_ENV === 'production');
   
   return (
-    <html lang="ru" suppressHydrationWarning>
+    <html lang={locale.htmlLang} dir={locale.direction} suppressHydrationWarning>
     <head>
 	      <meta charSet="utf-8" />
 	      <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
@@ -391,7 +398,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
           into the exported HTML, and the inline critical script below sets document.title
           for SPA-only routes. A static <title> would NOT be deduped by Expo export and
           produced a duplicate <title> tag on every page. */}
-      <meta name="description" content={DEFAULT_DESCRIPTION} />
+      <meta name="description" content={i18nT('seoStatic:root.default.description')} />
 
       {/* Storage hardening: neutralize throwing localStorage/sessionStorage
           (iOS Safari block-all-cookies / private mode) BEFORE any other script
@@ -416,7 +423,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
           NOTE: description and canonical are NOT duplicated here — React Helmet (data-rh="true")
           injects them per-page at build time. The inline JS above fixes [param] canonical URLs.
           Only tags that React Helmet does NOT inject on every page are kept as fallbacks. */}
-      <meta property="og:locale" content="ru_RU" />
+      <meta property="og:locale" content={locale.ogLocale} />
       <meta name="twitter:site" content="@metravel_by" />
 
       <meta
@@ -447,9 +454,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
                 '@id': 'https://metravel.by/#website',
                 url: 'https://metravel.by',
                 name: 'MeTravel',
-                description: 'Маршруты, заметки и фото путешествий по Беларуси',
+                description: i18nT('seo:app.html.marshruty_zametki_i_foto_puteshestviy_po_bel_d49ad49f'),
                 publisher: { '@id': 'https://metravel.by/#organization' },
-                inLanguage: 'ru',
+                inLanguage: locale.htmlLang,
                 potentialAction: {
                   '@type': 'SearchAction',
                   target: {
@@ -463,11 +470,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
                 '@type': 'Service',
                 '@id': 'https://metravel.by/#service',
                 name: 'MeTravel',
-                serviceType: 'Платформа для поиска и публикации маршрутов путешествий',
+                serviceType: i18nT('seo:app.html.platforma_dlya_poiska_i_publikatsii_marshrut_17ed22d3'),
                 url: 'https://metravel.by',
                 provider: { '@id': 'https://metravel.by/#organization' },
                 areaServed: 'Worldwide',
-                inLanguage: 'ru',
+                inLanguage: locale.htmlLang,
               },
             ],
           }),

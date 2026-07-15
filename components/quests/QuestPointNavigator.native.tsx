@@ -3,6 +3,8 @@ import { Animated, Easing, Linking, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { hapticNotification } from '@/utils/haptics'
+import { translate as i18nT } from '@/i18n'
+
 
 export type QuestPointNavigatorProps = {
   targetLat: number
@@ -59,9 +61,9 @@ function roundDistance(m: number): number {
 function formatDistance(m: number): string {
   if (m >= 1000) {
     const km = m / 1000
-    return `${km >= 10 ? Math.round(km) : km.toFixed(1)} км`
+    return i18nT('quests:components.quests.QuestPointNavigator.value1_km_beba36b1', { value1: km >= 10 ? Math.round(km) : km.toFixed(1) })
   }
-  return `${Math.round(m)} м`
+  return i18nT('quests:components.quests.QuestPointNavigator.value1_m_c15ed44c', { value1: Math.round(m) })
 }
 
 // Shortest signed delta a→b in degrees, range (-180, 180].
@@ -237,7 +239,7 @@ function QuestPointNavigatorImpl({ targetLat, targetLng, colors }: QuestPointNav
         }}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         accessibilityRole="button"
-        accessibilityLabel="Включить доступ к геолокации в настройках"
+        accessibilityLabel={i18nT('quests:components.quests.QuestPointNavigator.vklyuchit_dostup_k_geolokatsii_v_nastroykah_f66a3445')}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -248,7 +250,7 @@ function QuestPointNavigatorImpl({ targetLat, targetLng, colors }: QuestPointNav
         }}
       >
         <Feather name="settings" size={13} color={muted} />
-        <Text style={{ color: muted, fontSize: 12 }}>Включить геолокацию в настройках</Text>
+        <Text style={{ color: muted, fontSize: 12 }}>{i18nT('quests:components.quests.QuestPointNavigator.vklyuchit_geolokatsiyu_v_nastroykah_1b97d230')}</Text>
       </Pressable>
     )
   }
@@ -262,7 +264,7 @@ function QuestPointNavigatorImpl({ targetLat, targetLng, colors }: QuestPointNav
         onPress={enable}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         accessibilityRole="button"
-        accessibilityLabel="Показать стрелку и расстояние до точки квеста"
+        accessibilityLabel={i18nT('quests:components.quests.QuestPointNavigator.pokazat_strelku_i_rasstoyanie_do_tochki_kves_b0dd21ee')}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -274,8 +276,7 @@ function QuestPointNavigatorImpl({ targetLat, targetLng, colors }: QuestPointNav
       >
         <Feather name="compass" size={13} color={muted} />
         <Text style={{ color: muted, fontSize: 12 }}>
-          Показать стрелку и расстояние до точки
-        </Text>
+          {i18nT('quests:components.quests.QuestPointNavigator.pokazat_strelku_i_rasstoyanie_do_tochki_ce6414fd')}</Text>
       </Pressable>
     )
   }
@@ -290,10 +291,10 @@ function QuestPointNavigatorImpl({ targetLat, targetLng, colors }: QuestPointNav
       accessibilityRole="text"
       accessibilityLabel={
         arrived
-          ? 'Вы на месте'
+          ? i18nT('quests:components.quests.QuestPointNavigator.vy_na_meste_9edf4197')
           : distanceM != null
-            ? `До точки ${formatDistance(distanceM)}`
-            : 'Определение направления'
+            ? i18nT('quests:components.quests.QuestPointNavigator.do_tochki_value1_d2ec5e32', { value1: formatDistance(distanceM) })
+            : i18nT('quests:components.quests.QuestPointNavigator.opredelenie_napravleniya_36c04176')
       }
       style={{
         flexDirection: 'row',
@@ -306,7 +307,7 @@ function QuestPointNavigatorImpl({ targetLat, targetLng, colors }: QuestPointNav
       {arrived ? (
         <>
           <Feather name="check-circle" size={15} color={success} />
-          <Text style={{ color: success, fontSize: 13, fontWeight: '600' }}>Вы на месте</Text>
+          <Text style={{ color: success, fontSize: 13, fontWeight: '600' }}>{i18nT('quests:components.quests.QuestPointNavigator.vy_na_meste_9edf4197')}</Text>
         </>
       ) : (
         <>

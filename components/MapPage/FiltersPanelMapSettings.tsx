@@ -13,20 +13,23 @@ import {
 } from '@/config/mapWebLayers'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
+import type { OsmPoiCategory } from '@/utils/overpass'
+import { translate as i18nT, type TranslationKey } from '@/i18n'
 
-const OSM_POI_CATEGORIES = [
-  'Достопримечательности',
-  'Культура',
-  'Видовые места',
-  'Развлечения',
-  'Религия',
-  'История',
+
+const OSM_POI_CATEGORIES: ReadonlyArray<{ value: OsmPoiCategory; labelKey: TranslationKey }> = [
+  { value: 'attractions', labelKey: 'map:components.MapPage.FiltersPanelMapSettings.dostoprimechatelnosti_a8a167c8' },
+  { value: 'culture', labelKey: 'map:components.MapPage.FiltersPanelMapSettings.kultura_111870cc' },
+  { value: 'viewpoints', labelKey: 'map:components.MapPage.FiltersPanelMapSettings.vidovye_mesta_ed29416a' },
+  { value: 'entertainment', labelKey: 'map:components.MapPage.FiltersPanelMapSettings.razvlecheniya_1ed614fb' },
+  { value: 'religion', labelKey: 'map:components.MapPage.FiltersPanelMapSettings.religiya_07624514' },
+  { value: 'history', labelKey: 'map:components.MapPage.FiltersPanelMapSettings.istoriya_e588d346' },
 ] as const
 
 const OSM_POI_DEFAULT_CATEGORIES = [
-  'Достопримечательности',
-  'Видовые места',
-  'Культура',
+  'attractions',
+  'viewpoints',
+  'culture',
 ] as const
 
 function ignoreTransientMapRuntimeError() {
@@ -90,7 +93,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
       return initial
     },
   )
-  const [osmPoiCategories, setOsmPoiCategories] = useState<string[]>(() => [
+  const [osmPoiCategories, setOsmPoiCategories] = useState<OsmPoiCategory[]>(() => [
     ...OSM_POI_DEFAULT_CATEGORIES,
   ])
 
@@ -134,7 +137,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   )
 
   const toggleOsmCategory = useCallback(
-    (category: string) => {
+    (category: OsmPoiCategory) => {
       if (!mapUiApi) return
       setOsmPoiCategories((prev) => {
         const next = prev.includes(category)
@@ -187,11 +190,11 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
     <>
       <View style={styles.mapControlsRow}>
         <Button
-          label="Показать всё на карте"
+          label={i18nT('map:components.MapPage.FiltersPanelMapSettings.pokazat_vse_na_karte_ba0f263b')}
           icon={<MapIcon name="zoom-out-map" size={18} color={colors.text} />}
           onPress={() => safeMapUiCall(mapUiApi?.fitToResults)}
           disabled={!mapUiApi || !canFitToResults}
-          accessibilityLabel="Показать все результаты на карте"
+          accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelMapSettings.pokazat_vse_rezultaty_na_karte_03fcd330')}
           size="sm"
           variant="secondary"
         />
@@ -200,20 +203,20 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
       {mode === 'route' && (
         <View style={styles.mapControlsRow}>
           <Button
-            label="GPX"
+            label={i18nT('map:components.MapPage.FiltersPanelMapSettings.gpx_83a98f34')}
             icon={<MapIcon name="download" size={18} color={colors.text} />}
             onPress={() => safeMapUiCall(mapUiApi?.exportGpx)}
             disabled={!mapUiApi || !canBuildRoute || !canExportRoute}
-            accessibilityLabel="Скачать маршрут в формате GPX"
+            accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelMapSettings.skachat_marshrut_v_formate_gpx_08329a73')}
             size="sm"
             variant="secondary"
           />
           <Button
-            label="KML"
+            label={i18nT('map:components.MapPage.FiltersPanelMapSettings.kml_9a82e2b4')}
             icon={<MapIcon name="download" size={18} color={colors.text} />}
             onPress={() => safeMapUiCall(mapUiApi?.exportKml)}
             disabled={!mapUiApi || !canBuildRoute || !canExportRoute}
-            accessibilityLabel="Скачать маршрут в формате KML"
+            accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelMapSettings.skachat_marshrut_v_formate_kml_54e7c65c')}
             size="sm"
             variant="secondary"
           />
@@ -222,7 +225,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
 
       {shouldShowBaseLayerSelector && (
         <View style={styles.mapLayersSection}>
-          <Text style={styles.mapLayersLabel}>Слой карты</Text>
+          <Text style={styles.mapLayersLabel}>{i18nT('map:components.MapPage.FiltersPanelMapSettings.sloy_karty_0c227500')}</Text>
           <View style={styles.mapLayersRow}>
             {WEB_MAP_BASE_LAYERS.map((layer) => {
               const active = selectedBaseLayerId === layer.id
@@ -256,7 +259,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                   index === 0 && styles.mapOverlaySectionFirst,
                 ]}
               >
-                <Text style={styles.mapOverlaySectionTitle}>{section.category}</Text>
+                <Text style={styles.mapOverlaySectionTitle}>{section.title}</Text>
                 <View style={styles.mapToggleList}>
                   {section.items.map((overlay) => {
                     const enabled = Boolean(resolvedEnabledOverlays[overlay.id])
@@ -300,19 +303,20 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
 
           {showOsmCategoriesPanel && (
             <View style={styles.mapLayersSection}>
-              <Text style={styles.mapLayersLabel}>OSM: категории</Text>
+              <Text style={styles.mapLayersLabel}>{i18nT('map:components.MapPage.FiltersPanelMapSettings.osm_kategorii_371d81e3')}</Text>
               <View style={styles.mapToggleList}>
-                {OSM_POI_CATEGORIES.map((category) => {
-                  const enabled = osmPoiCategories.includes(category)
-                  const onToggle = () => toggleOsmCategory(category)
+                {OSM_POI_CATEGORIES.map(({ value, labelKey }) => {
+                  const enabled = osmPoiCategories.includes(value)
+                  const label = i18nT(labelKey)
+                  const onToggle = () => toggleOsmCategory(value)
                   return (
                     <Pressable
-                      key={category}
-                      testID={`map-osm-category-${category}`}
+                      key={value}
+                      testID={`map-osm-category-${value}`}
                       disabled={!mapUiApi}
                       onPress={onToggle}
                       accessibilityRole="switch"
-                      accessibilityLabel={category}
+                      accessibilityLabel={label}
                       accessibilityState={{ checked: enabled, disabled: !mapUiApi }}
                       aria-checked={enabled}
                       aria-disabled={!mapUiApi || undefined}
@@ -323,7 +327,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                       ]}
                     >
                       <Text style={styles.mapToggleText} numberOfLines={1}>
-                        {category}
+                        {label}
                       </Text>
                       <Toggle
                         value={enabled}
@@ -347,7 +351,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   return (
     <CollapsibleSection
       key={isMobile ? 'map-settings-mobile' : 'map-settings-desktop'}
-      title="Настройки карты"
+      title={i18nT('map:components.MapPage.FiltersPanelMapSettings.nastroyki_karty_527a23c7')}
       icon="sliders"
       defaultOpen={false}
       tone={isMobile ? 'flat' : 'default'}

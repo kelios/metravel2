@@ -7,30 +7,31 @@ import { Text, View } from '@/components/ui/Themed'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildCanonicalUrl } from '@/utils/seo'
+import { translate as i18nT } from '@/i18n'
+
 
 export default function NotFoundScreen() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   return (
     <>
-      <Stack.Screen options={{ title: 'Oops!' }} />
+      <Stack.Screen options={{ title: i18nT('shared:app.missing.oops_a237d9cd') }} />
       <InstantSEO
         headKey="not-found"
-        title="Страница не найдена | Metravel"
-        description="Страница не найдена. Перейдите на главную или откройте один из доступных разделов Metravel."
+        title={i18nT('shared:app.missing.stranitsa_ne_naydena_metravel_a9673114')}
+        description={i18nT('shared:app.missing.stranitsa_ne_naydena_pereydite_na_glavnuyu_i_0cfdec3b')}
         canonical={buildCanonicalUrl('/')}
         robots="noindex, nofollow"
       />
       <View style={styles.container}>
-        <Text style={styles.title}>Страница не найдена</Text>
+        <Text style={styles.title}>{i18nT('shared:app.missing.stranitsa_ne_naydena_8663ccb9')}</Text>
 
         <Text style={styles.subtitle}>
-          Похоже, вы перешли по неверной ссылке или страница была перемещена.
-        </Text>
+          {i18nT('shared:app.missing.pohozhe_vy_pereshli_po_nevernoy_ssylke_ili_s_3d66babf')}</Text>
 
         <Link href="/" asChild>
           <Pressable style={styles.primaryButton} accessibilityRole="button">
-            <Text style={styles.primaryButtonText}>На главную</Text>
+            <Text style={styles.primaryButtonText}>{i18nT('shared:app.missing.na_glavnuyu_58d8ad67')}</Text>
           </Pressable>
         </Link>
 
@@ -45,7 +46,7 @@ export default function NotFoundScreen() {
             router.back()
           }}
         >
-          <Text style={styles.secondaryButtonText}>Назад</Text>
+          <Text style={styles.secondaryButtonText}>{i18nT('shared:app.missing.nazad_50acffff')}</Text>
         </Pressable>
       </View>
     </>
@@ -85,7 +86,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: 'center',
   },
   primaryButtonText: {
-    color: colors.textInverse,
+    color: colors.textOnPrimary,
     fontSize: 16,
     fontWeight: '600',
   },

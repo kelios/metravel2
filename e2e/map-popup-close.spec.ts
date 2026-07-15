@@ -95,7 +95,8 @@ test.describe('Map page — popup open / close', () => {
     await popup.waitFor({ state: 'visible', timeout: 10_000 })
 
     // Also check for fullscreen overlay on narrow viewports
-    const isNarrow = (await page.viewportSize())?.width <= 560
+    const viewportWidth = (await page.viewportSize())?.width
+    const isNarrow = typeof viewportWidth === 'number' && viewportWidth <= 560
     if (isNarrow) {
       // On narrow viewports, fullscreen overlay is rendered via portal
       const overlay = page.locator('[aria-label="Закрыть"]')

@@ -1,13 +1,14 @@
 // api/telegramLink.ts
 // Слой привязки Telegram к профилю (Sprint 15 / блок 6, FE-421).
-// Контракт сверен с тикетом #417/#421 (BE ещё не задеплоен):
+// Production contract verified by board #919:
 //   получить    GET   /api/user/me/telegram/
 //   обновить    PATCH /api/user/me/telegram/        { telegram_username?, preferred_messenger? }
 //   старт авторизации POST /api/user/me/telegram/auth/start/   -> { deeplink, expires_at }
 //   подтвердить POST /api/user/me/telegram/auth/confirm/ { token } -> { telegram_verified }
-// До верификации BE на проде сохранён мок-фолбэк (EXPO_PUBLIC_TRIPS_MOCK=true или 404/501/0 в DEV).
+// Explicit mock and missing-endpoint fallback are development-only.
 
 import { apiClient, ApiError } from '@/api/client';
+import { resolveDevMockFlag } from '@/utils/devMockFlags';
 import { devWarn } from '@/utils/logger';
 
 // ── Доменные типы (camelCase) ──────────────────────────────────────────────
@@ -60,7 +61,10 @@ const mapLink = (dto: TelegramLinkDto): TelegramLink => ({
 
 // ── Мок-фолбэк (FE-guard: снять после верификации BE на проде + regression) ──
 
-const USE_MOCK = process.env.EXPO_PUBLIC_TRIPS_MOCK === 'true';
+const USE_MOCK = resolveDevMockFlag({
+  name: 'EXPO_PUBLIC_TRIPS_MOCK',
+  value: process.env.EXPO_PUBLIC_TRIPS_MOCK,
+});
 
 /** Бэкенд недоступен → 404/501/0. В DEV или под флагом отдаём мок. */
 const shouldFallbackToMock = (error: unknown): boolean => {

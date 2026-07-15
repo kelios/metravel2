@@ -53,6 +53,20 @@ describe('runtime config diagnostics parity (app vs script)', () => {
         EXPO_PUBLIC_ORS_API_KEY: 'key',
       },
     },
+    ...[
+      'EXPO_PUBLIC_TRIPS_MOCK',
+      'EXPO_PUBLIC_ACHIEVEMENTS_MOCK',
+      'EXPO_PUBLIC_SAFETY_MOCK',
+      'EXPO_PUBLIC_OSRM_MOCK',
+    ].map((flagName) => ({
+      name: `production rejects ${flagName}`,
+      env: {
+        NODE_ENV: 'production',
+        EXPO_PUBLIC_API_URL: 'https://metravel.by',
+        EXPO_PUBLIC_ORS_API_KEY: 'key',
+        [flagName]: 'true',
+      },
+    })),
   ];
 
   it.each(cases)('matches diagnostics contract for %s', ({ env }) => {
@@ -61,5 +75,35 @@ describe('runtime config diagnostics parity (app vs script)', () => {
 
     expect(normalize(appDiagnostics)).toEqual(normalize(scriptDiagnostics));
   });
-});
 
+  it.each([
+    'EXPO_PUBLIC_TRIPS_MOCK',
+    'EXPO_PUBLIC_ACHIEVEMENTS_MOCK',
+    'EXPO_PUBLIC_SAFETY_MOCK',
+    'EXPO_PUBLIC_OSRM_MOCK',
+  ])('reports %s as a production config error', (flagName) => {
+    const diagnostics = getScriptRuntimeConfigDiagnostics({
+      NODE_ENV: 'production',
+      EXPO_PUBLIC_API_URL: 'https://metravel.by',
+      EXPO_PUBLIC_ORS_API_KEY: 'key',
+      [flagName]: 'true',
+    });
+
+    expect(diagnostics).toContainEqual(
+      expect.objectContaining({ code: 'DEV_MOCK_FLAG_ENABLED', severity: 'error' }),
+    );
+  });
+
+  it('rejects the legacy numeric true form in production', () => {
+    const diagnostics = getScriptRuntimeConfigDiagnostics({
+      NODE_ENV: 'production',
+      EXPO_PUBLIC_API_URL: 'https://metravel.by',
+      EXPO_PUBLIC_ORS_API_KEY: 'key',
+      EXPO_PUBLIC_OSRM_MOCK: '1',
+    });
+
+    expect(diagnostics).toContainEqual(
+      expect.objectContaining({ code: 'DEV_MOCK_FLAG_ENABLED', severity: 'error' }),
+    );
+  });
+});

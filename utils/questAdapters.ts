@@ -15,6 +15,8 @@ import { getCountryCodeByCoords } from '@/utils/geoCountry';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { devError } from '@/utils/logger';
 import { getQuestAgeCategory, type QuestAgeCategory } from '@/utils/questAudience';
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * Парсит координату из API (число или строка).
@@ -380,14 +382,14 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
 
     // Fallback: always provide an intro so each quest starts with a dedicated start screen.
     if (!intro) {
-        const cityName = apiBundle.city?.name || 'город';
+        const cityName = apiBundle.city?.name || i18nT('quests:utils.questAdapters.defaultCity');
         const stepCount = steps.length;
         intro = {
             id: INTRO_STEP_ID,
-            title: `Старт квеста: ${apiBundle.title}`,
+            title: i18nT('shared:utils.questAdapters.start_kvesta_value1_f0fb29cb', { value1: apiBundle.title }),
             location: cityName,
-            story: `В этом маршруте ${stepCount} ${stepCount === 1 ? 'шаг' : stepCount < 5 ? 'шага' : 'шагов'}. Нажмите «Начать квест», чтобы перейти к первому заданию.`,
-            task: 'Нажмите кнопку «Начать квест».',
+            story: i18nT('quests:utils.questAdapters.routeIntro', { count: stepCount }),
+            task: i18nT('shared:utils.questAdapters.nazhmite_knopku_nachat_kvest_0676ff7c'),
             answer: () => true,
             lat: coordNum(apiBundle.city?.lat || 0),
             lng: coordNum(apiBundle.city?.lng || 0),

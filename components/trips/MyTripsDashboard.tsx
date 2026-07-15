@@ -12,21 +12,23 @@ import { useMyPlannedTrips } from '@/hooks/usePlannedTripsApi';
 import { useMyTripApplications } from '@/hooks/usePublicTripsApi';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 type DashboardSection = 'organized' | 'participating' | 'applications';
 
 const SECTION_COPY: Record<DashboardSection, { title: string; description: string }> = {
   organized: {
-    title: 'Поездки, которые я организую',
-    description: 'Маршрут, участники и подготовка к ближайшим поездкам — в одном месте.',
+    get title() { return i18nT('tripsStatic:components.trips.MyTripsDashboard.poezdki_kotorye_ya_organizuyu_8bb94e51') },
+    get description() { return i18nT('tripsStatic:components.trips.MyTripsDashboard.marshrut_uchastniki_i_podgotovka_k_blizhaysh_8a1f5969') },
   },
   participating: {
-    title: 'Поездки, в которых я участвую',
-    description: 'Приглашения и поездки, где организатором выступает другой путешественник.',
+    get title() { return i18nT('tripsStatic:components.trips.MyTripsDashboard.poezdki_v_kotoryh_ya_uchastvuyu_398e7f0a') },
+    get description() { return i18nT('tripsStatic:components.trips.MyTripsDashboard.priglasheniya_i_poezdki_gde_organizatorom_vy_a2a8b685') },
   },
   applications: {
-    title: 'Мои заявки',
-    description: 'Статусы заявок на участие в публичных поездках.',
+    get title() { return i18nT('tripsStatic:components.trips.MyTripsDashboard.moi_zayavki_27c7da8c') },
+    get description() { return i18nT('tripsStatic:components.trips.MyTripsDashboard.statusy_zayavok_na_uchastie_v_publichnyh_poe_befaa1e9') },
   },
 };
 
@@ -48,14 +50,13 @@ export default function MyTripsDashboard() {
       <View style={styles.inner}>
         <View style={styles.header}>
           <View style={styles.headerCopy}>
-            <Text style={styles.h1}>Мои поездки</Text>
+            <Text style={styles.h1}>{i18nT('trips:components.trips.MyTripsDashboard.moi_poezdki_f50af8c2')}</Text>
             <Text style={styles.lead}>
-              Организуйте свои поездки отдельно от участия в чужих.
-            </Text>
+              {i18nT('trips:components.trips.MyTripsDashboard.organizuyte_svoi_poezdki_otdelno_ot_uchastiy_20317735')}</Text>
           </View>
           <View style={styles.headerActions}>
             <Button
-              label="Найти поездку"
+              label={i18nT('trips:components.trips.MyTripsDashboard.nayti_poezdku_f3819be3')}
               variant="secondary"
               size="sm"
               fullWidth={isMobile}
@@ -64,7 +65,7 @@ export default function MyTripsDashboard() {
               testID="my-trips-find-cta"
             />
             <Button
-              label="Организовать поездку"
+              label={i18nT('trips:components.trips.MyTripsDashboard.organizovat_poezdku_2332a286')}
               size="sm"
               fullWidth={isMobile}
               onPress={() => router.push('/trips/plan/create')}
@@ -78,11 +79,10 @@ export default function MyTripsDashboard() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.segments}
-          accessibilityRole="tablist"
           testID="my-trips-segments"
         >
           <Chip
-            label="Организую"
+            label={i18nT('trips:components.trips.MyTripsDashboard.organizuyu_5d9149a8')}
             count={organizedCount && organizedCount > 0 ? organizedCount : undefined}
             selected={activeSection === 'organized'}
             onPress={() => setActiveSection('organized')}
@@ -90,7 +90,7 @@ export default function MyTripsDashboard() {
             testID="my-trips-segment-organized"
           />
           <Chip
-            label="Участвую"
+            label={i18nT('trips:components.trips.MyTripsDashboard.uchastvuyu_37ab4611')}
             count={participatingCount && participatingCount > 0 ? participatingCount : undefined}
             selected={activeSection === 'participating'}
             onPress={() => setActiveSection('participating')}
@@ -98,7 +98,7 @@ export default function MyTripsDashboard() {
             testID="my-trips-segment-participating"
           />
           <Chip
-            label="Заявки"
+            label={i18nT('trips:components.trips.MyTripsDashboard.zayavki_b21b670c')}
             count={applications?.length ? applications.length : undefined}
             selected={activeSection === 'applications'}
             onPress={() => setActiveSection('applications')}
@@ -120,7 +120,7 @@ export default function MyTripsDashboard() {
           <View style={styles.updates} testID="my-trips-updates">
             <View style={styles.updatesHeadingRow}>
               <Feather name="bell" size={18} color={colors.primaryDark} />
-              <Text style={styles.updatesTitle}>Обновления по поездкам</Text>
+              <Text style={styles.updatesTitle}>{i18nT('trips:components.trips.MyTripsDashboard.obnovleniya_po_poezdkam_203ecc63')}</Text>
             </View>
             <TripNotificationsList />
           </View>

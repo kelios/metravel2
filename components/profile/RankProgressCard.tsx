@@ -7,6 +7,8 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import RankBar from '@/components/achievements/RankBar'
 import type { UserRank } from '@/api/achievements'
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   rank: UserRank | null | undefined
@@ -24,20 +26,20 @@ function RankProgressCard({ rank, onPress, testID }: Props) {
   const styles = useMemo(() => getStyles(colors), [colors])
 
   const explainer = !rank
-    ? 'Загружаем уровень, очки опыта и значки.'
+    ? i18nT('profile:components.profile.RankProgressCard.zagruzhaem_uroven_ochki_opyta_i_znachki_5db32e6e')
     : rank.isMaxLevel
-    ? 'Вы достигли максимального уровня — открыты все привилегии.'
+    ? i18nT('profile:components.profile.RankProgressCard.vy_dostigli_maksimalnogo_urovnya_otkryty_vse_e68fe23f')
     : rank.nextLevelMinPoints != null
-      ? `Зарабатывайте очки опыта за маршруты, отзывы и активность, чтобы открыть уровень «${rank.nextLevelTitle ?? ''}».`
-      : 'Зарабатывайте очки опыта за маршруты, отзывы и активность, чтобы повышать уровень.'
+      ? i18nT('profile:components.profile.RankProgressCard.zarabatyvayte_ochki_opyta_za_marshruty_otzyv_a62fafa3', { value1: rank.nextLevelTitle ?? '' })
+      : i18nT('profile:components.profile.RankProgressCard.zarabatyvayte_ochki_opyta_za_marshruty_otzyv_e9fc47a5')
 
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : 'summary'}
-      accessibilityLabel={rank ? `Уровень ${rank.level}: ${rank.title}` : 'Уровень загружается'}
-      accessibilityHint={onPress ? 'Открыть детали наград и уровня' : undefined}
+      accessibilityLabel={rank ? i18nT('profile:components.profile.RankProgressCard.uroven_value1_value2_e857944f', { value1: rank.level, value2: rank.title }) : i18nT('profile:components.profile.RankProgressCard.uroven_zagruzhaetsya_7d653c2f')}
+      accessibilityHint={onPress ? i18nT('profile:components.profile.RankProgressCard.otkryt_detali_nagrad_i_urovnya_4b92f2a0') : undefined}
       style={({ pressed }) => [
         styles.card,
         globalFocusStyles.focusable,
@@ -48,11 +50,11 @@ function RankProgressCard({ rank, onPress, testID }: Props) {
       <View style={styles.headerRow}>
         <View style={styles.titleWrap}>
           <Feather name="trending-up" size={14} color={colors.primaryDark} />
-          <Text style={styles.headerTitle}>Ваш уровень</Text>
+          <Text style={styles.headerTitle}>{i18nT('profile:components.profile.RankProgressCard.vash_uroven_acf60230')}</Text>
         </View>
         {onPress ? (
           <View style={styles.detailsCta}>
-            <Text style={styles.detailsText}>Все награды</Text>
+            <Text style={styles.detailsText}>{i18nT('profile:components.profile.RankProgressCard.vse_nagrady_1aee7ee7')}</Text>
             <Feather name="chevron-right" size={14} color={colors.primaryDark} />
           </View>
         ) : null}
@@ -71,8 +73,7 @@ function RankProgressCard({ rank, onPress, testID }: Props) {
       )}
 
       <Text style={styles.whatIsIt}>
-        Уровень растёт за вашу активность на MeTravel — публикации, квесты, лайки.
-      </Text>
+        {i18nT('profile:components.profile.RankProgressCard.uroven_rastet_za_vashu_aktivnost_na_metravel_33350a74')}</Text>
       <Text style={styles.explainer}>{explainer}</Text>
     </Pressable>
   )

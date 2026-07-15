@@ -1,4 +1,6 @@
 import type { BBox } from './buildOverpassQuery';
+import { translate as i18nT } from '@/i18n'
+
 
 export type OSMPointFeature = {
   id: string;
@@ -66,22 +68,22 @@ const kindToRu = (tags: Record<string, string>) => {
   const amenity = tags.amenity;
   const historic = tags.historic;
 
-  if (tourism === 'camp_site') return 'Кемпинг';
-  if (tourism === 'camp_pitch') return 'Место под палатку';
-  if (tourism === 'wilderness_hut') return 'Лесной домик';
-  if (amenity === 'shelter') return 'Укрытие';
-  if (tourism === 'museum') return 'Музей';
-  if (tourism === 'viewpoint') return 'Смотровая площадка';
-  if (tourism === 'attraction') return 'Достопримечательность';
-  if (amenity === 'place_of_worship') return 'Храм';
-  if (historic === 'castle') return 'Замок';
-  if (historic === 'manor') return 'Усадьба';
-  if (historic === 'fort') return 'Форт';
-  if (historic === 'memorial') return 'Мемориал';
-  if (historic === 'monument') return 'Памятник';
-  if (historic === 'ruins') return 'Руины';
+  if (tourism === 'camp_site') return i18nT('shared:utils.overpass.overpassToPoints.kemping_d42ccf94');
+  if (tourism === 'camp_pitch') return i18nT('shared:utils.overpass.overpassToPoints.mesto_pod_palatku_476095f7');
+  if (tourism === 'wilderness_hut') return i18nT('shared:utils.overpass.overpassToPoints.lesnoy_domik_a7174313');
+  if (amenity === 'shelter') return i18nT('shared:utils.overpass.overpassToPoints.ukrytie_2e5866dd');
+  if (tourism === 'museum') return i18nT('shared:utils.overpass.overpassToPoints.muzey_53b0357b');
+  if (tourism === 'viewpoint') return i18nT('shared:utils.overpass.overpassToPoints.smotrovaya_ploschadka_079b8b75');
+  if (tourism === 'attraction') return i18nT('shared:utils.overpass.overpassToPoints.dostoprimechatelnost_82ddbe51');
+  if (amenity === 'place_of_worship') return i18nT('shared:utils.overpass.overpassToPoints.hram_347d0fbc');
+  if (historic === 'castle') return i18nT('shared:utils.overpass.overpassToPoints.zamok_f5862887');
+  if (historic === 'manor') return i18nT('shared:utils.overpass.overpassToPoints.usadba_d7bcce18');
+  if (historic === 'fort') return i18nT('shared:utils.overpass.overpassToPoints.fort_8412b387');
+  if (historic === 'memorial') return i18nT('shared:utils.overpass.overpassToPoints.memorial_46212ee6');
+  if (historic === 'monument') return i18nT('shared:utils.overpass.overpassToPoints.pamyatnik_87e97ae4');
+  if (historic === 'ruins') return i18nT('shared:utils.overpass.overpassToPoints.ruiny_7ed4495d');
 
-  return tourism || historic || amenity || 'Точка на карте';
+  return tourism || historic || amenity || i18nT('sharedStatic:map.pointFallback');
 };
 
 export const overpassToPoints = (data: unknown): OSMPointFeature[] => {

@@ -32,6 +32,7 @@ import type {
   TableBlock,
   ParsedContentBlock,
 } from './contentParser/types';
+import { translate as i18nT } from '@/i18n';
 /**
  * Парсер HTML/Markdown контента
  * ✅ ИСПРАВЛЕНИЕ: Объединяет текст в нормальные абзацы, нормализует пробелы
@@ -578,10 +579,16 @@ export class ContentParser {
     if (!text || text.length === 0) return null;
 
     // Проверяем классы и data-атрибуты
-    const isTip = className.includes('tip') || className.includes('совет') || className.includes('лайфхак');
-    const isWarning = className.includes('warning') || className.includes('предупреждение') || className.includes('важно');
-    const isDanger = className.includes('danger') || className.includes('опасность');
-    const isInfo = className.includes('info') || className.includes('информация');
+    const hasClassToken = (key: Parameters<typeof i18nT>[0]) =>
+      i18nT(key)
+        .split('|')
+        .map((token) => token.trim().toLocaleLowerCase())
+        .filter(Boolean)
+        .some((token) => className.includes(token));
+    const isTip = className.includes('tip') || hasClassToken('export:services.pdfExport.parsers.contentParser.tipClassTokens');
+    const isWarning = className.includes('warning') || hasClassToken('export:services.pdfExport.parsers.contentParser.warningClassTokens');
+    const isDanger = className.includes('danger') || hasClassToken('export:services.pdfExport.parsers.contentParser.dangerClassTokens');
+    const isInfo = className.includes('info') || hasClassToken('export:services.pdfExport.parsers.contentParser.infoClassTokens');
 
     if (isTip) {
       return {

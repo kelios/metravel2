@@ -1,6 +1,7 @@
 // MapLogicComponent.tsx - Internal component for map event handling and initialization
 import React, { useCallback, useEffect, useRef } from 'react';
 import type { LatLng } from '@/types/coordinates';
+import type { LeafletControlRef } from './leafletBridgeTypes';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { strToLatLng } from './utils';
 import { beginProgrammaticMapMove } from './programmaticMoveSignal';
@@ -84,7 +85,7 @@ interface MapLogicProps {
   lastAutoFitKeyRef: React.MutableRefObject<string | null>;
   leafletBaseLayerRef: React.MutableRefObject<any>;
   leafletOverlayLayersRef: React.MutableRefObject<Map<string, any>>;
-  leafletControlRef: React.MutableRefObject<any>;
+  leafletControlRef: LeafletControlRef;
   useMap: () => any;
   useMapEvents: (handlers: any) => any;
   hintCenter?: LatLng | null;

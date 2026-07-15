@@ -1,6 +1,8 @@
 import type { Travel } from '@/types/types';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { buildTravelPath, stripHtmlForSeo } from '@/utils/travelSeo';
+import { translate as i18nT } from '@/i18n'
+
 
 type TravelPlanSource = Pick<Travel, 'id' | 'slug' | 'name' | 'description'>;
 
@@ -52,8 +54,8 @@ export function buildTripPlanUrl(trip: TripPlanShareSource): string {
 export function buildTripShareText(trip: TripPlanShareSource): string {
   const title = clip(String(trip.title ?? '').trim(), TITLE_MAX);
   return title
-    ? `Присоединяйтесь к поездке «${title}» в MeTravel`
-    : 'Присоединяйтесь к поездке в MeTravel';
+    ? i18nT('trips:utils.tripPlanLinks.prisoedinyaytes_k_poezdke_value1_v_metravel_33d359a2', { value1: title })
+    : i18nT('trips:utils.tripPlanLinks.prisoedinyaytes_k_poezdke_v_metravel_1843c27d');
 }
 
 export function buildTripTelegramShareUrl(trip: TripPlanShareSource): string {
@@ -94,11 +96,11 @@ export function buildTripPlanPrefill(params: TripPlanSourceParams): TripPlanPref
   const sourceUrl = firstParam(params.sourceTravelUrl);
   const sourceDescription = firstParam(params.sourceTravelDescription);
 
-  const title = sourceTitle ? `Поездка по маршруту "${sourceTitle}"` : '';
+  const title = sourceTitle ? i18nT('trips:utils.tripPlanLinks.poezdka_po_marshrutu_value1_96b48431', { value1: sourceTitle }) : '';
   const descriptionParts = [
-    sourceTitle ? `Хочу организовать поездку по маршруту "${sourceTitle}".` : '',
+    sourceTitle ? i18nT('trips:utils.tripPlanLinks.hochu_organizovat_poezdku_po_marshrutu_value_c44e87b7', { value1: sourceTitle }) : '',
     sourceDescription,
-    sourceUrl ? `Исходный маршрут: ${sourceUrl}` : '',
+    sourceUrl ? i18nT('trips:utils.tripPlanLinks.ishodnyy_marshrut_value1_493b6050', { value1: sourceUrl }) : '',
   ].filter(Boolean);
 
   return {

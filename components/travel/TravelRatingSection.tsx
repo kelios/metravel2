@@ -6,6 +6,8 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import StarRating from '@/components/ui/StarRating';
 import { useTravelRating } from '@/hooks/useTravelRating';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { selectPlural, translate as i18nT } from '@/i18n'
+
 
 type Props = {
     travelId: number | undefined;
@@ -139,14 +141,13 @@ function TravelRatingSection({
                     showCount
                 />
                 {isSubmitting ? (
-                    <Text style={styles.yourRatingText}>Сохранение…</Text>
+                    <Text style={styles.yourRatingText}>{i18nT('travel:components.travel.TravelRatingSection.sohranenie_19f7ec61')}</Text>
                 ) : showSuccess ? (
                     <Text style={[styles.yourRatingText, { color: colors.success ?? colors.primary }]}>
-                        Спасибо за оценку!
-                    </Text>
+                        {i18nT('travel:components.travel.TravelRatingSection.spasibo_za_otsenku_3fc0202d')}</Text>
                 ) : userRating != null && userRating > 0 ? (
                     <Text style={styles.yourRatingText}>
-                        Ваша оценка: {userRating}
+                        {i18nT('travel:components.travel.TravelRatingSection.vasha_otsenka_f730b8df')}{userRating}
                     </Text>
                 ) : null}
             </View>
@@ -156,7 +157,7 @@ function TravelRatingSection({
     return (
         <View style={styles.container} testID={testID}>
             <View style={styles.headerRow}>
-                <Text style={styles.title}>Рейтинг</Text>
+                <Text style={styles.title}>{i18nT('travel:components.travel.TravelRatingSection.reyting_05774716')}</Text>
                 {ratingCount > 0 && (
                     <Text style={styles.countText}>
                         {ratingCount} {getCountLabel(ratingCount)}
@@ -169,9 +170,9 @@ function TravelRatingSection({
                     <View style={styles.emptyStateIconWrap}>
                       <Feather name="star" size={28} color={colors.warning ?? colors.accent} />
                     </View>
-                    <Text style={styles.emptyStateTitle}>Пока нет оценок</Text>
+                    <Text style={styles.emptyStateTitle}>{i18nT('travel:components.travel.TravelRatingSection.poka_net_otsenok_90430f65')}</Text>
                     <Text style={styles.emptyStateSubtext}>
-                        {canRate ? 'Будьте первым, кто оценит этот маршрут' : 'Войдите, чтобы оценить маршрут'}
+                        {canRate ? i18nT('travel:components.travel.TravelRatingSection.budte_pervym_kto_otsenit_etot_marshrut_4eeb3c4b') : i18nT('travel:components.travel.TravelRatingSection.voydite_chtoby_otsenit_marshrut_d63e5459')}
                     </Text>
                     {canRate && (
                         <View style={styles.emptyStateStars}>
@@ -190,7 +191,7 @@ function TravelRatingSection({
                     {isSubmitting && (
                         <View style={styles.statusRow}>
                             <Animated.View style={[styles.spinner, { transform: [{ rotate: spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]} />
-                            <Text style={styles.savingText}>Сохранение...</Text>
+                            <Text style={styles.savingText}>{i18nT('travel:components.travel.TravelRatingSection.sohranenie_c98995ba')}</Text>
                         </View>
                     )}
                     {!isSubmitting && showSuccess && (
@@ -208,7 +209,7 @@ function TravelRatingSection({
                                 }
                             ]}
                         >
-                            <Text style={styles.successText}>Спасибо за оценку!</Text>
+                            <Text style={styles.successText}>{i18nT('travel:components.travel.TravelRatingSection.spasibo_za_otsenku_3fc0202d')}</Text>
                         </Animated.View>
                     )}
                 </View>
@@ -220,7 +221,7 @@ function TravelRatingSection({
                         { transform: [{ scale: ratingChangeAnim }] }
                     ]}
                 >
-                    <Text style={styles.boxLabel}>Общий рейтинг</Text>
+                    <Text style={styles.boxLabel}>{i18nT('travel:components.travel.TravelRatingSection.obschiy_reyting_b897dca1')}</Text>
                     <StarRating
                         rating={rating}
                         ratingCount={ratingCount}
@@ -234,7 +235,7 @@ function TravelRatingSection({
                     {canRate ? (
                         <>
                             <Text style={styles.rateLabel}>
-                                {userRating != null && userRating > 0 ? 'Ваша оценка' : 'Оцените маршрут'}
+                                {userRating != null && userRating > 0 ? i18nT('travel:components.travel.TravelRatingSection.vasha_otsenka_92978da8') : i18nT('travel:components.travel.TravelRatingSection.otsenite_marshrut_0de95cde')}
                             </Text>
                             <StarRating
                                 rating={userRating ?? 0}
@@ -249,7 +250,7 @@ function TravelRatingSection({
                             {isSubmitting && (
                                 <View style={styles.statusRow}>
                                     <Animated.View style={[styles.spinner, { transform: [{ rotate: spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]} />
-                                    <Text style={styles.savingText}>Сохранение...</Text>
+                                    <Text style={styles.savingText}>{i18nT('travel:components.travel.TravelRatingSection.sohranenie_c98995ba')}</Text>
                                 </View>
                             )}
                             {!isSubmitting && showSuccess && (
@@ -267,7 +268,7 @@ function TravelRatingSection({
                                         }
                                     ]}
                                 >
-                                    <Text style={styles.successText}>Спасибо за оценку!</Text>
+                                    <Text style={styles.successText}>{i18nT('travel:components.travel.TravelRatingSection.spasibo_za_otsenku_3fc0202d')}</Text>
                                 </Animated.View>
                             )}
                         </>
@@ -275,12 +276,11 @@ function TravelRatingSection({
                         <Pressable
                             onPress={requireAuth}
                             accessibilityRole="button"
-                            accessibilityLabel="Войдите, чтобы оценить маршрут"
+                            accessibilityLabel={i18nT('travel:components.travel.TravelRatingSection.voydite_chtoby_otsenit_marshrut_d63e5459')}
                             hitSlop={8}
                         >
                             <Text style={[styles.loginHint, { textDecorationLine: 'underline' }]}>
-                                Войдите, чтобы оценить
-                            </Text>
+                                {i18nT('travel:components.travel.TravelRatingSection.voydite_chtoby_otsenit_069eddcf')}</Text>
                         </Pressable>
                     )}
                 </View>
@@ -291,13 +291,12 @@ function TravelRatingSection({
 }
 
 function getCountLabel(count: number): string {
-    const mod10 = count % 10;
-    const mod100 = count % 100;
-
-    if (mod100 >= 11 && mod100 <= 19) return 'оценок';
-    if (mod10 === 1) return 'оценка';
-    if (mod10 >= 2 && mod10 <= 4) return 'оценки';
-    return 'оценок';
+    return selectPlural(count, {
+        one: i18nT('travel:components.travel.TravelRatingSection.otsenka_912ec6a8'),
+        few: i18nT('travel:components.travel.TravelRatingSection.otsenki_1f7548c9'),
+        many: i18nT('travel:components.travel.TravelRatingSection.otsenok_ab81d5a5'),
+        other: i18nT('travel:components.travel.TravelRatingSection.otsenok_ab81d5a5'),
+    });
 }
 
 const createStyles = (colors: any) =>

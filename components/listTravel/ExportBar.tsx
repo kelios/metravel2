@@ -5,6 +5,8 @@ import ProgressIndicator from '@/components/ui/ProgressIndicator';
 import { createStyles } from './listTravelStyles';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/utils/pluralize';
+import { translate as i18nT } from '@/i18n'
+
 
 function WebTextButton({
   label,
@@ -100,8 +102,8 @@ export const ExportBar = memo(function ExportBar({
   const asViewStyle = (style: unknown): StyleProp<ViewStyle> => style as StyleProp<ViewStyle>;
   const asTextStyle = (style: unknown): StyleProp<TextStyle> => style as StyleProp<TextStyle>;
   const selectionText = selectedCount
-    ? `Выбрано ${selectedCount} ${getTravelLabel(selectedCount)}`
-    : 'Выберите путешествия для экспорта';
+    ? i18nT('travel:components.listTravel.ExportBar.vybrano_value1_value2_327f88e4', { value1: selectedCount, value2: getTravelLabel(selectedCount) })
+    : i18nT('travel:components.listTravel.ExportBar.vyberite_puteshestviya_dlya_eksporta_11714f42');
 
   return (
     <View
@@ -115,28 +117,28 @@ export const ExportBar = memo(function ExportBar({
         <Text style={asTextStyle(resolvedStyles.exportBarInfoTitle)}>{selectionText}</Text>
         <View style={asViewStyle(resolvedStyles.exportBarMetaRow)}>
           <Text style={asTextStyle(resolvedStyles.exportBarInfoSubtitle)}>
-            {hasSelection ? `Настройки: ${settingsSummary}` : 'Выберите хотя бы одно путешествие, чтобы включить кнопки'}
+            {hasSelection ? i18nT('travel:components.listTravel.ExportBar.nastroyki_value1_bcafaa11', { value1: settingsSummary }) : i18nT('travel:components.listTravel.ExportBar.vyberite_hotya_by_odno_puteshestvie_chtoby_v_fcdf9817')}
           </Text>
           <View style={asViewStyle(resolvedStyles.exportBarInfoActions)}>
             <WebTextButton
-              label={selectedCount === allCount && allCount > 0 ? 'Снять выделение' : 'Выбрать все'}
+              label={selectedCount === allCount && allCount > 0 ? i18nT('travel:components.listTravel.ExportBar.snyat_vydelenie_21dd14eb') : i18nT('travel:components.listTravel.ExportBar.vybrat_vse_b2fb9a88')}
               onPress={onToggleSelectAll}
-              accessibilityLabel={selectedCount === allCount && allCount > 0 ? 'Снять выделение' : 'Выбрать все'}
+              accessibilityLabel={selectedCount === allCount && allCount > 0 ? i18nT('travel:components.listTravel.ExportBar.snyat_vydelenie_21dd14eb') : i18nT('travel:components.listTravel.ExportBar.vybrat_vse_b2fb9a88')}
               style={asTextStyle(resolvedStyles.linkButton)}
             />
             {hasSelection && (
               <WebTextButton
-                label="Очистить выбор"
+                label={i18nT('travel:components.listTravel.ExportBar.ochistit_vybor_a741d985')}
                 onPress={onClearSelection}
-                accessibilityLabel="Очистить выбор"
+                accessibilityLabel={i18nT('travel:components.listTravel.ExportBar.ochistit_vybor_a741d985')}
                 style={asTextStyle(resolvedStyles.linkButton)}
               />
             )}
             {hasSelection && (
               <WebTextButton
-                label="Настройки"
+                label={i18nT('travel:components.listTravel.ExportBar.nastroyki_0e34bddd')}
                 onPress={onSettings}
-                accessibilityLabel="Настройки экспорта"
+                accessibilityLabel={i18nT('travel:components.listTravel.ExportBar.nastroyki_eksporta_3ff51289')}
                 style={asTextStyle(resolvedStyles.linkButton)}
               />
             )}
@@ -146,7 +148,7 @@ export const ExportBar = memo(function ExportBar({
 
       <View style={[asViewStyle(resolvedStyles.exportBarButtons), isMobile ? asViewStyle(resolvedStyles.exportBarButtonsMobile) : null]}>
         <UIButton
-          label={isGenerating ? `Генерация... ${progress || 0}%` : 'Сохранить PDF'}
+          label={isGenerating ? i18nT('travel:components.listTravel.ExportBar.generatsiya_value1_1e676e2e', { value1: progress || 0 }) : i18nT('travel:components.listTravel.ExportBar.sohranit_pdf_2e27b211')}
           onPress={onSave}
           disabled={!hasSelection || isGenerating}
         />
@@ -158,21 +160,21 @@ export const ExportBar = memo(function ExportBar({
             progress={progress ?? 0}
             stage={
               (progress ?? 0) < 30
-                ? 'Подготовка данных...'
+                ? i18nT('travel:components.listTravel.ExportBar.podgotovka_dannyh_d7a192a7')
                 : (progress ?? 0) < 60
-                  ? 'Генерация содержимого...'
+                  ? i18nT('travel:components.listTravel.ExportBar.generatsiya_soderzhimogo_abb73696')
                   : (progress ?? 0) < 90
-                    ? 'Обработка изображений...'
-                    : 'Создание PDF...'
+                    ? i18nT('travel:components.listTravel.ExportBar.obrabotka_izobrazheniy_acb78bcd')
+                    : i18nT('travel:components.listTravel.ExportBar.sozdanie_pdf_6caef798')
             }
             message={
               (progress ?? 0) < 30
-                ? 'Проверка выбранных путешествий'
+                ? i18nT('travel:components.listTravel.ExportBar.proverka_vybrannyh_puteshestviy_b6802281')
                 : (progress ?? 0) < 60
-                  ? 'Формирование макета'
+                  ? i18nT('travel:components.listTravel.ExportBar.formirovanie_maketa_f84b0971')
                   : (progress ?? 0) < 90
-                    ? 'Оптимизация изображений'
-                    : 'Финальная обработка'
+                    ? i18nT('travel:components.listTravel.ExportBar.optimizatsiya_izobrazheniy_2ff24de8')
+                    : i18nT('travel:components.listTravel.ExportBar.finalnaya_obrabotka_2e24337d')
             }
             showPercentage={true}
           />

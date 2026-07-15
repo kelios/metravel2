@@ -20,6 +20,8 @@ import {
 import { TravelHeroFavoriteToggle } from './TravelHeroFavoriteToggle'
 import TravelHeroExtras from './TravelHeroExtras'
 import TravelHeroInteractiveSlider from './TravelHeroInteractiveSlider'
+import TravelAuthorQuickLink from './TravelAuthorQuickLink'
+import { translate as i18nT } from '@/i18n'
 
 const FavoriteToggleLazy = React.lazy(() =>
   Promise.resolve(import('./TravelHeroFavoriteToggle')).then((m) => ({
@@ -168,18 +170,23 @@ function TravelHeroSectionInner({
   )
 
   if (!firstImg) {
-    return <ExtrasSlot
-      styles={styles}
-      extrasReady={extrasReady}
-      willRenderQuickJumps={willRenderQuickJumps}
-      quickJumpChipCount={quickJumpLinks.length}
-      travel={travel}
-      isMobile={isMobile}
-      sectionLinks={sectionLinks}
-      onQuickJump={onQuickJump}
-      activeKey={activeKey}
-      suppressQuickJumps={suppressQuickJumps}
-    />
+    return (
+      <>
+        {isMobile ? <TravelAuthorQuickLink travel={travel} /> : null}
+        <ExtrasSlot
+          styles={styles}
+          extrasReady={extrasReady}
+          willRenderQuickJumps={willRenderQuickJumps}
+          quickJumpChipCount={quickJumpLinks.length}
+          travel={travel}
+          isMobile={isMobile}
+          sectionLinks={sectionLinks}
+          onQuickJump={onQuickJump}
+          activeKey={activeKey}
+          suppressQuickJumps={suppressQuickJumps}
+        />
+      </>
+    )
   }
 
   return (
@@ -188,7 +195,7 @@ function TravelHeroSectionInner({
         testID="travel-details-hero"
         ref={anchors.gallery}
         accessibilityRole="none"
-        accessibilityLabel="Геройский блок с изображением и кнопкой «Хочу поехать»"
+        accessibilityLabel={i18nT('travel:components.travel.details.TravelDetailsHero.geroyskiy_blok_s_izobrazheniem_i_knopkoy_hoc_24d94fd3')}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'gallery' } : null)}
         style={sectionAndStable}
       >
@@ -261,6 +268,8 @@ function TravelHeroSectionInner({
         </View>
       </View>
 
+      {isMobile ? <TravelAuthorQuickLink travel={travel} /> : null}
+
       <ExtrasSlot
         styles={styles}
         extrasReady={extrasReady}
@@ -307,7 +316,7 @@ function ExtrasSlot({
       <View
         testID="travel-details-quick-facts"
         role="group"
-        aria-label="Краткие факты"
+        aria-label={i18nT('travel:components.travel.details.TravelDetailsHero.kratkie_fakty_7082c16b')}
         style={[
           styles.sectionContainer,
           styles.contentStable,

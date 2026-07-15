@@ -7,23 +7,25 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import EmptyState from '@/components/ui/EmptyState';
 import { useSecurityJournal } from '@/hooks/useSecurityJournal';
 import type { SecurityJournalEventType } from '@/api/privacy';
+import { formatDate as formatLocalizedDate, translate as i18nT } from '@/i18n'
 
-const EVENT_META: Record<SecurityJournalEventType, { label: string; icon: keyof typeof Feather.glyphMap }> = {
-    login: { label: 'Вход в аккаунт', icon: 'log-in' },
-    logout: { label: 'Выход из аккаунта', icon: 'log-out' },
-    password_change: { label: 'Смена пароля', icon: 'key' },
-    social_link: { label: 'Привязка соцсети', icon: 'link' },
-    badge_grant: { label: 'Выдача значка', icon: 'award' },
-    contact_reveal: { label: 'Раскрытие контактов', icon: 'eye' },
-    moderator_action: { label: 'Действие модератора', icon: 'shield' },
-    other: { label: 'Событие безопасности', icon: 'activity' },
-};
+
+const createEventMeta = (): Record<SecurityJournalEventType, { label: string; icon: keyof typeof Feather.glyphMap }> => ({
+    login: { label: i18nT('profile:components.settings.SecurityJournalList.events.login'), icon: 'log-in' },
+    logout: { label: i18nT('profile:components.settings.SecurityJournalList.events.logout'), icon: 'log-out' },
+    password_change: { label: i18nT('profile:components.settings.SecurityJournalList.events.passwordChange'), icon: 'key' },
+    social_link: { label: i18nT('profile:components.settings.SecurityJournalList.events.socialLink'), icon: 'link' },
+    badge_grant: { label: i18nT('profile:components.settings.SecurityJournalList.events.badgeGrant'), icon: 'award' },
+    contact_reveal: { label: i18nT('profile:components.settings.SecurityJournalList.events.contactReveal'), icon: 'eye' },
+    moderator_action: { label: i18nT('profile:components.settings.SecurityJournalList.events.moderatorAction'), icon: 'shield' },
+    other: { label: i18nT('profile:components.settings.SecurityJournalList.events.other'), icon: 'activity' },
+});
 
 const formatDate = (raw: string): string => {
     const date = new Date(raw);
     if (Number.isNaN(date.getTime())) return raw;
     try {
-        return date.toLocaleString('ru-RU', {
+        return formatLocalizedDate(date, {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
@@ -39,6 +41,7 @@ export default function SecurityJournalList() {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const { entries, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useSecurityJournal();
+    const eventMeta = createEventMeta();
 
     if (isLoading) {
         return (
@@ -52,8 +55,8 @@ export default function SecurityJournalList() {
         return (
             <EmptyState
                 icon="shield"
-                title="Журнал пуст"
-                description="Здесь будут отображаться события безопасности вашего аккаунта: входы, смена пароля, привязки соцсетей."
+                title={i18nT('profile:components.settings.SecurityJournalList.zhurnal_pust_e5b72bba')}
+                description={i18nT('profile:components.settings.SecurityJournalList.zdes_budut_otobrazhatsya_sobytiya_bezopasnos_a961da13')}
             />
         );
     }
@@ -61,7 +64,7 @@ export default function SecurityJournalList() {
     return (
         <View style={styles.wrap}>
             {entries.map((entry) => {
-                const meta = EVENT_META[entry.event_type] ?? EVENT_META.other;
+                const meta = eventMeta[entry.event_type] ?? eventMeta.other;
                 const details = [entry.device, entry.ip_address].filter(Boolean).join(' · ');
                 return (
                     <View key={String(entry.id)} style={styles.row}>
@@ -83,13 +86,13 @@ export default function SecurityJournalList() {
                     onPress={() => fetchNextPage()}
                     disabled={isFetchingNextPage}
                     accessibilityRole="button"
-                    accessibilityLabel="Показать ещё"
+                    accessibilityLabel={i18nT('profile:components.settings.SecurityJournalList.pokazat_esche_fc5aefec')}
                     {...Platform.select({ web: { cursor: 'pointer' } })}
                 >
                     {isFetchingNextPage ? (
                         <ActivityIndicator size="small" color={colors.primaryDark} />
                     ) : (
-                        <Text style={styles.loadMoreText}>Показать ещё</Text>
+                        <Text style={styles.loadMoreText}>{i18nT('profile:components.settings.SecurityJournalList.pokazat_esche_fc5aefec')}</Text>
                     )}
                 </Pressable>
             ) : null}

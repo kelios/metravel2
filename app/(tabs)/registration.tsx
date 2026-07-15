@@ -1,26 +1,5 @@
-import React, { Suspense } from 'react'
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
-
-const RegistrationForm = React.lazy(() => import('@/components/auth/RegistrationForm'))
-
-const Fallback = () => (
-  <View style={styles.fallback}>
-    <ActivityIndicator size="large" />
-  </View>
-)
+import RegistrationForm from '@/components/auth/RegistrationForm'
 
 export default function RegistrationRoute() {
-  return (
-    <Suspense fallback={<Fallback />}>
-      <RegistrationForm />
-    </Suspense>
-  )
+  return <RegistrationForm />
 }
-
-const styles = StyleSheet.create({
-  fallback: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-})

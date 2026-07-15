@@ -23,6 +23,8 @@ import {
   trackContentCreateCtaClicked,
   trackRouteCreateStarted,
 } from '@/utils/growthFunnelAnalytics';
+import { translate as i18nT } from '@/i18n'
+
 
 type Colors = UpsertTravelController['colors'];
 type Styles = ReturnType<typeof createStyles>;
@@ -88,8 +90,7 @@ const OfflineBanner = ({ colors, isVisible }: { colors: Colors; isVisible: boole
     >
       <Feather name="wifi-off" size={16} color={colors.textOnPrimary} />
       <Text style={[stylesStatic.offlineText, { color: colors.textOnPrimary }]}>
-        Нет соединения. Изменения будут сохранены при восстановлении сети.
-      </Text>
+        {i18nT('travel:components.travel.upsert.UpsertTravelView.net_soedineniya_izmeneniya_budut_sohraneny_p_8ccb9a42')}</Text>
     </Animated.View>
   );
 };
@@ -138,7 +139,7 @@ const LoadingState = ({ colors, styles }: Pick<WizardStateProps, 'colors' | 'sty
   <SafeAreaView
     style={styles.container}
     testID="travel-upsert.loading"
-    accessibilityLabel="Загрузка формы путешествия"
+    accessibilityLabel={i18nT('travel:components.travel.upsert.UpsertTravelView.zagruzka_formy_puteshestviya_be0c252f')}
     accessibilityRole="progressbar"
   >
     <WizardSkeleton colors={colors} />
@@ -149,8 +150,8 @@ function getLoadErrorPresentation(status: number, message: string) {
   if (status === 0) {
     return {
       icon: 'wifi-off' as const,
-      title: 'Нет соединения',
-      text: message || 'Проверьте интернет-соединение и попробуйте ещё раз.',
+      title: i18nT('travel:components.travel.upsert.UpsertTravelView.net_soedineniya_1863032c'),
+      text: message || i18nT('travel:components.travel.upsert.UpsertTravelView.networkFallback'),
       iconTone: 'warning' as const,
     };
   }
@@ -158,8 +159,8 @@ function getLoadErrorPresentation(status: number, message: string) {
   if (status === 401) {
     return {
       icon: 'user' as const,
-      title: 'Требуется вход',
-      text: 'Сессия истекла. Войдите в аккаунт, чтобы продолжить редактирование.',
+      title: i18nT('travel:components.travel.upsert.UpsertTravelView.trebuetsya_vhod_ee20c335'),
+      text: i18nT('travel:components.travel.upsert.UpsertTravelView.sessiya_istekla_voydite_v_akkaunt_chtoby_pro_00f92c37'),
       iconTone: 'danger' as const,
     };
   }
@@ -167,8 +168,8 @@ function getLoadErrorPresentation(status: number, message: string) {
   if (status === 403) {
     return {
       icon: 'lock' as const,
-      title: 'Нет доступа',
-      text: 'У вас нет прав для просмотра или редактирования этого путешествия.',
+      title: i18nT('travel:components.travel.upsert.UpsertTravelView.net_dostupa_bec84f1f'),
+      text: i18nT('travel:components.travel.upsert.UpsertTravelView.u_vas_net_prav_dlya_prosmotra_ili_redaktirov_21f0ac91'),
       iconTone: 'danger' as const,
     };
   }
@@ -176,16 +177,16 @@ function getLoadErrorPresentation(status: number, message: string) {
   if (status === 404) {
     return {
       icon: 'search' as const,
-      title: 'Путешествие не найдено',
-      text: 'Возможно, оно было удалено или ссылка указана неверно.',
+      title: i18nT('travel:components.travel.upsert.UpsertTravelView.puteshestvie_ne_naydeno_34012fc6'),
+      text: i18nT('travel:components.travel.upsert.UpsertTravelView.vozmozhno_ono_bylo_udaleno_ili_ssylka_ukazan_744b13de'),
       iconTone: 'danger' as const,
     };
   }
 
   return {
     icon: 'alert-triangle' as const,
-    title: 'Ошибка загрузки',
-    text: 'Не удалось загрузить путешествие. Попробуйте ещё раз.',
+    title: i18nT('travel:components.travel.upsert.UpsertTravelView.oshibka_zagruzki_b06e01d2'),
+    text: i18nT('travel:components.travel.upsert.UpsertTravelView.ne_udalos_zagruzit_puteshestvie_poprobuyte_e_b1a6e514'),
     iconTone: 'danger' as const,
   };
 }
@@ -202,8 +203,8 @@ const LoadErrorState = ({
 
   const actions = useMemo<EmptyStateAction[]>(() => {
     const homeAction: EmptyStateAction = {
-      label: 'На главную',
-      accessibilityLabel: 'Перейти на главную',
+      label: i18nT('travel:components.travel.upsert.UpsertTravelView.na_glavnuyu_a74dd9c6'),
+      accessibilityLabel: i18nT('travel:components.travel.upsert.UpsertTravelView.pereyti_na_glavnuyu_2b3a1289'),
       onPress: () => router.replace('/'),
       variant: 'secondary',
     };
@@ -211,8 +212,8 @@ const LoadErrorState = ({
     if (status === 401) {
       return [
         {
-          label: 'Войти',
-          accessibilityLabel: 'Войти в аккаунт',
+          label: i18nT('travel:components.travel.upsert.UpsertTravelView.voyti_c3df4ff8'),
+          accessibilityLabel: i18nT('travel:components.travel.upsert.UpsertTravelView.voyti_v_akkaunt_3949bf3b'),
           onPress: () => router.push(buildLoginHref({ redirect: '/metravel' }) as any),
         },
         homeAction,
@@ -222,8 +223,8 @@ const LoadErrorState = ({
     if (status === 403) {
       return [
         {
-          label: 'Мои путешествия',
-          accessibilityLabel: 'Перейти к моим путешествиям',
+          label: i18nT('travel:components.travel.upsert.UpsertTravelView.moi_puteshestviya_0814f31a'),
+          accessibilityLabel: i18nT('travel:components.travel.upsert.UpsertTravelView.pereyti_k_moim_puteshestviyam_dbf10167'),
           onPress: () => router.replace('/metravel'),
         },
         homeAction,
@@ -233,8 +234,8 @@ const LoadErrorState = ({
     if (status === 404) {
       return [
         {
-          label: 'Мои путешествия',
-          accessibilityLabel: 'Перейти к моим путешествиям',
+          label: i18nT('travel:components.travel.upsert.UpsertTravelView.moi_puteshestviya_0814f31a'),
+          accessibilityLabel: i18nT('travel:components.travel.upsert.UpsertTravelView.pereyti_k_moim_puteshestviyam_dbf10167'),
           onPress: () => router.replace('/metravel'),
         },
         homeAction,
@@ -243,8 +244,8 @@ const LoadErrorState = ({
 
     return [
       {
-        label: 'Повторить',
-        accessibilityLabel: 'Повторить загрузку',
+        label: i18nT('travel:components.travel.upsert.UpsertTravelView.povtorit_8b05356c'),
+        accessibilityLabel: i18nT('travel:components.travel.upsert.UpsertTravelView.povtorit_zagruzku_00e4bf94'),
         onPress: () => {
           void controller.retryLoad();
         },
@@ -262,7 +263,7 @@ const LoadErrorState = ({
       text={presentation.text}
       actions={actions}
       testID="travel-upsert.load-error"
-      accessibilityLabel="Ошибка загрузки путешествия"
+      accessibilityLabel={i18nT('travel:components.travel.upsert.UpsertTravelView.oshibka_zagruzki_puteshestviya_a6e2e4bd')}
     />
   );
 };
@@ -271,13 +272,13 @@ const AccessDeniedState = ({ colors, styles, router }: WizardStateProps) => {
   const actions = useMemo<EmptyStateAction[]>(
     () => [
       {
-        label: 'Мои путешествия',
-        accessibilityLabel: 'Перейти к моим путешествиям',
+        label: i18nT('travel:components.travel.upsert.UpsertTravelView.moi_puteshestviya_0814f31a'),
+        accessibilityLabel: i18nT('travel:components.travel.upsert.UpsertTravelView.pereyti_k_moim_puteshestviyam_dbf10167'),
         onPress: () => router.replace('/metravel'),
       },
       {
-        label: 'На главную',
-        accessibilityLabel: 'Перейти на главную',
+        label: i18nT('travel:components.travel.upsert.UpsertTravelView.na_glavnuyu_a74dd9c6'),
+        accessibilityLabel: i18nT('travel:components.travel.upsert.UpsertTravelView.pereyti_na_glavnuyu_2b3a1289'),
         onPress: () => router.replace('/'),
         variant: 'secondary',
       },
@@ -290,11 +291,11 @@ const AccessDeniedState = ({ colors, styles, router }: WizardStateProps) => {
       styles={styles}
       icon="lock"
       iconColor={colors.danger}
-      title="Нет доступа"
-      text="У вас нет прав для редактирования этого путешествия"
+      title={i18nT('travel:components.travel.upsert.UpsertTravelView.net_dostupa_bec84f1f')}
+      text={i18nT('travel:components.travel.upsert.UpsertTravelView.u_vas_net_prav_dlya_redaktirovaniya_etogo_pu_3591beab')}
       actions={actions}
       testID="travel-upsert.no-access"
-      accessibilityLabel="Нет доступа к редактированию"
+      accessibilityLabel={i18nT('travel:components.travel.upsert.UpsertTravelView.net_dostupa_k_redaktirovaniyu_736d7f48')}
     />
   );
 };
@@ -333,13 +334,13 @@ const AuthRequiredState = ({ colors, styles, router }: WizardStateProps) => {
   const actions = useMemo<EmptyStateAction[]>(
     () => [
       {
-        label: 'Войти',
-        accessibilityLabel: 'Войти и вернуться к созданию путешествия',
+        label: i18nT('travel:components.travel.upsert.UpsertTravelView.voyti_c3df4ff8'),
+        accessibilityLabel: i18nT('travel:components.travel.upsert.UpsertTravelView.voyti_i_vernutsya_k_sozdaniyu_puteshestviya_0d72d24e'),
         onPress: handleLogin,
       },
       {
-        label: 'Зарегистрироваться',
-        accessibilityLabel: 'Зарегистрироваться и вернуться к созданию путешествия',
+        label: i18nT('travel:components.travel.upsert.UpsertTravelView.zaregistrirovatsya_f73884d3'),
+        accessibilityLabel: i18nT('travel:components.travel.upsert.UpsertTravelView.zaregistrirovatsya_i_vernutsya_k_sozdaniyu_p_f69508ae'),
         onPress: handleRegister,
         variant: 'secondary',
       },
@@ -352,11 +353,11 @@ const AuthRequiredState = ({ colors, styles, router }: WizardStateProps) => {
       styles={styles}
       icon="user"
       iconColor={colors.primary}
-      title="Войдите в аккаунт"
-      text="Чтобы создать путешествие, необходимо авторизоваться"
+      title={i18nT('travel:components.travel.upsert.UpsertTravelView.voydite_v_akkaunt_1415b7c7')}
+      text={i18nT('travel:components.travel.upsert.UpsertTravelView.chtoby_sozdat_puteshestvie_neobhodimo_avtori_53cdc1ec')}
       actions={actions}
       testID="travel-upsert.auth-required"
-      accessibilityLabel="Требуется авторизация"
+      accessibilityLabel={i18nT('travel:components.travel.upsert.UpsertTravelView.trebuetsya_avtorizatsiya_2dcb6c96')}
     />
   );
 };
@@ -497,7 +498,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   }
 
   return (
-    <View style={styles.container} testID="travel-upsert.root" accessibilityLabel="Форма создания путешествия">
+    <View style={styles.container} testID="travel-upsert.root" accessibilityLabel={i18nT('travel:components.travel.upsert.UpsertTravelView.forma_sozdaniya_puteshestviya_9573fac8')}>
       <TravelPreviewModal
         visible={previewState.isPreviewVisible}
         onClose={previewState.hidePreview}

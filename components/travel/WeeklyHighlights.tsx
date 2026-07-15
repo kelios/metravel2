@@ -13,6 +13,8 @@ import { useVisibleCardCount } from '@/hooks/useVisibleCardCount';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import { queryKeys } from '@/api/queryKeys';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
+import { translate as i18nT } from '@/i18n'
+
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
 const PREVIEW_CARD_WIDTH = 208;
@@ -147,10 +149,10 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                         style={styles.expandButton}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         accessibilityRole="button"
-                        accessibilityLabel="Развернуть подборку месяца"
+                        accessibilityLabel={i18nT('travel:components.travel.WeeklyHighlights.razvernut_podborku_mesyatsa_4d3336ca')}
                     >
                         <Feather name="chevron-down" size={20} color={colors.primaryDark} />
-                        <Text style={[styles.expandButtonText, { color: colors.primaryText }]}>Подборка месяца</Text>
+                        <Text style={[styles.expandButtonText, { color: colors.primaryText }]}>{i18nT('travel:components.travel.WeeklyHighlights.podborka_mesyatsa_4061496b')}</Text>
                     </Pressable>
                 </View>
             );
@@ -167,11 +169,10 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                         </View>
                         <View style={styles.titleContainer}>
                             <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
-                                Подборка месяца
-                            </Text>
+                                {i18nT('travel:components.travel.WeeklyHighlights.podborka_mesyatsa_4061496b')}</Text>
                         </View>
                     </View>
-                    <Text style={[styles.subtitle, { color: colors.textMuted }]}>Самые популярные маршруты этого месяца</Text>
+                    <Text style={[styles.subtitle, { color: colors.textMuted }]}>{i18nT('travel:components.travel.WeeklyHighlights.samye_populyarnye_marshruty_etogo_mesyatsa_c2e48432')}</Text>
                 </>
             )}
             {isMobileWeb ? (

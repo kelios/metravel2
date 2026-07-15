@@ -5,6 +5,8 @@ import type { Travel } from '@/types/types';
 import { TravelForBook } from '@/types/pdf-export';
 import { ExportError, ExportErrorType } from '@/types/pdf-export';
 import { sanitizeRichTextForPdf } from '@/utils/sanitizeRichText';
+import { translate as i18nT } from '@/i18n'
+
 
 const IMAGE_PROXY_BASE = 'https://images.weserv.nl/?url=';
 const DEFAULT_IMAGE_PARAMS = 'w=1600&fit=inside';
@@ -15,9 +17,6 @@ const PLACEHOLDER_IMAGE = `data:image/svg+xml;charset=utf-8,${encodeURIComponent
     <path d="M110 450 L220 310 L310 380 L430 270 L690 450" stroke="rgb(209, 213, 219)" stroke-width="20" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="220" cy="300" r="70" fill="rgb(209, 213, 219)"/>
     <circle cx="520" cy="360" r="45" fill="rgb(229, 231, 235)"/>
-    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="rgb(203, 213, 245)" font-family="sans-serif" font-size="36">
-      Фото недоступно
-    </text>
   </svg>`
 )}`;
 
@@ -32,7 +31,7 @@ export class TravelDataTransformer {
     if (!Array.isArray(travels) || travels.length === 0) {
       throw new ExportError(
         ExportErrorType.TRANSFORMATION_ERROR,
-        'Массив путешествий пуст или невалиден'
+        i18nT('export:services.pdf_export.TravelDataTransformer.massiv_puteshestviy_pust_ili_nevaliden_0f4e81b1')
       );
     }
 
@@ -74,7 +73,7 @@ export class TravelDataTransformer {
     } catch (error) {
       throw new ExportError(
         ExportErrorType.TRANSFORMATION_ERROR,
-        `Ошибка преобразования путешествия ${travel.id || 'unknown'}`,
+        i18nT('export:services.pdf_export.TravelDataTransformer.oshibka_preobrazovaniya_puteshestviya_value1_1f214eaa', { value1: travel.id || 'unknown' }),
         error instanceof Error ? error : new Error(String(error)),
         { travel }
       );
@@ -281,14 +280,14 @@ export class TravelDataTransformer {
     if (!Array.isArray(travels)) {
       throw new ExportError(
         ExportErrorType.VALIDATION_ERROR,
-        'Данные путешествий должны быть массивом'
+        i18nT('export:services.pdf_export.TravelDataTransformer.dannye_puteshestviy_dolzhny_byt_massivom_8f81eb32')
       );
     }
 
     if (travels.length === 0) {
       throw new ExportError(
         ExportErrorType.VALIDATION_ERROR,
-        'Необходимо выбрать хотя бы одно путешествие'
+        i18nT('export:services.pdf_export.TravelDataTransformer.neobhodimo_vybrat_hotya_by_odno_puteshestvie_7a25ca51')
       );
     }
 
@@ -296,7 +295,7 @@ export class TravelDataTransformer {
     if (travels.length > MAX_TRAVELS) {
       throw new ExportError(
         ExportErrorType.VALIDATION_ERROR,
-        `Слишком много путешествий выбрано (${travels.length}). Максимум ${MAX_TRAVELS} путешествий для одного экспорта.`
+        i18nT('export:services.pdf_export.TravelDataTransformer.slishkom_mnogo_puteshestviy_vybrano_value1_m_406dc555', { value1: travels.length, value2: MAX_TRAVELS })
       );
     }
 
@@ -307,14 +306,14 @@ export class TravelDataTransformer {
       if (!travel || !travel.id) {
         throw new ExportError(
           ExportErrorType.VALIDATION_ERROR,
-          `Путешествие на позиции ${index} невалидно: отсутствует ID`
+          i18nT('export:services.pdf_export.TravelDataTransformer.puteshestvie_na_pozitsii_value1_nevalidno_ot_53bb5d10', { value1: index })
         );
       }
 
       if (!travel.name || travel.name.trim().length === 0) {
         throw new ExportError(
           ExportErrorType.VALIDATION_ERROR,
-          `Путешествие ${travel.id} невалидно: отсутствует название`
+          i18nT('export:services.pdf_export.TravelDataTransformer.puteshestvie_value1_nevalidno_otsutstvuet_na_55527916', { value1: travel.id })
         );
       }
 
@@ -329,10 +328,10 @@ export class TravelDataTransformer {
       textFields.forEach((text, fieldIndex) => {
         const textLength = typeof text === 'string' ? text.length : String(text).length;
         if (textLength > MAX_TEXT_LENGTH) {
-          const fieldNames = ['описание', 'рекомендации', 'плюсы', 'минусы'];
+          const fieldNames = [i18nT('export:services.pdf_export.TravelDataTransformer.opisanie_bd44d0b5'), i18nT('export:services.pdf_export.TravelDataTransformer.rekomendatsii_5b88b537'), i18nT('export:services.pdf_export.TravelDataTransformer.plyusy_204f01be'), i18nT('export:services.pdf_export.TravelDataTransformer.minusy_11a8c846')];
           throw new ExportError(
             ExportErrorType.VALIDATION_ERROR,
-            `Путешествие "${travel.name}" содержит слишком длинное ${fieldNames[fieldIndex]} (${textLength} символов). Максимум ${MAX_TEXT_LENGTH} символов.`
+            i18nT('export:services.pdf_export.TravelDataTransformer.puteshestvie_value1_soderzhit_slishkom_dlinn_f4b87eee', { value1: travel.name, value2: fieldNames[fieldIndex], value3: textLength, value4: MAX_TEXT_LENGTH })
           );
         }
         totalTextLength += textLength;
@@ -346,7 +345,7 @@ export class TravelDataTransformer {
       if (imageCount > MAX_IMAGES_PER_TRAVEL) {
         throw new ExportError(
           ExportErrorType.VALIDATION_ERROR,
-          `Путешествие "${travel.name}" содержит слишком много изображений (${imageCount}). Максимум ${MAX_IMAGES_PER_TRAVEL} изображений на путешествие.`
+          i18nT('export:services.pdf_export.TravelDataTransformer.puteshestvie_value1_soderzhit_slishkom_mnogo_aacc3fd9', { value1: travel.name, value2: imageCount, value3: MAX_IMAGES_PER_TRAVEL })
         );
       }
 
@@ -357,7 +356,7 @@ export class TravelDataTransformer {
     if (totalImages > MAX_TOTAL_IMAGES) {
       throw new ExportError(
         ExportErrorType.VALIDATION_ERROR,
-        `Слишком много изображений в выбранных путешествиях (${totalImages}). Максимум ${MAX_TOTAL_IMAGES} изображений для одного экспорта.`
+        i18nT('export:services.pdf_export.TravelDataTransformer.slishkom_mnogo_izobrazheniy_v_vybrannyh_pute_cded7c5a', { value1: totalImages, value2: MAX_TOTAL_IMAGES })
       );
     }
 
@@ -365,7 +364,7 @@ export class TravelDataTransformer {
     if (totalTextLength > MAX_TOTAL_TEXT_LENGTH) {
       throw new ExportError(
         ExportErrorType.VALIDATION_ERROR,
-        `Слишком много текста в выбранных путешествиях (${totalTextLength} символов). Максимум ${MAX_TOTAL_TEXT_LENGTH} символов для одного экспорта.`
+        i18nT('export:services.pdf_export.TravelDataTransformer.slishkom_mnogo_teksta_v_vybrannyh_puteshestv_ccae281b', { value1: totalTextLength, value2: MAX_TOTAL_TEXT_LENGTH })
       );
     }
   }

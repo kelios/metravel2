@@ -12,6 +12,8 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import MapIcon from './MapIcon'
+import { translate as i18nT } from '@/i18n'
+
 
 type TransportMode = 'car' | 'bike' | 'foot'
 
@@ -40,11 +42,11 @@ const PRESSED_OPACITY_07 = { opacity: 0.7 }
 function formatDuration(seconds: number, compact = false): string {
   if (!Number.isFinite(seconds) || seconds <= 0) return ''
   const totalMinutes = Math.round(seconds / 60)
-  if (totalMinutes < 60) return compact ? `${totalMinutes}м` : `${totalMinutes} мин`
+  if (totalMinutes < 60) return compact ? i18nT('map:components.MapPage.RoutingStatus.value1_m_0adff6ff', { value1: totalMinutes }) : i18nT('map:components.MapPage.RoutingStatus.value1_min_6e3c22ce', { value1: totalMinutes })
   const h = Math.floor(totalMinutes / 60)
   const m = totalMinutes % 60
-  if (m === 0) return compact ? `${h}ч` : `${h} ч`
-  return compact ? `${h}ч ${m}м` : `${h} ч ${m} мин`
+  if (m === 0) return compact ? i18nT('map:components.MapPage.RoutingStatus.value1_ch_ee64dc1f', { value1: h }) : i18nT('map:components.MapPage.RoutingStatus.value1_ch_39ade1be', { value1: h })
+  return compact ? i18nT('map:components.MapPage.RoutingStatus.value1_ch_value2_m_dc3e9fbc', { value1: h, value2: m }) : i18nT('map:components.MapPage.RoutingStatus.value1_ch_value2_min_b2532ef4', { value1: h, value2: m })
 }
 
 function estimateDurationSeconds(meters: number, mode: TransportMode): number {
@@ -52,8 +54,8 @@ function estimateDurationSeconds(meters: number, mode: TransportMode): number {
 }
 
 function formatDistance(meters: number): string {
-  if (meters < 1000) return `${Math.round(meters)} м`
-  return `${(meters / 1000).toFixed(1)} км`
+  if (meters < 1000) return i18nT('map:components.MapPage.RoutingStatus.value1_m_c093a0f2', { value1: Math.round(meters) })
+  return i18nT('map:components.MapPage.RoutingStatus.value1_km_eff5e281', { value1: (meters / 1000).toFixed(1) })
 }
 
 function MiniCard({
@@ -118,7 +120,7 @@ function RoutingStatus({
       <View
         style={styles.container}
         accessibilityRole="progressbar"
-        accessibilityLabel="Построение маршрута"
+        accessibilityLabel={i18nT('map:components.MapPage.RoutingStatus.postroenie_marshruta_3af96c59')}
         accessibilityLiveRegion="polite"
         {...(Platform.OS === 'web'
           ? ({ role: 'progressbar', 'aria-busy': true, 'aria-live': 'polite' } as any)
@@ -126,7 +128,7 @@ function RoutingStatus({
       >
         <View style={styles.loadingContent}>
           <ActivityIndicator size="small" color={colors.info} />
-          <Text style={styles.loadingText}>Построение маршрута…</Text>
+          <Text style={styles.loadingText}>{i18nT('map:components.MapPage.RoutingStatus.postroenie_marshruta_3180d207')}</Text>
         </View>
         <View style={styles.progressBarContainer}>
           <Animated.View
@@ -148,7 +150,7 @@ function RoutingStatus({
         <View style={styles.errorContent}>
           <Feather name="alert-circle" size={16} color={colors.danger} />
           <View style={styles.errorTextContainer}>
-            <Text style={styles.errorTitle}>Ошибка маршрутизации</Text>
+            <Text style={styles.errorTitle}>{i18nT('map:components.MapPage.RoutingStatus.oshibka_marshrutizatsii_c5fdf700')}</Text>
             <Text style={styles.errorMessage}>{error}</Text>
           </View>
         </View>
@@ -157,10 +159,10 @@ function RoutingStatus({
             style={({ pressed }) => [styles.retryButton, pressed && PRESSED_OPACITY_07]}
             onPress={onRetry}
             accessibilityRole="button"
-            accessibilityLabel="Повторить построение маршрута"
+            accessibilityLabel={i18nT('map:components.MapPage.RoutingStatus.povtorit_postroenie_marshruta_8f17d9ea')}
           >
             <Feather name="refresh-cw" size={13} color={colors.danger} />
-            <Text style={styles.retryButtonText}>Повторить</Text>
+            <Text style={styles.retryButtonText}>{i18nT('map:components.MapPage.RoutingStatus.povtorit_a4d0f601')}</Text>
           </Pressable>
         )}
       </View>
@@ -173,10 +175,9 @@ function RoutingStatus({
         <View style={styles.warningContent}>
           <Feather name="info" size={16} color={colors.warning} />
           <View style={styles.warningTextContainer}>
-            <Text style={styles.warningTitle}>Прямая линия</Text>
+            <Text style={styles.warningTitle}>{i18nT('map:components.MapPage.RoutingStatus.pryamaya_liniya_22799f17')}</Text>
             <Text style={styles.warningMessage}>
-              Оптимальный маршрут недоступен, показана прямая линия
-            </Text>
+              {i18nT('map:components.MapPage.RoutingStatus.optimalnyy_marshrut_nedostupen_pokazana_prya_cc230e83')}</Text>
           </View>
         </View>
       </View>
@@ -210,8 +211,8 @@ function RoutingStatus({
         />
         <Text style={styles.successTitle}>
           {isEstimated
-            ? compact ? 'Оценка' : 'Оценка маршрута'
-            : compact ? 'Маршрут готов' : 'Маршрут построен'}
+            ? compact ? i18nT('map:components.MapPage.RoutingStatus.otsenka_a67b6a48') : i18nT('map:components.MapPage.RoutingStatus.otsenka_marshruta_1442f3ad')
+            : compact ? i18nT('map:components.MapPage.RoutingStatus.marshrut_gotov_e3f45980') : i18nT('map:components.MapPage.RoutingStatus.marshrut_postroen_16d8f712')}
         </Text>
       </View>
       <View style={styles.miniCardGrid}>
@@ -219,7 +220,7 @@ function RoutingStatus({
           icon="navigation"
           iconColor={colors.primary}
           value={formatDistance(distance)}
-          label={compact ? 'Дистанция' : 'Расстояние'}
+          label={compact ? i18nT('map:components.MapPage.RoutingStatus.distantsiya_ff61fc7c') : i18nT('map:components.MapPage.RoutingStatus.rasstoyanie_0eb5f0ce')}
           styles={styles}
           compact={compact}
           extraStyle={compactCardStyle}
@@ -228,7 +229,7 @@ function RoutingStatus({
           icon="clock"
           iconColor={colors.primary}
           value={timeText}
-          label={compact ? 'Время' : 'Время в пути'}
+          label={compact ? i18nT('map:components.MapPage.RoutingStatus.vremya_aa260887') : i18nT('map:components.MapPage.RoutingStatus.vremya_v_puti_436c3037')}
           styles={styles}
           compact={compact}
           extraStyle={compactCardStyle}
@@ -238,8 +239,8 @@ function RoutingStatus({
             <MiniCard
               icon="trending-up"
               iconColor={colors.success}
-              value={`${Math.round(Number(elevationGain))} м`}
-              label="Набор"
+              value={i18nT('map:components.MapPage.RoutingStatus.value1_m_c093a0f2', { value1: Math.round(Number(elevationGain)) })}
+              label={i18nT('map:components.MapPage.RoutingStatus.nabor_d6b0e427')}
               styles={styles}
               compact={compact}
               extraStyle={compactCardStyle}
@@ -247,8 +248,8 @@ function RoutingStatus({
             <MiniCard
               icon="trending-down"
               iconColor={colors.danger}
-              value={`${Math.round(Number(elevationLoss))} м`}
-              label="Спуск"
+              value={i18nT('map:components.MapPage.RoutingStatus.value1_m_c093a0f2', { value1: Math.round(Number(elevationLoss)) })}
+              label={i18nT('map:components.MapPage.RoutingStatus.spusk_d1ac5e92')}
               styles={styles}
               compact={compact}
               extraStyle={compactCardStyle}

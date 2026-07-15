@@ -16,6 +16,8 @@ import { queryKeys } from '@/api/queryKeys';
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
+import { translate as i18nT } from '@/i18n'
+
 
 const ListTravel = lazy(async () => {
     const mod: any = await import('@/components/listTravel/ListTravelBase');
@@ -34,9 +36,9 @@ export default function ExportScreen() {
     // заглушку вместо контролов экспорта. Гейт по isHydrated — чтобы на десктопе
     // не мигала заглушка и не было hydration mismatch (до гидрации isMobile=true).
     const isMobileWebExport = isHydrated && isMobile;
-    const title = 'Экспорт в pdf | Metravel';
+    const title = i18nT('export:app.tabs.export.eksport_v_pdf_metravel_baa93748');
     const description =
-        'Экспорт ваших опубликованных и черновых путешествий на платформе Metravel.by';
+        i18nT('export:app.tabs.export.eksport_vashih_opublikovannyh_i_chernovyh_pu_b70e1a2a');
 
     useEffect(() => {
         if (!isFocused) return;
@@ -97,10 +99,10 @@ export default function ExportScreen() {
                 <ResponsiveContainer maxWidth="lg" padding>
                 <EmptyState
                     icon="monitor"
-                    title="PDF‑книга доступна только на компьютере"
-                    description="Сборка и экспорт путешествий в PDF работают в десктопной версии сайта. Откройте metravel.by на компьютере."
+                    title={i18nT('export:app.tabs.export.pdf_kniga_dostupna_tolko_na_kompyutere_5fa839fc')}
+                    description={i18nT('export:app.tabs.export.sborka_i_eksport_puteshestviy_v_pdf_rabotayu_f77f9626')}
                     secondaryAction={{
-                        label: 'Открыть Поиск',
+                        label: i18nT('export:app.tabs.export.otkryt_poisk_b06cf650'),
                         onPress: () => router.push('/search' as any),
                     }}
                     variant="empty"
@@ -110,14 +112,14 @@ export default function ExportScreen() {
                 <ResponsiveContainer maxWidth="lg" padding>
                 <EmptyState
                     icon="lock"
-                    title="Войдите, чтобы собрать PDF‑книгу"
-                    description="Экспорт в PDF доступен после авторизации."
+                    title={i18nT('export:app.tabs.export.voydite_chtoby_sobrat_pdf_knigu_dd53ff43')}
+                    description={i18nT('export:app.tabs.export.eksport_v_pdf_dostupen_posle_avtorizatsii_4948aa62')}
                     action={{
-                        label: 'Войти',
+                        label: i18nT('export:app.tabs.export.voyti_70e887f8'),
                         onPress: () => router.push(buildLoginHref({ redirect: '/export', intent: 'build-pdf' }) as any),
                     }}
                     secondaryAction={{
-                        label: 'Открыть Поиск',
+                        label: i18nT('export:app.tabs.export.otkryt_poisk_b06cf650'),
                         onPress: () => router.push('/search' as any),
                     }}
                     variant="empty"
@@ -127,14 +129,14 @@ export default function ExportScreen() {
                 <ResponsiveContainer maxWidth="lg" padding>
                 <EmptyState
                     icon="file-text"
-                    title="Чтобы собрать PDF‑книгу, добавьте хотя бы одно путешествие"
-                    description="Добавьте первое путешествие — и сможете собрать книгу и сохранить её в PDF."
+                    title={i18nT('export:app.tabs.export.chtoby_sobrat_pdf_knigu_dobavte_hotya_by_odn_605e941a')}
+                    description={i18nT('export:app.tabs.export.dobavte_pervoe_puteshestvie_i_smozhete_sobra_376685ca')}
                     action={{
-                        label: 'Добавить путешествие',
+                        label: i18nT('export:app.tabs.export.dobavit_puteshestvie_31bfd4e1'),
                         onPress: () => router.push('/travel/new' as any),
                     }}
                     secondaryAction={{
-                        label: 'Открыть Поиск',
+                        label: i18nT('export:app.tabs.export.otkryt_poisk_b06cf650'),
                         onPress: () => router.push('/search' as any),
                     }}
                     variant="empty"
@@ -144,7 +146,7 @@ export default function ExportScreen() {
                 <Suspense
                     fallback={
                         <View style={{ padding: 16 }}>
-                            <Text>Загрузка...</Text>
+                            <Text>{i18nT('export:app.tabs.export.zagruzka_7f1a74fb')}</Text>
                         </View>
                     }
                 >

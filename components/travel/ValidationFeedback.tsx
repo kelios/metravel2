@@ -9,6 +9,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { FieldValidationResult } from '@/utils/travelWizardValidation';
 import { useThemedColors } from '@/hooks/useTheme';
+import { selectPlural, translate as i18nT } from '@/i18n'
+
 
 interface CharacterCounterProps {
   current: number;
@@ -35,19 +37,19 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({
   
   if (hasMin && current < min) {
     status = 'error';
-    message = `${current} / ${min} символов (минимум)`;
+    message = i18nT('travel:components.travel.ValidationFeedback.minimum', { value1: current, value2: min });
   } else if (hasMax && current > max) {
     status = 'error';
-    message = `${current} / ${max} символов (превышен лимит)`;
+    message = i18nT('travel:components.travel.ValidationFeedback.limitExceeded', { value1: current, value2: max });
   } else if (hasMax) {
-    message = `${current} / ${max} символов`;
+    message = i18nT('travel:components.travel.ValidationFeedback.withMaximum', { value1: current, value2: max });
     if (current > max * 0.9) {
       status = 'warning';
     }
   } else if (hasMin) {
-    message = `${current} символов`;
+    message = i18nT('travel:components.travel.ValidationFeedback.characterCount', { value1: current });
   } else {
-    message = `${current} символов`;
+    message = i18nT('travel:components.travel.ValidationFeedback.characterCount', { value1: current });
   }
 
   const getColor = () => {
@@ -196,28 +198,28 @@ export const QualityIndicator: React.FC<QualityIndicatorProps> = ({ level, score
         return {
           color: colors.success,
           icon: 'check-circle' as const,
-          label: 'Отлично',
+          label: i18nT('travel:components.travel.ValidationFeedback.otlichno_a8a2f6b7'),
           bgColor: colors.successSoft,
         };
       case 'good':
         return {
           color: colors.success,
           icon: 'thumbs-up' as const,
-          label: 'Хорошо',
+          label: i18nT('travel:components.travel.ValidationFeedback.horosho_c4ebe651'),
           bgColor: colors.successSoft,
         };
       case 'fair':
         return {
           color: colors.warning,
           icon: 'alert-triangle' as const,
-          label: 'Удовлетворительно',
+          label: i18nT('travel:components.travel.ValidationFeedback.udovletvoritelno_c0510232'),
           bgColor: colors.warningSoft,
         };
       case 'poor':
         return {
           color: colors.danger,
           icon: 'x-circle' as const,
-          label: 'Требует улучшения',
+          label: i18nT('travel:components.travel.ValidationFeedback.trebuet_uluchsheniya_1052ec62'),
           bgColor: colors.dangerSoft,
         };
     }
@@ -268,13 +270,14 @@ interface ValidationSummaryProps {
   warningMessages?: string[];
 }
 
-function pluralRu(count: number, one: string, few: string, many: string): string {
-  const n = Math.abs(count) % 100;
-  const n1 = n % 10;
-  if (n > 10 && n < 20) return many;
-  if (n1 > 1 && n1 < 5) return few;
-  if (n1 === 1) return one;
-  return many;
+function selectLocalizedPlural(
+  count: number,
+  one: string,
+  few: string,
+  many: string,
+  other: string = many,
+): string {
+  return selectPlural(count, { one, few, many, other });
 }
 
 /**
@@ -359,7 +362,7 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
       <View style={[summaryStyles.summaryContainer, summaryStyles.successSummary]}>
         <View style={summaryStyles.summaryRow}>
           <Feather name="check-circle" size={16} color={colors.success} />
-          <Text style={summaryStyles.successSummaryText}>Все поля заполнены корректно</Text>
+          <Text style={summaryStyles.successSummaryText}>{i18nT('travel:components.travel.ValidationFeedback.vse_polya_zapolneny_korrektno_ea29a0ec')}</Text>
         </View>
       </View>
     );
@@ -376,7 +379,7 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
           <View style={summaryStyles.summaryItem}>
             <Feather name="alert-circle" size={16} color={colors.danger} />
             <Text style={summaryStyles.errorSummaryText}>
-              {errorCount} {pluralRu(errorCount, 'ошибка', 'ошибки', 'ошибок')}
+              {errorCount} {selectLocalizedPlural(errorCount, i18nT('travel:components.travel.ValidationFeedback.oshibka_a754c58d'), i18nT('travel:components.travel.ValidationFeedback.oshibki_71f0a30f'), i18nT('travel:components.travel.ValidationFeedback.oshibok_b6b2ef44'))}
             </Text>
           </View>
         )}
@@ -384,7 +387,7 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
           <View style={summaryStyles.summaryItem}>
             <Feather name="info" size={16} color={colors.warning} />
             <Text style={summaryStyles.warningSummaryText}>
-              {warningCount} {pluralRu(warningCount, 'предупреждение', 'предупреждения', 'предупреждений')}
+              {warningCount} {selectLocalizedPlural(warningCount, i18nT('travel:components.travel.ValidationFeedback.preduprezhdenie_bf607953'), i18nT('travel:components.travel.ValidationFeedback.preduprezhdeniya_e11e2b0f'), i18nT('travel:components.travel.ValidationFeedback.preduprezhdeniy_b07ba364'))}
             </Text>
           </View>
         )}
@@ -457,11 +460,11 @@ export const CollapsibleValidationSummary: React.FC<ValidationSummaryProps> = ({
 
   const summaryParts: string[] = [];
   if (errorCount > 0) {
-    summaryParts.push(`${errorCount} ${pluralRu(errorCount, 'ошибка', 'ошибки', 'ошибок')}`);
+    summaryParts.push(`${errorCount} ${selectLocalizedPlural(errorCount, i18nT('travel:components.travel.ValidationFeedback.oshibka_a754c58d'), i18nT('travel:components.travel.ValidationFeedback.oshibki_71f0a30f'), i18nT('travel:components.travel.ValidationFeedback.oshibok_b6b2ef44'))}`);
   }
   if (warningCount > 0) {
     summaryParts.push(
-      `${warningCount} ${pluralRu(warningCount, 'рекомендация', 'рекомендации', 'рекомендаций')}`,
+      `${warningCount} ${selectLocalizedPlural(warningCount, i18nT('travel:components.travel.ValidationFeedback.rekomendatsiya_4d886a5e'), i18nT('travel:components.travel.ValidationFeedback.rekomendatsii_bb776a51'), i18nT('travel:components.travel.ValidationFeedback.rekomendatsiy_6a21604e'))}`,
     );
   }
 
@@ -476,7 +479,7 @@ export const CollapsibleValidationSummary: React.FC<ValidationSummaryProps> = ({
         ]}
         accessibilityRole="button"
         accessibilityState={{ expanded }}
-        accessibilityLabel={`${summaryParts.join(', ')}. ${expanded ? 'Свернуть' : 'Развернуть'}`}
+        accessibilityLabel={`${summaryParts.join(', ')}. ${expanded ? i18nT('travel:components.travel.ValidationFeedback.svernut_1800ff74') : i18nT('travel:components.travel.ValidationFeedback.razvernut_b73c99ec')}`}
         {...(Platform.OS === 'web' ? ({ 'aria-expanded': expanded } as any) : null)}
       >
         <Feather

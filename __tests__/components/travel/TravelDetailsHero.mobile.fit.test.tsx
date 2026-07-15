@@ -5,10 +5,20 @@ import { Platform, StyleSheet, useWindowDimensions } from 'react-native'
 import { __testables } from '@/components/travel/details/TravelDetailsHero'
 
 const mockSliderSpy: jest.Mock<any, any> = jest.fn((_props: any) => null)
+const mockAuthorQuickLinkSpy: jest.Mock<any, any> = jest.fn(() => {
+  const React = require('react')
+  const { View } = require('react-native')
+  return React.createElement(View, { testID: 'mock-travel-author-quick-link' })
+})
 
 jest.mock('@/components/travel/Slider', () => ({
   __esModule: true,
   default: (props: any) => mockSliderSpy(props),
+}))
+
+jest.mock('@/components/travel/details/TravelAuthorQuickLink', () => ({
+  __esModule: true,
+  default: (props: any) => mockAuthorQuickLinkSpy(props),
 }))
 
 jest.mock('@/components/travel/AuthorCard', () => ({
@@ -49,6 +59,7 @@ describe('TravelHeroSection mobile image fit', () => {
     Platform.OS = 'ios'
     Platform.select = (obj: any) => obj.ios ?? obj.default
     mockSliderSpy.mockClear()
+    mockAuthorQuickLinkSpy.mockClear()
   })
 
   it('passes fit=contain to Slider on mobile', async () => {
@@ -159,5 +170,70 @@ describe('TravelHeroSection mobile image fit', () => {
     const flattenedStyle = StyleSheet.flatten(sliderContainer.props.style)
     const viewport = useWindowDimensions()
     expect(flattenedStyle.height).toBe(Math.max(260, Math.round(viewport.height * 0.7)))
+  })
+
+  it('renders the mobile author quick link below the hero slider container', async () => {
+    const travel: any = {
+      id: 3,
+      name: 'Author below slider',
+      userName: 'Мария Иванова',
+      userIds: '42',
+      gallery: [
+        {
+          url: 'https://cdn.example.com/img.jpg',
+          width: 1200,
+          height: 800,
+          updated_at: '2025-01-01',
+          id: 1,
+        },
+      ],
+      travelAddress: [],
+    }
+
+    const anchors: any = {
+      gallery: { current: null },
+      video: { current: null },
+      description: { current: null },
+      recommendation: { current: null },
+      plus: { current: null },
+      minus: { current: null },
+      map: { current: null },
+      points: { current: null },
+      near: { current: null },
+      popular: { current: null },
+      excursions: { current: null },
+    }
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <Suspense fallback={null}>
+          <__testables.TravelHeroSection
+            travel={travel}
+            anchors={anchors}
+            isMobile
+            renderSlider
+            onFirstImageLoad={() => {}}
+            sectionLinks={[]}
+            onQuickJump={() => {}}
+          />
+        </Suspense>,
+      )
+      await Promise.resolve()
+    })
+
+    const orderedNodes = tree!.root.findAll((node) => {
+      return (
+        node.props.testID === 'travel-details-hero-slider-container' ||
+        node.props.testID === 'mock-travel-author-quick-link'
+      )
+    })
+    const orderedIds = orderedNodes.map((node) => node.props.testID)
+    const firstSliderIndex = orderedIds.indexOf('travel-details-hero-slider-container')
+    const firstAuthorIndex = orderedIds.indexOf('mock-travel-author-quick-link')
+
+    expect(firstSliderIndex).toBeGreaterThanOrEqual(0)
+    expect(firstAuthorIndex).toBeGreaterThan(firstSliderIndex)
+    expect(mockAuthorQuickLinkSpy.mock.calls[0]?.[0]).toEqual(expect.objectContaining({ travel }))
   })
 })

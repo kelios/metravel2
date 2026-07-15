@@ -7,6 +7,8 @@ import { getThemedColors } from '@/hooks/useTheme'
 import type { BookSettings, ChecklistSection } from './BookSettingsModal.types'
 import { CHECKLIST_OPTIONS } from './BookSettingsModal.constants'
 import { buildModalColors } from './BookSettingsModal.helpers'
+import { translate as i18nT } from '@/i18n'
+
 
 type Themed = ReturnType<typeof getThemedColors>
 type ModalColors = ReturnType<typeof buildModalColors>
@@ -32,8 +34,7 @@ export function ChecklistFieldset({
     <div style={{ marginBottom: '24px', padding: '16px', borderRadius: '14px', border: `1px solid ${MODAL_COLORS.border}`, backgroundColor: MODAL_COLORS.backgroundSecondary, transition: 'all 0.3s ease' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '16px', marginBottom: '8px' }}>
         <label style={{ fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
-          Чек-листы путешественника
-        </label>
+          {i18nT('profile:components.export.BookSettingsModal_parts.chek_listy_puteshestvennika_1c0b0340')}</label>
         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: MODAL_COLORS.textMuted, whiteSpace: 'nowrap' }}>
           <input
             type="checkbox"
@@ -49,12 +50,10 @@ export function ChecklistFieldset({
               borderRadius: '4px',
             }}
           />
-          Добавить в PDF
-        </label>
+          {i18nT('profile:components.export.BookSettingsModal_parts.dobavit_v_pdf_db5eee9c')}</label>
       </div>
       <div style={{ fontSize: '12px', color: MODAL_COLORS.textSubtle, marginBottom: settings.includeChecklists ? '12px' : 0 }}>
-        Стандартные списки для печати: экипировка, еда, документы, техника и аптечка.
-      </div>
+        {i18nT('profile:components.export.BookSettingsModal_parts.standartnye_spiski_dlya_pechati_ekipirovka_e_237f6a52')}</div>
       {settings.includeChecklists && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
           {CHECKLIST_OPTIONS.map((option) => {
@@ -199,8 +198,7 @@ export function ModalFooter({
           target.style.boxShadow = themed.boxShadows.light as any
         }}
       >
-        Отмена
-      </button>
+        {i18nT('profile:components.export.BookSettingsModal_parts.otmena_7c664a0f')}</button>
       {onPreview && (
         <button
           onClick={onPreviewClick}
@@ -250,15 +248,14 @@ export function ModalFooter({
             target.style.transform = 'translateY(0)'
             target.style.boxShadow = themed.boxShadows.light as any
           }}
-          aria-label="Предварительный просмотр PDF"
+          aria-label={i18nT('profile:components.export.BookSettingsModal_parts.predvaritelnyy_prosmotr_pdf_9de23958')}
         >
           <Feather
             name={isSaving ? 'clock' : 'eye'}
             size={18}
             color={MODAL_COLORS.primary as any}
           />
-          Превью
-        </button>
+          {i18nT('profile:components.export.BookSettingsModal_parts.prevyu_8a8a2b33')}</button>
       )}
       <button
         onClick={onSave}
@@ -307,7 +304,7 @@ export function ModalFooter({
             target.style.boxShadow = themed.boxShadows.medium as any
           }
         }}
-        aria-label="Сохранить и создать PDF"
+        aria-label={i18nT('profile:components.export.BookSettingsModal_parts.sohranit_i_sozdat_pdf_48d80cbb')}
       >
         {isSaving ? (
           <>
@@ -323,13 +320,11 @@ export function ModalFooter({
                 to { transform: rotate(360deg); }
               }
             `}</style>
-            Создание...
-          </>
+            {i18nT('profile:components.export.BookSettingsModal_parts.sozdanie_14bbb42e')}</>
         ) : (
           <>
             <Feather name="file-text" size={18} color={MODAL_COLORS.textOnPrimary as any} />
-            Сохранить PDF
-          </>
+            {i18nT('profile:components.export.BookSettingsModal_parts.sohranit_pdf_513469e1')}</>
         )}
       </button>
     </div>

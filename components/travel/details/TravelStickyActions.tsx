@@ -28,6 +28,8 @@ import { buildCanonicalUrl } from '@/utils/seo';
 import { buildTravelPath } from '@/utils/travelSeo';
 import { hapticImpact } from '@/utils/haptics';
 import type { Travel } from '@/types/types';
+import { translate as i18nT } from '@/i18n'
+
 
 interface TravelStickyActionsProps {
   travel: Travel;
@@ -109,16 +111,16 @@ function TravelStickyActions({
     try {
       if (isFav) {
         await removeFavorite(travelId, 'travel');
-        void showToast({ type: 'info', text1: 'Удалено из «Хочу поехать»', position: 'bottom' });
+        void showToast({ type: 'info', text1: i18nT('travel:components.travel.details.TravelStickyActions.udaleno_iz_hochu_poehat_e7b482b5'), position: 'bottom' });
       } else {
         const url = travel?.slug
           ? `/travels/${travel.slug}`
           : `/travels/${travelId}`;
         await addFavorite({ id: travelId, type: 'travel', title: travel?.name || '', url });
-        void showToast({ type: 'success', text1: 'Добавлено в «Хочу поехать»', position: 'bottom' });
+        void showToast({ type: 'success', text1: i18nT('travel:components.travel.details.TravelStickyActions.dobavleno_v_hochu_poehat_60afbbe6'), position: 'bottom' });
       }
     } catch {
-      void showToast({ type: 'error', text1: 'Не удалось обновить «Хочу поехать»', position: 'bottom' });
+      void showToast({ type: 'error', text1: i18nT('travel:components.travel.details.TravelStickyActions.ne_udalos_obnovit_hochu_poehat_bb9f3a31'), position: 'bottom' });
     }
   }, [travelId, isAuthenticated, isFav, addFavorite, removeFavorite, requireAuth, travel?.name, travel?.slug]);
 
@@ -126,7 +128,7 @@ function TravelStickyActions({
     hapticImpact('light');
     const path = buildTravelPath(travel);
     const url = path ? buildCanonicalUrl(path) : '';
-    const title = travel?.name || 'Путешествие';
+    const title = travel?.name || i18nT('travel:common.travel');
 
     if (Platform.OS === 'web') {
       if (typeof navigator !== 'undefined' && navigator.share) {
@@ -142,13 +144,13 @@ function TravelStickyActions({
       }
       try {
         await Clipboard.setStringAsync(url);
-        void showToast({ type: 'success', text1: 'Ссылка скопирована', position: 'bottom' });
+        void showToast({ type: 'success', text1: i18nT('travel:components.travel.details.TravelStickyActions.ssylka_skopirovana_df59dce9'), position: 'bottom' });
       } catch {
-        void showToast({ type: 'error', text1: 'Не удалось скопировать ссылку', position: 'bottom' });
+        void showToast({ type: 'error', text1: i18nT('travel:components.travel.details.TravelStickyActions.ne_udalos_skopirovat_ssylku_72c7f83a'), position: 'bottom' });
       }
     } else {
       try {
-        await Share.share({ message: `${title}\n${url}` });
+        await Share.share({ message: i18nT('travel:components.travel.details.TravelStickyActions.value1_value2_e777c3b4', { value1: title, value2: url }) });
       } catch { /* user cancelled */ }
     }
   }, [travel]);
@@ -175,14 +177,14 @@ function TravelStickyActions({
       <View
         style={styles.bar}
         accessibilityRole={Platform.OS === 'web' ? ('toolbar' as any) : 'none'}
-        accessibilityLabel="Действия с путешествием"
+        accessibilityLabel={i18nT('travel:components.travel.details.TravelStickyActions.deystviya_s_puteshestviem_22b82c23')}
       >
         <Pressable
           onPress={handleFavorite}
           style={styles.button}
           accessibilityRole="button"
-          accessibilityLabel={isFav ? 'Удалить из «Хочу поехать»' : 'Добавить в «Хочу поехать»'}
-          accessibilityHint="Сохраняет путешествие в «Хочу поехать»"
+          accessibilityLabel={isFav ? i18nT('travel:components.travel.details.TravelStickyActions.udalit_iz_hochu_poehat_7b137b5b') : i18nT('travel:components.travel.details.TravelStickyActions.dobavit_v_hochu_poehat_aeab2e75')}
+          accessibilityHint={i18nT('travel:components.travel.details.TravelStickyActions.sohranyaet_puteshestvie_v_hochu_poehat_b32ec748')}
         >
           <Feather
             name="heart"
@@ -190,7 +192,7 @@ function TravelStickyActions({
             color={isFav ? colors.danger : colors.text}
           />
           <Text style={[styles.label, isFav && { color: colors.danger }]}>
-            {isFav ? 'В «Хочу поехать»' : 'Хочу поехать'}
+            {isFav ? i18nT('travel:components.travel.details.TravelStickyActions.v_hochu_poehat_71b2c60e') : i18nT('travel:components.travel.details.TravelStickyActions.hochu_poehat_bc0a2495')}
           </Text>
         </Pressable>
 
@@ -200,11 +202,11 @@ function TravelStickyActions({
           onPress={handleShare}
           style={styles.button}
           accessibilityRole="button"
-          accessibilityLabel="Поделиться"
-          accessibilityHint="Открывает диалог отправки ссылки на это путешествие"
+          accessibilityLabel={i18nT('travel:components.travel.details.TravelStickyActions.podelitsya_5059e01e')}
+          accessibilityHint={i18nT('travel:components.travel.details.TravelStickyActions.otkryvaet_dialog_otpravki_ssylki_na_eto_pute_1a27883a')}
         >
           <Feather name="share-2" size={20} color={colors.text} />
-          <Text style={styles.label}>Поделиться</Text>
+          <Text style={styles.label}>{i18nT('travel:components.travel.details.TravelStickyActions.podelitsya_5059e01e')}</Text>
         </Pressable>
 
         <View style={styles.divider} />
@@ -213,11 +215,11 @@ function TravelStickyActions({
           onPress={scrollToComments}
           style={styles.button}
           accessibilityRole="button"
-          accessibilityLabel="К комментариям"
-          accessibilityHint="Прокручивает страницу к разделу обсуждения"
+          accessibilityLabel={i18nT('travel:components.travel.details.TravelStickyActions.k_kommentariyam_6a5fe41e')}
+          accessibilityHint={i18nT('travel:components.travel.details.TravelStickyActions.prokruchivaet_stranitsu_k_razdelu_obsuzhdeni_13f299ed')}
         >
           <Feather name="message-circle" size={20} color={colors.text} />
-          <Text style={styles.label}>Обсуждение</Text>
+          <Text style={styles.label}>{i18nT('travel:components.travel.details.TravelStickyActions.obsuzhdenie_12dea2a0')}</Text>
         </Pressable>
       </View>
     </RNAnimated.View>

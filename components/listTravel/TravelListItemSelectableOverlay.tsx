@@ -1,5 +1,7 @@
 import { Pressable, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
   isWeb: boolean
@@ -20,7 +22,7 @@ export default function TravelListItemSelectableOverlay({
   styles,
   colors,
 }: Props) {
-  const checkboxLabel = isSelected ? 'Убрать из выбранного' : 'Выбрать'
+  const checkboxLabel = isSelected ? i18nT('travel:components.listTravel.TravelListItemSelectableOverlay.ubrat_iz_vybrannogo_de894210') : i18nT('travel:components.listTravel.TravelListItemSelectableOverlay.vybrat_c1d06133')
 
   return (
     <>

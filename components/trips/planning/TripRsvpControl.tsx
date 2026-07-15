@@ -8,6 +8,8 @@ import type { PlannedTrip, TripRsvp } from '@/api/plannedTrips';
 import { RSVP_LABEL } from '@/components/trips/planning/tripPlanFormatting';
 import { useSetRsvp } from '@/hooks/usePlannedTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   trip: PlannedTrip;
@@ -35,7 +37,7 @@ function TripRsvpControl({ trip }: Props) {
 
   return (
     <View style={styles.wrap} testID="trip-rsvp">
-      <Text style={styles.heading}>Ваш ответ</Text>
+      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.TripRsvpControl.vash_otvet_8c993997')}</Text>
 
       <View style={styles.chips}>
         {RSVP_OPTIONS.map((rsvp) => {
@@ -63,8 +65,7 @@ function TripRsvpControl({ trip }: Props) {
 
       {setRsvp.isError ? (
         <Text style={styles.error}>
-          Не удалось сохранить ответ. Попробуйте ещё раз.
-        </Text>
+          {i18nT('trips:components.trips.planning.TripRsvpControl.ne_udalos_sohranit_otvet_poprobuyte_esche_ra_f4ab6fa6')}</Text>
       ) : null}
     </View>
   );

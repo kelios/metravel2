@@ -8,6 +8,8 @@ import {
 } from 'react'
 import { StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { translate as i18nT } from '@/i18n'
+
 
 type QuillInstance = any
 
@@ -365,6 +367,36 @@ const ensureIdAttributeRegistered = (Quill: any) => {
   }
 }
 
+const QUILL_PICKER_ACCESSIBLE_NAMES: Record<string, string> = {
+  'ql-font': 'Font',
+  'ql-size': 'Text size',
+  'ql-header': 'Heading level',
+  'ql-color': 'Text color',
+  'ql-background': 'Background color',
+  'ql-align': 'Text alignment',
+}
+
+export const applyQuillAccessibility = (
+  quill: QuillInstance | null,
+  toolbar: HTMLElement | null,
+): void => {
+  toolbar?.querySelectorAll<HTMLElement>('.ql-picker-label').forEach((pickerLabel) => {
+    if (pickerLabel.getAttribute('aria-label') || pickerLabel.getAttribute('aria-labelledby')) return
+    const picker = pickerLabel.closest('.ql-picker')
+    const accessibleName = Object.entries(QUILL_PICKER_ACCESSIBLE_NAMES).find(([className]) =>
+      picker?.classList.contains(className),
+    )?.[1]
+    if (accessibleName) pickerLabel.setAttribute('aria-label', accessibleName)
+  })
+
+  const fallbackImageAlt = i18nT(
+    'shared:components.article.articleEditorUiHelpers.izobrazhenie_a7123dea',
+  )
+  quill?.root?.querySelectorAll?.('img:not([alt])')?.forEach?.((image: HTMLImageElement) => {
+    image.setAttribute('alt', fallbackImageAlt)
+  })
+}
+
 const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any) {
   const { theme, value, onChange, placeholder, style, editorChromeAttrs } = props
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -483,9 +515,11 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
             void e
           }
         }
+        applyQuillAccessibility(quill, toolbarEl)
 
         onTextChange = (delta: unknown, _oldDelta: unknown, source: unknown) => {
           if (isApplyingValueRef.current) return
+          applyQuillAccessibility(quill, toolbarEl)
           const html = String(quill.root?.innerHTML ?? '')
           lastHtmlRef.current = html
           onChangeRef.current?.(html, delta, source)
@@ -551,10 +585,12 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
         }
       }
       lastHtmlRef.current = next
+      applyQuillAccessibility(quill, null)
     } catch {
       try {
         quill.root.innerHTML = next
         lastHtmlRef.current = next
+        applyQuillAccessibility(quill, null)
       } catch (e) {
         void e
       }
@@ -577,8 +613,7 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
       <div ref={containerRef} style={{ width: '100%', minHeight: 0 }} />
       {loadError ? (
         <div style={{ padding: 8, color: DESIGN_TOKENS.colors.error, fontSize: 12 }}>
-          Не удалось загрузить редактор. Попробуйте обновить страницу.
-        </div>
+          {i18nT('shared:components.article.QuillEditor.ne_udalos_zagruzit_redaktor_poprobuyte_obnov_cb848670')}</div>
       ) : null}
     </div>
   )

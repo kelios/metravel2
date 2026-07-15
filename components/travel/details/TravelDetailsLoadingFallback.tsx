@@ -4,6 +4,8 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { METRICS } from '@/constants/layout'
 import { useResponsive } from '@/hooks/useResponsive'
+import { translate as i18nT } from '@/i18n'
+
 
 const ROOT_TEST_ID = 'travel-details-loading'
 
@@ -25,7 +27,7 @@ export default function TravelDetailsLoadingFallback() {
       testID={ROOT_TEST_ID}
       {...(typeof document !== 'undefined' ? ({ 'data-testid': ROOT_TEST_ID } as any) : null)}
       accessibilityRole="progressbar"
-      accessibilityLabel="Загрузка путешествия"
+      accessibilityLabel={i18nT('travel:components.travel.details.TravelDetailsLoadingFallback.zagruzka_puteshestviya_a918061e')}
       style={{ flex: 1 }}
     >
       {isDesktop ? (

@@ -6,7 +6,7 @@ import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss'
 import { buildCanonicalUrl, buildOgImageUrl, MAP_OG_IMAGE_PATH } from '@/utils/seo'
-import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo'
+import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo'
 import { useWebHydrationGate } from '@/hooks/useWebHydrationGate'
 
 const WEB_SR_ONLY_STYLE = {
@@ -32,8 +32,8 @@ export default function MapScreen() {
   const hydrationReady = useWebHydrationGate()
   const pathname = usePathname()
   const isFocused = useIsFocused()
-  const title = MAP_SEO_TITLE
-  const description = MAP_SEO_DESCRIPTION
+  const title = getMapSeoTitle()
+  const description = getMapSeoDescription()
   const canonical = buildCanonicalUrl(pathname || '/map')
   const ogImage = buildOgImageUrl(MAP_OG_IMAGE_PATH)
 

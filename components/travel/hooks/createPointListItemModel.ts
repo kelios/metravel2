@@ -1,4 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
+import { translate as i18nT } from '@/i18n'
+
 
 // #841: нормализуем URL для сравнения «ведёт ли ссылка на текущее путешествие».
 // Игнорируем origin (относит./абсолют.), query, hash и trailing slash — сравниваем
@@ -91,47 +93,47 @@ export function createPointListItemModel({
     ? [
         {
           key: 'google',
-          label: 'Google Maps',
+          label: i18nT('travel:components.travel.hooks.createPointListItemModel.google_maps_e74b887a'),
           icon: 'map-pin',
           onPress: () => void openExternal(buildMapUrl(item.coord)),
-          title: 'Открыть в Google Maps',
+          title: i18nT('travel:components.travel.hooks.createPointListItemModel.otkryt_v_google_maps_a28ee984'),
         },
         {
           key: 'apple',
-          label: 'Apple Maps',
+          label: i18nT('travel:components.travel.hooks.createPointListItemModel.apple_maps_fafa477e'),
           icon: 'map',
           onPress: () => void openExternal(buildAppleMapsUrl(item.coord)),
-          title: 'Открыть в Apple Maps',
+          title: i18nT('travel:components.travel.hooks.createPointListItemModel.otkryt_v_apple_maps_49aaaef9'),
         },
         {
           key: 'organic',
-          label: 'Organic Maps',
+          label: i18nT('travel:components.travel.hooks.createPointListItemModel.organic_maps_57574cd8'),
           icon: 'navigation',
           onPress: () => void openExternal(buildOrganicMapsUrl(item.coord)),
-          title: 'Открыть в Organic Maps',
+          title: i18nT('travel:components.travel.hooks.createPointListItemModel.otkryt_v_organic_maps_ccb909b2'),
         },
         {
           key: 'yandex',
-          label: 'Яндекс Карты',
+          label: i18nT('travel:components.travel.hooks.createPointListItemModel.yandeks_karty_6cef7c5c'),
           icon: 'navigation-2',
           onPress: () => void openExternal(buildYandexMapsUrl(item.coord)),
-          title: 'Открыть в Яндекс Картах',
+          title: i18nT('travel:components.travel.hooks.createPointListItemModel.otkryt_v_yandeks_kartah_7f86c142'),
         },
         {
           key: 'osm',
-          label: 'OpenStreetMap',
+          label: i18nT('travel:components.travel.hooks.createPointListItemModel.openstreetmap_ecba75ae'),
           icon: 'map',
           onPress: () => void openExternal(buildOsmUrl(item.coord)),
-          title: 'Открыть в OpenStreetMap',
+          title: i18nT('travel:components.travel.hooks.createPointListItemModel.otkryt_v_openstreetmap_190f1588'),
         },
         ...(buildWazeUrl
           ? [
               {
                 key: 'waze',
-                label: 'Waze',
+                label: i18nT('travel:components.travel.hooks.createPointListItemModel.waze_e6bc669c'),
                 icon: 'navigation' as keyof typeof Feather.glyphMap,
                 onPress: () => void openExternal(buildWazeUrl(item.coord)),
-                title: 'Проложить маршрут в Waze',
+                title: i18nT('travel:components.travel.hooks.createPointListItemModel.prolozhit_marshrut_v_waze_9e1c2664'),
               },
             ]
           : []),
@@ -139,10 +141,10 @@ export function createPointListItemModel({
           ? [
               {
                 key: 'yandex-navi',
-                label: 'Яндекс Навигатор',
+                label: i18nT('travel:components.travel.hooks.createPointListItemModel.yandeks_navigator_21267ba7'),
                 icon: 'navigation-2' as keyof typeof Feather.glyphMap,
                 onPress: () => void openExternal(buildYandexNaviUrl(item.coord)),
-                title: 'Проложить маршрут в Яндекс Навигаторе',
+                title: i18nT('travel:components.travel.hooks.createPointListItemModel.prolozhit_marshrut_v_yandeks_navigatore_26115a56'),
               },
             ]
           : []),
@@ -166,12 +168,12 @@ export function createPointListItemModel({
     ? [
         {
           key: 'article',
-          label: 'Статья',
+          label: i18nT('travel:components.travel.hooks.createPointListItemModel.statya_3106a0af'),
           icon: 'book-open',
           onPress: () => {
             void onOpenArticle(item);
           },
-          title: 'Открыть статью',
+          title: i18nT('travel:components.travel.hooks.createPointListItemModel.otkryt_statyu_82fbaed2'),
         },
       ]
     : [];

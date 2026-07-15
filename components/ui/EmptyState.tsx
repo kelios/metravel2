@@ -8,6 +8,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import Button from '@/components/ui/Button';
 import Chip from '@/components/ui/Chip';
+import { translate as i18nT } from '@/i18n'
+
 
 interface EmptyStateProps {
   icon: string;
@@ -73,7 +75,7 @@ function EmptyState({
       {/* ✅ UX УЛУЧШЕНИЕ: Предложения для поиска */}
       {suggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>
-          <Text style={styles.suggestionsTitle}>Попробуйте:</Text>
+          <Text style={styles.suggestionsTitle}>{i18nT('shared:components.ui.EmptyState.poprobuyte_e633baed')}</Text>
           <View style={styles.suggestionsList}>
             {suggestions.map((suggestion, index) => (
               <Chip
@@ -90,7 +92,7 @@ function EmptyState({
       {/* ✅ UX УЛУЧШЕНИЕ: Примеры для вдохновения */}
       {variant === 'inspire' && examples.length > 0 && (
         <View style={styles.examplesContainer}>
-          <Text style={styles.examplesTitle}>Примеры от путешественников:</Text>
+          <Text style={styles.examplesTitle}>{i18nT('shared:components.ui.EmptyState.primery_ot_puteshestvennikov_ae747d86')}</Text>
           <View style={styles.examplesList}>
             {examples.slice(0, 3).map((example, index) => (
               <View key={index} style={styles.exampleCard}>
@@ -100,7 +102,7 @@ function EmptyState({
                 </Text>
                 {example.author && (
                   <Text style={styles.exampleAuthor} numberOfLines={1}>
-                    от {example.author}
+                    {i18nT('shared:components.ui.EmptyState.ot_823c5a22')}{example.author}
                   </Text>
                 )}
               </View>

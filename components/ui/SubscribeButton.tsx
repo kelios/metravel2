@@ -7,6 +7,8 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/context/AuthContext';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { translate as i18nT } from '@/i18n'
+
 
 interface SubscribeButtonProps {
     targetUserId: string | number | null | undefined;
@@ -50,7 +52,7 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, iconOnly }
 
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const btnRef = useRef<any>(null);
-    const titleText = isSubscribed ? 'Отписаться' : 'Подписаться';
+    const titleText = isSubscribed ? i18nT('shared:components.ui.SubscribeButton.otpisatsya_0e2e1ea7') : i18nT('shared:components.ui.SubscribeButton.podpisatsya_e3acc977');
 
     const originalHandlePress = handlePress;
     const animatedHandlePress = useCallback(() => {
@@ -71,10 +73,10 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, iconOnly }
     if (!canSubscribe && isAuthenticated) return null;
 
     const a11yLabel = isLoading
-        ? 'Загрузка состояния подписки'
+        ? i18nT('shared:components.ui.SubscribeButton.zagruzka_sostoyaniya_podpiski_7423c0ef')
         : isSubscribed
-            ? 'Отписаться от пользователя'
-            : 'Подписаться на пользователя';
+            ? i18nT('shared:components.ui.SubscribeButton.otpisatsya_ot_polzovatelya_577975ed')
+            : i18nT('shared:components.ui.SubscribeButton.podpisatsya_na_polzovatelya_f873c74c');
 
     if (iconOnly) {
         return (
@@ -107,8 +109,8 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, iconOnly }
     const label = isLoading
         ? '...'
         : isSubscribed
-            ? 'Вы подписаны'
-            : 'Подписаться';
+            ? i18nT('shared:components.ui.SubscribeButton.vy_podpisany_aa09a5d6')
+            : i18nT('shared:components.ui.SubscribeButton.podpisatsya_e3acc977');
 
     return (
         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>

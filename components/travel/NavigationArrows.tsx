@@ -14,7 +14,9 @@ import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
+import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+ // ✅ РЕДИЗАЙН: Темная тема
 
 interface NavigationArrowsProps {
   currentTravel: Travel;
@@ -195,18 +197,18 @@ function NavigationArrows({
           onPress={() => handleNavigate(prevTravel)}
           style={({ pressed }) => [styles.navCard, styles.prevCard, globalFocusStyles.focusable, pressed && styles.navCardPressed]}
           accessibilityRole="button"
-          accessibilityLabel={`${isFallback ? 'Похожий маршрут' : 'Предыдущее путешествие'}: ${prevTravel.name || ''}`}
-          accessibilityHint="Открывает страницу путешествия"
+          accessibilityLabel={`${isFallback ? i18nT('travel:components.travel.NavigationArrows.pohozhiy_marshrut_7f315641') : i18nT('travel:components.travel.NavigationArrows.predyduschee_puteshestvie_14fe627e')}: ${prevTravel.name || ''}`}
+          accessibilityHint={i18nT('travel:components.travel.NavigationArrows.otkryvaet_stranitsu_puteshestviya_a4f7f8e4')}
           android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
         >
           <View style={styles.navContent}>
             <Feather name="chevron-left" size={24} color={colors.primaryDark} />
             <View style={styles.navInfo}>
               <Text style={styles.navLabel} numberOfLines={1}>
-                {isFallback ? 'Похожий маршрут' : 'Предыдущее'}
+                {isFallback ? i18nT('travel:components.travel.NavigationArrows.pohozhiy_marshrut_7f315641') : i18nT('travel:components.travel.NavigationArrows.predyduschee_93e3f9c1')}
               </Text>
               <Text style={styles.navTitle} numberOfLines={2} ellipsizeMode="tail">
-                {prevTravel.name || 'Без названия'}
+                {prevTravel.name || i18nT('travel:common.untitled')}
               </Text>
             </View>
             {buildImageUrl(prevTravel) && (
@@ -236,8 +238,8 @@ function NavigationArrows({
           onPress={() => handleNavigate(nextTravel)}
           style={({ pressed }) => [styles.navCard, styles.nextCard, globalFocusStyles.focusable, pressed && styles.navCardPressed]}
           accessibilityRole="button"
-          accessibilityLabel={`${isFallback ? 'Похожий маршрут' : 'Следующее путешествие'}: ${nextTravel.name || ''}`}
-          accessibilityHint="Открывает страницу путешествия"
+          accessibilityLabel={`${isFallback ? i18nT('travel:components.travel.NavigationArrows.pohozhiy_marshrut_7f315641') : i18nT('travel:components.travel.NavigationArrows.sleduyuschee_puteshestvie_21829e78')}: ${nextTravel.name || ''}`}
+          accessibilityHint={i18nT('travel:components.travel.NavigationArrows.otkryvaet_stranitsu_puteshestviya_a4f7f8e4')}
           android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
         >
           <View style={styles.navContent}>
@@ -258,10 +260,10 @@ function NavigationArrows({
             )}
             <View style={styles.navInfo}>
               <Text style={styles.navLabel} numberOfLines={1}>
-                {isFallback ? 'Похожий маршрут' : 'Следующее'}
+                {isFallback ? i18nT('travel:components.travel.NavigationArrows.pohozhiy_marshrut_7f315641') : i18nT('travel:components.travel.NavigationArrows.sleduyuschee_8a76bd06')}
               </Text>
               <Text style={styles.navTitle} numberOfLines={2} ellipsizeMode="tail">
-                {nextTravel.name || 'Без названия'}
+                {nextTravel.name || i18nT('travel:common.untitled')}
               </Text>
             </View>
             <Feather name="chevron-right" size={24} color={colors.primaryDark} />

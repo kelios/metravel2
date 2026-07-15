@@ -4,6 +4,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 import { userPointsApi } from '@/api/userPoints';
+import { translate as i18nT } from '@/i18n'
+
 
 export const usePointsExportKml = () => {
   const [isExporting, setIsExporting] = useState(false);
@@ -39,10 +41,10 @@ export const usePointsExportKml = () => {
       const uri = `${cacheDir}${filename}`;
       await FileSystem.writeAsStringAsync(uri, text);
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: contentType, dialogTitle: 'Экспорт точек' });
+        await Sharing.shareAsync(uri, { mimeType: contentType, dialogTitle: i18nT('map:components.UserPoints.usePointsExportKml.eksport_tochek_51ae90a3') });
       }
     } catch (error) {
-      setExportError(error instanceof Error ? error.message : 'Ошибка экспорта');
+      setExportError(error instanceof Error ? error.message : i18nT('map:components.UserPoints.usePointsExportKml.oshibka_eksporta_62cbb480'));
     } finally {
       setIsExporting(false);
     }

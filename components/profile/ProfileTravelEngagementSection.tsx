@@ -11,6 +11,8 @@ import {
   hasAnyTravelEngagementStats,
   type TravelEngagementStats,
 } from '@/utils/travelEngagementStats'
+import { translate as i18nT } from '@/i18n'
+
 
 type MetricKey = 'favoritesCount' | 'wishlistCount' | 'visitedCount' | 'plannedCount'
 export type ProfileTravelEngagementMetricKey = MetricKey
@@ -22,25 +24,21 @@ type MetricDefinition = {
   helper: string
 }
 
-const AUTHOR_METRICS: MetricDefinition[] = [
-  { key: 'favoritesCount', label: 'Сохранили', icon: 'heart', helper: 'добавили в «Хочу поехать»' },
-  { key: 'wishlistCount', label: 'Хотят', icon: 'bookmark', helper: 'добавили в «Хочу поехать»' },
-  { key: 'visitedCount', label: 'Были', icon: 'check-circle', helper: 'уже посетили маршрут' },
-  { key: 'plannedCount', label: 'Планируют', icon: 'calendar', helper: 'собираются поехать' },
+const createAuthorMetrics = (): MetricDefinition[] => [
+  { key: 'favoritesCount', label: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.author.saved.label'), icon: 'heart', helper: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.author.saved.helper') },
+  { key: 'wishlistCount', label: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.author.wishlist.label'), icon: 'bookmark', helper: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.author.wishlist.helper') },
+  { key: 'visitedCount', label: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.author.visited.label'), icon: 'check-circle', helper: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.author.visited.helper') },
+  { key: 'plannedCount', label: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.author.planned.label'), icon: 'calendar', helper: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.author.planned.helper') },
 ]
 
-const CALENDAR_METRICS: MetricDefinition[] = [
-  { key: 'visitedCount', label: 'Был', icon: 'check-circle', helper: 'мои посещённые поездки' },
-  { key: 'favoritesCount', label: 'Хочу', icon: 'bookmark', helper: 'мои «Хочу поехать»' },
-  { key: 'plannedCount', label: 'Планирую', icon: 'calendar', helper: 'мои поездки с датой' },
+const createCalendarMetrics = (): MetricDefinition[] => [
+  { key: 'visitedCount', label: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.calendar.visited.label'), icon: 'check-circle', helper: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.calendar.visited.helper') },
+  { key: 'favoritesCount', label: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.calendar.wishlist.label'), icon: 'bookmark', helper: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.calendar.wishlist.helper') },
+  { key: 'plannedCount', label: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.calendar.planned.label'), icon: 'calendar', helper: i18nT('profile:components.profile.ProfileTravelEngagementSection.metrics.calendar.planned.helper') },
 ]
 
 const formatMetricValue = (value: number | null | undefined) =>
   value == null ? '—' : String(value)
-
-const DEFAULT_AUTHOR_METRICS: MetricDefinition[] = AUTHOR_METRICS.filter(
-  (metric) => metric.key !== 'visitedCount'
-)
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boolean) =>
   StyleSheet.create({
@@ -181,42 +179,44 @@ export function ProfileTravelEngagementSummary({
   const styles = useMemo(() => createStyles(colors, isCompact), [colors, isCompact])
   const isAvailable = hasAnyTravelEngagementStats(summary)
   const isCalendarMode = mode === 'calendar'
-  const metrics = useMemo(() => {
-    if (isCalendarMode) return CALENDAR_METRICS
-    if (!summary) return DEFAULT_AUTHOR_METRICS
+  const authorMetrics = createAuthorMetrics()
+  const defaultAuthorMetrics = authorMetrics.filter((metric) => metric.key !== 'visitedCount')
+  const metrics = (() => {
+    if (isCalendarMode) return createCalendarMetrics()
+    if (!summary) return defaultAuthorMetrics
 
-    const availableMetrics = AUTHOR_METRICS.filter((metric) => summary[metric.key] !== null)
-    if (availableMetrics.length === 0) return DEFAULT_AUTHOR_METRICS
+    const availableMetrics = authorMetrics.filter((metric) => summary[metric.key] !== null)
+    if (availableMetrics.length === 0) return defaultAuthorMetrics
 
     if (activeMetric && !availableMetrics.some((metric) => metric.key === activeMetric)) {
-      return [...availableMetrics, ...AUTHOR_METRICS.filter((metric) => metric.key === activeMetric)]
+      return [...availableMetrics, ...authorMetrics.filter((metric) => metric.key === activeMetric)]
     }
 
     return availableMetrics
-  }, [activeMetric, isCalendarMode, summary])
+  })()
 
   const description = useMemo(() => {
     if (isCalendarMode) {
-      return 'Ваши личные статусы по поездкам: где уже были, что хотите и что уже внесли в планы.'
+      return i18nT('profile:components.profile.ProfileTravelEngagementSection.vashi_lichnye_statusy_po_poezdkam_gde_uzhe_b_4beb4aa9')
     }
 
     if (isLoading) {
-      return 'Собираем сводную статистику по вашим опубликованным маршрутам.'
+      return i18nT('profile:components.profile.ProfileTravelEngagementSection.sobiraem_svodnuyu_statistiku_po_vashim_opubl_7ff5d7bb')
     }
 
     if (travelsCount === 0) {
-      return 'Опубликуйте первое путешествие — здесь появится общая статистика интереса аудитории.'
+      return i18nT('profile:components.profile.ProfileTravelEngagementSection.opublikuyte_pervoe_puteshestvie_zdes_poyavit_db7bee4b')
     }
 
     if (summaryScope === 'loaded' && (loadedTravelsCount ?? 0) > 0 && (loadedTravelsCount ?? 0) < travelsCount) {
-      return 'Пока показываем сумму по уже загруженным карточкам. Полная сводка появится после подгрузки всех маршрутов.'
+      return i18nT('profile:components.profile.ProfileTravelEngagementSection.poka_pokazyvaem_summu_po_uzhe_zagruzhennym_k_6c67a96a')
     }
 
     if (isAvailable) {
-      return 'Здесь собрана суммарная реакция других пользователей на ваши маршруты: сохранения, желания, посещения и планы.'
+      return i18nT('profile:components.profile.ProfileTravelEngagementSection.zdes_sobrana_summarnaya_reaktsiya_drugih_pol_ec629916')
     }
 
-    return 'Статистика уже подключена. Как только у маршрутов появятся сохранения, желания и планы, значения отобразятся здесь.'
+    return i18nT('profile:components.profile.ProfileTravelEngagementSection.statistika_uzhe_podklyuchena_kak_tolko_u_mar_f4d608ba')
   }, [isAvailable, isCalendarMode, isLoading, loadedTravelsCount, summaryScope, travelsCount])
 
   return (
@@ -224,22 +224,22 @@ export function ProfileTravelEngagementSummary({
       <View style={styles.sectionHeader}>
         <View style={styles.sectionBadge}>
           <Text style={styles.sectionBadgeText}>
-            {isCalendarMode ? 'Личный календарь' : 'Статистика автора'}
+            {isCalendarMode ? i18nT('profile:components.profile.ProfileTravelEngagementSection.lichnyy_kalendar_4f0c8950') : i18nT('profile:components.profile.ProfileTravelEngagementSection.statistika_avtora_28684ac1')}
           </Text>
         </View>
         <Text style={styles.sectionTitle}>
-          {isCalendarMode ? 'Мои статусы поездок' : 'Что делают пользователи с вашими маршрутами'}
+          {isCalendarMode ? i18nT('profile:components.profile.ProfileTravelEngagementSection.moi_statusy_poezdok_c164210a') : i18nT('profile:components.profile.ProfileTravelEngagementSection.chto_delayut_polzovateli_s_vashimi_marshruta_f85d97d6')}
         </Text>
         <Text style={styles.sectionDescription}>{description}</Text>
         {!isCalendarMode ? (
           <View style={styles.sectionMetaRow}>
             <View style={styles.sectionMetaChip}>
-              <Text style={styles.sectionMetaChipText}>Маршрутов: {travelsCount}</Text>
+              <Text style={styles.sectionMetaChipText}>{i18nT('profile:components.profile.ProfileTravelEngagementSection.marshrutov_0c70d1ac')}{travelsCount}</Text>
             </View>
             {summaryScope === 'loaded' && (loadedTravelsCount ?? 0) > 0 && (loadedTravelsCount ?? 0) < travelsCount ? (
               <View style={styles.sectionMetaChip}>
                 <Text style={styles.sectionMetaChipText}>
-                  Загружено: {loadedTravelsCount} из {travelsCount}
+                  {i18nT('profile:components.profile.ProfileTravelEngagementSection.zagruzheno_8a574f0a')}{loadedTravelsCount} {i18nT('profile:components.profile.ProfileTravelEngagementSection.iz_01234bb3')}{travelsCount}
                 </Text>
               </View>
             ) : null}
@@ -269,7 +269,7 @@ export function ProfileTravelEngagementSummary({
               disabled={!onMetricPress}
               accessibilityRole={onMetricPress ? 'button' : undefined}
               accessibilityLabel={`${metric.label}: ${formatMetricValue(summary?.[metric.key])}`}
-              accessibilityHint={onMetricPress ? 'Показать соответствующие карточки' : undefined}
+              accessibilityHint={onMetricPress ? i18nT('profile:components.profile.ProfileTravelEngagementSection.pokazat_sootvetstvuyuschie_kartochki_188d300c') : undefined}
               accessibilityState={onMetricPress ? { selected: activeMetric === metric.key } : undefined}
             >
               <View style={styles.metricIconWrap}>

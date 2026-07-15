@@ -4,6 +4,8 @@ import { Text, View } from 'react-native'
 import { Button } from '@/ui/paper'
 
 import type { Styles } from './styles'
+import { translate as i18nT } from '@/i18n'
+
 
 export const RouteCoachmark = React.memo(function RouteCoachmark({
   styles,
@@ -16,23 +18,21 @@ export const RouteCoachmark = React.memo(function RouteCoachmark({
     <View
       style={styles.coachmark}
       testID="travel-wizard.step-route.coachmark"
-      accessibilityLabel="Подсказка: как добавить первую точку маршрута"
+      accessibilityLabel={i18nT('travel:components.travel.stepRoute.RouteCoachmark.podskazka_kak_dobavit_pervuyu_tochku_marshru_9e725c1d')}
     >
       <View style={styles.flexFill}>
-        <Text style={styles.coachmarkTitle}>Как добавить первую точку</Text>
+        <Text style={styles.coachmarkTitle}>{i18nT('travel:components.travel.stepRoute.RouteCoachmark.kak_dobavit_pervuyu_tochku_5e74ae08')}</Text>
         <Text style={styles.coachmarkBody}>
-          Найдите место, введите координаты вручную или кликните по карте ниже.
-        </Text>
+          {i18nT('travel:components.travel.stepRoute.RouteCoachmark.naydite_mesto_vvedite_koordinaty_vruchnuyu_i_980cd298')}</Text>
       </View>
       <Button
         mode="text"
         onPress={onDismiss}
         compact
         testID="travel-wizard.step-route.coachmark.dismiss"
-        accessibilityLabel="Скрыть подсказку"
+        accessibilityLabel={i18nT('travel:components.travel.stepRoute.RouteCoachmark.skryt_podskazku_1fdecf5a')}
       >
-        Понятно
-      </Button>
+        {i18nT('travel:components.travel.stepRoute.RouteCoachmark.ponyatno_c8de9938')}</Button>
     </View>
   )
 })

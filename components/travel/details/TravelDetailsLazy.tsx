@@ -2,6 +2,8 @@ import React, { lazy } from 'react'
 import { Text, View } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { translate as i18nT } from '@/i18n'
+
 
 const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined
 
@@ -55,7 +57,7 @@ export const withLazy = <T extends React.ComponentType<any>>(f: () => Promise<{ 
       return {
         default: (() => (
           <View style={{ padding: DESIGN_TOKENS.spacing.md }}>
-            <Text>Component failed to load</Text>
+            <Text>{i18nT('travel:components.travel.details.TravelDetailsLazy.component_failed_to_load_05315fe8')}</Text>
           </View>
         )) as unknown as T,
       }

@@ -4,7 +4,9 @@ import { Pressable, StyleSheet, Animated, Platform } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useBreakpoints } from '@/hooks/useResponsive'
-import { globalFocusStyles } from '@/styles/globalFocus' // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { globalFocusStyles } from '@/styles/globalFocus'
+import { translate as i18nT } from '@/i18n'
+ // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 interface ScrollToTopButtonProps {
   scrollViewRef?: React.RefObject<any>
@@ -156,13 +158,13 @@ function ScrollToTopButton({
         ]} // ✅ Динамический цвет
         onPress={scrollToTop}
         accessibilityRole="button"
-        accessibilityLabel="Прокрутить наверх"
-        accessibilityHint="Прокручивает страницу к началу"
+        accessibilityLabel={i18nT('shared:components.ui.ScrollToTopButton.prokrutit_naverh_e45f94ac')}
+        accessibilityHint={i18nT('shared:components.ui.ScrollToTopButton.prokruchivaet_stranitsu_k_nachalu_9999e79e')}
         {...Platform.select({
           web: {
             cursor: 'pointer',
             // @ts-ignore -- aria-label is a web-only ARIA attribute not in RN Pressable types
-            'aria-label': 'Прокрутить наверх',
+            'aria-label': i18nT('shared:components.ui.ScrollToTopButton.prokrutit_naverh_e45f94ac'),
             // @ts-ignore -- tabIndex is a web-only attribute not in RN Pressable types
             tabIndex: 0,
           },

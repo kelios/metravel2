@@ -1,5 +1,5 @@
 {
-  "description": "Web bundle size budget (KB). Regression guard: критический путь + eager-чанки (__common/entry — тикеты #764 reanimated-стаб, #765 leafletVendor вынесен из __common), HEIC-конвертер и total JS. Снапшот = фактическая сборка 2026-07-12 после перехода на lazy heic-to; допуск на дрейф — tolerancePct. Regenerate: node scripts/guard-bundle-budget.js --update (затем заново курировать ключи). Гоняется в release:check (guard:bundle-budget:fail) после build:web:prod.",
+  "description": "Web bundle size budget (KB). Regression guard: критический путь + eager-чанки (__common/entry — тикеты #764 reanimated-стаб, #765 leafletVendor вынесен из __common), HEIC-конвертер и total JS. __common re-baseline 2026-07-15 после app-wide i18n и удаления eager locale-каталога через compile-time web localization; total budget сохранён от 2026-07-12. Допуск на дрейф — tolerancePct. Regenerate: node scripts/guard-bundle-budget.js --update (затем заново курировать ключи). Гоняется в release:check (guard:bundle-budget:fail) после build:web:prod.",
   "tolerancePct": 5,
   "total": {
     "maxRawKB": 11886.5,
@@ -11,8 +11,8 @@
       "maxGzipKB": 276.6
     },
     "__common": {
-      "maxRawKB": 4066.8,
-      "maxGzipKB": 1065.9
+      "maxRawKB": 4632.6,
+      "maxGzipKB": 1198.6
     },
     "index": {
       "maxRawKB": 178.2,

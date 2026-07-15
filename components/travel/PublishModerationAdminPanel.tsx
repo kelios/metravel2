@@ -3,6 +3,8 @@ import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
 import type { ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 type PublishModerationAdminPanelProps = {
     colors: ThemedColors;
@@ -23,14 +25,12 @@ export default function PublishModerationAdminPanel({
 }: PublishModerationAdminPanelProps) {
     return (
         <View style={[styles.card, styles.adminCard]}>
-            <Text style={styles.cardTitle}>Панель модератора</Text>
+            <Text style={styles.cardTitle}>{i18nT('travel:components.travel.PublishModerationAdminPanel.panel_moderatora_7edb00cf')}</Text>
             <Text style={styles.adminHint}>
-                Маршрут находится на модерации. Вы можете одобрить или отклонить его.
-            </Text>
+                {i18nT('travel:components.travel.PublishModerationAdminPanel.marshrut_nahoditsya_na_moderatsii_vy_mozhete_542ba566')}</Text>
             <View style={styles.rejectionCommentContainer}>
                 <Text style={styles.rejectionCommentLabel}>
-                    Комментарий при отклонении (будет отправлен автору):
-                </Text>
+                    {i18nT('travel:components.travel.PublishModerationAdminPanel.kommentariy_pri_otklonenii_budet_otpravlen_a_2b76b4a3')}</Text>
                 <TextInput
                     style={[
                         styles.rejectionCommentInput,
@@ -42,33 +42,33 @@ export default function PublishModerationAdminPanel({
                     ]}
                     value={rejectionComment}
                     onChangeText={onRejectionCommentChange}
-                    placeholder="Укажите причину отклонения..."
+                    placeholder={i18nT('travel:components.travel.PublishModerationAdminPanel.ukazhite_prichinu_otkloneniya_c5c0761c')}
                     placeholderTextColor={colors.textMuted}
                     multiline
                     maxLength={1000}
-                    accessibilityLabel="Комментарий при отклонении"
+                    accessibilityLabel={i18nT('travel:components.travel.PublishModerationAdminPanel.kommentariy_pri_otklonenii_cbbe2068')}
                 />
             </View>
             <View style={styles.adminButtons}>
                 <Button
-                    label="Одобрить модерацию"
+                    label={i18nT('travel:components.travel.PublishModerationAdminPanel.odobrit_moderatsiyu_9291f287')}
                     onPress={onApprove}
                     icon={<Feather name="check-circle" size={20} color={colors.textOnPrimary} />}
                     variant="primary"
                     size="md"
                     style={[styles.adminButton, styles.adminButtonApprove]}
                     labelStyle={styles.adminButtonText}
-                    accessibilityLabel="Одобрить модерацию"
+                    accessibilityLabel={i18nT('travel:components.travel.PublishModerationAdminPanel.odobrit_moderatsiyu_9291f287')}
                 />
                 <Button
-                    label="Отклонить"
+                    label={i18nT('travel:components.travel.PublishModerationAdminPanel.otklonit_09b10036')}
                     onPress={onReject}
                     icon={<Feather name="x-circle" size={20} color={colors.textOnPrimary} />}
                     variant="danger"
                     size="md"
                     style={[styles.adminButton, styles.adminButtonReject]}
                     labelStyle={styles.adminButtonText}
-                    accessibilityLabel="Отклонить модерацию"
+                    accessibilityLabel={i18nT('travel:components.travel.PublishModerationAdminPanel.otklonit_moderatsiyu_bbccc89e')}
                 />
             </View>
         </View>

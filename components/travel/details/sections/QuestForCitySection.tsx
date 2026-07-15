@@ -6,6 +6,8 @@ import { useQuestsForLocation } from '@/hooks/useQuestForLocation'
 import { parseTravelCoords, type LocationQuery } from '@/utils/questForLocation'
 import { NEARBY_QUEST_THRESHOLD_KM, SAME_CITY_THRESHOLD_KM } from '@/constants/nearby'
 import type { Travel } from '@/types/types'
+import { translate as i18nT } from '@/i18n'
+
 
 const CARD_LIST_STYLE = { marginTop: 12, gap: 12 } as const
 const MAX_QUESTS = 6
@@ -20,10 +22,10 @@ type TravelWithExtraCoords = Travel & {
 }
 
 function buildEyebrow(distanceKm: number, cityName?: string): string | undefined {
-  if (Number.isFinite(distanceKm) && distanceKm < SAME_CITY_THRESHOLD_KM) return 'В этом городе'
+  if (Number.isFinite(distanceKm) && distanceKm < SAME_CITY_THRESHOLD_KM) return i18nT('travel:components.travel.details.sections.QuestForCitySection.v_etom_gorode_564dcecf')
   if (Number.isFinite(distanceKm) && distanceKm < NEARBY_QUEST_THRESHOLD_KM) {
     const rounded = distanceKm < 10 ? distanceKm.toFixed(1) : Math.round(distanceKm)
-    return cityName ? `~${rounded} км · ${cityName}` : `~${rounded} км рядом`
+    return cityName ? i18nT('travel:components.travel.details.sections.QuestForCitySection.value1_km_value2_a298ad71', { value1: rounded, value2: cityName }) : i18nT('travel:components.travel.details.sections.QuestForCitySection.value1_km_ryadom_4891f0e6', { value1: rounded })
   }
   return undefined
 }
@@ -58,11 +60,11 @@ export const QuestForCitySection: React.FC<{
 
   if (!matches.length) return null
 
-  const heading = matches.length === 1 ? 'Квест по этому городу' : 'Квесты по этому городу и рядом'
+  const heading = matches.length === 1 ? i18nT('travel:components.travel.details.sections.QuestForCitySection.kvest_po_etomu_gorodu_6742264a') : i18nT('travel:components.travel.details.sections.QuestForCitySection.kvesty_po_etomu_gorodu_i_ryadom_5bc0bff9')
   const subtitle =
     matches.length === 1
-      ? 'Пройдите пешком по легендам и загадкам — прямо со смартфона'
-      : 'Пешие маршруты с легендами и загадками — выберите подходящий'
+      ? i18nT('travel:components.travel.details.sections.QuestForCitySection.proydite_peshkom_po_legendam_i_zagadkam_prya_1d4af784')
+      : i18nT('travel:components.travel.details.sections.QuestForCitySection.peshie_marshruty_s_legendami_i_zagadkami_vyb_08dcfd14')
 
   return (
     <View

@@ -1,6 +1,8 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform, Animated } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
     /** Текущий рейтинг (0-5, допускаются дробные значения) */
@@ -148,8 +150,8 @@ function StarRating({
                     }
                     : {}),
                 accessibilityRole: 'button' as const,
-                accessibilityLabel: `Оценить на ${starValue} из 5`,
-                accessibilityHint: 'Нажмите, чтобы поставить оценку',
+                accessibilityLabel: i18nT('shared:components.ui.StarRating.otsenit_na_value1_iz_5_092c4cae', { value1: starValue }),
+                accessibilityHint: i18nT('shared:components.ui.StarRating.nazhmite_chtoby_postavit_otsenku_fc3646d1'),
                 accessibilityState: { selected: isUserRated },
             }
             : {};

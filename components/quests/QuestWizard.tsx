@@ -49,6 +49,8 @@ import { createQuestWizardStyles } from './questWizardStyles';
 // ===================== ТИПЫ =====================
 export type { QuestStep, QuestCity, QuestFinale } from './types';
 import type { QuestStep, QuestCity, QuestFinale } from './types';
+import { translate as i18nT } from '@/i18n'
+
 export type QuestWizardProps = {
     title: string; steps: QuestStep[]; finale: QuestFinale; intro?: QuestStep;
     storageKey?: string; city?: QuestCity;
@@ -229,7 +231,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const skipStep = useCallback(() => {
         const hasNext = currentIndex < allSteps.length - 1;
         advanceToNextStep();
-        if (hasNext) notifyQuest('Шаг пропущен');
+        if (hasNext) notifyQuest(i18nT('quests:components.quests.QuestWizard.shag_propuschen_f8686cda'));
     }, [advanceToNextStep, allSteps.length, currentIndex]);
 
     const goToStep = useCallback((index: number) => {
@@ -246,12 +248,12 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     }, []);
 
     const resetQuest = useCallback(async () => {
-        const ok = await confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.');
+        const ok = await confirmQuestAsync(i18nT('quests:components.quests.QuestWizard.sbrosit_progress_ffa455c0'), i18nT('quests:components.quests.QuestWizard.vse_vashi_otvety_budut_udaleny_103ee6ff'));
         if (!ok) return;
         try {
             await resetProgress();
             setShowFinaleOnly(false);
-            notifyQuest('Прогресс очищен');
+            notifyQuest(i18nT('quests:components.quests.QuestWizard.progress_ochischen_54659954'));
         } catch (e) {
             console.error('Error resetting progress:', e);
         }
@@ -330,23 +332,35 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         void (async () => {
             try {
                 const exported = await exportQuestOfflineMap({ title, steps });
-                notifyQuest(exported ? 'Файл с точками квеста готов' : 'В квесте нет точек для карты');
+                notifyQuest(
+                    exported
+                        ? i18nT('quests:components.quests.QuestWizard.gpx_s_peshim_marshrutom_kvesta_gotov_dd0919a1')
+                        : offlineMapPointsCount >= 2
+                          ? i18nT('quests:components.quests.QuestWizard.ne_udalos_postroit_realnyy_peshiy_marshrut_d_a06b2056')
+                          : i18nT('quests:components.quests.QuestWizard.v_kveste_net_tochek_dlya_karty_e2d9a5ea'),
+                );
             } catch {
-                notifyQuest('Не удалось подготовить точки для офлайн-карты');
+                notifyQuest(i18nT('quests:components.quests.QuestWizard.ne_udalos_podgotovit_realnyy_marshrut_dlya_o_76e048c3'));
             }
         })();
-    }, [steps, title]);
+    }, [offlineMapPointsCount, steps, title]);
 
     const handleOfflineMapOpenInApp = useCallback(() => {
         void (async () => {
             try {
                 const opened = await openQuestOfflineMapInApp({ title, steps });
-                if (!opened) notifyQuest('В квесте нет точек для карты');
+                if (!opened) {
+                    notifyQuest(
+                        offlineMapPointsCount >= 2
+                            ? i18nT('quests:components.quests.QuestWizard.ne_udalos_postroit_realnyy_peshiy_marshrut_d_1a2770b9')
+                            : i18nT('quests:components.quests.QuestWizard.v_kveste_net_tochek_dlya_karty_e2d9a5ea'),
+                    );
+                }
             } catch {
-                notifyQuest('Не удалось открыть точки в приложении карт');
+                notifyQuest(i18nT('quests:components.quests.QuestWizard.ne_udalos_otkryt_realnyy_marshrut_v_prilozhe_20204379'));
             }
         })();
-    }, [steps, title]);
+    }, [offlineMapPointsCount, steps, title]);
 
     // Скачать весь квест для офлайна: персистим сырой бандл в кэш и прогреваем
     // дисковый кэш фото (шаги + обложка + постер финала), чтобы квест открывался
@@ -370,12 +384,12 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                 setOfflineQuestState('done');
                 notifyQuest(
                     total > 0
-                        ? `Квест сохранён для офлайна — фото ${ok}/${total}`
-                        : 'Квест сохранён для офлайна',
+                        ? i18nT('quests:components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_foto_value1_valu_b0544e7a', { value1: ok, value2: total })
+                        : i18nT('quests:components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_da201f00'),
                 );
             } catch {
                 setOfflineQuestState('idle');
-                notifyQuest('Не удалось сохранить квест для офлайна');
+                notifyQuest(i18nT('quests:components.quests.QuestWizard.ne_udalos_sohranit_kvest_dlya_oflayna_21108b88'));
             }
         })();
     }, [coverUrl, finale.poster, offlineQuestState, questId, steps]);

@@ -8,6 +8,8 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsive } from '@/hooks/useResponsive'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader'
+import { translate as i18nT } from '@/i18n'
+
 
 interface ProfileSectionsHubProps {
   /** id текущего пользователя для ссылки на публичный профиль; без него пункт скрыт. */
@@ -22,46 +24,46 @@ interface HubItem {
   route: string
 }
 
-const BASE_ITEMS: HubItem[] = [
+const createBaseItems = (): HubItem[] => [
   {
     key: 'trips-my',
-    title: 'Мои поездки',
-    subtitle: 'Организую и участвую',
+    title: i18nT('profile:components.screens.profile.ProfileSectionsHub.items.myTrips.title'),
+    subtitle: i18nT('profile:components.screens.profile.ProfileSectionsHub.items.myTrips.subtitle'),
     icon: 'briefcase',
     route: '/trips/my',
   },
   {
     key: 'trips-community',
-    title: 'Сообщество',
-    subtitle: 'Поехали вместе',
+    title: i18nT('profile:components.screens.profile.ProfileSectionsHub.items.community.title'),
+    subtitle: i18nT('profile:components.screens.profile.ProfileSectionsHub.items.community.subtitle'),
     icon: 'users',
     route: '/trips/community',
   },
   {
     key: 'export',
-    title: 'Экспорт в PDF',
-    subtitle: 'Книга путешествий',
+    title: i18nT('profile:components.screens.profile.ProfileSectionsHub.items.export.title'),
+    subtitle: i18nT('profile:components.screens.profile.ProfileSectionsHub.items.export.subtitle'),
     icon: 'book-open',
     route: '/export',
   },
   {
     key: 'privacy',
-    title: 'Приватность',
-    subtitle: 'Кто видит контакты',
+    title: i18nT('profile:components.screens.profile.ProfileSectionsHub.items.privacy.title'),
+    subtitle: i18nT('profile:components.screens.profile.ProfileSectionsHub.items.privacy.subtitle'),
     icon: 'shield',
     route: '/privacy-settings?from=profile',
   },
   {
     key: 'security',
-    title: 'Журнал безопасности',
-    subtitle: 'История входов',
+    title: i18nT('profile:components.screens.profile.ProfileSectionsHub.items.security.title'),
+    subtitle: i18nT('profile:components.screens.profile.ProfileSectionsHub.items.security.subtitle'),
     icon: 'activity',
     route: '/security-journal',
   },
   {
     key: 'settings',
-    title: 'Настройки',
-    subtitle: 'Профиль и аккаунт',
+    title: i18nT('profile:components.screens.profile.ProfileSectionsHub.items.settings.title'),
+    subtitle: i18nT('profile:components.screens.profile.ProfileSectionsHub.items.settings.subtitle'),
     icon: 'settings',
     route: '/settings',
   },
@@ -79,14 +81,15 @@ export function ProfileSectionsHub({ userId }: ProfileSectionsHubProps) {
   const hideExport = isHydrated && isMobile
 
   const items = useMemo<HubItem[]>(() => {
-    const base = hideExport ? BASE_ITEMS.filter((item) => item.key !== 'export') : BASE_ITEMS
+    const baseItems = createBaseItems()
+    const base = hideExport ? baseItems.filter((item) => item.key !== 'export') : baseItems
     if (userId === undefined || userId === null || `${userId}`.length === 0) return base
     return [
       ...base,
       {
         key: 'public-profile',
-        title: 'Мой публичный профиль',
-        subtitle: 'Как вас видят другие',
+        title: i18nT('profile:components.screens.profile.ProfileSectionsHub.moy_publichnyy_profil_0f3ccacd'),
+        subtitle: i18nT('profile:components.screens.profile.ProfileSectionsHub.kak_vas_vidyat_drugie_6d47f34f'),
         icon: 'user',
         route: `/user/${userId}`,
       },
@@ -101,8 +104,8 @@ export function ProfileSectionsHub({ userId }: ProfileSectionsHubProps) {
   return (
     <View>
       <ProfileSectionHeader
-        title="Все мои разделы"
-        subtitle="Быстрый доступ ко всем разделам кабинета"
+        title={i18nT('profile:components.screens.profile.ProfileSectionsHub.vse_moi_razdely_151367e1')}
+        subtitle={i18nT('profile:components.screens.profile.ProfileSectionsHub.bystryy_dostup_ko_vsem_razdelam_kabineta_a460b7ad')}
       />
       <View style={styles.grid} accessibilityRole="menu">
         {items.map((item) => (

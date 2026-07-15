@@ -292,7 +292,7 @@ describe('PlannedTripScreen — planner states', () => {
     expect(trigger.props.accessibilityRole).toBe('button');
     expect(trigger.props.onChangeText).toBeUndefined();
     expect(getByTestId('trip-plan-edit-start-date-value').props.children).toBe(
-      '15 августа 2026',
+      '15 августа 2026 г.',
     );
 
     fireEvent.press(trigger);
@@ -300,14 +300,14 @@ describe('PlannedTripScreen — planner states', () => {
     fireEvent.press(getByTestId('mini-calendar-day-2026-08-20'));
     expect(queryByTestId('trip-plan-edit-date-picker')).toBeNull();
     expect(getByTestId('trip-plan-edit-start-date-value').props.children).toBe(
-      '20 августа 2026',
+      '20 августа 2026 г.',
     );
 
     fireEvent.press(getByTestId('trip-plan-edit-start-date'));
     fireEvent.press(getByTestId('trip-plan-edit-start-date-cancel'));
     expect(queryByTestId('trip-plan-edit-date-picker')).toBeNull();
     expect(getByTestId('trip-plan-edit-start-date-value').props.children).toBe(
-      '20 августа 2026',
+      '20 августа 2026 г.',
     );
 
     fireEvent.press(getByTestId('trip-plan-edit-save'));

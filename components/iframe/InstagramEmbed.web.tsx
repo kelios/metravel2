@@ -1,4 +1,6 @@
 import React, { useMemo } from 'react'
+import { translate as i18nT } from '@/i18n'
+
 
 interface InstagramEmbedProps {
   url: string
@@ -27,7 +29,7 @@ const InstagramEmbed: React.FC<InstagramEmbedProps> = ({ url }) => {
       allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
       allowFullScreen: true,
       loading: 'lazy',
-      title: 'Instagram post',
+      title: i18nT('shared:components.iframe.InstagramEmbed.instagram_post_a443d081'),
     })
   )
 }

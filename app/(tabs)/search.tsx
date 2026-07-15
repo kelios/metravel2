@@ -13,11 +13,8 @@ import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/uti
 import SearchPageSkeleton from '@/components/listTravel/SearchPageSkeleton'
 import ListTravel from '@/components/listTravel/ListTravelRoute'
 import { trackContentCreateCtaClicked } from '@/utils/growthFunnelAnalytics'
+import { translate as i18nT } from '@/i18n'
 
-/** SEO metadata */
-const PAGE_HEADING = 'Поиск маршрутов и идей путешествий по Беларуси'
-const SEO_TITLE = `${PAGE_HEADING} | Metravel`
-const SEO_DESCRIPTION = 'Ищите путешествия по странам, категориям и сложности. Фильтруйте маршруты и сохраняйте лучшие идеи в свою книгу путешествий.'
 
 function SearchScreen() {
   const pathname = usePathname()
@@ -25,6 +22,7 @@ function SearchScreen() {
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const { isAuthenticated } = useAuth()
+  const pageHeading = i18nT('seoStatic:search.heading')
   const [canRenderList, setCanRenderList] = useState(Platform.OS !== 'web')
 
   useEffect(() => {
@@ -47,9 +45,9 @@ function SearchScreen() {
     if (!isAuthenticated || Platform.OS === 'web') return undefined
 
     return {
-      accessibilityHint: 'Открывает мастер создания нового маршрута',
+      accessibilityHint: i18nT('shared:app.tabs.search.otkryvaet_master_sozdaniya_novogo_marshruta_1167875d'),
       iconName: 'plus' as const,
-      label: 'Создать маршрут',
+      label: i18nT('shared:app.tabs.search.sozdat_marshrut_eaa135a8'),
       onPress: handleCreateTravelPress,
       testID: 'create-travel-toolbar-button',
     }
@@ -92,20 +90,20 @@ function SearchScreen() {
       {isFocused && Platform.OS === 'web' && (
         <InstantSEO
           headKey="travel-search"
-          title={SEO_TITLE}
-          description={SEO_DESCRIPTION}
+          title={i18nT('seoStatic:root.search.title')}
+          description={i18nT('seoStatic:root.search.description')}
           canonical={buildCanonicalUrl(pathname || '/search')}
           image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
           ogType="website"
         />
       )}
       <View style={styles.container} testID="search-container">
-        {Platform.OS === 'web' && <h1 style={styles.srOnly as any}>{PAGE_HEADING}</h1>}
+        {Platform.OS === 'web' && <h1 style={styles.srOnly as any}>{pageHeading}</h1>}
         <ErrorBoundary
           fallback={
             <View style={styles.errorContainer}>
               <ErrorDisplay
-                message="Не удалось загрузить поиск путешествий"
+                message={i18nT('shared:app.tabs.search.ne_udalos_zagruzit_poisk_puteshestviy_7798f9dd')}
                 onRetry={() => router.replace((pathname || '/search') as any)}
                 variant="error"
               />

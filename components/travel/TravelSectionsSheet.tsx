@@ -6,6 +6,8 @@ import { useThemedColors } from "@/hooks/useTheme" // ✅ РЕДИЗАЙН: Те
 import { useResponsive } from "@/hooks/useResponsive"
 import { DESIGN_TOKENS } from "@/constants/designSystem"
 import { useTravelSectionsStore } from "@/stores/travelSectionsStore"
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
   links: TravelSectionLink[]
@@ -18,9 +20,9 @@ type GroupKey = "main" | "location" | "extra"
 type PressEvent = { stopPropagation?: () => void }
 
 const GROUP_LABELS: Record<GroupKey, string> = {
-  main: "Основное",
-  location: "Маршрут",
-  extra: "Ещё на странице",
+  get main() { return i18nT('travel:components.travel.TravelSectionsSheet.group.main') },
+  get location() { return i18nT('travel:components.travel.TravelSectionsSheet.group.location') },
+  get extra() { return i18nT('travel:components.travel.TravelSectionsSheet.group.extra') },
 }
 
 const PANEL_RADIUS = DESIGN_TOKENS.radii.lg
@@ -338,15 +340,15 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           testID="travel-sections-trigger"
           onPress={handleOpen}
           accessibilityRole="button"
-          accessibilityLabel="Секции, открыть список секций"
+          accessibilityLabel={i18nT('travel:components.travel.TravelSectionsSheet.sektsii_otkryt_spisok_sektsiy_d330c7f3')}
           ref={triggerRef}
           style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
         >
           <Feather name="list" size={18} color={colors.text} />
           <View style={styles.triggerTextWrap}>
-            <Text style={styles.triggerEyebrow}>Раздел</Text>
+            <Text style={styles.triggerEyebrow}>{i18nT('travel:components.travel.TravelSectionsSheet.razdel_d745d694')}</Text>
             <Text style={styles.triggerActiveText} numberOfLines={1}>
-              {activeLink?.label ?? "Секции"}
+              {activeLink?.label ?? i18nT('travel:components.travel.TravelSectionsSheet.sectionsFallback')}
             </Text>
           </View>
           <Feather name="chevron-down" size={20} color={colors.textMuted} />
@@ -369,17 +371,17 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
             testID="travel-sections-sheet"
             style={styles.sheet}
             accessibilityRole="menu"
-            accessibilityLabel="Список разделов"
+            accessibilityLabel={i18nT('travel:components.travel.TravelSectionsSheet.spisok_razdelov_2f7bedbe')}
             {...(Platform.OS === 'web' ? { onClick: (e: any) => e.stopPropagation() } : {})}
           >
             <View style={styles.header}>
-              <Text style={styles.title}>Разделы</Text>
+              <Text style={styles.title}>{i18nT('travel:components.travel.TravelSectionsSheet.razdely_f56d9925')}</Text>
               <Pressable
                 testID="travel-sections-close"
                 onPress={handleClose}
                 {...(Platform.OS === 'web' ? { onClick: handleClose } : {})}
                 accessibilityRole="button"
-                accessibilityLabel="Закрыть"
+                accessibilityLabel={i18nT('travel:components.travel.TravelSectionsSheet.zakryt_6652418c')}
                 ref={closeRef}
                 style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
               >

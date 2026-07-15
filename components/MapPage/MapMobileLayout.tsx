@@ -21,6 +21,8 @@ import { MapMobileTopOverlay } from './MapMobile/MapMobileTopOverlay'
 import MapPlaceBottomCard from './MapPlaceBottomCard'
 import { getPlacesLabel, PLACE_COUNT_BADGE_CAP } from './TravelListPanel/helpers'
 import type { TransportMode } from './transportModes'
+import { translate as i18nT } from '@/i18n'
+
 
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
 // Что показываем в шторке, когда она открыта (по запросу пользователя).
@@ -195,9 +197,13 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     clearSelectedPlace?.()
     setFiltersMode?.('radius')
     setSheetContent('filters')
+    // Record the explicit open intent synchronously. Native bottom-sheet
+    // `onChange` arrives after the snap animation, while a map click can finish
+    // in the same frame and would otherwise see a stale `collapsed` ref.
+    handleSheetStateChange('seventy')
     bottomSheetRef.current?.snapToSeventy()
     onOpenFilters()
-  }, [onOpenFilters, setFiltersMode, clearSelectedPlace])
+  }, [clearSelectedPlace, handleSheetStateChange, onOpenFilters, setFiltersMode])
 
   const closePopover = useCallback(() => setActivePopover(null), [])
 
@@ -323,7 +329,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     const hasRadiusContext =
       currentRadiusKm != null && String(currentRadiusKm).trim() !== ''
 
-    return `${placesCountLabel} ${getPlacesLabel(displayCount)}${hasRadiusContext ? ` · ${currentRadiusKm} км` : ''}`
+    return `${placesCountLabel} ${getPlacesLabel(displayCount)}${hasRadiusContext ? i18nT('map:components.MapPage.MapMobileLayout.value1_km_9e970651', { value1: currentRadiusKm }) : ''}`
   }, [currentRadiusKm, displayCount])
 
   // Радиус-поповер и слои-поповер переиспользуют ту же модель, что и шит:
@@ -371,7 +377,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     clearRouteAndSetMode('route')
     addRoutePoint(
       { lat: trustedUserLocation.latitude, lng: trustedUserLocation.longitude },
-      'Моё местоположение',
+      i18nT('map:components.MapPage.MapMobileLayout.moe_mestopolozhenie_3ab044c9'),
     )
     setFiltersMode?.('route')
     setRouteAutoStartPending(false)
@@ -460,11 +466,20 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   // card is not covered. Opening any sheet (list/filters/route) clears the card.
   const hasSelectedPlace = !!selectedPlace
   useEffect(() => {
-    if (hasSelectedPlace) {
-      bottomSheetRef.current?.snapToCollapsed()
-      setActivePopover(null)
+    if (!hasSelectedPlace) return
+
+    // Filters/route are explicit modal-like intents. A late Leaflet click from the
+    // same pointer sequence must not replace them with a place card and collapse
+    // the sheet. This can happen on mobile web when the list action swaps the sheet
+    // body while the underlying map is still finishing its click handler (#940).
+    if (sheetContent !== 'list' && sheetStateRef.current !== 'collapsed') {
+      clearSelectedPlace?.()
+      return
     }
-  }, [hasSelectedPlace])
+
+    bottomSheetRef.current?.snapToCollapsed()
+    setActivePopover(null)
+  }, [clearSelectedPlace, hasSelectedPlace, sheetContent])
 
   const handleClearSelectedPlace = useCallback(() => {
     clearSelectedPlace?.()
@@ -524,9 +539,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         style={styles.sheetFallback}
         testID="map-mobile-filters-loading"
         accessibilityRole="progressbar"
-        accessibilityLabel="Загружаем фильтры"
+        accessibilityLabel={i18nT('map:components.MapPage.MapMobileLayout.zagruzhaem_filtry_6233db2b')}
       >
-        <RNText style={styles.sheetFallbackTitle}>Загружаем фильтры</RNText>
+        <RNText style={styles.sheetFallbackTitle}>{i18nT('map:components.MapPage.MapMobileLayout.zagruzhaem_filtry_6233db2b')}</RNText>
         <FiltersSkeleton />
       </View>
     ),
@@ -547,8 +562,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             testID="travel-list-mobile-summary"
           >
             <RNText style={styles.sheetListTitle} numberOfLines={1}>
-              Места рядом
-            </RNText>
+              {i18nT('map:components.MapPage.MapMobileLayout.mesta_ryadom_ef2216b7')}</RNText>
             <View style={styles.sheetListCountChip}>
               <RNText style={styles.sheetListCountChipText} numberOfLines={1}>
                 {listHeaderSummaryText}
@@ -558,7 +572,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               testID="travel-list-open-filters"
               onPress={openFiltersSheet}
               accessibilityRole="button"
-              accessibilityLabel="Открыть фильтры"
+              accessibilityLabel={i18nT('map:components.MapPage.MapMobileLayout.otkryt_filtry_b6f552ba')}
               hitSlop={8}
               style={({ pressed }) => [
                 styles.sheetListFiltersButton,
@@ -570,7 +584,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           </View>
         ) : showSheetHeader ? (
           <RNText style={styles.sheetSheetTitle} numberOfLines={1}>
-            {sheetContent === 'route' ? 'Маршрут' : 'Фильтры и поиск'}
+            {sheetContent === 'route' ? i18nT('map:components.MapPage.MapMobileLayout.marshrut_bf0aedf2') : i18nT('map:components.MapPage.MapMobileLayout.filtry_i_poisk_e9eb803e')}
           </RNText>
         ) : (
           <View style={styles.sheetHeaderSpacer} />
@@ -579,7 +593,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           testID="map-mobile-sheet-close"
           onPress={handleCloseSheet}
           accessibilityRole="button"
-          accessibilityLabel="Закрыть"
+          accessibilityLabel={i18nT('map:components.MapPage.MapMobileLayout.zakryt_d55e477b')}
           hitSlop={8}
           style={({ pressed }) => [
             styles.sheetCloseButton,
@@ -695,7 +709,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             testID="map-search-this-area"
             onPress={onSearchThisArea}
             accessibilityRole="button"
-            accessibilityLabel="Искать в этой области"
+            accessibilityLabel={i18nT('map:components.MapPage.MapMobileLayout.iskat_v_etoy_oblasti_1828db63')}
             style={({ pressed }) => [
               styles.searchAreaButton,
               IS_WEB ? ({ bottom: searchAreaButtonBottom } as any) : null,
@@ -704,8 +718,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           >
             <Feather name="refresh-cw" size={15} color={colors.textOnPrimary} />
             <RNText style={styles.searchAreaButtonText} numberOfLines={1}>
-              Искать в этой области
-            </RNText>
+              {i18nT('map:components.MapPage.MapMobileLayout.iskat_v_etoy_oblasti_1828db63')}</RNText>
           </Pressable>
         )}
 

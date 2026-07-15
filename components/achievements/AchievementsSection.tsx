@@ -22,6 +22,8 @@ import BadgeMedal from '@/components/achievements/BadgeMedal'
 import AchievementsGalleryModal from '@/components/achievements/AchievementsGalleryModal'
 import PeerBadgeReceivedRow from '@/components/achievements/PeerBadgeReceivedRow'
 import SectionState from '@/components/achievements/SectionState'
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   /** bare — без внешней карточки и заголовка (контент для хаба наград). */
@@ -50,7 +52,7 @@ function AchievementsSection({ bare = false, testID, style }: Props) {
     <SectionState isFetching={isFetching} hasData={data != null}>
       {data ? (
         <>
-          <Text style={styles.subheading}>Значки — за конкретные достижения.</Text>
+          <Text style={styles.subheading}>{i18nT('achievements:components.achievements.AchievementsSection.znachki_za_konkretnye_dostizheniya_0b7c6354')}</Text>
           <RankBar rank={data.rank} style={styles.rank} />
 
           {data.earned.length > 0 ? (
@@ -72,9 +74,7 @@ function AchievementsSection({ bare = false, testID, style }: Props) {
             </ScrollView>
           ) : (
             <Text style={styles.empty}>
-              Пока нет значков. Публикуйте путешествия и проходите квесты — они
-              появятся здесь.
-            </Text>
+              {i18nT('achievements:components.achievements.AchievementsSection.poka_net_znachkov_publikuyte_puteshestviya_i_6b10ba90')}</Text>
           )}
 
           {peerReceived.length > 0 ? (
@@ -107,15 +107,15 @@ function AchievementsSection({ bare = false, testID, style }: Props) {
   return (
     <View style={[styles.card, style]} testID={testID}>
       <View style={styles.headerRow}>
-        <Text style={styles.heading}>Достижения</Text>
+        <Text style={styles.heading}>{i18nT('achievements:components.achievements.AchievementsSection.dostizheniya_d1c14b18')}</Text>
         {data ? (
           <Pressable
             onPress={() => setGalleryOpen(true)}
             accessibilityRole="button"
-            accessibilityLabel="Открыть все достижения"
+            accessibilityLabel={i18nT('achievements:components.achievements.AchievementsSection.otkryt_vse_dostizheniya_53728d63')}
             style={styles.allBtn}
           >
-            <Text style={styles.allBtnText}>Все</Text>
+            <Text style={styles.allBtnText}>{i18nT('achievements:components.achievements.AchievementsSection.vse_2a3f281e')}</Text>
             <Feather name="chevron-right" size={16} color={colors.primaryDark} />
           </Pressable>
         ) : null}

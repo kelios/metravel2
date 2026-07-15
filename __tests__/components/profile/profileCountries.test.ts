@@ -254,8 +254,8 @@ describe('profileCountries', () => {
         name: 'Польша',
         code: 'PL',
         visitCount: 2,
-        firstKnownDateLabel: '12 мая 2024',
-        summaryText: 'Польша (PL); 2 раза; первая известная дата: 12 мая 2024',
+        firstKnownDateLabel: '12 мая 2024 г.',
+        summaryText: 'Польша (PL); 2 раза; первая известная дата: 12 мая 2024 г.',
       }),
     ])
   })

@@ -16,7 +16,7 @@ import type {
   RareAwardCatalogItem,
   UserBadge,
   UserRank,
-} from '@/api/achievements';
+} from '@/api/achievementsTypes';
 
 const badge = (
   id: number,

@@ -6,6 +6,8 @@ import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useTravelsForQuest } from '@/hooks/useTravelsForQuest'
 import type { TravelLocationQuery } from '@/utils/travelForLocation'
+import { translate as i18nT } from '@/i18n'
+
 
 const MAX_TRAVELS = 4
 
@@ -34,7 +36,7 @@ export function TravelsForQuestSection({ cityName, countryName, countryCode, coo
 
   if (!matches.length) return null
 
-  const heading = cityName ? `Путешествия — ${cityName}` : 'Путешествия по этому городу'
+  const heading = cityName ? i18nT('quests:components.quests.TravelsForQuestSection.puteshestviya_value1_0b7c9157', { value1: cityName }) : i18nT('quests:components.quests.TravelsForQuestSection.puteshestviya_po_etomu_gorodu_53e4e897')
 
   return (
     <View
@@ -49,7 +51,7 @@ export function TravelsForQuestSection({ cityName, countryName, countryCode, coo
       >
         {heading}
       </Text>
-      <Text style={styles.subtitle}>Истории и маршруты авторов по этим местам</Text>
+      <Text style={styles.subtitle}>{i18nT('quests:components.quests.TravelsForQuestSection.istorii_i_marshruty_avtorov_po_etim_mestam_8d58fef3')}</Text>
 
       <View style={styles.grid}>
         {matches.map(({ travel }) => {

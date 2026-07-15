@@ -11,6 +11,8 @@ import Feather from '@expo/vector-icons/Feather'
 import type { ThemedColors } from '@/hooks/useTheme'
 import UiIconButton from '@/components/ui/IconButton'
 import Button from '@/components/ui/Button'
+import { translate as i18nT } from '@/i18n'
+
 
 type DynamicStyles = ReturnType<typeof import('./ArticleEditor.web.styles').getArticleEditorWebStyles>
 
@@ -97,10 +99,10 @@ export const ArticleEditorToolbar = ({
             onPress={onManualSave}
             label={
               isImageUploading
-                ? 'Загрузка изображения…'
+                ? i18nT('shared:components.article.ArticleEditorWebChrome.zagruzka_izobrazheniya_761ff261')
                 : isManualSaving
-                  ? 'Сохранение…'
-                  : 'Сохранить путешествие'
+                  ? i18nT('shared:components.article.ArticleEditorWebChrome.sohranenie_d02351eb')
+                  : i18nT('shared:components.article.ArticleEditorWebChrome.sohranit_puteshestvie_4f9a9f2f')
             }
             size={isCompactViewport ? 'sm' : 'md'}
             style={dynamicStyles.btn}
@@ -146,23 +148,22 @@ export const ArticleEditorAnchorModal = ({
   >
     <View style={dynamicStyles.modalBackdrop}>
       <View style={dynamicStyles.modalCard}>
-        <Text style={dynamicStyles.modalTitle}>Вставить якорь</Text>
+        <Text style={dynamicStyles.modalTitle}>{i18nT('shared:components.article.ArticleEditorWebChrome.vstavit_yakor_3097efbe')}</Text>
         <Text style={dynamicStyles.modalDescription}>
-          Идентификатор (например: day-3)
-        </Text>
+          {i18nT('shared:components.article.ArticleEditorWebChrome.identifikator_naprimer_day_3_1da8b82b')}</Text>
         <TextInput
           ref={inputRef}
           value={value}
           onChangeText={onChangeText}
-          placeholder="day-3"
+          placeholder={i18nT('shared:components.article.ArticleEditorWebChrome.day_3_49087a34')}
           placeholderTextColor={colors.textSecondary}
           autoCapitalize="none"
           autoCorrect={false}
           style={dynamicStyles.modalInput}
         />
         <View style={dynamicStyles.modalActions}>
-          <Button onPress={onCancel} label="Отмена" variant="ghost" size="sm" />
-          <Button onPress={onConfirm} label="Вставить" variant="primary" size="sm" />
+          <Button onPress={onCancel} label={i18nT('shared:components.article.ArticleEditorWebChrome.otmena_2b1f8ee3')} variant="ghost" size="sm" />
+          <Button onPress={onConfirm} label={i18nT('shared:components.article.ArticleEditorWebChrome.vstavit_db7090ed')} variant="primary" size="sm" />
         </View>
       </View>
     </View>
@@ -201,23 +202,22 @@ export const ArticleEditorLinkModal = ({
   >
     <View style={dynamicStyles.modalBackdrop}>
       <View style={dynamicStyles.modalCard}>
-        <Text style={dynamicStyles.modalTitle}>Ссылка</Text>
+        <Text style={dynamicStyles.modalTitle}>{i18nT('shared:components.article.ArticleEditorWebChrome.ssylka_f84e3543')}</Text>
         <Text style={dynamicStyles.modalDescription}>
-          URL (например: https://example.com)
-        </Text>
+          {i18nT('shared:components.article.ArticleEditorWebChrome.url_naprimer_https_example_com_a732e899')}</Text>
         <TextInput
           ref={inputRef}
           value={value}
           onChangeText={onChangeText}
-          placeholder="https://..."
+          placeholder={i18nT('shared:components.article.ArticleEditorWebChrome.https_58b02aae')}
           placeholderTextColor={colors.textSecondary}
           autoCapitalize="none"
           autoCorrect={false}
           style={dynamicStyles.modalInput}
         />
         <View style={dynamicStyles.modalActions}>
-          <Button onPress={onCancel} label="Отмена" variant="ghost" size="sm" />
-          <Button onPress={onConfirm} label="Сохранить" variant="primary" size="sm" />
+          <Button onPress={onCancel} label={i18nT('shared:components.article.ArticleEditorWebChrome.otmena_2b1f8ee3')} variant="ghost" size="sm" />
+          <Button onPress={onConfirm} label={i18nT('shared:components.article.ArticleEditorWebChrome.sohranit_59531924')} variant="primary" size="sm" />
         </View>
       </View>
     </View>

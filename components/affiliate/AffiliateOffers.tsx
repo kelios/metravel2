@@ -11,6 +11,8 @@ import {
   type AffiliateOfferContext,
 } from './affiliateConfig'
 import { useAffiliateImpression } from './useAffiliateImpression'
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = AffiliateOfferContext & { onOfferClick?: (programKey: string) => void }
 
@@ -74,7 +76,7 @@ function AffiliateOffers({ city, country, countryCode, travelId, onOfferClick }:
           </Pressable>
         </View>
       ))}
-      <Text style={styles.disclosure}>Реклама · Партнёрские предложения. Цена для вас не меняется.</Text>
+      <Text style={styles.disclosure}>{i18nT('shared:components.affiliate.AffiliateOffers.reklama_partnerskie_predlozheniya_tsena_dlya_777e00fa')}</Text>
     </View>
   )
 }

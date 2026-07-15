@@ -7,13 +7,16 @@ import CardActionPressable from '@/components/ui/CardActionPressable';
 import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet';
 import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
 import { SEMANTIC_ACTION_ICON } from '@/components/navigation/navigationActionMeta';
-import { POPUP_TOOLTIPS } from './constants';
+import { getPopupTooltips } from './constants';
 import FullscreenImageViewer from './FullscreenImageViewer';
 import FullscreenPopupOverlay from './FullscreenPopupOverlay';
 import { stopWebPopupEvent } from './domEvents';
 import { usePopupDomGuard } from './usePopupDomGuard';
 import { usePopupLayout } from './usePopupLayout';
 import { usePopupActions } from './usePopupActions';
+import { getPlacePopupCoordinate, getPlacePopupSubtitle } from './placePopupModel';
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
   title: string;
@@ -142,7 +145,7 @@ const PlacePopupCard: React.FC<Props> = ({
   addDisabled = false,
   isAdding = false,
   isSaved = false,
-  addLabel = 'Мои точки',
+  addLabel = i18nT('map:components.MapPage.Map.PlacePopupCard.index.moi_tochki_9e5ac9a2'),
   addTooltip,
   width = 352,
   imageHeight: _imageHeight = 56,
@@ -157,6 +160,7 @@ const PlacePopupCard: React.FC<Props> = ({
   colors,
   primaryActionOverride,
 }) => {
+  const popupTooltips = useMemo(getPopupTooltips, []);
   const setCardRootNode = usePopupDomGuard();
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
   const [navExpanded, setNavExpanded] = useState(false);
@@ -180,6 +184,7 @@ const PlacePopupCard: React.FC<Props> = ({
     width,
     imageUrl,
     addLabel,
+    isSaved,
     imageHeight: _imageHeight,
     compactLayout,
     fullscreenOnMobile,
@@ -216,27 +221,19 @@ const PlacePopupCard: React.FC<Props> = ({
   // clamp chops mid-word. In the bottom card we keep only the most informative
   // tail segments (locality + region/country) so the line ends on a clean
   // boundary. Desktop popup / nearby list keep the full subtitle untouched.
-  const displaySubtitle = useMemo(() => {
-    if (!_subtitle || !isBottomCardLayout) return _subtitle;
-    const segments = _subtitle.split(',').map((s) => s.trim()).filter(Boolean);
-    if (segments.length <= 3) return _subtitle;
-    return segments.slice(-3).join(', ');
-  }, [_subtitle, isBottomCardLayout]);
+  const displaySubtitle = useMemo(
+    () => getPlacePopupSubtitle(_subtitle, isBottomCardLayout),
+    [_subtitle, isBottomCardLayout],
+  );
 
   // In the mobile bottom card the coordinates are secondary metadata, so show a
   // shorter ~5-decimal value (50.05470, 19.93488) instead of the raw 7-decimal
   // string. Copy still uses the full original `coord` (handled in the factory),
   // so precision is preserved on paste.
-  const displayCoord = useMemo(() => {
-    if (!coord) return coord;
-    if (!isBottomCardLayout) return coord;
-    const parts = coord.replace(/;/g, ',').split(',').map((v) => v.trim());
-    if (parts.length < 2) return coord;
-    const lat = Number(parts[0]);
-    const lng = Number(parts[1]);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return coord;
-    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-  }, [coord, isBottomCardLayout]);
+  const displayCoord = useMemo(
+    () => getPlacePopupCoordinate(coord, isBottomCardLayout),
+    [coord, isBottomCardLayout],
+  );
 
   const handleOpenFullscreen = useCallback((event?: any) => {
     stopWebPopupEvent(event);
@@ -320,14 +317,14 @@ const PlacePopupCard: React.FC<Props> = ({
     !(!!articleHref && !!onOpenArticle);
   const primaryIconActionLabel =
     isBottomCardLayout && primaryAction?.icon === 'arrow-right'
-      ? 'Страница'
+      ? i18nT('map:components.MapPage.Map.PlacePopupCard.index.stranitsa_42cb2f31')
       : primaryAction?.label;
 
   // #FIX-3 — «Мои точки» is an ambiguous noun (reads as "view", but the chip ADDS the
   // point). On the bottom card (mobile web + native) show the verb «Сохранить» /
   // «Сохранено» (the bookmark/✓ icon already conveys save vs saved). Keeps the #334
   // add/un-save toggle. Desktop Leaflet popup keeps the existing `compactLabel`.
-  const saveChipLabel = useBottomCardChrome ? (isSaved ? 'Сохранено' : 'Сохранить') : compactLabel;
+  const saveChipLabel = useBottomCardChrome ? (isSaved ? i18nT('map:components.MapPage.Map.PlacePopupCard.index.sohraneno_c49c48f6') : i18nT('map:components.MapPage.Map.PlacePopupCard.index.sohranit_e0638622')) : compactLabel;
 
   // #FIX-3 — «Поделиться» is a share action surfaced as a small right-aligned icon in
   // the title row on the native bottom card (NOT in the action row, which must stay at
@@ -346,9 +343,9 @@ const PlacePopupCard: React.FC<Props> = ({
         </Text>
         {showTitleShare && onShareTelegram ? (
           <CardActionPressable
-            accessibilityLabel="Поделиться в Telegram"
+            accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.index.podelitsya_v_telegram_a5cf0cdd')}
             onPress={onShareTelegram}
-            title={POPUP_TOOLTIPS.shareTelegram}
+            title={popupTooltips.shareTelegram}
             enableWebClickFallback
             style={({ pressed }) => [styles.titleShareBtn, pressed && styles.iconActionBtnPressed]}
           >
@@ -406,6 +403,7 @@ const PlacePopupCard: React.FC<Props> = ({
     isBottomCardLayout,
     isDrivingLoading,
     onShareTelegram,
+    popupTooltips.shareTelegram,
     showTitleShare,
     styles,
     title,
@@ -472,9 +470,9 @@ const PlacePopupCard: React.FC<Props> = ({
           <Text style={styles.coordText} numberOfLines={1} selectable>{displayCoord}</Text>
           {onCopyCoord ? (
             <CardActionPressable
-              accessibilityLabel="Скопировать координаты"
+              accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.index.skopirovat_koordinaty_662a5c44')}
               onPress={() => void onCopyCoord()}
-              title={POPUP_TOOLTIPS.copyCoords}
+              title={popupTooltips.copyCoords}
               enableWebClickFallback
               style={({ pressed }) => [styles.coordCopyButton, pressed && styles.iconActionBtnPressed]}
             >
@@ -532,9 +530,9 @@ const PlacePopupCard: React.FC<Props> = ({
 
                 {onBuildRoute && (
                   <CardActionPressable
-                    accessibilityLabel="Построить маршрут от моего местоположения"
+                    accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.index.postroit_marshrut_ot_moego_mestopolozheniya_0949dacc')}
                     onPress={onBuildRoute}
-                    title={POPUP_TOOLTIPS.buildRoute}
+                    title={popupTooltips.buildRoute}
                     testID="popup-primary-action"
                     enableWebClickFallback
                     style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
@@ -543,16 +541,16 @@ const PlacePopupCard: React.FC<Props> = ({
                       <Feather name="corner-up-right" size={20} color={colors.textOnPrimary ?? colors.textOnDark} />
                     </View>
                     <View style={styles.iconActionLabelRow}>
-                      <Text style={styles.iconActionLabel} numberOfLines={2}>Маршрут от меня</Text>
+                      <Text style={styles.iconActionLabel} numberOfLines={2}>{i18nT('map:components.MapPage.Map.PlacePopupCard.index.marshrut_ot_menya_617360ad')}</Text>
                     </View>
                   </CardActionPressable>
                 )}
 
               {!!articleHref && !!onOpenArticle && (
                 <CardActionPressable
-                  accessibilityLabel="Открыть статью"
+                  accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.index.otkryt_statyu_f1d53e13')}
                   onPress={onOpenArticle}
-                  title={POPUP_TOOLTIPS.openArticle}
+                  title={popupTooltips.openArticle}
                   enableWebClickFallback
                   style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
                 >
@@ -560,7 +558,7 @@ const PlacePopupCard: React.FC<Props> = ({
                     <Feather name="book-open" size={19} color={colors.primaryDark} />
                   </View>
                   <View style={styles.iconActionLabelRow}>
-                    <Text style={styles.iconActionLabel} numberOfLines={1}>Страница</Text>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>{i18nT('map:components.MapPage.Map.PlacePopupCard.index.stranitsa_42cb2f31')}</Text>
                   </View>
                 </CardActionPressable>
               )}
@@ -627,14 +625,14 @@ const PlacePopupCard: React.FC<Props> = ({
                 <CardActionPressable
                   accessibilityLabel={
                     useNavSheet
-                      ? 'Открыть способы навигации'
+                      ? i18nT('map:components.MapPage.Map.PlacePopupCard.index.otkryt_sposoby_navigatsii_e0698aef')
                       : navExpanded
-                        ? 'Скрыть способы навигации'
-                        : 'Показать способы навигации'
+                        ? i18nT('map:components.MapPage.Map.PlacePopupCard.index.skryt_sposoby_navigatsii_832d2fb9')
+                        : i18nT('map:components.MapPage.Map.PlacePopupCard.index.pokazat_sposoby_navigatsii_11235d85')
                   }
                   accessibilityState={useNavSheet ? { expanded: navSheetVisible } : { expanded: navExpanded }}
                   onPress={toggleNav}
-                  title={POPUP_TOOLTIPS.moreNavigation}
+                  title={popupTooltips.moreNavigation}
                   enableWebClickFallback
                   style={({ pressed }) => [styles.iconActionBtn, pressed && styles.iconActionBtnPressed]}
                 >
@@ -651,7 +649,7 @@ const PlacePopupCard: React.FC<Props> = ({
                     ) : null}
                   </View>
                   <View style={styles.iconActionLabelRow}>
-                    <Text style={styles.iconActionLabel} numberOfLines={1}>Навигация</Text>
+                    <Text style={styles.iconActionLabel} numberOfLines={1}>{i18nT('map:components.MapPage.Map.PlacePopupCard.index.navigatsiya_b55f1991')}</Text>
                     {/* #FIX-3 — on the native bottom card the indicator is already in the
                         bubble (more-horizontal); a second chevron in the label row stole
                         width and clipped «Навигация» → «Навигац…». Keep the trailing
@@ -667,7 +665,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
             {showNavGrid && (
               <View style={styles.navSection}>
-                <Text style={styles.navSectionTitle}>Открыть в навигаторе</Text>
+                <Text style={styles.navSectionTitle}>{i18nT('map:components.MapPage.Map.PlacePopupCard.index.otkryt_v_navigatore_0753f1fd')}</Text>
                 <View style={styles.navGrid}>
                   {navActions.map((action) => (
                     <CardActionPressable
@@ -722,6 +720,10 @@ const PlacePopupCard: React.FC<Props> = ({
     primaryAction,
     primaryIconActionLabel,
     primaryActionOverride,
+    popupTooltips.buildRoute,
+    popupTooltips.copyCoords,
+    popupTooltips.moreNavigation,
+    popupTooltips.openArticle,
     renderFallbackPrimaryAction,
     saveActionVisual,
     showNavGrid,
@@ -753,9 +755,9 @@ const PlacePopupCard: React.FC<Props> = ({
 
   const closeControl = onClose && !suppressInlineClose ? (
     <CardActionPressable
-      accessibilityLabel="Закрыть попап"
+      accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.index.zakryt_popap_252bac72')}
       onPress={onClose}
-      title="Закрыть"
+      title={i18nT('map:components.MapPage.Map.PlacePopupCard.index.zakryt_168e0bd3')}
       enableWebClickFallback
       style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
     >
@@ -770,11 +772,11 @@ const PlacePopupCard: React.FC<Props> = ({
       onPointerDown={stopWebPopupEvent as any}
       onTouchStart={stopWebPopupEvent as any}
       accessibilityRole="button"
-      accessibilityLabel="Открыть фото на весь экран"
+      accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.index.otkryt_foto_na_ves_ekran_af231f16')}
       {...(Platform.OS === 'web'
         ? ({
             'data-card-action': 'true',
-            title: POPUP_TOOLTIPS.openPhoto,
+            title: popupTooltips.openPhoto,
             onMouseDownCapture: handleOpenFullscreen,
             onPointerDownCapture: handleOpenFullscreen,
             onClickCapture: handleOpenFullscreen,
@@ -811,7 +813,7 @@ const PlacePopupCard: React.FC<Props> = ({
             <span
               data-card-action="true"
               aria-hidden="true"
-              title={POPUP_TOOLTIPS.openPhoto}
+              title={popupTooltips.openPhoto}
               onMouseDownCapture={handleOpenFullscreen}
               onPointerDownCapture={handleOpenFullscreen}
               onClickCapture={handleOpenFullscreen}
@@ -922,7 +924,7 @@ const PlacePopupCard: React.FC<Props> = ({
           <ActionListSheet
             visible={navSheetVisible}
             onClose={closeNavSheet}
-            title="Навигация и действия"
+            title={i18nT('map:components.MapPage.Map.PlacePopupCard.index.navigatsiya_i_deystviya_0965c43c')}
             actions={navSheetActions}
           />
         ) : null}
@@ -1059,7 +1061,7 @@ const PlacePopupCard: React.FC<Props> = ({
         <ActionListSheet
           visible={navSheetVisible}
           onClose={closeNavSheet}
-          title="Навигация и действия"
+          title={i18nT('map:components.MapPage.Map.PlacePopupCard.index.navigatsiya_i_deystviya_0965c43c')}
           actions={navSheetActions}
         />
       ) : null}

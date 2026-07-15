@@ -9,6 +9,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
 import { calculateNewRating } from '@/utils/ratingHelpers';
+import { translate as i18nT } from '@/i18n'
+
 
 type UseArticleRatingOptions = {
     articleId: number | undefined;
@@ -73,7 +75,7 @@ export function useArticleRating({
                 queryClient.setQueryData(queryKeys.articleRating(articleId, isAuthenticated), context.previousData);
             }
             showToast({
-                text1: 'Не удалось сохранить оценку',
+                text1: i18nT('shared:hooks.useArticleRating.ne_udalos_sohranit_otsenku_b527e142'),
                 type: 'error',
             });
         },
@@ -85,7 +87,7 @@ export function useArticleRating({
             queryClient.invalidateQueries({ queryKey: queryKeys.article(articleId) });
 
             showToast({
-                text1: 'Оценка сохранена',
+                text1: i18nT('shared:hooks.useArticleRating.otsenka_sohranena_6cf770b3'),
                 type: 'success',
             });
         },

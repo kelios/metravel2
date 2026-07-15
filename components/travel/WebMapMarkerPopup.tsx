@@ -1,6 +1,8 @@
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { getTravelPointImageUrl } from '@/utils/travelPointImages';
+import { translate as i18nT } from '@/i18n'
+
 
 type WebMapMarkerPopupProps = {
     marker: any;
@@ -36,7 +38,7 @@ export default function WebMapMarkerPopup({
                 >
                     <ImageCardMedia
                         src={imageUrl}
-                        alt="Фото"
+                        alt={i18nT('travel:components.travel.WebMapMarkerPopup.foto_e0922db3')}
                         fit="contain"
                         blurBackground
                         allowCriticalWebBlur
@@ -143,8 +145,7 @@ export default function WebMapMarkerPopup({
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                         </svg>
-                        Редактировать
-                    </button>
+                        {i18nT('travel:components.travel.WebMapMarkerPopup.redaktirovat_6064d6d1')}</button>
                     <button
                         onClick={(e) => {
                             e.stopPropagation();

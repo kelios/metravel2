@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { View, TextInput, Button } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
+import { translate as i18nT } from '@/i18n'
+
 
 const ForgotPasswordScreen = () => {
     const [email, setEmail] = useState('');
@@ -16,13 +18,13 @@ const ForgotPasswordScreen = () => {
     return (
         <View>
             <TextInput
-                placeholder="Email"
+                placeholder={i18nT('auth:components.user.ForgotPasswordScreen.email_2810658d')}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
             />
-            <Button title="Отправить инструкцию" onPress={handleSendPassword} />
+            <Button title={i18nT('auth:components.user.ForgotPasswordScreen.otpravit_instruktsiyu_df6218a6')} onPress={handleSendPassword} />
         </View>
     );
 };

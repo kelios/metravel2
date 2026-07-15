@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n'
 // utils/routingHelpers.ts
 // Чистые утилиты для маршрутизации, извлечённые из components/MapPage/useRouting.ts.
 // Независимо тестируемы, без React-зависимостей.
@@ -9,6 +10,40 @@ export interface RouteResult {
     distance: number
     duration: number
     isOptimal: boolean
+}
+
+export type RoutingErrorCode =
+    | 'rate_limit'
+    | 'invalid_route'
+    | 'forbidden'
+    | 'provider_unavailable'
+    | 'empty_route'
+    | 'unknown'
+
+export type RoutingError = Error & {
+    routingCode: RoutingErrorCode
+    httpStatus?: number
+}
+
+export const createRoutingError = (
+    message: string,
+    routingCode: RoutingErrorCode = 'unknown',
+    httpStatus?: number,
+): RoutingError => Object.assign(new Error(message), {
+    routingCode,
+    ...(typeof httpStatus === 'number' ? { httpStatus } : null),
+})
+
+export const getRoutingErrorCode = (error: unknown): RoutingErrorCode => {
+    const code = (error as Partial<RoutingError> | null)?.routingCode
+    return code || 'unknown'
+}
+
+export const isPermanentRoutingError = (error: unknown): boolean => {
+    const status = Number((error as Partial<RoutingError> | null)?.httpStatus)
+    if (status === 400 || status === 401 || status === 403 || status === 404) return true
+    const code = getRoutingErrorCode(error)
+    return code === 'invalid_route' || code === 'forbidden'
 }
 
 // ===================== Профили провайдеров =====================
@@ -69,7 +104,10 @@ export const estimateDurationSeconds = (meters: number, mode: 'car' | 'bike' | '
 /** Проверяет массив координат [lng, lat] на валидность */
 export const validateRoutePoints = (points: [number, number][]): void => {
     if (!Array.isArray(points) || points.length < 2) {
-        throw new Error('Недостаточно точек для построения маршрута')
+        throw createRoutingError(
+            i18nT('shared:utils.routingHelpers.nedostatochno_tochek_dlya_postroeniya_marshr_7435fbc4'),
+            'invalid_route',
+        )
     }
 
     for (const [lng, lat] of points) {
@@ -77,7 +115,10 @@ export const validateRoutePoints = (points: [number, number][]): void => {
             !Number.isFinite(lng) || !Number.isFinite(lat) ||
             lng < -180 || lng > 180 || lat < -90 || lat > 90
         ) {
-            throw new Error('Некорректные координаты маршрута')
+            throw createRoutingError(
+                i18nT('shared:utils.routingHelpers.nekorrektnye_koordinaty_marshruta_9b77464a'),
+                'invalid_route',
+            )
         }
     }
 }
@@ -174,17 +215,7 @@ export const fetchWithRetry = async <T,>(
             lastError = error
 
             // Не ретраим 400, 401, 403, 404 - это постоянные ошибки
-            const isPermanentError =
-                error.message?.includes('400') ||
-                error.message?.includes('401') ||
-                error.message?.includes('403') ||
-                error.message?.includes('404') ||
-                error.message?.includes('429') ||
-                error.message?.includes('лимит') ||
-                error.message?.includes('Некорректные координаты') ||
-                error.message?.includes('Неверный API ключ')
-
-            if (isPermanentError) {
+            if (isPermanentRoutingError(error) || getRoutingErrorCode(error) === 'rate_limit') {
                 throw error
             }
 
@@ -201,7 +232,10 @@ export const fetchWithRetry = async <T,>(
         }
     }
 
-    throw lastError || new Error('Fetch failed after retries')
+    throw lastError || createRoutingError(
+        i18nT('map:utils.routingHelpers.requestFailedAfterRetries'),
+        'provider_unavailable',
+    )
 }
 
 // ===================== ORS helpers =====================

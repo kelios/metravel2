@@ -6,6 +6,8 @@ import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface ActiveFilter {
   key: string;
@@ -46,9 +48,9 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
         {visibleFilters.map((f) => (
           <CardActionPressable
             key={f.key}
-            accessibilityLabel={`Убрать фильтр: ${f.label}`}
+            accessibilityLabel={i18nT('map:components.MapPage.ActiveFiltersBar.ubrat_filtr_value1_0e9ad7b7', { value1: f.label })}
             onPress={() => onRemoveFilter(f.key)}
-            title={`Убрать: ${f.label}`}
+            title={i18nT('map:components.MapPage.ActiveFiltersBar.ubrat_value1_9f2821a9', { value1: f.label })}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
             <Text style={styles.chipText} numberOfLines={1}>{f.label}</Text>
@@ -57,13 +59,13 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
         ))}
         {onClearAll && visibleFilters.length > 1 && (
           <CardActionPressable
-            accessibilityLabel="Сбросить все фильтры"
+            accessibilityLabel={i18nT('map:components.MapPage.ActiveFiltersBar.sbrosit_vse_filtry_8755de36')}
             onPress={onClearAll}
-            title="Сбросить все"
+            title={i18nT('map:components.MapPage.ActiveFiltersBar.sbrosit_vse_f8a0db43')}
             style={({ pressed }) => [styles.clearBtn, pressed && styles.chipPressed]}
           >
             <Feather name="rotate-ccw" size={11} color={colors.textMuted} />
-            <Text style={styles.clearText}>Сбросить</Text>
+            <Text style={styles.clearText}>{i18nT('map:components.MapPage.ActiveFiltersBar.sbrosit_979f0798')}</Text>
           </CardActionPressable>
         )}
       </ScrollView>

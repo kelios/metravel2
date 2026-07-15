@@ -7,6 +7,8 @@ import { getTravelPointImageUrl } from '@/utils/travelPointImages';
 import { EXIF_IMAGE_INPUT_ACCEPT } from '@/utils/exifGps';
 import { useStyles } from './markersListStyles';
 import EditMarkerModal from './EditMarkerModal';
+import { translate as i18nT } from '@/i18n'
+
 
 interface MarkersListComponentProps {
     markers: MarkerData[];
@@ -171,12 +173,12 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
             {isDragOver && onAddMarkerFromPhoto ? (
                 <div style={styles.dropOverlay as React.CSSProperties}>
                     <Feather name="image" size={22} color={colors.primaryDark} />
-                    <span style={styles.dropOverlayText}>Отпустите фото — добавим точки по геолокации</span>
+                    <span style={styles.dropOverlayText}>{i18nT('map:components.map.MarkersListComponent.otpustite_foto_dobavim_tochki_po_geolokatsii_be12ffea')}</span>
                 </div>
             ) : null}
             <div style={styles.stickyHeader as React.CSSProperties}>
                 <div style={styles.headerRow}>
-                    <div style={styles.headerTitle}>Точки</div>
+                    <div style={styles.headerTitle}>{i18nT('map:components.map.MarkersListComponent.tochki_1da3e772')}</div>
                     <div style={styles.headerRight}>
                         {onAddMarkerFromPhoto ? (
                             <>
@@ -184,10 +186,10 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                     type="button"
                                     onClick={handleAddFromPhotoClick}
                                     style={styles.addFromPhotoButton as React.CSSProperties}
-                                    title="Добавить точку из геолокации фото (EXIF)"
+                                    title={i18nT('map:components.map.MarkersListComponent.dobavit_tochku_iz_geolokatsii_foto_exif_b56ac886')}
                                 >
                                     <Feather name="camera" size={14} color={colors.textMuted} />
-                                    <span>Из фото</span>
+                                    <span>{i18nT('map:components.map.MarkersListComponent.iz_foto_30cc8944')}</span>
                                 </button>
                                 <input
                                     ref={fileInputRef}
@@ -208,7 +210,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                             type="text"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            placeholder="Поиск по адресу"
+                            placeholder={i18nT('map:components.map.MarkersListComponent.poisk_po_adresu_418399ea')}
                             style={styles.searchInput}
                         />
                     </div>
@@ -217,7 +219,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                     <div
                         role="button"
                         tabIndex={0}
-                        aria-label="Добавить точки из фото: перетащите фото сюда или нажмите, чтобы выбрать"
+                        aria-label={i18nT('map:components.map.MarkersListComponent.dobavit_tochki_iz_foto_peretaschite_foto_syu_f225fa62')}
                         onClick={handleAddFromPhotoClick}
                         onKeyDown={handleDropZoneKeyDown}
                         style={{
@@ -231,8 +233,8 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                             <Feather name="image" size={16} color={colors.primaryDark} />
                         </div>
                         <div style={styles.dropZoneCompactText as React.CSSProperties}>
-                            <div style={styles.dropZoneTitle}>Перетащите фото сюда</div>
-                            <div style={styles.dropZoneHint}>или нажмите, чтобы выбрать — координаты из EXIF</div>
+                            <div style={styles.dropZoneTitle}>{i18nT('map:components.map.MarkersListComponent.peretaschite_foto_syuda_2a4ca511')}</div>
+                            <div style={styles.dropZoneHint}>{i18nT('map:components.map.MarkersListComponent.ili_nazhmite_chtoby_vybrat_koordinaty_iz_exi_b1c912b3')}</div>
                         </div>
                     </div>
                 ) : null}
@@ -240,13 +242,12 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
             {markers.length === 0 ? (
                 <>
                     <p style={styles.emptyText}>
-                        Пока нет ни одной точки. Нажмите на карту, чтобы добавить первую.
-                    </p>
+                        {i18nT('map:components.map.MarkersListComponent.poka_net_ni_odnoy_tochki_nazhmite_na_kartu_c_0df3e43c')}</p>
                     {onAddMarkerFromPhoto ? (
                         <div
                             role="button"
                             tabIndex={0}
-                            aria-label="Добавить точки из фото: перетащите фото сюда или нажмите, чтобы выбрать"
+                            aria-label={i18nT('map:components.map.MarkersListComponent.dobavit_tochki_iz_foto_peretaschite_foto_syu_f225fa62')}
                             onClick={handleAddFromPhotoClick}
                             onKeyDown={handleDropZoneKeyDown}
                             style={{
@@ -258,10 +259,9 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                             <div style={styles.dropZoneIcon as React.CSSProperties}>
                                 <Feather name="image" size={20} color={colors.primaryDark} />
                             </div>
-                            <div style={styles.dropZoneTitle}>Перетащите фото сюда</div>
+                            <div style={styles.dropZoneTitle}>{i18nT('map:components.map.MarkersListComponent.peretaschite_foto_syuda_2a4ca511')}</div>
                             <div style={styles.dropZoneHint}>
-                                или нажмите, чтобы выбрать. Точки добавятся по геолокации EXIF
-                            </div>
+                                {i18nT('map:components.map.MarkersListComponent.ili_nazhmite_chtoby_vybrat_tochki_dobavyatsy_dcd11896')}</div>
                         </div>
                     ) : null}
                 </>
@@ -269,15 +269,14 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                 <div style={styles.list}>
                     {filteredMarkers.length === 0 ? (
                         <div style={styles.emptySearchState}>
-                            <div style={styles.emptySearchTitle}>Ничего не найдено</div>
-                            <div style={styles.emptySearchText}>Проверьте адрес или очистите поиск.</div>
+                            <div style={styles.emptySearchTitle}>{i18nT('map:components.map.MarkersListComponent.nichego_ne_naydeno_713c909b')}</div>
+                            <div style={styles.emptySearchText}>{i18nT('map:components.map.MarkersListComponent.proverte_adres_ili_ochistite_poisk_c68b1024')}</div>
                             <button
                                 type="button"
                                 onClick={() => setSearch('')}
                                 style={styles.clearSearchButton}
                             >
-                                Очистить поиск
-                            </button>
+                                {i18nT('map:components.map.MarkersListComponent.ochistit_poisk_dd1cdf6a')}</button>
                         </div>
                     ) : filteredMarkers.map(({ marker, index }) => {
                         const isEditing = editingIndex === index;
@@ -292,8 +291,8 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                   })
                                   .filter(Boolean)
                                   .slice(0, 2)
-                                  .join(', ') || 'Категории выбраны')
-                            : 'Категории не выбраны';
+                                  .join(', ') || i18nT('map:components.map.MarkersListComponent.kategorii_vybrany_5cae87f4'))
+                            : i18nT('map:components.map.MarkersListComponent.kategorii_ne_vybrany_a50ecfb7');
                         const imageUrl = getTravelPointImageUrl(marker.image);
                         const hasImage = imageUrl.length > 0;
 
@@ -332,12 +331,12 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                         )}
                                         </div>
                                     <div style={styles.previewText}>
-                                        <div style={styles.markerTitle} title={marker.address || 'Без адреса'}>
-                                            {marker.address || 'Без адреса'}
+                                        <div style={styles.markerTitle} title={marker.address || i18nT('map:components.map.MarkersListComponent.bez_adresa_d9cfb4f0')}>
+                                            {marker.address || i18nT('map:components.map.MarkersListComponent.bez_adresa_d9cfb4f0')}
                                         </div>
                                         <div style={styles.metaRow}>
                                             <span style={styles.badge}>{categoriesLabel}</span>
-                                            {hasImage && <span style={styles.badgeMuted}>Есть фото</span>}
+                                            {hasImage && <span style={styles.badgeMuted}>{i18nT('map:components.map.MarkersListComponent.est_foto_6531b724')}</span>}
                                         </div>
                                     </div>
                                     <div style={styles.actions}>
@@ -350,7 +349,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                             type="button"
                                         >
                                             <Feather name="edit-2" size={13} color={colors.primaryDark} />
-                                            <span>Редактировать</span>
+                                            <span>{i18nT('map:components.map.MarkersListComponent.redaktirovat_6de468c0')}</span>
                                         </button>
                                         <button
                                             onClick={(e) => {
@@ -361,7 +360,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                             type="button"
                                         >
                                             <Feather name="trash-2" size={13} color={colors.dangerDark} />
-                                            <span>Удалить</span>
+                                            <span>{i18nT('map:components.map.MarkersListComponent.udalit_316dc2c9')}</span>
                                         </button>
                                     </div>
                                 </div>

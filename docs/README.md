@@ -47,7 +47,9 @@ yarn start
 
 ## Node.js
 
-- Current project baseline: Node `>= 20.19.4` (see `.nvmrc`).
+- Current project baseline: Node `>= 22.13.1` (see `.nvmrc`).
+- После установки/переключения Node через `nvm` активируй зафиксированный package
+  manager: `corepack enable && corepack prepare yarn@1.22.22 --activate`.
 
 ### Web
 
@@ -67,6 +69,12 @@ yarn test
 
 ```bash
 yarn test:run
+```
+
+- Localization contract:
+
+```bash
+yarn test:i18n
 ```
 
 - Coverage:

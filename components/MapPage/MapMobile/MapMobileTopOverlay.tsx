@@ -21,7 +21,7 @@ import type { MapUiApi } from '@/types/mapUi'
 import MapIcon from '../MapIcon'
 import {
   TRANSPORT_ICON,
-  TRANSPORT_LABEL,
+  getTransportLabel,
   TRANSPORT_SPEED_KMH,
   type TransportMode,
 } from '../transportModes'
@@ -29,6 +29,8 @@ import { getMapMobileTopOverlayStyles } from './MapMobileTopOverlay.styles'
 import { MapMobileRadiusPopover } from './MapMobileRadiusPopover'
 import { MapMobileLayersPopover } from './MapMobileLayersPopover'
 import { MapMobileTransportPopover } from './MapMobileTransportPopover'
+import { translate as i18nT } from '@/i18n'
+
 
 type ActivePopover = 'radius' | 'layers' | 'transport' | null
 
@@ -47,8 +49,8 @@ const ROUTE_SUMMARY_POPOVER_OFFSET = 88
 
 function formatRouteDistance(meters: number): string {
   if (!Number.isFinite(meters) || meters <= 0) return ''
-  if (meters < 1000) return `${Math.round(meters)} м`
-  return `${(meters / 1000).toFixed(1)} км`
+  if (meters < 1000) return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_m_5d0efb19', { value1: Math.round(meters) })
+  return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_km_6c6f740a', { value1: (meters / 1000).toFixed(1) })
 }
 
 function estimateRouteDurationSeconds(meters: number, mode: TransportMode): number {
@@ -60,11 +62,11 @@ function estimateRouteDurationSeconds(meters: number, mode: TransportMode): numb
 function formatRouteDuration(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds <= 0) return ''
   const totalMinutes = Math.max(1, Math.round(seconds / 60))
-  if (totalMinutes < 60) return `${totalMinutes} мин`
+  if (totalMinutes < 60) return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_min_b586289b', { value1: totalMinutes })
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60
-  if (minutes === 0) return `${hours} ч`
-  return `${hours} ч ${minutes} мин`
+  if (minutes === 0) return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_53da1ce7', { value1: hours })
+  return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_value2_min_0833ca5d', { value1: hours, value2: minutes })
 }
 
 interface MapMobileTopOverlayProps {
@@ -173,14 +175,14 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
     isRouteMode && routePointCount === 0 && !hasUserLocation && !routeManualStartActive
   const routeAccessibilityLabel = isRouteMode
     ? routePointCount === 1
-      ? 'Маршрут от меня: выберите место назначения'
-      : `Построить маршрут: выбрано ${Math.min(routePointCount, 2)} из 2 точек`
-    : 'Построить маршрут'
+      ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.marshrut_ot_menya_vyberite_mesto_naznacheniy_ae2deeeb')
+      : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_vybrano_value1_iz_2_tochek_926447de', { value1: Math.min(routePointCount, 2) })
+    : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_da7efcc5')
   const routeHintText = routePointCount === 1
-    ? 'Старт задан: Моё местоположение. Выберите место назначения на карте.'
+    ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.start_zadan_moe_mestopolozhenie_vyberite_mes_0022783b')
     : needsRouteStartChoice
-      ? 'Текущее положение не определено. Разрешите геолокацию или укажите старт вручную.'
-      : 'Коснитесь карты: 1-я точка — старт, 2-я — финиш'
+      ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.tekuschee_polozhenie_ne_opredeleno_razreshit_7df55703')
+      : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.kosnites_karty_1_ya_tochka_start_2_ya_finish_462b6762')
 
   // Inline hint shown when entering route mode; auto-hides after a couple of
   // taps (2 points dropped) or a short timeout so it never blocks the map.
@@ -218,10 +220,10 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   const routeDurationText = formatRouteDuration(durationSeconds)
   const routeSummaryStatus =
     routingError === 'Using direct line'
-      ? 'Прямая линия'
+      ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pryamaya_liniya_79c7e056')
       : routingLoading
-        ? 'Маршрут обновляется'
-        : 'Маршрут готов'
+        ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.marshrut_obnovlyaetsya_eab45ca3')
+        : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.marshrut_gotov_e4454e9a')
 
   // R-1 — глобальной шапки на табе карты больше нет, поэтому overlay сам отвечает
   // за отступ под статус-бар/нотч. Берём safe-area top, но держим небольшой пол,
@@ -252,7 +254,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         testID="map-center-user-quick"
         onPress={onCenterOnUser}
         accessibilityRole="button"
-        accessibilityLabel="Показать мое местоположение"
+        accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_moe_mestopolozhenie_e7418fde')}
         hitSlop={6}
         style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
       >
@@ -265,7 +267,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             testID="map-mobile-filters-button"
             onPress={onOpenFilters}
             accessibilityRole="button"
-            accessibilityLabel="Открыть фильтры"
+            accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.otkryt_filtry_2e8bb063')}
             hitSlop={6}
             style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
           >
@@ -278,7 +280,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               onPress={onToggleRadius}
               accessibilityRole="button"
               accessibilityState={{ expanded: activePopover === 'radius' }}
-              accessibilityLabel={`Радиус${radiusBadge ? ` ${radiusBadge}` : ''}`}
+              accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.radius_value1_760a1afd', { value1: radiusBadge ? ` ${radiusBadge}` : '' })}
               hitSlop={6}
               style={({ pressed }) => [
                 styles.iconButton,
@@ -302,7 +304,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             onPress={onToggleLayers}
             accessibilityRole="button"
             accessibilityState={{ expanded: activePopover === 'layers' }}
-            accessibilityLabel="Слои и настройки карты"
+            accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.sloi_i_nastroyki_karty_603c618f')}
             hitSlop={6}
             style={({ pressed }) => [
               styles.iconButton,
@@ -317,7 +319,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             testID="map-mobile-open-list"
             onPress={onOpenList}
             accessibilityRole="button"
-            accessibilityLabel={`Показать список рядом${listBadge ? ` — ${listBadge}` : ''}`}
+            accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_spisok_ryadom_value1_1dee15c6', { value1: listBadge ? ` — ${listBadge}` : '' })}
             hitSlop={6}
             style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
           >
@@ -340,7 +342,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               testID="map-mobile-show-all"
               onPress={onShowAllPlaces}
               accessibilityRole="button"
-              accessibilityLabel="Показать все места на карте и сбросить фильтры"
+              accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_vse_mesta_na_karte_i_sbrosit_filtry_88e4aa0a')}
               hitSlop={6}
               style={({ pressed }) => [
                 styles.iconButton,
@@ -386,7 +388,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 onPress={onToggleTransport}
                 accessibilityRole="button"
                 accessibilityState={{ expanded: activePopover === 'transport' }}
-                accessibilityLabel={`Тип передвижения: ${TRANSPORT_LABEL[transportMode]}`}
+                accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.tip_peredvizheniya_value1_d6bdfd68', { value1: getTransportLabel(transportMode) })}
                 hitSlop={6}
                 style={({ pressed }) => [
                   styles.iconButton,
@@ -403,7 +405,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 testID="map-mobile-route-clear-button"
                 onPress={onClearRoute}
                 accessibilityRole="button"
-                accessibilityLabel="Очистить маршрут"
+                accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.ochistit_marshrut_3265b685')}
                 hitSlop={6}
                 style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
               >
@@ -431,7 +433,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 testID="map-mobile-route-summary-close"
                 onPress={() => setDismissedRouteSummaryKey(routeSummaryKey)}
                 accessibilityRole="button"
-                accessibilityLabel="Скрыть сводку маршрута"
+                accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.skryt_svodku_marshruta_9d781c25')}
                 hitSlop={8}
                 style={({ pressed }) => [
                   styles.routeSummaryClose,
@@ -458,8 +460,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               )}
               {routingError === 'Using direct line' && (
                 <RNText style={styles.routeSummaryNote} numberOfLines={1}>
-                  прямая линия
-                </RNText>
+                  {i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pryamaya_liniya_e561a708')}</RNText>
               )}
             </View>
           </View>
@@ -524,7 +525,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                   testID="map-mobile-route-request-location"
                   onPress={onRequestLocation}
                   accessibilityRole="button"
-                  accessibilityLabel="Разрешить геолокацию для маршрута"
+                  accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_geolokatsiyu_dlya_marshruta_027a0102')}
                   hitSlop={6}
                   style={({ pressed }) => [
                     styles.routeHintActionPrimary,
@@ -532,8 +533,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                   ]}
                 >
                   <RNText style={styles.routeHintActionPrimaryText} numberOfLines={1}>
-                    Разрешить
-                  </RNText>
+                    {i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_b419aad0')}</RNText>
                 </Pressable>
               )}
               {!!onStartManualRoute && (
@@ -541,7 +541,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                   testID="map-mobile-route-manual-start"
                   onPress={onStartManualRoute}
                   accessibilityRole="button"
-                  accessibilityLabel="Указать старт маршрута вручную"
+                  accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.ukazat_start_marshruta_vruchnuyu_d0723436')}
                   hitSlop={6}
                   style={({ pressed }) => [
                     styles.routeHintActionSecondary,
@@ -549,8 +549,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                   ]}
                 >
                   <RNText style={styles.routeHintActionSecondaryText} numberOfLines={1}>
-                    Указать старт
-                  </RNText>
+                    {i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.ukazat_start_337c5937')}</RNText>
                 </Pressable>
               )}
             </View>

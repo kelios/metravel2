@@ -14,6 +14,8 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
+import { translate as i18nT } from '@/i18n'
+
 
 const getWebCreatePortal = (): ((node: React.ReactNode, container: Element) => any) | null => {
   if (Platform.OS !== 'web') return null;
@@ -233,8 +235,8 @@ const FullscreenImageViewer: React.FC<{
         ) : null}
         <button
           onClick={onClose}
-          aria-label="Закрыть фото"
-          title="Закрыть фото"
+          aria-label={i18nT('map:components.MapPage.Map.PlacePopupCard.FullscreenImageViewer.zakryt_foto_58834efa')}
+          title={i18nT('map:components.MapPage.Map.PlacePopupCard.FullscreenImageViewer.zakryt_foto_58834efa')}
           style={{
             position: 'absolute',
             // Keep the ✕ below the device notch / status bar on mobile web.
@@ -278,7 +280,7 @@ const FullscreenImageViewer: React.FC<{
         style={StyleSheet.absoluteFillObject}
         onPress={onClose}
         accessibilityRole="button"
-        accessibilityLabel="Закрыть фото"
+        accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.FullscreenImageViewer.zakryt_foto_58834efa')}
       >
         <ImageCardMedia
           src={hiResUrl}
@@ -318,7 +320,7 @@ const FullscreenImageViewer: React.FC<{
         hitSlop={16}
         style={[fullscreenStyles.closeBtn, { top: closeBtnTop }]}
         accessibilityRole="button"
-        accessibilityLabel="Закрыть фото"
+        accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.FullscreenImageViewer.zakryt_foto_58834efa')}
       >
         <Feather name="x" size={24} color={colors.textOnDark} />
       </Pressable>

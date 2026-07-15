@@ -2,6 +2,7 @@ import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { devError } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { getSecureItem } from '@/utils/secureStorage';
+import { getApiRequestCredentials, shouldUseStoredAuthToken } from '@/utils/authPlatform';
 import {
     extractTravelEngagementStats,
     type TravelEngagementStats,
@@ -120,8 +121,13 @@ export const fetchMyTravels = async (params: {
         }).toString();
 
         const url = `${GET_TRAVELS}?${query}`;
-        const token = params.includeDrafts ? await getSecureItem(TOKEN_KEY) : null;
-        const init: RequestInit = token ? { headers: { Authorization: `Token ${token}` } } : {};
+        const token = params.includeDrafts && shouldUseStoredAuthToken()
+            ? await getSecureItem(TOKEN_KEY)
+            : null;
+        const init: RequestInit = {
+            ...getApiRequestCredentials(!params.includeDrafts),
+            ...(token ? { headers: { Authorization: `Token ${token}` } } : {}),
+        };
         const res = await fetchWithTimeout(url, init, LONG_TIMEOUT);
         if (!res.ok) {
             const errorText = await res.text().catch(() => 'Unknown error');

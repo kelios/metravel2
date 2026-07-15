@@ -9,6 +9,8 @@ import { optimizeImageUrl } from '@/utils/imageOptimization';
 import type { useThemedColors } from '@/hooks/useTheme';
 import type { createSettingsStyles } from '@/components/screens/settings/settings.styles';
 import type { PreferredMessenger } from '@/api/telegramLink';
+import { translate as i18nT } from '@/i18n'
+
 
 type Colors = ReturnType<typeof useThemedColors>;
 type Styles = ReturnType<typeof createSettingsStyles>;
@@ -129,14 +131,14 @@ export default function ProfileSection({
                 </View>
                 <View style={styles.cardText}>
                     <Text style={styles.cardTitle}>{derivedDisplayName}</Text>
-                    <Text style={styles.cardMeta}>Редактирование профиля</Text>
+                    <Text style={styles.cardMeta}>{i18nT('profile:components.settings.ProfileSection.redaktirovanie_profilya_0977cd91')}</Text>
                 </View>
                 <View style={styles.profileActions}>
                     <Pressable
                         style={[styles.refreshButton, globalFocusStyles.focusable]}
                         onPress={loadProfile}
                         accessibilityRole="button"
-                        accessibilityLabel="Обновить профиль"
+                        accessibilityLabel={i18nT('profile:components.settings.ProfileSection.obnovit_profil_0ded90cf')}
                         disabled={profileLoading}
                         {...Platform.select({ web: { cursor: 'pointer' } })}
                     >
@@ -151,22 +153,22 @@ export default function ProfileSection({
 
             <View style={styles.formGrid}>
                 <View style={[styles.field, styles.fieldHalf]}>
-                    <Text style={styles.fieldLabel}>Имя</Text>
+                    <Text style={styles.fieldLabel}>{i18nT('profile:components.settings.ProfileSection.imya_4adb74f5')}</Text>
                     <TextInput
                         value={firstName}
                         onChangeText={setFirstName}
                         style={styles.input}
-                        placeholder="Введите имя"
+                        placeholder={i18nT('profile:components.settings.ProfileSection.vvedite_imya_c75a7d42')}
                         placeholderTextColor={colors.textMuted}
                     />
                 </View>
                 <View style={[styles.field, styles.fieldHalf]}>
-                    <Text style={styles.fieldLabel}>Фамилия</Text>
+                    <Text style={styles.fieldLabel}>{i18nT('profile:components.settings.ProfileSection.familiya_e2b61636')}</Text>
                     <TextInput
                         value={lastName}
                         onChangeText={setLastName}
                         style={styles.input}
-                        placeholder="Введите фамилию"
+                        placeholder={i18nT('profile:components.settings.ProfileSection.vvedite_familiyu_4e0ecd8e')}
                         placeholderTextColor={colors.textMuted}
                     />
                 </View>
@@ -174,48 +176,48 @@ export default function ProfileSection({
 
             <View style={styles.divider} />
 
-            <Text style={styles.subsectionTitle}>Социальные сети</Text>
+            <Text style={styles.subsectionTitle}>{i18nT('profile:components.settings.ProfileSection.sotsialnye_seti_6037a0d9')}</Text>
             <View style={styles.formGrid}>
                 <View style={[styles.field, styles.fieldHalf]}>
-                    <Text style={styles.fieldLabel}>YouTube</Text>
+                    <Text style={styles.fieldLabel}>{i18nT('profile:components.settings.ProfileSection.youtube_29434c67')}</Text>
                     <TextInput
                         value={youtube}
                         onChangeText={setYoutube}
                         style={styles.input}
-                        placeholder="Ссылка"
+                        placeholder={i18nT('profile:components.settings.ProfileSection.ssylka_20804010')}
                         placeholderTextColor={colors.textMuted}
                         autoCapitalize="none"
                     />
                 </View>
                 <View style={[styles.field, styles.fieldHalf]}>
-                    <Text style={styles.fieldLabel}>Instagram</Text>
+                    <Text style={styles.fieldLabel}>{i18nT('profile:components.settings.ProfileSection.instagram_d26e2d37')}</Text>
                     <TextInput
                         value={instagram}
                         onChangeText={setInstagram}
                         style={styles.input}
-                        placeholder="Ссылка"
+                        placeholder={i18nT('profile:components.settings.ProfileSection.ssylka_20804010')}
                         placeholderTextColor={colors.textMuted}
                         autoCapitalize="none"
                     />
                 </View>
                 <View style={[styles.field, styles.fieldHalf]}>
-                    <Text style={styles.fieldLabel}>Twitter</Text>
+                    <Text style={styles.fieldLabel}>{i18nT('profile:components.settings.ProfileSection.twitter_8c8cc55b')}</Text>
                     <TextInput
                         value={twitter}
                         onChangeText={setTwitter}
                         style={styles.input}
-                        placeholder="Ссылка"
+                        placeholder={i18nT('profile:components.settings.ProfileSection.ssylka_20804010')}
                         placeholderTextColor={colors.textMuted}
                         autoCapitalize="none"
                     />
                 </View>
                 <View style={[styles.field, styles.fieldHalf]}>
-                    <Text style={styles.fieldLabel}>VK</Text>
+                    <Text style={styles.fieldLabel}>{i18nT('profile:components.settings.ProfileSection.vk_97b4803e')}</Text>
                     <TextInput
                         value={vk}
                         onChangeText={setVk}
                         style={styles.input}
-                        placeholder="Ссылка"
+                        placeholder={i18nT('profile:components.settings.ProfileSection.ssylka_20804010')}
                         placeholderTextColor={colors.textMuted}
                         autoCapitalize="none"
                     />
@@ -223,7 +225,7 @@ export default function ProfileSection({
             </View>
 
             <Button
-                label={profileSaving ? 'Сохранение…' : 'Сохранить'}
+                label={profileSaving ? i18nT('profile:components.settings.ProfileSection.sohranenie_3c530238') : i18nT('profile:components.settings.ProfileSection.sohranit_808daff2')}
                 onPress={handleSaveProfile}
                 disabled={profileSaving || profileLoading || !hasUnsavedChanges}
                 loading={profileSaving}
@@ -233,26 +235,25 @@ export default function ProfileSection({
 
             <View style={styles.divider} />
 
-            <Text style={styles.subsectionTitle}>Telegram</Text>
+            <Text style={styles.subsectionTitle}>{i18nT('profile:components.settings.ProfileSection.telegram_f725f4ca')}</Text>
             <View style={styles.field}>
                 <View style={{ gap: 2 }}>
-                    <Text style={styles.fieldLabel}>Username в Telegram</Text>
+                    <Text style={styles.fieldLabel}>{i18nT('profile:components.settings.ProfileSection.username_v_telegram_b1a65ab0')}</Text>
                     {telegramVerified ? (
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Feather name="check-circle" size={14} color={colors.success} />
                             <Text style={[styles.settingMeta, { color: colors.success, marginLeft: 4 }]}>
-                                верифицирован
-                            </Text>
+                                {i18nT('profile:components.settings.ProfileSection.verifitsirovan_a8f25e7e')}</Text>
                         </View>
                     ) : (
-                        <Text style={styles.settingMeta}>не подтверждён</Text>
+                        <Text style={styles.settingMeta}>{i18nT('profile:components.settings.ProfileSection.ne_podtverzhden_fba83da1')}</Text>
                     )}
                 </View>
                 <TextInput
                     value={telegramUsername}
                     onChangeText={setTelegramUsername}
                     style={styles.input}
-                    placeholder="@username"
+                    placeholder={i18nT('profile:components.settings.ProfileSection.username_686d6882')}
                     placeholderTextColor={colors.textMuted}
                     autoCapitalize="none"
                     editable={!telegramBusy}
@@ -260,7 +261,7 @@ export default function ProfileSection({
             </View>
 
             <Button
-                label="Сохранить Telegram"
+                label={i18nT('profile:components.settings.ProfileSection.sohranit_telegram_feaf26df')}
                 onPress={saveTelegramUsername}
                 disabled={telegramBusy || !telegramUsernameDirty}
                 variant="secondary"
@@ -271,7 +272,7 @@ export default function ProfileSection({
             {!telegramVerified ? (
                 <View style={{ gap: 8, marginTop: 8 }}>
                     <Button
-                        label="Авторизовать через Telegram"
+                        label={i18nT('profile:components.settings.ProfileSection.avtorizovat_cherez_telegram_7b2606d4')}
                         onPress={startTelegramAuth}
                         disabled={telegramBusy}
                         fullWidth
@@ -279,7 +280,7 @@ export default function ProfileSection({
                     />
                     {telegramAwaitingConfirm ? (
                         <Button
-                            label="Я подтвердил в Telegram"
+                            label={i18nT('profile:components.settings.ProfileSection.ya_podtverdil_v_telegram_238debab')}
                             onPress={confirmTelegramAuth}
                             disabled={telegramBusy}
                             variant="secondary"
@@ -290,11 +291,11 @@ export default function ProfileSection({
                 </View>
             ) : null}
 
-            <Text style={[styles.subsectionTitle, { marginTop: 16 }]}>Предпочитаемый мессенджер</Text>
+            <Text style={[styles.subsectionTitle, { marginTop: 16 }]}>{i18nT('profile:components.settings.ProfileSection.predpochitaemyy_messendzher_8ed5608e')}</Text>
             <View
                 style={styles.themeOptions}
                 accessibilityRole="radiogroup"
-                accessibilityLabel="Предпочитаемый мессенджер"
+                accessibilityLabel={i18nT('profile:components.settings.ProfileSection.predpochitaemyy_messendzher_8ed5608e')}
             >
                 {messengerOptions.map((option) => {
                     const isSelected = preferredMessenger === option.value;
@@ -326,12 +327,12 @@ export default function ProfileSection({
 
             <View style={styles.divider} />
 
-            <Text style={styles.subsectionTitle}>Email-уведомления</Text>
+            <Text style={styles.subsectionTitle}>{i18nT('profile:components.settings.ProfileSection.email_uvedomleniya_31af8993')}</Text>
             <View style={styles.settingsList}>
                 <View style={styles.settingRow}>
                     <View style={styles.settingTextBlock}>
-                        <Text style={styles.settingTitle}>Отзывы</Text>
-                        <Text style={styles.settingMeta}>Письма о новых комментариях к вашим путешествиям</Text>
+                        <Text style={styles.settingTitle}>{i18nT('profile:components.settings.ProfileSection.otzyvy_32290e8f')}</Text>
+                        <Text style={styles.settingMeta}>{i18nT('profile:components.settings.ProfileSection.pisma_o_novyh_kommentariyah_k_vashim_puteshe_72c8e644')}</Text>
                     </View>
                     <Toggle
                         value={emailNotifyComments}
@@ -341,8 +342,8 @@ export default function ProfileSection({
                 </View>
                 <View style={styles.settingRow}>
                     <View style={styles.settingTextBlock}>
-                        <Text style={styles.settingTitle}>Сообщения</Text>
-                        <Text style={styles.settingMeta}>Письма о новых личных сообщениях</Text>
+                        <Text style={styles.settingTitle}>{i18nT('profile:components.settings.ProfileSection.soobscheniya_e84e24f0')}</Text>
+                        <Text style={styles.settingMeta}>{i18nT('profile:components.settings.ProfileSection.pisma_o_novyh_lichnyh_soobscheniyah_538480ab')}</Text>
                     </View>
                     <Toggle
                         value={emailNotifyMessages}
@@ -354,10 +355,10 @@ export default function ProfileSection({
 
             <View style={styles.divider} />
 
-            <Text style={styles.subsectionTitle}>Аватар</Text>
+            <Text style={styles.subsectionTitle}>{i18nT('profile:components.settings.ProfileSection.avatar_ffe6816d')}</Text>
             <View style={styles.avatarRow}>
                 <View style={styles.avatarField}>
-                    <Text style={styles.fieldLabel}>Аватар</Text>
+                    <Text style={styles.fieldLabel}>{i18nT('profile:components.settings.ProfileSection.avatar_ffe6816d')}</Text>
                     <View style={styles.avatarPickerRow}>
                         <View style={styles.avatarPreview}>
                             {avatarPreviewUrl ? (
@@ -368,7 +369,7 @@ export default function ProfileSection({
                         </View>
                         <View style={styles.avatarPickerButtons}>
                             <Button
-                                label="Выбрать"
+                                label={i18nT('profile:components.settings.ProfileSection.vybrat_6ed9f43f')}
                                 onPress={pickAvatar}
                                 disabled={profileLoading || avatarSaving}
                                 fullWidth={!isWeb}
@@ -377,7 +378,7 @@ export default function ProfileSection({
                                 style={isWeb ? styles.avatarButtonWeb : undefined}
                             />
                             <Button
-                                label={avatarSaving ? 'Загрузка…' : 'Загрузить'}
+                                label={avatarSaving ? i18nT('profile:components.settings.ProfileSection.zagruzka_fd7c25e7') : i18nT('profile:components.settings.ProfileSection.zagruzit_d1c4faba')}
                                 onPress={() => uploadAvatar()}
                                 disabled={profileLoading || avatarSaving || !avatarFile}
                                 loading={avatarSaving}
@@ -395,6 +396,7 @@ export default function ProfileSection({
                                     ref: webFileInputRef,
                                     type: 'file',
                                     accept: 'image/*',
+                                    'aria-label': i18nT('profile:components.settings.ProfileSection.avatar_ffe6816d'),
                                     onChange: handleWebFileSelected,
                                 }) as any)
                             }

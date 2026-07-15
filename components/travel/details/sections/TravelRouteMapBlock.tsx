@@ -10,6 +10,8 @@ import type { Travel } from '@/types/types'
 
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { useTravelRouteMapBlockModel } from '../hooks/useTravelRouteMapBlockModel'
+import { translate as i18nT } from '@/i18n'
+
 
 const TravelMap = React.lazy(() =>
   Promise.resolve(import('@/components/MapPage/TravelMap')).then((m) => ({ default: m.TravelMap })),
@@ -96,7 +98,7 @@ export const TravelRouteMapBlock: React.FC<{
         styles.webDeferredSection,
       ]}
       collapsable={false}
-      accessibilityLabel="Карта маршрута"
+      accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.karta_marshruta_0bb083af')}
       accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
       {...(Platform.OS === 'web'
         ? {
@@ -110,7 +112,7 @@ export const TravelRouteMapBlock: React.FC<{
         style={styles.sectionHeaderText}
         accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
         aria-level={2 as any}
-      >Карта маршрута</Text>
+      >{i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.karta_marshruta_0bb083af')}</Text>
       <View style={SECTION_CONTENT_MARGIN_STYLE}>
         {hasMapData ? (
           <>
@@ -120,7 +122,7 @@ export const TravelRouteMapBlock: React.FC<{
               initiallyOpen
               keepMounted={Platform.OS === 'web'}
               isLoading={isLoading && !shouldRender && !shouldForceRenderMap}
-              loadingLabel="Подгружаем карту маршрута..."
+              loadingLabel={i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.podgruzhaem_kartu_marshruta_a83bda14')}
               forceOpenTrigger={mapOpenTrigger || undefined}
               onOpenChange={handleMapOpenChange}
             >
@@ -165,8 +167,7 @@ export const TravelRouteMapBlock: React.FC<{
           <View style={styles.mapEmptyState}>
             <Feather name="map" size={32} color={colors.textMuted} />
             <Text style={[styles.mapEmptyText, { marginTop: 12 }]}>
-              Маршрут на карте не задан
-            </Text>
+              {i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.marshrut_na_karte_ne_zadan_3baa427b')}</Text>
             <Text
               style={{
                 fontSize: 13,
@@ -176,8 +177,7 @@ export const TravelRouteMapBlock: React.FC<{
                 opacity: 0.8,
               }}
             >
-              Автор не добавил линию маршрута для этого путешествия
-            </Text>
+              {i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.avtor_ne_dobavil_liniyu_marshruta_dlya_etogo_636d4fc3')}</Text>
           </View>
         )}
       </View>

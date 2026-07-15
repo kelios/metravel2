@@ -4,6 +4,8 @@
 import { Platform } from 'react-native';
 import { ApiError } from '@/api/client';
 import { showToast } from '@/utils/toast';
+import { translate as i18nT } from '@/i18n'
+
 
 const showToastMessage = async (payload: any) => {
     await showToast(payload);
@@ -97,44 +99,44 @@ export const isServerError = (error: any): boolean => {
  */
 export const getUserFriendlyNetworkError = (error: any): string => {
     if (!error) {
-        return 'Произошла неизвестная ошибка';
+        return i18nT('errors:utils.networkErrorHandler.proizoshla_neizvestnaya_oshibka_678842d7');
     }
 
     // Если это ApiError, используем его сообщение
     if (error instanceof ApiError) {
         if (hasOfflineFlag(error.data) || error.status === 0) {
-            return 'Нет подключения к интернету. Проверьте ваше соединение и попробуйте снова.';
+            return i18nT('errors:utils.networkErrorHandler.net_podklyucheniya_k_internetu_proverte_vash_76b1a868');
         }
         if (error.status === 401) {
-            return 'Требуется авторизация. Пожалуйста, войдите в систему.';
+            return i18nT('errors:utils.networkErrorHandler.trebuetsya_avtorizatsiya_pozhaluysta_voydite_e6066fc3');
         }
         if (error.status === 403) {
-            return 'Доступ запрещен. У вас нет прав для выполнения этого действия.';
+            return i18nT('errors:utils.networkErrorHandler.dostup_zapreschen_u_vas_net_prav_dlya_vypoln_87f83810');
         }
         if (error.status >= 500) {
-            return 'Ошибка сервера. Пожалуйста, попробуйте позже.';
+            return i18nT('errors:utils.networkErrorHandler.oshibka_servera_pozhaluysta_poprobuyte_pozzh_bec5b04f');
         }
         if (error.status === 404) {
-            return 'Запрашиваемый ресурс не найден.';
+            return i18nT('errors:utils.networkErrorHandler.zaprashivaemyy_resurs_ne_nayden_859798c3');
         }
-        return error.message || 'Произошла ошибка при выполнении запроса.';
+        return error.message || i18nT('errorsStatic:utils.network.requestFailed');
     }
 
     // Проверяем тип ошибки
     if (isNetworkError(error)) {
-        return 'Нет подключения к интернету. Проверьте ваше соединение и попробуйте снова.';
+        return i18nT('errors:utils.networkErrorHandler.net_podklyucheniya_k_internetu_proverte_vash_76b1a868');
     }
 
     if (isAuthError(error)) {
-        return 'Требуется авторизация. Пожалуйста, войдите в систему.';
+        return i18nT('errors:utils.networkErrorHandler.trebuetsya_avtorizatsiya_pozhaluysta_voydite_e6066fc3');
     }
 
     if (isServerError(error)) {
-        return 'Ошибка сервера. Пожалуйста, попробуйте позже.';
+        return i18nT('errors:utils.networkErrorHandler.oshibka_servera_pozhaluysta_poprobuyte_pozzh_bec5b04f');
     }
 
     // Возвращаем сообщение об ошибке или дефолтное
-    return error?.message || 'Произошла неизвестная ошибка';
+    return error?.message || i18nT('errorsStatic:utils.network.unknownError');
 };
 
 /**
@@ -171,7 +173,7 @@ export const handleNetworkError = (
     if (showToast && Platform.OS === 'web') {
         void showToastMessage({
             type: toastType,
-            text1: isNetworkError(error) ? 'Нет подключения' : 'Ошибка',
+            text1: isNetworkError(error) ? i18nT('errors:utils.networkErrorHandler.net_podklyucheniya_d70bb618') : i18nT('errors:utils.networkErrorHandler.oshibka_de1b2f1a'),
             text2: message,
             visibilityTime: isNetworkError(error) ? 5000 : 4000,
         });

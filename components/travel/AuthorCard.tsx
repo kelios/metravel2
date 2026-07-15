@@ -20,14 +20,26 @@ import RankBar from '@/components/achievements/RankBar'
 import BadgeMedal from '@/components/achievements/BadgeMedal'
 import BadgeDetailSheet, { type BadgeDetail } from '@/components/achievements/BadgeDetailSheet'
 import VerifiedBadge from '@/components/profile/VerifiedBadge'
+import { translate as i18nT } from '@/i18n'
 
-const STRICT_PLACEHOLDER = /^[.\s·•]+$|^Автор|^Пользователь|^User/i
-const LOOSE_PLACEHOLDER = /^[.\s·•]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i
 
-function cleanName(value: unknown, placeholder: RegExp): string {
+const STRICT_PLACEHOLDER = /^[.\s·•]+$/
+const LOOSE_PLACEHOLDER = /^[.\s·•]{4,}$/
+
+function cleanName(value: unknown, placeholder: RegExp, prefixKey: 'strict' | 'loose'): string {
   if (typeof value !== 'string') return ''
   const trimmed = value.trim()
-  if (!trimmed || placeholder.test(trimmed)) return ''
+  const prefixes = i18nT(
+    prefixKey === 'strict'
+      ? 'travel:components.travel.AuthorCard.placeholderPrefixes.strict'
+      : 'travel:components.travel.AuthorCard.placeholderPrefixes.loose'
+  ).split('|')
+  const normalized = trimmed.toLocaleLowerCase()
+  if (
+    !trimmed ||
+    placeholder.test(trimmed) ||
+    prefixes.some((prefix) => normalized.startsWith(prefix.trim().toLocaleLowerCase()))
+  ) return ''
   return trimmed
 }
 
@@ -42,9 +54,9 @@ function resolveAuthorName(travel: any): string {
   }
   const direct =
     travel?.author_name || travel?.authorName || travel?.owner_name || travel?.ownerName
-  const directClean = cleanName(direct, STRICT_PLACEHOLDER)
+  const directClean = cleanName(direct, STRICT_PLACEHOLDER, 'strict')
   if (directClean) return directClean
-  return cleanName(travel?.userName, LOOSE_PLACEHOLDER)
+  return cleanName(travel?.userName, LOOSE_PLACEHOLDER, 'loose')
 }
 
 function resolveAuthorId(travel: any): number | string | null {
@@ -82,10 +94,10 @@ function resolveAuthorCountry(profile: any, travel: any): string {
 function resolveSocials(profile: any) {
   if (!profile) return []
   const items = [
-    { key: 'youtube', label: 'YouTube', url: profile.youtube },
-    { key: 'instagram', label: 'Instagram', url: profile.instagram },
-    { key: 'twitter', label: 'Twitter', url: profile.twitter },
-    { key: 'vk', label: 'VK', url: profile.vk },
+    { key: 'youtube', label: i18nT('travel:components.travel.AuthorCard.youtube_4c46f92a'), url: profile.youtube },
+    { key: 'instagram', label: i18nT('travel:components.travel.AuthorCard.instagram_9542d897'), url: profile.instagram },
+    { key: 'twitter', label: i18nT('travel:components.travel.AuthorCard.twitter_78c022fd'), url: profile.twitter },
+    { key: 'vk', label: i18nT('travel:components.travel.AuthorCard.vk_29add94b'), url: profile.vk },
   ]
   return items.filter((s) => String(s.url ?? '').trim())
 }
@@ -114,12 +126,12 @@ function AuthorAchievements({ userId, ownerName, styles, colors }: AuthorAchieve
 
   return (
     <View style={styles.achievementsBlock}>
-      <RankBar rank={data.rank} compact titlePrefix="Уровень: " />
+      <RankBar rank={data.rank} compact titlePrefix={i18nT('travel:components.travel.AuthorCard.uroven_ffdcb900')} />
       {topBadges.length > 0 && (
         <>
           <View style={styles.badgesHeaderRow}>
             <Feather name="award" size={13} color={colors.textMuted} />
-            <Text style={styles.badgesHeaderText}>Значки автора</Text>
+            <Text style={styles.badgesHeaderText}>{i18nT('travel:components.travel.AuthorCard.znachki_avtora_19b1ed31')}</Text>
           </View>
           <View style={styles.badgesRow}>
             {topBadges.map((ub) => (
@@ -224,14 +236,14 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
             onPress={handleOpenAuthorProfile}
             accessibilityRole={userId ? 'button' : undefined}
             accessibilityLabel={
-              userId ? `Открыть профиль автора${userName ? ` ${userName}` : ''}` : undefined
+              userId ? i18nT('travel:components.travel.AuthorCard.otkryt_profil_avtora_value1_c93e9aca', { value1: userName ? ` ${userName}` : '' }) : undefined
             }
             disabled={!userId}
           >
             {avatarUri ? (
               <ImageCardMedia
                 src={avatarUri}
-                alt={userName || 'Автор'}
+                alt={userName || i18nT('travel:components.travel.AuthorCard.authorFallback')}
                 width={avatarSize}
                 height={avatarSize}
                 borderRadius={avatarBorderRadius}
@@ -254,7 +266,7 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                   onPress={handleOpenAuthorProfile}
                   disabled={!userId}
                   accessibilityRole={userId ? 'button' : undefined}
-                  accessibilityLabel={userId ? `Открыть профиль автора ${userName}` : undefined}
+                  accessibilityLabel={userId ? i18nT('travel:components.travel.AuthorCard.otkryt_profil_avtora_value1_0da4a86a', { value1: userName }) : undefined}
                   style={({ pressed }) => (pressed && userId ? styles.pressedDim : null)}
                 >
                   <Text style={[styles.authorName, isMobile && styles.authorNameMobile]}>
@@ -290,7 +302,7 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                   <Pressable
                     onPress={handleWriteToAuthor}
                     accessibilityRole="button"
-                    accessibilityLabel={`Написать автору${userName ? ` ${userName}` : ''}`}
+                    accessibilityLabel={i18nT('travel:components.travel.AuthorCard.napisat_avtoru_value1_94fdaf86', { value1: userName ? ` ${userName}` : '' })}
                     style={({ pressed }) => [
                       styles.actionButton,
                       isMobile && styles.actionButtonIconOnly,
@@ -299,14 +311,14 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                     ]}
                   >
                     <Feather name="mail" size={15} color={colors.primaryDark} />
-                    {!isMobile && <Text style={styles.actionButtonAccentText}>Написать</Text>}
+                    {!isMobile && <Text style={styles.actionButtonAccentText}>{i18nT('travel:components.travel.AuthorCard.napisat_85d7a13d')}</Text>}
                   </Pressable>
                 )}
 
                 <Pressable
                   onPress={handleViewAuthorTravels}
                   accessibilityRole="button"
-                  accessibilityLabel="Все путешествия автора"
+                  accessibilityLabel={i18nT('travel:components.travel.AuthorCard.vse_puteshestviya_avtora_c1a08fb2')}
                   style={({ pressed }) => [
                     styles.actionButton,
                     isMobile && styles.actionButtonIconOnly,
@@ -316,8 +328,7 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                   <Feather name="map" size={15} color={colors.textSecondary} />
                   {!isMobile && (
                     <Text style={styles.actionButtonText} numberOfLines={1}>
-                      Все путешествия
-                    </Text>
+                      {i18nT('travel:components.travel.AuthorCard.vse_puteshestviya_12f54fe6')}</Text>
                   )}
                 </Pressable>
               </View>
@@ -330,7 +341,7 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                     key={s.key}
                     onPress={() => openExternalUrl(String(s.url))}
                     accessibilityRole="link"
-                    accessibilityLabel={`Открыть ${s.label}`}
+                    accessibilityLabel={i18nT('travel:components.travel.AuthorCard.otkryt_value1_2165b58d', { value1: s.label })}
                     style={({ pressed }) => [
                       styles.socialChip,
                       pressed && styles.socialChipPressed,

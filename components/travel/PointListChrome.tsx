@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 
 import PointListRow from '@/components/travel/PointListRow';
+import { selectPlural, translate as i18nT } from '@/i18n'
+
 
 type PointLike = {
   id: string;
@@ -21,12 +23,12 @@ type PointLike = {
 };
 
 const getPointsLabel = (count: number) => {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-
-  if (mod10 === 1 && mod100 !== 11) return 'точка';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'точки';
-  return 'точек';
+  return selectPlural(count, {
+    one: i18nT('travel:components.travel.PointListChrome.tochka_b56842ff'),
+    few: i18nT('travel:components.travel.PointListChrome.tochki_2fec67ae'),
+    many: i18nT('travel:components.travel.PointListChrome.tochek_fe4d794f'),
+    other: i18nT('travel:components.travel.PointListChrome.tochek_fe4d794f'),
+  });
 };
 
 export const PointListToggleButton = React.memo(function PointListToggleButton({
@@ -99,7 +101,7 @@ export const PointListPreview = React.memo(function PointListPreview({
       onPress={onPress}
       style={styles.previewContainer}
       accessibilityRole="button"
-      accessibilityLabel={`Открыть список точек, всего ${pointsLabel}`}
+      accessibilityLabel={i18nT('travel:components.travel.PointListChrome.otkryt_spisok_tochek_vsego_value1_09ce7a60', { value1: pointsLabel })}
     >
       {previewPoints.map((pt, idx) => (
         <View key={pt.id} style={styles.previewRow}>
@@ -108,7 +110,7 @@ export const PointListPreview = React.memo(function PointListPreview({
           </View>
           <View style={styles.previewTextWrap}>
             <Text style={styles.previewAddress} numberOfLines={1}>
-              {pt.address || 'Без адреса'}
+              {pt.address || i18nT('travel:common.noAddress')}
             </Text>
             {pt.coord ? (
               <Text style={styles.previewCoord} numberOfLines={1}>
@@ -120,14 +122,14 @@ export const PointListPreview = React.memo(function PointListPreview({
       ))}
       {hiddenPreviewCount > 0 && (
         <Text style={styles.previewMore}>
-          + ещё {hiddenPreviewCount}
+          {i18nT('travel:components.travel.PointListChrome.esche_11f20093')}{hiddenPreviewCount}
         </Text>
       )}
       <View style={styles.previewFooter}>
         <View style={styles.previewFooterLead}>
           <Feather name="list" size={14} color={colors.primaryDark} />
           <Text style={styles.previewFooterText}>
-            Открыть список: {pointsLabel}
+            {i18nT('travel:components.travel.PointListChrome.otkryt_spisok_872269f1')}{pointsLabel}
           </Text>
         </View>
         <Feather name="chevron-right" size={16} color={colors.primaryDark} />
@@ -152,15 +154,15 @@ export const PointListStatus = React.memo(function PointListStatus({
   const pointsLabel = `${pointCount} ${getPointsLabel(pointCount)}`;
 
   const title = showList
-    ? (viewMode === 'list' ? 'Быстрый список точек' : 'Карточки точек')
-    : 'Точки маршрута';
+    ? (viewMode === 'list' ? i18nT('travel:components.travel.PointListChrome.bystryy_spisok_tochek_ed47b401') : i18nT('travel:components.travel.PointListChrome.kartochki_tochek_0ff485ae'))
+    : i18nT('travel:components.travel.PointListChrome.tochki_marshruta_aa73107a');
   const description = showList
     ? (
       isInteractiveOpen
-        ? 'Клик по точке открывает её детали, остальные кнопки остаются вторичными.'
-        : 'Клик по точке сразу открывает координаты на карте, кнопки рядом дают быстрые действия.'
+        ? i18nT('travel:components.travel.PointListChrome.klik_po_tochke_otkryvaet_ee_detali_ostalnye__14fd857e')
+        : i18nT('travel:components.travel.PointListChrome.klik_po_tochke_srazu_otkryvaet_koordinaty_na_2fc23e85')
     )
-    : 'Раскройте список, чтобы выбрать точку быстрее, чем искать её вручную на карте.';
+    : i18nT('travel:components.travel.PointListChrome.raskroyte_spisok_chtoby_vybrat_tochku_bystre_f9dbc826');
 
   return (
     <View style={styles.statusCard} testID="point-list-status">
@@ -198,25 +200,23 @@ export const PointListViewModeBar = React.memo(function PointListViewModeBar({
         onPress={() => onSelect('cards')}
         style={[styles.viewModeBtn, viewMode === 'cards' && styles.viewModeBtnActive]}
         accessibilityRole="button"
-        accessibilityLabel="Карточки"
+        accessibilityLabel={i18nT('travel:components.travel.PointListChrome.kartochki_681d872e')}
         accessibilityState={{ selected: viewMode === 'cards' }}
       >
         <Feather name="grid" size={16} color={viewMode === 'cards' ? colors.primary : colors.textMuted} />
         <Text style={[styles.viewModeBtnText, viewMode === 'cards' && styles.viewModeBtnTextActive]}>
-          Карточки
-        </Text>
+          {i18nT('travel:components.travel.PointListChrome.kartochki_681d872e')}</Text>
       </Pressable>
       <Pressable
         onPress={() => onSelect('list')}
         style={[styles.viewModeBtn, viewMode === 'list' && styles.viewModeBtnActive]}
         accessibilityRole="button"
-        accessibilityLabel="Список"
+        accessibilityLabel={i18nT('travel:components.travel.PointListChrome.spisok_8a652c54')}
         accessibilityState={{ selected: viewMode === 'list' }}
       >
         <Feather name="list" size={16} color={viewMode === 'list' ? colors.primary : colors.textMuted} />
         <Text style={[styles.viewModeBtnText, viewMode === 'list' && styles.viewModeBtnTextActive]}>
-          Список
-        </Text>
+          {i18nT('travel:components.travel.PointListChrome.spisok_8a652c54')}</Text>
       </Pressable>
     </View>
   );
@@ -341,11 +341,11 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
         onPress={onShowMore}
         style={({ pressed }) => [styles.toggle, pressed && styles.togglePressed]}
         accessibilityRole="button"
-        accessibilityLabel={`Показать ещё ${remaining} точек`}
+        accessibilityLabel={i18nT('travel:components.travel.PointListChrome.pokazat_esche_value1_tochek_f428791c', { value1: remaining })}
       >
         <View style={styles.toggleRow}>
           <Feather name="chevron-down" size={16} color={colors.primaryDark} />
-          <Text style={styles.toggleText}>{`Показать ещё (${remaining})`}</Text>
+          <Text style={styles.toggleText}>{i18nT('travel:components.travel.PointListChrome.pokazat_esche_value1_c2826eb5', { value1: remaining })}</Text>
         </View>
       </Pressable>
     ) : null;

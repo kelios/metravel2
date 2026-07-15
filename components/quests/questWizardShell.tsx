@@ -13,6 +13,8 @@ import {
   QUEST_FONT_SCALE_STEPS,
   useQuestFontScaleStore,
 } from '@/stores/questFontScaleStore'
+import { translate as i18nT } from '@/i18n'
+
 
 type QuestNavigationStep = {
   id: string
@@ -155,16 +157,16 @@ function QuestOfflineDownloadButton({
     state === 'done' ? 'check-circle' : 'download-cloud'
   const label =
     state === 'downloading'
-      ? 'Сохраняем…'
+      ? i18nT('quests:components.quests.questWizardShell.sohranyaem_5a4299e9')
       : state === 'done'
-        ? 'Сохранено офлайн'
-        : 'Скачать офлайн'
+        ? i18nT('quests:components.quests.questWizardShell.sohraneno_oflayn_6e50f89e')
+        : i18nT('quests:components.quests.questWizardShell.skachat_oflayn_b6488863')
   const accessibilityLabel =
     state === 'downloading'
-      ? 'Идёт сохранение квеста для офлайна'
+      ? i18nT('quests:components.quests.questWizardShell.idet_sohranenie_kvesta_dlya_oflayna_a2c2314e')
       : state === 'done'
-        ? 'Квест сохранён для офлайна'
-        : 'Скачать квест для офлайна'
+        ? i18nT('quests:components.quests.questWizardShell.kvest_sohranen_dlya_oflayna_5c4ef716')
+        : i18nT('quests:components.quests.questWizardShell.skachat_kvest_dlya_oflayna_1b7e958c')
   const iconColor = state === 'done' ? colors.success : colors.textMuted
 
   return (
@@ -293,8 +295,8 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
           />
           <QuestActionButton
             styles={styles}
-            label="Печать"
-            accessibilityLabel="Печать квеста"
+            label={i18nT('quests:components.quests.questWizardShell.pechat_76bdeffe')}
+            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.pechat_kvesta_f66c15e3')}
             iconName="printer"
             iconColor={colors.textMuted}
             onPress={onPrintDownload}
@@ -304,8 +306,8 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
           />
           <QuestActionButton
             styles={styles}
-            label="Скачать GPX"
-            accessibilityLabel={`Скачать GPX с ${offlineMapPointsCount} точками квеста`}
+            label={i18nT('quests:components.quests.questWizardShell.skachat_gpx_a032dca6')}
+            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.skachat_gpx_s_value1_tochkami_kvesta_83ac2431', { value1: offlineMapPointsCount })}
             iconName="download"
             iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
             onPress={onOfflineMapDownload}
@@ -316,8 +318,8 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
           />
           <QuestActionButton
             styles={styles}
-            label="Открыть в приложении"
-            accessibilityLabel="Открыть точки квеста в приложении карт"
+            label={i18nT('quests:components.quests.questWizardShell.otkryt_v_prilozhenii_818b6173')}
+            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.otkryt_tochki_kvesta_v_prilozhenii_kart_acb9e920')}
             iconName="external-link"
             iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
             onPress={onOfflineMapOpenInApp}
@@ -335,8 +337,8 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
           />
           <QuestActionButton
             styles={styles}
-            label="Сбросить"
-            accessibilityLabel="Сбросить прогресс"
+            label={i18nT('quests:components.quests.questWizardShell.sbrosit_dd613b60')}
+            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.sbrosit_progress_5f45dc36')}
             iconName="rotate-ccw"
             iconColor={colors.textMuted}
             onPress={onReset}
@@ -380,7 +382,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
               }}
               indexLabel={String(index)}
               isIntro={step.id === 'intro'}
-              label={step.id === 'intro' ? 'Старт' : step.title}
+              label={step.id === 'intro' ? i18nT('quests:components.quests.questWizardShell.start_225f7a82') : step.title}
               numberOfLines={2}
             />
           )
@@ -429,8 +431,8 @@ function QuestFontScaleControl({
     <>
       <QuestActionButton
         styles={styles}
-        label="Меньше шрифт"
-        accessibilityLabel="Уменьшить шрифт"
+        label={i18nT('quests:components.quests.questWizardShell.menshe_shrift_c69667d7')}
+        accessibilityLabel={i18nT('quests:components.quests.questWizardShell.umenshit_shrift_d50aaa89')}
         iconName="zoom-out"
         iconColor={atMin ? colors.disabled : colors.textMuted}
         onPress={decrease}
@@ -442,8 +444,8 @@ function QuestFontScaleControl({
       />
       <QuestActionButton
         styles={styles}
-        label="Больше шрифт"
-        accessibilityLabel="Увеличить шрифт"
+        label={i18nT('quests:components.quests.questWizardShell.bolshe_shrift_9ed58ce7')}
+        accessibilityLabel={i18nT('quests:components.quests.questWizardShell.uvelichit_shrift_b327d021')}
         iconName="zoom-in"
         iconColor={atMax ? colors.disabled : colors.textMuted}
         onPress={increase}
@@ -525,8 +527,8 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           {Platform.OS === 'web' && (
             <QuestActionButton
               styles={styles}
-              label="Печать"
-              accessibilityLabel="Печать квеста"
+              label={i18nT('quests:components.quests.questWizardShell.pechat_76bdeffe')}
+              accessibilityLabel={i18nT('quests:components.quests.questWizardShell.pechat_kvesta_f66c15e3')}
               iconName="printer"
               iconColor={colors.textMuted}
               onPress={onPrintDownload}
@@ -538,8 +540,8 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           )}
           <QuestActionButton
             styles={styles}
-            label="Скачать GPX"
-            accessibilityLabel={`Скачать GPX с ${offlineMapPointsCount} точками квеста`}
+            label={i18nT('quests:components.quests.questWizardShell.skachat_gpx_a032dca6')}
+            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.skachat_gpx_s_value1_tochkami_kvesta_83ac2431', { value1: offlineMapPointsCount })}
             iconName="download"
             iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
             onPress={onOfflineMapDownload}
@@ -551,8 +553,8 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           />
           <QuestActionButton
             styles={styles}
-            label="Открыть в приложении"
-            accessibilityLabel="Открыть точки квеста в приложении карт"
+            label={i18nT('quests:components.quests.questWizardShell.otkryt_v_prilozhenii_818b6173')}
+            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.otkryt_tochki_kvesta_v_prilozhenii_kart_acb9e920')}
             iconName="external-link"
             iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
             onPress={onOfflineMapOpenInApp}
@@ -572,8 +574,8 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           />
           <QuestActionButton
             styles={styles}
-            label="Сбросить"
-            accessibilityLabel="Сбросить прогресс"
+            label={i18nT('quests:components.quests.questWizardShell.sbrosit_dd613b60')}
+            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.sbrosit_progress_5f45dc36')}
             iconName="rotate-ccw"
             iconColor={colors.textMuted}
             onPress={onReset}
@@ -595,8 +597,8 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
       {!isMobile && offlineMapPointsCount > 0 && (
         <Text style={styles.exportHint}>
           {Platform.OS === 'web'
-            ? 'Скачается GPX-файл с точками — откройте его в офлайн-картах (Organic Maps, Maps.me).'
-            : 'Откроется системное «Поделиться» с GPX-файлом — сохраните его в офлайн-картах (Organic Maps, Maps.me).'}
+            ? i18nT('quests:components.quests.questWizardShell.skachaetsya_gpx_fayl_s_tochkami_otkroyte_ego_3208522f')
+            : i18nT('quests:components.quests.questWizardShell.otkroetsya_sistemnoe_podelitsya_s_gpx_faylom_e29381e2')}
         </Text>
       )}
 
@@ -628,7 +630,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
                 }}
                 indexLabel={step.id === 'intro' ? '' : String(index)}
                 isIntro={step.id === 'intro'}
-                label={step.id === 'intro' ? 'Старт' : step.title}
+                label={step.id === 'intro' ? i18nT('quests:components.quests.questWizardShell.start_225f7a82') : step.title}
               />
             )
           })}
@@ -685,7 +687,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
                 }}
                 indexLabel={step.id === 'intro' ? '' : String(index)}
                 isIntro={step.id === 'intro'}
-                label={step.id === 'intro' ? 'Старт' : step.title}
+                label={step.id === 'intro' ? i18nT('quests:components.quests.questWizardShell.start_225f7a82') : step.title}
               />
             )
           })}
@@ -709,7 +711,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
 
       {!isMobile && compactNav && (
         <Text style={styles.navActiveTitle} numberOfLines={1}>
-          {showFinaleOnly ? 'Финал' : currentIndex === 0 ? 'Старт' : allSteps[currentIndex]?.title}
+          {showFinaleOnly ? i18nT('quests:components.quests.questWizardShell.final_d1c11370') : currentIndex === 0 ? i18nT('quests:components.quests.questWizardShell.start_225f7a82') : allSteps[currentIndex]?.title}
         </Text>
       )}
 

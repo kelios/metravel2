@@ -1,4 +1,6 @@
 import { isTestEnvironment } from './shared'
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * Генерирует статичную карту через html2canvas (клиентский рендеринг)
@@ -99,7 +101,7 @@ export async function generateMapImageFromDOM(
       ctx.fillRect(0, 0, width, height)
       ctx.fillStyle = 'rgb(102, 102, 102)'
       ctx.font = '20px Arial, sans-serif'
-      const message = 'Карта не доступна для экспорта'
+      const message = i18nT('shared:utils.mapSnapshot.domCapture.karta_ne_dostupna_dlya_eksporta_bbc16c8e')
       const textWidth = ctx.measureText(message).width
       ctx.fillText(message, Math.max(10, (width - textWidth) / 2), height / 2)
     }

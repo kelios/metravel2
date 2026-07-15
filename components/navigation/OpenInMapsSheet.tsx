@@ -9,6 +9,8 @@ import {
   getNavigationActionVisual,
   type NavigationActionKind,
 } from './navigationActionMeta';
+import { translate as i18nT } from '@/i18n'
+
 
 export type OpenInMapsAction = {
   key: NavigationActionKind;
@@ -33,7 +35,7 @@ type Props = {
  * крупными таргетами и явной кнопкой закрытия с учётом safe-area top,
  * плюс закрытие по фону и hardware back (`onRequestClose`).
  */
-export default function OpenInMapsSheet({ visible, title = 'Открыть в картах', actions, onClose }: Props) {
+export default function OpenInMapsSheet({ visible, title = i18nT('navigation:components.navigation.OpenInMapsSheet.otkryt_v_kartah_a12bfa2e'), actions, onClose }: Props) {
   const colors = useThemedColors();
   const insets = useSafeAreaInsets();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
@@ -45,7 +47,7 @@ export default function OpenInMapsSheet({ visible, title = 'Открыть в к
           style={StyleSheet.absoluteFill}
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="Закрыть"
+          accessibilityLabel={i18nT('navigation:components.navigation.OpenInMapsSheet.zakryt_ffe5de0e')}
         />
 
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, DESIGN_TOKENS.spacing.md) }]}>
@@ -58,7 +60,7 @@ export default function OpenInMapsSheet({ visible, title = 'Открыть в к
             <Pressable
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть"
+              accessibilityLabel={i18nT('navigation:components.navigation.OpenInMapsSheet.zakryt_ffe5de0e')}
               hitSlop={10}
               style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
             >
@@ -99,10 +101,10 @@ export default function OpenInMapsSheet({ visible, title = 'Открыть в к
           <Pressable
             onPress={onClose}
             accessibilityRole="button"
-            accessibilityLabel="Отмена"
+            accessibilityLabel={i18nT('navigation:components.navigation.OpenInMapsSheet.otmena_471c1045')}
             style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
           >
-            <Text style={styles.cancelLabel}>Отмена</Text>
+            <Text style={styles.cancelLabel}>{i18nT('navigation:components.navigation.OpenInMapsSheet.otmena_471c1045')}</Text>
           </Pressable>
         </View>
       </View>

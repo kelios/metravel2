@@ -8,11 +8,12 @@
 //   403 — поездка не completed / оценивающий не участник / оценка самого себя.
 //   Идемпотентно: повторный POST обновляет свою оценку.
 //
-// Пока эндпоинт не задеплоен — в DEV (или EXPO_PUBLIC_TRIPS_MOCK=true) держим оценку
-// в памяти. В прод-бандл (__DEV__===false без флага) мок не попадает.
+// Production guard and DTO verified by board #919; in-memory ratings are development-only.
 
-import { apiClient, ApiError } from '@/api/client'
+import { apiClient } from '@/api/client'
 import { devError } from '@/utils/logger'
+import { resolveDevMockFlag } from '@/utils/devMockFlags'
+import { translate as i18nT } from '@/i18n'
 
 export type ParticipantRatingValue = 1 | 2 | 3 | 4 | 5
 
@@ -28,18 +29,18 @@ export interface SubmitParticipantRatingInput {
   review?: string
 }
 
-const PARTICIPANT_RATING_MOCK =
-  process.env.EXPO_PUBLIC_TRIPS_MOCK === 'true' || __DEV__
+const PARTICIPANT_RATING_MOCK = resolveDevMockFlag({
+  name: 'EXPO_PUBLIC_TRIPS_MOCK',
+  value: process.env.EXPO_PUBLIC_TRIPS_MOCK,
+  defaultInDev: true,
+})
 const mockRatings = new Map<string, ParticipantRating>()
 
 const mockKey = (tripId: number, userId: number): string => `${tripId}:${userId}`
 
-const isAbortError = (error: unknown): boolean =>
-  !!error && typeof error === 'object' && (error as { name?: unknown }).name === 'AbortError'
-
 function assertValidRating(rating: number): asserts rating is ParticipantRatingValue {
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-    throw new Error('Оценка должна быть от 1 до 5')
+    throw new Error(i18nT('errorsStatic:api.common.participantRatingRange'))
   }
 }
 
@@ -75,8 +76,8 @@ export async function rateParticipant(
 }
 
 /**
- * Своя оценка участника поездки (null, если не оценивал).
- * GET /trips/{tripId}/participants/{userId}/rate/ — 401/403/404 → null.
+ * Своя оценка участника поездки (null только если API подтвердил, что оценки нет).
+ * Auth/permission/unavailable/network failures stay typed ApiError values for UI.
  */
 export async function getMyParticipantRating(
   tripId: number,
@@ -86,23 +87,11 @@ export async function getMyParticipantRating(
     return mockRatings.get(mockKey(tripId, userId)) ?? null
   }
 
-  try {
-    const res = await apiClient.get<ParticipantRating | null>(
-      `/trips/${tripId}/participants/${userId}/rate/`,
-    )
-    if (res && typeof res.rating === 'number') {
-      return { rating: res.rating as ParticipantRatingValue, review: res.review ?? null }
-    }
-    return null
-  } catch (error: unknown) {
-    if (isAbortError(error)) return null
-    if (
-      error instanceof ApiError &&
-      (error.status === 401 || error.status === 403 || error.status === 404)
-    ) {
-      return null
-    }
-    devError('Error fetching participant rating:', error)
-    return null
+  const res = await apiClient.get<ParticipantRating | null>(
+    `/trips/${tripId}/participants/${userId}/rate/`,
+  )
+  if (res && typeof res.rating === 'number') {
+    return { rating: res.rating as ParticipantRatingValue, review: res.review ?? null }
   }
+  return null
 }

@@ -17,6 +17,8 @@ import { Feather } from '@expo/vector-icons'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { hapticImpact } from '@/utils/haptics'
+import { translate as i18nT } from '@/i18n'
+
 
 const ONBOARDING_STORAGE_KEY = 'metravel.onboarding.v1'
 
@@ -29,18 +31,18 @@ type Slide = {
 const SLIDES: Slide[] = [
   {
     icon: 'book-open',
-    title: 'Книга путешествий',
-    body: 'Реальные маршруты с фото, заметками и GPS-точками. Сохраняйте поездки и собирайте личную книгу путешествий.',
+    get title() { return i18nT('sharedStatic:components.onboarding.OnboardingScreen.kniga_puteshestviy_1203c656') },
+    get body() { return i18nT('sharedStatic:onboarding.travelBook.body') },
   },
   {
     icon: 'map-pin',
-    title: 'Городские квесты',
-    body: 'Проходите квесты прямо на месте: загадки, точки на карте и истории, которые открываются по мере движения по маршруту.',
+    get title() { return i18nT('sharedStatic:components.onboarding.OnboardingScreen.gorodskie_kvesty_e3751b8f') },
+    get body() { return i18nT('sharedStatic:onboarding.quests.body') },
   },
   {
     icon: 'compass',
-    title: 'Карта и места рядом',
-    body: 'Смотрите маршруты и интересные места на карте, находите идеи поблизости и стройте свой следующий выезд.',
+    get title() { return i18nT('sharedStatic:components.onboarding.OnboardingScreen.karta_i_mesta_ryadom_cf21d908') },
+    get body() { return i18nT('sharedStatic:onboarding.map.body') },
   },
 ]
 
@@ -120,10 +122,10 @@ export default function OnboardingScreen() {
           style={styles.primaryButton}
           onPress={onNext}
           accessibilityRole="button"
-          accessibilityLabel={isLast ? 'Начать' : 'Далее'}
+          accessibilityLabel={isLast ? i18nT('shared:components.onboarding.OnboardingScreen.nachat_f0b6b299') : i18nT('shared:components.onboarding.OnboardingScreen.dalee_4fb75bfb')}
         >
           <Text style={styles.primaryButtonText}>
-            {isLast ? 'Начать' : 'Далее'}
+            {isLast ? i18nT('shared:components.onboarding.OnboardingScreen.nachat_f0b6b299') : i18nT('shared:components.onboarding.OnboardingScreen.dalee_4fb75bfb')}
           </Text>
           <Feather
             name={isLast ? 'check' : 'arrow-right'}
@@ -137,10 +139,10 @@ export default function OnboardingScreen() {
             style={styles.skipButton}
             onPress={onSkip}
             accessibilityRole="button"
-            accessibilityLabel="Пропустить онбординг"
+            accessibilityLabel={i18nT('shared:components.onboarding.OnboardingScreen.propustit_onbording_fe00491b')}
             hitSlop={8}
           >
-            <Text style={styles.skipText}>Пропустить</Text>
+            <Text style={styles.skipText}>{i18nT('shared:components.onboarding.OnboardingScreen.propustit_f77c246d')}</Text>
           </Pressable>
         ) : (
           <View style={styles.skipSpacer} />

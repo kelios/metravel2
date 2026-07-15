@@ -5,7 +5,9 @@ import {
   resetPasswordLinkApi,
   setNewPasswordApi,
   sendPasswordApi,
+  validateWebCookieSessionApi,
 } from '@/api/auth';
+import { Platform } from 'react-native';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { validatePassword } from '@/utils/aiValidation';
 import { sanitizeInput } from '@/utils/security';
@@ -17,6 +19,7 @@ jest.mock('react-native', () => ({
   Alert: {
     alert: jest.fn(),
   },
+  Platform: { OS: 'ios' },
 }));
 
 jest.mock('@/utils/fetchWithTimeout', () => ({
@@ -51,6 +54,36 @@ const mockedSanitizeInput = sanitizeInput as jest.MockedFunction<typeof sanitize
 describe('src/api/auth.ts auth/password API', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+  });
+
+  describe('validateWebCookieSessionApi', () => {
+    it('probes a private endpoint with cookie credentials on web', async () => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+
+      await expect(validateWebCookieSessionApi()).resolves.toBe(true);
+
+      expect(mockedFetchWithTimeout).toHaveBeenCalledWith(
+        expect.stringContaining('/user/me/verifications/'),
+        expect.objectContaining({ method: 'GET', credentials: 'include' }),
+        expect.any(Number),
+      );
+    });
+
+    it.each([401, 403])('fails closed for HTTP %s', async (status) => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status } as any);
+
+      await expect(validateWebCookieSessionApi()).resolves.toBe(false);
+    });
+
+    it('keeps transient probe failures visible', async () => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 503 } as any);
+
+      await expect(validateWebCookieSessionApi()).rejects.toThrow('Web session probe failed: 503');
+    });
   });
 
   describe('loginApi', () => {

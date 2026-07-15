@@ -2,6 +2,8 @@ import React, { useMemo } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { useThemedColors } from '@/hooks/useTheme'
+import { selectPlural, translate as i18nT } from '@/i18n'
+
 
 type Colors = ReturnType<typeof useThemedColors>
 
@@ -32,20 +34,18 @@ export default function QuestGuestGate({
 
   return (
     <View style={styles.card} testID={testID}>
-      <Text style={styles.title}>Сохраним твой прогресс</Text>
+      <Text style={styles.title}>{i18nT('quests:components.quests.QuestGuestGate.sohranim_tvoy_progress_b99df14f')}</Text>
       <Text style={styles.lead}>
-        Ты прошёл {passedCount} {pluralPoints(passedCount)} — здорово! Чтобы продолжить квест,
-        сохранить результат и открыть финал, войди или зарегистрируйся. Пройденное не потеряется.
-      </Text>
+        {i18nT('quests:components.quests.QuestGuestGate.ty_proshel_ca229b47')}{passedCount} {pluralPoints(passedCount)} {i18nT('quests:components.quests.QuestGuestGate.zdorovo_chtoby_prodolzhit_kvest_sohranit_rez_1b7311fc')}</Text>
 
       <Pressable
         onPress={onLogin}
         style={styles.primaryButton}
         testID="quest-guest-gate-login"
         accessibilityRole="button"
-        accessibilityLabel="Войти, чтобы сохранить прогресс квеста"
+        accessibilityLabel={i18nT('quests:components.quests.QuestGuestGate.voyti_chtoby_sohranit_progress_kvesta_a58fb69a')}
       >
-        <Text style={styles.primaryButtonText}>Войти</Text>
+        <Text style={styles.primaryButtonText}>{i18nT('quests:components.quests.QuestGuestGate.voyti_5f893cd8')}</Text>
       </Pressable>
 
       <Pressable
@@ -53,9 +53,9 @@ export default function QuestGuestGate({
         style={styles.secondaryButton}
         testID="quest-guest-gate-register"
         accessibilityRole="button"
-        accessibilityLabel="Зарегистрироваться, чтобы сохранить прогресс квеста"
+        accessibilityLabel={i18nT('quests:components.quests.QuestGuestGate.zaregistrirovatsya_chtoby_sohranit_progress__5164906b')}
       >
-        <Text style={styles.secondaryButtonText}>Зарегистрироваться</Text>
+        <Text style={styles.secondaryButtonText}>{i18nT('quests:components.quests.QuestGuestGate.zaregistrirovatsya_84006714')}</Text>
       </Pressable>
 
       <Pressable
@@ -63,20 +63,21 @@ export default function QuestGuestGate({
         style={styles.dismissButton}
         testID="quest-guest-gate-dismiss"
         accessibilityRole="button"
-        accessibilityLabel="Вернуться к пройденным точкам квеста"
+        accessibilityLabel={i18nT('quests:components.quests.QuestGuestGate.vernutsya_k_proydennym_tochkam_kvesta_8320b119')}
       >
-        <Text style={styles.dismissButtonText}>Вернуться к пройденным точкам</Text>
+        <Text style={styles.dismissButtonText}>{i18nT('quests:components.quests.QuestGuestGate.vernutsya_k_proydennym_tochkam_ac57c14e')}</Text>
       </Pressable>
     </View>
   )
 }
 
 const pluralPoints = (count: number): string => {
-  const mod10 = count % 10
-  const mod100 = count % 100
-  if (mod10 === 1 && mod100 !== 11) return 'точку'
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'точки'
-  return 'точек'
+  return selectPlural(count, {
+    one: i18nT('quests:components.quests.QuestGuestGate.tochku_6dcdfa1f'),
+    few: i18nT('quests:components.quests.QuestGuestGate.tochki_13f25999'),
+    many: i18nT('quests:components.quests.QuestGuestGate.tochek_9ebfcb56'),
+    other: i18nT('quests:components.quests.QuestGuestGate.tochek_9ebfcb56'),
+  })
 }
 
 const createStyles = (colors: Colors) =>

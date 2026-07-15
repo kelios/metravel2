@@ -23,6 +23,8 @@ import { buildCanonicalUrl } from '@/utils/seo';
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader'
 import ContributionBanner from '@/components/common/ContributionBanner';
+import { translate as i18nT } from '@/i18n'
+
 
 export default function FavoritesScreen() {
     const router = useRouter();
@@ -97,10 +99,10 @@ export default function FavoritesScreen() {
             if (!clearFavorites) return;
 
             const confirmed = await confirmAction({
-                title: 'Очистить «Хочу поехать»',
-                message: 'Очистить «Хочу поехать»?',
-                confirmText: 'Очистить',
-                cancelText: 'Отмена',
+                title: i18nT('shared:app.tabs.favorites.ochistit_hochu_poehat_250e6c33'),
+                message: i18nT('shared:app.tabs.favorites.ochistit_hochu_poehat_8e2219f3'),
+                confirmText: i18nT('shared:app.tabs.favorites.ochistit_97020d69'),
+                cancelText: i18nT('shared:app.tabs.favorites.otmena_201b3e96'),
             });
             if (!confirmed) return;
 
@@ -141,8 +143,8 @@ export default function FavoritesScreen() {
     const seoBlock = (
         <InstantSEO
             headKey="favorites"
-            title="Хочу поехать | Metravel"
-            description="Маршруты, куда вы хотите поехать"
+            title={i18nT('shared:app.tabs.favorites.hochu_poehat_metravel_ece49980')}
+            description={i18nT('shared:app.tabs.favorites.marshruty_kuda_vy_hotite_poehat_c9209d67')}
             canonical={canonical}
             robots="noindex, nofollow"
         />
@@ -169,10 +171,10 @@ export default function FavoritesScreen() {
                 {seoBlock}
                 <EmptyState
                     icon="heart"
-                    title="Войдите в аккаунт"
-                    description="Войдите, чтобы сохранять маршруты в «Хочу поехать» и синхронизировать их между устройствами."
+                    title={i18nT('shared:app.tabs.favorites.voydite_v_akkaunt_b6b6d6dd')}
+                    description={i18nT('shared:app.tabs.favorites.voydite_chtoby_sohranyat_marshruty_v_hochu_p_003156c7')}
                     action={{
-                        label: 'Войти',
+                        label: i18nT('shared:app.tabs.favorites.voyti_4b517055'),
                         onPress: () => router.push(buildLoginHref({ redirect: '/favorites', intent: 'favorites' }) as any),
                     }}
                 />
@@ -184,7 +186,7 @@ export default function FavoritesScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {seoBlock}
-                <ProfileCollectionHeader title="Хочу поехать" onBackPress={handleBackToProfile} />
+                <ProfileCollectionHeader title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')} onBackPress={handleBackToProfile} />
                 <View style={styles.listContent}>
                     {Array.from({ length: 3 }).map((_, index) => (
                         <View key={index} style={styles.cardWrap}>
@@ -202,15 +204,15 @@ export default function FavoritesScreen() {
                 {seoBlock}
                 <EmptyState
                     icon="heart"
-                    title="В «Хочу поехать» пока пусто"
-                    description="Нажмите ♥ на карточке маршрута, чтобы добавить место, куда хотите поехать."
+                    title={i18nT('shared:app.tabs.favorites.v_hochu_poehat_poka_pusto_e39c47ea')}
+                    description={i18nT('shared:app.tabs.favorites.nazhmite_na_kartochke_marshruta_chtoby_dobav_80112c03')}
                     variant="empty"
                     action={{
-                        label: 'Найти маршруты',
+                        label: i18nT('shared:app.tabs.favorites.nayti_marshruty_ab318302'),
                         onPress: () => router.push('/search'),
                     }}
                     secondaryAction={{
-                        label: 'Популярные маршруты',
+                        label: i18nT('shared:app.tabs.favorites.populyarnye_marshruty_fcb7673e'),
                         onPress: () => router.push('/travelsby'),
                     }}
                 />
@@ -222,11 +224,11 @@ export default function FavoritesScreen() {
         <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
             {seoBlock}
             <ProfileCollectionHeader
-                title="Хочу поехать"
+                title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')}
                 onBackPress={handleBackToProfile}
                 showClearButton={typeof clearFavorites === 'function' && data.length > 0}
                 onClearPress={handleClearAll}
-                clearAccessibilityLabel="Очистить «Хочу поехать»"
+                clearAccessibilityLabel={i18nT('shared:app.tabs.favorites.ochistit_hochu_poehat_250e6c33')}
             />
 
             {Platform.OS === 'web' ? (
@@ -273,7 +275,7 @@ export default function FavoritesScreen() {
                                     style={[styles.removeButton, globalFocusStyles.focusable]}
                                     onPress={() => removeFavorite?.(item.id, item.type)}
                                     accessibilityRole="button"
-                                    accessibilityLabel="Удалить из «Хочу поехать»"
+                                    accessibilityLabel={i18nT('shared:app.tabs.favorites.udalit_iz_hochu_poehat_4f301763')}
                                     {...Platform.select({ web: { cursor: 'pointer' } })}
                                 >
                                     <Feather name="trash-2" size={16} color={colors.textOnPrimary} />
@@ -326,7 +328,7 @@ export default function FavoritesScreen() {
                                 style={[styles.removeButton, globalFocusStyles.focusable]}
                                 onPress={() => removeFavorite?.(item.id, item.type)}
                                 accessibilityRole="button"
-                                accessibilityLabel="Удалить из «Хочу поехать»"
+                                accessibilityLabel={i18nT('shared:app.tabs.favorites.udalit_iz_hochu_poehat_4f301763')}
                                 {...Platform.select({ web: { cursor: 'pointer' } })}
                             >
                                 <Feather name="trash-2" size={16} color={colors.textOnPrimary} />

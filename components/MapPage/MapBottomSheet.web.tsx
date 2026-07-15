@@ -20,6 +20,8 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { LAYOUT } from '@/constants/layout'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { translate as i18nT } from '@/i18n'
+
 
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
 type SheetIndex = -1 | 0 | 1 | 2 | 3
@@ -159,7 +161,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           hiddenWhenCollapsed && styles.webRootHidden,
           { ...bottomStyle, pointerEvents: hiddenWhenCollapsed ? 'none' : 'auto' },
         ]}
-        accessibilityLabel="Панель карты"
+        accessibilityLabel={i18nT('map:components.MapPage.MapBottomSheet.panel_karty_89ff2903')}
         accessibilityRole={!isCollapsed ? ('dialog' as any) : undefined}
         accessibilityViewIsModal={isFullScreen}
         {...(!isCollapsed
@@ -169,7 +171,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         <Pressable
           onPress={isCollapsed ? handlePeekTap : handleClose}
           style={styles.dragHandleArea}
-          accessibilityLabel={isCollapsed ? 'Развернуть панель' : 'Свернуть панель'}
+          accessibilityLabel={isCollapsed ? i18nT('map:components.MapPage.MapBottomSheet.razvernut_panel_95c40301') : i18nT('map:components.MapPage.MapBottomSheet.svernut_panel_c7fa1175')}
           accessibilityRole="button"
         >
           <View style={styles.dragHandle} />

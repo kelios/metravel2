@@ -11,6 +11,8 @@ import { showToast } from '@/utils/toast';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { resolveCategoryIdsByNames as mapResolveCategoryIds } from '@/utils/userPointsCategories';
 import { getPointCategoryIds, getPointCategoryNames } from '@/utils/travelPointMeta';
+import { translate as i18nT } from '@/i18n'
+
 
 type PointLike = {
   id: string;
@@ -49,7 +51,7 @@ export function usePointListAddPointModel({
       if (!isAuthenticated) {
         void showToast({
           type: 'info',
-          text1: 'Авторизуйтесь, чтобы сохранять точки',
+          text1: i18nT('travel:components.travel.hooks.usePointListAddPointModel.avtorizuytes_chtoby_sohranyat_tochki_96471933'),
           position: 'bottom',
         });
         return;
@@ -58,7 +60,7 @@ export function usePointListAddPointModel({
       if (!point.coord) {
         void showToast({
           type: 'info',
-          text1: 'У точки нет координат',
+          text1: i18nT('travel:components.travel.hooks.usePointListAddPointModel.u_tochki_net_koordinat_1d3df1ef'),
           position: 'bottom',
         });
         return;
@@ -69,7 +71,7 @@ export function usePointListAddPointModel({
       if (isPointSaved?.(point.coord)) {
         void showToast({
           type: 'info',
-          text1: 'Точка уже в «Мои точки»',
+          text1: i18nT('travel:components.travel.hooks.usePointListAddPointModel.tochka_uzhe_v_moi_tochki_fa7659b5'),
           position: 'bottom',
         });
         return;
@@ -79,7 +81,7 @@ export function usePointListAddPointModel({
       if (!coords) {
         void showToast({
           type: 'info',
-          text1: 'Невозможно распознать координаты',
+          text1: i18nT('travel:components.travel.hooks.usePointListAddPointModel.nevozmozhno_raspoznat_koordinaty_4d8a632c'),
           position: 'bottom',
         });
         return;
@@ -109,7 +111,7 @@ export function usePointListAddPointModel({
       const categoryNameString = cleanedCategoryName || undefined;
 
       const payload: Partial<ImportedPoint> = {
-        name: point.address || travelName || 'Точка маршрута',
+        name: point.address || travelName || i18nT('travel:components.travel.hooks.usePointListAddPointModel.routePointFallback'),
         address: point.address,
         description: point.description,
         latitude: coords.lat,
@@ -160,7 +162,7 @@ export function usePointListAddPointModel({
         });
         void showToast({
           type: 'success',
-          text1: 'Точка добавлена в «Мои точки»',
+          text1: i18nT('travel:components.travel.hooks.usePointListAddPointModel.tochka_dobavlena_v_moi_tochki_6e103965'),
           position: 'bottom',
         });
         void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
@@ -170,7 +172,7 @@ export function usePointListAddPointModel({
         }
         void showToast({
           type: 'error',
-          text1: 'Не удалось сохранить точку',
+          text1: i18nT('travel:components.travel.hooks.usePointListAddPointModel.ne_udalos_sohranit_tochku_a149afe7'),
           position: 'bottom',
         });
       } finally {

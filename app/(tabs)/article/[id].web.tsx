@@ -19,6 +19,8 @@ import { buildCanonicalUrl } from '@/utils/seo'
 import { stripToDescription } from '@/components/travel/utils/travelHelpers'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { webTouchScrollStyle } from '@/utils'
+import { translate as i18nT } from '@/i18n'
+
 
 export default function ArticleDetails() {
   const colors = useThemedColors()
@@ -78,7 +80,7 @@ export default function ArticleDetails() {
         }
 
         if (!loadedArticle?.id) {
-          throw new Error('Статья не найдена')
+          throw new Error(i18nT('shared:app.tabs.article.id.statya_ne_naydena_697a610d'))
         }
 
         if (!cancelled) {
@@ -86,7 +88,7 @@ export default function ArticleDetails() {
         }
       } catch (error: any) {
         if (!cancelled) {
-          setErrorMessage(error?.message || 'Не удалось загрузить статью')
+          setErrorMessage(error?.message || i18nT('sharedStatic:article.loadFailed'))
         }
       } finally {
         if (!cancelled) {
@@ -117,10 +119,10 @@ export default function ArticleDetails() {
     const hasResolvedArticle = Boolean(article?.id) && !errorMessage
     const title = hasResolvedArticle && article?.name
       ? `${article.name} | MeTravel`
-      : 'Статья не найдена | Metravel'
+      : i18nT('shared:app.tabs.article.id.statya_ne_naydena_metravel_82a6d640')
     const description = hasResolvedArticle
       ? stripToDescription(article?.description)
-      : 'Статья не найдена. Проверьте ссылку или вернитесь к списку статей Metravel.'
+      : i18nT('shared:app.tabs.article.id.statya_ne_naydena_proverte_ssylku_ili_vernit_4adc2c7f')
     const canonicalKey = article?.id || routeKey
     const canonical = hasResolvedArticle && canonicalKey
       ? buildCanonicalUrl(`/article/${canonicalKey}`)
@@ -176,8 +178,8 @@ export default function ArticleDetails() {
         {seoBlock}
         <SafeAreaView style={{ flex: 1 }}>
           <ScrollView style={[styles.container, webTouchScrollStyle]} contentContainerStyle={styles.centerContent}>
-            <Title style={styles.errorTitle}>Статья не найдена</Title>
-            <SafeHtml html={errorMessage || 'Проверьте ссылку на статью.'} />
+            <Title style={styles.errorTitle}>{i18nT('shared:app.tabs.article.id.statya_ne_naydena_697a610d')}</Title>
+            <SafeHtml html={errorMessage || i18nT('sharedStatic:article.checkLink')} />
           </ScrollView>
         </SafeAreaView>
       </>
@@ -198,7 +200,12 @@ export default function ArticleDetails() {
               <Card.Content>
                 <h1 style={{ fontSize: 18, fontWeight: '700', margin: 0 } as any}>{article.name}</h1>
                 <ArticleAuthorBanner article={article} />
-                <SafeHtml html={articleContent.html} serverSanitized={articleContent.serverSanitized} style={{ marginTop: 16 }} />
+                <SafeHtml
+                  html={articleContent.html}
+                  serverSanitized={articleContent.serverSanitized}
+                  imageAlt={article.name}
+                  style={{ marginTop: 16 }}
+                />
                 <ArticleActivationCtaSection article={article} redirectPath={articlePath} />
               </Card.Content>
             </Card>

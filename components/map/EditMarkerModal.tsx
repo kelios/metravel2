@@ -9,6 +9,8 @@ import MultiSelectField from '@/components/forms/MultiSelectField';
 import { isPointCategoryCreateEnabled } from '@/config/featureFlags';
 import { createPointCategory } from '@/api/misc';
 import type { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 const MultiSelectFieldAny: any = MultiSelectField;
 
@@ -109,8 +111,8 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
     };
 
     const handleDelete = () => {
-        const shortAddr = address || marker.address || 'эту точку';
-        const confirmed = window.confirm(`Удалить точку "${shortAddr}" из маршрута? Это действие нельзя отменить.`);
+        const shortAddr = address || marker.address || i18nT('map:components.map.EditMarkerModal.etu_tochku_054e1134');
+        const confirmed = window.confirm(i18nT('map:components.map.EditMarkerModal.udalit_tochku_value1_iz_marshruta_eto_deystv_229ad7bd', { value1: shortAddr }));
         if (!confirmed) return;
         onRemove(index);
         onClose();
@@ -123,8 +125,8 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                 <div style={styles.editForm}>
                     <div style={styles.editHeader}>
                         <div>
-                            <div style={styles.editTitle}>Точка #{index + 1}</div>
-                            <div style={styles.editSubtitle}>{marker.address || 'Без адреса'}</div>
+                            <div style={styles.editTitle}>{i18nT('map:components.map.EditMarkerModal.tochka_35020a41')}{index + 1}</div>
+                            <div style={styles.editSubtitle}>{marker.address || i18nT('map:components.map.EditMarkerModal.bez_adresa_31af1956')}</div>
                         </div>
                         <button
                             type="button"
@@ -136,26 +138,25 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                     </div>
 
                     <div style={styles.helperText}>
-                        Опишите место так, чтобы вы сами через год быстро поняли, что здесь смотреть или делать.
-                    </div>
+                        {i18nT('map:components.map.EditMarkerModal.opishite_mesto_tak_chtoby_vy_sami_cherez_god_1d45d9bf')}</div>
 
                     <div style={styles.field}>
-                        <label style={styles.fieldLabel}>Адрес точки</label>
+                        <label style={styles.fieldLabel}>{i18nT('map:components.map.EditMarkerModal.adres_tochki_cfb17459')}</label>
                         <input
                             type="text"
                             value={address}
                             onChange={(e) => setAddress(e.target.value.slice(0, 100))}
                             maxLength={100}
                             style={styles.input}
-                            placeholder="Например: Парковка у озера Sucha"
+                            placeholder={i18nT('map:components.map.EditMarkerModal.naprimer_parkovka_u_ozera_sucha_b5fd5cc9')}
                         />
                         <div style={{...styles.fieldHint, fontSize: '0.85em', color: colors.textMuted}}>
-                            Можно оставить адрес из карты или сократить до понятного названия места. ({address.length}/100)
+                            {i18nT('map:components.map.EditMarkerModal.mozhno_ostavit_adres_iz_karty_ili_sokratit_d_67e7e4c3')}{address.length}/100)
                         </div>
                     </div>
 
                     <div style={styles.field}>
-                        <label style={styles.fieldLabel}>Категории точки</label>
+                        <label style={styles.fieldLabel}>{i18nT('map:components.map.EditMarkerModal.kategorii_tochki_cb4d4962')}</label>
                         <MultiSelectFieldAny
                             label=""
                             items={categoryItems}
@@ -167,10 +168,10 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                             }}
                             allowCreate={allowCreateCategory}
                             onCreateItem={handleCreateCategory}
-                            createLabel="Добавить категорию"
+                            createLabel={i18nT('map:components.map.EditMarkerModal.dobavit_kategoriyu_bb7b37c2')}
                             labelField="name"
                             valueField="id"
-                            placeholder="Выберите..."
+                            placeholder={i18nT('map:components.map.EditMarkerModal.vyberite_de6e6bdc')}
                             style={styles.multiSelect}
                             placeholderStyle={styles.multiSelectPlaceholder}
                             selectedTextStyle={styles.multiSelectSelectedText}
@@ -178,12 +179,11 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                             containerStyle={styles.multiSelectDropdownContainer}
                         />
                         <div style={styles.fieldHint}>
-                            Выберите категории, которые описывают эту точку маршрута.
-                        </div>
+                            {i18nT('map:components.map.EditMarkerModal.vyberite_kategorii_kotorye_opisyvayut_etu_to_ec75aa9d')}</div>
                     </div>
 
                     <div style={styles.field}>
-                        <label style={styles.fieldLabel}>Изображение точки</label>
+                        <label style={styles.fieldLabel}>{i18nT('map:components.map.EditMarkerModal.izobrazhenie_tochki_d9618978')}</label>
                         {marker.id != null ? (
                             <>
                                 <PhotoUploadWithPreview
@@ -191,17 +191,15 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                                     idTravel={String(marker.id)}
                                     oldImage={localImage}
                                     onUpload={handleLocalImageUpload}
-                                    placeholder="Перетащите фото точки маршрута"
+                                    placeholder={i18nT('map:components.map.EditMarkerModal.peretaschite_foto_tochki_marshruta_3a234cc4')}
                                     maxSizeMB={10}
                                 />
                                 <div style={styles.fieldHint}>
-                                    Фото поможет путешественникам узнать место. Можно загрузить одно главное изображение.
-                                </div>
+                                    {i18nT('map:components.map.EditMarkerModal.foto_pomozhet_puteshestvennikam_uznat_mesto__e45440f7')}</div>
                             </>
                         ) : (
                             <div style={styles.fieldHint}>
-                                Сначала сохраните маршрут, затем откройте точку снова — после этого можно загрузить фото.
-                            </div>
+                                {i18nT('map:components.map.EditMarkerModal.snachala_sohranite_marshrut_zatem_otkroyte_t_4fff3196')}</div>
                         )}
                     </div>
 
@@ -214,15 +212,13 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                                 }}
                                 style={styles.primaryButton}
                             >
-                                Сохранить
-                            </button>
+                                {i18nT('map:components.map.EditMarkerModal.sohranit_4853bb8f')}</button>
                             <button
                                 type="button"
                                 onClick={handleClose}
                                 style={styles.secondaryButton}
                             >
-                                Отмена
-                            </button>
+                                {i18nT('map:components.map.EditMarkerModal.otmena_0a02aca0')}</button>
                         </div>
                         <button
                             type="button"
@@ -230,7 +226,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                             style={styles.deleteTextButton}
                         >
                             <Feather name="trash-2" size={14} color={colors.danger} />
-                            <span>Удалить точку</span>
+                            <span>{i18nT('map:components.map.EditMarkerModal.udalit_tochku_b058b974')}</span>
                         </button>
                     </div>
                 </div>

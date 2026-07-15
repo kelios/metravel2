@@ -10,6 +10,8 @@ import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import { showToast } from '@/utils/toast';
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * Shared hook for loading and managing user profile state.
@@ -70,10 +72,10 @@ export function useUserProfile() {
             const message =
                 query.error instanceof ApiError
                     ? query.error.message
-                    : 'Не удалось загрузить профиль';
+                    : i18nT('profile:hooks.useUserProfile.ne_udalos_zagruzit_profil_27527c73');
             showToast({
                 type: 'error',
-                text1: 'Ошибка',
+                text1: i18nT('profile:hooks.useUserProfile.oshibka_c577784e'),
                 text2: message,
                 visibilityTime: 4000,
             });

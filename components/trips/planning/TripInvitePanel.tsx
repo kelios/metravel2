@@ -14,6 +14,8 @@ import { openExternalUrl } from '@/utils/externalLinks';
 import { buildTripPlanUrl, buildTripTelegramShareUrl } from '@/utils/tripPlanLinks';
 import { shareTripPlan } from '@/utils/shareTripPlan';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   trip: PlannedTrip;
@@ -46,7 +48,7 @@ export const getTripInviteSubscriberName = (profile: InviteSubscriberProfile): s
     .map((value) => String(value ?? '').trim())
     .find((value) => value.length > 0);
 
-  return name || (fallbackId ? `Пользователь #${fallbackId}` : 'Пользователь');
+  return name || (fallbackId ? i18nT('trips:components.trips.planning.TripInvitePanel.polzovatel_value1_1a204f34', { value1: fallbackId }) : i18nT('trips:components.trips.planning.TripInvitePanel.polzovatel_2c7bb1ec'));
 };
 
 function TripInvitePanel({ trip }: Props) {
@@ -100,7 +102,7 @@ function TripInvitePanel({ trip }: Props) {
     void shareTripPlan(trip)
       .then((result) => {
         if (result === 'unavailable') {
-          setShareError('Не удалось открыть меню «Поделиться». Попробуйте ещё раз.');
+          setShareError(i18nT('trips:components.trips.planning.TripInvitePanel.ne_udalos_otkryt_menyu_podelitsya_poprobuyte_c9afbc63'));
         }
       })
       .finally(() => setSystemSharePending(false));
@@ -109,22 +111,22 @@ function TripInvitePanel({ trip }: Props) {
   const handleTelegramShare = () => {
     setShareError(null);
     if (!telegramShareUrl) {
-      setShareError('Не удалось сформировать ссылку на поездку.');
+      setShareError(i18nT('trips:components.trips.planning.TripInvitePanel.ne_udalos_sformirovat_ssylku_na_poezdku_346a937e'));
       return;
     }
     void (async () => {
       const opened = await openExternalUrl(telegramShareUrl);
       if (!opened) {
-        setShareError('Не удалось открыть Telegram. Ссылка на поездку доступна ниже.');
+        setShareError(i18nT('trips:components.trips.planning.TripInvitePanel.ne_udalos_otkryt_telegram_ssylka_na_poezdku__e3ab9946'));
       }
     })();
   };
 
   return (
     <View style={styles.wrap} testID="trip-invite">
-      <Text style={styles.heading}>Пригласить и поделиться</Text>
+      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.TripInvitePanel.priglasit_i_podelitsya_37d27121')}</Text>
 
-      <Text style={styles.label}>Подписчики</Text>
+      <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripInvitePanel.podpischiki_092b892e')}</Text>
       {subscribersLoading ? (
         <ActivityIndicator color={colors.primaryDark} />
       ) : subscribers.length ? (
@@ -154,11 +156,11 @@ function TripInvitePanel({ trip }: Props) {
           </View>
           {selectedNames.length ? (
             <Text style={styles.selectedNames} numberOfLines={2} testID="trip-invite-selected-names">
-              Выбрано: {selectedNames.join(', ')}
+              {i18nT('trips:components.trips.planning.TripInvitePanel.vybrano_6c0e58ad')}{selectedNames.join(', ')}
             </Text>
           ) : null}
           <Button
-            label={`Пригласить выбранных (${selected.length})`}
+            label={i18nT('trips:components.trips.planning.TripInvitePanel.priglasit_vybrannyh_value1_5a89baa2', { value1: selected.length })}
             onPress={handleInvite}
             loading={invite.isPending}
             disabled={invite.isPending || selected.length === 0}
@@ -166,18 +168,17 @@ function TripInvitePanel({ trip }: Props) {
             testID="trip-invite-submit"
           />
           {invitedCount != null ? (
-            <Text style={styles.success}>Приглашено: {invitedCount}</Text>
+            <Text style={styles.success}>{i18nT('trips:components.trips.planning.TripInvitePanel.priglasheno_ddca88d3')}{invitedCount}</Text>
           ) : null}
         </>
       ) : (
         <Text style={styles.hint}>
-          У вас пока нет подписчиков — поделитесь ссылкой ниже.
-        </Text>
+          {i18nT('trips:components.trips.planning.TripInvitePanel.u_vas_poka_net_podpischikov_podelites_ssylko_4eb3eb7e')}</Text>
       )}
 
-      <Text style={styles.label}>Поделиться</Text>
+      <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripInvitePanel.podelitsya_8729d9db')}</Text>
       <Button
-        label="Поделиться"
+        label={i18nT('trips:components.trips.planning.TripInvitePanel.podelitsya_8729d9db')}
         onPress={handleSystemShare}
         loading={systemSharePending}
         disabled={systemSharePending || !tripUrl}
@@ -186,7 +187,7 @@ function TripInvitePanel({ trip }: Props) {
         testID="trip-invite-share-system"
       />
       <Button
-        label="Поделиться в Telegram"
+        label={i18nT('trips:components.trips.planning.TripInvitePanel.podelitsya_v_telegram_83041b43')}
         onPress={handleTelegramShare}
         variant="outline"
         disabled={!telegramShareUrl}

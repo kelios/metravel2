@@ -13,6 +13,8 @@ import {
   getDateFieldForTravelStatus,
   getExplicitTravelStatusDate,
 } from '@/utils/travelStatusCalendarDisplay'
+import { translate as i18nT } from '@/i18n'
+
 
 type IconName = ComponentProps<typeof Feather>['name']
 
@@ -41,36 +43,36 @@ export type DateEditorState = {
 export type StatusBuckets = Record<TravelStatus, CalendarEntry[]>
 
 export const TABS: CalendarTab[] = [
-  { key: 'visited', label: 'Был', icon: 'check-circle' },
-  { key: 'planned', label: 'Планирую', icon: 'calendar' },
-  { key: 'wishlist', label: 'Хочу', icon: 'bookmark' },
+  { key: 'visited', get label() { return i18nT('calendarStatic:components.screens.calendar.calendarScreen_helpers.byl_9e3f47e6') }, icon: 'check-circle' },
+  { key: 'planned', get label() { return i18nT('calendarStatic:components.screens.calendar.calendarScreen_helpers.planiruyu_841c53b4') }, icon: 'calendar' },
+  { key: 'wishlist', get label() { return i18nT('calendarStatic:components.screens.calendar.calendarScreen_helpers.hochu_222ceb83') }, icon: 'bookmark' },
 ]
 
 export const EMPTY_STATE: Record<TravelStatus, EmptyStateConfig> = {
   visited: {
     icon: 'check-circle',
-    title: 'Нет посещённых мест',
-    description: 'Открой путешествие и отметь его статусом «Был здесь», чтобы оно появилось в этом разделе.',
-    actionLabel: 'Найти путешествия',
+    get title() { return i18nT('calendarStatic:components.screens.calendar.calendarScreen_helpers.net_poseschennyh_mest_fe3e827a') },
+    get description() { return i18nT('calendarStatic:components.screens.calendar.calendarScreen_helpers.otkroy_puteshestvie_i_otmet_ego_statusom_byl_e4ebc1c3') },
+    get actionLabel() { return i18nT('calendarStatic:empty.visited.action') },
   },
   planned: {
     icon: 'calendar',
-    title: 'Нет запланированных поездок',
-    description: 'Открой любое путешествие, нажми «Добавить в план», затем «Планирую» и выбери дату.',
-    actionLabel: 'Найти маршрут',
+    get title() { return i18nT('calendarStatic:components.screens.calendar.calendarScreen_helpers.net_zaplanirovannyh_poezdok_c49c3470') },
+    get description() { return i18nT('calendarStatic:components.screens.calendar.calendarScreen_helpers.otkroy_lyuboe_puteshestvie_nazhmi_dobavit_v__6deb5823') },
+    get actionLabel() { return i18nT('calendarStatic:empty.planned.action') },
   },
   wishlist: {
     icon: 'bookmark',
-    title: 'В «Хочу поехать» пока пусто',
-    description: 'Открой путешествие и выбери статус «Хочу поехать», чтобы собрать здесь личный список маршрутов.',
-    actionLabel: 'Найти маршруты',
+    get title() { return i18nT('calendarStatic:components.screens.calendar.calendarScreen_helpers.v_hochu_poehat_poka_pusto_3e455d21') },
+    get description() { return i18nT('calendarStatic:components.screens.calendar.calendarScreen_helpers.otkroy_puteshestvie_i_vyberi_status_hochu_po_d97a09ce') },
+    get actionLabel() { return i18nT('calendarStatic:empty.wishlist.action') },
   },
 }
 
 export const TAB_HINTS: Record<TravelStatus, string> = {
-  visited: 'Выбери дату, чтобы увидеть посещённые поездки за этот день. Если точной даты нет, добавь её прямо в карточке.',
-  planned: 'Выбери дату, чтобы отфильтровать запланированные поездки.',
-  wishlist: 'Это личный список «Хочу поехать». Дата для него не обязательна — главное, что вы хотите сохранить маршрут на потом.',
+  get visited() { return i18nT('calendarStatic:tabHint.visited') },
+  get planned() { return i18nT('calendarStatic:tabHint.planned') },
+  get wishlist() { return i18nT('calendarStatic:tabHint.wishlist') },
 }
 
 export const CARD_META_ICON_STYLE = { marginRight: 4 } as const
@@ -91,7 +93,7 @@ export const getModerationBadge = (
 ): ModerationBadgeConfig | null => {
   if (state === 'draft') {
     return {
-      label: 'Черновик',
+      label: i18nT('calendar:components.screens.calendar.calendarScreen_helpers.chernovik_746d03fb'),
       icon: 'edit-3',
       background: colors.warningLight,
       border: colors.warning,
@@ -100,7 +102,7 @@ export const getModerationBadge = (
   }
   if (state === 'pending') {
     return {
-      label: 'На модерации',
+      label: i18nT('calendar:components.screens.calendar.calendarScreen_helpers.na_moderatsii_2acec5d7'),
       icon: 'clock',
       background: colors.infoLight,
       border: colors.info,
@@ -209,7 +211,7 @@ export const sortCalendarEntries = (entries: CalendarEntry[], status: TravelStat
   })
 
 export const getDateEditorSubtitle = (status?: TravelStatus) => {
-  if (status === 'visited') return 'Укажи дату, когда ты был в этом путешествии.'
-  if (status === 'wishlist') return 'Этот статус просто сохраняет маршрут в ваш личный список «Хочу поехать». Дата не обязательна.'
-  return 'Укажи дату запланированной поездки.'
+  if (status === 'visited') return i18nT('calendar:components.screens.calendar.calendarScreen_helpers.ukazhi_datu_kogda_ty_byl_v_etom_puteshestvii_590bdf0e')
+  if (status === 'wishlist') return i18nT('calendar:components.screens.calendar.calendarScreen_helpers.etot_status_prosto_sohranyaet_marshrut_v_vas_1bb862e4')
+  return i18nT('calendar:components.screens.calendar.calendarScreen_helpers.ukazhi_datu_zaplanirovannoy_poezdki_09b2e98c')
 }

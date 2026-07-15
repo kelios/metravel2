@@ -27,6 +27,8 @@ import {
   getWebCardWidth,
   parseCoord,
 } from './utils'
+import { translate as i18nT } from '@/i18n'
+
 
 export type { Props }
 
@@ -110,49 +112,49 @@ const AddressListItem: React.FC<Props> = ({
         label: NAVIGATION_ACTION_LABELS.google,
         icon: 'map-pin' as const,
         onPress: () => openExternal(buildMapUrl(coord)),
-        title: 'Открыть в Google Maps',
+        title: i18nT('map:components.MapPage.AddressListItem.index.otkryt_v_google_maps_eaf56009'),
       },
       {
         key: 'apple',
         label: NAVIGATION_ACTION_LABELS.apple,
         icon: 'map' as const,
         onPress: () => openExternal(buildAppleMapsUrl(coord)),
-        title: 'Открыть в Apple Maps',
+        title: i18nT('map:components.MapPage.AddressListItem.index.otkryt_v_apple_maps_2a98f178'),
       },
       {
         key: 'organic',
         label: NAVIGATION_ACTION_LABELS.organic,
         icon: 'compass' as const,
         onPress: () => openExternal(buildOrganicMapsUrl(coord)),
-        title: 'Открыть в Organic Maps',
+        title: i18nT('map:components.MapPage.AddressListItem.index.otkryt_v_organic_maps_7f870efb'),
       },
       {
         key: 'waze',
         label: NAVIGATION_ACTION_LABELS.waze,
         icon: 'navigation' as const,
         onPress: () => openExternal(buildWazeUrl(coord)),
-        title: 'Проложить маршрут в Waze',
+        title: i18nT('map:components.MapPage.AddressListItem.index.prolozhit_marshrut_v_waze_02f49667'),
       },
       {
         key: 'yandex-maps',
         label: NAVIGATION_ACTION_LABELS['yandex-maps'],
         icon: 'map' as const,
         onPress: () => openExternal(buildYandexMapsUrl(coord)),
-        title: 'Открыть в Яндекс Картах',
+        title: i18nT('map:components.MapPage.AddressListItem.index.otkryt_v_yandeks_kartah_15b00094'),
       },
       {
         key: 'yandex',
         label: NAVIGATION_ACTION_LABELS.yandex,
         icon: 'navigation-2' as const,
         onPress: () => openExternal(buildYandexNaviUrl(coord)),
-        title: 'Проложить маршрут в Яндекс.Навигаторе',
+        title: i18nT('map:components.MapPage.AddressListItem.index.prolozhit_marshrut_v_yandeks_navigatore_19b1fd43'),
       },
       {
         key: 'osm',
         label: NAVIGATION_ACTION_LABELS.osm,
         icon: 'map' as const,
         onPress: () => openExternal(buildOpenStreetMapUrl(coord)),
-        title: 'Открыть в OpenStreetMap',
+        title: i18nT('map:components.MapPage.AddressListItem.index.otkryt_v_openstreetmap_79a89381'),
       },
     ]
   }, [coord])
@@ -172,49 +174,49 @@ const AddressListItem: React.FC<Props> = ({
         label: NAVIGATION_ACTION_LABELS.google,
         icon: 'map-pin' as const,
         onPress: () => openExternal(buildMapUrl(coord)),
-        title: 'Открыть в Google Maps',
+        title: i18nT('map:components.MapPage.AddressListItem.index.otkryt_v_google_maps_eaf56009'),
       },
       {
         key: 'apple',
         label: NAVIGATION_ACTION_LABELS.apple,
         icon: 'map' as const,
         onPress: () => openExternal(buildAppleMapsUrl(coord)),
-        title: 'Открыть в Apple Maps',
+        title: i18nT('map:components.MapPage.AddressListItem.index.otkryt_v_apple_maps_2a98f178'),
       },
       {
         key: 'organic',
         label: NAVIGATION_ACTION_LABELS.organic,
         icon: 'compass' as const,
         onPress: () => openExternal(buildOrganicMapsUrl(coord)),
-        title: 'Открыть в Organic Maps',
+        title: i18nT('map:components.MapPage.AddressListItem.index.otkryt_v_organic_maps_7f870efb'),
       },
       {
         key: 'waze',
         label: NAVIGATION_ACTION_LABELS.waze,
         icon: 'navigation' as const,
         onPress: () => openExternal(buildWazeUrl(coord)),
-        title: 'Проложить маршрут в Waze',
+        title: i18nT('map:components.MapPage.AddressListItem.index.prolozhit_marshrut_v_waze_02f49667'),
       },
       {
         key: 'yandex-maps',
         label: NAVIGATION_ACTION_LABELS['yandex-maps'],
         icon: 'map' as const,
         onPress: () => openExternal(buildYandexMapsUrl(coord)),
-        title: 'Открыть в Яндекс Картах',
+        title: i18nT('map:components.MapPage.AddressListItem.index.otkryt_v_yandeks_kartah_15b00094'),
       },
       {
         key: 'yandex',
         label: NAVIGATION_ACTION_LABELS.yandex,
         icon: 'navigation-2' as const,
         onPress: () => openExternal(buildYandexNaviUrl(coord)),
-        title: 'Проложить маршрут в Яндекс Навигаторе',
+        title: i18nT('map:components.MapPage.AddressListItem.index.prolozhit_marshrut_v_yandeks_navigatore_9d403633'),
       },
       {
         key: 'osm',
         label: NAVIGATION_ACTION_LABELS.osm,
         icon: 'map' as const,
         onPress: () => openExternal(buildOpenStreetMapUrl(coord)),
-        title: 'Открыть в OpenStreetMap',
+        title: i18nT('map:components.MapPage.AddressListItem.index.otkryt_v_openstreetmap_79a89381'),
       },
     ]
   }, [coord])
@@ -224,13 +226,13 @@ const AddressListItem: React.FC<Props> = ({
       isNativeMobile && onBuildRoute
         ? {
             key: 'route',
-            label: 'Маршрут',
+            label: i18nT('map:components.MapPage.AddressListItem.index.marshrut_b8504e80'),
             // #842: маршрут = «стрелка-поворот», отдельно от Telegram (самолётик) и
             // навигации (компас) — без трёх одинаковых стрелок в ряду.
             icon: SEMANTIC_ACTION_ICON.buildRoute,
             onPress: onBuildRoute,
-            accessibilityLabel: 'Построить маршрут сюда',
-            title: 'Построить маршрут сюда',
+            accessibilityLabel: i18nT('map:components.MapPage.AddressListItem.index.postroit_marshrut_syuda_5a3aca61'),
+            title: i18nT('map:components.MapPage.AddressListItem.index.postroit_marshrut_syuda_5a3aca61'),
           }
         : null,
     [isNativeMobile, onBuildRoute],
@@ -242,11 +244,11 @@ const AddressListItem: React.FC<Props> = ({
         ? [
             {
               key: 'article',
-              label: 'Открыть',
+              label: i18nT('map:components.MapPage.AddressListItem.index.otkryt_536d3817'),
               icon: 'book-open' as const,
               onPress: openArticle,
-              accessibilityLabel: 'Открыть страницу',
-              title: 'Открыть страницу',
+              accessibilityLabel: i18nT('map:components.MapPage.AddressListItem.index.otkryt_stranitsu_7d670c25'),
+              title: i18nT('map:components.MapPage.AddressListItem.index.otkryt_stranitsu_7d670c25'),
             },
           ]
         : []),

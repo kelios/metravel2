@@ -8,6 +8,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useAuth } from '@/context/AuthContext'
 import { useQuestPioneerMeta } from '@/hooks/useQuestPioneerMeta'
 import { useThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
   questId: string
@@ -53,14 +55,14 @@ function QuestPioneerBlock({ questId, questNumericId }: Props) {
     <Animated.View
       style={[styles.card, { opacity, transform: [{ translateY }, { scale }] }]}
       accessibilityRole="summary"
-      accessibilityLabel="Вы первый, кто прошёл этот квест"
+      accessibilityLabel={i18nT('quests:components.quests.QuestPioneerBlock.vy_pervyy_kto_proshel_etot_kvest_f99ebbd7')}
     >
       <View style={styles.medal}>
         <Feather name="award" size={30} color={colors.textOnPrimary} />
       </View>
       <View style={styles.textBlock}>
-        <Text style={styles.title}>Первопроходец!</Text>
-        <Text style={styles.subtitle}>Вы первый, кто прошёл этот квест</Text>
+        <Text style={styles.title}>{i18nT('quests:components.quests.QuestPioneerBlock.pervoprohodets_11c2a08c')}</Text>
+        <Text style={styles.subtitle}>{i18nT('quests:components.quests.QuestPioneerBlock.vy_pervyy_kto_proshel_etot_kvest_f99ebbd7')}</Text>
       </View>
     </Animated.View>
   )

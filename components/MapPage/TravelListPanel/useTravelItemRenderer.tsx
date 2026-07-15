@@ -15,6 +15,8 @@ import {
   IS_WEB,
 } from './helpers'
 import type { TravelListStyles } from './styles'
+import { translate as i18nT } from '@/i18n'
+
 
 type UseTravelItemRendererArgs = {
   styles: TravelListStyles
@@ -64,7 +66,7 @@ export function useTravelItemRenderer({
               pressed && styles.compactPreviewCardPressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel={`Открыть место: ${getTravelItemTitle(item)}`}
+            accessibilityLabel={i18nT('map:components.MapPage.TravelListPanel.useTravelItemRenderer.otkryt_mesto_value1_7888779b', { value1: getTravelItemTitle(item) })}
           >
             <View style={styles.compactPreviewIcon}>
               <Text style={styles.compactPreviewIconText}>⌖</Text>
@@ -124,7 +126,7 @@ export function useTravelItemRenderer({
               : addFavorite({
                   id: itemId as string | number,
                   type: 'travel',
-                  title: item?.address || item?.name || item?.title || 'Место',
+                  title: item?.address || item?.name || item?.title || i18nT('map:components.MapPage.TravelListPanel.useTravelItemRenderer.mesto_d8763e12'),
                   url:
                     item?.urlTravel || item?.articleUrl || `/travels/${itemId}`,
                   imageUrl: item?.travelImageThumbUrl || item?.imageUrl,
@@ -132,7 +134,7 @@ export function useTravelItemRenderer({
             void Promise.resolve(action).catch(() => {
               void showToast({
                 type: 'error',
-                text1: 'Не удалось обновить «Хочу поехать»',
+                text1: i18nT('map:components.MapPage.TravelListPanel.useTravelItemRenderer.ne_udalos_obnovit_hochu_poehat_56f8def1'),
                 position: 'bottom',
               })
             })

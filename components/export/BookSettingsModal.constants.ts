@@ -2,6 +2,7 @@
 // Константы настроек фотоальбома (вынесено из BookSettingsModal.tsx, поведение не меняется)
 
 import type { BookSettings, ChecklistSection } from './BookSettingsModal.types'
+import { translate as i18nT } from '@/i18n'
 
 export const DEFAULT_CHECKLIST_SELECTION: ChecklistSection[] = [
   'clothing',
@@ -17,11 +18,51 @@ export const CHECKLIST_OPTIONS: Array<{
   label: string
   items: string[]
 }> = [
-  { value: 'clothing', label: 'Одежда', items: ['Слои', 'Обувь', 'Дождевик'] },
-  { value: 'food', label: 'Еда', items: ['Перекусы', 'Термос', 'Посуда'] },
-  { value: 'electronics', label: 'Электроника', items: ['Повербанк', 'Камера', 'Переходники'] },
-  { value: 'documents', label: 'Документы', items: ['Паспорт', 'Визы', 'Страховка'] },
-  { value: 'medicine', label: 'Аптечка', items: ['Базовая аптечка', 'Пластыри', 'Солнцезащита'] },
+  {
+    value: 'clothing',
+    get label() { return i18nT('export:components.export.checklist.clothing.label') },
+    get items() { return [
+      i18nT('export:components.export.checklist.clothing.layers'),
+      i18nT('export:components.export.checklist.clothing.shoes'),
+      i18nT('export:components.export.checklist.clothing.raincoat'),
+    ] },
+  },
+  {
+    value: 'food',
+    get label() { return i18nT('export:components.export.checklist.food.label') },
+    get items() { return [
+      i18nT('export:components.export.checklist.food.snacks'),
+      i18nT('export:components.export.checklist.food.thermos'),
+      i18nT('export:components.export.checklist.food.dishes'),
+    ] },
+  },
+  {
+    value: 'electronics',
+    get label() { return i18nT('export:components.export.checklist.electronics.label') },
+    get items() { return [
+      i18nT('export:components.export.checklist.electronics.powerBank'),
+      i18nT('export:components.export.checklist.electronics.camera'),
+      i18nT('export:components.export.checklist.electronics.adapters'),
+    ] },
+  },
+  {
+    value: 'documents',
+    get label() { return i18nT('export:components.export.checklist.documents.label') },
+    get items() { return [
+      i18nT('export:components.export.checklist.documents.passport'),
+      i18nT('export:components.export.checklist.documents.visas'),
+      i18nT('export:components.export.checklist.documents.insurance'),
+    ] },
+  },
+  {
+    value: 'medicine',
+    get label() { return i18nT('export:components.export.checklist.medicine.label') },
+    get items() { return [
+      i18nT('export:components.export.checklist.medicine.basicKit'),
+      i18nT('export:components.export.checklist.medicine.bandages'),
+      i18nT('export:components.export.checklist.medicine.sunProtection'),
+    ] },
+  },
 ]
 
 export const defaultBookSettings: BookSettings = {

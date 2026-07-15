@@ -19,6 +19,8 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
 import { devWarn } from '@/utils/logger';
 import { buildTripPlanCreateHref } from '@/utils/tripPlanLinks';
+import { translate as i18nT } from '@/i18n'
+
 
 const JOURNAL_FONT_FAMILY =
   "'Georgia', 'Times New Roman', 'Inter', serif";
@@ -62,11 +64,15 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
       }
       onFavoriteToggle?.();
     } catch (error) {
-      devWarn('[CTASection] Не удалось переключить «Хочу поехать»:', error);
+      devWarn(
+        '[CTASection]',
+        i18nT('travel:components.travel.CTASection.ne_udalos_sohranit_v_hochu_poehat_2be6e48b'),
+        error,
+      );
       void showToast({
         type: 'error',
-        text1: 'Не удалось сохранить в «Хочу поехать»',
-        text2: 'Попробуйте ещё раз',
+        text1: i18nT('travel:components.travel.CTASection.ne_udalos_sohranit_v_hochu_poehat_2be6e48b'),
+        text2: i18nT('travel:components.travel.CTASection.poprobuyte_esche_raz_9521822e'),
         visibilityTime: 2500,
       });
     }
@@ -194,21 +200,19 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
         <View style={styles.content}>
           <View style={styles.textSection}>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
-              Хотите сохранить это путешествие?
-            </Text>
+              {i18nT('travel:components.travel.CTASection.hotite_sohranit_eto_puteshestvie_167594b1')}</Text>
             <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>
-              Войдите или зарегистрируйтесь, чтобы добавлять маршруты в «Хочу поехать» и создавать свои маршруты
-            </Text>
+              {i18nT('travel:components.travel.CTASection.voydite_ili_zaregistriruytes_chtoby_dobavlya_d198a0d4')}</Text>
           </View>
           <Button
-            label="Войти / Регистрация"
+            label={i18nT('travel:components.travel.CTASection.voyti_registratsiya_6e7ee291')}
             onPress={() => router.push(loginHref as any)}
             variant="primary"
             size="md"
             fullWidth
             style={styles.buttonBase}
             labelStyle={[styles.primaryButtonLabel, isMobile && styles.buttonLabelMobile]}
-            accessibilityLabel="Войти или зарегистрироваться. Откроется экран авторизации"
+            accessibilityLabel={i18nT('travel:components.travel.CTASection.voyti_ili_zaregistrirovatsya_otkroetsya_ekra_8e9d3bcd')}
           />
         </View>
       </View>
@@ -226,15 +230,13 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
       <View style={styles.content}>
         <View style={styles.textSection}>
           <Text style={[styles.title, isMobile && styles.titleMobile]}>
-            Действия с маршрутом
-          </Text>
+            {i18nT('travel:components.travel.CTASection.deystviya_s_marshrutom_29141fd4')}</Text>
           <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>
-            Организуйте поездку по этому маршруту, добавьте его в планы или в «Хочу поехать».
-          </Text>
+            {i18nT('travel:components.travel.CTASection.organizuyte_poezdku_po_etomu_marshrutu_dobav_0521974b')}</Text>
         </View>
 
         <Button
-          label="Организовать поездку по маршруту"
+          label={i18nT('travel:components.travel.CTASection.organizovat_poezdku_po_marshrutu_e7d6c073')}
           onPress={handlePlanTripFromRoute}
           variant="primary"
           size="md"
@@ -242,12 +244,12 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
           icon={<Feather name="calendar" size={18} color={colors.textOnPrimary} />}
           style={styles.buttonBase}
           labelStyle={[styles.primaryButtonLabel, isMobile && styles.buttonLabelMobile]}
-          accessibilityLabel="Организовать поездку по этому маршруту. Откроется форма планирования поездки"
+          accessibilityLabel={i18nT('travel:components.travel.CTASection.organizovat_poezdku_po_etomu_marshrutu_otkro_4447378e')}
           testID="travel-plan-trip-cta"
         />
 
         <Button
-          label="Создать авторский маршрут"
+          label={i18nT('travel:components.travel.CTASection.sozdat_avtorskiy_marshrut_94ab9f46')}
           onPress={handleCreateTravel}
           variant="outline"
           size="md"
@@ -259,7 +261,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
             styles.favoriteButtonLabel,
             isMobile && styles.buttonLabelMobile,
           ]}
-          accessibilityLabel="Создать авторский маршрут. Откроется форма создания нового путешествия"
+          accessibilityLabel={i18nT('travel:components.travel.CTASection.sozdat_avtorskiy_marshrut_otkroetsya_forma_s_8666f051')}
         />
 
         {/* Кнопка "Добавить в план / Мой календарь" */}
@@ -275,7 +277,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
         />
 
         <Button
-          label={isFavorite ? 'В «Хочу поехать»' : 'Хочу поехать'}
+          label={isFavorite ? i18nT('travel:components.travel.CTASection.v_hochu_poehat_dd8f7eaf') : i18nT('travel:components.travel.CTASection.hochu_poehat_8624541b')}
           onPress={handleFavorite}
           variant="outline"
           size="md"
@@ -297,7 +299,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
             styles.favoriteButtonLabel,
             isMobile && styles.buttonLabelMobile,
           ]}
-          accessibilityLabel={isFavorite ? 'Удалить из «Хочу поехать»' : 'Добавить в «Хочу поехать»'}
+          accessibilityLabel={isFavorite ? i18nT('travel:components.travel.CTASection.udalit_iz_hochu_poehat_8ca67aa0') : i18nT('travel:components.travel.CTASection.dobavit_v_hochu_poehat_1482c944')}
         />
       </View>
     </View>

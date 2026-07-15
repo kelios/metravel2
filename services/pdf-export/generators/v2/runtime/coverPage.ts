@@ -9,6 +9,8 @@ import {
   getOptimalTextColor,
   getOptimalTextPosition,
 } from '@/utils/imageAnalysis'
+import { formatDate, translate as i18nT } from '@/i18n'
+
 
 export interface SharedCoverPageData {
   title: string
@@ -202,7 +204,7 @@ function renderKicker(theme: PdfThemeConfig, textColor?: string): string {
       font-family: ${theme.typography.bodyFont};
     ">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="${textColor || 'rgba(255,255,255,0.84)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-      <span>Книга путешествий</span>
+      <span>${i18nT("export:services.pdf_export.generators.v2.runtime.coverPage.div_style_display_inline_flex_align_items_ce_cefb60e9.text01")}</span>
     </div>
   `
 }
@@ -361,7 +363,7 @@ function renderTitle(theme: PdfThemeConfig, title: string, textColor?: string): 
 }
 
 function renderDate(theme: PdfThemeConfig): string {
-  const dateStr = new Date().toLocaleDateString('ru-RU', {
+  const dateStr = formatDate(new Date(), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -372,7 +374,7 @@ function renderDate(theme: PdfThemeConfig): string {
       font-size: 9pt;
       opacity: 0.75;
       font-family: ${theme.typography.bodyFont};
-    ">Создано ${dateStr}</span>
+    ">${i18nT("export:services.pdf_export.generators.v2.runtime.coverPage.span_style_font_size_9pt_opacity_0_75_font_f_d8ae4acc.text01", { value2: dateStr })}</span>
   `
 }
 
@@ -465,7 +467,7 @@ function renderFooterRail(theme: PdfThemeConfig, metaLine: string): string {
           text-transform: uppercase;
           color: rgba(255,255,255,0.62);
           font-weight: 600;
-        ">Книга путешествий</div>
+        ">${i18nT("export:services.pdf_export.generators.v2.runtime.coverPage.div_class_cover_footer_rail_style_margin_0_2_c8afe335.text01")}</div>
         <div style="
           font-size: 11pt;
           letter-spacing: 0.02em;

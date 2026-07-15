@@ -12,6 +12,8 @@ import {
   routingStateLabel,
 } from '@/components/trips/planning/tripPlanFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   route: RoutePoint[];
@@ -45,7 +47,7 @@ export default function TripPlanRouteMap({
         <Feather name="map" size={18} color={colors.primaryDark} />
       </View>
       <View style={styles.copy}>
-        <Text style={styles.title}>Карта маршрута</Text>
+        <Text style={styles.title}>{i18nT('trips:components.trips.planning.TripPlanRouteMap.karta_marshruta_ef7b0875')}</Text>
         {transport ? (
           <View style={styles.routeMode}>
             <Feather name={TRANSPORT_ICON_NAME[transport] as never} size={14} color={colors.primaryDark} />
@@ -59,13 +61,13 @@ export default function TripPlanRouteMap({
         ) : null}
         <Text style={styles.text}>
           {routedPoints >= 2
-            ? `${routingStateLabel(routingState)}: ${routedPoints} точек трека, ${pointsWithCoordinates} остановок.`
+            ? i18nT('trips:components.trips.planning.TripPlanRouteMap.value1_value2_tochek_treka_value3_ostanovok_4c79114f', { value1: routingStateLabel(routingState), value2: routedPoints, value3: pointsWithCoordinates })
             : readonly
-              ? `В маршруте ${pointsWithCoordinates} точек с координатами.`
-              : 'На web можно добавлять точки кликом по карте. В приложении добавьте координаты в форме ниже.'}
+              ? i18nT('trips:components.trips.planning.TripPlanRouteMap.v_marshrute_value1_tochek_s_koordinatami_c7d03940', { value1: pointsWithCoordinates })
+              : i18nT('trips:components.trips.planning.TripPlanRouteMap.na_web_mozhno_dobavlyat_tochki_klikom_po_kar_ad88da15')}
         </Text>
         {approximate ? (
-          <Text style={styles.warning}>Линия показана приблизительно, проверьте маршрут перед поездкой.</Text>
+          <Text style={styles.warning}>{i18nT('trips:components.trips.planning.TripPlanRouteMap.liniya_pokazana_priblizitelno_proverte_marsh_f60c9d6e')}</Text>
         ) : null}
       </View>
     </View>

@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 type HomeHeroSearchBarProps = {
   colors: ThemedColors
@@ -42,18 +44,18 @@ function HomeHeroSearchBar({
           value={value}
           onChangeText={setValue}
           onSubmitEditing={handleSubmit}
-          placeholder={Platform.OS === 'web' ? 'Куда хотите поехать? Город, озеро, замок…' : 'Куда хотите поехать?'}
+          placeholder={Platform.OS === 'web' ? i18nT('home:components.home.HomeHeroSearchBar.kuda_hotite_poehat_gorod_ozero_zamok_5ca126e6') : i18nT('home:components.home.HomeHeroSearchBar.kuda_hotite_poehat_5f13aee9')}
           placeholderTextColor={inputMutedColor}
           returnKeyType="search"
           style={[styles.input, { color: inputTextColor }]}
-          accessibilityLabel="Поиск маршрутов"
+          accessibilityLabel={i18nT('home:components.home.HomeHeroSearchBar.poisk_marshrutov_ee35e283')}
           {...(Platform.OS === 'web' ? ({ enterKeyHint: 'search' } as any) : {})}
         />
       </View>
       <Pressable
         onPress={handleSubmit}
         accessibilityRole="button"
-        accessibilityLabel="Найти маршруты"
+        accessibilityLabel={i18nT('home:components.home.HomeHeroSearchBar.nayti_marshruty_2aac9702')}
         style={({ pressed, hovered }: any) => [
           styles.button,
           (pressed || hovered) && styles.buttonHover,

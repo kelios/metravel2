@@ -91,6 +91,37 @@ describe('TravelWizardHeader', () => {
     expect(flattened.minHeight).toBeGreaterThanOrEqual(44);
   });
 
+  it('lets mobile users jump directly to another wizard step from the step selector', () => {
+    mockResponsiveState = {
+      isPhone: true,
+      isLargePhone: false,
+    };
+    const onStepSelect = jest.fn();
+
+    const { getByTestId, getByText, queryByTestId } = render(
+      <TravelWizardHeader
+        title="Основная информация"
+        subtitle="Название и описание путешествия"
+        progressPercent={17}
+        currentStep={1}
+        totalSteps={6}
+        onStepSelect={onStepSelect}
+      />
+    );
+
+    fireEvent.press(getByTestId('travel-wizard-step-select'));
+
+    expect(getByTestId('travel-wizard-step-select-menu')).toBeTruthy();
+    expect(getByText('Шаг 5 из 6')).toBeTruthy();
+    expect(getByText('дополнительные параметры')).toBeTruthy();
+
+    fireEvent.press(getByTestId('travel-wizard-step-select-option-5'));
+
+    expect(onStepSelect).toHaveBeenCalledTimes(1);
+    expect(onStepSelect).toHaveBeenCalledWith(5);
+    expect(queryByTestId('travel-wizard-step-select-menu')).toBeNull();
+  });
+
   it('exposes a visible Save button in the toolbar (no menu needed) that calls onSave', () => {
     const onSave = jest.fn();
     const { getByTestId, getByText, queryByTestId } = render(

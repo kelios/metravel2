@@ -7,15 +7,14 @@ import {
 } from '@react-native-google-signin/google-signin';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface GoogleSignInButtonProps {
     onSuccess: (credential: string) => void;
     onError?: (error: string) => void;
     disabled?: boolean;
 }
-
-const GOOGLE_NATIVE_UNAVAILABLE_TEXT = 'Google Sign-In не настроен';
-const GOOGLE_NATIVE_UNAVAILABLE_A11Y = 'Google Sign-In не настроен для мобильного приложения';
 
 type GoogleSignInButtonConfiguredProps = GoogleSignInButtonProps & {
     webClientId: string;
@@ -83,14 +82,14 @@ function GoogleSignInButtonUnavailable() {
             disabled
             accessibilityRole="button"
             accessibilityState={{ disabled: true }}
-            accessibilityLabel={GOOGLE_NATIVE_UNAVAILABLE_A11Y}
+            accessibilityLabel={i18nT('authStatic:google.unavailable.a11y')}
             style={[styles.button, styles.buttonDisabled]}
         >
             <View style={styles.content}>
                 <View style={styles.iconContainer}>
-                    <Text style={styles.googleIcon}>G</Text>
+                    <Text style={styles.googleIcon}>{i18nT('auth:components.auth.GoogleSignInButton.g_101365fe')}</Text>
                 </View>
-                <Text style={styles.text}>{GOOGLE_NATIVE_UNAVAILABLE_TEXT}</Text>
+                <Text style={styles.text}>{i18nT('authStatic:google.unavailable.text')}</Text>
             </View>
         </Pressable>
     );
@@ -134,16 +133,16 @@ function GoogleSignInButtonConfigured({
                 return;
             }
 
-            onError?.('Не удалось получить id_token от Google');
+            onError?.(i18nT('auth:components.auth.GoogleSignInButton.ne_udalos_poluchit_id_token_ot_google_9aa6bc25'));
         } catch (error) {
             setIsLoading(false);
             if (isErrorWithCode(error)) {
                 if (error.code === statusCodes.IN_PROGRESS) {
-                    onError?.('Google Sign-In уже выполняется');
+                    onError?.(i18nT('auth:components.auth.GoogleSignInButton.google_sign_in_uzhe_vypolnyaetsya_9a1a1e6e'));
                     return;
                 }
                 if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-                    onError?.('Google Play Services недоступны или требуют обновления');
+                    onError?.(i18nT('auth:components.auth.GoogleSignInButton.google_play_services_nedostupny_ili_trebuyut_3f102c41'));
                     return;
                 }
                 if (error.code === statusCodes.SIGN_IN_CANCELLED) {
@@ -153,7 +152,7 @@ function GoogleSignInButtonConfigured({
             if (__DEV__) {
                 console.error('Google native sign-in error:', error);
             }
-            onError?.('Ошибка при открытии Google Sign-In');
+            onError?.(i18nT('auth:components.auth.GoogleSignInButton.oshibka_pri_otkrytii_google_sign_in_4891146d'));
         }
     };
 
@@ -168,7 +167,7 @@ function GoogleSignInButtonConfigured({
                 pressed && styles.buttonPressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Войти через Google"
+            accessibilityLabel={i18nT('auth:components.auth.GoogleSignInButton.voyti_cherez_google_bdcc8a1f')}
         >
             <View style={styles.content}>
                 {isLoading ? (
@@ -176,9 +175,9 @@ function GoogleSignInButtonConfigured({
                 ) : (
                     <>
                         <View style={styles.iconContainer}>
-                            <Text style={styles.googleIcon}>G</Text>
+                            <Text style={styles.googleIcon}>{i18nT('auth:components.auth.GoogleSignInButton.g_101365fe')}</Text>
                         </View>
-                        <Text style={styles.text}>Войти через Google</Text>
+                        <Text style={styles.text}>{i18nT('auth:components.auth.GoogleSignInButton.voyti_cherez_google_bdcc8a1f')}</Text>
                     </>
                 )}
             </View>

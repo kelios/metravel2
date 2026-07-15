@@ -5,6 +5,8 @@ import { Pressable, StyleSheet } from 'react-native'
 import { Text, View } from '@/components/ui/Themed'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 type ErrorScreenProps = {
   error: Error
@@ -15,20 +17,20 @@ export default function ErrorScreen({ error, retry }: ErrorScreenProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const message = useMemo(() => {
-    if (__DEV__) return error?.message || 'Неизвестная ошибка'
-    return 'Произошла непредвиденная ошибка'
+    if (__DEV__) return error?.message || i18nT('errorsStatic:unknownError')
+    return i18nT('errors:app.error.proizoshla_nepredvidennaya_oshibka_8b5c0ea7')
   }, [error])
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Ошибка' }} />
+      <Stack.Screen options={{ title: i18nT('errors:app.error.oshibka_cecac702') }} />
       <View style={styles.container}>
-        <Text style={styles.title}>Что-то пошло не так</Text>
+        <Text style={styles.title}>{i18nT('errors:app.error.chto_to_poshlo_ne_tak_2bd9c3e0')}</Text>
 
         <Text style={styles.subtitle}>{message}</Text>
 
         <Pressable style={styles.primaryButton} accessibilityRole="button" onPress={retry}>
-          <Text style={styles.primaryButtonText}>Попробовать снова</Text>
+          <Text style={styles.primaryButtonText}>{i18nT('errors:app.error.poprobovat_snova_86f28e83')}</Text>
         </Pressable>
 
         <Pressable
@@ -36,7 +38,7 @@ export default function ErrorScreen({ error, retry }: ErrorScreenProps) {
           accessibilityRole="button"
           onPress={() => router.replace('/')}
         >
-          <Text style={styles.secondaryButtonText}>На главную</Text>
+          <Text style={styles.secondaryButtonText}>{i18nT('errors:app.error.na_glavnuyu_cdb90635')}</Text>
         </Pressable>
 
       </View>
@@ -77,7 +79,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: 'center',
   },
   primaryButtonText: {
-    color: colors.textInverse,
+    color: colors.textOnPrimary,
     fontSize: 16,
     fontWeight: '600',
   },

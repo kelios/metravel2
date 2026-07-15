@@ -1,5 +1,7 @@
 import type { Travel } from '@/types/types'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
+import { createCollator, translate as i18nT } from '@/i18n'
+
 
 type CountryDescriptor = {
   id?: string
@@ -60,27 +62,6 @@ export type ProfileCountryStats = {
   totalCount: number
 }
 
-export type VisitedCountryMeta = {
-  visitedTravelsCount: number
-  firstVisitedDate: string | null
-  name: string
-  visits: VisitedCountryVisit[]
-}
-
-export type VisitedCountryIndex = {
-  visitedCodes: Set<string>
-  byCode: Map<string, VisitedCountryMeta>
-}
-
-export type ProfileCountryApplicationRow = {
-  id: string
-  name: string
-  code?: string
-  visitCount: number
-  firstKnownDateLabel: string | null
-  summaryText: string
-}
-
 export type ProfileCountryProgressPayload = {
   total_count?: number | null
   visited_count?: number | null
@@ -120,13 +101,13 @@ const REGION_GROUP_VISITED_COUNT_FIELDS = ['visited_count', 'visitedCount'] as c
 const REGION_GROUP_REMAINING_COUNT_FIELDS = ['remaining_count', 'remainingCount'] as const
 
 export const PROFILE_COUNTRY_REGION_META: Array<{ key: ProfileCountryRegionKey; label: string }> = [
-  { key: 'europe', label: 'Европа' },
-  { key: 'asia', label: 'Азия' },
-  { key: 'africa', label: 'Африка' },
-  { key: 'northAmerica', label: 'Северная Америка' },
-  { key: 'southAmerica', label: 'Южная Америка' },
-  { key: 'oceania', label: 'Океания' },
-  { key: 'other', label: 'Другие территории' },
+  { key: 'europe', get label() { return i18nT('profile:components.screens.profile.profileCountries.regions.europe') } },
+  { key: 'asia', get label() { return i18nT('profile:components.screens.profile.profileCountries.regions.asia') } },
+  { key: 'africa', get label() { return i18nT('profile:components.screens.profile.profileCountries.regions.africa') } },
+  { key: 'northAmerica', get label() { return i18nT('profile:components.screens.profile.profileCountries.regions.northAmerica') } },
+  { key: 'southAmerica', get label() { return i18nT('profile:components.screens.profile.profileCountries.regions.southAmerica') } },
+  { key: 'oceania', get label() { return i18nT('profile:components.screens.profile.profileCountries.regions.oceania') } },
+  { key: 'other', get label() { return i18nT('profile:components.screens.profile.profileCountries.regions.other') } },
 ]
 
 const REGION_BY_KEYWORD: Record<string, ProfileCountryRegionKey> = {
@@ -344,7 +325,7 @@ const getLocalizedCountryCodeIndex = () => {
 
   const DisplayNames = (Intl as unknown as { DisplayNames?: IntlDisplayNamesConstructor }).DisplayNames
   if (DisplayNames) {
-    ;['ru', 'en'].forEach((locale) => {
+    ;['ru', 'pl', 'en'].forEach((locale) => {
       const regionNames = new DisplayNames(locale, { type: 'region' })
       ISO_COUNTRY_CODES.forEach((code) => {
         const label = regionNames.of(code)
@@ -535,9 +516,12 @@ const descriptorKey = (descriptor: CountryDescriptor) =>
         ? `id:${descriptor.id}`
         : ''
 
-const compareCountryRows = (a: ProfileCountryRow, b: ProfileCountryRow) => {
-  if (a.visited !== b.visited) return a.visited ? -1 : 1
-  return a.name.localeCompare(b.name, 'ru')
+const createCountryRowsComparator = () => {
+  const collator = createCollator()
+  return (a: ProfileCountryRow, b: ProfileCountryRow) => {
+    if (a.visited !== b.visited) return a.visited ? -1 : 1
+    return collator.compare(a.name, b.name)
+  }
 }
 
 const readProgressCount = (value: unknown) =>
@@ -592,7 +576,7 @@ export const groupProfileCountriesByRegion = (rows: ProfileCountryRow[]): Profil
 
   return PROFILE_COUNTRY_REGION_META
     .map((meta) => {
-      const groupRows = (groups.get(meta.key) ?? []).slice().sort(compareCountryRows)
+      const groupRows = (groups.get(meta.key) ?? []).slice().sort(createCountryRowsComparator())
       const visitedCount = groupRows.filter((row) => row.visited).length
       const totalCount = groupRows.length
       return {
@@ -630,7 +614,7 @@ const buildProfileCountryRegionGroupsFromProgress = (
       if (!key || seen.has(key)) return null
       seen.add(key)
 
-      const groupRows = (rowsByRegion.get(key) ?? []).slice().sort(compareCountryRows)
+      const groupRows = (rowsByRegion.get(key) ?? []).slice().sort(createCountryRowsComparator())
       const derivedTotalCount = groupRows.length
       const derivedVisitedCount = groupRows.filter((row) => row.visited).length
       const totalCount = readNonNegativeInteger(rawGroup, REGION_GROUP_TOTAL_COUNT_FIELDS) ?? derivedTotalCount
@@ -727,7 +711,7 @@ export function buildProfileCountryStats({
     matchedVisitedKeys.add(nameKey)
   })
 
-  const sortedRows = rows.sort(compareCountryRows)
+  const sortedRows = rows.sort(createCountryRowsComparator())
   const visitedCount = sortedRows.filter((row) => row.visited).length
   const totalCount = sortedRows.length
 
@@ -769,7 +753,7 @@ export function buildProfileCountryStatsFromProgress(
       }
     })
     .filter((row): row is ProfileCountryRow => Boolean(row))
-    .sort(compareCountryRows)
+    .sort(createCountryRowsComparator())
 
   const derivedTotalCount = rows.length
   const derivedVisitedCount = rows.filter((row) => row.visited).length
@@ -790,146 +774,12 @@ export function buildProfileCountryStatsFromProgress(
   }
 }
 
-const MONTH_LABELS = [
-  'январь',
-  'февраль',
-  'март',
-  'апрель',
-  'май',
-  'июнь',
-  'июль',
-  'август',
-  'сентябрь',
-  'октябрь',
-  'ноябрь',
-  'декабрь',
-]
-
-const MONTH_DATE_LABELS = [
-  'января',
-  'февраля',
-  'марта',
-  'апреля',
-  'мая',
-  'июня',
-  'июля',
-  'августа',
-  'сентября',
-  'октября',
-  'ноября',
-  'декабря',
-]
-
-const formatMonthYear = (year: string, month: number) => {
-  const label = MONTH_LABELS[month - 1]
-  return label ? `${label} ${year}` : year
-}
-
-const formatApplicationDate = (value: unknown): string | null => {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  if (!trimmed) return null
-
-  const exactMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed)
-  if (exactMatch) {
-    const year = exactMatch[1]
-    const month = Number(exactMatch[2])
-    const day = Number(exactMatch[3])
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${day} ${MONTH_DATE_LABELS[month - 1]} ${year}`
-    }
-  }
-
-  const monthMatch = /^(\d{4})-(\d{2})$/.exec(trimmed)
-  if (monthMatch) {
-    const month = Number(monthMatch[2])
-    if (month >= 1 && month <= 12) return formatMonthYear(monthMatch[1], month)
-  }
-
-  if (/^\d{4}$/.test(trimmed)) return trimmed
-  return trimmed
-}
-
-const formatVisitCount = (count: number) => {
-  const mod10 = count % 10
-  const mod100 = count % 100
-  if (mod10 === 1 && mod100 !== 11) return `${count} раз`
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} раза`
-  return `${count} раз`
-}
-
-export const buildVisitedCountryIndex = (rows: ProfileCountryRow[]): VisitedCountryIndex => {
-  const visitedCodes = new Set<string>()
-  const byCode = new Map<string, VisitedCountryMeta>()
-
-  rows.forEach((row) => {
-    if (!row.visited) return
-    const code = typeof row.code === 'string' ? row.code.trim().toUpperCase() : ''
-    if (!code) return
-
-    visitedCodes.add(code)
-
-    const existing = byCode.get(code)
-    const visitedTravelsCount = Math.max(
-      existing?.visitedTravelsCount ?? 0,
-      row.visitedTravelsCount ?? 0,
-    )
-    const firstVisitedDate = pickEarlierDate(
-      existing?.firstVisitedDate ?? null,
-      row.firstVisitedDate ?? null,
-    )
-    const name = existing?.name || row.name || code
-    const visits = mergeVisits(existing?.visits ?? [], row.visits ?? [])
-
-    byCode.set(code, { visitedTravelsCount, firstVisitedDate, name, visits })
-  })
-
-  return { visitedCodes, byCode }
-}
-
-const mergeVisits = (
-  a: VisitedCountryVisit[],
-  b: VisitedCountryVisit[],
-): VisitedCountryVisit[] => {
-  if (a.length === 0) return b
-  if (b.length === 0) return a
-  const seen = new Set<string>()
-  const merged: VisitedCountryVisit[] = []
-  for (const visit of [...a, ...b]) {
-    if (seen.has(visit.travelId)) continue
-    seen.add(visit.travelId)
-    merged.push(visit)
-  }
-  return merged
-}
-
-const pickEarlierDate = (a: string | null, b: string | null): string | null => {
-  if (!a) return b
-  if (!b) return a
-  return a <= b ? a : b
-}
-
-export const buildCountryApplicationRows = (
-  rows: ProfileCountryRow[],
-): ProfileCountryApplicationRow[] =>
-  rows
-    .filter((row) => row.visited)
-    .map((row) => {
-      const visitCount = Math.max(row.visitedTravelsCount ?? 1, 1)
-      const firstKnownDateLabel = formatApplicationDate(row.firstVisitedDate)
-      const summaryParts = [
-        `${row.name}${row.code ? ` (${row.code})` : ''}`,
-        formatVisitCount(visitCount),
-        firstKnownDateLabel ? `первая известная дата: ${firstKnownDateLabel}` : 'даты не указаны',
-      ]
-
-      return {
-        id: row.id,
-        name: row.name,
-        code: row.code,
-        visitCount,
-        firstKnownDateLabel,
-        summaryText: summaryParts.join('; '),
-      }
-    })
-    .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+export {
+  buildCountryApplicationRows,
+  buildVisitedCountryIndex,
+} from './profileCountryApplication'
+export type {
+  ProfileCountryApplicationRow,
+  VisitedCountryIndex,
+  VisitedCountryMeta,
+} from './profileCountryApplication'

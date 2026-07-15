@@ -21,6 +21,8 @@ import {
     loadingStyle,
     mapHeightStyle,
 } from '@/components/travel/WebMapLeafletLayers';
+import { DEFAULT_LOCALE, i18n, translate as i18nT } from '@/i18n'
+
 
 type LeafletNS = any;
 type ReactLeafletNS = typeof import('react-leaflet');
@@ -43,7 +45,11 @@ const reverseGeocode = async (latlng: any) => {
 
     // 2. BigDataCloud как fallback
     try {
-        const bigdata = await bigDataCloudReverse(Number(latlng.lat), Number(latlng.lng), 'ru');
+        const bigdata = await bigDataCloudReverse(
+            Number(latlng.lat),
+            Number(latlng.lng),
+            i18n.resolvedLanguage || DEFAULT_LOCALE,
+        );
         if (bigdata.ok) {
             const data = await bigdata.json();
             return data;
@@ -415,8 +421,8 @@ const WebMapComponent = ({
         if (!coords) {
             void showToastMessage({
                 type: 'info',
-                text1: 'У фото нет координат',
-                text2: 'В этом снимке нет GPS в EXIF, поэтому точка не создана. Поставьте точку кликом по карте, затем нажмите «Редактировать» и прикрепите это фото к ней.',
+                text1: i18nT('travel:components.travel.WebMapComponent.u_foto_net_koordinat_53dd76a3'),
+                text2: i18nT('travel:components.travel.WebMapComponent.v_etom_snimke_net_gps_v_exif_poetomu_tochka__99b155e2'),
                 visibilityTime: 7000,
             });
             return;
@@ -430,8 +436,8 @@ const WebMapComponent = ({
         } catch {
             void showToastMessage({
                 type: 'error',
-                text1: 'Не удалось обработать фото',
-                text2: 'Попробуйте JPG или PNG, если HEIC не удалось преобразовать в браузере.',
+                text1: i18nT('travel:components.travel.WebMapComponent.ne_udalos_obrabotat_foto_598d7bae'),
+                text2: i18nT('travel:components.travel.WebMapComponent.poprobuyte_jpg_ili_png_esli_heic_ne_udalos_p_55f5d6dd'),
             });
             return;
         }
@@ -455,16 +461,16 @@ const WebMapComponent = ({
             // или при явном удалении точки. Пользователь добавит категории — следующий сейв пройдёт.
             void showToastMessage({
                 type: 'error',
-                text1: 'Точка добавлена, но не сохранена',
-                text2: 'Заполните обязательные поля точки (например, категории) и сохраните ещё раз.',
+                text1: i18nT('travel:components.travel.WebMapComponent.tochka_dobavlena_no_ne_sohranena_fa36d5a3'),
+                text2: i18nT('travel:components.travel.WebMapComponent.zapolnite_obyazatelnye_polya_tochki_naprimer_cf782264'),
             });
             return;
         }
 
         void showToastMessage({
             type: 'success',
-            text1: 'Точка добавлена',
-            text2: 'Координаты взяты из геолокации фото (EXIF).',
+            text1: i18nT('travel:components.travel.WebMapComponent.tochka_dobavlena_09df6a33'),
+            text2: i18nT('travel:components.travel.WebMapComponent.koordinaty_vzyaty_iz_geolokatsii_foto_exif_e5caf133'),
         });
     };
 
@@ -541,7 +547,7 @@ const WebMapComponent = ({
     const styles = useMemo(() => createWebMapStyles(colors), [colors]);
 
     if (!L || !rl || !markerIcon) {
-        return <div style={loadingStyle(colors)}>Загрузка карты…</div>;
+        return <div style={loadingStyle(colors)}>{i18nT('travel:components.travel.WebMapComponent.zagruzka_karty_c6c52f38')}</div>;
     }
 
     const MapContainer: any = (rl as any).MapContainer;
@@ -573,8 +579,8 @@ const WebMapComponent = ({
                                     type="button"
                                 >
                                     {isExpanded
-                                        ? `Скрыть точки (${localMarkers.length})`
-                                        : `Показать точки (${localMarkers.length})`}
+                                        ? i18nT('travel:components.travel.WebMapComponent.skryt_tochki_value1_918e3c69', { value1: localMarkers.length })
+                                        : i18nT('travel:components.travel.WebMapComponent.pokazat_tochki_value1_fb4db4b2', { value1: localMarkers.length })}
                                 </button>
                             )}
 

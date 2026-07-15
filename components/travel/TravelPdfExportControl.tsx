@@ -5,6 +5,8 @@ import Feather from '@expo/vector-icons/Feather'
 import type { Travel } from '@/types/types'
 import { ExportStage } from '@/types/pdf-export'
 import type { ShareButtonsPdfExportState } from '@/components/travel/ShareButtonsPdfExportBridge'
+import { translate as i18nT } from '@/i18n'
+
 
 const ShareButtonsPdfExportBridgeLazy = lazy(() => import('@/components/travel/ShareButtonsPdfExportBridge'))
 
@@ -13,7 +15,7 @@ const INITIAL_PDF_EXPORT_STATE: ShareButtonsPdfExportState = {
   progress: 0,
   currentStage: ExportStage.ERROR,
   lastSettings: {
-    title: 'Мои путешествия',
+    get title() { return i18nT('travel:components.travel.pdfExport.defaultBookTitle') },
     subtitle: '',
     coverType: 'auto',
     template: 'minimal',
@@ -47,7 +49,7 @@ function TravelPdfExportControl({
 
   const handleOpenExport = useCallback(() => {
     if (Platform.OS !== 'web') {
-      Alert.alert?.('Недоступно', 'Экспорт PDF доступен только в веб-версии')
+      Alert.alert?.(i18nT('travel:components.travel.TravelPdfExportControl.nedostupno_09a30ee5'), i18nT('travel:components.travel.TravelPdfExportControl.eksport_pdf_dostupen_tolko_v_veb_versii_3d58ea06'))
       return
     }
     setShouldMountPdfExport(true)
@@ -65,7 +67,7 @@ function TravelPdfExportControl({
   const setWebTitle = useCallback((el: any) => {
     if (Platform.OS === 'web' && el) {
       const node = el instanceof HTMLElement ? el : el._nativeTag ?? el
-      if (node?.setAttribute) node.setAttribute('title', 'Экспорт в PDF')
+      if (node?.setAttribute) node.setAttribute('title', i18nT('travel:components.travel.TravelPdfExportControl.eksport_v_pdf_94c24fb3'))
     }
   }, [])
 
@@ -75,7 +77,7 @@ function TravelPdfExportControl({
         onPress={handleOpenExport}
         disabled={isGenerating}
         accessibilityRole="button"
-        accessibilityLabel="Экспорт в PDF"
+        accessibilityLabel={i18nT('travel:components.travel.TravelPdfExportControl.eksport_v_pdf_94c24fb3')}
         ref={setWebTitle}
         style={({ pressed }) => [
           actionBtnStyle,
@@ -87,7 +89,7 @@ function TravelPdfExportControl({
               'data-action-btn': true,
               'data-disabled': isGenerating ? 'true' : 'false',
               role: 'button',
-              'aria-label': 'Экспорт в PDF',
+              'aria-label': i18nT('travel:components.travel.TravelPdfExportControl.eksport_v_pdf_94c24fb3'),
             }
           : {})}
       >

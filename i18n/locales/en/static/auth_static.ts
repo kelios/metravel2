@@ -1,0 +1,12 @@
+export const authStaticResources = {
+  "google.unavailable.text": "Google Sign-In is not configured",
+  "google.unavailable.a11y": "Google Sign-In is not configured for the mobile app",
+  "accountConfirmation.failed": "Failed to verify account. {{details}}",
+  "accountConfirmation.error": "An error occurred while confirming your account. {{details}}",
+  "registration.failed": "Failed to register.",
+  "google.signInFailed": "Error logging in via Google.",
+  "password.changeFailed": "Error changing password",
+  "utils.registrationPasswordStrength.silnyy_ac37343d": "Strong",
+  "utils.registrationPasswordStrength.slabyy_14e7800f": "Weak",
+  "utils.registrationPasswordStrength.sredniy_5f9e23d5": "Medium",
+} as const

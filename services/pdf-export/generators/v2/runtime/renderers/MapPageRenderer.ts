@@ -1,6 +1,8 @@
 import type { ParsedRoutePreview } from '@/types/travelRoutes'
 import { escapeHtml } from '../../../../utils/htmlUtils'
 import { buildRunningHeader, type RuntimeRenderContext } from './renderHelpers'
+import { translate as i18nT, translatePlural } from '@/i18n'
+
 
 export interface RuntimeMapPageData {
   travelName: string
@@ -60,7 +62,7 @@ export class RuntimeMapRenderer {
               background: ${colors.surfaceAlt};
             ">
               ${data.snapshotDataUrl
-                ? `<img src="${data.snapshotDataUrl}" alt="Карта маршрута" style="width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(1.15) contrast(1.05);" />`
+                ? `<img src="${data.snapshotDataUrl}" alt="${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.img_src_value1_alt_karta_marshruta_style_wid_d6bdc117.text01")}" style="width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(1.15) contrast(1.05);" />`
                 : data.mapSvg
               }
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="
@@ -108,11 +110,11 @@ export class RuntimeMapRenderer {
               margin: 0 0 4mm 0;
               font-family: ${typography.headingFont};
               page-break-after: avoid;
-            ">Продолжение маршрута <span style="
+            ">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.h2_style_font_size_value1_margin_0_0_4mm_0_f_6aaac1da.text01")} <span style="
               font-size: ${typography.small.size};
               font-weight: 400;
               color: ${colors.textMuted};
-            ">(продолжение)</span></h2>`
+            ">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.h2_style_font_size_value1_margin_0_0_4mm_0_f_6aaac1da.text02")}</span></h2>`
       pages += `
         <section class="pdf-page map-page" style="padding: ${spacing.pagePadding};">
           ${buildRunningHeader(this.ctx, data.travelName, continuationPageNum)}
@@ -159,7 +161,7 @@ export class RuntimeMapRenderer {
             line-height: 1.15;
             color: ${colors.text};
             font-family: ${typography.headingFont};
-          ">Маршрут</h2>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.div_style_margin_bottom_5mm_padding_12px_14p_e077c72e.text01")}</h2>
           <span style="
             display: inline-flex;
             align-items: center;
@@ -171,7 +173,7 @@ export class RuntimeMapRenderer {
             font-weight: 700;
             font-family: ${typography.bodyFont};
             white-space: nowrap;
-          ">${locationCount} ${locationCount === 1 ? 'точка' : locationCount >= 2 && locationCount <= 4 ? 'точки' : 'точек'}</span>
+          ">${locationCount} ${translatePlural('export:services.pdfExport.runtime.map.pointNoun', locationCount)}</span>
         </div>
         <p style="
           margin: 0;
@@ -214,7 +216,7 @@ export class RuntimeMapRenderer {
           margin: 0;
           font-family: ${typography.headingFont};
           page-break-after: avoid;
-        ">Маршрут</h2>
+        ">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.div_style_display_flex_flex_wrap_wrap_align__12bbc6a9.text01")}</h2>
         <span style="
           display: inline-flex;
           align-items: center;
@@ -225,7 +227,7 @@ export class RuntimeMapRenderer {
           font-size: ${typography.caption.size};
           font-weight: 700;
           font-family: ${typography.bodyFont};
-        ">${locationCount} ${locationCount === 1 ? 'точка' : locationCount >= 2 && locationCount <= 4 ? 'точки' : 'точек'}</span>
+        ">${locationCount} ${translatePlural('export:services.pdfExport.runtime.map.pointNoun', locationCount)}</span>
       </div>
       ${showSubtitle ? `<p style="
         color: ${colors.textMuted};
@@ -262,7 +264,7 @@ export class RuntimeMapRenderer {
     }
 
     const round = (v: number) => Math.round(v * 10) / 10
-    const fmt = (v: number) => `${Math.round(v)} м`
+    const fmt = (v: number) => i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.value1_m_29abffac', { value1: Math.round(v) })
 
     // Key samples
     const startSample = samples[0]
@@ -308,19 +310,19 @@ export class RuntimeMapRenderer {
 
     // 6 summary cards (matches summaryCards in RouteElevationProfile.tsx)
     const summaryCards = [
-      { label: 'Дистанция', value: `${round(totalDistanceKm)} км`, accent: true },
-      { label: 'Набор', value: `+${fmt(ascent)}`, accent: true },
-      { label: 'Сброс', value: `-${fmt(descent)}`, accent: false },
-      { label: 'Мин высота', value: fmt(minElevation), accent: false },
-      { label: 'Макс высота', value: fmt(maxElevation), accent: false },
-      { label: 'Перепад', value: fmt(elevationRange), accent: false },
+      { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.distantsiya_9619f33b'), value: `${round(totalDistanceKm)} км`, accent: true },
+      { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.nabor_85a14ea7'), value: `+${fmt(ascent)}`, accent: true },
+      { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.sbros_6cf0dd2d'), value: `-${fmt(descent)}`, accent: false },
+      { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.min_vysota_aaac7871'), value: fmt(minElevation), accent: false },
+      { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.maks_vysota_b1c09da3'), value: fmt(maxElevation), accent: false },
+      { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.perepad_9bd1952e'), value: fmt(elevationRange), accent: false },
     ]
 
     // 3 point cards (matches pointCards in RouteElevationProfile.tsx)
     const pointCards = [
-      { label: 'Старт', value: fmt(startSample.elevationM), color: accentColor },
-      { label: 'Высшая точка', value: fmt(peakSample.elevationM), color: infoColor },
-      { label: 'Финиш', value: fmt(finishSample.elevationM), color: colors.accentStrong ?? accentColor },
+      { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.start_70618fd0'), value: fmt(startSample.elevationM), color: accentColor },
+      { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.vysshaya_tochka_cae79074'), value: fmt(peakSample.elevationM), color: infoColor },
+      { label: i18nT('export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.finish_6ca45289'), value: fmt(finishSample.elevationM), color: colors.accentStrong ?? accentColor },
     ]
 
     return `
@@ -336,9 +338,9 @@ export class RuntimeMapRenderer {
       ">
         <!-- Header -->
         <div style="margin-bottom: 8px;">
-          <div style="font-size: 9pt; font-weight: 700; color: ${colors.text}; font-family: ${typography.headingFont};">Профиль высот</div>
+          <div style="font-size: 9pt; font-weight: 700; color: ${colors.text}; font-family: ${typography.headingFont};">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.div_style_margin_bottom_4mm_padding_10px_bac_14492623.text01")}</div>
           <div style="font-size: ${typography.caption.size}; color: ${colors.textMuted}; margin-top: 2px;">
-            ${escapeHtml(`${round(totalDistanceKm)} км • +${Math.round(ascent)} м набора • пик ${fmt(maxElevation)}`)}</div>
+            ${escapeHtml(i18nT('export:services.pdfExport.runtime.map.elevationSummary', { value1: round(totalDistanceKm), value2: Math.round(ascent), value3: fmt(maxElevation) }))}</div>
         </div>
 
         <!-- 6 summary cards -->
@@ -374,11 +376,11 @@ export class RuntimeMapRenderer {
             <span style="
               padding: 3px 8px; border-radius: 999px; font-size: ${typography.caption.size}; font-weight: 700;
               background: rgba(255,255,255,0.72); border: 1px solid ${colors.borderLight}; color: ${colors.text};
-            ">Мин ${fmt(minElevation)}</span>
+            ">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.div_style_margin_bottom_4mm_padding_10px_bac_14492623.text02", { value17: fmt(minElevation) })}</span>
             <span style="
               padding: 3px 8px; border-radius: 999px; font-size: ${typography.caption.size}; font-weight: 700;
               background: ${colors.accentSoft}; border: 1px solid ${colors.accentLight ?? colors.border}; color: ${colors.text};
-            ">Пик ${fmt(maxElevation)}</span>
+            ">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.div_style_margin_bottom_4mm_padding_10px_bac_14492623.text03", { value22: fmt(maxElevation) })}</span>
           </div>
 
           <svg viewBox="0 0 ${CW} ${CH}" style="width: 100%; height: 38mm; display: block;" xmlns="http://www.w3.org/2000/svg">
@@ -397,7 +399,7 @@ export class RuntimeMapRenderer {
                   stroke="${colors.borderLight}" stroke-width="1" stroke-dasharray="3 4" opacity="0.8"/>
                 <text x="${(PL - 3).toFixed(1)}" y="${(gy + 3.5).toFixed(1)}"
                   font-size="10" text-anchor="end" fill="${colors.textMuted}" font-family="${typography.bodyFont}"
-                >${Math.round(val)} м</text>
+                >${i18nT('export:services.pdfExport.runtime.map.meters', { value1: Math.round(val) })}</text>
               `
             }).join('')}
 
@@ -419,10 +421,10 @@ export class RuntimeMapRenderer {
 
             <!-- X-axis labels -->
             <text x="${PL}" y="${(CH - 3).toFixed(1)}"
-              font-size="10" fill="${colors.textMuted}" font-family="${typography.bodyFont}">0 км</text>
+              font-size="10" fill="${colors.textMuted}" font-family="${typography.bodyFont}">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.MapPageRenderer.div_style_margin_bottom_4mm_padding_10px_bac_14492623.text04")}</text>
             <text x="${(CW - PR).toFixed(1)}" y="${(CH - 3).toFixed(1)}"
               font-size="9" text-anchor="end" fill="${colors.textMuted}" font-family="${typography.bodyFont}"
-            >${escapeHtml(`${round(totalDistanceKm)} км`)}</text>
+            >${escapeHtml(i18nT('export:services.pdfExport.runtime.map.distance', { value1: round(totalDistanceKm) }))}</text>
           </svg>
         </div>
 

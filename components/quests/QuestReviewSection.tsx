@@ -7,6 +7,8 @@ import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useQuestReview } from '@/hooks/useQuestReview'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
   questId: string
@@ -83,9 +85,9 @@ function QuestReviewSection({
   if (showSuccess) {
     return (
       <View style={styles.container} testID={testID} nativeID="quest-review-section">
-        <Text style={styles.title}>Ваш отзыв о квесте</Text>
+        <Text style={styles.title}>{i18nT('quests:components.quests.QuestReviewSection.vash_otzyv_o_kveste_f0ff8a03')}</Text>
         <View style={styles.successBox}>
-          <Text style={styles.successText}>Спасибо за отзыв!</Text>
+          <Text style={styles.successText}>{i18nT('quests:components.quests.QuestReviewSection.spasibo_za_otzyv_af1c9931')}</Text>
         </View>
       </View>
     )
@@ -93,13 +95,12 @@ function QuestReviewSection({
 
   return (
     <View style={styles.container} testID={testID} nativeID="quest-review-section">
-      <Text style={styles.title}>Отзыв о квесте</Text>
+      <Text style={styles.title}>{i18nT('quests:components.quests.QuestReviewSection.otzyv_o_kveste_c6c8ceb5')}</Text>
       <Text style={styles.subtitle}>
-        Оценка учитывается в общем рейтинге квеста. Текстовый отзыв — по желанию.
-      </Text>
+        {i18nT('quests:components.quests.QuestReviewSection.otsenka_uchityvaetsya_v_obschem_reytinge_kve_28482d13')}</Text>
 
       <View style={styles.starsRow}>
-        <Text style={styles.fieldLabel}>Ваша оценка</Text>
+        <Text style={styles.fieldLabel}>{i18nT('quests:components.quests.QuestReviewSection.vasha_otsenka_8c70d246')}</Text>
         <StarRating
           rating={effectiveRating}
           userRating={effectiveRating}
@@ -113,7 +114,7 @@ function QuestReviewSection({
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>Что понравилось?</Text>
+        <Text style={styles.fieldLabel}>{i18nT('quests:components.quests.QuestReviewSection.chto_ponravilos_b836e082')}</Text>
         <TextInput
           style={styles.input}
           value={liked}
@@ -121,14 +122,14 @@ function QuestReviewSection({
           multiline
           numberOfLines={3}
           editable={!isSubmitting}
-          placeholder="Расскажите, что было интересно"
+          placeholder={i18nT('quests:components.quests.QuestReviewSection.rasskazhite_chto_bylo_interesno_472acf46')}
           placeholderTextColor={colors.textMuted}
           textAlignVertical="top"
         />
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>Что не понравилось / что улучшить?</Text>
+        <Text style={styles.fieldLabel}>{i18nT('quests:components.quests.QuestReviewSection.chto_ne_ponravilos_chto_uluchshit_d5e68794')}</Text>
         <TextInput
           style={styles.input}
           value={disliked}
@@ -136,7 +137,7 @@ function QuestReviewSection({
           multiline
           numberOfLines={3}
           editable={!isSubmitting}
-          placeholder="Что можно сделать лучше"
+          placeholder={i18nT('quests:components.quests.QuestReviewSection.chto_mozhno_sdelat_luchshe_2a40e215')}
           placeholderTextColor={colors.textMuted}
           textAlignVertical="top"
         />
@@ -147,10 +148,10 @@ function QuestReviewSection({
         disabled={!canSubmit || isSubmitting}
         style={[styles.submitButton, (!canSubmit || isSubmitting) && styles.submitButtonDisabled]}
         accessibilityRole="button"
-        accessibilityLabel="Отправить отзыв"
+        accessibilityLabel={i18nT('quests:components.quests.QuestReviewSection.otpravit_otzyv_fe6d43a0')}
         testID={`${testID}-submit`}
       >
-        <Text style={styles.submitButtonText}>{isSubmitting ? 'Отправляем…' : 'Отправить отзыв'}</Text>
+        <Text style={styles.submitButtonText}>{isSubmitting ? i18nT('quests:components.quests.QuestReviewSection.otpravlyaem_46246aeb') : i18nT('quests:components.quests.QuestReviewSection.otpravit_otzyv_fe6d43a0')}</Text>
       </Pressable>
     </View>
   )

@@ -5,6 +5,8 @@ import {
   buildTripShareText,
   type TripPlanShareSource,
 } from '@/utils/tripPlanLinks';
+import { translate as i18nT } from '@/i18n'
+
 
 export type ShareTripPlanResult = 'shared' | 'dismissed' | 'unavailable';
 
@@ -18,7 +20,7 @@ export async function shareTripPlan(
   const url = buildTripPlanUrl(trip);
   if (!url) return 'unavailable';
 
-  const title = String(trip.title ?? '').trim() || 'Поездка в MeTravel';
+  const title = String(trip.title ?? '').trim() || i18nT('tripsStatic:share.titleFallback');
   const text = buildTripShareText(trip);
 
   try {
@@ -37,8 +39,8 @@ export async function shareTripPlan(
     const result = await Share.share(
       Platform.OS === 'ios'
         ? { title, message: text, url }
-        : { title, message: `${text}\n${url}` },
-      { dialogTitle: `Поделиться поездкой «${title}»` },
+        : { title, message: i18nT('trips:utils.shareTripPlan.value1_value2_cff6d5b0', { value1: text, value2: url }) },
+      { dialogTitle: i18nT('trips:utils.shareTripPlan.podelitsya_poezdkoy_value1_677b9d34', { value1: title }) },
     );
 
     return result.action === Share.sharedAction ? 'shared' : 'dismissed';

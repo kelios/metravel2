@@ -2,6 +2,8 @@ import { Platform } from 'react-native'
 
 import { getMapPointKey } from '@/hooks/map/useMapTravels'
 import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
+import { selectPlural, translate as i18nT } from '@/i18n'
+
 
 export const IS_WEB = Platform.OS === 'web'
 export const WEB_LIST_OVERSCAN_ITEMS = 5
@@ -15,12 +17,12 @@ export const LIST_BOTTOM_PADDING = 96
 export const EMPTY_FAVORITES = new Set<string | number>()
 
 export function getPlacesLabel(count: number) {
-  const absCount = Math.abs(count) % 100
-  const lastDigit = absCount % 10
-  if (absCount > 10 && absCount < 20) return 'мест'
-  if (lastDigit === 1) return 'место'
-  if (lastDigit >= 2 && lastDigit <= 4) return 'места'
-  return 'мест'
+  return selectPlural(count, {
+    one: i18nT('map:components.MapPage.TravelListPanel.helpers.mesto_f9c2e628'),
+    few: i18nT('map:components.MapPage.TravelListPanel.helpers.mesta_2341066c'),
+    many: i18nT('map:components.MapPage.TravelListPanel.helpers.mest_2b967bae'),
+    other: i18nT('map:components.MapPage.TravelListPanel.helpers.mest_2b967bae'),
+  })
 }
 
 export function buildTravelListSummaryHint({
@@ -35,7 +37,7 @@ export function buildTravelListSummaryHint({
   userLocation?: { latitude: number; longitude: number } | null
 }) {
   if (compactPreview) {
-    return 'Ближайшие места одним взглядом. Полный список откроет больше вариантов.'
+    return i18nT('map:components.MapPage.TravelListPanel.helpers.blizhayshie_mesta_odnim_vzglyadom_polnyy_spi_ffe8461e')
   }
 
   const placesCountLabel =
@@ -44,14 +46,17 @@ export function buildTravelListSummaryHint({
   const hasRadiusContext = currentRadiusKm != null && String(currentRadiusKm).trim() !== ''
 
   if (hasRadiusContext) {
-    return `${placesCountLabel} ${placesWord} в радиусе ${currentRadiusKm} км${userLocation ? ' рядом с вами' : ''}. Нажмите на карточку, чтобы сфокусировать карту.`
+    const key = userLocation
+      ? 'map:components.MapPage.TravelListPanel.helpers.summaryInRadiusNearYou'
+      : 'map:components.MapPage.TravelListPanel.helpers.summaryInRadius'
+    return i18nT(key, { value1: placesCountLabel, value2: placesWord, value3: currentRadiusKm })
   }
 
   if (userLocation) {
-    return `${placesCountLabel} ${placesWord} рядом с вами. Нажмите на карточку, чтобы сфокусировать карту.`
+    return i18nT('map:components.MapPage.TravelListPanel.helpers.value1_value2_ryadom_s_vami_nazhmite_na_kart_7064c056', { value1: placesCountLabel, value2: placesWord })
   }
 
-  return `${placesCountLabel} ${placesWord} рядом. Нажмите на карточку, чтобы сфокусировать карту.`
+  return i18nT('map:components.MapPage.TravelListPanel.helpers.value1_value2_ryadom_nazhmite_na_kartochku_c_5d55e8f9', { value1: placesCountLabel, value2: placesWord })
 }
 
 // Clean POI title for the compact preview card, shared with the popup and the
@@ -65,7 +70,7 @@ export const getTravelItemSubtitle = (item: any): string => {
   const category = item?.categoryName || item?.category || item?.typeName
   if (category) return String(category)
   if (item?.coord) return String(item.coord)
-  return 'Место рядом'
+  return i18nT('map:components.MapPage.TravelListPanel.helpers.mesto_ryadom_54760203')
 }
 
 export const getTravelItemId = (item: any): string | number | undefined =>

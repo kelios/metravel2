@@ -8,6 +8,8 @@ import { orsDirections } from '@/api/external/ors';
 import { osrmRoute } from '@/api/external/osrm';
 import { valhallaRoute } from '@/api/external/valhalla';
 import { serverRoute } from '@/api/external/serverRouting';
+import { translate as i18nT } from '@/i18n'
+
 
 interface RouteResult {
   coords: LatLng[];
@@ -71,7 +73,7 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       if (!res.ok) {
         const errorText = await res.text().catch(() => '');
         throw new Error(
-          `Ошибка сервера маршрутизации: ${res.status}${errorText ? ` - ${errorText}` : ''}`
+          i18nT('map:components.MapPage.Map.useRouteBuilding.oshibka_servera_marshrutizatsii_value1_value_a1ec17bb', { value1: res.status, value2: errorText ? ` - ${errorText}` : '' })
         );
       }
 
@@ -79,7 +81,7 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       const geometry = data?.geometry;
 
       if (!Array.isArray(geometry) || geometry.length === 0)
-        throw new Error('Пустой маршрут от сервера маршрутизации');
+        throw new Error(i18nT('map:components.MapPage.Map.useRouteBuilding.pustoy_marshrut_ot_servera_marshrutizatsii_cfc2780a'));
 
       const coords: LatLng[] = geometry.map(
         ([lng, lat]: [number, number]) => ({ lat, lng })
@@ -147,18 +149,18 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
         }
 
         if (res.status === 429)
-          throw new Error('Превышен лимит запросов. Подождите немного.');
+          throw new Error(i18nT('map:components.MapPage.Map.useRouteBuilding.prevyshen_limit_zaprosov_podozhdite_nemnogo_1e6bc7a9'));
         if (res.status === 403)
-          throw new Error('Неверный API ключ или доступ запрещен.');
+          throw new Error(i18nT('map:components.MapPage.Map.useRouteBuilding.nevernyy_api_klyuch_ili_dostup_zapreschen_34391e92'));
         if (res.status === 400)
-          throw new Error('Некорректные координаты маршрута.');
+          throw new Error(i18nT('map:components.MapPage.Map.useRouteBuilding.nekorrektnye_koordinaty_marshruta_26616a57'));
         throw new Error(
-          `Ошибка ORS: ${res.status}${lastErrorText ? ` - ${lastErrorText}` : ''}`
+          i18nT('map:components.MapPage.Map.useRouteBuilding.oshibka_ors_value1_value2_c7a76deb', { value1: res.status, value2: lastErrorText ? ` - ${lastErrorText}` : '' })
         );
       }
 
       if (!res || !res.ok) {
-        throw new Error(`Ошибка ORS: ${res?.status ?? 'unknown'}${lastErrorText ? ` - ${lastErrorText}` : ''}`);
+        throw new Error(i18nT('map:components.MapPage.Map.useRouteBuilding.oshibka_ors_value1_value2_c7a76deb', { value1: res?.status ?? 'unknown', value2: lastErrorText ? ` - ${lastErrorText}` : '' }));
       }
 
       const data = await res.json();
@@ -167,7 +169,7 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       const summary = feature?.properties?.summary;
 
       if (!geometry?.coordinates?.length)
-        throw new Error('Пустой маршрут от ORS');
+        throw new Error(i18nT('map:components.MapPage.Map.useRouteBuilding.pustoy_marshrut_ot_ors_8485de5d'));
 
       // Convert [lng, lat] back to LatLng
       const coords: LatLng[] = geometry.coordinates.map(
@@ -204,11 +206,11 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       if (!res.ok) {
         const errorText = await res.text().catch(() => '');
         if (res.status === 429)
-          throw new Error('Превышен лимит запросов. Подождите немного.');
+          throw new Error(i18nT('map:components.MapPage.Map.useRouteBuilding.prevyshen_limit_zaprosov_podozhdite_nemnogo_1e6bc7a9'));
         if (res.status === 400)
-          throw new Error('Некорректные координаты маршрута.');
+          throw new Error(i18nT('map:components.MapPage.Map.useRouteBuilding.nekorrektnye_koordinaty_marshruta_26616a57'));
         throw new Error(
-          `Ошибка OSRM: ${res.status}${errorText ? ` - ${errorText}` : ''}`
+          i18nT('map:components.MapPage.Map.useRouteBuilding.oshibka_osrm_value1_value2_3fd7248f', { value1: res.status, value2: errorText ? ` - ${errorText}` : '' })
         );
       }
 
@@ -216,7 +218,7 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       const route = data.routes?.[0];
 
       if (!route?.geometry?.coordinates?.length)
-        throw new Error('Пустой маршрут от OSRM');
+        throw new Error(i18nT('map:components.MapPage.Map.useRouteBuilding.pustoy_marshrut_ot_osrm_d903348b'));
 
       // Convert [lng, lat] back to LatLng
       const coords: LatLng[] = route.geometry.coordinates.map(
@@ -255,11 +257,11 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       if (!res.ok) {
         const errorText = await res.text().catch(() => '');
         if (res.status === 429)
-          throw new Error('Превышен лимит запросов. Подождите немного.');
+          throw new Error(i18nT('map:components.MapPage.Map.useRouteBuilding.prevyshen_limit_zaprosov_podozhdite_nemnogo_1e6bc7a9'));
         if (res.status === 400)
-          throw new Error('Некорректные координаты маршрута.');
+          throw new Error(i18nT('map:components.MapPage.Map.useRouteBuilding.nekorrektnye_koordinaty_marshruta_26616a57'));
         throw new Error(
-          `Ошибка Valhalla: ${res.status}${errorText ? ` - ${errorText}` : ''}`
+          i18nT('map:components.MapPage.Map.useRouteBuilding.oshibka_valhalla_value1_value2_bc96a773', { value1: res.status, value2: errorText ? ` - ${errorText}` : '' })
         );
       }
 
@@ -267,7 +269,7 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       const trip = data.trip;
 
       if (!trip?.legs?.length)
-        throw new Error('Пустой маршрут от Valhalla');
+        throw new Error(i18nT('map:components.MapPage.Map.useRouteBuilding.pustoy_marshrut_ot_valhalla_b59f6cdc'));
 
       // Декодируем polyline6 (Valhalla использует precision 6)
       const decodePolyline6 = (encoded: string): LatLng[] => {
@@ -313,7 +315,7 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       }
 
       if (allCoords.length === 0)
-        throw new Error('Пустой маршрут от Valhalla');
+        throw new Error(i18nT('map:components.MapPage.Map.useRouteBuilding.pustoy_marshrut_ot_valhalla_b59f6cdc'));
 
       const distanceKm = trip.summary?.length || 0;
       const durationSec = trip.summary?.time || 0;
@@ -409,7 +411,7 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
             };
 
             setError(
-              'Используется прямая линия (сервисы маршрутизации недоступны)'
+              i18nT('map:components.MapPage.Map.useRouteBuilding.ispolzuetsya_pryamaya_liniya_servisy_marshru_2b26ccae')
             );
           }
         }
@@ -437,7 +439,7 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
         return;
       }
 
-      const errorMessage = error?.message || 'Не удалось построить маршрут';
+      const errorMessage = error?.message || i18nT('map:components.MapPage.useRouting.ne_udalos_postroit_marshrut_2d05f3d6');
       setError(errorMessage);
 
       // Fallback to direct line

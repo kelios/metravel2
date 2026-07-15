@@ -5,6 +5,9 @@ import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-na
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { PublicStalePayloadMeta } from '@/utils/publicStaleCache';
+import { translate as i18nT } from '@/i18n'
+import { formatDateTime } from '@/i18n/format'
+
 
 type StaleContentBannerProps = {
   meta: PublicStalePayloadMeta | null;
@@ -16,11 +19,13 @@ const formatSavedAt = (value: string): string | null => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
 
-  return date.toLocaleString('ru-RU', {
+  return formatDateTime(date, {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     month: 'short',
+    dateStyle: undefined,
+    timeStyle: undefined,
   });
 };
 
@@ -48,11 +53,11 @@ export default function StaleContentBanner({
     >
       <Feather name="wifi-off" size={18} color={colors.warning} />
       <View style={styles.textColumn}>
-        <Text style={[styles.title, { color: colors.text }]}>Показываем сохранённые данные</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{i18nT('shared:components.ui.StaleContentBanner.pokazyvaem_sohranennye_dannye_8f209579')}</Text>
         <Text style={[styles.description, { color: colors.textMuted }]}>
           {savedAtLabel
-            ? `Не удалось обновить данные. Версия сохранена ${savedAtLabel}.`
-            : 'Не удалось обновить данные. Показана последняя сохранённая версия.'}
+            ? i18nT('shared:components.ui.StaleContentBanner.ne_udalos_obnovit_dannye_versiya_sohranena_v_95ebff3c', { value1: savedAtLabel })
+            : i18nT('shared:components.ui.StaleContentBanner.ne_udalos_obnovit_dannye_pokazana_poslednyay_e933e9d4')}
         </Text>
       </View>
     </View>

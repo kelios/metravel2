@@ -29,6 +29,8 @@ import {
   BOTTOM_DOCK_MORE_MENU_SECTIONS,
   normalizeBottomDockActivePath,
 } from "./bottomDockModel";
+import { translate as i18nT } from '@/i18n'
+
 
 let GorhomBottomSheet: any = null;
 let GorhomBottomSheetView: any = null;
@@ -327,7 +329,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             style={styles.row}
             testID="footer-dock-row"
             accessibilityRole="tablist"
-            accessibilityLabel="Навигация"
+            accessibilityLabel={i18nT('navigation:components.layout.BottomDock.navigatsiya_24d0f434')}
           >
             {items.map((item) => {
               const isActive = !item.isMore && activePath === String(item.route);
@@ -363,7 +365,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             style={[styles.moreBackdrop, !sheetVisible && styles.moreBackdropHidden]}
             onPress={() => setShowMore(false)}
             accessibilityRole="button"
-            accessibilityLabel="Закрыть меню"
+            accessibilityLabel={i18nT('navigation:components.layout.BottomDock.zakryt_menyu_2bc0d545')}
           />
           <View
             ref={webMoreSheetRef}
@@ -372,7 +374,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             {...({
               role: 'dialog',
               'aria-modal': 'true',
-              'aria-label': 'Дополнительное меню',
+              'aria-label': i18nT('navigation:components.layout.BottomDock.dopolnitelnoe_menyu_da2c0277'),
               onPointerDown: handleSwipeStart,
               onPointerUp: handleSwipeEnd,
               onTouchStart: handleSwipeStart,
@@ -382,14 +384,14 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             <View style={styles.sheetHandle} accessible={false} importantForAccessibility="no" />
             <View style={styles.sheetHeader}>
               <View style={styles.sheetHeaderCopy}>
-                <Text style={styles.sheetEyebrow}>Быстрые действия</Text>
-                <Text style={styles.sheetTitle}>Ещё</Text>
+                <Text style={styles.sheetEyebrow}>{i18nT('navigation:components.layout.BottomDock.bystrye_deystviya_ad8c8380')}</Text>
+                <Text style={styles.sheetTitle}>{i18nT('navigation:components.layout.BottomDock.esche_d5fa4e69')}</Text>
               </View>
               <Pressable
                 onPress={() => setShowMore(false)}
                 style={[styles.sheetCloseBtn, globalFocusStyles.focusable]}
                 accessibilityRole="button"
-                accessibilityLabel="Закрыть"
+                accessibilityLabel={i18nT('navigation:components.layout.BottomDock.zakryt_6a41e4ea')}
               >
                 <Feather name="x" size={20} color={colors.textMuted} />
               </Pressable>
@@ -424,20 +426,20 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
               style={styles.nativeModalBackdrop}
               onPress={() => setShowMore(false)}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть меню"
+              accessibilityLabel={i18nT('navigation:components.layout.BottomDock.zakryt_menyu_2bc0d545')}
             />
             <View style={styles.nativeModalSheet} testID="footer-more-sheet-native">
               <View style={styles.sheetHandle} accessible={false} importantForAccessibility="no" />
               <View style={styles.sheetHeader}>
                 <View style={styles.sheetHeaderCopy}>
-                  <Text style={styles.sheetEyebrow}>Быстрые действия</Text>
-                  <Text style={styles.sheetTitle}>Ещё</Text>
+                  <Text style={styles.sheetEyebrow}>{i18nT('navigation:components.layout.BottomDock.bystrye_deystviya_ad8c8380')}</Text>
+                  <Text style={styles.sheetTitle}>{i18nT('navigation:components.layout.BottomDock.esche_d5fa4e69')}</Text>
                 </View>
                 <Pressable
                   onPress={() => setShowMore(false)}
                   style={[styles.sheetCloseBtn, globalFocusStyles.focusable]}
                   accessibilityRole="button"
-                  accessibilityLabel="Закрыть"
+                  accessibilityLabel={i18nT('navigation:components.layout.BottomDock.zakryt_6a41e4ea')}
                 >
                   <Feather name="x" size={20} color={colors.textMuted} />
                 </Pressable>
@@ -481,8 +483,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             <GorhomBottomSheetView style={{ paddingHorizontal: 16, paddingBottom: safeBottomPadding + 16 }}>
               <View style={styles.sheetHeader}>
                 <View style={styles.sheetHeaderCopy}>
-                  <Text style={styles.sheetEyebrow}>Быстрые действия</Text>
-                  <Text style={styles.sheetTitle}>Ещё</Text>
+                  <Text style={styles.sheetEyebrow}>{i18nT('navigation:components.layout.BottomDock.bystrye_deystviya_ad8c8380')}</Text>
+                  <Text style={styles.sheetTitle}>{i18nT('navigation:components.layout.BottomDock.esche_d5fa4e69')}</Text>
                 </View>
               </View>
               <ScrollView

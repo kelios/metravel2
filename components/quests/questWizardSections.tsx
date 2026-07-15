@@ -8,7 +8,6 @@ import { BadgeUnlockToast } from '@/components/achievements'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta'
 import { useQuestRatingMutation } from '@/hooks/useQuestRating'
-import { pluralizeRu } from '@/utils/pluralize'
 import QuestPioneerBlock from './QuestPioneerBlock'
 import QuestReviewSection from './QuestReviewSection'
 import type { QuestMapApp } from './questWizardHelpers'
@@ -19,6 +18,8 @@ import {
   QuestFullMapLazy,
   QuestWebVideo,
 } from './questWizardMedia'
+import { translate as i18nT } from '@/i18n'
+
 
 type PointLike = {
   id?: string
@@ -88,16 +89,16 @@ export function QuestDesktopMapPanel({
               onPress={() => openCurrentStepInMap(Platform.OS === 'ios' ? 'apple' : 'google')}
               hitSlop={6}
               accessibilityRole="button"
-              accessibilityLabel="Открыть навигацию"
+              accessibilityLabel={i18nT('quests:components.quests.questWizardSections.otkryt_navigatsiyu_d146fb23')}
             >
-              <Text style={styles.navButtonText}>Навигация</Text>
+              <Text style={styles.navButtonText}>{i18nT('quests:components.quests.questWizardSections.navigatsiya_7f87f2af')}</Text>
             </Pressable>
             <Pressable
               style={styles.navToggle}
               onPress={() => setDesktopNavExpanded((value) => !value)}
               hitSlop={6}
               accessibilityRole="button"
-              accessibilityLabel={desktopNavExpanded ? 'Скрыть варианты навигации' : 'Показать варианты навигации'}
+              accessibilityLabel={desktopNavExpanded ? i18nT('quests:components.quests.questWizardSections.skryt_varianty_navigatsii_6e9ab15c') : i18nT('quests:components.quests.questWizardSections.pokazat_varianty_navigatsii_60e8c5e0')}
             >
               <Text style={styles.navToggleText}>{desktopNavExpanded ? '▲' : '▼'}</Text>
             </Pressable>
@@ -106,7 +107,7 @@ export function QuestDesktopMapPanel({
               onPress={copyCurrentStepCoords}
               hitSlop={6}
               accessibilityRole="button"
-              accessibilityLabel={`Копировать координаты ${currentStep.lat.toFixed(4)}, ${currentStep.lng.toFixed(4)}`}
+              accessibilityLabel={i18nT('quests:components.quests.questWizardSections.kopirovat_koordinaty_value1_value2_60440820', { value1: currentStep.lat.toFixed(4), value2: currentStep.lng.toFixed(4) })}
             >
               <Text style={styles.coordsButtonText}>{currentStep.lat.toFixed(4)}, {currentStep.lng.toFixed(4)}</Text>
             </Pressable>
@@ -116,21 +117,21 @@ export function QuestDesktopMapPanel({
                 onPress={toggleMap}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel={showMap ? 'Скрыть фото' : 'Показать фото'}
+                accessibilityLabel={showMap ? i18nT('quests:components.quests.questWizardSections.skryt_foto_50539a5e') : i18nT('quests:components.quests.questWizardSections.pokazat_foto_e60f3e8b')}
               >
-                <Text style={styles.photoToggleText}>{showMap ? 'Скрыть фото' : 'Фото'}</Text>
+                <Text style={styles.photoToggleText}>{showMap ? i18nT('quests:components.quests.questWizardSections.skryt_foto_50539a5e') : i18nT('quests:components.quests.questWizardSections.foto_e73dc2af')}</Text>
               </Pressable>
             )}
           </View>
           {desktopNavExpanded && (
             <View style={styles.navDropdown}>
-              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('google'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>Google Maps</Text></Pressable>
-              {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('apple'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>Apple Maps</Text></Pressable>)}
-              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('organic'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>
-              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('waze'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>Waze</Text></Pressable>
-              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('yandex'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>Яндекс.Навигатор</Text></Pressable>
-              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('mapsme'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>
-              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('osm'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>OpenStreetMap</Text></Pressable>
+              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('google'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardSections.google_maps_0f9e8da2')}</Text></Pressable>
+              {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('apple'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardSections.apple_maps_2428622f')}</Text></Pressable>)}
+              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('organic'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardSections.organic_maps_6ac256f3')}</Text></Pressable>
+              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('waze'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardSections.waze_31869b49')}</Text></Pressable>
+              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('yandex'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardSections.yandeks_navigator_2bb0ac00')}</Text></Pressable>
+              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('mapsme'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardSections.maps_me_e9291555')}</Text></Pressable>
+              <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('osm'); setDesktopNavExpanded(false) }}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardSections.openstreetmap_b6740d2b')}</Text></Pressable>
             </View>
           )}
         </View>
@@ -140,7 +141,7 @@ export function QuestDesktopMapPanel({
         <QuestFullMapLazy
           steps={steps}
           height={useWideInlineLayout ? (compactDesktopLayout ? 460 : 520) : 360}
-          title="Карта квеста"
+          title={i18nT('quests:components.quests.questWizardSections.karta_kvesta_159fe057')}
           activeStepIndex={activeStepIndex}
           // На native превью-карта внутри вертикального ScrollView не должна
           // перехватывать свайп страницы (F-7): панорамирование — только в
@@ -165,8 +166,8 @@ export function QuestExcursionsInline({
       <View style={styles.excursionsDivider} />
       <View style={styles.excursionsCard}>
         <View style={styles.excursionsHeader}>
-          <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
-          <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
+          <Text style={styles.excursionsTitle}>{i18nT('quests:components.quests.questWizardSections.ekskursii_ryadom_46600fc1')}</Text>
+          <Text style={styles.excursionsSubtitle}>{i18nT('quests:components.quests.questWizardSections.otkroyte_bolshe_s_mestnymi_gidami_048b2051')}</Text>
         </View>
         <Suspense fallback={null}>
           <BelkrajWidgetLazy
@@ -191,8 +192,8 @@ export function QuestExcursionsSidebar({
   return (
     <View style={styles.excursionsSidebar}>
       <View style={styles.excursionsSidebarInner}>
-        <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
-        <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
+        <Text style={styles.excursionsTitle}>{i18nT('quests:components.quests.questWizardSections.ekskursii_ryadom_46600fc1')}</Text>
+        <Text style={styles.excursionsSubtitle}>{i18nT('quests:components.quests.questWizardSections.otkroyte_bolshe_s_mestnymi_gidami_048b2051')}</Text>
         <View style={styles.excursionsSidebarWidget}>
           <Suspense fallback={null}>
             <BelkrajWidgetLazy
@@ -218,8 +219,8 @@ export function QuestCompactExcursions({
   return (
     <View style={styles.compactExcursionsSection}>
       <View style={styles.compactExcursionsHeader}>
-        <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
-        <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
+        <Text style={styles.excursionsTitle}>{i18nT('quests:components.quests.questWizardSections.ekskursii_ryadom_46600fc1')}</Text>
+        <Text style={styles.excursionsSubtitle}>{i18nT('quests:components.quests.questWizardSections.otkroyte_bolshe_s_mestnymi_gidami_048b2051')}</Text>
       </View>
       <Suspense fallback={null}>
         <BelkrajWidgetLazy
@@ -253,8 +254,8 @@ export function QuestNativeAffiliateSection({
       <View style={styles.excursionsDivider} />
       <View style={styles.excursionsCard}>
         <View style={styles.excursionsHeader}>
-          <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
-          <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
+          <Text style={styles.excursionsTitle}>{i18nT('quests:components.quests.questWizardSections.ekskursii_ryadom_46600fc1')}</Text>
+          <Text style={styles.excursionsSubtitle}>{i18nT('quests:components.quests.questWizardSections.otkroyte_bolshe_s_mestnymi_gidami_048b2051')}</Text>
         </View>
         <AffiliateOffers {...context} />
       </View>
@@ -275,8 +276,7 @@ function QuestFinaleCompletionLine({
   if (completionsCount <= 0) return null
   return (
     <Text style={[styles.completionText, { opacity: 0.85 }]}>
-      Пройдено {completionsCount} {pluralizeRu(completionsCount, 'раз', 'раза', 'раз')} (включая вас)
-    </Text>
+      {i18nT('quests:components.quests.questWizardSections.completionCountWithYou', { count: completionsCount })}</Text>
   )
 }
 
@@ -342,7 +342,7 @@ export function QuestFinalePanel({
     <View style={styles.completionScreen}>
       {allCompleted ? (
         <View style={styles.finaleContent}>
-          <Text style={styles.completionTitle}>Квест завершен!</Text>
+          <Text style={styles.completionTitle}>{i18nT('quests:components.quests.questWizardSections.kvest_zavershen_6d9d9233')}</Text>
 
           {questId ? (
             <>
@@ -372,7 +372,7 @@ export function QuestFinalePanel({
                     loading="lazy"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
-                    title="Видео квеста"
+                    title={i18nT('quests:components.quests.questWizardSections.video_kvesta_5a8205e2')}
                   />
                 ) : videoOk ? (
                   <QuestWebVideo src={videoUri} poster={posterUri} onError={handleVideoError} />
@@ -386,13 +386,13 @@ export function QuestFinalePanel({
                         allowCriticalWebBlur
                         blurRadius={18}
                         style={StyleSheet.absoluteFillObject as any}
-                        alt="Постер видео квеста"
+                        alt={i18nT('quests:components.quests.questWizardSections.poster_video_kvesta_c8f64bd3')}
                       />
                     ) : null}
                     <View style={styles.videoFallbackOverlay}>
-                      <Text style={styles.videoFallbackText}>Не удалось воспроизвести видео. Попробуйте ещё раз.</Text>
+                      <Text style={styles.videoFallbackText}>{i18nT('quests:components.quests.questWizardSections.ne_udalos_vosproizvesti_video_poprobuyte_esc_eaa4ac08')}</Text>
                       <Pressable onPress={handleVideoRetry} style={styles.videoRetryBtn} hitSlop={8}>
-                        <Text style={styles.videoRetryText}>Повторить</Text>
+                        <Text style={styles.videoRetryText}>{i18nT('quests:components.quests.questWizardSections.povtorit_6c2cf666')}</Text>
                       </Pressable>
                     </View>
                   </>
@@ -429,16 +429,16 @@ export function QuestFinalePanel({
       ) : (
         <>
           <Text style={[styles.completionText, { opacity: 0.8 }]}>
-            Чтобы открыть приз и видео, завершите все шаги — пройдено {completedCount} из {stepsCount}.
+            {i18nT('quests:components.quests.questWizardSections.chtoby_otkryt_priz_i_video_zavershite_vse_sh_fd0438f8')}{completedCount} {i18nT('quests:components.quests.questWizardSections.iz_277be07e')}{stepsCount}.
           </Text>
           {onContinue && (
             <Pressable
               style={styles.primaryButton}
               onPress={onContinue}
               accessibilityRole="button"
-              accessibilityLabel="Продолжить квест"
+              accessibilityLabel={i18nT('quests:components.quests.questWizardSections.prodolzhit_kvest_4cc1b452')}
             >
-              <Text style={styles.buttonText}>Продолжить квест</Text>
+              <Text style={styles.buttonText}>{i18nT('quests:components.quests.questWizardSections.prodolzhit_kvest_4cc1b452')}</Text>
             </Pressable>
           )}
         </>

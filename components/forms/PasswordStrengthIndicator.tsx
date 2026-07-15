@@ -5,6 +5,8 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { checkPasswordStrength, getPasswordStrengthLabel, getPasswordStrengthColor } from '@/utils/passwordStrength';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface PasswordStrengthIndicatorProps {
   password: string;
@@ -45,7 +47,7 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps>
       </View>
       <View style={styles.labelContainer}>
         <Text style={[styles.label, { color }]}>
-          Сила пароля: {label}
+          {i18nT('auth:components.forms.PasswordStrengthIndicator.sila_parolya_64fc0a52')}{label}
         </Text>
       </View>
       {showFeedback && feedback.length > 0 && (

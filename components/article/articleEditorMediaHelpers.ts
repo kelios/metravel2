@@ -9,6 +9,8 @@ import {
   extractArticleEditorUploadUrl,
 } from './articleEditorConfig'
 import type { ArticleEditorSelection } from './articleEditor.types'
+import { translate as i18nT } from '@/i18n'
+
 
 type FireChange = (
   val: string,
@@ -122,7 +124,7 @@ export const uploadImageAndInsert = async ({
     if (__DEV__) {
       console.info('[ArticleEditor] upload blocked: not authenticated')
     }
-    Alert.alert('Авторизация', 'Войдите, чтобы загружать изображения')
+    Alert.alert(i18nT('shared:components.article.articleEditorMediaHelpers.avtorizatsiya_bdcce2b6'), i18nT('shared:components.article.articleEditorMediaHelpers.voydite_chtoby_zagruzhat_izobrazheniya_cebd5cf6'))
     return
   }
 
@@ -192,8 +194,8 @@ export const uploadImageAndInsert = async ({
     const message =
       err instanceof Error && err.message.trim().length > 0
         ? err.message
-        : 'Не удалось загрузить изображение'
-    Alert.alert('Ошибка', message)
+        : i18nT('shared:components.article.articleEditorMediaHelpers.ne_udalos_zagruzit_izobrazhenie_c6591767')
+    Alert.alert(i18nT('shared:components.article.articleEditorMediaHelpers.oshibka_840c6c20'), message)
   } finally {
     setIsImageUploading(false)
   }

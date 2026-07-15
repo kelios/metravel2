@@ -5,11 +5,12 @@ import type { BookSettings } from '@/components/export/BookSettingsModal';
 import * as useSingleTravelExportModule from '@/components/travel/hooks/useSingleTravelExport';
 import { ExportStage } from '@/types/pdf-export';
 import { resolveExportedFunction } from '@/utils/moduleInterop';
+import { translate as i18nT } from '@/i18n'
 
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
 
 const FALLBACK_BOOK_SETTINGS: BookSettings = {
-  title: 'Мои путешествия',
+  get title() { return i18nT('travel:components.travel.pdfExport.defaultBookTitle') },
   subtitle: '',
   coverType: 'auto',
   template: 'minimal',

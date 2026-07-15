@@ -5,6 +5,9 @@ import { normalizeToTravel } from '@/components/profile/travelNormalize';
 import { confirmAction } from '@/utils/confirmAction';
 import type { TravelEngagementStats } from '@/utils/travelEngagementStats'
 import { showToastMessage } from '@/utils/toast'
+import { translate as i18nT } from '@/i18n'
+import { isOfflineLikeError, isTimeoutError } from '@/api/clientErrors'
+
 
 interface UseMyTravelsArgs {
   userId?: string | null;
@@ -54,44 +57,43 @@ const getDeleteErrorCopy = (error: unknown) => {
   if (
     errorStatus === 404 ||
     message.includes('404') ||
-    message.includes('not found') ||
-    message.includes('не найден')
+    message.includes('not found')
   ) {
     return {
       isAlreadyDeleted: true,
-      title: 'Маршрут уже удалён',
-      description: 'Обновили список, чтобы синхронизировать профиль.',
+      title: i18nT('shared:hooks.useMyTravels.marshrut_uzhe_udalen_ec82e839'),
+      description: i18nT('shared:hooks.useMyTravels.obnovili_spisok_chtoby_sinhronizirovat_profi_e7550431'),
     }
   }
 
-  if (errorStatus === 403 || message.includes('403') || message.includes('доступ')) {
+  if (errorStatus === 403 || message.includes('403') || message.includes('forbidden')) {
     return {
       isAlreadyDeleted: false,
-      title: 'Нет доступа',
-      description: 'У вас нет прав для удаления этого маршрута.',
+      title: i18nT('shared:hooks.useMyTravels.net_dostupa_ca0e6d55'),
+      description: i18nT('shared:hooks.useMyTravels.u_vas_net_prav_dlya_udaleniya_etogo_marshrut_40c0e5b8'),
     }
   }
 
-  if (message.includes('timeout') || message.includes('время ожидания')) {
+  if (isTimeoutError(error)) {
     return {
       isAlreadyDeleted: false,
-      title: 'Превышено время ожидания',
-      description: 'Проверьте интернет и попробуйте снова.',
+      title: i18nT('shared:hooks.useMyTravels.prevysheno_vremya_ozhidaniya_e93ccac1'),
+      description: i18nT('shared:hooks.useMyTravels.proverte_internet_i_poprobuyte_snova_79ec3064'),
     }
   }
 
-  if (message.includes('network') || message.includes('сеть')) {
+  if (isOfflineLikeError(error)) {
     return {
       isAlreadyDeleted: false,
-      title: 'Проблема с подключением',
-      description: 'Проверьте интернет и попробуйте снова.',
+      title: i18nT('shared:hooks.useMyTravels.problema_s_podklyucheniem_8bad85c4'),
+      description: i18nT('shared:hooks.useMyTravels.proverte_internet_i_poprobuyte_snova_79ec3064'),
     }
   }
 
   return {
     isAlreadyDeleted: false,
-    title: 'Не удалось удалить маршрут',
-    description: error instanceof Error && error.message ? error.message : 'Попробуйте позже.',
+    title: i18nT('shared:hooks.useMyTravels.ne_udalos_udalit_marshrut_de4a9f1c'),
+    description: error instanceof Error && error.message ? error.message : i18nT('shared:hooks.useMyTravels.poprobuyte_pozzhe_c0c8a2b5'),
   }
 }
 
@@ -198,10 +200,10 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
     async (travelId: number) => {
       try {
         const ok = await confirmAction({
-          title: 'Удалить путешествие',
-          message: 'Удалить этот маршрут? Действие нельзя отменить.',
-          confirmText: 'Удалить',
-          cancelText: 'Отмена',
+          title: i18nT('shared:hooks.useMyTravels.udalit_puteshestvie_64a5de65'),
+          message: i18nT('shared:hooks.useMyTravels.udalit_etot_marshrut_deystvie_nelzya_otmenit_d24a1543'),
+          confirmText: i18nT('shared:hooks.useMyTravels.udalit_c7e4f56b'),
+          cancelText: i18nT('shared:hooks.useMyTravels.otmena_e1cbb99f'),
         });
         if (!ok) return;
 
@@ -223,8 +225,8 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
         await deleteTravel(travelId);
         void showToastMessage({
           type: 'success',
-          text1: 'Маршрут удалён',
-          text2: 'Профиль обновлён.',
+          text1: i18nT('shared:hooks.useMyTravels.marshrut_udalen_d9a3c536'),
+          text2: i18nT('shared:hooks.useMyTravels.profil_obnovlen_b45689b2'),
         })
         await load();
       } catch (error) {

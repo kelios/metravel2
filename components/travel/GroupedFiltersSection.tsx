@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface FilterGroup {
     id: string;
@@ -54,7 +56,7 @@ const GroupedFiltersSection: React.FC<GroupedFiltersSectionProps> = ({
                 ]}
                 onPress={toggleExpanded}
                 accessibilityRole="button"
-                accessibilityLabel={`${isExpanded ? 'Свернуть' : 'Развернуть'} секцию ${group.title}`}
+                accessibilityLabel={i18nT('travel:components.travel.GroupedFiltersSection.value1_sektsiyu_value2_0db12b61', { value1: isExpanded ? i18nT('travel:common.collapse') : i18nT('travel:common.expand'), value2: group.title })}
                 accessibilityState={{ expanded: isExpanded }}
                 {...Platform.select({ web: { cursor: 'pointer' } })}
             >
@@ -181,4 +183,3 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 });
 
 export default React.memo(GroupedFiltersSection);
-

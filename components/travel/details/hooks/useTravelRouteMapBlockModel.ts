@@ -1,4 +1,6 @@
 import { useMemo } from 'react'
+import { translate as i18nT } from '@/i18n'
+
 
 export function useTravelRouteMapBlockModel({
   downloadingRouteId,
@@ -43,7 +45,7 @@ export function useTravelRouteMapBlockModel({
         lineColor: item.color,
         onDownloadTrack: () => handleDownloadRoute(item.file),
         preview: item.preview,
-        title: `Профиль высот: ${item.label || `Трек ${index + 1}`}`,
+        title: i18nT('travel:components.travel.details.hooks.useTravelRouteMapBlockModel.profil_vysot_value1_3d42e1d4', { value1: item.label || `Трек ${index + 1}` }),
       })),
     [downloadingRouteId, handleDownloadRoute, keyPointLabels, routePreviewItems]
   )

@@ -22,6 +22,8 @@ import TripPlanCard from '@/components/trips/planning/TripPlanCard';
 import EmptyState from '@/components/ui/EmptyState';
 import { useCommunityTrips } from '@/hooks/usePlannedTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   initialTransport?: TripTransport;
@@ -50,10 +52,9 @@ function CommunityRoutesCatalog({ initialTransport }: Props) {
 
   return (
     <View style={styles.wrap} testID="community-routes">
-      <Text style={styles.heading}>Маршруты сообщества</Text>
+      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.CommunityRoutesCatalog.marshruty_soobschestva_6c6daddb')}</Text>
       <Text style={styles.subtitle}>
-        Готовые маршруты, опубликованные путешественниками.
-      </Text>
+        {i18nT('trips:components.trips.planning.CommunityRoutesCatalog.gotovye_marshruty_opublikovannye_puteshestve_a7db6ef1')}</Text>
 
       <View style={styles.chips}>
         <Pressable
@@ -66,8 +67,7 @@ function CommunityRoutesCatalog({ initialTransport }: Props) {
             textBreakStrategy="simple"
             style={[styles.chipText, transport === null && styles.chipTextActive]}
           >
-            Все
-          </Text>
+            {i18nT('trips:components.trips.planning.CommunityRoutesCatalog.vse_730ac669')}</Text>
         </Pressable>
         {TRANSPORT_OPTIONS.map((option) => {
           const active = transport === option;
@@ -98,7 +98,7 @@ function CommunityRoutesCatalog({ initialTransport }: Props) {
       <TextInput
         value={region}
         onChangeText={setRegion}
-        placeholder="Регион (по желанию)"
+        placeholder={i18nT('trips:components.trips.planning.CommunityRoutesCatalog.region_po_zhelaniyu_aa0b5cef')}
         placeholderTextColor={colors.textMuted}
         style={styles.input}
         testID="community-filter-region"
@@ -112,14 +112,13 @@ function CommunityRoutesCatalog({ initialTransport }: Props) {
         />
       ) : isError ? (
         <Text style={styles.error} testID="community-routes-error">
-          Не удалось загрузить маршруты.
-        </Text>
+          {i18nT('trips:components.trips.planning.CommunityRoutesCatalog.ne_udalos_zagruzit_marshruty_3a9c6311')}</Text>
       ) : !trips || trips.length === 0 ? (
         <EmptyState
           icon="map"
           variant="empty"
-          title="Пока пусто"
-          description="Пока нет опубликованных маршрутов."
+          title={i18nT('trips:components.trips.planning.CommunityRoutesCatalog.poka_pusto_8a0cf737')}
+          description={i18nT('trips:components.trips.planning.CommunityRoutesCatalog.poka_net_opublikovannyh_marshrutov_1bd320e1')}
         />
       ) : (
         <View style={styles.list}>

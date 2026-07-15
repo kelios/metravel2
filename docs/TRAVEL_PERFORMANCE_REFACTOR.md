@@ -488,6 +488,10 @@ Production build после delayed comments fallback:
 
 - Скрипт: `scripts/guard-bundle-budget.js`. Читает чанки prod-сборки из `dist/prod/_expo/static/js/web/*.js`, группирует их по логическому имени (без content-hash), считает raw + gzip и сравнивает с бюджетом.
 - Бюджет: `config/bundle-budget.json` — кураторский набор critical-path чанков (`entry`, `__common`, `index`, `[param]` travel route, `Map`, `TravelDetailsMapSection`, `TravelDetailsPostLcpRuntime`, `TravelDetailsFooterSection`, `TravelDetailsSidebarSection`, `CommentsSection`) плюс агрегатный `total`. Допуск `tolerancePct: 5`.
+- `2026-07-15`: после app-wide i18n `__common` отдельно re-baseline до
+  `4632.6 KB raw / 1198.6 KB gzip`. Перед фиксацией русский locale-каталог был
+  удалён из eager web-графа compile-time подстановкой; итоговый total
+  `11992.7 KB raw / 3066.7 KB gzip` остался в прежнем общем бюджете.
 - npm-скрипты:
   - `npm run guard:bundle-budget` — отчёт (exit 0);
   - `npm run guard:bundle-budget:fail` — exit 1 при любом превышении (для CI/preflight, требует свежий `npm run build:web:prod`);

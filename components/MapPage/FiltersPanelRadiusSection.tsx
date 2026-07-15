@@ -8,6 +8,8 @@ import type { ThemedColors } from '@/hooks/useTheme'
 
 import { CATEGORY_ICONS } from './mapCategoryIcons'
 import { getCategoryName, type CategoryOption } from '@/components/MapPage/categoryName'
+import { createCollator, translate as i18nT } from '@/i18n'
+
 
 interface FiltersPanelRadiusSectionProps {
   colors: ThemedColors
@@ -43,6 +45,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
   resultsTotal,
   onFilterChange,
 }) => {
+  const categoryCollator = useMemo(() => createCollator(), [])
   const safeOnFilterChange = useCallback(
     (field: string, value: any) => {
       if (typeof onFilterChange === 'function') onFilterChange(field, value)
@@ -71,7 +74,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
       Array.isArray(filters.categoryTravelAddress) && filters.categoryTravelAddress.length > 0
         ? filters.categoryTravelAddress
         : Object.keys(travelCategoriesCount)
-            .sort((left, right) => left.localeCompare(right, 'ru'))
+            .sort((left, right) => categoryCollator.compare(left, right))
             .map((name) => ({ id: name, name }))
 
     return resolved
@@ -88,7 +91,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
         (category): category is { id: string | number; value: string; count: number } =>
           category !== null,
       )
-  }, [filters.categoryTravelAddress, travelCategoriesCount])
+  }, [categoryCollator, filters.categoryTravelAddress, travelCategoriesCount])
 
   const [categoriesExpanded, setCategoriesExpanded] = useState(false)
 
@@ -111,10 +114,10 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
       .filter((category) => !selectedSet.has(category.value))
       .sort((left, right) => {
         if (right.count !== left.count) return right.count - left.count
-        return left.value.localeCompare(right.value, 'ru')
+        return categoryCollator.compare(left.value, right.value)
       })
     return { selected, unselected }
-  }, [categoryOptions, selectedCategoryValues])
+  }, [categoryCollator, categoryOptions, selectedCategoryValues])
 
   const COLLAPSED_UNSELECTED_LIMIT = 8
   const hiddenUnselectedCount = Math.max(
@@ -151,7 +154,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
         <MapSearchInput
           value={searchQueryValue}
           onChange={handleSearchChange}
-          placeholder="Найти место по названию..."
+          placeholder={i18nT('map:components.MapPage.FiltersPanelRadiusSection.nayti_mesto_po_nazvaniyu_0071d123')}
           resultsCount={
             searchQueryValue
               ? (typeof resultsTotal === 'number' ? resultsTotal : filteredTravelsData.length)
@@ -167,12 +170,12 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
       <View style={styles.lightStepBlock}>
         <View style={styles.lightStepHeader}>
           <Feather name="map-pin" size={16} color={colors.primaryDark} />
-          <Text style={styles.lightStepTitle}>Что посмотреть</Text>
+          <Text style={styles.lightStepTitle}>{i18nT('map:components.MapPage.FiltersPanelRadiusSection.chto_posmotret_0ad809aa')}</Text>
           {selectedCategoriesCount > 0 && (
             <Text style={styles.lightStepBadge}>{selectedCategoriesCount}</Text>
           )}
         </View>
-        {!isMobile && <Text style={styles.sectionHint}>Уточните тип мест</Text>}
+        {!isMobile && <Text style={styles.sectionHint}>{i18nT('map:components.MapPage.FiltersPanelRadiusSection.utochnite_tip_mest_f710a5c5')}</Text>}
 
         {categoryOptions.length > 0 ? (
           <>
@@ -212,8 +215,8 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel={
                   categoriesExpanded
-                    ? 'Свернуть список категорий'
-                    : `Показать ещё ${hiddenUnselectedCount} категорий`
+                    ? i18nT('map:components.MapPage.FiltersPanelRadiusSection.svernut_spisok_kategoriy_30bcc426')
+                    : i18nT('map:components.MapPage.FiltersPanelRadiusSection.pokazat_esche_value1_kategoriy_c9368920', { value1: hiddenUnselectedCount })
                 }
                 style={styles.categoriesToggle}
               >
@@ -224,14 +227,14 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                 />
                 <Text style={styles.categoriesToggleText}>
                   {categoriesExpanded
-                    ? 'Свернуть'
-                    : `Показать ещё (${hiddenUnselectedCount})`}
+                    ? i18nT('map:components.MapPage.FiltersPanelRadiusSection.svernut_31ab41bf')
+                    : i18nT('map:components.MapPage.FiltersPanelRadiusSection.pokazat_esche_value1_7fc96c09', { value1: hiddenUnselectedCount })}
                 </Text>
               </Pressable>
             )}
           </>
         ) : (
-          <Text style={styles.sectionHint}>Нет доступных категорий в текущем радиусе</Text>
+          <Text style={styles.sectionHint}>{i18nT('map:components.MapPage.FiltersPanelRadiusSection.net_dostupnyh_kategoriy_v_tekuschem_radiuse_386122c6')}</Text>
         )}
       </View>
     </>

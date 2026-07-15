@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n'
 /**
  * Map configuration constants
  */
@@ -39,8 +40,8 @@ export const DEFAULT_MAP_CENTER_TUPLE: [number, number] = [
  * чтобы не дублировать `${value} км` инлайн в нескольких местах.
  */
 export function formatRadiusLabel(value: string | number | null | undefined): string {
-  if (value === null || value === undefined) return 'Радиус'
+  if (value === null || value === undefined) return i18nT('shared:constants.mapConfig.radius_395844b2')
   const str = String(value).trim()
-  if (!str) return 'Радиус'
-  return /км$/i.test(str) ? str : `${str} км`
+  if (!str) return i18nT('shared:constants.mapConfig.radius_395844b2')
+  return i18nT('shared:constants.mapConfig.value1_km_b45e1a6a', { value1: str })
 }

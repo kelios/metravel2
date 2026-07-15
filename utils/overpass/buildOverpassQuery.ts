@@ -6,12 +6,12 @@ export type BBox = {
 };
 
 export type OsmPoiCategory =
-  | 'Достопримечательности'
-  | 'Культура'
-  | 'Видовые места'
-  | 'Развлечения'
-  | 'Религия'
-  | 'История';
+  | 'attractions'
+  | 'culture'
+  | 'viewpoints'
+  | 'entertainment'
+  | 'religion'
+  | 'history';
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
@@ -66,10 +66,10 @@ export const buildOsmPoiOverpassQL = (bbox: BBox, categories?: OsmPoiCategory[])
 
   // tourism categories
   const tourismKinds: string[] = [];
-  if (!enabled || enabled.includes('Достопримечательности')) tourismKinds.push('attraction');
-  if (!enabled || enabled.includes('Культура')) tourismKinds.push('museum');
-  if (!enabled || enabled.includes('Видовые места')) tourismKinds.push('viewpoint');
-  if (!enabled || enabled.includes('Развлечения')) tourismKinds.push('zoo', 'theme_park');
+  if (!enabled || enabled.includes('attractions')) tourismKinds.push('attraction');
+  if (!enabled || enabled.includes('culture')) tourismKinds.push('museum');
+  if (!enabled || enabled.includes('viewpoints')) tourismKinds.push('viewpoint');
+  if (!enabled || enabled.includes('entertainment')) tourismKinds.push('zoo', 'theme_park');
 
   if (tourismKinds.length) {
     const re = `^(${tourismKinds.join('|')})$`;
@@ -80,7 +80,7 @@ export const buildOsmPoiOverpassQL = (bbox: BBox, categories?: OsmPoiCategory[])
   }
 
   // historic category
-  if (!enabled || enabled.includes('История')) {
+  if (!enabled || enabled.includes('history')) {
     const re = '^(castle|manor|fort|ruins|archaeological_site|monument|memorial)$';
     parts.push(
       `  node["historic"~"${re}"](${b.south},${b.west},${b.north},${b.east});\n` +
@@ -89,7 +89,7 @@ export const buildOsmPoiOverpassQL = (bbox: BBox, categories?: OsmPoiCategory[])
   }
 
   // religion category
-  if (!enabled || enabled.includes('Религия')) {
+  if (!enabled || enabled.includes('religion')) {
     parts.push(
       `  node["amenity"="place_of_worship"](${b.south},${b.west},${b.north},${b.east});\n` +
         `  way["amenity"="place_of_worship"](${b.south},${b.west},${b.north},${b.east});`

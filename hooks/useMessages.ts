@@ -17,6 +17,8 @@ import {
 } from '@/api/messages';
 import { queryKeys } from '@/api/queryKeys';
 import { devError } from '@/utils/logger';
+import { translate as i18nT } from '@/i18n'
+
 
 const THREADS_POLL_INTERVAL = 30_000;
 const MESSAGES_POLL_INTERVAL = 10_000;
@@ -51,7 +53,7 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
         } catch (e: unknown) {
             devError('useThreads load error:', e);
             if (mountedRef.current) {
-                setError(getErrorMessage(e, 'Ошибка загрузки сообщений'));
+                setError(getErrorMessage(e, i18nT('messages:hooks.useMessages.oshibka_zagruzki_soobscheniy_b3faeb10')));
             }
         } finally {
             if (mountedRef.current) setLoading(false);
@@ -131,7 +133,7 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
         } catch (e: unknown) {
             devError('useThreadMessages load error:', e);
             if (mountedRef.current && requestThreadId === threadId) {
-                setError(getErrorMessage(e, 'Ошибка загрузки сообщений'));
+                setError(getErrorMessage(e, i18nT('messages:hooks.useMessages.oshibka_zagruzki_soobscheniy_b3faeb10')));
             }
         } finally {
             if (mountedRef.current && requestThreadId === threadId) setLoading(false);
@@ -232,7 +234,7 @@ export function useSendMessage() {
             return true;
         } catch (e: unknown) {
             devError('useSendMessage error:', e);
-            if (mountedRef.current) setError(getErrorMessage(e, 'Ошибка отправки сообщения'));
+            if (mountedRef.current) setError(getErrorMessage(e, i18nT('messages:hooks.useMessages.oshibka_otpravki_soobscheniya_b06f59fd')));
             return false;
         } finally {
             if (mountedRef.current) setSending(false);

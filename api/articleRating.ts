@@ -3,6 +3,7 @@
 
 import { apiClient } from '@/api/client';
 import { devError } from '@/utils/logger';
+import { translate as i18nT } from '@/i18n';
 
 export type ArticleRatingResponse = {
     rating: number;
@@ -23,7 +24,7 @@ export const rateArticle = async (params: RateArticleParams): Promise<ArticleRat
     const { articleId, rating } = params;
 
     if (rating < 1 || rating > 5) {
-        throw new Error('Рейтинг должен быть от 1 до 5');
+        throw new Error(i18nT('errorsStatic:api.common.ratingRange'));
     }
 
     try {

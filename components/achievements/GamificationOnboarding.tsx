@@ -14,6 +14,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useMyAchievements } from '@/hooks/useAchievementsApi';
 import { useMyPlaceFirstBadges } from '@/hooks/useGamification';
+import { translate as i18nT } from '@/i18n'
+
 
 const DISMISS_KEY = '@metravel/gamification2-onboarding-dismissed';
 
@@ -65,35 +67,33 @@ function GamificationOnboarding({ testID, style }: Props) {
         <View style={styles.iconWrap}>
           <Feather name="award" size={20} color={colors.textOnPrimary} />
         </View>
-        <Text style={styles.title}>Зарабатывайте значки и прокачивайте тропы</Text>
+        <Text style={styles.title}>{i18nT('achievements:components.achievements.GamificationOnboarding.zarabatyvayte_znachki_i_prokachivayte_tropy_a7e67b84')}</Text>
         <Pressable
           onPress={dismiss}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Закрыть подсказку"
+          accessibilityLabel={i18nT('achievements:components.achievements.GamificationOnboarding.zakryt_podskazku_e28ce368')}
         >
           <Feather name="x" size={18} color={colors.textMuted} />
         </Pressable>
       </View>
 
       <Text style={styles.body}>
-        Добавляйте новые места, публикуйте путешествия и проходите квесты — за это
-        вы получаете значки, поднимаете уровень и развиваете своего персонажа.
-      </Text>
+        {i18nT('achievements:components.achievements.GamificationOnboarding.dobavlyayte_novye_mesta_publikuyte_puteshest_b014df26')}</Text>
 
       <View style={styles.steps}>
-        <Step icon="map-pin" text="Добавьте место — станьте его первооткрывателем" colors={colors} />
-        <Step icon="edit-3" text="Опубликуйте путешествие — первый значок автора" colors={colors} />
-        <Step icon="flag" text="Пройдите квест — прокачайте тропу" colors={colors} />
+        <Step icon="map-pin" text={i18nT('achievements:components.achievements.GamificationOnboarding.dobavte_mesto_stante_ego_pervootkryvatelem_f213a279')} colors={colors} />
+        <Step icon="edit-3" text={i18nT('achievements:components.achievements.GamificationOnboarding.opublikuyte_puteshestvie_pervyy_znachok_avto_af385d50')} colors={colors} />
+        <Step icon="flag" text={i18nT('achievements:components.achievements.GamificationOnboarding.proydite_kvest_prokachayte_tropu_50d14dcf')} colors={colors} />
       </View>
 
       <Pressable
         style={styles.cta}
         onPress={dismiss}
         accessibilityRole="button"
-        accessibilityLabel="Понятно, как получить первый бейдж"
+        accessibilityLabel={i18nT('achievements:components.achievements.GamificationOnboarding.ponyatno_kak_poluchit_pervyy_beydzh_122e7a5c')}
       >
-        <Text style={styles.ctaText}>Понятно</Text>
+        <Text style={styles.ctaText}>{i18nT('achievements:components.achievements.GamificationOnboarding.ponyatno_6f4db72e')}</Text>
       </Pressable>
     </View>
   );

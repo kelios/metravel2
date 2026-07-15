@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -39,18 +39,12 @@ import {
 import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
 import { useDeletePlannedTrip, usePlannedTrip, useUpdatePlannedTrip } from '@/hooks/usePlannedTripsApi';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import { LAYOUT } from '@/constants/layout';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import type { PlannedTrip, TripTransport, TripVisibility } from '@/api/plannedTrips';
+import { translate as i18nT } from '@/i18n'
+import { createStyles } from '@/components/trips/planning/plannedTripScreen.styles';
 
-// Reserve space for the bottom tab bar / web dock so the route builder and
-// bottom controls are never hidden behind it.
-const SCROLL_BOTTOM_RESERVE = Platform.select({
-  web: 'calc(var(--mt-dock-h, 0px) + 24px)' as unknown as number,
-  default: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
-});
 
 const TRANSPORT_OPTIONS: TripTransport[] = ['car', 'bike', 'foot', 'public', 'mixed'];
 // БЭК хранит только is_public (PlannedTripUpdateSerializer): 'followers' молча
@@ -66,10 +60,10 @@ interface PlannerTab {
 }
 
 const PLANNER_TABS: PlannerTab[] = [
-  { key: 'route', label: 'Маршрут', icon: 'map' },
-  { key: 'people', label: 'Люди', icon: 'users' },
-  { key: 'export', label: 'Экспорт', icon: 'download' },
-  { key: 'more', label: 'Ещё', icon: 'more-horizontal' },
+  { key: 'route', get label() { return i18nT('tripsStatic:app.tabs.trips.plan.id.marshrut_52518f7d') }, icon: 'map' },
+  { key: 'people', get label() { return i18nT('tripsStatic:app.tabs.trips.plan.id.lyudi_ecd00897') }, icon: 'users' },
+  { key: 'export', get label() { return i18nT('tripsStatic:app.tabs.trips.plan.id.eksport_89eec9f8') }, icon: 'download' },
+  { key: 'more', get label() { return i18nT('tripsStatic:app.tabs.trips.plan.id.esche_1eb0a8cd') }, icon: 'more-horizontal' },
 ];
 
 const toDateInputValue = (value: string): string => {
@@ -169,7 +163,7 @@ export default function PlannedTripScreen() {
         router.replace('/trips/my');
       },
       onError: () => {
-        setDeleteError('Не удалось удалить поездку. Попробуйте ещё раз позже.');
+        setDeleteError(i18nT('trips:app.tabs.trips.plan.id.ne_udalos_udalit_poezdku_poprobuyte_esche_ra_e7ed9e56'));
       },
     });
   };
@@ -201,19 +195,19 @@ export default function PlannedTripScreen() {
     const seatsTotal = Number(editValues.seatsTotal);
 
     if (title.length < 3) {
-      setEditError('Название должно быть не короче 3 символов.');
+      setEditError(i18nT('trips:app.tabs.trips.plan.id.nazvanie_dolzhno_byt_ne_koroche_3_simvolov_7818255f'));
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
-      setEditError('Дата должна быть в формате ГГГГ-ММ-ДД.');
+      setEditError(i18nT('trips:app.tabs.trips.plan.id.data_dolzhna_byt_v_formate_gggg_mm_dd_e9eabe4e'));
       return;
     }
     if (editValues.startTime.trim() && !/^\d{2}:\d{2}$/.test(editValues.startTime.trim())) {
-      setEditError('Время должно быть в формате ЧЧ:ММ.');
+      setEditError(i18nT('trips:app.tabs.trips.plan.id.vremya_dolzhno_byt_v_formate_chch_mm_145c0e0b'));
       return;
     }
     if (!Number.isInteger(seatsTotal) || seatsTotal < 1 || seatsTotal > 50) {
-      setEditError('Укажите от 1 до 50 мест.');
+      setEditError(i18nT('trips:app.tabs.trips.plan.id.ukazhite_ot_1_do_50_mest_b503c700'));
       return;
     }
 
@@ -237,7 +231,7 @@ export default function PlannedTripScreen() {
           setIsEditing(false);
         },
         onError: () => {
-          setEditError('Не удалось сохранить изменения. Попробуйте ещё раз позже.');
+          setEditError(i18nT('trips:app.tabs.trips.plan.id.ne_udalos_sohranit_izmeneniya_poprobuyte_esc_2fe4ab76'));
         },
       },
     );
@@ -249,7 +243,7 @@ export default function PlannedTripScreen() {
         {isLoading ? (
           <ActivityIndicator style={styles.loader} />
         ) : isError || !trip ? (
-          <Text style={styles.error}>Не удалось загрузить поездку.</Text>
+          <Text style={styles.error}>{i18nT('trips:app.tabs.trips.plan.id.ne_udalos_zagruzit_poezdku_b321e113')}</Text>
         ) : (
           <>
             {/* ── Compact header: identity + route status at a glance ── */}
@@ -315,7 +309,7 @@ export default function PlannedTripScreen() {
               {routeApproximate ? (
                 <Text style={styles.approximateNote} testID="trip-plan-route-approximate">
                   {routingStateHint(trip.routingState) ??
-                    'Маршрут показан приблизительно — проверьте дорогу или тропу перед поездкой.'}
+                    i18nT('tripsStatic:route.approximateWarning')}
                 </Text>
               ) : null}
 
@@ -331,7 +325,7 @@ export default function PlannedTripScreen() {
               {trip.isOwner ? (
                 <View style={styles.ownerActions}>
                   <Button
-                    label="Редактировать поездку"
+                    label={i18nT('trips:app.tabs.trips.plan.id.redaktirovat_poezdku_535ddda6')}
                     variant="secondary"
                     size="sm"
                     onPress={handleStartEdit}
@@ -339,7 +333,7 @@ export default function PlannedTripScreen() {
                     testID="trip-plan-edit"
                   />
                   <Button
-                    label="Удалить поездку"
+                    label={i18nT('trips:app.tabs.trips.plan.id.udalit_poezdku_32f59a60')}
                     variant="danger"
                     size="sm"
                     onPress={() => setDeleteConfirmVisible(true)}
@@ -360,24 +354,24 @@ export default function PlannedTripScreen() {
             {/* Owner-only metadata editor. It also opens from the ?edit=1 deeplink. */}
             {trip.isOwner && isEditing && editValues ? (
               <View style={styles.editPanel} testID="trip-plan-edit-panel">
-                <Text style={styles.editHeading}>Редактировать поездку</Text>
+                <Text style={styles.editHeading}>{i18nT('trips:app.tabs.trips.plan.id.redaktirovat_poezdku_535ddda6')}</Text>
 
-                <Text style={styles.label}>Название</Text>
+                <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.nazvanie_f2800d8b')}</Text>
                 <TextInput
                   value={editValues.title}
                   onChangeText={(title) => setEditValues((prev) => prev ? { ...prev, title } : prev)}
-                  placeholder="Название поездки"
+                  placeholder={i18nT('trips:app.tabs.trips.plan.id.nazvanie_poezdki_859baf33')}
                   placeholderTextColor={colors.textMuted}
                   editable={!updateTrip.isPending}
                   style={styles.input}
                   testID="trip-plan-edit-title"
                 />
 
-                <Text style={styles.label}>Описание</Text>
+                <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.opisanie_c32c01de')}</Text>
                 <TextInput
                   value={editValues.description}
                   onChangeText={(description) => setEditValues((prev) => prev ? { ...prev, description } : prev)}
-                  placeholder="Описание поездки, ссылки, детали для участников"
+                  placeholder={i18nT('trips:app.tabs.trips.plan.id.opisanie_poezdki_ssylki_detali_dlya_uchastni_e1269600')}
                   placeholderTextColor={colors.textMuted}
                   editable={!updateTrip.isPending}
                   multiline
@@ -385,7 +379,7 @@ export default function PlannedTripScreen() {
                   testID="trip-plan-edit-description"
                 />
 
-                <Text style={styles.label}>Обложка</Text>
+                <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.oblozhka_6b408e05')}</Text>
                 <View style={styles.coverUpload} testID="trip-plan-edit-cover">
                   <PhotoUploadWithPreview
                     collection="plannedTripCover"
@@ -398,24 +392,23 @@ export default function PlannedTripScreen() {
                       setEditValues((prev) => (prev ? { ...prev, coverUrl: '' } : prev))
                     }
                     onUploadStateChange={setCoverUploadPending}
-                    placeholder="Перетащите фото обложки"
+                    placeholder={i18nT('trips:app.tabs.trips.plan.id.peretaschite_foto_oblozhki_2f8bb316')}
                     maxSizeMB={10}
                     disabled={updateTrip.isPending}
                   />
                   <Text style={styles.coverUploadHint}>
-                    Фото будет прикреплено к поездке после загрузки и сохранения изменений.
-                  </Text>
+                    {i18nT('trips:app.tabs.trips.plan.id.foto_budet_prikrepleno_k_poezdke_posle_zagru_1d3589b9')}</Text>
                 </View>
 
                 <View style={styles.formRow}>
                   <View style={styles.formCol}>
-                    <Text style={styles.label}>Дата</Text>
+                    <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.data_efe4aaba')}</Text>
                     {Platform.OS === 'web' ? (
                       <input
                         type="date"
                         value={editValues.startDate}
                         onChange={(event) => setEditValues((prev) => prev ? { ...prev, startDate: event.currentTarget.value } : prev)}
-                        aria-label="Дата поездки"
+                        aria-label={i18nT('trips:app.tabs.trips.plan.id.data_poezdki_d9833760')}
                         data-testid="trip-plan-edit-start-date"
                         disabled={updateTrip.isPending}
                         style={webDateInputStyle}
@@ -426,8 +419,8 @@ export default function PlannedTripScreen() {
                           onPress={() => setEditDatePickerVisible(true)}
                           disabled={updateTrip.isPending}
                           accessibilityRole="button"
-                          accessibilityLabel="Выбрать дату поездки"
-                          accessibilityHint="Откроет календарь выбора даты"
+                          accessibilityLabel={i18nT('trips:app.tabs.trips.plan.id.vybrat_datu_poezdki_3861ee98')}
+                          accessibilityHint={i18nT('trips:app.tabs.trips.plan.id.otkroet_kalendar_vybora_daty_b8c5a057')}
                           style={[styles.datePickerTrigger, globalFocusStyles.focusable]}
                           testID="trip-plan-edit-start-date"
                         >
@@ -460,11 +453,10 @@ export default function PlannedTripScreen() {
                               <View style={styles.datePickerHeader}>
                                 <View style={styles.datePickerTitleRow}>
                                   <Feather name="calendar" size={18} color={colors.primary} />
-                                  <Text style={styles.datePickerTitle}>Дата поездки</Text>
+                                  <Text style={styles.datePickerTitle}>{i18nT('trips:app.tabs.trips.plan.id.data_poezdki_d9833760')}</Text>
                                 </View>
                                 <Text style={styles.datePickerHint}>
-                                  Выберите день в календаре. Отмена не изменит текущую дату.
-                                </Text>
+                                  {i18nT('trips:app.tabs.trips.plan.id.vyberite_den_v_kalendare_otmena_ne_izmenit_t_6991c409')}</Text>
                               </View>
                               <View style={styles.datePickerCalendar}>
                                 <MiniCalendar
@@ -477,7 +469,7 @@ export default function PlannedTripScreen() {
                                 />
                               </View>
                               <Button
-                                label="Отмена"
+                                label={i18nT('trips:app.tabs.trips.plan.id.otmena_66379efd')}
                                 onPress={() => setEditDatePickerVisible(false)}
                                 variant="secondary"
                                 fullWidth
@@ -490,7 +482,7 @@ export default function PlannedTripScreen() {
                     )}
                   </View>
                   <View style={styles.formCol}>
-                    <Text style={styles.label}>Время</Text>
+                    <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.vremya_a8a7d6ef')}</Text>
                     <TextInput
                       value={editValues.startTime}
                       onChangeText={(startTime) => setEditValues((prev) => prev ? { ...prev, startTime } : prev)}
@@ -504,7 +496,7 @@ export default function PlannedTripScreen() {
                   </View>
                 </View>
 
-                <Text style={styles.label}>Транспорт</Text>
+                <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.transport_dd5df49c')}</Text>
                 <View style={styles.optionRow}>
                   {TRANSPORT_OPTIONS.map((option) => {
                     const active = editValues.transport === option;
@@ -529,7 +521,7 @@ export default function PlannedTripScreen() {
                   })}
                 </View>
 
-                <Text style={styles.label}>Видимость</Text>
+                <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.vidimost_bf1dd24d')}</Text>
                 <View style={styles.optionRow}>
                   {VISIBILITY_OPTIONS.map((option) => (
                     <Button
@@ -544,7 +536,7 @@ export default function PlannedTripScreen() {
                   ))}
                 </View>
 
-                <Text style={styles.label}>Мест</Text>
+                <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.mest_a8c84414')}</Text>
                 <TextInput
                   value={editValues.seatsTotal}
                   onChangeText={(seatsTotal) => setEditValues((prev) => prev ? { ...prev, seatsTotal: seatsTotal.replace(/[^0-9]/g, '') } : prev)}
@@ -564,7 +556,7 @@ export default function PlannedTripScreen() {
 
                 <View style={styles.editActions}>
                   <Button
-                    label="Сохранить изменения"
+                    label={i18nT('trips:app.tabs.trips.plan.id.sohranit_izmeneniya_ca17c0aa')}
                     onPress={handleSaveDetails}
                     loading={updateTrip.isPending}
                     disabled={updateTrip.isPending || coverUploadPending}
@@ -572,7 +564,7 @@ export default function PlannedTripScreen() {
                     testID="trip-plan-edit-save"
                   />
                   <Button
-                    label="Закрыть"
+                    label={i18nT('trips:app.tabs.trips.plan.id.zakryt_87bc8fb5')}
                     onPress={handleCancelEdit}
                     variant="ghost"
                     size="sm"
@@ -638,8 +630,7 @@ export default function PlannedTripScreen() {
                   </View>
                 ) : (
                   <Text style={styles.panelHint} testID="trip-plan-export-unavailable">
-                    Экспорт маршрута доступен в веб-версии и мобильном приложении.
-                  </Text>
+                    {i18nT('trips:app.tabs.trips.plan.id.eksport_marshruta_dostupen_v_veb_versii_i_mo_23033c52')}</Text>
                 )}
               </View>
             ) : null}
@@ -656,10 +647,10 @@ export default function PlannedTripScreen() {
               visible={deleteConfirmVisible}
               onClose={() => setDeleteConfirmVisible(false)}
               onConfirm={handleDelete}
-              title="Удалить поездку?"
-              message="Поездка исчезнет из каталога и ваших созданных поездок. Действие нельзя отменить."
-              confirmText="Удалить"
-              cancelText="Оставить"
+              title={i18nT('trips:app.tabs.trips.plan.id.udalit_poezdku_0d7713a2')}
+              message={i18nT('trips:app.tabs.trips.plan.id.poezdka_ischeznet_iz_kataloga_i_vashih_sozda_6e60ee80')}
+              confirmText={i18nT('trips:app.tabs.trips.plan.id.udalit_eafe069e')}
+              cancelText={i18nT('trips:app.tabs.trips.plan.id.ostavit_1f797003')}
               confirmTestID="trip-plan-delete-confirm"
               cancelTestID="trip-plan-delete-cancel"
             />
@@ -669,182 +660,3 @@ export default function PlannedTripScreen() {
     </ScrollView>
   );
 }
-
-const createStyles = (colors: ThemedColors, isMobile: boolean) =>
-  StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.background },
-    content: {
-      paddingHorizontal: 16,
-      paddingTop: 16,
-      paddingBottom: SCROLL_BOTTOM_RESERVE,
-      alignItems: 'center',
-    },
-    inner: { width: '100%', maxWidth: 860, gap: 14 },
-    loader: { marginVertical: 48 },
-    error: { color: colors.danger, fontSize: 14, fontWeight: '600', marginVertical: 24 },
-    cover: {
-      overflow: 'hidden',
-      borderRadius: 12,
-      backgroundColor: colors.surfaceMuted,
-    },
-    header: { gap: 6 },
-    badgeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
-    badge: {
-      alignSelf: 'flex-start',
-      borderRadius: 999,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-    },
-    badgeText: { fontSize: 12, fontWeight: '700', color: colors.textOnDark },
-    metaChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      borderRadius: 999,
-      paddingHorizontal: 9,
-      paddingVertical: 4,
-      backgroundColor: colors.surfaceMuted,
-    },
-    metaChipText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
-    title: { fontSize: isMobile ? 20 : 24, fontWeight: '900', color: colors.text },
-    meta: { fontSize: 14, color: colors.textSecondary },
-    summaryPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 7,
-      alignSelf: 'flex-start',
-      maxWidth: '100%',
-      marginTop: 2,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 999,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      backgroundColor: colors.surface,
-    },
-    summaryPillWarning: {
-      borderColor: colors.warningLight,
-      backgroundColor: colors.warningSoft,
-    },
-    summaryPillText: { fontSize: 13, fontWeight: '700', color: colors.text, flexShrink: 1 },
-    summaryPillTextWarning: { color: colors.warningDark },
-    approximateNote: { fontSize: 12, lineHeight: 16, color: colors.warningDark, fontWeight: '600' },
-    description: { fontSize: 15, color: colors.text, lineHeight: 21, marginTop: 4 },
-    descriptionLink: { color: colors.primaryDark, fontWeight: '700' },
-    ownerActions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: 8,
-      marginTop: 8,
-    },
-    deleteError: { fontSize: 13, lineHeight: 18, color: colors.danger, fontWeight: '600' },
-    editPanel: {
-      gap: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      padding: 12,
-      backgroundColor: colors.surface,
-    },
-    editHeading: { fontSize: 18, fontWeight: '800', color: colors.text },
-    label: { fontSize: 13, fontWeight: '700', color: colors.text, marginTop: 2 },
-    input: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      color: colors.text,
-      backgroundColor: colors.surface,
-      fontSize: 14,
-      ...Platform.select({ web: { outlineWidth: 0 as any } }),
-    },
-    textArea: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      color: colors.text,
-      backgroundColor: colors.surface,
-      fontSize: 14,
-      minHeight: 110,
-      textAlignVertical: 'top',
-      ...Platform.select({ web: { outlineWidth: 0 as any } }),
-    },
-    coverUpload: { gap: 6 },
-    coverUploadHint: { fontSize: 12, lineHeight: 17, color: colors.textMuted },
-    formRow: { flexDirection: 'row', gap: 10 },
-    formCol: { flex: 1, gap: 6 },
-    datePickerTrigger: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      backgroundColor: colors.surface,
-      minHeight: Platform.OS === 'android' ? 48 : 44,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    datePickerText: { flex: 1, color: colors.text, fontSize: 14, fontWeight: '600' },
-    datePickerOverlay: {
-      flex: 1,
-      justifyContent: 'flex-end',
-      backgroundColor: colors.overlay,
-      padding: 16,
-    },
-    datePickerSheet: {
-      backgroundColor: colors.surface,
-      borderRadius: 20,
-      padding: 16,
-      gap: 12,
-    },
-    datePickerHeader: { gap: 6 },
-    datePickerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    datePickerTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
-    datePickerHint: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
-    datePickerCalendar: { marginHorizontal: -16 },
-    optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    editActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-    editError: { fontSize: 13, lineHeight: 18, color: colors.danger, fontWeight: '600' },
-    tabBar: {
-      flexDirection: 'row',
-      gap: 6,
-      padding: 4,
-      borderRadius: 14,
-      backgroundColor: colors.surfaceMuted,
-    },
-    tab: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      minHeight: 40,
-      paddingHorizontal: 8,
-      paddingVertical: 8,
-      borderRadius: 10,
-    },
-    tabActive: {
-      backgroundColor: colors.surface,
-      ...Platform.select({
-        web: { boxShadow: '0 1px 3px rgba(0,0,0,0.12)' as any },
-        default: {
-          shadowColor: '#000',
-          shadowOpacity: 0.12,
-          shadowRadius: 3,
-          shadowOffset: { width: 0, height: 1 },
-          elevation: 1,
-        },
-      }),
-    },
-    tabText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary },
-    tabTextActive: { color: colors.primaryDark },
-    panel: {
-      gap: 16,
-    },
-    panelHint: { fontSize: 14, lineHeight: 20, color: colors.textMuted },
-  });

@@ -26,6 +26,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { getSiteBaseUrl } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
+import { translate as i18nT } from '@/i18n'
+
 
 type ActionChip = {
   key: string;
@@ -124,7 +126,7 @@ const getPointTitle = (point: ImportedPoint): string => {
   if (name) return looksLikeFullAddress(name) ? firstMeaningfulSegment(name) : name;
   const address = String(point.address ?? '').trim();
   if (address) return looksLikeFullAddress(address) ? firstMeaningfulSegment(address) : address;
-  return 'Точка';
+  return i18nT('map:components.UserPoints.PointCard.tochka_d03859aa');
 };
 
 const getPointSubtitle = (point: ImportedPoint, title: string): string => {
@@ -142,21 +144,21 @@ const openPointUrl = async (url: string) => {
     baseUrl: getSiteBaseUrl(),
   });
   if (!opened) {
-    void showToast({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
+    void showToast({ type: 'info', text1: i18nT('map:components.UserPoints.PointCard.ne_udalos_otkryt_ssylku_f2a5f7b1'), position: 'bottom' });
   }
 };
 
 const openMapUrl = async (url: string) => {
   const opened = await openExternalUrlInNewTab(url);
   if (!opened) {
-    void showToast({ type: 'info', text1: 'Не удалось открыть карту', position: 'bottom' });
+    void showToast({ type: 'info', text1: i18nT('map:components.UserPoints.PointCard.ne_udalos_otkryt_kartu_b3348698'), position: 'bottom' });
   }
 };
 
 const openShareUrl = async (url: string) => {
   const opened = await openExternalUrlInNewTab(url);
   if (!opened) {
-    void showToast({ type: 'info', text1: 'Не удалось поделиться', position: 'bottom' });
+    void showToast({ type: 'info', text1: i18nT('map:components.UserPoints.PointCard.ne_udalos_podelitsya_fbac5d2f'), position: 'bottom' });
   }
 };
 
@@ -214,9 +216,9 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       } else {
         await Clipboard.setStringAsync(coord);
       }
-      void showToast({ type: 'success', text1: 'Скопировано', position: 'bottom' });
+      void showToast({ type: 'success', text1: i18nT('map:components.UserPoints.PointCard.skopirovano_dc96a745'), position: 'bottom' });
     } catch {
-      void showToast({ type: 'info', text1: 'Не удалось скопировать', position: 'bottom' });
+      void showToast({ type: 'info', text1: i18nT('map:components.UserPoints.PointCard.ne_udalos_skopirovat_bd01e913'), position: 'bottom' });
     }
   }, [coord]);
 
@@ -232,8 +234,8 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     const result: string[] = [];
     if (subtitle) result.push(subtitle);
     if (point.description) result.push(String(point.description));
-    if (driveInfo?.status === 'ok') result.push(`${driveInfo.distanceKm} км · ~${driveInfo.durationMin} мин`);
-    if (driveInfo?.status === 'loading') result.push('Считаю маршрут…');
+    if (driveInfo?.status === 'ok') result.push(i18nT('map:components.UserPoints.PointCard.value1_km_value2_min_c446b117', { value1: driveInfo.distanceKm, value2: driveInfo.durationMin }));
+    if (driveInfo?.status === 'loading') result.push(i18nT('map:components.UserPoints.PointCard.schitayu_marshrut_7f9bef46'));
     if (typeof point.rating === 'number' && Number.isFinite(point.rating)) result.push(point.rating.toFixed(1));
     return result;
   }, [driveInfo, point.description, point.rating, subtitle]);
@@ -246,28 +248,28 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         label: isWebPlatform() ? 'Google Maps' : NAVIGATION_ACTION_LABELS.google,
         icon: 'map-pin',
         onPress: () => void openMapUrl(buildGoogleMapsUrl(coord)),
-        title: 'Открыть в Google Maps',
+        title: i18nT('map:components.UserPoints.PointCard.otkryt_v_google_maps_72f35f18'),
       },
       {
         key: 'organic',
         label: isWebPlatform() ? 'Organic Maps' : NAVIGATION_ACTION_LABELS.organic,
         icon: 'compass',
         onPress: () => void openMapUrl(buildOrganicMapsUrl(coord, title)),
-        title: 'Открыть в Organic Maps',
+        title: i18nT('map:components.UserPoints.PointCard.otkryt_v_organic_maps_ce04b8df'),
       },
       {
         key: 'waze',
         label: NAVIGATION_ACTION_LABELS.waze,
         icon: 'navigation',
         onPress: () => void openMapUrl(buildWazeUrl(coord)),
-        title: 'Проложить маршрут в Waze',
+        title: i18nT('map:components.UserPoints.PointCard.prolozhit_marshrut_v_waze_1b6c0439'),
       },
       {
         key: 'yandex',
-        label: isWebPlatform() ? 'Яндекс.Навигатор' : NAVIGATION_ACTION_LABELS.yandex,
+        label: isWebPlatform() ? i18nT('map:components.UserPoints.PointCard.yandeks_navigator_43af976c') : NAVIGATION_ACTION_LABELS.yandex,
         icon: 'navigation-2',
         onPress: () => void openMapUrl(buildYandexNaviUrl(coord)),
-        title: 'Проложить маршрут в Яндекс Навигаторе',
+        title: i18nT('map:components.UserPoints.PointCard.prolozhit_marshrut_v_yandeks_navigatore_df8a3ba6'),
       },
     ];
     if (isWebPlatform()) return base;
@@ -278,7 +280,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         label: NAVIGATION_ACTION_LABELS.apple,
         icon: 'map',
         onPress: () => void openMapUrl(buildAppleMapsUrl(coord)),
-        title: 'Открыть в Apple Maps',
+        title: i18nT('map:components.UserPoints.PointCard.otkryt_v_apple_maps_ff38e363'),
       },
       base[1]!,
       base[2]!,
@@ -287,7 +289,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         label: NAVIGATION_ACTION_LABELS['yandex-maps'],
         icon: 'map',
         onPress: () => void openMapUrl(buildYandexMapsUrl(coord)),
-        title: 'Открыть в Яндекс Картах',
+        title: i18nT('map:components.UserPoints.PointCard.otkryt_v_yandeks_kartah_64a30916'),
       },
       base[3]!,
       {
@@ -295,7 +297,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         label: NAVIGATION_ACTION_LABELS.osm,
         icon: 'map',
         onPress: () => void openMapUrl(buildOpenStreetMapUrl(coord)),
-        title: 'Открыть в OpenStreetMap',
+        title: i18nT('map:components.UserPoints.PointCard.otkryt_v_openstreetmap_67771e6d'),
       },
     ];
   }, [coord, title]);
@@ -305,42 +307,42 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     if (selectionMode) {
       result.push({
         key: 'select',
-        label: selected ? 'Выбрано' : 'Выбрать',
+        label: selected ? i18nT('map:components.UserPoints.PointCard.vybrano_6049d2ff') : i18nT('map:components.UserPoints.PointCard.vybrat_f26a6153'),
         icon: selected ? 'check-circle' : 'circle',
         onPress: () => onToggleSelect?.(point),
-        accessibilityLabel: selected ? 'Точка выбрана' : 'Выбрать точку',
-        title: selected ? 'Точка выбрана' : 'Выбрать точку',
+        accessibilityLabel: selected ? i18nT('map:components.UserPoints.PointCard.tochka_vybrana_22692a8d') : i18nT('map:components.UserPoints.PointCard.vybrat_tochku_096c52c8'),
+        title: selected ? i18nT('map:components.UserPoints.PointCard.tochka_vybrana_22692a8d') : i18nT('map:components.UserPoints.PointCard.vybrat_tochku_096c52c8'),
       });
       return result;
     }
     if (relatedPageUrl) {
       result.push({
         key: 'article',
-        label: 'Страница',
+        label: i18nT('map:components.UserPoints.PointCard.stranitsa_85bf2bbc'),
         icon: 'book-open',
         onPress: () => void openPointUrl(relatedPageUrl),
-        accessibilityLabel: 'Открыть страницу',
-        title: 'Открыть страницу',
+        accessibilityLabel: i18nT('map:components.UserPoints.PointCard.otkryt_stranitsu_78d815bb'),
+        title: i18nT('map:components.UserPoints.PointCard.otkryt_stranitsu_78d815bb'),
       });
     }
     if (onEdit) {
       result.push({
         key: 'edit',
-        label: 'Изменить',
+        label: i18nT('map:components.UserPoints.PointCard.izmenit_ef6b22fb'),
         icon: 'edit-2',
         onPress: () => onEdit(point),
-        accessibilityLabel: 'Редактировать',
-        title: 'Редактировать',
+        accessibilityLabel: i18nT('map:components.UserPoints.PointCard.redaktirovat_0d6b9842'),
+        title: i18nT('map:components.UserPoints.PointCard.redaktirovat_0d6b9842'),
       });
     }
     if (onDelete) {
       result.push({
         key: 'delete',
-        label: 'Удалить',
+        label: i18nT('map:components.UserPoints.PointCard.udalit_8bbb4e8c'),
         icon: 'trash-2',
         onPress: () => onDelete(point),
-        accessibilityLabel: 'Удалить',
-        title: 'Удалить',
+        accessibilityLabel: i18nT('map:components.UserPoints.PointCard.udalit_8bbb4e8c'),
+        title: i18nT('map:components.UserPoints.PointCard.udalit_8bbb4e8c'),
       });
     }
     return result;

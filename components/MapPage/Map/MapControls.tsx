@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather'
 
 import type { LatLng } from '@/types/coordinates'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 const MOBILE_LAYOUT_MAX_WIDTH = 767
 
@@ -159,11 +161,11 @@ const MapControls: React.FC<MapControlsProps> = ({
     <div style={controlsStyle}>
       <MapControlButton
         onClick={onCenterUserLocation}
-        title={'\u041c\u043e\u0435 \u043c\u0435\u0441\u0442\u043e\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u0435'}
+        title={i18nT('map:components.MapPage.Map.MapControls.moe_mestopolozhenie_af3a8b09')}
         ariaLabel={
           userLocation
-            ? '\u0412\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u043a \u043c\u043e\u0435\u043c\u0443 \u043c\u0435\u0441\u0442\u043e\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u044e'
-            : '\u041e\u043f\u0440\u0435\u0434\u0435\u043b\u0438\u0442\u044c \u043c\u043e\u0451 \u043c\u0435\u0441\u0442\u043e\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u0435'
+            ? i18nT('map:components.MapPage.Map.MapControls.vernutsya_k_moemu_mestopolozheniyu_f3e8fe2e')
+            : i18nT('map:components.MapPage.Map.MapControls.opredelit_moe_mestopolozhenie_f2c532ec')
         }
         icon="crosshair"
         colors={colors}
@@ -172,8 +174,8 @@ const MapControls: React.FC<MapControlsProps> = ({
       {onShowAll && (
         <MapControlButton
           onClick={onShowAll}
-          title={'Показать все места'}
-          ariaLabel={'Показать все места на карте'}
+          title={i18nT('map:components.MapPage.Map.MapControls.pokazat_vse_mesta_735f4640')}
+          ariaLabel={i18nT('map:components.MapPage.Map.MapControls.pokazat_vse_mesta_na_karte_8d9ee8dd')}
           icon="maximize"
           iconSize={20}
           colors={colors}
@@ -185,8 +187,8 @@ const MapControls: React.FC<MapControlsProps> = ({
           {onZoomIn && (
             <MapControlButton
               onClick={onZoomIn}
-              title={'\u041f\u0440\u0438\u0431\u043b\u0438\u0437\u0438\u0442\u044c'}
-              ariaLabel={'\u041f\u0440\u0438\u0431\u043b\u0438\u0437\u0438\u0442\u044c \u043a\u0430\u0440\u0442\u0443'}
+              title={i18nT('map:components.MapPage.Map.MapControls.priblizit_399433a9')}
+              ariaLabel={i18nT('map:components.MapPage.Map.MapControls.priblizit_kartu_4dd33fad')}
               icon="plus"
               iconSize={20}
               colors={colors}
@@ -196,8 +198,8 @@ const MapControls: React.FC<MapControlsProps> = ({
           {onZoomOut && (
             <MapControlButton
               onClick={onZoomOut}
-              title={'\u041e\u0442\u0434\u0430\u043b\u0438\u0442\u044c'}
-              ariaLabel={'\u041e\u0442\u0434\u0430\u043b\u0438\u0442\u044c \u043a\u0430\u0440\u0442\u0443'}
+              title={i18nT('map:components.MapPage.Map.MapControls.otdalit_8cf49ec6')}
+              ariaLabel={i18nT('map:components.MapPage.Map.MapControls.otdalit_kartu_335bc514')}
               icon="minus"
               iconSize={20}
               colors={colors}

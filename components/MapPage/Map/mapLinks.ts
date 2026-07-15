@@ -1,4 +1,6 @@
 import { Platform } from 'react-native';
+import { translate as i18nT } from '@/i18n'
+
 
 type ParsedCoord = {
   lat: number;
@@ -111,6 +113,6 @@ export const buildOpenStreetMapUrl = (coord: string) => {
 export const buildTelegramShareUrl = (coord: string) => {
   const mapUrl = buildGoogleMapsUrl(coord);
   if (!mapUrl) return '';
-  const text = `Координаты: ${coord}`;
+  const text = i18nT('map:components.MapPage.Map.mapLinks.koordinaty_value1_b9100be5', { value1: coord });
   return `https://t.me/share/url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`;
 };

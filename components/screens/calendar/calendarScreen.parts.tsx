@@ -35,6 +35,8 @@ import {
   getModerationBadge,
   getTravelPeriodLabel,
 } from './calendarScreen.helpers'
+import { translate as i18nT } from '@/i18n'
+
 
 export function WebDateInput({
   value,
@@ -140,7 +142,7 @@ export const SelectedDateFilter = memo(function SelectedDateFilter({
         ]}
         onPress={onClear}
         accessibilityRole="button"
-        accessibilityLabel={`Сбросить фильтр: ${selectedDate}`}
+        accessibilityLabel={i18nT('calendar:components.screens.calendar.calendarScreen_parts.sbrosit_filtr_value1_1fdbc217', { value1: selectedDate })}
       >
         <Feather name="calendar" size={13} color={accentColor} />
         <Text style={[styles.filterChipText, { color: accentColor }]}>{selectedDate}</Text>
@@ -176,12 +178,12 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
   const explicitDate = getExplicitTravelStatusDate(entry)
   const isWishlist = entry.status === 'wishlist'
   const dateMetaLabel = explicitDate
-    ? `Дата: ${explicitDate}`
+    ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.data_value1_c4a5ab0c', { value1: explicitDate })
     : isWishlist
-      ? 'Личный статус без даты'
+      ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.lichnyy_status_bez_daty_fd9e801a')
     : travelPeriod
-      ? 'Точная дата не указана'
-      : 'Дата не указана'
+      ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.tochnaya_data_ne_ukazana_68022bfe')
+      : i18nT('calendar:components.screens.calendar.calendarScreen_parts.data_ne_ukazana_cf2122a8')
 
   return (
     <View style={styles.cardWrap}>
@@ -207,7 +209,7 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
               <View style={styles.cardMetaContent}>
                 <Feather name="clock" size={12} color={colors.textMuted} style={CARD_META_ICON_STYLE} />
                 <Text style={styles.cardMetaText} numberOfLines={1}>
-                  Год/месяц: {travelPeriod}
+                  {i18nT('calendar:components.screens.calendar.calendarScreen_parts.god_mesyats_4b45d53c')}{travelPeriod}
                 </Text>
               </View>
             )}
@@ -230,7 +232,7 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
         style={[styles.removeBadge, globalFocusStyles.focusable]}
         onPress={(event) => onRemove(entry, event)}
         accessibilityRole="button"
-        accessibilityLabel={`Убрать «${cleanTravelTitle(entry.title, entry.country)}» из календаря`}
+        accessibilityLabel={i18nT('calendar:components.screens.calendar.calendarScreen_parts.ubrat_value1_iz_kalendarya_98ed1985', { value1: cleanTravelTitle(entry.title, entry.country) })}
         {...(Platform.OS === 'web' ? ({ 'data-card-action': 'true' } as any) : null)}
       >
         <Feather name="trash-2" size={15} color={colors.danger} />
@@ -262,7 +264,7 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
         ]}
         onPress={(event) => onEditDate(entry, event)}
         accessibilityRole="button"
-        accessibilityLabel={isWishlist ? 'Изменить статус' : hasCalendarDate ? `Изменить дату ${calendarDate}` : 'Добавить дату'}
+        accessibilityLabel={isWishlist ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.izmenit_status_0823b656') : hasCalendarDate ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.izmenit_datu_value1_234c04d5', { value1: calendarDate }) : i18nT('calendar:components.screens.calendar.calendarScreen_parts.dobavit_datu_6851e94d')}
         {...(Platform.OS === 'web' ? ({ 'data-card-action': 'true' } as any) : null)}
       >
         <Feather name={isWishlist ? 'bookmark' : hasCalendarDate ? 'calendar' : 'plus'} size={12} color={hasCalendarDate ? colors.surface : accentColor} />
@@ -273,7 +275,7 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
             !hasCalendarDate && { color: accentColor },
           ]}
         >
-          {isWishlist ? 'Статус' : calendarDate ?? 'Дата'}
+          {isWishlist ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.status_4f449c9a') : calendarDate ?? i18nT('calendarStatic:dateFallback')}
         </Text>
       </Pressable>
     </View>
@@ -319,7 +321,7 @@ export function DateEditorModal({
         <Pressable style={styles.modalOverlay} onPress={onClose}>
           <Pressable style={styles.modalSheet} onPress={(event) => event.stopPropagation()}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Статус в календаре</Text>
+            <Text style={styles.modalTitle}>{i18nT('calendar:components.screens.calendar.calendarScreen_parts.status_v_kalendare_909c44a4')}</Text>
             <Text style={styles.modalSubtitle}>{subtitle}</Text>
 
             <View style={styles.statusEditorRow}>
@@ -356,17 +358,17 @@ export function DateEditorModal({
                   style={styles.dateInput}
                   value={editor?.value ?? ''}
                   onChangeText={onChange}
-                  placeholder="ГГГГ-ММ-ДД"
+                  placeholder={i18nT('calendar:components.screens.calendar.calendarScreen_parts.gggg_mm_dd_8d160578')}
                   placeholderTextColor={colors.textMuted}
                   keyboardType="numbers-and-punctuation"
                   maxLength={10}
-                  accessibilityLabel="Дата путешествия"
+                  accessibilityLabel={i18nT('calendar:components.screens.calendar.calendarScreen_parts.data_puteshestviya_6acb7ff3')}
                 />
               )
             ) : (
               <View style={styles.statusNoteBox}>
                 <Feather name="bookmark" size={14} color={colors.textMuted} />
-                <Text style={styles.statusNoteText}>Для статуса «Хочу» достаточно просто сохранить маршрут.</Text>
+                <Text style={styles.statusNoteText}>{i18nT('calendar:components.screens.calendar.calendarScreen_parts.dlya_statusa_hochu_dostatochno_prosto_sohran_23fb4882')}</Text>
               </View>
             )}
 
@@ -378,26 +380,26 @@ export function DateEditorModal({
                   style={[styles.dateSecondaryButton, globalFocusStyles.focusable]}
                   onPress={onClear}
                   accessibilityRole="button"
-                  accessibilityLabel="Убрать дату"
+                  accessibilityLabel={i18nT('calendar:components.screens.calendar.calendarScreen_parts.ubrat_datu_974ef33b')}
                 >
-                  <Text style={styles.dateSecondaryText}>Убрать дату</Text>
+                  <Text style={styles.dateSecondaryText}>{i18nT('calendar:components.screens.calendar.calendarScreen_parts.ubrat_datu_974ef33b')}</Text>
                 </Pressable>
               )}
               <Pressable
                 style={[styles.dateSecondaryButton, globalFocusStyles.focusable]}
                 onPress={onClose}
                 accessibilityRole="button"
-                accessibilityLabel="Отмена"
+                accessibilityLabel={i18nT('calendar:components.screens.calendar.calendarScreen_parts.otmena_682370b1')}
               >
-                <Text style={styles.dateSecondaryText}>Отмена</Text>
+                <Text style={styles.dateSecondaryText}>{i18nT('calendar:components.screens.calendar.calendarScreen_parts.otmena_682370b1')}</Text>
               </Pressable>
               <Pressable
                 style={[styles.datePrimaryButton, globalFocusStyles.focusable]}
                 onPress={onSave}
                 accessibilityRole="button"
-                accessibilityLabel={needsDateInput ? 'Сохранить дату' : 'Сохранить статус'}
+                accessibilityLabel={needsDateInput ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.sohranit_datu_1b3c3b1d') : i18nT('calendar:components.screens.calendar.calendarScreen_parts.sohranit_status_953d4a48')}
               >
-                <Text style={styles.datePrimaryText}>{needsDateInput ? 'Сохранить' : 'Сохранить статус'}</Text>
+                <Text style={styles.datePrimaryText}>{needsDateInput ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.sohranit_0afc03f9') : i18nT('calendar:components.screens.calendar.calendarScreen_parts.sohranit_status_953d4a48')}</Text>
               </Pressable>
             </View>
 
@@ -406,10 +408,10 @@ export function DateEditorModal({
                 style={[styles.dateDangerButton, globalFocusStyles.focusable]}
                 onPress={onRemove}
                 accessibilityRole="button"
-                accessibilityLabel="Удалить из календаря"
+                accessibilityLabel={i18nT('calendar:components.screens.calendar.calendarScreen_parts.udalit_iz_kalendarya_0cdea23e')}
               >
                 <Feather name="trash-2" size={15} color={colors.danger} />
-                <Text style={styles.dateDangerText}>Удалить из календаря</Text>
+                <Text style={styles.dateDangerText}>{i18nT('calendar:components.screens.calendar.calendarScreen_parts.udalit_iz_kalendarya_0cdea23e')}</Text>
               </Pressable>
             )}
           </Pressable>
@@ -439,7 +441,7 @@ export function CalendarSkeleton({
       {seoBlock}
       {showHeader && (
         <ProfileCollectionHeader
-          title="Мой календарь"
+          title={i18nT('calendar:components.screens.calendar.calendarScreen_parts.moy_kalendar_c73f20df')}
           onBackPress={onBackPress}
           breadcrumbs={breadcrumbs}
           onBreadcrumbPress={onBreadcrumbPress}

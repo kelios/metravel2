@@ -20,6 +20,8 @@ import { compressTravelPhoto } from '@/utils/imageCompressor';
 import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import type { GalleryValueItem } from '@/components/travel/gallery/types';
 import { GalleryCaptionEditor } from '@/components/travel/gallery/GalleryCaptionEditor';
+import { translate as i18nT } from '@/i18n'
+
 
 const API_BASE_URL: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
@@ -303,10 +305,10 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       <View style={styles.headerContainer}>
         <View style={styles.titleRow}>
           <Feather name="camera" size={20} color={colors.text} />
-          <Text style={[styles.galleryTitle, { color: colors.text }]}>Галерея</Text>
+          <Text style={[styles.galleryTitle, { color: colors.text }]}>{i18nT('travel:components.travel.ImageGalleryComponent.galereya_394a39e3')}</Text>
         </View>
         <Text style={[styles.imageCount, { color: colors.textMuted }]}>
-          Загружено <Text style={[styles.highlight, { color: colors.primaryText }]}>{images.length}</Text> из {maxImages}
+          {i18nT('travel:components.travel.ImageGalleryComponent.zagruzheno_3283e913')}<Text style={[styles.highlight, { color: colors.primaryText }]}>{images.length}</Text> {i18nT('travel:components.travel.ImageGalleryComponent.iz_9fa7e764')}{maxImages}
         </Text>
       </View>
 
@@ -319,7 +321,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
             testID="gallery-ios.pick"
           >
             <Feather name="image" size={18} color={colors.textInverse} />
-            <Text style={[styles.addButtonText, { color: colors.textInverse }]}>Выбрать из галереи</Text>
+            <Text style={[styles.addButtonText, { color: colors.textInverse }]}>{i18nT('travel:components.travel.ImageGalleryComponent.vybrat_iz_galerei_fbf8b2e6')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -329,7 +331,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
             testID="gallery-ios.camera"
           >
             <Feather name="camera" size={18} color={colors.textInverse} />
-            <Text style={[styles.addButtonText, { color: colors.textInverse }]}>Сделать фото</Text>
+            <Text style={[styles.addButtonText, { color: colors.textInverse }]}>{i18nT('travel:components.travel.ImageGalleryComponent.sdelat_foto_79fec14d')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -368,7 +370,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
                       style={[styles.moveButton, { backgroundColor: colors.overlay }, index === 0 && styles.moveButtonDisabled]}
                       disabled={index === 0}
                       testID={`gallery-ios.move-left:${image.id}`}
-                      accessibilityLabel="Переместить фото левее"
+                      accessibilityLabel={i18nT('travel:components.travel.ImageGalleryComponent.peremestit_foto_levee_4a235bb8')}
                     >
                       <Feather name="arrow-left" size={15} color={index === 0 ? colors.textMuted : colors.textInverse} />
                     </TouchableOpacity>
@@ -381,7 +383,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
                       ]}
                       disabled={index === images.length - 1}
                       testID={`gallery-ios.move-right:${image.id}`}
-                      accessibilityLabel="Переместить фото правее"
+                      accessibilityLabel={i18nT('travel:components.travel.ImageGalleryComponent.peremestit_foto_pravee_85b5a0ad')}
                     >
                       <Feather name="arrow-right" size={15} color={index === images.length - 1 ? colors.textMuted : colors.textInverse} />
                     </TouchableOpacity>
@@ -401,7 +403,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
           ))}
         </View>
       ) : (
-        <Text style={[styles.noImagesText, { color: colors.textMuted }]}>Нет загруженных изображений</Text>
+        <Text style={[styles.noImagesText, { color: colors.textMuted }]}>{i18nT('travel:components.travel.ImageGalleryComponent.net_zagruzhennyh_izobrazheniy_c0f0d207')}</Text>
       )}
 
       {isUploading && (
@@ -419,10 +421,10 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
         visible={dialogVisible}
         onClose={() => setDialogVisible(false)}
         onConfirm={confirmDeleteImage}
-        title="Удаление изображения"
-        message="Вы уверены, что хотите удалить это изображение?"
-        confirmText="Удалить"
-        cancelText="Отмена"
+        title={i18nT('travel:components.travel.ImageGalleryComponent.udalenie_izobrazheniya_fe89ef6a')}
+        message={i18nT('travel:components.travel.ImageGalleryComponent.vy_uvereny_chto_hotite_udalit_eto_izobrazhen_c41049cb')}
+        confirmText={i18nT('travel:components.travel.ImageGalleryComponent.udalit_4f0a77b6')}
+        cancelText={i18nT('travel:components.travel.ImageGalleryComponent.otmena_03c4d548')}
       />
     </View>
   );

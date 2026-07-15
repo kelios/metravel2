@@ -3,6 +3,8 @@ import { AppState, Platform } from 'react-native';
 import { logError, logMessage } from '@/utils/logger';
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
+import { translate as i18nT } from '@/i18n'
+
 
 export interface Coordinates {
   latitude: number;
@@ -329,7 +331,7 @@ export function useMapCoordinates() {
           setCoordinatesSource('default');
         }
         clearLocationWatch();
-        setError('Местоположение не определено');
+        setError(i18nT('map:hooks.map.useMapCoordinates.mestopolozhenie_ne_opredeleno_8f1bec27'));
         resolve();
       };
 
@@ -366,7 +368,7 @@ export function useMapCoordinates() {
         });
         setCoordinates(DEFAULT_COORDINATES);
         setCoordinatesSource('default');
-        setError('Местоположение не определено');
+        setError(i18nT('map:hooks.map.useMapCoordinates.mestopolozhenie_ne_opredeleno_8f1bec27'));
         setIsLoading(false);
         clearLocationWatch();
         return;
@@ -411,7 +413,7 @@ export function useMapCoordinates() {
       } else {
         logError(err, { scope: 'map', step: 'getLocation' });
       }
-      setError('Не удалось определить местоположение');
+      setError(i18nT('map:hooks.map.useMapCoordinates.ne_udalos_opredelit_mestopolozhenie_ad63da94'));
       setCoordinates(DEFAULT_COORDINATES);
       setCoordinatesSource('default');
       clearLocationWatch();

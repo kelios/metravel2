@@ -25,6 +25,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/adr/README.md` — процесс и шаблон ADR
 - `docs/adr/0001-no-direct-linking-openurl.md`
 - `docs/adr/0002-images-via-image-card-media.md`
+- `docs/adr/0003-root-runtime-patches-and-metro-stubs.md`
 
 ## Feature maps
 

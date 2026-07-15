@@ -12,6 +12,8 @@ import {
 } from '@/utils/commentCacheHelpers'
 
 import { commentKeys } from './commentKeys'
+import { translate as i18nT } from '@/i18n'
+
 
 type CachedQueryEntry = [readonly unknown[], unknown]
 
@@ -82,8 +84,8 @@ export function useDeleteComment() {
     onError: () => {
       showToast({
         type: 'error',
-        text1: 'Не удалось удалить комментарий',
-        text2: 'Попробуйте ещё раз',
+        text1: i18nT('shared:hooks.comments.commentMutations.ne_udalos_udalit_kommentariy_4853133a'),
+        text2: i18nT('shared:hooks.comments.commentMutations.poprobuyte_esche_raz_6bec16bf'),
       })
     },
   })

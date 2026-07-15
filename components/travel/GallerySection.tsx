@@ -4,6 +4,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { GalleryValueItem } from '@/components/travel/gallery/types';
+import { translate as i18nT } from '@/i18n'
+
 
 interface GallerySectionProps {
     images: any[] | null | undefined;
@@ -40,10 +42,9 @@ const GallerySection: React.FC<GallerySectionProps> = ({ images, travelId, onCha
     if (isLoading) {
         return (
             <View style={styles.galleryContainer}>
-                <ActivityIndicator size="large" color={colors.primaryDark} accessibilityLabel="Загрузка галереи" />
+                <ActivityIndicator size="large" color={colors.primaryDark} accessibilityLabel={i18nT('travel:components.travel.GallerySection.zagruzka_galerei_8a152505')} />
                 <Text style={styles.loadingText}>
-                    Загрузка галереи…
-                </Text>
+                    {i18nT('travel:components.travel.GallerySection.zagruzka_galerei_8049b0b6')}</Text>
             </View>
         );
     }
@@ -53,8 +54,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({ images, travelId, onCha
         return (
             <View style={styles.galleryContainer}>
                 <Text style={styles.infoText}>
-                    Галерея станет доступна после сохранения путешествия.
-                </Text>
+                    {i18nT('travel:components.travel.GallerySection.galereya_stanet_dostupna_posle_sohraneniya_p_176414da')}</Text>
             </View>
         );
     }
@@ -72,8 +72,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({ images, travelId, onCha
             />
             {Platform.OS !== 'web' && normalizedImages.length === 0 && (
                 <Text style={styles.infoText}>
-                    Нет загруженных изображений
-                </Text>
+                    {i18nT('travel:components.travel.GallerySection.net_zagruzhennyh_izobrazheniy_c0e4d456')}</Text>
             )}
         </View>
     );

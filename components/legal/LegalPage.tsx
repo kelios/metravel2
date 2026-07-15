@@ -5,6 +5,8 @@ import { usePathname, useIsFocused } from 'expo-router'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { useThemedColors } from '@/hooks/useTheme'
 import { webTouchScrollStyle } from '@/utils'
+import { translate as i18nT } from '@/i18n'
+
 
 type Colors = ReturnType<typeof useThemedColors>
 
@@ -72,20 +74,22 @@ export default function LegalPage({
           ogType="website"
         />
       )}
-      <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.container}>
+      <ScrollView
+        style={webTouchScrollStyle}
+        contentContainerStyle={styles.container}
+        {...(Platform.OS === 'web' ? ({ tabIndex: 0 } as any) : {})}
+      >
         {Platform.OS === 'web' && <h1 style={hiddenWebHeadingStyle as any}>{seoTitle}</h1>}
         <Text style={styles.heading}>{pageTitle}</Text>
 
         {effectiveDate ? (
-          <Text style={styles.paragraph}>Дата вступления в силу: {effectiveDate}</Text>
+          <Text style={styles.paragraph}>{i18nT('shared:components.legal.LegalPage.data_vstupleniya_v_silu_32c18af2')}{effectiveDate}</Text>
         ) : null}
 
         {draftNotice ? (
           <View style={styles.draftBox}>
             <Text style={styles.draftText}>
-              Предварительная редакция. Финальные формулировки проходят юридическую проверку и
-              могут быть уточнены.
-            </Text>
+              {i18nT('shared:components.legal.LegalPage.predvaritelnaya_redaktsiya_finalnye_formulir_3bfab7e3')}</Text>
           </View>
         ) : null}
 

@@ -6,6 +6,8 @@ import Button from '@/components/ui/Button';
 import ColorChip from '@/components/ui/ColorChip';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { PointsListStyles } from './types';
+import { translate as i18nT } from '@/i18n'
+
 
 type CategoryOption = {
   id: string;
@@ -71,34 +73,34 @@ export const PointsListManualModal: React.FC<PointsListManualModalProps> = ({
           style={styles.manualBackdrop}
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="Закрыть форму"
+          accessibilityLabel={i18nT('map:components.UserPoints.PointsListManualModal.zakryt_formu_6de04b27')}
         />
         <View style={styles.manualModal}>
           <View style={styles.manualHeader}>
-            <Text style={styles.manualTitle}>{editingPointId ? 'Редактировать точку' : 'Добавить точку вручную'}</Text>
+            <Text style={styles.manualTitle}>{editingPointId ? i18nT('map:components.UserPoints.PointsListManualModal.redaktirovat_tochku_db3835c8') : i18nT('map:components.UserPoints.PointsListManualModal.dobavit_tochku_vruchnuyu_4666a821')}</Text>
             <Button
-              label="Закрыть"
+              label={i18nT('map:components.UserPoints.PointsListManualModal.zakryt_1cff2e81')}
               onPress={onClose}
-              accessibilityLabel="Закрыть"
+              accessibilityLabel={i18nT('map:components.UserPoints.PointsListManualModal.zakryt_1cff2e81')}
               size="sm"
               variant="secondary"
             />
           </View>
 
           <ScrollView style={styles.manualScroll} contentContainerStyle={styles.manualScrollContent}>
-            <FormFieldWithValidation label="Название" required error={manualError && !manualName.trim() ? manualError : null}>
+            <FormFieldWithValidation label={i18nT('map:components.UserPoints.PointsListManualModal.nazvanie_98d5f073')} required error={manualError && !manualName.trim() ? manualError : null}>
               <TextInput
                 style={styles.manualInput}
                 value={manualName}
                 onChangeText={onChangeName}
-                placeholder="Например: Любимое кафе"
+                placeholder={i18nT('map:components.UserPoints.PointsListManualModal.naprimer_lyubimoe_kafe_e519b0f8')}
                 placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
               />
             </FormFieldWithValidation>
 
             <View style={styles.coordsRow}>
               <View style={styles.coordsCol}>
-                <FormFieldWithValidation label="Lat" required error={manualError && !manualCoords ? manualError : null}>
+                <FormFieldWithValidation label={i18nT('map:components.UserPoints.PointsListManualModal.lat_8e1c785e')} required error={manualError && !manualCoords ? manualError : null}>
                   <TextInput
                     style={styles.manualInput}
                     value={manualLat}
@@ -110,7 +112,7 @@ export const PointsListManualModal: React.FC<PointsListManualModalProps> = ({
                 </FormFieldWithValidation>
               </View>
               <View style={styles.coordsCol}>
-                <FormFieldWithValidation label="Lng" required error={manualError && !manualCoords ? manualError : null}>
+                <FormFieldWithValidation label={i18nT('map:components.UserPoints.PointsListManualModal.lng_69d96b26')} required error={manualError && !manualCoords ? manualError : null}>
                   <TextInput
                     style={styles.manualInput}
                     value={manualLng}
@@ -123,7 +125,7 @@ export const PointsListManualModal: React.FC<PointsListManualModalProps> = ({
               </View>
             </View>
 
-            <FormFieldWithValidation label="Категория" required>
+            <FormFieldWithValidation label={i18nT('map:components.UserPoints.PointsListManualModal.kategoriya_0941378c')} required>
               <SimpleMultiSelect
                 data={categoryOptions.map((cat) => ({
                   value: cat.id,
@@ -137,7 +139,7 @@ export const PointsListManualModal: React.FC<PointsListManualModalProps> = ({
               />
             </FormFieldWithValidation>
 
-            <FormFieldWithValidation label="Цвет">
+            <FormFieldWithValidation label={i18nT('map:components.UserPoints.PointsListManualModal.tsvet_d73c5fa7')}>
               <View style={styles.manualColorRow}>
                 {manualColorOptions.map((color) => {
                   const isSelected = manualColor === color;
@@ -147,7 +149,7 @@ export const PointsListManualModal: React.FC<PointsListManualModalProps> = ({
                       color={color}
                       selected={isSelected}
                       onPress={() => onChangeColor(color)}
-                      accessibilityLabel={`Цвет ${color}`}
+                      accessibilityLabel={i18nT('map:components.UserPoints.PointsListManualModal.tsvet_value1_5d6679c3', { value1: color })}
                       chipSize={32}
                       dotSize={20}
                       dotBorderWidth={1}
@@ -164,11 +166,11 @@ export const PointsListManualModal: React.FC<PointsListManualModalProps> = ({
 
           <View style={styles.manualFooter}>
             <Button
-              label={isSavingManual ? 'Сохранение…' : 'Сохранить'}
+              label={isSavingManual ? i18nT('map:components.UserPoints.PointsListManualModal.sohranenie_e92faf5d') : i18nT('map:components.UserPoints.PointsListManualModal.sohranit_22439821')}
               onPress={onSave}
               disabled={isSavingManual}
               loading={isSavingManual}
-              accessibilityLabel="Сохранить точку"
+              accessibilityLabel={i18nT('map:components.UserPoints.PointsListManualModal.sohranit_tochku_4307406d')}
               fullWidth
             />
           </View>

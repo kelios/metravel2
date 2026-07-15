@@ -9,6 +9,8 @@ import TripStatusBadge from '@/components/trips/TripStatusBadge';
 import type { TripApplication } from '@/api/publicTrips';
 import { useCancelApplication, useMyTripApplications } from '@/hooks/usePublicTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 const canCancel = (a: TripApplication) => a.status === 'new' || a.status === 'pending';
 
@@ -27,15 +29,14 @@ function MyApplicationsList() {
     );
   }
   if (isError) {
-    return <Text style={styles.empty}>Не удалось загрузить ваши заявки.</Text>;
+    return <Text style={styles.empty}>{i18nT('trips:components.trips.MyApplicationsList.ne_udalos_zagruzit_vashi_zayavki_7641f02e')}</Text>;
   }
 
   const applications = data ?? [];
   if (applications.length === 0) {
     return (
       <Text style={styles.empty} testID="my-applications-empty">
-        Вы ещё не подавали заявок. Найдите поездку в каталоге «Поехали со мной».
-      </Text>
+        {i18nT('trips:components.trips.MyApplicationsList.vy_esche_ne_podavali_zayavok_naydite_poezdku_466710bc')}</Text>
     );
   }
 
@@ -67,7 +68,7 @@ function MyApplicationsList() {
               accessibilityRole="button"
               testID={`my-application-${a.id}-cancel`}
             >
-              <Text style={styles.cancel}>Отменить заявку</Text>
+              <Text style={styles.cancel}>{i18nT('trips:components.trips.MyApplicationsList.otmenit_zayavku_0a313720')}</Text>
             </Pressable>
           ) : null}
         </Pressable>

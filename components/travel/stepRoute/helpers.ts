@@ -2,6 +2,8 @@ import { Platform } from 'react-native'
 
 import type { TravelFilters } from '@/hooks/useTravelFilters'
 import { removePendingImageFile } from '@/utils/pendingImageFiles'
+import { getMapGeocoderLanguage } from '@/utils/mapLocale'
+import { translate as i18nT } from '@/i18n'
 
 import type { ManualPointState } from './types'
 
@@ -9,8 +11,8 @@ export const MAP_COACHMARK_STORAGE_KEY = 'travelWizardRouteMapCoachmarkDismissed
 export const ROUTE_MARKERS_ANCHOR_ID = 'markers-list-root'
 export const ROUTE_COUNTRIES_ANCHOR_ID = 'travelwizard-route-countries'
 export const KEYBOARD_BEHAVIOR = Platform.OS === 'ios' ? 'padding' : 'height'
-export const DEFAULT_TITLE = 'Маршрут путешествия'
-export const DEFAULT_NEXT_LABEL = 'К медиа'
+export const getDefaultTitle = () => i18nT('travel:components.travel.stepRoute.helpers.defaultTitle')
+export const getDefaultNextLabel = () => i18nT('travel:components.travel.stepRoute.helpers.defaultNextLabel')
 export const EMPTY_MANUAL_POINT: ManualPointState = {
   coords: '',
   lat: '',
@@ -93,10 +95,11 @@ export function revokeManualPreview(previewUrl: string | null) {
 
 export async function reverseGeocode(lat: number, lng: number) {
   if (Platform.OS === 'web') return null
+  const geocoderLanguage = getMapGeocoderLanguage()
 
   try {
     const primary = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ru`,
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=${encodeURIComponent(geocoderLanguage)}`,
     )
     if (primary.ok) return await primary.json()
   } catch {
@@ -105,7 +108,7 @@ export async function reverseGeocode(lat: number, lng: number) {
 
   try {
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=ru`,
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=${encodeURIComponent(geocoderLanguage)}`,
     )
     if (!response.ok) return null
     return await response.json()

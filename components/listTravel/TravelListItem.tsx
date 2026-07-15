@@ -36,6 +36,8 @@ import {
   resolveTravelAuthorName,
 } from './travelListItemHelpers'
 import { useTravelListItemNavigation } from './useTravelListItemNavigation'
+import { translate as i18nT } from '@/i18n'
+
 
 const PLACEHOLDER_BLURHASH = 'LEHL6nWB2yk8pyo0adR*.7kCMdnj'
 const EMPTY_STYLE = {} as const
@@ -134,7 +136,7 @@ function TravelListItem({
     countUnicIpView = 0,
   } = travel
 
-  const title = name?.trim() || 'Без названия'
+  const title = name?.trim() || i18nT('travel:common.untitled')
   const views = Number(countUnicIpView) || 0
   const viewsFormatted = formatViewCount(views)
   const travelKey = slug?.trim() || String(id)
@@ -317,11 +319,11 @@ function TravelListItem({
   const displayYear = showYearContext ? resolveDisplayTravelYear(travel.year) : null
 
   const a11yLabel =
-    `Путешествие: ${title}` +
-    (isDraft ? '. Статус: черновик' : '') +
-    (countries.length ? `. Страны: ${countries.join(', ')}` : '') +
-    (displayYear ? `. Год: ${displayYear}` : '') +
-    (views > 0 ? `. Просмотров: ${viewsFormatted}` : '')
+    i18nT('travel:components.listTravel.TravelListItem.a11yTitle', { value1: title }) +
+    (isDraft ? i18nT('travel:components.listTravel.TravelListItem.status_chernovik_a0df151f') : '') +
+    (countries.length ? i18nT('travel:components.listTravel.TravelListItem.strany_value1_755975ff', { value1: countries.join(', ') }) : '') +
+    (displayYear ? i18nT('travel:components.listTravel.TravelListItem.god_value1_e70dda0d', { value1: displayYear }) : '') +
+    (views > 0 ? i18nT('travel:components.listTravel.TravelListItem.prosmotrov_value1_aadc926b', { value1: viewsFormatted }) : '')
 
   const hasAuthorMeta = !hideAuthor && authorDisplayName !== ''
   const hasRating = travel.rating != null && travel.rating > 0
@@ -351,8 +353,8 @@ function TravelListItem({
         accessibilityLabel: a11yLabel,
         accessibilityRole: 'button' as const,
         accessibilityHint: selectable
-          ? 'Двойное нажатие для выбора'
-          : 'Двойное нажатие для просмотра деталей',
+          ? i18nT('travel:components.listTravel.TravelListItem.dvoynoe_nazhatie_dlya_vybora_9401c531')
+          : i18nT('travel:components.listTravel.TravelListItem.dvoynoe_nazhatie_dlya_prosmotra_detaley_480a446a'),
       }
 
   const selectableOverlay = selectable ? (
@@ -408,8 +410,8 @@ function TravelListItem({
       testID="admin-actions"
     >
       <CardActionPressable
-        accessibilityLabel="Редактировать"
-        title="Редактировать"
+        accessibilityLabel={i18nT('travel:components.listTravel.TravelListItem.redaktirovat_2e33442a')}
+        title={i18nT('travel:components.listTravel.TravelListItem.redaktirovat_2e33442a')}
         onPress={handleEdit}
         style={[styles.adminBtn, isMobile && styles.adminBtnMobile]}
         disabled={isDeleting}
@@ -421,8 +423,8 @@ function TravelListItem({
         <>
           <View style={[styles.adminDivider, isMobile && styles.adminDividerMobile]} />
           <CardActionPressable
-            accessibilityLabel={isDeleting ? 'Маршрут удаляется' : 'Удалить'}
-            title={isDeleting ? 'Удаляется…' : 'Удалить'}
+            accessibilityLabel={isDeleting ? i18nT('travel:components.listTravel.TravelListItem.marshrut_udalyaetsya_0d0bf1c2') : i18nT('travel:components.listTravel.TravelListItem.udalit_aa22ae90')}
+            title={isDeleting ? i18nT('travel:components.listTravel.TravelListItem.udalyaetsya_6e5041bf') : i18nT('travel:components.listTravel.TravelListItem.udalit_aa22ae90')}
             onPress={handleDelete}
             style={[styles.adminBtn, isMobile && styles.adminBtnMobile]}
             testID="delete-button"
@@ -480,7 +482,7 @@ function TravelListItem({
             ? ({
                 role: 'button',
                 tabIndex: 0,
-                'aria-label': `Открыть профиль автора ${authorDisplayName}`,
+                'aria-label': i18nT('travel:components.listTravel.TravelListItem.otkryt_profil_avtora_value1_8eda31f4', { value1: authorDisplayName }),
               } as any)
             : null)}
         >
@@ -498,7 +500,7 @@ function TravelListItem({
             pressed && authorUserId ? { opacity: 0.85 } : null,
           ]}
           accessibilityRole="button"
-          accessibilityLabel={`Автор: ${authorDisplayName}`}
+          accessibilityLabel={i18nT('travel:components.listTravel.TravelListItem.avtor_value1_1e39f2a9', { value1: authorDisplayName })}
         >
           <Text style={styles.metaTxt} numberOfLines={1}>
             {authorDisplayName}
@@ -544,8 +546,8 @@ function TravelListItem({
       <View style={styles.metaBadgesRow}>
         {isDraft && (
           <View style={styles.draftStatusBadge} testID="draft-status-badge">
-            <Feather name="edit-3" size={VIEW_ICON_SIZE} color={colors.warning} />
-            <Text style={styles.draftStatusText}>Черновик</Text>
+            <Feather name="edit-3" size={VIEW_ICON_SIZE} color={colors.warningDark} />
+            <Text style={styles.draftStatusText}>{i18nT('travel:components.listTravel.TravelListItem.chernovik_c4f08662')}</Text>
           </View>
         )}
         {displayYear != null && (

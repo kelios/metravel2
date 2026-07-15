@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Темная тема - элегантное темное оформление
  */
 export const darkTheme: PdfThemeConfig = {
   name: 'dark',
-  displayName: 'Темная',
-  description: 'Элегантное темное оформление',
+  get displayName() { return i18nT('export:services.pdfExport.theme.dark.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.dark.description') },
   
   colors: {
     text: '#f9fafb',

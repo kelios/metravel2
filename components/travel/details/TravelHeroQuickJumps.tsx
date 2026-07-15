@@ -6,16 +6,18 @@ import { useThemedColors } from '@/hooks/useTheme'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
+import { translate as i18nT } from '@/i18n'
+
 
 const TOUCH_TAP_MAX_MOVE = 12
 const DUPLICATE_PRESS_GUARD_MS = 250
 
 const ACTION_LABELS: Record<string, string> = {
-  map: 'Карта маршрута',
-  description: 'Описание',
-  points: 'Точки маршрута',
-  comments: 'Комментарии',
-  video: 'Видео',
+  get map() { return i18nT('travel:components.travel.details.TravelHeroQuickJumps.action.map') },
+  get description() { return i18nT('travel:components.travel.details.TravelHeroQuickJumps.action.description') },
+  get points() { return i18nT('travel:components.travel.details.TravelHeroQuickJumps.action.points') },
+  get comments() { return i18nT('travel:components.travel.details.TravelHeroQuickJumps.action.comments') },
+  get video() { return i18nT('travel:components.travel.details.TravelHeroQuickJumps.action.video') },
 }
 
 export function TravelHeroQuickJumps({
@@ -59,7 +61,7 @@ export function TravelHeroQuickJumps({
         contentContainerStyle={styles.quickJumpScrollContent}
         style={styles.quickJumpScroll}
         {...(Platform.OS === 'web' ? { role: 'navigation' as const } : null)}
-        accessibilityLabel="Быстрая навигация по разделам"
+        accessibilityLabel={i18nT('travel:components.travel.details.TravelHeroQuickJumps.bystraya_navigatsiya_po_razdelam_3bb6e8cb')}
       >
         {chips}
       </ScrollView>
@@ -138,8 +140,8 @@ const QuickJumpChip = React.memo(function QuickJumpChip({
         !isPrimary && pressed && styles.quickJumpChipPressed,
       ]}
       accessibilityRole="button"
-      accessibilityLabel={`Перейти к разделу ${link.label}`}
-      accessibilityHint="Прокручивает страницу к разделу"
+      accessibilityLabel={i18nT('travel:components.travel.details.TravelHeroQuickJumps.pereyti_k_razdelu_value1_130009ed', { value1: link.label })}
+      accessibilityHint={i18nT('travel:components.travel.details.TravelHeroQuickJumps.prokruchivaet_stranitsu_k_razdelu_f16386ae')}
     >
       <Feather
         name={link.icon as any}

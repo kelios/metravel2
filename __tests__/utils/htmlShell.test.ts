@@ -8,6 +8,16 @@ describe('html shell travel route gating', () => {
     expect(css).not.toContain('html:not(.rnw-styles-ready) #root');
   });
 
+  it('pins the travel root for the lifetime of the fixed SSG shell', () => {
+    const css = getRootVisibilityGateCss();
+
+    expect(css).toContain(
+      'html.travel-route:has(#ssg-skeleton .ssg-travel-hero) #root',
+    );
+    expect(css).toContain('position: fixed');
+    expect(css).toContain('inset: 0');
+  });
+
   it('marks travel detail routes before the root visibility gate applies', () => {
     const script = getTravelRouteClassScript();
 

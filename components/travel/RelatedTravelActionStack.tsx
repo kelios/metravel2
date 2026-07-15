@@ -7,6 +7,8 @@ import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries'
 import OptimizedFavoriteButton from '@/components/travel/OptimizedFavoriteButton'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { resolveRelatedTravelRef } from '@/utils/relatedTravel'
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
   relatedTravelUrl?: string | null
@@ -109,7 +111,7 @@ export default function RelatedTravelActionStack({
         // so it never stretches into a wide «Был / Хочу / Планирую» pill over the
         // photo. A selected status still shows its short label. The full inline
         // variant keeps the descriptive idle label.
-        idleLabel={variant === 'inline' ? 'Был / Хочу / Планирую' : undefined}
+        idleLabel={variant === 'inline' ? i18nT('travel:components.travel.RelatedTravelActionStack.byl_hochu_planiruyu_58750fb0') : undefined}
       />
     </View>
   )

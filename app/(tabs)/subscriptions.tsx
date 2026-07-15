@@ -20,6 +20,8 @@ import { buildLoginHref } from '@/utils/authNavigation';
 import { webTouchScrollStyle } from '@/utils';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { translate as i18nT } from '@/i18n'
+
 
 export default function SubscriptionsScreen() {
   // Android: hardware Back возвращает на предыдущий экран (Профиль), а не
@@ -57,18 +59,18 @@ export default function SubscriptionsScreen() {
     <View style={styles.header}>
       <View style={styles.headerRow}>
         <View style={styles.headerTitleBlock}>
-          <Text style={styles.title}>Подписки</Text>
-          <Text style={styles.subtitle}>Профиль</Text>
+          <Text style={styles.title}>{i18nT('shared:app.tabs.subscriptions.podpiski_f7c35e01')}</Text>
+          <Text style={styles.subtitle}>{i18nT('shared:app.tabs.subscriptions.profil_5da62480')}</Text>
         </View>
         <Pressable
           style={[styles.backToProfileButton, globalFocusStyles.focusable]}
           onPress={handleBackToProfile}
           accessibilityRole="button"
-          accessibilityLabel="Назад"
+          accessibilityLabel={i18nT('shared:app.tabs.subscriptions.nazad_d572b4fd')}
           {...Platform.select({ web: { cursor: 'pointer' } })}
         >
           <Feather name="arrow-left" size={16} color={colors.primaryDark} />
-          <Text style={styles.backToProfileButtonText}>Назад</Text>
+          <Text style={styles.backToProfileButtonText}>{i18nT('shared:app.tabs.subscriptions.nazad_d572b4fd')}</Text>
         </Pressable>
       </View>
     </View>
@@ -92,10 +94,10 @@ export default function SubscriptionsScreen() {
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <EmptyState
           icon="users"
-          title="Войдите в аккаунт"
-          description="Войдите, чтобы подписываться на авторов и видеть их путешествия."
+          title={i18nT('shared:app.tabs.subscriptions.voydite_v_akkaunt_7e11548a')}
+          description={i18nT('shared:app.tabs.subscriptions.voydite_chtoby_podpisyvatsya_na_avtorov_i_vi_d8ff462f')}
           action={{
-            label: 'Войти',
+            label: i18nT('shared:app.tabs.subscriptions.voyti_c82fbbc5'),
             onPress: () => pushRoute(buildLoginHref({ redirect: '/subscriptions', intent: 'subscriptions' })),
           }}
         />
@@ -107,8 +109,8 @@ export default function SubscriptionsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <InstantSEO
-        headKey="subscriptions" title="Подписки | Metravel"
-        description="Ваши подписки и подписчики"
+        headKey="subscriptions" title={i18nT('shared:app.tabs.subscriptions.podpiski_metravel_956320db')}
+        description={i18nT('shared:app.tabs.subscriptions.vashi_podpiski_i_podpischiki_f4b680c1')}
         canonical={buildCanonicalUrl('/subscriptions')} robots="noindex, nofollow"
       />
       <ScrollView

@@ -238,7 +238,7 @@ describe('TripCreateForm — Android date picker', () => {
   })
 
   it('formats picked dates for local display', () => {
-    expect(formatTripCreateDisplayDate('2026-08-15')).toBe('15 августа 2026')
+    expect(formatTripCreateDisplayDate('2026-08-15')).toBe('15 августа 2026 г.')
     expect(formatTripCreateDisplayDate('')).toBe('Выберите дату')
   })
 
@@ -250,7 +250,7 @@ describe('TripCreateForm — Android date picker', () => {
 
     expect(trigger.props.accessibilityRole).toBe('button')
     expect(trigger.props.onChangeText).toBeUndefined()
-    expect(getByTestId('trip-create-start-date-value').props.children).toBe('10 августа 2026')
+    expect(getByTestId('trip-create-start-date-value').props.children).toBe('10 августа 2026 г.')
   })
 
   it('updates visible date and submitted API value after selecting a calendar day', async () => {
@@ -268,7 +268,7 @@ describe('TripCreateForm — Android date picker', () => {
 
     fireEvent.press(getByTestId('mini-calendar-day-2026-08-15'))
     expect(queryByTestId('trip-create-date-picker')).toBeNull()
-    expect(getByTestId('trip-create-start-date-value').props.children).toBe('15 августа 2026')
+    expect(getByTestId('trip-create-start-date-value').props.children).toBe('15 августа 2026 г.')
 
     fireEvent.press(getByTestId('trip-create-consent'))
     fireEvent.press(getByTestId('trip-create-submit'))
@@ -291,6 +291,6 @@ describe('TripCreateForm — Android date picker', () => {
 
     fireEvent.press(getByTestId('trip-create-start-date-cancel'))
     expect(queryByTestId('trip-create-date-picker')).toBeNull()
-    expect(getByTestId('trip-create-start-date-value').props.children).toBe('10 августа 2026')
+    expect(getByTestId('trip-create-start-date-value').props.children).toBe('10 августа 2026 г.')
   })
 })

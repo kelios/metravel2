@@ -2,6 +2,8 @@ import React, { useMemo } from 'react'
 
 import { useNewVersionAvailable } from '@/hooks/useNewVersionAvailable'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * Non-blocking "new version available" banner (web only).
@@ -85,15 +87,14 @@ export default function NewVersionPrompt() {
   return (
     <div style={containerStyle} role="status" aria-live="polite">
       <div style={cardStyle}>
-        <span style={{ flex: 1, minWidth: 0 }}>Доступна новая версия</span>
+        <span style={{ flex: 1, minWidth: 0 }}>{i18nT('navigation:components.layout.NewVersionPrompt.dostupna_novaya_versiya_cb863f5c')}</span>
         <button type="button" style={reloadButtonStyle} onClick={reload}>
-          Обновить
-        </button>
+          {i18nT('navigation:components.layout.NewVersionPrompt.obnovit_5039ac04')}</button>
         <button
           type="button"
           style={dismissButtonStyle}
           onClick={dismiss}
-          aria-label="Закрыть"
+          aria-label={i18nT('navigation:components.layout.NewVersionPrompt.zakryt_077bdfcd')}
         >
           ✕
         </button>

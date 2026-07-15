@@ -13,6 +13,8 @@ import CardActionPressable from '@/components/ui/CardActionPressable';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import PointNavigationMenu from '@/components/navigation/PointNavigationMenu';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { translate as i18nT } from '@/i18n'
+
 
 type PointLike = {
   id: string;
@@ -107,7 +109,7 @@ const PointListRow = React.memo(function PointListRow({
             <Text style={styles.listRowBulletText}>{index + 1}</Text>
           </View>
           <Text style={styles.listRowTitle} numberOfLines={2}>
-            {point.address || 'Без адреса'}
+            {point.address || i18nT('travel:common.noAddress')}
           </Text>
         </View>
 
@@ -115,8 +117,8 @@ const PointListRow = React.memo(function PointListRow({
           <CardActionPressable
             style={[styles.listRowCoordChip, globalFocusStyles.focusable]}
             onPress={openMapFromLink}
-            accessibilityLabel={`Координаты: ${point.coord}`}
-            title="Открыть координаты в Google Maps"
+            accessibilityLabel={i18nT('travel:components.travel.PointListRow.koordinaty_value1_591481b3', { value1: point.coord })}
+            title={i18nT('travel:components.travel.PointListRow.otkryt_koordinaty_v_google_maps_2d3dbad0')}
           >
             <Feather name="map-pin" size={12} color={colors.textMuted} />
             <Text style={styles.listRowCoordText} numberOfLines={1}>
@@ -136,17 +138,17 @@ const PointListRow = React.memo(function PointListRow({
             <>
               {/* Утилиты: копировать, поделиться */}
               <CardActionPressable
-                accessibilityLabel="Скопировать координаты"
+                accessibilityLabel={i18nT('travel:components.travel.PointListRow.skopirovat_koordinaty_b49dd414')}
                 onPress={() => onCopy(point.coord)}
-                title="Скопировать координаты"
+                title={i18nT('travel:components.travel.PointListRow.skopirovat_koordinaty_b49dd414')}
                 style={styles.listRowIconBtn}
               >
                 <Feather name="copy" size={14} color={colors.textMuted} />
               </CardActionPressable>
               <CardActionPressable
-                accessibilityLabel="Поделиться в Telegram"
+                accessibilityLabel={i18nT('travel:components.travel.PointListRow.podelitsya_v_telegram_ee5e5b6b')}
                 onPress={() => onShare(point.coord)}
-                title="Телеграм"
+                title={i18nT('travel:components.travel.PointListRow.telegram_7701804c')}
                 style={styles.listRowIconBtn}
               >
                 <Feather name="send" size={14} color={colors.textMuted} />
@@ -158,7 +160,7 @@ const PointListRow = React.memo(function PointListRow({
               >
                 <PointNavigationMenu
                   coord={point.coord}
-                  label="Навигация"
+                  label={i18nT('travel:components.travel.PointListRow.navigatsiya_17c636a8')}
                   testIDPrefix={`travel-point-row-navigation-${point.id}`}
                 />
               </View>
@@ -169,8 +171,8 @@ const PointListRow = React.memo(function PointListRow({
             <CardActionPressable
               onPress={onAddPoint}
               disabled={Boolean(addButtonDisabled) || Boolean(addButtonLoading)}
-              accessibilityLabel="Мои точки"
-              title="Мои точки"
+              accessibilityLabel={i18nT('travel:components.travel.PointListRow.moi_tochki_aad50a18')}
+              title={i18nT('travel:components.travel.PointListRow.moi_tochki_aad50a18')}
               style={({ pressed }) => [
                 styles.listRowAddBtn,
                 pressed && !addButtonDisabled && !addButtonLoading && styles.addButtonPressed,
@@ -182,7 +184,7 @@ const PointListRow = React.memo(function PointListRow({
               ) : (
                 <>
                   <Feather name="map-pin" size={13} color={colors.primaryDark} />
-                  <Text style={styles.listRowAddBtnText}>Мои точки</Text>
+                  <Text style={styles.listRowAddBtnText}>{i18nT('travel:components.travel.PointListRow.moi_tochki_aad50a18')}</Text>
                 </>
               )}
             </CardActionPressable>
@@ -197,9 +199,9 @@ const PointListRow = React.memo(function PointListRow({
       {Platform.OS === 'web' ? (
         <View
           style={[styles.listRowPressable, globalFocusStyles.focusable]}
-          accessibilityLabel={`Открыть место: ${point.address}`}
+          accessibilityLabel={i18nT('travel:components.travel.PointListRow.otkryt_mesto_value1_219c3742', { value1: point.address })}
           {...({
-            'aria-label': `Открыть место: ${point.address}`,
+            'aria-label': i18nT('travel:components.travel.PointListRow.otkryt_mesto_value1_219c3742', { value1: point.address }),
             tabIndex: 0,
             onClick: handleWebRowClick,
             onKeyDown: handleWebRowKeyDown,
@@ -212,7 +214,7 @@ const PointListRow = React.memo(function PointListRow({
           onPress={handleRowPress}
           style={[styles.listRowPressable, globalFocusStyles.focusable]}
           accessibilityRole="button"
-          accessibilityLabel={`Открыть место: ${point.address}`}
+          accessibilityLabel={i18nT('travel:components.travel.PointListRow.otkryt_mesto_value1_219c3742', { value1: point.address })}
         >
           {rowContent}
         </Pressable>

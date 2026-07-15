@@ -17,6 +17,8 @@ import {
   markBaseUriLoaded,
   markUriLoaded,
 } from './imageLoadCache';
+import { translate as i18nT } from '@/i18n'
+
 
 // Re-export for use by LCP Hero
 export { markBaseUriLoaded, loadedSlideUriCache } from './imageLoadCache';
@@ -292,8 +294,8 @@ const Slide = memo(function Slide({
   const hasRenderableUri = resolvedUri.length > 0;
   const caption = typeof item.caption === 'string' ? item.caption.trim() : '';
   const accessibilityLabel = caption
-    ? `${caption}. Фотография путешествия ${index + 1} из ${imagesLength}`
-    : `Фотография путешествия ${index + 1} из ${imagesLength}`;
+    ? i18nT('travel:components.travel.sliderParts.Slide.value1_fotografiya_puteshestviya_value2_iz_v_8abf175c', { value1: caption, value2: index + 1, value3: imagesLength })
+    : i18nT('travel:components.travel.sliderParts.Slide.fotografiya_puteshestviya_value1_iz_value2_821e6a83', { value1: index + 1, value2: imagesLength });
 
   const slideContent = (
     <View
@@ -399,8 +401,8 @@ const Slide = memo(function Slide({
         style={{ width: '100%', height: '100%' }}
         accessibilityRole="button"
         accessibilityLabel={caption
-          ? `Открыть фото «${caption}» на весь экран`
-          : `Открыть фото ${index + 1} на весь экран`}
+          ? i18nT('travel:components.travel.sliderParts.Slide.otkryt_foto_value1_na_ves_ekran_387da948', { value1: caption })
+          : i18nT('travel:components.travel.sliderParts.Slide.otkryt_foto_value1_na_ves_ekran_13b3899b', { value1: index + 1 })}
       >
         {slideContent}
       </TouchableOpacity>

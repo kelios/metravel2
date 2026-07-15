@@ -18,6 +18,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { ApiError } from '@/api/client';
 import { useRareAwardCatalog, useGrantRareAward } from '@/hooks/useAchievementsApi';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   /** Получатель награды — владелец просматриваемого профиля. */
@@ -29,12 +31,12 @@ interface Props {
 
 const errorMessage = (error: unknown): string => {
   if (error instanceof ApiError) {
-    if (error.status === 403) return 'Недостаточно прав для выдачи награды.';
-    if (error.status === 404) return 'Пользователь или награда не найдены.';
-    if (error.status === 409) return 'Эта награда уже выдана или достигнут лимит владельцев.';
-    if (error.status === 400) return 'Проверьте выбор награды и причину.';
+    if (error.status === 403) return i18nT('achievements:components.achievements.AdminGrantRareAward.nedostatochno_prav_dlya_vydachi_nagrady_859e5d49');
+    if (error.status === 404) return i18nT('achievements:components.achievements.AdminGrantRareAward.polzovatel_ili_nagrada_ne_naydeny_1004a741');
+    if (error.status === 409) return i18nT('achievements:components.achievements.AdminGrantRareAward.eta_nagrada_uzhe_vydana_ili_dostignut_limit__63366712');
+    if (error.status === 400) return i18nT('achievements:components.achievements.AdminGrantRareAward.proverte_vybor_nagrady_i_prichinu_6e9354c5');
   }
-  return 'Не удалось выдать награду. Попробуйте позже.';
+  return i18nT('achievements:components.achievements.AdminGrantRareAward.ne_udalos_vydat_nagradu_poprobuyte_pozzhe_d639267d');
 };
 
 function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Props) {
@@ -82,25 +84,25 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
         style={[styles.button, style]}
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel="Выдать редкую награду"
+        accessibilityLabel={i18nT('achievements:components.achievements.AdminGrantRareAward.vydat_redkuyu_nagradu_87c77704')}
         testID={testID}
       >
         <Feather name="star" size={16} color={colors.primaryDark} />
-        <Text style={styles.buttonLabel}>Выдать редкую награду</Text>
+        <Text style={styles.buttonLabel}>{i18nT('achievements:components.achievements.AdminGrantRareAward.vydat_redkuyu_nagradu_87c77704')}</Text>
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
-        <Pressable style={styles.backdrop} onPress={close} accessibilityLabel="Закрыть">
+        <Pressable style={styles.backdrop} onPress={close} accessibilityLabel={i18nT('achievements:components.achievements.AdminGrantRareAward.zakryt_a6eb2fe6')}>
           <Pressable style={styles.sheet} onPress={() => {}}>
             <View style={styles.header}>
               <Text style={styles.title}>
-                Редкая награда{recipientName ? ` · ${recipientName}` : ''}
+                {i18nT('achievements:components.achievements.AdminGrantRareAward.redkaya_nagrada_b6972e49')}{recipientName ? ` · ${recipientName}` : ''}
               </Text>
               <Pressable
                 style={styles.closeBtn}
                 onPress={close}
                 accessibilityRole="button"
-                accessibilityLabel="Закрыть"
+                accessibilityLabel={i18nT('achievements:components.achievements.AdminGrantRareAward.zakryt_a6eb2fe6')}
               >
                 <Feather name="x" size={20} color={colors.text} />
               </Pressable>
@@ -109,9 +111,9 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
             {done ? (
               <View style={styles.successBox}>
                 <Feather name="check-circle" size={40} color={colors.success} />
-                <Text style={styles.successText}>Награда выдана</Text>
+                <Text style={styles.successText}>{i18nT('achievements:components.achievements.AdminGrantRareAward.nagrada_vydana_df1ef785')}</Text>
                 <Pressable style={styles.primaryBtn} onPress={close}>
-                  <Text style={styles.primaryBtnText}>Готово</Text>
+                  <Text style={styles.primaryBtnText}>{i18nT('achievements:components.achievements.AdminGrantRareAward.gotovo_811a4b03')}</Text>
                 </Pressable>
               </View>
             ) : isLoading || !catalog ? (
@@ -120,7 +122,7 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.label}>Категория</Text>
+                <Text style={styles.label}>{i18nT('achievements:components.achievements.AdminGrantRareAward.kategoriya_c101f0f2')}</Text>
                 {catalog.map((item) => {
                   const selected = item.slug === selectedSlug;
                   return (
@@ -151,15 +153,15 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
                   );
                 })}
 
-                <Text style={styles.label}>Причина</Text>
+                <Text style={styles.label}>{i18nT('achievements:components.achievements.AdminGrantRareAward.prichina_c3e41a00')}</Text>
                 <TextInput
                   style={styles.reasonInput}
                   value={reason}
                   onChangeText={setReason}
-                  placeholder="За что вручается награда"
+                  placeholder={i18nT('achievements:components.achievements.AdminGrantRareAward.za_chto_vruchaetsya_nagrada_6cac6411')}
                   placeholderTextColor={colors.textMuted}
                   multiline
-                  accessibilityLabel="Причина выдачи награды"
+                  accessibilityLabel={i18nT('achievements:components.achievements.AdminGrantRareAward.prichina_vydachi_nagrady_0fba630b')}
                 />
 
                 {grant.isError ? (
@@ -172,12 +174,12 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
                   disabled={!canSubmit}
                   accessibilityRole="button"
                   accessibilityState={{ disabled: !canSubmit }}
-                  accessibilityLabel="Выдать награду"
+                  accessibilityLabel={i18nT('achievements:components.achievements.AdminGrantRareAward.vydat_nagradu_68779ada')}
                 >
                   {grant.isPending ? (
                     <ActivityIndicator color={colors.textOnPrimary} />
                   ) : (
-                    <Text style={styles.primaryBtnText}>Выдать награду</Text>
+                    <Text style={styles.primaryBtnText}>{i18nT('achievements:components.achievements.AdminGrantRareAward.vydat_nagradu_68779ada')}</Text>
                   )}
                 </Pressable>
                 <View style={styles.footerSpace} />

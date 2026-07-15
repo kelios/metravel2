@@ -5,6 +5,8 @@ import { Button } from '@/ui/paper'
 import { EXIF_IMAGE_INPUT_ACCEPT } from '@/utils/exifGps'
 
 import type { ManualPointPanelProps } from './types'
+import { translate as i18nT } from '@/i18n'
+
 
 export const ManualPointPanel = React.memo(function ManualPointPanel({
   isVisible,
@@ -31,10 +33,9 @@ export const ManualPointPanel = React.memo(function ManualPointPanel({
           onPress={onToggle}
           compact
           testID="travel-wizard.step-route.manual.toggle"
-          accessibilityLabel="Добавить точку вручную"
+          accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.dobavit_tochku_vruchnuyu_40e63392')}
         >
-          Добавить точку вручную
-        </Button>
+          {i18nT('travel:components.travel.stepRoute.ManualPointPanel.dobavit_tochku_vruchnuyu_40e63392')}</Button>
       </View>
 
       {isVisible && (
@@ -43,7 +44,7 @@ export const ManualPointPanel = React.memo(function ManualPointPanel({
           style={styles.manualPointCard}
           nativeID="travelwizard-route-manual-panel"
           testID="travel-wizard.step-route.manual.panel"
-          accessibilityLabel="Панель добавления точки вручную"
+          accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.panel_dobavleniya_tochki_vruchnuyu_b2c32b4c')}
         >
           {Platform.OS === 'web' && (
             <View style={styles.manualPhotoRow}>
@@ -52,20 +53,18 @@ export const ManualPointPanel = React.memo(function ManualPointPanel({
                 onPress={onPhotoPick}
                 compact
                 testID="travel-wizard.step-route.manual.photo.pick"
-                accessibilityLabel="Определить координаты из фото"
+                accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.opredelit_koordinaty_iz_foto_d6734c3c')}
               >
-                Координаты из фото
-              </Button>
+                {i18nT('travel:components.travel.stepRoute.ManualPointPanel.koordinaty_iz_foto_a6c45365')}</Button>
               {state.photoPreviewUrl ? (
                 <Button
                   mode="text"
                   onPress={onClearPhoto}
                   compact
                   testID="travel-wizard.step-route.manual.photo.clear"
-                  accessibilityLabel="Убрать фото"
+                  accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.ubrat_foto_6dea5d6d')}
                 >
-                  Убрать фото
-                </Button>
+                  {i18nT('travel:components.travel.stepRoute.ManualPointPanel.ubrat_foto_6dea5d6d')}</Button>
               ) : null}
               <input
                 ref={fileInputRef}
@@ -75,13 +74,12 @@ export const ManualPointPanel = React.memo(function ManualPointPanel({
                 style={styles.manualHiddenInput as any}
               />
               <Text style={styles.manualPhotoHint}>
-                Фото прикрепится к точке и загрузится после автосохранения.
-              </Text>
+                {i18nT('travel:components.travel.stepRoute.ManualPointPanel.foto_prikrepitsya_k_tochke_i_zagruzitsya_pos_1ebc5d67')}</Text>
             </View>
           )}
 
           <View style={styles.manualCoordsWrapper}>
-            <Text style={styles.manualPointLabel}>Координаты (lat, lng)</Text>
+            <Text style={styles.manualPointLabel}>{i18nT('travel:components.travel.stepRoute.ManualPointPanel.koordinaty_lat_lng_0d968244')}</Text>
             <TextInput
               ref={coordsInputRef}
               value={state.coords}
@@ -90,33 +88,33 @@ export const ManualPointPanel = React.memo(function ManualPointPanel({
               style={styles.manualPointInput}
               inputMode="text"
               testID="travel-wizard.step-route.manual.coords"
-              accessibilityLabel="Координаты точки: широта, долгота"
+              accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.koordinaty_tochki_shirota_dolgota_f56c6427')}
             />
           </View>
 
           <View style={styles.manualPointInputsRow}>
             <View style={styles.manualPointInputWrapper}>
-              <Text style={styles.manualPointLabel}>Широта</Text>
+              <Text style={styles.manualPointLabel}>{i18nT('travel:components.travel.stepRoute.ManualPointPanel.shirota_8b33238d')}</Text>
               <TextInput
                 value={state.lat}
                 onChangeText={onLatChange}
-                placeholder="например 53.90"
+                placeholder={i18nT('travel:components.travel.stepRoute.ManualPointPanel.naprimer_53_90_0a8513b6')}
                 style={styles.manualPointInput}
                 inputMode="decimal"
                 testID="travel-wizard.step-route.manual.lat"
-                accessibilityLabel="Широта"
+                accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.shirota_8b33238d')}
               />
             </View>
             <View style={styles.manualPointInputWrapper}>
-              <Text style={styles.manualPointLabel}>Долгота</Text>
+              <Text style={styles.manualPointLabel}>{i18nT('travel:components.travel.stepRoute.ManualPointPanel.dolgota_910791d5')}</Text>
               <TextInput
                 value={state.lng}
                 onChangeText={onLngChange}
-                placeholder="например 27.56"
+                placeholder={i18nT('travel:components.travel.stepRoute.ManualPointPanel.naprimer_27_56_ad119976')}
                 style={styles.manualPointInput}
                 inputMode="decimal"
                 testID="travel-wizard.step-route.manual.lng"
-                accessibilityLabel="Долгота"
+                accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.dolgota_910791d5')}
               />
             </View>
           </View>
@@ -127,19 +125,17 @@ export const ManualPointPanel = React.memo(function ManualPointPanel({
               onPress={onAdd}
               compact
               testID="travel-wizard.step-route.manual.add"
-              accessibilityLabel="Добавить точку"
+              accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.dobavit_tochku_9c2004af')}
             >
-              Добавить
-            </Button>
+              {i18nT('travel:components.travel.stepRoute.ManualPointPanel.dobavit_307674c7')}</Button>
             <Button
               mode="text"
               onPress={onCancel}
               compact
               testID="travel-wizard.step-route.manual.cancel"
-              accessibilityLabel="Отмена"
+              accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.otmena_b2a62e12')}
             >
-              Отмена
-            </Button>
+              {i18nT('travel:components.travel.stepRoute.ManualPointPanel.otmena_b2a62e12')}</Button>
           </View>
         </View>
       )}

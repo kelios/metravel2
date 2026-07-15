@@ -22,12 +22,10 @@ settings.json
 .DS_Store
 **/.DS_Store
 .vscode/
-.env
-.env.dev
-.env.preprod
-.env.prod
-.env.e2e
-.env*.example
+.env*
+!.env.example
+!.env.*.example
+.secrets/
 .expo
 .expo-shared/
 .idea

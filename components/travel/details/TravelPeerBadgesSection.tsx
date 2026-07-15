@@ -9,6 +9,8 @@ import PeerBadgeReceivedRow from '@/components/achievements/PeerBadgeReceivedRow
 import type { Travel } from '@/types/types'
 
 import { useTravelDetailsStyles } from './TravelDetailsStyles'
+import { translate as i18nT } from '@/i18n'
+
 
 const ROW_SPACING = { marginTop: DESIGN_TOKENS.spacing.md } as const
 
@@ -46,17 +48,17 @@ const TravelPeerBadgesSection: React.FC<{ travel: Travel }> = memo(
       <View
         testID="travel-details-peer-badges"
         role="region"
-        accessibilityLabel="Награды от сообщества"
+        accessibilityLabel={i18nT('travel:components.travel.details.TravelPeerBadgesSection.nagrady_ot_soobschestva_8ec3eeb7')}
         style={[styles.sectionContainer, styles.contentStable]}
       >
-        <PeerBadgeReceivedRow items={received} title="Награды от сообщества" />
+        <PeerBadgeReceivedRow items={received} title={i18nT('travel:components.travel.details.TravelPeerBadgesSection.nagrady_ot_soobschestva_8ec3eeb7')} />
         {!isOwnTravel && (
           <PeerBadgeGiveButton
             target="travel"
             travelId={travelId}
             received={received}
-            label="Наградить статью"
-            pickerTitle="Наградить статью"
+            label={i18nT('travel:components.travel.details.TravelPeerBadgesSection.nagradit_statyu_3b604dba')}
+            pickerTitle={i18nT('travel:components.travel.details.TravelPeerBadgesSection.nagradit_statyu_3b604dba')}
             style={received.length > 0 ? ROW_SPACING : undefined}
           />
         )}

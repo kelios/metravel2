@@ -1,4 +1,5 @@
 import { openWebWindow } from '@/utils/externalLinks';
+import { getActiveLocaleDefinition, translate as i18nT } from '@/i18n';
 
 let pendingPreviewWindow: Window | null = null;
 const GLOBAL_PREVIEW_WINDOW_KEY = '__metravelBookPreviewWindow';
@@ -45,12 +46,13 @@ export function openPendingBookPreviewWindow(): Window | null {
   if (!win) return null;
   pendingPreviewWindow = win;
   setGlobalPreviewWindow(win);
+  const locale = getActiveLocaleDefinition();
 
   const loadingHtml = `<!DOCTYPE html>
-<html lang="ru">
+<html lang="${locale.htmlLang}" dir="${locale.direction}">
 <head>
 <meta charset="utf-8">
-<title>Готовим печатную версию…</title>
+<title>${i18nT('shared:utils.openBookPreviewWindow.title')}</title>
 <style>
   body {
     margin: 0;
@@ -73,7 +75,7 @@ export function openPendingBookPreviewWindow(): Window | null {
 </style>
 </head>
 <body>
-  <div class="card">Готовим печатную версию карты…</div>
+  <div class="card">${i18nT('shared:utils.openBookPreviewWindow.status')}</div>
 </body>
 </html>`;
 

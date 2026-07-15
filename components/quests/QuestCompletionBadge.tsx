@@ -3,7 +3,8 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { pluralizeRu } from '@/utils/pluralize'
+import { translate as i18nT } from '@/i18n'
+
 
 type QuestCompletionBadgeProps = {
   isCompleted: boolean
@@ -12,7 +13,7 @@ type QuestCompletionBadgeProps = {
 }
 
 const formatCompletions = (count: number): string =>
-  `Пройдено ${count} ${pluralizeRu(count, 'раз', 'раза', 'раз')}`
+  i18nT('quests:components.quests.QuestCompletionBadge.completionCount', { count })
 
 function CardBadge({ isCompleted, completionsCount }: QuestCompletionBadgeProps) {
   const colors = useThemedColors()
@@ -27,7 +28,7 @@ function CardBadge({ isCompleted, completionsCount }: QuestCompletionBadgeProps)
           ]}
         >
           <Feather name="check-circle" size={13} color={colors.success} />
-          <Text style={[styles.badgeText, { color: colors.successDark }]}>Пройден</Text>
+          <Text style={[styles.badgeText, { color: colors.successDark }]}>{i18nT('quests:components.quests.QuestCompletionBadge.proyden_e3667f0a')}</Text>
         </View>
       ) : null}
 
@@ -48,7 +49,7 @@ function DetailBadge({ isCompleted, completionsCount }: QuestCompletionBadgeProp
       {isCompleted ? (
         <View
           accessible
-          accessibilityLabel="Вы прошли этот квест"
+          accessibilityLabel={i18nT('quests:components.quests.QuestCompletionBadge.vy_proshli_etot_kvest_7e00d905')}
           style={[
             styles.detailChip,
             { backgroundColor: colors.successSoft, borderColor: colors.success },

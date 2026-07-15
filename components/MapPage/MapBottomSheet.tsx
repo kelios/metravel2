@@ -21,6 +21,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { translate as i18nT } from '@/i18n'
+
 
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
 
@@ -141,7 +143,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
                 bottomSheetRef.current?.snapToIndex(SNAP_INDEX_QUARTER)
               }}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть панель карты"
+              accessibilityLabel={i18nT('map:components.MapPage.MapBottomSheet.zakryt_panel_karty_a4786f25')}
             />
           </View>
         )

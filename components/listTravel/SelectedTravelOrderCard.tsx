@@ -8,6 +8,8 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { Caption } from '@/components/ui/Typography';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { createStyles } from './listTravelStyles';
+import { translate as i18nT } from '@/i18n'
+
 
 type ExportBarStyles = ReturnType<typeof createStyles>;
 const MEDIA_WIDTH = 128;
@@ -206,7 +208,7 @@ export default function SelectedTravelOrderCard({
           {cover ? (
             <img
               src={cover}
-              alt={travel.name || 'Путешествие'}
+              alt={travel.name || i18nT('travel:common.travel')}
               width={MEDIA_WIDTH}
               height={MEDIA_HEIGHT}
               draggable={false}
@@ -238,7 +240,7 @@ export default function SelectedTravelOrderCard({
           <div style={controlsStyle}>
             <button
               type="button"
-              aria-label={`Поднять ${travel.name || 'путешествие'} выше`}
+              aria-label={i18nT('travel:components.listTravel.SelectedTravelOrderCard.podnyat_value1_vyshe_0561b151', { value1: travel.name || i18nT('travel:common.travelLower') })}
               disabled={!canMoveUp}
               onClick={onMoveUp}
               style={{
@@ -255,7 +257,7 @@ export default function SelectedTravelOrderCard({
             </button>
             <button
               type="button"
-              aria-label={`Опустить ${travel.name || 'путешествие'} ниже`}
+              aria-label={i18nT('travel:components.listTravel.SelectedTravelOrderCard.opustit_value1_nizhe_59f112ad', { value1: travel.name || i18nT('travel:common.travelLower') })}
               disabled={!canMoveDown}
               onClick={onMoveDown}
               style={{
@@ -274,7 +276,7 @@ export default function SelectedTravelOrderCard({
 
           <div style={titleOverlayStyle}>
             <span style={titleTextStyle}>
-              {travel.name || 'Без названия'}
+              {travel.name || i18nT('travel:common.untitled')}
             </span>
           </div>
         </div>
@@ -294,7 +296,7 @@ export default function SelectedTravelOrderCard({
         {cover ? (
           <ImageCardMedia
             src={cover}
-            alt={travel.name || 'Путешествие'}
+            alt={travel.name || i18nT('travel:common.travel')}
             width={MEDIA_WIDTH}
             height={MEDIA_HEIGHT}
             borderRadius={MEDIA_RADIUS}
@@ -328,13 +330,13 @@ export default function SelectedTravelOrderCard({
             numberOfLines={2}
             ellipsizeMode="tail"
           >
-            {travel.name || 'Без названия'}
+            {travel.name || i18nT('travel:common.untitled')}
           </Caption>
         </View>
         <View style={asViewStyle(styles.selectedOrderControlsOverlay)}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Поднять ${travel.name || 'путешествие'} выше`}
+            accessibilityLabel={i18nT('travel:components.listTravel.SelectedTravelOrderCard.podnyat_value1_vyshe_0561b151', { value1: travel.name || i18nT('travel:common.travelLower') })}
             disabled={!canMoveUp}
             onPress={onMoveUp}
             style={[
@@ -350,7 +352,7 @@ export default function SelectedTravelOrderCard({
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Опустить ${travel.name || 'путешествие'} ниже`}
+            accessibilityLabel={i18nT('travel:components.listTravel.SelectedTravelOrderCard.opustit_value1_nizhe_59f112ad', { value1: travel.name || i18nT('travel:common.travelLower') })}
             disabled={!canMoveDown}
             onPress={onMoveDown}
             style={[

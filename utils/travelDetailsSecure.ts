@@ -7,6 +7,8 @@
  */
 
 import type { Travel } from "@/types/types";
+import { translate as i18nT } from '@/i18n'
+
 export {
   createSafeImageUrl,
   safeGetYoutubeId,
@@ -150,13 +152,13 @@ export function createBreadcrumbJsonLd(
     {
       "@type": "ListItem",
       position: 1,
-      name: "Главная",
+      name: i18nT('seoStatic:structuredData.home'),
       item: "https://metravel.by/",
     },
     {
       "@type": "ListItem",
       position: 2,
-      name: "Поиск",
+      name: i18nT('seoStatic:structuredData.search'),
       item: "https://metravel.by/search",
     },
   ];
@@ -214,7 +216,7 @@ function isValidImageUrl(url: string): boolean {
  * ⚠️ SECURITY: This prevents XSS attacks via HTML encoding
  */
 export function stripHtml(html?: string | null): string {
-  const fallback = "Найди место для путешествия и поделись своим опытом.";
+  const fallback = i18nT('shared:utils.travelDetailsSecure.naydi_mesto_dlya_puteshestviya_i_podelis_svo_0f229be4');
   if (!html) {
     return fallback;
   }

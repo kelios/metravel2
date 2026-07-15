@@ -12,6 +12,7 @@ jest.mock('@/hooks/useDebouncedValue', () => ({
 }));
 
 jest.mock('@/hooks/useResponsive', () => ({
+  useResponsiveWidth: () => (global as any).__mockResponsive?.width ?? 1440,
   useResponsive: () =>
     (global as any).__mockResponsive ?? {
       width: 1440,
@@ -33,10 +34,16 @@ jest.mock('@/hooks/useResponsive', () => ({
     },
 }));
 
+jest.mock('@/hooks/useHydrationReady', () => ({
+  useHydrationReady: () => true,
+}));
+
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({
     userId: 'test-user',
     isSuperuser: false,
+    isAuthenticated: true,
+    authReady: true,
   }),
 }));
 

@@ -8,6 +8,8 @@ import type { Travel } from '@/types/types'
 
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import { useTravelHeroFavoriteToggleModel } from './hooks/useTravelHeroFavoriteToggleModel'
+import { translate as i18nT } from '@/i18n'
+
 
 export const TravelHeroFavoriteToggle: React.FC<{
   travel: Travel
@@ -39,7 +41,7 @@ export const TravelHeroFavoriteToggle: React.FC<{
       accessibilityRole="button"
       accessibilityState={{ disabled: isPending, selected: isFavorite }}
       accessibilityLabel={favoriteButtonA11yLabel}
-      accessibilityHint={isFavorite ? 'Убирает путешествие из «Хочу поехать»' : 'Сохраняет путешествие в «Хочу поехать»'}
+      accessibilityHint={isFavorite ? i18nT('travel:components.travel.details.TravelHeroFavoriteToggle.ubiraet_puteshestvie_iz_hochu_poehat_bf1e9402') : i18nT('travel:components.travel.details.TravelHeroFavoriteToggle.sohranyaet_puteshestvie_v_hochu_poehat_5fa64422')}
     >
       <Feather
         name="heart"

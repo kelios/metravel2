@@ -68,18 +68,16 @@ describe('Messages API', () => {
             await expect(fetchMessageThreads()).rejects.toThrow('Network error');
         });
 
-        it('should treat 401 as empty list', async () => {
+        it('should expose 401 instead of faking an empty list', async () => {
             mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Unauthorized' }, 401));
 
-            const result = await fetchMessageThreads();
-            expect(result).toEqual([]);
+            await expect(fetchMessageThreads()).rejects.toMatchObject({ status: 401 });
         });
 
-        it('should treat 404 as empty list', async () => {
+        it('should expose 404 instead of hiding an unavailable endpoint', async () => {
             mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Not found' }, 404));
 
-            const result = await fetchMessageThreads();
-            expect(result).toEqual([]);
+            await expect(fetchMessageThreads()).rejects.toMatchObject({ status: 404 });
         });
     });
 
@@ -107,18 +105,16 @@ describe('Messages API', () => {
             await expect(fetchMessages(1)).rejects.toThrow('Server error');
         });
 
-        it('should treat 404 as empty paginated result', async () => {
+        it('should expose 404 instead of faking empty pagination', async () => {
             mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Not found' }, 404));
 
-            const result = await fetchMessages(1);
-            expect(result).toEqual({ count: 0, next: null, previous: null, results: [] });
+            await expect(fetchMessages(1)).rejects.toMatchObject({ status: 404 });
         });
 
-        it('should treat 401 as empty paginated result', async () => {
+        it('should expose 401 instead of faking empty pagination', async () => {
             mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Unauthorized' }, 401));
 
-            const result = await fetchMessages(1);
-            expect(result).toEqual({ count: 0, next: null, previous: null, results: [] });
+            await expect(fetchMessages(1)).rejects.toMatchObject({ status: 401 });
         });
     });
 
@@ -134,11 +130,10 @@ describe('Messages API', () => {
             expect(result).toEqual(mockUsers);
         });
 
-        it('should treat 401 as empty list', async () => {
+        it('should expose 401 instead of faking an empty user list', async () => {
             mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Unauthorized' }, 401));
 
-            const result = await fetchAvailableUsers();
-            expect(result).toEqual([]);
+            await expect(fetchAvailableUsers()).rejects.toMatchObject({ status: 401 });
         });
 
         // Regression: #544 — search found nobody because the backend wrapped the
@@ -179,11 +174,10 @@ describe('Messages API', () => {
             expect(result).toEqual({ thread_id: 42 });
         });
 
-        it('should return null thread_id on 401', async () => {
+        it('should expose 401 instead of pretending no thread exists', async () => {
             mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Unauthorized' }, 401));
 
-            const result = await fetchThreadByUser(99);
-            expect(result.thread_id).toBeNull();
+            await expect(fetchThreadByUser(99)).rejects.toMatchObject({ status: 401 });
         });
     });
 
@@ -219,11 +213,10 @@ describe('Messages API', () => {
             expect(result).toBeNull();
         });
 
-        it('should treat 401 as null (graceful)', async () => {
+        it('should expose 401 instead of reporting a successful delete', async () => {
             mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Unauthorized' }, 401));
 
-            const result = await deleteMessage(5);
-            expect(result).toBeNull();
+            await expect(deleteMessage(5)).rejects.toMatchObject({ status: 401 });
         });
 
         it('should treat 404 as null (graceful)', async () => {
@@ -251,18 +244,16 @@ describe('Messages API', () => {
             expect(result).toEqual(expectedData);
         });
 
-        it('should return fallback on 401', async () => {
+        it('should expose 401 instead of faking a read receipt', async () => {
             mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Unauthorized' }, 401));
 
-            const result = await markThreadRead(7);
-            expect(result).toEqual({ thread_id: 7, last_read_message_id: null, unread_count: 0 });
+            await expect(markThreadRead(7)).rejects.toMatchObject({ status: 401 });
         });
 
-        it('should return fallback on 404', async () => {
+        it('should expose 404 instead of faking a read receipt', async () => {
             mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Not found' }, 404));
 
-            const result = await markThreadRead(7);
-            expect(result).toEqual({ thread_id: 7, last_read_message_id: null, unread_count: 0 });
+            await expect(markThreadRead(7)).rejects.toMatchObject({ status: 404 });
         });
     });
 
@@ -285,11 +276,10 @@ describe('Messages API', () => {
             expect(result).toEqual({ count: 0 });
         });
 
-        it('should return zero on error', async () => {
+        it('should expose errors instead of reporting a false zero', async () => {
             mockedFetch.mockRejectedValueOnce(new Error('Network error'));
 
-            const result = await fetchUnreadCount();
-            expect(result).toEqual({ count: 0 });
+            await expect(fetchUnreadCount()).rejects.toThrow('Network error');
         });
 
         it('should handle threads with missing unread_count', async () => {
@@ -322,12 +312,11 @@ describe('Messages API', () => {
             );
         });
 
-        it('should work without token (unauthenticated)', async () => {
+        it('should expose unauthorized requests without a token', async () => {
             mockedGetSecureItem.mockResolvedValueOnce(null as any);
             mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Unauthorized' }, 401));
 
-            const result = await fetchMessageThreads();
-            expect(result).toEqual([]);
+            await expect(fetchMessageThreads()).rejects.toMatchObject({ status: 401 });
         });
     });
 

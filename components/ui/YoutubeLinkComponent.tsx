@@ -2,6 +2,8 @@ import React, {useEffect, useState, useMemo} from 'react';
 import {StyleSheet, Text, TextInput, View, Platform} from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface YoutubeLinkComponentProps {
     label: string;
@@ -84,7 +86,7 @@ const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
         }
         const youtubeRegex =
             /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=|shorts\/)?[A-Za-z0-9_-]{11}/;
-        return youtubeRegex.test(text.trim()) ? null : 'Неверная ссылка на YouTube';
+        return youtubeRegex.test(text.trim()) ? null : i18nT('shared:components.ui.YoutubeLinkComponent.nevernaya_ssylka_na_youtube_566c6207');
     };
 
     useEffect(() => {
@@ -120,7 +122,7 @@ const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
                 value={inputValue}
                 onChangeText={handleChange}
                 onBlur={handleBlur}
-                placeholder="Введите ссылку на YouTube"
+                placeholder={i18nT('shared:components.ui.YoutubeLinkComponent.vvedite_ssylku_na_youtube_b0fffb92')}
                 placeholderTextColor={colors.textMuted}
                 {...Platform.select({
                     web: {

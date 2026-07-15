@@ -17,6 +17,8 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
+import { translate as i18nT } from '@/i18n'
+
 
 const MAP_PIN_ICON_STYLE = { marginRight: 4 } as const;
 // Modern, легко читаемый sans-serif стек для подписей на изображении карточки.
@@ -140,8 +142,8 @@ function UnifiedTravelCard({
   const enableWebHoverEffects = isWeb && webHoverScale;
   const { isPhone, isLargePhone } = useBreakpoints();
   const isMobileDevice = isPhone || isLargePhone;
-  const cardActionLabel = `Открыть маршрут «${title}»`;
-  const mediaActionLabel = `Открыть фото маршрута «${title}»`;
+  const cardActionLabel = i18nT('shared:components.ui.UnifiedTravelCard.otkryt_marshrut_value1_12fea2fb', { value1: title });
+  const mediaActionLabel = i18nT('shared:components.ui.UnifiedTravelCard.otkryt_foto_marshruta_value1_485b08c5', { value1: title });
 
   // AND-13: Long press handler with haptic feedback for share action
   const handleLongPress = useCallback(() => {
@@ -484,6 +486,23 @@ function UnifiedTravelCard({
     [cardActionLabel, onPress],
   );
 
+  const webPrimaryActionProps = useMemo(() => {
+    if (!isWeb) return null;
+    const actionProps = { ...defaultWebProps, ...webPressableProps };
+    return {
+      ...actionProps,
+      onClick: (event: any) => {
+        event?.stopPropagation?.();
+        actionProps.onClick?.(event);
+      },
+      style: {
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+      },
+    };
+  }, [defaultWebProps, isWeb, webPressableProps]);
+
   const containerProps = useMemo(() => {
     if (!isWeb) return { onPress, ...(onLongPress ? { onLongPress: handleLongPress } : {}) };
 
@@ -492,9 +511,18 @@ function UnifiedTravelCard({
     const originalMouseLeave = base?.onMouseLeave;
     const originalFocus = base?.onFocus;
     const originalBlur = base?.onBlur;
+    const {
+      role: _role,
+      tabIndex: _tabIndex,
+      'aria-label': _ariaLabel,
+      'aria-checked': _ariaChecked,
+      'aria-pressed': _ariaPressed,
+      onKeyDown: _onKeyDown,
+      ...containerEventProps
+    } = base;
 
     return {
-      ...base,
+      ...containerEventProps,
       onMouseEnter: (e: any) => {
         if (enableWebHoverEffects) {
           setIsHovered(true);
@@ -520,7 +548,7 @@ function UnifiedTravelCard({
 
   const showHeroTitle = heroTitleOverlay && title.trim().length > 0;
   const normalizedMetaText = typeof metaText === 'string' ? metaText.trim() : '';
-  const displayMetaText = normalizedMetaText || 'Локация уточняется';
+  const displayMetaText = normalizedMetaText || i18nT('sharedStatic:travel.locationPending');
 
   // AND-16: Wrap in Animated.View for native spring, plain View for web
   const shouldUseNativePressScale = !isWeb && nativePressScaleEnabled;
@@ -592,6 +620,7 @@ function UnifiedTravelCard({
             style={StyleSheet.absoluteFill}
             {...({
               tabIndex: 0,
+              role: 'button',
               'aria-label': mediaActionLabel,
               onClick: (e: any) => {
                 e?.preventDefault?.();
@@ -716,12 +745,13 @@ function UnifiedTravelCard({
         style,
       ]}
       accessibilityRole={isWeb ? undefined : 'button'}
-      accessibilityLabel={cardActionLabel}
+      accessibilityLabel={isWeb ? undefined : cardActionLabel}
       testID={testID}
       // AND-27: Material Design ripple effect on Android
       {...(!isWeb ? { android_ripple: { color: 'rgba(0,0,0,0.08)', borderless: false } } : {})}
       {...Platform.select({ web: { cursor: 'pointer' } as any })}
     >
+      {webPrimaryActionProps ? <View {...(webPrimaryActionProps as any)} /> : null}
       {orderedContent}
     </ContainerComponent>
     </CardWrapper>

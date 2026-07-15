@@ -69,7 +69,7 @@ export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _sc
             } as any,
         }),
     },
-    stepPillLocked: { opacity: 0.35 },
+    stepPillLocked: { opacity: 0.72 },
     stepPillIndex: {
         fontSize: 11,
         fontWeight: '700',
@@ -123,7 +123,7 @@ export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _sc
             } as any,
         }),
     },
-    stepDotMiniLocked: { opacity: 0.35 },
+    stepDotMiniLocked: { opacity: 0.72 },
     stepDotMiniText: { fontSize: isMobile ? 10 : 12, fontWeight: '700', color: colors.brandText },
 
     navActiveTitle: {

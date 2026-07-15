@@ -8,6 +8,8 @@ import type { ThemedColors } from '@/hooks/useTheme';
 
 import type { City, NearbyCity } from './questsShared';
 import { pluralizeQuest } from './questsShared';
+import { translate as i18nT } from '@/i18n'
+
 
 type FeatherName = ComponentProps<typeof Feather>['name'];
 
@@ -144,20 +146,20 @@ export default function QuestsSidebar({
     const isNearbySelected = selectedCityId === nearbyId;
     const isKidsSelected = selectedCityId === kidsFilterId;
     const mapActionActive = viewMode === 'map';
-    const mapActionLabel = viewMode === 'map' ? 'Показать квесты списком' : 'Показать квесты на карте';
-    const toggleAllLabel = areAllCountryGroupsCollapsed ? 'Развернуть все страны' : 'Свернуть все страны';
+    const mapActionLabel = viewMode === 'map' ? i18nT('quests:screens.tabs.QuestsSidebar.pokazat_kvesty_spiskom_0029a3b3') : i18nT('quests:screens.tabs.QuestsSidebar.pokazat_kvesty_na_karte_d06a6df4');
+    const toggleAllLabel = areAllCountryGroupsCollapsed ? i18nT('quests:screens.tabs.QuestsSidebar.razvernut_vse_strany_58a7fc2c') : i18nT('quests:screens.tabs.QuestsSidebar.svernut_vse_strany_ee35b08d');
 
     return (
         <View style={styles.sidebar}>
             <View style={styles.sidebarHeader}>
                 <View style={styles.sidebarTitleRow}>
-                    <Text style={styles.sidebarTitle}>Приключения</Text>
+                    <Text style={styles.sidebarTitle}>{i18nT('quests:screens.tabs.QuestsSidebar.priklyucheniya_32619ed3')}</Text>
                     {onCloseDrawer && (
                         <Pressable
                             onPress={onCloseDrawer}
                             style={styles.sidebarCloseBtn}
                             accessibilityRole="button"
-                            accessibilityLabel="Закрыть меню"
+                            accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.zakryt_menyu_8f129c26')}
                             hitSlop={8}
                         >
                             <Feather name="x" size={20} color={colors.text} />
@@ -165,15 +167,14 @@ export default function QuestsSidebar({
                     )}
                 </View>
                 <Text style={styles.sidebarSubtitle}>
-                    Раскрой тайны городов через загадки и легенды
-                </Text>
+                    {i18nT('quests:screens.tabs.QuestsSidebar.raskroy_tayny_gorodov_cherez_zagadki_i_legen_d6d8c5ad')}</Text>
                 <View style={styles.sidebarActions}>
                     <SidebarActionButton
                         styles={styles}
                         colors={colors}
                         isMobile={isMobile}
                         icon={viewMode === 'map' ? 'list' : 'map'}
-                        label={viewMode === 'map' ? 'Показать списком' : 'Показать на карте'}
+                        label={viewMode === 'map' ? i18nT('quests:screens.tabs.QuestsSidebar.pokazat_spiskom_b48809cc') : i18nT('quests:screens.tabs.QuestsSidebar.pokazat_na_karte_6180ef1d')}
                         active={mapActionActive}
                         onPress={() => onSetViewMode(viewMode === 'map' ? 'list' : 'map')}
                         accessibilityLabel={mapActionLabel}
@@ -185,10 +186,10 @@ export default function QuestsSidebar({
                         colors={colors}
                         isMobile={isMobile}
                         icon="navigation"
-                        label="Рядом со мной"
+                        label={i18nT('quests:screens.tabs.QuestsSidebar.ryadom_so_mnoy_28d9b150')}
                         active={isNearbySelected}
                         onPress={() => onSelectCity(nearbyId)}
-                        accessibilityLabel={`Рядом со мной, ${pluralizeQuest(cityQuestCountById[nearbyId] || 0)}`}
+                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.ryadom_so_mnoy_value1_3b987cd8', { value1: pluralizeQuest(cityQuestCountById[nearbyId] || 0) })}
                         accessibilityState={{ selected: isNearbySelected }}
                         testID="quests-sidebar-nearby-button"
                     />
@@ -197,10 +198,10 @@ export default function QuestsSidebar({
                         colors={colors}
                         isMobile={isMobile}
                         icon="smile"
-                        label="Для детей"
+                        label={i18nT('quests:screens.tabs.QuestsSidebar.dlya_detey_1655148c')}
                         active={isKidsSelected}
                         onPress={() => onSelectCity(kidsFilterId)}
-                        accessibilityLabel={`Квесты для детей, ${pluralizeQuest(cityQuestCountById[kidsFilterId] || 0)}`}
+                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.kvesty_dlya_detey_value1_29205187', { value1: pluralizeQuest(cityQuestCountById[kidsFilterId] || 0) })}
                         accessibilityState={{ selected: isKidsSelected }}
                         testID="quests-sidebar-kids-button"
                     />
@@ -209,7 +210,7 @@ export default function QuestsSidebar({
                         colors={colors}
                         isMobile={isMobile}
                         icon={areAllCountryGroupsCollapsed ? 'chevrons-down' : 'chevrons-up'}
-                        label={areAllCountryGroupsCollapsed ? 'Развернуть все' : 'Свернуть все'}
+                        label={areAllCountryGroupsCollapsed ? i18nT('quests:screens.tabs.QuestsSidebar.razvernut_vse_d7cac57a') : i18nT('quests:screens.tabs.QuestsSidebar.svernut_vse_c847c584')}
                         disabled={!hasCountryGroups}
                         onPress={onToggleAllCountryGroups}
                         accessibilityLabel={toggleAllLabel}
@@ -233,7 +234,9 @@ export default function QuestsSidebar({
                                 onPress={() => onToggleCountryGroup(group.code)}
                                 style={styles.countryHeader}
                                 accessibilityRole="button"
-                                accessibilityLabel={`${isCollapsed ? 'Развернуть' : 'Свернуть'} группу ${group.name || group.code}, ${pluralizeQuest(countryQuestCount)}`}
+                                accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.value1_gruppu_value2_value3_b04a718c', { value1: isCollapsed
+                                    ? i18nT('quests:screens.tabs.QuestsSidebar.actions.expand')
+                                    : i18nT('quests:screens.tabs.QuestsSidebar.actions.collapse'), value2: group.name || group.code, value3: pluralizeQuest(countryQuestCount) })}
                                 accessibilityState={{ expanded: !isCollapsed }}
                             >
                                 <Text style={styles.countryLabel}>{group.name}</Text>

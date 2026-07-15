@@ -6,15 +6,17 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
   isWide: boolean;
 };
 
 const PILL_ITEMS = [
-  { icon: 'map-pin', label: 'реальные маршруты' },
-  { icon: 'camera', label: 'живые фото' },
-  { icon: 'users', label: 'сообщество' },
+  { icon: 'map-pin', get label() { return i18nT('homeStatic:components.about.HeroBanner.realnye_marshruty_4761bdb1') } },
+  { icon: 'camera', get label() { return i18nT('homeStatic:components.about.HeroBanner.zhivye_foto_84703ec1') } },
+  { icon: 'users', get label() { return i18nT('homeStatic:components.about.HeroBanner.soobschestvo_0284571c') } },
 ] as const;
 
 export const HeroBanner: React.FC<Props> = ({ isWide }) => {
@@ -27,12 +29,11 @@ export const HeroBanner: React.FC<Props> = ({ isWide }) => {
       <View style={styles.copy}>
         <View style={styles.kickerRow}>
           <Feather name="compass" size={14} color={colors.primaryDark} />
-          <Text style={styles.kicker}>MeTravel.by</Text>
+          <Text style={styles.kicker}>{i18nT('home:components.about.HeroBanner.metravel_by_b5cd9674')}</Text>
         </View>
-        <Text style={styles.title}>Путешествия, которые хочется повторить</Text>
+        <Text style={styles.title}>{i18nT('home:components.about.HeroBanner.puteshestviya_kotorye_hochetsya_povtorit_060a8f24')}</Text>
         <Text style={styles.subtitle}>
-          Платформа с маршрутами, местами и историями от людей, которые уже были там и готовы поделиться опытом.
-        </Text>
+          {i18nT('home:components.about.HeroBanner.platforma_s_marshrutami_mestami_i_istoriyami_cea11cf9')}</Text>
 
         <View style={styles.pills}>
           {PILL_ITEMS.map((item) => (
@@ -47,7 +48,7 @@ export const HeroBanner: React.FC<Props> = ({ isWide }) => {
           <Pressable
             onPress={() => router.push('/search' as any)}
             accessibilityRole="link"
-            accessibilityLabel="Смотреть маршруты"
+            accessibilityLabel={i18nT('home:components.about.HeroBanner.smotret_marshruty_376caa32')}
             style={({ pressed, hovered }: any) => [
               styles.ctaPrimary,
               hovered && Platform.OS === 'web' && styles.ctaHover,
@@ -55,13 +56,13 @@ export const HeroBanner: React.FC<Props> = ({ isWide }) => {
               globalFocusStyles.focusable,
             ]}
           >
-            <Text style={styles.ctaPrimaryText}>Смотреть маршруты</Text>
+            <Text style={styles.ctaPrimaryText}>{i18nT('home:components.about.HeroBanner.smotret_marshruty_376caa32')}</Text>
             <Feather name="arrow-right" size={16} color={colors.textOnPrimary} />
           </Pressable>
           <Pressable
             onPress={() => router.push('/map' as any)}
             accessibilityRole="link"
-            accessibilityLabel="Открыть карту"
+            accessibilityLabel={i18nT('home:components.about.HeroBanner.otkryt_kartu_dea4b129')}
             style={({ pressed, hovered }: any) => [
               styles.ctaSecondary,
               hovered && Platform.OS === 'web' && styles.ctaSecondaryHover,
@@ -70,7 +71,7 @@ export const HeroBanner: React.FC<Props> = ({ isWide }) => {
             ]}
           >
             <Feather name="map" size={16} color={colors.primaryDark} />
-            <Text style={styles.ctaSecondaryText}>Открыть карту</Text>
+            <Text style={styles.ctaSecondaryText}>{i18nT('home:components.about.HeroBanner.otkryt_kartu_dea4b129')}</Text>
           </Pressable>
         </View>
       </View>
@@ -78,11 +79,11 @@ export const HeroBanner: React.FC<Props> = ({ isWide }) => {
       <View style={styles.visual} pointerEvents="none">
         <View style={styles.visualHeader}>
           <View style={styles.visualDot} />
-          <Text style={styles.visualLabel}>маршрут выходного дня</Text>
+          <Text style={styles.visualLabel}>{i18nT('home:components.about.HeroBanner.marshrut_vyhodnogo_dnya_c7cb110e')}</Text>
         </View>
         <View style={styles.routeCard}>
           <View style={styles.routeLine} />
-          {['Старт', 'Место', 'Вид'].map((label, index) => (
+          {[i18nT('home:components.about.HeroBanner.start_83bffaa4'), i18nT('home:components.about.HeroBanner.mesto_06af6319'), i18nT('home:components.about.HeroBanner.vid_9348ce59')].map((label, index) => (
             <View key={label} style={[styles.routePoint, index === 2 && styles.routePointActive]}>
               <View style={styles.pointIcon}>
                 <Feather
@@ -97,7 +98,7 @@ export const HeroBanner: React.FC<Props> = ({ isWide }) => {
         </View>
         <View style={styles.visualFooter}>
           <Feather name="heart" size={15} color={colors.brand} />
-          <Text style={styles.visualFooterText}>сохраняйте идеи и добавляйте свои</Text>
+          <Text style={styles.visualFooterText}>{i18nT('home:components.about.HeroBanner.sohranyayte_idei_i_dobavlyayte_svoi_7da29a22')}</Text>
         </View>
       </View>
     </View>

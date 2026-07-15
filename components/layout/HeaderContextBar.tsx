@@ -23,6 +23,8 @@ import {
 } from './headerContextBarModel';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { BOTTOM_DOCK_ITEM_DEFS } from './bottomDockModel';
+import { translate as i18nT } from '@/i18n'
+
 
 // Top-level tab routes that already show their identity in the bottom dock — for those we
 // suppress the mobile context bar to avoid stealing 52px of vertical space for a redundant
@@ -46,8 +48,8 @@ const useBreadcrumbModelSafe: () => BreadcrumbModel =
       : (() => ({
           items: [],
           depth: 1,
-          currentTitle: 'Путешествия',
-          pageContextTitle: 'Путешествия',
+          currentTitle: i18nT('navigation:components.layout.HeaderContextBar.puteshestviya_2578a5d6'),
+          pageContextTitle: i18nT('navigation:components.layout.HeaderContextBar.puteshestviya_2578a5d6'),
           backToPath: null,
           showBreadcrumbs: false,
         }) as BreadcrumbModel);
@@ -126,7 +128,7 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
         <View testID={testID ?? 'header-context-bar'} style={containerStyle}>
           <View style={styles.mobileRow}>
             <ActionButton
-              accessibilityLabel="Назад"
+              accessibilityLabel={i18nT('navigation:components.layout.HeaderContextBar.nazad_ffc60b96')}
               onPress={handleBackPress}
               style={styles.backButton}
             >
@@ -145,7 +147,7 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
                 MapMobileLayout. Шапка карты остаётся (назад + заголовок). */}
             {mobileAction === 'travel-sections' ? (
               <ActionButton
-                accessibilityLabel="Открыть секции"
+                accessibilityLabel={i18nT('navigation:components.layout.HeaderContextBar.otkryt_sektsii_5683d1a0')}
                 onPress={requestOpen}
                 style={styles.mobileSectionsButton}
                 testID="mobile-sections-open"
@@ -172,18 +174,18 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
       <View
         testID={testID ?? 'header-context-bar'}
         style={containerStyle}
-        {...(Platform.OS === 'web' ? ({ role: 'navigation', 'aria-label': 'Breadcrumb' } as any) : {})}
+        {...(Platform.OS === 'web' ? ({ role: 'navigation', 'aria-label': i18nT('navigation:components.layout.HeaderContextBar.breadcrumb_a3361b51') } as any) : {})}
       >
         {model.showBreadcrumbs ? (
           <View style={styles.crumbRow}>
             <Pressable
               onPress={() => router.push('/' as any)}
               accessibilityRole="button"
-              accessibilityLabel="Перейти на Главную"
+              accessibilityLabel={i18nT('navigation:components.layout.HeaderContextBar.pereyti_na_glavnuyu_7e7e6f6f')}
               style={({ pressed }) => [styles.crumbItem, pressed && styles.crumbItemPressed, globalFocusStyles.focusable]}
             >
               <Feather name="home" size={13} color={colors.textMuted} />
-              <Text style={styles.crumbLabel}>Главная</Text>
+              <Text style={styles.crumbLabel}>{i18nT('navigation:components.layout.HeaderContextBar.glavnaya_e5cb516e')}</Text>
             </Pressable>
 
             {model.items.map((item, idx) => {
@@ -198,7 +200,7 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
                     }}
                     disabled={isLast}
                     accessibilityRole="button"
-                    accessibilityLabel={isLast ? `Текущая страница: ${item.label}` : `Перейти на ${item.label}`}
+                    accessibilityLabel={isLast ? i18nT('navigation:components.layout.HeaderContextBar.tekuschaya_stranitsa_value1_fcf33568', { value1: item.label }) : i18nT('navigation:components.layout.HeaderContextBar.pereyti_na_value1_b32e0679', { value1: item.label })}
                     {...(Platform.OS === 'web' && isLast
                       ? ({ 'aria-current': 'page' } as any)
                       : {})}

@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
+import { translate as i18nT } from '@/i18n';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { getMapPointKey } from '@/hooks/map/useMapTravels';
 import { strToLatLng } from './utils';
@@ -98,7 +99,19 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   return (
     <>
       {validPoints.map(({ point, coords, key }) => {
-        const accessibleName = point.address || point.categoryName || 'Место на карте';
+        const categoryName = Array.isArray(point.categoryName)
+          ? point.categoryName
+              .map((category) => (typeof category === 'string' ? category : category?.name))
+              .filter(Boolean)
+              .join(', ')
+          : typeof point.categoryName === 'string'
+            ? point.categoryName
+            : point.categoryName?.name;
+        const accessibleName = point.address || categoryName || i18nT('map:components.MapPage.Map.MapMarkers.mesto_na_karte_f4baa3a3');
+        const applyAccessibleName = (marker: any) => {
+          const el = marker?._icon || marker?.getElement?.();
+          if (el) el.setAttribute('aria-label', accessibleName);
+        };
         return (
         <Marker
           key={key}
@@ -111,16 +124,13 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
               if (typeof onMarkerInstance === 'function') {
                 onMarkerInstance(String(point.coord ?? ''), marker ?? null);
               }
-              // Add aria-label for a11y (Lighthouse aria-command-name audit)
-              const el = marker?._icon || marker?.getElement?.();
-              if (el && !el.getAttribute('aria-label')) {
-                el.setAttribute('aria-label', accessibleName);
-              }
+              applyAccessibleName(marker);
             } catch {
               // noop
             }
           }}
           eventHandlers={{
+            add: (e: any) => applyAccessibleName(e?.target),
             click: (e: any) => handleMarkerClick(e, point, coords),
           }}
         >

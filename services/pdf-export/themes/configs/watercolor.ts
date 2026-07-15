@@ -1,4 +1,5 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Watercolor - мягкая акварель: светлый бумажный фон, пастельные сине-зелёные
@@ -6,8 +7,8 @@ import type { PdfThemeConfig } from '../types'
  */
 export const watercolorTheme: PdfThemeConfig = {
   name: 'watercolor',
-  displayName: 'Акварель',
-  description: 'Мягкая акварель: пастельные тона и дружелюбные заголовки',
+  get displayName() { return i18nT('export:services.pdfExport.theme.watercolor.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.watercolor.description') },
 
   colors: {
     text: '#3a4046',

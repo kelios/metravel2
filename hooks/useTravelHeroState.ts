@@ -12,6 +12,8 @@ import { useTdTrace } from '@/hooks/useTdTrace'
 import { isIOSWebKit } from '@/components/ui/ImageCardMediaWebHelpers'
 import type { Travel, TravelMediaImage } from '@/types/types'
 import { findGalleryMediaImage } from '@/utils/travelMediaVariants'
+import { translate as i18nT } from '@/i18n'
+
 
 type ImgLike = {
   url: string
@@ -120,8 +122,8 @@ function useHeroMediaModel(
   }, [winH, insets.top, insets.bottom, isMobile])
 
   const heroAlt = travel?.name
-    ? `Фотография маршрута «${travel.name}»`
-    : 'Фото путешествия'
+    ? i18nT('shared:hooks.useTravelHeroState.fotografiya_marshruta_value1_f78854ce', { value1: travel.name })
+    : i18nT('shared:hooks.useTravelHeroState.foto_puteshestviya_039565f7')
 
   const isJSDOM =
     Platform.OS === 'web' &&

@@ -2,6 +2,8 @@ import React from 'react'
 import { ScrollView, Text as RNText } from 'react-native'
 
 import type { PointsListStyles } from './types'
+import { translate as i18nT } from '@/i18n'
+
 
 const INITIAL_POINTS = 80
 const POINTS_INCREMENT = 80
@@ -75,7 +77,7 @@ export const PointsListWebLazyScroll: React.FC<Props> = ({
       ))}
       {hasMoreItems ? (
         <RNText style={localStyles.listProgressText}>
-          Показано {visiblePoints.length} из {filteredPoints.length}
+          {i18nT('map:components.UserPoints.PointsListWebLazyScroll.pokazano_1660d084')}{visiblePoints.length} {i18nT('map:components.UserPoints.PointsListWebLazyScroll.iz_b7920f29')}{filteredPoints.length}
         </RNText>
       ) : null}
     </ScrollView>

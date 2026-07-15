@@ -7,6 +7,8 @@ import useBreadcrumbModelDefault, {
 } from '@/hooks/useBreadcrumbModel';
 import { getSiteBaseUrl } from '@/utils/seo';
 import { stringifyJsonLd } from '@/utils/jsonLd';
+import { translate as i18nT } from '@/i18n'
+
 
 const useBreadcrumbModelSafe: () => BreadcrumbModel =
   typeof useBreadcrumbModelNamed === 'function'
@@ -16,8 +18,8 @@ const useBreadcrumbModelSafe: () => BreadcrumbModel =
       : (() => ({
           items: [],
           depth: 1,
-          currentTitle: 'Путешествия',
-          pageContextTitle: 'Путешествия',
+          currentTitle: i18nT('seo:components.seo.BreadcrumbsJsonLd.puteshestviya_143fbb93'),
+          pageContextTitle: i18nT('seo:components.seo.BreadcrumbsJsonLd.puteshestviya_143fbb93'),
           backToPath: null,
           showBreadcrumbs: false,
         }) as BreadcrumbModel);
@@ -47,7 +49,7 @@ export default function BreadcrumbsJsonLd({ model: modelProp, pathname: pathname
   const itemListElement = useMemo(() => {
     const modelItems = model?.items ?? [];
     if (!model?.showBreadcrumbs || modelItems.length === 0) return null;
-    const items = [{ label: 'Главная', path: '/' }, ...modelItems];
+    const items = [{ label: i18nT('seo:components.seo.BreadcrumbsJsonLd.glavnaya_c0447583'), path: '/' }, ...modelItems];
     return items.map((item, index) => ({
       '@type': 'ListItem',
       position: index + 1,

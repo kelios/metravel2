@@ -38,8 +38,6 @@ module.exports = {
     '<rootDir>/components/MapUploadComponent',
     '<rootDir>/components/imageUpload/',
     '<rootDir>/components/travel/ImageGalleryComponent',
-    '<rootDir>/components/ArticleEditor.web.tsx',
-    '<rootDir>/components/export/BookSettingsModal.tsx',
     '<rootDir>/components/export/GalleryLayoutSelector.tsx',
   ],
   transformIgnorePatterns: [

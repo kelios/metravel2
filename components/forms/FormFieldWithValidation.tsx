@@ -7,6 +7,8 @@ import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface FormFieldWithValidationProps {
   label: string;
@@ -45,7 +47,7 @@ function FormFieldWithValidation({
       color: colors.text,
     },
     required: {
-      color: colors.danger,
+      color: colors.dangerDark,
     },
     hintContainer: {
       position: 'relative',
@@ -119,7 +121,7 @@ function FormFieldWithValidation({
     },
     errorText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm, // ✅ ИСПРАВЛЕНИЕ: Увеличен размер для читаемости
-      color: colors.danger,
+      color: colors.dangerDark,
       fontWeight: '500', // ✅ ИСПРАВЛЕНИЕ: Добавлен font-weight
       flex: 1,
       lineHeight: 18,
@@ -140,7 +142,7 @@ function FormFieldWithValidation({
               style={[styles.hintButton, isHintHovered && styles.hintButtonHovered]}
               onHoverIn={Platform.OS === 'web' ? () => setIsHintHovered(true) : undefined}
               onHoverOut={Platform.OS === 'web' ? () => setIsHintHovered(false) : undefined}
-              accessibilityLabel="Показать подсказку"
+              accessibilityLabel={i18nT('errors:components.forms.FormFieldWithValidation.pokazat_podskazku_6ecd8c34')}
               accessibilityRole="button"
               {...Platform.select({
                 web: {
@@ -167,7 +169,7 @@ function FormFieldWithValidation({
           accessibilityRole="alert"
           accessibilityLiveRegion="polite"
         >
-          <Feather name="alert-circle" size={16} color={colors.danger} style={styles.errorIcon} />
+          <Feather name="alert-circle" size={16} color={colors.dangerDark} style={styles.errorIcon} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}

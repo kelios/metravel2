@@ -9,10 +9,9 @@ import Home from '@/components/home/Home'
 import { HomePageSkeleton } from '@/components/home/HomePageSkeleton'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
+import { translate as i18nT } from '@/i18n'
 
-const SEO_TITLE = 'Идеи поездок на выходные и книга путешествий | Metravel'
-const SEO_DESCRIPTION =
-  'Подбирайте маршруты по расстоянию и формату отдыха, сохраняйте поездки с фото и заметками и собирайте личную книгу путешествий в PDF.'
+
 // Тематическое hero-изображение для соцсетей (1200×630) вместо generic-логотипа.
 const HOME_OG_IMAGE_PATH = '/og-home.jpg'
 const HOME_OG_IMAGE_WIDTH = 1200
@@ -24,13 +23,13 @@ function renderHomeSeo(canonical: string) {
   return (
     <InstantSEO
       headKey="home"
-      title={SEO_TITLE}
-      description={SEO_DESCRIPTION}
+      title={i18nT('seoStatic:root.home.title')}
+      description={i18nT('seoStatic:root.home.description')}
       canonical={canonical}
       image={buildOgImageUrl(HOME_OG_IMAGE_PATH)}
       imageWidth={HOME_OG_IMAGE_WIDTH}
       imageHeight={HOME_OG_IMAGE_HEIGHT}
-      imageAlt="Metravel — идеи путешествий на выходные"
+      imageAlt={i18nT('home:app.tabs.index.metravel_idei_puteshestviy_na_vyhodnye_747b4fc4')}
       ogType="website"
     />
   )
@@ -130,14 +129,14 @@ function HomeScreen() {
         {/* The single level-1 semantic heading is the visible hero title in
             HomeHeroBookLayout. This sr-only line carries the longer SEO phrasing
             for screen readers/crawlers as a level-2 heading to avoid duplicates. */}
-        {IS_WEB && React.createElement('h2', { style: styles.srOnly as any }, SEO_TITLE)}
+        {IS_WEB && React.createElement('h2', { style: styles.srOnly as any }, i18nT('seoStatic:root.home.title'))}
 
         <ErrorBoundary
           key={errorBoundaryRetryKey}
           fallback={
             <View style={styles.errorContainer}>
               <ErrorDisplay
-                message="Не удалось загрузить главную страницу"
+                message={i18nT('home:app.tabs.index.ne_udalos_zagruzit_glavnuyu_stranitsu_dcf3f37d')}
                 onRetry={handleHomeRetry}
                 variant="error"
               />
@@ -207,7 +206,7 @@ const SlowLoadHint = React.memo<{ colors: ReturnType<typeof useThemedColors> }>(
     <View style={slowLoadStyles.wrap} pointerEvents="none">
       <View style={[slowLoadStyles.pill, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <ActivityIndicator size="small" color={colors.primaryDark} />
-        <Text style={[slowLoadStyles.text, { color: colors.textMuted }]}>Загружаем…</Text>
+        <Text style={[slowLoadStyles.text, { color: colors.textMuted }]}>{i18nT('home:app.tabs.index.zagruzhaem_4bc2d2f4')}</Text>
       </View>
     </View>
   )

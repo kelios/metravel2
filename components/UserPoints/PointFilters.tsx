@@ -6,13 +6,15 @@ import { useThemedColors } from '@/hooks/useTheme';
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
 import Chip from '@/components/ui/Chip';
 import ColorChip from '@/components/ui/ColorChip';
+import { translate as i18nT } from '@/i18n'
+
 
 const RADIUS_OPTIONS: Array<number | null> = [100, 150, 200, 300, 500, null]; // null = all points
 const PILL_RADIUS = DESIGN_TOKENS.radii.pill;
 
 const getRadiusLabel = (km: number | null) => {
-  if (km === null) return 'Все точки';
-  return `${km} км`;
+  if (km === null) return i18nT('map:components.UserPoints.PointFilters.vse_tochki_c09f7775');
+  return i18nT('map:components.UserPoints.PointFilters.value1_km_00637647', { value1: km });
 };
 
 const toggleListValue = <T,>(list: T[] | undefined, value: T) => {
@@ -77,7 +79,7 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
   return (
     <View style={styles.container}>
       {presets?.length ? (
-        <CollapsibleSection title="Подборки" defaultOpen={false} icon="star">
+        <CollapsibleSection title={i18nT('map:components.UserPoints.PointFilters.podborki_09ef1cb5')} defaultOpen={false} icon="star">
           <ChipsContainer>
             {presets.map((p) => {
               const isSelected = activePresetId === p.id;
@@ -95,7 +97,7 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
         </CollapsibleSection>
       ) : null}
 
-      <CollapsibleSection title="Радиус" defaultOpen icon="map-pin">
+      <CollapsibleSection title={i18nT('map:components.UserPoints.PointFilters.radius_8646c448')} defaultOpen icon="map-pin">
         <ChipsContainer>
           {RADIUS_OPTIONS.map((km) => {
             const isSelected = filters.radiusKm === km;
@@ -108,7 +110,7 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
         </ChipsContainer>
       </CollapsibleSection>
 
-      <CollapsibleSection title="Цвет" defaultOpen badge={activeColorCount} icon="circle">
+      <CollapsibleSection title={i18nT('map:components.UserPoints.PointFilters.tsvet_28c5c655')} defaultOpen badge={activeColorCount} icon="circle">
         <ChipsContainer>
           {(availableColors ?? []).map((color) => {
             const isSelected = filters.colors?.includes(color);
@@ -118,7 +120,7 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
                 color={color}
                 selected={isSelected}
                 onPress={() => toggleColor(color)}
-                accessibilityLabel={`Цвет ${color}`}
+                accessibilityLabel={i18nT('map:components.UserPoints.PointFilters.tsvet_value1_db023932', { value1: color })}
                 style={styles.colorChip}
                 selectedStyle={styles.colorChipSelected}
               />
@@ -129,7 +131,7 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
 
       {siteCategoryOptions?.length ? (
         <CollapsibleSection
-          title="Категории"
+          title={i18nT('map:components.UserPoints.PointFilters.kategorii_79581419')}
           defaultOpen={false}
           badge={activeCategoryCount || undefined}
           icon="grid"

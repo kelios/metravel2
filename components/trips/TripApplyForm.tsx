@@ -13,23 +13,18 @@ import { useSubmitApplication } from '@/hooks/usePublicTripsApi';
 import { useActionConsent } from '@/hooks/useActionConsent';
 import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   trip: PublicTrip;
   onSubmitted?: () => void;
 }
 
-const DISCLAIMER =
-  'MeTravel не организует поездки и не является их участником. Это площадка для знакомства попутчиков — все договорённости, оплата и ответственность остаются на участниках.';
-const DUPLICATE_APPLICATION_MESSAGE =
-  'Заявка уже отправлена. Статус можно посмотреть в разделе «Мои поездки».';
-const GENERIC_SUBMIT_ERROR_MESSAGE =
-  'Не удалось отправить заявку. Попробуйте ещё раз позже.';
-
 export const getTripApplyErrorMessage = (error: unknown): string =>
   isDuplicateTripApplicationError(error)
-    ? DUPLICATE_APPLICATION_MESSAGE
-    : GENERIC_SUBMIT_ERROR_MESSAGE;
+    ? i18nT('tripsStatic:tripApply.duplicateError')
+    : i18nT('tripsStatic:tripApply.genericError');
 
 function parseLinks(raw: string): string[] {
   return raw
@@ -60,7 +55,7 @@ function TripApplyForm({ trip, onSubmitted }: Props) {
   const handleSubmit = () => {
     setError(null);
     if (message.trim().length < 10) {
-      setError('Напишите пару слов о себе — почему хотите поехать (минимум 10 символов).');
+      setError(i18nT('trips:components.trips.TripApplyForm.napishite_paru_slov_o_sebe_pochemu_hotite_po_36f0afb5'));
       return;
     }
     submit.mutate(
@@ -87,32 +82,31 @@ function TripApplyForm({ trip, onSubmitted }: Props) {
 
   return (
     <View style={styles.wrap} testID="trip-apply-form">
-      <Text style={styles.heading}>Хочу поехать</Text>
+      <Text style={styles.heading}>{i18nT('trips:components.trips.TripApplyForm.hochu_poehat_4a92c1e8')}</Text>
 
-      <Text style={styles.label}>Сообщение организатору</Text>
+      <Text style={styles.label}>{i18nT('trips:components.trips.TripApplyForm.soobschenie_organizatoru_ee7cee00')}</Text>
       <TextInput
         value={message}
         onChangeText={setMessage}
-        placeholder="Расскажите о себе: опыт, чем будете полезны, что ждёте от поездки"
+        placeholder={i18nT('trips:components.trips.TripApplyForm.rasskazhite_o_sebe_opyt_chem_budete_polezny__03fac933')}
         placeholderTextColor={colors.textMuted}
         multiline
         style={styles.textArea}
         testID="trip-apply-message"
       />
 
-      <Text style={styles.label}>Ссылки на соцсети (по желанию)</Text>
+      <Text style={styles.label}>{i18nT('trips:components.trips.TripApplyForm.ssylki_na_sotsseti_po_zhelaniyu_09a87889')}</Text>
       <TextInput
         value={links}
         onChangeText={setLinks}
-        placeholder="Instagram, Strava, Telegram… по одной на строку"
+        placeholder={i18nT('trips:components.trips.TripApplyForm.instagram_strava_telegram_po_odnoy_na_stroku_48adfb4b')}
         placeholderTextColor={colors.textMuted}
         autoCapitalize="none"
         style={styles.input}
         testID="trip-apply-links"
       />
       <Text style={styles.hint}>
-        Ссылки помогут организатору познакомиться с вами. Они видны только ему.
-      </Text>
+        {i18nT('trips:components.trips.TripApplyForm.ssylki_pomogut_organizatoru_poznakomitsya_s__b5b89f75')}</Text>
 
       <View style={styles.consentBlock}>
         <ConsentCheckbox
@@ -120,14 +114,12 @@ function TripApplyForm({ trip, onSubmitted }: Props) {
           onToggle={setAgreeRules}
           testID="trip-apply-consent-rules"
         >
-          Я ознакомился с{' '}
+          {i18nT('trips:components.trips.TripApplyForm.ya_oznakomilsya_s_243e7620')}{' '}
           <Link href="/trip-rules" style={styles.link}>
-            правилами поездок
-          </Link>{' '}
-          и{' '}
+            {i18nT('trips:components.trips.TripApplyForm.pravilami_poezdok_c465f9f0')}</Link>{' '}
+          {i18nT('trips:components.trips.TripApplyForm.i_ad42550a')}{' '}
           <Link href="/community-rules" style={styles.link}>
-            правилами сообщества
-          </Link>
+            {i18nT('trips:components.trips.TripApplyForm.pravilami_soobschestva_409de536')}</Link>
           .
         </ConsentCheckbox>
         <ConsentCheckbox
@@ -135,12 +127,10 @@ function TripApplyForm({ trip, onSubmitted }: Props) {
           onToggle={setAgreeDisclaimer}
           testID="trip-apply-consent-disclaimer"
         >
-          Я понимаю, что MeTravel не организует поездку и не несёт
-          ответственности за договорённости участников.
-        </ConsentCheckbox>
+          {i18nT('trips:components.trips.TripApplyForm.ya_ponimayu_chto_metravel_ne_organizuet_poez_324c6668')}</ConsentCheckbox>
       </View>
 
-      <SafetyNotice text={DISCLAIMER} style={styles.disclaimer} />
+      <SafetyNotice text={i18nT('tripsStatic:tripApply.disclaimer')} style={styles.disclaimer} />
 
       {error ? (
         <Text style={styles.error} testID="trip-apply-error">
@@ -149,7 +139,7 @@ function TripApplyForm({ trip, onSubmitted }: Props) {
       ) : null}
 
       <Button
-        label={hasExistingApplication ? 'Заявка уже отправлена' : 'Отправить заявку'}
+        label={hasExistingApplication ? i18nT('trips:components.trips.TripApplyForm.zayavka_uzhe_otpravlena_0dde292e') : i18nT('trips:components.trips.TripApplyForm.otpravit_zayavku_81fc35af')}
         onPress={handleSubmit}
         disabled={!canSubmit}
         loading={submit.isPending}

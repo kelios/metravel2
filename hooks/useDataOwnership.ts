@@ -11,6 +11,8 @@ import {
     revokeUserConsents,
     type DataExportDto,
 } from '@/api/privacy';
+import { translate as i18nT } from '@/i18n'
+
 
 const errorMessage = (error: unknown, fallback: string): string =>
     error instanceof ApiError ? error.message : fallback;
@@ -29,39 +31,39 @@ export function useDataOwnership() {
             setLastExport(data);
             if (data.status === 'ready' && data.download_url) {
                 openExternalUrl(data.download_url);
-                showToast({ type: 'success', text1: 'Архив готов', text2: 'Загрузка началась' });
+                showToast({ type: 'success', text1: i18nT('shared:hooks.useDataOwnership.arhiv_gotov_df06a08d'), text2: i18nT('shared:hooks.useDataOwnership.zagruzka_nachalas_672ebe0d') });
             } else {
                 showToast({
                     type: 'success',
-                    text1: 'Запрос принят',
-                    text2: 'Архив с вашими данными готовится. Мы пришлём ссылку.',
+                    text1: i18nT('shared:hooks.useDataOwnership.zapros_prinyat_4f1da9a9'),
+                    text2: i18nT('shared:hooks.useDataOwnership.arhiv_s_vashimi_dannymi_gotovitsya_my_prishl_cb30f698'),
                 });
             }
         },
         onError: (error) => {
-            showToast({ type: 'error', text1: 'Ошибка', text2: errorMessage(error, 'Не удалось запросить экспорт') });
+            showToast({ type: 'error', text1: i18nT('shared:hooks.useDataOwnership.oshibka_718d3c7d'), text2: errorMessage(error, i18nT('shared:hooks.useDataOwnership.ne_udalos_zaprosit_eksport_bb7e0c6c')) });
         },
     });
 
     const deleteMessagesMutation = useMutation({
         mutationFn: deleteUserMessages,
-        onSuccess: () => showToast({ type: 'success', text1: 'Переписка удалена' }),
+        onSuccess: () => showToast({ type: 'success', text1: i18nT('shared:hooks.useDataOwnership.perepiska_udalena_647250f7') }),
         onError: (error) =>
-            showToast({ type: 'error', text1: 'Ошибка', text2: errorMessage(error, 'Не удалось удалить переписку') }),
+            showToast({ type: 'error', text1: i18nT('shared:hooks.useDataOwnership.oshibka_718d3c7d'), text2: errorMessage(error, i18nT('shared:hooks.useDataOwnership.ne_udalos_udalit_perepisku_f24184c9')) }),
     });
 
     const deleteRoutesMutation = useMutation({
         mutationFn: deleteUserRoutes,
-        onSuccess: () => showToast({ type: 'success', text1: 'Маршруты удалены' }),
+        onSuccess: () => showToast({ type: 'success', text1: i18nT('shared:hooks.useDataOwnership.marshruty_udaleny_69c5c668') }),
         onError: (error) =>
-            showToast({ type: 'error', text1: 'Ошибка', text2: errorMessage(error, 'Не удалось удалить маршруты') }),
+            showToast({ type: 'error', text1: i18nT('shared:hooks.useDataOwnership.oshibka_718d3c7d'), text2: errorMessage(error, i18nT('shared:hooks.useDataOwnership.ne_udalos_udalit_marshruty_c4218ef8')) }),
     });
 
     const revokeConsentsMutation = useMutation({
         mutationFn: revokeUserConsents,
-        onSuccess: () => showToast({ type: 'success', text1: 'Согласия отозваны' }),
+        onSuccess: () => showToast({ type: 'success', text1: i18nT('shared:hooks.useDataOwnership.soglasiya_otozvany_c280176e') }),
         onError: (error) =>
-            showToast({ type: 'error', text1: 'Ошибка', text2: errorMessage(error, 'Не удалось отозвать согласия') }),
+            showToast({ type: 'error', text1: i18nT('shared:hooks.useDataOwnership.oshibka_718d3c7d'), text2: errorMessage(error, i18nT('shared:hooks.useDataOwnership.ne_udalos_otozvat_soglasiya_b7ee15b9')) }),
     });
 
     const exportData = useCallback(() => {
@@ -71,27 +73,27 @@ export function useDataOwnership() {
 
     const deleteMessages = useCallback(async () => {
         const confirmed = await confirmAction({
-            title: 'Удалить переписку',
-            message: 'Вся ваша личная переписка будет удалена без возможности восстановления. Продолжить?',
-            confirmText: 'Удалить',
+            title: i18nT('shared:hooks.useDataOwnership.udalit_perepisku_1d65d54f'),
+            message: i18nT('shared:hooks.useDataOwnership.vsya_vasha_lichnaya_perepiska_budet_udalena__45ded7c4'),
+            confirmText: i18nT('shared:hooks.useDataOwnership.udalit_fcfe15ec'),
         });
         if (confirmed) deleteMessagesMutation.mutate();
     }, [deleteMessagesMutation]);
 
     const deleteRoutes = useCallback(async () => {
         const confirmed = await confirmAction({
-            title: 'Удалить маршруты',
-            message: 'Ваши сохранённые маршруты будут удалены без возможности восстановления. Продолжить?',
-            confirmText: 'Удалить',
+            title: i18nT('shared:hooks.useDataOwnership.udalit_marshruty_e479bd12'),
+            message: i18nT('shared:hooks.useDataOwnership.vashi_sohranennye_marshruty_budut_udaleny_be_5de38c28'),
+            confirmText: i18nT('shared:hooks.useDataOwnership.udalit_fcfe15ec'),
         });
         if (confirmed) deleteRoutesMutation.mutate();
     }, [deleteRoutesMutation]);
 
     const revokeConsents = useCallback(async () => {
         const confirmed = await confirmAction({
-            title: 'Отозвать согласия',
-            message: 'Будут отозваны ранее данные согласия на обработку данных. Продолжить?',
-            confirmText: 'Отозвать',
+            title: i18nT('shared:hooks.useDataOwnership.otozvat_soglasiya_7f94de65'),
+            message: i18nT('shared:hooks.useDataOwnership.budut_otozvany_ranee_dannye_soglasiya_na_obr_d73e6fbd'),
+            confirmText: i18nT('shared:hooks.useDataOwnership.otozvat_60af44ae'),
         });
         if (confirmed) revokeConsentsMutation.mutate();
     }, [revokeConsentsMutation]);

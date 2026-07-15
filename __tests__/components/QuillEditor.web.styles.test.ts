@@ -1,4 +1,7 @@
-import { ARTICLE_EDITOR_QUILL_WEB_CSS } from '@/components/article/QuillEditor.web'
+import {
+  applyQuillAccessibility,
+  ARTICLE_EDITOR_QUILL_WEB_CSS,
+} from '@/components/article/QuillEditor.web'
 
 describe('QuillEditor.web styles', () => {
   it('keeps travel editor layout rules scoped to the article editor chrome', () => {
@@ -21,5 +24,22 @@ describe('QuillEditor.web styles', () => {
     expect(ARTICLE_EDITOR_QUILL_WEB_CSS).toContain('fill: var(--color-textMuted);')
     expect(ARTICLE_EDITOR_QUILL_WEB_CSS).toContain('button[disabled]')
     expect(ARTICLE_EDITOR_QUILL_WEB_CSS).toContain('stroke: var(--color-textSubtle);')
+  })
+
+  it('names picker controls and adds fallback alt text to editor images', () => {
+    const toolbar = document.createElement('div')
+    toolbar.innerHTML = [
+      '<span class="ql-picker ql-font"><span class="ql-picker-label"></span></span>',
+      '<span class="ql-picker ql-size"><span class="ql-picker-label" aria-label="Custom size"></span></span>',
+    ].join('')
+    const root = document.createElement('div')
+    root.innerHTML = '<img src="/missing-alt.jpg"><img src="/described.jpg" alt="Авторское описание">'
+
+    applyQuillAccessibility({ root }, toolbar)
+
+    expect(toolbar.querySelector('.ql-font .ql-picker-label')?.getAttribute('aria-label')).toBe('Font')
+    expect(toolbar.querySelector('.ql-size .ql-picker-label')?.getAttribute('aria-label')).toBe('Custom size')
+    expect(root.querySelector('img[src="/missing-alt.jpg"]')?.getAttribute('alt')).toBe('Изображение')
+    expect(root.querySelector('img[src="/described.jpg"]')?.getAttribute('alt')).toBe('Авторское описание')
   })
 })

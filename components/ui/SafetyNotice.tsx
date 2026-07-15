@@ -8,9 +8,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { translate as i18nT } from '@/i18n'
 
-const DEFAULT_TEXT =
-  'MeTravel не несёт ответственности за личные договорённости и встречи. Будьте осторожны при обмене контактами и личными данными.';
 
 const STORAGE_PREFIX = 'metravel_safety_notice_dismissed:';
 
@@ -41,6 +40,7 @@ function SafetyNotice({ text, storageKey, dismissible, style, testID }: SafetyNo
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const canDismiss = dismissible ?? Boolean(storageKey);
+  const displayText = text ?? i18nT('sharedStatic:safetyNotice.default');
 
   // На web стартовое значение читаем синхронно (без мигания плашки), на native —
   // дочитываем в эффекте.
@@ -79,17 +79,17 @@ function SafetyNotice({ text, storageKey, dismissible, style, testID }: SafetyNo
     <View
       style={[styles.container, style]}
       accessibilityRole="alert"
-      accessibilityLabel={text ?? DEFAULT_TEXT}
+      accessibilityLabel={displayText}
       testID={testID ?? 'safety-notice'}
     >
       <Feather name="shield" size={18} color={colors.warning} style={styles.icon} />
-      <Text style={styles.text}>{text ?? DEFAULT_TEXT}</Text>
+      <Text style={styles.text}>{displayText}</Text>
       {canDismiss && (
         <Pressable
           onPress={handleDismiss}
           style={[styles.closeButton, globalFocusStyles.focusable]}
           accessibilityRole="button"
-          accessibilityLabel="Скрыть предупреждение"
+          accessibilityLabel={i18nT('shared:components.ui.SafetyNotice.skryt_preduprezhdenie_de851520')}
           testID={`${testID ?? 'safety-notice'}-dismiss`}
           hitSlop={8}
           {...Platform.select({ web: { cursor: 'pointer' as any } })}

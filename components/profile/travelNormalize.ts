@@ -1,5 +1,6 @@
 import type { Travel } from '@/types/types';
 import { attachTravelEngagementStats } from '@/utils/travelEngagementStats'
+import { translate as i18nT } from '@/i18n'
 
 export type ProfileListItem = {
   type?: string;
@@ -57,7 +58,7 @@ export const normalizeToTravel = (item: Record<string, unknown>): Travel => {
   const id = typeof idRaw === 'number' ? idRaw : Number(idRaw) || 0;
   const url = String(item?.url ?? item?.urlTravel ?? item?.href ?? '').trim();
   const slug = String(item?.slug ?? getSlugFromUrl(url, String(id || item?.id || ''))).trim();
-  const name = String(item?.name ?? item?.title ?? '').trim() || 'Без названия';
+  const name = String(item?.name ?? item?.title ?? '').trim() || i18nT('profile:components.profile.travelNormalize.untitled');
 
   const travel_image_thumb_url =
     String(

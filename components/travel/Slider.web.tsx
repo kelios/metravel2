@@ -25,6 +25,8 @@ import Slide from './sliderParts/Slide'
 import { useSliderCore } from './sliderParts/useSliderCore'
 import { useSliderTrack } from './sliderParts/useSliderTrack'
 import { useSliderPointerDrag } from './sliderParts/useSliderPointerDrag'
+import { translate as i18nT } from '@/i18n'
+
 
 export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types'
 
@@ -482,7 +484,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           <View
             ref={viewportRef}
             testID="slider-scroll"
-            accessibilityLabel="Галерея изображений"
+            accessibilityLabel={i18nT('travel:components.travel.Slider.galereya_izobrazheniy_7c82db75')}
             {...({ role: 'group', 'aria-roledescription': 'carousel' } as any)}
             {...dataSetSliderId}
             style={[styles.carouselViewport, { height: containerHeight }, viewportTouchAction]}

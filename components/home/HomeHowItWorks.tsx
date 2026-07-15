@@ -9,31 +9,33 @@ import { useResponsive } from '@/hooks/useResponsive'
 import { ResponsiveContainer } from '@/components/layout'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { buildLoginHref } from '@/utils/authNavigation'
+import { translate as i18nT } from '@/i18n'
+
 
 const STEPS = [
   {
     number: 1,
-    title: 'Выбери маршрут',
-    description: 'Фильтруй по расстоянию, формату и длительности',
+    get title() { return i18nT('homeStatic:components.home.HomeHowItWorks.vyberi_marshrut_b7c35145') },
+    get description() { return i18nT('homeStatic:components.home.HomeHowItWorks.filtruy_po_rasstoyaniyu_formatu_i_dlitelnost_77b8bb10') },
     icon: 'compass',
     path: '/search',
-    actionLabel: 'Открыть каталог',
+    get actionLabel() { return i18nT('homeStatic:howItWorks.openCatalog') },
   },
   {
     number: 2,
-    title: 'Сохрани поездку',
-    description: 'Добавь фото, заметки и точки маршрута',
+    get title() { return i18nT('homeStatic:components.home.HomeHowItWorks.sohrani_poezdku_b54cc208') },
+    get description() { return i18nT('homeStatic:components.home.HomeHowItWorks.dobav_foto_zametki_i_tochki_marshruta_7a27ffd9') },
     icon: 'bookmark',
     path: '/travel/new',
-    actionLabel: 'Добавить поездку',
+    get actionLabel() { return i18nT('homeStatic:howItWorks.addTravel') },
   },
   {
     number: 3,
-    title: 'Поделись книгой',
-    description: 'Скачай PDF или отправь ссылку',
+    get title() { return i18nT('homeStatic:components.home.HomeHowItWorks.podelis_knigoy_122072f8') },
+    get description() { return i18nT('homeStatic:components.home.HomeHowItWorks.skachay_pdf_ili_otprav_ssylku_a634b00d') },
     icon: 'share-2',
     path: '/export',
-    actionLabel: 'Создать книгу',
+    get actionLabel() { return i18nT('homeStatic:howItWorks.createBook') },
   },
 ] as const
 
@@ -99,7 +101,7 @@ function StepCard({
           >
             {step.title}
           </Text>
-          <Text style={styles.stepKicker}>Шаг {step.number}</Text>
+          <Text style={styles.stepKicker}>{i18nT('home:components.home.HomeHowItWorks.shag_b08e9673')}{step.number}</Text>
         </View>
       </View>
       <Text style={styles.stepDescription}>{step.description}</Text>
@@ -171,18 +173,16 @@ function HomeHowItWorks() {
               color={colors.primaryDark}
               {...({ 'aria-hidden': true, focusable: false } as any)}
             />
-            <Text style={styles.eyebrowText}>Как это работает</Text>
+            <Text style={styles.eyebrowText}>{i18nT('home:components.home.HomeHowItWorks.kak_eto_rabotaet_bb600852')}</Text>
           </View>
           <Text
             style={styles.title}
             accessibilityRole="header"
             {...({ 'aria-level': 2 } as any)}
           >
-            Как сохранить маршрут и вернуться к нему позже
-          </Text>
+            {i18nT('home:components.home.HomeHowItWorks.kak_sohranit_marshrut_i_vernutsya_k_nemu_poz_c0e3e8df')}</Text>
           <Text style={styles.subtitle}>
-            Выберите поездку, добавьте заметки и откройте всё снова, когда это понадобится
-          </Text>
+            {i18nT('home:components.home.HomeHowItWorks.vyberite_poezdku_dobavte_zametki_i_otkroyte__a385b1df')}</Text>
         </View>
 
         <View style={styles.stepsContainer}>

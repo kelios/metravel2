@@ -10,6 +10,7 @@ import {
   resolveCoverImage as resolveBookCoverImage,
 } from '../runtime/bookData';
 import { generateSharedCoverPageMarkup } from '../runtime/coverPage';
+import { translate as i18nT } from '@/i18n';
 
 /**
  * Генератор обложки книги
@@ -25,7 +26,7 @@ export class CoverPageGenerator extends BasePageGenerator {
   async generate(context: PageContext): Promise<string> {
     const { settings, travels = [], theme } = context;
 
-    const userName = travels[0]?.userName || 'Аноним';
+    const userName = travels[0]?.userName || i18nT('export:services.pdfExport.generators.coverPage.anonymous');
     const yearRange = getBookYearRange(travels);
 
     const coverImage = resolveBookCoverImage(travels, settings);

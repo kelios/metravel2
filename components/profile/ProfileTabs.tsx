@@ -5,6 +5,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { translate as i18nT } from '@/i18n'
+
 
 export type ProfileTabKey =
   | 'overview'
@@ -163,22 +165,22 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
   );
 
   const allTabs: Array<{ key: ProfileTabKey; label: string; a11yLabel: string; hint: string }> = [
-    { key: 'travels', label: 'Маршруты', a11yLabel: 'Мои маршруты', hint: 'Показать все ваши путешествия' },
-    { key: 'publishedTravels', label: 'Опубл.', a11yLabel: 'Опубликованные маршруты', hint: 'Показать опубликованные путешествия' },
-    { key: 'draftTravels', label: 'Черновики', a11yLabel: 'Черновики маршрутов', hint: 'Показать сохранённые черновики путешествий' },
-    { key: 'subscribers', label: 'Подписчики', a11yLabel: 'Подписчики', hint: 'Открыть список подписчиков' },
-    { key: 'subscriptions', label: 'Подписки', a11yLabel: 'Подписки', hint: 'Открыть список подписок' },
+    { key: 'travels', label: i18nT('profile:components.profile.ProfileTabs.marshruty_6faa8208'), a11yLabel: i18nT('profile:components.profile.ProfileTabs.moi_marshruty_13d9bcc9'), hint: i18nT('profile:components.profile.ProfileTabs.pokazat_vse_vashi_puteshestviya_d18d90e6') },
+    { key: 'publishedTravels', label: i18nT('profile:components.profile.ProfileTabs.opubl_8960af68'), a11yLabel: i18nT('profile:components.profile.ProfileTabs.opublikovannye_marshruty_04ba1d94'), hint: i18nT('profile:components.profile.ProfileTabs.pokazat_opublikovannye_puteshestviya_8b7eda79') },
+    { key: 'draftTravels', label: i18nT('profile:components.profile.ProfileTabs.chernoviki_5cd596df'), a11yLabel: i18nT('profile:components.profile.ProfileTabs.chernoviki_marshrutov_7818add1'), hint: i18nT('profile:components.profile.ProfileTabs.pokazat_sohranennye_chernoviki_puteshestviy_b5b0208a') },
+    { key: 'subscribers', label: i18nT('profile:components.profile.ProfileTabs.podpischiki_c3060a7c'), a11yLabel: i18nT('profile:components.profile.ProfileTabs.podpischiki_c3060a7c'), hint: i18nT('profile:components.profile.ProfileTabs.otkryt_spisok_podpischikov_ecd34c45') },
+    { key: 'subscriptions', label: i18nT('profile:components.profile.ProfileTabs.podpiski_35c76252'), a11yLabel: i18nT('profile:components.profile.ProfileTabs.podpiski_35c76252'), hint: i18nT('profile:components.profile.ProfileTabs.otkryt_spisok_podpisok_30153619') },
     {
       key: 'overview',
-      label: 'Уровень',
-      a11yLabel: 'Уровень, значки и достижения',
-      hint: 'Показать ваш уровень, значки и достижения',
+      label: i18nT('profile:components.profile.ProfileTabs.uroven_c4e1223e'),
+      a11yLabel: i18nT('profile:components.profile.ProfileTabs.uroven_znachki_i_dostizheniya_cab1dee4'),
+      hint: i18nT('profile:components.profile.ProfileTabs.pokazat_vash_uroven_znachki_i_dostizheniya_99816bce'),
     },
-    { key: 'stats', label: 'Статистика', a11yLabel: 'Статистика профиля', hint: 'Вовлечённость маршрутов и личные статусы' },
-    { key: 'countries', label: 'Страны', a11yLabel: 'Страны профиля', hint: 'Показать страны, где вы уже были, и оставшиеся страны' },
-    { key: 'worldmap', label: 'Карта', a11yLabel: 'Карта мира', hint: 'Карта посещённых стран: серым — не посещено, цветом — посещено' },
-    { key: 'favorites', label: 'Хочу поехать', a11yLabel: 'Хочу поехать', hint: 'Показать маршруты, куда вы хотите поехать' },
-    { key: 'history', label: 'История', a11yLabel: 'Недавно смотрел', hint: 'Показать историю просмотров' },
+    { key: 'stats', label: i18nT('profile:components.profile.ProfileTabs.statistika_4d6e2616'), a11yLabel: i18nT('profile:components.profile.ProfileTabs.statistika_profilya_760237b0'), hint: i18nT('profile:components.profile.ProfileTabs.vovlechennost_marshrutov_i_lichnye_statusy_34ed19ae') },
+    { key: 'countries', label: i18nT('profile:components.profile.ProfileTabs.strany_20c33f2d'), a11yLabel: i18nT('profile:components.profile.ProfileTabs.strany_profilya_5649ce1c'), hint: i18nT('profile:components.profile.ProfileTabs.pokazat_strany_gde_vy_uzhe_byli_i_ostavshies_b420fd51') },
+    { key: 'worldmap', label: i18nT('profile:components.profile.ProfileTabs.karta_f1f34fd3'), a11yLabel: i18nT('profile:components.profile.ProfileTabs.karta_mira_60a7fda8'), hint: i18nT('profile:components.profile.ProfileTabs.karta_poseschennyh_stran_serym_ne_posescheno_443680c5') },
+    { key: 'favorites', label: i18nT('profile:components.profile.ProfileTabs.hochu_poehat_6d285e47'), a11yLabel: i18nT('profile:components.profile.ProfileTabs.hochu_poehat_6d285e47'), hint: i18nT('profile:components.profile.ProfileTabs.pokazat_marshruty_kuda_vy_hotite_poehat_874bb3dd') },
+    { key: 'history', label: i18nT('profile:components.profile.ProfileTabs.istoriya_6b1e228d'), a11yLabel: i18nT('profile:components.profile.ProfileTabs.nedavno_smotrel_8ae72b41'), hint: i18nT('profile:components.profile.ProfileTabs.pokazat_istoriyu_prosmotrov_c5066c06') },
   ];
 
   const tabs = tabKeys

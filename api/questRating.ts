@@ -7,6 +7,7 @@
 
 import { apiClient, ApiError } from '@/api/client'
 import { devError } from '@/utils/logger'
+import { translate as i18nT } from '@/i18n'
 
 export type QuestRating = 1 | 2 | 3 | 4 | 5
 
@@ -24,7 +25,7 @@ const isAbortError = (error: unknown): boolean =>
 
 function assertValidRating(rating: number): asserts rating is QuestRating {
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-    throw new Error('Рейтинг должен быть от 1 до 5')
+    throw new Error(i18nT('errorsStatic:api.common.ratingRange'))
   }
 }
 

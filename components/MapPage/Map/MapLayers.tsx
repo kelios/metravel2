@@ -10,6 +10,8 @@ import type { MapMode } from './types';
 import { isValidCoordinate } from '@/utils/coordinateValidator';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getOsmTileUrl, OSM_PROXY_ATTRIBUTION, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
+import { translate as i18nT } from '@/i18n'
+
 
 const isTestEnv =
   typeof process !== 'undefined' &&
@@ -115,6 +117,15 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
   }, [userLocation]);
 
   const shouldRenderBaseTileLayer = Platform.OS !== 'web' || isTestEnv;
+  const userLocationLabel = i18nT('map:components.MapPage.Map.MapLayers.vy_zdes_ba4a137a');
+
+  const labelUserLocationMarker = (marker: any) => {
+    if (Platform.OS !== 'web') return;
+    const el = marker?._icon || marker?.getElement?.();
+    if (!el) return;
+    el.setAttribute('role', 'img');
+    el.setAttribute('aria-label', userLocationLabel);
+  };
 
   return (
     <>
@@ -148,12 +159,17 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
           key={`user-location-${userLocationPaneName ?? 'default-pane'}`}
           position={[validUserLocation.lat, validUserLocation.lng]}
           icon={userLocationIcon}
+          title={userLocationLabel}
+          alt={userLocationLabel}
+          ref={labelUserLocationMarker}
           pane={Platform.OS === 'web' ? userLocationPaneName : undefined}
           interactive={Platform.OS !== 'web'}
           zIndexOffset={0}
           eventHandlers={
             Platform.OS === 'web'
-              ? undefined
+              ? {
+                  add: (e: any) => labelUserLocationMarker(e?.target),
+                }
               : {
                   click: (e: any) => {
                     e.originalEvent?.stopPropagation();
@@ -161,7 +177,7 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
                 }
           }
         >
-          <Popup className="metravel-route-marker-popup">Вы здесь</Popup>
+          <Popup className="metravel-route-marker-popup">{userLocationLabel}</Popup>
         </Marker>
       )}
     </>

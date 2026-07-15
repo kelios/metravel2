@@ -566,7 +566,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     expect(userMarker.props.interactive).toBe(false)
     expect(userMarker.props.pane).toBeUndefined()
     expect(userMarker.props.zIndexOffset).toBe(0)
-    expect(userMarker.props.eventHandlers).toBeUndefined()
+    expect(userMarker.props.eventHandlers?.click).toBeUndefined()
 
     ;(process.env as any).NODE_ENV = prevNodeEnv
   })

@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { Icon } from '@/ui/paper';
 import type { ModerationIssue } from '@/utils/formValidation';
 import CardActionPressable from '@/components/ui/CardActionPressable';
+import { translate as i18nT } from '@/i18n'
+
 
 type ChecklistItem = {
   key: string;
@@ -35,7 +37,7 @@ const PublishChecklistCard: React.FC<PublishChecklistCardProps> = ({
   return (
     <View style={[styles.card, styles.checklistCard]}>
       <View style={styles.checklistHeader}>
-        <Text style={styles.cardTitle}>Готовность к публикации</Text>
+        <Text style={styles.cardTitle}>{i18nT('travel:components.travel.PublishChecklistCard.gotovnost_k_publikatsii_4a01400b')}</Text>
         <View style={styles.progressRing}>
           <Text style={styles.progressRingText}>
             {checklist.filter((item) => item.ok).length}/{checklist.length}
@@ -46,7 +48,7 @@ const PublishChecklistCard: React.FC<PublishChecklistCardProps> = ({
       <View style={styles.checklistSection}>
         <View style={styles.sectionHeaderRow}>
           <Feather name="check-circle" size={16} color={colors.success} />
-          <Text style={styles.sectionHeaderText}>Обязательно для публикации</Text>
+          <Text style={styles.sectionHeaderText}>{i18nT('travel:components.travel.PublishChecklistCard.obyazatelno_dlya_publikatsii_6a19e5bb')}</Text>
         </View>
         {requiredChecklist.map((item) => {
           const issue = moderationIssuesByKey.get(item.key);
@@ -78,7 +80,7 @@ const PublishChecklistCard: React.FC<PublishChecklistCardProps> = ({
                 </Text>
                 <Text style={styles.checklistDetail}>{item.detail}</Text>
                 {isClickable && !item.ok && (
-                  <Text style={styles.checklistHint}>Нажмите, чтобы перейти</Text>
+                  <Text style={styles.checklistHint}>{i18nT('travel:components.travel.PublishChecklistCard.nazhmite_chtoby_pereyti_a3ce0b22')}</Text>
                 )}
               </View>
               {isClickable && !item.ok && (
@@ -117,7 +119,7 @@ const PublishChecklistCard: React.FC<PublishChecklistCardProps> = ({
       <View style={[styles.checklistSection, styles.checklistSectionRecommended]}>
         <View style={styles.sectionHeaderRow}>
           <Feather name="info" size={16} color={colors.primaryDark} />
-          <Text style={styles.sectionHeaderText}>Рекомендуем заполнить</Text>
+          <Text style={styles.sectionHeaderText}>{i18nT('travel:components.travel.PublishChecklistCard.rekomenduem_zapolnit_21208cd1')}</Text>
         </View>
         {recommendedChecklist.map((item) => {
           const issue = moderationIssuesByKey.get(item.key);
@@ -150,7 +152,7 @@ const PublishChecklistCard: React.FC<PublishChecklistCardProps> = ({
                 <Text style={styles.checklistDetail}>{item.detail}</Text>
                 {item.benefit && <Text style={styles.benefitText}>{item.benefit}</Text>}
                 {isClickable && !item.ok && (
-                  <Text style={styles.checklistHint}>Нажмите, чтобы перейти</Text>
+                  <Text style={styles.checklistHint}>{i18nT('travel:components.travel.PublishChecklistCard.nazhmite_chtoby_pereyti_a3ce0b22')}</Text>
                 )}
               </View>
               {isClickable && !item.ok && (

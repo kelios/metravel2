@@ -6,6 +6,7 @@
  * avoids a hard number. The quest eyebrow uses the same threshold so the meaning
  * of "рядом" stays consistent across sections.
  */
+import { translate as i18nT } from '@/i18n'
 
 // Distance (km) under which a quest is still labelled as being "рядом".
 export const NEARBY_QUEST_THRESHOLD_KM = 50
@@ -14,4 +15,5 @@ export const NEARBY_QUEST_THRESHOLD_KM = 50
 export const SAME_CITY_THRESHOLD_KM = 1.5
 
 // Non-misleading subtitle for the "near" travels list.
-export const NEARBY_TRAVELS_SUBTITLE = 'Маршруты поблизости'
+export const getNearbyTravelsSubtitle = (): string =>
+  i18nT('travel:constants.nearby.travelsSubtitle')

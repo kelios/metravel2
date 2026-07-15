@@ -10,6 +10,8 @@ import Animated, {
 import Feather from '@expo/vector-icons/Feather'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { translate as i18nT } from '@/i18n'
+
 
 interface CollapsibleSectionProps {
   title: string
@@ -92,7 +94,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         onPress={toggleOpen}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel={accessibilityLabel ?? `${title}${open ? ', развернуто' : ', свернуто'}`}
+        accessibilityLabel={accessibilityLabel ?? `${title}${open ? i18nT('map:components.MapPage.CollapsibleSection.razvernuto_2e5d0817') : i18nT('map:components.MapPage.CollapsibleSection.svernuto_fcb9643f')}`}
         hitSlop={8}
       >
         <View style={styles.collapsibleTitle}>

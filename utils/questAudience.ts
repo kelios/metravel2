@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n'
 export type QuestAgeCategoryId = 'age-5-7' | 'age-8-10' | 'age-11-14' | 'kids' | 'teens';
 
 export type QuestAgeCategory = {
@@ -9,27 +10,27 @@ export type QuestAgeCategory = {
 const AGE_CATEGORIES: QuestAgeCategory[] = [
   {
     id: 'age-5-7',
-    label: '5-7 лет',
+    get label() { return i18nT('sharedStatic:utils.questAudience.5_7_let_f64c26fe') },
     searchTerms: ['5-7', '5–7', '5 лет', '6 лет', '7 лет', 'дошкольники', 'младшие дети'],
   },
   {
     id: 'age-8-10',
-    label: '8-10 лет',
+    get label() { return i18nT('sharedStatic:utils.questAudience.8_10_let_bdff38ff') },
     searchTerms: ['8-10', '8–10', '8 лет', '9 лет', '10 лет', 'школьники', 'дети 8'],
   },
   {
     id: 'age-11-14',
-    label: '11-14 лет',
+    get label() { return i18nT('sharedStatic:utils.questAudience.11_14_let_367abbcf') },
     searchTerms: ['11-14', '11–14', '11 лет', '12 лет', '13 лет', '14 лет', 'подростки'],
   },
   {
     id: 'teens',
-    label: 'Подростки',
+    get label() { return i18nT('sharedStatic:utils.questAudience.podrostki_5d5fd81c') },
     searchTerms: ['подростки', 'тинейджеры', '11-14', '11–14'],
   },
   {
     id: 'kids',
-    label: 'Для детей',
+    get label() { return i18nT('sharedStatic:utils.questAudience.dlya_detey_ea3191e9') },
     searchTerms: ['детский', 'для детей', 'дети', 'семейный'],
   },
 ];
@@ -50,6 +51,11 @@ export function getQuestAgeCategory(tags?: string[] | null): QuestAgeCategory | 
   if (!tags?.length) return null;
   const normalizedTags = new Set(tags.map(normalizeQuestTag).filter(Boolean));
   return AGE_CATEGORIES.find((category) => normalizedTags.has(category.id)) ?? null;
+}
+
+export function getQuestAgeBadgeLabel(category?: QuestAgeCategory | null): string | null {
+  if (!category) return null;
+  return category.id === 'kids' ? i18nT('shared:utils.questAudience.utochnit_vozrast_b9db14c6') : category.label;
 }
 
 export function getQuestAgeSearchTerms(tags?: string[] | null): string[] {

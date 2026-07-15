@@ -2,6 +2,8 @@ import React, { useCallback, useRef } from 'react'
 import { Platform, Pressable, StyleSheet, TouchableOpacity, type GestureResponderEvent, type StyleProp, type ViewStyle } from 'react-native'
 
 import type { createGalleryStyles } from './styles'
+import { translate as i18nT } from '@/i18n'
+
 
 // Gallery styles include web-only CSS (cursor/:hover/backdropFilter) on the
 // interactive entries, so the accepted style is the factory's own value type
@@ -18,7 +20,7 @@ export const DeleteAction: React.FC<{
   testID?: string
   accessibilityLabel?: string
   children: React.ReactNode
-}> = ({ onActivate, style, testID, accessibilityLabel = 'Удалить фото', children }) => {
+}> = ({ onActivate, style, testID, accessibilityLabel = i18nT('travel:components.travel.gallery.DeleteAction.udalit_foto_0125fa97'), children }) => {
   const lastActivateTsRef = useRef<number | null>(null)
 
   const makeActivate = useCallback(

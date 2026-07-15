@@ -1,5 +1,7 @@
 import type React from 'react'
 import type Feather from '@expo/vector-icons/Feather'
+import { selectPlural, translate as i18nT, type TranslationKey } from '@/i18n'
+
 
 export const MAP_FOCUS_RADIUS_KM = '5'
 export const PLACES_PAGE_SIZE = 20
@@ -18,8 +20,6 @@ const DEFAULT_CATEGORY_SELECTION = [
   'Река',
   'Ручей',
 ] as const
-const FEATURED_CATEGORY_LABEL = 'Замки, дворцы, экотропы и вода'
-
 export type CategoryCollection = {
   id: string
   title: string
@@ -28,18 +28,23 @@ export type CategoryCollection = {
   categories: readonly string[]
 }
 
-export const INTERESTING_CATEGORY_COLLECTIONS: readonly CategoryCollection[] = [
+type CategoryCollectionDefinition = Omit<CategoryCollection, 'title' | 'hint'> & {
+  titleKey: TranslationKey
+  hintKey: TranslationKey
+}
+
+const INTERESTING_CATEGORY_COLLECTION_DEFINITIONS: readonly CategoryCollectionDefinition[] = [
   {
     id: 'featured',
-    title: FEATURED_CATEGORY_LABEL,
-    hint: 'для первой поездки',
+    titleKey: 'map:screens.tabs.PlacesScreen_helpers.zamki_dvortsy_ekotropy_i_voda_c7838ce4',
+    hintKey: 'map:screens.tabs.PlacesScreen_helpers.dlya_pervoy_poezdki_d662bb10',
     icon: 'star',
     categories: DEFAULT_CATEGORY_SELECTION,
   },
   {
     id: 'history',
-    title: 'История и руины',
-    hint: 'замки, форты, усадьбы',
+    titleKey: 'map:screens.tabs.PlacesScreen_helpers.istoriya_i_ruiny_5fd385ee',
+    hintKey: 'map:screens.tabs.PlacesScreen_helpers.zamki_forty_usadby_87966db5',
     icon: 'archive',
     categories: [
       'Замок',
@@ -56,8 +61,8 @@ export const INTERESTING_CATEGORY_COLLECTIONS: readonly CategoryCollection[] = [
   },
   {
     id: 'nature',
-    title: 'Природа и вода',
-    hint: 'озера, реки, тропы',
+    titleKey: 'map:screens.tabs.PlacesScreen_helpers.priroda_i_voda_06ce145c',
+    hintKey: 'map:screens.tabs.PlacesScreen_helpers.ozera_reki_tropy_ed469009',
     icon: 'droplet',
     categories: [
       'Озеро',
@@ -75,8 +80,8 @@ export const INTERESTING_CATEGORY_COLLECTIONS: readonly CategoryCollection[] = [
   },
   {
     id: 'family',
-    title: 'Для прогулки с семьей',
-    hint: 'парки, зоопарки, обзорные',
+    titleKey: 'map:screens.tabs.PlacesScreen_helpers.dlya_progulki_s_semey_fa28da7c',
+    hintKey: 'map:screens.tabs.PlacesScreen_helpers.parki_zooparki_obzornye_a127add5',
     icon: 'users',
     categories: [
       'Парк',
@@ -92,6 +97,13 @@ export const INTERESTING_CATEGORY_COLLECTIONS: readonly CategoryCollection[] = [
   },
 ] as const
 
+export const getInterestingCategoryCollections = (): readonly CategoryCollection[] =>
+  INTERESTING_CATEGORY_COLLECTION_DEFINITIONS.map(({ titleKey, hintKey, ...collection }) => ({
+    ...collection,
+    title: i18nT(titleKey),
+    hint: i18nT(hintKey),
+  }))
+
 export const parseCategoryParam = (value: unknown): string[] => {
   if (typeof value !== 'string') return []
   return value
@@ -106,23 +118,24 @@ export const isSameCategorySet = (left: string[], right: readonly string[]): boo
   return left.every((item) => rightSet.has(item))
 }
 
-const getMatchingCollection = (categories: string[]): CategoryCollection | null =>
-  INTERESTING_CATEGORY_COLLECTIONS.find((collection) =>
+const getMatchingCollection = (categories: string[]): CategoryCollectionDefinition | null =>
+  INTERESTING_CATEGORY_COLLECTION_DEFINITIONS.find((collection) =>
     isSameCategorySet(categories, collection.categories),
   ) ?? null
 
 export const getActiveCategoryTitle = (categories: string[]): string => {
-  if (categories.length === 0) return 'Все места'
+  if (categories.length === 0) return i18nT('map:screens.tabs.PlacesScreen_helpers.vse_mesta_353b6d51')
   const collection = getMatchingCollection(categories)
-  if (collection) return collection.title
+  if (collection) return i18nT(collection.titleKey)
   if (categories.length <= 2) return categories.join(', ')
-  return `${categories.length} категорий`
+  return i18nT('map:screens.tabs.PlacesScreen_helpers.value1_kategoriy_57a6c780', { value1: categories.length })
 }
 
 export function getPlacesCountLabel(count: number): string {
-  const mod10 = count % 10
-  const mod100 = count % 100
-  if (mod10 === 1 && mod100 !== 11) return 'место'
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'места'
-  return 'мест'
+  return selectPlural(count, {
+    one: i18nT('map:screens.tabs.PlacesScreen_helpers.mesto_d355b0e5'),
+    few: i18nT('map:screens.tabs.PlacesScreen_helpers.mesta_bd09fde1'),
+    many: i18nT('map:screens.tabs.PlacesScreen_helpers.mest_cad64ed8'),
+    other: i18nT('map:screens.tabs.PlacesScreen_helpers.mest_cad64ed8'),
+  })
 }

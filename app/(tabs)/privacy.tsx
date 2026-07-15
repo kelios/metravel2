@@ -5,6 +5,8 @@ import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useThemedColors } from '@/hooks/useTheme';
 import { webTouchScrollStyle } from '@/utils';
+import { translate as i18nT } from '@/i18n'
+
 
 export default function PrivacyScreen() {
   const pathname = usePathname();
@@ -14,8 +16,8 @@ export default function PrivacyScreen() {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const title = 'Политика конфиденциальности и обработка данных | Metravel';
-  const description = 'Подробная политика конфиденциальности Metravel: как мы собираем, обрабатываем и защищаем ваши персональные данные в соответствии с требованиями GDPR.';
+  const title = i18nT('legal:app.tabs.privacy.politika_konfidentsialnosti_i_obrabotka_dann_92a2b75f');
+  const description = i18nT('legal:app.tabs.privacy.podrobnaya_politika_konfidentsialnosti_metra_8843276e');
 
   return (
     <View style={styles.root}>
@@ -29,7 +31,11 @@ export default function PrivacyScreen() {
           ogType="website"
         />
       )}
-      <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.container}>
+      <ScrollView
+        style={webTouchScrollStyle}
+        contentContainerStyle={styles.container}
+        {...(Platform.OS === 'web' ? ({ tabIndex: 0 } as any) : {})}
+      >
         {Platform.OS === 'web' && (
             <h1 style={{
                 position: 'absolute' as const,
@@ -43,124 +49,65 @@ export default function PrivacyScreen() {
                 borderWidth: 0,
             } as any}>{title}</h1>
         )}
-        <Text style={styles.heading}>Политика конфиденциальности</Text>
+        <Text style={styles.heading}>{i18nT('legal:app.tabs.privacy.politika_konfidentsialnosti_695191e7')}</Text>
 
-        <Text style={styles.paragraph}>Дата вступления в силу: 27.11.2025</Text>
+        <Text style={styles.paragraph}>{i18nT('legal:app.tabs.privacy.data_vstupleniya_v_silu_27_11_2025_4dfc32f2')}</Text>
 
-        <Text style={styles.subheading}>1. Кто мы</Text>
+        <Text style={styles.subheading}>{i18nT('legal:app.tabs.privacy.1_kto_my_3a41f887')}</Text>
         <Text style={styles.paragraph}>
-          Контролёром персональных данных является частное лицо — администратор и создатель некоммерческого проекта
-          Metravel (веб-сайт и связанные с ним сервисы, далее — «Сервис»).
-        </Text>
+          {i18nT('legal:app.tabs.privacy.kontrolerom_personalnyh_dannyh_yavlyaetsya_c_815ce399')}</Text>
         <Text style={styles.paragraph}>
-          Сайт управляется из Республики Беларусь. Несмотря на то, что администратор находится за пределами Европейского
-          Союза, при обработке персональных данных пользователей из ЕС/ЕЭЗ он, в соответствующих случаях, руководствуется
-          требованиями Общего регламента ЕС по защите данных (GDPR).
-        </Text>
+          {i18nT('legal:app.tabs.privacy.sayt_upravlyaetsya_iz_respubliki_belarus_nes_b83d839b')}</Text>
 
-        <Text style={styles.subheading}>2. Какие данные мы обрабатываем</Text>
+        <Text style={styles.subheading}>{i18nT('legal:app.tabs.privacy.2_kakie_dannye_my_obrabatyvaem_efe4f0d3')}</Text>
         <Text style={styles.paragraph}>
-          При регистрации и использовании аккаунта мы обрабатываем: имя пользователя, адрес электронной почты, пароль
-          (хранится в зашифрованном виде на стороне сервера), внутренний идентификатор пользователя и, при наличии,
-          признак администратора/суперпользователя.
-        </Text>
+          {i18nT('legal:app.tabs.privacy.pri_registratsii_i_ispolzovanii_akkaunta_my__5008631d')}</Text>
         <Text style={styles.paragraph}>
-          Дополнительно обрабатываются данные аутентификации и безопасности (токены доступа, информация о входе/выходе,
-          технические журналы ошибок), контент путешествий (название, описание, рекомендации, фотографии и метаданные,
-          такие как страны, категории, длительность, год поездки и т.п.), а также технические данные устройств и
-          браузеров (IP-адрес, тип устройства и браузера, настройки языка и др.). Сайт носит некоммерческий характер и
-          предназначен для обмена опытом и вдохновения путешествиями, а не для продажи услуг или товаров.
-        </Text>
+          {i18nT('legal:app.tabs.privacy.dopolnitelno_obrabatyvayutsya_dannye_autenti_9127f1c1')}</Text>
         <Text style={styles.paragraph}>
-          Мы можем запрашивать доступ к вашему примерному местоположению (геолокации устройства) только для того, чтобы
-          показывать путешествия и маршруты рядом с вами и центрировать карту. Координаты используются только на стороне
-          вашего устройства и не сохраняются в нашей базе данных в привязке к вашему аккаунту.
-        </Text>
+          {i18nT('legal:app.tabs.privacy.my_mozhem_zaprashivat_dostup_k_vashemu_prime_05355f82')}</Text>
 
-        <Text style={styles.subheading}>3. Цели и правовые основания обработки</Text>
+        <Text style={styles.subheading}>{i18nT('legal:app.tabs.privacy.3_tseli_i_pravovye_osnovaniya_obrabotki_e4d0afa1')}</Text>
         <Text style={styles.paragraph}>
-          Основные цели обработки включают:
-        </Text>
+          {i18nT('legal:app.tabs.privacy.osnovnye_tseli_obrabotki_vklyuchayut_499189dd')}</Text>
         <Text style={styles.paragraph}>
-          • предоставление и поддержку работы Сервиса, создание и ведение аккаунта, аутентификация, восстановление
-          пароля, публикация и отображение путешествий (основание — исполнение договора, ст. 6(1)(b) GDPR);
-        </Text>
+          {i18nT('legal:app.tabs.privacy.predostavlenie_i_podderzhku_raboty_servisa_s_cf95b9d6')}</Text>
         <Text style={styles.paragraph}>
-          • обеспечение безопасности Сервиса, предотвращение мошенничества и злоупотреблений, ведение журналов ошибок и
-          технических логов (основание — наш законный интерес, ст. 6(1)(f) GDPR);
-        </Text>
+          {i18nT('legal:app.tabs.privacy.obespechenie_bezopasnosti_servisa_predotvras_caa9be6c')}</Text>
         <Text style={styles.paragraph}>
-          • использование аналитики (например, Яндекс.Метрика и Google Analytics 4) и данных геолокации только при вашем
-          согласии, а также отправка маркетинговых материалов при отдельном согласии (основание — согласие, ст. 6(1)(a)
-          GDPR);
-        </Text>
+          {i18nT('legal:app.tabs.privacy.ispolzovanie_analitiki_naprimer_yandeks_metr_7215ad5d')}</Text>
         <Text style={styles.paragraph}>
-          • выполнение отдельных юридических обязательств, если это требуется применимым законодательством (основание —
-          юридическое обязательство, ст. 6(1)(c) GDPR).
-        </Text>
+          {i18nT('legal:app.tabs.privacy.vypolnenie_otdelnyh_yuridicheskih_obyazatels_58b121b6')}</Text>
 
-        <Text style={styles.subheading}>4. Cookies и локальное хранилище</Text>
+        <Text style={styles.subheading}>{i18nT('legal:app.tabs.privacy.4_cookies_i_lokalnoe_hranilische_8c993f3f')}</Text>
         <Text style={styles.paragraph}>
-          Мы используем технически необходимые файлы cookies и механизмы локального хранилища (например, localStorage,
-          AsyncStorage) для поддержки вашей сессии входа, сохранения базовых настроек интерфейса и корректной работы
-          Сервиса. Эти файлы необходимы для функционирования Сервиса и не требуют отдельного согласия.
-        </Text>
+          {i18nT('legal:app.tabs.privacy.my_ispolzuem_tehnicheski_neobhodimye_fayly_c_86b4b204')}</Text>
         <Text style={styles.paragraph}>
-          Аналитические инструменты (такие как Яндекс.Метрика и Google Analytics 4) используются только после того, как
-          вы даёте явное согласие через баннер настроек cookies. Вы можете выбрать только необходимые файлы или принять
-          необходимые и аналитические. Ваш выбор сохраняется в браузере и может быть изменён (например, через настройки
-          браузера или соответствующий раздел настроек на сайте, если он предусмотрен).
-        </Text>
+          {i18nT('legal:app.tabs.privacy.analiticheskie_instrumenty_takie_kak_yandeks_03d8dc46')}</Text>
 
-        <Text style={styles.subheading}>5. Обработка данных о местоположении</Text>
+        <Text style={styles.subheading}>{i18nT('legal:app.tabs.privacy.5_obrabotka_dannyh_o_mestopolozhenii_131076ea')}</Text>
         <Text style={styles.paragraph}>
-          Мы можем запрашивать доступ к вашему примерному местоположению (геолокации устройства) только при вашем явном
-          согласии, выраженном через настройки браузера или операционной системы. Эти данные используются исключительно
-          для поиска путешествий рядом с вами и улучшения релевантности отображаемого контента. Координаты не
-          сохраняются в нашей базе данных в привязке к вашему аккаунту, и мы не создаём долгосрочные профили на основе
-          истории перемещений.
-        </Text>
+          {i18nT('legal:app.tabs.privacy.my_mozhem_zaprashivat_dostup_k_vashemu_prime_03ad6ba6')}</Text>
 
-        <Text style={styles.subheading}>6. Международная передача данных</Text>
+        <Text style={styles.subheading}>{i18nT('legal:app.tabs.privacy.6_mezhdunarodnaya_peredacha_dannyh_c1c2408c')}</Text>
         <Text style={styles.paragraph}>
-          Наши серверы и инфраструктура могут располагаться в Республике Беларусь, в Европейском Союзе/ЕЭЗ (например, в
-          дата-центрах AWS в регионе eu-north-1), а также в других странах через аналитические и облачные сервисы. Это
-          означает, что персональные данные пользователей из ЕС/ЕЭЗ могут передаваться за пределы ЕС/ЕЭЗ.
-        </Text>
+          {i18nT('legal:app.tabs.privacy.nashi_servery_i_infrastruktura_mogut_raspola_fd4ab957')}</Text>
         <Text style={styles.paragraph}>
-          В таких случаях мы по возможности используем стандартные договорные положения (Standard Contractual Clauses,
-          SCC), одобренные Европейской комиссией, и другие предусмотренные законом механизмы, а также применяем
-          технические и организационные меры безопасности (шифрование каналов связи, минимизация объёма передаваемых
-          данных, ограничение доступа). При этом в отдельных юрисдикциях государственные органы могут иметь
-          расширенные полномочия по доступу к данным в соответствии с местным законодательством.
-        </Text>
+          {i18nT('legal:app.tabs.privacy.v_takih_sluchayah_my_po_vozmozhnosti_ispolzu_ab3bdb8e')}</Text>
 
-        <Text style={styles.subheading}>7. Сроки хранения данных</Text>
+        <Text style={styles.subheading}>{i18nT('legal:app.tabs.privacy.7_sroki_hraneniya_dannyh_d65c1bc0')}</Text>
         <Text style={styles.paragraph}>
-          Мы храним персональные данные не дольше, чем это необходимо для целей, для которых они были собраны, если иное
-          не требуется законом. Данные аккаунта хранятся пока ваш аккаунт активен, а после его удаления — в течение
-          ограниченного периода для технического резервирования и разрешения возможных споров. Контент путешествий
-          хранится, пока он опубликован или сохранён в черновиках; после удаления он удаляется или анонимизируется в
-          пользовательском интерфейсе, при этом копии могут временно сохраняться в резервных копиях.
-        </Text>
+          {i18nT('legal:app.tabs.privacy.my_hranim_personalnye_dannye_ne_dolshe_chem__0a1ebee0')}</Text>
 
-        <Text style={styles.subheading}>8. Ваши права</Text>
+        <Text style={styles.subheading}>{i18nT('legal:app.tabs.privacy.8_vashi_prava_8c551843')}</Text>
         <Text style={styles.paragraph}>
-          В соответствии с применимым законодательством о защите данных, включая GDPR, вы имеете право на доступ к
-          своим данным, их исправление, удаление, ограничение обработки, переносимость данных, а также право возражать
-          против определённых видов обработки и право отозвать согласие, если обработка основана на согласии.
-        </Text>
+          {i18nT('legal:app.tabs.privacy.v_sootvetstvii_s_primenimym_zakonodatelstvom_231e7416')}</Text>
         <Text style={styles.paragraph}>
-          Для реализации своих прав вы можете связаться с администратором Сервиса по адресу электронной почты:
-          metraveldev@gmail.com. Если вы находитесь на территории ЕС/ЕЭЗ, вы также имеете право подать жалобу в
-          надзорный орган по защите данных по месту вашего обычного проживания, работы или предполагаемого нарушения.
-        </Text>
+          {i18nT('legal:app.tabs.privacy.dlya_realizatsii_svoih_prav_vy_mozhete_svyaz_b024d59a')}</Text>
 
-        <Text style={styles.subheading}>9. Контакты</Text>
+        <Text style={styles.subheading}>{i18nT('legal:app.tabs.privacy.9_kontakty_2b536753')}</Text>
         <Text style={styles.paragraph}>
-          По вопросам, связанным с обработкой персональных данных и настоящей Политикой конфиденциальности, вы можете
-          связаться с администратором Сервиса по адресу электронной почты: metraveldev@gmail.com.
-        </Text>
+          {i18nT('legal:app.tabs.privacy.po_voprosam_svyazannym_s_obrabotkoy_personal_5da4d840')}</Text>
       </ScrollView>
     </View>
   );

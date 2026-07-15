@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather';
 import Chip from '@/components/ui/Chip';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n';
 
 interface Category {
   id: string | number;
@@ -22,18 +23,18 @@ interface CategoryChipsProps {
 }
 
 // ✅ УЛУЧШЕНИЕ: Маппинг популярных категорий на иконки
-const CATEGORY_ICONS: Record<string, string> = {
-  'Горы': 'mountain',
-  'Пляжи': 'sun',
-  'Города': 'map-pin',
-  'Природа': 'tree',
-  'Музеи': 'building',
-  'Озера': 'droplet',
-  'Культура': 'music',
-  'Спорт': 'activity',
-  'Еда': 'coffee',
-  'Архитектура': 'layers',
-};
+const getCategoryIcons = (): Record<string, string> => ({
+  [i18nT('sharedStatic:categoryIconLookup.mountains')]: 'mountain',
+  [i18nT('sharedStatic:categoryIconLookup.beaches')]: 'sun',
+  [i18nT('sharedStatic:categoryIconLookup.cities')]: 'map-pin',
+  [i18nT('sharedStatic:categoryIconLookup.nature')]: 'tree',
+  [i18nT('sharedStatic:categoryIconLookup.museums')]: 'building',
+  [i18nT('sharedStatic:categoryIconLookup.lakes')]: 'droplet',
+  [i18nT('sharedStatic:categoryIconLookup.culture')]: 'music',
+  [i18nT('sharedStatic:categoryIconLookup.sport')]: 'activity',
+  [i18nT('sharedStatic:categoryIconLookup.food')]: 'coffee',
+  [i18nT('sharedStatic:categoryIconLookup.architecture')]: 'layers',
+});
 
 function CategoryChips({
   categories,
@@ -44,6 +45,7 @@ function CategoryChips({
 }: CategoryChipsProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+  const categoryIcons = getCategoryIcons();
   const visibleCategories = useMemo(
     () => categories.slice(0, maxVisible),
     [categories, maxVisible]
@@ -61,7 +63,7 @@ function CategoryChips({
       {visibleCategories.map((category) => {
         const isSelected = selectedCategories.includes(category.name);
         // ✅ УЛУЧШЕНИЕ: Используем иконку из пропса или маппинга
-        const iconName = category.icon || CATEGORY_ICONS[category.name];
+        const iconName = category.icon || categoryIcons[category.name];
         const shouldShowIcon = showIcons && iconName && !isSelected;
         const icon = isSelected ? (
           <Feather name="x" size={14} color={colors.textOnPrimary} />

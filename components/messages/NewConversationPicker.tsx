@@ -15,6 +15,8 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import type { MessagingUser } from '@/api/messages';
 import { getMessagingUserDisplayName, getMessagingUserId, getMessagingUserSearchText } from '@/api/messages';
+import { translate as i18nT } from '@/i18n'
+
 
 interface NewConversationPickerProps {
     users: MessagingUser[];
@@ -55,7 +57,7 @@ function NewConversationPicker({
                     ]}
                     onPress={() => onSelectUser(uid)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Написать ${name}`}
+                    accessibilityLabel={i18nT('messages:components.messages.NewConversationPicker.napisat_value1_31a6ac35', { value1: name })}
                 >
                     <View style={[styles.avatar, { backgroundColor: colors.primarySoft }]}>
                         {item.avatar ? (
@@ -81,11 +83,11 @@ function NewConversationPicker({
                     onPress={onClose}
                     style={styles.backButton}
                     accessibilityRole="button"
-                    accessibilityLabel="Назад к списку диалогов"
+                    accessibilityLabel={i18nT('messages:components.messages.NewConversationPicker.nazad_k_spisku_dialogov_2c9eba60')}
                 >
                     <Feather name="arrow-left" size={22} color={colors.text} />
                 </Pressable>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Новый диалог</Text>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>{i18nT('messages:components.messages.NewConversationPicker.novyy_dialog_27ed2802')}</Text>
             </View>
 
             <View style={[styles.searchContainer, { borderColor: colors.borderLight }]}>
@@ -97,12 +99,12 @@ function NewConversationPicker({
                     ]}
                     value={search}
                     onChangeText={setSearch}
-                    placeholder="Поиск по имени, email или нику..."
+                    placeholder={i18nT('messages:components.messages.NewConversationPicker.poisk_po_imeni_email_ili_niku_7297353e')}
                     placeholderTextColor={colors.textMuted}
-                    accessibilityLabel="Поиск пользователя"
+                    accessibilityLabel={i18nT('messages:components.messages.NewConversationPicker.poisk_polzovatelya_6c47addc')}
                 />
                 {search.length > 0 && (
-                    <Pressable onPress={() => setSearch('')} accessibilityLabel="Очистить поиск">
+                    <Pressable onPress={() => setSearch('')} accessibilityLabel={i18nT('messages:components.messages.NewConversationPicker.ochistit_poisk_ea77c00d')}>
                         <Feather name="x" size={16} color={colors.textMuted} />
                     </Pressable>
                 )}
@@ -112,7 +114,7 @@ function NewConversationPicker({
                 <View style={styles.emptyContainer}>
                     <Feather name="users" size={40} color={colors.textMuted} />
                     <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                        {search.trim() ? 'Пользователи не найдены' : 'Нет доступных пользователей'}
+                        {search.trim() ? i18nT('messages:components.messages.NewConversationPicker.polzovateli_ne_naydeny_432e1706') : i18nT('messages:components.messages.NewConversationPicker.net_dostupnyh_polzovateley_2254ce0f')}
                     </Text>
                 </View>
             ) : (

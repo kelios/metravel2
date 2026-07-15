@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 import type { Travel } from '@/types/types'
+import { translate as i18nT } from '@/i18n'
+
 
 export type InsightKey = 'recommendation' | 'plus' | 'minus'
 
@@ -35,15 +37,15 @@ export function useTravelDetailsContentSectionModel({
       [
         hasRecommendation && {
           key: 'recommendation' as InsightKey,
-          label: 'Советы',
+          label: i18nT('travel:components.travel.details.hooks.useTravelDetailsContentSectionModel.sovety_a9570231'),
         },
         hasPlus && {
           key: 'plus' as InsightKey,
-          label: 'Понравилось',
+          label: i18nT('travel:components.travel.details.hooks.useTravelDetailsContentSectionModel.ponravilos_34743085'),
         },
         hasMinus && {
           key: 'minus' as InsightKey,
-          label: 'Не зашло',
+          label: i18nT('travel:components.travel.details.hooks.useTravelDetailsContentSectionModel.ne_zashlo_98168f9e'),
         },
       ].filter(Boolean) as Array<{ key: InsightKey; label: string }>,
     [hasRecommendation, hasPlus, hasMinus]
@@ -53,7 +55,7 @@ export function useTravelDetailsContentSectionModel({
     if (!travel.description) return ''
     const wordCount = travel.description.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length
     const minutes = Math.max(1, Math.ceil(wordCount / 200))
-    return ` · ~${minutes} мин чтения`
+    return i18nT('travel:components.travel.details.hooks.useTravelDetailsContentSectionModel.value1_min_chteniya_886e0693', { value1: minutes })
   }, [travel.description])
 
   const shouldUseMobileInsights = isMobile && insightConfigs.length > 0

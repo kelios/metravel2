@@ -21,6 +21,8 @@ import {
 } from '@/utils/questAdapters';
 import { devWarn } from '@/utils/logger';
 import type { QuestMeta, FrontendQuestBundle } from '@/utils/questAdapters';
+import { translate as i18nT } from '@/i18n'
+
 
 // Re-export types for backward compatibility
 export type { QuestMeta, FrontendQuestBundle };
@@ -74,7 +76,7 @@ export function useQuestsList(opts?: { enabled?: boolean }) {
     }, [quests]);
 
     const errorMessage = error
-        ? getErrorMessage(error, 'Ошибка загрузки квестов')
+        ? getErrorMessage(error, i18nT('quests:hooks.useQuestsApi.oshibka_zagruzki_kvestov_cdefd63b'))
         : null;
     if (error) devWarn('Failed to load quests list:', errorMessage);
 
@@ -173,7 +175,7 @@ export function useQuestBundle(questId: string | undefined) {
             })
             .catch((err) => {
                 if (cancelled) return;
-                const message = getErrorMessage(err, 'Квест не найден');
+                const message = getErrorMessage(err, i18nT('quests:hooks.useQuestsApi.kvest_ne_nayden_af9ac6a4'));
                 console.warn('Failed to load quest bundle:', message);
                 setError(message);
                 setLoading(false);

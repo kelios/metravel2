@@ -8,6 +8,7 @@ import { useTravelWizard } from '@/hooks/useTravelWizard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useDraftRecovery } from '@/hooks/useDraftRecovery';
 import { normalizeTravelId } from '@/utils/travelFormUtils';
+import { translate as i18nT } from '@/i18n'
 
 type ManualSave = ReturnType<typeof useTravelFormData>['handleManualSave'];
 
@@ -53,10 +54,10 @@ export interface UpsertTravelController {
 }
 
 const AUTOSAVE_BADGES: Record<string, string | undefined> = {
-  saving: 'Сохранение...',
-  saved: 'Сохранено',
-  error: 'Ошибка сохранения',
-  debouncing: 'Ожидание...',
+  get saving() { return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.saving') },
+  get saved() { return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.saved') },
+  get error() { return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.error') },
+  get debouncing() { return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.debouncing') },
 };
 
 export function useUpsertTravelController(): UpsertTravelController {

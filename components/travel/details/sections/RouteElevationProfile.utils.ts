@@ -1,4 +1,6 @@
 import type { ParsedRoutePoint } from '@/types/travelRoutes'
+import { translate as i18nT } from '@/i18n'
+
 
 export const CHART_HEIGHT = 120
 export const CHART_PADDING = 8
@@ -7,10 +9,10 @@ export const roundProfileValue = (value: number): number =>
   Math.round(value * 10) / 10
 
 export const formatProfileKm = (value: number): string =>
-  `${roundProfileValue(value)} км`
+  i18nT('travel:components.travel.details.sections.RouteElevationProfile_utils.value1_km_8a6fa4bb', { value1: roundProfileValue(value) })
 
 export const formatProfileMeters = (value: number): string =>
-  `${Math.round(value)} м`
+  i18nT('travel:components.travel.details.sections.RouteElevationProfile_utils.value1_m_657a510c', { value1: Math.round(value) })
 
 export const getLocalPointerX = (event: any): number | null => {
   const locationX = event?.nativeEvent?.locationX

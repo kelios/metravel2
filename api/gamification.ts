@@ -3,13 +3,14 @@
 // прогрессии (Собачья/Кабанья/Лисья/Птичья), 4 типа активности
 // (Исследователь/Читатель/Автор/Участник), персонажи + выбор пути.
 // Контракт зеркалит docs/features/social-trips-gamification-backlog.md (Sprint A).
-// Пока бэкенд (BE-place-first-badge/BE-progression-lines/BE-activity-types/
-// BE-character-paths) не готов — fetch-функции отдают моки под тем же флагом, что и
-// базовые достижения: EXPO_PUBLIC_ACHIEVEMENTS_MOCK=true (или при 404/501/0 в DEV).
+// Production contract verified by board #919; mocks and missing-endpoint
+// fallbacks are development-only.
 
 import { apiClient, ApiError } from '@/api/client';
+import { resolveDevMockFlag } from '@/utils/devMockFlags';
 import { devWarn } from '@/utils/logger';
-import type { BadgeTier } from '@/api/achievements';
+import type { BadgeTier } from '@/api/achievementsTypes';
+import { translate as i18nT } from '@/i18n';
 import {
   MOCK_PLACE_FIRST_BADGES,
   MOCK_GAMIFICATION_PROGRESS,
@@ -281,7 +282,7 @@ const mapPlaceFirstBadge = (dto: PlaceFirstBadgeDto): PlaceFirstBadge => ({
   views: dto.views ?? 0,
   saves: dto.saves ?? 0,
   visits: dto.visits ?? 0,
-  authorStatus: dto.author_status ?? 'Первооткрыватель',
+  authorStatus: dto.author_status ?? i18nT('achievements:api.gamification.placeFirstAuthorStatusFallback'),
   imageUrl: dto.image_url ? dto.image_url : null,
   tier: normalizeTier(dto.tier),
   isFresh: Boolean(dto.is_fresh),
@@ -363,7 +364,7 @@ export const mapCharacter = (dto: CharacterStateDto): CharacterState => {
   // все варианты с флагом canSelect/lockedReason, UI сам решает как их показать.
   return {
     id: dto.user_id,
-    name: active?.name ?? 'Персонаж',
+    name: active?.name ?? i18nT('achievements:api.gamification.characterNameFallback'),
     level: active?.level?.level ?? 1,
     pathSlug: normalizePathSlug(selected?.slug),
     pathName: selected?.name ?? null,
@@ -379,7 +380,10 @@ export const mapCharacter = (dto: CharacterStateDto): CharacterState => {
 
 // ── Мок-фолбэк (общий флаг с базовыми достижениями) ─────────────────────────
 
-const USE_MOCK = process.env.EXPO_PUBLIC_ACHIEVEMENTS_MOCK === 'true';
+const USE_MOCK = resolveDevMockFlag({
+  name: 'EXPO_PUBLIC_ACHIEVEMENTS_MOCK',
+  value: process.env.EXPO_PUBLIC_ACHIEVEMENTS_MOCK,
+});
 
 const shouldFallbackToMock = (error: unknown): boolean => {
   if (USE_MOCK) return true;
@@ -406,17 +410,14 @@ export async function fetchMyPlaceFirstBadges(): Promise<PlaceFirstBadge[]> {
   }
 }
 
-/** Бейджи первооткрывателя места конкретного автора (публично).
- *  NB: у BE пока НЕТ per-user эндпоинта place-badges (есть только
- *  `/achievements/place-badges/me/`). До появления BE-эндпоинта вызов отдаёт 404 →
- *  graceful mock-fallback. Нужна BE-задача на `/achievements/user/{id}/place-badges/`. */
+/** Бейджи первооткрывателя места конкретного автора (публично). */
 export async function fetchUserPlaceFirstBadges(
   userId: string | number,
 ): Promise<PlaceFirstBadge[]> {
   if (USE_MOCK) return MOCK_PLACE_FIRST_BADGES;
   try {
     const dto = await apiClient.get<PlaceFirstBadgeDto[]>(
-      `/achievements/place-badges/user/${userId}/`,
+      `/achievements/user/${encodeURIComponent(String(userId))}/place-badges/`,
       undefined,
       { skipAuth: true },
     );

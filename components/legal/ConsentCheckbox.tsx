@@ -31,20 +31,21 @@ export default function ConsentCheckbox({
   const styles = useMemo(() => createStyles(colors), [colors])
 
   return (
-    <Pressable
-      onPress={() => onToggle(!checked)}
-      style={styles.row}
-      hitSlop={6}
-      testID={testID}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked }}
-      accessibilityLabel={accessibilityLabel}
-    >
-      <View style={[styles.box, checked && styles.boxChecked]}>
-        {checked ? <Feather name="check" size={14} color={colors.textOnPrimary} /> : null}
-      </View>
+    <View style={styles.row}>
+      <Pressable
+        onPress={() => onToggle(!checked)}
+        style={({ pressed }) => [styles.control, pressed && styles.controlPressed]}
+        testID={testID}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked }}
+        accessibilityLabel={accessibilityLabel}
+      >
+        <View style={[styles.box, checked && styles.boxChecked]}>
+          {checked ? <Feather name="check" size={14} color={colors.textOnPrimary} /> : null}
+        </View>
+      </Pressable>
       <Text style={styles.label}>{children}</Text>
-    </Pressable>
+    </View>
   )
 }
 
@@ -53,7 +54,19 @@ const createStyles = (colors: Colors) =>
     row: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      gap: 10,
+      gap: 0,
+    },
+    control: {
+      width: 44,
+      height: 44,
+      marginLeft: -11,
+      marginRight: -1,
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      paddingTop: 1,
+    },
+    controlPressed: {
+      opacity: 0.72,
     },
     box: {
       width: 22,

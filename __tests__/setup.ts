@@ -367,7 +367,6 @@ console.error = (message, ...args) => {
 // Ensure critical Expo env vars exist for API clients referenced in tests
 process.env.EXPO_PUBLIC_API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.50.36'
 process.env.EXPO_PUBLIC_GOOGLE_GA4 = process.env.EXPO_PUBLIC_GOOGLE_GA4 || 'test-ga4'
-process.env.EXPO_PUBLIC_GOOGLE_API_SECRET = process.env.EXPO_PUBLIC_GOOGLE_API_SECRET || 'test-secret'
 
 // Guardrail: unit/integration tests must NOT call the local Playwright webserver/proxy.
 // If you see this, something is resolving API base from window.location.origin instead of EXPO_PUBLIC_API_URL.

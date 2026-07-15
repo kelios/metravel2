@@ -6,6 +6,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { getSecureItem, setSecureItem, removeSecureItem } from '@/utils/secureStorage';
+import { translate as i18nT } from '@/i18n'
+
 
 const BIOMETRIC_ENABLED_KEY = 'biometric_auth_enabled';
 
@@ -125,8 +127,8 @@ export function useBiometricAuth(): UseBiometricAuthReturn {
     try {
       // Verify biometric before enabling (ensure user can actually use it)
       const result = await LocalAuth.authenticateAsync({
-        promptMessage: 'Подтвердите для включения биометрии',
-        cancelLabel: 'Отмена',
+        promptMessage: i18nT('shared:hooks.useBiometricAuth.podtverdite_dlya_vklyucheniya_biometrii_48c83745'),
+        cancelLabel: i18nT('shared:hooks.useBiometricAuth.otmena_7b421ce1'),
         disableDeviceFallback: false,
       });
 
@@ -157,7 +159,7 @@ export function useBiometricAuth(): UseBiometricAuthReturn {
   }, []);
 
   const authenticate = useCallback(async (
-    promptMessage = 'Войдите с помощью биометрии',
+    promptMessage = i18nT('shared:hooks.useBiometricAuth.voydite_s_pomoschyu_biometrii_a0567b85'),
   ): Promise<boolean> => {
     if (Platform.OS === 'web' || !LocalAuth) return false;
     if (authInFlightRef.current) return false;
@@ -166,7 +168,7 @@ export function useBiometricAuth(): UseBiometricAuthReturn {
     try {
       const result = await LocalAuth.authenticateAsync({
         promptMessage,
-        cancelLabel: 'Использовать пароль',
+        cancelLabel: i18nT('shared:hooks.useBiometricAuth.ispolzovat_parol_0a348a29'),
         disableDeviceFallback: false, // Allow PIN/pattern fallback
       });
 

@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import type { useThemedColors } from '@/hooks/useTheme';
 import type { createSettingsStyles } from '@/components/screens/settings/settings.styles';
+import { translate as i18nT } from '@/i18n'
+
 
 type Colors = ReturnType<typeof useThemedColors>;
 type Styles = ReturnType<typeof createSettingsStyles>;
@@ -33,8 +35,8 @@ export default function DataManagementSection({
                         <Feather name="heart" size={18} color={colors.primaryDark} />
                     </View>
                     <View style={styles.cardText}>
-                        <Text style={styles.cardTitle}>Хочу поехать</Text>
-                        <Text style={styles.cardMeta}>{Array.isArray(favorites) ? favorites.length : 0} шт.</Text>
+                        <Text style={styles.cardTitle}>{i18nT('profile:components.settings.DataManagementSection.hochu_poehat_5f921b1c')}</Text>
+                        <Text style={styles.cardMeta}>{Array.isArray(favorites) ? favorites.length : 0} {i18nT('profile:components.settings.DataManagementSection.sht_345a19d5')}</Text>
                     </View>
                 </View>
 
@@ -42,11 +44,11 @@ export default function DataManagementSection({
                     style={[styles.dangerButton, globalFocusStyles.focusable]}
                     onPress={handleClearFavorites}
                     accessibilityRole="button"
-                    accessibilityLabel="Очистить «Хочу поехать»"
+                    accessibilityLabel={i18nT('profile:components.settings.DataManagementSection.ochistit_hochu_poehat_cdf8d757')}
                     {...Platform.select({ web: { cursor: 'pointer' } })}
                 >
                     <Feather name="trash-2" size={18} color={colors.danger} />
-                    <Text style={styles.dangerButtonText}>Очистить «Хочу поехать»</Text>
+                    <Text style={styles.dangerButtonText}>{i18nT('profile:components.settings.DataManagementSection.ochistit_hochu_poehat_cdf8d757')}</Text>
                 </Pressable>
             </View>
 
@@ -56,8 +58,8 @@ export default function DataManagementSection({
                         <Feather name="clock" size={18} color={colors.primaryDark} />
                     </View>
                     <View style={styles.cardText}>
-                        <Text style={styles.cardTitle}>История просмотров</Text>
-                        <Text style={styles.cardMeta}>{Array.isArray(viewHistory) ? viewHistory.length : 0} шт.</Text>
+                        <Text style={styles.cardTitle}>{i18nT('profile:components.settings.DataManagementSection.istoriya_prosmotrov_f059f6d6')}</Text>
+                        <Text style={styles.cardMeta}>{Array.isArray(viewHistory) ? viewHistory.length : 0} {i18nT('profile:components.settings.DataManagementSection.sht_345a19d5')}</Text>
                     </View>
                 </View>
 
@@ -65,11 +67,11 @@ export default function DataManagementSection({
                     style={[styles.dangerButton, globalFocusStyles.focusable]}
                     onPress={handleClearHistory}
                     accessibilityRole="button"
-                    accessibilityLabel="Очистить историю просмотров"
+                    accessibilityLabel={i18nT('profile:components.settings.DataManagementSection.ochistit_istoriyu_prosmotrov_6649b434')}
                     {...Platform.select({ web: { cursor: 'pointer' } })}
                 >
                     <Feather name="trash-2" size={18} color={colors.danger} />
-                    <Text style={styles.dangerButtonText}>Очистить историю</Text>
+                    <Text style={styles.dangerButtonText}>{i18nT('profile:components.settings.DataManagementSection.ochistit_istoriyu_45d708bd')}</Text>
                 </Pressable>
             </View>
         </>

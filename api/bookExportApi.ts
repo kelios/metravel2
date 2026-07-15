@@ -8,6 +8,7 @@
 import { apiClient } from '@/api/client'
 import { ApiError } from '@/api/clientErrors'
 import type { DownloadResponse } from '@/api/clientTypes'
+import { translate as i18nT } from '@/i18n'
 
 export type BookExportFormat = 'html' | 'pdf'
 export type BookExportJobStatus = 'queued' | 'running' | 'done' | 'failed'
@@ -44,7 +45,7 @@ export class BookExportJobFailedError extends Error {
   readonly errorCode: string | null
 
   constructor(job: BookExportJob) {
-    super(job.error_message || job.message || 'Экспорт книги на сервере не удался')
+    super(job.error_message || job.message || i18nT('errorsStatic:api.bookExport.serverFailed'))
     this.name = 'BookExportJobFailedError'
     this.errorCode = job.error_code ?? null
   }
@@ -52,7 +53,7 @@ export class BookExportJobFailedError extends Error {
 
 export class BookExportJobTimeoutError extends Error {
   constructor(jobId: string) {
-    super(`Экспорт книги не завершился вовремя (job ${jobId})`)
+    super(i18nT('errorsStatic:api.bookExport.timeout', { jobId }))
     this.name = 'BookExportJobTimeoutError'
   }
 }

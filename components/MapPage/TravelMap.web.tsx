@@ -25,7 +25,6 @@ import { LAYOUT } from '@/constants/layout'
 import { normalizePoint } from '@/components/map-core/types'
 import { queryKeys } from '@/api/queryKeys'
 import { getOsmTileUrl, getOsmTileCrossOrigin, OSM_PROXY_ATTRIBUTION, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers'
-
 const IS_WEB = Platform.OS === 'web'
 
 const NOOP = () => {}
@@ -428,7 +427,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       const poi = attachOsmPoiOverlay(L, map, {
         maxAreaKm2: 2500,
         debounceMs: 700,
-        categories: ['Достопримечательности', 'Видовые места', 'Культура'],
+        categories: ['attractions', 'viewpoints', 'culture'],
       })
       if (poi?.layer) {
         poi.layer.addTo(map)

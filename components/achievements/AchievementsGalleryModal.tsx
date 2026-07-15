@@ -17,6 +17,8 @@ import BadgeGrid, { type BadgeGridItem } from '@/components/achievements/BadgeGr
 import BadgeDetailSheet, {
   type BadgeDetail,
 } from '@/components/achievements/BadgeDetailSheet';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   visible: boolean;
@@ -147,15 +149,15 @@ function AchievementsGalleryModal({ visible, onClose, data, ownerName }: Props) 
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть">
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={i18nT('achievements:components.achievements.AchievementsGalleryModal.zakryt_1442a22e')}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.header}>
-            <Text style={styles.title}>Достижения</Text>
+            <Text style={styles.title}>{i18nT('achievements:components.achievements.AchievementsGalleryModal.dostizheniya_b8ede63f')}</Text>
             <Pressable
               style={styles.closeBtn}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть"
+              accessibilityLabel={i18nT('achievements:components.achievements.AchievementsGalleryModal.zakryt_1442a22e')}
             >
               <Feather name="x" size={20} color={colors.text} />
             </Pressable>
@@ -167,8 +169,7 @@ function AchievementsGalleryModal({ visible, onClose, data, ownerName }: Props) 
             </View>
 
             <Text style={styles.subheading}>
-              Значки — за конкретные достижения. Сгруппированы по разделам.
-            </Text>
+              {i18nT('achievements:components.achievements.AchievementsGalleryModal.znachki_za_konkretnye_dostizheniya_sgruppiro_b9824e2b')}</Text>
 
             {groups.map((group) => (
               <View key={group.slug} style={styles.group}>

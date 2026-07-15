@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { globalFocusStyles } from '@/styles/globalFocus'
+import { translate as i18nT } from '@/i18n'
+
 
 interface PersonalStatusSummaryProps {
   visited: number
@@ -32,9 +34,9 @@ export function PersonalStatusSummary({
 
   const metrics: Metric[] = useMemo(
     () => [
-      { key: 'visited', label: 'Были', value: visited, icon: 'check-circle', tone: 'accent' },
-      { key: 'wishlist', label: 'Хочу', value: wishlist, icon: 'bookmark', tone: 'brand' },
-      { key: 'planned', label: 'Планирую', value: planned, icon: 'calendar', tone: 'primary' },
+      { key: 'visited', label: i18nT('profile:components.profile.PersonalStatusSummary.byli_f66be49a'), value: visited, icon: 'check-circle', tone: 'accent' },
+      { key: 'wishlist', label: i18nT('profile:components.profile.PersonalStatusSummary.hochu_45c64b91'), value: wishlist, icon: 'bookmark', tone: 'brand' },
+      { key: 'planned', label: i18nT('profile:components.profile.PersonalStatusSummary.planiruyu_a106fd10'), value: planned, icon: 'calendar', tone: 'primary' },
     ],
     [visited, wishlist, planned],
   )
@@ -148,12 +150,11 @@ export function PersonalStatusSummary({
       <View style={styles.header}>
         <View style={styles.badgeRow}>
           <Feather name="user" size={11} color={colors.textMuted} />
-          <Text style={styles.badgeText}>Личный календарь</Text>
+          <Text style={styles.badgeText}>{i18nT('profile:components.profile.PersonalStatusSummary.lichnyy_kalendar_03637ad5')}</Text>
         </View>
-        <Text style={styles.title}>Мои статусы поездок</Text>
+        <Text style={styles.title}>{i18nT('profile:components.profile.PersonalStatusSummary.moi_statusy_poezdok_5a81aaa7')}</Text>
         <Text style={styles.description}>
-          Здесь только ваши личные отметки: где уже были, что сохранили и что в планах.
-        </Text>
+          {i18nT('profile:components.profile.PersonalStatusSummary.zdes_tolko_vashi_lichnye_otmetki_gde_uzhe_by_f09ba557')}</Text>
       </View>
 
       <View style={styles.grid}>
@@ -170,7 +171,7 @@ export function PersonalStatusSummary({
             ]}
             accessibilityRole="button"
             accessibilityLabel={`${m.label}: ${formatTripsCount(m.value)}`}
-            accessibilityHint="Открыть календарь с этим статусом"
+            accessibilityHint={i18nT('profile:components.profile.PersonalStatusSummary.otkryt_kalendar_s_etim_statusom_989d9f2c')}
           >
             <View style={styles.tileHeader}>
               <Feather name={m.icon} size={14} color={toneColor(m.tone)} />
@@ -186,10 +187,10 @@ export function PersonalStatusSummary({
           onPress={() => onOpenCalendar()}
           style={({ pressed }) => [styles.cta, globalFocusStyles.focusable, { opacity: pressed ? 0.85 : 1 }]}
           accessibilityRole="button"
-          accessibilityLabel="Открыть календарь"
+          accessibilityLabel={i18nT('profile:components.profile.PersonalStatusSummary.otkryt_kalendar_633a0592')}
         >
           <Feather name="calendar" size={14} color={colors.primaryDark} />
-          <Text style={styles.ctaText}>Открыть календарь</Text>
+          <Text style={styles.ctaText}>{i18nT('profile:components.profile.PersonalStatusSummary.otkryt_kalendar_633a0592')}</Text>
         </Pressable>
       </View>
     </View>

@@ -15,6 +15,8 @@ import {
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 import { buildDropMarkerHtml } from '@/utils/markerSvg';
+import { translate as i18nT } from '@/i18n'
+
 
 type LeafletNS = typeof import('leaflet');
 type ReactLeafletNS = typeof import('react-leaflet');
@@ -173,7 +175,7 @@ export default function TripPlanRouteMap({
     return (
       <View style={styles.loadingWrap} testID="trip-plan-route-map">
         <ActivityIndicator color={colors.primaryDark} />
-        <Text style={styles.hint}>Загрузка карты маршрута...</Text>
+        <Text style={styles.hint}>{i18nT('trips:components.trips.planning.TripPlanRouteMap.zagruzka_karty_marshruta_5f48efc0')}</Text>
       </View>
     );
   }
@@ -190,7 +192,7 @@ export default function TripPlanRouteMap({
     <View style={styles.wrap} testID="trip-plan-route-map">
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.title}>Карта маршрута</Text>
+          <Text style={styles.title}>{i18nT('trips:components.trips.planning.TripPlanRouteMap.karta_marshruta_8fbc6a38')}</Text>
           {transport ? (
             <View style={styles.routeMode}>
               <Feather name={TRANSPORT_ICON_NAME[transport] as never} size={14} color={colors.primaryDark} />
@@ -206,11 +208,11 @@ export default function TripPlanRouteMap({
             {trackPositions.length >= 2 && routeGeometry?.length
               ? routingStateLabel(routingState)
               : readonly
-                ? 'Точки маршрута показаны на карте.'
-                : 'Нажмите на карту, чтобы добавить точку. После клика можно сразу переименовать её.'}
+                ? i18nT('trips:components.trips.planning.TripPlanRouteMap.tochki_marshruta_pokazany_na_karte_14e6732e')
+                : i18nT('trips:components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6')}
           </Text>
           {approximate ? (
-            <Text style={styles.warning}>Линия приблизительная: проверьте дорогу или тропу перед поездкой.</Text>
+            <Text style={styles.warning}>{i18nT('trips:components.trips.planning.TripPlanRouteMap.liniya_priblizitelnaya_proverte_dorogu_ili_t_9fb768f4')}</Text>
           ) : null}
         </View>
         <Text style={styles.counter}>{markerPositions.length}</Text>
@@ -263,8 +265,7 @@ export default function TripPlanRouteMap({
                         onClick={() => onEditPoint?.(index)}
                         style={styles.popupButton as React.CSSProperties}
                       >
-                        Редактировать
-                      </button>
+                        {i18nT('trips:components.trips.planning.TripPlanRouteMap.redaktirovat_0c9026cb')}</button>
                     ) : null}
                   </div>
                 </Popup>

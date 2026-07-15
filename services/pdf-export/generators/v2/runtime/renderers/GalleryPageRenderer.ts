@@ -3,6 +3,8 @@ import type { GalleryLayout } from '@/types/pdf-gallery'
 import { calculateOptimalColumns } from '@/types/pdf-gallery'
 import { escapeHtml, type RuntimeRenderContext, buildRunningHeader, getImageFilterStyle } from './renderHelpers'
 import { buildSafeImageUrl } from '../../../../utils/htmlUtils'
+import { translate as i18nT } from '@/i18n'
+
 
 interface GalleryPagePhoto {
   url: string
@@ -120,7 +122,7 @@ export class RuntimeGalleryRenderer {
             font-family: ${this.ctx.theme.typography.headingFont};
             text-transform: uppercase;
             letter-spacing: 0.12em;
-          ">Фотогалерея</span>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.GalleryPageRenderer.div_style_display_flex_align_items_center_ga_5dd34671.text01")}</span>
           <span style="
             display: inline-flex;
             align-items: center;
@@ -131,7 +133,7 @@ export class RuntimeGalleryRenderer {
             font-size: 8pt;
             font-weight: 700;
             font-family: ${this.ctx.theme.typography.bodyFont};
-          ">${totalPhotos} фото</span>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.GalleryPageRenderer.div_style_display_flex_align_items_center_ga_5dd34671.text02", { value8: totalPhotos })}</span>
         </div>
         <div style="
           height: 3px;
@@ -157,7 +159,7 @@ export class RuntimeGalleryRenderer {
             font-size: 8pt;
             font-weight: 700;
             font-family: ${this.ctx.theme.typography.bodyFont};
-          ">Фото ${rangeStart}–${rangeEnd} из ${totalPhotos}</span>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.GalleryPageRenderer.div_style_display_flex_justify_content_flex__7df416fd.text01", { value4: rangeStart, value5: rangeEnd, value6: totalPhotos })}</span>
         </div>
       ` : ''
 
@@ -305,7 +307,7 @@ export class RuntimeGalleryRenderer {
               ${getImageFilterStyle(this.ctx)}
             "
             onerror="this.style.display='none';" />
-          <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(caption || `Фото ${globalIndex + 1}`)}"
+          <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(caption || i18nT('export:services.pdfExport.runtime.gallery.photoAlt', { value1: globalIndex + 1 }))}"
             loading="eager" decoding="sync"
             style="
               position: relative;
@@ -543,7 +545,7 @@ export class RuntimeGalleryRenderer {
           ">${globalIndex + 1}</span>
         `
 
-        const polaroidCaptionText = showCaptions && photo.caption ? photo.caption : `Фото ${globalIndex + 1}`
+        const polaroidCaptionText = showCaptions && photo.caption ? photo.caption : i18nT('export:services.pdf_export.generators.v2.runtime.renderers.GalleryPageRenderer.foto_value1_dddeabe9', { value1: globalIndex + 1 })
         const polaroidCaption = layout === 'polaroid' ? `
           <div style="
             height: 8mm;
@@ -585,7 +587,7 @@ export class RuntimeGalleryRenderer {
               ${getImageFilterStyle(this.ctx)}
             "
             onerror="this.style.display='none';" />
-          <img src="${escapeHtml(photo.url)}" alt="Фото ${globalIndex + 1}"
+          <img src="${escapeHtml(photo.url)}" alt="${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.GalleryPageRenderer.div_class_gallery_photo_frame_style_value1_b_5f3278b4.text01", { value13: globalIndex + 1 })}"
             loading="eager" decoding="sync"
             style="
               position: relative;

@@ -14,6 +14,7 @@ import type {
   UserPointsStats
 } from '@/types/userPoints';
 import type { DocumentPickerAsset } from 'expo-document-picker';
+import { translate as i18nT } from '@/i18n';
 
 type FileInput = File | DocumentPickerAsset;
 
@@ -102,7 +103,7 @@ const toStringArray = (v: unknown): string[] =>
 const normalizePreviewPoint = (raw: unknown): ImportPreviewPoint => {
   const p = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   return {
-    name: typeof p.name === 'string' && p.name ? p.name : 'Без названия',
+    name: typeof p.name === 'string' && p.name ? p.name : i18nT('errorsStatic:api.userPoints.untitled'),
     description: typeof p.description === 'string' ? p.description : null,
     latitude: toNumber(p.latitude),
     longitude: toNumber(p.longitude),

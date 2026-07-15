@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
+import { getFormatLocale, translate as i18nT } from '@/i18n'
+
 
 type SpeechRecognitionAlternativeLike = {
   transcript?: string;
@@ -60,7 +62,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
   const [interimText, setInterimText] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const lang = options?.lang ?? 'ru-RU';
+  const lang = options?.lang ?? getFormatLocale();
   const continuous = options?.continuous ?? true;
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -100,7 +102,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
           onFinalTextRef.current(cleanedFinal);
         }
       } catch (e: unknown) {
-        setError(getErrorMessage(e, 'Ошибка распознавания речи'));
+        setError(getErrorMessage(e, i18nT('shared:hooks.useWebSpeechDictation.oshibka_raspoznavaniya_rechi_caa0cc14')));
       }
     };
 
@@ -111,7 +113,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEventLike) => {
-      const message = typeof event.error === 'string' ? event.error : 'Ошибка распознавания речи';
+      const message = typeof event.error === 'string' ? event.error : i18nT('shared:hooks.useWebSpeechDictation.oshibka_raspoznavaniya_rechi_caa0cc14');
       runningRef.current = false;
       setError(message);
       setIsListening(false);
@@ -155,7 +157,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
       setIsListening(true);
     } catch (e: unknown) {
       runningRef.current = false;
-      setError(getErrorMessage(e, 'Не удалось запустить диктовку'));
+      setError(getErrorMessage(e, i18nT('shared:hooks.useWebSpeechDictation.ne_udalos_zapustit_diktovku_e02629cd')));
       setIsListening(false);
     }
   }, []);

@@ -85,7 +85,7 @@ describe('BookHtmlExportService', () => {
     const service = new BookHtmlExportService()
 
     await expect(service.generateTravelsHtml([baseTravel], settings)).rejects.toThrow(
-      'Book HTML preview is only available on web'
+      'Предпросмотр HTML-книги доступен только в веб-версии',
     )
   })
 

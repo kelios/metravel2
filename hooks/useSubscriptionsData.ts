@@ -11,6 +11,8 @@ import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
 import { confirmAction } from '@/utils/confirmAction';
 import { normalizeTravelPreview, type TravelPreview } from '@/utils/subscriptionsHelpers';
+import { translate as i18nT } from '@/i18n'
+
 
 export type SubscriptionTab = 'subscriptions' | 'subscribers';
 
@@ -191,10 +193,10 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   const handleUnsubscribe = useCallback(
     async (userId: number) => {
       const confirmed = await confirmAction({
-        title: 'Отписаться',
-        message: 'Вы уверены, что хотите отписаться от этого автора?',
-        confirmText: 'Отписаться',
-        cancelText: 'Отмена',
+        title: i18nT('shared:hooks.useSubscriptionsData.otpisatsya_b4c7f63a'),
+        message: i18nT('shared:hooks.useSubscriptionsData.vy_uvereny_chto_hotite_otpisatsya_ot_etogo_a_68da60cc'),
+        confirmText: i18nT('shared:hooks.useSubscriptionsData.otpisatsya_b4c7f63a'),
+        cancelText: i18nT('shared:hooks.useSubscriptionsData.otmena_a30f32ee'),
       });
       if (!confirmed) return;
 

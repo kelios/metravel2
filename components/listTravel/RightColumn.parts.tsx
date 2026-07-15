@@ -4,6 +4,8 @@ import { ActivityIndicator, Text, View } from 'react-native'
 import { SkeletonLoader, TravelCardSkeleton } from '@/components/ui/SkeletonLoader'
 import { RECOMMENDATIONS_TOTAL_HEIGHT } from '@/components/listTravel/rightColumnModel'
 import { devError } from '@/utils/logger'
+import { translate as i18nT } from '@/i18n'
+
 
 // Retry a dynamic import a few times before giving up. In dev, Metro can
 // transiently drop an async module fetch ("unexpected end of stream"); without
@@ -35,7 +37,7 @@ export const RecommendationsTabs = lazy(async () => {
     return {
       default: memo((_props: { forceVisible?: boolean; onVisibilityChange?: (visible: boolean) => void }) => (
         <View style={{ padding: 16, alignItems: 'center' }}>
-          <Text>Не удалось загрузить рекомендации</Text>
+          <Text>{i18nT('travel:components.listTravel.RightColumn_parts.ne_udalos_zagruzit_rekomendatsii_03d2b9d3')}</Text>
         </View>
       )),
     } as unknown as typeof import('./RecommendationsTabs')

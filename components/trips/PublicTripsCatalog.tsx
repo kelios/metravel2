@@ -30,6 +30,8 @@ import {
   hasActivePublicTripFilters,
   sortPublicTrips,
 } from '@/components/trips/publicTripCatalogUtils';
+import { translate as i18nT } from '@/i18n'
+
 
 const GUTTER = 12;
 const MAX_WIDTH = 1100;
@@ -93,7 +95,7 @@ function PublicTripsCatalog() {
   const organizeAction = compactIntro ? (
     <IconButton
       icon={<Feather name="plus" size={18} color={colors.text} />}
-      label="Организовать мою поездку"
+      label={i18nT('trips:components.trips.PublicTripsCatalog.organizovat_moyu_poezdku_3ee4dcf9')}
       onPress={() => router.push('/trips/plan/create')}
       size="md"
       style={styles.organizeIconBtn}
@@ -101,7 +103,7 @@ function PublicTripsCatalog() {
     />
   ) : (
     <Button
-      label="Организовать мою поездку"
+      label={i18nT('trips:components.trips.PublicTripsCatalog.organizovat_moyu_poezdku_3ee4dcf9')}
       onPress={() => router.push('/trips/plan/create')}
       icon={<Feather name="plus" size={16} color={colors.textOnPrimary} />}
       size="md"
@@ -123,13 +125,13 @@ function PublicTripsCatalog() {
         <TextInput
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Поиск по поездкам"
+          placeholder={i18nT('trips:components.trips.PublicTripsCatalog.poisk_po_poezdkam_5627fcb8')}
           placeholderTextColor={colors.textMuted}
           style={styles.searchInput}
           returnKeyType="search"
           autoCapitalize="none"
           autoCorrect={false}
-          accessibilityLabel="Поиск по поездкам"
+          accessibilityLabel={i18nT('trips:components.trips.PublicTripsCatalog.poisk_po_poezdkam_5627fcb8')}
           testID="public-trips-search-input"
         />
         {hasActiveSearch ? (
@@ -137,7 +139,7 @@ function PublicTripsCatalog() {
             onPress={() => setSearchQuery('')}
             style={styles.searchClear}
             accessibilityRole="button"
-            accessibilityLabel="Очистить поиск"
+            accessibilityLabel={i18nT('trips:components.trips.PublicTripsCatalog.ochistit_poisk_3530b329')}
             testID="public-trips-search-clear"
           >
             <Feather name="x" size={16} color={colors.textMuted} />
@@ -165,45 +167,42 @@ function PublicTripsCatalog() {
           <Pressable
             onPress={goBack}
             accessibilityRole="button"
-            accessibilityLabel="Назад"
+            accessibilityLabel={i18nT('trips:components.trips.PublicTripsCatalog.nazad_b4ee6b82')}
             style={styles.backCrumb}
             testID="public-trips-back"
           >
-            <Feather name="arrow-left" size={15} color={colors.primaryDark} />
-            <Text style={styles.backCrumbText}>Назад</Text>
+            <Feather name="arrow-left" size={15} color={colors.primaryText} />
+            <Text style={styles.backCrumbText}>{i18nT('trips:components.trips.PublicTripsCatalog.nazad_b4ee6b82')}</Text>
           </Pressable>
           <View style={styles.crumbTrail}>
             <Pressable
               onPress={() => router.push('/')}
               accessibilityRole="button"
-              accessibilityLabel="Перейти на главную"
+              accessibilityLabel={i18nT('trips:components.trips.PublicTripsCatalog.pereyti_na_glavnuyu_d0724ffd')}
               style={styles.crumbItem}
             >
               <Feather name="home" size={13} color={colors.textMuted} />
-              <Text style={styles.crumbText}>Главная</Text>
+              <Text style={styles.crumbText}>{i18nT('trips:components.trips.PublicTripsCatalog.glavnaya_ed2e490e')}</Text>
             </Pressable>
             <Feather name="chevron-right" size={14} color={colors.textMuted} />
             <Text style={styles.crumbCurrent} numberOfLines={1}>
-              Поехали со мной
-            </Text>
+              {i18nT('trips:components.trips.PublicTripsCatalog.poehali_so_mnoy_8297a10d')}</Text>
           </View>
         </View>
 
         <View style={styles.titleRow}>
-          <Text style={styles.h1}>Поехали со мной</Text>
+          <Text style={styles.h1}>{i18nT('trips:components.trips.PublicTripsCatalog.poehali_so_mnoy_8297a10d')}</Text>
           {organizeAction}
         </View>
 
         <SafetyNotice
-          text="MeTravel не организует поездки — это площадка для поиска попутчиков. Будьте внимательны при договорённостях и обмене контактами."
+          text={i18nT('trips:components.trips.PublicTripsCatalog.metravel_ne_organizuet_poezdki_eto_ploschadk_ef41d388')}
           style={styles.notice}
         />
 
         {showFullIntro ? (
           <Text style={styles.subtitle}>
-            Публичные поездки от других путешественников. Нашли компанию по душе —
-            подайте заявку «Хочу поехать». Или организуйте свою поездку и найдите попутчиков.
-          </Text>
+            {i18nT('trips:components.trips.PublicTripsCatalog.publichnye_poezdki_ot_drugih_puteshestvennik_facc5972')}</Text>
         ) : null}
 
         {compactIntro ? (
@@ -211,12 +210,12 @@ function PublicTripsCatalog() {
             onPress={() => setIntroExpanded((v) => !v)}
             style={styles.introToggle}
             accessibilityRole="button"
-            accessibilityLabel={introExpanded ? 'Скрыть вводную информацию' : 'Показать информацию о поездках'}
+            accessibilityLabel={introExpanded ? i18nT('trips:components.trips.PublicTripsCatalog.skryt_vvodnuyu_informatsiyu_14678353') : i18nT('trips:components.trips.PublicTripsCatalog.pokazat_informatsiyu_o_poezdkah_81e78d07')}
             testID="public-trips-intro-toggle"
           >
-            <Feather name={introExpanded ? 'chevron-up' : 'info'} size={15} color={colors.primaryDark} />
+            <Feather name={introExpanded ? 'chevron-up' : 'info'} size={15} color={colors.primaryText} />
             <Text style={styles.introToggleText}>
-              {introExpanded ? 'Скрыть' : 'О поездках'}
+              {introExpanded ? i18nT('trips:components.trips.PublicTripsCatalog.skryt_3d16fdf4') : i18nT('trips:components.trips.PublicTripsCatalog.o_poezdkah_f75b4cd6')}
             </Text>
           </Pressable>
         ) : null}
@@ -242,17 +241,17 @@ function PublicTripsCatalog() {
             <ActivityIndicator color={colors.primaryDark} />
           </View>
         ) : isError ? (
-          <Text style={styles.empty}>Не удалось загрузить каталог поездок.</Text>
+          <Text style={styles.empty}>{i18nT('trips:components.trips.PublicTripsCatalog.ne_udalos_zagruzit_katalog_poezdok_8ff8ecbf')}</Text>
         ) : trips.length === 0 ? (
           <View style={styles.emptyBox} testID="public-trips-empty">
             <Text style={styles.empty}>
               {hasActiveFilters || hasActiveSearch
-                ? 'Ничего не найдено. Сбросьте поиск или фильтры.'
-                : 'Пока нет открытых поездок. Загляните позже.'}
+                ? i18nT('trips:components.trips.PublicTripsCatalog.nichego_ne_naydeno_sbroste_poisk_ili_filtry_06382c80')
+                : i18nT('trips:components.trips.PublicTripsCatalog.poka_net_otkrytyh_poezdok_zaglyanite_pozzhe_fdb683cb')}
             </Text>
             {hasActiveFilters || hasActiveSearch ? (
               <Button
-                label="Сбросить"
+                label={i18nT('trips:components.trips.PublicTripsCatalog.sbrosit_09d93db0')}
                 variant="secondary"
                 size="sm"
                 onPress={resetSearchAndFilters}
@@ -298,7 +297,7 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.primarySoft,
       ...Platform.select({ web: { cursor: 'pointer' as any } }),
     },
-    backCrumbText: { fontSize: 13, fontWeight: '700', color: colors.primaryDark },
+    backCrumbText: { fontSize: 13, fontWeight: '700', color: colors.primaryText },
     crumbTrail: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -343,7 +342,7 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.primarySoft,
       ...Platform.select({ web: { cursor: 'pointer' as any } }),
     },
-    introToggleText: { fontSize: 13, fontWeight: '700', color: colors.primaryDark },
+    introToggleText: { fontSize: 13, fontWeight: '700', color: colors.primaryText },
     notice: { marginVertical: 2 },
     controlsRow: {
       position: 'relative',

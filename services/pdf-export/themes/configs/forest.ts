@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Forest — насыщенные зелёные тона, лесная атмосфера
  */
 export const forestTheme: PdfThemeConfig = {
   name: 'forest',
-  displayName: 'Лес',
-  description: 'Насыщенные зелёные тона и земляная палитра',
+  get displayName() { return i18nT('export:services.pdfExport.theme.forest.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.forest.description') },
 
   colors: {
     text: '#1a2e1a',

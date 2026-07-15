@@ -21,6 +21,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { parseTravelStatusDateParts, useTravelStatusStore } from '@/stores/travelStatusStore';
 import { useAuthStore } from '@/stores/authStore';
+import { translate as i18nT } from '@/i18n'
+
 
 const MultiSelectFieldAny: any = MultiSelectField;
 
@@ -244,7 +246,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             {
                 id: form.id,
                 type: 'travel',
-                title: form.name || travelDataOld?.name || 'Без названия',
+                title: form.name || travelDataOld?.name || i18nT('travel:common.untitled'),
                 url: form.slug ? `/travels/${form.slug}` : `/travels/${form.id}`,
                 imageUrl:
                     form.travel_image_thumb_url ||
@@ -268,7 +270,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
         return (
             <View style={styles.loaderContainer}>
                 <ActivityIndicator size="large" color={colors.primaryDark} />
-                <Text style={styles.loadingText}>Загрузка фильтров...</Text>
+                <Text style={styles.loadingText}>{i18nT('travel:components.travel.FiltersUpsertComponent.zagruzka_filtrov_fbb6fa5e')}</Text>
             </View>
         );
     }
@@ -281,13 +283,13 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
         >
             {onClose && isMobile && (
                 <ButtonBase
-                    label="X"
+                    label={i18nT('travel:components.travel.FiltersUpsertComponent.x_c2692853')}
                     onPress={() => onClose()}
                     variant="ghost"
                     size="sm"
                     style={styles.closeIcon}
                     labelStyle={styles.closeButtonText}
-                    accessibilityLabel="Закрыть"
+                    accessibilityLabel={i18nT('travel:components.travel.FiltersUpsertComponent.zakryt_abd8267c')}
                 />
             )}
 
@@ -298,10 +300,9 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     onPress={onSave}
                     style={styles.saveButton}
                     accessibilityRole="button"
-                    accessibilityLabel="Сохранить изменения"
+                    accessibilityLabel={i18nT('travel:components.travel.FiltersUpsertComponent.sohranit_izmeneniya_573b2df9')}
                 >
-                    Сохранить
-                </Button>
+                    {i18nT('travel:components.travel.FiltersUpsertComponent.sohranit_cffd4fdc')}</Button>
             )}
 
             {showPreviewButton && form.slug ? (
@@ -311,24 +312,23 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     onPress={openPreview}
                     style={styles.floatingIconButton}
                     accessibilityRole="link"
-                    accessibilityLabel="Открыть предпросмотр маршрута"
+                    accessibilityLabel={i18nT('travel:components.travel.FiltersUpsertComponent.otkryt_predprosmotr_marshruta_414a7689')}
                 >
-                    Предпросмотр
-                </Button>
+                    {i18nT('travel:components.travel.FiltersUpsertComponent.predprosmotr_675c70ff')}</Button>
             ) : null}
 
 
             {showPublishControls && (
                 <>
                     <CheckboxComponent
-                        label="Сохранить как черновик"
+                        label={i18nT('travel:components.travel.FiltersUpsertComponent.sohranit_kak_chernovik_b35d78e8')}
                         value={!form.publish}
                         onChange={(value) => handleFieldChange('publish', !value)}
                     />
 
                     {isSuperAdmin && (
                         <CheckboxComponent
-                            label="Прошел модерацию"
+                            label={i18nT('travel:components.travel.FiltersUpsertComponent.proshel_moderatsiyu_b3cab7a8')}
                             value={form.moderation ?? false}
                             onChange={(value) => handleFieldChange('moderation', value)}
                         />
@@ -346,18 +346,17 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                                 ? form.travel_image_thumb_small_url
                                 : (travelDataOld as any)?.travel_image_thumb_small_url ?? null
                         }
-                        placeholder="Перетащите обложку путешествия"
+                        placeholder={i18nT('travel:components.travel.FiltersUpsertComponent.peretaschite_oblozhku_puteshestviya_f3680ef2')}
                         maxSizeMB={10}
                     />
                     <Text style={styles.coverHint}>
-                        Рекомендуем горизонтальное изображение (соотношение сторон 16:9), без коллажей и текста на картинке.
-                    </Text>
+                        {i18nT('travel:components.travel.FiltersUpsertComponent.rekomenduem_gorizontalnoe_izobrazhenie_sootn_fb2cc121')}</Text>
                 </View>
             )}
 
             {showCountries && (
                 <MultiSelectFieldAny
-                    label="Страны для путешествия *"
+                    label={i18nT('travel:components.travel.FiltersUpsertComponent.strany_dlya_puteshestviya_e9cfa1f6')}
                     items={resolvedCountries}
                     value={form.countries ?? []}
                     onChange={handleCountriesChange}
@@ -369,7 +368,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             {showCategories && (
                 <View nativeID="travelwizard-publish-categories">
                     <MultiSelectFieldAny
-                        label="Категории путешествий *"
+                        label={i18nT('travel:components.travel.FiltersUpsertComponent.kategorii_puteshestviy_c0a00d10')}
                         items={resolvedCategories}
                         value={form.categories ?? []}
                         onChange={handleCategoriesChange}
@@ -382,7 +381,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             {showAdditionalFields && (
                 <>
                     <MultiSelectFieldAny
-                        label="Средства передвижения"
+                        label={i18nT('travel:components.travel.FiltersUpsertComponent.sredstva_peredvizheniya_548015cd')}
                     items={resolvedTransports}
                         value={form.transports ?? []}
                         onChange={handleTransportsChange}
@@ -391,7 +390,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     />
 
                     <MultiSelectFieldAny
-                        label="Физическая подготовка"
+                        label={i18nT('travel:components.travel.FiltersUpsertComponent.fizicheskaya_podgotovka_d7610a5a')}
                     items={resolvedComplexity}
                         value={form.complexity ?? []}
                         onChange={handleComplexityChange}
@@ -400,7 +399,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     />
 
                     <MultiSelectFieldAny
-                        label="С кем путешествуете"
+                        label={i18nT('travel:components.travel.FiltersUpsertComponent.s_kem_puteshestvuete_04f7938b')}
                     items={resolvedCompanions}
                         value={form.companions ?? []}
                         onChange={handleCompanionsChange}
@@ -409,7 +408,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     />
 
                     <MultiSelectFieldAny
-                        label="Тип ночлега"
+                        label={i18nT('travel:components.travel.FiltersUpsertComponent.tip_nochlega_446b0177')}
                     items={resolvedOvernights}
                         value={form.over_nights_stay ?? []}
                         onChange={handleOvernightsChange}
@@ -418,7 +417,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     />
 
                     <MultiSelectFieldAny
-                        label="Месяц путешествия"
+                        label={i18nT('travel:components.travel.FiltersUpsertComponent.mesyats_puteshestviya_68091083')}
                     items={resolvedMonth}
                         value={form.month ?? []}
                         onChange={handleMonthChange}
@@ -426,16 +425,16 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                         valueField="id"
                     />
 
-                    {renderNumericInput('Год путешествия', 'year')}
+                    {renderNumericInput(i18nT('travel:components.travel.FiltersUpsertComponent.god_puteshestviya_ad173b35'), 'year')}
                     {renderVisitedDateInput()}
                     <CheckboxComponent
-                        label="Требуется виза"
+                        label={i18nT('travel:components.travel.FiltersUpsertComponent.trebuetsya_viza_904fcbb9')}
                         value={form.visa ?? false}
                         onChange={handleVisaChange}
                     />
-                    {renderNumericInput('Количество участников', 'number_peoples')}
-                    {renderNumericInput('Длительность (дней)', 'number_days')}
-                    {renderNumericInput('Бюджет (руб.)', 'budget')}
+                    {renderNumericInput(i18nT('travel:components.travel.FiltersUpsertComponent.kolichestvo_uchastnikov_e94e6a74'), 'number_peoples')}
+                    {renderNumericInput(i18nT('travel:components.travel.FiltersUpsertComponent.dlitelnost_dney_dcce1646'), 'number_days')}
+                    {renderNumericInput(i18nT('travel:components.travel.FiltersUpsertComponent.byudzhet_rub_3eae045b'), 'budget')}
                 </>
             )}
         </ScrollView>
@@ -458,7 +457,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                             handleFieldChange(field, digits);
                         }
                     }}
-                    placeholder={`Введите ${label.toLowerCase()}`}
+                    placeholder={i18nT('travel:components.travel.FiltersUpsertComponent.vvedite_value1_fdb230f6', { value1: label.toLowerCase() })}
                     keyboardType={Platform.select({ ios: 'number-pad', android: 'numeric', default: 'numeric' })}
                     inputMode="numeric"
                 />
@@ -472,13 +471,13 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
 
         return (
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Дата, когда был(а)</Text>
+                <Text style={styles.label}>{i18nT('travel:components.travel.FiltersUpsertComponent.data_kogda_byl_a_3d68a928')}</Text>
                 {Platform.OS === 'web' ? (
                     <input
                         type="date"
                         value={parseTravelStatusDateParts(value) ? value : ''}
                         onChange={(event) => handleVisitedDateChange(event.target.value)}
-                        aria-label="Дата, когда был в путешествии"
+                        aria-label={i18nT('travel:components.travel.FiltersUpsertComponent.data_kogda_byl_v_puteshestvii_ceab8b37')}
                         style={{
                             width: '100%',
                             padding: '10px 12px',
@@ -496,16 +495,15 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                         style={[styles.input, isInvalid && styles.inputInvalid]}
                         value={value}
                         onChangeText={handleVisitedDateChange}
-                        placeholder="ГГГГ-ММ-ДД"
+                        placeholder={i18nT('travel:components.travel.FiltersUpsertComponent.gggg_mm_dd_ab72b205')}
                         placeholderTextColor={colors.textMuted}
                         keyboardType="numbers-and-punctuation"
                         maxLength={10}
-                        accessibilityLabel="Дата, когда был в путешествии"
+                        accessibilityLabel={i18nT('travel:components.travel.FiltersUpsertComponent.data_kogda_byl_v_puteshestvii_ceab8b37')}
                     />
                 )}
                 <Text style={styles.fieldHint}>
-                    Если точная дата не указана, календарь отнесёт поездку к месяцу и году путешествия.
-                </Text>
+                    {i18nT('travel:components.travel.FiltersUpsertComponent.esli_tochnaya_data_ne_ukazana_kalendar_otnes_80347012')}</Text>
             </View>
         );
     }

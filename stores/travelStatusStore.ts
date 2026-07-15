@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { devError, devWarn } from '@/utils/logger'
 import { safeJsonParseString } from '@/utils/safeJsonParse'
 import { buildTravelMonthFallbackDate } from '@/utils/travelCalendarDate'
+import { translate as i18nT } from '@/i18n'
+
 
 const TRAVEL_STATUS_KEY = 'metravel_travel_status'
 
@@ -127,7 +129,7 @@ const normalizeAuthoredTravelEntry = (item: unknown): TravelStatusEntry | null =
   const id = normalizeTravelId(item.id ?? item.travel_id ?? item._id)
   if (id === undefined) return null
 
-  const title = normalizeOptionalString(item.name ?? item.title) ?? `Путешествие ${String(id)}`
+  const title = normalizeOptionalString(item.name ?? item.title) ?? i18nT('errorsStatic:stores.travelStatus.titleFallback', { id: String(id) })
   const imageUrl = normalizeOptionalString(
     item.travel_image_thumb_url ??
       item.travel_image_thumb_small_url ??
@@ -275,7 +277,7 @@ const normalizeServerStatusEntry = (item: unknown): TravelStatusEntry | null => 
   const travelId = item.travel_id ?? travel.id
   const title = typeof travel.name === 'string' && travel.name.trim()
     ? travel.name.trim()
-    : `Путешествие ${String(travelId ?? '').trim()}`
+    : i18nT('shared:stores.travelStatusStore.puteshestvie_value1_a99c3208', { value1: String(travelId ?? '').trim() })
   const url = typeof travel.url === 'string' && travel.url.trim()
     ? travel.url.trim()
     : typeof travel.slug === 'string' && travel.slug.trim()

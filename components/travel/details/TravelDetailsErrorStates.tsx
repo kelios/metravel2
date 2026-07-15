@@ -1,6 +1,8 @@
 import React from 'react'
 import { Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { translate as i18nT } from '@/i18n'
+
 
 interface ErrorStateStyles {
   safeArea: object
@@ -23,15 +25,15 @@ export function MissingParamError({ styles, seoBlock, onGoHome }: MissingParamEr
       {seoBlock}
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.errorContainer} role="alert">
-          <Text style={styles.errorTitle}>Путешествие не найдено</Text>
-          <Text style={styles.errorText}>В ссылке отсутствует идентификатор путешествия.</Text>
+          <Text style={styles.errorTitle}>{i18nT('travel:components.travel.details.TravelDetailsErrorStates.puteshestvie_ne_naydeno_9fd534f7')}</Text>
+          <Text style={styles.errorText}>{i18nT('travel:components.travel.details.TravelDetailsErrorStates.v_ssylke_otsutstvuet_identifikator_puteshest_c0021f5b')}</Text>
           <TouchableOpacity
             onPress={onGoHome}
             style={styles.errorButton}
             accessibilityRole="button"
-            accessibilityLabel="На главную"
+            accessibilityLabel={i18nT('travel:components.travel.details.TravelDetailsErrorStates.na_glavnuyu_c35a9aeb')}
           >
-            <Text style={styles.errorButtonText}>На главную</Text>
+            <Text style={styles.errorButtonText}>{i18nT('travel:components.travel.details.TravelDetailsErrorStates.na_glavnuyu_c35a9aeb')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -49,26 +51,26 @@ interface LoadErrorProps {
 
 function isNotFoundError(message?: string): boolean {
   if (!message) return false
-  return /\b404\b|not found|не найден|не существует|удалено/i.test(message)
+  return new RegExp(i18nT('travel:components.travel.details.TravelDetailsErrorStates.notFoundPattern'), 'i').test(message)
 }
 
 function isRateLimitedError(message?: string): boolean {
   if (!message) return false
-  return /слишком много запросов|too many requests|429|перегруж/i.test(message)
+  return new RegExp(i18nT('travel:components.travel.details.TravelDetailsErrorStates.rateLimitedPattern'), 'i').test(message)
 }
 
 export function LoadError({ styles, seoBlock, errorMessage, onRetry, onGoHome }: LoadErrorProps) {
   const notFound = isNotFoundError(errorMessage)
   const rateLimited = !notFound && isRateLimitedError(errorMessage)
 
-  let title = 'Не удалось загрузить путешествие'
-  let text = 'Проверьте подключение к интернету и попробуйте ещё раз.'
+  let title = i18nT('travel:components.travel.details.TravelDetailsErrorStates.ne_udalos_zagruzit_puteshestvie_6ea4cf0c')
+  let text = i18nT('travel:components.travel.details.TravelDetailsErrorStates.proverte_podklyuchenie_k_internetu_i_poprobu_be33bf61')
   if (notFound) {
-    title = 'Путешествие не найдено'
-    text = 'Возможно, оно было удалено или ссылка устарела.'
+    title = i18nT('travel:components.travel.details.TravelDetailsErrorStates.notFoundTitle')
+    text = i18nT('travel:components.travel.details.TravelDetailsErrorStates.notFoundText')
   } else if (rateLimited) {
-    title = 'Слишком много запросов'
-    text = 'Подождите немного и нажмите «Повторить».'
+    title = i18nT('travel:components.travel.details.TravelDetailsErrorStates.rateLimitedTitle')
+    text = i18nT('travel:components.travel.details.TravelDetailsErrorStates.rateLimitedText')
   }
 
   return (
@@ -83,20 +85,19 @@ export function LoadError({ styles, seoBlock, errorMessage, onRetry, onGoHome }:
               onPress={onRetry}
               style={styles.errorButton}
               accessibilityRole="button"
-              accessibilityLabel="Повторить"
+              accessibilityLabel={i18nT('travel:components.travel.details.TravelDetailsErrorStates.povtorit_5acae0b1')}
             >
-              <Text style={styles.errorButtonText}>Повторить</Text>
+              <Text style={styles.errorButtonText}>{i18nT('travel:components.travel.details.TravelDetailsErrorStates.povtorit_5acae0b1')}</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
             onPress={onGoHome}
             style={notFound ? styles.errorButton : secondaryButtonStyle}
             accessibilityRole="button"
-            accessibilityLabel="На главную"
+            accessibilityLabel={i18nT('travel:components.travel.details.TravelDetailsErrorStates.na_glavnuyu_c35a9aeb')}
           >
             <Text style={notFound ? styles.errorButtonText : secondaryButtonTextStyle}>
-              На главную
-            </Text>
+              {i18nT('travel:components.travel.details.TravelDetailsErrorStates.na_glavnuyu_c35a9aeb')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

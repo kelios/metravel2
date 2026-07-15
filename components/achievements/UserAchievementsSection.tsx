@@ -14,6 +14,8 @@ import { useUserAchievements } from '@/hooks/useAchievementsApi';
 import RankBar from '@/components/achievements/RankBar';
 import BadgeGrid, { type BadgeGridItem } from '@/components/achievements/BadgeGrid';
 import PeerBadgeReceivedRow from '@/components/achievements/PeerBadgeReceivedRow';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   userId: string | number;
@@ -53,7 +55,7 @@ function UserAchievementsSection({ userId, testID, style }: Props) {
 
   return (
     <View style={[styles.card, style]} testID={testID}>
-      <Text style={styles.heading}>Достижения</Text>
+      <Text style={styles.heading}>{i18nT('achievements:components.achievements.UserAchievementsSection.dostizheniya_2bd6cb65')}</Text>
       <RankBar rank={data.rank} />
       {items.length > 0 ? (
         <BadgeGrid items={items} size={60} style={styles.grid} />

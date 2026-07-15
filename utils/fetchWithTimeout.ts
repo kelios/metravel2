@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n'
 // src/utils/fetchWithTimeout.ts
 // ✅ Общая утилита для fetch с таймаутом
 
@@ -13,7 +14,7 @@
 // не ретраить — повтор зависшего бэка лишь утроит мёртвое ожидание под спиннером.
 // Текст сохранён для обратной совместимости (глобальный retry матчит по сообщению).
 function createTimeoutError(timeout: number): Error {
-    const err = new Error(`Превышено время ожидания (${timeout}ms). Попробуйте позже.`);
+    const err = new Error(i18nT('shared:utils.fetchWithTimeout.prevysheno_vremya_ozhidaniya_value1_ms_popro_7f165b76', { value1: timeout }));
     err.name = 'TimeoutError';
     return err;
 }
@@ -99,7 +100,7 @@ export async function fetchWithTimeout(
                 throw createTimeoutError(timeout);
             }
             throw new Error(
-                `Сетевое соединение было прервано при запросе ${url}. Попробуйте позже.`
+                i18nT('shared:utils.fetchWithTimeout.setevoe_soedinenie_bylo_prervano_pri_zaprose_20fc1cf2', { value1: url })
             );
         }
 

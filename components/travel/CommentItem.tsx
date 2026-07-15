@@ -11,6 +11,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useLikeComment, useUnlikeComment, useDeleteComment } from '../../hooks/useComments';
 import { formatRelativeTime } from '@/utils/relativeTime';
+import { translate as i18nT } from '@/i18n'
+
 
 interface CommentItemProps {
   comment: TravelComment;
@@ -93,7 +95,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
           </View>
           <View>
             <Text style={styles.userName}>
-              {comment.user_name || `Пользователь #${comment.user}`}
+              {comment.user_name || i18nT('travel:components.travel.CommentItem.userFallback', { value1: comment.user })}
             </Text>
             <Text style={styles.date}>{formattedDate}</Text>
           </View>
@@ -104,7 +106,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
             style={styles.moreButton}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Действия с комментарием"
+            accessibilityLabel={i18nT('travel:components.travel.CommentItem.deystviya_s_kommentariem_c7fbcb60')}
             accessibilityState={{ expanded: showActions }}
             testID="comment-actions-trigger"
           >
@@ -124,11 +126,11 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
                 setShowActions(false);
               }}
               style={styles.actionButton}
-              accessibilityLabel="Редактировать комментарий"
+              accessibilityLabel={i18nT('travel:components.travel.CommentItem.redaktirovat_kommentariy_4777db64')}
               testID="comment-actions-edit"
             >
               <Feather name="edit-2" size={18} color={colors.primaryDark} />
-              <Text style={styles.actionLabel}>Изменить</Text>
+              <Text style={styles.actionLabel}>{i18nT('travel:components.travel.CommentItem.izmenit_3b5da3b2')}</Text>
             </Pressable>
           )}
           {canDelete && (
@@ -137,7 +139,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
               style={styles.actionButton}
               disabled={deleteComment.isPending}
               accessibilityLabel={
-                showsAdminDeleteLabel ? 'Удалить комментарий (Админ)' : 'Удалить комментарий'
+                showsAdminDeleteLabel ? i18nT('travel:components.travel.CommentItem.udalit_kommentariy_admin_d55d0a7c') : i18nT('travel:components.travel.CommentItem.udalit_kommentariy_25a8d8a8')
               }
               testID="comment-actions-delete"
             >
@@ -151,7 +153,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
                 <>
                   <Feather name="trash-2" size={18} color={colors.danger} />
                   <Text style={showsAdminDeleteLabel ? styles.deleteAdminLabel : styles.deleteLabel}>
-                    {showsAdminDeleteLabel ? 'Удалить (Админ)' : 'Удалить'}
+                    {showsAdminDeleteLabel ? i18nT('travel:components.travel.CommentItem.udalit_admin_b33b3c72') : i18nT('travel:components.travel.CommentItem.udalit_15129e08')}
                   </Text>
                 </>
               )}
@@ -167,7 +169,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
             style={styles.footerButton}
             hitSlop={8}
             disabled={likeComment.isPending || unlikeComment.isPending}
-            accessibilityLabel={isLiked ? 'Убрать лайк' : 'Поставить лайк'}
+            accessibilityLabel={isLiked ? i18nT('travel:components.travel.CommentItem.ubrat_layk_8b9a9e57') : i18nT('travel:components.travel.CommentItem.postavit_layk_5d9b14ea')}
             testID="comment-like"
           >
             <Feather
@@ -189,7 +191,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
             style={styles.footerButton}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Войдите, чтобы оценить комментарий"
+            accessibilityLabel={i18nT('travel:components.travel.CommentItem.voydite_chtoby_otsenit_kommentariy_84861e6c')}
           >
             <Feather name="heart" size={16} color={colors.textMuted} />
             {comment.likes_count > 0 && (
@@ -203,11 +205,11 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
             onPress={() => onReply(comment)}
             style={styles.footerButton}
             hitSlop={8}
-            accessibilityLabel="Ответить на комментарий"
+            accessibilityLabel={i18nT('travel:components.travel.CommentItem.otvetit_na_kommentariy_cff0c125')}
             testID="comment-reply"
           >
             <Feather name="message-circle" size={16} color={colors.textMuted} />
-            <Text style={styles.footerText}>Ответить</Text>
+            <Text style={styles.footerText}>{i18nT('travel:components.travel.CommentItem.otvetit_5310e439')}</Text>
           </Pressable>
         )}
 
@@ -218,10 +220,10 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
         visible={confirmVisible}
         onClose={() => setConfirmVisible(false)}
         onConfirm={handleConfirmDelete}
-        title="Удалить комментарий?"
-        message="Вы уверены, что хотите удалить комментарий? Это действие необратимо."
-        confirmText="Удалить"
-        cancelText="Отмена"
+        title={i18nT('travel:components.travel.CommentItem.udalit_kommentariy_a5d75f50')}
+        message={i18nT('travel:components.travel.CommentItem.vy_uvereny_chto_hotite_udalit_kommentariy_et_d2432436')}
+        confirmText={i18nT('travel:components.travel.CommentItem.udalit_15129e08')}
+        cancelText={i18nT('travel:components.travel.CommentItem.otmena_6a66c8f0')}
         confirmTestID="comment-delete-confirm"
         cancelTestID="comment-delete-cancel"
       />

@@ -20,13 +20,15 @@ import type {
   ContactRequestParty,
   ContactRequestStatus,
 } from '@/api/contactRequests'
+import { translate as i18nT } from '@/i18n'
 
-const SENT_STATUS_LABEL: Partial<Record<ContactRequestStatus, string>> = {
-  pending: 'Ожидает ответа',
-  granted: 'Контакты раскрыты',
-  declined: 'Отклонён',
-  revoked: 'Отозван',
-}
+
+const createSentStatusLabels = (): Partial<Record<ContactRequestStatus, string>> => ({
+  pending: i18nT('profile:components.profile.ContactRequestsInbox.status.pending'),
+  granted: i18nT('profile:components.profile.ContactRequestsInbox.status.granted'),
+  declined: i18nT('profile:components.profile.ContactRequestsInbox.status.declined'),
+  revoked: i18nT('profile:components.profile.ContactRequestsInbox.status.revoked'),
+})
 
 /**
  * FE-424: входящие/исходящие заявки на раскрытие контактов в своём профиле.
@@ -36,6 +38,7 @@ const SENT_STATUS_LABEL: Partial<Record<ContactRequestStatus, string>> = {
 export function ContactRequestsInbox() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
+  const sentStatusLabels = createSentStatusLabels()
 
   const receivedQuery = useContactRequests('received', 'pending')
   const sentQuery = useContactRequests('sent')
@@ -51,20 +54,20 @@ export function ContactRequestsInbox() {
       // Предупреждение перед взаимным раскрытием контактов (один раз / по версии).
       if (!consent.granted) {
         const confirmed = await confirmAction({
-          title: 'Раскрыть контакты',
+          title: i18nT('profile:components.profile.ContactRequestsInbox.raskryt_kontakty_15797519'),
           message:
-            'После подтверждения пользователь увидит ваши контакты, а вы — его. Раскрыть контакты?',
-          confirmText: 'Раскрыть',
+            i18nT('profile:components.profile.ContactRequestsInbox.posle_podtverzhdeniya_polzovatel_uvidit_vash_6e7b643d'),
+          confirmText: i18nT('profile:components.profile.ContactRequestsInbox.raskryt_2ccf2880'),
         })
         if (!confirmed) return
         await consent.grant()
       }
       try {
         await mutateAsync({ id: request.id, status: 'granted' })
-        showToast({ type: 'success', text1: 'Контакты раскрыты' })
+        showToast({ type: 'success', text1: i18nT('profile:components.profile.ContactRequestsInbox.kontakty_raskryty_1dd8c9dd') })
       } catch (error) {
-        const message = error instanceof ApiError ? error.message : 'Не удалось подтвердить заявку'
-        showToast({ type: 'error', text1: 'Ошибка', text2: message })
+        const message = error instanceof ApiError ? error.message : i18nT('profile:components.profile.ContactRequestsInbox.ne_udalos_podtverdit_zayavku_35d0eb52')
+        showToast({ type: 'error', text1: i18nT('profile:components.profile.ContactRequestsInbox.oshibka_229b9ab5'), text2: message })
       }
     },
     [consent, mutateAsync],
@@ -74,10 +77,10 @@ export function ContactRequestsInbox() {
     async (request: ContactAccessRequest) => {
       try {
         await mutateAsync({ id: request.id, status: 'declined' })
-        showToast({ type: 'success', text1: 'Заявка отклонена' })
+        showToast({ type: 'success', text1: i18nT('profile:components.profile.ContactRequestsInbox.zayavka_otklonena_cad4be8d') })
       } catch (error) {
-        const message = error instanceof ApiError ? error.message : 'Не удалось отклонить заявку'
-        showToast({ type: 'error', text1: 'Ошибка', text2: message })
+        const message = error instanceof ApiError ? error.message : i18nT('profile:components.profile.ContactRequestsInbox.ne_udalos_otklonit_zayavku_9d8ced15')
+        showToast({ type: 'error', text1: i18nT('profile:components.profile.ContactRequestsInbox.oshibka_229b9ab5'), text2: message })
       }
     },
     [mutateAsync],
@@ -115,16 +118,16 @@ export function ContactRequestsInbox() {
     <View style={styles.card}>
       <View style={styles.header}>
         <Feather name="user-check" size={18} color={colors.primaryDark} />
-        <Text style={styles.title}>Заявки на контакты</Text>
+        <Text style={styles.title}>{i18nT('profile:components.profile.ContactRequestsInbox.zayavki_na_kontakty_c4433849')}</Text>
       </View>
 
       {!hasAny ? (
-        <Text style={styles.empty}>Новых заявок на раскрытие контактов нет.</Text>
+        <Text style={styles.empty}>{i18nT('profile:components.profile.ContactRequestsInbox.novyh_zayavok_na_raskrytie_kontaktov_net_e4f37b53')}</Text>
       ) : null}
 
       {received.length > 0 ? (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Входящие</Text>
+          <Text style={styles.sectionTitle}>{i18nT('profile:components.profile.ContactRequestsInbox.vhodyaschie_44c4c5cc')}</Text>
           {received.map((request) => (
             <View key={request.id} style={styles.row}>
               {renderAvatar(request.requester)}
@@ -132,25 +135,25 @@ export function ContactRequestsInbox() {
                 <Text style={styles.rowName} numberOfLines={1}>
                   {request.requester.name}
                 </Text>
-                <Text style={styles.rowMeta}>хочет видеть ваши контакты</Text>
+                <Text style={styles.rowMeta}>{i18nT('profile:components.profile.ContactRequestsInbox.hochet_videt_vashi_kontakty_3aa09ce8')}</Text>
               </View>
               <View style={styles.actions}>
                 <Button
-                  label="Подтвердить"
+                  label={i18nT('profile:components.profile.ContactRequestsInbox.podtverdit_4699baef')}
                   size="sm"
                   variant="primary"
                   loading={isPending}
                   onPress={() => handleGrant(request)}
-                  accessibilityLabel={`Подтвердить заявку от ${request.requester.name}`}
+                  accessibilityLabel={i18nT('profile:components.profile.ContactRequestsInbox.podtverdit_zayavku_ot_value1_4f146e3e', { value1: request.requester.name })}
                   testID={`contact-request-grant-${request.id}`}
                 />
                 <Button
-                  label="Отклонить"
+                  label={i18nT('profile:components.profile.ContactRequestsInbox.otklonit_341e2192')}
                   size="sm"
                   variant="ghost"
                   loading={isPending}
                   onPress={() => handleDecline(request)}
-                  accessibilityLabel={`Отклонить заявку от ${request.requester.name}`}
+                  accessibilityLabel={i18nT('profile:components.profile.ContactRequestsInbox.otklonit_zayavku_ot_value1_5c80952a', { value1: request.requester.name })}
                   testID={`contact-request-decline-${request.id}`}
                 />
               </View>
@@ -161,7 +164,7 @@ export function ContactRequestsInbox() {
 
       {sent.length > 0 ? (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Отправленные</Text>
+          <Text style={styles.sectionTitle}>{i18nT('profile:components.profile.ContactRequestsInbox.otpravlennye_9e52c324')}</Text>
           {sent.map((request) => (
             <View key={request.id} style={styles.row}>
               {renderAvatar(request.target)}
@@ -170,7 +173,7 @@ export function ContactRequestsInbox() {
                   {request.target.name}
                 </Text>
                 <Text style={styles.rowMeta}>
-                  {SENT_STATUS_LABEL[request.status] ?? 'Запрос отправлен'}
+                  {sentStatusLabels[request.status] ?? i18nT('profile:components.profile.ContactRequestsInbox.status.sent')}
                 </Text>
               </View>
             </View>

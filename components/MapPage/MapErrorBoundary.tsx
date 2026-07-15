@@ -4,6 +4,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import { ThemeContext, getThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import Feather from '@expo/vector-icons/Feather';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   children: ReactNode;
@@ -117,15 +119,15 @@ class MapErrorBoundary extends Component<Props, State> {
   private getFriendlyMessage(): string {
     const msg = String(this.state.error?.message ?? '');
     if (this.isModuleError(this.state.error)) {
-      return 'Модуль карты не загрузился. Попробуйте ещё раз.';
+      return i18nT('map:components.MapPage.MapErrorBoundary.modul_karty_ne_zagruzilsya_poprobuyte_esche__b9ca45bb');
     }
     if (msg.includes('reused by another instance')) {
-      return 'Контейнер карты был переиспользован. Попробуйте снова.';
+      return i18nT('map:components.MapPage.MapErrorBoundary.konteyner_karty_byl_pereispolzovan_poprobuyt_7b379a46');
     }
     if (/network|fetch|load/i.test(msg)) {
-      return 'Не удалось загрузить данные карты. Проверьте соединение.';
+      return i18nT('map:components.MapPage.MapErrorBoundary.ne_udalos_zagruzit_dannye_karty_proverte_soe_5bfc77c7');
     }
-    return msg || 'Произошла непредвиденная ошибка';
+    return msg || i18nT('map:components.MapPage.MapErrorBoundary.proizoshla_nepredvidennaya_oshibka_f66efe5d');
   }
 
   render() {
@@ -147,12 +149,12 @@ class MapErrorBoundary extends Component<Props, State> {
         >
           <View style={styles.content}>
             <Feather name="alert-circle" size={48} color={colors.danger} />
-            <Text style={styles.title} accessibilityRole="header">Ошибка загрузки карты</Text>
+            <Text style={styles.title} accessibilityRole="header">{i18nT('map:components.MapPage.MapErrorBoundary.oshibka_zagruzki_karty_d9cca5ff')}</Text>
             <Text style={styles.message}>
               {this.getFriendlyMessage()}
             </Text>
             <Button
-              label="Попробовать снова"
+              label={i18nT('map:components.MapPage.MapErrorBoundary.poprobovat_snova_addb3686')}
               icon={<Feather name="rotate-cw" size={20} color={colors.textOnPrimary} />}
               onPress={this.handleReset}
               variant="primary"

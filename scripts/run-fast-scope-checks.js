@@ -245,6 +245,11 @@ const main = () => {
       process.exit(guardStatus)
     }
 
+    const typeDebtGuardStatus = runCommand('npm', ['run', 'guard:type-debt'])
+    if (typeDebtGuardStatus !== 0) {
+      process.exit(typeDebtGuardStatus)
+    }
+
     if (result.lintTargets.length === 0) {
       console.log('fast-scope-checks: no lintable changed files, eslint skipped.')
       return

@@ -10,16 +10,14 @@ import { ResponsiveContainer } from '@/components/layout'
 import Button from '@/components/ui/Button'
 import { subscribeEmail, type SubscribeSource } from '@/api/misc'
 import { queueAnalyticsEvent } from '@/utils/analytics'
+import { translate as i18nT } from '@/i18n'
+
 
 interface EmailSubscriptionFormProps {
   source: SubscribeSource
   title?: string
   subtitle?: string
 }
-
-const DEFAULT_TITLE = 'Подпишитесь на новые маршруты'
-const DEFAULT_SUBTITLE =
-  'Раз в пару недель — лучшие путешествия, идеи на выходные и квесты по городам. Без спама, отписаться можно в один клик.'
 
 // Lightweight client-side gate; the backend is the source of truth and returns
 // a localized 400 for anything it rejects.
@@ -50,7 +48,7 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
   const handleSubmit = () => {
     const trimmed = email.trim()
     if (!EMAIL_RE.test(trimmed)) {
-      setLocalError('Введите корректный email')
+      setLocalError(i18nT('shared:components.common.EmailSubscriptionForm.vvedite_korrektnyy_email_03c63cf4'))
       return
     }
     setLocalError(null)
@@ -70,8 +68,8 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
           </View>
 
           <View style={[styles.textBlock, isMobile ? styles.textBlockMobile : styles.textBlockDesktop]}>
-            <Text style={styles.title}>{title ?? DEFAULT_TITLE}</Text>
-            <Text style={styles.subtitle}>{subtitle ?? DEFAULT_SUBTITLE}</Text>
+            <Text style={styles.title}>{title ?? i18nT('sharedStatic:subscription.defaultTitle')}</Text>
+            <Text style={styles.subtitle}>{subtitle ?? i18nT('sharedStatic:subscription.defaultSubtitle')}</Text>
           </View>
 
           {succeeded ? (
@@ -79,8 +77,8 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
               <Feather name="check-circle" size={18} color={colors.primaryDark} />
               <Text style={styles.successText}>
                 {alreadyExists
-                  ? 'Вы уже подписаны — спасибо, что с нами!'
-                  : 'Готово! Письмо с новыми маршрутами скоро придёт.'}
+                  ? i18nT('shared:components.common.EmailSubscriptionForm.vy_uzhe_podpisany_spasibo_chto_s_nami_6014714e')
+                  : i18nT('shared:components.common.EmailSubscriptionForm.gotovo_pismo_s_novymi_marshrutami_skoro_prid_a7046d88')}
               </Text>
             </View>
           ) : (
@@ -93,7 +91,7 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
                     if (localError) setLocalError(null)
                   }}
                   onSubmitEditing={handleSubmit}
-                  placeholder="ваш@email.com"
+                  placeholder={i18nT('shared:components.common.EmailSubscriptionForm.vash_email_com_3f97bbae')}
                   placeholderTextColor={colors.textMuted}
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -102,7 +100,7 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
                   editable={!mutation.isPending}
                   returnKeyType="go"
                   style={[styles.input, !!errorText && styles.inputError]}
-                  accessibilityLabel="Email для подписки на новые маршруты"
+                  accessibilityLabel={i18nT('shared:components.common.EmailSubscriptionForm.email_dlya_podpiski_na_novye_marshruty_54ea0434')}
                 />
                 {!!errorText && (
                   <Text style={styles.errorText} accessibilityLiveRegion="polite">
@@ -111,7 +109,7 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
                 )}
               </View>
               <Button
-                label="Подписаться"
+                label={i18nT('shared:components.common.EmailSubscriptionForm.podpisatsya_593e3a3e')}
                 onPress={handleSubmit}
                 variant="primary"
                 size={isMobile ? 'md' : 'md'}
@@ -119,7 +117,7 @@ function EmailSubscriptionForm({ source, title, subtitle }: EmailSubscriptionFor
                 loading={mutation.isPending}
                 disabled={mutation.isPending}
                 style={styles.submitBtn}
-                accessibilityLabel="Подписаться на рассылку новых маршрутов"
+                accessibilityLabel={i18nT('shared:components.common.EmailSubscriptionForm.podpisatsya_na_rassylku_novyh_marshrutov_1ccbe1b4')}
               />
             </View>
           )}

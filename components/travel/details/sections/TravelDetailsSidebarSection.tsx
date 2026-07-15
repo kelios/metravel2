@@ -12,7 +12,9 @@ import NavigationArrows from '@/components/travel/NavigationArrows'
 import { useTravelDetailsSidebarSectionModel } from '../hooks/useTravelDetailsSidebarSectionModel'
 import NearTravelList from '@/components/travel/NearTravelList'
 import PopularTravelList from '@/components/travel/PopularTravelList'
-import { NEARBY_TRAVELS_SUBTITLE } from '@/constants/nearby'
+import { getNearbyTravelsSubtitle } from '@/constants/nearby'
+import { translate as i18nT } from '@/i18n'
+
 
 const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
 const LIST_FALLBACK_STYLE = { minHeight: 220 } as const
@@ -68,7 +70,7 @@ export const TravelDetailsSidebarSection: React.FC<{
         }}
         style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
-        accessibilityLabel="Рядом можно посмотреть"
+        accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.ryadom_mozhno_posmotret_3f015f94')}
         accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'near' } : {})}
       >
@@ -78,9 +80,9 @@ export const TravelDetailsSidebarSection: React.FC<{
             style={styles.sectionHeaderText}
             accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
             aria-level={2 as any}
-          >Рядом можно посмотреть</Text>
+          >{i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.ryadom_mozhno_posmotret_3f015f94')}</Text>
         </View>
-        <Text style={styles.sectionSubtitle}>{NEARBY_TRAVELS_SUBTITLE}</Text>
+        <Text style={styles.sectionSubtitle}>{getNearbyTravelsSubtitle()}</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
           {hasValidTravelId && (
             <View testID="travel-details-near-loaded">
@@ -101,7 +103,7 @@ export const TravelDetailsSidebarSection: React.FC<{
       {shouldShowNavigationArrows && (
         <View
           style={[styles.sectionContainer, styles.navigationArrowsContainer]}
-          accessibilityLabel="Навигация по похожим маршрутам"
+          accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.navigatsiya_po_pohozhim_marshrutam_cbec0b95')}
           role="navigation"
         >
           <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
@@ -117,7 +119,7 @@ export const TravelDetailsSidebarSection: React.FC<{
         }}
         style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
-        accessibilityLabel="Популярные маршруты"
+        accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.populyarnye_marshruty_e9bc8e8c')}
         accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'popular' } : {})}
       >
@@ -127,9 +129,9 @@ export const TravelDetailsSidebarSection: React.FC<{
             style={styles.sectionHeaderText}
             accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
             aria-level={2 as any}
-          >Популярные маршруты</Text>
+          >{i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.populyarnye_marshruty_e9bc8e8c')}</Text>
         </View>
-        <Text style={styles.sectionSubtitle}>Самые просматриваемые направления за неделю</Text>
+        <Text style={styles.sectionSubtitle}>{i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.samye_prosmatrivaemye_napravleniya_za_nedely_e8d2c61d')}</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
           <View testID="travel-details-popular-loaded">
             <Suspense fallback={<View style={LIST_FALLBACK_STYLE} />}>

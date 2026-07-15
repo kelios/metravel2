@@ -14,6 +14,8 @@ import { useYoutubeEmbedModel } from '../hooks/useYoutubeEmbedModel';
 import { useTravelDetailsStyles } from '../TravelDetailsStyles';
 import { withLazy } from '../TravelDetailsLazy';
 import { Icon } from '../TravelDetailsIcons';
+import { translate as i18nT } from '@/i18n'
+
 
 const WebViewComponent =
   Platform.OS === 'web'
@@ -32,7 +34,7 @@ const Fallback = () => {
   const styles = useTravelDetailsStyles();
   return (
     <View style={styles.fallback}>
-      <ActivityIndicator size="small" accessibilityLabel="Загрузка YouTube" />
+      <ActivityIndicator size="small" accessibilityLabel={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.zagruzka_youtube_bc5e2414')} />
     </View>
   );
 };
@@ -50,11 +52,11 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
         onPress={handlePreviewPress}
         style={styles.videoContainer}
         accessibilityRole="button"
-        accessibilityLabel="Смотреть видео"
+        accessibilityLabel={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.smotret_video_b3c7bda0')}
       >
         <ImageCardMedia
           src={`https://img.youtube.com/vi/${id}/hqdefault.jpg`}
-          alt="Превью видео YouTube"
+          alt={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.prevyu_video_youtube_f1ae631f')}
           fit="contain"
           blurBackground
           allowCriticalWebBlur
@@ -64,7 +66,7 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
         />
         <View style={styles.playOverlay}>
           <Icon name="play-circle-fill" size={64} color={colors.textOnDark} />
-          <Text style={styles.videoHintText}>Видео запустится автоматически</Text>
+          <Text style={styles.videoHintText}>{i18nT('travel:components.travel.details.sections.LazyYouTubeSection.video_zapustitsya_avtomaticheski_c03be162')}</Text>
         </View>
       </Pressable>
     );
@@ -89,7 +91,7 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
         loading="lazy"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen
-        title="YouTube video"
+        title={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.youtube_video_bfabc11f')}
       />
     </div>
   ) : (

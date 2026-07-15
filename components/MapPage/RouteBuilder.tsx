@@ -5,6 +5,8 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { LatLng } from '@/types/coordinates';
 import MapIcon from './MapIcon';
 import IconButton from '@/components/ui/IconButton';
+import { translate as i18nT } from '@/i18n'
+
 
 interface RouteBuilderProps {
   startAddress: string;
@@ -39,7 +41,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
             <IconButton
               testID="route-swap"
               icon={<MapIcon name="swap-vert" size={compact ? 16 : 18} color={colors.primaryDark} />}
-              label="Поменять старт и финиш местами"
+              label={i18nT('map:components.MapPage.RouteBuilder.pomenyat_start_i_finish_mestami_1bd61586')}
               size={compact ? 'sm' : 'md'}
               onPress={onSwap}
               style={styles.swapActionButton}
@@ -49,7 +51,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
             <IconButton
               testID="route-clear"
               icon={<MapIcon name="close" size={compact ? 16 : 18} color={colors.textMuted} />}
-              label="Очистить маршрут"
+              label={i18nT('map:components.MapPage.RouteBuilder.ochistit_marshrut_c7535487')}
               size={compact ? 'sm' : 'md'}
               onPress={onClear}
               style={styles.iconButton}
@@ -65,7 +67,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
           </View>
           <View style={styles.addressInputWrapper}>
             <AddressSearch
-              placeholder="Старт"
+              placeholder={i18nT('map:components.MapPage.RouteBuilder.start_73c944ad')}
               value={startAddress}
               onAddressSelect={(addr, coords) => onAddressSelect(addr, coords, true)}
               enableCoordinateInput
@@ -85,7 +87,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
           </View>
           <View style={styles.addressInputWrapper}>
             <AddressSearch
-              placeholder="Финиш"
+              placeholder={i18nT('map:components.MapPage.RouteBuilder.finish_693a48bc')}
               value={endAddress}
               onAddressSelect={(addr, coords) => onAddressSelect(addr, coords, false)}
               enableCoordinateInput
@@ -98,13 +100,11 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
 
       {!startAddress && (
         <Text style={styles.hint} testID="route-hint-start">
-          Коснитесь карты или введите адрес старта
-        </Text>
+          {i18nT('map:components.MapPage.RouteBuilder.kosnites_karty_ili_vvedite_adres_starta_f1abce46')}</Text>
       )}
       {Boolean(startAddress) && !endAddress && (
         <Text style={styles.hint} testID="route-hint-end">
-          Теперь выберите точку финиша
-        </Text>
+          {i18nT('map:components.MapPage.RouteBuilder.teper_vyberite_tochku_finisha_82361621')}</Text>
       )}
     </View>
   );

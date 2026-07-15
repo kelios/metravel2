@@ -4,7 +4,10 @@ import type Feather from '@expo/vector-icons/Feather'
 import PlaceListCard from '@/components/places/PlaceListCard'
 import { TravelCoords } from '@/types/types'
 
-import { PLACE_CARD_STYLE, TRANSPORT_LABELS } from './constants'
+import { PLACE_CARD_STYLE } from './constants'
+import { getTransportLabel } from '../transportModes'
+import { translate as i18nT } from '@/i18n'
+
 
 type FeatherIcon = keyof typeof Feather.glyphMap
 
@@ -101,7 +104,7 @@ const AddressListItemCard: React.FC<Props> = ({
 }) => {
   const categoryLabel = categories.join(', ')
   const distanceBadges = distanceInfo
-    ? [distanceInfo.distanceText, `${TRANSPORT_LABELS[transportMode]} ${distanceInfo.travelTimeText}`]
+    ? [distanceInfo.distanceText, `${getTransportLabel(transportMode)} ${distanceInfo.travelTimeText}`]
     : []
   // Secondary address line (POI titles separate the clean name from the full
   // reverse-geocoded address) renders above the distance badges.
@@ -134,7 +137,7 @@ const AddressListItemCard: React.FC<Props> = ({
       isAdding={isAddingPoint}
       imageHeight={cardImageHeight}
       width={cardWidth}
-      addLabel={pointAdded ? 'Добавлено' : 'Сохранить'}
+      addLabel={pointAdded ? i18nT('map:components.MapPage.AddressListItem.AddressListItemCard.dobavleno_e6c744c6') : i18nT('map:components.MapPage.AddressListItem.AddressListItemCard.sohranit_06fb5b11')}
       addButtonPlacement="row"
       compact
       popupAligned

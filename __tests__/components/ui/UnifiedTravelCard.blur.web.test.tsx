@@ -222,4 +222,23 @@ describe('UnifiedTravelCard blur background (web)', () => {
       '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     )
   })
+
+  it('keeps the primary web action separate from nested card controls', () => {
+    let tree: renderer.ReactTestRenderer
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <UnifiedTravelCard
+          title="Actionable travel"
+          onPress={() => {}}
+          rightTopSlot={React.createElement('button', { 'aria-label': 'Secondary action' })}
+        />
+      )
+    })
+
+    const primaryAction = tree!.root.find(
+      (node: any) => node.props?.role === 'link' && node.props?.['aria-label']?.includes('Actionable travel')
+    )
+    expect(primaryAction.findAll((node: any) => node.type === 'button')).toHaveLength(0)
+  })
 })

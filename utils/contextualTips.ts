@@ -1,4 +1,6 @@
 import { TravelFormData } from '@/types/types';
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * ✅ ФАЗА 2: Умные подсказки (Contextual Tips)
@@ -26,8 +28,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
   1: [
     {
       id: 'name-too-short',
-      title: 'Название слишком короткое',
-      message: 'Добавьте больше деталей в название. Например: "5 дней в горах Грузии" вместо просто "Грузия"',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.nazvanie_slishkom_korotkoe_da76ecf4') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.dobavte_bolshe_detaley_v_nazvanie_naprimer_5_ee46f364') },
       type: 'tip',
       priority: 1,
       condition: (data) => {
@@ -37,8 +39,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
     },
     {
       id: 'no-description',
-      title: 'Добавьте описание',
-      message: 'Путешествия с описанием получают на 60% больше просмотров. Расскажите о маршруте, впечатлениях, советах.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.dobavte_opisanie_c0d8ec19') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.puteshestviya_s_opisaniem_poluchayut_na_60_b_fbfdea75') },
       type: 'info',
       priority: 2,
       condition: (data) => {
@@ -48,8 +50,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
     },
     {
       id: 'description-too-short',
-      title: 'Описание можно расширить',
-      message: 'Добавьте больше деталей: что увидели, какие были сложности, что понравилось больше всего. Минимум 100 символов рекомендуется.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.opisanie_mozhno_rasshirit_238c9642') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.dobavte_bolshe_detaley_chto_uvideli_kakie_by_34fd1402') },
       type: 'tip',
       priority: 3,
       condition: (data) => {
@@ -63,8 +65,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
   2: [
     {
       id: 'no-points',
-      title: 'Добавьте точки на карту',
-      message: 'Используйте поиск по названию места - это быстрее чем вводить координаты вручную. Просто начните печатать название.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.dobavte_tochki_na_kartu_ccb261a3') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.ispolzuyte_poisk_po_nazvaniyu_mesta_eto_byst_258c25e0') },
       type: 'info',
       priority: 1,
       condition: (data) => {
@@ -74,8 +76,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
     },
     {
       id: 'few-points',
-      title: 'Маршрут можно детализировать',
-      message: 'Добавьте больше точек для полноты маршрута. Путешествия с 5+ точками получают больше внимания.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.marshrut_mozhno_detalizirovat_9d1b0335') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.dobavte_bolshe_tochek_dlya_polnoty_marshruta_834be0d9') },
       type: 'tip',
       priority: 2,
       condition: (data) => {
@@ -85,8 +87,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
     },
     {
       id: 'points-without-photos',
-      title: 'Добавьте фото к точкам',
-      message: 'У вас есть точки без фотографий. Фото помогают другим представить места и повышают интерес к маршруту на 40%.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.dobavte_foto_k_tochkam_e134e627') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.u_vas_est_tochki_bez_fotografiy_foto_pomogay_d5f866b8') },
       type: 'tip',
       priority: 3,
       condition: (data) => {
@@ -97,8 +99,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
     },
     {
       id: 'no-countries-selected',
-      title: 'Выберите страны',
-      message: 'Укажите страны маршрута - это помогает другим путешественникам найти ваш маршрут в поиске.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.vyberite_strany_aa611d97') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.ukazhite_strany_marshruta_eto_pomogaet_drugi_a17bded4') },
       type: 'info',
       priority: 4,
       condition: (data) => {
@@ -106,7 +108,7 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
         return countries.length === 0;
       },
       action: {
-        label: 'Выбрать страны',
+        get label() { return i18nT('sharedStatic:utils.contextualTips.vybrat_strany_7ff922ae') },
         step: 2,
       },
     },
@@ -116,8 +118,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
   3: [
     {
       id: 'no-cover',
-      title: 'Добавьте обложку',
-      message: 'Путешествия с обложкой получают в 3 раза больше просмотров! Выберите лучшее фото из поездки.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.dobavte_oblozhku_5c6918e8') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.puteshestviya_s_oblozhkoy_poluchayut_v_3_raz_12feeb6d') },
       type: 'warning',
       priority: 1,
       condition: (data) => {
@@ -126,8 +128,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
     },
     {
       id: 'cover-added',
-      title: 'Отлично!',
-      message: 'Обложка добавлена. Для лучшего результата используйте горизонтальное фото 16:9 без текста и коллажей.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.otlichno_25546d5e') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.oblozhka_dobavlena_dlya_luchshego_rezultata__a7ea6fc0') },
       type: 'success',
       priority: 5,
       condition: (data) => {
@@ -140,8 +142,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
   4: [
     {
       id: 'add-practical-info',
-      title: 'Добавьте практическую информацию',
-      message: 'Укажите бюджет, длительность, количество участников - это поможет другим спланировать поездку.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.dobavte_prakticheskuyu_informatsiyu_cbcecd6c') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.ukazhite_byudzhet_dlitelnost_kolichestvo_uch_38da3271') },
       type: 'tip',
       priority: 2,
       condition: (data) => {
@@ -154,8 +156,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
   5: [
     {
       id: 'no-categories',
-      title: 'Выберите категории',
-      message: 'Категории помогают другим найти ваш маршрут. Путешествия с категориями получают +40% просмотров в поиске.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.vyberite_kategorii_ca7eadf2') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.kategorii_pomogayut_drugim_nayti_vash_marshr_05e16e21') },
       type: 'info',
       priority: 1,
       condition: (data) => {
@@ -165,8 +167,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
     },
     {
       id: 'add-transport',
-      title: 'Укажите транспорт',
-      message: 'Добавьте виды транспорта - это поможет другим понять, подходит ли маршрут для них.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.ukazhite_transport_8b305878') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.dobavte_vidy_transporta_eto_pomozhet_drugim__68c1d080') },
       type: 'tip',
       priority: 2,
       condition: (data) => {
@@ -176,8 +178,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
     },
     {
       id: 'add-difficulty',
-      title: 'Укажите сложность',
-      message: 'Уровень физической подготовки помогает путешественникам выбрать подходящий маршрут.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.ukazhite_slozhnost_9fee2580') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.uroven_fizicheskoy_podgotovki_pomogaet_putes_8fc831f0') },
       type: 'tip',
       priority: 3,
       condition: (data) => {
@@ -191,8 +193,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
   6: [
     {
       id: 'ready-to-publish',
-      title: 'Готово к публикации!',
-      message: 'Все обязательные поля заполнены. Проверьте превью карточки перед публикацией.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.gotovo_k_publikatsii_65bc0996') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.vse_obyazatelnye_polya_zapolneny_proverte_pr_95e3e715') },
       type: 'success',
       priority: 1,
       condition: (data) => {
@@ -204,8 +206,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
     },
     {
       id: 'missing-required',
-      title: 'Заполните обязательные поля',
-      message: 'Для публикации нужны: название (мин. 3 символа), описание (мин. 50 символов) и хотя бы 1 точка на карте.',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.zapolnite_obyazatelnye_polya_7bbabeb2') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.dlya_publikatsii_nuzhny_nazvanie_min_3_simvo_c6caa236') },
       type: 'warning',
       priority: 1,
       condition: (data) => {
@@ -217,8 +219,8 @@ export const CONTEXTUAL_TIPS: Record<number, ContextualTip[]> = {
     },
     {
       id: 'add-recommended',
-      title: 'Улучшите видимость',
-      message: 'Добавьте рекомендуемые поля для лучшей видимости: страны, категории, обложку. Это увеличит просмотры на 200%!',
+      get title() { return i18nT('sharedStatic:utils.contextualTips.uluchshite_vidimost_56f842aa') },
+      get message() { return i18nT('sharedStatic:utils.contextualTips.dobavte_rekomenduemye_polya_dlya_luchshey_vi_18e5a9be') },
       type: 'tip',
       priority: 2,
       condition: (data) => {

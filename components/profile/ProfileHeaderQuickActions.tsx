@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { translate as i18nT } from '@/i18n'
+
 
 export type ProfileHeaderActionKey = 'messages' | 'trips' | 'userpoints' | 'calendar' | 'newTravel';
 
@@ -20,7 +22,7 @@ export interface ProfileHeaderQuickActionsProps {
 // верх: коммуникация → info, гео → primary, время → warning, создание → brand.
 type QuickActionTone = 'info' | 'primary' | 'success' | 'warning' | 'brand';
 
-const ITEMS: Array<{
+type QuickActionItem = {
   key: ProfileHeaderActionKey;
   label: string;
   icon: React.ComponentProps<typeof Feather>['name'];
@@ -28,42 +30,44 @@ const ITEMS: Array<{
   /** Главный CTA — заливается брендом, остальные утилитарны/вторичны. */
   primaryCta?: boolean;
   accessibilityHint: string;
-}> = [
+};
+
+const createQuickActionItems = (): QuickActionItem[] => [
   {
     key: 'messages',
-    label: 'Чаты',
+    label: i18nT('profile:components.profile.ProfileHeaderQuickActions.items.messages.label'),
     icon: 'message-circle',
     tone: 'info',
-    accessibilityHint: 'Перейти к сообщениям и диалогам',
+    accessibilityHint: i18nT('profile:components.profile.ProfileHeaderQuickActions.items.messages.hint'),
   },
   {
     key: 'trips',
-    label: 'Поездки',
+    label: i18nT('profile:components.profile.ProfileHeaderQuickActions.items.trips.label'),
     icon: 'briefcase',
     tone: 'success',
-    accessibilityHint: 'Открыть созданные поездки, заявки и уведомления',
+    accessibilityHint: i18nT('profile:components.profile.ProfileHeaderQuickActions.items.trips.hint'),
   },
   {
     key: 'userpoints',
-    label: 'Мои точки',
+    label: i18nT('profile:components.profile.ProfileHeaderQuickActions.items.userpoints.label'),
     icon: 'map-pin',
     tone: 'primary',
-    accessibilityHint: 'Перейти к сохранённым точкам на карте',
+    accessibilityHint: i18nT('profile:components.profile.ProfileHeaderQuickActions.items.userpoints.hint'),
   },
   {
     key: 'calendar',
-    label: 'Календарь',
+    label: i18nT('profile:components.profile.ProfileHeaderQuickActions.items.calendar.label'),
     icon: 'calendar',
     tone: 'warning',
-    accessibilityHint: 'Перейти к календарю путешествий',
+    accessibilityHint: i18nT('profile:components.profile.ProfileHeaderQuickActions.items.calendar.hint'),
   },
   {
     key: 'newTravel',
-    label: 'Маршрут',
+    label: i18nT('profile:components.profile.ProfileHeaderQuickActions.items.newTravel.label'),
     icon: 'plus',
     tone: 'brand',
     primaryCta: true,
-    accessibilityHint: 'Создать новый маршрут',
+    accessibilityHint: i18nT('profile:components.profile.ProfileHeaderQuickActions.items.newTravel.hint'),
   },
 ];
 
@@ -74,6 +78,7 @@ export function ProfileHeaderQuickActions({
   compact = false,
 }: ProfileHeaderQuickActionsProps) {
   const colors = useThemedColors();
+  const items = createQuickActionItems();
 
   const toneColors = useMemo<Record<QuickActionTone, { fg: string; soft: string }>>(
     () => ({
@@ -177,7 +182,7 @@ export function ProfileHeaderQuickActions({
 
   return (
     <View style={styles.row} accessibilityRole="menu">
-      {ITEMS.map((item) => {
+      {items.map((item) => {
         const showBadge = item.key === 'messages' && unreadMessagesCount > 0;
         const tone = toneColors[item.tone];
         const isCta = !!item.primaryCta;
@@ -193,7 +198,7 @@ export function ProfileHeaderQuickActions({
             hitSlop={{ top: 10, bottom: 10, left: 4, right: 4 }}
             accessibilityRole="menuitem"
             accessibilityLabel={
-              showBadge ? `${item.label}, ${unreadMessagesCount} непрочитанных` : item.label
+              showBadge ? i18nT('profile:components.profile.ProfileHeaderQuickActions.value1_value2_neprochitannyh_be8896bb', { value1: item.label, value2: unreadMessagesCount }) : item.label
             }
             accessibilityHint={item.accessibilityHint}
             style={({ pressed }) => [

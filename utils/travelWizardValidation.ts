@@ -4,6 +4,8 @@
  */
 
 import { TravelFormData } from '@/types/types';
+import { translate as i18nT } from '@/i18n'
+
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -73,12 +75,12 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
       name: {
         minLength: 3,
         maxLength: 200,
-        label: 'Название путешествия',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.nazvanie_puteshestviya_7d8dd724') },
       },
       description: {
         minLength: 50,
         content: 'html',
-        label: 'Описание',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.opisanie_a9350f71') },
       },
     },
   },
@@ -88,13 +90,13 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
     fields: {
       coordsMeTravel: {
         minItems: 1,
-        label: 'Точки маршрута',
-        requiredMessage: 'Точки маршрута обязательны для заполнения',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.tochki_marshruta_d726f00e') },
+        get requiredMessage() { return i18nT('travel:utils.travelWizardValidation.required.routePoints') },
       },
       countries: {
         minItems: 1,
-        label: 'Страны маршрута',
-        requiredMessage: 'Страны маршрута обязательны для заполнения',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.strany_marshruta_27ec69ae') },
+        get requiredMessage() { return i18nT('travel:utils.travelWizardValidation.required.countries') },
       },
     },
   },
@@ -104,15 +106,15 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
     recommended: ['coverImage', 'gallery'],
     fields: {
       coverImage: {
-        label: 'Главное изображение',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.glavnoe_izobrazhenie_e97ccba0') },
       },
       gallery: {
         minItems: 3,
-        label: 'Галерея фотографий',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.galereya_fotografiy_751bf667') },
       },
       youtube_link: {
         pattern: /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/,
-        label: 'Ссылка на YouTube',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.ssylka_na_youtube_21b1f224') },
       },
     },
   },
@@ -124,20 +126,20 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
       plus: {
         maxLength: 1000,
         content: 'html',
-        label: 'Плюсы путешествия',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.plyusy_puteshestviya_17596d43') },
       },
       minus: {
         maxLength: 1000,
         content: 'html',
-        label: 'Минусы путешествия',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.minusy_puteshestviya_1f8fbc38') },
       },
       recommendation: {
         maxLength: 2000,
         content: 'html',
-        label: 'Рекомендации',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.rekomendatsii_e0ccf331') },
       },
       budget: {
-        label: 'Бюджет',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.byudzhet_c5ee397d') },
       },
     },
   },
@@ -148,19 +150,19 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
     fields: {
       categories: {
         minItems: 1,
-        label: 'Категории',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.kategorii_0f84d789') },
       },
       transports: {
-        label: 'Транспорт',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.transport_02adfc61') },
       },
       complexity: {
-        label: 'Сложность',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.slozhnost_a6592127') },
       },
       companions: {
-        label: 'Компания',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.kompaniya_3cdbd9a3') },
       },
       month: {
-        label: 'Сезон',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.sezon_965dbedd') },
       },
     },
   },
@@ -171,26 +173,26 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
       name: {
         minLength: 3,
         maxLength: 200,
-        label: 'Название путешествия',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.nazvanie_puteshestviya_7d8dd724') },
       },
       description: {
         minLength: 50,
         content: 'html',
-        label: 'Описание',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.opisanie_a9350f71') },
       },
       coordsMeTravel: {
         minItems: 1,
-        label: 'Точки маршрута',
-        requiredMessage: 'Точки маршрута обязательны для заполнения',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.tochki_marshruta_d726f00e') },
+        get requiredMessage() { return i18nT('travel:utils.travelWizardValidation.required.routePoints') },
       },
       countries: {
         minItems: 1,
-        label: 'Страны маршрута',
-        requiredMessage: 'Страны маршрута обязательны для заполнения',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.strany_marshruta_27ec69ae') },
+        get requiredMessage() { return i18nT('travel:utils.travelWizardValidation.required.countries') },
       },
       categories: {
         minItems: 1,
-        label: 'Категории',
+        get label() { return i18nT('errorsStatic:utils.travelWizardValidation.kategorii_0f84d789') },
       },
     },
   },
@@ -266,7 +268,7 @@ export function validateField(
 
     if (length < rules.minLength && !isEmpty) {
       result.isValid = false;
-      result.error = `Минимум ${rules.minLength} символов (сейчас: ${length})`;
+      result.error = i18nT('travel:utils.travelWizardValidation.minLength', { value1: rules.minLength, value2: length });
     }
   }
 
@@ -278,7 +280,7 @@ export function validateField(
 
     if (length > rules.maxLength) {
       result.isValid = false;
-      result.error = `Максимум ${rules.maxLength} символов (сейчас: ${length})`;
+      result.error = i18nT('travel:utils.travelWizardValidation.maxLength', { value1: rules.maxLength, value2: length });
     }
   }
 
@@ -286,9 +288,12 @@ export function validateField(
   if (rules.minItems !== undefined && Array.isArray(value)) {
     if (value.length < rules.minItems) {
       result.isValid = false;
-      result.error = `Необходимо минимум ${rules.minItems} ${
-        rules.minItems === 1 ? 'элемент' : 'элемента'
-      }`;
+      result.error = i18nT('travel:utils.travelWizardValidation.minItems', {
+        value1: rules.minItems,
+        value2: rules.minItems === 1
+          ? i18nT('errors:utils.travelWizardValidation.element_c7ec4fb7')
+          : i18nT('errors:utils.travelWizardValidation.elementa_fb75a182'),
+      });
     }
   }
 
@@ -296,7 +301,7 @@ export function validateField(
   if (rules.pattern && typeof value === 'string' && value.length > 0) {
     if (!rules.pattern.test(value)) {
       result.isValid = false;
-      result.error = `Неверный формат`;
+      result.error = i18nT('travel:utils.travelWizardValidation.invalidFormat');
     }
   }
 
@@ -330,7 +335,7 @@ export function validateStep(
           field: fieldName,
           message:
             fieldRules?.requiredMessage ||
-            `${fieldRules?.label || fieldName} обязательно для заполнения`,
+            i18nT('travel:utils.travelWizardValidation.requiredField', { value1: fieldRules?.label || fieldName }),
           severity: 'error',
           anchorId: `field-${fieldName}`,
         });
@@ -340,7 +345,7 @@ export function validateStep(
         if (!validation.isValid && validation.error) {
           errors.push({
             field: fieldName,
-            message: `${fieldRules?.label || fieldName}: ${validation.error}`,
+            message: i18nT('errors:utils.travelWizardValidation.value1_value2_9c115ed4', { value1: fieldRules?.label || fieldName, value2: validation.error }),
             severity: 'error',
             anchorId: `field-${fieldName}`,
           });
@@ -359,7 +364,7 @@ export function validateStep(
       if (isEmpty) {
         warnings.push({
           field: fieldName,
-          message: `Рекомендуется заполнить: ${fieldRules?.label || fieldName}`,
+          message: i18nT('errors:utils.travelWizardValidation.rekomenduetsya_zapolnit_value1_52401d05', { value1: fieldRules?.label || fieldName }),
           severity: 'warning',
           anchorId: `field-${fieldName}`,
         });
@@ -458,26 +463,26 @@ export function getQualityScore(formData: TravelFormData): {
   const hasVideo = formData.youtube_link && formData.youtube_link.length > 0;
 
   if (hasCover) score += 10;
-  else suggestions.push('Добавьте главное изображение');
+  else suggestions.push(i18nT('errors:utils.travelWizardValidation.dobavte_glavnoe_izobrazhenie_9fc0ee73'));
 
   if (hasGallery) score += 15;
-  else suggestions.push('Добавьте минимум 3 фото в галерею');
+  else suggestions.push(i18nT('errors:utils.travelWizardValidation.dobavte_minimum_3_foto_v_galereyu_f7e7a6c1'));
 
   if (hasVideo) score += 5;
 
   // Детали (20 баллов)
   if (plusText.length >= 50) score += 7;
-  else suggestions.push('Опишите плюсы путешествия');
+  else suggestions.push(i18nT('errors:utils.travelWizardValidation.opishite_plyusy_puteshestviya_02447f46'));
 
   if (minusText.length >= 50) score += 7;
-  else suggestions.push('Опишите минусы путешествия');
+  else suggestions.push(i18nT('errors:utils.travelWizardValidation.opishite_minusy_puteshestviya_c5391d5f'));
 
   if (recommendationText.length >= 50) score += 6;
-  else suggestions.push('Добавьте рекомендации');
+  else suggestions.push(i18nT('errors:utils.travelWizardValidation.dobavte_rekomendatsii_a9facebb'));
 
   // Параметры (10 баллов)
   if (formData.categories && formData.categories.length > 0) score += 5;
-  else suggestions.push('Выберите категории');
+  else suggestions.push(i18nT('errors:utils.travelWizardValidation.vyberite_kategorii_aaff2ffc'));
 
   if (formData.transports && formData.transports.length > 0) score += 5;
 

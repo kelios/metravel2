@@ -9,8 +9,10 @@ import {
   SEMANTIC_ACTION_ICON,
 } from '@/components/navigation/navigationActionMeta';
 
-import { POPUP_TOOLTIPS } from './constants';
+import { getPopupTooltips } from './constants';
 import { isInternalArticleHref } from './domEvents';
+import { translate as i18nT } from '@/i18n'
+
 
 type FeatherIcon = React.ComponentProps<typeof Feather>['name'];
 
@@ -62,6 +64,7 @@ export function usePopupActions({
   onBuildRoute,
   primaryActionOverride,
 }: UsePopupActionsArgs) {
+  const popupTooltips = useMemo(getPopupTooltips, []);
   const hasCoord = !!coord;
 
   const normalizedArticleHref = useMemo(() => {
@@ -93,13 +96,13 @@ export function usePopupActions({
   const drivingText = useMemo(() => {
     if (!hasDrivingInfo) return null;
     const km = drivingDistanceMeters! / 1000;
-    const kmLabel = km >= 10 ? `${Math.round(km)} км` : `${km.toFixed(1)} км`;
+    const kmLabel = km >= 10 ? i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.value1_km_cbb88f64', { value1: Math.round(km) }) : i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.value1_km_cbb88f64', { value1: km.toFixed(1) });
     // За пределами разумной автопоездки ETA теряет смысл (тысячи км → тысячи минут) —
     // показываем только расстояние.
     if (km > DRIVE_ETA_MAX_KM) return kmLabel;
     const totalMins = Math.max(1, Math.round(drivingDurationSeconds! / 60));
     const durationLabel =
-      totalMins < 60 ? `${totalMins} мин` : `${Math.floor(totalMins / 60)} ч ${totalMins % 60} мин`;
+      totalMins < 60 ? i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.value1_min_a48c9273', { value1: totalMins }) : i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.value1_ch_value2_min_dc78275e', { value1: Math.floor(totalMins / 60), value2: totalMins % 60 });
     return `${kmLabel} · ${durationLabel}`;
   }, [drivingDistanceMeters, drivingDurationSeconds, hasDrivingInfo]);
 
@@ -115,36 +118,36 @@ export function usePopupActions({
     }
     if (onBuildRoute) {
       return {
-        label: 'Маршрут от меня',
+        label: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.marshrut_ot_menya_a5fe179b'),
         icon: SEMANTIC_ACTION_ICON.buildRoute,
         onPress: onBuildRoute,
-        tooltip: POPUP_TOOLTIPS.buildRoute,
-        accessibilityLabel: 'Построить маршрут от моего местоположения',
+        tooltip: popupTooltips.buildRoute,
+        accessibilityLabel: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.postroit_marshrut_ot_moego_mestopolozheniya_aae59049'),
       };
     }
 
     if (hasArticle) {
       return {
-        label: 'Открыть страницу',
+        label: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.otkryt_stranitsu_787ed124'),
         icon: 'arrow-right' as const,
         onPress: onOpenArticle!,
-        tooltip: POPUP_TOOLTIPS.openArticle,
-        accessibilityLabel: 'Открыть статью о точке',
+        tooltip: popupTooltips.openArticle,
+        accessibilityLabel: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.otkryt_statyu_o_tochke_f64d1e1b'),
       };
     }
 
     if (hasCoord && onOpenGoogleMaps) {
       return {
-        label: 'Google Maps',
+        label: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.google_maps_990f5f39'),
         icon: 'map' as const,
         onPress: onOpenGoogleMaps,
-        tooltip: POPUP_TOOLTIPS.openGoogleMaps,
-        accessibilityLabel: 'Открыть точку в Google Maps',
+        tooltip: popupTooltips.openGoogleMaps,
+        accessibilityLabel: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.otkryt_tochku_v_google_maps_fd3ee635'),
       };
     }
 
     return null;
-  }, [hasArticle, hasCoord, onBuildRoute, onOpenArticle, onOpenGoogleMaps, primaryActionOverride]);
+  }, [hasArticle, hasCoord, onBuildRoute, onOpenArticle, onOpenGoogleMaps, popupTooltips, primaryActionOverride]);
 
   const saveActionVisual = useMemo(
     () => getNavigationActionVisual('save', colors),
@@ -166,33 +169,33 @@ export function usePopupActions({
     if (hasCoord && onOpenGoogleMaps) {
       items.push({
         key: 'google',
-        accessibilityLabel: 'Google Maps',
+        accessibilityLabel: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.google_maps_990f5f39'),
         label: NAVIGATION_ACTION_LABELS.google,
         ...getNavigationActionVisual('google', colors),
         onPress: onOpenGoogleMaps,
-        title: POPUP_TOOLTIPS.openGoogleMaps,
+        title: popupTooltips.openGoogleMaps,
       });
     }
 
     if (hasCoord && onOpenAppleMaps) {
       items.push({
         key: 'apple',
-        accessibilityLabel: 'Apple Maps',
+        accessibilityLabel: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.apple_maps_e8038c05'),
         label: NAVIGATION_ACTION_LABELS.apple,
         ...getNavigationActionVisual('apple', colors),
         onPress: onOpenAppleMaps,
-        title: POPUP_TOOLTIPS.openAppleMaps,
+        title: popupTooltips.openAppleMaps,
       });
     }
 
     if (hasCoord && onOpenOrganicMaps) {
       items.push({
         key: 'organic',
-        accessibilityLabel: 'Organic Maps',
+        accessibilityLabel: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.organic_maps_d417caeb'),
         label: NAVIGATION_ACTION_LABELS.organic,
         ...getNavigationActionVisual('organic', colors),
         onPress: onOpenOrganicMaps,
-        title: POPUP_TOOLTIPS.openOrganicMaps,
+        title: popupTooltips.openOrganicMaps,
       });
     }
 
@@ -207,68 +210,68 @@ export function usePopupActions({
     ) {
       items.push({
         key: 'article',
-        accessibilityLabel: 'Открыть статью',
-        label: 'Статья',
+        accessibilityLabel: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.otkryt_statyu_875cc7b3'),
+        label: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.statya_07e31f72'),
         icon: 'book-open',
         iconColor: colors.primary,
         tintBg: colors.primarySoft,
         onPress: onOpenArticle,
-        title: POPUP_TOOLTIPS.openArticle,
+        title: popupTooltips.openArticle,
       });
     }
 
     if (hasCoord && onOpenWaze) {
       items.push({
         key: 'waze',
-        accessibilityLabel: 'Waze',
+        accessibilityLabel: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.waze_3b6c0cbd'),
         label: NAVIGATION_ACTION_LABELS.waze,
         ...getNavigationActionVisual('waze', colors),
         onPress: onOpenWaze,
-        title: POPUP_TOOLTIPS.openWaze,
+        title: popupTooltips.openWaze,
       });
     }
 
     if (hasCoord && onOpenYandexMaps) {
       items.push({
         key: 'yandex-maps',
-        accessibilityLabel: 'Яндекс Карты',
+        accessibilityLabel: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.yandeks_karty_cded233a'),
         label: NAVIGATION_ACTION_LABELS['yandex-maps'],
         ...getNavigationActionVisual('yandex-maps', colors),
         onPress: onOpenYandexMaps,
-        title: POPUP_TOOLTIPS.openYandexMaps,
+        title: popupTooltips.openYandexMaps,
       });
     }
 
     if (hasCoord && onOpenYandexNavi) {
       items.push({
         key: 'yandex',
-        accessibilityLabel: 'Яндекс Навигатор',
+        accessibilityLabel: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.yandeks_navigator_27676798'),
         label: NAVIGATION_ACTION_LABELS.yandex,
         ...getNavigationActionVisual('yandex', colors),
         onPress: onOpenYandexNavi,
-        title: POPUP_TOOLTIPS.openYandexNavi,
+        title: popupTooltips.openYandexNavi,
       });
     }
 
     if (hasCoord && onOpenOpenStreetMap) {
       items.push({
         key: 'osm',
-        accessibilityLabel: 'OpenStreetMap',
+        accessibilityLabel: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.openstreetmap_0af5d0cd'),
         label: NAVIGATION_ACTION_LABELS.osm,
         ...getNavigationActionVisual('osm', colors),
         onPress: onOpenOpenStreetMap,
-        title: POPUP_TOOLTIPS.openOpenStreetMap,
+        title: popupTooltips.openOpenStreetMap,
       });
     }
 
     if (hasCoord && onShareTelegram) {
       items.push({
         key: 'telegram',
-        accessibilityLabel: 'Поделиться в Telegram',
+        accessibilityLabel: i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupActions.podelitsya_v_telegram_533c8b62'),
         label: NAVIGATION_ACTION_LABELS.telegram,
         ...getNavigationActionVisual('telegram', colors),
         onPress: onShareTelegram,
-        title: POPUP_TOOLTIPS.shareTelegram,
+        title: popupTooltips.shareTelegram,
       });
     }
 
@@ -287,6 +290,7 @@ export function usePopupActions({
     onOpenYandexNavi,
     onOpenOpenStreetMap,
     onShareTelegram,
+    popupTooltips,
     primaryAction,
   ]);
 

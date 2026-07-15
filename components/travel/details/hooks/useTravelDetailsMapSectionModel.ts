@@ -9,6 +9,8 @@ import type { Travel } from '@/types/types'
 import { downloadTravelRouteFileBlob } from '@/api/travelRoutes'
 import { downloadBlobOnWeb } from '@/utils/downloadUrlOnWeb'
 import { useTravelDetailsMapSectionHintsModel } from './useTravelDetailsMapSectionHintsModel'
+import { translate as i18nT } from '@/i18n'
+
 
 function getTravelDetailsMapSectionFlags(params: {
   forceOpenKey: string | null
@@ -96,13 +98,13 @@ export function useTravelDetailsMapSectionModel({
   const notifyDownloadUnavailable = useCallback(() => {
     if (Platform.OS === 'web') {
       try {
-        window.alert?.('Файл маршрута недоступен для скачивания')
+        window.alert?.(i18nT('travel:components.travel.details.hooks.useTravelDetailsMapSectionModel.fayl_marshruta_nedostupen_dlya_skachivaniya_eb34c600'))
       } catch {
         return
       }
       return
     }
-    Alert.alert?.('Недоступно', 'Файл маршрута недоступен для скачивания')
+    Alert.alert?.(i18nT('travel:components.travel.details.hooks.useTravelDetailsMapSectionModel.nedostupno_72fbad4f'), i18nT('travel:components.travel.details.hooks.useTravelDetailsMapSectionModel.fayl_marshruta_nedostupen_dlya_skachivaniya_eb34c600'))
   }, [])
 
   const handleDownloadRoute = useCallback(async (file: TravelRouteFile) => {
@@ -146,7 +148,7 @@ export function useTravelDetailsMapSectionModel({
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, {
           mimeType: response.contentType || 'application/octet-stream',
-          dialogTitle: 'Сохранить файл маршрута',
+          dialogTitle: i18nT('travel:components.travel.details.hooks.useTravelDetailsMapSectionModel.sohranit_fayl_marshruta_cdda8b31'),
         })
       } else {
         notifyDownloadUnavailable()

@@ -2,6 +2,8 @@ import type {
   BuildStatsMiniCardParams,
   BuildRunningHeaderParams,
 } from './types'
+import { translate as i18nT } from '@/i18n'
+
 
 export function buildPdfStatsMiniCard({
   travel,
@@ -30,14 +32,17 @@ export function buildPdfStatsMiniCard({
 
   const photoCount = (travel.gallery || []).length
   if (photoCount > 0) {
-    items.push({ icon: renderPdfIcon('camera', iconColor, iconSize), value: `${photoCount} фото` })
+    items.push({
+      icon: renderPdfIcon('camera', iconColor, iconSize),
+      value: i18nT('export:services.pdfExport.runtime.stats.photoCount', { value1: photoCount }),
+    })
   }
 
   const locationCount = (travel.travelAddress || []).length
   if (locationCount > 0) {
     items.push({
       icon: renderPdfIcon('map-pin', iconColor, iconSize),
-      value: `${locationCount} ${locationCount === 1 ? 'место' : locationCount < 5 ? 'места' : 'мест'}`,
+      value: `${locationCount} ${locationCount === 1 ? i18nT('export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.statsAndHeader.mesto_0a39836a') : locationCount < 5 ? i18nT('export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.statsAndHeader.mesta_b1efe410') : i18nT('export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.statsAndHeader.mest_535feb3c')}`,
     })
   }
 

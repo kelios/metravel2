@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { openExternalUrl } from '@/utils/externalLinks';
+import { translate as i18nT } from '@/i18n'
+
 
 const SUPPORT_URL = 'https://www.instagram.com/metravelby/';
 
@@ -53,10 +55,10 @@ export default function ErrorDisplay({
   const isNetworkError = isNetworkErrorProp || isNetworkRelatedMessage(message);
 
   // AND-10: При сетевой ошибке переопределяем defaults
-  const effectiveTitle = title ?? (isNetworkError ? 'Нет подключения к интернету' : 'Что-то пошло не так');
+  const effectiveTitle = title ?? (isNetworkError ? i18nT('errors:components.ui.ErrorDisplay.net_podklyucheniya_k_internetu_192a0651') : i18nT('errors:components.ui.ErrorDisplay.chto_to_poshlo_ne_tak_ebbcd2c7'));
   const effectiveVariant = isNetworkError ? 'warning' : variant;
   const effectiveMessage = isNetworkError && !message
-    ? 'Проверьте подключение к интернету и попробуйте ещё раз'
+    ? i18nT('errors:components.ui.ErrorDisplay.proverte_podklyuchenie_k_internetu_i_poprobu_bb53deb7')
     : message;
 
   const iconName = isNetworkError ? 'wifi-off' :
@@ -183,7 +185,7 @@ export default function ErrorDisplay({
           {/* Детали (только в dev режиме) */}
           {details && __DEV__ && (
             <View style={styles.detailsContainer}>
-              <Text style={styles.detailsLabel}>Технические детали:</Text>
+              <Text style={styles.detailsLabel}>{i18nT('errors:components.ui.ErrorDisplay.tehnicheskie_detali_d33f5381')}</Text>
               <Text style={styles.details}>{details}</Text>
             </View>
           )}
@@ -196,7 +198,7 @@ export default function ErrorDisplay({
               style={[styles.button, styles.primaryButton]}
               onPress={onRetry}
               accessibilityRole="button"
-              accessibilityLabel={isNetworkError ? 'Повторить попытку подключения' : 'Попробовать снова'}
+              accessibilityLabel={isNetworkError ? i18nT('errors:components.ui.ErrorDisplay.povtorit_popytku_podklyucheniya_12e00eec') : i18nT('errors:components.ui.ErrorDisplay.poprobovat_snova_ec1a8f2c')}
               {...Platform.select({
                 web: {
                   cursor: 'pointer',
@@ -209,7 +211,7 @@ export default function ErrorDisplay({
             >
               <Feather name={isNetworkError ? 'wifi' : 'refresh-cw'} size={16} color={colors.textOnPrimary} />
               <Text style={styles.buttonText}>
-                {isNetworkError ? 'Повторить' : 'Попробовать снова'}
+                {isNetworkError ? i18nT('errors:components.ui.ErrorDisplay.povtorit_8f1eacea') : i18nT('errors:components.ui.ErrorDisplay.poprobovat_snova_ec1a8f2c')}
               </Text>
             </Pressable>
           )}
@@ -221,7 +223,7 @@ export default function ErrorDisplay({
                 void openExternalUrl(SUPPORT_URL)
               }}
               accessibilityRole="button"
-              accessibilityLabel="Связаться с поддержкой"
+              accessibilityLabel={i18nT('errors:components.ui.ErrorDisplay.svyazatsya_s_podderzhkoy_55a4272f')}
               {...Platform.select({
                 web: {
                   cursor: 'pointer',
@@ -234,8 +236,7 @@ export default function ErrorDisplay({
             >
               <Feather name="mail" size={16} color={colors.primaryDark} />
               <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-                Связаться с поддержкой
-              </Text>
+                {i18nT('errors:components.ui.ErrorDisplay.svyazatsya_s_podderzhkoy_55a4272f')}</Text>
             </Pressable>
           )}
 
@@ -244,7 +245,7 @@ export default function ErrorDisplay({
               style={styles.dismissButton}
               onPress={onDismiss}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть уведомление об ошибке"
+              accessibilityLabel={i18nT('errors:components.ui.ErrorDisplay.zakryt_uvedomlenie_ob_oshibke_42c95b34')}
               {...Platform.select({
                 web: {
                   cursor: 'pointer',

@@ -18,30 +18,49 @@ interface SafeHtmlProps {
     style?: any;
     className?: string;
     testID?: string;
+    /** Fallback alt text for rich-text images that do not provide their own alt. */
+    imageAlt?: string;
 }
 
 const SAFE_HTML_RICH_TEXT_CLASS = 'safe-html-rich-text';
 const SAFE_HTML_RICH_TEXT_STYLES_ID = 'safe-html-rich-text-styles';
 
+const escapeHtmlAttribute = (value: string) =>
+    value
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+export const addFallbackImageAlt = (html: string, imageAlt: string) => {
+    const escapedAlt = escapeHtmlAttribute(imageAlt.trim());
+    return html.replace(/<img\b[^>]*>/gi, (tag) => {
+        if (/\s+alt\s*=/i.test(tag)) return tag;
+        if (/\s*\/>$/.test(tag)) {
+            return tag.replace(/\s*\/>$/, ` alt="${escapedAlt}" />`);
+        }
+        return tag.replace(/>$/, ` alt="${escapedAlt}">`);
+    });
+};
+
 /**
  * Компонент для безопасного рендеринга HTML контента
  * Автоматически санитизирует HTML для защиты от XSS
  */
-export function SafeHtml({ html, serverSanitized = false, style, className, testID }: SafeHtmlProps) {
+export function SafeHtml({ html, serverSanitized = false, style, className, testID, imageAlt }: SafeHtmlProps) {
     const colors = useThemedColors();
     const trimmed = String(html ?? '').trim();
 
     // Санитизируем HTML
     const sanitized = useMemo(() => {
         if (!trimmed) return '';
-        if (serverSanitized) {
-            // canonical safe_html с бэка (#709): без normalize+sanitize, только guard
-            return normalizeRichTextListFragments(replaceInstagramEmbedsWithCards(guardServerSafeHtml(html)));
-        }
-        return normalizeRichTextListFragments(
-            sanitizeRichText(replaceInstagramEmbedsWithCards(normalizeArticleEditorHtmlForInput(html)))
-        );
-    }, [html, trimmed, serverSanitized]);
+        const safeHtml = serverSanitized
+            ? normalizeRichTextListFragments(replaceInstagramEmbedsWithCards(guardServerSafeHtml(html)))
+            : normalizeRichTextListFragments(
+                sanitizeRichText(replaceInstagramEmbedsWithCards(normalizeArticleEditorHtmlForInput(html)))
+            );
+        return imageAlt !== undefined ? addFallbackImageAlt(safeHtml, imageAlt) : safeHtml;
+    }, [html, trimmed, serverSanitized, imageAlt]);
     const richTextStyles = useMemo(
         () => `
 ${getInstagramCardStyles(`.${SAFE_HTML_RICH_TEXT_CLASS}`, colors)}

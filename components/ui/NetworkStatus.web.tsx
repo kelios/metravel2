@@ -4,6 +4,9 @@ import { Platform, StyleSheet, Text, View } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { translate as i18nT } from '@/i18n'
+import { webViewStyle } from '@/utils/webProps'
+
 
 interface NetworkStatusProps {
   showWhenOnline?: boolean
@@ -45,7 +48,7 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
     return null
   }
 
-  const message = isConnected ? 'Соединение восстановлено' : 'Нет подключения к интернету'
+  const message = isConnected ? i18nT('shared:components.ui.NetworkStatus.soedinenie_vosstanovleno_25419314') : i18nT('shared:components.ui.NetworkStatus.net_podklyucheniya_k_internetu_71e8692e')
   const backgroundColor = isConnected ? colors.success : colors.danger
 
   return (
@@ -69,14 +72,14 @@ const styles = StyleSheet.create({
     paddingVertical: DESIGN_TOKENS.spacing.sm,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     zIndex: 9999,
-    transitionProperty: Platform.OS === 'web' ? ('transform' as any) : undefined,
-    transitionDuration: Platform.OS === 'web' ? ('300ms' as any) : undefined,
-    transitionTimingFunction: Platform.OS === 'web' ? ('ease' as any) : undefined,
     ...Platform.select({
-      web: {
-        position: 'fixed' as any,
-        willChange: 'transform' as any,
-      },
+      web: webViewStyle({
+        position: 'fixed',
+        transitionDuration: '300ms',
+        transitionProperty: 'transform',
+        transitionTimingFunction: 'ease',
+        willChange: 'transform',
+      }),
     }),
   },
   top: {

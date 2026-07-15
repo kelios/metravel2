@@ -5,6 +5,8 @@ import { Pressable, Text, View } from 'react-native'
 import type { TravelComment } from '@/types/comments'
 
 import { CommentItem } from './CommentItem'
+import { translate as i18nT } from '@/i18n'
+
 
 type CommentThreadProps = {
   comment: TravelComment
@@ -47,8 +49,7 @@ function CommentThreadComponent({
               color={colors.textMuted}
             />
             <Text style={styles.parentChainLabel}>
-              Контекст ветки обсуждения
-            </Text>
+              {i18nT('travel:components.travel.CommentThread.kontekst_vetki_obsuzhdeniya_98579cfb')}</Text>
           </View>
           {parentChain.map((parentComment, index) => (
             <CommentItem
@@ -77,7 +78,7 @@ function CommentThreadComponent({
           <Pressable
             onPress={() => onToggleThread(comment.id)}
             style={styles.toggleThreadButton}
-            accessibilityLabel={isExpanded ? 'Свернуть ответы' : 'Показать ответы'}
+            accessibilityLabel={isExpanded ? i18nT('travel:components.travel.CommentThread.svernut_otvety_83f15405') : i18nT('travel:components.travel.CommentThread.pokazat_otvety_df0373ab')}
           >
             <View style={styles.threadLine} />
             <Feather
@@ -87,8 +88,8 @@ function CommentThreadComponent({
             />
             <Text style={styles.toggleThreadText}>
               {isExpanded
-                ? `Свернуть ответы (${threadReplies.length})`
-                : `Показать ответы (${threadReplies.length})`}
+                ? i18nT('travel:components.travel.CommentThread.svernut_otvety_value1_4ad72267', { value1: threadReplies.length })
+                : i18nT('travel:components.travel.CommentThread.pokazat_otvety_value1_7a71f6c0', { value1: threadReplies.length })}
             </Text>
           </Pressable>
           {isExpanded && (

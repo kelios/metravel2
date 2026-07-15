@@ -12,6 +12,8 @@ import { ApiError } from '@/api/client';
 import { Platform } from 'react-native';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import { validateReadyForModeration } from '@/utils/travelWizardValidation';
+import { hasUsableAuthCredential, shouldUseStoredAuthToken } from '@/utils/authPlatform';
+import { translate as i18nT } from '@/i18n';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
@@ -59,6 +61,13 @@ const getErrorMessage = (error: unknown, fallback: string): string =>
     ? error.message
     : fallback;
 
+const requireAuthCredential = async (): Promise<void> => {
+  const token = shouldUseStoredAuthToken() ? await getSecureItem('userToken') : null;
+  if (!hasUsableAuthCredential(token)) {
+    throw new Error(i18nT('errorsStatic:api.misc.authRequired'));
+  }
+};
+
 const slugifySafe = (value?: string): string => {
   if (!value) return '';
   const out = value
@@ -88,10 +97,7 @@ export const saveFormData = async (
   options?: { autosave?: boolean; intent?: SaveFormDataIntent }
 ): Promise<TravelFormData> => {
   try {
-    const token = await getSecureItem('userToken');
-    if (!token) {
-      throw new Error('Пользователь не авторизован');
-    }
+    await requireAuthCredential();
 
     const intent: SaveFormDataIntent =
       options?.intent ?? (options?.autosave === true ? 'autosave' : 'save');
@@ -101,13 +107,13 @@ export const saveFormData = async (
     // ✅ FIX: Валидация критичных полей перед отправкой
     const trimmedName = typeof data.name === 'string' ? data.name.trim() : '';
     if (!isAutosaveDraft && trimmedName.length === 0) {
-      throw new Error('Название обязательно для заполнения');
+      throw new Error(i18nT('errorsStatic:api.misc.titleRequired'));
     }
     if (!isAutosaveDraft && trimmedName.length < 3) {
-      throw new Error('Название должно содержать минимум 3 символа');
+      throw new Error(i18nT('errorsStatic:api.misc.titleTooShort'));
     }
     if (trimmedName.length > 200) {
-      throw new Error('Название слишком длинное (максимум 200 символов)');
+      throw new Error(i18nT('errorsStatic:api.misc.titleTooLong'));
     }
 
     // ✅ FIX: Валидация массивов (предотвращение отправки невалидных данных)
@@ -117,7 +123,7 @@ export const saveFormData = async (
     arrayFields.forEach(field => {
       const value = dataRecord[field];
       if (value && !Array.isArray(value)) {
-        throw new Error(`Поле ${field} должно быть массивом`);
+        throw new Error(i18nT('errorsStatic:api.misc.fieldMustBeArray', { field }));
       }
     });
 
@@ -131,7 +137,7 @@ export const saveFormData = async (
       const moderationValidation = validateReadyForModeration(data);
       if (!moderationValidation.isValid) {
         throw new Error(
-          `Заполните обязательные поля для модерации: ${moderationValidation.missingFields.join(', ')}`
+          i18nT('errorsStatic:api.misc.moderationFieldsRequired', { fields: moderationValidation.missingFields.join(', ') })
         );
       }
     }
@@ -278,14 +284,11 @@ function sanitizeForJson(value: unknown, state?: SanitizeState): unknown {
 }
 
 export const deleteTravelMainImage = async (travelId: string | number) => {
-  const token = await getSecureItem('userToken');
-  if (!token) {
-    throw new Error('Пользователь не авторизован');
-  }
+  await requireAuthCredential();
 
   const normalizedId = String(travelId);
   if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
-    throw new Error('Некорректный id путешествия');
+    throw new Error(i18nT('errorsStatic:api.misc.invalidTravelId'));
   }
 
   // Preserve previous behavior: return the raw Response so callers can inspect status (e.g. 204).
@@ -305,17 +308,14 @@ export const uploadImage = async (
   url?: string;
   [key: string]: unknown;
 }> => {
-  const token = await getSecureItem('userToken');
-  if (!token) {
-    throw new Error('Пользователь не авторизован');
-  }
+  await requireAuthCredential();
 
   if (typeof File !== 'undefined' && data instanceof FormData) {
     const file = data.get('file');
     if (file instanceof File) {
       const validation = validateImageFile(file);
       if (!validation.valid) {
-        throw new Error(validation.error || 'Ошибка валидации файла');
+        throw new Error(validation.error || i18nT('errorsStatic:api.misc.fileValidationFailed'));
       }
     }
   }
@@ -359,19 +359,16 @@ export const updateGalleryCaption = async (
   caption: string,
   signal?: AbortSignal,
 ): Promise<GalleryCaptionResponse> => {
-  const token = await getSecureItem('userToken');
-  if (!token) {
-    throw new Error('Пользователь не авторизован');
-  }
+  await requireAuthCredential();
 
   const numericImageId = Number(imageId);
   if (!Number.isInteger(numericImageId) || numericImageId <= 0) {
-    throw new Error('Некорректный id изображения');
+    throw new Error(i18nT('errorsStatic:api.misc.invalidImageId'));
   }
 
   const normalizedCaption = String(caption ?? '').trim();
   if (normalizedCaption.length > 500) {
-    throw new Error('Подпись не должна превышать 500 символов');
+    throw new Error(i18nT('errorsStatic:api.misc.captionTooLong'));
   }
 
   return await apiClient.request<GalleryCaptionResponse>(
@@ -390,14 +387,11 @@ export const reorderGallery = async (
   imageIds: Array<string | number>,
   signal?: AbortSignal,
 ): Promise<{ gallery: GalleryReorderImage[] }> => {
-  const token = await getSecureItem('userToken');
-  if (!token) {
-    throw new Error('Пользователь не авторизован');
-  }
+  await requireAuthCredential();
 
   const numericTravelId = Number(travelId);
   if (!Number.isInteger(numericTravelId) || numericTravelId <= 0) {
-    throw new Error('Некорректный id путешествия');
+    throw new Error(i18nT('errorsStatic:api.misc.invalidTravelId'));
   }
 
   const numericImageIds = Array.from(
@@ -423,10 +417,7 @@ export const reorderGallery = async (
 };
 
 export const deleteImage = async (imageId: string) => {
-  const token = await getSecureItem('userToken');
-  if (!token) {
-    throw new Error('Пользователь не авторизован');
-  }
+  await requireAuthCredential();
 
   try {
     return await apiClient.delete<unknown>(`/gallery/${encodeURIComponent(imageId)}/`, DEFAULT_TIMEOUT);
@@ -435,7 +426,7 @@ export const deleteImage = async (imageId: string) => {
     if (typeof ApiError === 'function' && error instanceof ApiError) {
       throw error;
     }
-    throw new Error('Ошибка удаления изображения');
+    throw new Error(i18nT('errorsStatic:api.misc.imageDeleteFailed'));
   }
 };
 
@@ -456,15 +447,12 @@ export const createPointCategory = async (
   rawName: string,
   signal?: AbortSignal,
 ): Promise<CreatedPointCategory> => {
-  const token = await getSecureItem('userToken');
-  if (!token) {
-    throw new Error('Пользователь не авторизован');
-  }
+  await requireAuthCredential();
 
   const sanitized = sanitizeInput(String(rawName ?? ''));
   const name = (typeof sanitized === 'string' ? sanitized : String(rawName ?? '')).trim().slice(0, 255);
   if (name.length < 2) {
-    throw new Error('Название категории слишком короткое');
+    throw new Error(i18nT('errorsStatic:api.misc.categoryNameTooShort'));
   }
 
   const result = await apiClient.request<{ id?: number | string; name?: string }>(
@@ -475,7 +463,7 @@ export const createPointCategory = async (
 
   const id = Number(result?.id);
   if (!Number.isInteger(id) || id <= 0) {
-    throw new Error('Сервер вернул некорректную категорию');
+    throw new Error(i18nT('errorsStatic:api.misc.invalidCategoryResponse'));
   }
 
   return { id, name: typeof result?.name === 'string' && result.name.trim() ? result.name : name };
@@ -554,7 +542,7 @@ export const sendFeedback = async (
   const sanitizedMessage = sanitizeInput(message.trim());
 
   if (!sanitizedName || !sanitizedEmail || !sanitizedMessage) {
-    throw new Error('Все поля должны быть заполнены');
+    throw new Error(i18nT('errorsStatic:api.misc.allFieldsRequired'));
   }
 
   try {
@@ -584,18 +572,18 @@ export const sendFeedback = async (
         (Array.isArray(json?.message) ? json.message[0] : undefined) ||
         (typeof json?.message === 'string' ? json.message : undefined) ||
         json?.detail ||
-        'Ошибка при отправке.';
+        i18nT('errorsStatic:api.misc.sendFailed');
       throw new Error(firstError);
     }
 
     return typeof json === 'string'
       ? json
-      : (typeof json?.message === 'string' ? json.message : 'Сообщение успешно отправлено');
+      : (typeof json?.message === 'string' ? json.message : i18nT('errorsStatic:api.misc.messageSent'));
   } catch (e: unknown) {
     if (__DEV__) {
       console.error('Ошибка при отправке обратной связи:', e);
     }
-    throw new Error(getErrorMessage(e, 'Не удалось отправить сообщение'));
+    throw new Error(getErrorMessage(e, i18nT('errorsStatic:api.misc.messageSendFailed')));
   }
 };
 
@@ -617,7 +605,7 @@ export const subscribeEmail = async (
   const sanitizedEmail = sanitizeInput(email.trim());
 
   if (!sanitizedEmail) {
-    throw new Error('Введите email');
+    throw new Error(i18nT('errorsStatic:api.misc.emailRequired'));
   }
 
   try {
@@ -649,8 +637,8 @@ export const subscribeEmail = async (
         (Array.isArray(json?.source) ? json.source[0] : undefined) ||
         json?.detail ||
         (res.status === 429
-          ? 'Слишком много попыток. Попробуйте позже.'
-          : 'Не удалось оформить подписку.');
+          ? i18nT('errorsStatic:api.misc.tooManyAttempts')
+          : i18nT('errorsStatic:api.misc.subscriptionFailed'));
       throw new Error(firstError);
     }
 
@@ -662,14 +650,14 @@ export const subscribeEmail = async (
     if (__DEV__) {
       console.error('Ошибка при оформлении подписки:', e);
     }
-    throw new Error(getErrorMessage(e, 'Не удалось оформить подписку'));
+    throw new Error(getErrorMessage(e, i18nT('errorsStatic:api.misc.subscriptionFailedShort')));
   }
 };
 
 export const sendAIMessage = async (inputText: string) => {
   const validation = validateAIMessage(inputText);
   if (!validation.valid) {
-    throw new Error(validation.error || 'Некорректное сообщение');
+    throw new Error(validation.error || i18nT('errorsStatic:api.misc.invalidMessage'));
   }
 
   try {

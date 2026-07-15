@@ -1,209 +1,94 @@
-import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import {
-  type LayoutChangeEvent,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
   Text,
   TextInput,
   View,
-  useWindowDimensions,
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
-import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useIsFocused } from 'expo-router'
-import { keepPreviousData, useInfiniteQuery, useQueries, useQuery } from '@tanstack/react-query'
 
-import { fetchPlacesCatalog } from '@/api/places'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { Menu } from '@/ui/paper'
 import { useThemedColors } from '@/hooks/useTheme'
-import { openExternalUrlInNewTab } from '@/utils/externalLinks'
+import { useResponsiveWidth } from '@/hooks/useResponsive'
 import { stringifyJsonLd } from '@/utils/jsonLd'
-import { type CatalogPlace } from '@/utils/placesCatalog'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH, getSiteBaseUrl } from '@/utils/seo'
 import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
 import ContributionBanner from '@/components/common/ContributionBanner'
 
 import {
-  type CategoryCollection,
-  INTERESTING_CATEGORY_COLLECTIONS,
-  LOAD_MORE_SCROLL_THRESHOLD,
-  MAP_FOCUS_RADIUS_KM,
-  PLACES_PAGE_SIZE,
   PRESSED_OPACITY,
-  getActiveCategoryTitle,
   getPlacesCountLabel,
   isSameCategorySet,
-  parseCategoryParam,
 } from './PlacesScreen.helpers'
 import { PlaceCard, SkeletonGrid, StateBlock } from './PlacesScreen.parts'
 import { createStyles } from './PlacesScreen.styles'
+import { usePlacesCatalogController } from './usePlacesCatalogController'
+import { translate as i18nT } from '@/i18n'
+
 
 export default function PlacesScreen() {
-  const router = useRouter()
-  const params = useLocalSearchParams<{ category?: string; country?: string; q?: string }>()
   const isFocused = useIsFocused()
   const colors = useThemedColors()
-  const { width } = useWindowDimensions()
+  const width = useResponsiveWidth()
   const isCompact = width < 760
   const isWide = width >= 1100
   const styles = useMemo(() => createStyles(colors, isCompact, isWide), [colors, isCompact, isWide])
-  const [query, setQuery] = useState(() =>
-    typeof params.q === 'string' ? params.q : '',
-  )
-  const deferredQuery = useDeferredValue(query)
-  const [categoryQuery, setCategoryQuery] = useState('')
-  const deferredCategoryQuery = useDeferredValue(categoryQuery)
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
-    parseCategoryParam(params.category),
-  )
-  const [selectedCountry, setSelectedCountry] = useState<string | null>(() =>
-    typeof params.country === 'string' && params.country.trim() ? params.country.trim() : null,
-  )
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const [countryMenuVisible, setCountryMenuVisible] = useState(false)
-  // Height of the sticky topBar (web) so the sticky sidebar can sit just below it
-  // instead of being hidden behind it.
-  const [topBarHeight, setTopBarHeight] = useState(0)
-  const handleTopBarLayout = useCallback((event: LayoutChangeEvent) => {
-    if (Platform.OS !== 'web') return
-    const height = Number(event?.nativeEvent?.layout?.height ?? 0)
-    if (height > 0) setTopBarHeight((current) => (Math.abs(current - height) < 1 ? current : height))
-  }, [])
+  const {
+    activeCategoryTitle,
+    catalogTotal,
+    categoryQuery,
+    collectionCards,
+    countryFacets,
+    countryMenuVisible,
+    deferredCategoryQuery,
+    deferredQuery,
+    facetsQuery,
+    filteredCategoryFacets,
+    filtersOpen,
+    firstScreenCount,
+    handleClearCategories,
+    handleQueryChange,
+    handleScroll,
+    handleSelectCountry,
+    handleToggleCategory,
+    handleTopBarLayout,
+    hasActiveFilters,
+    hasCategorySearch,
+    hasMorePlaces,
+    isInitialLoading,
+    loadMorePlaces,
+    openOnMap,
+    openTravel,
+    placesQuery,
+    query,
+    resetAll,
+    resultsStatus,
+    selectCategoryCollection,
+    selectedCategories,
+    selectedCountry,
+    setCategoryQuery,
+    setCountryMenuVisible,
+    setFiltersOpen,
+    showCollections,
+    showLoadedCounts,
+    topBarHeight,
+    totalCount,
+    visiblePlaces,
+  } = usePlacesCatalogController({ isCompact, isWide })
 
-  const listParams = useMemo(
-    () => ({
-      q: deferredQuery.trim() || undefined,
-      categories: selectedCategories.length > 0 ? selectedCategories : undefined,
-      country: selectedCountry ?? undefined,
-    }),
-    [deferredQuery, selectedCategories, selectedCountry],
-  )
-
-  // Main paginated list — filters go to the server (q/category/country) and pages
-  // are fetched on demand instead of loading the whole 2000+ catalog into memory.
-  // Multiple categories are sent as repeated `category` params → backend OR-union.
-  const placesQuery = useInfiniteQuery({
-    queryKey: ['places-catalog', 'list', listParams],
-    queryFn: ({ pageParam, signal }) =>
-      fetchPlacesCatalog({ page: pageParam, perPage: PLACES_PAGE_SIZE, ...listParams }, signal),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, allPages) => {
-      const loaded = allPages.reduce((sum, page) => sum + page.places.length, 0)
-      return loaded < lastPage.count ? allPages.length + 1 : undefined
-    },
-    placeholderData: keepPreviousData,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 20 * 60 * 1000,
-    retry: 2,
-    retryDelay: (attempt) => Math.min(800 * 2 ** attempt, 2400),
-    refetchOnWindowFocus: false,
-  })
-
-  // Facets (category / country chips + counts) come from a category-agnostic query
-  // so the chip list stays complete while categories are selected. It mirrors the
-  // active q/country filter, matching the map endpoint's cross-filtered counts.
-  const facetsParams = useMemo(
-    () => ({ q: deferredQuery.trim() || undefined, country: selectedCountry ?? undefined }),
-    [deferredQuery, selectedCountry],
-  )
-  const facetsQuery = useQuery({
-    queryKey: ['places-catalog', 'facets', facetsParams],
-    queryFn: ({ signal }) =>
-      fetchPlacesCatalog({ page: 1, perPage: 1, ...facetsParams }, signal),
-    placeholderData: keepPreviousData,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 20 * 60 * 1000,
-    retry: 2,
-    refetchOnWindowFocus: false,
-  })
-
-  // Per-collection totals for the "Интересные подборки" cards. Each collection is a
-  // fixed multi-category set, so its count comes from a lightweight perPage=1 catalog
-  // request that mirrors the active country filter (matching the map endpoint's
-  // cross-filtered counts). Runs only on web/desktop where the section is shown.
-  const showCollections = Platform.OS === 'web' && !isCompact
-  const collectionCountsParams = useMemo(
-    () => ({ country: selectedCountry ?? undefined }),
-    [selectedCountry],
-  )
-  const collectionCountQueries = useQueries({
-    queries: INTERESTING_CATEGORY_COLLECTIONS.map((collection) => ({
-      queryKey: ['places-catalog', 'collection', collection.id, collectionCountsParams],
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        fetchPlacesCatalog(
-          { page: 1, perPage: 1, categories: [...collection.categories], ...collectionCountsParams },
-          signal,
-        ),
-      enabled: showCollections,
-      placeholderData: keepPreviousData,
-      staleTime: 5 * 60 * 1000,
-      gcTime: 20 * 60 * 1000,
-      retry: 2,
-      refetchOnWindowFocus: false,
-    })),
-  })
-
-  const visiblePlaces = useMemo(
-    () => placesQuery.data?.pages.flatMap((page) => page.places) ?? [],
-    [placesQuery.data],
-  )
-  const totalCount = placesQuery.data?.pages[0]?.count ?? 0
-  const catalogTotal = facetsQuery.data?.count ?? 0
-  const categoryFacets = useMemo(() => facetsQuery.data?.categoryFacets ?? [], [facetsQuery.data])
-  const countryFacets = useMemo(() => facetsQuery.data?.countryFacets ?? [], [facetsQuery.data])
-
-  const collectionCards = useMemo(
-    () =>
-      INTERESTING_CATEGORY_COLLECTIONS.map((collection, index) => ({
-        ...collection,
-        count: collectionCountQueries[index]?.data?.count ?? 0,
-        countReady: !!collectionCountQueries[index]?.data,
-      })),
-    [collectionCountQueries],
-  )
-
-  const filteredCategoryFacets = useMemo(() => {
-    const normalized = deferredCategoryQuery.trim().toLowerCase()
-    const selectedSet = new Set(selectedCategories)
-    const list = normalized
-      ? categoryFacets.filter((facet) => facet.name.toLowerCase().includes(normalized))
-      : categoryFacets
-    const withSelected = selectedCategories.reduce<typeof list>((acc, name) => {
-      // Keep every selected category reachable even if the facet list is filtered.
-      return acc.some((facet) => facet.name === name)
-        ? acc
-        : [{ id: null, name, count: 0 }, ...acc]
-    }, list)
-    // Selected chips float to the top so the active multi-selection stays visible.
-    return [...withSelected].sort((a, b) => {
-      const aSel = selectedSet.has(a.name)
-      const bSel = selectedSet.has(b.name)
-      if (aSel !== bSel) return aSel ? -1 : 1
-      return 0
-    })
-  }, [categoryFacets, deferredCategoryQuery, selectedCategories])
-
-  const hasMorePlaces = placesQuery.hasNextPage
-  const showLoadedCounts = !facetsQuery.isLoading && !facetsQuery.isError
-  // First grid row(s) are above the fold — decode those eagerly with high
-  // priority so the first screen shows sharp photos instead of blur on load.
-  const gridColumns = isWide ? 3 : isCompact ? 1 : 2
-  const firstScreenCount = gridColumns * 2
-
-  const activeCategoryTitle = getActiveCategoryTitle(selectedCategories)
   const pageDescription = selectedCategories.length > 0
-    ? `Места выбранных категорий: ${selectedCategories.join(', ')}. Карточки точек, переход на карту и ссылка на путешествие.`
-    : 'Каталог мест MeTravel: замки, музеи, парки, природные точки и другие места из путешествий.'
+    ? i18nT('map:screens.tabs.PlacesScreen.mesta_vybrannyh_kategoriy_value1_kartochki_t_005ce7dc', { value1: selectedCategories.join(', ') })
+    : i18nT('map:screens.tabs.PlacesScreen.katalog_mest_metravel_zamki_muzei_parki_prir_0c294a51')
 
   // ─── SEO ───
   const seoHeading = useMemo(() => {
-    const parts = ['Места']
+    const parts = [i18nT('map:screens.tabs.PlacesScreen.mesta_eff0ba98')]
     if (selectedCategories.length > 0) parts.push(activeCategoryTitle)
     if (selectedCountry) parts.push(selectedCountry)
     return parts.join(' — ')
@@ -239,131 +124,6 @@ export default function PlacesScreen() {
     )
   }, [isFocused, seoHeading, seoPlaces, totalCount])
 
-  const syncCategoryParams = useCallback((categories: string[]) => {
-    router.setParams(categories.length > 0 ? { category: categories.join(',') } : { category: '' })
-  }, [router])
-
-  const handleQueryChange = useCallback((next: string) => {
-    setQuery(next)
-    router.setParams(next ? { q: next } : { q: '' })
-  }, [router])
-
-  // Sync URL params → state when ?category/?country change without a remount
-  // (e.g. in-app navigation to /places?category=...). Guarded on value equality
-  // so it never loops with the setParams calls in the handlers below.
-  useEffect(() => {
-    const nextCategories = parseCategoryParam(params.category)
-    setSelectedCategories((current) =>
-      isSameCategorySet(current, nextCategories) ? current : nextCategories,
-    )
-  }, [params.category])
-
-  useEffect(() => {
-    const nextCountry =
-      typeof params.country === 'string' && params.country.trim() ? params.country.trim() : null
-    setSelectedCountry((current) => (current === nextCountry ? current : nextCountry))
-  }, [params.country])
-
-  useEffect(() => {
-    const nextQuery = typeof params.q === 'string' ? params.q : ''
-    setQuery((current) => (current === nextQuery ? current : nextQuery))
-  }, [params.q])
-
-  const loadMorePlaces = useCallback(() => {
-    if (placesQuery.hasNextPage && !placesQuery.isFetchingNextPage) {
-      void placesQuery.fetchNextPage()
-    }
-  }, [placesQuery])
-
-  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (!hasMorePlaces || placesQuery.isFetchingNextPage) return
-    const nativeEvent = event?.nativeEvent
-    const layoutHeight = Number(nativeEvent?.layoutMeasurement?.height ?? 0)
-    const offsetY = Number(nativeEvent?.contentOffset?.y ?? 0)
-    const contentHeight = Number(nativeEvent?.contentSize?.height ?? 0)
-    if (!layoutHeight || !contentHeight) return
-
-    const distanceToBottom = contentHeight - (layoutHeight + offsetY)
-    if (distanceToBottom <= LOAD_MORE_SCROLL_THRESHOLD) {
-      loadMorePlaces()
-    }
-  }, [hasMorePlaces, loadMorePlaces, placesQuery.isFetchingNextPage])
-
-  const handleToggleCategory = useCallback((category: string) => {
-    setSelectedCategories((current) => {
-      const next = current.includes(category)
-        ? current.filter((item) => item !== category)
-        : [...current, category]
-      syncCategoryParams(next)
-      return next
-    })
-  }, [syncCategoryParams])
-
-  const handleClearCategories = useCallback(() => {
-    setSelectedCategories([])
-    syncCategoryParams([])
-  }, [syncCategoryParams])
-
-  const selectCategoryCollection = useCallback((collection: CategoryCollection) => {
-    const next = [...collection.categories]
-    setSelectedCategories(next)
-    syncCategoryParams(next)
-  }, [syncCategoryParams])
-
-  const handleSelectCountry = useCallback((country: string | null) => {
-    setSelectedCountry(country)
-    setCountryMenuVisible(false)
-    router.setParams(country ? { country } : { country: '' })
-  }, [router])
-
-  const openOnMap = useCallback((place: CatalogPlace) => {
-    if (!Number.isFinite(place.latNumber) || !Number.isFinite(place.lngNumber)) return
-    router.push({
-      pathname: '/map',
-      params: {
-        lat: String(place.latNumber),
-        lng: String(place.lngNumber),
-        radius: MAP_FOCUS_RADIUS_KM,
-        categories: place.category,
-        placeId: place.id,
-        placeTitle: place.title,
-        placeAddress: place.address || place.country || place.title,
-        placeCategory: place.category,
-        placeTravelUrl: place.urlTravel || '',
-        placeImageUrl: place.travelImageThumbUrl || place.imageUrl || '',
-      },
-    })
-  }, [router])
-
-  const openTravel = useCallback((place: CatalogPlace) => {
-    if (!place.urlTravel) return
-    const internalRoute = normalizeRelatedTravelRoute(place.urlTravel)
-    if (internalRoute) {
-      router.push(internalRoute as any)
-      return
-    }
-    void openExternalUrlInNewTab(place.urlTravel)
-  }, [router])
-
-  const hasActiveFilters = selectedCategories.length > 0 || !!selectedCountry || !!query
-  const hasCategorySearch = deferredCategoryQuery.trim().length > 0
-
-  const resetAll = useCallback(() => {
-    handleQueryChange('')
-    setCategoryQuery('')
-    handleClearCategories()
-    handleSelectCountry(null)
-  }, [handleQueryChange, handleClearCategories, handleSelectCountry])
-
-  const isInitialLoading = placesQuery.isLoading
-  const resultsStatus: 'loading' | 'error' | 'empty' | 'list' = isInitialLoading
-    ? 'loading'
-    : placesQuery.isError
-      ? 'error'
-      : visiblePlaces.length === 0
-        ? 'empty'
-        : 'list'
-
   // Compact "app" chrome — a sticky compact filter bar (search + Категории + страна
   // + Сбросить) pinned above a single scrolling column of cards. Used on every mobile
   // width, web and native alike, so /places renders identically across platforms; the
@@ -374,10 +134,10 @@ export default function PlacesScreen() {
   const loadMoreBlock = hasMorePlaces ? (
     <View style={styles.loadMoreFooter}>
       <Text style={styles.loadMoreText}>
-        Показано {visiblePlaces.length} из {totalCount}
+        {i18nT('map:screens.tabs.PlacesScreen.pokazano_673c959e')}{visiblePlaces.length} {i18nT('map:screens.tabs.PlacesScreen.iz_897ff3eb')}{totalCount}
       </Text>
       <Button
-        label="Показать ещё"
+        label={i18nT('map:screens.tabs.PlacesScreen.pokazat_esche_f7728927')}
         variant="secondary"
         size="sm"
         onPress={loadMorePlaces}
@@ -395,12 +155,12 @@ export default function PlacesScreen() {
         styles={styles}
         colors={colors}
         icon="alert-circle"
-        title="Не удалось загрузить места"
-        description="Проверьте соединение и попробуйте снова."
-        actionLabel="Повторить"
+        title={i18nT('map:screens.tabs.PlacesScreen.ne_udalos_zagruzit_mesta_b8af7ba1')}
+        description={i18nT('map:screens.tabs.PlacesScreen.proverte_soedinenie_i_poprobuyte_snova_198a2bc9')}
+        actionLabel={i18nT('map:screens.tabs.PlacesScreen.povtorit_e910f968')}
         onAction={() => placesQuery.refetch()}
         pending={placesQuery.isFetching}
-        pendingLabel="Загружаем…"
+        pendingLabel={i18nT('map:screens.tabs.PlacesScreen.zagruzhaem_a0cca9ea')}
       />
     )
   } else if (resultsStatus === 'empty') {
@@ -409,12 +169,12 @@ export default function PlacesScreen() {
         styles={styles}
         colors={colors}
         icon="inbox"
-        title="Каталог пока пуст"
-        description="Скоро здесь появятся места из путешествий."
-        actionLabel="Обновить"
+        title={i18nT('map:screens.tabs.PlacesScreen.katalog_poka_pust_ead50e14')}
+        description={i18nT('map:screens.tabs.PlacesScreen.skoro_zdes_poyavyatsya_mesta_iz_puteshestviy_95576d13')}
+        actionLabel={i18nT('map:screens.tabs.PlacesScreen.obnovit_aaf704dc')}
         onAction={() => placesQuery.refetch()}
         pending={placesQuery.isFetching}
-        pendingLabel="Обновляем…"
+        pendingLabel={i18nT('map:screens.tabs.PlacesScreen.obnovlyaem_22cc01a2')}
       />
     ) : (
       <StateBlock
@@ -423,15 +183,15 @@ export default function PlacesScreen() {
         icon="map-pin"
         title={
           deferredQuery
-            ? `По запросу «${deferredQuery}» ничего не найдено`
-            : 'Места не найдены'
+            ? i18nT('map:screens.tabs.PlacesScreen.po_zaprosu_value1_nichego_ne_naydeno_2c354d86', { value1: deferredQuery })
+            : i18nT('map:screens.tabs.PlacesScreen.mesta_ne_naydeny_bad57b88')
         }
         description={
           deferredQuery
-            ? 'Попробуйте другое название или сбросьте фильтры.'
-            : 'Измените категорию или страну.'
+            ? i18nT('map:screens.tabs.PlacesScreen.poprobuyte_drugoe_nazvanie_ili_sbroste_filtr_7cf6a42b')
+            : i18nT('map:screens.tabs.PlacesScreen.izmenite_kategoriyu_ili_stranu_5611fa44')
         }
-        actionLabel="Сбросить фильтры"
+        actionLabel={i18nT('map:screens.tabs.PlacesScreen.sbrosit_filtry_f13dc45b')}
         onAction={resetAll}
       />
     )
@@ -460,9 +220,9 @@ export default function PlacesScreen() {
           <View style={styles.topBarMeta}>
             <View style={styles.heroTitleRow}>
               <Feather name="map-pin" size={18} color={colors.primary} />
-              <Text style={styles.heroTitle}>Места</Text>
+              <Text style={styles.heroTitle}>{i18nT('map:screens.tabs.PlacesScreen.mesta_eff0ba98')}</Text>
               {showLoadedCounts ? (
-                <Text style={styles.heroCount}>· {catalogTotal} в каталоге</Text>
+                <Text style={styles.heroCount}>· {catalogTotal} {i18nT('map:screens.tabs.PlacesScreen.v_kataloge_af576304')}</Text>
               ) : null}
             </View>
             <Text style={styles.topBarHint} numberOfLines={1}>
@@ -477,17 +237,17 @@ export default function PlacesScreen() {
               <TextInput
                 value={query}
                 onChangeText={handleQueryChange}
-                placeholder="Поиск по названию или адресу..."
+                placeholder={i18nT('map:screens.tabs.PlacesScreen.poisk_po_nazvaniyu_ili_adresu_ef70caf8')}
                 placeholderTextColor={colors.textMuted}
                 style={styles.searchInput}
                 returnKeyType="search"
-                accessibilityLabel="Найти место"
+                accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.nayti_mesto_c5e8b835')}
               />
               {query ? (
                 <Pressable
                   onPress={() => handleQueryChange('')}
                   accessibilityRole="button"
-                  accessibilityLabel="Очистить поиск"
+                  accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.ochistit_poisk_4f31e8e9')}
                   hitSlop={10}
                   style={({ pressed }) => [styles.searchClear, pressed && PRESSED_OPACITY]}
                 >
@@ -504,7 +264,7 @@ export default function PlacesScreen() {
                 <Pressable
                   onPress={() => setCountryMenuVisible(true)}
                   accessibilityRole="button"
-                  accessibilityLabel="Выбрать страну"
+                  accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.vybrat_stranu_a7b66c0c')}
                   accessibilityState={{ expanded: countryMenuVisible, disabled: facetsQuery.isLoading }}
                   disabled={facetsQuery.isLoading}
                   style={({ pressed }) => [
@@ -516,9 +276,9 @@ export default function PlacesScreen() {
                 >
                   <Feather name="globe" size={16} color={selectedCountry ? colors.primary : colors.textMuted} />
                   <View style={styles.countrySelectTextBlock}>
-                    <Text style={styles.countrySelectLabel}>Страна</Text>
+                    <Text style={styles.countrySelectLabel}>{i18nT('map:screens.tabs.PlacesScreen.strana_f749c62d')}</Text>
                     <Text style={styles.countrySelectValue} numberOfLines={1}>
-                      {selectedCountry ?? 'Все страны'}
+                      {selectedCountry ?? i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
                       {showLoadedCounts && !selectedCountry ? ` (${catalogTotal})` : ''}
                     </Text>
                   </View>
@@ -527,7 +287,7 @@ export default function PlacesScreen() {
               }
             >
               <Menu.Item
-                title={showLoadedCounts ? `Все страны (${catalogTotal})` : 'Все страны'}
+                title={showLoadedCounts ? i18nT('map:screens.tabs.PlacesScreen.vse_strany_value1_7f58288c', { value1: catalogTotal }) : i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
                 onPress={() => handleSelectCountry(null)}
                 leadingIcon={({ size }) => (
                   <Feather
@@ -573,7 +333,7 @@ export default function PlacesScreen() {
               ]}
             >
               <View style={styles.sidebarHeader}>
-                <Text style={styles.sectionTitle}>Категории</Text>
+                <Text style={styles.sectionTitle}>{i18nT('map:screens.tabs.PlacesScreen.kategorii_7e54cc5b')}</Text>
                 {selectedCategories.length > 0 ? (
                   <View style={styles.selectedBadge}>
                     <Text style={styles.selectedBadgeText}>{selectedCategories.length}</Text>
@@ -590,18 +350,18 @@ export default function PlacesScreen() {
                 <TextInput
                   value={categoryQuery}
                   onChangeText={setCategoryQuery}
-                  placeholder="Найти категорию..."
+                  placeholder={i18nT('map:screens.tabs.PlacesScreen.nayti_kategoriyu_9e5e9459')}
                   placeholderTextColor={colors.textMuted}
                   style={styles.categorySearchInput}
                   returnKeyType="search"
-                  accessibilityLabel="Поиск категории"
+                  accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.poisk_kategorii_654d76f0')}
                   testID="places-category-search-input"
                 />
                 {categoryQuery ? (
                   <Pressable
                     onPress={() => setCategoryQuery('')}
                     accessibilityRole="button"
-                    accessibilityLabel="Очистить поиск категории"
+                    accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.ochistit_poisk_kategorii_31f7af51')}
                     hitSlop={10}
                     style={({ pressed }) => [styles.categorySearchClear, pressed && PRESSED_OPACITY]}
                   >
@@ -612,7 +372,7 @@ export default function PlacesScreen() {
 
               {showCollections && !hasCategorySearch ? (
                 <View style={styles.collectionSection}>
-                  <Text style={styles.hintText}>Интересные подборки</Text>
+                  <Text style={styles.hintText}>{i18nT('map:screens.tabs.PlacesScreen.interesnye_podborki_05fc53e0')}</Text>
                   <View style={styles.collectionList}>
                     {collectionCards.map((collection) => {
                       const selected = isSameCategorySet(selectedCategories, collection.categories)
@@ -625,7 +385,7 @@ export default function PlacesScreen() {
                             onPress={() => selectCategoryCollection(collection)}
                             accessibilityRole="button"
                             accessibilityState={{ selected }}
-                            accessibilityLabel={`Подборка: ${collection.title}`}
+                            accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.podborka_value1_9a67f5b2', { value1: collection.title })}
                             style={({ pressed }) => [
                               styles.featuredSelectArea,
                               pressed && PRESSED_OPACITY,
@@ -654,7 +414,7 @@ export default function PlacesScreen() {
                             <Pressable
                               onPress={handleClearCategories}
                               accessibilityRole="button"
-                              accessibilityLabel={`Очистить подборку ${collection.title}`}
+                              accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.ochistit_podborku_value1_29340fbb', { value1: collection.title })}
                               hitSlop={10}
                               style={({ pressed }) => [styles.featuredClear, pressed && PRESSED_OPACITY]}
                             >
@@ -670,14 +430,14 @@ export default function PlacesScreen() {
 
               <Text style={styles.hintText}>
                 {hasCategorySearch
-                  ? 'Найденные категории'
+                  ? i18nT('map:screens.tabs.PlacesScreen.naydennye_kategorii_75a4bdc5')
                   : showCollections
-                    ? 'Или выберите категории вручную'
-                    : 'Выберите категории'}
+                    ? i18nT('map:screens.tabs.PlacesScreen.ili_vyberite_kategorii_vruchnuyu_11fb6a00')
+                    : i18nT('map:screens.tabs.PlacesScreen.vyberite_kategorii_8717e26b')}
               </Text>
               <View style={styles.chipRow}>
                 <Chip
-                  label="Все категории"
+                  label={i18nT('map:screens.tabs.PlacesScreen.vse_kategorii_f1b4a07f')}
                   count={showLoadedCounts ? catalogTotal : undefined}
                   selected={selectedCategories.length === 0}
                   onPress={handleClearCategories}
@@ -698,8 +458,7 @@ export default function PlacesScreen() {
                 {filteredCategoryFacets.length === 0 && deferredCategoryQuery.trim() ? (
                   <View style={styles.categorySearchEmpty} testID="places-category-search-empty">
                     <Text style={styles.categorySearchEmptyText}>
-                      Категории не найдены
-                    </Text>
+                      {i18nT('map:screens.tabs.PlacesScreen.kategorii_ne_naydeny_0e4e6021')}</Text>
                   </View>
                 ) : null}
               </View>
@@ -710,7 +469,7 @@ export default function PlacesScreen() {
                   style={({ pressed }) => [styles.sidebarResetBtn, pressed && PRESSED_OPACITY]}
                 >
                   <Feather name="refresh-ccw" size={14} color={colors.textMuted} />
-                  <Text style={styles.sidebarResetBtnText}>Сбросить фильтры</Text>
+                  <Text style={styles.sidebarResetBtnText}>{i18nT('map:screens.tabs.PlacesScreen.sbrosit_filtry_f13dc45b')}</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -723,13 +482,13 @@ export default function PlacesScreen() {
                 <Text style={styles.resultsTitle} numberOfLines={2}>{activeCategoryTitle}</Text>
                 <Text style={styles.resultsMeta}>
                   {isInitialLoading
-                    ? 'Загружаем подборку...'
+                    ? i18nT('map:screens.tabs.PlacesScreen.zagruzhaem_podborku_b98517c7')
                     : `${totalCount} ${getPlacesCountLabel(totalCount)}`}
                 </Text>
               </View>
               {selectedCategories.length > 0 ? (
                 <Button
-                  label="Все места"
+                  label={i18nT('map:screens.tabs.PlacesScreen.vse_mesta_e8f3c355')}
                   variant="outline"
                   onPress={handleClearCategories}
                 />
@@ -753,17 +512,17 @@ export default function PlacesScreen() {
         <TextInput
           value={query}
           onChangeText={handleQueryChange}
-          placeholder="Поиск места..."
+          placeholder={i18nT('map:screens.tabs.PlacesScreen.poisk_mesta_642f16e6')}
           placeholderTextColor={colors.textMuted}
           style={styles.searchInput}
           returnKeyType="search"
-          accessibilityLabel="Найти место"
+          accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.nayti_mesto_c5e8b835')}
         />
         {query ? (
           <Pressable
             onPress={() => handleQueryChange('')}
             accessibilityRole="button"
-            accessibilityLabel="Очистить поиск"
+            accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.ochistit_poisk_4f31e8e9')}
             hitSlop={10}
             style={({ pressed }) => [styles.searchClear, pressed && PRESSED_OPACITY]}
           >
@@ -780,7 +539,7 @@ export default function PlacesScreen() {
             <Pressable
               onPress={() => setCountryMenuVisible(true)}
               accessibilityRole="button"
-              accessibilityLabel="Выбрать страну"
+              accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.vybrat_stranu_a7b66c0c')}
               accessibilityState={{ expanded: countryMenuVisible, disabled: facetsQuery.isLoading }}
               disabled={facetsQuery.isLoading}
               style={({ pressed }) => [
@@ -798,14 +557,14 @@ export default function PlacesScreen() {
                 ]}
                 numberOfLines={1}
               >
-                {selectedCountry ?? 'Все страны'}
+                {selectedCountry ?? i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
               </Text>
               <Feather name="chevron-down" size={16} color={colors.textMuted} />
             </Pressable>
           }
         >
           <Menu.Item
-            title={showLoadedCounts ? `Все страны (${catalogTotal})` : 'Все страны'}
+            title={showLoadedCounts ? i18nT('map:screens.tabs.PlacesScreen.vse_strany_value1_7f58288c', { value1: catalogTotal }) : i18nT('map:screens.tabs.PlacesScreen.vse_strany_08494525')}
             onPress={() => handleSelectCountry(null)}
             leadingIcon={({ size }) => (
               <Feather
@@ -848,8 +607,7 @@ export default function PlacesScreen() {
             numberOfLines={1}
             style={[styles.mobileFilterToggleText, selectedCategories.length > 0 && styles.mobileFilterToggleTextActive]}
           >
-            Категории
-          </Text>
+            {i18nT('map:screens.tabs.PlacesScreen.kategorii_7e54cc5b')}</Text>
           {selectedCategories.length > 0 ? (
             <View style={styles.filterBadge}>
               <Text style={styles.filterBadgeText}>{selectedCategories.length}</Text>
@@ -866,10 +624,10 @@ export default function PlacesScreen() {
           <Pressable
             onPress={resetAll}
             accessibilityRole="button"
-            accessibilityLabel="Сбросить фильтры"
+            accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.sbrosit_filtry_f13dc45b')}
             style={({ pressed }) => [styles.resetBtn, pressed && PRESSED_OPACITY]}
           >
-            <Text style={styles.resetBtnText}>Сбросить</Text>
+            <Text style={styles.resetBtnText}>{i18nT('map:screens.tabs.PlacesScreen.sbrosit_10b66035')}</Text>
           </Pressable>
         ) : null}
       </View>

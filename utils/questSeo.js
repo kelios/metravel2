@@ -1,4 +1,24 @@
-/* global module */
+/* global module, require */
+
+const questSeoRu = require('../i18n/locales/ru/questSeo.json');
+const { selectPluralCategory } = require('../i18n/pluralRules');
+
+const DEFAULT_QUEST_SEO_LOCALE = 'ru-RU';
+
+function interpolateTranslation(template, params = {}) {
+  return String(template).replace(/\{\{(\w+)\}\}/g, (_, key) =>
+    params[key] == null ? '' : String(params[key]));
+}
+
+function defaultTranslate(key, params = {}) {
+  const resourceKey = String(key).replace(/^seo:/, '');
+  return interpolateTranslation(questSeoRu[resourceKey] || key, params);
+}
+
+function selectPlural(count, forms, locale) {
+  const category = selectPluralCategory(count, locale);
+  return forms[category] || forms.other;
+}
 
 const SEO_TITLE_MAX_LENGTH = 60;
 const SEO_TITLE_SUFFIX = ' | Metravel';
@@ -10,17 +30,9 @@ function normalizeText(value, fallback = '') {
     .trim();
 }
 
-function pluralizeRu(value, one, few, many) {
-  const mod10 = value % 10;
-  const mod100 = value % 100;
-  if (mod10 === 1 && mod100 !== 11) return one;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
-  return many;
-}
-
 function stripRepeatedCityPrefix(title, cityName) {
   if (!title || !cityName) return title;
-  if (!title.toLocaleLowerCase('ru').startsWith(cityName.toLocaleLowerCase('ru'))) return title;
+  if (!title.toLowerCase().startsWith(cityName.toLowerCase())) return title;
 
   const remainder = title.slice(cityName.length);
   if (remainder && !/^[\s:–—-]/u.test(remainder)) return title;
@@ -69,35 +81,47 @@ function clampMetaDescription(value, maxEncodedLength = SEO_DESCRIPTION_MAX_ENCO
   return clipped.replace(/[\s.,;:!?·–—-]+$/u, '').trim();
 }
 
-function formatDuration(durationMin) {
+function formatDuration(durationMin, translate) {
   const minutesTotal = Number(durationMin) || 0;
   if (minutesTotal <= 0) return '';
   const hours = Math.floor(minutesTotal / 60);
   const minutes = minutesTotal % 60;
-  if (hours <= 0) return `${minutes} мин`;
-  return minutes > 0 ? `${hours} ч ${minutes} мин` : `${hours} ч`;
+  if (hours <= 0) return translate('seo:utils.questSeo.value1_min_7c081c0f', { value1: minutes });
+  return minutes > 0 ? translate('seo:utils.questSeo.value1_ch_value2_min_a31b9fed', { value1: hours, value2: minutes }) : translate('seo:utils.questSeo.value1_ch_d6644461', { value1: hours });
 }
 
-function buildQuestSeoMetadata({ title, cityName, points, durationMin } = {}) {
-  const questTitle = normalizeText(title, 'Городской квест');
+function buildQuestSeoMetadata({
+  title,
+  cityName,
+  points,
+  durationMin,
+  translate = defaultTranslate,
+  locale = DEFAULT_QUEST_SEO_LOCALE,
+} = {}) {
+  const questTitle = normalizeText(title, translate('seo:utils.questSeo.gorodskoy_kvest_2737d6fc'));
   const city = normalizeText(cityName);
   const shortTitle = stripRepeatedCityPrefix(questTitle, city);
   const searchTitle = city
-    ? `${city}: что посмотреть${shortTitle ? ` — ${shortTitle}` : ''}`
-    : `${questTitle}: что посмотреть`;
+    ? translate('seo:utils.questSeo.value1_chto_posmotret_value2_c7c9b7ba', { value1: city, value2: shortTitle ? ` — ${shortTitle}` : '' })
+    : translate('seo:utils.questSeo.value1_chto_posmotret_3257ff8c', { value1: questTitle });
 
   const descriptionParts = [
     city
-      ? `Город ${city}: бесплатный пеший маршрут «${shortTitle}» по достопримечательностям.`
-      : `Бесплатный пеший маршрут «${questTitle}» по достопримечательностям.`,
+      ? translate('seo:utils.questSeo.gorod_value1_besplatnyy_peshiy_marshrut_valu_951719a3', { value1: city, value2: shortTitle })
+      : translate('seo:utils.questSeo.besplatnyy_peshiy_marshrut_value1_po_dostopr_8cbbea0f', { value1: questTitle }),
   ];
   const pointsCount = Number(points) || 0;
   if (pointsCount > 0) {
-    descriptionParts.push(`${pointsCount} ${pluralizeRu(pointsCount, 'точка', 'точки', 'точек')}.`);
+    descriptionParts.push(`${pointsCount} ${selectPlural(pointsCount, {
+      one: translate('seo:utils.questSeo.tochka_1aa8f86f'),
+      few: translate('seo:utils.questSeo.tochki_8aa14238'),
+      many: translate('seo:utils.questSeo.tochek_0509b34c'),
+      other: translate('seo:utils.questSeo.tochek_0509b34c'),
+    }, locale)}.`);
   }
-  const duration = formatDuration(durationMin);
-  if (duration) descriptionParts.push(`Примерно ${duration}.`);
-  descriptionParts.push('Задания и легенды — прямо со смартфона.');
+  const duration = formatDuration(durationMin, translate);
+  if (duration) descriptionParts.push(translate('seo:utils.questSeo.primerno_value1_cc8b37aa', { value1: duration }));
+  descriptionParts.push(translate('seo:utils.questSeo.zadaniya_i_legendy_pryamo_so_smartfona_33796e9b'));
 
   return {
     title: buildBrandedSeoTitle(searchTitle),

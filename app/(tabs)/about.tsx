@@ -2,7 +2,6 @@
 import { useCallback, useMemo, useRef, useState, memo, useEffect } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StatusBar, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Constants from 'expo-constants';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { AboutIntroCard } from '@/components/about/AboutIntroCard';
 import { VideoCard } from '@/components/about/VideoCard';
@@ -19,12 +18,13 @@ import { useAboutStyles } from '@/components/about/aboutStyles';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
 import { openExternalUrl } from '@/utils/externalLinks';
-import { webTouchScrollStyle } from '@/utils';
+import { getAppVersionInfo, webTouchScrollStyle } from '@/utils';
 import ContributionBanner from '@/components/common/ContributionBanner';
+import { translate as i18nT } from '@/i18n'
+
 
 const EMAIL = 'metraveldev@gmail.com';
 const MAIL_SUBJECT = 'Info metravel.by';
-const MAIL_BODY = 'Добрый день!';
 const YT_URL = 'https://www.youtube.com/watch?v=K0oV4Y-i8hY';
 const YT_THUMB = 'https://img.youtube.com/vi/K0oV4Y-i8hY/hqdefault.jpg';
 const SOCIAL_LINKS = {
@@ -38,10 +38,7 @@ function AboutAndContactScreen() {
   const { width } = useResponsive();
   const isWide = width >= 900;
 
-  const appVersion =
-    (Constants as any)?.expoConfig?.version ||
-    (Constants as any)?.manifest?.version ||
-    'unknown';
+  const appVersionInfo = useMemo(() => getAppVersionInfo(), []);
 
   const [webBuildVersion, setWebBuildVersion] = useState<string>('');
 
@@ -89,19 +86,19 @@ function AboutAndContactScreen() {
     if (hp.trim()) return;
 
     if (!name.trim() || !email.trim() || !message.trim())
-      return setResp({ text: 'Заполните все поля.', error: true });
-    if (!isEmailValid(email)) return setResp({ text: 'Введите корректный e-mail.', error: true });
-    if (!agree) return setResp({ text: 'Требуется согласие на обработку данных.', error: true });
+      return setResp({ text: i18nT('home:app.tabs.about.zapolnite_vse_polya_81219dd3'), error: true });
+    if (!isEmailValid(email)) return setResp({ text: i18nT('home:app.tabs.about.vvedite_korrektnyy_e_mail_4838c75c'), error: true });
+    if (!agree) return setResp({ text: i18nT('home:app.tabs.about.trebuetsya_soglasie_na_obrabotku_dannyh_66e7bb8e'), error: true });
 
     try {
       setSending(true);
       const res = await sendFeedback(name.trim(), email.trim(), message.trim());
       setResp({ text: res, error: false });
       clearForm();
-      showToast({ type: 'success', text1: 'Сообщение отправлено', text2: 'Спасибо за обратную связь!', visibilityTime: 4000 });
+      showToast({ type: 'success', text1: i18nT('home:app.tabs.about.soobschenie_otpravleno_e066a056'), text2: i18nT('home:app.tabs.about.spasibo_za_obratnuyu_svyaz_bb3f2f80'), visibilityTime: 4000 });
     } catch (e: any) {
-      setResp({ text: e?.message || 'Не удалось отправить сообщение.', error: true });
-      showToast({ type: 'error', text1: 'Ошибка отправки', text2: e?.message || 'Попробуйте позже', visibilityTime: 4000 });
+      setResp({ text: e?.message || i18nT('sharedStatic:contact.sendFailed'), error: true });
+      showToast({ type: 'error', text1: i18nT('home:app.tabs.about.oshibka_otpravki_f0b980aa'), text2: e?.message || i18nT('sharedStatic:errors.tryLater'), visibilityTime: 4000 });
     } finally {
       setSending(false);
     }
@@ -116,7 +113,7 @@ function AboutAndContactScreen() {
   };
 
   const sendMail = useCallback(() => {
-    const url = `mailto:${EMAIL}?subject=${encodeURIComponent(MAIL_SUBJECT)}&body=${encodeURIComponent(MAIL_BODY)}`;
+    const url = `mailto:${EMAIL}?subject=${encodeURIComponent(MAIL_SUBJECT)}&body=${encodeURIComponent(i18nT('sharedStatic:contact.mailBody'))}`;
     void openExternalUrl(url, {
       allowedProtocols: ['mailto:'],
       onError: (error) => {
@@ -162,9 +159,9 @@ function AboutAndContactScreen() {
     return false;
   }, [sending, name, email, message, agree]);
 
-  const title = 'О проекте MeTravel — сообщество путешественников | Metravel';
+  const title = i18nT('home:app.tabs.about.o_proekte_metravel_soobschestvo_puteshestven_64997f50');
   const description =
-      'Проект MeTravel — сообщество путешественников по Беларуси и не только. Делитесь маршрутами, пишите статьи, сохраняйте впечатления и вдохновляйтесь идеями.';
+      i18nT('home:app.tabs.about.proekt_metravel_soobschestvo_puteshestvennik_f1e95ae3');
 
   return (
       <>
@@ -213,7 +210,7 @@ function AboutAndContactScreen() {
                         onOpenCookies={() => router.push('/cookies' as any)}
                         socialLinks={SOCIAL_LINKS}
                         versionInfo={{
-                          appVersion: String(appVersion),
+                          ...appVersionInfo,
                           ...(Platform.OS === 'web' ? { webBuildVersion } : {}),
                         }}
                       />

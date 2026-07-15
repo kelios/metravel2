@@ -13,6 +13,12 @@ import { retry, isRetryableError } from '@/utils/retry';
 import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import { getCsrfHeader } from '@/utils/csrf';
+import {
+    getApiRequestCredentials,
+    hasUsableAuthCredential,
+    shouldUseStoredAuthToken,
+} from '@/utils/authPlatform';
+import { translate as i18nT } from '@/i18n';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
@@ -42,6 +48,36 @@ const SETNEWPASSWORD = `${URLAPI}/user/set-password-after-reset/`;
 const SENDPASSWORD = `${URLAPI}/user/sendpassword/`;
 const GOOGLE_LOGIN = `${URLAPI}/user/google-login/`;
 const PUSH_TOKEN = `${URLAPI}/user/push-token/`;
+const WEB_SESSION_PROBE = `${URLAPI}/user/me/verifications/`;
+
+const getStoredAuthToken = async (): Promise<string | null> =>
+    shouldUseStoredAuthToken() ? getSecureItem('userToken') : null;
+
+const persistNativeAuthTokens = async (token?: string, refresh?: string): Promise<void> => {
+    if (!shouldUseStoredAuthToken() || !token) return;
+    await setSecureItem('userToken', token);
+    if (refresh) await setSecureItem('refreshToken', refresh);
+};
+
+/**
+ * Validate the ambient HttpOnly-cookie session through a private endpoint.
+ * Public profile endpoints cannot prove that the browser still owns a session.
+ */
+export const validateWebCookieSessionApi = async (): Promise<boolean> => {
+    if (shouldUseStoredAuthToken()) return false;
+
+    const response = await fetchWithTimeout(WEB_SESSION_PROBE, {
+        method: 'GET',
+        ...getApiRequestCredentials(),
+        headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
+    }, DEFAULT_TIMEOUT);
+
+    if (response.status === 401 || response.status === 403) return false;
+    if (!response.ok) {
+        throw new Error(`Web session probe failed: ${response.status}`);
+    }
+    return true;
+};
 
 type GoogleAuthResponse = {
     token?: string;
@@ -67,12 +103,12 @@ const getGoogleAuthErrorMessage = (payload: Partial<GoogleAuthResponse>, status:
         return payload.id_token[0];
     }
     if (status === 401 || status === 403) {
-        return 'Google не подтвердил аккаунт. Попробуйте выбрать аккаунт ещё раз.';
+        return i18nT('errorsStatic:api.auth.googleAccountNotConfirmed');
     }
     if (status >= 500) {
-        return 'Сервис Google-входа временно недоступен. Попробуйте позже.';
+        return i18nT('errorsStatic:api.auth.googleUnavailable');
     }
-    return 'Не удалось войти через Google.';
+    return i18nT('errorsStatic:api.auth.googleSignInFailed');
 };
 
 export const loginApi = async (email: string, password: string): Promise<{
@@ -85,13 +121,13 @@ export const loginApi = async (email: string, password: string): Promise<{
 } | null> => {
     try {
         if (!password || password.trim().length === 0) {
-            Alert.alert('Ошибка', 'Пароль не может быть пустым');
+            Alert.alert(i18nT('errorsStatic:api.auth.errorTitle'), i18nT('errorsStatic:api.auth.emptyPassword'));
             return null;
         }
 
         const trimmedEmail = (email ?? '').trim();
         if (!trimmedEmail) {
-            Alert.alert('Ошибка', 'Email не может быть пустым');
+            Alert.alert(i18nT('errorsStatic:api.auth.errorTitle'), i18nT('errorsStatic:api.auth.emptyEmail'));
             return null;
         }
 
@@ -99,6 +135,7 @@ export const loginApi = async (email: string, password: string): Promise<{
             async () => {
                 const res = await fetchWithTimeout(LOGIN, {
                     method: 'POST',
+                    ...getApiRequestCredentials(),
                     headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
                     body: JSON.stringify({ email: trimmedEmail, password }),
                 }, DEFAULT_TIMEOUT);
@@ -141,25 +178,26 @@ export const loginApi = async (email: string, password: string): Promise<{
         const rawMessage = error instanceof Error ? error.message : '';
         let message: string;
         if (/Login failed: (401|403)/.test(rawMessage)) {
-            message = 'Неверный email или пароль';
+            message = i18nT('errorsStatic:api.auth.invalidCredentials');
         } else if (/Login failed: \d+/.test(rawMessage)) {
             // 5xx/429/прочее — серверная/временная ошибка, не вводим в заблуждение «неверным паролем».
-            message = 'Сервис временно недоступен. Попробуйте позже.';
+            message = i18nT('errorsStatic:api.auth.serviceUnavailable');
         } else {
             message = getUserFriendlyError(error);
         }
-        Alert.alert('Ошибка входа', message);
+        Alert.alert(i18nT('errorsStatic:api.auth.signInErrorTitle'), message);
         return null;
     }
 };
 
 export const logoutApi = async () => {
     try {
-        const token = await getSecureItem('userToken');
+        const token = await getStoredAuthToken();
         const response = await fetchWithTimeout(LOGOUT, {
             method: 'POST',
+            ...getApiRequestCredentials(),
             headers: {
-                Authorization: `Token ${token}`,
+                ...(token ? { Authorization: `Token ${token}` } : {}),
                 'Content-Type': 'application/json',
                 ...getCsrfHeader(),
             },
@@ -188,6 +226,7 @@ export const sendPasswordApi = async (email: string) => {
     try {
         const response = await fetchWithTimeout(SENDPASSWORD, {
             method: 'POST',
+            ...getApiRequestCredentials(),
             headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
             body: JSON.stringify({ email }),
         }, DEFAULT_TIMEOUT);
@@ -198,16 +237,16 @@ export const sendPasswordApi = async (email: string) => {
 
         const json = await safeJsonParse<{ success?: boolean; message?: string }>(response, {});
         if (json.success) {
-            Alert.alert('Успех', 'Инструкции по восстановлению пароля отправлены на ваш email');
+            Alert.alert(i18nT('errorsStatic:api.auth.successTitle'), i18nT('errorsStatic:api.auth.resetInstructionsSent'));
             return true;
         }
-        Alert.alert('Ошибка', getUserFriendlyError(json.message || 'Не удалось отправить инструкции по восстановлению пароля'));
+        Alert.alert(i18nT('errorsStatic:api.auth.errorTitle'), getUserFriendlyError(json.message || i18nT('errorsStatic:api.auth.resetInstructionsFailed')));
         return false;
     } catch (error) {
         if (__DEV__) {
             console.error(error);
         }
-        Alert.alert('Ошибка', getUserFriendlyError(error));
+        Alert.alert(i18nT('errorsStatic:api.auth.errorTitle'), getUserFriendlyError(error));
         return false;
     }
 };
@@ -215,12 +254,13 @@ export const sendPasswordApi = async (email: string) => {
 export const resetPasswordLinkApi = async (email: string) => {
     const sanitizedEmail = sanitizeInput(email.trim());
     if (!sanitizedEmail) {
-        throw new Error('Email не может быть пустым');
+        throw new Error(i18nT('errorsStatic:api.auth.emptyEmail'));
     }
 
     try {
         const response = await fetchWithTimeout(RESETPASSWORDLINK, {
             method: 'POST',
+            ...getApiRequestCredentials(),
             headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
             body: JSON.stringify({ email: sanitizedEmail }),
         }, DEFAULT_TIMEOUT);
@@ -228,15 +268,15 @@ export const resetPasswordLinkApi = async (email: string) => {
         const json = await safeJsonParse<{ email?: string[]; message?: string }>(response, {});
 
         if (!response.ok) {
-            return json?.email?.[0] || json?.message || 'Ошибка';
+            return json?.email?.[0] || json?.message || i18nT('errorsStatic:api.auth.errorTitle');
         }
 
-        return json?.message || 'Инструкции по восстановлению отправлены.';
+        return json?.message || i18nT('errorsStatic:api.auth.resetInstructionsSentShort');
     } catch (error) {
         if (__DEV__) {
             console.error(error);
         }
-        return 'Не удалось отправить инструкции по восстановлению пароля';
+        return i18nT('errorsStatic:api.auth.resetInstructionsFailed');
     }
 };
 
@@ -244,12 +284,13 @@ export const setNewPasswordApi = async (password_reset_token: string, password: 
     try {
         const passwordValidation = validatePassword(password);
         if (!passwordValidation.valid) {
-            Alert.alert('Ошибка валидации', passwordValidation.error || 'Пароль не соответствует требованиям');
+            Alert.alert(i18nT('errorsStatic:api.auth.validationErrorTitle'), passwordValidation.error || i18nT('errorsStatic:api.auth.passwordRequirements'));
             return false;
         }
 
         const response = await fetchWithTimeout(SETNEWPASSWORD, {
             method: 'POST',
+            ...getApiRequestCredentials(),
             headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
             body: JSON.stringify({ password, password_reset_token }),
         }, DEFAULT_TIMEOUT);
@@ -260,16 +301,16 @@ export const setNewPasswordApi = async (password_reset_token: string, password: 
 
         const json = await safeJsonParse<{ success?: boolean; detail?: string; message?: string }>(response, {});
         if (json.success || json.detail) {
-            Alert.alert('Успех', json.detail || 'Пароль успешно изменен');
+            Alert.alert(i18nT('errorsStatic:api.auth.successTitle'), json.detail || i18nT('errorsStatic:api.auth.passwordChanged'));
             return true;
         }
-        Alert.alert('Ошибка', getUserFriendlyError(json.message || 'Не удалось изменить пароль'));
+        Alert.alert(i18nT('errorsStatic:api.auth.errorTitle'), getUserFriendlyError(json.message || i18nT('errorsStatic:api.auth.passwordChangeFailed')));
         return false;
     } catch (error) {
         if (__DEV__) {
             console.error(error);
         }
-        Alert.alert('Ошибка', getUserFriendlyError(error));
+        Alert.alert(i18nT('errorsStatic:api.auth.errorTitle'), getUserFriendlyError(error));
         return false;
     }
 };
@@ -279,8 +320,9 @@ export const registration = async (values: FormValues): Promise<{ ok: boolean; m
         if (values.password) {
             const passwordValidation = validatePassword(values.password);
             if (!passwordValidation.valid) {
-                Alert.alert('Ошибка валидации', passwordValidation.error || 'Пароль не соответствует требованиям');
-                return { ok: false, message: passwordValidation.error || 'Пароль не соответствует требованиям' };
+                const fallbackMessage = i18nT('errorsStatic:api.auth.passwordRequirements');
+                Alert.alert(i18nT('errorsStatic:api.auth.validationErrorTitle'), passwordValidation.error || fallbackMessage);
+                return { ok: false, message: passwordValidation.error || fallbackMessage };
             }
         }
 
@@ -288,6 +330,7 @@ export const registration = async (values: FormValues): Promise<{ ok: boolean; m
             async () => {
                 return await fetchWithTimeout(REGISTER, {
                     method: 'POST',
+                    ...getApiRequestCredentials(),
                     headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
                     body: JSON.stringify(values),
                 }, DEFAULT_TIMEOUT);
@@ -312,23 +355,23 @@ export const registration = async (values: FormValues): Promise<{ ok: boolean; m
         }>(response, {});
 
         if (!response.ok) {
-            return { ok: false, message: jsonResponse.error || 'Ошибка регистрации' };
+            return { ok: false, message: jsonResponse.error || i18nT('errorsStatic:api.auth.registrationErrorTitle') };
         }
 
         if (jsonResponse.token) {
-            await setSecureItem('userToken', jsonResponse.token);
             const resp = jsonResponse as Record<string, unknown>;
-            if (typeof resp.refresh === 'string') {
-                await setSecureItem('refreshToken', resp.refresh);
-            }
+            await persistNativeAuthTokens(
+                jsonResponse.token,
+                typeof resp.refresh === 'string' ? resp.refresh : undefined,
+            );
             await AsyncStorage.setItem('userName', jsonResponse.name || '');
         }
 
-        const successMessage = 'Пользователь успешно зарегистрирован. Проверьте почту для активации.';
+        const successMessage = i18nT('errorsStatic:api.auth.registrationSucceeded');
         return { ok: true, message: successMessage };
     } catch (error: unknown) {
         devError('Registration error:', error);
-        const msg = error instanceof Error ? error.message : 'Произошла неизвестная ошибка.';
+        const msg = error instanceof Error ? error.message : i18nT('errorsStatic:api.common.unknownError');
         return { ok: false, message: msg };
     }
 };
@@ -337,6 +380,7 @@ export const confirmAccount = async (hash: string) => {
     try {
         const response = await fetchWithTimeout(CONFIRM_REGISTER, {
             method: 'POST',
+            ...getApiRequestCredentials(),
             headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
             body: JSON.stringify({ hash }),
         }, DEFAULT_TIMEOUT);
@@ -348,15 +392,12 @@ export const confirmAccount = async (hash: string) => {
         }>(response, {});
 
         if (jsonResponse.userToken) {
-            await setSecureItem('userToken', jsonResponse.userToken);
-            if (jsonResponse.refreshToken) {
-                await setSecureItem('refreshToken', jsonResponse.refreshToken);
-            }
+            await persistNativeAuthTokens(jsonResponse.userToken, jsonResponse.refreshToken);
             await AsyncStorage.setItem('userName', jsonResponse.userName || '');
         }
         return jsonResponse;
     } catch (error: unknown) {
-        const msg = error instanceof Error ? error.message : 'Произошла ошибка при подтверждении учетной записи.';
+        const msg = error instanceof Error ? error.message : i18nT('errorsStatic:api.auth.confirmationFailed');
         throw new Error(msg);
     }
 };
@@ -372,13 +413,14 @@ export const googleAuthApi = async (idToken: string): Promise<{
     try {
         const trimmedToken = String(idToken || '').trim();
         if (!trimmedToken) {
-            throw new Error('Не удалось получить id_token от Google');
+            throw new Error(i18nT('errorsStatic:api.auth.googleIdTokenMissing'));
         }
 
         const response = await retry(
             async () => {
                 return await fetchWithTimeout(GOOGLE_LOGIN, {
                     method: 'POST',
+                    ...getApiRequestCredentials(),
                     headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
                     body: JSON.stringify({ id_token: trimmedToken }),
                 }, DEFAULT_TIMEOUT);
@@ -406,11 +448,11 @@ export const googleAuthApi = async (idToken: string): Promise<{
             id: string | number;
             is_superuser: boolean;
         };
-        throw new Error('Сервер не вернул токен авторизации Google.');
+        throw new Error(i18nT('errorsStatic:api.auth.googleServerTokenMissing'));
     } catch (error: unknown) {
         devError('Google auth error:', error);
         const message = getUserFriendlyError(error);
-        Alert.alert('Ошибка входа через Google', message);
+        Alert.alert(i18nT('errorsStatic:api.auth.googleSignInErrorTitle'), message);
         return null;
     }
 };
@@ -422,13 +464,14 @@ export const googleAuthApi = async (idToken: string): Promise<{
  */
 export const registerPushTokenApi = async (pushToken: string): Promise<boolean> => {
     try {
-        const token = await getSecureItem('userToken');
-        if (!token) return false;
+        const token = await getStoredAuthToken();
+        if (!hasUsableAuthCredential(token)) return false;
 
         const response = await fetchWithTimeout(PUSH_TOKEN, {
             method: 'POST',
+            ...getApiRequestCredentials(),
             headers: {
-                Authorization: `Token ${token}`,
+                ...(token ? { Authorization: `Token ${token}` } : {}),
                 'Content-Type': 'application/json',
                 ...getCsrfHeader(),
             },

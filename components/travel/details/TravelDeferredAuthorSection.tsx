@@ -7,6 +7,8 @@ import type { Travel } from '@/types/types'
 
 import TravelPeerBadgesSection from './TravelPeerBadgesSection'
 import { useTravelDetailsStyles } from './TravelDetailsStyles'
+import { translate as i18nT } from '@/i18n'
+
 
 const PLACEHOLDER_MT_12 = { marginTop: 12 } as const
 
@@ -26,10 +28,10 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function Mob
         <View
           testID="travel-details-author-mobile"
           role="region"
-          accessibilityLabel="Автор маршрута"
+          accessibilityLabel={i18nT('travel:components.travel.details.TravelDeferredAuthorSection.avtor_marshruta_6986236c')}
           style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
         >
-          <Text style={styles.sectionHeaderText}>Автор</Text>
+          <Text style={styles.sectionHeaderText}>{i18nT('travel:components.travel.details.TravelDeferredAuthorSection.avtor_da9de0f2')}</Text>
           <View style={PLACEHOLDER_MT_12}>
             <AuthorCard travel={travel} />
           </View>
@@ -39,7 +41,7 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function Mob
       <View
         testID="travel-details-share-mobile"
         role="region"
-        accessibilityLabel="Поделиться маршрутом"
+        accessibilityLabel={i18nT('travel:components.travel.details.TravelDeferredAuthorSection.podelitsya_marshrutom_0d380df3')}
         style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
       >
         <ShareButtons travel={travel} />

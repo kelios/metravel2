@@ -14,8 +14,29 @@ const readAppConfig = () => {
   return JSON.parse(raw);
 };
 
+const readRepoFile = (relativePath: string) =>
+  fs.readFileSync(path.join(__dirname, '../..', relativePath), 'utf8');
+
 describe('Platform Compatibility Tests', () => {
   describe('Multi-Platform Support', () => {
+    it('uses a supported dynamic token for public trip detail exports', () => {
+      expect(fs.existsSync(path.join(__dirname, '../../app/(tabs)/trips/[id].tsx'))).toBe(true);
+      expect(fs.existsSync(path.join(__dirname, '../../app/(tabs)/trips/[tripId].tsx'))).toBe(false);
+      expect(readRepoFile('app/(tabs)/_layout.tsx')).toContain('name="trips/[id]"');
+    });
+
+    it('keeps travel filters on the hydration-safe responsive store', () => {
+      const source = readRepoFile('components/listTravel/ModernFilters.tsx');
+      expect(source).toContain('useResponsiveWidth');
+      expect(source).not.toContain("Dimensions.get('window')");
+    });
+
+    it('keeps the authenticated metravel route eager for static hydration', () => {
+      const source = readRepoFile('app/(tabs)/metravel.tsx');
+      expect(source).toContain("import ListTravel from '@/components/listTravel/ListTravelBase'");
+      expect(source).not.toMatch(/lazy\s*\(/);
+    });
+
     it('should have configuration for all platforms', () => {
       const appConfig = readAppConfig();
       expect(appConfig.expo.web).toBeDefined();
@@ -236,6 +257,18 @@ describe('Platform Compatibility Tests', () => {
         p === 'expo-router' || (Array.isArray(p) && p[0] === 'expo-router')
       );
       expect(hasRouter).toBe(true);
+    });
+
+    it('keeps production web routes split while native routes stay synchronous', () => {
+      const appConfig = readAppConfig();
+      const routerPlugin = appConfig.expo.plugins.find((plugin: any) =>
+        Array.isArray(plugin) && plugin[0] === 'expo-router'
+      );
+
+      expect(routerPlugin?.[1]?.asyncRoutes).toEqual({
+        web: true,
+        default: false,
+      });
     });
 
     it('should have expo-location plugin with config', () => {

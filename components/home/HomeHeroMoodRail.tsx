@@ -10,6 +10,8 @@ import Feather from '@expo/vector-icons/Feather'
 
 import type { MoodCard } from './homeHeroContent'
 import type { QuickFilterParams } from './homeHeroShared'
+import { translate as i18nT } from '@/i18n'
+
 
 type HomeHeroMoodRailProps = {
   colors: {
@@ -49,7 +51,7 @@ const renderMoodChip = (
       },
     ]}
     accessibilityRole="button"
-    accessibilityLabel={`${card.title}. Идея поездки`}
+    accessibilityLabel={i18nT('home:components.home.HomeHeroMoodRail.value1_ideya_poezdki_c416349a', { value1: card.title })}
   >
     <Feather
       name={card.icon as any}

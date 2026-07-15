@@ -11,6 +11,8 @@ import { useTravelDetailsStyles } from '../TravelDetailsStyles';
 import { Icon } from '../TravelDetailsIcons';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { translate as i18nT } from '@/i18n'
+
 
 const CONTENT_MARGIN_STYLE = { marginTop: 12 } as const;
 
@@ -95,8 +97,8 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
             highlight === 'info' && styles.sectionHeaderInfo,
             open && styles.sectionHeaderActive,
           ]}
-          accessibilityLabel={getAccessibilityLabel(title, `${open ? 'развёрнуто' : 'свёрнуто'}`)}
-          accessibilityHint={`Нажмите, чтобы ${open ? 'свернуть' : 'развернуть'} раздел`}
+          accessibilityLabel={getAccessibilityLabel(title, `${open ? i18nT('travel:components.travel.details.sections.CollapsibleSection.razvernuto_20293f70') : i18nT('travel:components.travel.details.sections.CollapsibleSection.svernuto_f932e3ff')}`)}
+          accessibilityHint={i18nT('travel:components.travel.details.sections.CollapsibleSection.nazhmite_chtoby_value1_razdel_8d102e51', { value1: open ? i18nT('travel:common.collapseLower') : i18nT('travel:common.expandLower') })}
         >
           <View style={styles.sectionHeaderTitleWrap}>
             {coverImageUrl ? (

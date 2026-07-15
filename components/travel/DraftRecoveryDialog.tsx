@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
+import { formatDate, translate as i18nT } from '@/i18n'
+
 
 interface DraftRecoveryDialogProps {
   visible: boolean;
@@ -14,7 +16,7 @@ interface DraftRecoveryDialogProps {
 }
 
 function formatTimestamp(timestamp: number | null): string {
-  if (!timestamp) return 'неизвестное время';
+  if (!timestamp) return i18nT('travel:components.travel.DraftRecoveryDialog.neizvestnoe_vremya_38b61a26');
 
   const date = new Date(timestamp);
   const now = new Date();
@@ -22,11 +24,11 @@ function formatTimestamp(timestamp: number | null): string {
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
 
-  if (diffMins < 1) return 'только что';
-  if (diffMins < 60) return `${diffMins} мин. назад`;
-  if (diffHours < 24) return `${diffHours} ч. назад`;
+  if (diffMins < 1) return i18nT('travel:components.travel.DraftRecoveryDialog.tolko_chto_a2c21d64');
+  if (diffMins < 60) return i18nT('travel:components.travel.DraftRecoveryDialog.value1_min_nazad_9eb6bbea', { value1: diffMins });
+  if (diffHours < 24) return i18nT('travel:components.travel.DraftRecoveryDialog.value1_ch_nazad_54cc86ac', { value1: diffHours });
 
-  return date.toLocaleDateString('ru-RU', {
+  return formatDate(date, {
     day: 'numeric',
     month: 'short',
     hour: '2-digit',
@@ -58,45 +60,42 @@ export function DraftRecoveryDialog({
         <View
           style={styles.dialog}
           accessibilityRole="alert"
-          accessibilityLabel="Найден локальный черновик"
+          accessibilityLabel={i18nT('travel:components.travel.DraftRecoveryDialog.nayden_lokalnyy_chernovik_0dd4d86c')}
         >
           <View style={styles.iconContainer}>
             <Feather name="edit-3" size={30} color={colors.primaryDark} />
           </View>
 
-          <Text style={styles.title}>Есть несохранённые изменения</Text>
+          <Text style={styles.title}>{i18nT('travel:components.travel.DraftRecoveryDialog.est_nesohranennye_izmeneniya_b2189b41')}</Text>
           <Text style={styles.message}>
-            Мы нашли локальный черновик этого путешествия от {formattedTime}. Вы можете продолжить
-            с ним или открыть сохранённую версию.
-          </Text>
+            {i18nT('travel:components.travel.DraftRecoveryDialog.my_nashli_lokalnyy_chernovik_etogo_puteshest_252112b5')}{formattedTime}{i18nT('travel:components.travel.DraftRecoveryDialog.vy_mozhete_prodolzhit_s_nim_ili_otkryt_sohra_83454798')}</Text>
 
           <View style={styles.note}>
             <Feather name="info" size={16} color={colors.primaryDark} />
             <Text style={styles.noteText}>
-              Если путешествие уже сохранили, выбирайте сохранённую версию.
-            </Text>
+              {i18nT('travel:components.travel.DraftRecoveryDialog.esli_puteshestvie_uzhe_sohranili_vybirayte_s_e5584f3b')}</Text>
           </View>
 
           <View style={styles.actions}>
             <Button
-              label="Открыть сохранённую"
+              label={i18nT('travel:components.travel.DraftRecoveryDialog.otkryt_sohranennuyu_a08fba4f')}
               variant="outline"
               size="md"
               fullWidth
               icon={<Feather name="file" size={16} color={colors.text} />}
               onPress={onDiscard}
-              accessibilityLabel="Открыть сохранённую версию"
+              accessibilityLabel={i18nT('travel:components.travel.DraftRecoveryDialog.otkryt_sohranennuyu_versiyu_ad039b1a')}
               disabled={isRecovering}
             />
 
             <Button
-              label={isRecovering ? 'Восстановление...' : 'Продолжить с черновика'}
+              label={isRecovering ? i18nT('travel:components.travel.DraftRecoveryDialog.vosstanovlenie_9af70ff1') : i18nT('travel:components.travel.DraftRecoveryDialog.prodolzhit_s_chernovika_238fa662')}
               variant="primary"
               size="md"
               fullWidth
               icon={<Feather name="refresh-cw" size={16} color={colors.textOnPrimary} />}
               onPress={onRecover}
-              accessibilityLabel="Продолжить с локального черновика"
+              accessibilityLabel={i18nT('travel:components.travel.DraftRecoveryDialog.prodolzhit_s_lokalnogo_chernovika_4e5e67fc')}
               loading={isRecovering}
             />
           </View>

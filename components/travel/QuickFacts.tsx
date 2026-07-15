@@ -11,6 +11,8 @@ import type { Travel } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 const isWeb = Platform.OS === 'web' || typeof document !== 'undefined';
 
@@ -96,7 +98,7 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
   
   // Форматируем длительность
   const daysText = numberDays != null && Number.isFinite(numberDays)
-    ? `${numberDays} ${numberDays === 1 ? 'день' : numberDays < 5 ? 'дня' : 'дней'}`
+    ? `${numberDays} ${numberDays === 1 ? i18nT('travel:components.travel.QuickFacts.den_5d590b5e') : numberDays < 5 ? i18nT('travel:components.travel.QuickFacts.dnya_4cd61ae4') : i18nT('travel:components.travel.QuickFacts.dney_7912e49c')}`
     : null;
 
   // Если нет данных, не показываем компонент
@@ -139,7 +141,7 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
         styles.container,
         isMobile && styles.containerMobile,
       ]}
-      accessibilityLabel="Ключевая информация о путешествии"
+      accessibilityLabel={i18nT('travel:components.travel.QuickFacts.klyuchevaya_informatsiya_o_puteshestvii_353cd257')}
     >
       <SafeView style={styles.factsRow}>
         {factItems.map((item, i) => (
@@ -153,12 +155,12 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
         <SafeView style={styles.categoriesContainer}>
           <SafeView style={styles.categoriesHeader}>
             <Feather name="tag" size={iconSize} color={iconColor} />
-            <Text style={styles.categoriesLabel}>Категории</Text>
+            <Text style={styles.categoriesLabel}>{i18nT('travel:components.travel.QuickFacts.kategorii_074cf050')}</Text>
           </SafeView>
           <SafeView style={styles.categoriesWrap}>
             {categories.map((cat, index) => {
               const categoryRole = onCategoryPress ? 'button' : 'text';
-              const categoryLabel = `Категория: ${cat}`;
+              const categoryLabel = i18nT('travel:components.travel.QuickFacts.kategoriya_value1_3e381353', { value1: cat });
               const webA11yProps = getWebA11yProps(categoryLabel, categoryRole);
 
               return (
@@ -169,7 +171,7 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
                   disabled={!onCategoryPress}
                   accessibilityRole={categoryRole}
                   accessibilityLabel={categoryLabel}
-                  accessibilityHint={onCategoryPress ? 'Фильтрует путешествия по этой категории' : undefined}
+                  accessibilityHint={onCategoryPress ? i18nT('travel:components.travel.QuickFacts.filtruet_puteshestviya_po_etoy_kategorii_e6c229bd') : undefined}
                   {...(webA11yProps as any)}
                 >
                 <Text style={styles.categoryText}>{cat}</Text>

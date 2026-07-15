@@ -9,6 +9,8 @@ import { useRouter } from 'expo-router';
 import type { TripNotification } from '@/api/publicTrips';
 import { useTripNotifications } from '@/hooks/usePublicTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 const ICON: Record<TripNotification['kind'], keyof typeof Feather.glyphMap> = {
   new_application: 'user-plus',
@@ -20,9 +22,9 @@ function relativeTime(iso: string): string {
   if (Number.isNaN(then)) return '';
   const diff = Date.now() - then;
   const day = 24 * 60 * 60 * 1000;
-  if (diff < 60 * 60 * 1000) return 'только что';
-  if (diff < day) return `${Math.floor(diff / (60 * 60 * 1000))} ч назад`;
-  return `${Math.floor(diff / day)} дн назад`;
+  if (diff < 60 * 60 * 1000) return i18nT('trips:components.trips.TripNotificationsList.tolko_chto_efbf164e');
+  if (diff < day) return i18nT('trips:components.trips.TripNotificationsList.value1_ch_nazad_8fcf483e', { value1: Math.floor(diff / (60 * 60 * 1000)) });
+  return i18nT('trips:components.trips.TripNotificationsList.value1_dn_nazad_01c7bb11', { value1: Math.floor(diff / day) });
 }
 
 function TripNotificationsList() {
@@ -39,15 +41,14 @@ function TripNotificationsList() {
     );
   }
   if (isError) {
-    return <Text style={styles.empty}>Не удалось загрузить уведомления.</Text>;
+    return <Text style={styles.empty}>{i18nT('trips:components.trips.TripNotificationsList.ne_udalos_zagruzit_uvedomleniya_e227aca0')}</Text>;
   }
 
   const notifications = data ?? [];
   if (notifications.length === 0) {
     return (
       <Text style={styles.empty} testID="trip-notifications-empty">
-        Уведомлений пока нет.
-      </Text>
+        {i18nT('trips:components.trips.TripNotificationsList.uvedomleniy_poka_net_ee139f4f')}</Text>
     );
   }
 

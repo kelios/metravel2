@@ -5,6 +5,8 @@ import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig';
 import { buildSafeImageUrl } from '../../../utils/htmlUtils';
 import { getAtlasPageCount, shouldRenderAtlas } from './atlasPages';
 import type { NormalizedLocation, TravelSectionMeta } from './types';
+import { createCollator, translate as i18nT } from '@/i18n'
+
 
 export const TOC_ITEMS_PER_PAGE = 7;
 
@@ -13,6 +15,7 @@ export function sortTravels(
   sortOrder: BookSettings['sortOrder']
 ): TravelForBook[] {
   const sorted = [...travels];
+  const collator = createCollator();
   switch (sortOrder) {
     case 'manual':
       return sorted;
@@ -22,10 +25,10 @@ export function sortTravels(
       return sorted.sort((a, b) => (Number(a.year) || 0) - (Number(b.year) || 0));
     case 'country':
       return sorted.sort((a, b) =>
-        (a.countryName || '').localeCompare(b.countryName || '', 'ru')
+        collator.compare(a.countryName || '', b.countryName || '')
       );
     case 'alphabetical':
-      return sorted.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+      return sorted.sort((a, b) => collator.compare(a.name, b.name));
     default:
       return sorted;
   }
@@ -179,7 +182,7 @@ export function normalizeLocations(travel: TravelForBook): NormalizedLocation[] 
       const coords = parseCoordinates(point.coord);
       return {
         id: String(point.id ?? index),
-        address: point.address || `Точка ${index + 1}`,
+        address: point.address || i18nT('export:services.pdfExport.runtime.atlas.pointFallback', { value1: index + 1 }),
         categoryName: point.categoryName,
         coord: point.coord,
         thumbnailUrl: point.travelImageThumbUrl,
@@ -343,7 +346,7 @@ export function buildRouteSvg(
     .join('');
 
   return `
-    <svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet" overflow="hidden" role="img" aria-label="Маршрут путешествия">
+    <svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet" overflow="hidden" role="img" aria-label="${i18nT("export:services.pdf_export.generators.v2.runtime.bookData.svg_viewbox_0_0_100_60_preserveaspectratio_x_78a720c2.text01")}">
       <defs>
         <linearGradient id="mapGradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="${theme.colors.surfaceAlt}" />
@@ -372,7 +375,7 @@ function escapeXml(value: string): string {
 
 export function buildMapPlaceholder(theme: Pick<PdfThemeConfig, 'colors'>): string {
   return `
-    <svg viewBox="0 0 100 60" role="img" aria-label="Маршрут" preserveAspectRatio="none">
+    <svg viewBox="0 0 100 60" role="img" aria-label="${i18nT("export:services.pdf_export.generators.v2.runtime.bookData.svg_viewbox_0_0_100_60_role_img_aria_label_m_035d149f.text01")}" preserveAspectRatio="none">
       <defs>
         <linearGradient id="mapPlaceholderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="${theme.colors.surfaceAlt}" />
@@ -380,7 +383,7 @@ export function buildMapPlaceholder(theme: Pick<PdfThemeConfig, 'colors'>): stri
         </linearGradient>
       </defs>
       <rect x="0" y="0" width="100" height="60" rx="4" fill="url(#mapPlaceholderGradient)" />
-      <text x="50" y="32" text-anchor="middle" fill="${theme.colors.textMuted}" font-size="8">Недостаточно данных</text>
+      <text x="50" y="32" text-anchor="middle" fill="${theme.colors.textMuted}" font-size="8">${i18nT("export:services.pdf_export.generators.v2.runtime.bookData.svg_viewbox_0_0_100_60_role_img_aria_label_m_035d149f.text02")}</text>
     </svg>
   `;
 }

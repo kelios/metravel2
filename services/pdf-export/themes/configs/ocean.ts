@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Ocean — глубокий синий с бирюзовыми акцентами, свежий прибрежный стиль
  */
 export const oceanTheme: PdfThemeConfig = {
   name: 'ocean',
-  displayName: 'Океан',
-  description: 'Глубокий синий с бирюзовыми акцентами',
+  get displayName() { return i18nT('export:services.pdfExport.theme.ocean.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.ocean.description') },
 
   colors: {
     text: '#0c1b2a',

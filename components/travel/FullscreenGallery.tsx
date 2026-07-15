@@ -16,6 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ZoomableGalleryImage from '@/components/travel/ZoomableGalleryImage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface FullscreenGalleryProps {
   visible: boolean;
@@ -136,7 +138,7 @@ export default function FullscreenGallery({
           width={SCREEN_WIDTH}
           height={SCREEN_HEIGHT}
           priority="high"
-          alt={item.alt || 'Фото маршрута'}
+          alt={item.alt || i18nT('travel:components.travel.FullscreenGallery.routePhotoAlt')}
           resetKey={`${visible}-${index}`}
           onInteractionChange={(active) => {
             setZoomedRawIndex((current) => {
@@ -210,7 +212,7 @@ export default function FullscreenGallery({
           onPress={onClose}
           style={[styles.closeButton, { top: insets.top + 12 }]}
           accessibilityRole="button"
-          accessibilityLabel="Закрыть галерею"
+          accessibilityLabel={i18nT('travel:components.travel.FullscreenGallery.zakryt_galereyu_84365214')}
           hitSlop={12}
         >
           <Feather name="x" size={24} color={colors.textOnDark} />

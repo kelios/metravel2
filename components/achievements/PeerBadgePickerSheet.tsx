@@ -15,6 +15,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { usePeerBadgeCatalog, useGrantPeerBadge } from '@/hooks/useAchievementsApi';
 import type { PeerBadgeReceived, PeerBadgeTarget } from '@/api/achievements';
 import BadgeMedal from '@/components/achievements/BadgeMedal';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   visible: boolean;
@@ -52,11 +54,11 @@ function PeerBadgePickerSheet({
   const styles = getStyles(colors);
 
   const heading =
-    title ?? (target === 'travel' ? 'Наградить путешествие' : 'Наградить автора');
+    title ?? (target === 'travel' ? i18nT('achievements:components.achievements.PeerBadgePickerSheet.nagradit_puteshestvie_4a165119') : i18nT('achievements:components.achievements.PeerBadgePickerSheet.nagradit_avtora_fda404fd'));
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть">
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={i18nT('achievements:components.achievements.PeerBadgePickerSheet.zakryt_a1c659fa')}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.header}>
             <Text style={styles.title}>{heading}</Text>
@@ -64,7 +66,7 @@ function PeerBadgePickerSheet({
               style={styles.closeBtn}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть"
+              accessibilityLabel={i18nT('achievements:components.achievements.PeerBadgePickerSheet.zakryt_a1c659fa')}
             >
               <Feather name="x" size={20} color={colors.text} />
             </Pressable>
@@ -77,10 +79,9 @@ function PeerBadgePickerSheet({
           ) : options.length === 0 ? (
             <View style={styles.emptyState}>
               <Feather name="award" size={26} color={colors.textMuted} />
-              <Text style={styles.emptyTitle}>Нет доступных наград</Text>
+              <Text style={styles.emptyTitle}>{i18nT('achievements:components.achievements.PeerBadgePickerSheet.net_dostupnyh_nagrad_9ee2a601')}</Text>
               <Text style={styles.emptyText}>
-                Для этого типа контента пока нет вариантов награды.
-              </Text>
+                {i18nT('achievements:components.achievements.PeerBadgePickerSheet.dlya_etogo_tipa_kontenta_poka_net_variantov__89630fca')}</Text>
             </View>
           ) : (
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -97,7 +98,9 @@ function PeerBadgePickerSheet({
                     }
                     accessibilityRole="button"
                     accessibilityState={{ selected: granted }}
-                    accessibilityLabel={`${granted ? 'Забрать' : 'Выдать'} значок «${badge.name}»`}
+                    accessibilityLabel={i18nT('achievements:components.achievements.PeerBadgePickerSheet.value1_znachok_value2_e849d9e1', { value1: granted
+                      ? i18nT('achievements:components.achievements.PeerBadgePickerSheet.actions.revoke')
+                      : i18nT('achievements:components.achievements.PeerBadgePickerSheet.actions.grant'), value2: badge.name })}
                   >
                     <BadgeMedal badge={badge} size={44} earned />
                     <View style={styles.optionText}>
@@ -118,7 +121,7 @@ function PeerBadgePickerSheet({
                         color={granted ? colors.textOnPrimary : colors.primary}
                       />
                       <Text style={[styles.toggleText, granted && styles.toggleTextOn]}>
-                        {granted ? 'Выдано' : 'Выдать'}
+                        {granted ? i18nT('achievements:components.achievements.PeerBadgePickerSheet.vydano_e24d2d1f') : i18nT('achievements:components.achievements.PeerBadgePickerSheet.vydat_73b97b21')}
                       </Text>
                     </View>
                   </Pressable>

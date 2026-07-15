@@ -6,6 +6,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import type { PeerBadgeReceived, PeerBadgeTarget } from '@/api/achievements';
 import PeerBadgePickerSheet from '@/components/achievements/PeerBadgePickerSheet';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   target: PeerBadgeTarget;
@@ -35,7 +37,7 @@ function PeerBadgeGiveButton({
   // Выдавать значки могут только авторизованные. Свою цель прячет родитель.
   if (!isAuthenticated) return null;
 
-  const text = label ?? (target === 'travel' ? 'Наградить' : 'Наградить автора');
+  const text = label ?? (target === 'travel' ? i18nT('achievements:components.achievements.PeerBadgeGiveButton.nagradit_db0e2e3a') : i18nT('achievements:components.achievements.PeerBadgeGiveButton.nagradit_avtora_fac91397'));
   const styles = getStyles(colors);
 
   return (

@@ -6,6 +6,8 @@ import type { Travel } from '@/types/types'
 import { getAffiliateOffers, isAffiliateEnabled } from '@/components/affiliate/affiliateConfig'
 import AffiliateOffers from '@/components/affiliate/AffiliateOffers'
 import { getCountryCodeByCoords } from '@/utils/geoCountry'
+import { translate as i18nT } from '@/i18n'
+
 
 /** ISO country code: explicit `countryCode`, else derived from the first point's coords. */
 const resolveCountryCode = (travel: Travel): string | undefined => {
@@ -66,14 +68,14 @@ export const AffiliateSection: React.FC<{
         Platform.OS === 'web' ? styles.webDeferredSection : null,
       ]}
       collapsable={false}
-      accessibilityLabel="Полезное в поездку"
+      accessibilityLabel={i18nT('travel:components.travel.details.sections.AffiliateSection.poleznoe_v_poezdku_e14de6ad')}
       {...(webRegionProps ?? {})}
     >
       <Text
         style={styles.sectionHeaderText}
         {...(webHeadingProps ?? {})}
-      >Полезное в поездку</Text>
-      <Text style={styles.sectionSubtitle}>Экскурсии и жильё рядом с маршрутом</Text>
+      >{i18nT('travel:components.travel.details.sections.AffiliateSection.poleznoe_v_poezdku_e14de6ad')}</Text>
+      <Text style={styles.sectionSubtitle}>{i18nT('travel:components.travel.details.sections.AffiliateSection.ekskursii_i_zhile_ryadom_s_marshrutom_84c0332c')}</Text>
 
       <View style={{ marginTop: 12 }}>
         <AffiliateOffers

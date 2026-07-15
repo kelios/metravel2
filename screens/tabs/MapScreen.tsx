@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform } from 'react-native'
+import { translate as i18nT } from '@/i18n'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { stringifyJsonLd } from '@/utils/jsonLd'
@@ -10,7 +11,7 @@ import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useRouteStore } from '@/stores/routeStore'
 import { MapCanvas } from '@/components/MapPage/MapCanvas'
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
-import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo'
+import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo'
 import { buildOgImageUrl, MAP_OG_IMAGE_PATH } from '@/utils/seo'
 import { createMapStructuredData } from '@/utils/discoverySeo'
 import { devWarn } from '@/utils/logger'
@@ -171,10 +172,10 @@ export default function MapScreen() {
     if (!isWeb || !isFocused) return null
     return createMapStructuredData({
       canonical,
-      title: MAP_SEO_TITLE,
-      description: MAP_SEO_DESCRIPTION,
+      title: getMapSeoTitle(),
+      description: getMapSeoDescription(),
       entries: travelsData.slice(0, MAP_STRUCTURED_DATA_ENTRY_LIMIT).map((item: any) => ({
-        name: item?.address || 'Маршрут на карте',
+        name: item?.address || i18nT('map:screens.tabs.MapScreen.marshrut_na_karte_62253936'),
         url: item?.urlTravel,
         lat: item?.lat ?? String(item?.coord || '').split(',')[0],
         lng: item?.lng ?? String(item?.coord || '').split(',')[1],
@@ -199,8 +200,8 @@ export default function MapScreen() {
     return (
       <InstantSEO
         headKey={mapError ? 'map-error' : 'map'}
-        title={MAP_SEO_TITLE}
-        description={MAP_SEO_DESCRIPTION}
+        title={getMapSeoTitle()}
+        description={getMapSeoDescription()}
         canonical={canonical}
         image={buildOgImageUrl(MAP_OG_IMAGE_PATH)}
         imageWidth={1200}

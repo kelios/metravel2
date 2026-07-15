@@ -4,6 +4,7 @@ import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { devError, devWarn } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { getSecureItem } from '@/utils/secureStorage';
+import { shouldUseStoredAuthToken } from '@/utils/authPlatform';
 import {
     getPublicStalePayloadMeta,
     isRecoverablePublicStaleError,
@@ -467,7 +468,7 @@ export const fetchTravel = async (
     id: number,
     options?: FetchTravelOptions
 ): Promise<Travel> => {
-    const token = await getSecureItem(TOKEN_KEY);
+    const token = shouldUseStoredAuthToken() ? await getSecureItem(TOKEN_KEY) : null;
     const isAuthenticated = Boolean(token);
     const cacheKey = `id:${id}`;
 
@@ -550,7 +551,7 @@ export const fetchTravelBySlug = async (
     slug: string,
     options?: { signal?: AbortSignal }
 ): Promise<Travel> => {
-    const token = await getSecureItem(TOKEN_KEY);
+    const token = shouldUseStoredAuthToken() ? await getSecureItem(TOKEN_KEY) : null;
     const isAuthenticated = Boolean(token);
     const slugCacheKey = getSlugCacheKey(slug);
     const cacheKey = `slug:${slugCacheKey}`;

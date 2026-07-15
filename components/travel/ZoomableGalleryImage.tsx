@@ -8,6 +8,8 @@ import {
 } from 'react-native-gesture-handler';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { translate as i18nT } from '@/i18n'
+
 
 type ZoomableGalleryImageProps = {
   src: string;
@@ -149,7 +151,7 @@ export default function ZoomableGalleryImage({
     <GestureHandlerRootView
       testID="travel-zoomable-image"
       style={[styles.viewport, { width, height }]}
-      accessibilityLabel={`${alt}. Увеличение двумя пальцами`}
+      accessibilityLabel={i18nT('travel:components.travel.ZoomableGalleryImage.value1_uvelichenie_dvumya_paltsami_57c2f423', { value1: alt })}
     >
       <PanGestureHandler
         ref={panRef}

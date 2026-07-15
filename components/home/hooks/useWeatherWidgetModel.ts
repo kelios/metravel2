@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Feather from '@expo/vector-icons/Feather';
 
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { translate as i18nT } from '@/i18n'
+
 
 type WeatherPoint = {
     coord: string;
@@ -37,7 +39,7 @@ export function useWeatherWidgetModel({
 
     const locationLabel = useMemo(() => {
         if (!primaryAddress && !normalizedCountryName) {
-            return primaryCoord ? 'точке маршрута' : '';
+            return primaryCoord ? i18nT('home:components.home.hooks.useWeatherWidgetModel.tochke_marshruta_50fd9f66') : '';
         }
         const addressParts = primaryAddress.split(',').map((part) => part.trim());
         const locationParts = addressParts.slice(0, 3).filter(Boolean);
@@ -97,7 +99,7 @@ export function useWeatherWidgetModel({
               date,
               temperatureMin: tempMin[i],
               temperatureMax: tempMax[i],
-              condition: weatherDescriptions[codes[i]] ?? 'Неизвестно',
+              condition: getWeatherDescription(codes[i]),
               icon: iconFromCode(codes[i]),
             }));
 
@@ -126,36 +128,41 @@ export function useWeatherWidgetModel({
     };
 }
 
-const weatherDescriptions: Record<number, string> = {
-    0: 'Ясно',
-    1: 'Преим. ясно',
-    2: 'Переменная облачность',
-    3: 'Пасмурно',
-    45: 'Туман',
-    48: 'Инейный туман',
-    51: 'Мелкий дождь',
-    53: 'Умеренный дождь',
-    55: 'Сильный дождь',
-    56: 'Ледяной дождь',
-    57: 'Сильный ледяной дождь',
-    61: 'Слабый дождь',
-    63: 'Умеренный дождь',
-    65: 'Сильный дождь',
-    66: 'Ледяной дождь',
-    67: 'Сильный ледяной дождь',
-    71: 'Слабый снег',
-    73: 'Умеренный снег',
-    75: 'Сильный снег',
-    77: 'Снежная крупа',
-    80: 'Слабый ливень',
-    81: 'Умеренный ливень',
-    82: 'Сильный ливень',
-    85: 'Слабый снег',
-    86: 'Сильный снег',
-    95: 'Гроза',
-    96: 'Гроза с градом',
-    99: 'Сильная гроза',
-};
+const WEATHER_DESCRIPTION_KEYS = {
+    0: 'homeStatic:weather.clear',
+    1: 'homeStatic:weather.mainlyClear',
+    2: 'homeStatic:weather.partlyCloudy',
+    3: 'homeStatic:weather.overcast',
+    45: 'homeStatic:weather.fog',
+    48: 'homeStatic:weather.rimeFog',
+    51: 'homeStatic:weather.lightDrizzle',
+    53: 'homeStatic:weather.moderateDrizzle',
+    55: 'homeStatic:weather.heavyDrizzle',
+    56: 'homeStatic:weather.freezingDrizzle',
+    57: 'homeStatic:weather.heavyFreezingDrizzle',
+    61: 'homeStatic:weather.lightRain',
+    63: 'homeStatic:weather.moderateRain',
+    65: 'homeStatic:weather.heavyRain',
+    66: 'homeStatic:weather.freezingRain',
+    67: 'homeStatic:weather.heavyFreezingRain',
+    71: 'homeStatic:weather.lightSnow',
+    73: 'homeStatic:weather.moderateSnow',
+    75: 'homeStatic:weather.heavySnow',
+    77: 'homeStatic:weather.snowGrains',
+    80: 'homeStatic:weather.lightShowers',
+    81: 'homeStatic:weather.moderateShowers',
+    82: 'homeStatic:weather.heavyShowers',
+    85: 'homeStatic:weather.lightSnowShowers',
+    86: 'homeStatic:weather.heavySnowShowers',
+    95: 'homeStatic:weather.thunderstorm',
+    96: 'homeStatic:weather.thunderstormWithHail',
+    99: 'homeStatic:weather.heavyThunderstorm',
+} as const;
+
+function getWeatherDescription(code: number): string {
+    const key = WEATHER_DESCRIPTION_KEYS[code as keyof typeof WEATHER_DESCRIPTION_KEYS];
+    return key ? i18nT(key) : i18nT('homeStatic:weather.unknown');
+}
 
 function iconFromCode(code: number): React.ComponentProps<typeof Feather>['name'] {
     if (code === 0) return 'sun';

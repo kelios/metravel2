@@ -9,15 +9,17 @@ import Button from '@/components/ui/Button';
 import { useRouteTemplates } from '@/hooks/usePlannedTripsApi';
 import { ROUTE_POINT_ICON_NAME } from '@/components/trips/planning/tripPlanFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   onCreate: () => void;
 }
 
-const VALUE_POINTS = [
-  'Соберите маршрут из мест MeTravel — добавляйте точки в один тап.',
-  'Пригласите подписчиков и собирайте, кто едет.',
-  'Экспортируйте маршрут в навигатор и опубликуйте отчёт после поездки.',
+const getValuePoints = () => [
+  i18nT('tripsStatic:planningEmpty.route'),
+  i18nT('tripsStatic:planningEmpty.people'),
+  i18nT('tripsStatic:planningEmpty.export'),
 ];
 
 function TripPlanningEmptyState({ onCreate }: Props) {
@@ -25,16 +27,16 @@ function TripPlanningEmptyState({ onCreate }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { data: templates } = useRouteTemplates();
   const example = templates?.[0] ?? null;
+  const valuePoints = getValuePoints();
 
   return (
     <View style={styles.wrap} testID="trips-empty-state">
-      <Text style={styles.heading}>Спланируйте свою поездку</Text>
+      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.TripPlanningEmptyState.splaniruyte_svoyu_poezdku_21bf9e69')}</Text>
       <Text style={styles.subheading}>
-        Превратите идею в готовый маршрут и поделитесь им с попутчиками.
-      </Text>
+        {i18nT('trips:components.trips.planning.TripPlanningEmptyState.prevratite_ideyu_v_gotovyy_marshrut_i_podeli_b8f138ac')}</Text>
 
       <View style={styles.points}>
-        {VALUE_POINTS.map((point) => (
+        {valuePoints.map((point) => (
           <View key={point} style={styles.pointRow}>
             <Text style={styles.bullet}>•</Text>
             <Text style={styles.pointText}>{point}</Text>
@@ -43,7 +45,7 @@ function TripPlanningEmptyState({ onCreate }: Props) {
       </View>
 
       <Button
-        label="Запланировать поездку"
+        label={i18nT('trips:components.trips.planning.TripPlanningEmptyState.zaplanirovat_poezdku_b9077e18')}
         onPress={onCreate}
         fullWidth
         testID="trips-empty-cta"
@@ -51,7 +53,7 @@ function TripPlanningEmptyState({ onCreate }: Props) {
 
       {example ? (
         <View style={styles.exampleCard}>
-          <Text style={styles.exampleLabel}>Пример маршрута</Text>
+          <Text style={styles.exampleLabel}>{i18nT('trips:components.trips.planning.TripPlanningEmptyState.primer_marshruta_79caecc5')}</Text>
           <Text style={styles.exampleTitle}>{example.title}</Text>
           {example.description ? (
             <Text style={styles.exampleDescription}>{example.description}</Text>

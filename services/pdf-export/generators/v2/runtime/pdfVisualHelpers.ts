@@ -2,6 +2,8 @@ import type { CaptionPosition } from '@/types/pdf-gallery'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
 import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig'
 import { escapeHtml } from '../../../utils/htmlUtils'
+import { translate as i18nT } from '@/i18n'
+
 
 type GalleryTypography = PdfThemeConfig['typography']
 type GalleryColors = Pick<PdfThemeConfig['colors'], 'textMuted' | 'border' | 'surface'>
@@ -43,7 +45,7 @@ export function buildGalleryCaption(args: {
     return { wrapperStart: '', wrapperEnd: '' }
   }
 
-  const text = `Фото ${index + 1}`
+  const text = i18nT('export:services.pdf_export.generators.v2.runtime.pdfVisualHelpers.foto_value1_20d78e18', { value1: index + 1 })
 
   if (position === 'overlay') {
     return {

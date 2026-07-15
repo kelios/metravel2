@@ -96,17 +96,17 @@ describe('secureStorage (web)', () => {
     expect(value).toBe('value')
   })
 
-  it('does not throw and keeps token readable when setItem throws (iOS private mode)', async () => {
+  it('keeps a non-auth secret readable in memory when setItem throws', async () => {
     ;(global.window as any).localStorage.setItem = jest.fn(() => {
       throw new DOMException('QuotaExceededError', 'QuotaExceededError')
     })
 
-    await expect(setSecureItem('userToken', 'tok-123')).resolves.toBeUndefined()
+    await expect(setSecureItem('privatePreference', 'value-123')).resolves.toBeUndefined()
 
     // getItem still returns null (nothing persisted), so the read must fall back
     // to the in-memory copy written during the failed setItem.
-    const value = await getSecureItem('userToken')
-    expect(value).toBe('tok-123')
+    const value = await getSecureItem('privatePreference')
+    expect(value).toBe('value-123')
   })
 
   it('does not throw when accessing localStorage throws (block-all-cookies)', async () => {
@@ -117,12 +117,22 @@ describe('secureStorage (web)', () => {
       },
     })
 
-    await expect(setSecureItem('userToken', 'tok-456')).resolves.toBeUndefined()
-    const value = await getSecureItem('userToken')
-    expect(value).toBe('tok-456')
+    await expect(setSecureItem('privatePreference', 'value-456')).resolves.toBeUndefined()
+    const value = await getSecureItem('privatePreference')
+    expect(value).toBe('value-456')
   })
 
-  it('removes item from sessionStorage', async () => {
+  it('never persists or returns web auth tokens and purges legacy keys', async () => {
+    ;(global.window as any).localStorage.setItem('secure_userToken', 'legacy-token')
+
+    await expect(setSecureItem('userToken', 'new-token')).resolves.toBeUndefined()
+    await expect(getSecureItem('userToken')).resolves.toBeNull()
+
+    expect((global.window as any).localStorage.removeItem).toHaveBeenCalledWith('secure_userToken')
+    expect((global.window as any).localStorage.getItem('secure_userToken')).toBeNull()
+  })
+
+  it('removes item from localStorage', async () => {
     await setSecureItem('key', 'v')
 
     await removeSecureItem('key')

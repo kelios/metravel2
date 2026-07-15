@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import { Platform } from 'react-native'
 
 import { withLazy } from '@/components/travel/details/TravelDetailsLazy'
+import { translate as i18nT } from '@/i18n'
+
 
 const SkipToContentLink = withLazy(() => import('@/components/accessibility/SkipToContentLink'))
 const AccessibilityAnnouncer = withLazy(() => import('@/components/accessibility/AccessibilityAnnouncer'))
@@ -25,7 +27,7 @@ export default function TravelDetailsAccessibilityChrome({
         <Suspense fallback={null}>
           <SkipToContentLink
             targetId="travel-main-content"
-            label="Skip to main content"
+            label={i18nT('travel:components.travel.details.TravelDetailsAccessibilityChrome.skip_to_main_content_e6d1fd91')}
             initiallyVisible={Platform.OS === 'web'}
             autoFocusOnMount={Platform.OS === 'web'}
           />

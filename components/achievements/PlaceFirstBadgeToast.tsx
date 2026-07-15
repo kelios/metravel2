@@ -7,6 +7,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useMyPlaceFirstBadges } from '@/hooks/useGamification';
 import { trackPlaceFirstBadgeEarned } from '@/utils/gamificationAnalytics';
 import type { PlaceFirstBadge } from '@/api/gamification';
+import { translate as i18nT } from '@/i18n'
+
 
 // Места, по которым тост уже показан в этой сессии — без повторов при рефетче.
 const shownIds = new Set<number>();
@@ -75,13 +77,13 @@ function PlaceFirstBadgeToast({ enabled = true }: Props) {
         style={styles.toast}
         onPress={dismiss}
         accessibilityRole="alert"
-        accessibilityLabel={`Вы первооткрыватель места: ${current.placeName}`}
+        accessibilityLabel={i18nT('achievements:components.achievements.PlaceFirstBadgeToast.vy_pervootkryvatel_mesta_value1_a8a5019e', { value1: current.placeName })}
       >
         <View style={styles.iconWrap}>
           <Feather name="map-pin" size={22} color={colors.textOnPrimary} />
         </View>
         <View style={styles.textBlock}>
-          <Text style={styles.title}>Первооткрыватель места!</Text>
+          <Text style={styles.title}>{i18nT('achievements:components.achievements.PlaceFirstBadgeToast.pervootkryvatel_mesta_e52eb0e2')}</Text>
           <Text style={styles.name} numberOfLines={1}>
             {current.placeName}
           </Text>

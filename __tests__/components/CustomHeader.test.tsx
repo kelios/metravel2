@@ -105,6 +105,18 @@ describe('CustomHeader', () => {
             expect(utils.getByLabelText('Маршруты')).toBeTruthy();
         });
 
+        it('removes the shared skip-link id from an inactive transition header', () => {
+            (usePathname as jest.Mock).mockReturnValue('/trips/plan');
+            const client = createTestQueryClient();
+            const { getByTestId } = render(
+                <QueryClientProvider client={client}>
+                    <CustomHeader isNavigationTarget={false} />
+                </QueryClientProvider>,
+            );
+
+            expect(getByTestId('main-header').props.nativeID).toBeUndefined();
+        });
+
         it('shows navigation items on desktop', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();

@@ -3,6 +3,8 @@ import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { GalleryLayout } from '@/types/pdf-gallery';
+import { translate as i18nT } from '@/i18n'
+
 
 export interface GalleryLayoutInfo {
   id: GalleryLayout;
@@ -28,7 +30,7 @@ export function LayoutCard({ layout, isSelected, onSelect }: LayoutCardProps) {
       onPress={onSelect}
       accessibilityRole="radio"
       accessibilityState={{ checked: isSelected }}
-      accessibilityLabel={`Раскладка ${layout.name}`}
+      accessibilityLabel={i18nT('export:components.export.LayoutCard.raskladka_value1_319910f9', { value1: layout.name })}
       accessibilityHint={layout.description}
     >
       <View style={styles.layoutIcon}>

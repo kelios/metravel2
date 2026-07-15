@@ -1,58 +1,11 @@
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { readConsent } from '@/utils/consent';
-import { devWarn } from '@/utils/logger';
 
-const MEASUREMENT_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4;
-const API_SECRET = process.env.EXPO_PUBLIC_GOOGLE_API_SECRET;
-const ANALYTICS_CLIENT_ID_KEY = 'metravel_ga4_client_id';
 let hasWarnedMissingConfig = false;
-let cachedClientId: string | null = null;
-let clientIdRequest: Promise<string> | null = null;
 const WEB_ANALYTICS_QUEUE_KEY = '__metravelAnalyticsEventQueue';
 const WEB_ANALYTICS_LISTENER_KEY = '__metravelAnalyticsQueueListenerAttached';
 
-const generateClientId = () => `${Date.now()}.${Math.floor(Math.random() * 1e9)}`;
 const MAX_YANDEX_GOAL_NAME_LENGTH = 64;
-
-const getPersistentClientId = async () => {
-    if (cachedClientId) {
-        return cachedClientId;
-    }
-
-    if (clientIdRequest) {
-        return clientIdRequest;
-    }
-
-    clientIdRequest = (async () => {
-        try {
-            const storedClientId = await AsyncStorage.getItem(ANALYTICS_CLIENT_ID_KEY);
-            if (storedClientId) {
-                cachedClientId = storedClientId;
-                return storedClientId;
-            }
-        } catch {
-            // ignore storage read issues and fall back to a generated anonymous id
-        }
-
-        const generatedClientId = generateClientId();
-        cachedClientId = generatedClientId;
-
-        try {
-            await AsyncStorage.setItem(ANALYTICS_CLIENT_ID_KEY, generatedClientId);
-        } catch {
-            // ignore storage write issues and keep the in-memory id for the current session
-        }
-
-        return generatedClientId;
-    })();
-
-    try {
-        return await clientIdRequest;
-    } finally {
-        clientIdRequest = null;
-    }
-};
 
 const toYandexGoalName = (eventName: string) =>
     String(eventName || '')
@@ -125,7 +78,7 @@ export const sendAnalyticsEvent = async (
     }
 
     // Web: use gtag.js (already injected in app/+html.tsx) instead of Measurement Protocol.
-    // Measurement Protocol from the browser triggers CORS and exposes api_secret.
+    // Browser-side Measurement Protocol would expose provider credentials.
     if (Platform.OS === 'web') {
         const w = typeof window !== 'undefined' ? (window as any) : undefined;
         ensureWebAnalyticsQueueListener(w);
@@ -191,47 +144,9 @@ export const sendAnalyticsEvent = async (
         return;
     }
 
-    // Native / non-web fallback: Measurement Protocol.
-    // NOTE: api_secret should ideally live on a server, not in a public env var.
-    if (!MEASUREMENT_ID || !API_SECRET) {
-        if (!hasWarnedMissingConfig) {
-            console.warn('GA4: Missing MEASUREMENT_ID or API_SECRET – analytics event skipped. Provide EXPO_PUBLIC_GOOGLE_GA4 and EXPO_PUBLIC_GOOGLE_API_SECRET to enable.');
-            hasWarnedMissingConfig = true;
-        }
-        return;
-    }
-
-    const url = `https://www.google-analytics.com/mp/collect?measurement_id=${MEASUREMENT_ID}&api_secret=${API_SECRET}`;
-    const clientId = await getPersistentClientId();
-    const body = {
-        client_id: clientId,
-        events: [
-            {
-                name: eventName,
-                params: eventParams,
-            },
-        ],
-    };
-
-    try {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        });
-
-        if (!res.ok) {
-            // Не используем console.error: на native LogBox показывает это тостом,
-            // а сбой отправки аналитики не должен прерывать UX. Лог только в dev.
-            devWarn(`GA4 Error [${res.status}]:`, await res.text());
-        } else {
-            // GA event sent successfully
-        }
-    } catch (error) {
-        // Офлайн / сетевой сбой при отправке аналитики — ожидаемо, не ошибка приложения.
-        // console.error всплывал бы LogBox-тостом поверх карты с кэш-тайлами.
-        devWarn('GA4 Fetch Error:', error);
-    }
+    // Native analytics is intentionally disabled until the app has an approved
+    // secret-free SDK or backend proxy. Client bundles must never ship provider secrets.
+    return;
 };
 
 export const trackWizardEvent = async (

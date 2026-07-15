@@ -12,6 +12,8 @@ import { hapticImpact } from '@/utils/haptics';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { saveGuestFavoriteIntent } from '@/utils/guestFavoriteIntent';
 import { trackFavoriteIntentGuest } from '@/utils/growthFunnelAnalytics';
+import { translate as i18nT } from '@/i18n'
+
 
 const UNFAVORITED_ICON_STYLE = { opacity: 0.55 } as const;
 
@@ -136,8 +138,8 @@ function FavoriteButton({
                 });
                 await showToast({
                     type: 'success',
-                    text1: isAndroidGuest ? 'Сохранено на этом устройстве' : 'Добавлено в «Хочу поехать»',
-                    text2: isAndroidGuest ? 'Войдите, чтобы синхронизировать «Хочу поехать».' : undefined,
+                    text1: isAndroidGuest ? i18nT('travel:components.travel.FavoriteButton.sohraneno_na_etom_ustroystve_cdc5e362') : i18nT('travel:components.travel.FavoriteButton.dobavleno_v_hochu_poehat_442a2566'),
+                    text2: isAndroidGuest ? i18nT('travel:components.travel.FavoriteButton.voydite_chtoby_sinhronizirovat_hochu_poehat_f0f4f24d') : undefined,
                     position: 'bottom',
                     visibilityTime: isAndroidGuest ? 3500 : 2000,
                 });
@@ -145,7 +147,7 @@ function FavoriteButton({
                 await removeFavorite(id, type);
                 await showToast({
                     type: 'info',
-                    text1: isAndroidGuest ? 'Удалено с этого устройства' : 'Удалено из «Хочу поехать»',
+                    text1: isAndroidGuest ? i18nT('travel:components.travel.FavoriteButton.udaleno_s_etogo_ustroystva_42b53da4') : i18nT('travel:components.travel.FavoriteButton.udaleno_iz_hochu_poehat_3ea076cb'),
                     position: 'bottom',
                     visibilityTime: 2000,
                 });
@@ -162,13 +164,13 @@ function FavoriteButton({
             // ✅ UX-001: Улучшенное сообщение об ошибке
             const errorMessage = error instanceof Error 
                 ? (error.message.includes('network') || error.message.includes('timeout')
-                    ? 'Проблема с подключением. Изменения будут синхронизированы при восстановлении сети.'
+                    ? i18nT('travel:components.travel.FavoriteButton.problema_s_podklyucheniem_izmeneniya_budut_s_12e5c7dc')
                     : error.message)
-                : 'Не удалось обновить «Хочу поехать»';
+                : i18nT('travel:components.travel.FavoriteButton.ne_udalos_obnovit_hochu_poehat_ae6de0b8');
             
             await showToast({
                 type: 'error',
-                text1: 'Ошибка',
+                text1: i18nT('travel:components.travel.FavoriteButton.oshibka_73fab30d'),
                 text2: errorMessage,
                 position: 'bottom',
                 visibilityTime: 4000,
@@ -202,7 +204,7 @@ function FavoriteButton({
                       onMouseDown: (e: any) => {
                           if (e?.stopPropagation) e.stopPropagation();
                       },
-                      'aria-label': isFav ? 'Удалить из «Хочу поехать»' : 'Добавить в «Хочу поехать»',
+                      'aria-label': isFav ? i18nT('travel:components.travel.FavoriteButton.udalit_iz_hochu_poehat_b6ff82c1') : i18nT('travel:components.travel.FavoriteButton.dobavit_v_hochu_poehat_fbf5211c'),
                       'aria-pressed': isFav,
                   }
                 : {
@@ -210,11 +212,11 @@ function FavoriteButton({
                       hitSlop: { top: 10, bottom: 10, left: 10, right: 10 },
                       accessibilityRole: 'button',
                       accessibilityLabel: isFav
-                          ? `Удалить "${title}" из «Хочу поехать»`
-                          : `Добавить "${title}" в «Хочу поехать»`,
+                          ? i18nT('travel:components.travel.FavoriteButton.udalit_value1_iz_hochu_poehat_70288eb2', { value1: title })
+                          : i18nT('travel:components.travel.FavoriteButton.dobavit_value1_v_hochu_poehat_c698c838', { value1: title }),
                       accessibilityHint: isFav
-                          ? 'Удаляет элемент из «Хочу поехать»'
-                          : 'Добавляет элемент в «Хочу поехать»',
+                          ? i18nT('travel:components.travel.FavoriteButton.udalyaet_element_iz_hochu_poehat_0c985c36')
+                          : i18nT('travel:components.travel.FavoriteButton.dobavlyaet_element_v_hochu_poehat_31cd24d0'),
                       accessibilityState: { selected: isFav },
                   })}
         >

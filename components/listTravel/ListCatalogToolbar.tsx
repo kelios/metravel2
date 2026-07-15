@@ -6,6 +6,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { getTravelLabel } from '@/utils/pluralize'
 import type { ListDensity } from '@/stores/listViewStore'
+import { translate as i18nT } from '@/i18n'
+
 
 export type ListSortOption = { id: string; name: string }
 export type ListStatusMode = 'all' | 'published' | 'drafts'
@@ -41,9 +43,9 @@ const spacing = DESIGN_TOKENS.spacing
 const radii = DESIGN_TOKENS.radii
 const DEFAULT_SORT_ID = 'newest'
 const NATIVE_SORT_LABELS: Record<string, string> = {
-  newest: 'Новые',
-  oldest: 'Старые',
-  popular_desc: 'Популярные',
+  get newest() { return i18nT('travel:components.listTravel.sortings.newestShort') },
+  get oldest() { return i18nT('travel:components.listTravel.sortings.oldestShort') },
+  get popular_desc() { return i18nT('travel:components.listTravel.sortings.popularShort') },
 }
 
 function ListCatalogToolbar({
@@ -96,7 +98,7 @@ function ListCatalogToolbar({
         isCompactWeb && styles.sortScrollCompactWeb,
       ]}
       accessibilityRole={Platform.OS === 'web' ? undefined : ('toolbar' as any)}
-      accessibilityLabel="Сортировка списка"
+      accessibilityLabel={i18nT('travel:components.listTravel.ListCatalogToolbar.sortirovka_spiska_f3306938')}
     >
       {sortOptions.map((option) => {
         const isActive = option.id === activeSort
@@ -108,7 +110,7 @@ function ListCatalogToolbar({
             onPress={() => onSortChange(option.id)}
             accessibilityRole="button"
             accessibilityState={{ selected: isActive }}
-            accessibilityLabel={`Сортировать: ${option.name}`}
+            accessibilityLabel={i18nT('travel:components.listTravel.ListCatalogToolbar.sortirovat_value1_36ec73e5', { value1: option.name })}
             style={[styles.chip, isActive && styles.chipActive]}
             {...Platform.select({ web: { title: option.name } as any })}
           >
@@ -136,7 +138,7 @@ function ListCatalogToolbar({
     <View
       style={styles.densityGroup}
       accessibilityRole={Platform.OS === 'web' ? undefined : ('radiogroup' as any)}
-      accessibilityLabel="Плотность списка"
+      accessibilityLabel={i18nT('travel:components.listTravel.ListCatalogToolbar.plotnost_spiska_2c4c93c1')}
     >
       {DENSITY_BUTTONS.map((button) => {
         const isActive = density === button.value
@@ -166,7 +168,7 @@ function ListCatalogToolbar({
     <View
       style={styles.densityGroup}
       accessibilityRole={Platform.OS === 'web' ? undefined : ('radiogroup' as any)}
-      accessibilityLabel="Статус моих путешествий"
+      accessibilityLabel={i18nT('travel:components.listTravel.ListCatalogToolbar.status_moih_puteshestviy_855a3491')}
     >
       {STATUS_BUTTONS.map((button) => {
         const isActive = statusMode === button.value
@@ -233,9 +235,9 @@ const STATUS_BUTTONS: Array<{
   icon: keyof typeof Feather.glyphMap
   label: string
 }> = [
-  { value: 'all', icon: 'layers', label: 'Все мои путешествия' },
-  { value: 'published', icon: 'check-circle', label: 'Опубликованные' },
-  { value: 'drafts', icon: 'edit-3', label: 'Черновики' },
+  { value: 'all', icon: 'layers', get label() { return i18nT('travel:components.listTravel.ListCatalogToolbar.status.all') } },
+  { value: 'published', icon: 'check-circle', get label() { return i18nT('travel:components.listTravel.ListCatalogToolbar.status.published') } },
+  { value: 'drafts', icon: 'edit-3', get label() { return i18nT('travel:components.listTravel.ListCatalogToolbar.status.drafts') } },
 ]
 
 const DENSITY_BUTTONS: Array<{
@@ -243,8 +245,8 @@ const DENSITY_BUTTONS: Array<{
   icon: keyof typeof Feather.glyphMap
   label: string
 }> = [
-  { value: 'comfortable', icon: 'square', label: 'Крупные карточки' },
-  { value: 'compact', icon: 'grid', label: 'Компактный вид' },
+  { value: 'comfortable', icon: 'square', get label() { return i18nT('travel:components.listTravel.ListCatalogToolbar.density.comfortable') } },
+  { value: 'compact', icon: 'grid', get label() { return i18nT('travel:components.listTravel.ListCatalogToolbar.density.compact') } },
 ]
 
 const getStyles = (colors: ThemedColors) =>

@@ -11,6 +11,8 @@ import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 function TravelDetailsBackButton() {
   const router = useRouter()
@@ -30,7 +32,7 @@ function TravelDetailsBackButton() {
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel="Назад"
+        accessibilityLabel={i18nT('travel:components.travel.details.TravelDetailsBackButton.nazad_d576d22f')}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         android_ripple={{ color: 'rgba(0,0,0,0.12)', borderless: true }}
         style={({ pressed }) => [

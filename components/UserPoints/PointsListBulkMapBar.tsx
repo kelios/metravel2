@@ -3,6 +3,8 @@ import { Text, View } from 'react-native';
 import Button from '@/components/ui/Button';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { PointsListStyles } from './types';
+import { translate as i18nT } from '@/i18n'
+
 
 type BulkProgress = {
   current: number;
@@ -44,56 +46,56 @@ export const PointsListBulkMapBar: React.FC<PointsListBulkMapBarProps> = ({
       <View style={styles.bulkMapBarRow}>
         <Text style={styles.bulkMapBarText}>
           {bulkProgress
-            ? `Удаляем: ${bulkProgress.current}/${bulkProgress.total}`
+            ? i18nT('map:components.UserPoints.PointsListBulkMapBar.udalyaem_value1_value2_aef51245', { value1: bulkProgress.current, value2: bulkProgress.total })
             : selectedCount > 0
-              ? `Выбрано: ${selectedCount}`
-              : 'Выберите точки в списке'}
+              ? i18nT('map:components.UserPoints.PointsListBulkMapBar.vybrano_value1_dc022d4b', { value1: selectedCount })
+              : i18nT('map:components.UserPoints.PointsListBulkMapBar.vyberite_tochki_v_spiske_d2006efc')}
         </Text>
         <View style={styles.bulkMapBarActions}>
           <Button
-            label="Список"
+            label={i18nT('map:components.UserPoints.PointsListBulkMapBar.spisok_41c8b9c5')}
             onPress={onBackToList}
             disabled={isBulkWorking}
             size="sm"
             variant="secondary"
-            accessibilityLabel="Назад к списку"
+            accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkMapBar.nazad_k_spisku_a72b9334')}
           />
 
           {selectedCount > 0 ? (
             <>
               <Button
-                label="Снять"
+                label={i18nT('map:components.UserPoints.PointsListBulkMapBar.snyat_575b693f')}
                 onPress={onClearSelection}
                 disabled={isBulkWorking}
                 size="sm"
                 variant="secondary"
-                accessibilityLabel="Снять"
+                accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkMapBar.snyat_575b693f')}
               />
               <Button
-                label="Изменить"
+                label={i18nT('map:components.UserPoints.PointsListBulkMapBar.izmenit_d066c372')}
                 onPress={onOpenBulkEdit}
                 disabled={isBulkWorking}
                 size="sm"
-                accessibilityLabel="Изменить"
+                accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkMapBar.izmenit_d066c372')}
               />
               <Button
-                label="Удалить"
+                label={i18nT('map:components.UserPoints.PointsListBulkMapBar.udalit_b55d2000')}
                 onPress={onOpenDeleteSelected}
                 disabled={isBulkWorking}
                 size="sm"
                 variant="danger"
-                accessibilityLabel="Удалить выбранные"
+                accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkMapBar.udalit_vybrannye_c4749ebe')}
               />
             </>
           ) : null}
 
           <Button
-            label="Готово"
+            label={i18nT('map:components.UserPoints.PointsListBulkMapBar.gotovo_e773b749')}
             onPress={onDone}
             disabled={isBulkWorking}
             size="sm"
             variant="secondary"
-            accessibilityLabel="Готово"
+            accessibilityLabel={i18nT('map:components.UserPoints.PointsListBulkMapBar.gotovo_e773b749')}
           />
         </View>
       </View>

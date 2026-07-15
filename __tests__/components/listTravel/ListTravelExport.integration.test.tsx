@@ -22,7 +22,11 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('@/context/AuthContext', () => ({
-  useAuth: () => ({ isAuthenticated: true, userId: '1' }),
+  useAuth: () => ({ authReady: true, isAuthenticated: true, userId: '1' }),
+}));
+
+jest.mock('@/hooks/useHydrationReady', () => ({
+  useHydrationReady: () => true,
 }));
 
 jest.mock('@/hooks/useResponsive', () => ({

@@ -23,6 +23,8 @@ import {
   ProfileHeaderQuickActions,
   type ProfileHeaderActionKey,
 } from './ProfileHeaderQuickActions';
+import { translate as i18nT } from '@/i18n'
+
 
 interface ProfileHeaderRank {
   level: number;
@@ -41,13 +43,6 @@ interface ProfileHeaderProps {
   onRankPress?: () => void;
   avatarUploading?: boolean;
 }
-
-const SOCIAL_LABELS: Record<string, string> = {
-  youtube: 'YouTube',
-  instagram: 'Instagram',
-  twitter: 'Twitter',
-  vk: 'ВКонтакте',
-};
 
 const SOCIAL_ICONS: Record<string, React.ComponentProps<typeof Feather>['name']> = {
   youtube: 'youtube',
@@ -108,24 +103,24 @@ export function ProfileHeader({
     () =>
       profile
         ? [
-            { key: 'youtube', label: 'YouTube', url: profile.youtube },
-            { key: 'instagram', label: 'Instagram', url: profile.instagram },
-            { key: 'twitter', label: 'Twitter', url: profile.twitter },
-            { key: 'vk', label: 'VK', url: profile.vk },
+            { key: 'youtube', label: i18nT('profile:components.profile.ProfileHeader.youtube_3c5324c5'), url: profile.youtube },
+            { key: 'instagram', label: i18nT('profile:components.profile.ProfileHeader.instagram_dbd24d26'), url: profile.instagram },
+            { key: 'twitter', label: i18nT('profile:components.profile.ProfileHeader.twitter_6c382a7e'), url: profile.twitter },
+            { key: 'vk', label: i18nT('profile:components.profile.ProfileHeader.vk_4e6034d6'), url: profile.vk },
           ].filter((link) => !!link.url)
         : [],
     [profile]
   );
 
   const rankLabel = useMemo(
-    () => (rank ? `Уровень ${rank.level}: ${rank.title}` : null),
+    () => (rank ? i18nT('profile:components.profile.ProfileHeader.uroven_value1_value2_7a325518', { value1: rank.level, value2: rank.title }) : null),
     [rank]
   );
 
   // Компактная подпись чипа: уровень + название ранга («Ур.5 · Эксперт»), чтобы
   // чип читался как самостоятельный статус, а не обрезанный «Ур.5».
   const rankChipText = useMemo(
-    () => (rank ? `Ур.${rank.level} · ${rank.title}` : null),
+    () => (rank ? i18nT('profile:components.profile.ProfileHeader.ur_value1_value2_735cc6bf', { value1: rank.level, value2: rank.title }) : null),
     [rank]
   );
 
@@ -323,7 +318,7 @@ export function ProfileHeader({
           >
             <ImageCardMedia
               src={coverPhoto}
-              alt="Обложка профиля"
+              alt={i18nT('profile:components.profile.ProfileHeader.oblozhka_profilya_b2ecd31d')}
               height={COVER_HEIGHT}
               width="100%"
               borderRadius={0}
@@ -342,7 +337,7 @@ export function ProfileHeader({
           >
             <ImageCardMedia
               source={DEFAULT_COVER_SOURCE}
-              alt="Обложка профиля"
+              alt={i18nT('profile:components.profile.ProfileHeader.oblozhka_profilya_b2ecd31d')}
               height={COVER_HEIGHT}
               width="100%"
               borderRadius={0}
@@ -380,8 +375,8 @@ export function ProfileHeader({
           onPress={onAvatarUpload}
           disabled={avatarUploading}
           accessibilityRole="button"
-          accessibilityLabel={avatarUploading ? 'Загрузка аватара' : 'Изменить аватар'}
-          accessibilityHint="Нажмите, чтобы загрузить новое фото профиля"
+          accessibilityLabel={avatarUploading ? i18nT('profile:components.profile.ProfileHeader.zagruzka_avatara_55d6c4d0') : i18nT('profile:components.profile.ProfileHeader.izmenit_avatar_3b22482f')}
+          accessibilityHint={i18nT('profile:components.profile.ProfileHeader.nazhmite_chtoby_zagruzit_novoe_foto_profilya_631853a6')}
         >
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>
@@ -404,7 +399,7 @@ export function ProfileHeader({
         <View style={styles.infoColumn} pointerEvents="box-none" testID="profile-header-info-column">
           <View style={styles.nameRow} testID="profile-header-name-row">
             <Text style={styles.userName} numberOfLines={2}>
-              {user.name || 'Пользователь'}
+              {user.name || i18nT('profile:components.profile.ProfileHeader.defaultUserName')}
             </Text>
           </View>
           {(rankLabel || socialLinks.length > 0) ? (
@@ -414,8 +409,8 @@ export function ProfileHeader({
                   onPress={onRankPress}
                   disabled={!onRankPress}
                   accessibilityRole={onRankPress ? 'button' : undefined}
-                  accessibilityLabel={onRankPress ? `Открыть прогресс профиля: ${rankLabel}` : rankLabel}
-                  accessibilityHint="Уровень растёт за вашу активность на MeTravel"
+                  accessibilityLabel={onRankPress ? i18nT('profile:components.profile.ProfileHeader.otkryt_progress_profilya_value1_7235e580', { value1: rankLabel }) : rankLabel}
+                  accessibilityHint={i18nT('profile:components.profile.ProfileHeader.uroven_rastet_za_vashu_aktivnost_na_metravel_7d32196b')}
                   style={({ pressed }) => [
                     styles.rankChip,
                     pressed && { opacity: 0.78 },
@@ -438,8 +433,8 @@ export function ProfileHeader({
                   ]}
                   onPress={() => openExternalUrl(String(link.url))}
                   accessibilityRole="link"
-                  accessibilityLabel={`Открыть ${SOCIAL_LABELS[link.key] ?? link.label}`}
-                  accessibilityHint={`Откроется внешняя ссылка на ${SOCIAL_LABELS[link.key] ?? link.label}`}
+                  accessibilityLabel={i18nT('profile:components.profile.ProfileHeader.otkryt_value1_8f445d13', { value1: link.label })}
+                  accessibilityHint={i18nT('profile:components.profile.ProfileHeader.otkroetsya_vneshnyaya_ssylka_na_value1_1821b787', { value1: link.label })}
                 >
                   <Feather
                     name={SOCIAL_ICONS[link.key] || 'link'}

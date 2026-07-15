@@ -4,6 +4,9 @@ import * as WebBrowser from 'expo-web-browser'
 import React from 'react'
 import { Platform } from 'react-native'
 import { useThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+import { webAccessibilityProps } from '@/utils/webProps'
+
 
 export function ExternalLink(
   props: Omit<React.ComponentProps<typeof Link>, 'href'> & {
@@ -38,11 +41,10 @@ export function ExternalLink(
         }
       }}
       accessibilityRole="link"
-      accessibilityHint="Открывает внешнюю ссылку"
-      {...(Platform.OS === 'web' ? {
-        // @ts-ignore -- aria-label is a web-only ARIA attribute not in RN Pressable types
-        'aria-label': `Перейти по ссылке: ${props.href}`,
-      } : {})}
+      accessibilityHint={i18nT('shared:components.ui.ExternalLink.otkryvaet_vneshnyuyu_ssylku_9f2f78de')}
+      {...(Platform.OS === 'web' ? webAccessibilityProps({
+        'aria-label': i18nT('shared:components.ui.ExternalLink.pereyti_po_ssylke_value1_b03ad8f1', { value1: props.href }),
+      }) : {})}
     />
   )
 }

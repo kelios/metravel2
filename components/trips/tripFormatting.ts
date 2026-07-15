@@ -7,19 +7,22 @@ import type {
   PublicTripStatus,
 } from '@/api/publicTrips';
 import type { ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+import { formatDate } from '@/i18n/format'
+
 
 export const TRIP_STATUS_LABEL: Record<PublicTripStatus, string> = {
-  open: 'Открыта',
-  full: 'Мест нет',
-  completed: 'Завершена',
+  get open() { return i18nT('tripsStatic:trip.status.open') },
+  get full() { return i18nT('tripsStatic:trip.status.full') },
+  get completed() { return i18nT('tripsStatic:trip.status.completed') },
 };
 
 export const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, string> = {
-  new: 'Новая',
-  pending: 'На рассмотрении',
-  approved: 'Одобрена',
-  rejected: 'Отклонена',
-  cancelled: 'Отменена',
+  get new() { return i18nT('tripsStatic:trip.application.new') },
+  get pending() { return i18nT('tripsStatic:trip.application.pending') },
+  get approved() { return i18nT('tripsStatic:trip.application.approved') },
+  get rejected() { return i18nT('tripsStatic:trip.application.rejected') },
+  get cancelled() { return i18nT('tripsStatic:trip.application.cancelled') },
 };
 
 export function tripStatusColor(
@@ -52,18 +55,13 @@ export function applicationStatusColor(
   }
 }
 
-const MONTHS = [
-  'янв', 'фев', 'мар', 'апр', 'мая', 'июн',
-  'июл', 'авг', 'сен', 'окт', 'ноя', 'дек',
-];
-
 function fmt(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return formatDate(d, { day: 'numeric', month: 'short' });
 }
 
-/** «18–20 июл» / «28 июн». */
+/** «18 июл. – 20 июл.» / «28 июн.». */
 export function formatTripDates(trip: Pick<PublicTrip, 'startDate' | 'endDate'>): string {
   if (!trip.endDate || trip.endDate === trip.startDate) return fmt(trip.startDate);
   return `${fmt(trip.startDate)} – ${fmt(trip.endDate)}`;
@@ -72,7 +70,7 @@ export function formatTripDates(trip: Pick<PublicTrip, 'startDate' | 'endDate'>)
 /** Свободные места: «осталось 4 из 6». */
 export function formatSeats(trip: Pick<PublicTrip, 'seatsTotal' | 'seatsTaken'>): string {
   const free = Math.max(0, trip.seatsTotal - trip.seatsTaken);
-  return `мест: ${free} из ${trip.seatsTotal}`;
+  return i18nT('trips:components.trips.tripFormatting.mest_value1_iz_value2_11fa56e7', { value1: free, value2: trip.seatsTotal });
 }
 
 /** Строка-мета под заголовком карточки. */

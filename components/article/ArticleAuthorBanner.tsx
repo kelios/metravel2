@@ -6,6 +6,8 @@ import { useRouter, type Href } from 'expo-router'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import type { Article } from '@/types/types'
+import { translate as i18nT } from '@/i18n'
+
 
 const STRICT_PLACEHOLDER = /^[.\s·•]+$|^Автор|^Пользователь|^User/i
 const LOOSE_PLACEHOLDER = /^[.\s·•]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i
@@ -89,14 +91,14 @@ function ArticleAuthorBanner({ article }: ArticleAuthorBannerProps) {
 
   if (!author.name && !author.userId) return null
 
-  const authorName = author.name || 'Автор путешествия'
+  const authorName = author.name || i18nT('sharedStatic:article.authorFallback')
   const content = (
     <>
       <View style={styles.iconWrap}>
         <Feather name="user" size={18} color={colors.primaryDark} />
       </View>
       <View style={styles.copy}>
-        <Text style={styles.label}>Автор путешествия</Text>
+        <Text style={styles.label}>{i18nT('shared:components.article.ArticleAuthorBanner.avtor_puteshestviya_ad2f74e1')}</Text>
         <Text style={styles.name} numberOfLines={2}>
           {authorName}
         </Text>
@@ -104,7 +106,7 @@ function ArticleAuthorBanner({ article }: ArticleAuthorBannerProps) {
       {!!author.userId && (
         <View style={styles.action}>
           <Feather name="map" size={15} color={colors.primaryDark} />
-          <Text style={styles.actionText}>Путешествия автора</Text>
+          <Text style={styles.actionText}>{i18nT('shared:components.article.ArticleAuthorBanner.puteshestviya_avtora_4cbf3127')}</Text>
         </View>
       )}
     </>
@@ -112,7 +114,7 @@ function ArticleAuthorBanner({ article }: ArticleAuthorBannerProps) {
 
   if (!author.userId) {
     return (
-      <View style={styles.container} accessibilityLabel={`Автор путешествия ${authorName}`}>
+      <View style={styles.container} accessibilityLabel={i18nT('shared:components.article.ArticleAuthorBanner.avtor_puteshestviya_value1_564a1271', { value1: authorName })}>
         {content}
       </View>
     )
@@ -122,7 +124,7 @@ function ArticleAuthorBanner({ article }: ArticleAuthorBannerProps) {
     <Pressable
       onPress={handleOpenAuthorTravels}
       accessibilityRole="button"
-      accessibilityLabel={`Открыть путешествия автора ${authorName}`}
+      accessibilityLabel={i18nT('shared:components.article.ArticleAuthorBanner.otkryt_puteshestviya_avtora_value1_4ffb6ace', { value1: authorName })}
       style={({ pressed }) => [styles.container, pressed && styles.pressed]}
     >
       {content}

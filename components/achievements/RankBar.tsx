@@ -6,6 +6,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { MaxLevelLaurel } from '@/components/achievements/GamificationIcons';
 import type { UserRank } from '@/api/achievements';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   rank: UserRank;
@@ -98,10 +100,10 @@ function RankBar({ rank, compact = false, titlePrefix = '', testID, style }: Pro
       accessibilityRole="summary"
       accessibilityLabel={
         mode === 'max'
-          ? `Уровень ${rank.level}, ${rank.title}. Максимальный уровень`
+          ? i18nT('achievements:components.achievements.RankBar.uroven_value1_value2_maksimalnyy_uroven_87b25d43', { value1: rank.level, value2: rank.title })
           : mode === 'progress'
-            ? `Уровень ${rank.level}, ${rank.title}. ${rank.totalPoints} очков, до уровня ${rank.nextLevelTitle ?? ''} осталось ${remaining}`
-            : `Уровень ${rank.level}, ${rank.title}. ${rank.totalPoints} очков`
+            ? i18nT('achievements:components.achievements.RankBar.uroven_value1_value2_value3_ochkov_do_urovny_11997ee8', { value1: rank.level, value2: rank.title, value3: rank.totalPoints, value4: rank.nextLevelTitle ?? '', value5: remaining })
+            : i18nT('achievements:components.achievements.RankBar.uroven_value1_value2_value3_ochkov_42b9cc01', { value1: rank.level, value2: rank.title, value3: rank.totalPoints })
       }
     >
       <View style={styles.row}>
@@ -120,7 +122,7 @@ function RankBar({ rank, compact = false, titlePrefix = '', testID, style }: Pro
           </Text>
           {!compact ? (
             <Text style={styles.points}>
-              {rank.totalPoints} очков опыта · значков: {rank.badgesCount}
+              {rank.totalPoints} {i18nT('achievements:components.achievements.RankBar.ochkov_opyta_znachkov_f241c47e')}{rank.badgesCount}
             </Text>
           ) : null}
         </View>
@@ -141,12 +143,11 @@ function RankBar({ rank, compact = false, titlePrefix = '', testID, style }: Pro
         mode === 'max' ? (
           <View style={styles.captionRow}>
             <MaxLevelLaurel size={16} color={colors.textMuted} />
-            <Text style={styles.caption}>Максимальный уровень достигнут</Text>
+            <Text style={styles.caption}>{i18nT('achievements:components.achievements.RankBar.maksimalnyy_uroven_dostignut_a5334b70')}</Text>
           </View>
         ) : (
           <Text style={styles.caption}>
-            До «{rank.nextLevelTitle}»: ещё {remaining} очков опыта
-          </Text>
+            {i18nT('achievements:components.achievements.RankBar.do_1761ac98')}{rank.nextLevelTitle}{i18nT('achievements:components.achievements.RankBar.esche_bddbafc0')}{remaining} {i18nT('achievements:components.achievements.RankBar.ochkov_opyta_add93c72')}</Text>
         )
       ) : null}
     </View>

@@ -6,6 +6,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useMyAchievements } from '@/hooks/useAchievementsApi';
 import type { UserBadge } from '@/api/achievements';
 import BadgeMedal from '@/components/achievements/BadgeMedal';
+import { translate as i18nT } from '@/i18n'
+
 
 // Значки, по которым тост уже показан в этой сессии — чтобы не дёргать повторно
 // при рефетче/навигации. Сброс на полной перезагрузке (приемлемо для v1).
@@ -69,11 +71,11 @@ function BadgeUnlockToast({ enabled = true }: Props) {
         style={styles.toast}
         onPress={dismiss}
         accessibilityRole="alert"
-        accessibilityLabel={`Новый значок: ${current.badge.name}`}
+        accessibilityLabel={i18nT('achievements:components.achievements.BadgeUnlockToast.novyy_znachok_value1_9fc66015', { value1: current.badge.name })}
       >
         <BadgeMedal badge={current.badge} size={48} earned />
         <View style={styles.textBlock}>
-          <Text style={styles.title}>Новый значок!</Text>
+          <Text style={styles.title}>{i18nT('achievements:components.achievements.BadgeUnlockToast.novyy_znachok_7f3e7132')}</Text>
           <Text style={styles.name} numberOfLines={1}>
             {current.badge.name}
           </Text>

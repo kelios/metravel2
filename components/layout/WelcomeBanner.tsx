@@ -9,6 +9,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { LinearGradient } from 'expo-linear-gradient';
+import { translate as i18nT } from '@/i18n'
+
 
 interface WelcomeBannerProps {
   compact?: boolean;
@@ -124,7 +126,7 @@ function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
   if (compact) {
     return (
       <View style={styles.compactContainer}>
-        <Text style={styles.compactTitle}>Откройте мир путешествий</Text>
+        <Text style={styles.compactTitle}>{i18nT('navigation:components.layout.WelcomeBanner.otkroyte_mir_puteshestviy_609d220f')}</Text>
       </View>
     );
   }
@@ -139,29 +141,28 @@ function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
       >
         <View style={styles.content}>
           <View style={styles.textContainer}>
-            <Text style={styles.title}>Откройте мир путешествий</Text>
+            <Text style={styles.title}>{i18nT('navigation:components.layout.WelcomeBanner.otkroyte_mir_puteshestviy_609d220f')}</Text>
             <Text style={styles.subtitle}>
-              Исследуйте уникальные маршруты, делитесь впечатлениями и находите вдохновение для новых приключений
-            </Text>
+              {i18nT('navigation:components.layout.WelcomeBanner.issleduyte_unikalnye_marshruty_delites_vpech_ce575c0a')}</Text>
           </View>
 
           <View style={styles.actions}>
             <Pressable
               style={styles.primaryButton}
               onPress={() => router.push('/travel/new')}
-              accessibilityLabel="Создать путешествие"
+              accessibilityLabel={i18nT('navigation:components.layout.WelcomeBanner.sozdat_puteshestvie_9a14711a')}
             >
               <Feather name="plus" size={18} color={colors.primaryDark} />
-              <Text style={styles.primaryButtonText}>Создать путешествие</Text>
+              <Text style={styles.primaryButtonText}>{i18nT('navigation:components.layout.WelcomeBanner.sozdat_puteshestvie_9a14711a')}</Text>
             </Pressable>
 
             <Pressable
               style={styles.secondaryButton}
               onPress={() => router.push('/map')}
-              accessibilityLabel="Открыть карту"
+              accessibilityLabel={i18nT('navigation:components.layout.WelcomeBanner.otkryt_kartu_ef64413f')}
             >
               <Feather name="map" size={18} color={colors.primaryDark} />
-              <Text style={styles.secondaryButtonText}>На карте</Text>
+              <Text style={styles.secondaryButtonText}>{i18nT('navigation:components.layout.WelcomeBanner.na_karte_8c9e48a5')}</Text>
             </Pressable>
           </View>
         </View>

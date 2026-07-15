@@ -2,21 +2,23 @@ import type { BookSettings } from '@/components/export/BookSettingsModal'
 import { getThemeConfig } from '../../../themes/PdfThemeConfig'
 
 import type { TravelSectionMeta } from './types'
+import { translate as i18nT } from '@/i18n'
+
 
 const CHECKLIST_LIBRARY: Record<BookSettings['checklistSections'][number], string[]> = {
-  clothing: ['Термобельё', 'Тёплый слой/флис', 'Дождевик/пончо', 'Треккинговая обувь', 'Шапка, перчатки, бафф'],
-  food: ['Перекусы', 'Термос', 'Походная посуда', 'Мультитул/нож', 'Фильтр или запас воды'],
-  electronics: ['Повербанк', 'Камера/GoPro', 'Переходники', 'Налобный фонарь', 'Запасные карты памяти'],
-  documents: ['Паспорт', 'Билеты/бронирования', 'Страховка', 'Водительские права', 'Список контактов'],
-  medicine: ['Индивидуальные лекарства', 'Пластыри и бинт', 'Средство от насекомых', 'Солнцезащита', 'Антисептик'],
+  get clothing() { return i18nT('export:services.pdfExport.checklist.clothing.items').split('|') },
+  get food() { return i18nT('export:services.pdfExport.checklist.food.items').split('|') },
+  get electronics() { return i18nT('export:services.pdfExport.checklist.electronics.items').split('|') },
+  get documents() { return i18nT('export:services.pdfExport.checklist.documents.items').split('|') },
+  get medicine() { return i18nT('export:services.pdfExport.checklist.medicine.items').split('|') },
 }
 
 const CHECKLIST_LABELS: Record<BookSettings['checklistSections'][number], string> = {
-  clothing: 'Одежда',
-  food: 'Еда',
-  electronics: 'Электроника',
-  documents: 'Документы',
-  medicine: 'Аптечка',
+  get clothing() { return i18nT('export:components.export.checklist.clothing.label') },
+  get food() { return i18nT('export:components.export.checklist.food.label') },
+  get electronics() { return i18nT('export:components.export.checklist.electronics.label') },
+  get documents() { return i18nT('export:components.export.checklist.documents.label') },
+  get medicine() { return i18nT('export:components.export.checklist.medicine.label') },
 }
 
 const CHECKLIST_ICONS: Record<BookSettings['checklistSections'][number], string> = {
@@ -95,7 +97,7 @@ export function renderTocPageSection(args: {
             color: ${colors.accent};
             font-family: ${typography.bodyFont};
             margin-bottom: 2mm;
-          ">MeTravel · Книга путешествий</div>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.pdfSectionRenderers.section_class_pdf_page_toc_page_style_paddin_8ffc01d6.text01")}</div>
           <h2 style="
             font-size: 28pt;
             font-weight: 800;
@@ -104,7 +106,7 @@ export function renderTocPageSection(args: {
             font-family: ${typography.headingFont};
             line-height: 1;
             margin: 0;
-          ">Содержание</h2>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.pdfSectionRenderers.section_class_pdf_page_toc_page_style_paddin_8ffc01d6.text02")}</h2>
         </div>
         <div style="
           display: flex;
@@ -292,7 +294,7 @@ export function renderChecklistPageSection(args: {
   const sections = settings.checklistSections
     .map((section) => ({
       key: section,
-      label: CHECKLIST_LABELS[section] || 'Секция',
+      label: CHECKLIST_LABELS[section] || i18nT('export:services.pdfExport.runtime.checklist.sectionFallback'),
       items: CHECKLIST_LIBRARY[section] || [],
       icon: CHECKLIST_ICONS[section] || '',
       tint: CHECKLIST_TINTS[section] || 'transparent',
@@ -349,7 +351,7 @@ export function renderChecklistPageSection(args: {
                 font-weight: 600;
                 font-family: ${typography.bodyFont};
                 line-height: 1.2;
-              ">${section.items.length} пунктов</span>
+              ">${i18nT("export:services.pdf_export.generators.v2.runtime.pdfSectionRenderers.div_style_border_value1_solid_value2_border__37a9fc0c.text01", { value20: section.items.length })}</span>
             </div>
           </div>
           <div style="
@@ -387,7 +389,7 @@ export function renderChecklistPageSection(args: {
 
   return `
     <section class="pdf-page checklist-page" style="padding: ${spacing.pagePadding};">
-      ${buildRunningHeader('Чек-листы', pageNumber)}
+      ${buildRunningHeader(i18nT('export:services.pdfExport.runtime.checklist.title'), pageNumber)}
       <div style="margin-bottom: ${spacing.sectionSpacing};">
         <div style="
           display: flex;
@@ -414,13 +416,13 @@ export function renderChecklistPageSection(args: {
               letter-spacing: -0.01em;
               color: ${colors.text};
               font-family: ${typography.headingFont};
-            ">Чек-листы путешествия</h2>
+            ">${i18nT("export:services.pdf_export.generators.v2.runtime.pdfSectionRenderers.section_class_pdf_page_checklist_page_style__a9c72629.text01")}</h2>
             <p style="
               color: ${colors.textMuted};
               font-size: ${typography.small.size};
               font-family: ${typography.bodyFont};
               margin: 2px 0 0 0;
-            ">Подходит для печати и отметок ручкой</p>
+            ">${i18nT("export:services.pdf_export.generators.v2.runtime.pdfSectionRenderers.section_class_pdf_page_checklist_page_style__a9c72629.text02")}</p>
           </div>
         </div>
         <div style="

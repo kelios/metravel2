@@ -6,6 +6,8 @@ import { normalizeRichTextListFragments } from '@/utils/richTextLists'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
 import { applySmartImageLayout } from '@/utils/richTextImageLayout'
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml'
+import { translate as i18nT } from '@/i18n'
+
 
 const OPTIMIZATION_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr']
 
@@ -309,7 +311,7 @@ const normalizeImgTags = (html: string): string => {
       .replace(/\bfetchpriority="[^"]*"/i, '')
       .replace(/\bloading="[^"]*"/i, '')
 
-    const fallbackAlt = `Изображение маршрута ${imgIdx + 1}`
+    const fallbackAlt = i18nT('travel:components.travel.stableContent.htmlTransform.izobrazhenie_marshruta_value1_ae0fc919', { value1: imgIdx + 1 })
     const altMatch = out.match(/\balt="([^"]*)"/i)
     if (!altMatch) {
       out = out.replace(/>$/, ` alt="${fallbackAlt}">`)
@@ -340,7 +342,7 @@ const replaceYouTubeIframes = (html: string): string =>
        width="1280" height="720"
        alt="YouTube preview" loading="lazy" decoding="async"
        style="width:100%;height:100%;object-fit:cover;display:block"/>
-  <div role="button" tabindex="0" aria-label="Смотреть видео"
+  <div role="button" tabindex="0" aria-label="${i18nT("travel:components.travel.stableContent.htmlTransform.div_class_yt_lite_data_yt_value1_style_posit_873857b2.text01")}"
     style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:transparent;cursor:pointer">
     <span style="width:68px;height:48px;background:var(--color-overlay);clip-path:polygon(20% 10%,20% 90%,85% 50%);"></span>
   </div>

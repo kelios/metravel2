@@ -8,10 +8,15 @@ import { useRouteStore } from '@/stores/routeStore'
 
 const mockTravelListPanel = jest.fn((props: any) => {
   const React = require('react')
-  const { View, Text } = require('react-native')
+  const { Pressable, View, Text } = require('react-native')
   return (
     <View testID="mock-travel-list-panel">
       <Text>{props.isLoading ? 'Travel list loading' : 'Travel list'}</Text>
+      {props.onOpenFilters ? (
+        <Pressable testID="mock-list-open-filters" onPress={props.onOpenFilters}>
+          <Text>Open filters</Text>
+        </Pressable>
+      ) : null}
     </View>
   )
 })
@@ -133,6 +138,53 @@ describe('MapMobileLayout', () => {
 
     expect(screen.getByTestId('map-mobile-filters-loading')).toBeTruthy()
     expect(screen.getByText('Загружаем фильтры')).toBeTruthy()
+  })
+
+  it('opens ready filters from the expanded list and keeps them above late map selections', async () => {
+    const clearSelectedPlace = jest.fn()
+    const Provider = ({ children }: { children: React.ReactNode }) => <View>{children}</View>
+    const Panel = () => <View testID="filters-block-main" />
+    const filtersPanelProps = {
+      Component: Provider,
+      Panel,
+      contextValue: { mode: 'radius', setMode: jest.fn(), filterValue: {} },
+    }
+    const baseProps = {
+      mapComponent: <View testID="mock-map" />,
+      travelsData: [{ id: 1 }],
+      coordinates: { latitude: 53.9, longitude: 27.56 },
+      transportMode: 'car' as const,
+      buildRouteTo: jest.fn(),
+      onCenterOnUser: jest.fn(),
+      onOpenFilters: jest.fn(),
+      filtersPanelProps,
+      clearSelectedPlace,
+    }
+    const screen = render(<MapMobileLayout {...baseProps} />)
+
+    await act(async () => {
+      useMapPanelStore.setState((state) => ({
+        commandNonce: state.commandNonce + 1,
+        command: { kind: 'open', tab: 'list' },
+      }))
+    })
+    fireEvent.press(screen.getByTestId('mock-list-open-filters'))
+
+    await waitFor(() => expect(screen.getByTestId('filters-block-main')).toBeTruthy())
+    expect(mockSnapToSeventy).toHaveBeenCalled()
+
+    mockSnapToCollapsed.mockClear()
+    clearSelectedPlace.mockClear()
+    screen.rerender(
+      <MapMobileLayout
+        {...baseProps}
+        selectedPlace={{ id: 10, coord: '53.9,27.56', address: 'Late marker' }}
+      />,
+    )
+
+    await waitFor(() => expect(clearSelectedPlace).toHaveBeenCalled())
+    expect(screen.getByTestId('filters-block-main')).toBeTruthy()
+    expect(mockSnapToCollapsed).not.toHaveBeenCalled()
   })
 
   it('passes loading state to the mobile places tab while map results refresh', () => {

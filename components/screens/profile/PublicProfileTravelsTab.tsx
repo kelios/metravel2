@@ -6,6 +6,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import type { Travel } from '@/types/types';
+import { translate as i18nT } from '@/i18n'
+
 
 const AUTHOR_CARD_BLURHASH = 'LEHL6nWB2yk8pyo0adR*.7kCMdnj';
 
@@ -40,11 +42,11 @@ export function PublicProfileTravelsTab({
   }
 
   if (isError) {
-    return <Text style={styles.stateText}>Не удалось загрузить путешествия автора</Text>;
+    return <Text style={styles.stateText}>{i18nT('profile:components.screens.profile.PublicProfileTravelsTab.ne_udalos_zagruzit_puteshestviya_avtora_9b0811fb')}</Text>;
   }
 
   if (travels.length === 0) {
-    return <Text style={styles.stateText}>У автора пока нет опубликованных путешествий</Text>;
+    return <Text style={styles.stateText}>{i18nT('profile:components.screens.profile.PublicProfileTravelsTab.u_avtora_poka_net_opublikovannyh_puteshestvi_60a70e6a')}</Text>;
   }
 
   return (
@@ -58,7 +60,7 @@ export function PublicProfileTravelsTab({
           return (
             <View key={String(travel.id ?? travel.slug ?? index)} style={styles.cardWrap}>
               <UnifiedTravelCard
-                title={travel.name?.trim() || 'Без названия'}
+                title={travel.name?.trim() || i18nT('profile:components.screens.profile.PublicProfileTravelsTab.untitled')}
                 imageUrl={travel.travel_image_thumb_url || null}
                 metaText={meta || null}
                 onPress={() => onOpenTravel(travel)}
@@ -86,10 +88,10 @@ export function PublicProfileTravelsTab({
           style={[styles.viewAllButton, globalFocusStyles.focusable]}
           onPress={onLoadMore}
           accessibilityRole="button"
-          accessibilityLabel="Показать ещё путешествия автора"
+          accessibilityLabel={i18nT('profile:components.screens.profile.PublicProfileTravelsTab.pokazat_esche_puteshestviya_avtora_e98ba901')}
           {...Platform.select({ web: { cursor: 'pointer' } })}
         >
-          <Text style={styles.viewAllButtonText}>Показать ещё</Text>
+          <Text style={styles.viewAllButtonText}>{i18nT('profile:components.screens.profile.PublicProfileTravelsTab.pokazat_esche_4dc205b6')}</Text>
           <Feather name="chevron-down" size={16} color={colors.primaryDark} />
         </Pressable>
       ) : null}

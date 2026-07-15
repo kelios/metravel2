@@ -8,6 +8,8 @@ import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
+import { translate as i18nT } from '@/i18n'
+
 
 const TelegramDiscussionSectionLazy = lazy(() => import('@/components/travel/TelegramDiscussionSection'))
 
@@ -63,7 +65,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
     <>
       <View
         testID="travel-details-telegram"
-        accessibilityLabel="Обсуждение в Telegram"
+        accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsFooterSection.obsuzhdenie_v_telegram_63bdc570')}
         accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
         style={[styles.sectionContainer, styles.authorCardContainer, footerStyles.compactSection]}
       >
@@ -75,7 +77,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
       {!isMobile && (
         <View
           testID="travel-details-share"
-          accessibilityLabel="Поделиться маршрутом"
+          accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsFooterSection.podelitsya_marshrutom_18019d80')}
           accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
           style={[styles.sectionContainer, styles.shareButtonsContainer, footerStyles.compactSection]}
         >
@@ -94,7 +96,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
       {isMobile && (
         <View
           testID="travel-details-cta"
-          accessibilityLabel="Призыв к действию"
+          accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsFooterSection.prizyv_k_deystviyu_f84d6e75')}
           accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
           style={[styles.sectionContainer, footerStyles.compactSection]}
         >

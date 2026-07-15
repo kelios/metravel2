@@ -14,6 +14,8 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useYoutubeEmbedModel } from '../hooks/useYoutubeEmbedModel'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { Icon } from '../TravelDetailsIcons'
+import { translate as i18nT } from '@/i18n'
+
 
 export interface LazyYouTubeProps {
   url: string
@@ -48,12 +50,12 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
         onPress={handlePreviewPress}
         style={styles.videoContainer}
         accessibilityRole="button"
-        accessibilityLabel="Смотреть видео"
+        accessibilityLabel={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.smotret_video_998d86a4')}
       >
         {shouldLoad ? (
           <ImageCardMedia
             src={`https://img.youtube.com/vi/${id}/hqdefault.jpg`}
-            alt="Превью видео YouTube"
+            alt={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.prevyu_video_youtube_43c600fa')}
             fit="contain"
             blurBackground
             allowCriticalWebBlur
@@ -64,7 +66,7 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
         ) : null}
         <View style={styles.playOverlay}>
           <Icon name="play-circle-fill" size={64} color={colors.textOnDark} />
-          <Text style={styles.videoHintText}>Видео запустится автоматически</Text>
+          <Text style={styles.videoHintText}>{i18nT('travel:components.travel.details.sections.LazyYouTubeSection.video_zapustitsya_avtomaticheski_e11cf341')}</Text>
         </View>
       </Pressable>
     )
@@ -89,7 +91,7 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
         loading="lazy"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen
-        title="YouTube video"
+        title={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.youtube_video_2e756db5')}
       />
     </div>
   )

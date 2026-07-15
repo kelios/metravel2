@@ -5,6 +5,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { translate as i18nT } from '@/i18n'
+
 
 type FeatherName = React.ComponentProps<typeof Feather>['name'];
 
@@ -25,57 +27,57 @@ type Category = {
 const CATEGORIES: Category[] = [
   {
     icon: 'shield',
-    title: 'Замки и крепости',
-    desc: 'Несвиж, Мир, Лида и легенды веков',
+    get title() { return i18nT('homeStatic:components.about.CategoriesShowcase.zamki_i_kreposti_2aae3abf') },
+    get desc() { return i18nT('homeStatic:about.category.castles.description') },
     route: '/search',
     filters: { categoryTravelAddress: [33, 43] },
   },
   {
     icon: 'droplet',
-    title: 'Озёра и реки',
-    desc: 'Браславы, Нарочь, тихие лесные плёсы',
+    get title() { return i18nT('homeStatic:components.about.CategoriesShowcase.ozera_i_reki_c424d98b') },
+    get desc() { return i18nT('homeStatic:about.category.water.description') },
     route: '/search',
     filters: { categoryTravelAddress: [84, 110, 113, 193] },
   },
   {
     icon: 'feather',
-    title: 'Природа и парки',
-    desc: 'Беловежская пуща, заказники, тропы',
+    get title() { return i18nT('homeStatic:components.about.CategoriesShowcase.priroda_i_parki_4617513c') },
+    get desc() { return i18nT('homeStatic:about.category.nature.description') },
     route: '/search',
     filters: { categories: [21, 22, 2] },
   },
   {
     icon: 'smile',
-    title: 'Парки и развлечения',
-    desc: 'Парки развлечений, зоопарки, арены и семейный отдых',
+    get title() { return i18nT('homeStatic:components.about.CategoriesShowcase.parki_i_razvlecheniya_57112025') },
+    get desc() { return i18nT('homeStatic:about.category.entertainment.description') },
     route: '/search',
     filters: { categoryTravelAddress: [92, 35, 46, 185, 204] },
   },
   {
     icon: 'layers',
-    title: 'Города и архитектура',
-    desc: 'Минск, Гродно, Витебск — гулять и любоваться',
+    get title() { return i18nT('homeStatic:components.about.CategoriesShowcase.goroda_i_arhitektura_f7c1af07') },
+    get desc() { return i18nT('homeStatic:about.category.cities.description') },
     route: '/search',
     filters: { categories: [19, 20] },
   },
   {
     icon: 'image',
-    title: 'Музеи и арт',
-    desc: 'Музеи, скансены и усадьбы для культурных прогулок',
+    get title() { return i18nT('homeStatic:components.about.CategoriesShowcase.muzei_i_art_07233c1f') },
+    get desc() { return i18nT('homeStatic:about.category.museums.description') },
     route: '/search',
     filters: { categoryTravelAddress: [76, 77, 136] },
   },
   {
     icon: 'coffee',
-    title: 'Гастрономия',
-    desc: 'Кафе, рестораны, бары, пивоварни и винодельни',
+    get title() { return i18nT('homeStatic:components.about.CategoriesShowcase.gastronomiya_fdd2c2c0') },
+    get desc() { return i18nT('homeStatic:about.category.food.description') },
     route: '/search',
     filters: { categoryTravelAddress: [50, 109, 10, 98, 172, 198] },
   },
   {
     icon: 'map',
-    title: 'Готовые маршруты',
-    desc: 'На день, выходные, машиной и пешком',
+    get title() { return i18nT('homeStatic:components.about.CategoriesShowcase.gotovye_marshruty_683cbbce') },
+    get desc() { return i18nT('homeStatic:about.category.routes.description') },
     route: '/search',
   },
 ];
@@ -103,11 +105,10 @@ export const CategoriesShowcase: React.FC<Props> = ({ isWide }) => {
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
-        <Text style={[styles.eyebrow, { color: colors.primaryText }]}>Что вы найдёте на сайте</Text>
-        <Text style={[styles.title, { color: colors.text }]}>Идеи для любого настроения</Text>
+        <Text style={[styles.eyebrow, { color: colors.primaryText }]}>{i18nT('home:components.about.CategoriesShowcase.chto_vy_naydete_na_sayte_f9d65a89')}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{i18nT('home:components.about.CategoriesShowcase.idei_dlya_lyubogo_nastroeniya_a90611eb')}</Text>
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-          Десятки реальных путешествий — от тихих озёр до городских прогулок. Нажмите на карточку, чтобы открыть подборку
-        </Text>
+          {i18nT('home:components.about.CategoriesShowcase.desyatki_realnyh_puteshestviy_ot_tihih_ozer__f87ec9ab')}</Text>
       </View>
 
       <View style={[styles.grid, isWide ? styles.gridWide : styles.gridNarrow]}>
@@ -134,7 +135,7 @@ export const CategoriesShowcase: React.FC<Props> = ({ isWide }) => {
                 <Text style={styles.cardTitle}>{cat.title}</Text>
                 <Text style={styles.cardDesc}>{cat.desc}</Text>
                 <View style={styles.cardCta}>
-                  <Text style={styles.cardCtaText}>Смотреть</Text>
+                  <Text style={styles.cardCtaText}>{i18nT('home:components.about.CategoriesShowcase.smotret_8159b3d6')}</Text>
                   <Feather name="arrow-right" size={12} color={colors.primaryDark} />
                 </View>
               </View>

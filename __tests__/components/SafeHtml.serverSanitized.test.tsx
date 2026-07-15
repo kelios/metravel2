@@ -56,4 +56,20 @@ describe('SafeHtml serverSanitized canonical path (#709)', () => {
     });
     expect(mockedSanitize).toHaveBeenCalledTimes(1);
   });
+
+  it('adds a fallback alt only to rich-text images that do not already have one', async () => {
+    const { container } = render(
+      <SafeHtml
+        html={'<p><img src="/one.jpg"><img src="/two.jpg" alt="Подпись автора"></p>'}
+        serverSanitized
+        imageAlt={'Маршрут «Краков»'}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('img')).toHaveLength(2);
+    });
+    expect(container.querySelector('img[src="/one.jpg"]')?.getAttribute('alt')).toBe('Маршрут «Краков»');
+    expect(container.querySelector('img[src="/two.jpg"]')?.getAttribute('alt')).toBe('Подпись автора');
+  });
 });

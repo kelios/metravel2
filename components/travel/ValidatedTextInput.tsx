@@ -9,6 +9,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { validateField, STEP_VALIDATION_RULES } from '@/utils/travelWizardValidation';
 import { CharacterCounter, FieldValidationMessage } from './ValidationFeedback';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface ValidatedTextInputProps {
   label: string;
@@ -102,7 +104,7 @@ export const ValidatedTextInput: React.FC<ValidatedTextInputProps> = ({
 
       <TextInputComponent
         label=""
-        accessibilityLabel={required ? `${label}, обязательное` : label}
+        accessibilityLabel={required ? i18nT('travel:components.travel.ValidatedTextInput.value1_obyazatelnoe_9ecd860a', { value1: label }) : label}
         value={value}
         onChange={onChange}
         multiline={multiline}

@@ -9,6 +9,9 @@ import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/st
 import { getActiveQueryClient } from '@/api/activeQueryClient';
 import { queryKeys } from '@/api/queryKeys';
 import type { UserProfileDto } from '@/api/user';
+import { shouldUseStoredAuthToken } from '@/utils/authPlatform';
+import { translate as i18nT } from '@/i18n'
+
 
 const getAuthApi = async () => import('@/api/auth');
 const getUserApi = async () => import('@/api/user');
@@ -137,14 +140,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     checkAuthentication: async () => {
         const epochAtStart = authEpoch;
         try {
+            const usesStoredToken = shouldUseStoredAuthToken();
             const [token, storageData] = await Promise.all([
-                getSecureItem('userToken'),
+                usesStoredToken ? getSecureItem('userToken') : Promise.resolve(null),
                 getStorageBatch(['userId', 'userName', 'isSuperuser', 'userAvatar']),
             ]);
 
             if (epochAtStart !== authEpoch) return;
 
-            if (!token) {
+            if ((usesStoredToken && !token) || !storageData.userId) {
                 set({
                     isAuthenticated: false,
                     userId: null,
@@ -157,20 +161,60 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             }
 
             const restoredAvatar = normalizeAvatar(storageData.userAvatar);
+            let verifiedWebProfile: UserProfileDto | null = null;
+
+            // HttpOnly cookies cannot be inspected from JavaScript. Validate the
+            // ambient web session with a private endpoint before using the public
+            // profile endpoint to restore non-secret display metadata.
+            if (!usesStoredToken) {
+                const { validateWebCookieSessionApi } = await getAuthApi();
+                const hasActiveCookieSession = await validateWebCookieSessionApi();
+                if (epochAtStart !== authEpoch) return;
+                if (!hasActiveCookieSession) {
+                    await removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar']);
+                    set({
+                        isAuthenticated: false,
+                        userId: null,
+                        username: '',
+                        isSuperuser: false,
+                        userAvatar: null,
+                        isPremium: false,
+                    });
+                    return;
+                }
+
+                verifiedWebProfile = await fetchUserProfileViaCache(storageData.userId);
+                if (epochAtStart !== authEpoch) return;
+                if (!verifiedWebProfile) {
+                    await removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar']);
+                    set({
+                        isAuthenticated: false,
+                        userId: null,
+                        username: '',
+                        isSuperuser: false,
+                        userAvatar: null,
+                        isPremium: false,
+                    });
+                    return;
+                }
+            }
+
+            const verifiedAvatar = normalizeAvatar(verifiedWebProfile?.avatar);
+            const verifiedName = String(verifiedWebProfile?.first_name ?? '').trim();
 
             set({
                 isAuthenticated: true,
                 userId: storageData.userId,
-                username: storageData.userName || '',
+                username: verifiedName || storageData.userName || '',
                 isSuperuser: storageData.isSuperuser === 'true',
-                userAvatar: restoredAvatar,
-                isPremium: false,
+                userAvatar: verifiedAvatar ?? restoredAvatar,
+                isPremium: verifiedWebProfile?.is_premium ?? false,
             });
 
             // Always fetch profile in background to ensure avatar + premium flag are up-to-date.
             // Route through the mounted QueryClient + shared queryKey so this request
             // dedupes with useUserProfile (the profile screen) instead of firing twice.
-            if (storageData.userId) {
+            if (usesStoredToken && storageData.userId) {
                 fetchUserProfileViaCache(storageData.userId)
                     .then((profile) => {
                         if (epochAtStart !== authEpoch) return;
@@ -217,9 +261,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             if (!userData) return false;
             if (epochAtStart !== authEpoch) return false;
 
-            await setSecureItem('userToken', userData.token);
-            if (userData.refresh) {
-                await setSecureItem('refreshToken', userData.refresh);
+            if (shouldUseStoredAuthToken()) {
+                await setSecureItem('userToken', userData.token);
+                if (userData.refresh) {
+                    await setSecureItem('refreshToken', userData.refresh);
+                }
             }
 
             let profile: UserProfileDto | null = null;
@@ -289,9 +335,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             if (!userData) return false;
             if (epochAtStart !== authEpoch) return false;
 
-            await setSecureItem('userToken', userData.token);
-            if (userData.refresh) {
-                await setSecureItem('refreshToken', userData.refresh);
+            if (shouldUseStoredAuthToken()) {
+                await setSecureItem('userToken', userData.token);
+                if (userData.refresh) {
+                    await setSecureItem('refreshToken', userData.refresh);
+                }
             }
 
             let profile: UserProfileDto | null = null;
@@ -378,12 +426,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             const response = await resetPasswordLinkApi(email);
             return typeof response === 'string'
                 ? response
-                : 'Что-то пошло не так. Попробуйте снова.';
+                : i18nT('shared:stores.authStore.chto_to_poshlo_ne_tak_poprobuyte_snova_6b2b849c');
         } catch (error) {
             if (__DEV__) {
                 console.error('Ошибка при сбросе пароля:', error);
             }
-            return 'Произошла ошибка. Попробуйте ещё раз.';
+            return i18nT('shared:stores.authStore.proizoshla_oshibka_poprobuyte_esche_raz_fa0eb9e8');
         }
     },
 

@@ -20,6 +20,8 @@ import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
 
 import { MapMobilePopover } from './MapMobilePopover'
+import { translate as i18nT } from '@/i18n'
+
 
 interface OverlayOption {
   id: string
@@ -77,13 +79,12 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
     >
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-          Слои карты
-        </Text>
+          {i18nT('map:components.MapPage.MapMobile.MapMobileLayersPopover.sloi_karty_61711812')}</Text>
         <Pressable
           testID="map-mobile-layers-popover-close"
           onPress={onRequestClose}
           accessibilityRole="button"
-          accessibilityLabel="Закрыть"
+          accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileLayersPopover.zakryt_ceb4ed2d')}
           hitSlop={13}
           style={({ pressed }) => [pressed && { opacity: 0.6 }]}
         >

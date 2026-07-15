@@ -4,6 +4,8 @@ import ModernFilters from './ModernFilters'
 import type { FilterState as ModernFilterState } from './ModernFilters'
 import type { FilterState } from './utils/listTravelTypes'
 import type { TravelFilterGroup } from './utils/filterGroups'
+import { translate as i18nT } from '@/i18n'
+
 
 interface SidebarFiltersProps {
   isMobile: boolean
@@ -112,7 +114,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
               style={overlayStyles.backdrop}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть фильтры"
+              accessibilityLabel={i18nT('travel:components.listTravel.SidebarFilters.zakryt_filtry_731ad4fb')}
             />
             <View style={overlayStyles.sheet}>{filtersElement}</View>
           </View>

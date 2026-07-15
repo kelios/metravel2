@@ -1,26 +1,5 @@
-import React, { Suspense } from 'react'
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
-
-const LoginForm = React.lazy(() => import('@/components/auth/LoginForm'))
-
-const Fallback = () => (
-  <View style={styles.fallback}>
-    <ActivityIndicator size="large" />
-  </View>
-)
+import LoginForm from '@/components/auth/LoginForm'
 
 export default function LoginRoute() {
-  return (
-    <Suspense fallback={<Fallback />}>
-      <LoginForm />
-    </Suspense>
-  )
+  return <LoginForm />
 }
-
-const styles = StyleSheet.create({
-  fallback: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-})

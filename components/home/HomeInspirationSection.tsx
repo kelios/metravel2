@@ -14,6 +14,8 @@ import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { queryConfigs } from '@/utils/reactQueryConfig'
 import { createSectionStyles } from './homeInspirationStyles'
+import { translate as i18nT } from '@/i18n'
+
 
 type Styles = ReturnType<typeof createSectionStyles>
 
@@ -33,28 +35,28 @@ const NAV_FEEDBACK_MS = 700
 
 const EMPTY_STATE_TEXT: Record<string, { title: string; subtitle: string }> = {
   'home-travels-of-month': {
-    title: 'Новая подборка уже в пути',
-    subtitle: 'Скоро добавим свежие идеи для ближайших выходных.',
+    get title() { return i18nT('homeStatic:components.home.HomeInspirationSection.novaya_podborka_uzhe_v_puti_dfbafc73') },
+    get subtitle() { return i18nT('homeStatic:components.home.HomeInspirationSection.skoro_dobavim_svezhie_idei_dlya_blizhayshih__09439763') },
   },
   'home-popular-travels': {
-    title: 'Ещё мало данных по популярности',
-    subtitle: 'Откройте каталог и выберите маршрут по фильтрам.',
+    get title() { return i18nT('homeStatic:components.home.HomeInspirationSection.esche_malo_dannyh_po_populyarnosti_e2389d04') },
+    get subtitle() { return i18nT('homeStatic:components.home.HomeInspirationSection.otkroyte_katalog_i_vyberite_marshrut_po_filt_ab31f38d') },
   },
   'home-new-travels': {
-    title: 'Свежие маршруты в пути',
-    subtitle: 'Загляните в каталог — там уже есть готовые идеи.',
+    get title() { return i18nT('homeStatic:components.home.HomeInspirationSection.svezhie_marshruty_v_puti_967363eb') },
+    get subtitle() { return i18nT('homeStatic:components.home.HomeInspirationSection.zaglyanite_v_katalog_tam_uzhe_est_gotovye_id_9a0dc772') },
   },
   'home-random-travels': {
-    title: 'Случайная идея пока не загрузилась',
-    subtitle: 'Попробуйте каталог или вернитесь к подборке чуть позже.',
+    get title() { return i18nT('homeStatic:components.home.HomeInspirationSection.sluchaynaya_ideya_poka_ne_zagruzilas_65bc0861') },
+    get subtitle() { return i18nT('homeStatic:components.home.HomeInspirationSection.poprobuyte_katalog_ili_vernites_k_podborke_c_4e3fe0f1') },
   },
 }
 
 const SECTION_BADGES: Record<string, string> = {
-  'home-travels-of-month': 'Подборка выходного дня',
-  'home-random-travels': 'Случайный выбор',
-  'home-popular-travels': 'Популярное',
-  'home-new-travels': 'Новинки',
+  get 'home-travels-of-month'() { return i18nT('homeStatic:inspiration.month') },
+  get 'home-random-travels'() { return i18nT('homeStatic:inspiration.random') },
+  get 'home-popular-travels'() { return i18nT('homeStatic:inspiration.popular') },
+  get 'home-new-travels'() { return i18nT('homeStatic:inspiration.new') },
 }
 
 function extractItems(data: any): any[] {
@@ -186,10 +188,10 @@ export function HomeInspirationSection({
     router.push('/search' as any)
   }, [title, router])
 
-  const viewMoreLabel = isMobile ? 'Все маршруты' : 'Смотреть все маршруты'
+  const viewMoreLabel = isMobile ? i18nT('home:components.home.HomeInspirationSection.vse_marshruty_b0e98d06') : i18nT('home:components.home.HomeInspirationSection.smotret_vse_marshruty_b50a25b9')
   const emptyState = EMPTY_STATE_TEXT[queryKey] ?? {
-    title: 'Пока здесь пусто',
-    subtitle: 'Попробуйте открыть каталог маршрутов.',
+    title: i18nT('home:components.home.HomeInspirationSection.poka_zdes_pusto_79cbcf37'),
+    subtitle: i18nT('home:components.home.HomeInspirationSection.poprobuyte_otkryt_katalog_marshrutov_053c11a6'),
   }
   const sectionBadge = SECTION_BADGES[queryKey]
 
@@ -203,7 +205,7 @@ export function HomeInspirationSection({
     <Button
       label={viewMoreLabel}
       onPress={handleViewMore}
-      accessibilityLabel={`Открыть каталог маршрутов для секции «${title}»`}
+      accessibilityLabel={i18nT('home:components.home.HomeInspirationSection.otkryt_katalog_marshrutov_dlya_sektsii_value_43809a8e', { value1: title })}
       loading={openingCatalog}
       icon={<Feather name="arrow-right" size={16} color={colors.text} />}
       iconPosition="right"
@@ -236,11 +238,11 @@ export function HomeInspirationSection({
       <View style={[styles.section, isMobile && styles.sectionMobile]}>
         <View style={[styles.sectionFrame, isWeekendShowcase && styles.showcaseSectionFrame]}>
           <ErrorDisplay
-            title="Не удалось загрузить подборку"
+            title={i18nT('home:components.home.HomeInspirationSection.ne_udalos_zagruzit_podborku_520d6c7c')}
             message={
               error instanceof Error
                 ? error.message
-                : 'Попробуйте обновить подборку ещё раз.'
+                : i18nT('home:components.home.HomeInspirationSection.poprobuyte_obnovit_podborku_esche_raz_8c32ec8b')
             }
             onRetry={() => {
               void refetch()
@@ -250,9 +252,9 @@ export function HomeInspirationSection({
           />
           <View style={styles.errorFallbackActions}>
             <Button
-              label={isFetching ? 'Обновляем...' : 'Открыть каталог'}
+              label={isFetching ? i18nT('home:components.home.HomeInspirationSection.obnovlyaem_95ce25b5') : i18nT('home:components.home.HomeInspirationSection.otkryt_katalog_2dac5825')}
               onPress={handleViewMore}
-              accessibilityLabel="Открыть каталог маршрутов без этой подборки"
+              accessibilityLabel={i18nT('home:components.home.HomeInspirationSection.otkryt_katalog_marshrutov_bez_etoy_podborki_fdd3388b')}
               icon={<Feather name="compass" size={16} color={colors.text} />}
               variant="secondary"
               loading={openingCatalog}
@@ -461,7 +463,7 @@ function EmptyState({
         <Feather name="compass" size={22} color={colors.primaryDark} focusable={false as any} />
       </View>
       <View style={buildEmptyPillStyle(colors)}>
-        <Text style={buildEmptyPillTextStyle(colors)}>Пока без совпадений</Text>
+        <Text style={buildEmptyPillTextStyle(colors)}>{i18nT('home:components.home.HomeInspirationSection.poka_bez_sovpadeniy_6a4a2ee3')}</Text>
       </View>
       <Text style={[styles.emptyStateTitle, { textAlign: 'center' }]}>
         {emptyState.title}

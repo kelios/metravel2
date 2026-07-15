@@ -1,5 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n';
 
 export type NavigationActionKind =
   | 'apple'
@@ -42,11 +43,11 @@ export const NAVIGATION_ACTION_LABELS: Record<NavigationActionKind, string> = {
   google: 'Google',
   organic: 'Organic',
   osm: 'OSM',
-  save: 'Сохранить',
+  get save() { return i18nT('navigationStatic:navigationAction.save') },
   telegram: 'Telegram',
   waze: 'Waze',
-  yandex: 'Яндекс Нави',
-  'yandex-maps': 'Яндекс Карты',
+  get yandex() { return i18nT('navigationStatic:navigationAction.yandexNavigator') },
+  get 'yandex-maps'() { return i18nT('navigationStatic:navigationAction.yandexMaps') },
 };
 
 export function resolveNavigationActionKind(

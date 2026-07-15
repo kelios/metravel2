@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Modern - современная тема с геометрическими формами
  */
 export const modernTheme: PdfThemeConfig = {
   name: 'modern',
-  displayName: 'Современная',
-  description: 'Геометрические формы, яркие градиенты',
+  get displayName() { return i18nT('export:services.pdfExport.theme.modern.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.modern.description') },
   
   colors: {
     text: '#0f172a',

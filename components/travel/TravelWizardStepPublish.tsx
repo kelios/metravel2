@@ -16,7 +16,6 @@ import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { sendMessage } from '@/api/messages';
 import { devError } from '@/utils/logger';
 import { hapticNotification } from '@/utils/haptics';
-import { TravelFormData } from '@/types/types';
 import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
 import { trackWizardEvent } from '@/utils/analytics';
 import {
@@ -47,41 +46,8 @@ import {
 import { openExternalUrl } from '@/utils/externalLinks';
 import { publishTravelToInstagram, fetchInstagramOAuthStartUrl } from '@/api/instagramPublish';
 import { createStyles } from '@/components/travel/travelWizardStepPublish.styles';
-
-interface TravelWizardStepPublishProps {
-    currentStep: number;
-    totalSteps: number;
-    formData: TravelFormData;
-    countries?: Array<{
-        country_id: string;
-        title_ru: string;
-        title_en?: string;
-        title?: string;
-        name?: string;
-    }>;
-    // ✅ FIX: Унифицированная сигнатура setFormData для совместимости с другими шагами
-    setFormData: React.Dispatch<React.SetStateAction<TravelFormData>> | ((data: TravelFormData) => void);
-    isSuperAdmin: boolean;
-    onManualSave: (
-        data?: TravelFormData,
-        options?: { intent?: 'save' | 'publish' },
-    ) => Promise<TravelFormData | void>;
-    onGoBack: () => void;
-    onFinish: () => void;
-    onNavigateToIssue?: (issue: ModerationIssue) => void;
-    onStepSelect?: (step: number) => void;
-    stepMeta?: {
-        title?: string;
-        subtitle?: string;
-        tipTitle?: string;
-        tipBody?: string;
-        nextLabel?: string;
-    };
-    progress?: number;
-    autosaveBadge?: string;
-    onPreview?: () => void;
-    onOpenPublic?: () => void;
-}
+import type { TravelWizardStepPublishProps } from '@/components/travel/TravelWizardStepPublish.types';
+import { translate as i18nT } from '@/i18n'
 
 const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     currentStep,
@@ -127,9 +93,9 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     }, [formData.moderation, formData.publish]);
 
     const currentBackendStatus = useMemo(() => {
-        if (formData.moderation) return { label: 'Опубликовано', tone: 'success' } as const;
-        if (formData.publish) return { label: 'Отправлено на модерацию', tone: 'warning' } as const;
-        return { label: 'Черновик', tone: 'muted' } as const;
+        if (formData.moderation) return { label: i18nT('travel:components.travel.TravelWizardStepPublish.opublikovano_572457aa'), tone: 'success' } as const;
+        if (formData.publish) return { label: i18nT('travel:components.travel.TravelWizardStepPublish.otpravleno_na_moderatsiyu_6f9b87dd'), tone: 'warning' } as const;
+        return { label: i18nT('travel:components.travel.TravelWizardStepPublish.chernovik_80f263f2'), tone: 'muted' } as const;
     }, [formData.moderation, formData.publish]);
 
     const isUser = !isSuperAdmin;
@@ -316,8 +282,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             if (!hasToastBeenShown(error)) {
                 void showToastMessage({
                     type: 'error',
-                    text1: 'Ошибка сохранения',
-                    text2: error instanceof Error ? error.message : 'Попробуйте ещё раз',
+                    text1: i18nT('travel:components.travel.TravelWizardStepPublish.oshibka_sohraneniya_02c1b824'),
+                    text2: error instanceof Error ? error.message : i18nT('travel:components.travel.TravelWizardStepPublish.poprobuyte_esche_raz_7abf248f'),
                 });
             }
         } finally {
@@ -361,7 +327,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             });
             setMissingForModeration(criticalMissing);
             hapticNotification('warning');
-            pulsePrimaryError('Нельзя отправить: исправьте ошибки');
+            pulsePrimaryError(i18nT('travel:components.travel.TravelWizardStepPublish.nelzya_otpravit_ispravte_oshibki_eb8fb6a9'));
             scrollToMissingBanner();
             finishAction();
             return;
@@ -392,8 +358,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 setFormData(previousForm);
                 void showToastMessage({
                     type: 'error',
-                    text1: 'Не удалось отправить',
-                    text2: 'Сохранение не удалось. Проверьте интернет и попробуйте ещё раз.',
+                    text1: i18nT('travel:components.travel.TravelWizardStepPublish.ne_udalos_otpravit_46d67527'),
+                    text2: i18nT('travel:components.travel.TravelWizardStepPublish.sohranenie_ne_udalos_proverte_internet_i_pop_ab095dd2'),
                 });
                 setIsSaving(false);
                 return;
@@ -413,8 +379,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
             void showToastMessage({
                 type: 'success',
-                text1: 'Маршрут отправлен на модерацию',
-                text2: 'После одобрения он появится в разделе "Мои путешествия".',
+                text1: i18nT('travel:components.travel.TravelWizardStepPublish.marshrut_otpravlen_na_moderatsiyu_0d19b6a4'),
+                text2: i18nT('travel:components.travel.TravelWizardStepPublish.posle_odobreniya_on_poyavitsya_v_razdele_moi_03ac6085'),
             });
 
             hapticNotification('success');
@@ -433,8 +399,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             if (!hasToastBeenShown(error)) {
                 void showToastMessage({
                     type: 'error',
-                    text1: 'Не удалось отправить',
-                    text2: error instanceof Error ? error.message : 'Проверьте интернет и попробуйте ещё раз.',
+                    text1: i18nT('travel:components.travel.TravelWizardStepPublish.ne_udalos_otpravit_46d67527'),
+                    text2: error instanceof Error ? error.message : i18nT('travel:components.travel.TravelWizardStepPublish.proverte_internet_i_poprobuyte_esche_raz_415d3732'),
                 });
             }
         } finally {
@@ -460,8 +426,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 setFormData(previousForm);
                 void showToastMessage({
                     type: 'error',
-                    text1: 'Не удалось сохранить',
-                    text2: 'Проверьте интернет-соединение и попробуйте ещё раз',
+                    text1: i18nT('travel:components.travel.TravelWizardStepPublish.ne_udalos_sohranit_4605a31e'),
+                    text2: i18nT('travel:components.travel.TravelWizardStepPublish.proverte_internet_soedinenie_i_poprobuyte_es_8be75220'),
                 });
                 return;
             }
@@ -472,8 +438,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
             void showToastMessage({
                 type: 'success',
-                text1: 'Модерация одобрена',
-                text2: 'Маршрут опубликован и доступен всем пользователям.',
+                text1: i18nT('travel:components.travel.TravelWizardStepPublish.moderatsiya_odobrena_b8eb059d'),
+                text2: i18nT('travel:components.travel.TravelWizardStepPublish.marshrut_opublikovan_i_dostupen_vsem_polzova_bccaf03e'),
             });
 
             router.replace('/metravel');
@@ -483,8 +449,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             if (!hasToastBeenShown(error)) {
                 void showToastMessage({
                     type: 'error',
-                    text1: 'Не удалось сохранить',
-                    text2: error instanceof Error ? error.message : 'Проверьте интернет-соединение и попробуйте ещё раз',
+                    text1: i18nT('travel:components.travel.TravelWizardStepPublish.ne_udalos_sohranit_4605a31e'),
+                    text2: error instanceof Error ? error.message : i18nT('travel:components.travel.TravelWizardStepPublish.proverte_internet_soedinenie_i_poprobuyte_es_8be75220'),
                 });
             }
         } finally {
@@ -510,8 +476,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 setFormData(previousForm);
                 void showToastMessage({
                     type: 'error',
-                    text1: 'Не удалось сохранить',
-                    text2: 'Проверьте интернет-соединение и попробуйте ещё раз',
+                    text1: i18nT('travel:components.travel.TravelWizardStepPublish.ne_udalos_sohranit_4605a31e'),
+                    text2: i18nT('travel:components.travel.TravelWizardStepPublish.proverte_internet_soedinenie_i_poprobuyte_es_8be75220'),
                 });
                 return;
             }
@@ -525,8 +491,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             const commentText = rejectionComment.trim();
             if (authorId && commentText) {
                 try {
-                    const travelName = formData.name || 'Без названия';
-                    const messageText = `Модерация отклонена для "${travelName}": ${commentText}`;
+                    const travelName = formData.name || i18nT('travel:common.untitled');
+                    const messageText = i18nT('travel:components.travel.TravelWizardStepPublish.moderatsiya_otklonena_dlya_value1_value2_a111c39e', { value1: travelName, value2: commentText });
                     await sendMessage({
                         participants: [Number(authorId)],
                         text: messageText,
@@ -543,10 +509,10 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
             void showToastMessage({
                 type: 'info',
-                text1: 'Модерация отклонена',
+                text1: i18nT('travel:components.travel.TravelWizardStepPublish.moderatsiya_otklonena_ac183762'),
                 text2: commentText
-                    ? 'Маршрут возвращен в черновики. Комментарий отправлен автору.'
-                    : 'Маршрут возвращен в черновики.',
+                    ? i18nT('travel:components.travel.TravelWizardStepPublish.marshrut_vozvraschen_v_chernoviki_kommentari_9adead67')
+                    : i18nT('travel:components.travel.TravelWizardStepPublish.marshrut_vozvraschen_v_chernoviki_d5241a14'),
             });
 
             setRejectionComment('');
@@ -557,8 +523,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             if (!hasToastBeenShown(error)) {
                 void showToastMessage({
                     type: 'error',
-                    text1: 'Не удалось сохранить',
-                    text2: error instanceof Error ? error.message : 'Проверьте интернет-соединение и попробуйте ещё раз',
+                    text1: i18nT('travel:components.travel.TravelWizardStepPublish.ne_udalos_sohranit_4605a31e'),
+                    text2: error instanceof Error ? error.message : i18nT('travel:components.travel.TravelWizardStepPublish.proverte_internet_soedinenie_i_poprobuyte_es_8be75220'),
                 });
             }
         } finally {
@@ -581,7 +547,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         await Clipboard.setStringAsync(finalText);
         void showToastMessage({
             type: 'success',
-            text1: 'Текст для Instagram скопирован',
+            text1: i18nT('travel:components.travel.TravelWizardStepPublish.tekst_dlya_instagram_skopirovan_d5e8c582'),
         });
     }, [finalInstagramText]);
 
@@ -600,8 +566,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             if (!authUrl) {
                 void showToastMessage({
                     type: 'error',
-                    text1: 'Instagram не настроен на сервере',
-                    text2: 'Нужны ключи Meta на бэкенде (задача BE-066).',
+                    text1: i18nT('travel:components.travel.TravelWizardStepPublish.instagram_ne_nastroen_na_servere_080724da'),
+                    text2: i18nT('travel:components.travel.TravelWizardStepPublish.nuzhny_klyuchi_meta_na_bekende_zadacha_be_06_3ef88e17'),
                 });
                 return;
             }
@@ -609,15 +575,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             if (!opened) {
                 void showToastMessage({
                     type: 'error',
-                    text1: 'Не удалось открыть Meta OAuth',
-                    text2: 'Проверьте блокировку всплывающих окон и повторите.',
+                    text1: i18nT('travel:components.travel.TravelWizardStepPublish.ne_udalos_otkryt_meta_oauth_3c11f44b'),
+                    text2: i18nT('travel:components.travel.TravelWizardStepPublish.proverte_blokirovku_vsplyvayuschih_okon_i_po_e1079518'),
                 });
             }
         } catch (error) {
             void showToastMessage({
                 type: 'error',
-                text1: 'Не удалось начать подключение Instagram',
-                text2: error instanceof Error ? error.message : 'Повторите попытку позже.',
+                text1: i18nT('travel:components.travel.TravelWizardStepPublish.ne_udalos_nachat_podklyuchenie_instagram_409edc30'),
+                text2: error instanceof Error ? error.message : i18nT('travel:components.travel.TravelWizardStepPublish.povtorite_popytku_pozzhe_fa7a4481'),
             });
         } finally {
             instagramConnectingRef.current = false;
@@ -633,8 +599,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         if (!Number.isFinite(travelId) || travelId <= 0) {
             void showToastMessage({
                 type: 'error',
-                text1: 'Сначала сохраните путешествие',
-                text2: 'Публикация в Instagram доступна после сохранения.',
+                text1: i18nT('travel:components.travel.TravelWizardStepPublish.snachala_sohranite_puteshestvie_f91c1dce'),
+                text2: i18nT('travel:components.travel.TravelWizardStepPublish.publikatsiya_v_instagram_dostupna_posle_sohr_4e51d7a0'),
             });
             return;
         }
@@ -643,8 +609,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         if (imageUrls.length === 0) {
             void showToastMessage({
                 type: 'error',
-                text1: 'Нет фото для публикации',
-                text2: 'Добавьте хотя бы одно фото в галерею.',
+                text1: i18nT('travel:components.travel.TravelWizardStepPublish.net_foto_dlya_publikatsii_26980134'),
+                text2: i18nT('travel:components.travel.TravelWizardStepPublish.dobavte_hotya_by_odno_foto_v_galereyu_ee5be50f'),
             });
             return;
         }
@@ -661,17 +627,20 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             });
             void showToastMessage({
                 type: 'success',
-                text1: 'Опубликовано в Instagram',
+                text1: i18nT('travel:components.travel.TravelWizardStepPublish.opublikovano_v_instagram_0edea0fd'),
                 text2: result?.postUrl || undefined,
             });
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            const notConnected = /\b401\b|\b403\b|config|connect|подключ|token|account/i.test(message);
+            const notConnected = new RegExp(
+                i18nT('travel:components.travel.TravelWizardStepPublish.instagramNotConnectedPattern'),
+                'i',
+            ).test(message);
             void showToastMessage({
                 type: 'error',
-                text1: notConnected ? 'Аккаунт Instagram не подключён' : 'Не удалось опубликовать',
+                text1: notConnected ? i18nT('travel:components.travel.TravelWizardStepPublish.akkaunt_instagram_ne_podklyuchen_a04bf7ce') : i18nT('travel:components.travel.TravelWizardStepPublish.ne_udalos_opublikovat_3fbabd22'),
                 text2: notConnected
-                    ? 'Нажмите «Подключить Instagram», затем повторите публикацию.'
+                    ? i18nT('travel:components.travel.TravelWizardStepPublish.nazhmite_podklyuchit_instagram_zatem_povtori_6c7379a0')
                     : message,
             });
         } finally {
@@ -696,21 +665,21 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 <TravelWizardHeader
                     canGoBack={true}
                     onBack={onGoBack}
-                    title={stepMeta?.title ?? 'Публикация путешествия'}
-                    subtitle={stepMeta?.subtitle ?? 'Черновик можно сохранить; публикация требует обязательные пункты.'}
+                    title={stepMeta?.title ?? i18nT('travel:components.travel.TravelWizardStepPublish.defaultTitle')}
+                    subtitle={stepMeta?.subtitle ?? i18nT('travel:components.travel.TravelWizardStepPublish.defaultSubtitle')}
                     progressPercent={qualityScore.score}
                     errorCount={missingRequiredCount}
                     autosaveBadge={autosaveBadge}
                     onPrimary={handlePrimaryAction}
                     primaryLabel={
                         isSaving
-                            ? 'Сохранение…'
+                            ? i18nT('travel:components.travel.TravelWizardStepPublish.sohranenie_6ac62247')
                             : primaryOverrideLabel ??
                               (pendingModeration
-                                  ? 'Отправлено на модерацию'
+                                  ? i18nT('travel:components.travel.TravelWizardStepPublish.otpravleno_na_moderatsiyu_6f9b87dd')
                                   : status === 'draft'
-                                  ? 'Сохранить черновик'
-                                  : 'Отправить на модерацию')
+                                  ? i18nT('travel:components.travel.TravelWizardStepPublish.sohranit_chernovik_7d6023b4')
+                                  : i18nT('travel:components.travel.TravelWizardStepPublish.otpravit_na_moderatsiyu_55154a94'))
                     }
                     primaryTestID="primary-button"
                     primaryDisabled={pendingModeration || isSaving}
@@ -724,7 +693,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     extraBelowProgress={
                         <View style={styles.readinessNote}>
                             <Text style={styles.readinessNoteText}>
-                                Вы на последнем шаге мастера. Индикатор показывает готовность к публикации: {qualityScore.score}%.
+                                {i18nT('travel:components.travel.TravelWizardStepPublish.vy_na_poslednem_shage_mastera_indikator_poka_df37fcf6')}{qualityScore.score}%.
                             </Text>
                         </View>
                     }
@@ -811,14 +780,14 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         setRejectConfirmVisible(false);
                         void handleRejectModeration();
                     }}
-                    title="Отклонить модерацию"
+                    title={i18nT('travel:components.travel.TravelWizardStepPublish.otklonit_moderatsiyu_27e138a4')}
                     message={
                         rejectionComment.trim()
-                            ? 'Путешествие вернётся в черновики, автор получит сообщение с вашим комментарием. Действие необратимо.'
-                            : 'Путешествие вернётся в черновики и будет снято с публикации. Комментарий не заполнен — автор не узнает причину. Действие необратимо.'
+                            ? i18nT('travel:components.travel.TravelWizardStepPublish.puteshestvie_vernetsya_v_chernoviki_avtor_po_7e1bc9af')
+                            : i18nT('travel:components.travel.TravelWizardStepPublish.puteshestvie_vernetsya_v_chernoviki_i_budet__d9185285')
                     }
-                    confirmText="Отклонить"
-                    cancelText="Отмена"
+                    confirmText={i18nT('travel:components.travel.TravelWizardStepPublish.otklonit_a76b58b3')}
+                    cancelText={i18nT('travel:components.travel.TravelWizardStepPublish.otmena_1fdffdc8')}
                 />
             </KeyboardAvoidingView>
         </SafeAreaView>

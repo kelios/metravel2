@@ -11,6 +11,8 @@ import type { NavigationIconName } from '@/constants/navigationIcons'
 import { useThemedColors } from '@/hooks/useTheme'
 import { hapticImpact } from '@/utils/haptics'
 import NavigationIcon from '@/components/layout/NavigationIcon'
+import { translate as i18nT } from '@/i18n'
+
 
 type QuickAction = {
   key: string
@@ -20,10 +22,10 @@ type QuickAction = {
 }
 
 const ACTIONS: QuickAction[] = [
-  { key: 'map', label: 'Карта', icon: 'map', route: '/map' },
-  { key: 'places', label: 'Места', icon: 'map-pin', route: '/places' },
-  { key: 'quests', label: 'Квесты', icon: 'quest-route', route: '/quests' },
-  { key: 'roulette', label: 'Случайный маршрут', icon: 'dice', route: '/roulette' },
+  { key: 'map', get label() { return i18nT('homeStatic:components.home.HomeQuickActions.karta_46f4c169') }, icon: 'map', route: '/map' },
+  { key: 'places', get label() { return i18nT('homeStatic:components.home.HomeQuickActions.mesta_18e916bd') }, icon: 'map-pin', route: '/places' },
+  { key: 'quests', get label() { return i18nT('homeStatic:components.home.HomeQuickActions.kvesty_a89f2d6d') }, icon: 'quest-route', route: '/quests' },
+  { key: 'roulette', get label() { return i18nT('homeStatic:components.home.HomeQuickActions.sluchaynyy_marshrut_5924f56b') }, icon: 'dice', route: '/roulette' },
 ]
 
 function HomeQuickActions() {

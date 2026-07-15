@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 type LogoProps = {
     isCompact?: boolean;
@@ -31,19 +33,19 @@ export default React.memo(function Logo({
             onPress={() => router.push('/')}
             style={styles.logoContainer}
             accessibilityRole="link"
-            accessibilityHint="Перейти на главную страницу"
+            accessibilityHint={i18nT('navigation:components.layout.Logo.pereyti_na_glavnuyu_stranitsu_98203dd9')}
         >
             <Image
                 source={logoLoadFailed ? fallbackSource : primarySource}
                 style={[styles.logo, isCompact && styles.logoCompact]}
                 resizeMode="contain"
                 onError={() => setLogoLoadFailed(true)}
-                accessibilityLabel="MeTravel логотип"
-                alt="MeTravel логотип"
+                accessibilityLabel={i18nT('navigation:components.layout.Logo.metravel_logotip_14780610')}
+                alt={i18nT('navigation:components.layout.Logo.metravel_logotip_14780610')}
             />
             {showWordmark && (
                 <Text style={styles.logoTextRow}>
-                    <Text style={styles.logoTextMe}>Me</Text><Text style={styles.logoTextTravel}>Travel</Text>
+                    <Text style={styles.logoTextMe}>{i18nT('navigation:components.layout.Logo.me_7e450b64')}</Text><Text style={styles.logoTextTravel}>{i18nT('navigation:components.layout.Logo.travel_6006be95')}</Text>
                 </Text>
             )}
         </TouchableOpacity>

@@ -18,6 +18,8 @@ import { showToast } from '@/utils/toast';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import type { ShareButtonsPdfExportState } from '@/components/travel/ShareButtonsPdfExportBridge';
 import { devWarn } from '@/utils/logger';
+import { translate as i18nT } from '@/i18n'
+
 
 const ShareButtonsPdfExportBridgeLazy = lazy(() => import('@/components/travel/ShareButtonsPdfExportBridge'));
 
@@ -26,7 +28,7 @@ const INITIAL_PDF_EXPORT_STATE: ShareButtonsPdfExportState = {
   progress: 0,
   currentStage: ExportStage.ERROR,
   lastSettings: {
-    title: 'Мои путешествия',
+    get title() { return i18nT('travel:components.travel.pdfExport.defaultBookTitle') },
     subtitle: '',
     coverType: 'auto',
     template: 'minimal',
@@ -73,8 +75,8 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
     return `${getSiteBaseUrl()}/travels/${travelId}`;
   }, [url, travel]);
 
-  const shareTitle = travel.name || 'Путешествие на MeTravel';
-  const shareText = `Посмотрите это путешествие: ${shareTitle}`;
+  const shareTitle = travel.name || i18nT('travel:components.travel.ShareButtons.defaultShareTitle');
+  const shareText = i18nT('travel:components.travel.ShareButtons.posmotrite_eto_puteshestvie_value1_7cccb3c1', { value1: shareTitle });
   const sharePostText = `${shareText} ${shareUrl}`;
   const canUseWebShareApi =
     Platform.OS === 'web' &&
@@ -85,8 +87,8 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
     devWarn(`[ShareButtons] Не удалось выполнить действие «${label}»:`, error);
     void showToast({
       type: 'error',
-      text1: 'Не удалось открыть окно шаринга',
-      text2: 'Попробуйте ещё раз',
+      text1: i18nT('travel:components.travel.ShareButtons.ne_udalos_otkryt_okno_sharinga_7a6f995b'),
+      text2: i18nT('travel:components.travel.ShareButtons.poprobuyte_esche_raz_3c479d0f'),
       visibilityTime: 2500,
     });
   }, []);
@@ -101,12 +103,16 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
       }
 
       if (showSuccessAlert) {
-        showToast({ type: 'success', text1: 'Ссылка скопирована', visibilityTime: 2000 });
+        showToast({ type: 'success', text1: i18nT('travel:components.travel.ShareButtons.ssylka_skopirovana_f7d0a74e'), visibilityTime: 2000 });
       }
       return true;
     } catch (error) {
-      devWarn('[ShareButtons] Не удалось скопировать ссылку:', error);
-      showToast({ type: 'error', text1: 'Не удалось скопировать', text2: 'Попробуйте ещё раз', visibilityTime: 3000 });
+      devWarn(
+        '[ShareButtons]',
+        i18nT('travel:components.travel.ShareButtons.ne_udalos_skopirovat_c7f647e7'),
+        error,
+      );
+      showToast({ type: 'error', text1: i18nT('travel:components.travel.ShareButtons.ne_udalos_skopirovat_c7f647e7'), text2: i18nT('travel:components.travel.ShareButtons.poprobuyte_esche_raz_3c479d0f'), visibilityTime: 3000 });
       return false;
     }
   }, []);
@@ -172,7 +178,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
         });
       } catch (error: any) {
         if (error?.name !== 'AbortError') {
-          handleShareError('системный шаринг', error);
+          handleShareError(i18nT('travel:components.travel.ShareButtons.sistemnyy_sharing_abf838b2'), error);
         }
       }
       return;
@@ -180,12 +186,12 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
 
     try {
       await Share.share({
-        message: `${shareText}\n${shareUrl}`,
+        message: i18nT('travel:components.travel.ShareButtons.value1_value2_79dc3882', { value1: shareText, value2: shareUrl }),
         title: shareTitle,
       });
     } catch (error: any) {
       if (error?.name !== 'AbortError') {
-        handleShareError('системный шаринг', error);
+        handleShareError(i18nT('travel:components.travel.ShareButtons.sistemnyy_sharing_abf838b2'), error);
       }
     }
   }, [canUseWebShareApi, handleShareError, shareUrl, shareTitle, shareText]);
@@ -214,8 +220,8 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
   const shareButtons = [
     {
       key: 'copy',
-      label: 'Ссылка',
-      accessibilityLabel: 'Копировать ссылку',
+      label: i18nT('travel:components.travel.ShareButtons.ssylka_99fea002'),
+      accessibilityLabel: i18nT('travel:components.travel.ShareButtons.kopirovat_ssylku_39dcd42c'),
       icon: 'copy',
       onPress: handleCopyLink,
       color: palette.neutral,
@@ -223,8 +229,8 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
     },
     {
       key: 'copyPost',
-      label: 'Текст',
-      accessibilityLabel: 'Скопировать текст для поста',
+      label: i18nT('travel:components.travel.ShareButtons.tekst_1ccce593'),
+      accessibilityLabel: i18nT('travel:components.travel.ShareButtons.skopirovat_tekst_dlya_posta_0430e7a3'),
       icon: 'type',
       onPress: handleCopyPostText,
       color: palette.neutral,
@@ -234,8 +240,8 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
     ...(Platform.OS === 'web'
       ? [{
           key: 'export' as const,
-          label: isGenerating ? `PDF ${progress}%` : 'PDF / книга',
-          accessibilityLabel: isGenerating ? `Создание книги PDF, ${progress}%` : 'Открыть экспорт в PDF',
+          label: isGenerating ? `PDF ${progress}%` : i18nT('travel:components.travel.ShareButtons.pdf_kniga_e2013fce'),
+          accessibilityLabel: isGenerating ? i18nT('travel:components.travel.ShareButtons.sozdanie_knigi_pdf_value1_53c04d94', { value1: progress }) : i18nT('travel:components.travel.ShareButtons.otkryt_eksport_v_pdf_92bdc8ac'),
           icon: 'file-text' as const,
           onPress: handleOpenExport,
           color: palette.export,
@@ -245,9 +251,9 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
       : []),
     {
       key: 'telegram',
-      label: 'Telegram',
-      accessibilityLabel: 'Поделиться в Telegram',
-      accessibilityHint: 'Открывает диалог отправки в Telegram',
+      label: i18nT('travel:components.travel.ShareButtons.telegram_dff50f31'),
+      accessibilityLabel: i18nT('travel:components.travel.ShareButtons.podelitsya_v_telegram_bebb9d6b'),
+      accessibilityHint: i18nT('travel:components.travel.ShareButtons.otkryvaet_dialog_otpravki_v_telegram_2dfd26c8'),
       icon: 'send',
       onPress: handleShareTelegram,
       color: palette.telegram,
@@ -255,9 +261,9 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
     },
     {
       key: 'vk',
-      label: 'VK',
-      accessibilityLabel: 'Поделиться во ВКонтакте',
-      accessibilityHint: 'Открывает диалог отправки во ВКонтакте',
+      label: i18nT('travel:components.travel.ShareButtons.vk_afe88dc2'),
+      accessibilityLabel: i18nT('travel:components.travel.ShareButtons.podelitsya_vo_vkontakte_7b669909'),
+      accessibilityHint: i18nT('travel:components.travel.ShareButtons.otkryvaet_dialog_otpravki_vo_vkontakte_c704b876'),
       icon: 'users',
       onPress: handleShareVK,
       color: palette.vk,
@@ -265,9 +271,9 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
     },
     {
       key: 'whatsapp',
-      label: 'WhatsApp',
-      accessibilityLabel: 'Поделиться в WhatsApp',
-      accessibilityHint: 'Открывает диалог отправки в WhatsApp',
+      label: i18nT('travel:components.travel.ShareButtons.whatsapp_b8f961ed'),
+      accessibilityLabel: i18nT('travel:components.travel.ShareButtons.podelitsya_v_whatsapp_f5a30242'),
+      accessibilityHint: i18nT('travel:components.travel.ShareButtons.otkryvaet_dialog_otpravki_v_whatsapp_a785b9c1'),
       icon: 'message-circle',
       onPress: handleShareWhatsApp,
       color: palette.whatsapp,
@@ -279,8 +285,8 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
   if (Platform.OS !== 'web') {
     shareButtons.unshift({
       key: 'native',
-      label: 'Поделиться',
-      accessibilityLabel: 'Открыть системное меню Поделиться',
+      label: i18nT('travel:components.travel.ShareButtons.podelitsya_aa929e89'),
+      accessibilityLabel: i18nT('travel:components.travel.ShareButtons.otkryt_sistemnoe_menyu_podelitsya_4edc3a9d'),
       icon: 'share',
       onPress: handleNativeShare,
       color: palette.export,
@@ -293,17 +299,17 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
     : [
         {
           key: 'quick',
-          title: 'Быстрые действия',
+          title: i18nT('travel:components.travel.ShareButtons.bystrye_deystviya_d9e8757f'),
           items: shareButtons.filter((button) => button.group === 'quick'),
         },
         {
           key: 'social',
-          title: 'Соцсети',
+          title: i18nT('travel:components.travel.ShareButtons.sotsseti_109ba488'),
           items: shareButtons.filter((button) => button.group === 'social'),
         },
         {
           key: 'export',
-          title: 'Экспорт',
+          title: i18nT('travel:components.travel.ShareButtons.eksport_7ed71b16'),
           items: shareButtons.filter((button) => button.group === 'export'),
         },
       ].filter((group) => group.items.length > 0);
@@ -323,13 +329,12 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
           }
         ]}
         accessibilityRole="button"
-        accessibilityLabel="Показать панель «Поделиться»"
+        accessibilityLabel={i18nT('travel:components.travel.ShareButtons.pokazat_panel_podelitsya_12173feb')}
       >
         <Feather name="share-2" size={22} color={colors.textMuted} />
         {!isSticky && (
           <Text style={[styles.buttonText, { color: colors.text, marginLeft: 8 }]}>
-            Поделиться
-          </Text>
+            {i18nT('travel:components.travel.ShareButtons.podelitsya_aa929e89')}</Text>
         )}
       </Pressable>
     );
@@ -348,7 +353,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
       >
         {!isSticky && (
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Поделиться</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{i18nT('travel:components.travel.ShareButtons.podelitsya_aa929e89')}</Text>
             {isMobile && (
               <Pressable
                 onPress={toggleCollapse}
@@ -357,7 +362,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
                   pressed && styles.collapseButtonPressed,
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel={isCollapsed ? 'Показать панель действий' : 'Скрыть панель действий'}
+                accessibilityLabel={isCollapsed ? i18nT('travel:components.travel.ShareButtons.pokazat_panel_deystviy_e38a8974') : i18nT('travel:components.travel.ShareButtons.skryt_panel_deystviy_cc7f2001')}
               >
                 <Feather 
                   name={isCollapsed ? 'chevron-down' : 'chevron-up'} 
@@ -383,7 +388,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
                       { backgroundColor: colors.backgroundSecondary }
                     ]}
                     accessibilityRole="button"
-                    accessibilityLabel="Скрыть панель действий"
+                    accessibilityLabel={i18nT('travel:components.travel.ShareButtons.skryt_panel_deystviy_cc7f2001')}
                   >
                     <Feather name="x" size={20} color={colors.textMuted} />
                   </Pressable>
@@ -452,12 +457,12 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
               <View style={styles.progressContainer}>
                 <View style={[styles.progressBar, { width: `${progress}%` }]} />
                 <Text style={styles.progressText}>
-                  {currentStage === ExportStage.VALIDATING && 'Проверка данных...'}
-                  {currentStage === ExportStage.TRANSFORMING && 'Подготовка путешествия...'}
-                  {currentStage === ExportStage.GENERATING_HTML && 'Генерация страниц книги...'}
-                  {currentStage === ExportStage.LOADING_IMAGES && 'Загрузка фотографий...'}
-                  {currentStage === ExportStage.RENDERING && 'Подготовка к печати...'}
-                  {currentStage === ExportStage.COMPLETE && 'Готово! Открываем книгу...'}
+                  {currentStage === ExportStage.VALIDATING && i18nT('travel:components.travel.ShareButtons.stageValidating')}
+                  {currentStage === ExportStage.TRANSFORMING && i18nT('travel:components.travel.ShareButtons.stageTransforming')}
+                  {currentStage === ExportStage.GENERATING_HTML && i18nT('travel:components.travel.ShareButtons.stageGeneratingHtml')}
+                  {currentStage === ExportStage.LOADING_IMAGES && i18nT('travel:components.travel.ShareButtons.stageLoadingImages')}
+                  {currentStage === ExportStage.RENDERING && i18nT('travel:components.travel.ShareButtons.stageRendering')}
+                  {currentStage === ExportStage.COMPLETE && i18nT('travel:components.travel.ShareButtons.stageComplete')}
                 </Text>
               </View>
             )}

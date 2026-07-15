@@ -57,9 +57,13 @@ describe('UserPointsMapPointMarkerWeb', () => {
     },
   };
 
+  const markerElement = {
+    setAttribute: jest.fn(),
+  };
   const markerApi = {
     openPopup: jest.fn(),
     closePopup: jest.fn(),
+    getElement: jest.fn(() => markerElement),
   };
 
   const Marker = React.forwardRef<any, any>(({ children, eventHandlers }, ref) => {
@@ -125,10 +129,13 @@ describe('UserPointsMapPointMarkerWeb', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockPlacePopupCard.mockClear();
+    markerElement.setAttribute.mockClear();
   });
 
   it('renders the saved point popup through the shared PlacePopupCard template', () => {
     renderMarker();
+
+    expect(markerElement.setAttribute).toHaveBeenCalledWith('aria-label', 'Saved place');
 
     expect(screen.getByTestId('mock-place-popup-card')).toBeTruthy();
     const props = mockPlacePopupCard.mock.calls[0]?.[0];

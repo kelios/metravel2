@@ -523,14 +523,14 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (!normalized) return
     if (normalized.toLowerCase().includes('signal is aborted')) return
 
-    const shouldWarn = normalized.includes('Слишком много запросов')
+    const shouldWarn = errors.routingCode === 'rate_limit'
     try {
       if (shouldWarn) console.warn('[Map] Routing:', normalized)
       else console.error('[Map] Routing error:', normalized)
     } catch {
       // ignore console invocation failures in restricted runtimes
     }
-  }, [errors?.routing])
+  }, [errors?.routing, errors?.routingCode])
 
   const customIcons = useLeafletIcons(L)
   // Базовая подложка карты всегда светлая (обычный цвет), даже в тёмной теме UI.
@@ -542,7 +542,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // Expose marker index for MapUiApi.openPopupForCoord
   useEffect(() => {
     try {
-      ;(leafletControlRef as any).markerByCoord = markerByCoordRef.current
+      leafletControlRef.markerByCoord = markerByCoordRef.current
     } catch {
       ignoreOptionalMapRuntimeError()
     }

@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Nordic — холодный скандинавский минимализм, приглушённые голубые и серые
  */
 export const nordicTheme: PdfThemeConfig = {
   name: 'nordic',
-  displayName: 'Скандинавия',
-  description: 'Холодный минимализм, приглушённые серо-голубые тона',
+  get displayName() { return i18nT('export:services.pdfExport.theme.nordic.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.nordic.description') },
 
   colors: {
     text: '#1c2533',

@@ -6,6 +6,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import ErrorBoundary from '@/components/ui/ErrorBoundary'
 import type { Travel } from '@/types/types'
 import { isWebAutomation } from '@/utils/isWebAutomation'
+import { translate as i18nT } from '@/i18n'
+
 
 const WeatherWidget = React.lazy(() => import('@/components/home/WeatherWidget'))
 
@@ -37,12 +39,11 @@ const WEATHER_PLACEHOLDER_STYLE = {
 const WeatherErrorFallback: React.FC<{ colors: any; onRetry: () => void }> = ({ colors, onRetry }) => (
   <View style={{ minHeight: 120, justifyContent: 'center', gap: DESIGN_TOKENS.spacing.sm, marginTop: DESIGN_TOKENS.spacing.sm } as any}>
     <Text style={{ color: colors.textMuted, fontSize: DESIGN_TOKENS.typography.sizes.sm } as any}>
-      Не удалось загрузить погоду
-    </Text>
+      {i18nT('travel:components.travel.details.sections.TravelWeatherBlock.ne_udalos_zagruzit_pogodu_28c03dd5')}</Text>
     <Pressable
       onPress={onRetry}
       accessibilityRole="button"
-      accessibilityLabel="Повторить загрузку погоды"
+      accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelWeatherBlock.povtorit_zagruzku_pogody_6dea5a7f')}
       style={({ pressed }) => [{
         flexDirection: 'row',
         alignItems: 'center',
@@ -58,8 +59,7 @@ const WeatherErrorFallback: React.FC<{ colors: any; onRetry: () => void }> = ({ 
     >
       <Feather name="refresh-cw" size={16} color={colors.text} />
       <Text style={{ color: colors.text, fontWeight: '600', fontSize: DESIGN_TOKENS.typography.sizes.sm } as any}>
-        Повторить
-      </Text>
+        {i18nT('travel:components.travel.details.sections.TravelWeatherBlock.povtorit_5e33f7a9')}</Text>
     </Pressable>
   </View>
 )
@@ -78,20 +78,20 @@ export const TravelWeatherBlock: React.FC<{
   return (
     <View
       accessibilityRole={Platform.OS === 'web' ? ('region' as any) : 'none'}
-      accessibilityLabel="Погода"
+      accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelWeatherBlock.pogoda_853f5c3c')}
       style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
     >
       <Text
         style={styles.sectionHeaderText}
         accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
         aria-level={2 as any}
-      >Погода</Text>
-      <Text style={styles.sectionSubtitle}>Прогноз по точкам маршрута</Text>
+      >{i18nT('travel:components.travel.details.sections.TravelWeatherBlock.pogoda_853f5c3c')}</Text>
+      <Text style={styles.sectionSubtitle}>{i18nT('travel:components.travel.details.sections.TravelWeatherBlock.prognoz_po_tochkam_marshruta_926029bd')}</Text>
       {!weatherVisible ? (
         <Pressable
           onPress={() => setWeatherVisible(true)}
           accessibilityRole="button"
-          accessibilityLabel="Показать погоду по точкам маршрута"
+          accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelWeatherBlock.pokazat_pogodu_po_tochkam_marshruta_a15c8883')}
           style={({ pressed }) => [{
             flexDirection: 'row',
             alignItems: 'center',
@@ -110,8 +110,7 @@ export const TravelWeatherBlock: React.FC<{
         >
           <Feather name="cloud" size={16} color={colors.text} />
           <Text style={{ color: colors.text, fontWeight: '600', fontSize: DESIGN_TOKENS.typography.sizes.sm } as any}>
-            Показать погоду
-          </Text>
+            {i18nT('travel:components.travel.details.sections.TravelWeatherBlock.pokazat_pogodu_19f2da8f')}</Text>
         </Pressable>
       ) : (
         <View style={{ marginTop: DESIGN_TOKENS.spacing.sm }}>
@@ -124,7 +123,7 @@ export const TravelWeatherBlock: React.FC<{
             <Suspense
               fallback={
                 <View style={WEATHER_PLACEHOLDER_STYLE}>
-                  <ActivityIndicator size="small" accessibilityLabel="Загрузка погоды" />
+                  <ActivityIndicator size="small" accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelWeatherBlock.zagruzka_pogody_40fbc4c5')} />
                 </View>
               }
             >

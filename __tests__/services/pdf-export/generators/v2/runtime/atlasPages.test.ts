@@ -140,4 +140,18 @@ describe('Travel atlas (global map + index)', () => {
     expect(pages[0]).not.toContain('NaN')
     expect(pages[0]).not.toContain('Infinity')
   })
+
+  test('renders localized atlas counts when native Intl.PluralRules is unavailable', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(Intl, 'PluralRules')
+    Object.defineProperty(Intl, 'PluralRules', { configurable: true, value: undefined })
+
+    try {
+      const pages = renderAtlasPages({ meta, theme, startPageNumber: 4 })
+      expect(pages[0]).toContain('3 путешествия')
+      expect(pages[0]).toContain('12 точек')
+      expect(pages[0]).toContain('3 страны')
+    } finally {
+      if (descriptor) Object.defineProperty(Intl, 'PluralRules', descriptor)
+    }
+  })
 })

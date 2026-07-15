@@ -8,6 +8,8 @@ import type { PlannedTrip } from '@/api/plannedTrips';
 import AffiliateOffers from '@/components/affiliate/AffiliateOffers';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { trackTripAffiliateClick } from '@/utils/tripAnalytics';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   trip: PlannedTrip;
@@ -19,7 +21,7 @@ function TripAffiliateBlock({ trip }: Props) {
 
   return (
     <View style={styles.wrap} testID="trip-affiliate">
-      <Text style={styles.heading}>Где остановиться и что посмотреть</Text>
+      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.TripAffiliateBlock.gde_ostanovitsya_i_chto_posmotret_d0723aa4')}</Text>
       <AffiliateOffers
         city={trip.region || undefined}
         onOfferClick={(key) => trackTripAffiliateClick(trip.id, key)}

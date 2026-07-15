@@ -7,6 +7,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
 import { usePhotoUpload, chooseFallbackUrl } from '@/hooks/usePhotoUpload';
+import { translate as i18nT } from '@/i18n'
+
 
 interface PhotoUploadWithPreviewProps {
   collection: string;
@@ -100,13 +102,13 @@ const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
           <View style={styles.previewContainer as any}>
             <img src={currentDisplayUrl} alt="" aria-hidden referrerPolicy="no-referrer" style={styles.previewBlur as any} />
             <img
-              src={currentDisplayUrl} alt="Предпросмотр" referrerPolicy="no-referrer"
+              src={currentDisplayUrl} alt={i18nT('travel:components.travel.PhotoUploadWithPreview.predprosmotr_cd9c2eff')} referrerPolicy="no-referrer"
               style={styles.previewImage as any}
               onLoad={(e) => handleImageLoadCheck(e.currentTarget as HTMLImageElement)}
               onError={() => handleImageError()}
             />
             {!disabled && (
-              <Pressable style={styles.removeButton as any} onPress={handleRemovePress} accessibilityLabel="Удалить изображение">
+              <Pressable style={styles.removeButton as any} onPress={handleRemovePress} accessibilityLabel={i18nT('travel:components.travel.PhotoUploadWithPreview.udalit_izobrazhenie_0c6f4255')}>
                 <Feather name="x" size={18} color={colors.textOnPrimary} />
               </Pressable>
             )}
@@ -115,8 +117,8 @@ const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
           <View style={styles.placeholderContainer as any}>
             <Feather name="upload-cloud" size={40} color={colors.primaryDark} />
             <Text style={styles.placeholderText as any}>{placeholder}</Text>
-            <Text style={styles.placeholderSubtext as any}>или нажмите для выбора файла</Text>
-            <Text style={styles.placeholderHint as any}>Макс. размер: {maxSizeMB}MB</Text>
+            <Text style={styles.placeholderSubtext as any}>{i18nT('travel:components.travel.PhotoUploadWithPreview.ili_nazhmite_dlya_vybora_fayla_8e7a14a9')}</Text>
+            <Text style={styles.placeholderHint as any}>{i18nT('travel:components.travel.PhotoUploadWithPreview.maks_razmer_3c63e70c')}{maxSizeMB}{i18nT('travel:components.travel.PhotoUploadWithPreview.mb_18863aeb')}</Text>
           </View>
         )}
       </div>
@@ -139,7 +141,7 @@ const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
 const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove,
   onUploadStateChange,
-  disabled = false, placeholder = 'Перетащите сюда изображение', maxSizeMB = 10,
+  disabled = false, placeholder = i18nT('travel:components.travel.PhotoUploadWithPreview.peretaschite_syuda_izobrazhenie_2109990b'), maxSizeMB = 10,
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -206,7 +208,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         {loading ? <ActivityIndicator color={colors.textOnPrimary} /> : (
           <>
             <Feather name="upload-cloud" size={16} color={colors.textOnPrimary} />
-            <Text style={styles.uploadButtonText}>{currentDisplayUrl ? 'Заменить фото' : 'Загрузить фото'}</Text>
+            <Text style={styles.uploadButtonText}>{currentDisplayUrl ? i18nT('travel:components.travel.PhotoUploadWithPreview.zamenit_foto_b3cc1485') : i18nT('travel:components.travel.PhotoUploadWithPreview.zagruzit_foto_9cd3d4f7')}</Text>
           </>
         )}
       </Pressable>
@@ -216,7 +218,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
           {!disabled && (
             <Pressable style={styles.nativeRemoveButton} onPress={handleRemovePress}>
               <Feather name="trash-2" size={14} color={colors.danger} />
-              <Text style={styles.nativeRemoveText}>Удалить</Text>
+              <Text style={styles.nativeRemoveText}>{i18nT('travel:components.travel.PhotoUploadWithPreview.udalit_752b7703')}</Text>
             </Pressable>
           )}
         </View>

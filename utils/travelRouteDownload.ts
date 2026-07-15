@@ -4,6 +4,8 @@ import * as Sharing from 'expo-sharing'
 
 import { downloadTravelRouteFileBlob } from '@/api/travelRoutes'
 import { downloadBlobOnWeb } from '@/utils/downloadUrlOnWeb'
+import { translate as i18nT } from '@/i18n'
+
 
 type DownloadableRouteFile = {
   id: number
@@ -47,7 +49,7 @@ export async function downloadTravelRouteFile(
 
   await Sharing.shareAsync(uri, {
     mimeType,
-    dialogTitle: 'Сохранить файл маршрута',
+    dialogTitle: i18nT('shared:utils.travelRouteDownload.sohranit_fayl_marshruta_7edbd35d'),
   })
   return true
 }

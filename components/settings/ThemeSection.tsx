@@ -3,6 +3,8 @@ import Feather from '@expo/vector-icons/Feather';
 
 import type { Theme, useThemedColors } from '@/hooks/useTheme';
 import type { createSettingsStyles } from '@/components/screens/settings/settings.styles';
+import { translate as i18nT } from '@/i18n'
+
 
 type Colors = ReturnType<typeof useThemedColors>;
 type Styles = ReturnType<typeof createSettingsStyles>;
@@ -30,15 +32,15 @@ export default function ThemeSection({ styles, colors, theme, setTheme, themeOpt
                     <Feather name="sun" size={18} color={colors.primaryDark} />
                 </View>
                 <View style={styles.cardText}>
-                    <Text style={styles.cardTitle}>Тема оформления</Text>
-                    <Text style={styles.cardMeta}>По умолчанию светлая</Text>
+                    <Text style={styles.cardTitle}>{i18nT('profile:components.settings.ThemeSection.tema_oformleniya_78a345c8')}</Text>
+                    <Text style={styles.cardMeta}>{i18nT('profile:components.settings.ThemeSection.po_umolchaniyu_svetlaya_b13d797b')}</Text>
                 </View>
             </View>
 
             <View
                 style={styles.themeOptions}
                 accessibilityRole="radiogroup"
-                accessibilityLabel="Выбор темы оформления"
+                accessibilityLabel={i18nT('profile:components.settings.ThemeSection.vybor_temy_oformleniya_dbeae2db')}
             >
                 {themeOptions.map((option) => {
                     const isSelected = theme === option.value;

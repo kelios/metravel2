@@ -22,83 +22,67 @@ import * as Sharing from 'expo-sharing';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import { DESIGN_COLORS } from '@/constants/designSystem';
-import { buildQuestOfflineMapGpx } from './questOfflineMapExport';
+import { buildQuestOfflineMapGeoJSON, buildQuestOfflineMapGpx } from './questOfflineMapExport';
+import { buildQuestWalkingRouteGeometry } from './questRouteGeometry';
+import { hasRoutedQuestTrack, useQuestRouteGeometry, type QuestRouteGeometryState } from './useQuestRouteGeometry';
 import {
-    isQuestMapPngMessage,
     QUEST_MAP_PNG_RENDERER_SCRIPT,
     saveAndShareQuestMapPng,
 } from './questNativeMapPng';
+import {
+    parseQuestMapBridgeMessage,
+    type QuestMapMarkerStatus,
+} from './questMapBridge';
+import {
+    groupQuestStepPoints,
+    normalizeQuestStepPoints,
+    type QuestStepPoint,
+} from './questMapPoints';
 import { openQuestMap, type QuestMapApp } from './questWizardHelpers';
 import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
 import { LEAFLET_JS, LEAFLET_CSS } from '@/utils/leafletInlineAsset';
+import { serializeForInlineScript } from '@/utils/webViewBridge';
+import { selectPlural, translate as i18nT } from '@/i18n'
 
-const QUEST_NAV_PROVIDERS: Array<{ app: QuestMapApp; label: string }> = [
-    { app: 'google', label: 'Google' },
-    { app: 'organic', label: 'Organic' },
-    { app: 'waze', label: 'Waze' },
-    { app: 'yandex', label: 'Яндекс' },
-    { app: 'osm', label: 'OSM' },
-];
 
 const MIN_INLINE_MAP_HEIGHT = 420;
 
-type StepPoint = { lat: number; lng: number; title?: string };
+function formatPointCount(count: number) {
+    return selectPlural(count, {
+        one: i18nT('quests:components.quests.QuestFullMap.value1_tochka_c8481435', { value1: count }),
+        few: i18nT('quests:components.quests.QuestFullMap.value1_tochki_a2cd5a87', { value1: count }),
+        many: i18nT('quests:components.quests.QuestFullMap.value1_tochek_75c461c8', { value1: count }),
+        other: i18nT('quests:components.quests.QuestFullMap.value1_tochek_75c461c8', { value1: count }),
+    });
+}
 
-type GroupedPoint = { lat: number; lng: number; indexes: number[]; titles: string[] };
-
-type MarkerStatus = {
-    expectedMarkers: number;
-    markerNodes: number;
-    visibleMarkers: number;
-    settled: boolean;
+const formatRouteDistance = (meters: number) => {
+    if (!Number.isFinite(meters) || meters <= 0) return null;
+    if (meters < 1000) return i18nT('quests:components.quests.QuestFullMap.value1_m_a64562c6', { value1: Math.round(meters) });
+    return i18nT('quests:components.quests.QuestFullMap.value1_km_24d92f57', { value1: (meters / 1000).toFixed(meters < 10000 ? 1 : 0) });
 };
 
-function formatPointCount(count: number) {
-    const mod10 = count % 10;
-    const mod100 = count % 100;
-    if (mod10 === 1 && mod100 !== 11) return `${count} точка`;
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} точки`;
-    return `${count} точек`;
-}
-
-function buildGeoJSON(pts: StepPoint[]) {
-    return JSON.stringify(
-        {
-            type: 'FeatureCollection',
-            features: [
-                ...pts.map((p, i) => ({
-                    type: 'Feature',
-                    geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
-                    properties: { order: i + 1, title: p.title || `Точка ${i + 1}` },
-                })),
-                {
-                    type: 'Feature',
-                    geometry: {
-                        type: 'LineString',
-                        coordinates: pts.map(p => [p.lng, p.lat]),
-                    },
-                    properties: { name: 'Маршрут квеста' },
-                },
-            ],
-        },
-        null,
-        2
-    );
-}
-
-const safeJson = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');
+const getRouteStatusText = (route: QuestRouteGeometryState) => {
+    if (route.status === 'loading') return i18nT('quests:components.quests.QuestFullMap.stroim_peshiy_marshrut_po_dorozhkam_8ab3ce79');
+    if (hasRoutedQuestTrack(route.track, route.source)) {
+        const distance = formatRouteDistance(route.distanceM);
+        return distance ? i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_value1_62786bc6', { value1: distance }) : i18nT('quests:components.quests.QuestFullMap.peshiy_marshrut_gotov_bca517c9');
+    }
+    if (route.status === 'fallback') return i18nT('quests:components.quests.QuestFullMap.marshrutizator_nedostupen_pokazana_priblizit_20e198c4');
+    return i18nT('quests:components.quests.QuestFullMap.dobavte_minimum_dve_tochki_dlya_marshruta_1653582f');
+};
 
 function QuestFullMap({
     steps,
     height = 520,
-    title = 'Карта квеста',
+    title = i18nT('quests:components.quests.QuestFullMap.karta_kvesta_9da6e5cf'),
     activeStepIndex,
     allowFullscreen = true,
     onClose,
     interactive = true,
     pointerFrozen = false,
 }: {
-    steps: StepPoint[];
+    steps: QuestStepPoint[];
     height?: number;
     title?: string;
     activeStepIndex?: number;
@@ -113,7 +97,7 @@ function QuestFullMap({
     // Пока идёт закрытие fullscreen — снимаем pointerEvents с WebView, чтобы native
     // touch-responder успел получить UP/CANCEL до размонтирования (RN touch-deadlock).
     const [fullscreenClosing, setFullscreenClosing] = useState(false);
-    const [markerStatus, setMarkerStatus] = useState<MarkerStatus | null>(null);
+    const [markerStatus, setMarkerStatus] = useState<QuestMapMarkerStatus | null>(null);
     const [isExportingPng, setIsExportingPng] = useState(false);
     const webViewRef = useRef<WebView>(null);
     const pngResolverRef = useRef<((dataUrl: string | null) => void) | null>(null);
@@ -146,32 +130,38 @@ function QuestFullMap({
     });
 
     const points = useMemo(
-        () => steps.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng)),
+        () => normalizeQuestStepPoints(steps),
         [steps]
+    );
+    const questNavProviders = useMemo<Array<{ app: QuestMapApp; label: string }>>(
+        () => [
+            { app: 'google', label: 'Google' },
+            { app: 'organic', label: 'Organic' },
+            { app: 'waze', label: 'Waze' },
+            { app: 'yandex', label: i18nT('quests:components.quests.QuestFullMap.navigation.yandex') },
+            { app: 'osm', label: 'OSM' },
+        ],
+        [],
     );
 
     // Группировка совпадающих координат (как в web-версии)
-    const groupedPoints = useMemo<GroupedPoint[]>(() => {
-        const map = new Map<string, GroupedPoint>();
-        points.forEach((p, i) => {
-            const key = `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`;
-            const existing = map.get(key);
-            if (!existing) {
-                map.set(key, {
-                    lat: p.lat,
-                    lng: p.lng,
-                    indexes: [i + 1],
-                    titles: [p.title || `Точка ${i + 1}`],
-                });
-            } else {
-                existing.indexes.push(i + 1);
-                existing.titles.push(p.title || `Точка ${i + 1}`);
-            }
-        });
-        return Array.from(map.values()).sort(
-            (a, b) => Math.min(...a.indexes) - Math.min(...b.indexes)
-        );
-    }, [points]);
+    const groupedPoints = useMemo(
+        () => groupQuestStepPoints(
+            points,
+            pointNumber => i18nT(
+                'quests:components.quests.QuestFullMap.pointFallback',
+                { value1: pointNumber },
+            ),
+        ),
+        [points],
+    );
+
+    const routeGeometry = useQuestRouteGeometry(points);
+    const routeIsRouted = hasRoutedQuestTrack(routeGeometry.track, routeGeometry.source);
+    const routeStatusText = getRouteStatusText(routeGeometry);
+    const routeLineTrack = routeGeometry.track.length >= 2
+        ? routeGeometry.track
+        : points.map(point => [point.lng, point.lat] as [number, number]);
 
     const htmlContent = useMemo(() => `
     <!DOCTYPE html>
@@ -208,25 +198,32 @@ function QuestFullMap({
             point[1] >= -180 && point[1] <= 180;
         }
 
-        var rawRoutePoints = ${safeJson(points.map(p => [p.lat, p.lng]))};
-        var routePoints = rawRoutePoints.filter(isValidLatLng);
-        var grouped = ${safeJson(groupedPoints)}.filter(function (point) {
+        var rawWaypointPoints = ${serializeForInlineScript(points.map(p => [p.lat, p.lng]))};
+        var waypointPoints = rawWaypointPoints.filter(isValidLatLng);
+        var rawRouteTrack = ${serializeForInlineScript(routeLineTrack)};
+        var routePoints = rawRouteTrack.map(function (point) {
+          return Array.isArray(point) && point.length >= 2 ? [Number(point[1]), Number(point[0])] : null;
+        }).filter(isValidLatLng);
+        if (routePoints.length < 2) routePoints = waypointPoints;
+        var routeIsRouted = ${routeIsRouted ? 'true' : 'false'};
+        var grouped = ${serializeForInlineScript(groupedPoints)}.filter(function (point) {
           return Number.isFinite(point.lat) &&
             Number.isFinite(point.lng) &&
             point.lat >= -90 && point.lat <= 90 &&
             point.lng >= -180 && point.lng <= 180;
         });
-        var navProviders = ${safeJson(QUEST_NAV_PROVIDERS)};
-        var theme = ${safeJson({
+        var navProviders = ${serializeForInlineScript(questNavProviders)};
+        var theme = ${serializeForInlineScript({
             primary: colors.primary,
             primaryDark: colors.primaryDark,
             warning: colors.warning,
             warningDark: colors.warningDark,
             text: colors.text,
             textOnPrimary: colors.textOnPrimary,
+            surface: colors.surface,
             routeLine: DESIGN_COLORS.routeLine,
         })};
-        var initialCenter = routePoints[0] || [53.9, 27.56];
+        var initialCenter = waypointPoints[0] || routePoints[0] || [53.9, 27.56];
 
         var mapInteractive = ${interactive ? 'true' : 'false'};
         var map = L.map('map', {
@@ -256,21 +253,46 @@ function QuestFullMap({
           keepBuffer: 1
         });
 
+        var routeHalo = routePoints.length > 1
+          ? L.polyline(routePoints, {
+              color: theme.surface,
+              weight: routeIsRouted ? 9 : 7,
+              opacity: 0.92,
+              lineCap: 'round',
+              lineJoin: 'round'
+            }).addTo(map)
+          : null;
         var routeLine = routePoints.length > 1
-          ? L.polyline(routePoints, { color: theme.routeLine, weight: 4 }).addTo(map)
+          ? L.polyline(routePoints, {
+              color: routeIsRouted ? theme.routeLine : theme.warningDark,
+              weight: routeIsRouted ? 5 : 4,
+              opacity: routeIsRouted ? 0.96 : 0.78,
+              dashArray: routeIsRouted ? null : '8 10',
+              lineCap: 'round',
+              lineJoin: 'round'
+            }).addTo(map)
           : null;
 
         function iconFor(label, active) {
-          var size = active ? 36 : 28;
-          var fontSize = active ? 14 : 12;
-          var bg = active ? theme.primary : theme.warning;
-          var stroke = active ? theme.primaryDark : theme.warningDark;
-          var color = active ? theme.textOnPrimary : theme.text;
-          var html = '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:9999px;' +
+          var size = active ? 40 : 34;
+          var dotSize = active ? 30 : 26;
+          var fontSize = active ? 14 : 13;
+          var bg = active ? theme.primary : theme.surface;
+          var stroke = active ? theme.primaryDark : theme.primary;
+          var color = active ? theme.textOnPrimary : theme.primaryDark;
+          var html = '<div style="position:relative;width:' + size + 'px;height:' + size + 'px">' +
+            '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:9999px;' +
+            'background:' + theme.surface + ';border:2px solid ' + theme.surface + ';' +
+            'display:flex;align-items:center;justify-content:center;' +
+            'box-shadow:0 8px 18px rgba(0,0,0,.22);position:relative;z-index:1">' +
+            '<div style="width:' + dotSize + 'px;height:' + dotSize + 'px;border-radius:9999px;' +
             'background:' + bg + ';border:2px solid ' + stroke + ';color:' + color + ';' +
             'display:flex;align-items:center;justify-content:center;font-weight:800;' +
-            'font-size:' + fontSize + 'px;line-height:1;padding:0 4px;' +
-            'box-shadow:0 2px 6px rgba(0,0,0,.25)">' + label + '</div>';
+            'font-size:' + fontSize + 'px;line-height:1;padding:0 4px">' + label + '</div>' +
+            '</div><div style="position:absolute;left:50%;bottom:-2px;width:10px;height:10px;' +
+            'background:' + theme.surface + ';border-right:2px solid ' + theme.surface + ';' +
+            'border-bottom:2px solid ' + theme.surface + ';transform:translateX(-50%) rotate(45deg);' +
+            'box-shadow:0 8px 18px rgba(0,0,0,.22);z-index:0"></div></div>';
           return L.divIcon({ className: 'qmark', html: html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
         }
 
@@ -279,12 +301,12 @@ function QuestFullMap({
             return '<button type="button" class="qnav-btn" data-app="' + provider.app +
               '" data-lat="' + gp.lat + '" data-lng="' + gp.lng +
               '" data-title="' + encodeURIComponent(gp.titles[0] || '') + '" ' +
-              'style="cursor:pointer;border:1px solid ' + theme.routeLine + ';background:#fff;color:' + theme.text +
+              'style="cursor:pointer;border:1px solid ' + theme.routeLine + ';background:' + theme.surface + ';color:' + theme.text +
               ';border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700;line-height:1">' +
               provider.label + '</button>';
           }).join('');
           return '<div style="margin-top:8px;font-size:12px;font-weight:700;color:' + theme.text +
-            '">Довести меня</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-width:220px">' +
+            '">' + ${serializeForInlineScript(i18nT('quests:components.quests.QuestFullMap.dovesti_menya_cbcbe1c8'))} + '</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-width:220px">' +
             buttons + '</div>';
         }
 
@@ -359,7 +381,7 @@ function QuestFullMap({
             window.ReactNativeWebView.postMessage(JSON.stringify({
               type: 'quest-map-status',
               stage: stage,
-              points: routePoints.length,
+              points: waypointPoints.length,
               expectedMarkers: expectedMarkers,
               markerNodes: document.querySelectorAll('.qmark').length,
               visibleMarkers: visibleMarkers,
@@ -383,8 +405,8 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
             var active = activeIndex != null && gp.indexes.indexOf(activeIndex + 1) !== -1;
             markers[i].setIcon(iconFor(gp.indexes.join(','), active));
           });
-          if (activeIndex != null && isValidLatLng(routePoints[activeIndex])) {
-            map.panTo(routePoints[activeIndex], { animate: true });
+          if (activeIndex != null && isValidLatLng(waypointPoints[activeIndex])) {
+            map.panTo(waypointPoints[activeIndex], { animate: true });
           }
         };
 
@@ -403,6 +425,7 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
           try {
             if (!map.hasLayer(tileLayer) && hasStableMapSize()) {
               tileLayer.addTo(map);
+              if (routeHalo && !map.hasLayer(routeHalo)) routeHalo.addTo(map);
               if (routeLine && !map.hasLayer(routeLine)) routeLine.addTo(map);
             }
           } catch (e) {}
@@ -422,14 +445,15 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
         // Повторяем fit после invalidateSize, пока контейнер не получит размер.
         function fitToRoute() {
           try {
-            if (routePoints.length === 0) {
+            if (waypointPoints.length === 0 && routePoints.length === 0) {
               map.setView([53.9, 27.56], 10);
               ensureTileLayer();
               return true;
             }
             map.invalidateSize();
             if (!hasStableMapSize()) return false;
-            var bounds = L.latLngBounds(routePoints).pad(0.15);
+            var boundsPoints = routePoints.length > 1 ? routePoints.concat(waypointPoints) : waypointPoints;
+            var bounds = L.latLngBounds(boundsPoints).pad(0.15);
             if (!bounds.isValid()) {
               map.setView(initialCenter, 15);
               ensureTileLayer();
@@ -467,7 +491,7 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
       </script>
     </body>
     </html>
-  `, [points, groupedPoints, colors, interactive]);
+  `, [points, routeLineTrack, routeIsRouted, groupedPoints, colors, interactive, questNavProviders]);
 
     useEffect(() => {
         if (isLoading) return;
@@ -482,46 +506,31 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
     }, [htmlContent]);
 
     const handleMapMessage = (event: WebViewMessageEvent) => {
-        try {
-            const data = JSON.parse(event.nativeEvent.data) as Partial<MarkerStatus> & {
-                type?: string;
-                app?: QuestMapApp;
-                lat?: number;
-                lng?: number;
-                title?: string;
-                ok?: boolean;
-                dataUrl?: string | null;
-            };
-            if (isQuestMapPngMessage(data)) {
-                const resolver = pngResolverRef.current;
-                pngResolverRef.current = null;
-                if (pngTimeoutRef.current) {
-                    clearTimeout(pngTimeoutRef.current);
-                    pngTimeoutRef.current = null;
-                }
-                resolver?.(data.ok ? (data.dataUrl ?? null) : null);
-                return;
+        const message = parseQuestMapBridgeMessage(event.nativeEvent.data);
+        if (!message) return;
+        if (message.type === 'quest-map-png') {
+            const resolver = pngResolverRef.current;
+            pngResolverRef.current = null;
+            if (pngTimeoutRef.current) {
+                clearTimeout(pngTimeoutRef.current);
+                pngTimeoutRef.current = null;
             }
-            if (data.type === 'quest-map-nav') {
-                if (
-                    data.app &&
-                    Number.isFinite(data.lat) &&
-                    Number.isFinite(data.lng)
-                ) {
-                    void openQuestMap({ lat: data.lat!, lng: data.lng!, title: data.title }, data.app);
-                }
-                return;
-            }
-            if (data.type !== 'quest-map-status') return;
-            setMarkerStatus({
-                expectedMarkers: Number(data.expectedMarkers) || groupedPoints.length,
-                markerNodes: Number(data.markerNodes) || 0,
-                visibleMarkers: Number(data.visibleMarkers) || 0,
-                settled: Boolean(data.settled),
-            });
-        } catch {
-            // Ignore non-JSON WebView messages.
+            resolver?.(message.ok ? message.dataUrl : null);
+            return;
         }
+        if (message.type === 'quest-map-nav') {
+            void openQuestMap(
+                { lat: message.lat, lng: message.lng, title: message.title },
+                message.app,
+            );
+            return;
+        }
+        setMarkerStatus({
+            expectedMarkers: message.expectedMarkers || groupedPoints.length,
+            markerNodes: message.markerNodes || 0,
+            visibleMarkers: message.visibleMarkers || 0,
+            settled: message.settled,
+        });
     };
 
     const markersConfirmed =
@@ -562,14 +571,14 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
             const ok = await saveAndShareQuestMapPng({ dataUrl, title });
             if (!ok && dataUrl == null) {
                 Alert.alert(
-                    'Экспорт PNG',
-                    'Не удалось сформировать изображение карты. Попробуйте GPX или GeoJSON.'
+                    i18nT('quests:components.quests.QuestFullMap.eksport_png_f998b6c7'),
+                    i18nT('quests:components.quests.QuestFullMap.ne_udalos_sformirovat_izobrazhenie_karty_pop_8f0c211b')
                 );
             } else if (!ok) {
-                Alert.alert('Экспорт PNG', 'Не удалось поделиться изображением карты');
+                Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_png_f998b6c7'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_podelitsya_izobrazheniem_karty_f9e98473'));
             }
         } catch {
-            Alert.alert('Экспорт PNG', 'Не удалось сформировать изображение карты');
+            Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_png_f998b6c7'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_sformirovat_izobrazhenie_karty_91b89c4b'));
         } finally {
             setIsExportingPng(false);
         }
@@ -582,43 +591,71 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
         };
     }, []);
 
+    const resolveRoutedTrackForExport = async () => {
+        if (routeIsRouted) return routeGeometry.track;
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        try {
+            const result = await buildQuestWalkingRouteGeometry(points, { signal: controller.signal });
+            return result.source === 'routed' && result.track.length >= 2 ? result.track : null;
+        } finally {
+            clearTimeout(timeout);
+        }
+    };
+
     const shareAsGPX = async () => {
         try {
-            const gpxFile = buildQuestOfflineMapGpx({ title, steps: points });
+            const routedTrack = await resolveRoutedTrackForExport();
+            if (!routedTrack) {
+                Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_gpx_5b594fb6'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_01a5921d'));
+                return;
+            }
+
+            const gpxFile = buildQuestOfflineMapGpx({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed' });
             const cacheDir = FileSystem.cacheDirectory ?? '';
             const fileUri = `${cacheDir}${gpxFile.filename}`;
             await FileSystem.writeAsStringAsync(fileUri, gpxFile.content);
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(fileUri, {
                     mimeType: gpxFile.mimeType,
-                    dialogTitle: 'Поделиться маршрутом',
+                    dialogTitle: i18nT('quests:components.quests.QuestFullMap.podelitsya_marshrutom_d39de8d4'),
                 });
             }
         } catch {
-            Alert.alert('Экспорт', 'Не удалось поделиться GPX-файлом');
+            Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_d541404b'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_podelitsya_gpx_faylom_fbac86e9'));
         }
     };
 
     const shareAsGeoJSON = async () => {
         try {
+            const routedTrack = await resolveRoutedTrackForExport();
+            if (!routedTrack) {
+                Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_geojson_2369b67f'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_433c08de'));
+                return;
+            }
+
             const cacheDir = FileSystem.cacheDirectory ?? '';
             const fileUri = `${cacheDir}${title.replace(/\s+/g, '_')}.geojson`;
-            await FileSystem.writeAsStringAsync(fileUri, buildGeoJSON(points));
+            await FileSystem.writeAsStringAsync(
+                fileUri,
+                buildQuestOfflineMapGeoJSON({ title, steps: points, routeTrack: routedTrack, routeSource: 'routed' }),
+            );
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(fileUri, {
                     mimeType: 'application/geo+json',
-                    dialogTitle: 'Поделиться маршрутом',
+                    dialogTitle: i18nT('quests:components.quests.QuestFullMap.podelitsya_marshrutom_d39de8d4'),
                 });
             }
         } catch {
-            Alert.alert('Экспорт', 'Не удалось поделиться GeoJSON-файлом');
+            Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_d541404b'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_podelitsya_geojson_faylom_5bb0e239'));
         }
     };
 
     if (points.length === 0) {
         return (
             <View style={[styles.wrap, { height: resolvedHeight }]}>
-                <Text style={styles.loadingText}>Нет точек маршрута для карты</Text>
+                <Text style={styles.loadingText}>{i18nT('quests:components.quests.QuestFullMap.net_tochek_marshruta_dlya_karty_bd5c5d99')}</Text>
             </View>
         );
     }
@@ -638,7 +675,7 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
                             style={styles.mobileMenuButton}
                             onPress={() => setFullscreenVisible(true)}
                             accessibilityRole="button"
-                            accessibilityLabel="Открыть карту квеста на весь экран"
+                            accessibilityLabel={i18nT('quests:components.quests.QuestFullMap.otkryt_kartu_kvesta_na_ves_ekran_aa9d3b80')}
                         >
                             <Feather name="maximize-2" size={18} color={colors.textOnPrimary} />
                         </TouchableOpacity>
@@ -647,7 +684,7 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
                         style={styles.mobileMenuButton}
                         onPress={() => setExportMenuVisible(true)}
                         accessibilityRole="button"
-                        accessibilityLabel="Скачать маршрут (PNG, GPX, GeoJSON)"
+                        accessibilityLabel={i18nT('quests:components.quests.QuestFullMap.skachat_marshrut_png_gpx_geojson_bb653813')}
                     >
                         <Feather name="download" size={18} color={colors.textOnPrimary} />
                     </TouchableOpacity>
@@ -657,7 +694,7 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
                             onPress={onClose}
                             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                             accessibilityRole="button"
-                            accessibilityLabel="Закрыть полноэкранную карту квеста"
+                            accessibilityLabel={i18nT('quests:components.quests.QuestFullMap.zakryt_polnoekrannuyu_kartu_kvesta_dbff4c11')}
                         >
                             <Feather name="x" size={20} color={colors.text} />
                         </TouchableOpacity>
@@ -688,14 +725,29 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
             ) : null}
 
             <View
+                style={styles.routeStatus}
+                testID="quest-map-route-status"
+                accessibilityLabel={routeStatusText}
+            >
+                <Feather
+                    name={routeGeometry.status === 'loading' ? 'loader' : routeIsRouted ? 'navigation' : 'alert-triangle'}
+                    size={14}
+                    color={routeIsRouted ? colors.primary : routeGeometry.status === 'loading' ? colors.textMuted : colors.warningDark}
+                />
+                <Text style={styles.routeStatusText} numberOfLines={1}>
+                    {routeStatusText}
+                </Text>
+            </View>
+
+            <View
                 style={styles.pointStatus}
                 testID="quest-map-points-status"
                 accessibilityLabel={
                     markersConfirmed
-                        ? `${formatPointCount(points.length)} на карте`
+                        ? i18nT('quests:components.quests.QuestFullMap.value1_na_karte_23ac5875', { value1: formatPointCount(points.length) })
                         : markersMissing
-                          ? 'Точки карты не отрисовались'
-                          : `${formatPointCount(points.length)} загружаются на карту`
+                          ? i18nT('quests:components.quests.QuestFullMap.tochki_karty_ne_otrisovalis_4b6fa92f')
+                          : i18nT('quests:components.quests.QuestFullMap.value1_zagruzhayutsya_na_kartu_430cc5cb', { value1: formatPointCount(points.length) })
                 }
             >
                 <Feather
@@ -705,10 +757,10 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
                 />
                 <Text style={styles.pointStatusText} numberOfLines={1}>
                     {markersConfirmed
-                        ? `${formatPointCount(points.length)} на карте`
+                        ? i18nT('quests:components.quests.QuestFullMap.value1_na_karte_23ac5875', { value1: formatPointCount(points.length) })
                         : markersMissing
-                          ? 'Точки карты не отрисовались'
-                          : `${formatPointCount(points.length)} загружаются на карту`}
+                          ? i18nT('quests:components.quests.QuestFullMap.tochki_karty_ne_otrisovalis_4b6fa92f')
+                          : i18nT('quests:components.quests.QuestFullMap.value1_zagruzhayutsya_na_kartu_430cc5cb', { value1: formatPointCount(points.length) })}
                 </Text>
             </View>
 
@@ -724,7 +776,7 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
                     onPress={() => setExportMenuVisible(false)}
                 >
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Экспорт маршрута</Text>
+                        <Text style={styles.modalTitle}>{i18nT('quests:components.quests.QuestFullMap.eksport_marshruta_365e5842')}</Text>
                         <TouchableOpacity
                             style={styles.modalOption}
                             onPress={() => {
@@ -732,7 +784,7 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
                                 void shareAsPNG();
                             }}
                         >
-                            <Text style={styles.modalOptionText}>Поделиться PNG</Text>
+                            <Text style={styles.modalOptionText}>{i18nT('quests:components.quests.QuestFullMap.podelitsya_png_cea537a4')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.modalOption}
@@ -741,7 +793,7 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
                                 void shareAsGPX();
                             }}
                         >
-                            <Text style={styles.modalOptionText}>Поделиться GPX</Text>
+                            <Text style={styles.modalOptionText}>{i18nT('quests:components.quests.QuestFullMap.podelitsya_gpx_bd013bf8')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.modalOption}
@@ -750,13 +802,13 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
                                 void shareAsGeoJSON();
                             }}
                         >
-                            <Text style={styles.modalOptionText}>Поделиться GeoJSON</Text>
+                            <Text style={styles.modalOptionText}>{i18nT('quests:components.quests.QuestFullMap.podelitsya_geojson_1c4cb024')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.modalOption, styles.cancelOption]}
                             onPress={() => setExportMenuVisible(false)}
                         >
-                            <Text style={styles.cancelOptionText}>Отмена</Text>
+                            <Text style={styles.cancelOptionText}>{i18nT('quests:components.quests.QuestFullMap.otmena_bac038f4')}</Text>
                         </TouchableOpacity>
                     </View>
                 </TouchableOpacity>
@@ -766,7 +818,7 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
                 {isLoading && (
                     <View style={styles.loader}>
                         <ActivityIndicator size="large" color={colors.primaryDark} />
-                        <Text style={styles.loadingText}>Загрузка карты...</Text>
+                        <Text style={styles.loadingText}>{i18nT('quests:components.quests.QuestFullMap.zagruzka_karty_7aad04b6')}</Text>
                     </View>
                 )}
                 <WebView
@@ -787,7 +839,7 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
                         style={styles.zoomButton}
                         onPress={() => handleZoom('in')}
                         accessibilityRole="button"
-                        accessibilityLabel="Приблизить карту"
+                        accessibilityLabel={i18nT('quests:components.quests.QuestFullMap.priblizit_kartu_aa504c98')}
                     >
                         <Text style={styles.zoomButtonText}>+</Text>
                     </TouchableOpacity>
@@ -795,7 +847,7 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
                         style={styles.zoomButton}
                         onPress={() => handleZoom('out')}
                         accessibilityRole="button"
-                        accessibilityLabel="Отдалить карту"
+                        accessibilityLabel={i18nT('quests:components.quests.QuestFullMap.otdalit_kartu_1b6a4a22')}
                     >
                         <Text style={styles.zoomButtonText}>−</Text>
                     </TouchableOpacity>
@@ -805,15 +857,15 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
             <View style={styles.touchHints}>
                 <Text style={styles.hintText}>
                     {interactive
-                        ? '↕️ Двумя пальцами для масштабирования'
-                        : 'Откройте карту на весь экран, чтобы перемещать её'}
+                        ? i18nT('quests:components.quests.QuestFullMap.dvumya_paltsami_dlya_masshtabirovaniya_2e3cc5a3')
+                        : i18nT('quests:components.quests.QuestFullMap.otkroyte_kartu_na_ves_ekran_chtoby_peremesch_a990f545')}
                 </Text>
             </View>
 
             {isExportingPng ? (
                 <View style={styles.pngOverlay} pointerEvents="auto">
                     <ActivityIndicator size="large" color={colors.primaryDark} />
-                    <Text style={styles.loadingText}>Готовим изображение карты...</Text>
+                    <Text style={styles.loadingText}>{i18nT('quests:components.quests.QuestFullMap.gotovim_izobrazhenie_karty_a9ade26f')}</Text>
                 </View>
             ) : null}
         </View>
@@ -878,6 +930,23 @@ const createStyles = (colors: ThemedColors) =>
         },
         map: {
             flex: 1,
+        },
+        routeStatus: {
+            minHeight: 36,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+            backgroundColor: colors.surface,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+        },
+        routeStatusText: {
+            flex: 1,
+            fontSize: 13,
+            fontWeight: '600',
+            color: colors.text,
         },
         pointStatus: {
             minHeight: 36,

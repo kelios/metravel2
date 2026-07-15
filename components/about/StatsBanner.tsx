@@ -5,6 +5,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 type FeatherName = React.ComponentProps<typeof Feather>['name'];
 
@@ -13,10 +15,10 @@ type Props = {
 };
 
 const ITEMS: Array<{ icon: FeatherName; value: string; label: string; href: string }> = [
-  { icon: 'compass', value: 'Сотни', label: 'маршрутов от путешественников', href: '/search' },
-  { icon: 'camera', value: 'Тысячи', label: 'живых фото и впечатлений', href: '/search?sort=popular' },
-  { icon: 'map', value: 'Карта', label: 'с точками интереса по всей стране', href: '/map' },
-  { icon: 'heart', value: 'Бесплатно', label: 'и без рекламы — просто для души', href: '/search' },
+  { icon: 'compass', get value() { return i18nT('homeStatic:about.stats.hundreds') }, get label() { return i18nT('homeStatic:components.about.StatsBanner.marshrutov_ot_puteshestvennikov_7b635034') }, href: '/search' },
+  { icon: 'camera', get value() { return i18nT('homeStatic:about.stats.thousands') }, get label() { return i18nT('homeStatic:components.about.StatsBanner.zhivyh_foto_i_vpechatleniy_cbc0cc16') }, href: '/search?sort=popular' },
+  { icon: 'map', get value() { return i18nT('homeStatic:about.stats.map') }, get label() { return i18nT('homeStatic:components.about.StatsBanner.s_tochkami_interesa_po_vsey_strane_d4a6bc32') }, href: '/map' },
+  { icon: 'heart', get value() { return i18nT('homeStatic:about.stats.free') }, get label() { return i18nT('homeStatic:components.about.StatsBanner.i_bez_reklamy_prosto_dlya_dushi_ff2a8d4e') }, href: '/search' },
 ];
 
 export const StatsBanner: React.FC<Props> = ({ isWide }) => {

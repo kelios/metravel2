@@ -7,6 +7,8 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
+import { translate as i18nT } from '@/i18n'
+
 
 type FooterDesktopProps = {
   testID?: string
@@ -286,33 +288,33 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
   }
 
   const utilityLinks: LinkItem[] = [
-    { key: 'quests', label: 'Квесты', route: '/quests' as any },
-    { key: 'app', label: 'Приложение', route: '/app' as any },
-    { key: 'about', label: 'О сайте', route: '/about' as any },
-    { key: 'privacy', label: 'Политика', route: '/privacy' as any },
-    { key: 'cookies', label: 'Cookies', route: '/cookies' as any },
-    { key: 'terms', label: 'Соглашение', route: '/terms' as any },
-    { key: 'disclaimer', label: 'Отказ от ответственности', route: '/disclaimer' as any },
-    { key: 'community-rules', label: 'Правила сообщества', route: '/community-rules' as any },
-    { key: 'trip-rules', label: 'Правила поездок', route: '/trip-rules' as any },
+    { key: 'quests', label: i18nT('navigation:components.layout.FooterDesktop.kvesty_a13429c0'), route: '/quests' as any },
+    { key: 'app', label: i18nT('navigation:components.layout.FooterDesktop.prilozhenie_ac8200d5'), route: '/app' as any },
+    { key: 'about', label: i18nT('navigation:components.layout.FooterDesktop.o_sayte_f17fcfd7'), route: '/about' as any },
+    { key: 'privacy', label: i18nT('navigation:components.layout.FooterDesktop.politika_569007d9'), route: '/privacy' as any },
+    { key: 'cookies', label: i18nT('navigation:components.layout.FooterDesktop.cookies_52e35ac6'), route: '/cookies' as any },
+    { key: 'terms', label: i18nT('navigation:components.layout.FooterDesktop.soglashenie_eed97b3c'), route: '/terms' as any },
+    { key: 'disclaimer', label: i18nT('navigation:components.layout.FooterDesktop.otkaz_ot_otvetstvennosti_a7924dad'), route: '/disclaimer' as any },
+    { key: 'community-rules', label: i18nT('navigation:components.layout.FooterDesktop.pravila_soobschestva_3fc378a4'), route: '/community-rules' as any },
+    { key: 'trip-rules', label: i18nT('navigation:components.layout.FooterDesktop.pravila_poezdok_0224bc25'), route: '/trip-rules' as any },
   ]
 
   const social: LinkItem[] = [
     {
       key: 'tt',
-      label: 'TikTok',
+      label: i18nT('navigation:components.layout.FooterDesktop.tiktok_87c3a282'),
       externalUrl: 'https://www.tiktok.com/@metravel.by',
       icon: <Feather name="music" size={18} color={iconColor} />,
     },
     {
       key: 'ig',
-      label: 'Instagram',
+      label: i18nT('navigation:components.layout.FooterDesktop.instagram_8c5228c3'),
       externalUrl: 'https://www.instagram.com/metravelby/',
       icon: <Feather name="instagram" size={18} color={iconColor} />,
     },
     {
       key: 'yt',
-      label: 'YouTube',
+      label: i18nT('navigation:components.layout.FooterDesktop.youtube_11ee4fb1'),
       externalUrl: 'https://www.youtube.com/@metravelby',
       icon: <Feather name="youtube" size={18} color={iconColor} />,
     },
@@ -352,7 +354,7 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
             </View>
 
             <Text style={styles.copy} numberOfLines={1}>
-              © MeTravel 2020–{new Date().getFullYear()}
+              {i18nT('navigation:components.layout.FooterDesktop.metravel_2020_1c77d748')}{new Date().getFullYear()}
             </Text>
           </View>
         </View>

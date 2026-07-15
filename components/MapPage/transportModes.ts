@@ -1,3 +1,5 @@
+import { translate as i18nT } from '@/i18n'
+
 /**
  * Shared transport-mode options for route building.
  *
@@ -27,17 +29,28 @@ export const TRANSPORT_SPEED_KMH: Record<TransportMode, number> = {
 }
 
 /** Order used in both the desktop segmented control and the mobile popover. */
-export const TRANSPORT_MODES: ReadonlyArray<TransportModeOption> = [
-  { key: 'car', icon: 'directions-car', label: 'Авто', iconSource: 'material' },
-  { key: 'foot', icon: 'directions-walk', label: 'Пешком', iconSource: 'material' },
-  { key: 'bike', icon: 'directions-bike', label: 'Велосипед', iconSource: 'material' },
+const TRANSPORT_MODE_DEFINITIONS: ReadonlyArray<Omit<TransportModeOption, 'label'>> = [
+  { key: 'car', icon: 'directions-car', iconSource: 'material' },
+  { key: 'foot', icon: 'directions-walk', iconSource: 'material' },
+  { key: 'bike', icon: 'directions-bike', iconSource: 'material' },
 ]
 
-export const TRANSPORT_LABEL: Record<TransportMode, string> = {
-  car: 'Авто',
-  foot: 'Пешком',
-  bike: 'Велосипед',
+export const getTransportLabel = (mode: TransportMode): string => {
+  switch (mode) {
+    case 'bike':
+      return i18nT('map:components.MapPage.transportModes.velosiped_82cf8bea')
+    case 'foot':
+      return i18nT('map:components.MapPage.transportModes.peshkom_f6e70267')
+    default:
+      return i18nT('map:components.MapPage.transportModes.avto_320b0f3d')
+  }
 }
+
+export const getTransportModes = (): ReadonlyArray<TransportModeOption> =>
+  TRANSPORT_MODE_DEFINITIONS.map((option) => ({
+    ...option,
+    label: getTransportLabel(option.key),
+  }))
 
 export const TRANSPORT_ICON: Record<TransportMode, TransportModeOption['icon']> = {
   car: 'directions-car',

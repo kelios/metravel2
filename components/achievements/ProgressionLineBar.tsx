@@ -13,6 +13,8 @@ import type {
   ProgressionLine,
   ProgressionLineSlug,
 } from '@/api/gamification'
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   line: ProgressionLine
@@ -31,12 +33,12 @@ const LINE_FILL_TIER: Record<ProgressionLineSlug, keyof typeof TIER_VISUALS> = {
 
 // Что засчитывается в трек — FE-фолбэк, если BE не прислал description.
 // Снимает главную путаницу: пользователь видит, какое действие растит линейку.
-const ACTIVITY_DESC: Record<ActivityKind, string> = {
-  participant: 'Совместные поездки, к которым вы присоединились',
-  author: 'Опубликованные путешествия и статьи',
-  reader: 'Прочитанные истории путешествий',
-  explorer: 'Открытые места и точки на карте',
-}
+const createActivityDescriptions = (): Record<ActivityKind, string> => ({
+  participant: i18nT('achievements:components.achievements.ProgressionLineBar.activity.participant'),
+  author: i18nT('achievements:components.achievements.ProgressionLineBar.activity.author'),
+  reader: i18nT('achievements:components.achievements.ProgressionLineBar.activity.reader'),
+  explorer: i18nT('achievements:components.achievements.ProgressionLineBar.activity.explorer'),
+})
 
 /** Одна линейка прогрессии: маскот ветки, тип активности, уровень и % до следующего. */
 function ProgressionLineBar({ line, testID, style }: Props) {
@@ -65,18 +67,20 @@ function ProgressionLineBar({ line, testID, style }: Props) {
   const fillColor = TIER_VISUALS[LINE_FILL_TIER[line.slug]].ring
   const styles = useMemo(() => getStyles(colors), [colors])
 
-  const description = line.description ?? ACTIVITY_DESC[line.activityKind]
+  const description = line.description ?? createActivityDescriptions()[line.activityKind]
+  const nextLevelDescription = line.isMaxLevel
+    ? i18nT('achievements:components.achievements.ProgressionLineBar.accessibility.maxLevel')
+    : i18nT('achievements:components.achievements.ProgressionLineBar.accessibility.nextLevel', {
+        value1: line.nextLevelTitle,
+        value2: remaining,
+      })
 
   return (
     <View
       style={[styles.container, style]}
       testID={testID}
       accessibilityRole="summary"
-      accessibilityLabel={`${line.activityName}. ${description}. Уровень ${line.level}, ${line.levelTitle}. ${
-        line.isMaxLevel
-          ? 'Максимальный уровень'
-          : `до уровня ${line.nextLevelTitle} осталось ${remaining}`
-      }`}
+      accessibilityLabel={i18nT('achievements:components.achievements.ProgressionLineBar.value1_value2_uroven_value3_value4_value5_8cac0332', { value1: line.activityName, value2: description, value3: line.level, value4: line.levelTitle, value5: nextLevelDescription })}
     >
       <View style={styles.row}>
         <ProgressionAnimalMedallion slug={line.slug} size={40} />
@@ -86,7 +90,7 @@ function ProgressionLineBar({ line, testID, style }: Props) {
               {line.activityName}
             </Text>
             <View style={styles.levelChip}>
-              <Text style={styles.levelChipText}>Ур. {line.level}</Text>
+              <Text style={styles.levelChipText}>{i18nT('achievements:components.achievements.ProgressionLineBar.ur_7b30937f')}{line.level}</Text>
             </View>
           </View>
           <Text style={styles.desc} numberOfLines={2}>
@@ -95,7 +99,7 @@ function ProgressionLineBar({ line, testID, style }: Props) {
         </View>
         <View style={styles.valueWrap}>
           <Text style={styles.value}>{line.current}</Text>
-          <Text style={styles.valueLabel}>очк.</Text>
+          <Text style={styles.valueLabel}>{i18nT('achievements:components.achievements.ProgressionLineBar.ochk_2cecc13d')}</Text>
         </View>
       </View>
 
@@ -109,12 +113,11 @@ function ProgressionLineBar({ line, testID, style }: Props) {
         <View style={styles.captionRow}>
           <MaxLevelLaurel size={16} color={colors.textMuted} />
           <Text style={styles.caption} numberOfLines={1}>
-            «{line.levelTitle}» — максимальный уровень
-          </Text>
+            «{line.levelTitle}{i18nT('achievements:components.achievements.ProgressionLineBar.maksimalnyy_uroven_4f223f42')}</Text>
         </View>
       ) : (
         <Text style={styles.caption} numberOfLines={1}>
-          «{line.levelTitle}» · ещё {remaining} до «{line.nextLevelTitle}»
+          «{line.levelTitle}{i18nT('achievements:components.achievements.ProgressionLineBar.esche_a9e72d18')}{remaining} {i18nT('achievements:components.achievements.ProgressionLineBar.do_e75f69c8')}{line.nextLevelTitle}»
         </Text>
       )}
     </View>

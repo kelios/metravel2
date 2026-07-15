@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Classic - классическая тема с традиционной типографикой
  */
 export const classicTheme: PdfThemeConfig = {
   name: 'classic',
-  displayName: 'Классическая',
-  description: 'Традиционная типографика, сдержанные цвета',
+  get displayName() { return i18nT('export:services.pdfExport.theme.classic.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.classic.description') },
   
   colors: {
     text: '#1a1a1a',

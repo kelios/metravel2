@@ -16,6 +16,9 @@ module.exports = function (api) {
         ],
         plugins: [
             '@babel/plugin-transform-export-namespace-from',
+            isWeb && ['./i18n/babel-inline-plugin.js', {
+                projectRoot: __dirname,
+            }],
             // react-native-web переписывает импорты RN на web-реализацию — ТОЛЬКО для web,
             // в native-бандле это убивает рантайм (TurboModuleRegistry/EventEmitter = undefined)
             !isTest && isWeb && 'react-native-web',

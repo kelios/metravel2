@@ -29,6 +29,8 @@ import {
   isBackendImageId,
   normalizeDisplayUrl,
 } from './utils'
+import { translate as i18nT } from '@/i18n'
+
 
 interface UploadImageResponse {
   url?: unknown
@@ -65,7 +67,7 @@ const WEB_GALLERY_DROPZONE_ACCEPT = {
 const createRejectedGalleryItem = (
   file: File,
   index: number,
-  fallbackMessage = 'Этот файл не удалось добавить в галерею.',
+  fallbackMessage = i18nT('travel:components.travel.gallery.ImageGallery.etot_fayl_ne_udalos_dobavit_v_galereyu_3f2fef5f'),
 ): GalleryItem => {
   const tempId = `invalid-${Date.now()}-${index}-${String(file.name || 'file')}`
 
@@ -82,31 +84,31 @@ const createRejectedGalleryItem = (
 
 const getDropRejectionError = (rejection: FileRejection): string => {
   if (rejection.errors.some((error) => error.code === 'file-invalid-type')) {
-    return 'Этот формат пока не загружается в веб-галерею. Используйте JPG, PNG, WEBP, GIF или HEIC.'
+    return i18nT('travel:components.travel.gallery.ImageGallery.etot_format_poka_ne_zagruzhaetsya_v_veb_gale_588b2eb4')
   }
 
   if (rejection.errors.some((error) => error.code === 'file-too-large')) {
     const validation = validateImageFile(rejection.file)
-    return validation.error || 'Файл слишком большой для загрузки.'
+    return validation.error || i18nT('travel:components.travel.gallery.ImageGallery.fileTooLarge')
   }
 
   const validation = validateImageFile(rejection.file)
-  return validation.error || 'Этот файл не удалось добавить в галерею.'
+  return validation.error || i18nT('travel:components.travel.gallery.ImageGallery.fileRejected')
 }
 
 const getUploadErrorMessage = (error: unknown): string => {
   if (typeof HeicConversionError === 'function' && error instanceof HeicConversionError) {
-    return 'Не удалось преобразовать HEIC в браузере. Попробуйте другой файл.'
+    return i18nT('travel:components.travel.gallery.ImageGallery.ne_udalos_preobrazovat_heic_v_brauzere_popro_3f41a550')
   }
 
   if (error instanceof Error && error.message.trim()) {
     const message = error.message.trim()
-    if (/размер файла|файл пустой|неподдерживаемый формат/i.test(message)) {
+    if (new RegExp(i18nT('travel:components.travel.gallery.ImageGallery.validationErrorPattern'), 'i').test(message)) {
       return message
     }
   }
 
-  return 'Ошибка загрузки'
+  return i18nT('travel:components.travel.gallery.ImageGallery.oshibka_zagruzki_178f1fc0')
 }
 
 const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
@@ -213,11 +215,11 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
 
   const validateUploadFile = useCallback((file: File): string | null => {
     if (!file) {
-      return 'Файл не выбран'
+      return i18nT('travel:components.travel.gallery.ImageGallery.fayl_ne_vybran_5fd5f77a')
     }
 
     if (file.size === 0) {
-      return 'Файл пустой'
+      return i18nT('travel:components.travel.gallery.ImageGallery.fayl_pustoy_d0df2edc')
     }
 
     const normalizedType = String(file.type || '').toLowerCase()
@@ -225,13 +227,13 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     const hasSupportedExtension = WEB_SUPPORTED_UPLOAD_EXTENSIONS.some((ext) => normalizedName.endsWith(ext))
 
     if (Platform.OS === 'web' && normalizedType && !WEB_SUPPORTED_UPLOAD_TYPES.has(normalizedType) && !hasSupportedExtension) {
-      return 'Этот формат пока не загружается в веб-галерею. Используйте JPG, PNG, WEBP, GIF или HEIC.'
+      return i18nT('travel:components.travel.gallery.ImageGallery.etot_format_poka_ne_zagruzhaetsya_v_veb_gale_588b2eb4')
     }
 
     if (Platform.OS !== 'web') {
       const validation = validateImageFile(file)
       if (!validation.valid) {
-        return validation.error || 'Ошибка загрузки'
+        return validation.error || i18nT('travel:components.travel.gallery.ImageGallery.uploadError')
       }
     }
 
@@ -305,7 +307,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
       // два быстрых дропа подряд видели бы одинаковое устаревшее значение и могли
       // превысить maxImages.
       if (imagesRef.current.length + files.length > maxImages) {
-        alert(`Максимум ${maxImages} изображений`)
+        alert(i18nT('travel:components.travel.gallery.ImageGallery.maksimum_value1_izobrazheniy_73dec95a', { value1: maxImages }))
         return
       }
 
@@ -565,7 +567,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     if (retryRef.current.has(stableKey)) {
       setImages((prev) =>
         prev.map((img) =>
-          (img.stableKey ?? img.id) === stableKey ? { ...img, isUploading: false, error: 'Ошибка загрузки' } : img,
+          (img.stableKey ?? img.id) === stableKey ? { ...img, isUploading: false, error: i18nT('travel:components.travel.gallery.ImageGallery.oshibka_zagruzki_178f1fc0') } : img,
         ),
       )
       return
@@ -585,7 +587,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     retryRef.current.add(stableKey)
     setImages((prev) =>
       prev.map((img) =>
-        (img.stableKey ?? img.id) === stableKey ? { ...img, isUploading: false, error: 'Ошибка загрузки' } : img,
+        (img.stableKey ?? img.id) === stableKey ? { ...img, isUploading: false, error: i18nT('travel:components.travel.gallery.ImageGallery.oshibka_zagruzki_178f1fc0') } : img,
       ),
     )
   }, [])
@@ -623,7 +625,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
             prev.map((item) => {
               if ((item.stableKey ?? item.id) !== stableKey) return item
               if (item.hasLoaded) return item
-              return { ...item, error: 'Ошибка загрузки', isUploading: false }
+              return { ...item, error: i18nT('travel:components.travel.gallery.ImageGallery.oshibka_zagruzki_178f1fc0'), isUploading: false }
             }),
           )
         }, timeout)
@@ -692,10 +694,10 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
           selectedImageIdRef.current = null
         }}
         onConfirm={confirmDeleteImage}
-        title="Удаление изображения"
-        message="Вы уверены, что хотите удалить это изображение?"
-        confirmText="Удалить"
-        cancelText="Отмена"
+        title={i18nT('travel:components.travel.gallery.ImageGallery.udalenie_izobrazheniya_f8f83382')}
+        message={i18nT('travel:components.travel.gallery.ImageGallery.vy_uvereny_chto_hotite_udalit_eto_izobrazhen_6f7f41ae')}
+        confirmText={i18nT('travel:components.travel.gallery.ImageGallery.udalit_7c7423a6')}
+        cancelText={i18nT('travel:components.travel.gallery.ImageGallery.otmena_b86a2b90')}
         confirmTestID="confirm-delete"
         cancelTestID="cancel-delete"
       />

@@ -26,6 +26,8 @@ import {
   useRouteElevationModel,
   type ChartPoint,
 } from './routeElevationProfile/useRouteElevationModel'
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
   title?: string
@@ -44,7 +46,7 @@ type Props = {
 }
 
 export default function RouteElevationProfile({
-  title = 'Профиль высот',
+  title = i18nT('travel:components.travel.details.sections.RouteElevationProfile.profil_vysot_9cf951c1'),
   lineColor,
   preview,
   onDownloadTrack,
@@ -145,7 +147,7 @@ export default function RouteElevationProfile({
           <Pressable
             onPress={() => void onDownloadTrack()}
             accessibilityRole="button"
-            accessibilityLabel="Скачать трек в GPX"
+            accessibilityLabel={i18nT('travel:components.travel.details.sections.RouteElevationProfile.skachat_trek_v_gpx_2473cf07')}
             accessibilityState={{ disabled: isDownloadPending, busy: isDownloadPending }}
             style={({ pressed }) => [
               styles.downloadBtn,
@@ -160,7 +162,7 @@ export default function RouteElevationProfile({
               <Feather name="download" size={14} color={colors.primaryDark} />
             )}
             <Text style={styles.downloadBtnText}>
-              {isDownloadPending ? 'Скачивание…' : 'GPX'}
+              {isDownloadPending ? i18nT('travel:components.travel.details.sections.RouteElevationProfile.skachivanie_0fd86ba2') : 'GPX'}
             </Text>
           </Pressable>
         ) : null}
@@ -203,7 +205,7 @@ export default function RouteElevationProfile({
               ]}
             >
               {!isCompactLayout ? (
-                <Text style={styles.chartMetaLabel}>Мин</Text>
+                <Text style={styles.chartMetaLabel}>{i18nT('travel:components.travel.details.sections.RouteElevationProfile.min_df119832')}</Text>
               ) : null}
               <Text style={styles.chartMetaValue}>
                 {formatProfileMeters(metrics.minElevation ?? 0)}
@@ -217,7 +219,7 @@ export default function RouteElevationProfile({
               ]}
             >
               {!isCompactLayout ? (
-                <Text style={styles.chartMetaLabel}>Пик</Text>
+                <Text style={styles.chartMetaLabel}>{i18nT('travel:components.travel.details.sections.RouteElevationProfile.pik_1ca766ff')}</Text>
               ) : null}
               <Text style={styles.chartMetaValue}>
                 {formatProfileMeters(metrics.maxElevation ?? 0)}
@@ -325,7 +327,7 @@ export default function RouteElevationProfile({
               : null)}
           />
           <View style={styles.axisLabels}>
-            <Text style={styles.axisText}>0 км</Text>
+            <Text style={styles.axisText}>{i18nT('travel:components.travel.details.sections.RouteElevationProfile.0_km_2896db8a')}</Text>
             <Text style={styles.axisText}>
               {formatProfileKm(metrics.totalDistanceKm)}
             </Text>
@@ -382,7 +384,7 @@ export default function RouteElevationProfile({
                     color={colors.textMuted}
                   />
                   <Text style={styles.tagItem}>
-                    Транспорт: {transportHints.join(', ')}
+                    {i18nT('travel:components.travel.details.sections.RouteElevationProfile.transport_83487c96')}{transportHints.join(', ')}
                   </Text>
                 </View>
               ) : null}

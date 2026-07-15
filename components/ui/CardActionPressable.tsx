@@ -27,15 +27,20 @@ type CardActionPressableProps = {
 
 export const buildWebAccessibilityAttributes = (
   accessibilityState?: CardActionPressableProps['accessibilityState'],
+  accessibilityRole: NonNullable<CardActionPressableProps['accessibilityRole']> = 'button',
 ) => {
   if (!accessibilityState) return {};
 
+  const toggleState =
+    typeof accessibilityState.checked === 'boolean'
+      ? accessibilityState.checked
+      : accessibilityState.selected;
+
   return {
-    ...(typeof accessibilityState.checked === 'boolean'
-      ? { 'aria-checked': String(accessibilityState.checked) }
-      : null),
-    ...(typeof accessibilityState.selected === 'boolean'
-      ? { 'aria-selected': String(accessibilityState.selected) }
+    ...(typeof toggleState === 'boolean'
+      ? accessibilityRole === 'button'
+        ? { 'aria-pressed': String(toggleState) }
+        : { 'aria-checked': String(toggleState) }
       : null),
     ...(typeof accessibilityState.disabled === 'boolean'
       ? { 'aria-disabled': String(accessibilityState.disabled) }
@@ -101,9 +106,17 @@ const CardActionPressable = ({
   const safeChildren = React.Children.toArray(children).filter((child) => typeof child !== 'string');
   const tooltipText = title ?? accessibilityLabel;
   const effectiveAccessibilityState = accessibilityState ?? { disabled };
+  const platformAccessibilityState =
+    Platform.OS === 'web'
+      ? {
+          disabled: effectiveAccessibilityState.disabled,
+          expanded: effectiveAccessibilityState.expanded,
+          busy: effectiveAccessibilityState.busy,
+        }
+      : effectiveAccessibilityState;
   const webAccessibilityAttributes =
     Platform.OS === 'web'
-      ? buildWebAccessibilityAttributes(effectiveAccessibilityState)
+      ? buildWebAccessibilityAttributes(effectiveAccessibilityState, accessibilityRole)
       : {};
 
   const activate = useCallback((e?: any) => {
@@ -150,7 +163,7 @@ const CardActionPressable = ({
       accessibilityRole={accessibilityRole}
       {...(accessibilityLabel ? { accessibilityLabel } : {})}
       accessibilityHint={accessibilityHint}
-      accessibilityState={effectiveAccessibilityState}
+      accessibilityState={platformAccessibilityState}
       disabled={disabled}
       onPressIn={onPressIn}
       onPress={activate}

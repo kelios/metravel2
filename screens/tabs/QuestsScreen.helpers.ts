@@ -2,62 +2,68 @@
 
 import { haversineKm } from '@/utils/geo';
 import { isQuestForChildrenOrTeens } from '@/utils/questAudience';
+import { translate as i18nT, type TranslationKey } from '@/i18n';
 
 // Русские названия стран для заголовков групп в каталоге квестов. Ключи —
 // ISO alpha-2 коды из utils/geoCountry.ts (getCountryCodeByCoords). Держи в
 // синхроне: у каждого кода, который может вернуть geoCountry, должно быть имя,
 // иначе заголовок группы падает на сырой код («GR», «HR»). Добавляешь квест в
 // новой стране — добавь сюда её код.
-export const COUNTRY_NAMES: Record<string, string> = {
-    BY: 'Беларусь',
-    PL: 'Польша',
-    UA: 'Украина',
-    RU: 'Россия',
-    AM: 'Армения',
-    GE: 'Грузия',
-    AZ: 'Азербайджан',
-    TR: 'Турция',
-    DE: 'Германия',
-    FR: 'Франция',
-    IT: 'Италия',
-    ES: 'Испания',
-    CZ: 'Чехия',
-    SK: 'Словакия',
-    HU: 'Венгрия',
-    RO: 'Румыния',
-    LT: 'Литва',
-    LV: 'Латвия',
-    EE: 'Эстония',
-    MD: 'Молдова',
-    AT: 'Австрия',
-    CH: 'Швейцария',
-    NL: 'Нидерланды',
-    BE: 'Бельгия',
-    PT: 'Португалия',
-    GR: 'Греция',
-    CY: 'Кипр',
-    RS: 'Сербия',
-    HR: 'Хорватия',
-    SI: 'Словения',
-    BA: 'Босния и Герцеговина',
-    MK: 'Северная Македония',
-    AL: 'Албания',
-    BG: 'Болгария',
-    IL: 'Израиль',
-    JO: 'Иордания',
-    LB: 'Ливан',
-    IR: 'Иран',
-    KZ: 'Казахстан',
-    UZ: 'Узбекистан',
-    TH: 'Таиланд',
-    VN: 'Вьетнам',
-    JP: 'Япония',
-    CN: 'Китай',
-    IN: 'Индия',
-    US: 'США',
-    CA: 'Канада',
-    BR: 'Бразилия',
-    AU: 'Австралия',
+export const COUNTRY_NAME_KEYS: Record<string, TranslationKey> = {
+    BY: 'quests:screens.tabs.QuestsScreen.country.BY',
+    PL: 'quests:screens.tabs.QuestsScreen.country.PL',
+    UA: 'quests:screens.tabs.QuestsScreen.country.UA',
+    RU: 'quests:screens.tabs.QuestsScreen.country.RU',
+    AM: 'quests:screens.tabs.QuestsScreen.country.AM',
+    GE: 'quests:screens.tabs.QuestsScreen.country.GE',
+    AZ: 'quests:screens.tabs.QuestsScreen.country.AZ',
+    TR: 'quests:screens.tabs.QuestsScreen.country.TR',
+    DE: 'quests:screens.tabs.QuestsScreen.country.DE',
+    FR: 'quests:screens.tabs.QuestsScreen.country.FR',
+    IT: 'quests:screens.tabs.QuestsScreen.country.IT',
+    ES: 'quests:screens.tabs.QuestsScreen.country.ES',
+    CZ: 'quests:screens.tabs.QuestsScreen.country.CZ',
+    SK: 'quests:screens.tabs.QuestsScreen.country.SK',
+    HU: 'quests:screens.tabs.QuestsScreen.country.HU',
+    RO: 'quests:screens.tabs.QuestsScreen.country.RO',
+    LT: 'quests:screens.tabs.QuestsScreen.country.LT',
+    LV: 'quests:screens.tabs.QuestsScreen.country.LV',
+    EE: 'quests:screens.tabs.QuestsScreen.country.EE',
+    MD: 'quests:screens.tabs.QuestsScreen.country.MD',
+    AT: 'quests:screens.tabs.QuestsScreen.country.AT',
+    CH: 'quests:screens.tabs.QuestsScreen.country.CH',
+    NL: 'quests:screens.tabs.QuestsScreen.country.NL',
+    BE: 'quests:screens.tabs.QuestsScreen.country.BE',
+    PT: 'quests:screens.tabs.QuestsScreen.country.PT',
+    GR: 'quests:screens.tabs.QuestsScreen.country.GR',
+    CY: 'quests:screens.tabs.QuestsScreen.country.CY',
+    RS: 'quests:screens.tabs.QuestsScreen.country.RS',
+    HR: 'quests:screens.tabs.QuestsScreen.country.HR',
+    SI: 'quests:screens.tabs.QuestsScreen.country.SI',
+    BA: 'quests:screens.tabs.QuestsScreen.country.BA',
+    MK: 'quests:screens.tabs.QuestsScreen.country.MK',
+    AL: 'quests:screens.tabs.QuestsScreen.country.AL',
+    BG: 'quests:screens.tabs.QuestsScreen.country.BG',
+    IL: 'quests:screens.tabs.QuestsScreen.country.IL',
+    JO: 'quests:screens.tabs.QuestsScreen.country.JO',
+    LB: 'quests:screens.tabs.QuestsScreen.country.LB',
+    IR: 'quests:screens.tabs.QuestsScreen.country.IR',
+    KZ: 'quests:screens.tabs.QuestsScreen.country.KZ',
+    UZ: 'quests:screens.tabs.QuestsScreen.country.UZ',
+    TH: 'quests:screens.tabs.QuestsScreen.country.TH',
+    VN: 'quests:screens.tabs.QuestsScreen.country.VN',
+    JP: 'quests:screens.tabs.QuestsScreen.country.JP',
+    CN: 'quests:screens.tabs.QuestsScreen.country.CN',
+    IN: 'quests:screens.tabs.QuestsScreen.country.IN',
+    US: 'quests:screens.tabs.QuestsScreen.country.US',
+    CA: 'quests:screens.tabs.QuestsScreen.country.CA',
+    BR: 'quests:screens.tabs.QuestsScreen.country.BR',
+    AU: 'quests:screens.tabs.QuestsScreen.country.AU',
+};
+
+export const getQuestCountryName = (code: string): string => {
+    const key = COUNTRY_NAME_KEYS[code];
+    return key ? i18nT(key) : code;
 };
 
 // v2: сброс устаревшего авто-сохранённого города (старый код по гео сохранял
@@ -114,8 +120,8 @@ export function buildQuestCityCatalog<
         const questMeta = questByCityId.get(city.id);
         const normalizedName = (city.name || questMeta?.cityName || '')
             .trim()
-            .toLocaleLowerCase('ru')
-            .replace(/ё/g, 'е')
+            .toLowerCase()
+            .replace(/\u0451/g, String.fromCodePoint(0x435))
             .replace(/\s+/g, ' ');
         const countryCode = (city.countryCode || questMeta?.countryCode || '').trim().toUpperCase();
         const groupKey = normalizedName ? `${countryCode}:${normalizedName}` : `id:${city.id}`;

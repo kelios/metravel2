@@ -15,6 +15,8 @@ import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import PrivacySettingsMatrix from '@/components/settings/PrivacySettingsMatrix';
+import { translate as i18nT } from '@/i18n'
+
 
 export default function PrivacySettingsScreen() {
     const router = useRouter();
@@ -47,10 +49,10 @@ export default function PrivacySettingsScreen() {
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <EmptyState
                     icon="lock"
-                    title="Войдите в аккаунт"
-                    description="Войдите, чтобы управлять настройками приватности."
+                    title={i18nT('profile:app.privacy_settings.voydite_v_akkaunt_df01412b')}
+                    description={i18nT('profile:app.privacy_settings.voydite_chtoby_upravlyat_nastroykami_privatn_676e455e')}
                     action={{
-                        label: 'Войти',
+                        label: i18nT('profile:app.privacy_settings.voyti_a507295a'),
                         onPress: () =>
                             router.push(buildLoginHref({ redirect: '/privacy-settings', intent: 'settings' }) as any),
                     }}
@@ -64,8 +66,8 @@ export default function PrivacySettingsScreen() {
             {isFocused && (
                 <InstantSEO
                     headKey="privacy-settings"
-                    title="Настройки приватности | Metravel"
-                    description="Управление видимостью вашего контента"
+                    title={i18nT('profile:app.privacy_settings.nastroyki_privatnosti_metravel_8e4a01fc')}
+                    description={i18nT('profile:app.privacy_settings.upravlenie_vidimostyu_vashego_kontenta_2bc82426')}
                     canonical={buildCanonicalUrl('/privacy-settings')}
                     robots="noindex, nofollow"
                 />
@@ -75,18 +77,18 @@ export default function PrivacySettingsScreen() {
                     <View style={styles.header}>
                         <View style={styles.headerRow}>
                             <View style={styles.headerTitleBlock}>
-                                <Text style={styles.title}>Приватность</Text>
-                                <Text style={styles.subtitle}>Кто видит ваш контент</Text>
+                                <Text style={styles.title}>{i18nT('profile:app.privacy_settings.privatnost_abbf5093')}</Text>
+                                <Text style={styles.subtitle}>{i18nT('profile:app.privacy_settings.kto_vidit_vash_kontent_6ccfac25')}</Text>
                             </View>
                             <Pressable
                                 style={[styles.backToProfileButton, globalFocusStyles.focusable]}
                                 onPress={handleBackToSource}
                                 accessibilityRole="button"
-                                accessibilityLabel="Назад"
+                                accessibilityLabel={i18nT('profile:app.privacy_settings.nazad_577dbd9b')}
                                 {...Platform.select({ web: { cursor: 'pointer' } })}
                             >
                                 <Feather name="arrow-left" size={16} color={colors.primaryDark} />
-                                <Text style={styles.backToProfileButtonText}>Назад</Text>
+                                <Text style={styles.backToProfileButtonText}>{i18nT('profile:app.privacy_settings.nazad_577dbd9b')}</Text>
                             </Pressable>
                         </View>
                     </View>

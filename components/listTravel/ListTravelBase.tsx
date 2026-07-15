@@ -2,9 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Platform,
-  View,
 } from 'react-native'
-import type Feather from '@expo/vector-icons/Feather'
 import { showToastMessage } from '@/utils/toast'
 import { queryKeys } from '@/api/queryKeys'
 import { usePathname, useRouter } from 'expo-router'
@@ -15,12 +13,10 @@ import ListTravelTopContent from './parts/ListTravelTopContent'
 import ListTravelLayout from './parts/ListTravelLayout'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
-import EmptyState from '@/components/ui/EmptyState'
 import StaleContentBanner from '@/components/ui/StaleContentBanner'
-import { buildLoginHref } from '@/utils/authNavigation'
 import { fetchAllFiltersOptimized } from '@/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { useResponsive } from '@/hooks/useResponsive'
+import { useHydrationReady } from '@/hooks/useHydrationReady'
 import type { Travel } from '@/types/types'
 import { SEARCH_DEBOUNCE } from './utils/listTravelConstants'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
@@ -52,51 +48,23 @@ import {
   isListTravelAnyFallbackLoading,
   isListTravelFallbackStageExhausted,
   selectListTravelFallbackMatch,
-  getListTravelViewportState,
   getSearchCardImageHeight,
   getSearchCardWidth,
 } from './listTravelBaseModel'
+import { useListTravelViewportState } from './hooks/useListTravelViewportState'
+import ListTravelOwnUserGate, {
+  getListTravelOwnUserGateMode,
+} from './parts/ListTravelOwnUserGate'
+import { translate as i18nT } from '@/i18n'
+import type { ListTravelBaseProps } from './ListTravelBase.types'
+
 
 const EMPTY_FALLBACK_STEPS: ReturnType<typeof buildListTravelFallbackSteps> = [];
 
-type ListTravelBaseProps = {
-  primaryAction?: {
-    accessibilityHint?: string
-    iconName: keyof typeof Feather.glyphMap
-    label: string
-    onPress: () => void
-    testID: string
-  }
-}
-
 function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
     const colors = useThemedColors();
-    const {
-      width: rawWidth,
-      isPhone,
-      isLargePhone,
-      isTablet: isTabletSize,
-      isDesktop: isDesktopSize,
-      isPortrait,
-    } = useResponsive();
-
-    const viewportState = getListTravelViewportState({
-      isDesktopSize,
-      isLargePhone,
-      isPhone,
-      isPortrait,
-      isTabletSize,
-      rawWidth,
-    });
-
-    // Стабилизируем width: мобильная адресная строка может менять viewport.
-    // Обновляем только при значительном изменении (>50px). setState во время
-    // рендера — поддерживаемый React-паттерн для производной величины с гистерезисом
-    // (без мутации ref в рендере и без лишнего кадра).
-    const [width, setWidth] = useState(viewportState.width);
-    if (Math.abs(viewportState.width - width) > 50) {
-      setWidth(viewportState.width);
-    }
+    const hydrationReady = useHydrationReady();
+    const { viewportState, width } = useListTravelViewportState();
     const route = useRoute();
     const pathname = usePathname();
     const router = useRouter();
@@ -366,7 +334,7 @@ function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
           deleteInFlightRef.current = null;
           void showToastMessage({
             type: 'success',
-            text1: 'Путешествие удалено',
+            text1: i18nT('travel:components.listTravel.ListTravelBase.puteshestvie_udaleno_58ad42fe'),
           });
         } catch (error) {
           if (isTravelAlreadyDeletedError(error)) {
@@ -402,14 +370,14 @@ function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
     useEffect(() => {
         if (!deleteId || Platform.OS === 'web') return;
 
-        Alert.alert('Удалить путешествие?', 'Это действие нельзя отменить.', [
+        Alert.alert(i18nT('travel:components.listTravel.ListTravelBase.udalit_puteshestvie_b9ed27f5'), i18nT('travel:components.listTravel.ListTravelBase.eto_deystvie_nelzya_otmenit_dd4f9ae8'), [
             {
-                text: 'Отмена',
+                text: i18nT('travel:components.listTravel.ListTravelBase.otmena_b3f645ff'),
                 style: 'cancel',
                 onPress: () => setDelete(null),
             },
             {
-                text: 'Удалить',
+                text: i18nT('travel:components.listTravel.ListTravelBase.udalit_39199478'),
                 style: 'destructive',
                 onPress: () => handleDelete(),
             },
@@ -735,23 +703,19 @@ function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
 
     // Страницы "Мои путешествия" и экспорт привязаны к userId. Гостю показываем
     // login-wall (как на /favorites), а не пустой счётчик "0 путешествий".
-    const requiresOwnUser = isMeTravel || isExport;
-    if (requiresOwnUser && authReady && !isAuthenticated) {
-      const loginRedirect = isExport ? '/export' : '/metravel';
-      const loginIntent = isExport ? 'export' : 'metravel';
+    const ownUserGateMode = getListTravelOwnUserGateMode({
+      authReady,
+      hydrationReady,
+      isAuthenticated,
+      requiresOwnUser: isMeTravel || isExport,
+    });
+    if (ownUserGateMode) {
       return (
-        <View style={styles.root}>
-          <EmptyState
-            icon="map-pin"
-            title="Войдите в аккаунт"
-            description="Войдите, чтобы видеть свои путешествия и собирать личную книгу поездок."
-            action={{
-              label: 'Войти',
-              onPress: () =>
-                router.push(buildLoginHref({ redirect: loginRedirect, intent: loginIntent }) as any),
-            }}
-          />
-        </View>
+        <ListTravelOwnUserGate
+          mode={ownUserGateMode}
+          isExport={isExport}
+          rootStyle={styles.root}
+        />
       );
     }
 

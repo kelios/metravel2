@@ -195,15 +195,15 @@ describe('routingStateHint', () => {
 
 describe('formatTripDateTime', () => {
   it('formats date only when time is null', () => {
-    expect(formatTripDateTime('2026-07-11', null)).toBe('11 июля 2026')
+    expect(formatTripDateTime('2026-07-11', null)).toBe('11 июля 2026 г.')
   })
 
   it('appends time when provided', () => {
-    expect(formatTripDateTime('2026-07-11', '08:00')).toBe('11 июля 2026, 08:00')
+    expect(formatTripDateTime('2026-07-11', '08:00')).toBe('11 июля 2026 г., 08:00')
   })
 
   it('formats January correctly (month index 0)', () => {
-    expect(formatTripDateTime('2026-01-05', null)).toBe('5 января 2026')
+    expect(formatTripDateTime('2026-01-05', null)).toBe('5 января 2026 г.')
   })
 
   it('returns original string for invalid date', () => {
@@ -211,7 +211,7 @@ describe('formatTripDateTime', () => {
   })
 
   it('formats June date', () => {
-    expect(formatTripDateTime('2026-06-28', '10:30')).toBe('28 июня 2026, 10:30')
+    expect(formatTripDateTime('2026-06-28', '10:30')).toBe('28 июня 2026 г., 10:30')
   })
 })
 

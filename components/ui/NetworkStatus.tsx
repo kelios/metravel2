@@ -9,6 +9,8 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface NetworkStatusProps {
   showWhenOnline?: boolean; // Показывать ли индикатор когда сеть есть
@@ -55,8 +57,8 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
   }
 
   const message = isConnected
-    ? 'Соединение восстановлено'
-    : 'Нет подключения к интернету';
+    ? i18nT('shared:components.ui.NetworkStatus.soedinenie_vosstanovleno_692decf2')
+    : i18nT('shared:components.ui.NetworkStatus.net_podklyucheniya_k_internetu_7a7a2a5e');
 
   const backgroundColor = isConnected ? colors.success : colors.danger;
 

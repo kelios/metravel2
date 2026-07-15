@@ -8,7 +8,11 @@
 ## Setup
 
 ```bash
-npm install
+nvm install
+nvm use
+corepack enable
+corepack prepare yarn@1.22.22 --activate
+yarn install --frozen-lockfile
 cp .env.dev .env
 ```
 
@@ -48,7 +52,10 @@ Android QA rule:
 
 - `npm run lint` — ESLint.
 - `npm run typecheck` — полный TypeScript audit (`tsc --noEmit`). Сейчас это отдельная проверка долга, а не cheap-check после каждого логического блока.
-- `npm run check:fast` — быстрый локальный прогон для законченного логического блока: selective checks + `guard:external-links` + ESLint только по изменённым js/ts файлам. ESLint запускается с локальным cache и `--max-warnings=0`, чтобы повторные прогоны были быстрее, а новые warning'и в touched-files не проходили незамеченными.
+- `npm run typecheck:e2e` — non-emitting TypeScript audit всех Playwright specs из `e2e/**/*.ts`.
+- `npm run guard:type-debt` — запрещает рост `as any`, `@ts-ignore`, `@ts-expect-error` и `eslint-disable` по production-доменам и файлам относительно `scripts/type-debt-baseline.json`; `guard:type-debt:update` допустим только после явного review причины нового baseline.
+- `npm run test:i18n` — unit- и governance-проверки locale registry, переводов, форматтеров и отсутствия новых hardcoded UI-строк.
+- `npm run check:fast` — быстрый локальный прогон для законченного логического блока: selective checks + `guard:external-links` + `guard:type-debt` + ESLint только по изменённым js/ts файлам. ESLint запускается с локальным cache и `--max-warnings=0`, чтобы повторные прогоны были быстрее, а новые warning'и в touched-files не проходили незамеченными.
 - `npm run check:fast:dry` — показывает, что именно проверит быстрый scope-прогон, без запуска команд.
 - `npm run check:preflight` — единый selective preflight-runner перед PR/крупным завершённым куском: один раз определяет changed files и с тем же scope запускает `check:fast`, `guard:file-complexity:changed` и `check:e2e:changed`.
 - `npm run check:e2e:changed` — selective Playwright smoke-прогон по changed files для travel/search/map/account/messages.
@@ -87,6 +94,54 @@ Recommended cadence:
 - если нужен только быстрый просмотр e2e scope без запуска браузера, использовать `npm run check:e2e:changed:dry`;
 - один раз на машине после `install` запускать `npm run hooks:install`, чтобы fast/preflight проверки срабатывали автоматически на commit/push;
 - перед завершением задачи запускать проверки по scope изменений, как требует `docs/RULES.md`.
+
+## Localization
+
+Production UI поддерживает русский, польский и английский через общий i18n-слой:
+
+- `i18n/config.ts` — locale registry, системная локаль native и детерминированная
+  стартовая локаль web SSR/hydration;
+- `i18n/LocaleProvider.tsx` — активная локаль, сохранённое предпочтение и `lang`/`dir` документа;
+- `i18n/locales/<locale>/` — языковые ресурсы по доменам;
+- `i18n/format.ts` — даты, числа, валюты, списки, relative time и сортировка;
+- `types/i18next.d.ts` — строгая типизация ключей.
+
+Web-сборка подставляет компактный RU/PL/EN набор для каждого используемого ключа
+во время Babel-трансформации (`i18n/babel-inline-plugin.js`) и использует лёгкие
+`*.web.ts(x)` runtime-модули. Полные locale-каталоги не возвращаются в общий
+web-chunk. Native и Jest работают через полный i18next resource contract.
+Статический web HTML остаётся русским baseline для детерминированного SSR и
+hydration; сохранённый явный выбор применяется после hydration и синхронизирует
+`lang`/`dir`. Новый пользователь начинает с русского. Режим системного языка
+включается только явным выбором в настройках.
+
+Для нового UI используй `useTranslation()` из `@/i18n` внутри компонента. В
+не-React helper допустимы `translate()`/`getFixedTranslator()`. Не вычисляй
+перевод один раз при импорте модуля: статические справочники делай factory-функцией
+или getter-свойствами, чтобы смена языка обновляла результат. Даты, числа и
+`localeCompare` не должны содержать `ru-RU` напрямую — используй `i18n/format.ts`.
+
+Чтобы добавить язык:
+
+1. Добавь locale в `LOCALE_REGISTRY` и отдельный полный набор ресурсов в
+   `i18n/locales/<locale>/` с теми же namespace/key, что у русского baseline;
+   экспорт набора оберни в `defineLocaleResources()` для compile-time проверки.
+2. Подключи ресурсы в `i18n/resources.ts`; TypeScript должен выявить пропущенные
+   или неверные ключи до runtime.
+3. Убедись, что общий `LanguageSwitcher` в header и `LanguageSection` в settings
+   используют `useLocale()`; storage contract версионирован и поддерживает
+   explicit/system режимы.
+4. Проверь web `lang`/`dir`, SEO locale, plural forms, Intl formatting и native
+   cold restart. Первый client render должен совпадать с locale статического HTML;
+   сохранённый выбор применяется после hydration. Для locale-specific URL/hreflang
+   сначала нужен отдельный SEO-контракт — текущие canonical URL остаются без
+   языкового префикса.
+5. Запусти `npm run test:i18n`, затем проверки по общему scope.
+
+Не переводятся на клиенте: пользовательский и редакционный контент из API,
+названия мест от backend/geocoder, сообщения/комментарии и стабильные API-коды.
+Для локализуемых backend-справочников нужен стабильный code/id и отдельный display
+label; сравнивать бизнес-логику с русской подписью запрещено.
 
 ## Route point from photo
 

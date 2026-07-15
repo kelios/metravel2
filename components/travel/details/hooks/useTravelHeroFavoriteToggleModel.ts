@@ -5,6 +5,8 @@ import { useFavorites } from '@/context/FavoritesContext'
 import type { Travel } from '@/types/types'
 import { showToast } from '@/utils/toast'
 import { buildTravelPath } from '@/utils/travelSeo'
+import { translate as i18nT } from '@/i18n'
+
 
 export function useTravelHeroFavoriteToggleModel({
   isMobile,
@@ -18,12 +20,12 @@ export function useTravelHeroFavoriteToggleModel({
   const [isPending, setIsPending] = useState(false)
 
   const isFavorite = checkIsFavorite(travel.id, 'travel')
-  const favoriteButtonLabel = isFavorite ? 'В «Хочу поехать»' : 'Хочу поехать'
+  const favoriteButtonLabel = isFavorite ? i18nT('travel:components.travel.details.hooks.useTravelHeroFavoriteToggleModel.v_hochu_poehat_6b93d2cd') : i18nT('travel:components.travel.details.hooks.useTravelHeroFavoriteToggleModel.hochu_poehat_18236960')
   const favoriteButtonA11yLabel = isMobile
     ? favoriteButtonLabel
     : isFavorite
-      ? 'Удалить из «Хочу поехать»'
-      : 'Добавить в «Хочу поехать»'
+      ? i18nT('travel:components.travel.details.hooks.useTravelHeroFavoriteToggleModel.udalit_iz_hochu_poehat_beebb351')
+      : i18nT('travel:components.travel.details.hooks.useTravelHeroFavoriteToggleModel.dobavit_v_hochu_poehat_3cd37529')
 
   const handleFavoriteToggle = useCallback(async () => {
     const isGuest = !isAuthenticated
@@ -36,7 +38,7 @@ export function useTravelHeroFavoriteToggleModel({
         await removeFavorite(travel.id, 'travel')
         showToast({
           type: isGuest ? 'info' : 'success',
-          text1: isGuest ? 'Удалено с этого устройства' : 'Удалено из «Хочу поехать»',
+          text1: isGuest ? i18nT('travel:components.travel.details.hooks.useTravelHeroFavoriteToggleModel.udaleno_s_etogo_ustroystva_976f214a') : i18nT('travel:components.travel.details.hooks.useTravelHeroFavoriteToggleModel.udaleno_iz_hochu_poehat_a28bb5fc'),
           visibilityTime: 2000,
         })
         return
@@ -54,14 +56,14 @@ export function useTravelHeroFavoriteToggleModel({
       })
       showToast({
         type: 'success',
-        text1: isGuest ? 'Сохранено на этом устройстве' : 'Добавлено в «Хочу поехать»',
-        text2: isGuest ? 'Войдите, чтобы синхронизировать «Хочу поехать».' : undefined,
+        text1: isGuest ? i18nT('travel:components.travel.details.hooks.useTravelHeroFavoriteToggleModel.sohraneno_na_etom_ustroystve_640e4438') : i18nT('travel:components.travel.details.hooks.useTravelHeroFavoriteToggleModel.dobavleno_v_hochu_poehat_4fea9c78'),
+        text2: isGuest ? i18nT('travel:components.travel.details.hooks.useTravelHeroFavoriteToggleModel.voydite_chtoby_sinhronizirovat_hochu_poehat_97e4aa6d') : undefined,
         visibilityTime: isGuest ? 3500 : 2000,
       })
     } catch {
       showToast({
         type: 'error',
-        text1: 'Не удалось обновить «Хочу поехать»',
+        text1: i18nT('travel:components.travel.details.hooks.useTravelHeroFavoriteToggleModel.ne_udalos_obnovit_hochu_poehat_ee35c1dc'),
         visibilityTime: 3000,
       })
     } finally {

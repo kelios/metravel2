@@ -3,6 +3,8 @@ import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-na
 import { Feather } from '@expo/vector-icons'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   isVerified?: boolean
@@ -33,7 +35,7 @@ function VerifiedBadge({
       <View
         style={[styles.iconOnly, style]}
         accessibilityRole="image"
-        accessibilityLabel="Проверенный участник"
+        accessibilityLabel={i18nT('profile:components.profile.VerifiedBadge.proverennyy_uchastnik_18cc793a')}
         testID={testID ?? 'verified-badge'}
       >
         <Feather name="check-circle" size={14} color={colors.primaryDark} />
@@ -47,21 +49,21 @@ function VerifiedBadge({
         <View
           style={styles.verifiedChip}
           accessibilityRole="image"
-          accessibilityLabel="Проверенный участник"
+          accessibilityLabel={i18nT('profile:components.profile.VerifiedBadge.proverennyy_uchastnik_18cc793a')}
         >
           <Feather name="check-circle" size={13} color={colors.primaryDark} />
-          <Text style={styles.verifiedText}>Проверенный</Text>
+          <Text style={styles.verifiedText}>{i18nT('profile:components.profile.VerifiedBadge.proverennyy_08a597c4')}</Text>
         </View>
       ) : null}
       {showExperienced ? (
         <View
           style={styles.organizerChip}
           accessibilityRole="image"
-          accessibilityLabel="Организатор с опытом"
+          accessibilityLabel={i18nT('profile:components.profile.VerifiedBadge.organizator_s_opytom_4f5500a5')}
           testID="organizer-badge"
         >
           <Feather name="award" size={13} color={colors.textOnPrimary} />
-          <Text style={styles.organizerText}>Организатор с опытом</Text>
+          <Text style={styles.organizerText}>{i18nT('profile:components.profile.VerifiedBadge.organizator_s_opytom_4f5500a5')}</Text>
         </View>
       ) : null}
     </View>

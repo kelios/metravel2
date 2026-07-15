@@ -1,27 +1,22 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
-import { useQuery } from '@tanstack/react-query'
 
-import { queryKeys } from '@/api/queryKeys'
-import { fetchAllCountries } from '@/api/misc'
-import { fetchUserCountryProgress } from '@/api/user'
 import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
-import { queryConfigs } from '@/utils/reactQueryConfig'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 import type { Travel } from '@/types/types'
 import {
-  buildCountryApplicationRows,
-  buildProfileCountryStats,
-  buildProfileCountryStatsFromProgress,
   type ProfileCountryApplicationRow,
   type ProfileCountryRegionGroup,
   type ProfileCountryRow,
 } from './profileCountries'
+import { useProfileCountriesData } from './useProfileCountriesData'
+import { selectPlural, translate as i18nT } from '@/i18n'
+
 
 interface ProfileCountriesTabProps {
   userId: string | number | null | undefined
@@ -34,11 +29,12 @@ interface ProfileCountriesTabProps {
 }
 
 const formatVisitCount = (count: number) => {
-  const mod10 = count % 10
-  const mod100 = count % 100
-  if (mod10 === 1 && mod100 !== 11) return `${count} раз`
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} раза`
-  return `${count} раз`
+  return selectPlural(count, {
+    one: i18nT('profile:components.screens.profile.ProfileCountriesTab.value1_raz_1479fc9e', { value1: count }),
+    few: i18nT('profile:components.screens.profile.ProfileCountriesTab.value1_raza_0ab39799', { value1: count }),
+    many: i18nT('profile:components.screens.profile.ProfileCountriesTab.value1_raz_1479fc9e', { value1: count }),
+    other: i18nT('profile:components.screens.profile.ProfileCountriesTab.value1_raz_1479fc9e', { value1: count }),
+  })
 }
 
 const getCountryFlagLabel = (country: Pick<ProfileCountryRow, 'code' | 'name'>) => {
@@ -66,100 +62,38 @@ export function ProfileCountriesTab({
   const { isMobile, width } = useResponsive()
   const isCompact = isMobile || width < 640
   const styles = useMemo(() => createStyles(colors, isCompact), [colors, isCompact])
-  const [countries, setCountries] = useState<unknown[]>([])
-  const [countriesLoading, setCountriesLoading] = useState(false)
-  const [countriesError, setCountriesError] = useState(false)
-  const countryProgressQuery = useQuery({
-    queryKey: queryKeys.userCountryProgress(userId),
-    queryFn: () => fetchUserCountryProgress(userId as string | number),
-    enabled: Boolean(userId),
-    ...queryConfigs.dynamic,
+  const {
+    applicationRows,
+    isInitialLoading,
+    progressPercent,
+    showCatalogError,
+    showFallbackCatalogLoading,
+    showPartialCatalogWarning,
+    showTravelsSyncing,
+    stats,
+  } = useProfileCountriesData({
+    userId,
+    travels,
+    personalTravelStatusEntries,
+    travelsSyncing,
+    loadedTravelsCount,
+    totalTravelsCount,
   })
-  const shouldLoadFallbackCatalog = !userId || countryProgressQuery.isError
-
-  useEffect(() => {
-    if (!shouldLoadFallbackCatalog) {
-      setCountries([])
-      setCountriesLoading(false)
-      setCountriesError(false)
-      return
-    }
-
-    const controller = new AbortController()
-    let mounted = true
-
-    setCountriesLoading(true)
-    setCountriesError(false)
-
-    fetchAllCountries({ signal: controller.signal, throwOnError: true })
-      .then((nextCountries) => {
-        if (!mounted) return
-        setCountries(nextCountries)
-      })
-      .catch((error) => {
-        if (!mounted) return
-        if (error instanceof Error && error.name === 'AbortError') return
-        setCountriesError(true)
-        setCountries([])
-      })
-      .finally(() => {
-        if (mounted) setCountriesLoading(false)
-      })
-
-    return () => {
-      mounted = false
-      controller.abort()
-    }
-  }, [shouldLoadFallbackCatalog])
-
-  const backendStats = useMemo(
-    () =>
-      countryProgressQuery.data
-        ? buildProfileCountryStatsFromProgress(countryProgressQuery.data)
-        : null,
-    [countryProgressQuery.data],
-  )
-
-  const fallbackStats = useMemo(
-    () =>
-      buildProfileCountryStats({
-        countries,
-        travels,
-        personalTravelStatusEntries,
-      }),
-    [countries, personalTravelStatusEntries, travels],
-  )
-  const stats = backendStats ?? fallbackStats
-  const applicationRows = useMemo(() => buildCountryApplicationRows(stats.rows), [stats.rows])
-
-  const progressPercent = stats.totalCount > 0
-    ? Math.min(100, Math.round((stats.visitedCount / stats.totalCount) * 100))
-    : 0
-
-  const isInitialLoading =
-    (countryProgressQuery.isLoading && !backendStats && stats.rows.length === 0) ||
-    (shouldLoadFallbackCatalog && countriesLoading && stats.rows.length === 0)
-  const showCatalogError =
-    (countryProgressQuery.isError || countriesError) && stats.rows.length === 0
-  const showPartialCatalogWarning =
-    !backendStats && (countryProgressQuery.isError || countriesError) && stats.rows.length > 0
-  const showTravelsSyncing =
-    !backendStats && travelsSyncing && totalTravelsCount > 0 && loadedTravelsCount < totalTravelsCount
 
   return (
     <View style={styles.wrap}>
       <ProfileSectionHeader
-        title="Страны"
-        subtitle="Ваш прогресс по посещённым странам"
+        title={i18nT('profile:components.screens.profile.ProfileCountriesTab.strany_9526955d')}
+        subtitle={i18nT('profile:components.screens.profile.ProfileCountriesTab.vash_progress_po_poseschennym_stranam_b87694d2')}
         onBack={onBackToOverview}
-        backLabel="Уровень"
+        backLabel={i18nT('profile:components.screens.profile.ProfileCountriesTab.uroven_f829d52e')}
       />
 
       <View style={styles.summaryCard}>
         <View style={styles.metricsRow}>
-          <CountryMetric label="Посетили" value={stats.visitedCount} tone="success" />
-          <CountryMetric label="Осталось" value={stats.remainingCount} tone="muted" />
-          <CountryMetric label="Всего" value={stats.totalCount} tone="neutral" />
+          <CountryMetric label={i18nT('profile:components.screens.profile.ProfileCountriesTab.posetili_15cefd0f')} value={stats.visitedCount} tone="success" />
+          <CountryMetric label={i18nT('profile:components.screens.profile.ProfileCountriesTab.ostalos_ae766f93')} value={stats.remainingCount} tone="muted" />
+          <CountryMetric label={i18nT('profile:components.screens.profile.ProfileCountriesTab.vsego_db000654')} value={stats.totalCount} tone="neutral" />
         </View>
 
         <View style={styles.progressRow}>
@@ -169,19 +103,19 @@ export function ProfileCountriesTab({
           <Text style={styles.progressPercent}>{progressPercent}%</Text>
         </View>
 
-        {showTravelsSyncing || (shouldLoadFallbackCatalog && countriesLoading) || showPartialCatalogWarning ? (
+        {showTravelsSyncing || showFallbackCatalogLoading || showPartialCatalogWarning ? (
           <View style={styles.noticeRow}>
-            {(shouldLoadFallbackCatalog && countriesLoading) || showTravelsSyncing ? (
+            {showFallbackCatalogLoading || showTravelsSyncing ? (
               <ActivityIndicator size="small" color={colors.primaryDark} />
             ) : (
               <Feather name="alert-circle" size={14} color={colors.warning} />
             )}
             <Text style={styles.noticeText}>
               {showTravelsSyncing
-                ? `Загружаем маршруты: ${loadedTravelsCount} из ${totalTravelsCount}`
-                : shouldLoadFallbackCatalog && countriesLoading
-                  ? 'Загружаем список стран'
-                  : 'Не удалось обновить данные, показываем сохранённые'}
+                ? i18nT('profile:components.screens.profile.ProfileCountriesTab.zagruzhaem_marshruty_value1_iz_value2_81a95ec0', { value1: loadedTravelsCount, value2: totalTravelsCount })
+                : showFallbackCatalogLoading
+                  ? i18nT('profile:components.screens.profile.ProfileCountriesTab.zagruzhaem_spisok_stran_61a28cab')
+                  : i18nT('profile:components.screens.profile.ProfileCountriesTab.ne_udalos_obnovit_dannye_pokazyvaem_sohranen_06c297a1')}
             </Text>
           </View>
         ) : null}
@@ -196,8 +130,8 @@ export function ProfileCountriesTab({
       ) : showCatalogError ? (
         <View style={styles.emptyCard}>
           <Feather name="alert-circle" size={18} color={colors.warning} />
-          <Text style={styles.emptyTitle}>Не удалось загрузить страны</Text>
-          <Text style={styles.emptyText}>Попробуйте открыть вкладку позже — ваш прогресс сохранится.</Text>
+          <Text style={styles.emptyTitle}>{i18nT('profile:components.screens.profile.ProfileCountriesTab.ne_udalos_zagruzit_strany_926c595b')}</Text>
+          <Text style={styles.emptyText}>{i18nT('profile:components.screens.profile.ProfileCountriesTab.poprobuyte_otkryt_vkladku_pozzhe_vash_progre_20beff4f')}</Text>
         </View>
       ) : (
         <>
@@ -265,15 +199,14 @@ export function ProfileCountriesTab({
       <View style={styles.applicationCard}>
         <View style={styles.applicationTitleRow}>
           <Feather name="bar-chart-2" size={16} color={colors.primaryDark} />
-          <Text style={styles.applicationTitle}>Статистика по странам</Text>
+          <Text style={styles.applicationTitle}>{i18nT('profile:components.screens.profile.ProfileCountriesTab.statistika_po_stranam_ca086727')}</Text>
         </View>
 
         {rows.length === 0 ? (
           <View style={styles.applicationEmpty}>
             <Feather name="info" size={16} color={colors.textMuted} />
             <Text style={styles.applicationMutedText}>
-              Посещённых стран пока нет. Когда появятся маршруты или отметки «Был здесь», здесь появится статистика по странам.
-            </Text>
+              {i18nT('profile:components.screens.profile.ProfileCountriesTab.poseschennyh_stran_poka_net_kogda_poyavyatsy_6e06189d')}</Text>
           </View>
         ) : (
           <View style={styles.applicationList}>
@@ -309,11 +242,10 @@ export function ProfileCountriesTab({
         <View style={styles.mapHeader}>
           <View style={styles.mapTitleRow}>
             <Feather name="map" size={16} color={colors.primaryDark} />
-            <Text style={styles.mapTitle}>Прогресс по регионам</Text>
+            <Text style={styles.mapTitle}>{i18nT('profile:components.screens.profile.ProfileCountriesTab.progress_po_regionam_e6d2abe9')}</Text>
           </View>
           <Text style={styles.mapSubtitle}>
-            Зелёным — где уже были, серым — куда ещё предстоит.
-          </Text>
+            {i18nT('profile:components.screens.profile.ProfileCountriesTab.zelenym_gde_uzhe_byli_serym_kuda_esche_preds_813acf1b')}</Text>
         </View>
         <View style={styles.mapGrid}>
           {groups.map((group) => {
@@ -361,11 +293,11 @@ export function ProfileCountriesTab({
           <View style={styles.regionTitleWrap}>
             <Text style={styles.regionTitle}>{group.label}</Text>
             <Text style={styles.regionSubtitle}>
-              Посетили {group.visitedCount} / всего {group.totalCount}
+              {i18nT('profile:components.screens.profile.ProfileCountriesTab.posetili_a24308d2')}{group.visitedCount} {i18nT('profile:components.screens.profile.ProfileCountriesTab.vsego_5c6b3497')}{group.totalCount}
             </Text>
           </View>
           <View style={styles.regionBadge}>
-            <Text style={styles.regionBadgeText}>{group.remainingCount} осталось</Text>
+            <Text style={styles.regionBadgeText}>{group.remainingCount} {i18nT('profile:components.screens.profile.ProfileCountriesTab.ostalos_c2cf7caa')}</Text>
           </View>
         </View>
         <View style={styles.countryGrid}>
@@ -382,7 +314,7 @@ export function ProfileCountriesTab({
       <View
         style={[styles.countryTile, country.visited ? styles.countryTileVisited : styles.countryTileMuted]}
         accessibilityRole="text"
-        accessibilityLabel={`${country.name}: ${country.visited ? 'посещена' : 'не посещена'}`}
+        accessibilityLabel={`${country.name}: ${country.visited ? i18nT('profile:components.screens.profile.ProfileCountriesTab.poseschena_d0d01a14') : i18nT('profile:components.screens.profile.ProfileCountriesTab.ne_poseschena_e9afa926')}`}
       >
         <CountryFlagBadge country={country} />
         <Text

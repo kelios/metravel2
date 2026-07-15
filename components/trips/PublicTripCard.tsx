@@ -13,6 +13,8 @@ import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCo
 import type { PublicTrip } from '@/api/publicTrips';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { trackFeaturedClick, trackFeaturedImpression } from '@/utils/tripAnalytics';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   trip: PublicTrip;
@@ -53,7 +55,7 @@ function PublicTripCard({ trip, onPress, width, testID }: Props) {
   const featuredChip = trip.featured ? (
     <View style={styles.featuredChip} testID={`${testID ?? 'trip-card'}-featured`}>
       <Feather name="zap" size={11} color={colors.textOnPrimary} />
-      <Text style={styles.featuredText}>Продвигается</Text>
+      <Text style={styles.featuredText}>{i18nT('trips:components.trips.PublicTripCard.prodvigaetsya_a90a5d56')}</Text>
     </View>
   ) : null;
 

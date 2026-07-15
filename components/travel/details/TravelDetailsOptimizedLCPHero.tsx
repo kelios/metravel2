@@ -13,6 +13,7 @@ import {
   getMediaLqipUrl,
 } from '@/utils/travelMediaVariants';
 import { markUriLoaded } from '@/components/travel/sliderParts/imageLoadCache';
+import { translate as i18nT } from '@/i18n';
 import {
   getBackdropSegments,
   getContainedMediaBox,
@@ -323,7 +324,7 @@ function OptimizedLCPHeroInner({
             src={srcWithRetry}
             srcSet={responsive.srcSet}
             sizes={responsive.sizes}
-            alt={alt || 'Фотография маршрута путешествия'}
+            alt={alt || i18nT('travel:components.travel.details.TravelDetailsOptimizedLCPHero.defaultAlt')}
             width={img.width || 1200}
             height={img.height || Math.round(1200 / ratio)}
             style={{

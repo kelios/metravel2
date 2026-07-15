@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n'
 type TabType = 'recommendations' | 'highlights' | 'favorites' | 'history'
 
 type CollectionItem = {
@@ -18,19 +19,19 @@ export function getRecommendationsTabsConfig(params: {
   isAuthenticated: boolean
 }) {
   return [
-    { id: 'highlights' as const, label: 'Подборка месяца', shortLabel: 'Подборка', icon: 'zap' },
-    { id: 'recommendations' as const, label: 'Рекомендации', shortLabel: 'Для вас', icon: 'star' },
+    { id: 'highlights' as const, label: i18nT('travel:components.listTravel.recommendationsTabsModel.podborka_mesyatsa_cd082d45'), shortLabel: i18nT('travel:components.listTravel.recommendationsTabsModel.podborka_47829a4a'), icon: 'zap' },
+    { id: 'recommendations' as const, label: i18nT('travel:components.listTravel.recommendationsTabsModel.rekomendatsii_e3222d33'), shortLabel: i18nT('travel:components.listTravel.recommendationsTabsModel.dlya_vas_133f8fe9'), icon: 'star' },
     {
       id: 'favorites' as const,
-      label: 'Хочу поехать',
-      shortLabel: 'Хочу',
+      label: i18nT('travel:components.listTravel.recommendationsTabsModel.hochu_poehat_cac2b1d3'),
+      shortLabel: i18nT('travel:components.listTravel.recommendationsTabsModel.hochu_4ca0afac'),
       icon: 'heart',
       count: params.isAuthenticated ? params.favoritesCount : 0,
     },
     {
       id: 'history' as const,
-      label: 'История',
-      shortLabel: 'История',
+      label: i18nT('travel:components.listTravel.recommendationsTabsModel.istoriya_cba7c560'),
+      shortLabel: i18nT('travel:components.listTravel.recommendationsTabsModel.istoriya_cba7c560'),
       icon: 'clock',
       count: params.isAuthenticated ? params.historyCount : 0,
     },

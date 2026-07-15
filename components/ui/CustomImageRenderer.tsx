@@ -12,6 +12,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { optimizeImageUrl } from '@/utils/imageProxy';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface CustomImageRendererProps extends CustomRendererProps<any> {
   contentWidth: number;
@@ -163,7 +165,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
 
   if (!raw || isSmallIcon) return null;
 
-  const alt = tnode.attributes?.alt || 'Изображение маршрута';
+  const alt = tnode.attributes?.alt || i18nT('sharedStatic:image.travelAlt');
   const isPressable = Boolean(onPressImage && src);
 
   const imageContent = (
@@ -214,7 +216,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
         <Pressable
           onPress={() => onPressImage?.({ src, alt })}
           accessibilityRole="button"
-          accessibilityLabel={`Открыть изображение: ${alt}`}
+          accessibilityLabel={i18nT('shared:components.ui.CustomImageRenderer.otkryt_izobrazhenie_value1_f6c52942', { value1: alt })}
         >
           {imageContent}
         </Pressable>

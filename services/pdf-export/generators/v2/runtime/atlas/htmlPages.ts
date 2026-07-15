@@ -4,13 +4,22 @@
 import type { PdfThemeConfig } from '../../../../themes/PdfThemeConfig'
 import { buildAtlasMapSvg } from './mapSvg'
 import type { AtlasTravelEntry } from './types'
+import { selectPlural, translate as i18nT } from '@/i18n'
 
-function pluralRu(n: number, forms: [string, string, string]): string {
-  const mod10 = n % 10
-  const mod100 = n % 100
-  if (mod10 === 1 && mod100 !== 11) return forms[0]
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return forms[1]
-  return forms[2]
+
+function localizedNoun(count: number, key: Parameters<typeof i18nT>[0]): string {
+  const forms = i18nT(key).split('|').map((form) => form.trim())
+  const fallback = forms[3] || forms[2] || forms[0] || ''
+  return selectPlural(count, {
+    one: forms[0] || fallback,
+    few: forms[1] || fallback,
+    many: forms[2] || fallback,
+    other: fallback,
+  })
+}
+
+function localizedCount(count: number, key: Parameters<typeof i18nT>[0]): string {
+  return `${count} ${localizedNoun(count, key)}`
 }
 
 export function renderAtlasMapPage({
@@ -36,9 +45,9 @@ export function renderAtlasMapPage({
   ).size
 
   const statKicker = [
-    `${totalTravels} ${pluralRu(totalTravels, ['путешествие', 'путешествия', 'путешествий'])}`,
-    `${totalPoints} ${pluralRu(totalPoints, ['точка', 'точки', 'точек'])}`,
-    countries > 0 ? `${countries} ${pluralRu(countries, ['страна', 'страны', 'стран'])}` : '',
+    localizedCount(totalTravels, 'export:services.pdfExport.runtime.atlas.travelNounForms'),
+    localizedCount(totalPoints, 'export:services.pdfExport.runtime.atlas.pointNounForms'),
+    countries > 0 ? localizedCount(countries, 'export:services.pdfExport.runtime.atlas.countryNounForms') : '',
   ]
     .filter(Boolean)
     .join(' · ')
@@ -48,7 +57,7 @@ export function renderAtlasMapPage({
   const legendChips = entries
     .map((entry) => {
       const travel = entry.meta.travel
-      const name = escapeHtml(travel.name || `Путешествие ${entry.travelOrdinal}`)
+      const name = escapeHtml(travel.name || i18nT('export:services.pdfExport.runtime.atlas.travelFallback', { value1: entry.travelOrdinal }))
       return `
         <div style="
           display: flex;
@@ -88,7 +97,7 @@ export function renderAtlasMapPage({
             font-size: 7.5pt;
             color: ${colors.textMuted};
             font-family: ${typography.bodyFont};
-          ">стр. ${entry.meta.mapPage ?? entry.meta.startPage + 2}</span>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.atlas.htmlPages.div_style_display_flex_align_items_center_ga_5a9d70e5.text01", { value11: entry.meta.mapPage ?? entry.meta.startPage + 2 })}</span>
         </div>
       `
     })
@@ -119,7 +128,7 @@ export function renderAtlasMapPage({
             color: ${colors.accent};
             font-family: ${typography.bodyFont};
             margin-bottom: 3mm;
-          ">${bookTitle ? escapeHtml(bookTitle) + ' · ' : ''}Атлас</div>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.atlas.htmlPages.section_class_pdf_page_atlas_page_atlas_map__1ae2981a.text01", { value6: bookTitle ? escapeHtml(bookTitle) + ' · ' : '' })}</div>
           <h2 style="
             font-size: 30pt;
             font-weight: 800;
@@ -128,7 +137,7 @@ export function renderAtlasMapPage({
             font-family: ${typography.headingFont};
             line-height: 1;
             margin: 0;
-          ">Все точки на карте</h2>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.atlas.htmlPages.section_class_pdf_page_atlas_page_atlas_map__1ae2981a.text02")}</h2>
           <p style="
             margin: 3mm 0 0 0;
             color: ${colors.textMuted};
@@ -136,7 +145,7 @@ export function renderAtlasMapPage({
             font-family: ${typography.bodyFont};
             line-height: 1.4;
             max-width: 130mm;
-          ">Общий маршрут книги — на одной карте. Точки сгруппированы по путешествиям, а на следующих страницах вы найдёте указатель с номерами страниц.</p>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.atlas.htmlPages.section_class_pdf_page_atlas_page_atlas_map__1ae2981a.text03")}</p>
         </div>
         <div style="
           display: flex;
@@ -152,7 +161,7 @@ export function renderAtlasMapPage({
             letter-spacing: 0.14em;
             text-transform: uppercase;
             font-weight: 700;
-          ">Содержание · Карта</div>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.atlas.htmlPages.section_class_pdf_page_atlas_page_atlas_map__1ae2981a.text04")}</div>
           <div style="
             font-size: 9pt;
             color: ${colors.text};
@@ -216,7 +225,7 @@ export function renderAtlasMapPage({
             color: ${colors.textMuted};
             font-family: ${typography.bodyFont};
             margin-bottom: 3mm;
-          ">Легенда путешествий</div>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.atlas.htmlPages.section_class_pdf_page_atlas_page_atlas_map__1ae2981a.text05")}</div>
           <div style="
             display: flex;
             flex-wrap: wrap;
@@ -248,7 +257,7 @@ export function renderAtlasMapPage({
           font-family: ${typography.bodyFont};
           letter-spacing: 0.06em;
           font-weight: 600;
-        ">METRAVEL.BY · АТЛАС 1 / ${totalAtlasPages}</span>
+        ">${i18nT("export:services.pdf_export.generators.v2.runtime.atlas.htmlPages.section_class_pdf_page_atlas_page_atlas_map__1ae2981a.text06", { value31: totalAtlasPages })}</span>
       </div>
     </section>
   `
@@ -276,14 +285,19 @@ export function renderAtlasIndexPage({
 }): string {
   const { colors, typography, spacing } = theme
 
-  const headerKicker = pageIndex === 0 ? 'УКАЗАТЕЛЬ ТОЧЕК' : 'УКАЗАТЕЛЬ (ПРОДОЛЖЕНИЕ)'
+  const headerKicker = pageIndex === 0
+    ? i18nT('export:services.pdf_export.generators.v2.runtime.atlas.htmlPages.ukazatel_tochek_f21c5b5d')
+    : i18nT('export:services.pdfExport.runtime.atlas.indexTitle')
+  const continuation = pageIndex > 0
+    ? ` <span style="font-size: 11pt; font-weight: 600; color: ${colors.textMuted};">(${i18nT('export:services.pdfExport.runtime.atlas.continuation')})</span>`
+    : ''
 
   const groups = pageEntries
     .map((entry) => {
       const travel = entry.meta.travel
       const country = travel.countryName ? escapeHtml(travel.countryName) : ''
       const year = travel.year ? escapeHtml(String(travel.year)) : ''
-      const metaLine = [country, year, `${entry.pointCount} ${pluralRu(entry.pointCount, ['точка', 'точки', 'точек'])}`]
+      const metaLine = [country, year, localizedCount(entry.pointCount, 'export:services.pdfExport.runtime.atlas.pointNounForms')]
         .filter(Boolean)
         .join(' · ')
 
@@ -291,7 +305,7 @@ export function renderAtlasIndexPage({
 
       const pointItems = entry.meta.locations
         .map((loc, idx) => {
-          const rawAddress = loc.address || `Точка ${idx + 1}`
+          const rawAddress = loc.address || i18nT('export:services.pdfExport.runtime.atlas.pointFallback', { value1: idx + 1 })
           const firstSegment = rawAddress.split(/\s*[·,]\s*/)[0]?.trim() || rawAddress
           return `
             <li style="
@@ -390,7 +404,7 @@ export function renderAtlasIndexPage({
                 letter-spacing: 0.1em;
                 text-transform: uppercase;
                 font-weight: 700;
-              ">стр.</span>
+              ">${i18nT("export:services.pdf_export.generators.v2.runtime.atlas.htmlPages.div_style_margin_bottom_6mm_break_inside_avo_ee8bc93c.text01")}</span>
               <span style="
                 font-size: 16pt;
                 font-weight: 800;
@@ -440,7 +454,7 @@ export function renderAtlasIndexPage({
             color: ${colors.accent};
             font-family: ${typography.bodyFont};
             margin-bottom: 2mm;
-          ">${bookTitle ? escapeHtml(bookTitle) + ' · ' : ''}АТЛАС</div>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.atlas.htmlPages.section_class_pdf_page_atlas_page_atlas_inde_21541a38.text01", { value6: bookTitle ? escapeHtml(bookTitle) + ' · ' : '' })}</div>
           <h2 style="
             font-size: 24pt;
             font-weight: 800;
@@ -449,7 +463,7 @@ export function renderAtlasIndexPage({
             font-family: ${typography.headingFont};
             line-height: 1;
             margin: 0;
-          ">${headerKicker.split('(')[0].trim()}${headerKicker.includes('(') ? ` <span style="font-size: 11pt; font-weight: 600; color: ${colors.textMuted};">(продолжение)</span>` : ''}</h2>
+          ">${headerKicker}${continuation}</h2>
         </div>
         <div style="
           display: flex;
@@ -464,13 +478,13 @@ export function renderAtlasIndexPage({
             letter-spacing: 0.12em;
             text-transform: uppercase;
             font-weight: 700;
-          ">${pageIndex === 0 ? 'Точки → страницы книги' : 'Продолжение указателя'}</div>
+          ">${pageIndex === 0 ? i18nT('export:services.pdfExport.runtime.atlas.pointsToPages') : i18nT('export:services.pdfExport.runtime.atlas.indexContinuation')}</div>
           <div style="
             font-size: 8.5pt;
             color: ${colors.text};
             font-family: ${typography.bodyFont};
             font-weight: 600;
-          ">${totalTravels} · ${totalPoints} ${pluralRu(totalPoints, ['точка', 'точки', 'точек'])}</div>
+          ">${totalTravels} · ${totalPoints} ${localizedNoun(totalPoints, 'export:services.pdfExport.runtime.atlas.pointNounForms')}</div>
         </div>
       </div>
 
@@ -501,7 +515,7 @@ export function renderAtlasIndexPage({
           font-family: ${typography.bodyFont};
           letter-spacing: 0.06em;
           font-weight: 600;
-        ">METRAVEL.BY · АТЛАС ${pageIndex + 2} / ${totalAtlasPages}</span>
+        ">${i18nT("export:services.pdf_export.generators.v2.runtime.atlas.htmlPages.section_class_pdf_page_atlas_page_atlas_inde_21541a38.text02", { value24: pageIndex + 2, value25: totalAtlasPages })}</span>
       </div>
     </section>
   `

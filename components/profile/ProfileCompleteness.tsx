@@ -4,9 +4,11 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { UserProfileDto } from '@/api/user';
+import { translate as i18nT } from '@/i18n'
+
 
 interface ProfileCompletenessProps {
-  user: { name: string; email: string; avatar?: string | null };
+  user: { name: string; email: string; avatar?: string | null; hasDisplayName: boolean };
   profile?: UserProfileDto | null;
   travelsCount: number;
 }
@@ -25,19 +27,19 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
     () => [
       {
         key: 'name',
-        label: 'Имя',
+        label: i18nT('profile:components.profile.ProfileCompleteness.imya_2d455d22'),
         icon: 'user',
-        done: Boolean(user.name && user.name !== 'Пользователь'),
+        done: user.hasDisplayName,
       },
       {
         key: 'avatar',
-        label: 'Фото',
+        label: i18nT('profile:components.profile.ProfileCompleteness.foto_2373d29c'),
         icon: 'camera',
         done: Boolean(user.avatar),
       },
       {
         key: 'social',
-        label: 'Соцсеть',
+        label: i18nT('profile:components.profile.ProfileCompleteness.sotsset_2627f63a'),
         icon: 'link',
         done: Boolean(
           profile?.youtube || profile?.instagram || profile?.twitter || profile?.vk
@@ -45,12 +47,12 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
       },
       {
         key: 'travel',
-        label: 'Маршрут',
+        label: i18nT('profile:components.profile.ProfileCompleteness.marshrut_e01f2892'),
         icon: 'map',
         done: travelsCount > 0,
       },
     ],
-    [user.name, user.avatar, profile, travelsCount]
+    [user.hasDisplayName, user.avatar, profile, travelsCount]
   );
 
   const doneCount = steps.filter((s) => s.done).length;
@@ -176,7 +178,7 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
     <View
       style={styles.container}
       accessibilityRole="progressbar"
-      accessibilityLabel="Заполненность профиля"
+      accessibilityLabel={i18nT('profile:components.profile.ProfileCompleteness.zapolnennost_profilya_84142b90')}
       accessibilityValue={{ min: 0, max: 100, now: percent }}
     >
       <View style={styles.header}>
@@ -185,7 +187,7 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
             <Feather name="trending-up" size={14} color={colors.primaryDark} />
           </View>
           <Text style={styles.title}>
-            {nextStep ? `Добавьте ${nextStep.label.toLowerCase()}` : 'Заполните профиль'}
+            {nextStep ? i18nT('profile:components.profile.ProfileCompleteness.dobavte_value1_867fcfcd', { value1: nextStep.label.toLowerCase() }) : i18nT('profile:components.profile.ProfileCompleteness.zapolnite_profil_1437b8dd')}
           </Text>
         </View>
         <View style={styles.percentBadge}>

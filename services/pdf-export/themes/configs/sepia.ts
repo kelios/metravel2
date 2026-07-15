@@ -1,4 +1,5 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Sepia Newspaper - газета в стиле сепия
@@ -6,8 +7,8 @@ import type { PdfThemeConfig } from '../types'
  */
 export const sepiaTheme: PdfThemeConfig = {
   name: 'sepia',
-  displayName: 'Сепия',
-  description: 'винтажная газетная вёрстка с теплыми коричневыми тонами старых газет',
+  get displayName() { return i18nT('export:services.pdfExport.theme.sepia.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.sepia.description') },
 
   colors: {
     text: '#3e2723',

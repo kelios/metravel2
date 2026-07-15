@@ -31,6 +31,8 @@ import {
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDefaultTripStartDate, type TripPlanPrefill } from '@/utils/tripPlanLinks';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   onCreated?: (trip: PlannedTrip) => void;
@@ -61,19 +63,19 @@ interface FormValues {
   createTelegramGroup: boolean;
 }
 
-const schema = yup.object({
+const createSchema = () => yup.object({
   title: yup
     .string()
     .trim()
-    .required('Введите название поездки')
-    .min(3, 'Название должно быть не короче 3 символов'),
+    .required(i18nT('tripsStatic:tripCreate.validation.titleRequired'))
+    .min(3, i18nT('tripsStatic:tripCreate.validation.titleMin')),
   description: yup.string().trim(),
   startDate: yup
     .string()
     .trim()
-    .required('Укажите дату старта')
-    .matches(DATE_RE, 'Дата в формате ГГГГ-ММ-ДД')
-    .test('valid-date', 'Некорректная дата', (value) => {
+    .required(i18nT('tripsStatic:tripCreate.validation.startDateRequired'))
+    .matches(DATE_RE, i18nT('tripsStatic:tripCreate.validation.startDateFormat'))
+    .test('valid-date', i18nT('tripsStatic:tripCreate.validation.startDateInvalid'), (value) => {
       if (!value) return false;
       const d = new Date(value);
       return !Number.isNaN(d.getTime());
@@ -81,7 +83,7 @@ const schema = yup.object({
   startTime: yup
     .string()
     .trim()
-    .test('valid-time', 'Время в формате ЧЧ:ММ', (value) =>
+    .test('valid-time', i18nT('tripsStatic:tripCreate.validation.startTimeFormat'), (value) =>
       !value ? true : TIME_RE.test(value),
     ),
   transport: yup.string().oneOf(TRANSPORT_OPTIONS).required(),
@@ -89,8 +91,8 @@ const schema = yup.object({
   seatsTotal: yup
     .string()
     .trim()
-    .required('Укажите число мест')
-    .test('valid-seats', 'От 1 до 50 мест', (value) => {
+    .required(i18nT('tripsStatic:tripCreate.validation.seatsRequired'))
+    .test('valid-seats', i18nT('tripsStatic:tripCreate.validation.seatsRange'), (value) => {
       const n = Number(value);
       return Number.isInteger(n) && n >= 1 && n <= 50;
     }),
@@ -99,7 +101,7 @@ const schema = yup.object({
   startLat: yup
     .string()
     .trim()
-    .test('valid-lat', 'Широта от -90 до 90', (value) => {
+    .test('valid-lat', i18nT('tripsStatic:tripCreate.validation.latitudeRange'), (value) => {
       if (!value) return true;
       const n = Number(value);
       return Number.isFinite(n) && n >= -90 && n <= 90;
@@ -107,7 +109,7 @@ const schema = yup.object({
   startLng: yup
     .string()
     .trim()
-    .test('valid-lng', 'Долгота от -180 до 180', (value) => {
+    .test('valid-lng', i18nT('tripsStatic:tripCreate.validation.longitudeRange'), (value) => {
       if (!value) return true;
       const n = Number(value);
       return Number.isFinite(n) && n >= -180 && n <= 180;
@@ -206,12 +208,12 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
     setSubmitError(null);
     setErrors({});
     if (!consentChecked) {
-      setSubmitError('Подтвердите согласие организатора, чтобы создать поездку.');
+      setSubmitError(i18nT('trips:components.trips.planning.TripCreateForm.podtverdite_soglasie_organizatora_chtoby_soz_fc79dbb1'));
       return;
     }
     void consent.grant();
     try {
-      const valid = await schema.validate(values, { abortEarly: false });
+      const valid = await createSchema().validate(values, { abortEarly: false });
       const input: CreateTripInput = {
         title: valid.title.trim(),
         description: (valid.description ?? '').trim(),
@@ -226,7 +228,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
       create.mutate(input, {
         onSuccess: (trip) => onCreated?.(trip),
         onError: () =>
-          setSubmitError('Не удалось создать поездку. Попробуйте ещё раз позже.'),
+          setSubmitError(i18nT('trips:components.trips.planning.TripCreateForm.ne_udalos_sozdat_poezdku_poprobuyte_esche_ra_f2723719')),
       });
     } catch (err) {
       if (err instanceof yup.ValidationError) {
@@ -243,24 +245,24 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
 
   return (
     <View style={styles.wrap} testID="trip-create-form">
-      <Text style={styles.heading}>Новая поездка</Text>
+      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.TripCreateForm.novaya_poezdka_1901be53')}</Text>
 
-      <Text style={styles.label}>Название</Text>
+      <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripCreateForm.nazvanie_1cff860a')}</Text>
       <TextInput
         value={values.title}
         onChangeText={(t) => setField('title', t)}
-        placeholder="Например: Озёра Браславщины на выходные"
+        placeholder={i18nT('trips:components.trips.planning.TripCreateForm.naprimer_ozera_braslavschiny_na_vyhodnye_b602de55')}
         placeholderTextColor={colors.textMuted}
         style={styles.input}
         testID="trip-create-title"
       />
       {errors.title ? <Text style={styles.error}>{errors.title}</Text> : null}
 
-      <Text style={styles.label}>Описание (по желанию)</Text>
+      <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripCreateForm.opisanie_po_zhelaniyu_ca092e13')}</Text>
       <TextInput
         value={values.description}
         onChangeText={(t) => setField('description', t)}
-        placeholder="Идея поездки, ссылки, что хотите увидеть, ожидания от попутчиков"
+        placeholder={i18nT('trips:components.trips.planning.TripCreateForm.ideya_poezdki_ssylki_chto_hotite_uvidet_ozhi_d96cfbbf')}
         placeholderTextColor={colors.textMuted}
         multiline
         style={styles.textArea}
@@ -269,13 +271,13 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
 
       <View style={styles.row}>
         <View style={styles.col}>
-          <Text style={styles.label}>Дата старта</Text>
+          <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripCreateForm.data_starta_051d8790')}</Text>
           {Platform.OS === 'web' ? (
             <input
               type="date"
               value={values.startDate}
               onChange={(event) => setField('startDate', event.target.value)}
-              aria-label="Дата старта"
+              aria-label={i18nT('trips:components.trips.planning.TripCreateForm.data_starta_051d8790')}
               data-testid="trip-create-start-date"
               style={webDateInputStyle}
             />
@@ -284,8 +286,8 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
               <Pressable
                 onPress={openStartDatePicker}
                 accessibilityRole="button"
-                accessibilityLabel="Выбрать дату старта"
-                accessibilityHint="Откроет календарь выбора даты"
+                accessibilityLabel={i18nT('trips:components.trips.planning.TripCreateForm.vybrat_datu_starta_b5b7ab99')}
+                accessibilityHint={i18nT('trips:components.trips.planning.TripCreateForm.otkroet_kalendar_vybora_daty_0583ffc3')}
                 style={[styles.datePickerTrigger, globalFocusStyles.focusable]}
                 testID="trip-create-start-date"
               >
@@ -321,11 +323,10 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
                     <View style={styles.datePickerHeader}>
                       <View style={styles.datePickerTitleRow}>
                         <Feather name="calendar" size={18} color={colors.primary} />
-                        <Text style={styles.datePickerTitle}>Дата старта</Text>
+                        <Text style={styles.datePickerTitle}>{i18nT('trips:components.trips.planning.TripCreateForm.data_starta_051d8790')}</Text>
                       </View>
                       <Text style={styles.datePickerHint}>
-                        Выберите день в календаре. Отмена не изменит текущую дату.
-                      </Text>
+                        {i18nT('trips:components.trips.planning.TripCreateForm.vyberite_den_v_kalendare_otmena_ne_izmenit_t_3eba0aae')}</Text>
                     </View>
                     <View style={styles.datePickerCalendar}>
                       <MiniCalendar
@@ -338,7 +339,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
                       />
                     </View>
                     <Button
-                      label="Отмена"
+                      label={i18nT('trips:components.trips.planning.TripCreateForm.otmena_b15b4282')}
                       onPress={closeStartDatePicker}
                       variant="secondary"
                       fullWidth
@@ -354,11 +355,11 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
           ) : null}
         </View>
         <View style={styles.col}>
-          <Text style={styles.label}>Время (по желанию)</Text>
+          <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripCreateForm.vremya_po_zhelaniyu_681acf37')}</Text>
           <TextInput
             value={values.startTime}
             onChangeText={(t) => setField('startTime', t)}
-            placeholder="Например: 08:00"
+            placeholder={i18nT('trips:components.trips.planning.TripCreateForm.naprimer_08_00_536b52a7')}
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             style={styles.input}
@@ -370,7 +371,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
         </View>
       </View>
 
-      <Text style={styles.label}>Транспорт</Text>
+      <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripCreateForm.transport_3e664411')}</Text>
       <View style={styles.chips}>
         {TRANSPORT_OPTIONS.map((option) => {
           const active = values.transport === option;
@@ -398,7 +399,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
         })}
       </View>
 
-      <Text style={styles.label}>Видимость</Text>
+      <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripCreateForm.vidimost_7bd64d56')}</Text>
       <View style={styles.chips}>
         {VISIBILITY_OPTIONS.map((option) => {
           const active = values.visibility === option;
@@ -422,7 +423,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
       </View>
       <Text style={styles.hint}>{VISIBILITY_HINT[values.visibility]}</Text>
 
-      <Text style={styles.label}>Число мест</Text>
+      <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripCreateForm.chislo_mest_d9075ef5')}</Text>
       <TextInput
         value={values.seatsTotal}
         onChangeText={(t) => setField('seatsTotal', t.replace(/[^0-9]/g, ''))}
@@ -436,11 +437,11 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
         <Text style={styles.error}>{errors.seatsTotal}</Text>
       ) : null}
 
-      <Text style={styles.label}>Точка старта (по желанию)</Text>
+      <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripCreateForm.tochka_starta_po_zhelaniyu_f2b51d15')}</Text>
       <TextInput
         value={values.startPointName}
         onChangeText={(t) => setField('startPointName', t)}
-        placeholder="Например: Минск, площадь Победы"
+        placeholder={i18nT('trips:components.trips.planning.TripCreateForm.naprimer_minsk_ploschad_pobedy_2b2fb722')}
         placeholderTextColor={colors.textMuted}
         style={styles.input}
         testID="trip-create-start-point-name"
@@ -450,7 +451,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
           <TextInput
             value={values.startLat}
             onChangeText={(t) => setField('startLat', t)}
-            placeholder="Широта"
+            placeholder={i18nT('trips:components.trips.planning.TripCreateForm.shirota_1d753d15')}
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             style={styles.input}
@@ -464,7 +465,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
           <TextInput
             value={values.startLng}
             onChangeText={(t) => setField('startLng', t)}
-            placeholder="Долгота"
+            placeholder={i18nT('trips:components.trips.planning.TripCreateForm.dolgota_e82f7abe')}
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             style={styles.input}
@@ -479,27 +480,21 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
       <View style={styles.disabledNotice} testID="trip-create-telegram-unavailable">
         <Feather name="send" size={15} color={colors.textMuted} />
         <Text style={styles.hint}>
-          Telegram-группа для участников появится после подключения серверных
-          приглашений. Сейчас поездку можно создать и поделиться ссылкой после
-          сохранения.
-        </Text>
+          {i18nT('trips:components.trips.planning.TripCreateForm.telegram_gruppa_dlya_uchastnikov_poyavitsya__f43fac89')}</Text>
       </View>
 
       <ConsentCheckbox
         checked={consentChecked}
         onToggle={setConsentChecked}
         testID="trip-create-consent"
-        accessibilityLabel="Согласие организатора с правилами и отказом от ответственности"
+        accessibilityLabel={i18nT('trips:components.trips.planning.TripCreateForm.soglasie_organizatora_s_pravilami_i_otkazom__aedac6a7')}
       >
-        Я организатор поездки: беру на себя ответственность за встречу и маршрут,
-        понимаю, что MeTravel не несёт ответственности за поездку, и принимаю{' '}
+        {i18nT('trips:components.trips.planning.TripCreateForm.ya_organizator_poezdki_beru_na_sebya_otvetst_74b68913')}{' '}
         <Link href={'/community-rules' as never} style={styles.link}>
-          правила сообщества
-        </Link>{' '}
-        и{' '}
+          {i18nT('trips:components.trips.planning.TripCreateForm.pravila_soobschestva_6d9ab0e4')}</Link>{' '}
+        {i18nT('trips:components.trips.planning.TripCreateForm.i_7de6b56d')}{' '}
         <Link href={'/disclaimer' as never} style={styles.link}>
-          отказ от ответственности
-        </Link>
+          {i18nT('trips:components.trips.planning.TripCreateForm.otkaz_ot_otvetstvennosti_12a25d18')}</Link>
         .
       </ConsentCheckbox>
 
@@ -516,7 +511,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
       ) : null}
 
       <Button
-        label="Запланировать поездку"
+        label={i18nT('trips:components.trips.planning.TripCreateForm.zaplanirovat_poezdku_5e8537a1')}
         onPress={handleSubmit}
         loading={create.isPending}
         disabled={create.isPending || !consentChecked}

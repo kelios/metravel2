@@ -9,6 +9,8 @@ import { showToastMessage } from '@/utils/toast';
 import { getErrorMessage } from '@/utils/errorHelpers';
 import { useBeforeUnload } from '@/utils/beforeunloadGuard';
 import { normalizeInternalReturnPath } from '@/utils/navigationReturnPath';
+import { translate as i18nT } from '@/i18n'
+
 
 type WizardSaveResult = {
   publish?: boolean;
@@ -34,51 +36,51 @@ export interface StepMeta {
 export const STEP_CONFIG: StepMeta[] = [
   {
     id: 1,
-    title: 'Основная информация',
-    subtitle: 'Название и описание путешествия',
-    tipTitle: 'Совет',
-    tipBody: 'Начните с названия и короткого описания. Остальные поля можно заполнить позже — они нужны только для модерации.',
-    nextLabel: 'Далее: Маршрут (шаг 2 из 6)',
+    get title() { return i18nT('sharedStatic:hooks.useTravelWizard.osnovnaya_informatsiya_2d38d55a') },
+    get subtitle() { return i18nT('sharedStatic:hooks.useTravelWizard.nazvanie_i_opisanie_puteshestviya_a2040e23') },
+    get tipTitle() { return i18nT('travel:hooks.useTravelWizard.step1.tipTitle') },
+    get tipBody() { return i18nT('travel:hooks.useTravelWizard.step1.tipBody') },
+    get nextLabel() { return i18nT('travel:hooks.useTravelWizard.step1.nextLabel') },
   },
   {
     id: 2,
-    title: 'Маршрут на карте',
-    subtitle: 'Добавьте ключевые точки и страны маршрута',
-    tipTitle: 'Лайфхак',
+    get title() { return i18nT('sharedStatic:hooks.useTravelWizard.marshrut_na_karte_5e4729f7') },
+    get subtitle() { return i18nT('sharedStatic:hooks.useTravelWizard.dobavte_klyuchevye_tochki_i_strany_marshruta_3f62aabc') },
+    get tipTitle() { return i18nT('travel:hooks.useTravelWizard.step2.tipTitle') },
     tipBody: '',
-    nextLabel: 'К медиа (шаг 3 из 6)',
+    get nextLabel() { return i18nT('travel:hooks.useTravelWizard.step2.nextLabel') },
   },
   {
     id: 3,
-    title: 'Медиа путешествия',
-    subtitle: 'Добавьте обложку, фотографии и видео — это повышает доверие и конверсию',
-    tipTitle: 'Подсказка',
-    tipBody: 'Если есть выбор, начните с обложки: горизонтальный кадр без коллажей обычно смотрится лучше в списках.',
-    nextLabel: 'К деталям (шаг 4 из 6)',
+    get title() { return i18nT('sharedStatic:hooks.useTravelWizard.media_puteshestviya_7faffe0e') },
+    get subtitle() { return i18nT('sharedStatic:hooks.useTravelWizard.dobavte_oblozhku_fotografii_i_video_eto_povy_d5486605') },
+    get tipTitle() { return i18nT('travel:hooks.useTravelWizard.defaultTipTitle') },
+    get tipBody() { return i18nT('travel:hooks.useTravelWizard.step3.tipBody') },
+    get nextLabel() { return i18nT('travel:hooks.useTravelWizard.step3.nextLabel') },
   },
   {
     id: 4,
-    title: 'Детали и советы',
-    subtitle: 'Плюсы/минусы, рекомендации и бюджет — чтобы маршрут был полезнее',
-    tipTitle: 'Подсказка',
-    tipBody: 'Короткие списки и конкретика работают лучше, чем общий текст. Пишите так, как советовали бы другу.',
-    nextLabel: 'К доп. параметрам (шаг 5 из 6)',
+    get title() { return i18nT('sharedStatic:hooks.useTravelWizard.detali_i_sovety_9f987a7e') },
+    get subtitle() { return i18nT('sharedStatic:hooks.useTravelWizard.plyusy_minusy_rekomendatsii_i_byudzhet_chtob_1238afbb') },
+    get tipTitle() { return i18nT('travel:hooks.useTravelWizard.defaultTipTitle') },
+    get tipBody() { return i18nT('travel:hooks.useTravelWizard.step4.tipBody') },
+    get nextLabel() { return i18nT('travel:hooks.useTravelWizard.step4.nextLabel') },
   },
   {
     id: 5,
-    title: 'Дополнительные параметры',
-    subtitle: 'Транспорт, сложность, сезонность, виза и другие настройки',
-    tipTitle: 'Подсказка',
-    tipBody: 'Эти поля не обязательны для перехода по шагам, но помогают читателям лучше понять условия маршрута.',
-    nextLabel: 'К публикации (шаг 6 из 6)',
+    get title() { return i18nT('sharedStatic:hooks.useTravelWizard.dopolnitelnye_parametry_10c4d7f6') },
+    get subtitle() { return i18nT('sharedStatic:hooks.useTravelWizard.transport_slozhnost_sezonnost_viza_i_drugie__71b95c16') },
+    get tipTitle() { return i18nT('travel:hooks.useTravelWizard.defaultTipTitle') },
+    get tipBody() { return i18nT('travel:hooks.useTravelWizard.step5.tipBody') },
+    get nextLabel() { return i18nT('travel:hooks.useTravelWizard.step5.nextLabel') },
   },
   {
     id: 6,
-    title: 'Публикация путешествия',
-    subtitle: 'Проверьте готовность и выберите статус — черновик или модерация',
-    tipTitle: 'Подсказка',
-    tipBody: 'Перед модерацией убедитесь, что есть описание, страны, минимум одна точка маршрута и обложка/фото.',
-    nextLabel: 'Завершить',
+    get title() { return i18nT('sharedStatic:hooks.useTravelWizard.publikatsiya_puteshestviya_e195efbe') },
+    get subtitle() { return i18nT('sharedStatic:hooks.useTravelWizard.proverte_gotovnost_i_vyberite_status_chernov_4e8e3917') },
+    get tipTitle() { return i18nT('travel:hooks.useTravelWizard.defaultTipTitle') },
+    get tipBody() { return i18nT('travel:hooks.useTravelWizard.step6.tipBody') },
+    get nextLabel() { return i18nT('travel:hooks.useTravelWizard.step6.nextLabel') },
   },
 ];
 
@@ -355,20 +357,20 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
       }
 
       Alert.alert(
-        'Есть несохранённые изменения',
+        i18nT('shared:hooks.useTravelWizard.est_nesohranennye_izmeneniya_4cb67f79'),
         canSave
-          ? 'Сохранить черновик перед выходом?'
-          : 'Сейчас сохранить нельзя (нет интернета или идёт сохранение). Выйти без сохранения?',
+          ? i18nT('shared:hooks.useTravelWizard.sohranit_chernovik_pered_vyhodom_d0ff2d3c')
+          : i18nT('shared:hooks.useTravelWizard.seychas_sohranit_nelzya_net_interneta_ili_id_55c139ab'),
         [
           {
-            text: 'Остаться',
+            text: i18nT('shared:hooks.useTravelWizard.ostatsya_e14e72fc'),
             style: 'cancel',
             onPress: reset,
           },
           ...(canSave
             ? [
                 {
-                  text: 'Сохранить и выйти',
+                  text: i18nT('shared:hooks.useTravelWizard.sohranit_i_vyyti_d514b94e'),
                   onPress: async () => {
                     try {
                       await onSave();
@@ -378,8 +380,8 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
                       reset();
                       await showToastMessage({
                         type: 'error',
-                        text1: 'Не удалось сохранить',
-                        text2: getErrorMessage(e, 'Попробуйте ещё раз'),
+                        text1: i18nT('shared:hooks.useTravelWizard.ne_udalos_sohranit_d5966e16'),
+                        text2: getErrorMessage(e, i18nT('shared:hooks.useTravelWizard.poprobuyte_esche_raz_1dda501f')),
                       });
                     }
                   },
@@ -387,7 +389,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
               ]
             : []),
           {
-            text: 'Выйти без сохранения',
+            text: i18nT('shared:hooks.useTravelWizard.vyyti_bez_sohraneniya_cd5cbc49'),
             style: 'destructive',
             onPress: () => {
               reset();

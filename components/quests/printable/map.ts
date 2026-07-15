@@ -9,6 +9,8 @@ import {
   PRINT_COLORS,
   type PrintableMapPoint,
 } from './constants';
+import { translate as i18nT } from '@/i18n'
+
 
 type MapImageGeneratorModule = typeof import('@/utils/mapImageGenerator');
 
@@ -30,7 +32,7 @@ export async function buildPrintableCanvasMapDataUrl(points: PrintableMapPoint[]
       points.map((point) => ({
         lat: point.lat,
         lng: point.lng,
-        label: `${point.num}. ${point.location}`,
+        label: i18nT('quests:components.quests.printable.map.value1_value2_895a1ab3', { value1: point.num, value2: point.location }),
       })),
       {
         width: MAP_IMAGE_WIDTH,
@@ -55,7 +57,7 @@ export async function buildPrintableLeafletMapDataUrl(points: PrintableMapPoint[
       points.map((point) => ({
         lat: point.lat,
         lng: point.lng,
-        label: `${point.num}. ${point.location}`,
+        label: i18nT('quests:components.quests.printable.map.value1_value2_895a1ab3', { value1: point.num, value2: point.location }),
       })),
       {
         width: MAP_IMAGE_WIDTH,
@@ -121,7 +123,7 @@ export function buildPrintableMapSvg(points: PrintableMapPoint[]): string {
     .join('');
 
   return `
-        <svg class="map-svg" viewBox="0 0 ${MAP_VIEWBOX_WIDTH} ${MAP_VIEWBOX_HEIGHT}" role="img" aria-label="Схема маршрута квеста">
+        <svg class="map-svg" viewBox="0 0 ${MAP_VIEWBOX_WIDTH} ${MAP_VIEWBOX_HEIGHT}" role="img" aria-label="${i18nT("quests:components.quests.printable.map.svg_class_map_svg_viewbox_0_0_value1_value2__14813e41.text01")}">
             <defs>
                 <linearGradient id="mapBgGradient" x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stop-color="${PRINT_COLORS.mapGridBg}"></stop>

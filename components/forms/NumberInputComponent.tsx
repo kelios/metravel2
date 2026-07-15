@@ -3,6 +3,8 @@ import React, { useCallback, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface NumberInputComponentProps {
     label: string;
@@ -148,7 +150,7 @@ const NumberInputComponent: React.FC<NumberInputComponentProps> = ({
                 placeholderTextColor={colors.textMuted}
                 editable={!disabled}
                 accessibilityLabel={label}
-                accessibilityHint={hint || `Введите число${min !== undefined ? ` от ${min}` : ''}${max !== undefined ? ` до ${max}` : ''}`}
+                accessibilityHint={hint || `Введите число${min !== undefined ? i18nT('shared:components.forms.NumberInputComponent.ot_value1_77a163f8', { value1: min }) : ''}${max !== undefined ? i18nT('shared:components.forms.NumberInputComponent.do_value1_3379aab5', { value1: max }) : ''}`}
                 accessibilityState={{ disabled }}
                 {...Platform.select({
                     web: {

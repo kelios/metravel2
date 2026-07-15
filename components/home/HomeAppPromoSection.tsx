@@ -7,14 +7,16 @@ import { ResponsiveContainer } from '@/components/layout'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
+import { translate as i18nT } from '@/i18n'
+
 
 const IS_WEB = Platform.OS === 'web'
 const APP_ICON = require('@/assets/images/icon.png')
 
 const HIGHLIGHTS: { icon: 'map-pin' | 'flag' | 'download'; text: string }[] = [
-  { icon: 'map-pin', text: 'Карта мест и маршрутов' },
-  { icon: 'flag', text: 'Городские квесты' },
-  { icon: 'download', text: 'Офлайн-доступ' },
+  { icon: 'map-pin', get text() { return i18nT('homeStatic:components.home.HomeAppPromoSection.karta_mest_i_marshrutov_2231a0a5') } },
+  { icon: 'flag', get text() { return i18nT('homeStatic:components.home.HomeAppPromoSection.gorodskie_kvesty_be30b0e9') } },
+  { icon: 'download', get text() { return i18nT('homeStatic:components.home.HomeAppPromoSection.oflayn_dostup_ef721dee') } },
 ]
 
 // Промо установки Android-приложения — только на web (в самом приложении не показываем).
@@ -40,7 +42,7 @@ function HomeAppPromoSection() {
         <Pressable
           onPress={handleInstall}
           accessibilityRole={'link' as any}
-          accessibilityLabel="Скачать приложение MeTravel для Android"
+          accessibilityLabel={i18nT('home:components.home.HomeAppPromoSection.skachat_prilozhenie_metravel_dlya_android_25ce3837')}
           style={[styles.card, isMobile && styles.cardMobile, hovered && styles.cardHover]}
           {...({
             onMouseEnter: () => setHovered(true),
@@ -51,25 +53,22 @@ function HomeAppPromoSection() {
             source={APP_ICON}
             style={styles.icon}
             resizeMode="contain"
-            accessibilityLabel="Иконка приложения MeTravel"
+            accessibilityLabel={i18nT('home:components.home.HomeAppPromoSection.ikonka_prilozheniya_metravel_99bf95cf')}
           />
 
           <View style={styles.body}>
             <View style={styles.badge}>
               <Feather name="smartphone" size={12} color={colors.primary} />
-              <Text style={styles.badgeText}>Уже на Android</Text>
+              <Text style={styles.badgeText}>{i18nT('home:components.home.HomeAppPromoSection.uzhe_na_android_0f096743')}</Text>
             </View>
             <Text
               style={styles.title}
               accessibilityRole="header"
               {...({ 'aria-level': 2 } as any)}
             >
-              Приложение MeTravel в кармане
-            </Text>
+              {i18nT('home:components.home.HomeAppPromoSection.prilozhenie_metravel_v_karmane_f8221845')}</Text>
             <Text style={styles.subtitle}>
-              Карта, квесты и путеводители — офлайн, с сохранением избранного. Бесплатно, идёт открытое
-              тестирование.
-            </Text>
+              {i18nT('home:components.home.HomeAppPromoSection.karta_kvesty_i_putevoditeli_oflayn_s_sohrane_a9ae3b9e')}</Text>
 
             {!isMobile && (
               <View style={styles.highlights}>
@@ -85,7 +84,7 @@ function HomeAppPromoSection() {
 
           <View style={[styles.cta, hovered && styles.ctaHover]}>
             <Feather name="download" size={18} color={colors.textOnPrimary} />
-            <Text style={styles.ctaText}>Скачать</Text>
+            <Text style={styles.ctaText}>{i18nT('home:components.home.HomeAppPromoSection.skachat_4cce0fbd')}</Text>
           </View>
         </Pressable>
       </ResponsiveContainer>

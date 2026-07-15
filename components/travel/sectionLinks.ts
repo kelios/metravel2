@@ -1,6 +1,8 @@
 import { Platform } from "react-native"
 
 import type { Travel } from "@/types/types"
+import { translate as i18nT } from '@/i18n'
+
 
 export type TravelSectionLink = {
   key: string
@@ -45,19 +47,19 @@ export const buildTravelSectionLinks = (
 
   const links: TravelSectionLink[] = []
 
-  pushIf(hasGallery, links, { key: "gallery", icon: "image", label: "Галерея" })
-  pushIf(hasDescription, links, { key: "description", icon: "file-text", label: "Описание" })
-  pushIf(hasVideo, links, { key: "video", icon: "video", label: "Видео" })
-  pushIf(hasRecommendation, links, { key: "recommendation", icon: "thumbs-up", label: "Рекомендации" })
-  pushIf(hasPlus, links, { key: "plus", icon: "plus", label: "Плюсы" })
-  pushIf(hasMinus, links, { key: "minus", icon: "minus", label: "Минусы" })
-  pushIf(platform === "web" && hasTravelAddress, links, { key: "excursions", icon: "compass", label: "Экскурсии" })
+  pushIf(hasGallery, links, { key: "gallery", icon: "image", label: i18nT('travel:components.travel.sectionLinks.galereya_20119b40') })
+  pushIf(hasDescription, links, { key: "description", icon: "file-text", label: i18nT('travel:components.travel.sectionLinks.opisanie_80e1d1ba') })
+  pushIf(hasVideo, links, { key: "video", icon: "video", label: i18nT('travel:components.travel.sectionLinks.video_5ff9084b') })
+  pushIf(hasRecommendation, links, { key: "recommendation", icon: "thumbs-up", label: i18nT('travel:components.travel.sectionLinks.rekomendatsii_83cdaba4') })
+  pushIf(hasPlus, links, { key: "plus", icon: "plus", label: i18nT('travel:components.travel.sectionLinks.plyusy_80285d53') })
+  pushIf(hasMinus, links, { key: "minus", icon: "minus", label: i18nT('travel:components.travel.sectionLinks.minusy_722b20a7') })
+  pushIf(platform === "web" && hasTravelAddress, links, { key: "excursions", icon: "compass", label: i18nT('travel:components.travel.sectionLinks.ekskursii_60b416ff') })
 
-  links.push({ key: "map", icon: "map", label: "Карта маршрута" })
-  pushIf(hasTravelAddress, links, { key: "points", icon: "list", label: "Координаты мест" })
-  links.push({ key: "near", icon: "map-pin", label: "Рядом можно посмотреть" })
-  links.push({ key: "popular", icon: "star", label: "Популярные маршруты" })
-  links.push({ key: "comments", icon: "message-circle", label: "Комментарии" })
+  links.push({ key: "map", icon: "map", label: i18nT('travel:components.travel.sectionLinks.karta_marshruta_e95d2bba') })
+  pushIf(hasTravelAddress, links, { key: "points", icon: "list", label: i18nT('travel:components.travel.sectionLinks.koordinaty_mest_b024ee27') })
+  links.push({ key: "near", icon: "map-pin", label: i18nT('travel:components.travel.sectionLinks.ryadom_mozhno_posmotret_a8f25f47') })
+  links.push({ key: "popular", icon: "star", label: i18nT('travel:components.travel.sectionLinks.populyarnye_marshruty_95d66469') })
+  links.push({ key: "comments", icon: "message-circle", label: i18nT('travel:components.travel.sectionLinks.kommentarii_80cf82b1') })
 
   return links
 }

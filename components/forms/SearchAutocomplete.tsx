@@ -7,6 +7,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { FlashList } from '@shopify/flash-list';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
 
@@ -25,19 +27,19 @@ interface SearchAutocompleteProps {
 
 
 // Популярные запросы (можно заменить на API вызов)
-const POPULAR_QUERIES = [
-  'Минск',
-  'Беларусь',
-  'Природа',
-  'Города',
-  'Польша',
-  'Вильнюс',
+const getPopularQueries = () => [
+  i18nT('sharedStatic:searchAutocomplete.popular.minsk'),
+  i18nT('sharedStatic:searchAutocomplete.popular.belarus'),
+  i18nT('sharedStatic:searchAutocomplete.popular.nature'),
+  i18nT('sharedStatic:searchAutocomplete.popular.cities'),
+  i18nT('sharedStatic:searchAutocomplete.popular.poland'),
+  i18nT('sharedStatic:searchAutocomplete.popular.vilnius'),
 ];
 
 // Генерация предложений на основе запроса
 function generateSuggestions(query: string): Suggestion[] {
   if (!query || query.length < 2) {
-    return POPULAR_QUERIES.slice(0, 5).map(text => ({
+    return getPopularQueries().slice(0, 5).map(text => ({
       text,
       type: 'city' as const,
       icon: 'map-pin',
@@ -48,7 +50,7 @@ function generateSuggestions(query: string): Suggestion[] {
   const suggestions: Suggestion[] = [];
 
   // Города Беларуси
-  const cities = ['Минск', 'Брест', 'Гродно', 'Витебск', 'Гомель', 'Могилев'];
+  const cities = [i18nT('shared:components.forms.SearchAutocomplete.minsk_3b3e7183'), i18nT('shared:components.forms.SearchAutocomplete.brest_9ae83be3'), i18nT('shared:components.forms.SearchAutocomplete.grodno_1f6a2b63'), i18nT('shared:components.forms.SearchAutocomplete.vitebsk_3a8dbc6f'), i18nT('shared:components.forms.SearchAutocomplete.gomel_5ab8c0a6'), i18nT('shared:components.forms.SearchAutocomplete.mogilev_a858c382')];
   cities.forEach(city => {
     if (city.toLowerCase().includes(lowerQuery)) {
       suggestions.push({ text: city, type: 'city', icon: 'map-pin' });
@@ -56,7 +58,7 @@ function generateSuggestions(query: string): Suggestion[] {
   });
 
   // Страны
-  const countries = ['Беларусь', 'Польша', 'Литва', 'Латвия', 'Украина'];
+  const countries = [i18nT('shared:components.forms.SearchAutocomplete.belarus_d0b12928'), i18nT('shared:components.forms.SearchAutocomplete.polsha_0b8f9bad'), i18nT('shared:components.forms.SearchAutocomplete.litva_4dfc837a'), i18nT('shared:components.forms.SearchAutocomplete.latviya_7704e4b0'), i18nT('shared:components.forms.SearchAutocomplete.ukraina_8eb3b97a')];
   countries.forEach(country => {
     if (country.toLowerCase().includes(lowerQuery) && !suggestions.find(s => s.text === country)) {
       suggestions.push({ text: country, type: 'country', icon: 'globe' });
@@ -64,7 +66,7 @@ function generateSuggestions(query: string): Suggestion[] {
   });
 
   // Категории
-  const categories = ['Природа', 'Города', 'Архитектура', 'История', 'Культура'];
+  const categories = [i18nT('shared:components.forms.SearchAutocomplete.priroda_bf4aec83'), i18nT('shared:components.forms.SearchAutocomplete.goroda_4dc12ded'), i18nT('shared:components.forms.SearchAutocomplete.arhitektura_12a25a06'), i18nT('shared:components.forms.SearchAutocomplete.istoriya_e90964eb'), i18nT('shared:components.forms.SearchAutocomplete.kultura_bbc7c106')];
   categories.forEach(category => {
     if (category.toLowerCase().includes(lowerQuery) && !suggestions.find(s => s.text === category)) {
       suggestions.push({ text: category, type: 'category', icon: 'tag' });
@@ -250,8 +252,8 @@ function SearchAutocomplete({
         </Text>
         {item.type !== 'city' && (
           <Text style={styles.suggestionType}>
-            {item.type === 'country' ? 'Страна' :
-             item.type === 'category' ? 'Категория' : 'Путешествие'}
+            {item.type === 'country' ? i18nT('shared:components.forms.SearchAutocomplete.strana_0be287a9') :
+             item.type === 'category' ? i18nT('shared:components.forms.SearchAutocomplete.kategoriya_e4d230ab') : i18nT('shared:components.forms.SearchAutocomplete.puteshestvie_5f88e8fc')}
           </Text>
         )}
       </Pressable>

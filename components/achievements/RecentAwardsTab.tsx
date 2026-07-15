@@ -22,6 +22,8 @@ import BadgeDetailSheet, {
 import AchievementsGalleryModal from '@/components/achievements/AchievementsGalleryModal'
 import SectionState from '@/components/achievements/SectionState'
 import { formatRelativeTime } from '@/utils/relativeTime'
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   testID?: string
@@ -52,8 +54,7 @@ function RecentAwardsTab({ testID, style }: Props) {
   if (!isAuthenticated) {
     return (
       <Text style={styles.empty}>
-        Войдите, чтобы видеть свои награды.
-      </Text>
+        {i18nT('achievements:components.achievements.RecentAwardsTab.voydite_chtoby_videt_svoi_nagrady_2bcf41f0')}</Text>
     )
   }
 
@@ -64,12 +65,12 @@ function RecentAwardsTab({ testID, style }: Props) {
           <Pressable
             onPress={() => setGalleryOpen(true)}
             accessibilityRole="button"
-            accessibilityLabel="Как это достигнуто"
+            accessibilityLabel={i18nT('achievements:components.achievements.RecentAwardsTab.kak_eto_dostignuto_bbed3005')}
             style={styles.howBtn}
             testID="recent-awards-how"
           >
             <Feather name="help-circle" size={14} color={colors.primaryDark} />
-            <Text style={styles.howText}>Как это достигнуто</Text>
+            <Text style={styles.howText}>{i18nT('achievements:components.achievements.RecentAwardsTab.kak_eto_dostignuto_bbed3005')}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -77,7 +78,7 @@ function RecentAwardsTab({ testID, style }: Props) {
       <SectionState
         isFetching={isFetching}
         hasData={data != null}
-        emptyText="Пока нет новых наград — всё впереди."
+        emptyText={i18nT('achievements:components.achievements.RecentAwardsTab.poka_net_novyh_nagrad_vse_vperedi_81d5c9a4')}
       >
         {data && items.length > 0 ? (
           <ScrollView
@@ -111,7 +112,7 @@ function RecentAwardsTab({ testID, style }: Props) {
             })}
           </ScrollView>
         ) : (
-          <Text style={styles.empty}>Пока нет новых наград — всё впереди.</Text>
+          <Text style={styles.empty}>{i18nT('achievements:components.achievements.RecentAwardsTab.poka_net_novyh_nagrad_vse_vperedi_81d5c9a4')}</Text>
         )}
       </SectionState>
 

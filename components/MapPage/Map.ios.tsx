@@ -9,7 +9,7 @@ import { openExternalUrl } from '@/utils/externalLinks';
 import { resolveInternalTravelRoute } from '@/utils/relatedTravel';
 import { LEAFLET_JS, LEAFLET_CSS } from '@/utils/leafletInlineAsset';
 import { useMapClusters } from '@/hooks/map/useMapClusters';
-import type { MapClusterBBox, MapClustersFilters } from '@/api/map';
+import type { MapClustersFilters } from '@/api/map';
 import {
   buildServerClusterRenderData,
   filterServerClusterRenderDataByRadius,
@@ -29,6 +29,15 @@ import {
 } from '@/utils/mapTileCache';
 import { MapOfflineDownloadControl } from './MapOfflineDownloadControl';
 import type { MapMovePayload } from './Map/types';
+import {
+  isSameViewportSnapshot,
+  normalizeRoutePoint,
+  parseNativeMapBridgeMessage,
+  type NativeViewportSnapshot,
+} from './Map/nativeBridge';
+import { serializeForInlineScript } from '@/utils/webViewBridge';
+import { getActiveLocaleDefinition, translate as i18nT } from '@/i18n'
+
 
 // Overpass endpoint mirrors utils/overpass/fetchOverpass.ts. Inlined as a plain
 // string because the overlay engine runs INSIDE the WebView and has no access to
@@ -94,11 +103,6 @@ type TravelPropsType = {
 interface Coordinates {
   latitude: number;
   longitude: number;
-}
-
-interface NativeViewportSnapshot {
-  bbox: MapClusterBBox;
-  zoom: number;
 }
 
 interface TravelProps {
@@ -167,80 +171,6 @@ const withAlpha = (color: string, alpha: number) => {
 
   return color;
 };
-
-const normalizeRoutePoint = (point: unknown): [number, number] | null => {
-  if (!Array.isArray(point) || point.length < 2) return null;
-  const lng = Number(point[0]);
-  const lat = Number(point[1]);
-  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
-  if (Math.abs(lng) > 180 || Math.abs(lat) > 90) return null;
-  return [lat, lng];
-};
-
-const isSameViewportSnapshot = (
-  left: NativeViewportSnapshot | null,
-  right: NativeViewportSnapshot,
-): boolean => {
-  if (!left) return false;
-  return (
-    Math.abs(left.zoom - right.zoom) < 0.01 &&
-    Math.abs(left.bbox.south - right.bbox.south) < 0.0005 &&
-    Math.abs(left.bbox.west - right.bbox.west) < 0.0005 &&
-    Math.abs(left.bbox.north - right.bbox.north) < 0.0005 &&
-    Math.abs(left.bbox.east - right.bbox.east) < 0.0005
-  );
-};
-
-const isValidNativeViewportSnapshot = (snapshot: NativeViewportSnapshot): boolean =>
-  Number.isFinite(snapshot.zoom) &&
-  Number.isFinite(snapshot.bbox.south) &&
-  Number.isFinite(snapshot.bbox.west) &&
-  Number.isFinite(snapshot.bbox.north) &&
-  Number.isFinite(snapshot.bbox.east);
-
-const parseNativeMapMovePayload = (parsed: { [key: string]: unknown }): MapMovePayload | null => {
-  const lat = Number(parsed?.lat);
-  const lng = Number(parsed?.lng);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-
-  const payload: MapMovePayload = { latitude: lat, longitude: lng };
-  const zoom = Number(parsed?.zoom);
-  if (Number.isFinite(zoom)) {
-    payload.zoom = zoom;
-  }
-  if (parsed?.userInitiated === true) {
-    payload.userInitiated = true;
-  }
-
-  const rawBbox = parsed?.bbox as { [key: string]: unknown } | null | undefined;
-  if (rawBbox) {
-    const bbox = {
-      south: Number(rawBbox.south),
-      west: Number(rawBbox.west),
-      north: Number(rawBbox.north),
-      east: Number(rawBbox.east),
-    };
-    if (
-      Number.isFinite(bbox.south) &&
-      Number.isFinite(bbox.west) &&
-      Number.isFinite(bbox.north) &&
-      Number.isFinite(bbox.east)
-    ) {
-      payload.bbox = bbox;
-    }
-  }
-
-  return payload;
-};
-
-// Данные шлём в WebView через injectJavaScript, а не через перезагрузку source.html:
-// на Android смена source.html не всегда триггерит reload, и инлайн JSON может
-// оборвать <script> неэкранированными символами. U+2028/U+2029 — валидны в JSON,
-// но являются терминаторами строки в JS, поэтому их экранируем для inject.
-const LINE_SEPARATOR = new RegExp(String.fromCharCode(0x2028), 'g');
-const PARAGRAPH_SEPARATOR = new RegExp(String.fromCharCode(0x2029), 'g');
-const serializeForInjection = (value: unknown): string =>
-  JSON.stringify(value).replace(LINE_SEPARATOR, '\\u2028').replace(PARAGRAPH_SEPARATOR, '\\u2029');
 
 const USER_LOCATION_COLOR = DESIGN_TOKENS.colors.accent;
 
@@ -424,7 +354,7 @@ const Map: React.FC<TravelProps> = ({
   const setWebViewTile = useCallback(
     (key: string, dataUrl: string) => {
       injectMapCommand(
-        `window.__metravelSetTile && window.__metravelSetTile(${JSON.stringify(key)}, ${JSON.stringify(dataUrl)})`,
+        `window.__metravelSetTile && window.__metravelSetTile(${serializeForInlineScript(key)}, ${serializeForInlineScript(dataUrl)})`,
       );
     },
     [injectMapCommand],
@@ -505,7 +435,7 @@ const Map: React.FC<TravelProps> = ({
     (id: string, enabled: boolean) => {
       enabledOverlaysRef.current[id] = enabled;
       injectMapCommand(
-        `window.__metravelSetOverlay && window.__metravelSetOverlay(${JSON.stringify(id)}, ${enabled ? 'true' : 'false'})`,
+        `window.__metravelSetOverlay && window.__metravelSetOverlay(${serializeForInlineScript(id)}, ${enabled ? 'true' : 'false'})`,
       );
     },
     [injectMapCommand],
@@ -570,7 +500,7 @@ const Map: React.FC<TravelProps> = ({
   const pushPayload = useCallback(() => {
     if (!isReadyRef.current) return;
     injectMapCommand(
-      `window.__metravelRenderPoints && window.__metravelRenderPoints(${serializeForInjection(mapPayload)})`,
+      `window.__metravelRenderPoints && window.__metravelRenderPoints(${serializeForInlineScript(mapPayload)})`,
     );
   }, [injectMapCommand, mapPayload]);
 
@@ -638,7 +568,7 @@ const Map: React.FC<TravelProps> = ({
     Object.keys(enabled).forEach((id) => {
       if (!enabled[id]) return;
       injectMapCommand(
-        `window.__metravelSetOverlay && window.__metravelSetOverlay(${JSON.stringify(id)}, true)`,
+        `window.__metravelSetOverlay && window.__metravelSetOverlay(${serializeForInlineScript(id)}, true)`,
       );
     });
   }, [injectMapCommand]);
@@ -690,6 +620,7 @@ const Map: React.FC<TravelProps> = ({
     <body>
       <div id="map"></div>
       <script>
+        const MAP_LANGUAGE = ${serializeForInlineScript(getActiveLocaleDefinition().geocoderLanguage)};
         // zoomControl: false — встроенные кнопки +/− Leaflet (верхний левый угол)
         // перекрывали номерной/стартовый маркер маршрута. Зум доступен через
         // плавающие нативные контролы (__metravelMapZoomIn/Out).
@@ -855,7 +786,7 @@ const Map: React.FC<TravelProps> = ({
           } catch (e) {}
         };
         new TileBridge({
-          attribution: ${JSON.stringify(getThemedBaseAttribution())},
+          attribution: ${serializeForInlineScript(getThemedBaseAttribution())},
           maxZoom: ${getThemedBaseMaxZoom()},
           tileSize: 256,
           updateWhenIdle: false,
@@ -902,8 +833,8 @@ const Map: React.FC<TravelProps> = ({
         // лежит поверх travel-маркеров.
         const userLayer = L.layerGroup().addTo(map);
 
-        const USER_LOCATION_COLOR = ${JSON.stringify(USER_LOCATION_COLOR)};
-        const USER_LOCATION_RING = ${JSON.stringify(themeColors.textOnDark)};
+        const USER_LOCATION_COLOR = ${serializeForInlineScript(USER_LOCATION_COLOR)};
+        const USER_LOCATION_RING = ${serializeForInlineScript(themeColors.textOnDark)};
 
         // Рисует синюю точку пользователя (accent-цвет, как на web) + полупрозрачный
         // accuracy-круг под ней. Перед отрисовкой чистит userLayer, чтобы точка не
@@ -929,7 +860,7 @@ const Map: React.FC<TravelProps> = ({
               fillColor: USER_LOCATION_COLOR,
               fillOpacity: 1
             }).addTo(userLayer);
-            dot.bindPopup('Вы здесь');
+            dot.bindPopup(${serializeForInlineScript(i18nT('map:components.MapPage.Map.nativeWebView.currentLocation'))});
             try { dot.bringToFront(); } catch (e) {}
           } catch (e) {}
         };
@@ -944,7 +875,7 @@ const Map: React.FC<TravelProps> = ({
         // bottom-card offset is unchanged.
         const markerIcon = L.divIcon({
           className: 'metravel-marker',
-          html: ${JSON.stringify(BIRD_MARKER_HTML)},
+          html: ${serializeForInlineScript(BIRD_MARKER_HTML)},
           iconSize: [48, 58],
           iconAnchor: [24, 54],
           popupAnchor: [0, -46]
@@ -960,9 +891,9 @@ const Map: React.FC<TravelProps> = ({
           });
         }
 
-        const ROUTE_COLOR = ${JSON.stringify(DESIGN_COLORS.routeLine)};
-        const ROUTE_SURFACE = ${JSON.stringify(themeColors.surface)};
-        const ROUTE_START = ${JSON.stringify(themeColors.success || themeColors.primary)};
+        const ROUTE_COLOR = ${serializeForInlineScript(DESIGN_COLORS.routeLine)};
+        const ROUTE_SURFACE = ${serializeForInlineScript(themeColors.surface)};
+        const ROUTE_START = ${serializeForInlineScript(themeColors.success || themeColors.primary)};
 
         // Экранируем значения точек перед вставкой в HTML popup: поля приходят с бэка
         // и могут содержать <, >, ", ' и & — без эскейпа это XSS в WebView (#113).
@@ -1134,8 +1065,8 @@ const Map: React.FC<TravelProps> = ({
         // На web эти слои рисует useMapApi (Overpass/WFS/tile). На native повторяем
         // тот же контракт mapUiApi.setOverlayEnabled(id, enabled) — но рендерим
         // внутри WebView. Overpass/WFS — bbox-driven с дебаунсом по moveend.
-        var OVERLAY_DEFS = ${serializeForInjection(NATIVE_OVERLAY_LAYERS)};
-        var OVERPASS_ENDPOINT = ${JSON.stringify(OVERPASS_ENDPOINT)};
+        var OVERLAY_DEFS = ${serializeForInlineScript(NATIVE_OVERLAY_LAYERS)};
+        var OVERPASS_ENDPOINT = ${serializeForInlineScript(OVERPASS_ENDPOINT)};
         var overlayLayers = {};      // id -> L.layerGroup/L.tileLayer
         var overlayControllers = {}; // id -> { start, stop } для bbox-driven слоёв
         var overlayEnabled = {};     // id -> bool
@@ -1268,7 +1199,7 @@ const Map: React.FC<TravelProps> = ({
             var lng = (el.type === 'node') ? el.lon : (el.center && el.center.lon);
             if (!isFinite(lat) || !isFinite(lng)) continue;
             var tags = el.tags || {};
-            var title = tags.name || tags['name:ru'] || tags.tourism || tags.historic || tags.amenity || 'Точка OSM';
+            var title = tags['name:' + MAP_LANGUAGE] || tags.name || tags['name:en'] || tags.tourism || tags.historic || tags.amenity || ${serializeForInlineScript(i18nT('map:components.MapPage.Map.nativeWebView.osmPoint'))};
             var m = L.circleMarker([lat, lng], {
               radius: 6, color: ROUTE_SURFACE, weight: 2, fillColor: color, fillOpacity: 0.95
             });
@@ -1287,9 +1218,9 @@ const Map: React.FC<TravelProps> = ({
             var lng = (el.type === 'node') ? el.lon : (el.center && el.center.lon);
             if (!isFinite(lat) || !isFinite(lng)) continue;
             var tags = el.tags || {};
-            var title = tags['name:ru'] || tags.name || tags['name:en'] || tags.tourism || tags.natural || tags.historic || tags.amenity || tags.railway || 'Точка OSM';
+            var title = tags['name:' + MAP_LANGUAGE] || tags.name || tags['name:en'] || tags.tourism || tags.natural || tags.historic || tags.amenity || tags.railway || ${serializeForInlineScript(i18nT('map:components.MapPage.Map.nativeWebView.osmPoint'))};
             var eleNum = tags.ele != null ? Number(tags.ele) : NaN;
-            var eleLine = isFinite(eleNum) ? ('<div style="margin-top:4px;font-size:12px;color:#888">Высота: ' + Math.round(eleNum) + ' м</div>') : '';
+            var eleLine = isFinite(eleNum) ? ('<div style="margin-top:4px;font-size:12px;color:#888">' + ${serializeForInlineScript(i18nT('map:components.MapPage.Map.nativeWebView.elevationPrefix'))} + Math.round(eleNum) + ${serializeForInlineScript(i18nT('map:components.MapPage.Map.nativeWebView.meterSuffix'))} + '</div>') : '';
             var m = L.circleMarker([lat, lng], {
               radius: 6, color: ROUTE_SURFACE, weight: 2, fillColor: (color || '#ff9f0a'), fillOpacity: 0.95
             });
@@ -1338,7 +1269,7 @@ const Map: React.FC<TravelProps> = ({
             },
             onEachFeature: function(feature, layer) {
               var props = (feature && feature.properties) || {};
-              var name = props.name || props.Name || props.NAZWA || props.nazwa || 'Zanocuj w lesie';
+              var name = props.name || props.Name || props.NAZWA || props.nazwa || ${serializeForInlineScript(i18nT('map:components.MapPage.Map.nativeWebView.forestCamping'))};
               try { layer.bindPopup('<div class="popup-text"><div class="popup-title">' + escapeHtml(String(name)) + '</div></div>'); } catch (e) {}
             }
           }).addTo(layerGroup);
@@ -1438,81 +1369,64 @@ const Map: React.FC<TravelProps> = ({
         }}
         onMessage={async (event) => {
           const raw = String(event?.nativeEvent?.data ?? '');
-          if (!raw) return;
+          const message = parseNativeMapBridgeMessage(raw);
+          if (!message) return;
           try {
-            const parsed = JSON.parse(raw);
-            if (parsed?.type === 'READY') {
+            if (message.type === 'READY') {
               handleReady();
               return;
             }
-            if (parsed?.type === 'TILE_REQ') {
-              const z = Number(parsed?.z);
-              const x = Number(parsed?.x);
-              const y = Number(parsed?.y);
-              const key = typeof parsed?.key === 'string' ? parsed.key : `${z}/${x}/${y}`;
-              if (Number.isFinite(z) && Number.isFinite(x) && Number.isFinite(y)) {
-                void handleTileRequest(z, x, y, key);
-              }
+            if (message.type === 'TILE_REQ') {
+              void handleTileRequest(message.z, message.x, message.y, message.key);
               return;
             }
-            if (parsed?.type === 'MAP_CLICK') {
-              const lat = Number(parsed?.lat);
-              const lng = Number(parsed?.lng);
-              if (Number.isFinite(lat) && Number.isFinite(lng)) {
-                onMapClick?.(lng, lat);
-              }
+            if (message.type === 'MAP_CLICK') {
+              onMapClick?.(message.longitude, message.latitude);
               return;
             }
-            if (parsed?.type === 'MAP_MOVED') {
+            if (message.type === 'MAP_MOVED') {
               // F-49 — новый центр карты после панорамирования/зума.
-              const movePayload = parseNativeMapMovePayload(parsed);
-              if (movePayload) {
-                onMapMoveRef.current?.(movePayload);
+              if (message.move) {
+                onMapMoveRef.current?.(message.move);
               }
             }
-            if (parsed?.type === 'MAP_MOVED' || parsed?.type === 'MAP_VIEWPORT') {
-              const zoom = Number(parsed?.zoom);
-              const bbox = parsed?.bbox;
-              if (bbox) {
-                const nextViewport = {
-                  bbox: {
-                    south: Number(bbox.south),
-                    west: Number(bbox.west),
-                    north: Number(bbox.north),
-                    east: Number(bbox.east),
-                  },
-                  zoom,
-                };
-                if (isValidNativeViewportSnapshot(nextViewport)) {
-                  setViewportSnapshot((current) =>
-                    isSameViewportSnapshot(current, nextViewport) ? current : nextViewport,
-                  );
-                }
+            if (message.type === 'MAP_MOVED' || message.type === 'MAP_VIEWPORT') {
+              if (message.viewport) {
+                const nextViewport = message.viewport;
+                setViewportSnapshot((current) =>
+                  isSameViewportSnapshot(current, nextViewport)
+                    ? current
+                    : nextViewport,
+                );
               }
               return;
             }
-            if (parsed?.type === 'SELECT_PLACE') {
+            if (message.type === 'SELECT_PLACE') {
               // F-46 — WebView sends stable id/coord plus index fallback. Server
               // cluster updates can replace the points array during zoom, so relying
               // only on the index can miss the tapped marker and fail to open the card.
-              const index = Number(parsed?.index);
               const selectablePoints = renderedNativePointsRef.current;
-              const selectedId = parsed?.id == null ? '' : String(parsed.id);
-              const selectedCoord = parsed?.coord == null ? '' : String(parsed.coord).trim();
-              let selectedPoint = selectedId
-                ? selectablePoints.find((point) => point?.id != null && String(point.id) === selectedId)
+              let selectedPoint = message.id
+                ? selectablePoints.find((point) => point?.id != null && String(point.id) === message.id)
                 : undefined;
-              if (!selectedPoint && selectedCoord) {
-                selectedPoint = selectablePoints.find((point) => String(point?.coord ?? '').trim() === selectedCoord);
+              if (!selectedPoint && message.coord) {
+                selectedPoint = selectablePoints.find(
+                  (point) => String(point?.coord ?? '').trim() === message.coord,
+                );
               }
-              if (!selectedPoint && Number.isInteger(index) && index >= 0 && index < selectablePoints.length) {
-                selectedPoint = selectablePoints[index];
+              if (
+                !selectedPoint &&
+                message.index != null &&
+                message.index >= 0 &&
+                message.index < selectablePoints.length
+              ) {
+                selectedPoint = selectablePoints[message.index];
               }
               if (selectedPoint) onMarkerSelect?.(selectedPoint);
               return;
             }
-            if (parsed?.type !== 'OPEN_URL') return;
-            const safeUrl = getSafeExternalUrl(parsed?.url, { allowRelative: true, baseUrl: getSiteBaseUrl() });
+            if (message.type !== 'OPEN_URL') return;
+            const safeUrl = getSafeExternalUrl(message.url, { allowRelative: true, baseUrl: getSiteBaseUrl() });
             if (!safeUrl) return;
             // Travel marker links arrive as absolute URLs against the API host
             // (on local/dev API that host is NOT metravel.by), so route by path

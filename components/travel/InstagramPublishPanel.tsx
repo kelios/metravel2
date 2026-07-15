@@ -12,6 +12,8 @@ import {
 import Button from '@/components/ui/Button'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 type InstagramPublishPanelProps = {
   colors: ThemedColors
@@ -115,7 +117,7 @@ function InstagramGalleryItem({
         onPress={() => onRemoveImage(index)}
         style={styles.instagramGalleryRemoveButton}
         testID={`instagram-remove-${index}`}
-        accessibilityLabel={`Исключить фото ${index + 1} из публикации`}
+        accessibilityLabel={i18nT('travel:components.travel.InstagramPublishPanel.isklyuchit_foto_value1_iz_publikatsii_cded6c1a', { value1: index + 1 })}
       >
         <Feather name="x" size={iconSize} color={colors.textInverse} />
       </Pressable>
@@ -128,7 +130,7 @@ function InstagramGalleryItem({
             index === 0 && styles.instagramGalleryControlButtonDisabled,
           ]}
           testID={`instagram-move-left-${index}`}
-          accessibilityLabel={`Переместить фото ${index + 1} влево`}
+          accessibilityLabel={i18nT('travel:components.travel.InstagramPublishPanel.peremestit_foto_value1_vlevo_cff6df19', { value1: index + 1 })}
         >
           <Feather
             name="chevron-left"
@@ -144,7 +146,7 @@ function InstagramGalleryItem({
             isLast && styles.instagramGalleryControlButtonDisabled,
           ]}
           testID={`instagram-move-right-${index}`}
-          accessibilityLabel={`Переместить фото ${index + 1} вправо`}
+          accessibilityLabel={i18nT('travel:components.travel.InstagramPublishPanel.peremestit_foto_value1_vpravo_1678a1d6', { value1: index + 1 })}
         >
           <Feather
             name="chevron-right"
@@ -187,15 +189,13 @@ export default function InstagramPublishPanel({
 }: InstagramPublishPanelProps) {
   return (
     <View style={[styles.card, styles.instagramCard]}>
-      <Text style={styles.cardTitle}>Instagram публикация</Text>
+      <Text style={styles.cardTitle}>{i18nT('travel:components.travel.InstagramPublishPanel.instagram_publikatsiya_2cf828a3')}</Text>
       <Text style={styles.adminHint}>
-        Берутся только первые 10 фото из галереи. Порядок можно поменять
-        вручную.
-      </Text>
+        {i18nT('travel:components.travel.InstagramPublishPanel.berutsya_tolko_pervye_10_foto_iz_galerei_por_a0afd9f0')}</Text>
 
       <View style={styles.instagramControlRow}>
         <View style={styles.instagramCounterPill}>
-          <Text style={styles.instagramCounterLabel}>Длина caption</Text>
+          <Text style={styles.instagramCounterLabel}>{i18nT('travel:components.travel.InstagramPublishPanel.dlina_caption_0ba447e1')}</Text>
           <Text
             style={[
               styles.instagramCounterValue,
@@ -206,7 +206,7 @@ export default function InstagramPublishPanel({
           </Text>
         </View>
         <View style={styles.instagramCounterPill}>
-          <Text style={styles.instagramCounterLabel}>Хэштеги</Text>
+          <Text style={styles.instagramCounterLabel}>{i18nT('travel:components.travel.InstagramPublishPanel.heshtegi_45eece16')}</Text>
           <Text
             style={[
               styles.instagramCounterValue,
@@ -219,35 +219,33 @@ export default function InstagramPublishPanel({
       </View>
 
       <View style={styles.instagramEditor}>
-        <Text style={styles.instagramEditorLabel}>Caption</Text>
+        <Text style={styles.instagramEditorLabel}>{i18nT('travel:components.travel.InstagramPublishPanel.caption_5f9135b2')}</Text>
         <TextInput
           value={editableInstagramCaption}
           onChangeText={onCaptionChange}
           style={styles.instagramCaptionInput}
           multiline
-          placeholder="Опишите маршрут и добавьте призыв к действию"
+          placeholder={i18nT('travel:components.travel.InstagramPublishPanel.opishite_marshrut_i_dobavte_prizyv_k_deystvi_87bb5037')}
           placeholderTextColor={colors.textMuted}
-          accessibilityLabel="Instagram caption"
+          accessibilityLabel={i18nT('travel:components.travel.InstagramPublishPanel.instagram_caption_d3fed686')}
         />
       </View>
 
       <View style={styles.instagramEditor}>
-        <Text style={styles.instagramEditorLabel}>Хэштеги</Text>
+        <Text style={styles.instagramEditorLabel}>{i18nT('travel:components.travel.InstagramPublishPanel.heshtegi_45eece16')}</Text>
         <TextInput
           value={editableInstagramHashtags}
           onChangeText={onHashtagsChange}
           style={styles.instagramCaptionInput}
           multiline
-          placeholder="#метки #путешествия"
+          placeholder={i18nT('travel:components.travel.InstagramPublishPanel.metki_puteshestviya_f1333591')}
           placeholderTextColor={colors.textMuted}
-          accessibilityLabel="Instagram hashtags"
+          accessibilityLabel={i18nT('travel:components.travel.InstagramPublishPanel.instagram_hashtags_2bc1b44c')}
         />
       </View>
 
       <Text style={styles.instagramHintText}>
-        Перетаскивайте карточки мышью или используйте стрелки для точной
-        перестановки.
-      </Text>
+        {i18nT('travel:components.travel.InstagramPublishPanel.peretaskivayte_kartochki_myshyu_ili_ispolzuy_92bd969d')}</Text>
 
       {Platform.OS === 'web' ? (
         <div
@@ -305,7 +303,7 @@ export default function InstagramPublishPanel({
                 onPress={() => onRemoveImage(index)}
                 style={styles.instagramGalleryRemoveButton}
                 testID={`instagram-remove-${index}`}
-                accessibilityLabel={`Исключить фото ${index + 1} из публикации`}
+                accessibilityLabel={i18nT('travel:components.travel.InstagramPublishPanel.isklyuchit_foto_value1_iz_publikatsii_cded6c1a', { value1: index + 1 })}
               >
                 <Feather name="x" size={18} color={colors.textInverse} />
               </Pressable>
@@ -318,7 +316,7 @@ export default function InstagramPublishPanel({
                     index === 0 && styles.instagramGalleryControlButtonDisabled,
                   ]}
                   testID={`instagram-move-left-${index}`}
-                  accessibilityLabel={`Переместить фото ${index + 1} влево`}
+                  accessibilityLabel={i18nT('travel:components.travel.InstagramPublishPanel.peremestit_foto_value1_vlevo_cff6df19', { value1: index + 1 })}
                 >
                   <Feather
                     name="chevron-left"
@@ -335,7 +333,7 @@ export default function InstagramPublishPanel({
                       styles.instagramGalleryControlButtonDisabled,
                   ]}
                   testID={`instagram-move-right-${index}`}
-                  accessibilityLabel={`Переместить фото ${index + 1} вправо`}
+                  accessibilityLabel={i18nT('travel:components.travel.InstagramPublishPanel.peremestit_foto_value1_vpravo_1678a1d6', { value1: index + 1 })}
                 >
                   <Feather
                     name="chevron-right"
@@ -375,15 +373,14 @@ export default function InstagramPublishPanel({
 
       <View style={styles.instagramPreview}>
         <View style={styles.instagramFieldHeader}>
-          <Text style={styles.rejectionCommentLabel}>Текст поста</Text>
+          <Text style={styles.rejectionCommentLabel}>{i18nT('travel:components.travel.InstagramPublishPanel.tekst_posta_292cad89')}</Text>
           <Text
             style={[
               styles.instagramCounter,
               isInstagramCaptionTooLong && styles.instagramCounterDanger,
             ]}
           >
-            {instagramFinalLength}/{instagramCaptionMaxLength} символов
-          </Text>
+            {instagramFinalLength}/{instagramCaptionMaxLength} {i18nT('travel:components.travel.InstagramPublishPanel.simvolov_6dd28e72')}</Text>
         </View>
         <TextInput
           style={[
@@ -397,10 +394,10 @@ export default function InstagramPublishPanel({
           ]}
           value={editableInstagramCaption}
           onChangeText={onCaptionChange}
-          placeholder="Текст публикации"
+          placeholder={i18nT('travel:components.travel.InstagramPublishPanel.tekst_publikatsii_b42f5ff0')}
           placeholderTextColor={colors.textMuted}
           multiline
-          accessibilityLabel="Текст поста для Instagram"
+          accessibilityLabel={i18nT('travel:components.travel.InstagramPublishPanel.tekst_posta_dlya_instagram_40424367')}
         />
         <Text
           style={[
@@ -408,22 +405,19 @@ export default function InstagramPublishPanel({
             isInstagramCaptionTooLong && styles.instagramHintDanger,
           ]}
         >
-          Текст: {instagramCaptionLength} символов. Итоговый caption с тегами
-          должен быть не длиннее {instagramCaptionMaxLength} символов.
-        </Text>
+          {i18nT('travel:components.travel.InstagramPublishPanel.tekst_7756018e')}{instagramCaptionLength} {i18nT('travel:components.travel.InstagramPublishPanel.simvolov_itogovyy_caption_s_tegami_dolzhen_b_545f384a')}{instagramCaptionMaxLength} {i18nT('travel:components.travel.InstagramPublishPanel.simvolov_e806e0ee')}</Text>
       </View>
 
       <View style={styles.instagramPreview}>
         <View style={styles.instagramFieldHeader}>
-          <Text style={styles.rejectionCommentLabel}>Хэштеги</Text>
+          <Text style={styles.rejectionCommentLabel}>{i18nT('travel:components.travel.InstagramPublishPanel.heshtegi_45eece16')}</Text>
           <Text
             style={[
               styles.instagramCounter,
               isInstagramHashtagCountTooHigh && styles.instagramCounterDanger,
             ]}
           >
-            {instagramHashtagCount}/{instagramHashtagMaxCount} тегов
-          </Text>
+            {instagramHashtagCount}/{instagramHashtagMaxCount} {i18nT('travel:components.travel.InstagramPublishPanel.tegov_ecb02fbb')}</Text>
         </View>
         <TextInput
           style={[
@@ -436,10 +430,10 @@ export default function InstagramPublishPanel({
           ]}
           value={editableInstagramHashtags}
           onChangeText={onHashtagsChange}
-          placeholder="#metravelby #польша"
+          placeholder={i18nT('travel:components.travel.InstagramPublishPanel.metravelby_polsha_6e00b999')}
           placeholderTextColor={colors.textMuted}
           multiline
-          accessibilityLabel="Хэштеги для Instagram"
+          accessibilityLabel={i18nT('travel:components.travel.InstagramPublishPanel.heshtegi_dlya_instagram_4d576c95')}
         />
         <Text
           style={[
@@ -447,14 +441,13 @@ export default function InstagramPublishPanel({
             isInstagramHashtagCountTooHigh && styles.instagramHintDanger,
           ]}
         >
-          Instagram допускает до {instagramHashtagMaxCount} хэштегов. Сейчас
-          распознано {instagramHashtagCount}.
+          {i18nT('travel:components.travel.InstagramPublishPanel.instagram_dopuskaet_do_d2797a8f')}{instagramHashtagMaxCount} {i18nT('travel:components.travel.InstagramPublishPanel.heshtegov_seychas_raspoznano_257e2896')}{instagramHashtagCount}.
         </Text>
       </View>
 
       <View style={styles.instagramPreview}>
         <View style={styles.instagramFieldHeader}>
-          <Text style={styles.rejectionCommentLabel}>Предпросмотр</Text>
+          <Text style={styles.rejectionCommentLabel}>{i18nT('travel:components.travel.InstagramPublishPanel.predprosmotr_dc5089bd')}</Text>
           <Text
             style={[
               styles.instagramCounter,
@@ -469,25 +462,23 @@ export default function InstagramPublishPanel({
 
       <View style={styles.adminButtons}>
         <Button
-          label="Скопировать текст"
+          label={i18nT('travel:components.travel.InstagramPublishPanel.skopirovat_tekst_4a932939')}
           onPress={onCopyText}
           icon={<Feather name="copy" size={18} color={colors.textOnPrimary} />}
           variant="secondary"
           size="md"
           style={styles.adminButton}
           labelStyle={styles.adminButtonText}
-          accessibilityLabel="Скопировать текст для Instagram"
+          accessibilityLabel={i18nT('travel:components.travel.InstagramPublishPanel.skopirovat_tekst_dlya_instagram_fddd37ac')}
         />
       </View>
 
       <Text style={styles.adminHint}>
-        Перед первой публикацией один раз подключите аккаунт @metravelby через «Подключить
-        Instagram». После этого «Опубликовать» отправляет пост напрямую.
-      </Text>
+        {i18nT('travel:components.travel.InstagramPublishPanel.pered_pervoy_publikatsiey_odin_raz_podklyuch_ec7d7bdf')}</Text>
 
       <View style={styles.adminButtons}>
         <Button
-          label="Подключить Instagram"
+          label={i18nT('travel:components.travel.InstagramPublishPanel.podklyuchit_instagram_43bf83ab')}
           onPress={onConnect}
           disabled={isConnecting || isPublishing}
           loading={isConnecting}
@@ -496,13 +487,13 @@ export default function InstagramPublishPanel({
           size="md"
           style={styles.adminButton}
           labelStyle={styles.adminButtonText}
-          accessibilityLabel="Подключить аккаунт Instagram"
+          accessibilityLabel={i18nT('travel:components.travel.InstagramPublishPanel.podklyuchit_akkaunt_instagram_1c920bca')}
         />
       </View>
 
       <View style={styles.adminButtons}>
         <Button
-          label="Опубликовать в Instagram"
+          label={i18nT('travel:components.travel.InstagramPublishPanel.opublikovat_v_instagram_9e103c36')}
           onPress={onPublish}
           disabled={isPublishing || isConnecting}
           loading={isPublishing}
@@ -513,7 +504,7 @@ export default function InstagramPublishPanel({
           size="md"
           style={styles.adminButton}
           labelStyle={styles.adminButtonText}
-          accessibilityLabel="Опубликовать в Instagram"
+          accessibilityLabel={i18nT('travel:components.travel.InstagramPublishPanel.opublikovat_v_instagram_9e103c36')}
         />
       </View>
     </View>

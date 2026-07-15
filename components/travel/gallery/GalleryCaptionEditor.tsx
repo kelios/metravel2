@@ -4,6 +4,8 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { updateGalleryCaption } from '@/api/misc'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -76,18 +78,18 @@ export function GalleryCaptionEditor({
   const statusContent = status === 'saving' ? (
     <View style={styles.statusRow} testID={`gallery-caption-saving-${imageId}`}>
       <ActivityIndicator size="small" color={colors.primary} />
-      <Text style={styles.helperText}>Сохраняем…</Text>
+      <Text style={styles.helperText}>{i18nT('travel:components.travel.gallery.GalleryCaptionEditor.sohranyaem_4b4b5e54')}</Text>
     </View>
   ) : status === 'saved' ? (
-    <Text style={styles.savedText} testID={`gallery-caption-saved-${imageId}`}>Сохранено</Text>
+    <Text style={styles.savedText} testID={`gallery-caption-saved-${imageId}`}>{i18nT('travel:components.travel.gallery.GalleryCaptionEditor.sohraneno_3163b9b6')}</Text>
   ) : status === 'error' ? (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Повторить сохранение подписи"
+      accessibilityLabel={i18nT('travel:components.travel.gallery.GalleryCaptionEditor.povtorit_sohranenie_podpisi_00534e9d')}
       onPress={() => void persistCaption()}
       testID={`gallery-caption-retry-${imageId}`}
     >
-      <Text style={styles.errorText}>Не сохранено — повторить</Text>
+      <Text style={styles.errorText}>{i18nT('travel:components.travel.gallery.GalleryCaptionEditor.ne_sohraneno_povtorit_b0393149')}</Text>
     </Pressable>
   ) : (
     <Text style={styles.helperText}>{caption.length}/500</Text>
@@ -100,12 +102,12 @@ export function GalleryCaptionEditor({
         onChangeText={handleChangeText}
         onBlur={() => void persistCaption()}
         onSubmitEditing={() => void persistCaption()}
-        placeholder="Что это за место?"
+        placeholder={i18nT('travel:components.travel.gallery.GalleryCaptionEditor.chto_eto_za_mesto_0e282fd7')}
         placeholderTextColor={colors.textMuted}
         maxLength={500}
         multiline
         editable={!disabled && status !== 'saving'}
-        accessibilityLabel="Подпись к фотографии: что это за место"
+        accessibilityLabel={i18nT('travel:components.travel.gallery.GalleryCaptionEditor.podpis_k_fotografii_chto_eto_za_mesto_3e8434b3')}
         testID={`gallery-caption-input-${imageId}`}
         style={styles.input}
       />

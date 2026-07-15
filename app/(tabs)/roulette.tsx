@@ -28,10 +28,8 @@ import { createStyles } from '@/components/roulette/styles';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/utils/pluralize';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
+import { translate as i18nT } from '@/i18n'
 
-const SEO_TITLE = 'Случайный маршрут | Metravel';
-const SEO_DESCRIPTION =
-  'Не знаешь, куда поехать? Подбери фильтры — и мы случайно предложим три маршрута под твои пожелания.';
 
 const MAP_BACKGROUND = require('../../assets/travel/roulette-map-bg.jpg') as ImageSourcePropType;
 const COMPASS_BACKGROUND = require('../../assets/travel/roulette-compass-bg.jpg') as ImageSourcePropType;
@@ -76,12 +74,12 @@ const CompassDial = memo(function CompassDial({
       <Pressable
         style={buttonStyle}
         onPress={onPress}
-        accessibilityLabel={spinning ? 'Подбираем маршруты' : 'Крутить рулетку'}
+        accessibilityLabel={spinning ? i18nT('shared:app.tabs.roulette.podbiraem_marshruty_631ed3d1') : i18nT('shared:app.tabs.roulette.krutit_ruletku_1e997580')}
         accessibilityRole="button"
       >
         <Feather name="compass" size={iconSize} color={colors.primaryDark} style={{ marginBottom: 4 }} />
         <Text style={styles.rouletteCompassButtonTitle}>
-          {spinning ? 'Крутим…' : 'Случайный маршрут'}
+          {spinning ? i18nT('shared:app.tabs.roulette.krutim_7358efab') : i18nT('shared:app.tabs.roulette.sluchaynyy_marshrut_059a8a1d')}
         </Text>
         {!spinning && <Text style={styles.rouletteCompassButtonSubtitle}>{subtitle}</Text>}
       </Pressable>
@@ -221,7 +219,7 @@ export default function RouletteScreen() {
     ).start();
   }, [result, cardAnims]);
 
-  const compassSubtitle = result.length > 0 ? 'Ещё раз' : 'Нажми';
+  const compassSubtitle = result.length > 0 ? i18nT('shared:app.tabs.roulette.esche_raz_c110bab5') : i18nT('shared:app.tabs.roulette.nazhmi_25dc94f5');
 
   return (
     <View style={styles.root}>
@@ -231,8 +229,8 @@ export default function RouletteScreen() {
       {Platform.OS === 'web' && isMounted && isFocused && (
         <InstantSEO
           headKey="roulette"
-          title={SEO_TITLE}
-          description={SEO_DESCRIPTION}
+          title={i18nT('seoStatic:root.roulette.title')}
+          description={i18nT('seoStatic:root.roulette.description')}
           canonical={buildCanonicalUrl(pathname || '/roulette')}
           image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
           ogType="website"
@@ -257,11 +255,11 @@ export default function RouletteScreen() {
         <View style={[styles.main, isMobile && styles.mainMobile]}>
           <View style={[styles.heroRow, isMobile && styles.heroRowMobile]}>
             <View style={[styles.heroTextBlock, isMobile && styles.heroTextBlockMobile]}>
-              <Text style={styles.heroTitle}>Не знаешь, куда поехать?</Text>
+              <Text style={styles.heroTitle}>{i18nT('shared:app.tabs.roulette.ne_znaesh_kuda_poehat_aa17da72')}</Text>
               <Text style={styles.heroSubtitle}>
                 {isMobile
-                  ? 'Нажми компас — покажем 3 маршрута.'
-                  : 'Нажми компас — покажем 3 случайных маршрута. Фильтры слева сузят выбор, но можно крутить сразу.'}
+                  ? i18nT('shared:app.tabs.roulette.nazhmi_kompas_pokazhem_3_marshruta_f763a524')
+                  : i18nT('shared:app.tabs.roulette.nazhmi_kompas_pokazhem_3_sluchaynyh_marshrut_51d75c58')}
               </Text>
             </View>
           </View>
@@ -278,7 +276,7 @@ export default function RouletteScreen() {
                     <View style={styles.mobileFiltersHeaderRow}>
                       <Feather name="filter" size={14} color={colors.primaryDark} />
                       <Text style={styles.mobileFiltersLabel} numberOfLines={1}>
-                        {`Фильтры: ${filtersSummary}`}
+                        {i18nT('shared:app.tabs.roulette.filtry_value1_f0114db2', { value1: filtersSummary })}
                       </Text>
                     </View>
                   </Pressable>
@@ -296,7 +294,7 @@ export default function RouletteScreen() {
                 {(spinning || result.length > 0) && (
                   <View style={styles.mobileSpinButton}>
                     <UIButton
-                      label={spinning ? 'Подбираем…' : 'Ещё'}
+                      label={spinning ? i18nT('shared:app.tabs.roulette.podbiraem_b82c6db6') : i18nT('shared:app.tabs.roulette.esche_a5b57985')}
                       onPress={handleSpin}
                       disabled={showLoading}
                     />
@@ -312,16 +310,15 @@ export default function RouletteScreen() {
                 <Animated.View style={{ transform: [{ rotate: compassRotate }] }}>
                   <Feather name="compass" size={40} color={colors.primaryDark} />
                 </Animated.View>
-                <Text style={[styles.loaderText, { marginTop: 12 }]}>Подбираем маршруты…</Text>
+                <Text style={[styles.loaderText, { marginTop: 12 }]}>{i18nT('shared:app.tabs.roulette.podbiraem_marshruty_def4478f')}</Text>
               </View>
             )}
 
             {!showLoading && isEmpty && (
               <View style={styles.emptyBox}>
-                <Text style={styles.emptyTitle}>Ничего не нашли</Text>
+                <Text style={styles.emptyTitle}>{i18nT('shared:app.tabs.roulette.nichego_ne_nashli_d74d63c5')}</Text>
                 <Text style={styles.emptyText}>
-                  Попробуй убрать часть фильтров или измени запрос.
-                </Text>
+                  {i18nT('shared:app.tabs.roulette.poprobuy_ubrat_chast_filtrov_ili_izmeni_zapr_355b9ced')}</Text>
               </View>
             )}
 
@@ -330,7 +327,7 @@ export default function RouletteScreen() {
                 {spinning && (
                   <View style={styles.overlaySpinner}>
                     <View style={styles.spinnerCircle}>
-                      <Text style={styles.spinnerText}>Подбираем маршруты…</Text>
+                      <Text style={styles.spinnerText}>{i18nT('shared:app.tabs.roulette.podbiraem_marshruty_def4478f')}</Text>
                     </View>
                   </View>
                 )}
@@ -352,13 +349,13 @@ export default function RouletteScreen() {
                     {result.length === 0 && totalCount > 0 && (
                       <>
                         <Text style={styles.poolHint}>
-                          {`Случайный выбор из ${totalCount} ${getTravelLabel(totalCount)}`}
+                          {i18nT('shared:app.tabs.roulette.sluchaynyy_vybor_iz_value1_value2_02b741a7', { value1: totalCount, value2: getTravelLabel(totalCount) })}
                         </Text>
                         <View style={styles.slotsRow}>
                           {PLACEHOLDER_SLOTS.map((slotIndex) => (
                             <View key={slotIndex} style={styles.slotCard}>
                               <Feather name="map-pin" size={24} color={colors.borderStrong} />
-                              <Text style={styles.slotLabel}>{`Идея ${slotIndex}`}</Text>
+                              <Text style={styles.slotLabel}>{i18nT('shared:app.tabs.roulette.ideya_value1_68bcd3d7', { value1: slotIndex })}</Text>
                             </View>
                           ))}
                         </View>
@@ -422,7 +419,7 @@ export default function RouletteScreen() {
                           colors={colors}
                           spinning={spinning}
                           rotate={compassRotate}
-                          subtitle="Нажми"
+                          subtitle={i18nT('shared:app.tabs.roulette.nazhmi_25dc94f5')}
                           onPress={handleSpin}
                           wrapStyle={styles.mobileRouletteCompassWrap}
                           buttonStyle={styles.mobileRouletteCompassButton}
@@ -430,7 +427,7 @@ export default function RouletteScreen() {
                         />
                         {totalCount > 0 && (
                           <Text style={styles.poolHint}>
-                            {`Случайный выбор из ${totalCount} ${getTravelLabel(totalCount)}`}
+                            {i18nT('shared:app.tabs.roulette.sluchaynyy_vybor_iz_value1_value2_02b741a7', { value1: totalCount, value2: getTravelLabel(totalCount) })}
                           </Text>
                         )}
                       </View>

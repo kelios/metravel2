@@ -1,5 +1,7 @@
 import type { RouteExportInput, RouteWaypoint } from '@/utils/routeExport';
 import type { Travel } from '@/types/types';
+import { translate as i18nT } from '@/i18n'
+
 
 const parsePointCoord = (point: any): [number, number] | null => {
   const raw =
@@ -75,8 +77,8 @@ export const buildTravelPointsExportInput = (travel: Travel): RouteExportInput =
   const travelName = normalizeText((travel as any)?.name ?? (travel as any)?.title) || 'Metravel points';
   const sourceUrl = normalizeText((travel as any)?.url);
   const sourceLines = [
-    `Точки маршрута из Metravel: ${travelName}`,
-    sourceUrl ? `Источник: ${sourceUrl}` : '',
+    i18nT('export:utils.travelPointsExport.tochki_marshruta_iz_metravel_value1_75577000', { value1: travelName }),
+    sourceUrl ? i18nT('export:utils.travelPointsExport.istochnik_value1_93c005d7', { value1: sourceUrl }) : '',
   ].filter(Boolean);
 
   return {

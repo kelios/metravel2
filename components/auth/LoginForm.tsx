@@ -29,6 +29,9 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import { webTouchScrollStyle } from '@/utils';
+import { buildRegistrationHref, resolvePostAuthPath } from '@/utils/authNavigation';
+import { translate as i18nT } from '@/i18n'
+
 
 interface LoginFormValues {
     email: string;
@@ -77,15 +80,6 @@ export default function Login() {
         setMsg({ text, error });
     };
 
-    const resolvePostAuthPath = (): string => {
-        if (intent === 'create-book') return '/travel/new';
-        if (intent === 'build-pdf') return '/export';
-        if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
-            return redirect;
-        }
-        return '/';
-    };
-
     React.useEffect(() => {
         if (!isFocused) return;
         if (!intent) return;
@@ -114,14 +108,14 @@ export default function Login() {
         const trimmedEmail = email.trim();
         
         if (!trimmedEmail) {
-            showMsg('Введите email адрес', true);
+            showMsg(i18nT('auth:components.auth.LoginForm.vvedite_email_adres_51fd4d2d'), true);
             return;
         }
         
         // Проверка формата email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(trimmedEmail)) {
-            showMsg('Введите корректный email адрес', true);
+            showMsg(i18nT('auth:components.auth.LoginForm.vvedite_korrektnyy_email_adres_04386f4a'), true);
             return;
         }
         
@@ -129,7 +123,7 @@ export default function Login() {
             const res = await sendPassword(trimmedEmail);
             showMsg(res, /ошиб|не удалось/i.test(res));
         } catch (error) {
-            showMsg(getErrorMessage(error, 'Ошибка при сбросе пароля.'), true);
+            showMsg(getErrorMessage(error, i18nT('auth:components.auth.LoginForm.oshibka_pri_sbrose_parolya_2500a38a')), true);
         }
     };
 
@@ -148,12 +142,12 @@ export default function Login() {
                 // Держим форму заблокированной до фактической навигации (finally вызовет
                 // setSubmitting(false), но submitted оставляет кнопки disabled).
                 setSubmitted(true);
-                router.replace(resolvePostAuthPath() as any);
+                router.replace(resolvePostAuthPath({ redirect, intent }) as any);
             } else {
-                showMsg('Неверный email или пароль.', true);
+                showMsg(i18nT('auth:components.auth.LoginForm.nevernyy_email_ili_parol_18c8d999'), true);
             }
         } catch (error) {
-            showMsg(getErrorMessage(error, 'Ошибка при входе.'), true);
+            showMsg(getErrorMessage(error, i18nT('auth:components.auth.LoginForm.oshibka_pri_vhode_e41ad402')), true);
         } finally {
             setSubmitting(false);
         }
@@ -173,12 +167,12 @@ export default function Login() {
                 }
                 navigating = true;
                 setSubmitted(true);
-                router.replace(resolvePostAuthPath() as any);
+                router.replace(resolvePostAuthPath({ redirect, intent }) as any);
             } else {
-                showMsg('Не удалось войти через Google.', true);
+                showMsg(i18nT('auth:components.auth.LoginForm.ne_udalos_voyti_cherez_google_0930989b'), true);
             }
         } catch (error) {
-            showMsg(getErrorMessage(error, 'Ошибка при входе через Google.'), true);
+            showMsg(getErrorMessage(error, i18nT('auth:components.auth.LoginForm.oshibka_pri_vhode_cherez_google_e89e4a9b')), true);
         } finally {
             // На успехе оставляем заблокированным до размонтирования (идёт навигация).
             if (!navigating && mountedRef.current) setGoogleBusy(false);
@@ -203,9 +197,9 @@ export default function Login() {
         onSubmit: handleLogin,
     });
 
-    const title = 'Вход в Metravel: аккаунт, маршруты и Хочу поехать | Metravel';
+    const title = i18nT('auth:components.auth.LoginForm.vhod_v_metravel_akkaunt_marshruty_i_hochu_po_bf2420aa');
     const description =
-        'Войдите в аккаунт Metravel, чтобы сохранять маршруты в «Хочу поехать», публиковать поездки и собирать личную книгу путешествий.';
+        i18nT('auth:components.auth.LoginForm.voydite_v_akkaunt_metravel_chtoby_sohranyat__2df803f3');
 
     /* ---------- render ---------- */
     return (
@@ -270,7 +264,7 @@ export default function Login() {
 
                                                 {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для email */}
                                                 <FormFieldWithValidation
-                                                    label="Email"
+                                                    label={i18nT('auth:components.auth.LoginForm.email_c5e1625d')}
                                                     error={touched.email && errors.email ? errors.email : null}
                                                     required
                                                 >
@@ -280,7 +274,7 @@ export default function Login() {
                                                             touched.email && errors.email && styles.inputError,
                                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                                         ]}
-                                                        placeholder="Email"
+                                                        placeholder={i18nT('auth:components.auth.LoginForm.email_c5e1625d')}
                                                         value={values.email}
                                                         onChangeText={handleChange('email')}
                                                         onBlur={handleBlur('email')}
@@ -297,7 +291,7 @@ export default function Login() {
 
                                                 {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для пароля */}
                                                 <FormFieldWithValidation
-                                                    label="Пароль"
+                                                    label={i18nT('auth:components.auth.LoginForm.parol_288eb6a9')}
                                                     error={touched.password && errors.password ? errors.password : null}
                                                     required
                                                 >
@@ -310,7 +304,7 @@ export default function Login() {
                                                                 touched.password && errors.password && styles.inputError,
                                                                 globalFocusStyles.focusable,
                                                             ]}
-                                                            placeholder="Пароль"
+                                                            placeholder={i18nT('auth:components.auth.LoginForm.parol_288eb6a9')}
                                                             value={values.password}
                                                             onChangeText={handleChange('password')}
                                                             onBlur={handleBlur('password')}
@@ -325,7 +319,7 @@ export default function Login() {
                                                             onPress={() => setShowPassword((v) => !v)}
                                                             style={[styles.eyeButton, globalFocusStyles.focusable]}
                                                             accessibilityRole="button"
-                                                            accessibilityLabel={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                                                            accessibilityLabel={showPassword ? i18nT('auth:components.auth.LoginForm.skryt_parol_406391d8') : i18nT('auth:components.auth.LoginForm.pokazat_parol_cfedfb8e')}
                                                             hitSlop={8}
                                                         >
                                                             <Feather
@@ -338,14 +332,14 @@ export default function Login() {
                                                 </FormFieldWithValidation>
 
                                                 <Button
-                                                    label={isSubmitting || submitted ? 'Подождите…' : 'Войти'}
+                                                    label={isSubmitting || submitted ? i18nT('auth:components.auth.LoginForm.podozhdite_113cf4cf') : i18nT('auth:components.auth.LoginForm.voyti_608953ec')}
                                                     onPress={() => handleSubmit()}
                                                     disabled={isSubmitting || submitted || googleBusy}
                                                     loading={isSubmitting || submitted}
                                                     variant="primary"
                                                     size="lg"
                                                     style={styles.btn}
-                                                    accessibilityLabel="Войти"
+                                                    accessibilityLabel={i18nT('auth:components.auth.LoginForm.voyti_608953ec')}
                                                 />
 
                                                 <Pressable
@@ -357,14 +351,14 @@ export default function Login() {
                                                         globalFocusStyles.focusable,
                                                     ]}
                                                     accessibilityRole="button"
-                                                    accessibilityLabel="Сбросить пароль"
+                                                    accessibilityLabel={i18nT('auth:components.auth.LoginForm.sbrosit_parol_ec9af7c3')}
                                                 >
-                                                    <Text style={styles.forgot}>Забыли пароль?</Text>
+                                                    <Text style={styles.forgot}>{i18nT('auth:components.auth.LoginForm.zabyli_parol_05f81115')}</Text>
                                                 </Pressable>
 
                                                 <View style={styles.dividerContainer}>
                                                     <View style={styles.dividerLine} />
-                                                    <Text style={styles.dividerText}>или</Text>
+                                                    <Text style={styles.dividerText}>{i18nT('auth:components.auth.LoginForm.ili_c82ebb8c')}</Text>
                                                     <View style={styles.dividerLine} />
                                                 </View>
 
@@ -375,11 +369,11 @@ export default function Login() {
                                                 />
 
                                             <View style={styles.registerContainer}>
-                                                <Text style={styles.registerText}>Нет аккаунта? </Text>
+                                                <Text style={styles.registerText}>{i18nT('auth:components.auth.LoginForm.net_akkaunta_6dd7f1de')}</Text>
                                                 <Link
                                                     href={
                                                         (redirect && typeof redirect === 'string')
-                                                            ? (`/registration?redirect=${encodeURIComponent(redirect)}${intent ? `&intent=${encodeURIComponent(intent)}` : ''}` as any)
+                                                            ? (buildRegistrationHref({ redirect, intent }) as any)
                                                             : (`/registration${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
                                                     }
                                                     style={styles.registerLink}
@@ -392,8 +386,7 @@ export default function Login() {
                                                         });
                                                     }}
                                                 >
-                                                    Зарегистрируйтесь
-                                                </Link>
+                                                    {i18nT('auth:components.auth.LoginForm.zaregistriruytes_2bd038aa')}</Link>
                                             </View>
                             </View>
                         </View>
@@ -546,7 +539,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontWeight: '500',
     },
     err: { 
-        color: colors.danger,
+        color: colors.dangerDark,
         backgroundColor: colors.dangerSoft,
         borderLeftWidth: 3,
         borderLeftColor: colors.danger,

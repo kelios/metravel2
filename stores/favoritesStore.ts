@@ -6,6 +6,7 @@ import { cleanupInvalidFavorites, isValidFavoriteId } from '@/utils/favoritesCle
 import { markTravelAsFavorite, unmarkTravelAsFavorite } from '@/api/travelsFavorites';
 import { clearUserFavorites, fetchUserFavoriteTravels } from '@/api/user';
 import { getGuestFavoritesStorageKey } from '@/utils/guestTrialState';
+import { translate as i18nT } from '@/i18n';
 
 const SERVER_FAVORITES_CACHE_KEY = 'metravel_favorites_server';
 
@@ -247,7 +248,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             const userFavorites: FavoriteItem[] = favArr.map((t) => ({
                 id: t.id,
                 type: 'travel' as const,
-                title: t.name || 'Без названия',
+                title: t.name || i18nT('errorsStatic:stores.content.untitled'),
                 url: t.slug ? `/travels/${t.slug}` : (t.url ? String(t.url).split('?')[0].split('#')[0] : `/travels/${t.id}`),
                 imageUrl: t.travel_image_thumb_url,
                 addedAt: (() => {

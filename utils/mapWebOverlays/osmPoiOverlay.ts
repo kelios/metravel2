@@ -8,6 +8,8 @@ import {
 } from '@/utils/overpass';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { fetchBackendOverlay } from './backendOverlaysAdapter';
+import { translate as i18nT } from '@/i18n'
+
 
 type LeafletMap = any;
 
@@ -99,19 +101,28 @@ export const attachOsmPoiOverlay = (L: any, map: LeafletMap, opts?: OsmPoiOverla
 
   const escapeAttr = (s: string) => escapeHtml(s).replace(/`/g, '');
 
-  const getCategory = (tags: Record<string, string>) => {
+  const getCategory = (tags: Record<string, string>): OsmPoiCategory => {
     const tourism = tags.tourism;
     const amenity = tags.amenity;
     const historic = tags.historic;
 
-    if (tourism === 'museum') return 'Культура';
-    if (tourism === 'viewpoint') return 'Видовые места';
-    if (tourism === 'zoo' || tourism === 'theme_park') return 'Развлечения';
-    if (amenity === 'place_of_worship') return 'Религия';
-    if (historic) return 'История';
-    if (tourism === 'attraction') return 'Достопримечательности';
+    if (tourism === 'museum') return 'culture';
+    if (tourism === 'viewpoint') return 'viewpoints';
+    if (tourism === 'zoo' || tourism === 'theme_park') return 'entertainment';
+    if (amenity === 'place_of_worship') return 'religion';
+    if (historic) return 'history';
+    return 'attractions';
+  };
 
-    return 'Достопримечательности';
+  const getCategoryLabel = (category: OsmPoiCategory) => {
+    switch (category) {
+      case 'culture': return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.kultura_17ee7ad6');
+      case 'viewpoints': return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.vidovye_mesta_c50ae2b5');
+      case 'entertainment': return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.razvlecheniya_822b0d67');
+      case 'religion': return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.religiya_056aacb8');
+      case 'history': return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.istoriya_db827b33');
+      default: return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.dostoprimechatelnosti_c4b24c41');
+    }
   };
 
   const getTypeLabel = (tags: Record<string, string>) => {
@@ -119,40 +130,39 @@ export const attachOsmPoiOverlay = (L: any, map: LeafletMap, opts?: OsmPoiOverla
     const amenity = tags.amenity;
     const historic = tags.historic;
 
-    if (tourism === 'museum') return 'Музей';
-    if (tourism === 'viewpoint') return 'Смотровая площадка';
-    if (tourism === 'zoo') return 'Зоопарк';
-    if (tourism === 'theme_park') return 'Парк развлечений';
-    if (tourism === 'attraction') return 'Достопримечательность';
-    if (amenity === 'place_of_worship') return 'Храм';
+    if (tourism === 'museum') return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.muzey_97b01f10');
+    if (tourism === 'viewpoint') return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.smotrovaya_ploschadka_8947d60d');
+    if (tourism === 'zoo') return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.zoopark_3aa6a7af');
+    if (tourism === 'theme_park') return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.park_razvlecheniy_e54c9a28');
+    if (tourism === 'attraction') return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.dostoprimechatelnost_63bce2a7');
+    if (amenity === 'place_of_worship') return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.hram_1f41c0f1');
 
-    if (historic === 'castle') return 'Замок';
-    if (historic === 'manor') return 'Усадьба';
-    if (historic === 'fort') return 'Форт';
-    if (historic === 'memorial') return 'Мемориал';
-    if (historic === 'monument') return 'Памятник';
-    if (historic === 'ruins') return 'Руины';
-    if (historic === 'archaeological_site') return 'Археологический памятник';
+    if (historic === 'castle') return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.zamok_da0b9042');
+    if (historic === 'manor') return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.usadba_bad9000a');
+    if (historic === 'fort') return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.fort_ba4c5955');
+    if (historic === 'memorial') return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.memorial_b5e9b8c2');
+    if (historic === 'monument') return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.pamyatnik_1096a2bd');
+    if (historic === 'ruins') return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.ruiny_be40ce34');
+    if (historic === 'archaeological_site') return i18nT('shared:utils.mapWebOverlays.osmPoiOverlay.arheologicheskiy_pamyatnik_ed5ba6e5');
 
-    return tourism || historic || amenity || 'Точка на карте';
+    return tourism || historic || amenity || i18nT('sharedStatic:map.pointFallback');
   };
 
-  const getMarkerColors = (category: string) => {
-    if (category === 'История') return { stroke: DESIGN_TOKENS.colors.accentDark, fill: DESIGN_TOKENS.colors.accentLight };
-    if (category === 'Культура') return { stroke: DESIGN_TOKENS.colors.infoDark, fill: DESIGN_TOKENS.colors.infoLight };
-    if (category === 'Видовые места') return { stroke: DESIGN_TOKENS.colors.successDark, fill: DESIGN_TOKENS.colors.successLight };
-    if (category === 'Религия') return { stroke: DESIGN_TOKENS.colors.warningDark, fill: DESIGN_TOKENS.colors.warningLight };
-    if (category === 'Развлечения') return { stroke: DESIGN_TOKENS.colors.dangerDark, fill: DESIGN_TOKENS.colors.dangerLight };
-    // Default category ("Достопримечательности")
+  const getMarkerColors = (category: OsmPoiCategory) => {
+    if (category === 'history') return { stroke: DESIGN_TOKENS.colors.accentDark, fill: DESIGN_TOKENS.colors.accentLight };
+    if (category === 'culture') return { stroke: DESIGN_TOKENS.colors.infoDark, fill: DESIGN_TOKENS.colors.infoLight };
+    if (category === 'viewpoints') return { stroke: DESIGN_TOKENS.colors.successDark, fill: DESIGN_TOKENS.colors.successLight };
+    if (category === 'religion') return { stroke: DESIGN_TOKENS.colors.warningDark, fill: DESIGN_TOKENS.colors.warningLight };
+    if (category === 'entertainment') return { stroke: DESIGN_TOKENS.colors.dangerDark, fill: DESIGN_TOKENS.colors.dangerLight };
     return { stroke: DESIGN_TOKENS.colors.warningDark, fill: DESIGN_TOKENS.colors.warningLight };
   };
 
-  const getBadgeColors = (category: string) => {
-    if (category === 'История') return { bg: DESIGN_TOKENS.colors.accentSoft, fg: DESIGN_TOKENS.colors.accentDark };
-    if (category === 'Культура') return { bg: DESIGN_TOKENS.colors.infoSoft, fg: DESIGN_TOKENS.colors.infoDark };
-    if (category === 'Видовые места') return { bg: DESIGN_TOKENS.colors.successSoft, fg: DESIGN_TOKENS.colors.successDark };
-    if (category === 'Религия') return { bg: DESIGN_TOKENS.colors.warningSoft, fg: DESIGN_TOKENS.colors.warningDark };
-    if (category === 'Развлечения') return { bg: DESIGN_TOKENS.colors.dangerSoft, fg: DESIGN_TOKENS.colors.dangerDark };
+  const getBadgeColors = (category: OsmPoiCategory) => {
+    if (category === 'history') return { bg: DESIGN_TOKENS.colors.accentSoft, fg: DESIGN_TOKENS.colors.accentDark };
+    if (category === 'culture') return { bg: DESIGN_TOKENS.colors.infoSoft, fg: DESIGN_TOKENS.colors.infoDark };
+    if (category === 'viewpoints') return { bg: DESIGN_TOKENS.colors.successSoft, fg: DESIGN_TOKENS.colors.successDark };
+    if (category === 'religion') return { bg: DESIGN_TOKENS.colors.warningSoft, fg: DESIGN_TOKENS.colors.warningDark };
+    if (category === 'entertainment') return { bg: DESIGN_TOKENS.colors.dangerSoft, fg: DESIGN_TOKENS.colors.dangerDark };
     return { bg: DESIGN_TOKENS.colors.surfaceMuted, fg: DESIGN_TOKENS.colors.text };
   };
 
@@ -173,6 +183,7 @@ export const attachOsmPoiOverlay = (L: any, map: LeafletMap, opts?: OsmPoiOverla
       if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
 
       const category = getCategory(p.tags);
+      const categoryLabel = getCategoryLabel(category);
       const typeLabel = getTypeLabel(p.tags);
       const markerColors = getMarkerColors(category);
       const badgeColors = getBadgeColors(category);
@@ -227,7 +238,7 @@ export const attachOsmPoiOverlay = (L: any, map: LeafletMap, opts?: OsmPoiOverla
       const buttons: string[] = [];
       if (website) {
         buttons.push(
-          `<a href="${escapeAttr(website)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:6px 10px;border-radius:10px;border:1px solid ${escapeAttr(DESIGN_TOKENS.colors.border)};color:${escapeAttr(DESIGN_TOKENS.colors.text)};background:${escapeAttr(DESIGN_TOKENS.colors.surface)};text-decoration:none;font-weight:600">Сайт</a>`,
+          `<a href="${escapeAttr(website)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:6px 10px;border-radius:10px;border:1px solid ${escapeAttr(DESIGN_TOKENS.colors.border)};color:${escapeAttr(DESIGN_TOKENS.colors.text)};background:${escapeAttr(DESIGN_TOKENS.colors.surface)};text-decoration:none;font-weight:600">${i18nT("shared:utils.mapWebOverlays.osmPoiOverlay.a_href_value1_target_blank_rel_noopener_nore_e07d2e8c.text01")}</a>`,
         );
       }
       if (wikiUrl) {
@@ -253,7 +264,7 @@ export const attachOsmPoiOverlay = (L: any, map: LeafletMap, opts?: OsmPoiOverla
                 <div style="font-weight:800;line-height:1.2;font-size:14px;color:${escapeAttr(DESIGN_TOKENS.colors.text)};word-break:break-word">${escapeHtml(p.title)}</div>
                 <div style="margin-top:4px;font-size:12px;line-height:1.3;color:${escapeAttr(DESIGN_TOKENS.colors.textMuted)}">${escapeHtml(typeLabel)}</div>
               </div>
-              <div style="white-space:nowrap;align-self:flex-start;padding:4px 10px;border-radius:999px;background:${badgeColors.bg};color:${badgeColors.fg};font-size:12px;font-weight:800;line-height:1">${escapeHtml(category)}</div>
+              <div style="white-space:nowrap;align-self:flex-start;padding:4px 10px;border-radius:999px;background:${badgeColors.bg};color:${badgeColors.fg};font-size:12px;font-weight:800;line-height:1">${escapeHtml(categoryLabel)}</div>
             </div>
 
             ${shortDesc ? `<div style="margin-top:8px;font-size:12px;line-height:1.35;color:${escapeAttr(DESIGN_TOKENS.colors.text)};opacity:0.92;word-break:break-word">${escapeHtml(shortDesc)}</div>` : ''}
@@ -274,7 +285,7 @@ export const attachOsmPoiOverlay = (L: any, map: LeafletMap, opts?: OsmPoiOverla
               )
               .join('')}</div>` : ''}
 
-            <div style="margin-top:${buttons.length ? '10px' : '8px'};padding-top:10px;border-top:1px solid ${escapeAttr(DESIGN_TOKENS.colors.borderLight)};font-size:11px;line-height:1.2;color:${escapeAttr(DESIGN_TOKENS.colors.textSubtle)}">Источник: OpenStreetMap</div>
+            <div style="margin-top:${buttons.length ? '10px' : '8px'};padding-top:10px;border-top:1px solid ${escapeAttr(DESIGN_TOKENS.colors.borderLight)};font-size:11px;line-height:1.2;color:${escapeAttr(DESIGN_TOKENS.colors.textSubtle)}">${i18nT("shared:utils.mapWebOverlays.osmPoiOverlay.div_style_max_width_320px_div_style_backgrou_536bbcc4.text01")}</div>
           </div>
         </div>
       `;

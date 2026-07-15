@@ -3,6 +3,8 @@ import { Alert } from 'react-native'
 import type { Dispatch, SetStateAction } from 'react'
 import { normalizeAnchorId, escapeHtml, normalizeHtmlForQuill } from '@/utils/htmlUtils'
 import type { ArticleEditorSelection } from './articleEditor.types'
+import { translate as i18nT } from '@/i18n'
+
 
 type EditorGetter = () => any
 
@@ -72,7 +74,7 @@ export const insertAnchorIntoEditor = ({
   if (!editor) return
   const id = normalizeAnchorId(idRaw)
   if (!id) {
-    Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)')
+    Alert.alert(i18nT('shared:components.article.articleEditorQuillHelpers.yakor_0529bf09'), i18nT('shared:components.article.articleEditorQuillHelpers.vvedite_korrektnyy_identifikator_naprimer_da_a2375a98'))
     return
   }
 

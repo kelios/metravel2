@@ -9,6 +9,8 @@ import { RSVP_LABEL, rsvpColor } from '@/components/trips/planning/tripPlanForma
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import UserSafetyMenu from '@/components/profile/UserSafetyMenu';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   trip: PlannedTrip;
@@ -50,7 +52,7 @@ function TripParticipantsList({ trip }: Props) {
             {p.name}
           </Text>
           <Text style={styles.role}>
-            {p.role === 'organizer' ? 'Организатор' : 'Участник'}
+            {p.role === 'organizer' ? i18nT('trips:components.trips.planning.TripParticipantsList.organizator_988f1b06') : i18nT('trips:components.trips.planning.TripParticipantsList.uchastnik_d2aecd62')}
           </Text>
         </View>
         <View style={[styles.badge, { backgroundColor: badgeColor }]}>
@@ -65,17 +67,16 @@ function TripParticipantsList({ trip }: Props) {
 
   return (
     <View style={styles.wrap} testID="trip-participants">
-      <Text style={styles.heading}>Участники</Text>
+      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.TripParticipantsList.uchastniki_d582b4d8')}</Text>
 
       {participants.length ? (
         <>
           <Text style={styles.summary}>
-            {participants.length} участников · {goingCount} едут
-          </Text>
+            {participants.length} {i18nT('trips:components.trips.planning.TripParticipantsList.uchastnikov_ac14f99f')}{goingCount} {i18nT('trips:components.trips.planning.TripParticipantsList.edut_ab3d0897')}</Text>
           <View style={styles.list}>{participants.map(renderRow)}</View>
         </>
       ) : (
-        <Text style={styles.hint}>Пока никто не присоединился.</Text>
+        <Text style={styles.hint}>{i18nT('trips:components.trips.planning.TripParticipantsList.poka_nikto_ne_prisoedinilsya_9e30c18c')}</Text>
       )}
     </View>
   );

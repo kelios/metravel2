@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 export type SortOption = 'date' | 'popularity' | 'distance' | 'name';
 
@@ -13,9 +15,9 @@ interface SortSelectorProps {
 }
 
 const SORT_OPTIONS: { value: SortOption; label: string; icon: string }[] = [
-  { value: 'date', label: 'По дате', icon: 'calendar' },
-  { value: 'popularity', label: 'По популярности', icon: 'trending-up' },
-  { value: 'name', label: 'По названию', icon: 'type' },
+  { value: 'date', get label() { return i18nT('sharedStatic:components.ui.SortSelector.po_date_7b38f670') }, icon: 'calendar' },
+  { value: 'popularity', get label() { return i18nT('sharedStatic:components.ui.SortSelector.po_populyarnosti_0cf7c20d') }, icon: 'trending-up' },
+  { value: 'name', get label() { return i18nT('sharedStatic:components.ui.SortSelector.po_nazvaniyu_d1dee248') }, icon: 'type' },
 ];
 
 function SortSelector({ value, onChange, showDistance = false }: SortSelectorProps) {
@@ -25,12 +27,12 @@ function SortSelector({ value, onChange, showDistance = false }: SortSelectorPro
   const styles = useMemo(() => getStyles(colors), [colors]);
 
   const options = showDistance
-    ? [...SORT_OPTIONS, { value: 'distance' as SortOption, label: 'По расстоянию', icon: 'map-pin' }]
+    ? [...SORT_OPTIONS, { value: 'distance' as SortOption, label: i18nT('shared:components.ui.SortSelector.po_rasstoyaniyu_8c8c6925'), icon: 'map-pin' }]
     : SORT_OPTIONS;
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>
-      <Text style={styles.label}>Сортировка:</Text>
+      <Text style={styles.label}>{i18nT('shared:components.ui.SortSelector.sortirovka_a1c8e586')}</Text>
       <View style={styles.optionsContainer}>
         {options.map((option) => {
           const isActive = value === option.value;
@@ -40,7 +42,7 @@ function SortSelector({ value, onChange, showDistance = false }: SortSelectorPro
               onPress={() => onChange(option.value)}
               style={[styles.option, isActive && styles.optionActive]}
               accessibilityRole="button"
-              accessibilityLabel={`Сортировать ${option.label}`}
+              accessibilityLabel={i18nT('shared:components.ui.SortSelector.sortirovat_value1_98a74dcf', { value1: option.label })}
               accessibilityState={{ selected: isActive }}
             >
               <Feather

@@ -10,6 +10,8 @@ import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import TravelHeroQuickJumps from './TravelHeroQuickJumps'
 import { useTravelHeroExtrasModel } from './hooks/useTravelHeroExtrasModel'
+import { translate as i18nT } from '@/i18n'
+
 
 export const TravelHeroExtras: React.FC<{
   travel: Travel
@@ -33,7 +35,7 @@ export const TravelHeroExtras: React.FC<{
       <View
         testID="travel-details-quick-facts"
         role="group"
-        aria-label="Краткие факты"
+        aria-label={i18nT('travel:components.travel.details.TravelHeroExtras.kratkie_fakty_e2e737ad')}
         style={[
           styles.sectionContainer,
           styles.contentStable,

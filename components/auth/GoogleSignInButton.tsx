@@ -9,6 +9,8 @@ import {
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import { getGoogleSignInButtonTheme } from './googleSignInButtonTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface GoogleSignInButtonProps {
     onSuccess: (credential: string) => void;
@@ -64,9 +66,6 @@ declare global {
 
 const GOOGLE_GSI_SCRIPT_ID = 'google-gsi-client-script';
 const LOOPBACK_WEB_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
-const GOOGLE_NATIVE_UNAVAILABLE_TEXT = 'Google Sign-In не настроен';
-const GOOGLE_NATIVE_UNAVAILABLE_A11Y = 'Google Sign-In не настроен для мобильного приложения';
-
 type GoogleSignInButtonConfiguredProps = GoogleSignInButtonProps & {
     webClientId: string;
     iosClientId: string;
@@ -125,7 +124,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
         if (!hasClientId) {
             return {
                 enabled: false,
-                fallbackText: 'Google Sign-In не настроен.',
+                fallbackText: i18nT('auth:components.auth.GoogleSignInButton.google_sign_in_ne_nastroen_1ed9f07a'),
             };
         }
         if (typeof window === 'undefined') {
@@ -146,7 +145,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
 
         return {
             enabled: false,
-            fallbackText: 'Google Sign-In недоступен на localhost. Используйте email и пароль.',
+            fallbackText: i18nT('auth:components.auth.GoogleSignInButton.google_sign_in_nedostupen_na_localhost_ispol_6a3728e1'),
         };
     }, [hasClientId]);
     const shouldShowFallback = !googleAvailability.enabled;
@@ -155,7 +154,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
     useEffect(() => {
         if (Platform.OS !== 'web') return;
         if (!hasClientId) {
-            onErrorRef.current?.('Google Sign-In не настроен: отсутствует EXPO_PUBLIC_GOOGLE_CLIENT_ID');
+            onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.google_sign_in_ne_nastroen_otsutstvuet_expo__2060d11b'));
             return;
         }
         if (!googleAvailability.enabled) return;
@@ -165,7 +164,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
             if (!cancelled) setIsGoogleLoaded(true);
         };
         const handleScriptError = () => {
-            if (!cancelled) onErrorRef.current?.('Не удалось загрузить Google Sign-In');
+            if (!cancelled) onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.ne_udalos_zagruzit_google_sign_in_b5eb8e60'));
         };
 
         let attachedScript: HTMLScriptElement | null = null;
@@ -223,7 +222,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
                     if (response.credential) {
                         onSuccessRef.current(response.credential);
                     } else {
-                        onErrorRef.current?.('Не удалось получить данные от Google');
+                        onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.ne_udalos_poluchit_dannye_ot_google_c9bf56fd'));
                     }
                 },
             });
@@ -231,7 +230,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
             if (__DEV__) {
                 console.error('Google Sign-In initialization error:', error);
             }
-            onErrorRef.current?.('Ошибка инициализации Google Sign-In');
+            onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.oshibka_initsializatsii_google_sign_in_206f71df'));
         }
     }, [googleAvailability.enabled, googleClientId, hasClientId, isGoogleLoaded]);
 
@@ -256,7 +255,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
             if (__DEV__) {
                 console.error('Google Sign-In button render error:', error);
             }
-            onErrorRef.current?.('Ошибка отображения кнопки Google Sign-In');
+            onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.oshibka_otobrazheniya_knopki_google_sign_in_4b06f7ad'));
         }
     }, [googleAvailability.enabled, hasClientId, isDark, isGoogleButtonRendered, isGoogleLoaded]);
 
@@ -271,7 +270,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
                 isButtonDisabled && styles.buttonDisabled,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Войти через Google"
+            accessibilityLabel={i18nT('auth:components.auth.GoogleSignInButton.voyti_cherez_google_572f82b0')}
         >
             {shouldShowFallback ? (
                 <View style={styles.fallbackContainer}>
@@ -280,7 +279,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
             ) : !isGoogleLoaded && (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="small" color={colors.text} />
-                    <Text style={styles.loadingText}>Загрузка Google Sign-In...</Text>
+                    <Text style={styles.loadingText}>{i18nT('auth:components.auth.GoogleSignInButton.zagruzka_google_sign_in_cfa4830b')}</Text>
                 </View>
             )}
             <div
@@ -328,14 +327,14 @@ function GoogleSignInButtonNativeUnavailable() {
             disabled
             accessibilityRole="button"
             accessibilityState={{ disabled: true }}
-            accessibilityLabel={GOOGLE_NATIVE_UNAVAILABLE_A11Y}
+            accessibilityLabel={i18nT('authStatic:google.unavailable.a11y')}
             style={[styles.button, styles.buttonDisabled]}
         >
             <View style={styles.content}>
                 <View style={styles.iconContainer}>
-                    <Text style={styles.googleIcon}>G</Text>
+                    <Text style={styles.googleIcon}>{i18nT('auth:components.auth.GoogleSignInButton.g_c25ce9e0')}</Text>
                 </View>
-                <Text style={styles.text}>{GOOGLE_NATIVE_UNAVAILABLE_TEXT}</Text>
+                <Text style={styles.text}>{i18nT('authStatic:google.unavailable.text')}</Text>
             </View>
         </Pressable>
     );
@@ -379,16 +378,16 @@ function GoogleSignInButtonNativeConfigured({
                 return;
             }
 
-            onError?.('Не удалось получить id_token от Google');
+            onError?.(i18nT('auth:components.auth.GoogleSignInButton.ne_udalos_poluchit_id_token_ot_google_12ff72b6'));
         } catch (error) {
             setIsLoading(false);
             if (isErrorWithCode(error)) {
                 if (error.code === statusCodes.IN_PROGRESS) {
-                    onError?.('Google Sign-In уже выполняется');
+                    onError?.(i18nT('auth:components.auth.GoogleSignInButton.google_sign_in_uzhe_vypolnyaetsya_5c2c3aea'));
                     return;
                 }
                 if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-                    onError?.('Google Play Services недоступны или требуют обновления');
+                    onError?.(i18nT('auth:components.auth.GoogleSignInButton.google_play_services_nedostupny_ili_trebuyut_e96c8fe1'));
                     return;
                 }
                 if (error.code === statusCodes.SIGN_IN_CANCELLED) {
@@ -398,7 +397,7 @@ function GoogleSignInButtonNativeConfigured({
             if (__DEV__) {
                 console.error('Google native sign-in error:', error);
             }
-            onError?.('Ошибка при открытии Google Sign-In');
+            onError?.(i18nT('auth:components.auth.GoogleSignInButton.oshibka_pri_otkrytii_google_sign_in_c1bf910f'));
         }
     };
 
@@ -413,7 +412,7 @@ function GoogleSignInButtonNativeConfigured({
                 pressed && styles.buttonPressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Войти через Google"
+            accessibilityLabel={i18nT('auth:components.auth.GoogleSignInButton.voyti_cherez_google_572f82b0')}
         >
             <View style={styles.content}>
                 {isLoading ? (
@@ -421,9 +420,9 @@ function GoogleSignInButtonNativeConfigured({
                 ) : (
                     <>
                         <View style={styles.iconContainer}>
-                            <Text style={styles.googleIcon}>G</Text>
+                            <Text style={styles.googleIcon}>{i18nT('auth:components.auth.GoogleSignInButton.g_c25ce9e0')}</Text>
                         </View>
-                        <Text style={styles.text}>Войти через Google</Text>
+                        <Text style={styles.text}>{i18nT('auth:components.auth.GoogleSignInButton.voyti_cherez_google_572f82b0')}</Text>
                     </>
                 )}
             </View>

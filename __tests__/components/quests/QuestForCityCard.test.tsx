@@ -95,4 +95,24 @@ describe('QuestForCityCard', () => {
 
     expect(getByText('11-14 лет')).toBeTruthy()
   })
+
+  it('asks to clarify age when a child quest has only the generic kids tag', () => {
+    const { getByText, queryByText } = render(
+      <QuestForCityCard
+        quest={{
+          id: 'mogilev-kids',
+          title: 'Трубач Могислав будит город',
+          points: 6,
+          cityId: '7',
+          cityName: 'Могилёв',
+          lat: 53.9,
+          lng: 30.3,
+          tags: ['kids', 'family'],
+        }}
+      />,
+    )
+
+    expect(getByText('Уточнить возраст')).toBeTruthy()
+    expect(queryByText('Для детей')).toBeNull()
+  })
 })

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Platform, StyleSheet, View, useWindowDimensions, ScrollView, TextInput, Text as RNText, RefreshControl } from 'react-native'
+import { Platform, View, useWindowDimensions, ScrollView, TextInput, Text as RNText, RefreshControl } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { FlashList } from '@shopify/flash-list'
 
@@ -9,12 +9,15 @@ import { useThemedColors } from '@/hooks/useTheme'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import IconButton from '@/components/ui/IconButton'
-import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { MapUiApi } from '@/types/mapUi'
 import { resolveExportedFunction } from '@/utils/moduleInterop'
 import { nominatimSearch } from '@/api/external/nominatim'
+import { getMapGeocoderLanguage } from '@/utils/mapLocale'
 
 import type { PointsListStyles } from './types'
+import { translate as i18nT } from '@/i18n'
+import { createLocalStyles } from './PointsListGrid.styles'
+
 
 let getFiltersPanelStylesSafe: ((...args: any[]) => any) | null = null
 try {
@@ -149,16 +152,16 @@ export const PointsListGrid: React.FC<{
   const lastGeocodedQueryRef = React.useRef<string>('')
   const panelOptions = React.useMemo(
     () => [
-      { key: 'filters', label: 'Фильтры карты' },
-      { key: 'list', label: `Список (${filteredPoints.length})` },
+      { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_karty_bf82f2ec') },
+      { key: 'list', label: i18nT('map:components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4', { value1: filteredPoints.length }) },
     ],
     [filteredPoints.length]
   )
   const mobileTabOptions = React.useMemo(
     () => [
-      { key: 'map', label: 'Карта', icon: 'map' },
-      { key: 'list', label: `Список (${filteredPoints.length})`, icon: 'list' },
-      { key: 'filters', label: 'Фильтры', icon: 'filter-list' },
+      { key: 'map', label: i18nT('map:components.UserPoints.PointsListGrid.karta_b48708d8'), icon: 'map' },
+      { key: 'list', label: i18nT('map:components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4', { value1: filteredPoints.length }), icon: 'list' },
+      { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_a9025123'), icon: 'filter-list' },
     ],
     [filteredPoints.length]
   )
@@ -193,7 +196,7 @@ export const PointsListGrid: React.FC<{
 
         <IconButton
           icon={<Feather name="crosshair" size={20} color={colors.text} />}
-          label="Моё местоположение"
+          label={i18nT('map:components.UserPoints.PointsListGrid.moe_mestopolozhenie_852e92f2')}
           onPress={onLocateMe}
           disabled={isLocating}
           style={[styles.locateFab, isLocating && styles.locateFabDisabled]}
@@ -271,9 +274,9 @@ export const PointsListGrid: React.FC<{
             style={localStyles.listSearchInput as any}
             value={searchQuery}
             onChangeText={onSearch}
-            placeholder="Поиск по названию..."
+            placeholder={i18nT('map:components.UserPoints.PointsListGrid.poisk_po_nazvaniyu_0d899cfa')}
             placeholderTextColor={themedColors.textMuted}
-            accessibilityLabel="Поиск по названию..."
+            accessibilityLabel={i18nT('map:components.UserPoints.PointsListGrid.poisk_po_nazvaniyu_0d899cfa')}
             testID="userpoints-list-search"
           />
 
@@ -281,7 +284,7 @@ export const PointsListGrid: React.FC<{
             {onOpenActions ? (
               <IconButton
                 icon={<Feather name="settings" size={16} color={themedColors.text} />}
-                label="Управление точками"
+                label={i18nT('map:components.UserPoints.PointsListGrid.upravlenie_tochkami_fcf804c2')}
                 onPress={onOpenActions}
                 size="sm"
                 testID="userpoints-actions-open"
@@ -291,7 +294,7 @@ export const PointsListGrid: React.FC<{
 
             <IconButton
               icon={<Feather name="sliders" size={16} color={themedColors.text} />}
-              label="Фильтры"
+              label={i18nT('map:components.UserPoints.PointsListGrid.filtry_a9025123')}
               onPress={() => setPanelTab('filters')}
               size="sm"
               testID="userpoints-list-open-filters"
@@ -300,7 +303,7 @@ export const PointsListGrid: React.FC<{
 
             <IconButton
               icon={<Feather name="rotate-ccw" size={16} color={themedColors.text} />}
-              label="Сбросить фильтры"
+              label={i18nT('map:components.UserPoints.PointsListGrid.sbrosit_filtry_811750be')}
               onPress={onResetFilters}
               disabled={!hasFilters}
               size="sm"
@@ -312,18 +315,18 @@ export const PointsListGrid: React.FC<{
 
         {showingRecommendations ? (
           <View style={localStyles.recommendationsHeader}>
-            <RNText style={localStyles.recommendationsTitle}>3 случайные точки из ваших</RNText>
+            <RNText style={localStyles.recommendationsTitle}>{i18nT('map:components.UserPoints.PointsListGrid.3_sluchaynye_tochki_iz_vashih_24a90489')}</RNText>
             <View style={localStyles.recommendationsActions}>
               <IconButton
                 icon={<Feather name="refresh-cw" size={16} color={themedColors.text} />}
-                label="Обновить"
+                label={i18nT('map:components.UserPoints.PointsListGrid.obnovit_335ad256')}
                 onPress={onRefreshRecommendations}
                 size="sm"
                 showLabel
               />
               <IconButton
                 icon={<Feather name="x" size={16} color={themedColors.textOnPrimary} />}
-                label="Все точки"
+                label={i18nT('map:components.UserPoints.PointsListGrid.vse_tochki_2d6d6b49')}
                 onPress={onCloseRecommendations}
                 size="sm"
                 active
@@ -371,8 +374,7 @@ export const PointsListGrid: React.FC<{
           {showingRecommendations && routeInfo ? (
             <View style={localStyles.routeInfo}>
               <RNText style={localStyles.routeInfoText}>
-                {routeInfo.distance} км · ~{routeInfo.duration} мин
-              </RNText>
+                {routeInfo.distance} {i18nT('map:components.UserPoints.PointsListGrid.km_5098801f')}{routeInfo.duration} {i18nT('map:components.UserPoints.PointsListGrid.min_912426a2')}</RNText>
             </View>
           ) : null}
         </View>
@@ -527,7 +529,7 @@ export const PointsListGrid: React.FC<{
     }
 
     const focusFallback = () => {
-      focusWith({ lat: 53.902496, lng: 27.561481, label: 'Минск', zoom: 10 })
+      focusWith({ lat: 53.902496, lng: 27.561481, label: i18nT('map:components.UserPoints.PointsListGrid.minsk_f73327f9'), zoom: 10 })
     }
 
     if (geocodeTimerRef.current) clearTimeout(geocodeTimerRef.current)
@@ -539,7 +541,7 @@ export const PointsListGrid: React.FC<{
       geocodeAbortRef.current = controller
 
       nominatimSearch(
-        { q, limit: 1, addressdetails: 1, acceptLanguage: 'ru' },
+        { q, limit: 1, addressdetails: 1, acceptLanguage: getMapGeocoderLanguage() },
         { signal: controller.signal },
       )
         .then((r) => (r.ok ? r.json() : null))
@@ -660,7 +662,7 @@ export const PointsListGrid: React.FC<{
               options={panelOptions}
               value={panelTab}
               onChange={(key) => setPanelTab(key as 'filters' | 'list')}
-              accessibilityLabel="Панель"
+              accessibilityLabel={i18nT('map:components.UserPoints.PointsListGrid.panel_7e476941')}
               compact
             />
           </View>
@@ -679,7 +681,7 @@ export const PointsListGrid: React.FC<{
           options={mobileTabOptions}
           value={mobileTab}
           onChange={handleMobileTabChange}
-          accessibilityLabel="Карта, список или фильтры точек"
+          accessibilityLabel={i18nT('map:components.UserPoints.PointsListGrid.karta_spisok_ili_filtry_tochek_7f0bb71f')}
           compact
           activateOnPressInNative
         />
@@ -695,141 +697,3 @@ export const PointsListGrid: React.FC<{
     </View>
   )
 }
-
-const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-  mapLayoutContainer: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  mapMainContent: {
-    flex: 1,
-  },
-  mapRightPanel: {
-    width: 440,
-    borderLeftWidth: 0,
-    backgroundColor: colors.background,
-    ...(Platform.OS === 'web'
-      ? ({
-          boxShadow: colors.boxShadows.card,
-          zIndex: 2,
-        } as any)
-      : null),
-  },
-  mobilePanelContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  mobileTabsBar: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.surface,
-  },
-  panelTabs: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.surface,
-  },
-  rightPanelScroll: {
-    flex: 1,
-  },
-  rightPanelContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-  },
-  pointsList: {
-    paddingTop: 12,
-    paddingBottom: 24,
-    paddingHorizontal: 16,
-  },
-  listControlsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 16,
-    paddingHorizontal: 4,
-  },
-  listControlsActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-    flexShrink: 1,
-    maxWidth: '100%',
-  },
-  listSearchInput: {
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 200,
-    minWidth: 170,
-    height: 44,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: DESIGN_TOKENS.radii.sm,
-    paddingHorizontal: 16,
-    backgroundColor: colors.surface,
-    color: colors.text,
-    fontSize: 15,
-    ...(Platform.OS === 'web' ? ({
-      outlineWidth: 0,
-      outlineStyle: 'none',
-      outlineColor: 'transparent',
-      transition: 'border-color 150ms ease, box-shadow 150ms ease',
-    } as any) : null),
-  },
-  pointsListItem: {
-    marginBottom: 12,
-  },
-  listProgressText: {
-    marginTop: 4,
-    marginBottom: 12,
-    textAlign: 'center',
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  recommendationsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: colors.primarySoft,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    marginBottom: 16,
-    marginHorizontal: 4,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: colors.primaryAlpha30,
-  },
-  recommendationsActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexShrink: 0,
-  },
-  recommendationsTitle: {
-    fontSize: 15,
-    fontWeight: '600' as any,
-    color: colors.primaryDark,
-    flex: 1,
-  },
-  routeInfo: {
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: colors.primarySoft,
-    borderRadius: DESIGN_TOKENS.radii.sm,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
-  },
-  routeInfoText: {
-    fontSize: 13,
-    fontWeight: '500' as any,
-    color: colors.primaryDark,
-  },
-});

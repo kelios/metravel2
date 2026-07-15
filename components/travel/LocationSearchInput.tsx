@@ -14,6 +14,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useLocationSearchQuery, type LocationSearchResult } from '@/api/geoQueries';
+import { translate as i18nT } from '@/i18n'
+
 
 const isWeb = Platform.OS === 'web' || typeof document !== 'undefined';
 
@@ -39,7 +41,7 @@ interface LocationSearchInputProps {
  */
 const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
     onLocationSelect,
-    placeholder = 'Поиск места на карте...',
+    placeholder = i18nT('travel:components.travel.LocationSearchInput.poisk_mesta_na_karte_3bddba6d'),
     autoFocus = false,
     scrollViewRef,
     scrollOffsetRef,
@@ -117,7 +119,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
         isError,
     } = useLocationSearchQuery({ query: debouncedQuery });
 
-    const error = isError ? 'Ошибка поиска. Попробуйте еще раз.' : null;
+    const error = isError ? i18nT('travel:components.travel.LocationSearchInput.oshibka_poiska_poprobuyte_esche_raz_649dc9ce') : null;
 
     // Показываем выпадашку, как только пришёл задебаунсенный результат.
     useEffect(() => {
@@ -198,7 +200,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
                         onPress={handleClear}
                         style={styles.clearButton}
                         accessibilityRole="button"
-                        accessibilityLabel="Очистить поле поиска"
+                        accessibilityLabel={i18nT('travel:components.travel.LocationSearchInput.ochistit_pole_poiska_2b82d7d3')}
                     >
                         <Feather name="x" size={18} color={colors.textMuted} />
                     </Pressable>
@@ -206,7 +208,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
             </View>
 
             {query.trim().length > 0 && query.trim().length < 3 && !isLoading && !error && (
-                <Text style={styles.minCharsHint}>Введите минимум 3 символа для поиска</Text>
+                <Text style={styles.minCharsHint}>{i18nT('travel:components.travel.LocationSearchInput.vvedite_minimum_3_simvola_dlya_poiska_acf04c20')}</Text>
             )}
 
             {!!error && (
@@ -256,8 +258,8 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
             {showResults && results.length === 0 && !isLoading && query.length >= 3 && (
                 <View style={styles.emptyContainer}>
                     <Feather name="search" size={24} color={colors.textMuted} />
-                    <Text style={styles.emptyText}>Ничего не найдено</Text>
-                    <Text style={styles.emptyHint}>Попробуйте изменить запрос</Text>
+                    <Text style={styles.emptyText}>{i18nT('travel:components.travel.LocationSearchInput.nichego_ne_naydeno_bb50273b')}</Text>
+                    <Text style={styles.emptyHint}>{i18nT('travel:components.travel.LocationSearchInput.poprobuyte_izmenit_zapros_0f704303')}</Text>
                 </View>
             )}
         </View>

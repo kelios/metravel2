@@ -28,6 +28,8 @@ jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({
     userId: '123',
     isSuperuser: false,
+    isAuthenticated: true,
+    authReady: true,
   }),
 }));
 

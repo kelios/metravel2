@@ -5,6 +5,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { PeerBadgeReceived } from '@/api/achievements';
 import BadgeMedal from '@/components/achievements/BadgeMedal';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   items: PeerBadgeReceived[];
@@ -14,7 +16,7 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-function PeerBadgeReceivedRow({ items, size = 56, title = 'От сообщества', testID, style }: Props) {
+function PeerBadgeReceivedRow({ items, size = 56, title = i18nT('achievements:components.achievements.PeerBadgeReceivedRow.ot_soobschestva_0e5c09e7'), testID, style }: Props) {
   const colors = useThemedColors();
   const styles = getStyles(colors, size);
 

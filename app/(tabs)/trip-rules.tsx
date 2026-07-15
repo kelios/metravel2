@@ -1,57 +1,59 @@
 import LegalPage from '@/components/legal/LegalPage'
+import { translate as i18nT } from '@/i18n'
+
 
 export default function TripRulesScreen() {
   return (
     <LegalPage
       headKey="legal-trip-rules"
-      seoTitle="Правила участия в поездках | Metravel"
-      seoDescription="Правила участия в совместных поездках Metravel: ответственность организаторов и участников, безопасность, договорённости и риски."
-      pageTitle="Правила участия в поездках"
+      seoTitle={i18nT('trips:app.tabs.trip_rules.pravila_uchastiya_v_poezdkah_metravel_8cf61361')}
+      seoDescription={i18nT('trips:app.tabs.trip_rules.pravila_uchastiya_v_sovmestnyh_poezdkah_metr_ab16b279')}
+      pageTitle={i18nT('trips:app.tabs.trip_rules.pravila_uchastiya_v_poezdkah_30927e21')}
       effectiveDate="20.06.2026"
       draftNotice
       intro={[
-        'Эти правила применяются к совместным поездкам, которые пользователи организуют и в которых участвуют через Metravel. Сервис является информационной площадкой и не является туроператором.',
+        i18nT('trips:app.tabs.trip_rules.eti_pravila_primenyayutsya_k_sovmestnym_poez_b36fb6ab'),
       ]}
       sections={[
         {
-          heading: '1. Роль Metravel',
+          heading: i18nT('trips:app.tabs.trip_rules.1_rol_metravel_f012fa79'),
           paragraphs: [
-            'Metravel предоставляет площадку для поиска попутчиков и совместных поездок. Сервис не организует поездки, не оказывает туристических услуг и не является стороной договорённостей между пользователями.',
-            'Все условия поездки (маршрут, расходы, сроки, ответственность) согласовываются участниками самостоятельно.',
+            i18nT('trips:app.tabs.trip_rules.metravel_predostavlyaet_ploschadku_dlya_pois_3061b785'),
+            i18nT('trips:app.tabs.trip_rules.vse_usloviya_poezdki_marshrut_rashody_sroki__2dae8b64'),
           ],
         },
         {
-          heading: '2. Организаторам',
+          heading: i18nT('trips:app.tabs.trip_rules.2_organizatoram_cf9bca5f'),
           paragraphs: [
-            'Указывайте достоверную информацию о поездке, требованиях к участникам, расходах и рисках.',
-            'Вы отвечаете за корректность описания и за соблюдение применимого законодательства. Не обещайте гарантий безопасности, которые не можете обеспечить.',
+            i18nT('trips:app.tabs.trip_rules.ukazyvayte_dostovernuyu_informatsiyu_o_poezd_7237b770'),
+            i18nT('trips:app.tabs.trip_rules.vy_otvechaete_za_korrektnost_opisaniya_i_za__92909a31'),
           ],
         },
         {
-          heading: '3. Участникам',
+          heading: i18nT('trips:app.tabs.trip_rules.3_uchastnikam_872e798a'),
           paragraphs: [
-            'Оценивайте свою подготовку, состояние здоровья и риски маршрута. Участие — добровольное и на собственный риск.',
-            'Самостоятельно проверяйте информацию об организаторе и условиях. MeTravel не проверяет подлинность аккаунтов и не гарантирует исполнение договорённостей.',
+            i18nT('trips:app.tabs.trip_rules.otsenivayte_svoyu_podgotovku_sostoyanie_zdor_355a7fe7'),
+            i18nT('trips:app.tabs.trip_rules.samostoyatelno_proveryayte_informatsiyu_ob_o_2011acda'),
           ],
         },
         {
-          heading: '4. Безопасность и контакты',
+          heading: i18nT('trips:app.tabs.trip_rules.4_bezopasnost_i_kontakty_46f278fd'),
           paragraphs: [
-            'Будьте осторожны при обмене контактами и личной информацией. Не передавайте платёжные и конфиденциальные данные незнакомым людям.',
-            'При оффлайн-встречах выбирайте безопасные публичные места и сообщайте близким о планах.',
+            i18nT('trips:app.tabs.trip_rules.budte_ostorozhny_pri_obmene_kontaktami_i_lic_90040d8b'),
+            i18nT('trips:app.tabs.trip_rules.pri_offlayn_vstrechah_vybirayte_bezopasnye_p_ba386bde'),
           ],
         },
         {
-          heading: '5. Ответственность',
+          heading: i18nT('trips:app.tabs.trip_rules.5_otvetstvennost_690c3d4d'),
           paragraphs: [
-            'Сервис не несёт ответственности за действия пользователей, договорённости между ними, а также за ущерб, возникший в ходе поездок.',
-            'Споры между участниками разрешаются ими самостоятельно.',
+            i18nT('trips:app.tabs.trip_rules.servis_ne_neset_otvetstvennosti_za_deystviya_3abe0e4f'),
+            i18nT('trips:app.tabs.trip_rules.spory_mezhdu_uchastnikami_razreshayutsya_imi_7510f719'),
           ],
         },
         {
-          heading: '6. Контакты',
+          heading: i18nT('trips:app.tabs.trip_rules.6_kontakty_f7380129'),
           paragraphs: [
-            'Сообщить о нарушении или задать вопрос можно по адресу metraveldev@gmail.com.',
+            i18nT('trips:app.tabs.trip_rules.soobschit_o_narushenii_ili_zadat_vopros_mozh_e676e21f'),
           ],
         },
       ]}

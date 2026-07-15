@@ -20,6 +20,8 @@ import type { ImportedPoint } from '@/types/userPoints'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { getSiteBaseUrl } from '@/utils/seo'
 import { showToast } from '@/utils/toast'
+import { translate as i18nT } from '@/i18n'
+
 
 const DEFAULT_SITE_POINT_COLOR = DESIGN_COLORS.travelPoint
 
@@ -73,7 +75,7 @@ const getPointTitle = (point: ImportedPoint): string => {
   if (name) return looksLikeFullAddress(name) ? firstMeaningfulSegment(name) : name
   const address = String(point.address ?? '').trim()
   if (address) return looksLikeFullAddress(address) ? firstMeaningfulSegment(address) : address
-  return 'Точка'
+  return i18nT('map:components.UserPoints.UserPointsMapPointMarker.tochka_99c57a1a')
 }
 
 const getPointSubtitle = (point: ImportedPoint, title: string): string => {
@@ -141,7 +143,7 @@ const getRelatedUrls = (point: ImportedPoint) => {
   return { articleUrl, travelUrl }
 }
 
-const openExternal = async (url: string, errorText = 'Не удалось открыть ссылку') => {
+const openExternal = async (url: string, errorText = i18nT('map:components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_ssylku_f3b28577')) => {
   if (!url) return
   const opened = await openExternalUrlInNewTab(url)
   if (!opened) void showToast({ type: 'info', text1: errorText, position: 'bottom' })
@@ -153,7 +155,7 @@ const openRelatedPage = async (url: string) => {
     allowRelative: true,
     baseUrl: getSiteBaseUrl(),
   })
-  if (!opened) void showToast({ type: 'info', text1: 'Не удалось открыть страницу', position: 'bottom' })
+  if (!opened) void showToast({ type: 'info', text1: i18nT('map:components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_stranitsu_50207480'), position: 'bottom' })
 }
 
 export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPointMarkerWeb(
@@ -213,9 +215,9 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
     if (!coord) return
     try {
       await Clipboard.setStringAsync(coord)
-      void showToast({ type: 'success', text1: 'Координаты скопированы', position: 'bottom' })
+      void showToast({ type: 'success', text1: i18nT('map:components.UserPoints.UserPointsMapPointMarker.koordinaty_skopirovany_9794ecb0'), position: 'bottom' })
     } catch {
-      void showToast({ type: 'error', text1: 'Не удалось скопировать координаты', position: 'bottom' })
+      void showToast({ type: 'error', text1: i18nT('map:components.UserPoints.UserPointsMapPointMarker.ne_udalos_skopirovat_koordinaty_251cf34d'), position: 'bottom' })
     }
   }, [coord])
 
@@ -225,42 +227,42 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
 
   const handleShareTelegram = React.useCallback(() => {
     if (!coord) return
-    void openExternal(buildTelegramShareUrl(coord), 'Не удалось поделиться')
+    void openExternal(buildTelegramShareUrl(coord), i18nT('map:components.UserPoints.UserPointsMapPointMarker.ne_udalos_podelitsya_1ff7407d'))
   }, [coord])
 
   const handleOpenGoogleMaps = React.useCallback(() => {
     if (!coord) return
-    void openExternal(buildGoogleMapsUrl(coord), 'Не удалось открыть Google Maps')
+    void openExternal(buildGoogleMapsUrl(coord), i18nT('map:components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_google_maps_a2ca522b'))
   }, [coord])
 
   const handleOpenAppleMaps = React.useCallback(() => {
     if (!coord) return
-    void openExternal(buildAppleMapsUrl(coord), 'Не удалось открыть Apple Maps')
+    void openExternal(buildAppleMapsUrl(coord), i18nT('map:components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_apple_maps_c57c17b9'))
   }, [coord])
 
   const handleOpenOrganicMaps = React.useCallback(() => {
     if (!coord) return
-    void openExternal(buildOrganicMapsUrl(coord, title), 'Не удалось открыть Organic Maps')
+    void openExternal(buildOrganicMapsUrl(coord, title), i18nT('map:components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_organic_maps_87cc6b2d'))
   }, [coord, title])
 
   const handleOpenWaze = React.useCallback(() => {
     if (!coord) return
-    void openExternal(buildWazeUrl(coord), 'Не удалось открыть Waze')
+    void openExternal(buildWazeUrl(coord), i18nT('map:components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_waze_d35ab6c9'))
   }, [coord])
 
   const handleOpenYandexMaps = React.useCallback(() => {
     if (!coord) return
-    void openExternal(buildYandexMapsUrl(coord), 'Не удалось открыть Яндекс Карты')
+    void openExternal(buildYandexMapsUrl(coord), i18nT('map:components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_yandeks_karty_860260b8'))
   }, [coord])
 
   const handleOpenYandexNavi = React.useCallback(() => {
     if (!coord) return
-    void openExternal(buildYandexNaviUrl(coord), 'Не удалось открыть Яндекс Навигатор')
+    void openExternal(buildYandexNaviUrl(coord), i18nT('map:components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_yandeks_navigator_d112999a'))
   }, [coord])
 
   const handleOpenOpenStreetMap = React.useCallback(() => {
     if (!coord) return
-    void openExternal(buildOpenStreetMapUrl(coord), 'Не удалось открыть OpenStreetMap')
+    void openExternal(buildOpenStreetMapUrl(coord), i18nT('map:components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_openstreetmap_342ea6e3'))
   }, [coord])
 
   const handleMarkerClick = React.useCallback(() => {
@@ -313,14 +315,26 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
     return getMarkerIconCached(String(fill || '').trim() || fallback, { active: isActive, emphasize: isSitePoint })
   }, [colors.backgroundTertiary, getMarkerIconCached, isActive, isSitePoint, point.color])
 
-  const markerEventHandlers = React.useMemo(() => ({ click: handleMarkerClick } as any), [handleMarkerClick])
+  const applyAccessibleName = React.useCallback((marker: any | null) => {
+    const element = marker?._icon || marker?.getElement?.()
+    if (!element) return
+    element.setAttribute('aria-label', title)
+  }, [title])
+  const markerEventHandlers = React.useMemo(
+    () => ({
+      add: (event: any) => applyAccessibleName(event?.target),
+      click: handleMarkerClick,
+    } as any),
+    [applyAccessibleName, handleMarkerClick],
+  )
   const markerRefCb = React.useCallback(
     (marker: any | null) => {
       if (!Number.isFinite(pointId)) return
       markerInstanceRef.current = marker
+      applyAccessibleName(marker)
       onMarkerReady?.({ pointId, marker })
     },
-    [onMarkerReady, pointId]
+    [applyAccessibleName, onMarkerReady, pointId]
   )
 
   const extraActions = React.useMemo<UserPointPopupAction[]>(() => {
@@ -328,21 +342,21 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
     if (onEditPoint) {
       actions.push({
         key: 'edit',
-        label: 'Изменить',
+        label: i18nT('map:components.UserPoints.UserPointsMapPointMarker.izmenit_c2243a6f'),
         icon: 'edit-2',
         onPress: handleEditPoint,
-        accessibilityLabel: 'Редактировать',
-        tooltip: 'Редактировать',
+        accessibilityLabel: i18nT('map:components.UserPoints.UserPointsMapPointMarker.redaktirovat_44ce8fb2'),
+        tooltip: i18nT('map:components.UserPoints.UserPointsMapPointMarker.redaktirovat_44ce8fb2'),
       })
     }
     if (onDeletePoint) {
       actions.push({
         key: 'delete',
-        label: 'Удалить',
+        label: i18nT('map:components.UserPoints.UserPointsMapPointMarker.udalit_976107ea'),
         icon: 'trash-2',
         onPress: handleDeletePoint,
-        accessibilityLabel: 'Удалить',
-        tooltip: 'Удалить',
+        accessibilityLabel: i18nT('map:components.UserPoints.UserPointsMapPointMarker.udalit_976107ea'),
+        tooltip: i18nT('map:components.UserPoints.UserPointsMapPointMarker.udalit_976107ea'),
       })
     }
     // No inline «Закрыть» action — the card's top-right ✕ (onClose) already closes.
@@ -355,7 +369,14 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
   if (!hasCoords) return null
 
   return (
-    <mods.Marker ref={markerRefCb as any} position={markerPosition} icon={markerIcon} eventHandlers={markerEventHandlers}>
+    <mods.Marker
+      ref={markerRefCb as any}
+      position={markerPosition}
+      icon={markerIcon}
+      title={title}
+      alt={title}
+      eventHandlers={markerEventHandlers}
+    >
       <mods.Popup
         className="metravel-user-point-popup metravel-place-popup"
         closeButton={false}

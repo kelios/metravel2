@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import { Platform } from 'react-native'
 
 import { buildWeservProxyUrl, extractFirstImgSrc } from '@/components/travel/stableContent/htmlTransform'
+import { translate as i18nT } from '@/i18n'
 
 import { WEB_RICH_TEXT_CLASS, WEB_RICH_TEXT_STYLES_ID } from './webStyles'
 
@@ -366,7 +367,7 @@ export function useStableContentWebEffects({
             sourceElement: candidate,
             image: {
               src,
-              alt: candidate.getAttribute('alt') || `Изображение маршрута ${index + 1}`,
+              alt: candidate.getAttribute('alt') || i18nT('travel:components.travel.stableContent.useWebEffects.routeImageAlt', { value1: index + 1 }),
             },
           }
         })

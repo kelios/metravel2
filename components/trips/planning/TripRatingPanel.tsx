@@ -3,11 +3,15 @@ import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 import Feather from '@expo/vector-icons/Feather'
 
 import StarRating from '@/components/ui/StarRating'
+import Button from '@/components/ui/Button'
 import type { PlannedTrip, TripParticipant } from '@/api/plannedTrips'
 import type { ParticipantRatingValue } from '@/api/participantRating'
+import { ApiError } from '@/api/client'
 import { useMyParticipantRating, useRateParticipant } from '@/hooks/useParticipantRating'
 import { useAuthStore } from '@/stores/authStore'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   trip: PlannedTrip
@@ -23,13 +27,28 @@ interface RowProps {
 }
 
 function ParticipantRatingRow({ tripId, participant, colors, styles }: RowProps) {
-  const { data: existing } = useMyParticipantRating(tripId, participant.id)
+  const ratingQuery = useMyParticipantRating(tripId, participant.id)
   const rateMutation = useRateParticipant()
   const [review, setReview] = useState('')
   const [reviewDirty, setReviewDirty] = useState(false)
 
-  const currentRating = existing?.rating ?? null
-  const reviewValue = reviewDirty ? review : existing?.review ?? ''
+  const currentRating = ratingQuery.data?.rating ?? null
+  const reviewValue = reviewDirty ? review : ratingQuery.data?.review ?? ''
+  const visibleError = ratingQuery.error ?? rateMutation.error
+  const errorStatus = visibleError instanceof ApiError ? visibleError.status : null
+  const isRetryableLoadError =
+    ratingQuery.isError && (errorStatus === null || errorStatus === 0 || errorStatus >= 500)
+  const errorMessage = visibleError
+    ? errorStatus === 401
+      ? i18nT('trips:components.trips.planning.TripRatingPanel.sessiya_istekla_voydite_v_akkaunt_2e065fad')
+      : errorStatus === 403
+        ? i18nT('trips:components.trips.planning.TripRatingPanel.net_dostupa_k_otsenke_uchastnika_3a209b6b')
+        : errorStatus === 404 || errorStatus === 501
+          ? i18nT('trips:components.trips.planning.TripRatingPanel.otsenki_uchastnikov_poka_nedostupny_e6b71d31')
+          : ratingQuery.isError
+            ? i18nT('trips:components.trips.planning.TripRatingPanel.ne_udalos_zagruzit_sohranennuyu_otsenku_55246acd')
+            : i18nT('trips:components.trips.planning.TripRatingPanel.ne_udalos_sohranit_otsenku_5f159a99')
+    : null
 
   const submit = (rating: ParticipantRatingValue, reviewText: string) => {
     rateMutation.mutate({
@@ -57,7 +76,7 @@ function ParticipantRatingRow({ tripId, participant, colors, styles }: RowProps)
           {participant.name}
         </Text>
         {participant.role === 'organizer' ? (
-          <Text style={styles.organizerTag}>организатор</Text>
+          <Text style={styles.organizerTag}>{i18nT('trips:components.trips.planning.TripRatingPanel.organizator_a13e58c1')}</Text>
         ) : null}
       </View>
 
@@ -65,7 +84,7 @@ function ParticipantRatingRow({ tripId, participant, colors, styles }: RowProps)
         rating={currentRating}
         userRating={currentRating}
         interactive
-        disabled={rateMutation.isPending}
+        disabled={ratingQuery.isFetching || ratingQuery.isError || rateMutation.isPending}
         onRate={handleRate}
         size="medium"
         testID={`participant-stars-${participant.id}`}
@@ -77,28 +96,53 @@ function ParticipantRatingRow({ tripId, participant, colors, styles }: RowProps)
           setReviewDirty(true)
           setReview(t.slice(0, REVIEW_MAX))
         }}
-        placeholder="Отзыв (необязательно)"
+        placeholder={i18nT('trips:components.trips.planning.TripRatingPanel.otzyv_neobyazatelno_0956b79c')}
         placeholderTextColor={colors.textMuted}
         multiline
         style={styles.reviewInput}
-        editable={!!currentRating}
+        editable={!!currentRating && !ratingQuery.isError && !rateMutation.isPending}
         testID={`participant-review-${participant.id}`}
       />
+      {errorMessage ? (
+        <View
+          style={styles.errorState}
+          accessibilityRole="alert"
+          testID={`participant-rating-error-${participant.id}`}
+        >
+          <View style={styles.errorTextRow}>
+            <Feather name="alert-circle" size={16} color={colors.danger} />
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+          {isRetryableLoadError ? (
+            <Button
+              label={i18nT('trips:components.trips.planning.TripRatingPanel.povtorit_9df6f43f')}
+              variant="outline"
+              size="md"
+              loading={ratingQuery.isFetching}
+              onPress={() => {
+                void ratingQuery.refetch()
+              }}
+              icon={<Feather name="refresh-cw" size={16} color={colors.primaryDark} />}
+              testID={`participant-rating-retry-${participant.id}`}
+            />
+          ) : null}
+        </View>
+      ) : null}
       {currentRating && reviewDirty ? (
         <Pressable
           style={styles.saveReview}
           onPress={handleSaveReview}
           accessibilityRole="button"
-          accessibilityLabel={`Сохранить отзыв об участнике ${participant.name}`}
+          accessibilityLabel={i18nT('trips:components.trips.planning.TripRatingPanel.sohranit_otzyv_ob_uchastnike_value1_f42331b5', { value1: participant.name })}
         >
           <Feather name="save" size={14} color={colors.primaryDark} />
-          <Text style={styles.saveReviewText}>Сохранить отзыв</Text>
+          <Text style={styles.saveReviewText}>{i18nT('trips:components.trips.planning.TripRatingPanel.sohranit_otzyv_d0515f64')}</Text>
         </Pressable>
       ) : null}
       {currentRating && !reviewDirty ? (
         <View style={styles.savedRow}>
           <Feather name="check" size={14} color={colors.primaryDark} />
-          <Text style={styles.savedText}>Оценка сохранена</Text>
+          <Text style={styles.savedText}>{i18nT('trips:components.trips.planning.TripRatingPanel.otsenka_sohranena_5aa9762f')}</Text>
         </View>
       ) : null}
     </View>
@@ -132,11 +176,10 @@ function TripRatingPanel({ trip }: Props) {
     <View style={styles.wrap} testID="trip-rating-panel">
       <View style={styles.headRow}>
         <Feather name="star" size={18} color={colors.primaryDark} />
-        <Text style={styles.heading}>Оцените попутчиков</Text>
+        <Text style={styles.heading}>{i18nT('trips:components.trips.planning.TripRatingPanel.otsenite_poputchikov_c288d016')}</Text>
       </View>
       <Text style={styles.subhead}>
-        Поездка завершена — поставьте оценку участникам. Это помогает сообществу.
-      </Text>
+        {i18nT('trips:components.trips.planning.TripRatingPanel.poezdka_zavershena_postavte_otsenku_uchastni_fac6685e')}</Text>
       {rateable.map((p) => (
         <ParticipantRatingRow
           key={p.id}
@@ -193,6 +236,14 @@ const createStyles = (colors: ThemedColors) =>
     saveReviewText: { fontSize: 13, fontWeight: '700', color: colors.primaryText },
     savedRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     savedText: { fontSize: 12, color: colors.textMuted },
+    errorState: {
+      gap: 8,
+      borderRadius: 10,
+      padding: 10,
+      backgroundColor: colors.dangerLight,
+    },
+    errorTextRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+    errorText: { flex: 1, fontSize: 13, lineHeight: 18, color: colors.text },
   })
 
 export default memo(TripRatingPanel)

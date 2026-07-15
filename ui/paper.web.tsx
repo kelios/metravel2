@@ -109,6 +109,8 @@ type MenuProps = {
   anchor: React.ReactNode
   children: React.ReactNode
   contentStyle?: StyleProp<ViewStyle>
+  accessibilityRole?: 'menu' | 'dialog'
+  accessibilityLabel?: string
 }
 
 const MenuItem: React.FC<MenuItemProps> = ({ title, onPress, leadingIcon, style, titleStyle }) => {
@@ -139,6 +141,8 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
   anchor,
   children,
   contentStyle,
+  accessibilityRole = 'menu',
+  accessibilityLabel,
 }) => {
   const [panelPosition, setPanelPosition] = React.useState<{ top: number; left: number; maxHeight: number; width: number } | null>(null)
   const anchorRef = React.useRef<View>(null)
@@ -249,7 +253,7 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
       </View>
       {visible ? (
         <Portal>
-          <View style={styles.menuOverlay} accessibilityRole="menu" testID="web-menu-overlay">
+          <View style={styles.menuOverlay} testID="web-menu-overlay">
             <Pressable style={styles.menuBackdrop} onPress={onDismiss} />
             {panelPosition ? (
               <View
@@ -264,6 +268,8 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
                   } as any,
                   contentStyle,
                 ] as any}
+                accessibilityRole={accessibilityRole as any}
+                accessibilityLabel={accessibilityLabel}
                 testID="web-menu-panel"
               >
                 {children}
@@ -277,6 +283,14 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
 }
 
 Menu.Item = MenuItem
+
+type DialogMenuProps = Omit<MenuProps, 'accessibilityRole'>
+
+export const DialogMenu: React.FC<DialogMenuProps> & { Item: React.FC<MenuItemProps> } = (props) => (
+  <Menu {...props} accessibilityRole="dialog" />
+)
+
+DialogMenu.Item = MenuItem
 
 export const Card: React.FC<ChildrenProps & { style?: StyleProp<ViewStyle> }> & {
   Content: React.FC<ChildrenProps>
@@ -325,7 +339,7 @@ const styles = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.primary,
   },
   buttonText: {
-    color: DESIGN_TOKENS.colors.textOnDark,
+    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontWeight: '700',
   },
   iconButton: {

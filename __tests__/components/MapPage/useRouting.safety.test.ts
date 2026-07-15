@@ -5,6 +5,7 @@
 
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { useRouting, clearResolvedRouteKeys } from '@/components/MapPage/useRouting';
+import { routeCache } from '@/utils/routeCache';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -13,6 +14,7 @@ describe('useRouting - Safety Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     clearResolvedRouteKeys();
+    routeCache.clear();
     (global.fetch as jest.Mock).mockReset();
   });
 

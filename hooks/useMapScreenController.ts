@@ -19,6 +19,8 @@ import { getStyles } from '@/screens/tabs/map.styles';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { mapCategoryNamesToIds, isCategoryFilterUnresolved } from '@/utils/filterQuery';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
+import { createCollator } from '@/i18n';
+import { parseWebViewJsonObject, toFiniteCoordinate } from '@/utils/webViewBridge';
 
 // Модульные хуки для карты
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates';
@@ -69,6 +71,7 @@ const distanceKm = (
 };
 
 export function useMapScreenController() {
+  const categoryCollator = useMemo(() => createCollator(), []);
   // Map API reference
   const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
   const handleMapUiApiReady = useCallback((api: MapUiApi | null) => {
@@ -569,12 +572,12 @@ export function useMapScreenController() {
     });
 
     return Array.from(fallbackNames)
-      .sort((a, b) => a.localeCompare(b, 'ru'))
+      .sort((a, b) => categoryCollator.compare(a, b))
       .map((name) => ({
         id: name,
         name,
       }));
-  }, [allTravelsData, filters.categoryTravelAddress]);
+  }, [allTravelsData, categoryCollator, filters.categoryTravelAddress]);
 
   // Reset filters, route and map overlays.
   // #213 — сброс должен возвращать карту к дефолтным слоям: гасим включённые
@@ -681,12 +684,11 @@ export function useMapScreenController() {
         try {
           const raw = window.localStorage.getItem('metravel:lastKnownCoords');
           if (raw) {
-            const parsed = JSON.parse(raw) as Partial<{ latitude: number; longitude: number }>;
-            const lat = Number(parsed?.latitude);
-            const lng = Number(parsed?.longitude);
-            if (Number.isFinite(lat) && Number.isFinite(lng)) {
-              return { latitude: lat, longitude: lng };
-            }
+            const parsed = parseWebViewJsonObject(raw);
+            const cached = parsed
+              ? toFiniteCoordinate(parsed.latitude, parsed.longitude)
+              : null;
+            if (cached) return cached;
           }
         } catch {
           // noop

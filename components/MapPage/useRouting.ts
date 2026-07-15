@@ -21,7 +21,14 @@ import {
     buildRadiuses,
     WARN_ENDPOINT_SNAP_METERS,
     ORS_RADIUSES_TO_TRY,
+    createRoutingError,
+    getRoutingErrorCode,
+    isPermanentRoutingError,
+    type RoutingErrorCode,
 } from '@/utils/routingHelpers'
+import { translate as i18nT } from '@/i18n'
+import { resolveDevMockFlag } from '@/utils/devMockFlags'
+
 
 // Глобальный кеш успешно/аварийно обработанных routeKey, чтобы избегать повторных запросов в сессию
 const resolvedRouteKeys = new Set<string>()
@@ -37,12 +44,16 @@ async function throwForRoutingStatus(
   options: { include403?: boolean } = {},
 ): Promise<void> {
   const errorText = await res.text().catch(() => '')
-  if (res.status === 429) throw new Error('Превышен лимит запросов. Подождите немного.')
-  if (res.status === 400) throw new Error('Некорректные координаты маршрута.')
+  if (res.status === 429) throw createRoutingError(i18nT('map:components.MapPage.useRouting.prevyshen_limit_zaprosov_podozhdite_nemnogo_150df3a6'), 'rate_limit', res.status)
+  if (res.status === 400) throw createRoutingError(i18nT('map:components.MapPage.useRouting.nekorrektnye_koordinaty_marshruta_88d0d4a1'), 'invalid_route', res.status)
   if (options.include403 && res.status === 403) {
-    throw new Error('Неверный API ключ или доступ запрещен.')
+    throw createRoutingError(i18nT('map:components.MapPage.useRouting.nevernyy_api_klyuch_ili_dostup_zapreschen_c74b17e2'), 'forbidden', res.status)
   }
-  throw new Error(`Ошибка ${provider}: ${res.status}${errorText ? ` - ${errorText}` : ''}`)
+  throw createRoutingError(
+    i18nT('map:components.MapPage.useRouting.oshibka_value1_value2_value3_95c95a81', { value1: provider, value2: res.status, value3: errorText ? ` - ${errorText}` : '' }),
+    'provider_unavailable',
+    res.status,
+  )
 }
 
 // Helper for tests to reset memoized route keys
@@ -54,6 +65,7 @@ interface RoutingState {
     distance: number
     duration: number
     coords: [number, number][]
+    errorCode: RoutingErrorCode | null
 }
 
 
@@ -69,6 +81,7 @@ export const useRouting = (
         distance: 0,
         duration: 0,
         coords: [],
+        errorCode: null,
     })
 
     const abortRef = useRef<AbortController | null>(null)
@@ -125,14 +138,14 @@ export const useRouting = (
         )
 
         if (!res.ok) {
-            await throwForRoutingStatus(res, 'сервера маршрутизации')
+            await throwForRoutingStatus(res, i18nT('map:components.MapPage.useRouting.servera_marshrutizatsii_41b39b43'))
         }
 
         const data = await res.json()
         const geometry = data?.geometry
 
         if (!Array.isArray(geometry) || geometry.length === 0) {
-            throw new Error('Пустой маршрут от сервера маршрутизации')
+            throw new Error(i18nT('map:components.MapPage.useRouting.pustoy_marshrut_ot_servera_marshrutizatsii_76b3ee86'))
         }
 
         return {
@@ -153,7 +166,10 @@ export const useRouting = (
         const apiKey = String(ORS_API_KEY ?? '').trim()
 
         if (!apiKey || apiKey.length < 10) {
-            throw new Error('Неверный API ключ или доступ запрещен.');
+            throw createRoutingError(
+                i18nT('map:components.MapPage.useRouting.nevernyy_api_klyuch_ili_dostup_zapreschen_c74b17e2'),
+                'forbidden',
+            );
         }
 
         let lastError: any = null
@@ -176,14 +192,15 @@ export const useRouting = (
                         const errorText = await res.text().catch(() => '')
                         const { code: orsCode, message: orsMessage } = parseOrsError(errorText)
 
-                        if (res.status === 429) throw new Error('Превышен лимит запросов. Подождите немного.')
-                        if (res.status === 403) throw new Error('Неверный API ключ или доступ запрещен.')
-                        if (res.status === 400) throw new Error('Некорректные координаты маршрута.')
+                        if (res.status === 429) throw createRoutingError(i18nT('map:components.MapPage.useRouting.prevyshen_limit_zaprosov_podozhdite_nemnogo_150df3a6'), 'rate_limit', res.status)
+                        if (res.status === 403) throw createRoutingError(i18nT('map:components.MapPage.useRouting.nevernyy_api_klyuch_ili_dostup_zapreschen_c74b17e2'), 'forbidden', res.status)
+                        if (res.status === 400) throw createRoutingError(i18nT('map:components.MapPage.useRouting.nekorrektnye_koordinaty_marshruta_88d0d4a1'), 'invalid_route', res.status)
 
-                        const err: any = new Error(
-                            `Ошибка ORS: ${res.status}${errorText ? ` - ${errorText}` : ''}`
+                        const err: any = createRoutingError(
+                            i18nT('map:components.MapPage.useRouting.oshibka_ors_value1_value2_0d3e7d54', { value1: res.status, value2: errorText ? ` - ${errorText}` : '' }),
+                            'provider_unavailable',
+                            res.status,
                         )
-                        err.httpStatus = res.status
                         err.responseText = errorText
                         err.orsCode = orsCode
                         err.orsMessage = orsMessage
@@ -195,7 +212,7 @@ export const useRouting = (
                     const geometry = feature?.geometry
                     const summary = feature?.properties?.summary
 
-                    if (!geometry?.coordinates?.length) throw new Error('Пустой маршрут от ORS')
+                    if (!geometry?.coordinates?.length) throw new Error(i18nT('map:components.MapPage.useRouting.pustoy_marshrut_ot_ors_80a1a55d'))
 
                     {
                         const first = geometry.coordinates?.[0] as any
@@ -240,7 +257,7 @@ export const useRouting = (
             }
         }
 
-        throw lastError || new Error('Ошибка ORS')
+        throw lastError || new Error(i18nT('map:components.MapPage.useRouting.oshibka_ors_a4508f9b'))
     }, [ORS_API_KEY])
 
     const fetchOSRM = useCallback(async (
@@ -252,13 +269,11 @@ export const useRouting = (
 
         const profile = getOSRMProfile(mode)
         // В dev можно замокать OSRM, чтобы не зависеть от сети/CORS (только при явном флаге)
-        const mockOsrm =
-            typeof process !== 'undefined' &&
-            !isTestEnv &&
-            (
-                (process.env as any)?.EXPO_PUBLIC_OSRM_MOCK === '1' ||
-                (process.env as any)?.EXPO_PUBLIC_OSRM_MOCK === 'true'
-            )
+        const mockOsrm = resolveDevMockFlag({
+            name: 'EXPO_PUBLIC_OSRM_MOCK',
+            value: process.env.EXPO_PUBLIC_OSRM_MOCK,
+            isDev: __DEV__ && !isTestEnv,
+        })
 
         if (mockOsrm) {
             // Прямая линия через все точки (lng,lat)
@@ -281,7 +296,7 @@ export const useRouting = (
         // ✅ БЕЗОПАСНОСТЬ: Валидация профиля (только разрешенные значения)
         const allowedProfiles = ['driving', 'walking', 'cycling'];
         if (!allowedProfiles.includes(profile)) {
-            throw new Error('Некорректный профиль транспорта');
+            throw new Error(i18nT('map:components.MapPage.useRouting.nekorrektnyy_profil_transporta_23243d7c'));
         }
 
         let res: Response
@@ -296,7 +311,11 @@ export const useRouting = (
                 { signal },
             )
         } catch (e: any) {
-            throw new Error(e?.message || 'OSRM недоступен (network)')
+            if (e?.name === 'AbortError') throw e
+            throw createRoutingError(
+                e?.message || i18nT('map:components.MapPage.useRouting.osrmUnavailable'),
+                getRoutingErrorCode(e) === 'unknown' ? 'provider_unavailable' : getRoutingErrorCode(e),
+            )
         }
         
         if (!res.ok) {
@@ -306,7 +325,7 @@ export const useRouting = (
         const data = await res.json()
         const route = data.routes?.[0]
         
-        if (!route?.geometry?.coordinates?.length) throw new Error('Пустой маршрут от OSRM')
+        if (!route?.geometry?.coordinates?.length) throw new Error(i18nT('map:components.MapPage.useRouting.pustoy_marshrut_ot_osrm_0eb45ea3'))
         
         return {
             coords: route.geometry.coordinates as [number, number][],
@@ -338,7 +357,11 @@ export const useRouting = (
         try {
             res = await valhallaRoute(requestBody, { signal });
         } catch (e: any) {
-            throw new Error(e?.message || 'Valhalla недоступен (network)');
+            if (e?.name === 'AbortError') throw e
+            throw createRoutingError(
+                e?.message || i18nT('map:components.MapPage.useRouting.valhallaUnavailable'),
+                getRoutingErrorCode(e) === 'unknown' ? 'provider_unavailable' : getRoutingErrorCode(e),
+            );
         }
 
         if (!res.ok) {
@@ -348,7 +371,7 @@ export const useRouting = (
         const data = await res.json();
         const trip = data.trip;
 
-        if (!trip?.legs?.length) throw new Error('Пустой маршрут от Valhalla');
+        if (!trip?.legs?.length) throw new Error(i18nT('map:components.MapPage.useRouting.pustoy_marshrut_ot_valhalla_25b5523c'));
 
         // Собираем координаты из всех legs
         const allCoords: [number, number][] = [];
@@ -359,7 +382,7 @@ export const useRouting = (
             }
         }
 
-        if (allCoords.length === 0) throw new Error('Пустой маршрут от Valhalla');
+        if (allCoords.length === 0) throw new Error(i18nT('map:components.MapPage.useRouting.pustoy_marshrut_ot_valhalla_25b5523c'));
 
         // distance в kilometers, конвертируем в метры
         const distanceKm = trip.summary?.length || 0;
@@ -399,6 +422,7 @@ export const useRouting = (
                 distance: 0,
                 duration: 0,
                 coords: [],
+                errorCode: null,
             })
             return
         }
@@ -430,6 +454,7 @@ export const useRouting = (
                 distance: cached.distance,
                 duration: cached.duration || estimateDurationSeconds(cached.distance, transportMode),
                 coords: cached.coords,
+                errorCode: null,
             })
             // routeKey уже включает transportMode, поэтому безопасно не перестраивать маршрут повторно.
             return
@@ -458,7 +483,8 @@ export const useRouting = (
                 setState((prev) => ({
                     ...prev,
                     loading: false,
-                    error: `Слишком много запросов. Подождите ${Math.ceil(waitTime / 1000)}с`,
+                    error: i18nT('map:components.MapPage.useRouting.slishkom_mnogo_zaprosov_podozhdite_value1_s_ef8e6bb3', { value1: Math.ceil(waitTime / 1000) }),
+                    errorCode: 'rate_limit',
                     distance: directDistance,
                     duration: estimateDurationSeconds(directDistance, transportMode),
                     coords: currentPoints,
@@ -490,7 +516,7 @@ export const useRouting = (
 
             try {
                 commitIfCurrent(() => {
-                    setState((prev) => ({ ...prev, loading: true, error: false }))
+                    setState((prev) => ({ ...prev, loading: true, error: false, errorCode: null }))
                 })
                 // Record request even if stale-check would skip UI updates; it still counts towards rate limiting.
                 routeCache.recordRequest()
@@ -548,7 +574,7 @@ export const useRouting = (
                 }
 
                 if (!result) {
-                    throw lastError || new Error('Не удалось построить маршрут')
+                    throw lastError || new Error(i18nT('map:components.MapPage.useRouting.ne_udalos_postroit_marshrut_2d05f3d6'))
                 }
 
                 // Ensure the polyline visually starts/ends at the selected markers
@@ -571,6 +597,7 @@ export const useRouting = (
                         distance: result.distance,
                         duration,
                         coords: result.coords,
+                        errorCode: null,
                     })
                 })
             } catch (primaryError: any) {
@@ -579,7 +606,8 @@ export const useRouting = (
                 // Fallback: direct line
                 const directDistance = calculateDirectDistance(currentPoints)
                 const duration = estimateDurationSeconds(directDistance, transportMode)
-                const msg = primaryError?.message || 'Не удалось построить маршрут'
+                const msg = primaryError?.message || i18nT('map:components.MapPage.useRouting.ne_udalos_postroit_marshrut_2d05f3d6')
+                const errorCode = getRoutingErrorCode(primaryError)
 
                 console.warn('[useRouting] ⚠️ Route building failed, using direct line:', {
                     error: msg,
@@ -596,6 +624,7 @@ export const useRouting = (
                         distance: directDistance,
                         duration,
                         coords: currentPoints,
+                        errorCode,
                     })
                 })
                 if (isStale()) return
@@ -604,18 +633,8 @@ export const useRouting = (
                 // (невалидные координаты / ключ / 400 / 403 / 404).
                 // Временные сбои (сеть, 429, 5xx) НЕ кэшируем, чтобы следующий
                 // заход в пределах TTL перестроил реальный маршрут.
-                const status = Number(primaryError?.httpStatus)
-                const permanentStatus = status === 400 || status === 401 || status === 403 || status === 404
-                const transientStatus = status === 429 || (status >= 500 && status <= 599)
-                const isPermanentError =
-                    permanentStatus ||
-                    msg.includes('Некорректные координаты') ||
-                    msg.includes('координаты маршрута') ||
-                    msg.includes('Недостаточно точек') ||
-                    msg.includes('Неверный API ключ')
-
-                // Кэшируем только если ошибка надёжно перманентна и не помечена как временная.
-                if (isPermanentError && !transientStatus) {
+                // Кэшируем только ошибки со стабильным permanent-кодом/HTTP-статусом.
+                if (isPermanentRoutingError(primaryError)) {
                     resolvedRouteKeys.add(routeKey)
                     routeCache.set(currentPoints, transportMode, currentPoints, directDistance, duration)
                 }

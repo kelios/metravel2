@@ -19,6 +19,8 @@ import type { LatLng } from '@/types/coordinates'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import MapIcon from './MapIcon'
 import IconButton from '@/components/ui/IconButton'
+import { translate as i18nT } from '@/i18n'
+
 
 const MIN_QUERY_LENGTH = 3
 const SEARCH_DEBOUNCE_MS = 500
@@ -90,7 +92,7 @@ interface SearchResult {
 }
 
 const AddressSearch: React.FC<AddressSearchProps> = ({
-  placeholder = 'Введите адрес...',
+  placeholder = i18nT('map:components.MapPage.AddressSearch.vvedite_adres_9750381d'),
   onAddressSelect,
   value = '',
   label,
@@ -122,7 +124,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
         { q, limit: SEARCH_LIMIT, addressdetails: 1 },
         { signal, headers: { 'User-Agent': 'MeTravel/1.0' } },
       )
-      if (!response.ok) throw new Error('Ошибка поиска адреса')
+      if (!response.ok) throw new Error(i18nT('map:components.MapPage.AddressSearch.oshibka_poiska_adresa_ce9e23a9'))
       return response.json()
     },
   })
@@ -227,7 +229,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
         {query.length > 0 && !loading && (
           <IconButton
             icon={<MapIcon name="close" size={20} color={colors.textMuted} />}
-            label="Очистить поиск"
+            label={i18nT('map:components.MapPage.AddressSearch.ochistit_poisk_14a2d114')}
             size="sm"
             onPress={handleClear}
             style={styles.clearButton}
@@ -239,7 +241,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
         <View
           style={styles.resultsContainer}
           accessibilityRole={Platform.OS === 'web' ? ('listbox' as any) : 'list'}
-          accessibilityLabel="Результаты поиска адреса"
+          accessibilityLabel={i18nT('map:components.MapPage.AddressSearch.rezultaty_poiska_adresa_cf35a8de')}
         >
           <FlatList
             data={results}
@@ -269,16 +271,15 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
       {showErrorState && (
         <View style={styles.errorResults}>
           <Text style={styles.errorResultsText}>
-            Не удалось выполнить поиск. Проверьте соединение.
-          </Text>
+            {i18nT('map:components.MapPage.AddressSearch.ne_udalos_vypolnit_poisk_proverte_soedinenie_d006a955')}</Text>
           <Pressable
             onPress={() => refetch()}
             style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
             accessibilityRole="button"
-            accessibilityLabel="Повторить поиск"
+            accessibilityLabel={i18nT('map:components.MapPage.AddressSearch.povtorit_poisk_6e2f285c')}
           >
             <MapIcon name="refresh" size={14} color={colors.primaryDark} />
-            <Text style={styles.retryText}>Повторить</Text>
+            <Text style={styles.retryText}>{i18nT('map:components.MapPage.AddressSearch.povtorit_0281f28d')}</Text>
           </Pressable>
         </View>
       )}
@@ -286,15 +287,14 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
       {showEmptyState && (
         <View style={styles.emptyResults}>
           <Text style={styles.emptyResultsText}>
-            Ничего не найдено по запросу «{debouncedQuery}»
+            {i18nT('map:components.MapPage.AddressSearch.nichego_ne_naydeno_po_zaprosu_965e0048')}{debouncedQuery}»
           </Text>
         </View>
       )}
 
       {showMinCharsHint && (
         <Text style={styles.minCharsHint}>
-          Введите минимум {MIN_QUERY_LENGTH} символа для поиска
-        </Text>
+          {i18nT('map:components.MapPage.AddressSearch.vvedite_minimum_b27f28ab')}{MIN_QUERY_LENGTH} {i18nT('map:components.MapPage.AddressSearch.simvola_dlya_poiska_cde32fee')}</Text>
       )}
     </View>
   )

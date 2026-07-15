@@ -6,6 +6,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { BackHandler, Platform, ToastAndroid } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
+import { translate as i18nT } from '@/i18n'
+
 
 const HOME_PATHS = ['/', '/index', '/search', '/(tabs)', '/(tabs)/index', '/(tabs)/search'];
 
@@ -60,7 +62,7 @@ export function useAndroidBackHandler(
         return false;
       }
       lastBackPressTime.current = now;
-      ToastAndroid.show('Нажмите ещё раз для выхода', ToastAndroid.SHORT);
+      ToastAndroid.show(i18nT('shared:hooks.useAndroidBackHandler.nazhmite_esche_raz_dlya_vyhoda_6b6fd338'), ToastAndroid.SHORT);
       return true;
     }
 

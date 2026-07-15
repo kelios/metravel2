@@ -20,6 +20,8 @@ import { useFavorites } from '@/context/FavoritesContext'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
+import { translate as i18nT } from '@/i18n'
+
 
 export default function ArticleDetails() {
   const { width } = useResponsive()
@@ -82,7 +84,7 @@ export default function ArticleDetails() {
         }
 
         if (!loadedArticle?.id) {
-          throw new Error('Статья не найдена')
+          throw new Error(i18nT('shared:app.tabs.article.id.statya_ne_naydena_c605a688'))
         }
 
         if (!cancelled) {
@@ -90,7 +92,7 @@ export default function ArticleDetails() {
         }
       } catch (error: any) {
         if (!cancelled) {
-          setErrorMessage(error?.message || 'Не удалось загрузить статью')
+          setErrorMessage(error?.message || i18nT('sharedStatic:article.loadFailed'))
         }
       } finally {
         if (!cancelled) {
@@ -125,8 +127,8 @@ export default function ArticleDetails() {
     return (
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView style={styles.container} contentContainerStyle={styles.centerContent}>
-          <Title style={styles.errorTitle}>Статья не найдена</Title>
-          <SafeHtml html={errorMessage || 'Проверьте ссылку на статью.'} />
+          <Title style={styles.errorTitle}>{i18nT('shared:app.tabs.article.id.statya_ne_naydena_c605a688')}</Title>
+          <SafeHtml html={errorMessage || i18nT('sharedStatic:article.checkLink')} />
         </ScrollView>
       </SafeAreaView>
     )
@@ -149,11 +151,12 @@ export default function ArticleDetails() {
                   <ArticleAuthorBanner article={article} />
                   {Platform.select({
                     web: (
-                        <SafeHtml
-                            html={articleContent.html}
-                            serverSanitized={articleContent.serverSanitized}
-                            style={{ marginTop: 16 }}
-                        />
+                      <SafeHtml
+                        html={articleContent.html}
+                        serverSanitized={articleContent.serverSanitized}
+                        imageAlt={article.name}
+                        style={{ marginTop: 16 }}
+                      />
                     ),
                     default: (
                         <RenderHTML

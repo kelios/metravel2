@@ -6,6 +6,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { TravelFormData } from '@/types/types';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { getCountryLabel } from '@/utils/pluralize';
+import { translate as i18nT } from '@/i18n'
+
 
 interface TravelPreviewModalProps {
     visible: boolean;
@@ -52,14 +54,14 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
         const result = [];
 
         if ((formData as any).number_days) {
-            result.push(`${(formData as any).number_days} дн.`);
+            result.push(i18nT('travel:components.travel.TravelPreviewModal.value1_dn_277ff571', { value1: (formData as any).number_days }));
         }
 
         const markersCount = Array.isArray((formData as any).coordsMeTravel)
             ? ((formData as any).coordsMeTravel as any[]).length
             : 0;
         if (markersCount > 0) {
-            result.push(`${markersCount} точек`);
+            result.push(i18nT('travel:components.travel.TravelPreviewModal.value1_tochek_863e3e69', { value1: markersCount }));
         }
 
         const countriesCount = Array.isArray((formData as any).countries)
@@ -84,11 +86,11 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
                     style={styles.backdrop}
                     onPress={onClose}
                     accessibilityRole="button"
-                    accessibilityLabel="Закрыть превью"
+                    accessibilityLabel={i18nT('travel:components.travel.TravelPreviewModal.zakryt_prevyu_c8ff6791')}
                 />
                 <View
                     style={styles.modalContent}
-                    accessibilityLabel="Превью карточки"
+                    accessibilityLabel={i18nT('travel:components.travel.TravelPreviewModal.prevyu_kartochki_2c411aac')}
                     {...Platform.select({
                         web: {
                             // @ts-ignore -- role dialog is a web-only ARIA role not in RN View types
@@ -100,12 +102,12 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
                     })}
                 >
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Превью карточки</Text>
+                        <Text style={styles.modalTitle}>{i18nT('travel:components.travel.TravelPreviewModal.prevyu_kartochki_2c411aac')}</Text>
                         <Pressable
                             onPress={onClose}
                             style={styles.closeButton}
                             accessibilityRole="button"
-                            accessibilityLabel="Закрыть превью"
+                            accessibilityLabel={i18nT('travel:components.travel.TravelPreviewModal.zakryt_prevyu_c8ff6791')}
                         >
                             <Feather name="x" size={24} color={colors.text} />
                         </Pressable>
@@ -116,7 +118,7 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
                             {coverImage ? (
                                 <ImageCardMedia
                                     src={coverImage}
-                                    alt={formData.name || 'Обложка путешествия'}
+                                    alt={formData.name || i18nT('travel:components.travel.TravelPreviewModal.coverAlt')}
                                     fit="contain"
                                     blurBackground
                                     allowCriticalWebBlur
@@ -128,7 +130,7 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
 
                             <View style={styles.cardContent}>
                                 <Text style={styles.cardTitle} numberOfLines={2}>
-                                    {formData.name || 'Без названия'}
+                                    {formData.name || i18nT('travel:common.untitled')}
                                 </Text>
 
                                 {!!description && (
@@ -166,8 +168,7 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
                         <View style={styles.hint}>
                             <Feather name="info" size={16} color={colors.primaryDark} />
                             <Text style={styles.hintText}>
-                                Так ваше путешествие будет выглядеть в списке после публикации
-                            </Text>
+                                {i18nT('travel:components.travel.TravelPreviewModal.tak_vashe_puteshestvie_budet_vyglyadet_v_spi_fbe74f45')}</Text>
                         </View>
                     </ScrollView>
                 </View>

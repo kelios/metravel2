@@ -25,9 +25,12 @@ import { PublicProfileOverviewTab } from '@/components/screens/profile/PublicPro
 import { PublicProfileTravelsTab } from '@/components/screens/profile/PublicProfileTravelsTab';
 import { useUserAchievements } from '@/hooks/useAchievementsApi';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useHydrationReady } from '@/hooks/useHydrationReady';
 import type { Travel } from '@/types/types';
 import SubscriptionsTabContent from '@/components/subscriptions/SubscriptionsTabContent';
 import { useSubscriptionsData } from '@/hooks/useSubscriptionsData';
+import { translate as i18nT } from '@/i18n'
+
 
 const AUTHOR_TRAVELS_LIMIT = 12;
 
@@ -38,17 +41,20 @@ export default function PublicUserProfileScreen() {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { isMobile } = useResponsive();
+  const hydrationReady = useHydrationReady();
 
   const userId = useMemo(() => {
+    if (!hydrationReady) return null;
     const raw = params?.id;
     if (!raw) return null;
     const n = Number(raw);
     return Number.isFinite(n) ? String(n) : null;
-  }, [params?.id]);
+  }, [hydrationReady, params?.id]);
 
   const { profile, isLoading, error, fullName } = useUserProfileCached(userId, {
     enabled: !!userId,
   });
+  const displayName = fullName || i18nT('profile:app.tabs.profile.defaultUserName');
 
   const [avatarError, setAvatarError] = useState(false);
   // Expo Router переиспользует инстанс при смене param — сбрасываем флаг ошибки
@@ -69,10 +75,10 @@ export default function PublicUserProfileScreen() {
     () =>
       profile
         ? [
-            { key: 'youtube', label: 'YouTube', value: profile.youtube },
-            { key: 'instagram', label: 'Instagram', value: profile.instagram },
-            { key: 'twitter', label: 'Twitter', value: profile.twitter },
-            { key: 'vk', label: 'VK', value: profile.vk },
+            { key: 'youtube', label: i18nT('auth:app.tabs.user.id.youtube_607e07f5'), value: profile.youtube },
+            { key: 'instagram', label: i18nT('auth:app.tabs.user.id.instagram_2e202e54'), value: profile.instagram },
+            { key: 'twitter', label: i18nT('auth:app.tabs.user.id.twitter_4a585f6e'), value: profile.twitter },
+            { key: 'vk', label: i18nT('auth:app.tabs.user.id.vk_43635279'), value: profile.vk },
           ]
             .filter((s) => Boolean(String(s.value ?? '').trim()))
             .map((s) => ({ key: s.key, label: s.label, value: String(s.value) }))
@@ -173,38 +179,38 @@ export default function PublicUserProfileScreen() {
     const pills: ProfileStatPill[] = [
       {
         key: 'travels',
-        label: 'Маршруты',
+        label: i18nT('auth:app.tabs.user.id.marshruty_30d765de'),
         value: authorTravelsTotal,
         icon: 'map',
         onPress: () => handleChangeTab('travels'),
-        accessibilityHint: 'Показать опубликованные маршруты автора',
+        accessibilityHint: i18nT('auth:app.tabs.user.id.pokazat_opublikovannye_marshruty_avtora_863ec77c'),
       },
     ];
 
     if (isOwnProfile) {
       pills.push({
         key: 'subscribers',
-        label: 'Подписчики',
+        label: i18nT('auth:app.tabs.user.id.podpischiki_3e8b3c47'),
         value: subscribersCount,
         icon: 'users',
         onPress: () => handleChangeTab('subscribers'),
-        accessibilityHint: 'Показать подписчиков под шапкой профиля',
+        accessibilityHint: i18nT('auth:app.tabs.user.id.pokazat_podpischikov_pod_shapkoy_profilya_399b3201'),
       });
     }
 
     pills.push({
       key: 'achievements',
-      label: 'Достижения',
+      label: i18nT('auth:app.tabs.user.id.dostizheniya_6c995dc0'),
       value: badgesCount,
       icon: 'award',
       onPress: () => handleChangeTab('overview'),
-      accessibilityHint: 'Открыть обзор с достижениями',
+      accessibilityHint: i18nT('auth:app.tabs.user.id.otkryt_obzor_s_dostizheniyami_73cc4a8a'),
     });
 
     return pills;
   }, [authorTravelsTotal, isOwnProfile, subscribersCount, badgesCount, handleChangeTab]);
 
-  if (isLoading) {
+  if (!hydrationReady || isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <View style={styles.loader}>
@@ -218,21 +224,21 @@ export default function PublicUserProfileScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <View style={styles.errorWrap}>
-          <Text style={styles.errorTitle}>Профиль недоступен</Text>
+          <Text style={styles.errorTitle}>{i18nT('auth:app.tabs.user.id.profil_nedostupen_59cc6751')}</Text>
           <Text style={styles.errorText}>
             {!userId
-              ? 'Некорректный id пользователя'
-              : (error as any)?.message || String(error || 'Не удалось загрузить данные профиля')}
+              ? i18nT('auth:app.tabs.user.id.nekorrektnyy_id_polzovatelya_ebab8a55')
+              : (error as any)?.message || String(error || i18nT('profile:app.tabs.user.id.loadError'))}
           </Text>
           <Pressable
             style={[styles.backButton, globalFocusStyles.focusable]}
             onPress={() => router.back()}
             accessibilityRole="button"
-            accessibilityLabel="Назад"
+            accessibilityLabel={i18nT('auth:app.tabs.user.id.nazad_84ede616')}
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
             <Feather name="arrow-left" size={16} color={colors.primaryDark} />
-            <Text style={styles.backButtonText}>Назад</Text>
+            <Text style={styles.backButtonText}>{i18nT('auth:app.tabs.user.id.nazad_84ede616')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -247,8 +253,8 @@ export default function PublicUserProfileScreen() {
       {isFocused && (
         <InstantSEO
           headKey={`user-${userId}`}
-          title={`${fullName || 'Пользователь'} | Metravel`}
-          description={`Профиль автора ${fullName || ''} на Metravel`}
+          title={`${displayName} | Metravel`}
+          description={i18nT('auth:app.tabs.user.id.profil_avtora_value1_na_metravel_471497a1', { value1: fullName || '' })}
           canonical={buildCanonicalUrl(`/user/${userId}`)}
           ogType="website"
         />
@@ -269,7 +275,7 @@ export default function PublicUserProfileScreen() {
                 borderWidth: 0,
               } as any
             }
-          >{`${fullName || 'Пользователь'} | Metravel`}</h1>
+          >{`${displayName} | Metravel`}</h1>
         )}
 
         <PublicProfileHeader

@@ -4,13 +4,14 @@
 //   GET  /api/trips/{id}/telegram-group/              -> TelegramGroupDto
 //   POST /api/trips/{id}/telegram-group/  {enabled, group_url?, invite_url?} -> TelegramGroupDto (owner-only)
 //   POST /api/trips/{id}/telegram-group/invite-link/  -> { url, text } (owner/participant)
-// BE-эндпоинты ещё НЕ задеплоены → безопасный unavailable-фолбэк
-// (EXPO_PUBLIC_TRIPS_MOCK=true, production 404/405/501 или network status 0 в DEV).
+// Production contract verified by board #919. 404/405/501 remains a safe typed
+// unavailable state; network/mock fallback is development-only.
 // Важно: fallback НЕ должен генерировать fake t.me invite/group links.
-// Снять после верификации BE на проде.
 
 import { apiClient, ApiError } from '@/api/client';
+import { resolveDevMockFlag } from '@/utils/devMockFlags';
 import { devWarn } from '@/utils/logger';
+import { translate as i18nT } from '@/i18n';
 
 // ── Доменные типы (camelCase) ──────────────────────────────────────────────
 
@@ -72,16 +73,19 @@ const mapGroup = (dto: TelegramGroupDto): TripTelegramGroup => ({
 
 const mapInvite = (dto: InviteLinkDto): TripInviteLink => ({
   isAvailable: Boolean(dto.url),
-  unavailableReason: dto.url ? null : TELEGRAM_GROUP_UNAVAILABLE_REASON,
+  unavailableReason: dto.url ? null : getTelegramGroupUnavailableReason(),
   url: dto.url ?? '',
   text: dto.text ?? '',
 });
 
 // ── Безопасный фолбэк (FE-guard: снять после верификации BE на проде + regression) ──
 
-const USE_MOCK = process.env.EXPO_PUBLIC_TRIPS_MOCK === 'true';
-export const TELEGRAM_GROUP_UNAVAILABLE_REASON =
-  'Telegram-группы поездок пока не подключены. Мы включим приглашения, когда серверный invite будет готов.';
+const USE_MOCK = resolveDevMockFlag({
+  name: 'EXPO_PUBLIC_TRIPS_MOCK',
+  value: process.env.EXPO_PUBLIC_TRIPS_MOCK,
+});
+export const getTelegramGroupUnavailableReason = (): string =>
+  i18nT('errorsStatic:tripTelegram.unavailable');
 
 const ENDPOINT_UNAVAILABLE_STATUSES = [404, 405, 501];
 
@@ -95,7 +99,7 @@ const shouldReturnUnavailable = (error: unknown): boolean => {
 const unavailableGroup = (tripId: number): TripTelegramGroup => ({
   tripId,
   isAvailable: false,
-  unavailableReason: TELEGRAM_GROUP_UNAVAILABLE_REASON,
+  unavailableReason: getTelegramGroupUnavailableReason(),
   enabled: false,
   groupUrl: null,
   inviteUrl: null,
@@ -106,7 +110,7 @@ const unavailableGroup = (tripId: number): TripTelegramGroup => ({
 
 const unavailableInvite = (): TripInviteLink => ({
   isAvailable: false,
-  unavailableReason: TELEGRAM_GROUP_UNAVAILABLE_REASON,
+  unavailableReason: getTelegramGroupUnavailableReason(),
   url: '',
   text: '',
 });

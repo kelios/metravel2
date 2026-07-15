@@ -3,6 +3,8 @@ import type {
   BuildTravelContentRuntimeDataParams,
   TravelContentRuntimeData,
 } from './types'
+import { translate as i18nT } from '@/i18n'
+
 
 export function buildPdfInlineGallerySection({
   travel,
@@ -52,7 +54,7 @@ export function buildPdfInlineGallerySection({
             color: ${colors.accent};
             margin: 0;
             font-family: ${typography.headingFont};
-          ">Фотогалерея</h2>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.inlineGallery.div_style_margin_bottom_value1_div_style_dis_5459e59e.text01")}</h2>
           <span style="
             font-size: ${typography.small.size};
             color: ${colors.textMuted};
@@ -73,7 +75,7 @@ export function buildPdfInlineGallerySection({
               box-shadow: ${theme.blocks.shadow};
               position: relative;
             ">
-              ${buildContainImage(photo, `Фото ${index + 1}`, '48mm', { onerrorBg: colors.surfaceAlt })}
+              ${buildContainImage(photo, i18nT('export:services.pdfExport.runtime.gallery.photoAlt', { value1: index + 1 }), '48mm', { onerrorBg: colors.surfaceAlt })}
               ${index === 3 ? `
                 <div style="
                   position: absolute;
@@ -106,7 +108,7 @@ export function buildPdfInlineGallerySection({
           background: ${colors.surfaceAlt};
           position: relative;
         ">
-          ${buildContainImage(photos[0], 'Фото путешествия', '85mm', { onerrorBg: colors.surfaceAlt })}
+          ${buildContainImage(photos[0], i18nT('export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.inlineGallery.foto_puteshestviya_720ec355'), '85mm', { onerrorBg: colors.surfaceAlt })}
           ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
         </div>
       </div>
@@ -140,7 +142,7 @@ export function buildPdfInlineGallerySection({
               ${layout === 'polaroid' ? `transform: rotate(${index % 2 === 0 ? '-1.2deg' : '1.1deg'});` : ''}
             ">
               ${caption && captionPosition === 'top' ? caption.wrapperStart + caption.wrapperEnd : ''}
-              ${buildContainImage(photo, `Фото ${index + 1}`, imageHeight, { onerrorBg: colors.surfaceAlt })}
+              ${buildContainImage(photo, i18nT('export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.inlineGallery.foto_value1_2d93b666', { value1: index + 1 }), imageHeight, { onerrorBg: colors.surfaceAlt })}
               ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
               ${caption && captionPosition === 'bottom' ? caption.wrapperStart + caption.wrapperEnd : ''}
             </div>

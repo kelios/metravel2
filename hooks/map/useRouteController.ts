@@ -16,6 +16,8 @@ import type { MapUiApi } from '@/types/mapUi';
 import type { LatLng } from '@/types/coordinates';
 import type { RoutePoint } from '@/types/route';
 import type { TravelCoords } from '@/types/types';
+import { translate as i18nT } from '@/i18n'
+
 
 interface UseRouteControllerOptions {
   /**
@@ -421,7 +423,7 @@ export function useRouteController(
           setMode('route');
           routeStore.clearRoute();
           if (originCoords) {
-            addPoint(originCoords, 'Мое местоположение');
+            addPoint(originCoords, i18nT('map:hooks.map.useRouteController.moe_mestopolozhenie_64cab0dd'));
           }
           addPoint(
             targetCoords,

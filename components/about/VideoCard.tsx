@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useAboutStyles } from './aboutStyles';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
   youtubeThumb: string;
@@ -16,18 +18,18 @@ export const VideoCard: React.FC<Props> = ({ youtubeThumb, onOpenYoutube }) => {
   return (
     <View style={styles.videoCard}>
       <View style={styles.videoCardHeader}>
-        <Text style={styles.videoCardTitle}>Видео-инструкция</Text>
-        <Text style={styles.videoCardSubtitle}>Как пользоваться платформой</Text>
+        <Text style={styles.videoCardTitle}>{i18nT('home:components.about.VideoCard.video_instruktsiya_c8181ac5')}</Text>
+        <Text style={styles.videoCardSubtitle}>{i18nT('home:components.about.VideoCard.kak_polzovatsya_platformoy_823174e1')}</Text>
       </View>
       <Pressable
         onPress={onOpenYoutube}
         style={({ pressed }) => [styles.videoThumbWrap, pressed && styles.videoCardPressed]}
         accessibilityRole="button"
-        accessibilityLabel="Смотреть инструкцию на YouTube"
+        accessibilityLabel={i18nT('home:components.about.VideoCard.smotret_instruktsiyu_na_youtube_c3930b0b')}
       >
         <ImageCardMedia
           src={youtubeThumb}
-          alt="YouTube видео о MeTravel"
+          alt={i18nT('home:components.about.VideoCard.youtube_video_o_metravel_42216f54')}
           fit="contain"
           blurBackground
           allowCriticalWebBlur
@@ -43,7 +45,7 @@ export const VideoCard: React.FC<Props> = ({ youtubeThumb, onOpenYoutube }) => {
         </View>
       </Pressable>
       <View style={styles.videoCardFooter}>
-        <Text style={styles.videoCardFooterText}>METRAVEL O METRAVEL.BY</Text>
+        <Text style={styles.videoCardFooterText}>{i18nT('home:components.about.VideoCard.metravel_o_metravel_by_e85cb4ae')}</Text>
       </View>
     </View>
   );

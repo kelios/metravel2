@@ -1,42 +1,10 @@
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { getInstagramCardStyles } from '@/utils/instagramRichText'
 import type { useThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 export const instagramTrailingStyles = (
   colors: ReturnType<typeof useThemedColors>,
   cls: string,
-): string => `
-.${cls} .instagram-wrapper {
-  width: min(100%, 540px);
-  max-width: 540px;
-  margin: ${DESIGN_TOKENS.spacing.md}px auto ${DESIGN_TOKENS.spacing.lg}px;
-  border-radius: 22px;
-  overflow: hidden;
-  border: 1px solid ${colors.borderLight};
-  background: linear-gradient(180deg, ${colors.surface} 0%, ${colors.surfaceMuted} 100%);
-  box-shadow: ${colors.boxShadows?.light || 'none'};
-}
-
-.${cls} .instagram-embed {
-  display: block;
-  width: 100%;
-  min-height: 680px;
-  border: 0;
-  background: ${colors.surfaceMuted};
-}
-
-/* Стили для подписей Instagram */
-.${cls} .instagram-caption {
-  font-size: 14px;
-  color: ${colors.textMuted};
-  line-height: 1.5;
-  width: min(100%, 430px);
-  margin: 10px auto 22px;
-  text-align: center;
-}
-.${cls} .instagram-caption-text {
-  display: inline;
-}
-
-${getInstagramCardStyles(`.${cls}`, colors)}
-`
+): string => i18nT('travel:components.travel.stableContent.webStyles.instagramTrailing.value1_instagram_wrapper_width_min_100_540px_bef1a288', { value1: cls, value2: DESIGN_TOKENS.spacing.md, value3: DESIGN_TOKENS.spacing.lg, value4: colors.borderLight, value5: colors.surface, value6: colors.surfaceMuted, value7: colors.boxShadows?.light || 'none', value8: cls, value9: colors.surfaceMuted, value10: cls, value11: colors.textMuted, value12: cls, value13: getInstagramCardStyles(`.${cls}`, colors) })

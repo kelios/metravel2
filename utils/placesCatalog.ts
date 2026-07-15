@@ -1,4 +1,6 @@
 import type { TravelCoords } from '@/types/types'
+import { translate as i18nT } from '@/i18n'
+
 
 export type CatalogPlace = TravelCoords & {
   id: string
@@ -145,14 +147,14 @@ const mapCatalogItem = (raw: unknown): CatalogPlace | null => {
   if (!id) return null
 
   const address = normalizeText(item.address)
-  const category = normalizeText(item.category?.name, 'Другое')
+  const category = normalizeText(item.category?.name, i18nT('shared:utils.placesCatalog.drugoe_3fd100e8'))
   const categoryId = parseFacetId(item.category?.id)
-  const country = normalizeText(item.country?.name, 'Страна не указана')
+  const country = normalizeText(item.country?.name, i18nT('shared:utils.placesCatalog.strana_ne_ukazana_2418b87a'))
   const countryCode = normalizeText(item.country?.code)
   const urlTravel = normalizeText(item.travel?.url)
   const thumbUrl = normalizeImageUrl(item.image?.thumb_url)
   const landscapeUrl = normalizeImageUrl(item.image?.landscape_url)
-  const title = normalizeText(item.title, address || 'Место без названия')
+  const title = normalizeText(item.title, address || i18nT('map:utils.placesCatalog.mesto_bez_nazvaniya_d8d437b0'))
   const searchText = normalizeText(item.search_text).toLowerCase()
 
   return {

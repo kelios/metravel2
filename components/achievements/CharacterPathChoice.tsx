@@ -14,6 +14,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useChooseCharacterPath } from '@/hooks/useGamification';
 import { ProgressionAnimalMedallion } from '@/components/achievements/GamificationIcons';
 import type { CharacterPathOption } from '@/api/gamification';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   options: CharacterPathOption[];
@@ -43,7 +45,7 @@ function CharacterPathChoice({ options, testID, style }: Props) {
     <View style={[styles.wrap, style]} testID={testID}>
       <View style={styles.titleRow}>
         <Feather name="git-branch" size={15} color={colors.primaryDark} />
-        <Text style={styles.title}>Выберите путь развития</Text>
+        <Text style={styles.title}>{i18nT('achievements:components.achievements.CharacterPathChoice.vyberite_put_razvitiya_816f081c')}</Text>
       </View>
 
       <View style={styles.options}>
@@ -56,7 +58,7 @@ function CharacterPathChoice({ options, testID, style }: Props) {
               disabled={isPending}
               onPress={() => mutate({ pathSlug: opt.slug })}
               accessibilityRole="button"
-              accessibilityLabel={`Выбрать путь: ${opt.name}. ${opt.description}`}
+              accessibilityLabel={i18nT('achievements:components.achievements.CharacterPathChoice.vybrat_put_value1_value2_e51e700a', { value1: opt.name, value2: opt.description })}
             >
               <ProgressionAnimalMedallion slug={opt.slug} size={40} />
               <View style={styles.optionBody}>

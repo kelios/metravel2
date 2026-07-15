@@ -9,6 +9,8 @@ import type {
   TravelCommentTreeNode,
 } from '@/types/comments';
 import type { QueryClient } from '@tanstack/react-query';
+import { translate as i18nT } from '@/i18n'
+
 
 // ===================== Tree-payload guards =====================
 
@@ -190,7 +192,7 @@ export function createOptimisticComment(
     thread: data.thread_id ?? 0,
     sub_thread: parentCommentId ?? null,
     user: 0, // Current user ID (will be replaced on refetch)
-    user_name: 'Отправка...',
+    user_name: i18nT('shared:utils.commentCacheHelpers.otpravka_3a4c32fb'),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     likes_count: 0,

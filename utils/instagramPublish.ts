@@ -1,4 +1,5 @@
 import type { TravelFormData, GalleryItem } from '@/types/types';
+import { translate as i18nT } from '@/i18n';
 
 type CountryOption = {
   country_id: string;
@@ -23,7 +24,8 @@ export type InstagramPublicationDraft = {
   suggestedLabels: string[];
 };
 
-const DEFAULT_DESCRIPTION_FALLBACK = 'Новое путешествие на Metravel.';
+const getDefaultDescriptionFallback = (): string =>
+  i18nT('travel:utils.instagramPublish.defaultDescriptionFallback');
 export const INSTAGRAM_CAPTION_MAX_LENGTH = 2200;
 export const INSTAGRAM_HASHTAG_MAX_COUNT = 30;
 
@@ -303,7 +305,7 @@ export const buildInstagramPublicationDraft = ({
   ]).filter(Boolean);
 
   const hashtags = hashtagTokens.slice(0, INSTAGRAM_HASHTAG_MAX_COUNT).map((token) => `#${token}`);
-  const rawCaption = stripHtmlToInstagramCaption(formData.description) || formData.name?.trim() || DEFAULT_DESCRIPTION_FALLBACK;
+  const rawCaption = stripHtmlToInstagramCaption(formData.description) || formData.name?.trim() || getDefaultDescriptionFallback();
   const caption = clampInstagramCaption(rawCaption, hashtags);
   const finalText = buildFinalInstagramText(caption, hashtags);
 

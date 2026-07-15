@@ -11,21 +11,23 @@ import {
     type PrivacyContentType,
     type PrivacyAudience,
 } from '@/api/privacy';
+import { translate as i18nT } from '@/i18n'
 
-const CONTENT_LABELS: Record<PrivacyContentType, { title: string; meta: string; icon: keyof typeof Feather.glyphMap }> = {
-    trips: { title: 'Путешествия', meta: 'Кто видит ваши опубликованные путешествия', icon: 'map' },
-    routes: { title: 'Маршруты', meta: 'Кто видит ваши сохранённые маршруты', icon: 'navigation' },
-    social: { title: 'Контакты и соцсети', meta: 'Кто видит ваши ссылки на соцсети', icon: 'at-sign' },
-    achievements: { title: 'Достижения', meta: 'Кто видит ваши значки и уровень', icon: 'award' },
-    visited_places: { title: 'Посещённые места', meta: 'Кто видит карту ваших посещений', icon: 'check-circle' },
-};
 
-const AUDIENCE_LABELS: Record<PrivacyAudience, string> = {
-    all: 'Все',
-    registered: 'Зарегистр.',
-    followers: 'Подписчики',
-    only_me: 'Только я',
-};
+const createContentLabels = (): Record<PrivacyContentType, { title: string; meta: string; icon: keyof typeof Feather.glyphMap }> => ({
+    trips: { title: i18nT('profile:components.settings.PrivacySettingsMatrix.content.trips.title'), meta: i18nT('profile:components.settings.PrivacySettingsMatrix.content.trips.meta'), icon: 'map' },
+    routes: { title: i18nT('profile:components.settings.PrivacySettingsMatrix.content.routes.title'), meta: i18nT('profile:components.settings.PrivacySettingsMatrix.content.routes.meta'), icon: 'navigation' },
+    social: { title: i18nT('profile:components.settings.PrivacySettingsMatrix.content.social.title'), meta: i18nT('profile:components.settings.PrivacySettingsMatrix.content.social.meta'), icon: 'at-sign' },
+    achievements: { title: i18nT('profile:components.settings.PrivacySettingsMatrix.content.achievements.title'), meta: i18nT('profile:components.settings.PrivacySettingsMatrix.content.achievements.meta'), icon: 'award' },
+    visited_places: { title: i18nT('profile:components.settings.PrivacySettingsMatrix.content.visitedPlaces.title'), meta: i18nT('profile:components.settings.PrivacySettingsMatrix.content.visitedPlaces.meta'), icon: 'check-circle' },
+});
+
+const createAudienceLabels = (): Record<PrivacyAudience, string> => ({
+    all: i18nT('profile:components.settings.PrivacySettingsMatrix.audience.all'),
+    registered: i18nT('profile:components.settings.PrivacySettingsMatrix.audience.registered'),
+    followers: i18nT('profile:components.settings.PrivacySettingsMatrix.audience.followers'),
+    only_me: i18nT('profile:components.settings.PrivacySettingsMatrix.audience.onlyMe'),
+});
 
 type Props = {
     /** Заголовок секции (опц.) — скрывается, когда матрица встроена в экран со своим заголовком. */
@@ -36,6 +38,8 @@ export default function PrivacySettingsMatrix({ showHeading = false }: Props) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const { settings, isLoading, isSaving, setAudience } = usePrivacySettings();
+    const contentLabels = createContentLabels();
+    const audienceLabels = createAudienceLabels();
 
     if (isLoading) {
         return (
@@ -47,13 +51,12 @@ export default function PrivacySettingsMatrix({ showHeading = false }: Props) {
 
     return (
         <View style={styles.wrap}>
-            {showHeading ? <Text style={styles.heading}>Настройки приватности</Text> : null}
+            {showHeading ? <Text style={styles.heading}>{i18nT('profile:components.settings.PrivacySettingsMatrix.nastroyki_privatnosti_e8b8f4f1')}</Text> : null}
             <Text style={styles.intro}>
-                Выберите, кто может видеть разные типы вашего контента. Изменения сохраняются автоматически.
-            </Text>
+                {i18nT('profile:components.settings.PrivacySettingsMatrix.vyberite_kto_mozhet_videt_raznye_tipy_vasheg_d9566b1a')}</Text>
 
             {PRIVACY_CONTENT_TYPES.map((contentType) => {
-                const meta = CONTENT_LABELS[contentType];
+                const meta = contentLabels[contentType];
                 const selected = settings[contentType];
                 return (
                     <View key={contentType} style={styles.card}>
@@ -70,7 +73,7 @@ export default function PrivacySettingsMatrix({ showHeading = false }: Props) {
                         <View
                             style={styles.segmentRow}
                             accessibilityRole="radiogroup"
-                            accessibilityLabel={`Аудитория: ${meta.title}`}
+                            accessibilityLabel={i18nT('profile:components.settings.PrivacySettingsMatrix.auditoriya_value1_14cb181a', { value1: meta.title })}
                         >
                             {PRIVACY_AUDIENCES.map((audience) => {
                                 const isActive = selected === audience;
@@ -86,11 +89,11 @@ export default function PrivacySettingsMatrix({ showHeading = false }: Props) {
                                         ]}
                                         accessibilityRole="radio"
                                         accessibilityState={{ selected: isActive, disabled: isSaving }}
-                                        accessibilityLabel={AUDIENCE_LABELS[audience]}
+                                        accessibilityLabel={audienceLabels[audience]}
                                         {...Platform.select({ web: { cursor: 'pointer' } })}
                                     >
                                         <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
-                                            {AUDIENCE_LABELS[audience]}
+                                            {audienceLabels[audience]}
                                         </Text>
                                     </Pressable>
                                 );

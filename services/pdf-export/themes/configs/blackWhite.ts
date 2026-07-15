@@ -1,4 +1,5 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Black & White Newspaper - черно-белая газетная тема
@@ -6,8 +7,8 @@ import type { PdfThemeConfig } from '../types'
  */
 export const blackWhiteTheme: PdfThemeConfig = {
   name: 'black-white',
-  displayName: 'Черно-белая',
-  description: 'Классическая монохромная газетная вёрстка',
+  get displayName() { return i18nT('export:services.pdfExport.theme.blackWhite.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.blackWhite.description') },
 
   colors: {
     text: '#000000',

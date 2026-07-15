@@ -18,6 +18,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { shareTravel } from '@/utils/shareTravel';
 import { resolveTravelAuthorDisplayName, resolveTravelAuthorName } from '@/components/listTravel/travelListItemHelpers';
 import { formatViewCount } from '@/components/travel/utils/travelHelpers';
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = { travel: Travel };
 
@@ -42,13 +44,14 @@ const resolveTravelViews = (travel: Travel): number => {
 const TravelTmlRound: React.FC<Props> = ({ travel }) => {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const unknownCountry = i18nT('travel:components.travel.TravelTmlRound.strana_ne_ukazana_2e2953f1');
 
     const {
-        name = "Без названия",
+        name = i18nT('travel:components.travel.TravelTmlRound.bez_nazvaniya_1402d4f0'),
         slug,
         travel_image_thumb_small_url,
         travel_image_thumb_url,
-        countryName = "Страна не указана",
+        countryName = unknownCountry,
     } = travel;
 
     const baseImageUrl = useMemo(() => {
@@ -124,9 +127,9 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
         shareTravel({
             id: slug || String(travel.id),
             title: name,
-            description: countryName !== 'Страна не указана' ? countryName : undefined,
+            description: countryName !== unknownCountry ? countryName : undefined,
         });
-    }, [slug, travel.id, name, countryName]);
+    }, [slug, travel.id, name, countryName, unknownCountry]);
 
     const overlay = (
         <View style={styles.overlayBottom}>
@@ -141,7 +144,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
     );
 
     const contentSlot = useMemo(() => {
-        const showCountry = !!countryName && countryName !== "Страна не указана";
+        const showCountry = !!countryName && countryName !== unknownCountry;
         const hasMeta = !!authorDisplayName || !!travelYear || !!viewsLabel;
         if (!showCountry && !hasMeta) return null;
 
@@ -189,6 +192,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
         authorDisplayName,
         colors.textMuted,
         countryName,
+        unknownCountry,
         styles.contentSlot,
         styles.locationRow,
         styles.locationText,

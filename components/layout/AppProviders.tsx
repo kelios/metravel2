@@ -6,6 +6,7 @@ import { AuthContext, createAuthFallbackValue } from '@/context/authContextBase'
 import { FavoritesContext, createFavoritesFallbackValue } from '@/context/FavoritesContext';
 import { FavoritesProvider } from '@/context/FavoritesProvider';
 import ThemedPaperProvider from '@/components/ui/ThemedPaperProvider';
+import { LocaleProvider } from '@/i18n/LocaleProvider';
 
 interface AppProvidersProps {
   queryClient: any;
@@ -161,8 +162,10 @@ export default function AppProviders({
   );
 
   return (
-    <ThemedPaperProvider>
-      {authContent}
-    </ThemedPaperProvider>
+    <LocaleProvider>
+      <ThemedPaperProvider>
+        {authContent}
+      </ThemedPaperProvider>
+    </LocaleProvider>
   );
 }

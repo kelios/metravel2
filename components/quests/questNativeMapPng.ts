@@ -14,6 +14,8 @@
 // expo-sharing — blessed native-модули, web-бандла не касаются).
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { translate as i18nT } from '@/i18n'
+
 
 export const QUEST_MAP_PNG_MESSAGE_TYPE = 'quest-map-png';
 
@@ -62,7 +64,7 @@ export async function saveAndShareQuestMapPng(params: {
 
         await Sharing.shareAsync(fileUri, {
             mimeType: 'image/png',
-            dialogTitle: 'Поделиться картой квеста',
+            dialogTitle: i18nT('quests:components.quests.questNativeMapPng.podelitsya_kartoy_kvesta_116938d2'),
         });
         return true;
     } catch {

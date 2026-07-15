@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface TextInputComponentProps {
     label?: string;
@@ -138,7 +140,7 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                 value={value}
                 onChangeText={onChange}
                 accessibilityLabel={accessibilityLabel ?? label}
-                placeholder={placeholder || (label ? `Введите ${label.toLowerCase()}` : '')}
+                placeholder={placeholder || (label ? i18nT('shared:components.forms.TextInputComponent.vvedite_value1_e4ccf293', { value1: label.toLowerCase() }) : '')}
                 placeholderTextColor={colors.textMuted}
                 secureTextEntry={secureTextEntry}
                 multiline={multiline}

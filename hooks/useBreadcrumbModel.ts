@@ -12,6 +12,8 @@ import { fetchUserProfile, type UserProfileDto } from '@/api/user';
 import { fetchPlannedTrip, type PlannedTrip } from '@/api/plannedTrips';
 import { fetchPublicTrip, type PublicTrip } from '@/api/publicTrips';
 import { queryKeys } from '@/queryKeys';
+import { translate as i18nT } from '@/i18n'
+
 
 type SearchParamsWithReturnTo = { returnTo?: string | string[] };
 
@@ -50,49 +52,49 @@ export type BreadcrumbModel = {
 const MAX_BREADCRUMB_LENGTH = 50;
 
 const pageTranslations: Record<string, string> = {
-  travelsby: 'Беларусь',
-  map: 'Карта',
-  quests: 'Квесты',
-  roulette: 'Случайный маршрут',
-  article: 'Статья',
-  travel: 'Мои путешествия',
-  profile: 'Профиль',
-  login: 'Вход',
-  registration: 'Регистрация',
-  metravel: 'Мои путешествия',
-  about: 'О сайте',
-  export: 'Экспорт',
-  settings: 'Настройки',
-  history: 'Вы смотрели',
-  favorites: 'Избранное',
-  accountconfirmation: 'Подтверждение аккаунта',
-  'set-password': 'Установка пароля',
-  new: 'Новое путешествие',
-  userpoints: 'Мои точки',
-  messages: 'Сообщения',
-  subscriptions: 'Подписки',
-  contact: 'Контакты',
-  places: 'Места',
-  articles: 'Статьи',
-  calendar: 'Календарь',
-  search: 'Поиск',
-  cookies: 'Файлы cookie',
-  privacy: 'Конфиденциальность',
-  register: 'Регистрация',
-  terms: 'Пользовательское соглашение',
-  disclaimer: 'Отказ от ответственности',
-  'community-rules': 'Правила сообщества',
-  'trip-rules': 'Правила участия в поездках',
-  'security-journal': 'Журнал безопасности',
-  'privacy-settings': 'Настройки приватности',
-  trips: 'Поездки',
-  plan: 'Планирование',
-  create: 'Новая поездка',
-  app: 'Приложение',
+  get travelsby() { return i18nT('navigationStatic:breadcrumb.travelsby') },
+  get map() { return i18nT('navigationStatic:breadcrumb.map') },
+  get quests() { return i18nT('navigationStatic:breadcrumb.quests') },
+  get roulette() { return i18nT('navigationStatic:breadcrumb.roulette') },
+  get article() { return i18nT('navigationStatic:breadcrumb.article') },
+  get travel() { return i18nT('navigationStatic:breadcrumb.travel') },
+  get profile() { return i18nT('navigationStatic:breadcrumb.profile') },
+  get login() { return i18nT('navigationStatic:breadcrumb.login') },
+  get registration() { return i18nT('navigationStatic:breadcrumb.registration') },
+  get metravel() { return i18nT('navigationStatic:breadcrumb.metravel') },
+  get about() { return i18nT('navigationStatic:breadcrumb.about') },
+  get export() { return i18nT('navigationStatic:breadcrumb.export') },
+  get settings() { return i18nT('navigationStatic:breadcrumb.settings') },
+  get history() { return i18nT('navigationStatic:breadcrumb.history') },
+  get favorites() { return i18nT('navigationStatic:breadcrumb.favorites') },
+  get accountconfirmation() { return i18nT('navigationStatic:breadcrumb.accountconfirmation') },
+  get 'set-password'() { return i18nT('navigationStatic:breadcrumb.setPassword') },
+  get new() { return i18nT('navigationStatic:breadcrumb.newTravel') },
+  get userpoints() { return i18nT('navigationStatic:breadcrumb.userpoints') },
+  get messages() { return i18nT('navigationStatic:breadcrumb.messages') },
+  get subscriptions() { return i18nT('navigationStatic:breadcrumb.subscriptions') },
+  get contact() { return i18nT('navigationStatic:breadcrumb.contact') },
+  get places() { return i18nT('navigationStatic:breadcrumb.places') },
+  get articles() { return i18nT('navigationStatic:breadcrumb.articles') },
+  get calendar() { return i18nT('navigationStatic:breadcrumb.calendar') },
+  get search() { return i18nT('navigationStatic:breadcrumb.search') },
+  get cookies() { return i18nT('navigationStatic:breadcrumb.cookies') },
+  get privacy() { return i18nT('navigationStatic:breadcrumb.privacy') },
+  get register() { return i18nT('navigationStatic:breadcrumb.register') },
+  get terms() { return i18nT('navigationStatic:breadcrumb.terms') },
+  get disclaimer() { return i18nT('navigationStatic:breadcrumb.disclaimer') },
+  get 'community-rules'() { return i18nT('navigationStatic:breadcrumb.communityRules') },
+  get 'trip-rules'() { return i18nT('navigationStatic:breadcrumb.tripRules') },
+  get 'security-journal'() { return i18nT('navigationStatic:breadcrumb.securityJournal') },
+  get 'privacy-settings'() { return i18nT('navigationStatic:breadcrumb.privacySettings') },
+  get trips() { return i18nT('navigationStatic:breadcrumb.trips') },
+  get plan() { return i18nT('navigationStatic:breadcrumb.plan') },
+  get create() { return i18nT('navigationStatic:breadcrumb.create') },
+  get app() { return i18nT('navigationStatic:breadcrumb.app') },
 };
 
-const PROFILE_CRUMB: BreadcrumbModelItem = { label: 'Профиль', path: '/profile' };
-const SETTINGS_CRUMB: BreadcrumbModelItem = { label: 'Настройки', path: '/settings' };
+const PROFILE_CRUMB: BreadcrumbModelItem = { get label() { return i18nT('sharedStatic:hooks.useBreadcrumbModel.profil_6d96d80b') }, path: '/profile' };
+const SETTINGS_CRUMB: BreadcrumbModelItem = { get label() { return i18nT('sharedStatic:hooks.useBreadcrumbModel.nastroyki_ef971c38') }, path: '/settings' };
 
 // Одноуровневые страницы личного кабинета БЕЗ собственной шапки — крошки строятся
 // через «Профиль» (при необходимости — ещё и через «Настройки»).
@@ -102,20 +104,20 @@ const SETTINGS_CRUMB: BreadcrumbModelItem = { label: 'Настройки', path:
 // /userpoints свою шапку убрал — крошки «Профиль › Мои точки» показывает бар.
 const CABINET_ROUTE_CRUMBS: Record<string, BreadcrumbModelItem[]> = {
   '/profile': [PROFILE_CRUMB],
-  '/userpoints': [PROFILE_CRUMB, { label: 'Мои точки', path: '/userpoints' }],
+  '/userpoints': [PROFILE_CRUMB, { get label() { return i18nT('sharedStatic:hooks.useBreadcrumbModel.moi_tochki_c4f7a9e4') }, path: '/userpoints' }],
   '/settings': [PROFILE_CRUMB, SETTINGS_CRUMB],
-  '/messages': [PROFILE_CRUMB, { label: 'Сообщения', path: '/messages' }],
-  '/subscriptions': [PROFILE_CRUMB, { label: 'Подписки', path: '/subscriptions' }],
-  '/export': [PROFILE_CRUMB, { label: 'Экспорт', path: '/export' }],
+  '/messages': [PROFILE_CRUMB, { get label() { return i18nT('sharedStatic:hooks.useBreadcrumbModel.soobscheniya_3dee5716') }, path: '/messages' }],
+  '/subscriptions': [PROFILE_CRUMB, { get label() { return i18nT('sharedStatic:hooks.useBreadcrumbModel.podpiski_81e9f04b') }, path: '/subscriptions' }],
+  '/export': [PROFILE_CRUMB, { get label() { return i18nT('sharedStatic:hooks.useBreadcrumbModel.eksport_33d30a64') }, path: '/export' }],
   '/security-journal': [
     PROFILE_CRUMB,
     SETTINGS_CRUMB,
-    { label: 'Журнал безопасности', path: '/security-journal' },
+    { get label() { return i18nT('sharedStatic:hooks.useBreadcrumbModel.zhurnal_bezopasnosti_c75b6d48') }, path: '/security-journal' },
   ],
   '/privacy-settings': [
     PROFILE_CRUMB,
     SETTINGS_CRUMB,
-    { label: 'Настройки приватности', path: '/privacy-settings' },
+    { get label() { return i18nT('sharedStatic:hooks.useBreadcrumbModel.nastroyki_privatnosti_b8161b9e') }, path: '/privacy-settings' },
   ],
 };
 
@@ -186,7 +188,7 @@ function getRootTitle(pathname: string) {
   if (root?.label) return root.label;
   const segment = pathname.replace(/^\//, '').split('/').filter(Boolean)[0] || '';
   if (segment) return toTitleFromSegment(segment);
-  return 'Путешествия';
+  return i18nT('shared:hooks.useBreadcrumbModel.puteshestviya_7be089c0');
 }
 
 function isBelarusCountryName(value: unknown) {
@@ -411,7 +413,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
           items,
           depth: items.length + 1,
           currentTitle: pageContextTitle,
-          pageContextTitle: 'Главная',
+          pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.glavnaya_6804642b'),
           backToPath: '/',
           showBreadcrumbs: true,
         };
@@ -465,7 +467,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
 
     const isUserProfile = p.startsWith('/user/') && parts.length >= 2 && parts[0] === 'user';
     if (isUserProfile) {
-      const userName = userProfileName || 'Профиль';
+      const userName = userProfileName || i18nT('sharedStatic:breadcrumb.profileFallback');
       const userTitle = truncateLabel(userName);
 
       const items: BreadcrumbModelItem[] = [
@@ -476,7 +478,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
         items,
         depth: items.length + 1,
         currentTitle: userTitle,
-        pageContextTitle: 'Главная',
+        pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.glavnaya_6804642b'),
         backToPath: '/',
         showBreadcrumbs: true,
       };
@@ -484,9 +486,9 @@ export function useBreadcrumbModel(): BreadcrumbModel {
 
     const isArticleDetails = parts[0] === 'article' && parts.length >= 2;
     if (isArticleDetails) {
-      const currentLabel = articleTitle || 'Статья';
+      const currentLabel = articleTitle || i18nT('sharedStatic:breadcrumb.articleFallback');
       const items: BreadcrumbModelItem[] = [
-        { label: 'Статьи', path: '/articles' },
+        { label: i18nT('shared:hooks.useBreadcrumbModel.stati_ffeec651'), path: '/articles' },
         { label: currentLabel, path: p },
       ];
 
@@ -494,7 +496,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
         items,
         depth: items.length + 1,
         currentTitle: currentLabel,
-        pageContextTitle: 'Статьи',
+        pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.stati_ffeec651'),
         backToPath: '/articles',
         showBreadcrumbs: true,
       };
@@ -503,10 +505,10 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     const isPlannedTripDetails =
       parts[0] === 'trips' && parts[1] === 'plan' && parts.length >= 3 && parts[2] !== 'create';
     if (isPlannedTripDetails) {
-      const currentLabel = truncateLabel(plannedTripData?.title || 'Поездка');
+      const currentLabel = truncateLabel(plannedTripData?.title || i18nT('sharedStatic:breadcrumb.tripFallback'));
       const items: BreadcrumbModelItem[] = [
         PROFILE_CRUMB,
-        { label: 'Мои поездки', path: '/trips/my' },
+        { label: i18nT('shared:hooks.useBreadcrumbModel.moi_poezdki_39aebae0'), path: '/trips/my' },
         { label: currentLabel, path: p },
       ];
 
@@ -514,7 +516,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
         items,
         depth: items.length + 1,
         currentTitle: currentLabel,
-        pageContextTitle: 'Профиль',
+        pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.profil_6d96d80b'),
         backToPath: '/trips/my',
         showBreadcrumbs: true,
       };
@@ -523,9 +525,9 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     const isPublicTripDetails =
       parts[0] === 'trips' && parts.length >= 2 && Number.isFinite(Number(parts[1]));
     if (isPublicTripDetails) {
-      const currentLabel = truncateLabel(publicTripData?.title || 'Поездка');
+      const currentLabel = truncateLabel(publicTripData?.title || i18nT('sharedStatic:breadcrumb.tripFallback'));
       const items: BreadcrumbModelItem[] = [
-        { label: 'Поездки', path: '/trips' },
+        { label: i18nT('shared:hooks.useBreadcrumbModel.poezdki_e2cdc063'), path: '/trips' },
         { label: currentLabel, path: p },
       ];
 
@@ -533,7 +535,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
         items,
         depth: items.length + 1,
         currentTitle: currentLabel,
-        pageContextTitle: 'Поездки',
+        pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.poezdki_e2cdc063'),
         backToPath: '/trips',
         showBreadcrumbs: true,
       };
@@ -541,15 +543,15 @@ export function useBreadcrumbModel(): BreadcrumbModel {
 
     if (p === '/trips/my') {
       const items: BreadcrumbModelItem[] = [
-        { label: 'Поездки', path: '/trips' },
-        { label: 'Мои поездки', path: '/trips/my' },
+        { label: i18nT('shared:hooks.useBreadcrumbModel.poezdki_e2cdc063'), path: '/trips' },
+        { label: i18nT('shared:hooks.useBreadcrumbModel.moi_poezdki_39aebae0'), path: '/trips/my' },
       ];
 
       return {
         items,
         depth: items.length + 1,
-        currentTitle: 'Мои поездки',
-        pageContextTitle: 'Поездки',
+        currentTitle: i18nT('shared:hooks.useBreadcrumbModel.moi_poezdki_39aebae0'),
+        pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.poezdki_e2cdc063'),
         backToPath: '/trips',
         showBreadcrumbs: true,
       };
@@ -564,7 +566,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       }
 
       const items = [
-        { label: 'Квесты', path: '/quests' },
+        { label: i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10'), path: '/quests' },
         { label: questTitle, path: p },
       ];
 
@@ -572,7 +574,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
         items,
         depth: items.length + 1,
         currentTitle: questTitle,
-        pageContextTitle: 'Квесты',
+        pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10'),
         backToPath: '/quests',
         showBreadcrumbs: true,
       };

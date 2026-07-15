@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Retro — ретро-стиль 70-х: горчичный, бургунди, тёплый беж
  */
 export const retroTheme: PdfThemeConfig = {
   name: 'retro',
-  displayName: 'Ретро',
-  description: 'Стиль 70-х — горчичный, бургунди, тёплый беж',
+  get displayName() { return i18nT('export:services.pdfExport.theme.retro.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.retro.description') },
 
   colors: {
     text: '#2a1f14',

@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n'
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
@@ -72,7 +73,7 @@ export const mapKnownServerErrorToRu = (rawMessage: string): string | null => {
     message.includes('must pass moderation') ||
     (message.includes('publish') && message.includes('moderation'))
   ) {
-    return 'Маршрут сохранён как черновик, но пока не может быть опубликован: сначала он должен пройти модерацию.'
+    return i18nT('errors:utils.errorHelpers.marshrut_sohranen_kak_chernovik_no_poka_ne_m_b7966ec1')
   }
 
   return null

@@ -4,6 +4,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import StarRating from '@/components/ui/StarRating';
 import { useArticleRating } from '@/hooks/useArticleRating';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { selectPlural, translate as i18nT } from '@/i18n'
+
 
 type Props = {
     articleId: number | undefined;
@@ -61,7 +63,7 @@ function ArticleRatingSection({
     return (
         <View style={styles.container} testID={testID}>
             <View style={styles.header}>
-                <Text style={styles.title}>Рейтинг статьи</Text>
+                <Text style={styles.title}>{i18nT('shared:components.article.ArticleRatingSection.reyting_stati_bf5d2d3e')}</Text>
                 {ratingCount > 0 && (
                     <Text style={styles.countText}>
                         {ratingCount} {getCountLabel(ratingCount)}
@@ -85,7 +87,7 @@ function ArticleRatingSection({
                 {canRate && (
                     <View style={styles.rateSection}>
                         <Text style={styles.rateLabel}>
-                            {userRating != null && userRating > 0 ? 'Ваша оценка:' : 'Оцените статью:'}
+                            {userRating != null && userRating > 0 ? i18nT('shared:components.article.ArticleRatingSection.vasha_otsenka_6e822bc5') : i18nT('shared:components.article.ArticleRatingSection.otsenite_statyu_ff384ce6')}
                         </Text>
                         <StarRating
                             rating={userRating ?? 0}
@@ -98,18 +100,17 @@ function ArticleRatingSection({
                             showCount={false}
                         />
                         {isSubmitting && (
-                            <Text style={styles.savingText}>Сохранение...</Text>
+                            <Text style={styles.savingText}>{i18nT('shared:components.article.ArticleRatingSection.sohranenie_9d9151b6')}</Text>
                         )}
                         {userRating != null && userRating > 0 && !isSubmitting && !isLoading && (
-                            <Text style={styles.yourRatingText}>Ваша оценка: {userRating}</Text>
+                            <Text style={styles.yourRatingText}>{i18nT('shared:components.article.ArticleRatingSection.vasha_otsenka_cccfdba6')}{userRating}</Text>
                         )}
                     </View>
                 )}
 
                 {!canRate && (
                     <Text style={styles.loginHint}>
-                        Войдите, чтобы оценить
-                    </Text>
+                        {i18nT('shared:components.article.ArticleRatingSection.voydite_chtoby_otsenit_fe9f546b')}</Text>
                 )}
             </View>
         </View>
@@ -117,13 +118,12 @@ function ArticleRatingSection({
 }
 
 function getCountLabel(count: number): string {
-    const lastDigit = count % 10;
-    const lastTwoDigits = count % 100;
-
-    if (lastTwoDigits >= 11 && lastTwoDigits <= 19) return 'оценок';
-    if (lastDigit === 1) return 'оценка';
-    if (lastDigit >= 2 && lastDigit <= 4) return 'оценки';
-    return 'оценок';
+    return selectPlural(count, {
+        one: i18nT('shared:components.article.ArticleRatingSection.otsenka_f65ce63f'),
+        few: i18nT('shared:components.article.ArticleRatingSection.otsenki_d41c6edf'),
+        many: i18nT('shared:components.article.ArticleRatingSection.otsenok_0f83ec1c'),
+        other: i18nT('shared:components.article.ArticleRatingSection.otsenok_0f83ec1c'),
+    });
 }
 
 const createStyles = (colors: any) =>

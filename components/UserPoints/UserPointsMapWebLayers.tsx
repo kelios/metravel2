@@ -3,6 +3,8 @@ import React from 'react'
 import type { ImportedPoint } from '@/types/userPoints'
 
 import { UserPointsMapPointMarkerWeb } from './UserPointsMapPointMarker.web'
+import { translate as i18nT } from '@/i18n'
+
 
 type DriveInfo =
   | { status: 'loading' }
@@ -134,10 +136,12 @@ export const UserPointsMapWebLayers = React.memo(function UserPointsMapWebLayers
           key="__user__"
           position={[centerOverride.lat, centerOverride.lng]}
           icon={getMarkerIconCached(colors.primary, { active: true })}
+          title={i18nT('map:components.UserPoints.UserPointsMapWebLayers.moe_mestopolozhenie_7ab4d787')}
+          alt={i18nT('map:components.UserPoints.UserPointsMapWebLayers.moe_mestopolozhenie_7ab4d787')}
         >
           <mods.Popup>
             <div style={{ fontSize: 12, color: colors.text }}>
-              <strong>Моё местоположение</strong>
+              <strong>{i18nT('map:components.UserPoints.UserPointsMapWebLayers.moe_mestopolozhenie_7ab4d787')}</strong>
             </div>
           </mods.Popup>
         </mods.Marker>
@@ -148,6 +152,8 @@ export const UserPointsMapWebLayers = React.memo(function UserPointsMapWebLayers
           key="__search__"
           position={[searchMarker.lat, searchMarker.lng]}
           icon={getMarkerIconCached(colors.primarySoft, { active: true })}
+          title={String(searchMarker.label || i18nT('map:components.UserPoints.UserPointsMapPointMarker.tochka_99c57a1a'))}
+          alt={String(searchMarker.label || i18nT('map:components.UserPoints.UserPointsMapPointMarker.tochka_99c57a1a'))}
         >
           {String(searchMarker.label || '').trim() ? (
             <mods.Popup>
@@ -170,6 +176,8 @@ export const UserPointsMapWebLayers = React.memo(function UserPointsMapWebLayers
           key="__pending__"
           position={[pendingMarker.lat, pendingMarker.lng]}
           icon={getMarkerIconCached(pendingMarkerColor)}
+          title={i18nT('map:components.UserPoints.UserPointsMapPointMarker.tochka_99c57a1a')}
+          alt={i18nT('map:components.UserPoints.UserPointsMapPointMarker.tochka_99c57a1a')}
         />
       ) : null}
 

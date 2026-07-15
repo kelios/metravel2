@@ -1,10 +1,12 @@
 import { act } from '@testing-library/react';
+import { Platform } from 'react-native';
 
 jest.mock('@/api/auth', () => ({
   loginApi: jest.fn(),
   logoutApi: jest.fn(),
   resetPasswordLinkApi: jest.fn(),
   setNewPasswordApi: jest.fn(),
+  validateWebCookieSessionApi: jest.fn().mockResolvedValue(true),
 }));
 
 jest.mock('@/utils/secureStorage', () => ({
@@ -30,28 +32,40 @@ jest.mock('@/api/user', () => ({
   },
 }));
 
-const { loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi } =
+const {
+  loginApi,
+  logoutApi,
+  resetPasswordLinkApi,
+  setNewPasswordApi,
+  validateWebCookieSessionApi,
+} =
   require('@/api/auth') as {
     loginApi: jest.Mock;
     logoutApi: jest.Mock;
     resetPasswordLinkApi: jest.Mock;
     setNewPasswordApi: jest.Mock;
+    validateWebCookieSessionApi: jest.Mock;
   };
 
-const { getSecureItem } = require('@/utils/secureStorage') as {
+const { getSecureItem, setSecureItem } = require('@/utils/secureStorage') as {
   getSecureItem: jest.Mock;
+  setSecureItem: jest.Mock;
 };
-const { getStorageBatch } = require('@/utils/storageBatch') as {
+const { getStorageBatch, removeStorageBatch } = require('@/utils/storageBatch') as {
   getStorageBatch: jest.Mock;
+  removeStorageBatch: jest.Mock;
 };
 const { fetchUserProfile } = require('@/api/user') as { fetchUserProfile: jest.Mock };
 
 import { useAuthStore } from '@/stores/authStore';
 
 const flushPromises = () => new Promise((r) => setTimeout(r, 0));
+const originalPlatformOS = Platform.OS;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  validateWebCookieSessionApi.mockResolvedValue(true);
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
   // Reset store to initial state
   useAuthStore.setState({
     isAuthenticated: false,
@@ -62,6 +76,10 @@ beforeEach(() => {
     authReady: false,
     profileRefreshToken: 0,
   });
+});
+
+afterAll(() => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatformOS });
 });
 
 describe('authStore', () => {
@@ -157,6 +175,65 @@ describe('authStore', () => {
       expect(s.authReady).toBe(true);
     });
 
+    it('validates a web HttpOnly-cookie session without reading a JS token', async () => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      getStorageBatch.mockResolvedValue({
+        userId: '7',
+        userName: 'Julia',
+        isSuperuser: 'false',
+        userAvatar: null,
+      });
+      fetchUserProfile.mockResolvedValue({
+        first_name: 'Julia',
+        avatar: null,
+        is_premium: true,
+      });
+
+      await act(async () => {
+        await useAuthStore.getState().checkAuthentication();
+      });
+
+      expect(getSecureItem).not.toHaveBeenCalled();
+      expect(validateWebCookieSessionApi).toHaveBeenCalledTimes(1);
+      expect(fetchUserProfile).toHaveBeenCalledWith('7');
+      expect(useAuthStore.getState()).toEqual(
+        expect.objectContaining({
+          isAuthenticated: true,
+          userId: '7',
+          isPremium: true,
+        }),
+      );
+    });
+
+    it('fails closed when stale web metadata has no active cookie session', async () => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      getStorageBatch.mockResolvedValue({
+        userId: '7',
+        userName: 'Julia',
+        isSuperuser: 'false',
+        userAvatar: null,
+      });
+      validateWebCookieSessionApi.mockResolvedValue(false);
+
+      await act(async () => {
+        await useAuthStore.getState().checkAuthentication();
+      });
+
+      expect(fetchUserProfile).not.toHaveBeenCalled();
+      expect(removeStorageBatch).toHaveBeenCalledWith([
+        'userName',
+        'isSuperuser',
+        'userId',
+        'userAvatar',
+      ]);
+      expect(useAuthStore.getState()).toEqual(
+        expect.objectContaining({
+          isAuthenticated: false,
+          userId: null,
+        }),
+      );
+    });
+
     it('normalizes avatar "null" string to null', async () => {
       getSecureItem.mockResolvedValue('tok');
       getStorageBatch.mockResolvedValue({
@@ -204,6 +281,23 @@ describe('authStore', () => {
       expect(s.userId).toBe('5');
       expect(s.username).toBe('Юлия');
       expect(s.userAvatar).toBe('https://img/a.jpg');
+    });
+
+    it('does not persist access or refresh tokens on web login', async () => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      loginApi.mockResolvedValue({
+        token: 'must-not-be-stored',
+        refresh: 'must-not-be-stored-either',
+        id: 5,
+        name: 'Julia',
+        email: 'j@test.com',
+        is_superuser: false,
+      });
+      fetchUserProfile.mockResolvedValue({ first_name: 'Julia', avatar: null });
+
+      await expect(useAuthStore.getState().login('j@test.com', 'pass')).resolves.toBe(true);
+
+      expect(setSecureItem).not.toHaveBeenCalled();
     });
 
     it('returns false when loginApi returns null', async () => {

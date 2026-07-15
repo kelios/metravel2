@@ -11,6 +11,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
+import { translate as i18nT } from '@/i18n'
+
 
 const WEB_CARD_SHADOW_STYLE = { boxShadow: DESIGN_TOKENS.shadows.card };
 const WEB_CURSOR_POINTER_STYLE = { cursor: 'pointer' as const };
@@ -29,7 +31,7 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
   const fullName = useMemo(() => {
     const first = String(profile.first_name ?? '').trim();
     const last = String(profile.last_name ?? '').trim();
-    return `${first} ${last}`.trim() || 'Пользователь';
+    return `${first} ${last}`.trim() || i18nT('sharedStatic:user.fallbackName');
   }, [profile.first_name, profile.last_name]);
 
   const initials = useMemo(() => {
@@ -49,7 +51,7 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
           style={styles.info}
           onPress={() => onOpenProfile(userId)}
           accessibilityRole="button"
-          accessibilityLabel={`Открыть профиль ${fullName}`}
+          accessibilityLabel={i18nT('shared:components.subscriptions.SubscriberCard.otkryt_profil_value1_159b4403', { value1: fullName })}
           {...Platform.select({ web: { cursor: 'pointer' } })}
         >
           <View style={styles.avatar}>
@@ -74,7 +76,7 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
             style={[styles.actionButton, globalFocusStyles.focusable]}
             onPress={() => onMessage(userId)}
             accessibilityRole="button"
-            accessibilityLabel={`Написать ${fullName}`}
+            accessibilityLabel={i18nT('shared:components.subscriptions.SubscriberCard.napisat_value1_b8348a10', { value1: fullName })}
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
             <Feather name="mail" size={16} color={colors.primaryDark} />
@@ -157,4 +159,3 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   });
 
 export default React.memo(SubscriberCard);
-

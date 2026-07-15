@@ -11,6 +11,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { stripToDescription } from '@/components/travel/utils/travelHelpers';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
+import { translate as i18nT } from '@/i18n'
+
 
 type ArticleListItemProps = {
   article: Article;
@@ -86,7 +88,7 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article, returnHref }
 
   // ✅ МИГРАЦИЯ: Мемоизация стилей для производительности
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const webOpenHint = 'Открыть в новой вкладке: Ctrl/Cmd + клик';
+  const webOpenHint = i18nT('shared:components.article.ArticleListItem.otkryt_v_novoy_vkladke_ctrl_cmd_klik_3b420a55');
   const mediaSrc = imageFailed ? null : resolvedImageUrl;
   const mediaHeights = useMemo(() => getArticleMediaHeights(viewportWidth), [viewportWidth]);
   const mediaHeight = mediaSrc ? mediaHeights.image : mediaHeights.placeholder;

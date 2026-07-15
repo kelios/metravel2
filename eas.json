@@ -6,7 +6,7 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "node": "20.19.4",
+      "node": "22.13.1",
       "ios": {
         "simulator": true,
         "buildConfiguration": "Debug"
@@ -18,7 +18,7 @@
     },
     "preview": {
       "distribution": "internal",
-      "node": "20.19.4",
+      "node": "22.13.1",
       "ios": {
         "simulator": false,
         "buildConfiguration": "Release"
@@ -29,7 +29,7 @@
     },
     "production": {
       "distribution": "store",
-      "node": "20.19.4",
+      "node": "22.13.1",
       "ios": {
         "simulator": false,
         "buildConfiguration": "Release",

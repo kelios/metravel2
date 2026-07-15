@@ -3,6 +3,8 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface SelectOption {
     value: string;
@@ -26,7 +28,7 @@ const SelectComponent: React.FC<SelectProps> = ({
     options = [],
     value = '',
     onChange,
-    placeholder = 'Выберите...',
+    placeholder = i18nT('shared:components.forms.SelectComponent.vyberite_e59836d4'),
     error,
     hint,
     required = false,
@@ -187,8 +189,7 @@ const SelectComponent: React.FC<SelectProps> = ({
             )}
 
             <Text style={{ color: colors.textMuted, fontSize: 14 }}>
-                Select компонент на mobile требует установки @react-native-picker/picker
-            </Text>
+                {i18nT('shared:components.forms.SelectComponent.select_komponent_na_mobile_trebuet_ustanovki_b3d884a8')}</Text>
 
             {/* ✅ УЛУЧШЕНИЕ: Подсказка */}
             {!!hint && !error && (

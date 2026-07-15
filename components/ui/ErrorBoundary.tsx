@@ -2,6 +2,8 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   children: ReactNode;
@@ -107,14 +109,14 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <View style={styles.container}>
           <View style={styles.content}>
-            <Text style={styles.title}>Что-то пошло не так</Text>
+            <Text style={styles.title}>{i18nT('errors:components.ui.ErrorBoundary.chto_to_poshlo_ne_tak_aef679ab')}</Text>
             <Text style={styles.message}>
-              {this.state.error?.message || 'Произошла непредвиденная ошибка'}
+              {this.state.error?.message || i18nT('errorsStatic:unexpectedError')}
             </Text>
             <ErrorActionButton
-              label="Попробовать снова"
+              label={i18nT('errors:components.ui.ErrorBoundary.poprobovat_snova_8836dde0')}
               onPress={this.handleReset}
-              accessibilityLabel="Попробовать снова"
+              accessibilityLabel={i18nT('errors:components.ui.ErrorBoundary.poprobovat_snova_8836dde0')}
               styles={styles}
               primary
             />

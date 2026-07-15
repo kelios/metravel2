@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 type ToggleableMapSectionProps = {
     children: React.ReactNode;
@@ -20,7 +22,7 @@ const ToggleableMapSection = ({
     children,
     initiallyOpen = false,
     isLoading = false,
-    loadingLabel = 'Загружаем карту...',
+    loadingLabel = i18nT('travel:components.travel.ToggleableMapSection.zagruzhaem_kartu_16e7cb3f'),
     keepMounted = false,
     forceOpenTrigger,
     onOpenChange,
@@ -37,7 +39,7 @@ const ToggleableMapSection = ({
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const hintText = useMemo(
-        () => (showMap && isLoading ? loadingLabel : showMap ? 'Скрыть карту' : 'Показать карту'),
+        () => (showMap && isLoading ? loadingLabel : showMap ? i18nT('travel:components.travel.ToggleableMapSection.skryt_kartu_6b3a3010') : i18nT('travel:components.travel.ToggleableMapSection.pokazat_kartu_3a0d4ed9')),
         [isLoading, loadingLabel, showMap],
     );
 
@@ -124,7 +126,7 @@ const ToggleableMapSection = ({
                                         <Feather name="map" size={24} color={colors.textMuted} />
                                     </View>
                                 ) : (
-                                    <ActivityIndicator color={colors.primaryDark} accessibilityLabel="Загрузка карты маршрута" />
+                                    <ActivityIndicator color={colors.primaryDark} accessibilityLabel={i18nT('travel:components.travel.ToggleableMapSection.zagruzka_karty_marshruta_12ef3d0a')} />
                                 )}
                             </View>
                         ) : (

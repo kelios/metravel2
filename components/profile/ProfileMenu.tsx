@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { translate as i18nT } from '@/i18n'
+
 
 interface ProfileMenuProps {
   onLogout: () => void;
@@ -137,8 +139,8 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
             globalFocusStyles.focusable,
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Меню профиля"
-          accessibilityHint="Открыть меню с дополнительными действиями"
+          accessibilityLabel={i18nT('profile:components.profile.ProfileMenu.menyu_profilya_ab998098')}
+          accessibilityHint={i18nT('profile:components.profile.ProfileMenu.otkryt_menyu_s_dopolnitelnymi_deystviyami_70add9c2')}
         >
           <Feather name="more-vertical" size={20} color={colors.textMuted} />
         </Pressable>
@@ -161,11 +163,11 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
                   globalFocusStyles.focusable,
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel="Настройки"
-                accessibilityHint="Перейти к настройкам профиля"
+                accessibilityLabel={i18nT('profile:components.profile.ProfileMenu.nastroyki_aa086331')}
+                accessibilityHint={i18nT('profile:components.profile.ProfileMenu.pereyti_k_nastroykam_profilya_8ce1f4b8')}
               >
                 <Feather name="settings" size={16} color={colors.text} />
-                <Text style={styles.menuItemText}>Настройки</Text>
+                <Text style={styles.menuItemText}>{i18nT('profile:components.profile.ProfileMenu.nastroyki_aa086331')}</Text>
               </Pressable>
             )}
 
@@ -178,13 +180,12 @@ export function ProfileMenu({ onLogout, onSettings }: ProfileMenuProps) {
                 globalFocusStyles.focusable,
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Выйти из аккаунта"
-              accessibilityHint="Выйти из текущего аккаунта"
+              accessibilityLabel={i18nT('profile:components.profile.ProfileMenu.vyyti_iz_akkaunta_d177010b')}
+              accessibilityHint={i18nT('profile:components.profile.ProfileMenu.vyyti_iz_tekuschego_akkaunta_ae3af90f')}
             >
               <Feather name="log-out" size={16} color={colors.danger} />
               <Text style={[styles.menuItemText, styles.menuItemTextDanger]}>
-                Выйти
-              </Text>
+                {i18nT('profile:components.profile.ProfileMenu.vyyti_84e3f5c0')}</Text>
             </Pressable>
           </View>
         </Pressable>

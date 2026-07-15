@@ -39,6 +39,8 @@ import {
   confirmRichTextLossIfNeeded,
   type RichTextSnapshot,
 } from '@/utils/travelTextLossGuard';
+import { translate as i18nT } from '@/i18n'
+
 
 type ToastAwareError = Error & { toastShown?: boolean };
 const DEFAULT_MARKER_SERIALIZER_FALLBACK_IMAGE = '/og-default.png';
@@ -591,7 +593,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         });
       }
 
-      showToast('Ошибка автосохранения', 'error');
+      showToast(i18nT('shared:hooks.useTravelFormPersistence.oshibka_avtosohraneniya_0fb98f16'), 'error');
     },
     [showToast, stableTravelId, formDataRef, mountedRef, suppressAutosaveErrorToastRef]
   );
@@ -693,7 +695,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         applySavedData(normalizedSavedData, toSave as TravelFormData);
         autosaveCancelPendingRef.current?.();
         if (!dataOverride) {
-          showToast('Сохранено');
+          showToast(i18nT('shared:hooks.useTravelFormPersistence.sohraneno_6f40d98d'));
         }
         return savedData;
       } catch (error) {
@@ -719,10 +721,10 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         const isModerationPublishError = mappedRu != null && isPublishIntent;
 
         const toastTitle = isModerationPublishError
-          ? 'Сохранено как черновик'
-          : 'Ошибка сохранения';
+          ? i18nT('shared:hooks.useTravelFormPersistence.sohraneno_kak_chernovik_6a776ece')
+          : i18nT('shared:hooks.useTravelFormPersistence.oshibka_sohraneniya_009a0024');
         const toastText = mappedRu
-          ?? (rawDetails && rawDetails !== 'Save failed' ? rawDetails : 'Попробуйте ещё раз');
+          ?? (rawDetails && rawDetails !== 'Save failed' ? rawDetails : i18nT('shared:hooks.useTravelFormPersistence.poprobuyte_esche_raz_b527c579'));
 
         void showToastMessage({
           type: isModerationPublishError ? 'info' : 'error',

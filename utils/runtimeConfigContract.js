@@ -6,6 +6,13 @@ const ROUTING_API_KEY_CANDIDATES = [
   'ROUTE_SERVICE_KEY',
 ]
 
+const MOCK_FLAG_NAMES = [
+  'EXPO_PUBLIC_TRIPS_MOCK',
+  'EXPO_PUBLIC_ACHIEVEMENTS_MOCK',
+  'EXPO_PUBLIC_SAFETY_MOCK',
+  'EXPO_PUBLIC_OSRM_MOCK',
+]
+
 const LEGACY_ROUTING_API_KEY_SOURCES = new Set([
   'EXPO_PUBLIC_ROUTE_SERVICE',
   'ORS_API_KEY',
@@ -130,6 +137,19 @@ const getRuntimeConfigDiagnosticsCore = (env = process.env, options = {}) => {
     }
   }
 
+  const isProduction =
+    String(env.NODE_ENV || '').trim().toLowerCase() === 'production' ||
+    String(env.EXPO_PUBLIC_ENV || '').trim().toLowerCase() === 'production'
+
+  for (const flagName of MOCK_FLAG_NAMES) {
+    if (!['1', 'true'].includes(String(env[flagName] || '').trim().toLowerCase())) continue
+    diagnostics.push({
+      code: 'DEV_MOCK_FLAG_ENABLED',
+      severity: isProduction ? 'error' : 'warning',
+      message: `${flagName}=true is development-only and must be disabled in production.`,
+    })
+  }
+
   const routingDiagnostics = getRoutingConfigDiagnosticsCore(env).map((diagnostic) => ({
     ...diagnostic,
     severity: 'warning',
@@ -139,6 +159,7 @@ const getRuntimeConfigDiagnosticsCore = (env = process.env, options = {}) => {
 }
 
 module.exports = {
+  MOCK_FLAG_NAMES,
   ROUTING_API_KEY_CANDIDATES,
   resolveRoutingApiKeyWithSourceCore,
   getRoutingConfigDiagnosticsCore,

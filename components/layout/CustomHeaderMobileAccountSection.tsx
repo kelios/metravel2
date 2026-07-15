@@ -16,6 +16,8 @@ import {
   isHeaderMobileMenuTestEnv,
   ThemeToggleLazy,
 } from './customHeaderMobileLazy';
+import { translate as i18nT } from '@/i18n'
+
 
 const useFavoritesSafe = (): { favorites: { length: number } } => {
   try {
@@ -182,7 +184,7 @@ export default function CustomHeaderMobileAccountSection({
           onPress={() => handleUserAction('/profile')}
           style={[styles.mobileUserPill, globalFocusStyles.focusable]}
           accessibilityRole="button"
-          accessibilityLabel={`Открыть профиль ${username}`}
+          accessibilityLabel={i18nT('navigation:components.layout.CustomHeaderMobileAccountSection.otkryt_profil_value1_4b61a725', { value1: username })}
         >
           <UserAvatar
             uri={avatarUri}
@@ -206,7 +208,7 @@ export default function CustomHeaderMobileAccountSection({
         onPress={openMobileMenu}
         style={[styles.mobileMenuButton, globalFocusStyles.focusable]}
         accessibilityRole="button"
-        accessibilityLabel="Открыть меню"
+        accessibilityLabel={i18nT('navigation:components.layout.CustomHeaderMobileAccountSection.otkryt_menyu_e43b6ae3')}
         testID="mobile-menu-open"
       >
         <View style={styles.iconSlot24}>
@@ -220,7 +222,7 @@ export default function CustomHeaderMobileAccountSection({
             <Pressable
               testID="mobile-menu-overlay"
               accessibilityRole="button"
-              accessibilityLabel="Закрыть меню"
+              accessibilityLabel={i18nT('navigation:components.layout.CustomHeaderMobileAccountSection.zakryt_menyu_b46b8503')}
               onPress={closeMenuSafely}
             >
               <View />

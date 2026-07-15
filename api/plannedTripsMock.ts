@@ -8,7 +8,7 @@ import type {
   RoutePoint,
   RouteTemplate,
   TripSuggestion,
-} from '@/api/plannedTrips';
+} from '@/api/plannedTripsTypes';
 
 /** Глубокая копия — мок-стор мутируется в DEV, не делимся ссылками. */
 export const cloneTrip = (t: PlannedTrip): PlannedTrip => ({

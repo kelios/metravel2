@@ -15,6 +15,8 @@ import { appendPlainTextToHtml, plainTextToHtml } from '@/utils/htmlUtils';
 import { useWebSpeechDictation } from '@/hooks/useWebSpeechDictation';
 import { showToast } from '@/utils/toast';
 import { createContentUpsertStyles } from './contentUpsertStyles';
+import { getFormatLocale, translate as i18nT, translatePlural } from '@/i18n'
+
 
 const ArticleEditor = lazy(() => import('@/components/article/ArticleEditor'));
 
@@ -51,7 +53,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     const [isImportingDescriptionText, setIsImportingDescriptionText] = useState(false);
     const [isPastingDescriptionText, setIsPastingDescriptionText] = useState(false);
 
-    const dictation = useWebSpeechDictation({ lang: 'ru-RU', continuous: true });
+    const dictation = useWebSpeechDictation({ lang: getFormatLocale(), continuous: true });
     const descriptionHtmlRef = useRef<string>(String(formData.description ?? ''));
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
@@ -108,19 +110,19 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
 
     const descriptionStatusText = useMemo(() => {
         if (descriptionPlainLength === 0) {
-            return 'Опишите, для кого этот маршрут, что в нём главное и чего ожидать. Минимум 50 символов.';
+            return i18nT('travel:components.travel.ContentUpsertSection.opishite_dlya_kogo_etot_marshrut_chto_v_nem__76c60d07');
         }
         if (descriptionPlainLength < 50) {
             const remaining = 50 - descriptionPlainLength;
-            return `Осталось ${remaining} ${remaining === 1 ? 'символ' : remaining < 5 ? 'символа' : 'символов'} до минимума`;
+            return i18nT('travel:components.travel.ContentUpsertSection.ostalos_value1_value2_do_minimuma_07d2d15c', { value1: remaining, value2: translatePlural('travel:common.characterNoun', remaining) });
         }
         if (descriptionPlainLength <= 150) {
-            return 'Хорошее краткое описание. Можно добавить чуть больше деталей (по желанию).';
+            return i18nT('travel:components.travel.ContentUpsertSection.horoshee_kratkoe_opisanie_mozhno_dobavit_chu_a7c25864');
         }
-        return 'Отличное подробное описание!';
+        return i18nT('travel:components.travel.ContentUpsertSection.otlichnoe_podrobnoe_opisanie_ce837ac8');
     }, [descriptionPlainLength]);
 
-    const descriptionAnchorHint = 'Якорь: поставьте курсор в месте, куда нужно прокручивать, и вставьте якорь через иконку закладки (получится <span id="id">…</span>). Ссылка в тексте/оглавлении — <a href="#id">Текст ссылки</a>.';
+    const descriptionAnchorHint = i18nT('travel:components.travel.ContentUpsertSection.yakor_postavte_kursor_v_meste_kuda_nuzhno_pr_38e2354f');
 
     const descriptionProgress = useMemo(() => {
         const progress = Math.min((descriptionPlainLength / 50) * 100, 100);
@@ -194,8 +196,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             if (size != null && size > 1024 * 1024) {
                 await showToast({
                     type: 'error',
-                    text1: 'Слишком большой файл',
-                    text2: 'Пожалуйста, выберите текст до 1 МБ (например .txt/.md).',
+                    text1: i18nT('travel:components.travel.ContentUpsertSection.slishkom_bolshoy_fayl_1ebf9152'),
+                    text2: i18nT('travel:components.travel.ContentUpsertSection.pozhaluysta_vyberite_tekst_do_1_mb_naprimer__8509c3f4'),
                 });
                 return;
             }
@@ -205,8 +207,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             if (!cleaned) {
                 await showToast({
                     type: 'error',
-                    text1: 'Пустой текст',
-                    text2: 'Файл не содержит текста или не удалось прочитать содержимое.',
+                    text1: i18nT('travel:components.travel.ContentUpsertSection.pustoy_tekst_976bbb80'),
+                    text2: i18nT('travel:components.travel.ContentUpsertSection.fayl_ne_soderzhit_teksta_ili_ne_udalos_proch_098f5f71'),
                 });
                 return;
             }
@@ -214,14 +216,14 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             appendToDescription(cleaned);
             await showToast({
                 type: 'success',
-                text1: 'Текст добавлен',
-                text2: asset.name ? `Файл: ${asset.name}` : undefined,
+                text1: i18nT('travel:components.travel.ContentUpsertSection.tekst_dobavlen_1e512740'),
+                text2: asset.name ? i18nT('travel:components.travel.ContentUpsertSection.fayl_value1_d4e3846e', { value1: asset.name }) : undefined,
             });
         } catch (err: any) {
             await showToast({
                 type: 'error',
-                text1: 'Не удалось импортировать',
-                text2: err?.message ? String(err.message) : 'Попробуйте другой файл (например .txt).',
+                text1: i18nT('travel:components.travel.ContentUpsertSection.ne_udalos_importirovat_02dba43d'),
+                text2: err?.message ? String(err.message) : i18nT('travel:components.travel.ContentUpsertSection.poprobuyte_drugoy_fayl_naprimer_txt_558af228'),
             });
         } finally {
             setIsImportingDescriptionText(false);
@@ -236,18 +238,18 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             if (!cleaned) {
                 await showToast({
                     type: 'error',
-                    text1: 'Буфер пуст',
-                    text2: 'Скопируйте текст и попробуйте снова.',
+                    text1: i18nT('travel:components.travel.ContentUpsertSection.bufer_pust_a2a2ce35'),
+                    text2: i18nT('travel:components.travel.ContentUpsertSection.skopiruyte_tekst_i_poprobuyte_snova_cc524644'),
                 });
                 return;
             }
             appendToDescription(cleaned);
-            await showToast({ type: 'success', text1: 'Текст добавлен', text2: 'Из буфера обмена' });
+            await showToast({ type: 'success', text1: i18nT('travel:components.travel.ContentUpsertSection.tekst_dobavlen_1e512740'), text2: i18nT('travel:components.travel.ContentUpsertSection.iz_bufera_obmena_acc66fc3') });
         } catch (err: any) {
             await showToast({
                 type: 'error',
-                text1: 'Не удалось вставить',
-                text2: err?.message ? String(err.message) : 'Попробуйте снова.',
+                text1: i18nT('travel:components.travel.ContentUpsertSection.ne_udalos_vstavit_f7a02dca'),
+                text2: err?.message ? String(err.message) : i18nT('travel:components.travel.ContentUpsertSection.poprobuyte_snova_efd38252'),
             });
         } finally {
             setIsPastingDescriptionText(false);
@@ -285,14 +287,14 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             hint?: string,
             fieldKey?: string,
         ) => {
-            const key = fieldKey ?? (title === 'Описание' ? 'description' : undefined);
+            const key = fieldKey;
             const handleLayout = (event: NativeSyntheticEvent<LayoutChangeEvent['nativeEvent']>) => {
                 if (!key) return;
                 const y = event.nativeEvent.layout.y;
                 setFieldPositions(prev => ({ ...prev, [key]: y }));
             };
 
-            const isDescription = title === 'Описание';
+            const isDescription = key === 'description';
 
             return (
                 <View style={styles.sectionEditor} onLayout={handleLayout}>
@@ -329,7 +331,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                     >
                                         {descriptionStatusText}
                                     </Text>
-                                    <Text style={styles.descriptionCounterText}>{descriptionPlainLength} символов</Text>
+                                    <Text style={styles.descriptionCounterText}>{descriptionPlainLength} {i18nT('travel:components.travel.ContentUpsertSection.simvolov_d0f4cacb')}</Text>
                                 </View>
 
                                 {isMobile ? (
@@ -338,10 +340,10 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                         onPress={() => setAreDescriptionToolsVisible(value => !value)}
                                         accessibilityRole="button"
                                         accessibilityState={{ expanded: areDescriptionToolsVisible }}
-                                        accessibilityLabel={areDescriptionToolsVisible ? 'Скрыть инструменты описания' : 'Показать инструменты описания'}
+                                        accessibilityLabel={areDescriptionToolsVisible ? i18nT('travel:components.travel.ContentUpsertSection.skryt_instrumenty_opisaniya_511ee840') : i18nT('travel:components.travel.ContentUpsertSection.pokazat_instrumenty_opisaniya_1671a933')}
                                     >
                                         <Text style={styles.descriptionToolsToggleText}>
-                                            {areDescriptionToolsVisible ? 'Скрыть инструменты' : 'Инструменты: диктовка, импорт, вставка'}
+                                            {areDescriptionToolsVisible ? i18nT('travel:components.travel.ContentUpsertSection.skryt_instrumenty_29c91146') : i18nT('travel:components.travel.ContentUpsertSection.instrumenty_diktovka_import_vstavka_9ac3d594')}
                                         </Text>
                                         <Feather
                                             name={areDescriptionToolsVisible ? 'chevron-up' : 'chevron-down'}
@@ -357,7 +359,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                         <Button
                                             size="sm"
                                             variant={dictation.isListening ? 'danger' : 'outline'}
-                                            label={dictation.isListening ? 'Стоп' : 'Надиктовать'}
+                                            label={dictation.isListening ? i18nT('travel:components.travel.ContentUpsertSection.stop_b7ef349a') : i18nT('travel:components.travel.ContentUpsertSection.nadiktovat_9eaa89e4')}
                                             icon={<Feather name={dictation.isListening ? 'square' : 'mic'} size={16} color={dictation.isListening ? colors.textOnPrimary : colors.text} />}
                                             onPress={() => (dictation.isListening ? dictation.stop() : dictation.start())}
                                             style={styles.descriptionActionButton}
@@ -366,7 +368,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            label="Диктовка"
+                                            label={i18nT('travel:components.travel.ContentUpsertSection.diktovka_fc4af390')}
                                             icon={<Feather name="mic" size={16} color={colors.text} />}
                                             disabled
                                             style={styles.descriptionActionButton}
@@ -376,7 +378,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                     <Button
                                         size="sm"
                                         variant="outline"
-                                        label={isImportingDescriptionText ? 'Импорт…' : 'Импорт текста'}
+                                        label={isImportingDescriptionText ? i18nT('travel:components.travel.ContentUpsertSection.import_e9e80ad6') : i18nT('travel:components.travel.ContentUpsertSection.import_teksta_f9185f51')}
                                         icon={<Feather name="upload" size={16} color={colors.text} />}
                                         loading={isImportingDescriptionText}
                                         disabled={isImportingDescriptionText}
@@ -387,7 +389,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                     <Button
                                         size="sm"
                                         variant="outline"
-                                        label={isPastingDescriptionText ? 'Вставка…' : 'Вставить'}
+                                        label={isPastingDescriptionText ? i18nT('travel:components.travel.ContentUpsertSection.vstavka_d9165414') : i18nT('travel:components.travel.ContentUpsertSection.vstavit_d3c07b2b')}
                                         icon={<Feather name="clipboard" size={16} color={colors.text} />}
                                         loading={isPastingDescriptionText}
                                         disabled={isPastingDescriptionText}
@@ -405,8 +407,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
 
                                 {(!isMobile || areDescriptionToolsVisible) && Platform.OS !== 'web' ? (
                                     <Text style={styles.dictationHint}>
-                                        Подсказка: на телефоне можно использовать микрофон на клавиатуре (системная диктовка) и потом нажать «Вставить».
-                                    </Text>
+                                        {i18nT('travel:components.travel.ContentUpsertSection.podskazka_na_telefone_mozhno_ispolzovat_mikr_27251d78')}</Text>
                                 ) : null}
 
                                 {!isMobile ? (
@@ -443,19 +444,19 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                     descriptionHtmlRef.current = next;
                                     onChange(next);
                                 }}
-                                placeholder={hint ?? 'Кратко опишите маршрут: для кого он, что главное и чего ожидать.'}
+                                placeholder={hint ?? i18nT('travel:components.travel.ContentUpsertSection.defaultDescriptionHint')}
                                 placeholderTextColor={colors.textMuted}
-                                accessibilityLabel="Описание путешествия"
+                                accessibilityLabel={i18nT('travel:components.travel.ContentUpsertSection.opisanie_puteshestviya_75a5cc4c')}
                                 testID="travel-wizard.basic.description.mobile-input"
                             />
                             <TouchableOpacity
                                 style={styles.descriptionAdvancedButton}
                                 onPress={() => setIsDescriptionFullscreen(true)}
                                 accessibilityRole="button"
-                                accessibilityLabel="Открыть расширенный редактор описания"
+                                accessibilityLabel={i18nT('travel:components.travel.ContentUpsertSection.otkryt_rasshirennyy_redaktor_opisaniya_c0770e8e')}
                             >
                                 <Feather name="edit-3" size={16} color={colors.primaryText} />
-                                <Text style={styles.descriptionAdvancedButtonText}>Расширенный редактор</Text>
+                                <Text style={styles.descriptionAdvancedButtonText}>{i18nT('travel:components.travel.ContentUpsertSection.rasshirennyy_redaktor_37259fe6')}</Text>
                             </TouchableOpacity>
 
                             <Modal
@@ -485,19 +486,19 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                         styles.modalActionButton,
                                                         isCompactFullscreenHeader && styles.modalActionButtonCompact,
                                                     ]}
-                                                    accessibilityLabel="Закрыть полноэкранный редактор"
+                                                    accessibilityLabel={i18nT('travel:components.travel.ContentUpsertSection.zakryt_polnoekrannyy_redaktor_89b88fa5')}
                                                 >
                                                     <View style={styles.modalActionContent}>
                                                         <Feather name="x" size={14} color={colors.primaryText} />
                                                         {!isCompactFullscreenHeader && (
-                                                            <Text style={styles.modalHeaderAction}>Закрыть</Text>
+                                                            <Text style={styles.modalHeaderAction}>{i18nT('travel:components.travel.ContentUpsertSection.zakryt_f8478810')}</Text>
                                                         )}
                                                     </View>
                                                 </TouchableOpacity>
                                             </View>
                                             <View style={styles.modalHeaderCenter}>
-                                                <Text style={styles.modalHeaderTitle}>Описание</Text>
-                                                <Text style={styles.modalHeaderSubtitle}>{descriptionPlainLength} символов</Text>
+                                                <Text style={styles.modalHeaderTitle}>{i18nT('travel:components.travel.ContentUpsertSection.opisanie_cdbe94cb')}</Text>
+                                                <Text style={styles.modalHeaderSubtitle}>{descriptionPlainLength} {i18nT('travel:components.travel.ContentUpsertSection.simvolov_d0f4cacb')}</Text>
                                             </View>
                                             <View style={[styles.modalHeaderSide, styles.modalHeaderSideRight]}>
                                                 <TouchableOpacity
@@ -513,12 +514,12 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                         styles.modalActionButtonPrimary,
                                                         isCompactFullscreenHeader && styles.modalActionButtonCompact,
                                                     ]}
-                                                    accessibilityLabel="Сохранить и закрыть полноэкранный редактор"
+                                                    accessibilityLabel={i18nT('travel:components.travel.ContentUpsertSection.sohranit_i_zakryt_polnoekrannyy_redaktor_77ff80c5')}
                                                 >
                                                     <View style={styles.modalActionContent}>
                                                         <Feather name="check" size={14} color={colors.textOnPrimary} />
                                                         {!isCompactFullscreenHeader && (
-                                                            <Text style={[styles.modalHeaderAction, styles.modalHeaderActionPrimary]}>Готово</Text>
+                                                            <Text style={[styles.modalHeaderAction, styles.modalHeaderActionPrimary]}>{i18nT('travel:components.travel.ContentUpsertSection.gotovo_7fe97ed6')}</Text>
                                                         )}
                                                     </View>
                                                 </TouchableOpacity>
@@ -526,7 +527,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                         </View>
                                         <View style={styles.modalBody}>
                                             <View style={styles.modalEditorCard}>
-                                                <Suspense fallback={<View style={{ padding: 20 }}><Text>Загрузка редактора...</Text></View>}>
+                                                <Suspense fallback={<View style={{ padding: 20 }}><Text>{i18nT('travel:components.travel.ContentUpsertSection.zagruzka_redaktora_d5683e4b')}</Text></View>}>
                                                     <ArticleEditor
                                                         key={`description-fullscreen-${idTravelStr ?? 'new'}`}
                                                         label={title}
@@ -591,15 +592,14 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                     {isDescription && autosaveStatus && (
                         <View style={styles.autosaveRow}>
                             {autosaveStatus === 'saving' && (
-                                <Text style={styles.autosaveText}>Автосохранение…</Text>
+                                <Text style={styles.autosaveText}>{i18nT('travel:components.travel.ContentUpsertSection.avtosohranenie_d4efcd67')}</Text>
                             )}
                             {autosaveStatus === 'saved' && (
-                                <Text style={styles.autosaveSuccess}>Изменения сохранены</Text>
+                                <Text style={styles.autosaveSuccess}>{i18nT('travel:components.travel.ContentUpsertSection.izmeneniya_sohraneny_7b2917ac')}</Text>
                             )}
                             {autosaveStatus === 'error' && (
                                 <Text style={styles.autosaveError}>
-                                    Не удалось сохранить изменения. Попробуйте еще раз или проверьте интернет.
-                                </Text>
+                                    {i18nT('travel:components.travel.ContentUpsertSection.ne_udalos_sohranit_izmeneniya_poprobuyte_esc_90d2401c')}</Text>
                             )}
                         </View>
                     )}
@@ -617,6 +617,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             colors.text,
             colors.textOnPrimary,
             colors.textMuted,
+            descriptionAnchorHint,
             descriptionPlainLength,
             descriptionPlainText,
             descriptionProgress,
@@ -723,7 +724,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                 {showProgress && (
                     <View style={styles.progressSection}>
                         <View style={styles.progressHeader}>
-                            <Text style={styles.progressLabel}>Прогресс заполнения</Text>
+                            <Text style={styles.progressLabel}>{i18nT('travel:components.travel.ContentUpsertSection.progress_zapolneniya_0a93518d')}</Text>
                             <Text style={styles.progressPercent}>{formProgress}%</Text>
                         </View>
                         <View style={styles.progressBarContainer}>
@@ -742,12 +743,12 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                         }}
                     >
                         <TextInputComponent
-                            label="Название"
+                            label={i18nT('travel:components.travel.ContentUpsertSection.nazvanie_d756dec3')}
                             value={formData.name ?? ''}
                             onChange={value => handleChange('name', value)}
                             error={getError('name')}
                             required={true}
-                            hint="Краткое и понятное название (не менее 3 символов). По нему путешественники будут искать маршрут."
+                            hint={i18nT('travel:components.travel.ContentUpsertSection.kratkoe_i_ponyatnoe_nazvanie_ne_menee_3_simv_7fc748ba')}
                         />
                     </View>
                 )}
@@ -761,23 +762,24 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                         }}
                     >
                         {renderEditorSection(
-                            'Описание',
+                            i18nT('travel:components.travel.ContentUpsertSection.opisanie_cdbe94cb'),
                             formData.description,
                             val => handleChange('description', val),
                             getError('description'),
                             true,
-                            undefined
+                            undefined,
+                            'description'
                         )}
                     </View>}
 
                 {(visibleFields == null || visibleFields.includes('plus')) &&
-                    renderEditorSection('Плюсы', formData.plus, val => handleChange('plus', val), null, false, 'Что вам понравилось в этом путешествии')}
+                    renderEditorSection(i18nT('travel:components.travel.ContentUpsertSection.plyusy_7e8ecd01'), formData.plus, val => handleChange('plus', val), null, false, i18nT('travel:components.travel.ContentUpsertSection.chto_vam_ponravilos_v_etom_puteshestvii_b2e95dd2'))}
 
                 {(visibleFields == null || visibleFields.includes('minus')) &&
-                    renderEditorSection('Минусы', formData.minus, val => handleChange('minus', val), null, false, 'Что можно улучшить')}
+                    renderEditorSection(i18nT('travel:components.travel.ContentUpsertSection.minusy_9b37a35a'), formData.minus, val => handleChange('minus', val), null, false, i18nT('travel:components.travel.ContentUpsertSection.chto_mozhno_uluchshit_46f05590'))}
 
                 {(visibleFields == null || visibleFields.includes('recommendation')) &&
-                    renderEditorSection('Рекомендации', formData.recommendation, val => handleChange('recommendation', val), null, false, 'Ваши советы для других путешественников')}
+                    renderEditorSection(i18nT('travel:components.travel.ContentUpsertSection.rekomendatsii_566f7fca'), formData.recommendation, val => handleChange('recommendation', val), null, false, i18nT('travel:components.travel.ContentUpsertSection.vashi_sovety_dlya_drugih_puteshestvennikov_49e41714'))}
             </ScrollView>
         </SafeAreaView>
     );

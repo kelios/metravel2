@@ -8,216 +8,20 @@ import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionSta
 import { Menu } from '@/ui/paper';
 
 import { useThemedColors } from '@/hooks/useTheme';
+import { SEMANTIC_ACTION_ICON } from '@/components/navigation/navigationActionMeta';
 import {
-  getNavigationActionVisual,
-  resolveNavigationActionKind,
-  SEMANTIC_ACTION_ICON,
-} from '@/components/navigation/navigationActionMeta';
+  CardMeta,
+  LabeledActionChip,
+  MapActionChip,
+} from './PlaceListCard.parts';
+import type { PlaceListCardProps } from './PlaceListCard.types';
+import { buildPlaceListCardActionModel } from './placeListCardActionModel';
+import { translate as i18nT } from '@/i18n'
+
 
 const IS_WEB = Platform.OS === 'web';
 
-type ActionChip = {
-  key: string;
-  label: string;
-  icon: keyof typeof Feather.glyphMap;
-  onPress: () => void;
-  accessibilityLabel?: string;
-  title?: string;
-};
-
-type InlineAction = ActionChip;
-
-type Props = {
-  title: string;
-  imageUrl?: string | null;
-  categoryLabel?: string | null;
-  coord?: string | null;
-  badges?: string[];
-  onCardPress?: () => void;
-  onMediaPress?: () => void;
-  onCopyCoord?: () => void;
-  onShare?: () => void;
-  mapActions?: ActionChip[];
-  inlineActions?: InlineAction[];
-  quickActions?: ActionChip[];
-  onAddPoint?: () => void;
-  addDisabled?: boolean;
-  isAdding?: boolean;
-  // #839: точка уже в «Мои точки» — показываем ✓ «Сохранено» вместо ＋ «Сохранить».
-  isSaved?: boolean;
-  addLabel?: string;
-  width?: number;
-  imageHeight?: number;
-  /**
-   * Above-the-fold cards (first viewport rows) decode eagerly with high
-   * fetch-priority so the first screen renders sharp photos instead of blur on
-   * load. Defaults to `false` (lazy/low) so the map / travel-points / user-points
-   * usages keep their existing off-screen-friendly behaviour. Only the reveal
-   * timing gate in `ImageCardMedia` still waits for `onLoad` — this flag never
-   * shows the `<img>` before decode (CLAUDE.md decode-gate rule).
-   */
-  eagerImage?: boolean;
-  testID?: string;
-  style?: any;
-  showActionRow?: boolean;
-  showAddButton?: boolean;
-  addButtonPlacement?: 'button' | 'row';
-  webTouchAction?: string;
-  compact?: boolean;
-  titleLayout?: 'overlay' | 'content';
-  titleNumberOfLines?: number;
-  /**
-   * Travel-points list card: mirror the redesigned map-popup arrangement so the
-   * «Точки» tab and the map marker popup read identically. When set, the
-   * favorite/trip-status stack moves to the photo TOP-LEFT corner (popup parity),
-   * the «Поделиться» action surfaces as a small ➤ icon in the title row, and the
-   * save action renders as a labeled tile inside the «Действия с точкой» row.
-   * Opt-in: the /places catalog and map search/recommendations cards (which also
-   * use this component) keep their existing layout when the prop is absent.
-   */
-  popupAligned?: boolean;
-  relatedTravelUrl?: string | null;
-  relatedTravelCountry?: string | null;
-  relatedTravelCity?: string | null;
-  // Fallback favorite (used for cards without a related travel so EVERY card
-  // shows the same top-right favorite affordance).
-  isFavorite?: boolean;
-  onToggleFavorite?: () => void;
-};
-
-const MapActionChip = React.memo(function MapActionChip({
-  action,
-  colors,
-  styles,
-}: {
-  action: ActionChip;
-  colors: ReturnType<typeof useThemedColors>;
-  styles: Record<string, any>;
-}) {
-  const kind = resolveNavigationActionKind(action.key, action.label);
-  const visual = kind ? getNavigationActionVisual(kind, colors) : null;
-
-  return (
-    <LabeledActionChip
-      accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
-      icon={visual?.icon ?? action.icon}
-      iconBubbleStyle={visual ? { backgroundColor: visual.tintBg } : null}
-      iconColor={visual?.iconColor ?? colors.textMuted}
-      label={action.label}
-      onPress={action.onPress}
-      styles={styles}
-      title={action.title ?? action.label}
-    />
-  );
-});
-
-const LabeledActionChip = React.memo(function LabeledActionChip({
-  accessibilityLabel,
-  accessibilityState,
-  children,
-  disabled,
-  icon,
-  iconBubbleStyle,
-  iconColor,
-  label,
-  onPress,
-  styles,
-  title,
-}: {
-  accessibilityLabel?: string;
-  accessibilityState?: { checked?: boolean; selected?: boolean; disabled?: boolean; expanded?: boolean; busy?: boolean };
-  children?: React.ReactNode;
-  disabled?: boolean;
-  icon?: keyof typeof Feather.glyphMap;
-  iconBubbleStyle?: any;
-  iconColor?: string;
-  label: string;
-  onPress?: () => void;
-  styles: Record<string, any>;
-  title?: string;
-}) {
-  return (
-    <CardActionPressable
-      accessibilityLabel={accessibilityLabel ?? title ?? label}
-      accessibilityState={accessibilityState ?? (disabled ? { disabled: true } : undefined)}
-      disabled={disabled}
-      onPress={onPress}
-      title={title ?? label}
-      style={({ pressed }) => [
-        styles.mapActionChip,
-        pressed && !disabled && styles.iconBtnPressed,
-        disabled && styles.iconBtnDisabled,
-      ]}
-    >
-      <View style={[styles.mapActionIconBubble, iconBubbleStyle]}>
-        {children ?? (icon ? <Feather name={icon} size={16} color={iconColor} /> : null)}
-      </View>
-      <Text style={styles.mapActionLabel} numberOfLines={1}>
-        {label}
-      </Text>
-    </CardActionPressable>
-  );
-});
-
-const CardMeta = React.memo(function CardMeta({
-  showTitleInContent,
-  categoryLabel,
-  badges,
-  compact,
-  styles,
-}: {
-  showTitleInContent: boolean;
-  categoryLabel?: string | null;
-  badges: string[];
-  compact: boolean;
-  styles: Record<string, any>;
-}) {
-  const showBadges = badges.length > 0;
-  if (!categoryLabel && !showBadges) return null;
-
-  // Content layout: category is rendered as a pill in the title block above —
-  // here we only render the badges row.
-  if (showTitleInContent) {
-    if (!showBadges) return null;
-    return (
-      <View style={styles.detailRow}>
-        {badges.map((badge, index) => (
-          <View key={`${badge}-${index}`} style={styles.detailChip}>
-            <Text style={styles.detailChipText} numberOfLines={1}>
-              {badge}
-            </Text>
-          </View>
-        ))}
-      </View>
-    );
-  }
-
-  // Overlay layout: inline category + badges.
-  return (
-    <View style={styles.metaRow}>
-      {!!categoryLabel &&
-        (compact ? (
-          <View style={styles.metaChip}>
-            <Text style={styles.metaChipText} numberOfLines={1}>
-              {categoryLabel}
-            </Text>
-          </View>
-        ) : (
-          <Text style={styles.categoryText} numberOfLines={1}>
-            {categoryLabel}
-          </Text>
-        ))}
-      {showBadges &&
-        badges.map((badge, index) => (
-          <Text key={`${badge}-${index}`} style={styles.badgeText}>
-            {badge}
-          </Text>
-        ))}
-    </View>
-  );
-});
-
-const PlaceListCard: React.FC<Props> = ({
+const PlaceListCard: React.FC<PlaceListCardProps> = ({
   title,
   imageUrl,
   categoryLabel,
@@ -234,7 +38,7 @@ const PlaceListCard: React.FC<Props> = ({
   addDisabled = false,
   isAdding = false,
   isSaved = false,
-  addLabel = 'Мои точки',
+  addLabel = i18nT('map:components.places.PlaceListCard.moi_tochki_bd56c6f8'),
   width,
   imageHeight = 140,
   eagerImage = false,
@@ -264,78 +68,46 @@ const PlaceListCard: React.FC<Props> = ({
 
   const hasCoord = !!coord;
   const isCompactActionCard = compact;
-  // Unified compact card: primary actions (♥ favorite + ＋ save) live in the
-  // top-right overlay so every list card reads identically. Every secondary
-  // action (Telegram / map apps / «Открыть») collapses into a single «Ещё»
-  // overflow menu, so the action row can never balloon into a long horizontal
-  // strip on some cards and a short one on others.
-  const overlayAddInline = isCompactActionCard && addButtonPlacement === 'row';
-  // Popup parity: «Поделиться» surfaces as a small ➤ icon in the title row, so it
-  // is removed from the overflow «Навигация и действия» sheet (a share action is
-  // not a map-app) and the save action renders as a labeled tile in the row.
-  const showTitleShare = popupAligned && hasCoord && !!onShare;
-  const showSaveTile = popupAligned && !!onAddPoint;
-  // #839: saved-visual для кнопки сохранения точки (галочка + «Сохранено»).
-  const savedColor = (colors as any).success ?? colors.primaryDark ?? colors.primary;
-  const saveLabel = isSaved ? 'Сохранено' : addLabel;
-  const saveIcon: keyof typeof Feather.glyphMap | undefined = isAdding
-    ? undefined
-    : isSaved
-      ? 'check'
-      : 'bookmark';
-  const saveIconColor = isSaved ? savedColor : colors.textMuted;
-  const shareOverflowAction: ActionChip | null =
-    isCompactActionCard && !showTitleShare && hasCoord && onShare
-      ? {
-          key: 'share',
-          label: 'Telegram',
-          icon: SEMANTIC_ACTION_ICON.telegramShare,
-          onPress: onShare,
-          accessibilityLabel: 'Поделиться в Telegram',
-          title: 'Поделиться в Telegram',
-        }
-      : null;
-  const visibleMapActions = isCompactActionCard ? [] : mapActions;
-  // Popup parity: «Страница» (article) stays a visible tile in the action row
-  // (its own affordance, like the popup) instead of folding into the navigation
-  // sheet; only the map-app actions collapse into «Навигация и действия».
-  const visibleInlineActions = isCompactActionCard
-    ? popupAligned
-      ? inlineActions
-      : []
-    : inlineActions;
-  const overflowActions = isCompactActionCard
-    ? [
-        ...(shareOverflowAction ? [shareOverflowAction] : []),
-        ...mapActions,
-        ...(popupAligned ? [] : inlineActions),
-      ]
-    : [];
-  const showShareChip = !isCompactActionCard && hasCoord && !!onShare;
-  const showRowAddButton =
-    showAddButton && addButtonPlacement === 'row' && !!onAddPoint && !overlayAddInline;
-  // Popup parity: quick actions (e.g. «Маршрут») render as labeled tiles at the
-  // start of the action row instead of in the hero corner.
-  const showRowQuickActions = popupAligned && quickActions.length > 0;
-  const hasActionRow = showActionRow && (
-    showRowQuickActions ||
-    (hasCoord && !!onCopyCoord) ||
-    showShareChip ||
-    showSaveTile ||
-    visibleMapActions.length > 0 ||
-    visibleInlineActions.length > 0 ||
-    overflowActions.length > 0 ||
-    showRowAddButton
-  );
+  const {
+    hasActionRow,
+    overflowActionLabel,
+    overflowActionTitle,
+    overflowActions,
+    overlayAddInline,
+    saveIcon,
+    saveIconColor,
+    saveLabel,
+    savedColor,
+    showInlineRelatedTravelActions,
+    showRowAddButton,
+    showRowQuickActions,
+    showSaveTile,
+    showShareChip,
+    showTitleShare,
+    visibleInlineActions,
+    visibleMapActions,
+  } = buildPlaceListCardActionModel({
+    addButtonPlacement,
+    addLabel,
+    colors,
+    hasCoord,
+    inlineActions,
+    isAdding,
+    isCompactActionCard,
+    isSaved,
+    mapActions,
+    onAddPoint,
+    onCopyCoord,
+    onShare,
+    popupAligned,
+    quickActions,
+    relatedTravelUrl,
+    showActionRow,
+    showAddButton,
+    showTitleInContent,
+  });
   const openOverflowMenu = useCallback(() => setOverflowVisible(true), []);
   const closeOverflowMenu = useCallback(() => setOverflowVisible(false), []);
-  // Popup parity: in the popup-aligned points card the favorite + trip-status
-  // controls stay in the photo TOP-LEFT corner (RelatedTravelActionStack overlay
-  // variant), while the trip-status control still keeps visible status text.
-  const showInlineRelatedTravelActions =
-    !popupAligned && !!relatedTravelUrl && showTitleInContent;
-  const overflowActionLabel = mapActions.length > 0 ? 'Навигация' : 'Ещё';
-  const overflowActionTitle = mapActions.length > 0 ? 'Навигация и действия' : 'Ещё действия';
   // Top-right overlay holds the two primary affordances (♥ favorite + ＋ save)
   // on EVERY card, so the list reads as one pattern regardless of whether a
   // card has a related travel or its own photo. Related-travel cards delegate
@@ -378,9 +150,9 @@ const PlaceListCard: React.FC<Props> = ({
     <CardActionPressable
       accessibilityRole="button"
       accessibilityState={{ selected: isFavorite }}
-      accessibilityLabel={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+      accessibilityLabel={isFavorite ? i18nT('map:components.places.PlaceListCard.ubrat_iz_izbrannogo_5252f484') : i18nT('map:components.places.PlaceListCard.dobavit_v_izbrannoe_47de2856')}
       onPress={onToggleFavorite}
-      title={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+      title={isFavorite ? i18nT('map:components.places.PlaceListCard.ubrat_iz_izbrannogo_5252f484') : i18nT('map:components.places.PlaceListCard.dobavit_v_izbrannoe_47de2856')}
       style={({ pressed }) => [styles.fallbackFavButton, pressed && styles.iconBtnPressed]}
     >
       <Feather
@@ -439,7 +211,7 @@ const PlaceListCard: React.FC<Props> = ({
       imageHeight={imageHeight}
       width={width}
       testID={testID}
-      style={style}
+      style={style as React.ComponentProps<typeof UnifiedTravelCard>['style']}
       heroTitleOverlay={!showTitleInContent}
       webHoverScale={false}
       webTouchAction={webTouchAction}
@@ -468,9 +240,9 @@ const PlaceListCard: React.FC<Props> = ({
                   </Text>
                   <CardActionPressable
                     accessibilityRole="button"
-                    accessibilityLabel="Поделиться в Telegram"
+                    accessibilityLabel={i18nT('map:components.places.PlaceListCard.podelitsya_v_telegram_a5cebf19')}
                     onPress={() => void onShare()}
-                    title="Поделиться в Telegram"
+                    title={i18nT('map:components.places.PlaceListCard.podelitsya_v_telegram_a5cebf19')}
                     style={({ pressed }) => [
                       styles.titleShareButton,
                       pressed && styles.iconBtnPressed,
@@ -497,7 +269,7 @@ const PlaceListCard: React.FC<Props> = ({
 
           {showInlineRelatedTravelActions && relatedTravelUrl ? (
             <View style={styles.inlineRelatedTravelActions}>
-              <Text style={styles.inlineSectionLabel}>Статус поездки</Text>
+              <Text style={styles.inlineSectionLabel}>{i18nT('map:components.places.PlaceListCard.status_poezdki_718acbe9')}</Text>
               <RelatedTravelActionStack
                 relatedTravelUrl={relatedTravelUrl}
                 fallbackTitle={title}
@@ -528,25 +300,25 @@ const PlaceListCard: React.FC<Props> = ({
 
               {hasCoord && onCopyCoord && (
                 <LabeledActionChip
-                  accessibilityLabel="Скопировать координаты"
+                  accessibilityLabel={i18nT('map:components.places.PlaceListCard.skopirovat_koordinaty_6eaf9e07')}
                   icon="copy"
                   iconColor={colors.textMuted}
-                  label="Коорд."
+                  label={i18nT('map:components.places.PlaceListCard.koord_f65169a2')}
                   onPress={() => void onCopyCoord()}
                   styles={styles}
-                  title={coord || 'Скопировать координаты'}
+                  title={coord || i18nT('map:components.places.PlaceListCard.skopirovat_koordinaty_6eaf9e07')}
                 />
               )}
 
               {showShareChip && onShare && (
                 <LabeledActionChip
-                  accessibilityLabel="Поделиться в Telegram"
+                  accessibilityLabel={i18nT('map:components.places.PlaceListCard.podelitsya_v_telegram_a5cebf19')}
                   icon={SEMANTIC_ACTION_ICON.telegramShare}
                   iconColor={colors.textMuted}
-                  label="Telegram"
+                  label={i18nT('map:components.places.PlaceListCard.telegram_5a2f6e04')}
                   onPress={() => void onShare()}
                   styles={styles}
-                  title="Телеграм"
+                  title={i18nT('map:components.places.PlaceListCard.telegram_6d191220')}
                 />
               )}
 
@@ -802,7 +574,7 @@ const createStyles = (
     categoryPillText: {
       fontSize: compact ? 10.5 : 11.5,
       lineHeight: compact ? 13 : 15,
-      color: colors.primaryDark ?? colors.primary,
+      color: colors.primaryText,
       fontWeight: '700',
       letterSpacing: 0.4,
       textTransform: 'uppercase',
@@ -961,7 +733,7 @@ const createStyles = (
       fontSize: compact ? 12 : 13,
       fontWeight: '700',
       letterSpacing: 0.1,
-      color: colors.primaryDark ?? colors.primary,
+      color: colors.primaryText,
     },
     overflowMenuContent: {
       backgroundColor: colors.surface,

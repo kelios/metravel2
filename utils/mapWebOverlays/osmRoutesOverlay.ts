@@ -2,6 +2,8 @@ import type { BBox, OSMLineFeature } from '@/utils/overpass';
 import { bboxAreaKm2, fetchOsmRoutes, overpassToLines } from '@/utils/overpass';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { fetchBackendOverlay } from './backendOverlaysAdapter';
+import { translate as i18nT } from '@/i18n'
+
 
 type LeafletMap = any;
 
@@ -163,7 +165,7 @@ export const attachOsmRoutesOverlay = (L: any, map: LeafletMap, opts?: OsmRoutes
         <div style="max-width:260px">
           <div style="font-weight:800;margin-bottom:4px">${escapeHtml(line.title)}</div>
           ${routeType ? `<div style="font-size:12px;opacity:0.8">${escapeHtml(String(routeType))}</div>` : ''}
-          ${line.osmUrl ? `<div style="margin-top:6px"><a href="${line.osmUrl}" target="_blank" rel="noopener noreferrer">Открыть в OpenStreetMap</a></div>` : ''}
+          ${line.osmUrl ? `<div style="margin-top:6px"><a href="${line.osmUrl}" target="_blank" rel="noopener noreferrer">${i18nT("shared:utils.mapWebOverlays.osmRoutesOverlay.div_style_margin_top_6px_a_href_value1_targe_6d82870c.text01")}</a></div>` : ''}
         </div>
       `;
 

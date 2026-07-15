@@ -9,6 +9,8 @@ import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import UnreadBadge from './UnreadBadge'
 import NavigationIcon from './NavigationIcon'
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
   visible: boolean
@@ -97,13 +99,13 @@ export default function CustomHeaderMobileMenu({
     ? [
         {
           key: 'login',
-          label: 'Войти',
+          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.voyti_ff34a63d'),
           icon: 'log-in',
           onPress: () => onUserAction(buildLoginHref({ intent: 'menu' }) as any),
         },
         {
           key: 'registration',
-          label: 'Зарегистрироваться',
+          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.zaregistrirovatsya_42755889'),
           icon: 'user-plus',
           onPress: () => {
             trackRegisterCtaClicked({ source: 'mobile_menu', intent: 'menu', authState: 'guest' })
@@ -114,36 +116,36 @@ export default function CustomHeaderMobileMenu({
     : [
         {
           key: 'profile',
-          label: `Личный кабинет${favoritesCount > 0 ? ` (${favoritesCount})` : ''}`,
+          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.lichnyy_kabinet_value1_ea3db966', { value1: favoritesCount > 0 ? ` (${favoritesCount})` : '' }),
           icon: 'user',
           onPress: () => onUserAction('/profile'),
-          accessibilityLabel: username ? `Личный кабинет ${username}` : 'Личный кабинет',
+          accessibilityLabel: username ? i18nT('navigation:components.layout.CustomHeaderMobileMenu.lichnyy_kabinet_value1_e241654e', { value1: username }) : i18nT('navigation:components.layout.CustomHeaderMobileMenu.lichnyy_kabinet_b728bc9e'),
         },
         {
           key: 'new-travel',
-          label: 'Добавить путешествие',
+          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.dobavit_puteshestvie_f5877871'),
           icon: 'plus-circle',
           onPress: () => onUserAction('/travel/new'),
         },
         {
           key: 'my-travels',
-          label: 'Мои путешествия',
+          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.moi_puteshestviya_353f3065'),
           icon: 'map',
           onPress: onMyTravels ? onMyTravels : () => onUserAction('/metravel'),
         },
         {
           key: 'user-points',
-          label: 'Мои точки',
+          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.moi_tochki_9da59ffd'),
           icon: 'map-pin',
           onPress: () => onUserAction('/userpoints'),
         },
         {
           key: 'messages',
-          label: unreadCount > 0 ? `Сообщения (${unreadCount})` : 'Сообщения',
+          label: unreadCount > 0 ? i18nT('navigation:components.layout.CustomHeaderMobileMenu.soobscheniya_value1_155d128d', { value1: unreadCount }) : i18nT('navigation:components.layout.CustomHeaderMobileMenu.soobscheniya_1fe9d06d'),
           icon: 'mail',
           onPress: () => onUserAction('/messages'),
           accessibilityLabel:
-            unreadCount > 0 ? `Сообщения, ${unreadCount} непрочитанных` : 'Сообщения',
+            unreadCount > 0 ? i18nT('navigation:components.layout.CustomHeaderMobileMenu.soobscheniya_value1_neprochitannyh_06035ae9', { value1: unreadCount }) : i18nT('navigation:components.layout.CustomHeaderMobileMenu.soobscheniya_1fe9d06d'),
           iconColor: unreadCount > 0 ? colors.primary : colors.textMuted,
           labelStyle: unreadCount > 0 ? { fontWeight: '600', color: colors.text } : undefined,
           iconSlotStyle: { position: 'relative' },
@@ -153,7 +155,7 @@ export default function CustomHeaderMobileMenu({
         // фича доступна только на десктопе (см. AccountMenu). На мобильном пункт убран.
         {
           key: 'logout',
-          label: 'Выход',
+          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.vyhod_0a810aed'),
           icon: 'log-out',
           onPress: onLogout,
         },
@@ -163,7 +165,7 @@ export default function CustomHeaderMobileMenu({
   // включило бы /articles в TOP_LEVEL_TAB_PATHS и скрыло контекст-бар с кнопкой «Назад».
   const articlesNavItem: HeaderNavItem = {
     path: '/articles',
-    label: 'Статьи',
+    label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.stati_bb6d41b4'),
     icon: 'file-text',
     priority: 'secondary',
   }
@@ -201,7 +203,7 @@ export default function CustomHeaderMobileMenu({
           collapsable={false}
           onPress={onOverlayPress}
           accessibilityRole="button"
-          accessibilityLabel="Закрыть меню"
+          accessibilityLabel={i18nT('navigation:components.layout.CustomHeaderMobileMenu.zakryt_menyu_fd90a4da')}
         >
           <View style={{ flex: 1 }} collapsable={false} />
         </Pressable>
@@ -210,15 +212,15 @@ export default function CustomHeaderMobileMenu({
           ref={panelRef}
           style={styles.modalContent}
           testID="mobile-menu-panel"
-          {...({ role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Меню навигации' } as any)}
+          {...({ role: 'dialog', 'aria-modal': 'true', 'aria-label': i18nT('navigation:components.layout.CustomHeaderMobileMenu.menyu_navigatsii_039574df') } as any)}
         >
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Меню</Text>
+            <Text style={styles.modalTitle}>{i18nT('navigation:components.layout.CustomHeaderMobileMenu.menyu_cb359c1b')}</Text>
             <Pressable
               onPress={onRequestClose}
               style={styles.modalCloseButton}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть меню"
+              accessibilityLabel={i18nT('navigation:components.layout.CustomHeaderMobileMenu.zakryt_menyu_fd90a4da')}
               testID="mobile-menu-close"
             >
               <Feather name="x" size={22} color={colors.text} />
@@ -226,23 +228,23 @@ export default function CustomHeaderMobileMenu({
           </View>
 
           <ScrollView style={styles.modalNavContainer} keyboardShouldPersistTaps="handled">
-            <Text style={styles.modalSectionTitle}>Аккаунт</Text>
+            <Text style={styles.modalSectionTitle}>{i18nT('navigation:components.layout.CustomHeaderMobileMenu.akkaunt_39bf2f02')}</Text>
             {accountItems.map((item) => renderMenuItem(item, styles, colors))}
 
             <View style={styles.modalDivider} />
-            <Text style={styles.modalSectionTitle}>Навигация</Text>
+            <Text style={styles.modalSectionTitle}>{i18nT('navigation:components.layout.CustomHeaderMobileMenu.navigatsiya_15727585')}</Text>
             {navigationItems.map((item) => renderMenuItem(item, styles, colors))}
 
             {themeToggleNode ? (
               <>
                 <View style={styles.modalDivider} />
-                <Text style={styles.modalSectionTitle}>Тема</Text>
+                <Text style={styles.modalSectionTitle}>{i18nT('navigation:components.layout.CustomHeaderMobileMenu.tema_cfc0350a')}</Text>
                 <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>{themeToggleNode}</View>
               </>
             ) : null}
 
             <View style={styles.modalDivider} />
-            <Text style={styles.modalSectionTitle}>Документы</Text>
+            <Text style={styles.modalSectionTitle}>{i18nT('navigation:components.layout.CustomHeaderMobileMenu.dokumenty_48a6fa0f')}</Text>
             {documentItems.map((item) => renderMenuItem(item, styles, colors))}
           </ScrollView>
         </View>

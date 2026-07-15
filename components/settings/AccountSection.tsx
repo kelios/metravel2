@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import type { useThemedColors } from '@/hooks/useTheme';
 import type { createSettingsStyles } from '@/components/screens/settings/settings.styles';
+import { translate as i18nT } from '@/i18n'
+
 
 type Colors = ReturnType<typeof useThemedColors>;
 type Styles = ReturnType<typeof createSettingsStyles>;
@@ -30,8 +32,8 @@ export default function AccountSection({
                     <Feather name="user" size={18} color={colors.primaryDark} />
                 </View>
                 <View style={styles.cardText}>
-                    <Text style={styles.cardTitle}>{username || 'Пользователь'}</Text>
-                    <Text style={styles.cardMeta}>Вы вошли в аккаунт</Text>
+                    <Text style={styles.cardTitle}>{username || i18nT('profile:components.settings.AccountSection.defaultUserName')}</Text>
+                    <Text style={styles.cardMeta}>{i18nT('profile:components.settings.AccountSection.vy_voshli_v_akkaunt_903ff030')}</Text>
                 </View>
             </View>
 
@@ -39,22 +41,22 @@ export default function AccountSection({
                 style={[styles.dangerButton, globalFocusStyles.focusable]}
                 onPress={handleLogout}
                 accessibilityRole="button"
-                accessibilityLabel="Выйти из аккаунта"
+                accessibilityLabel={i18nT('profile:components.settings.AccountSection.vyyti_iz_akkaunta_30eec566')}
                 {...Platform.select({ web: { cursor: 'pointer' } })}
             >
                 <Feather name="log-out" size={18} color={colors.danger} />
-                <Text style={styles.dangerButtonText}>Выйти</Text>
+                <Text style={styles.dangerButtonText}>{i18nT('profile:components.settings.AccountSection.vyyti_790a2d1c')}</Text>
             </Pressable>
 
             <Pressable
                 style={[styles.dangerButton, styles.deleteAccountButton, globalFocusStyles.focusable]}
                 onPress={handleDeleteAccount}
                 accessibilityRole="button"
-                accessibilityLabel="Удалить аккаунт"
+                accessibilityLabel={i18nT('profile:components.settings.AccountSection.udalit_akkaunt_35f7b30c')}
                 {...Platform.select({ web: { cursor: 'pointer' } })}
             >
                 <Feather name="user-x" size={18} color={colors.textOnPrimary} />
-                <Text style={styles.deleteAccountButtonText}>Удалить аккаунт</Text>
+                <Text style={styles.deleteAccountButtonText}>{i18nT('profile:components.settings.AccountSection.udalit_akkaunt_35f7b30c')}</Text>
             </Pressable>
         </View>
     );

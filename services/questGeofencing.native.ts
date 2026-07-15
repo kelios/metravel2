@@ -11,6 +11,8 @@
 
 import { devWarn } from '@/utils/logger';
 import { presentLocalQuestNotification } from '@/services/notifications';
+import { translate as i18nT } from '@/i18n'
+
 
 export type GeofenceStep = {
   id: string;
@@ -125,8 +127,8 @@ const notifiedRegions = new Set<string>();
       const where = step.title ? ` «${step.title}»` : '';
       void presentLocalQuestNotification(
         `quest-geofence-${quest.questId}-${regionId}`,
-        'Вы на месте — откройте загадку',
-        `Вы подошли к точке${where} квеста «${quest.title}». Откройте загадку!`,
+        i18nT('shared:services.questGeofencing.vy_na_meste_otkroyte_zagadku_09e0702f'),
+        i18nT('shared:services.questGeofencing.vy_podoshli_k_tochke_value1_kvesta_value2_ot_5709191a', { value1: where, value2: quest.title }),
         `${quest.cityId}/${quest.questId}`,
       );
     });

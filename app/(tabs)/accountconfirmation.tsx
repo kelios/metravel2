@@ -8,6 +8,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { translate as i18nT } from '@/i18n'
+
 
 export default function AccountConfirmation() {
     const [loading, setLoading] = useState(true);
@@ -25,7 +27,7 @@ export default function AccountConfirmation() {
         const hashStr = Array.isArray(hash) ? hash[0] : hash;
         if (!hashStr) {
             // Нет/невалидный hash — не оставляем бесконечный спиннер.
-            setError('Ссылка подтверждения недействительна или устарела.');
+            setError(i18nT('auth:app.tabs.accountconfirmation.ssylka_podtverzhdeniya_nedeystvitelna_ili_us_529ee053'));
             setLoading(false);
             return;
         }
@@ -43,11 +45,11 @@ export default function AccountConfirmation() {
                     setIsAuthenticated(true);
                     router.replace('/'); // ✅ переходим на главную
                 } else {
-                    setError('Не удалось подтвердить учетную запись. ' + ((response as any)?.non_field_errors?.[0] ?? ''));
+                    setError(i18nT('authStatic:accountConfirmation.failed', { details: (response as any)?.non_field_errors?.[0] ?? '' }));
                 }
             } catch (err: any) {
                 if (!active) return;
-                setError('Произошла ошибка при подтверждении учетной записи. ' + (err?.message ?? ''));
+                setError(i18nT('authStatic:accountConfirmation.error', { details: err?.message ?? '' }));
             } finally {
                 if (active) setLoading(false);
             }
@@ -65,8 +67,8 @@ export default function AccountConfirmation() {
             {isFocused && (
                 <InstantSEO
                     headKey="account-confirmation"
-                    title="Подтверждение аккаунта | Metravel"
-                    description="Подтверждение учётной записи"
+                    title={i18nT('auth:app.tabs.accountconfirmation.podtverzhdenie_akkaunta_metravel_61934574')}
+                    description={i18nT('auth:app.tabs.accountconfirmation.podtverzhdenie_uchetnoy_zapisi_0b22626c')}
                     canonical={buildCanonicalUrl('/accountconfirmation')}
                     robots="noindex, nofollow"
                 />
@@ -90,11 +92,10 @@ export default function AccountConfirmation() {
                                 style={styles.button}
                                 contentStyle={styles.buttonContent}
                             >
-                                На главную
-                            </Button>
+                                {i18nT('auth:app.tabs.accountconfirmation.na_glavnuyu_80e75d20')}</Button>
                         </View>
                     ) : (
-                        <Text style={styles.successText}>Учетная запись успешно подтверждена!</Text>
+                        <Text style={styles.successText}>{i18nT('auth:app.tabs.accountconfirmation.uchetnaya_zapis_uspeshno_podtverzhdena_cf1db801')}</Text>
                     )}
                 </Card>
             </View>
@@ -135,7 +136,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         ...colors.shadows.medium,
     },
     errorText: {
-        color: colors.danger,
+        color: colors.dangerDark,
         marginBottom: 20,
         textAlign: 'center',
     },

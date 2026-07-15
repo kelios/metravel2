@@ -25,6 +25,8 @@ import {
 import { openExternalUrl } from '@/utils/externalLinks';
 import { trackRouteExported } from '@/utils/tripAnalytics';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   trip: PlannedTrip;
@@ -56,7 +58,7 @@ export const buildTripRouteExportInput = (trip: PlannedTrip): RouteExportInput =
   return {
     name: trip.title,
     description: approximate
-      ? 'Маршрут экспортирован как приблизительный: проверьте дорогу или тропу перед поездкой.'
+      ? i18nT('trips:components.trips.planning.TripRouteExportMenu.marshrut_eksportirovan_kak_priblizitelnyy_pr_d492205e')
       : trip.description || undefined,
     waypoints,
     track: routedTrack ?? waypointTrack,
@@ -89,15 +91,15 @@ function TripRouteExportMenu({ trip }: Props) {
       const file = format === 'gpx' ? buildGpx(input) : buildKml(input);
       const saved = await saveRouteExportFile(
         file,
-        format === 'gpx' ? 'Сохранить маршрут GPX' : 'Сохранить маршрут KML',
+        format === 'gpx' ? i18nT('trips:components.trips.planning.TripRouteExportMenu.sohranit_marshrut_gpx_da908e9f') : i18nT('trips:components.trips.planning.TripRouteExportMenu.sohranit_marshrut_kml_0a6163aa'),
       );
       if (!saved) {
-        setExportError(`Не удалось создать и передать файл ${format.toUpperCase()}.`);
+        setExportError(i18nT('trips:components.trips.planning.TripRouteExportMenu.ne_udalos_sozdat_i_peredat_fayl_value1_7bf4c699', { value1: format.toUpperCase() }));
         return;
       }
       trackRouteExported(trip.id, format);
     } catch {
-      setExportError(`Не удалось создать и передать файл ${format.toUpperCase()}.`);
+      setExportError(i18nT('trips:components.trips.planning.TripRouteExportMenu.ne_udalos_sozdat_i_peredat_fayl_value1_7bf4c699', { value1: format.toUpperCase() }));
     } finally {
       setExportingAction(null);
     }
@@ -119,16 +121,16 @@ function TripRouteExportMenu({ trip }: Props) {
     try {
       const saved = await saveRouteExportFile(
         buildGpx(input),
-        `Сохранить GPX для ${descriptor.label}`,
+        i18nT('trips:components.trips.planning.TripRouteExportMenu.sohranit_gpx_dlya_value1_4b3e9e5c', { value1: descriptor.label }),
       );
       if (!saved) {
-        setExportError(`Не удалось подготовить GPX для ${descriptor.label}.`);
+        setExportError(i18nT('trips:components.trips.planning.TripRouteExportMenu.ne_udalos_podgotovit_gpx_dlya_value1_97c06ef1', { value1: descriptor.label }));
         return;
       }
       if (descriptor.importUrl) await openExternalUrl(descriptor.importUrl);
       trackRouteExported(trip.id, descriptor.id);
     } catch {
-      setExportError(`Не удалось подготовить GPX для ${descriptor.label}.`);
+      setExportError(i18nT('trips:components.trips.planning.TripRouteExportMenu.ne_udalos_podgotovit_gpx_dlya_value1_97c06ef1', { value1: descriptor.label }));
     } finally {
       setExportingAction(null);
     }
@@ -136,22 +138,21 @@ function TripRouteExportMenu({ trip }: Props) {
 
   return (
     <View style={styles.wrap} testID="trip-route-export">
-      <Text style={styles.heading}>Экспорт маршрута</Text>
+      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.TripRouteExportMenu.eksport_marshruta_3bdeb871')}</Text>
 
       {disabled ? (
         <Text style={styles.hint}>
-          Добавьте минимум две точки с координатами, чтобы экспортировать маршрут.
-        </Text>
+          {i18nT('trips:components.trips.planning.TripRouteExportMenu.dobavte_minimum_dve_tochki_s_koordinatami_ch_4a19e760')}</Text>
       ) : null}
       {!disabled && approximate ? (
         <Text style={styles.warning} testID="trip-route-export-approximate">
-          {approximateHint ?? 'Маршрут приблизительный: GPX/KML можно скачать, но линию нужно проверить перед поездкой.'}
+          {approximateHint ?? i18nT('tripsStatic:route.approximateExportWarning')}
         </Text>
       ) : null}
 
       <View style={styles.row}>
         <Button
-          label={isWeb ? 'Скачать GPX' : 'Поделиться GPX'}
+          label={isWeb ? i18nT('trips:components.trips.planning.TripRouteExportMenu.skachat_gpx_cc6c1a54') : i18nT('trips:components.trips.planning.TripRouteExportMenu.podelitsya_gpx_f240186b')}
           onPress={() => void handleSaveExport('gpx')}
           variant="secondary"
           disabled={disabled || exportingAction !== null}
@@ -159,7 +160,7 @@ function TripRouteExportMenu({ trip }: Props) {
           testID="trip-route-export-gpx"
         />
         <Button
-          label={isWeb ? 'Скачать KML' : 'Поделиться KML'}
+          label={isWeb ? i18nT('trips:components.trips.planning.TripRouteExportMenu.skachat_kml_30f6a059') : i18nT('trips:components.trips.planning.TripRouteExportMenu.podelitsya_kml_5f084c27')}
           onPress={() => void handleSaveExport('kml')}
           variant="secondary"
           disabled={disabled || exportingAction !== null}
@@ -170,9 +171,7 @@ function TripRouteExportMenu({ trip }: Props) {
 
       {!isWeb ? (
         <Text style={styles.hint} testID="trip-route-export-native-import-hint">
-          Для Garmin Connect и Komoot сначала откроется системное меню сохранения GPX,
-          затем — страница импорта выбранного сервиса.
-        </Text>
+          {i18nT('trips:components.trips.planning.TripRouteExportMenu.dlya_garmin_connect_i_komoot_snachala_otkroe_2647f7ca')}</Text>
       ) : null}
 
       {exportError ? (
@@ -181,7 +180,7 @@ function TripRouteExportMenu({ trip }: Props) {
         </Text>
       ) : null}
 
-      <Text style={styles.label}>Открыть в навигаторе</Text>
+      <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripRouteExportMenu.otkryt_v_navigatore_8d026e76')}</Text>
       <View style={styles.row}>
         {ROUTE_NAVIGATORS.map((descriptor) => (
           <Button

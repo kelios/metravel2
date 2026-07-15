@@ -9,6 +9,7 @@ import { WEB_MAP_BASE_LAYERS } from '@/config/mapWebLayers';
 import { createLeafletLayer } from '@/utils/mapWebLayers';
 import { beginProgrammaticMapMove } from './programmaticMoveSignal';
 import type { OsmPoiCategory } from '@/utils/overpass';
+import type { LeafletControlRef } from './leafletBridgeTypes';
 
 const MOBILE_WEB_USER_FOCUS_MAX_WIDTH = 768;
 const MOBILE_WEB_USER_FOCUS_OFFSET: [number, number] = [84, -92];
@@ -29,7 +30,7 @@ interface UseMapApiProps {
   routePoints: [number, number][];
   leafletBaseLayerRef: React.MutableRefObject<any>;
   leafletOverlayLayersRef: React.MutableRefObject<Map<string, any>>;
-  leafletControlRef: React.MutableRefObject<any>;
+  leafletControlRef: LeafletControlRef;
   onRequestUserLocationFocus?: () => void | Promise<void>;
 }
 
@@ -146,15 +147,15 @@ export function useMapApi({
                   map.removeLayer(layer);
                 }
 
-                const overpassController = (leafletControlRef as any).overpassController;
-                if (overpassController?.layer === layer) {
+                const overpassController = leafletControlRef.overpassController;
+                if (overpassController && overpassController.layer === layer) {
                   if (enabled) overpassController.start?.();
                   else overpassController.stop?.();
                 }
 
-                const controllers: Map<string, any> = (leafletControlRef as any).overlayControllers;
+                const controllers = leafletControlRef.overlayControllers;
                 const controller = controllers?.get?.(id);
-                if (controller?.layer === layer) {
+                if (controller && controller.layer === layer) {
                   if (enabled) controller.start?.();
                   else controller.stop?.();
                 }
@@ -234,8 +235,7 @@ export function useMapApi({
 
           // Продьюсер (Map.web.tsx) пишет markerByCoord напрямую на объект ref,
           // а не в .current — читаем оттуда же.
-          const markerIndex: Map<string, any> | undefined =
-            (leafletControlRef as any)?.markerByCoord;
+          const markerIndex = leafletControlRef.markerByCoord;
 
           const tryFindMarker = () => {
             const parsed = CoordinateConverter.fromLooseString(rawKey);
@@ -374,7 +374,7 @@ export function useMapApi({
           }
 
           // Get controller from the unified overlayControllers map
-          const controllers: Map<string, any> = (leafletControlRef as any).overlayControllers;
+          const controllers = leafletControlRef.overlayControllers;
           const controller = controllers?.get?.(id);
 
           if (controller) {
@@ -404,7 +404,7 @@ export function useMapApi({
       },
       setOsmPoiCategories: (categories: string[]) => {
         try {
-          const controllers: Map<string, any> = (leafletControlRef as any).overlayControllers;
+          const controllers = leafletControlRef.overlayControllers;
           const controller = controllers?.get?.('osm-poi');
           controller?.setCategories?.(categories as unknown as OsmPoiCategory[]);
         } catch {

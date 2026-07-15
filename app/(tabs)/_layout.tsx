@@ -4,6 +4,7 @@ import { Platform, View, Animated } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
 import CustomHeader from '@/components/layout/CustomHeader';
 import { isQuestDetailHeaderPath, shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
+import { useHydrationReady } from '@/hooks/useHydrationReady';
 
 // Defensive lazy imports: fallback to empty component if module resolution fails
 const EmptyFallback = () => null;
@@ -110,8 +111,9 @@ const shouldHideHeaderForMap = (pathname: string): boolean => {
     return window.innerWidth < MAP_HEADER_MOBILE_BREAKPOINT;
 };
 
-const Header = React.memo(function Header() {
+const Header = React.memo(function Header({ isNavigationTarget }: { isNavigationTarget: boolean }) {
     const pathname = usePathname() || '/';
+    const hydrationReady = useHydrationReady();
     const [, setVariant] = useState<HeaderVariant>(() => getStaticHeaderVariant(pathname));
     // Mobile-only: re-evaluate header suppression on resize/route so the map tab
     // drops the global header bar once we know the viewport is mobile.
@@ -123,14 +125,15 @@ const Header = React.memo(function Header() {
     );
 
     useEffect(() => {
+        if (!hydrationReady) return;
         const next = getHeaderVariant(pathname);
         setVariant(next);
         setMeasuredHeight(readCachedHeaderHeight(next));
         setHideForMap(shouldHideHeaderForMap(pathname));
-    }, [pathname]);
+    }, [hydrationReady, pathname]);
 
     useEffect(() => {
-        if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+        if (!hydrationReady || Platform.OS !== 'web' || typeof window === 'undefined') return;
         const onResize = () => {
             const next = getHeaderVariant(pathname);
             setVariant((prev) => {
@@ -145,7 +148,7 @@ const Header = React.memo(function Header() {
         };
         window.addEventListener('resize', onResize);
         return () => window.removeEventListener('resize', onResize);
-    }, [pathname]);
+    }, [hydrationReady, pathname]);
 
     const handleHeaderHeight = useCallback((h: number) => {
         if (h <= 0) return;
@@ -167,13 +170,16 @@ const Header = React.memo(function Header() {
     if (Platform.OS === 'web') {
         return (
             <View style={{ height: measuredHeight }}>
-                <CustomHeader onHeightChange={handleHeaderHeight} />
+                <CustomHeader
+                    onHeightChange={handleHeaderHeight}
+                    isNavigationTarget={isNavigationTarget}
+                />
             </View>
         );
     }
 
     return (
-      <CustomHeader />
+      <CustomHeader isNavigationTarget={isNavigationTarget} />
     );
 });
 
@@ -206,7 +212,12 @@ export default function TabLayout() {
                 backBehavior="history"
                 screenOptions={{
                     tabBarStyle: tabBarHiddenStyle,
-                    header: () => <Header />, // кастомный заголовок
+                    // React Navigation keeps the previous screen header mounted during
+                    // transitions. Only the focused header may own the skip-link target;
+                    // otherwise redirect routes briefly duplicate `main-navigation`.
+                    header: ({ navigation }) => (
+                        <Header isNavigationTarget={navigation.isFocused()} />
+                    ),
                     lazy: true,               // экраны создаются по первому фокусу
                     freezeOnBlur: false,      // не замораживаем экраны при потере фокуса
                 }}
@@ -232,7 +243,7 @@ export default function TabLayout() {
                 <Tabs.Screen name="quests/[city]/[questId]" options={HIDDEN} />
                 <Tabs.Screen name="trips/index" options={HIDDEN} />
                 <Tabs.Screen name="trips/my" options={HIDDEN} />
-                <Tabs.Screen name="trips/[tripId]" options={HIDDEN} />
+                <Tabs.Screen name="trips/[id]" options={HIDDEN} />
                 <Tabs.Screen name="trips/community" options={HIDDEN} />
                 <Tabs.Screen name="trips/plan/index" options={HIDDEN} />
                 <Tabs.Screen name="trips/plan/create" options={HIDDEN} />

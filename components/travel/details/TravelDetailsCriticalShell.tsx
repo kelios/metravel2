@@ -24,7 +24,6 @@ import {
 
 import type { AnchorsMap } from './TravelDetailsTypes';
 import TravelDetailsSkeletonOverlay from './TravelDetailsSkeletonOverlay';
-import TravelAuthorQuickLink from './TravelAuthorQuickLink';
 import TravelDetailsHeroDeferredColumn, {
   TravelDetailsContentBlock,
   TravelDetailsHeroBlock,
@@ -124,14 +123,13 @@ export default function TravelDetailsCriticalShell({
 }: TravelDetailsCriticalShellProps) {
   const insets = useSafeAreaInsetsSafe();
 
-  // Drop the SSG-injected title nodes once the real React <h1> has mounted:
-  //  - the sr-only `<h1 data-ssg-travel-h1>` added to #root after the static export
-  //    (React never owns it during hydration, so it would survive as a second H1);
-  //  - the visible `.ssg-travel-h1` skeleton placeholder, which no longer overlaps
-  //    the React heading and would otherwise linger/flash as a duplicate title.
+  // Drop the SSG-injected sr-only heading once the real React <h1> has mounted.
+  // The visible `.ssg-travel-h1` belongs to the fixed SSG shell and must remain
+  // until that shell is torn down; removing it early shifts the crawlable SSG
+  // article underneath and is counted as CLS even while the overlay is visible.
   useEffect(() => {
     if (Platform.OS !== 'web' || !travel) return;
-    const stale = document.querySelectorAll('h1[data-ssg-travel-h1], .ssg-travel-h1');
+    const stale = document.querySelectorAll('h1[data-ssg-travel-h1]');
     stale.forEach((node) => node.parentNode?.removeChild(node));
   }, [travel]);
 
@@ -252,7 +250,6 @@ export default function TravelDetailsCriticalShell({
       ? [
           <View key="hero" style={contentWrapperStyle} collapsable={false}>
             {topNotice}
-            <TravelAuthorQuickLink travel={travel} />
             <TravelDetailsHeroBlock
               travel={travel}
               anchors={anchors}

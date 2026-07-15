@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface MapLegendProps {
   showRouteMode?: boolean;
@@ -20,29 +22,29 @@ function MapLegend({ showRouteMode = false }: MapLegendProps) {
         icon: 'map-pin',
         color: colors.warning,
         background: colors.warningLight,
-        label: 'Путешествия',
-        description: 'Места для посещения',
+        label: i18nT('map:components.MapPage.MapLegend.puteshestviya_ceccab46'),
+        description: i18nT('map:components.MapPage.MapLegend.mesta_dlya_posescheniya_3e19e009'),
       },
       {
         icon: 'map-pin',
         color: colors.success,
         background: colors.successLight,
-        label: 'Старт',
-        description: 'Начало маршрута',
+        label: i18nT('map:components.MapPage.MapLegend.start_3573c517'),
+        description: i18nT('map:components.MapPage.MapLegend.nachalo_marshruta_be91b36f'),
       },
       {
         icon: 'map-pin',
         color: colors.danger,
         background: colors.dangerLight,
-        label: 'Финиш',
-        description: 'Конец маршрута',
+        label: i18nT('map:components.MapPage.MapLegend.finish_79e86417'),
+        description: i18nT('map:components.MapPage.MapLegend.konets_marshruta_454a7658'),
       },
       {
         icon: 'navigation',
         color: colors.info,
         background: colors.infoLight,
-        label: 'Ваше местоположение',
-        description: 'Текущая позиция',
+        label: i18nT('map:components.MapPage.MapLegend.vashe_mestopolozhenie_9ef80275'),
+        description: i18nT('map:components.MapPage.MapLegend.tekuschaya_pozitsiya_9113c6fc'),
       },
     ];
 
@@ -52,8 +54,8 @@ function MapLegend({ showRouteMode = false }: MapLegendProps) {
         icon: 'trending-up',
         color: colors.accent,
         background: colors.accentLight,
-        label: 'Маршрут',
-        description: 'Построенный путь',
+        label: i18nT('map:components.MapPage.MapLegend.marshrut_247e30ee'),
+        description: i18nT('map:components.MapPage.MapLegend.postroennyy_put_52f0be48'),
       });
     }
 
@@ -66,17 +68,17 @@ function MapLegend({ showRouteMode = false }: MapLegendProps) {
     <View
       style={[styles.container, isMobile && styles.containerMobile]}
       role="region"
-      accessibilityLabel="Легенда карты"
+      accessibilityLabel={i18nT('map:components.MapPage.MapLegend.legenda_karty_dd352994')}
     >
       <Pressable
         style={({ pressed }) => [styles.header, collapsed && styles.headerCollapsed, pressed && { opacity: 0.7 }]}
         onPress={() => setCollapsed((v) => !v)}
         accessibilityRole="button"
-        accessibilityLabel={collapsed ? 'Показать легенду' : 'Скрыть легенду'}
+        accessibilityLabel={collapsed ? i18nT('map:components.MapPage.MapLegend.pokazat_legendu_14943ba1') : i18nT('map:components.MapPage.MapLegend.skryt_legendu_8a28fd89')}
         accessibilityState={{ expanded: !collapsed }}
       >
         <Feather name="info" size={16} color={colors.textMuted} />
-        <Text style={styles.title} accessibilityRole="header">Легенда карты</Text>
+        <Text style={styles.title} accessibilityRole="header">{i18nT('map:components.MapPage.MapLegend.legenda_karty_dd352994')}</Text>
         <Feather name={collapsed ? 'chevron-down' : 'chevron-up'} size={14} color={colors.textMuted} />
       </Pressable>
       {!collapsed && (

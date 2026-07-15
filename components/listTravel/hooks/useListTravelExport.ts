@@ -3,6 +3,8 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import type { ExportConfig } from '@/types/pdf-export';
+import { translate as i18nT } from '@/i18n'
+
 
 interface UseListTravelExportOptions {
   ownerName?: string | null;
@@ -129,7 +131,7 @@ export function useListTravelExport(
 
   const baseSettings = useMemo<BookSettings>(
     () => ({
-      title: normalizedOwnerName ? `Путешествия ${normalizedOwnerName}` : 'Мои путешествия',
+      title: normalizedOwnerName ? i18nT('travel:components.listTravel.hooks.useListTravelExport.puteshestviya_value1_0626d74c', { value1: normalizedOwnerName }) : i18nT('travel:components.listTravel.hooks.useListTravelExport.moi_puteshestviya_ae41dad8'),
       subtitle: '',
       coverType: 'auto',
       template: 'minimal',

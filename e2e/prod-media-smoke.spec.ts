@@ -182,12 +182,13 @@ test.describe('Production Media Loading Smoke Test', () => {
 
     // Group failures by error code
     const failuresByCode = imageFailures.reduce((acc, f) => {
-      if (!acc[f.status]) acc[f.status] = [];
-      acc[f.status].push(f.url);
+      const key = String(f.status);
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(f.url);
       return acc;
-    }, {} as Record<number, string[]>);
+    }, {} as Record<string, string[]>);
 
-    Object.entries(failuresByCode).forEach(([code, urls]) => {
+    Object.entries<string[]>(failuresByCode).forEach(([code, urls]) => {
       console.log(`\nHTTP ${code}: ${urls.length} failures`);
       urls.slice(0, 2).forEach((url) => {
         console.log(`  - ${url.substring(0, 100)}`);
@@ -294,7 +295,7 @@ test.describe('Production Media Loading Smoke Test', () => {
         return acc;
       }, {} as Record<string, string[]>);
 
-      Object.entries(grouped).forEach(([code, urls]) => {
+      Object.entries<string[]>(grouped).forEach(([code, urls]) => {
         console.log(`\n  HTTP ${code}: ${urls.length} failures`);
         urls.slice(0, 3).forEach((url) => {
           console.log(`    - ${url.substring(0, 100)}`);

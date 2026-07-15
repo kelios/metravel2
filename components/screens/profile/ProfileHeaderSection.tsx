@@ -5,6 +5,8 @@ import type { ProfileHeaderActionKey } from '@/components/profile/ProfileHeaderQ
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import Button from '@/components/ui/Button';
 import type { createProfileScreenStyles } from './profileScreen.styles';
+import { translate as i18nT } from '@/i18n'
+
 
 type ProfileScreenStyles = ReturnType<typeof createProfileScreenStyles>;
 
@@ -96,7 +98,7 @@ export function ProfileHeaderSection({
         <View style={styles.tabActions}>
           <View style={styles.tabActionsRow}>
             <Button
-              label="Очистить"
+              label={i18nT('profile:components.screens.profile.ProfileHeaderSection.ochistit_0cf8b203')}
               onPress={handleClearActiveTab}
               variant="danger"
               size="sm"

@@ -11,6 +11,8 @@ import type { MapClustersFilters } from '@/api/map';
 import type { MapMovePayload } from './Map/types';
 import type { ComponentType } from 'react';
 import { isFallbackMinskCenter } from './Map/fallbackCenter';
+import { translate as i18nT } from '@/i18n'
+
 
 type LatLng = { latitude: number; longitude: number };
 
@@ -59,7 +61,7 @@ interface MapPanelProps {
 }
 
 /** Плейсхолдер для нативных платформ или во время загрузки карты */
-function Placeholder({ text = 'Карта доступна только в браузере', showSkeleton = false }: { text?: string; showSkeleton?: boolean }) {
+function Placeholder({ text = i18nT('map:components.MapPage.MapPanel.karta_dostupna_tolko_v_brauzere_5c48664d'), showSkeleton = false }: { text?: string; showSkeleton?: boolean }) {
     const themeColors = useThemedColors();
 
     if (showSkeleton) {
@@ -192,7 +194,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
     return (
         <View style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}>
             <MapErrorBoundary onError={handleMapError}>
-                <Suspense fallback={<Placeholder text="Инициализация карты…" showSkeleton={true} />}>
+                <Suspense fallback={<Placeholder text={i18nT('map:components.MapPage.MapPanel.initsializatsiya_karty_f0c55212')} showSkeleton={true} />}>
                   <LazyWebMap
                       key={`map-${mapKeyVersion}`}
                       travel={travelProp}

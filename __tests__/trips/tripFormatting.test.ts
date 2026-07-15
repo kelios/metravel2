@@ -44,11 +44,11 @@ describe('tripFormatting', () => {
   })
 
   it('formats date ranges and single days', () => {
-    expect(formatTripDates(baseTrip)).toBe('18 июл – 20 июл')
-    expect(formatTripDates({ startDate: '2026-06-28', endDate: null })).toBe('28 июн')
+    expect(formatTripDates(baseTrip)).toBe('18 июл. – 20 июл.')
+    expect(formatTripDates({ startDate: '2026-06-28', endDate: null })).toBe('28 июн.')
     expect(
       formatTripDates({ startDate: '2026-06-28', endDate: '2026-06-28' }),
-    ).toBe('28 июн')
+    ).toBe('28 июн.')
   })
 
   it('computes free seats', () => {

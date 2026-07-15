@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface SkipLink {
   id: string;
@@ -15,8 +17,8 @@ interface SkipLinksProps {
 }
 
 const DEFAULT_LINKS: SkipLink[] = [
-  { id: 'skip-main', label: 'Перейти к основному содержимому', targetId: 'main-content' },
-  { id: 'skip-nav', label: 'Перейти к навигации', targetId: 'main-navigation' },
+  { id: 'skip-main', get label() { return i18nT('navigationStatic:components.layout.SkipLinks.pereyti_k_osnovnomu_soderzhimomu_6663999c') }, targetId: 'main-content' },
+  { id: 'skip-nav', get label() { return i18nT('navigationStatic:components.layout.SkipLinks.pereyti_k_navigatsii_bb05b7ca') }, targetId: 'main-navigation' },
 ];
 
 export default function SkipLinks({

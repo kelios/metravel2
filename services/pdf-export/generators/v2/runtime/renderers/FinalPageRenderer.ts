@@ -1,6 +1,8 @@
 import type { TravelForBook } from '@/types/pdf-export'
 import type { TravelQuote } from '../../../../quotes/travelQuotes'
 import { escapeHtml, formatDays, getTravelLabel, type RuntimeRenderContext } from './renderHelpers'
+import { translate as i18nT } from '@/i18n'
+
 
 export class RuntimeFinalRenderer {
   constructor(private ctx: RuntimeRenderContext) {}
@@ -26,13 +28,17 @@ export class RuntimeFinalRenderer {
     }
     if (countries.size > 0) {
       const cl = countries.size
-      stats.push({ value: cl, label: cl === 1 ? 'страна' : cl < 5 ? 'страны' : 'стран' })
+      stats.push({ value: cl, label: cl === 1 ? i18nT('export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.strana_844f89f7') : cl < 5 ? i18nT('export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.strany_fb143431') : i18nT('export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.stran_d9546eb7') })
     }
     if (totalDays > 0) {
-      stats.push({ value: totalDays, label: formatDays(totalDays).replace(String(totalDays), '').trim() || 'дней' })
+      stats.push({
+        value: totalDays,
+        label: formatDays(totalDays).replace(String(totalDays), '').trim()
+          || i18nT('export:services.pdfExport.runtime.final.daysFallback'),
+      })
     }
     if (totalPhotos > 0) {
-      stats.push({ value: totalPhotos, label: totalPhotos === 1 ? 'фото' : 'фото' })
+      stats.push({ value: totalPhotos, label: totalPhotos === 1 ? i18nT('export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.foto_c827a5d9') : i18nT('export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.foto_c827a5d9') })
     }
 
     const statsHtml = stats.length > 0 ? `
@@ -152,7 +158,7 @@ export class RuntimeFinalRenderer {
             color: ${colors.cover.text};
             line-height: ${typography.h1.lineHeight};
             text-shadow: 0 8px 24px rgba(0,0,0,0.18);
-          ">Спасибо за путешествие!</h2>
+          ">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.section_class_pdf_page_final_page_style_padd_473b31a3.text01")}</h2>
           <p style="
             max-width: 112mm;
             margin: 0 auto 12mm auto;
@@ -161,8 +167,7 @@ export class RuntimeFinalRenderer {
             opacity: 0.8;
             font-family: ${typography.bodyFont};
           ">
-            Пусть эта книга напоминает о самых тёплых эмоциях
-            и помогает планировать новые приключения.
+            ${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.section_class_pdf_page_final_page_style_padd_473b31a3.text02")}
           </p>
           ${statsHtml}
           ${finalQuote ? `

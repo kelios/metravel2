@@ -18,6 +18,8 @@ import { queryKeys } from '@/api/queryKeys'
 import { createMapPopupComponent } from './Map/createMapPopupComponent'
 import { useUserLocationSignal } from './Map/userLocationSignal'
 import type { Point } from './Map/types'
+import { translate as i18nT } from '@/i18n'
+
 
 const IS_WEB = Platform.OS === 'web'
 const SWIPE_CLOSE_THRESHOLD_PX = 64
@@ -226,7 +228,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       testID="map-place-bottom-card-close"
       onPress={handleClose}
       accessibilityRole="button"
-      accessibilityLabel="Закрыть карточку места"
+      accessibilityLabel={i18nT('map:components.MapPage.MapPlaceBottomCard.zakryt_kartochku_mesta_e4d7f18c')}
       hitSlop={10}
       style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.7 }]}
       {...(webCloseHandlers ?? {})}
@@ -248,7 +250,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       testID="map-place-bottom-card-close"
       onPress={handleClose}
       accessibilityRole="button"
-      accessibilityLabel="Закрыть карточку места"
+      accessibilityLabel={i18nT('map:components.MapPage.MapPlaceBottomCard.zakryt_kartochku_mesta_e4d7f18c')}
       hitSlop={12}
       style={({ pressed }) => [styles.headerCloseButton, pressed && { opacity: 0.6 }]}
       {...(webCloseHandlers ?? {})}
@@ -317,7 +319,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
     <View style={styles.nativeRoot} testID="map-place-bottom-card" pointerEvents="box-none">
       <Pressable
         testID="map-place-bottom-card-backdrop"
-        accessibilityLabel="Закрыть карточку места"
+        accessibilityLabel={i18nT('map:components.MapPage.MapPlaceBottomCard.zakryt_kartochku_mesta_e4d7f18c')}
         accessibilityRole="button"
         onPress={handleClose}
         style={styles.nativeBackdrop}
@@ -329,7 +331,7 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
             testID="map-place-bottom-card-close"
             onPress={handleClose}
             accessibilityRole="button"
-            accessibilityLabel="Закрыть карточку места"
+            accessibilityLabel={i18nT('map:components.MapPage.MapPlaceBottomCard.zakryt_kartochku_mesta_e4d7f18c')}
             hitSlop={12}
             style={({ pressed }) => [styles.headerCloseButton, pressed && { opacity: 0.6 }]}
           >

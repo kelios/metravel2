@@ -3,6 +3,8 @@ import { API_BASE_URL, DEFAULT_TIMEOUT, TOKEN_KEY } from '@/api/apiConfig';
 import { getSecureItem } from '@/utils/secureStorage';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { safeJsonParse } from '@/utils/safeJsonParse';
+import { getApiRequestCredentials, shouldUseStoredAuthToken } from '@/utils/authPlatform';
+import { translate as i18nT } from '@/i18n';
 
 // ---------------------------------------------------------------------------
 // Lightweight fetch helper for messaging endpoints.
@@ -27,7 +29,9 @@ async function messagingFetch<T>(
     options: RequestInit = {},
     timeout: number = DEFAULT_TIMEOUT,
 ): Promise<T> {
-    const token = await getSecureItem(TOKEN_KEY).catch(() => null);
+    const token = shouldUseStoredAuthToken()
+        ? await getSecureItem(TOKEN_KEY).catch(() => null)
+        : null;
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Token ${token}` } : {}),
@@ -36,7 +40,7 @@ async function messagingFetch<T>(
 
     const response = await fetchWithTimeout(
         `${API_BASE_URL}${endpoint}`,
-        { ...options, headers },
+        { ...options, ...getApiRequestCredentials(), headers },
         timeout,
     );
 
@@ -47,7 +51,7 @@ async function messagingFetch<T>(
         const rec = errorData && typeof errorData === 'object' ? (errorData as Record<string, unknown>) : {};
         const message = (typeof rec.message === 'string' ? rec.message : undefined)
             || (typeof rec.detail === 'string' ? rec.detail : undefined)
-            || `Ошибка запроса: ${response.statusText}`;
+            || i18nT('errorsStatic:api.common.requestFailed', { details: response.statusText });
         throw new ApiError(
             response.status,
             message,
@@ -84,7 +88,7 @@ export const getParticipantPreviewDisplayName = (preview: ParticipantPreview): s
     if (displayName) return displayName;
     const username = preview.username?.trim();
     if (username) return username;
-    return preview.is_deleted ? 'Удалённый пользователь' : null;
+    return preview.is_deleted ? i18nT('errorsStatic:api.messages.deletedUser') : null;
 };
 
 export const threadHasParticipantPreviews = (thread: MessageThread): boolean =>
@@ -163,7 +167,7 @@ export function getMessagingUserDisplayName(u: MessagingUser): string {
     if (name) return name;
     const parts = [u.first_name, u.last_name].map((p) => p?.trim()).filter(Boolean);
     if (parts.length > 0) return parts.join(' ');
-    return 'Пользователь';
+    return i18nT('errorsStatic:api.messages.userFallback');
 }
 
 export function getMessagingUserId(u: MessagingUser): number {
@@ -212,13 +216,7 @@ export interface ThreadByUserResponse {
 // ---- API functions ----
 
 export const fetchMessageThreads = async (): Promise<MessageThread[]> => {
-    try {
-        return await messagingFetch<MessageThread[]>('/message-threads/');
-    } catch (e: unknown) {
-        const status = getMessagingErrorStatus(e);
-        if (status === 401 || status === 404) return [];
-        throw e;
-    }
+    return messagingFetch<MessageThread[]>('/message-threads/');
 };
 
 // Backend may return either a bare array or a paginated/wrapped envelope
@@ -239,26 +237,14 @@ const normalizeAvailableUsers = (raw: RawAvailableUsers): MessagingUser[] => {
 };
 
 export const fetchAvailableUsers = async (): Promise<MessagingUser[]> => {
-    try {
-        const raw = await messagingFetch<RawAvailableUsers>('/message-threads/available-users/');
-        return normalizeAvailableUsers(raw);
-    } catch (e: unknown) {
-        const status = getMessagingErrorStatus(e);
-        if (status === 401 || status === 404) return [];
-        throw e;
-    }
+    const raw = await messagingFetch<RawAvailableUsers>('/message-threads/available-users/');
+    return normalizeAvailableUsers(raw);
 };
 
 export const fetchThreadByUser = async (userId: number): Promise<ThreadByUserResponse> => {
-    try {
-        return await messagingFetch<ThreadByUserResponse>(
-            `/message-threads/thread-by-user/?user_id=${userId}`,
-        );
-    } catch (e: unknown) {
-        const status = getMessagingErrorStatus(e);
-        if (status === 401 || status === 404) return { thread_id: null };
-        throw e;
-    }
+    return messagingFetch<ThreadByUserResponse>(
+        `/message-threads/thread-by-user/?user_id=${userId}`,
+    );
 };
 
 export const fetchMessages = async (
@@ -266,24 +252,16 @@ export const fetchMessages = async (
     page: number = 1,
     perPage: number = 50
 ): Promise<PaginatedMessages> => {
-    try {
-        const raw = await messagingFetch<RawPaginatedMessages>(
-            `/messages/?thread_id=${threadId}&page=${page}&perPage=${perPage}`,
-        );
-        // Normalize: backend may use 'data' instead of 'results', 'next_page_url' instead of 'next'
-        return {
-            count: raw.count ?? raw.total ?? 0,
-            next: raw.next ?? raw.next_page_url ?? null,
-            previous: raw.previous ?? null,
-            results: raw.results ?? raw.data ?? [],
-        };
-    } catch (e: unknown) {
-        const status = getMessagingErrorStatus(e);
-        if (status === 401 || status === 404) {
-            return { count: 0, next: null, previous: null, results: [] };
-        }
-        throw e;
-    }
+    const raw = await messagingFetch<RawPaginatedMessages>(
+        `/messages/?thread_id=${threadId}&page=${page}&perPage=${perPage}`,
+    );
+    // Normalize: backend may use 'data' instead of 'results', 'next_page_url' instead of 'next'
+    return {
+        count: raw.count ?? raw.total ?? 0,
+        next: raw.next ?? raw.next_page_url ?? null,
+        previous: raw.previous ?? null,
+        results: raw.results ?? raw.data ?? [],
+    };
 };
 
 export interface MarkThreadReadPayload {
@@ -300,21 +278,13 @@ export const markThreadRead = async (
     threadId: number,
     payload?: MarkThreadReadPayload
 ): Promise<MarkThreadReadResponse> => {
-    try {
-        return await messagingFetch<MarkThreadReadResponse>(
-            `/message-threads/${threadId}/mark-read/`,
-            {
-                method: 'POST',
-                body: JSON.stringify(payload ?? {}),
-            },
-        );
-    } catch (e: unknown) {
-        const status = getMessagingErrorStatus(e);
-        if (status === 401 || status === 404) {
-            return { thread_id: threadId, last_read_message_id: null, unread_count: 0 };
-        }
-        throw e;
-    }
+    return messagingFetch<MarkThreadReadResponse>(
+        `/message-threads/${threadId}/mark-read/`,
+        {
+            method: 'POST',
+            body: JSON.stringify(payload ?? {}),
+        },
+    );
 };
 
 export interface UnreadCountResponse {
@@ -322,13 +292,9 @@ export interface UnreadCountResponse {
 }
 
 export const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
-    try {
-        const threads = await fetchMessageThreads();
-        const count = threads.reduce((sum, thread) => sum + (thread.unread_count ?? 0), 0);
-        return { count };
-    } catch {
-        return { count: 0 };
-    }
+    const threads = await fetchMessageThreads();
+    const count = threads.reduce((sum, thread) => sum + (thread.unread_count ?? 0), 0);
+    return { count };
 };
 
 export const sendMessage = async (
@@ -342,7 +308,7 @@ export const sendMessage = async (
     } catch (e: unknown) {
         const status = getMessagingErrorStatus(e);
         if (status === 401) {
-            throw new Error('Для отправки сообщений необходимо авторизоваться');
+            throw new Error(i18nT('errorsStatic:api.messages.authRequired'));
         }
         throw e;
     }
@@ -355,7 +321,7 @@ export const deleteThread = async (threadId: number | string): Promise<null> => 
         });
     } catch (e: unknown) {
         const status = getMessagingErrorStatus(e);
-        if (status === 401 || status === 404) return null;
+        if (status === 404) return null;
         throw e;
     }
 };
@@ -367,7 +333,7 @@ export const deleteMessage = async (id: number | string): Promise<null> => {
         });
     } catch (e: unknown) {
         const status = getMessagingErrorStatus(e);
-        if (status === 401 || status === 404) return null;
+        if (status === 404) return null;
         throw e;
     }
 };

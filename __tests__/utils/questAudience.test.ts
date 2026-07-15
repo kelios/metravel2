@@ -1,4 +1,5 @@
 import {
+  getQuestAgeBadgeLabel,
   getQuestAgeCategory,
   getQuestAgeSearchTerms,
   isQuestForChildrenOrTeens,
@@ -13,6 +14,11 @@ describe('questAudience', () => {
   it('falls back to generic kids and teens labels', () => {
     expect(getQuestAgeCategory([' Kids '])?.label).toBe('Для детей');
     expect(getQuestAgeCategory(['TEENS'])?.label).toBe('Подростки');
+  });
+
+  it('asks editors to clarify age for generic kids tags in UI badges', () => {
+    expect(getQuestAgeBadgeLabel(getQuestAgeCategory(['kids']))).toBe('Уточнить возраст');
+    expect(getQuestAgeBadgeLabel(getQuestAgeCategory(['kids', 'age-8-10']))).toBe('8-10 лет');
   });
 
   it('detects child and teen quest tags without treating family alone as age-specific', () => {

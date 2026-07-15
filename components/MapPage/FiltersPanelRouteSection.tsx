@@ -13,11 +13,13 @@ import type { ThemedColors } from '@/hooks/useTheme'
 import type { LatLng } from '@/types/coordinates'
 import type { RoutePoint } from '@/types/route'
 import {
-  TRANSPORT_LABEL,
-  TRANSPORT_MODES,
+  getTransportLabel,
+  getTransportModes,
   TRANSPORT_SPEED_KMH,
   type TransportMode,
 } from './transportModes'
+import { translate as i18nT } from '@/i18n'
+
 
 function toRad(deg: number) {
   return (deg * Math.PI) / 180
@@ -118,7 +120,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
   const endSelected = !!routePoints[1]
   const hasTwoPoints = mode === 'route' && routePoints.length >= 2
   const remainingPoints = Math.max(0, 2 - routePoints.length)
-  const selectedTransportLabel = TRANSPORT_LABEL[transportMode] ?? 'Транспорт выбран'
+  const selectedTransportLabel = getTransportLabel(transportMode)
 
   const validation = useMemo(() => {
     if (mode === 'route' && routePoints.length > 0) {
@@ -150,14 +152,14 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
       <View style={styles.lightStepBlock}>
         <View style={styles.lightStepHeader}>
           <Text style={styles.lightStepNumber}>1</Text>
-          <Text style={styles.lightStepTitle}>Транспорт</Text>
+          <Text style={styles.lightStepTitle}>{i18nT('map:components.MapPage.FiltersPanelRouteSection.transport_aa70a7ea')}</Text>
           {isMobile && <Text style={styles.lightStepBadge}>{selectedTransportLabel}</Text>}
         </View>
         <SegmentedControl
-          options={[...TRANSPORT_MODES]}
+          options={[...getTransportModes()]}
           value={transportMode}
           onChange={(key) => setTransportMode(key as TransportMode)}
-          accessibilityLabel="Транспорт"
+          accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelRouteSection.transport_aa70a7ea')}
           compact
           dense
           noOuterMargins
@@ -170,14 +172,14 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
       <View style={styles.lightStepBlock}>
         <View style={styles.lightStepHeader}>
           <Text style={styles.lightStepNumber}>2</Text>
-          <Text style={styles.lightStepTitle}>Точки маршрута</Text>
+          <Text style={styles.lightStepTitle}>{i18nT('map:components.MapPage.FiltersPanelRouteSection.tochki_marshruta_0250dc3a')}</Text>
           {startSelected && endSelected ? (
             <View style={styles.lightCheckBadge}>
               <MapIcon name="check" size={12} color={colors.success} />
-              <Text style={styles.lightCheckText}>Готово</Text>
+              <Text style={styles.lightCheckText}>{i18nT('map:components.MapPage.FiltersPanelRouteSection.gotovo_aab95a18')}</Text>
             </View>
           ) : (
-            <Text style={styles.lightStepHint}>Выберите точки</Text>
+            <Text style={styles.lightStepHint}>{i18nT('map:components.MapPage.FiltersPanelRouteSection.vyberite_tochki_fb6530e6')}</Text>
           )}
         </View>
 
@@ -197,20 +199,20 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
           <View style={styles.noPointsToast} testID="route-empty-state">
             <Text style={styles.noPointsTitle}>
               {routePoints.length === 0
-                ? 'Сначала выберите старт и финиш'
-                : 'Нужна ещё одна точка'}
+                ? i18nT('map:components.MapPage.FiltersPanelRouteSection.snachala_vyberite_start_i_finish_ffb07516')
+                : i18nT('map:components.MapPage.FiltersPanelRouteSection.nuzhna_esche_odna_tochka_6663beeb')}
             </Text>
             <Text style={styles.noPointsSubtitle}>
               {routePoints.length === 0
-                ? 'Начните с адреса или отметьте первую точку на карте, затем добавьте место назначения.'
-                : `Маршрут почти готов. Добавьте ещё ${remainingPoints} точку, чтобы запустить расчёт.`}
+                ? i18nT('map:components.MapPage.FiltersPanelRouteSection.nachnite_s_adresa_ili_otmette_pervuyu_tochku_1296572f')
+                : i18nT('map:components.MapPage.FiltersPanelRouteSection.marshrut_pochti_gotov_dobavte_esche_value1_t_c7314962', { value1: remainingPoints })}
             </Text>
             {routePoints.length > 0 && onClearRoute && (
               <View style={styles.noPointsActions}>
                 <Button
-                  label="Очистить маршрут"
+                  label={i18nT('map:components.MapPage.FiltersPanelRouteSection.ochistit_marshrut_cf553839')}
                   onPress={onClearRoute}
-                  accessibilityLabel="Очистить маршрут"
+                  accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelRouteSection.ochistit_marshrut_cf553839')}
                   size="sm"
                   variant="outline"
                   style={styles.ctaButton}
@@ -225,9 +227,9 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
         <View style={styles.lightStepBlock} testID="route-stats-block">
           <View style={styles.lightStepHeader}>
             <Text style={styles.lightStepNumber}>3</Text>
-            <Text style={styles.lightStepTitle}>Итог маршрута</Text>
+            <Text style={styles.lightStepTitle}>{i18nT('map:components.MapPage.FiltersPanelRouteSection.itog_marshruta_aa8b7865')}</Text>
             {isEstimated && !routingLoading && !routingError && (
-              <Text style={styles.lightStepHint}>оценка</Text>
+              <Text style={styles.lightStepHint}>{i18nT('map:components.MapPage.FiltersPanelRouteSection.otsenka_b6ef51eb')}</Text>
             )}
           </View>
           <View testID="route-stats">
@@ -249,10 +251,13 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
 
       {!onAddressSelect && mode === 'route' && routePoints.length > 0 && (
         <View style={styles.lightStepBlock}>
-          <Text style={styles.lightSectionLabel}>Точки маршрута</Text>
+          <Text style={styles.lightSectionLabel}>{i18nT('map:components.MapPage.FiltersPanelRouteSection.tochki_marshruta_0250dc3a')}</Text>
           <View style={styles.lightPointsList} testID="route-points-list">
             {routePoints.map((p, index) => {
-              const label = String(p?.address || '').trim() || `Точка ${index + 1}`
+              const label = String(p?.address || '').trim() || i18nT(
+                'map:components.MapPage.FiltersPanelRouteSection.pointFallback',
+                { value1: index + 1 },
+              )
               const canRemove = typeof onRemoveRoutePoint === 'function' && Boolean(p?.id)
               const key = String(p?.id ?? index)
               return (
@@ -269,7 +274,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
                   </Text>
                   <IconButton
                     icon={<MapIcon name="close" size={14} color={colors.textMuted} />}
-                    label={`Удалить точку: ${label}`}
+                    label={i18nT('map:components.MapPage.FiltersPanelRouteSection.udalit_tochku_value1_928ec407', { value1: label })}
                     size="sm"
                     disabled={!canRemove}
                     onPress={() => {

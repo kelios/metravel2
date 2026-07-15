@@ -12,6 +12,8 @@ import MarkerClusterGroup from './MarkerClusterGroup'
 import { RouteMarkersLayer } from './RouteMarkersLayer'
 import ClusterLayer from './ClusterLayer'
 import type { ClusterData } from './types'
+import { translate as i18nT } from '@/i18n'
+
 
 type ReactLeafletNS = typeof import('react-leaflet')
 
@@ -89,7 +91,7 @@ export const MapLoadingOverlay: React.FC<{
     <View style={[styles.loader, { position: 'relative', overflow: 'hidden' }] as any}>
       <MapWebBackground opacity={0.12} />
       <View style={{ position: 'relative', zIndex: 1, alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primaryDark} accessibilityLabel="Загрузка карты" />
+        <ActivityIndicator size="large" color={colors.primaryDark} accessibilityLabel={i18nT('map:components.MapPage.Map.MapWebCanvas.zagruzka_karty_a34fdf7a')} />
       </View>
     </View>
   </View>
@@ -102,7 +104,7 @@ export const NoPointsMessage: React.FC = () => (
     accessible
     accessibilityRole="text"
   >
-    <Text>Маршрут построен. Вдоль маршрута нет доступных точек в радиусе 2 км.</Text>
+    <Text>{i18nT('map:components.MapPage.Map.MapWebCanvas.marshrut_postroen_vdol_marshruta_net_dostupn_e78cba4e')}</Text>
   </View>
 )
 

@@ -4,10 +4,12 @@ import * as Sharing from 'expo-sharing';
 
 import type { RouteExportResult } from './types';
 import { downloadTextFileWeb } from './download';
+import { translate as i18nT } from '@/i18n'
+
 
 export async function saveRouteExportFile(
   file: RouteExportResult,
-  dialogTitle = 'Сохранить файл маршрута',
+  dialogTitle = i18nT('export:utils.routeExport.save.sohranit_fayl_marshruta_39cdf9d4'),
 ): Promise<boolean> {
   if (Platform.OS === 'web') {
     return downloadTextFileWeb(file);

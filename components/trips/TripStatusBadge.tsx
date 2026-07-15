@@ -11,6 +11,8 @@ import {
   applicationStatusColor,
   tripStatusColor,
 } from '@/components/trips/tripFormatting';
+import { translate as i18nT } from '@/i18n'
+
 
 type Props =
   | { kind: 'application'; status: ApplicationStatus; testID?: string }
@@ -35,7 +37,7 @@ function TripStatusBadge(props: Props) {
     <View
       style={[styles.badge, { borderColor: color }]}
       accessibilityRole="text"
-      accessibilityLabel={`Статус: ${label}`}
+      accessibilityLabel={i18nT('trips:components.trips.TripStatusBadge.status_value1_9575ba65', { value1: label })}
       testID={props.testID}
     >
       <View style={[styles.dot, { backgroundColor: color }]} />

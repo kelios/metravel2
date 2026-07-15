@@ -19,6 +19,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { trackProgressionLevelUp } from '@/utils/gamificationAnalytics'
 import ProgressionLineBar from '@/components/achievements/ProgressionLineBar'
 import SectionState from '@/components/achievements/SectionState'
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   /** userId — публичный профиль автора; не задан — собственный профиль (/me/). */
@@ -78,23 +80,22 @@ function ActivityProgressionSection({
     <View style={[bare ? styles.bare : styles.card, style]} testID={testID}>
       <View style={styles.headerRow}>
         <View style={styles.headerText}>
-          <Text style={styles.heading}>Тропы развития</Text>
+          <Text style={styles.heading}>{i18nT('achievements:components.achievements.ActivityProgressionSection.tropy_razvitiya_7e50bca2')}</Text>
           <Text style={styles.subheading} numberOfLines={2}>
-            Уровень растёт за маршруты, чтение, поездки и открытые места.
-          </Text>
+            {i18nT('achievements:components.achievements.ActivityProgressionSection.uroven_rastet_za_marshruty_chtenie_poezdki_i_14628b3a')}</Text>
         </View>
         {onOpenAwards ? (
           <Pressable
             onPress={onOpenAwards}
             accessibilityRole="button"
-            accessibilityLabel="Открыть все награды"
+            accessibilityLabel={i18nT('achievements:components.achievements.ActivityProgressionSection.otkryt_vse_nagrady_6272585c')}
             style={({ pressed }) => [
               styles.awardsButton,
               pressed && { opacity: 0.78 },
             ]}
           >
             <Feather name="award" size={14} color={colors.primaryDark} />
-            <Text style={styles.awardsButtonText}>Награды</Text>
+            <Text style={styles.awardsButtonText}>{i18nT('achievements:components.achievements.ActivityProgressionSection.nagrady_69c61772')}</Text>
             <Feather name="chevron-right" size={14} color={colors.primaryDark} />
           </Pressable>
         ) : null}

@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import type { TravelFormData } from '@/types/types';
 import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
 import { getQualityScore } from '@/utils/travelWizardValidation';
+import { translate as i18nT } from '@/i18n'
+
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -42,12 +44,12 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
     const hasPhotos = hasCover || galleryItems.length > 0;
 
     return [
-      { key: 'name', label: 'Название маршрута', detail: 'Минимум 3 символа', ok: hasName, required: true },
-      { key: 'description', label: 'Описание маршрута', detail: 'Минимум 50 символов', ok: hasDescription, required: true },
-      { key: 'route', label: 'Маршрут на карте', detail: 'Минимум 1 точка (шаг 2)', ok: hasRoute, required: true },
-      { key: 'countries', label: 'Страны маршрута', detail: 'Минимум 1 страна (шаг 2)', ok: hasCountries, required: true },
-      { key: 'categories', label: 'Категории маршрута', detail: 'Минимум 1 категория (шаг 5)', ok: hasCategories, required: true },
-      { key: 'photos', label: 'Фото или обложка', detail: 'Обложка или ≥1 фото (шаг 3)', ok: hasPhotos, required: true },
+      { key: 'name', label: i18nT('travel:components.travel.useTravelPublishChecklist.nazvanie_marshruta_3f5fd620'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_3_simvola_6627ac3c'), ok: hasName, required: true },
+      { key: 'description', label: i18nT('travel:components.travel.useTravelPublishChecklist.opisanie_marshruta_e77b9baa'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_50_simvolov_0da73d52'), ok: hasDescription, required: true },
+      { key: 'route', label: i18nT('travel:components.travel.useTravelPublishChecklist.marshrut_na_karte_4463d1b9'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_1_tochka_shag_2_ee6b3e68'), ok: hasRoute, required: true },
+      { key: 'countries', label: i18nT('travel:components.travel.useTravelPublishChecklist.strany_marshruta_91145fda'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_1_strana_shag_2_ccfa6f24'), ok: hasCountries, required: true },
+      { key: 'categories', label: i18nT('travel:components.travel.useTravelPublishChecklist.kategorii_marshruta_81500fea'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_1_kategoriya_shag_5_79d7518c'), ok: hasCategories, required: true },
+      { key: 'photos', label: i18nT('travel:components.travel.useTravelPublishChecklist.foto_ili_oblozhka_5874111e'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.oblozhka_ili_1_foto_shag_3_7dd535ea'), ok: hasPhotos, required: true },
     ];
   }, [
     formData.categories,
@@ -67,11 +69,11 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
     const hasGallery3 = galleryItems.length >= 3;
 
     return [
-      { key: 'plus', label: 'Плюсы маршрута', detail: 'Опишите преимущества (шаг 4)', benefit: 'Повышает доверие читателей', ok: hasPlus },
-      { key: 'minus', label: 'Минусы маршрута', detail: 'Укажите недостатки (шаг 4)', benefit: 'Помогает принять решение', ok: hasMinus },
-      { key: 'recommendation', label: 'Рекомендации и лайфхаки', detail: 'Поделитесь советами (шаг 4)', benefit: 'Увеличивает ценность маршрута', ok: hasRecommendation },
-      { key: 'gallery3', label: 'Минимум 3 фото в галерее', detail: `Сейчас: ${galleryItems.length} фото (шаг 3)`, benefit: 'Маршруты с фото получают больше просмотров', ok: hasGallery3 },
-      { key: 'video', label: 'Видео о путешествии', detail: 'YouTube-ссылка (шаг 3)', benefit: 'Видео повышает вовлечённость', ok: hasVideo },
+      { key: 'plus', label: i18nT('travel:components.travel.useTravelPublishChecklist.plyusy_marshruta_b9d8d4b4'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.opishite_preimuschestva_shag_4_1567b1f1'), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.povyshaet_doverie_chitateley_a07f4e63'), ok: hasPlus },
+      { key: 'minus', label: i18nT('travel:components.travel.useTravelPublishChecklist.minusy_marshruta_f083b6fd'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.ukazhite_nedostatki_shag_4_dfc31708'), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.pomogaet_prinyat_reshenie_171de921'), ok: hasMinus },
+      { key: 'recommendation', label: i18nT('travel:components.travel.useTravelPublishChecklist.rekomendatsii_i_layfhaki_8f5cef9b'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.podelites_sovetami_shag_4_76eecab2'), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.uvelichivaet_tsennost_marshruta_ee350669'), ok: hasRecommendation },
+      { key: 'gallery3', label: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_3_foto_v_galeree_7ea4c6df'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.seychas_value1_foto_shag_3_9d2ca97a', { value1: galleryItems.length }), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.marshruty_s_foto_poluchayut_bolshe_prosmotro_d11e6185'), ok: hasGallery3 },
+      { key: 'video', label: i18nT('travel:components.travel.useTravelPublishChecklist.video_o_puteshestvii_7045907e'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.youtube_ssylka_shag_3_01055795'), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.video_povyshaet_vovlechennost_7ca45a3f'), ok: hasVideo },
     ];
   }, [formData.plus, formData.minus, formData.recommendation, formData.youtube_link, galleryItems.length]);
 
@@ -85,12 +87,12 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
     const hasPhotos = hasCover || galleryItems.length > 0;
 
     return [
-      { key: 'name', label: 'Название маршрута (не менее 3 символов)', ok: hasName },
-      { key: 'description', label: 'Описание для кого маршрут и чего ожидать (не менее 50 символов)', ok: hasDescription },
-      { key: 'countries', label: 'Страны маршрута (минимум одна, выбираются на шаге "Маршрут")', ok: hasCountries },
-      { key: 'categories', label: 'Категории маршрута (минимум одна, выбираются на шаге "Доп. параметры")', ok: hasCategories },
-      { key: 'route', label: 'Маршрут на карте (минимум одна точка на шаге "Маршрут")', ok: hasRoute },
-      { key: 'photos', label: 'Фото или обложка маршрута (рекомендуем горизонтальное изображение, без коллажей)', ok: hasPhotos },
+      { key: 'name', label: i18nT('travel:components.travel.useTravelPublishChecklist.nazvanie_marshruta_ne_menee_3_simvolov_10548c4e'), ok: hasName },
+      { key: 'description', label: i18nT('travel:components.travel.useTravelPublishChecklist.opisanie_dlya_kogo_marshrut_i_chego_ozhidat__db49628e'), ok: hasDescription },
+      { key: 'countries', label: i18nT('travel:components.travel.useTravelPublishChecklist.strany_marshruta_minimum_odna_vybirayutsya_n_b5e6a718'), ok: hasCountries },
+      { key: 'categories', label: i18nT('travel:components.travel.useTravelPublishChecklist.kategorii_marshruta_minimum_odna_vybirayutsy_7333f07f'), ok: hasCategories },
+      { key: 'route', label: i18nT('travel:components.travel.useTravelPublishChecklist.marshrut_na_karte_minimum_odna_tochka_na_sha_ce6389ab'), ok: hasRoute },
+      { key: 'photos', label: i18nT('travel:components.travel.useTravelPublishChecklist.foto_ili_oblozhka_marshruta_rekomenduem_gori_cdfe3c6c'), ok: hasPhotos },
     ];
   }, [
     formData.categories,

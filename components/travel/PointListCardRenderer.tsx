@@ -3,6 +3,8 @@ import Feather from '@expo/vector-icons/Feather'
 import { Platform, View } from 'react-native'
 
 import PlaceListCard from '@/components/places/PlaceListCard'
+import { translate as i18nT } from '@/i18n'
+
 
 type PointLike = {
   id: string
@@ -114,7 +116,7 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
         mapActions={itemModel.mapActions}
         inlineActions={itemModel.inlineActions}
         onAddPoint={itemModel.handleAddPointClick}
-        addLabel="Сохранить"
+        addLabel={i18nT('travel:components.travel.PointListCardRenderer.sohranit_fef12e13')}
         addDisabled={itemModel.addDisabled}
         isAdding={itemModel.isAdding}
         isSaved={itemModel.isSaved}

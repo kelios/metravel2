@@ -5,6 +5,7 @@ import { useRouting } from '@/components/MapPage/useRouting';
 import { useElevation } from './useElevation';
 import { showRouteBuiltToast, showRouteErrorToast } from '@/utils/mapToasts';
 import type { TransportMode } from './types';
+import { translate as i18nT } from '@/i18n';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -130,7 +131,7 @@ export function useMapRouting(
 
     // Toasts
     if (result.error) {
-      showRouteErrorToast(result.error || 'Ошибка маршрута');
+      showRouteErrorToast(result.error || i18nT('errorsStatic:map.routeFailed'));
     } else if (!result.loading && result.distance > 0 && result.duration > 0) {
       showRouteBuiltToast(result.distance / 1000, result.duration / 60);
     }
@@ -142,4 +143,3 @@ export function useMapRouting(
 
   return result;
 }
-

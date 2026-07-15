@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n'
 const HEIC_MIME_TYPES = new Set([
   'image/heic',
   'image/heif',
@@ -43,7 +44,7 @@ export function isHeicLikeFile(file: File): boolean {
 // показывает понятное сообщение вместо загрузки заведомо битого файла.
 export class HeicConversionError extends Error {
   constructor(cause?: unknown) {
-    super('Не удалось преобразовать HEIC в браузере');
+    super(i18nT('shared:utils.webImageUpload.ne_udalos_preobrazovat_heic_v_brauzere_4286f759'));
     this.name = 'HeicConversionError';
     (this as { cause?: unknown }).cause = cause;
   }

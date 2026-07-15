@@ -9,6 +9,8 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
 import { queryKeys } from '@/queryKeys';
 import { calculateNewRating } from '@/utils/ratingHelpers';
+import { translate as i18nT } from '@/i18n'
+
 
 type UseTravelRatingOptions = {
     travelId: number | undefined;
@@ -94,7 +96,7 @@ export function useTravelRating({
                 queryClient.setQueryData(queryKeys.travelUserRating(travelId), context.previousUserRating);
             }
             showToast({
-                text1: 'Не удалось сохранить оценку',
+                text1: i18nT('shared:hooks.useTravelRating.ne_udalos_sohranit_otsenku_0071b390'),
                 type: 'error',
             });
         },
@@ -143,7 +145,7 @@ export function useTravelRating({
             queryClient.invalidateQueries({ queryKey: queryKeys.travel(travelId!) });
 
             showToast({
-                text1: 'Оценка сохранена',
+                text1: i18nT('shared:hooks.useTravelRating.otsenka_sohranena_a9156750'),
                 type: 'success',
             });
         },

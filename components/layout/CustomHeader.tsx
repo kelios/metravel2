@@ -3,6 +3,7 @@ import { Platform, View } from 'react-native'
 import { usePathname } from 'expo-router'
 
 import { useResponsive } from '@/hooks/useResponsive'
+import { useHydrationReady } from '@/hooks/useHydrationReady'
 import { useThemedColors } from '@/hooks/useTheme'
 import useBreadcrumbModel from '@/hooks/useBreadcrumbModel'
 
@@ -21,6 +22,7 @@ import { resolveHeaderContextBarAction } from './headerContextBarModel'
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
 import { createCustomHeaderStyles, webStickyStyle } from './customHeaderStyles'
 import Logo from './Logo'
+import LanguageSwitcher from './LanguageSwitcher'
 
 const TOP_LEVEL_TAB_PATHS = new Set<string>(
   ['/'].concat(HEADER_NAV_ITEMS.filter((item) => !item.external).map((item) => item.path)),
@@ -31,15 +33,19 @@ const CONTEXT_BAR_HEIGHT_DESKTOP = 40
 
 type CustomHeaderProps = {
   onHeightChange?: (height: number) => void
+  isNavigationTarget?: boolean
 }
 
-function CustomHeader({ onHeightChange }: CustomHeaderProps) {
+function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeaderProps) {
   const colors = useThemedColors()
   const pathname = usePathname()
   // useResponsive returns width=0 during SSR and first client render,
   // matching the server snapshot → prevents hydration mismatch in Suspense fallback.
   // After hydration it switches to real window.innerWidth via useSyncExternalStore.
-  const { width, isHydrated } = useResponsive()
+  const responsive = useResponsive()
+  const hydrationReady = useHydrationReady()
+  const isHydrated = hydrationReady && responsive.isHydrated
+  const width = isHydrated ? responsive.width : 0
   const isMobile = getIsHeaderMobile(width, width)
   const activePath = getHeaderActivePath(pathname)
   const showHeaderContextBar =
@@ -94,7 +100,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     <View
       style={[styles.container, webStickyStyle]}
       testID="main-header"
-      nativeID="main-navigation"
+      nativeID={isNavigationTarget ? 'main-navigation' : undefined}
       onLayout={handleLayout}
       {...(Platform.OS === 'web' ? ({ tabIndex: -1 } as any) : null)}
     >
@@ -107,6 +113,8 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
               <CustomHeaderNavSectionComp activePath={activePath} styles={styles} />
             </Suspense>
           )}
+
+          <LanguageSwitcher compact={isMobile} />
 
           {/* Account section is auth-specific (no SSR/SEO value). Render only the
               empty placeholder during prerender + first client render — mounting the

@@ -6,6 +6,8 @@ import { Platform } from 'react-native';
 import { uploadImage } from '@/api/misc';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { prepareWebImageFileForUpload, HeicConversionError } from '@/utils/webImageUpload';
+import { translate as i18nT } from '@/i18n'
+
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
 
@@ -131,7 +133,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         setImageUri(uploadedUrl); setPreviewUrl(null);
         setFallbackImageUrl(lastPreviewUrl || uploadedUrlRaw || uploadedUrl);
         setHasTriedFallback(false);
-        setUploadMessage('Фотография успешно загружена');
+        setUploadMessage(i18nT('shared:hooks.usePhotoUpload.fotografiya_uspeshno_zagruzhena_21b2e8f4'));
         onUpload?.(uploadedUrl);
       }
     } catch {
@@ -213,8 +215,8 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   const validateFile = useCallback((file: File | { uri: string; name: string; type: string; size?: number }): string | null => {
     const maxSize = maxSizeMB * 1024 * 1024;
     if (Platform.OS === 'web' && file instanceof File) {
-      if (file.size > maxSize) return `Файл слишком большой. Максимальный размер: ${maxSizeMB}MB`;
-      if (!ALLOWED_TYPES.includes(file.type)) return `Неподдерживаемый формат. Разрешены: JPG, PNG, GIF, WEBP, HEIC, HEIF`;
+      if (file.size > maxSize) return i18nT('shared:hooks.usePhotoUpload.fayl_slishkom_bolshoy_maksimalnyy_razmer_val_4f239ac1', { value1: maxSizeMB });
+      if (!ALLOWED_TYPES.includes(file.type)) return i18nT('shared:hooks.usePhotoUpload.nepodderzhivaemyy_format_razresheny_jpg_png__f81e3a7b');
     }
     return null;
   }, [maxSizeMB]);
@@ -244,7 +246,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
 
       const normalizedId = (idTravel ?? '').toString();
       if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
-        setUploadMessage('Превью готово. Сохраните точку для загрузки фото.');
+        setUploadMessage(i18nT('shared:hooks.usePhotoUpload.prevyu_gotovo_sohranite_tochku_dlya_zagruzki_0d630d1b'));
         pendingUploadRef.current = uploadableFile;
         onUpload?.(previewCandidate);
         return;
@@ -281,22 +283,22 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         setImageUri(uploadedUrl); setPreviewUrl(null);
         setFallbackImageUrl(previewCandidate || uploadedUrlRaw || uploadedUrl);
         setHasTriedFallback(false);
-        setUploadMessage('Фотография успешно загружена');
+        setUploadMessage(i18nT('shared:hooks.usePhotoUpload.fotografiya_uspeshno_zagruzhena_21b2e8f4'));
         onUpload?.(uploadedUrl); setError(null);
       } else if (previewCandidate) {
         setImageUri(previewCandidate); setPreviewUrl(null);
-        setUploadMessage('Превью сохранено. Попробуйте загрузить позже.');
+        setUploadMessage(i18nT('shared:hooks.usePhotoUpload.prevyu_sohraneno_poprobuyte_zagruzit_pozzhe_ad990114'));
         onUpload?.(previewCandidate); setFallbackImageUrl(null); setHasTriedFallback(false); setError(null);
       } else {
-        setError('Ошибка при загрузке'); setPreviewUrl(null);
+        setError(i18nT('shared:hooks.usePhotoUpload.oshibka_pri_zagruzke_27a0bd4b')); setPreviewUrl(null);
       }
     } catch (err) {
       console.error('Ошибка при загрузке:', err);
       if (mountedRef.current) {
         setError(
           err instanceof HeicConversionError
-            ? 'Не удалось преобразовать HEIC. Сохраните фото как JPG и загрузите снова.'
-            : 'Произошла ошибка при загрузке'
+            ? i18nT('shared:hooks.usePhotoUpload.ne_udalos_preobrazovat_heic_sohranite_foto_k_e692768e')
+            : i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675')
         );
         setPreviewUrl(null);
       }
@@ -315,7 +317,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     if (/^(blob:|data:)/i.test(currentDisplayUrl)) { ignoredOldImageRef.current = currentDisplayUrl; handleRemoveImage(); return; }
     const apiCandidate = buildApiPrefixedUrl(currentDisplayUrl);
     if (apiCandidate) { applyFallback(apiCandidate); return; }
-    setImageUri(null); setPreviewUrl(null); setError('Изображение не найдено');
+    setImageUri(null); setPreviewUrl(null); setError(i18nT('shared:hooks.usePhotoUpload.izobrazhenie_ne_naydeno_6a0466ad'));
   }, [currentDisplayUrl, fallbackImageUrl, lastPreviewUrl, hasTriedFallback, applyFallback, handleRemoveImage]);
 
   const handleImageError = useCallback(() => {
@@ -325,7 +327,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     if (/^(blob:|data:)/i.test(currentDisplayUrl)) { ignoredOldImageRef.current = currentDisplayUrl; handleRemoveImage(); return; }
     const apiCandidate = buildApiPrefixedUrl(currentDisplayUrl);
     if (apiCandidate) { applyFallback(apiCandidate); return; }
-    setImageUri(null); setPreviewUrl(null); setError('Изображение не найдено');
+    setImageUri(null); setPreviewUrl(null); setError(i18nT('shared:hooks.usePhotoUpload.izobrazhenie_ne_naydeno_6a0466ad'));
   }, [currentDisplayUrl, fallbackImageUrl, lastPreviewUrl, hasTriedFallback, applyFallback, handleRemoveImage, scheduleRemoteRetry]);
 
   return {

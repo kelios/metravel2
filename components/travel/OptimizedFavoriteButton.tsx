@@ -9,6 +9,8 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
 import { saveGuestFavoriteIntent } from '@/utils/guestFavoriteIntent';
 import { trackFavoriteIntentGuest } from '@/utils/growthFunnelAnalytics';
+import { translate as i18nT } from '@/i18n'
+
 
 type OptimizedFavoriteButtonProps = {
     id: string | number;
@@ -91,8 +93,8 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                 if (isAndroidGuest) {
                     showToast({
                         type: 'success',
-                        text1: 'Сохранено на этом устройстве',
-                        text2: 'Войдите, чтобы синхронизировать «Хочу поехать».',
+                        text1: i18nT('travel:components.travel.OptimizedFavoriteButton.sohraneno_na_etom_ustroystve_2e6175c6'),
+                        text2: i18nT('travel:components.travel.OptimizedFavoriteButton.voydite_chtoby_sinhronizirovat_hochu_poehat_cf4168e6'),
                         visibilityTime: 3500,
                     });
                 }
@@ -101,7 +103,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                 if (isAndroidGuest) {
                     showToast({
                         type: 'info',
-                        text1: 'Удалено с этого устройства',
+                        text1: i18nT('travel:components.travel.OptimizedFavoriteButton.udaleno_s_etogo_ustroystva_12a50dda'),
                         visibilityTime: 2000,
                     });
                 }
@@ -110,7 +112,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
             setOptimisticFav(serverIsFav);
             showToast({
                 type: 'error',
-                text1: 'Не удалось обновить «Хочу поехать»',
+                text1: i18nT('travel:components.travel.OptimizedFavoriteButton.ne_udalos_obnovit_hochu_poehat_ff7f74c7'),
                 visibilityTime: 3000,
             });
         } finally {
@@ -151,7 +153,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                             handlePress(e);
                         }
                     }}
-                    aria-label={isFav ? 'Удалить из «Хочу поехать»' : 'Добавить в «Хочу поехать»'}
+                    aria-label={isFav ? i18nT('travel:components.travel.OptimizedFavoriteButton.udalit_iz_hochu_poehat_2f50b03f') : i18nT('travel:components.travel.OptimizedFavoriteButton.dobavit_v_hochu_poehat_c9b63a42')}
                     aria-pressed={isFav}
                     aria-busy={isPending}
                     style={[
@@ -172,7 +174,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
             hitSlop={10}
             disabled={isPending}
             accessibilityRole="button"
-            accessibilityLabel={isFav ? 'Удалить из «Хочу поехать»' : 'Добавить в «Хочу поехать»'}
+            accessibilityLabel={isFav ? i18nT('travel:components.travel.OptimizedFavoriteButton.udalit_iz_hochu_poehat_2f50b03f') : i18nT('travel:components.travel.OptimizedFavoriteButton.dobavit_v_hochu_poehat_c9b63a42')}
             accessibilityState={{ selected: isFav, busy: isPending, disabled: isPending }}
             testID="favorite-button"
         >

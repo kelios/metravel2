@@ -1,12 +1,14 @@
 // api/client.ts
-// ✅ АРХИТЕКТУРА: Единый API клиент с автоматическим refresh token
-// ✅ FIX-001: Использует безопасное хранилище для токенов
-// ✅ FIX-003: Исправлена race condition при обновлении токена
 
 import { devError } from '@/utils/logger';
 import { Platform } from 'react-native';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getCsrfHeader } from '@/utils/csrf';
+import {
+    getApiRequestCredentials,
+    shouldUseStoredAuthToken,
+    usesWebCookieAuth,
+} from '@/utils/authPlatform';
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import {
     API_BASE_URL,
@@ -18,15 +20,19 @@ import {
 } from '@/api/apiConfig';
 import { notifyAuthInvalidation } from '@/api/authInvalidation';
 export { setAuthInvalidationHandler } from '@/api/authInvalidation';
-import { getApiErrorMessage, getErrorTextField } from '@/utils/errorHelpers';
 import { RateLimiter, type RateLimitSlot } from '@/utils/rateLimiter';
 import { ApiError, hasLoggableRequestError, isOfflineLikeError } from '@/api/clientErrors';
+import { translate as i18nT } from '@/i18n';
+import type { DownloadResponse } from '@/api/clientTypes';
 import {
-    type DownloadResponse,
-    TRANSIENT_UPLOAD_STATUSES,
-    UPLOAD_RETRY_DELAY_MS,
-    parseDownloadFilename,
-} from '@/api/clientTypes';
+    parseDownloadResponse,
+    parseSuccessResponse,
+    throwDetailedError,
+} from '@/api/clientResponse';
+import {
+    fetchUploadWithTransientRetry,
+    isTransientUploadStatus,
+} from '@/api/clientUploadTransport';
 
 export { ApiError, isTimeoutError } from '@/api/clientErrors';
 
@@ -72,6 +78,9 @@ class ApiClient {
      * ✅ FIX-003: Исправлена race condition через lock механизм
      */
     private async refreshAccessToken(): Promise<string> {
+        if (!shouldUseStoredAuthToken()) {
+            throw new Error('Web auth refresh is managed by the HttpOnly cookie');
+        }
         // Если уже идет обновление, ждем его завершения
         if (this.refreshTokenLock) {
             // Ждем завершения текущего обновления
@@ -98,13 +107,14 @@ class ApiClient {
                 // ✅ FIX-001: Используем безопасное хранилище
                 const refreshToken = await getSecureItem(REFRESH_TOKEN_KEY);
                 if (!refreshToken) {
-                    throw new Error('Refresh token не найден');
+                    throw new Error(i18nT('errorsStatic:api.client.refreshTokenMissing'));
                 }
 
                 const response = await fetchWithTimeout(
                     `${this.baseURL}/user/refresh/`,
                     {
                         method: 'POST',
+                        ...getApiRequestCredentials(),
                         headers: this.defaultHeaders,
                         body: JSON.stringify({ refresh: refreshToken }),
                     },
@@ -115,7 +125,7 @@ class ApiClient {
                     // Решение об очистке токенов принимает вызывающий код по
                     // подтверждённому 401 (см. isTokenRejectedByServer) — сам по себе
                     // неудачный refresh не доказывает невалидность access-токена (#810).
-                    throw new ApiError(response.status, 'Не удалось обновить токен');
+                    throw new ApiError(response.status, i18nT('errorsStatic:api.client.refreshFailed'));
                 }
 
                 const data = await response.json();
@@ -161,7 +171,11 @@ class ApiClient {
         try {
             const probe = await fetchWithTimeout(
                 `${this.baseURL}/user/me/verifications/`,
-                { method: 'GET', headers: this.authHeaders(token) },
+                {
+                    method: 'GET',
+                    ...getApiRequestCredentials(),
+                    headers: this.authHeaders(token),
+                },
                 DEFAULT_TIMEOUT
             );
             return probe.status === 401;
@@ -175,6 +189,7 @@ class ApiClient {
      * ✅ FIX-001: Использует безопасное хранилище
      */
     private async getAccessToken(): Promise<string | null> {
+        if (!shouldUseStoredAuthToken()) return null;
         return await getSecureItem(TOKEN_KEY);
     }
 
@@ -198,63 +213,8 @@ class ApiClient {
         };
     }
 
-    /** Пытается распарсить тело ошибки как JSON, иначе возвращает исходный текст. */
-    private parseErrorBody(text: string): unknown {
-        try {
-            return JSON.parse(text);
-        } catch {
-            return text;
-        }
-    }
-
-    /** Читает тело ответа-ошибки и бросает ApiError с человекочитаемым сообщением. */
-    private async throwDetailedError(response: Response): Promise<never> {
-        const errorText = await response.text().catch(() => 'Unknown error');
-        const errorData = this.parseErrorBody(errorText);
-        const fallbackStatusText = response.statusText || `HTTP ${response.status}`;
-        throw new ApiError(
-            response.status,
-            getApiErrorMessage(errorData, fallbackStatusText),
-            errorData
-        );
-    }
-
-    private async parseSuccessResponse<T>(response: Response): Promise<T> {
-        if (response.status === 204) {
-            return null as T;
-        }
-
-        const maybeTextFn = (response as Partial<Response>)?.text;
-        if (typeof maybeTextFn === 'function') {
-            const text = await response.text().catch(() => '');
-            if (!text) {
-                return null as T;
-            }
-            try {
-                return JSON.parse(text) as T;
-            } catch {
-                // Если это простой текст, не JSON, логируем и возвращаем null
-                if (__DEV__) {
-                    devError('Ошибка парсинга JSON в parseSuccessResponse:', text.substring(0, 100));
-                }
-                return null as T;
-            }
-        }
-
-        const maybeJsonFn = (response as Partial<Response>)?.json;
-        if (typeof maybeJsonFn === 'function') {
-            return (await response.json()) as T;
-        }
-
-        return null as T;
-    }
-
     private isTransientUploadStatus(status: number): boolean {
-        return TRANSIENT_UPLOAD_STATUSES.has(status);
-    }
-
-    private async wait(ms: number): Promise<void> {
-        await new Promise((resolve) => setTimeout(resolve, ms));
+        return isTransientUploadStatus(status);
     }
 
     private async fetchUploadWithTransientRetry(
@@ -263,22 +223,13 @@ class ApiClient {
         timeout: number,
         retries: number = 1
     ): Promise<Response> {
-        let attempt = 0;
-
-        while (true) {
-            const response = await fetchWithTimeout(`${this.baseURL}${endpoint}`, init, timeout);
-            const shouldRetry =
-                attempt < retries && !response.ok && this.isTransientUploadStatus(response.status);
-
-            if (!shouldRetry) {
-                return response;
-            }
-
-            attempt += 1;
-            if (UPLOAD_RETRY_DELAY_MS > 0) {
-                await this.wait(UPLOAD_RETRY_DELAY_MS);
-            }
-        }
+        return fetchUploadWithTransientRetry(
+            this.baseURL,
+            endpoint,
+            init,
+            timeout,
+            retries
+        );
     }
 
     /**
@@ -305,7 +256,7 @@ class ApiClient {
         if (!rateLimitSlot) {
             throw new ApiError(
                 429,
-                'Слишком много запросов. Пожалуйста, подождите немного.',
+                i18nT('errorsStatic:api.client.tooManyRequests'),
                 { rateLimited: true }
             );
         }
@@ -315,7 +266,7 @@ class ApiClient {
         if (!isOnline) {
             throw new ApiError(
                 0,
-                'Нет подключения к интернету. Проверьте ваше соединение и попробуйте снова.',
+                i18nT('errorsStatic:api.client.offline'),
                 { offline: true }
             );
         }
@@ -326,7 +277,7 @@ class ApiClient {
         try {
             const response = await fetchWithTimeout(
                 `${this.baseURL}${endpoint}`,
-                { ...options, headers },
+                { ...options, ...getApiRequestCredentials(skipAuth), headers },
                 timeout
             );
 
@@ -345,7 +296,7 @@ class ApiClient {
                         await this.clearTokens();
                     }
                 }
-                throw new ApiError(401, 'Требуется авторизация');
+                throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
             }
 
             // Если получили 401, пробуем обновить токен.
@@ -354,7 +305,7 @@ class ApiClient {
             // падениям e2e после первого 401. Поэтому в E2E не делаем refresh.
             if (response.status === 401 && token) {
                 if (isE2E) {
-                    throw new ApiError(401, 'Требуется авторизация');
+                    throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
                 }
                 try {
                     const newToken = await this.refreshAccessToken();
@@ -367,19 +318,19 @@ class ApiClient {
 
                     const retryResponse = await fetchWithTimeout(
                         `${this.baseURL}${endpoint}`,
-                        { ...options, headers: retryHeaders },
+                        { ...options, ...getApiRequestCredentials(), headers: retryHeaders },
                         timeout
                     );
 
                     if (!retryResponse.ok) {
                         throw new ApiError(
                             retryResponse.status,
-                            `Ошибка запроса: ${retryResponse.statusText || `HTTP ${retryResponse.status}`}`,
+                            i18nT('errorsStatic:api.common.requestFailed', { details: retryResponse.statusText || `HTTP ${retryResponse.status}` }),
                             await retryResponse.text().catch(() => null)
                         );
                     }
 
-                    return await this.parseSuccessResponse<T>(retryResponse);
+                    return await parseSuccessResponse<T>(retryResponse);
                 } catch {
                     // Refresh недоступен (у бэка нет /user/refresh/, refresh-токен не выдаётся),
                     // поэтому сюда попадает ЛЮБОЙ 401 при живом access-токене. Токены стираем
@@ -397,20 +348,20 @@ class ApiClient {
                     });
                     const fallbackResponse = await fetchWithTimeout(
                         `${this.baseURL}${endpoint}`,
-                        { ...options, headers: fallbackHeaders },
+                        { ...options, ...getApiRequestCredentials(true), headers: fallbackHeaders },
                         timeout
                     );
 
                     if (!fallbackResponse.ok) {
-                        await this.throwDetailedError(fallbackResponse);
+                        await throwDetailedError(fallbackResponse);
                     }
 
-                    return await this.parseSuccessResponse<T>(fallbackResponse);
+                    return await parseSuccessResponse<T>(fallbackResponse);
                 }
             }
 
             if (!response.ok) {
-                await this.throwDetailedError(response);
+                await throwDetailedError(response);
             }
 
             // Если ответ пустой (204 No Content), возвращаем null
@@ -418,7 +369,7 @@ class ApiClient {
                 return null as T;
             }
 
-            return await this.parseSuccessResponse<T>(response);
+            return await parseSuccessResponse<T>(response);
         } catch (error) {
             const errorName = error instanceof Error ? error.name : '';
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -446,7 +397,7 @@ class ApiClient {
             if (isOfflineLikeError(error)) {
                 throw new ApiError(
                     0,
-                    'Нет подключения к интернету. Проверьте ваше соединение и попробуйте снова.',
+                    i18nT('errorsStatic:api.client.offline'),
                     { offline: true }
                 );
             }
@@ -465,7 +416,7 @@ class ApiClient {
         if (!rateLimitSlot) {
             throw new ApiError(
                 429,
-                'Слишком много запросов. Пожалуйста, подождите немного.',
+                i18nT('errorsStatic:api.client.tooManyRequests'),
                 { rateLimited: true }
             );
         }
@@ -474,7 +425,7 @@ class ApiClient {
         if (!isOnline) {
             throw new ApiError(
                 0,
-                'Нет подключения к интернету. Проверьте ваше соединение и попробуйте снова.',
+                i18nT('errorsStatic:api.client.offline'),
                 { offline: true }
             );
         }
@@ -482,34 +433,15 @@ class ApiClient {
         const token = await this.getAccessToken();
         const headers = this.authHeaders(token, { extra: options.headers });
 
-        const handle = async (resp: Response): Promise<DownloadResponse> => {
-            if (!resp.ok) {
-                const errorText = await resp.text().catch(() => 'Unknown error');
-                const errorData: unknown = this.parseErrorBody(errorText);
-                throw new ApiError(
-                    resp.status,
-                    getErrorTextField(errorData, 'message') ||
-                        getErrorTextField(errorData, 'detail') ||
-                        `Ошибка запроса: ${resp.statusText}`,
-                    errorData
-                );
-            }
-
-            const contentType = resp.headers.get('content-type') ?? undefined;
-            const filename = parseDownloadFilename(resp.headers.get('content-disposition'));
-            const blob =
-                Platform.OS === 'web'
-                    ? await resp.blob()
-                    : ({
-                        text: () => resp.text(),
-                      } as Blob);
-            return { blob, contentType, filename };
-        };
-
         try {
             const resp = await fetchWithTimeout(
                 `${this.baseURL}${endpoint}`,
-                { ...options, method: options.method || 'GET', headers },
+                {
+                    ...options,
+                    ...getApiRequestCredentials(),
+                    method: options.method || 'GET',
+                    headers,
+                },
                 timeout
             );
 
@@ -519,12 +451,12 @@ class ApiClient {
                 if (!storedToken) {
                     await this.clearTokens();
                 }
-                throw new ApiError(401, 'Требуется авторизация');
+                throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
             }
 
             if (resp.status === 401 && token) {
                 if (isE2E) {
-                    throw new ApiError(401, 'Требуется авторизация');
+                    throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
                 }
                 try {
                     const newToken = await this.refreshAccessToken();
@@ -534,10 +466,15 @@ class ApiClient {
                     };
                     const retryResp = await fetchWithTimeout(
                         `${this.baseURL}${endpoint}`,
-                        { ...options, method: options.method || 'GET', headers: retryHeaders },
+                        {
+                            ...options,
+                            ...getApiRequestCredentials(),
+                            method: options.method || 'GET',
+                            headers: retryHeaders,
+                        },
                         timeout
                     );
-                    return await handle(retryResp);
+                    return await parseDownloadResponse(retryResp);
                 } catch {
                     // См. request(): токены стираем только по подтверждённому 401 пробы (#810).
                     if (await this.isTokenRejectedByServer(token)) {
@@ -546,14 +483,19 @@ class ApiClient {
                     const fallbackHeaders = this.authHeaders(null, { extra: options.headers });
                     const fallbackResp = await fetchWithTimeout(
                         `${this.baseURL}${endpoint}`,
-                        { ...options, method: options.method || 'GET', headers: fallbackHeaders },
+                        {
+                            ...options,
+                            ...getApiRequestCredentials(true),
+                            method: options.method || 'GET',
+                            headers: fallbackHeaders,
+                        },
                         timeout
                     );
-                    return await handle(fallbackResp);
+                    return await parseDownloadResponse(fallbackResp);
                 }
             }
 
-            return await handle(resp);
+            return await parseDownloadResponse(resp);
         } catch (error) {
             const errorName = error instanceof Error ? error.name : '';
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -575,7 +517,7 @@ class ApiClient {
             if (isOfflineLikeError(error)) {
                 throw new ApiError(
                     0,
-                    'Нет подключения к интернету. Проверьте ваше соединение и попробуйте снова.',
+                    i18nT('errorsStatic:api.client.offline'),
                     { offline: true }
                 );
             }
@@ -584,9 +526,6 @@ class ApiClient {
         }
     }
 
-    /**
-     * GET запрос
-     */
     async get<T>(
         endpoint: string,
         timeout?: number,
@@ -595,9 +534,6 @@ class ApiClient {
         return this.request<T>(endpoint, { method: 'GET', ...(options ?? {}) }, timeout);
     }
 
-    /**
-     * POST запрос
-     */
     async post<T>(endpoint: string, data?: unknown, timeout?: number): Promise<T> {
         return this.request<T>(
             endpoint,
@@ -609,9 +545,6 @@ class ApiClient {
         );
     }
 
-    /**
-     * PUT запрос
-     */
     async put<T>(endpoint: string, data?: unknown, timeout?: number): Promise<T> {
         return this.request<T>(
             endpoint,
@@ -623,9 +556,6 @@ class ApiClient {
         );
     }
 
-    /**
-     * PATCH запрос
-     */
     async patch<T>(endpoint: string, data?: unknown, timeout?: number): Promise<T> {
         return this.request<T>(
             endpoint,
@@ -637,9 +567,6 @@ class ApiClient {
         );
     }
 
-    /**
-     * DELETE запрос
-     */
     async delete<T>(endpoint: string, timeout?: number): Promise<T> {
         return this.request<T>(endpoint, { method: 'DELETE' }, timeout);
     }
@@ -669,7 +596,7 @@ class ApiClient {
 
             if (response.status === 401 && token) {
                 if (isE2E) {
-                    throw new ApiError(401, 'Требуется авторизация');
+                    throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
                 }
                 const newToken = await this.refreshAccessToken();
                 const retryHeaders: HeadersInit = {
@@ -689,7 +616,7 @@ class ApiClient {
                 if (!retryResponse.ok) {
                     throw new ApiError(
                         retryResponse.status,
-                        `Ошибка загрузки: ${retryResponse.statusText}`
+                        i18nT('errorsStatic:api.client.uploadFailed', { details: retryResponse.statusText })
                     );
                 }
 
@@ -699,7 +626,7 @@ class ApiClient {
             if (!response.ok) {
                 throw new ApiError(
                     response.status,
-                    `Ошибка загрузки: ${response.statusText}`
+                    i18nT('errorsStatic:api.client.uploadFailed', { details: response.statusText })
                 );
             }
 
@@ -709,7 +636,7 @@ class ApiClient {
                 throw error;
             }
             devError('File upload error:', error);
-            throw new ApiError(0, error instanceof Error ? error.message : 'Ошибка загрузки файла');
+            throw new ApiError(0, error instanceof Error ? error.message : i18nT('errorsStatic:api.client.fileUploadFailed'));
         }
     }
 
@@ -764,6 +691,9 @@ class ApiClient {
         return new Promise<T>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open(method, `${this.baseURL}${endpoint}`);
+            if (usesWebCookieAuth()) {
+                xhr.withCredentials = true;
+            }
 
             const headers = this.authHeaders(token);
             for (const [headerKey, headerValue] of Object.entries(headers)) {
@@ -802,12 +732,12 @@ class ApiClient {
                         .then(resolve)
                         .catch(reject);
                 } else {
-                    reject(new ApiError(xhr.status, `Ошибка загрузки: ${xhr.statusText}`));
+                    reject(new ApiError(xhr.status, i18nT('errorsStatic:api.client.uploadFailed', { details: xhr.statusText })));
                 }
             };
 
-            xhr.onerror = () => reject(new ApiError(0, 'Ошибка сети при загрузке'));
-            xhr.ontimeout = () => reject(new ApiError(0, 'Превышено время загрузки'));
+            xhr.onerror = () => reject(new ApiError(0, i18nT('errorsStatic:api.client.uploadNetworkError')));
+            xhr.ontimeout = () => reject(new ApiError(0, i18nT('errorsStatic:api.client.uploadTimeout')));
 
             xhr.send(formData);
         });
@@ -832,7 +762,7 @@ class ApiClient {
 
             if (response.status === 401 && token) {
                 if (isE2E) {
-                    throw new ApiError(401, 'Требуется авторизация');
+                    throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
                 }
                 const newToken = await this.refreshAccessToken();
                 const retryHeaders: HeadersInit = {
@@ -844,23 +774,23 @@ class ApiClient {
                     timeout
                 );
                 if (!retryResponse.ok) {
-                    await this.throwDetailedError(retryResponse);
+                    await throwDetailedError(retryResponse);
                 }
-                return await this.parseSuccessResponse<T>(retryResponse);
+                return await parseSuccessResponse<T>(retryResponse);
             }
 
             if (!response.ok) {
                 // Читаем тело ответа (напр. 400 «unsupported file type»), а не пустой
                 // statusText — по HTTP/2 statusText всегда пустой, из-за чего ошибка
                 // выглядела как «Ошибка загрузки:» без причины.
-                await this.throwDetailedError(response);
+                await throwDetailedError(response);
             }
 
-            return await this.parseSuccessResponse<T>(response);
+            return await parseSuccessResponse<T>(response);
         } catch (error) {
             if (error instanceof ApiError) throw error;
             devError('FormData upload error:', error);
-            throw new ApiError(0, error instanceof Error ? error.message : 'Ошибка загрузки файла');
+            throw new ApiError(0, error instanceof Error ? error.message : i18nT('errorsStatic:api.client.fileUploadFailed'));
         }
     }
 }

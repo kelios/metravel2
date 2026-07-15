@@ -14,6 +14,8 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import PointNavigationMenu from '@/components/navigation/PointNavigationMenu';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import type { PointListResponsiveModel } from '@/components/travel/hooks/usePointListResponsiveModel';
+import { translate as i18nT } from '@/i18n'
+
 
 type PointLike = {
   address: string;
@@ -89,7 +91,7 @@ const AddToPointsButton = React.memo(function AddToPointsButton({
       <CardActionPressable
         onPress={onPress}
         disabled={disabled || loading}
-        accessibilityLabel="Мои точки"
+        accessibilityLabel={i18nT('travel:components.travel.PointCard.moi_tochki_095b9737')}
         style={({ pressed }) => [
           globalFocusStyles.focusable,
           styles.addButton,
@@ -103,7 +105,7 @@ const AddToPointsButton = React.memo(function AddToPointsButton({
         ) : (
           <View style={styles.addButtonRow}>
             <Feather name="plus-circle" size={16} color={colors.textOnPrimary} />
-            <Text style={[styles.addButtonText, { color: colors.textOnPrimary }]}>Мои точки</Text>
+            <Text style={[styles.addButtonText, { color: colors.textOnPrimary }]}>{i18nT('travel:components.travel.PointCard.moi_tochki_095b9737')}</Text>
           </View>
         )}
       </CardActionPressable>
@@ -168,7 +170,7 @@ const PointCard = React.memo(function PointCard({
         onPress={onCardPress ?? openMapFromLink}
         style={[styles.cardPressable, globalFocusStyles.focusable]}
         accessibilityRole="button"
-        accessibilityLabel={`Открыть место: ${point.address}`}
+        accessibilityLabel={i18nT('travel:components.travel.PointCard.otkryt_mesto_value1_146f093c', { value1: point.address })}
       >
         <View
           testID="travel-point-card-image-wrap"
@@ -205,15 +207,15 @@ const PointCard = React.memo(function PointCard({
             >
               <View style={styles.actionsRow}>
                 <PointActionIcon
-                  accessibilityLabel="Скопировать координаты"
-                  title="Скопировать координаты"
+                  accessibilityLabel={i18nT('travel:components.travel.PointCard.skopirovat_koordinaty_ef85ad09')}
+                  title={i18nT('travel:components.travel.PointCard.skopirovat_koordinaty_ef85ad09')}
                   onPress={() => onCopy(point.coord)}
                   icon={<Feather name="clipboard" size={18} color={colors.textOnDark} />}
                   style={styles.actionBtn}
                 />
                 <PointActionIcon
-                  accessibilityLabel="Поделиться"
-                  title="Поделиться в Telegram"
+                  accessibilityLabel={i18nT('travel:components.travel.PointCard.podelitsya_ee0ad34e')}
+                  title={i18nT('travel:components.travel.PointCard.podelitsya_v_telegram_7a0e6aac')}
                   onPress={() => onShare(point.coord)}
                   icon={<Feather name="send" size={18} color={colors.textOnDark} />}
                   style={styles.actionBtn}
@@ -238,8 +240,8 @@ const PointCard = React.memo(function PointCard({
             <CardActionPressable
               style={[styles.overlayCoordRow, globalFocusStyles.focusable]}
               onPress={openMapFromLink}
-              accessibilityLabel={`Координаты: ${point.coord}`}
-              title="Открыть координаты в Google Maps"
+              accessibilityLabel={i18nT('travel:components.travel.PointCard.koordinaty_value1_dfde5151', { value1: point.coord })}
+              title={i18nT('travel:components.travel.PointCard.otkryt_koordinaty_v_google_maps_55c82450')}
             >
               <Feather name="map-pin" size={14} color={colors.textOnDark} />
               <Text
@@ -253,7 +255,7 @@ const PointCard = React.memo(function PointCard({
             <View style={styles.overlayNavigationMenu}>
               <PointNavigationMenu
                 coord={point.coord}
-                label="Открыть в навигаторе"
+                label={i18nT('travel:components.travel.PointCard.otkryt_v_navigatore_c8c53ed9')}
                 testIDPrefix={`travel-point-card-navigation-${point.coord.replace(/[^a-zA-Z0-9_-]+/g, '-')}`}
               />
             </View>
@@ -306,7 +308,7 @@ const PointCard = React.memo(function PointCard({
             <View style={styles.cardInfoNavigationMenu}>
               <PointNavigationMenu
                 coord={point.coord}
-                label="Карта"
+                label={i18nT('travel:components.travel.PointCard.karta_e5879a2e')}
                 testIDPrefix={`travel-point-card-navigation-${point.coord.replace(/[^a-zA-Z0-9_-]+/g, '-')}`}
               />
             </View>
@@ -320,8 +322,8 @@ const PointCard = React.memo(function PointCard({
                 {point.coord}
               </Text>
               <CardActionPressable
-                accessibilityLabel="Скопировать координаты"
-                title="Скопировать координаты"
+                accessibilityLabel={i18nT('travel:components.travel.PointCard.skopirovat_koordinaty_ef85ad09')}
+                title={i18nT('travel:components.travel.PointCard.skopirovat_koordinaty_ef85ad09')}
                 onPress={() => onCopy(point.coord)}
                 style={({ pressed }) => [
                   styles.cardInfoIconButton,
@@ -334,8 +336,8 @@ const PointCard = React.memo(function PointCard({
 
             <View style={styles.cardInfoActionsRow}>
               <CardActionPressable
-                accessibilityLabel="Поделиться"
-                title="Поделиться в Telegram"
+                accessibilityLabel={i18nT('travel:components.travel.PointCard.podelitsya_ee0ad34e')}
+                title={i18nT('travel:components.travel.PointCard.podelitsya_v_telegram_7a0e6aac')}
                 onPress={() => onShare(point.coord)}
                 style={({ pressed }) => [
                   styles.cardInfoActionButton,
@@ -344,14 +346,13 @@ const PointCard = React.memo(function PointCard({
               >
                 <Feather name="send" size={18} color={primaryColor} />
                 <Text style={styles.cardInfoActionText} numberOfLines={1} allowFontScaling={false}>
-                  TG
-                </Text>
+                  {i18nT('travel:components.travel.PointCard.tg_58c2e64e')}</Text>
               </CardActionPressable>
 
               {onAddPoint && (
                 <CardActionPressable
-                  accessibilityLabel="Мои точки"
-                  title="Мои точки"
+                  accessibilityLabel={i18nT('travel:components.travel.PointCard.moi_tochki_095b9737')}
+                  title={i18nT('travel:components.travel.PointCard.moi_tochki_095b9737')}
                   onPress={onAddPoint}
                   disabled={Boolean(addButtonDisabled) || Boolean(addButtonLoading)}
                   style={({ pressed }) => [
@@ -367,8 +368,7 @@ const PointCard = React.memo(function PointCard({
                     <Feather name="plus-circle" size={18} color={primaryColor} />
                   )}
                   <Text style={styles.cardInfoActionText} numberOfLines={1} allowFontScaling={false}>
-                    Мои
-                  </Text>
+                    {i18nT('travel:components.travel.PointCard.moi_551ccc5e')}</Text>
                 </CardActionPressable>
               )}
             </View>

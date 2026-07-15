@@ -1,5 +1,6 @@
-import React, { Suspense } from 'react'
-import { View, Text, TextInput, ActivityIndicator } from 'react-native'
+import React, { Suspense, type ReactNode } from 'react'
+import { View, Text, TextInput, ActivityIndicator, Modal } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 import Button from '@/components/ui/Button'
 import { hasSurfaceDraggedFiles } from './articleEditorMediaHelpers'
@@ -8,6 +9,27 @@ import {
   ArticleEditorLinkModal,
   ArticleEditorToolbar,
 } from './ArticleEditorWebChrome'
+import { translate as i18nT } from '@/i18n'
+
+
+export const ArticleEditorShell = ({
+  children,
+  dynamicStyles,
+  fullscreen,
+}: {
+  children: ReactNode
+  dynamicStyles: any
+  fullscreen: boolean
+}) => fullscreen ? (
+  <Modal visible animationType="slide">
+    <SafeAreaView style={dynamicStyles.fullWrap}>
+      <View style={dynamicStyles.fullInner}>{children}</View>
+    </SafeAreaView>
+  </Modal>
+) : (
+  <View style={dynamicStyles.wrap}>{children}</View>
+)
+
 
 export const ArticleEditorLoader: React.FC<{
   canActivate?: boolean
@@ -18,13 +40,12 @@ export const ArticleEditorLoader: React.FC<{
   <View style={dynamicStyles.loadBox}>
     {canActivate ? (
       <>
-        <Text style={dynamicStyles.loadTxt}>Редактор подготавливается</Text>
+        <Text style={dynamicStyles.loadTxt}>{i18nT('shared:components.article.ArticleEditor_web_parts.redaktor_podgotavlivaetsya_d0f38cfc')}</Text>
         <Text style={dynamicStyles.loadHint}>
-          Можно открыть его сразу или подождать автоматическую загрузку.
-        </Text>
+          {i18nT('shared:components.article.ArticleEditor_web_parts.mozhno_otkryt_ego_srazu_ili_podozhdat_avtoma_813c0424')}</Text>
         <Button
           onPress={onRequestLoad}
-          label="Открыть редактор"
+          label={i18nT('shared:components.article.ArticleEditor_web_parts.otkryt_redaktor_5bf866ec')}
           variant="outline"
           size="sm"
         />
@@ -32,7 +53,7 @@ export const ArticleEditorLoader: React.FC<{
     ) : (
       <>
         <ActivityIndicator size="small" color={primaryColor} />
-        <Text style={dynamicStyles.loadTxt}>Загрузка…</Text>
+        <Text style={dynamicStyles.loadTxt}>{i18nT('shared:components.article.ArticleEditor_web_parts.zagruzka_2973bf98')}</Text>
       </>
     )}
   </View>

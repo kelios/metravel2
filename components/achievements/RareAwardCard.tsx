@@ -14,6 +14,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { rareAwardToBadge, type RareAward } from '@/api/achievements';
 import BadgeMedal from '@/components/achievements/BadgeMedal';
 import ShareBadgeSheet from '@/components/achievements/ShareBadgeSheet';
+import { formatDate as formatLocalizedDate, translate as i18nT } from '@/i18n'
+
 
 interface Props {
   award: RareAward;
@@ -29,7 +31,7 @@ const formatDate = (iso: string): string => {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('ru-RU', {
+  return formatLocalizedDate(d, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -70,7 +72,7 @@ function RareAwardCard({ award, ownerName, shareable = true, testID, style }: Pr
           style={styles.shareBtn}
           onPress={() => setShareOpen(true)}
           accessibilityRole="button"
-          accessibilityLabel={`Поделиться наградой «${award.title}»`}
+          accessibilityLabel={i18nT('achievements:components.achievements.RareAwardCard.podelitsya_nagradoy_value1_1321d317', { value1: award.title })}
           testID={testID ? `${testID}-share` : undefined}
         >
           <Feather name="share-2" size={16} color={colors.primaryDark} />

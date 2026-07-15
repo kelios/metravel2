@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import CardActionPressable from '@/components/ui/CardActionPressable';
+import { translate as i18nT } from '@/i18n'
+
 
 interface GroupClearButtonProps {
   onPress: () => void;
@@ -14,7 +16,7 @@ interface GroupClearButtonProps {
 const GroupClearButton = memo(({ onPress, count, colors }: GroupClearButtonProps) => (
   <CardActionPressable
     onPress={onPress}
-    title={`Очистить ${count} выбранных`}
+    title={i18nT('travel:components.listTravel.filters.GroupClearButton.ochistit_value1_vybrannyh_72bd2495', { value1: count })}
     style={{
       width: 26,
       height: 26,
@@ -25,7 +27,7 @@ const GroupClearButton = memo(({ onPress, count, colors }: GroupClearButtonProps
       ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
     }}
     accessibilityRole="button"
-    accessibilityLabel={`Очистить ${count} выбранных`}
+    accessibilityLabel={i18nT('travel:components.listTravel.filters.GroupClearButton.ochistit_value1_vybrannyh_72bd2495', { value1: count })}
   >
     <Feather name="x" size={14} color={colors.brandText} />
   </CardActionPressable>

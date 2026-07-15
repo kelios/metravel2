@@ -2,6 +2,8 @@ import { memo, useEffect } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 // Lazy-require reanimated only on native
 const Reanimated = Platform.OS !== 'web' ? require('react-native-reanimated') : null;
@@ -80,7 +82,7 @@ function NativeProgressBar({
   });
 
   return (
-    <View style={styles.container} accessible accessibilityLabel={`Загрузка ${percent}%`} accessibilityRole="progressbar">
+    <View style={styles.container} accessible accessibilityLabel={i18nT('shared:components.ui.UploadProgressBar.zagruzka_value1_764ac64a', { value1: percent })} accessibilityRole="progressbar">
       {label ? (
         <Text style={[styles.label, { color: colors.textMuted }]}>{label} — {percent}%</Text>
       ) : (

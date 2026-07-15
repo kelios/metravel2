@@ -8,6 +8,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import { readConsent, writeConsent, ConsentState } from '@/utils/consent';
+import { translate as i18nT } from '@/i18n'
+
 
 const isWeb = Platform.OS === 'web';
 
@@ -172,8 +174,7 @@ function ConsentBanner() {
             numberOfLines={isMobile ? 2 : undefined}
             style={[styles.text, isMobile && styles.textMobile, { color: colors.textMuted }]}
           >
-            Используем аналитику для улучшения сервиса.
-          </Text>
+            {i18nT('navigation:components.layout.ConsentBanner.ispolzuem_analitiku_dlya_uluchsheniya_servis_dae68d24')}</Text>
         </View>
         <View
           style={[
@@ -185,7 +186,7 @@ function ConsentBanner() {
           <Link href="/cookies" asChild>
             <Pressable
               accessibilityRole="link"
-              accessibilityLabel="Подробнее о cookies"
+              accessibilityLabel={i18nT('navigation:components.layout.ConsentBanner.podrobnee_o_cookies_caf7ecdc')}
               style={({ pressed }) => [
                 styles.detailsLink,
                 { borderColor: colors.border },
@@ -193,12 +194,11 @@ function ConsentBanner() {
               ]}
             >
               <Text style={[styles.detailsLinkText, { color: colors.primaryText }]}>
-                Подробнее
-              </Text>
+                {i18nT('navigation:components.layout.ConsentBanner.podrobnee_1db70e5c')}</Text>
             </Pressable>
           </Link>
           <Button
-            label="Отклонить"
+            label={i18nT('navigation:components.layout.ConsentBanner.otklonit_054e0823')}
             onPress={handleNecessaryOnly}
             variant="outline"
             size="sm"
@@ -207,10 +207,10 @@ function ConsentBanner() {
               isNarrowMobile && styles.buttonNarrow,
               { borderColor: colors.border, borderWidth: 1, backgroundColor: 'transparent' },
             ]}
-            accessibilityLabel="Отклонить"
+            accessibilityLabel={i18nT('navigation:components.layout.ConsentBanner.otklonit_054e0823')}
           />
           <Button
-            label="Принять"
+            label={i18nT('navigation:components.layout.ConsentBanner.prinyat_007a0122')}
             onPress={handleAcceptAll}
             variant="primary"
             size="sm"
@@ -219,7 +219,7 @@ function ConsentBanner() {
               isNarrowMobile && styles.buttonNarrow,
               { backgroundColor: colors.primary },
             ]}
-            accessibilityLabel="Принять"
+            accessibilityLabel={i18nT('navigation:components.layout.ConsentBanner.prinyat_007a0122')}
           />
         </View>
       </View>

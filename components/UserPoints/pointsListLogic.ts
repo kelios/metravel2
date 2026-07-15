@@ -1,6 +1,8 @@
+import { translate as i18nT, type TranslationKey } from '@/i18n';
+
 export type PointsPreset = {
   id: string;
-  label: string;
+  labelKey: TranslationKey;
   baseCategoryNames: string[];
   nearbyCategoryNames: string[];
   proximityKm: number;
@@ -9,7 +11,7 @@ export type PointsPreset = {
 export const POINTS_PRESETS: PointsPreset[] = [
   {
     id: 'hike_mountains',
-    label: 'Поход в горы',
+    labelKey: 'map:components.UserPoints.pointsListLogic.pohod_v_gory_9aa66407',
     baseCategoryNames: ['Гора', 'Горный хребет', 'Перевал', 'Треккинговый маршрут'],
     nearbyCategoryNames: [
       'Приют',
@@ -37,7 +39,7 @@ export const POINTS_PRESETS: PointsPreset[] = [
   },
   {
     id: 'history_ruins',
-    label: 'Руины',
+    labelKey: 'map:components.UserPoints.pointsListLogic.ruiny_8c403d16',
     baseCategoryNames: [
       'Руины',
       'Руины замка',
@@ -80,26 +82,29 @@ export const POINTS_PRESETS: PointsPreset[] = [
   },
   {
     id: 'lakes',
-    label: 'Озёра',
+    labelKey: 'map:components.UserPoints.pointsListLogic.ozera_26a9aa68',
     baseCategoryNames: ['Озеро'],
     nearbyCategoryNames: ['Родник', 'Водопад', 'Парк', 'Лес', 'Место отдыха', 'Пляж', 'Скала'],
     proximityKm: 6,
   },
   {
     id: 'with_kids',
-    label: 'С детьми',
+    labelKey: 'map:components.UserPoints.pointsListLogic.s_detmi_e08eff8f',
     baseCategoryNames: ['Парк развлечений', 'Парк', 'Место отдыха'],
     nearbyCategoryNames: ['Кафе', 'Ресторан', 'Туалет', 'Остановка', 'Музей', 'Пляж', 'Озеро'],
     proximityKm: 4,
   },
   {
     id: 'nature',
-    label: 'Природа',
+    labelKey: 'map:components.UserPoints.pointsListLogic.priroda_ea99e5ea',
     baseCategoryNames: ['Заповедник', 'Лес', 'Парк', 'Водопад', 'Озеро'],
     nearbyCategoryNames: ['Родник', 'Скала', 'Пещера', 'Гора', 'Место отдыха'],
     proximityKm: 10,
   },
 ];
+
+export const getPointsPresetLabel = (preset: PointsPreset): string =>
+  i18nT(preset.labelKey);
 
 export const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 6371;

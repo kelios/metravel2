@@ -11,6 +11,8 @@ import { ResponsiveContainer } from '@/components/layout'
 import Button from '@/components/ui/Button'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { trackContentCreateCtaClicked, trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
+import { translate as i18nT } from '@/i18n'
+
 
 export type ContributionBannerVariant =
   | 'home'
@@ -33,51 +35,43 @@ const COPY: Record<
 > = {
   home: {
     icon: 'map-pin',
-    title: 'Добавьте место, в котором побывали',
-    subtitle:
-      'Каждый маршрут на Metravel создан такими же путешественниками. Расскажите о своём — и помогите другим найти следующее приключение. Это бесплатно и занимает пару минут.',
+    get title() { return i18nT('sharedStatic:components.common.ContributionBanner.dobavte_mesto_v_kotorom_pobyvali_c75bd52e') },
+    get subtitle() { return i18nT('sharedStatic:components.common.ContributionBanner.kazhdyy_marshrut_na_metravel_sozdan_takimi_z_361a2079') },
   },
   search: {
     icon: 'compass',
-    title: 'Не нашли нужный маршрут? Добавьте его сами!',
-    subtitle:
-      'Огромное спасибо всем путешественникам, которые уже поделились своими маршрутами. Ваш опыт — самый честный путеводитель.',
+    get title() { return i18nT('sharedStatic:components.common.ContributionBanner.ne_nashli_nuzhnyy_marshrut_dobavte_ego_sami_93a79b04') },
+    get subtitle() { return i18nT('sharedStatic:components.common.ContributionBanner.ogromnoe_spasibo_vsem_puteshestvennikam_koto_1a59ba9a') },
   },
   articles: {
     icon: 'edit-2',
-    title: 'Вы тоже можете пополнить карту!',
-    subtitle:
-      'Все маршруты здесь созданы такими же людьми, как вы. Если вам есть что рассказать о каком-то месте — добавьте его, и это увидят сотни человек.',
+    get title() { return i18nT('sharedStatic:components.common.ContributionBanner.vy_tozhe_mozhete_popolnit_kartu_73eb12e1') },
+    get subtitle() { return i18nT('sharedStatic:components.common.ContributionBanner.vse_marshruty_zdes_sozdany_takimi_zhe_lyudmi_9cbfd905') },
   },
   favorites: {
     icon: 'heart',
-    title: 'Поделитесь местами, которые вам понравились',
-    subtitle:
-      'Спасибо, что пользуетесь сервисом! Если сохранённые маршруты вдохновили вас — добавьте своё место. Другие путешественники будут вам очень благодарны.',
+    get title() { return i18nT('sharedStatic:components.common.ContributionBanner.podelites_mestami_kotorye_vam_ponravilis_7146ed15') },
+    get subtitle() { return i18nT('sharedStatic:components.common.ContributionBanner.spasibo_chto_polzuetes_servisom_esli_sohrane_b4513fe0') },
   },
   places: {
     icon: 'globe',
-    title: 'Знаете место, которого здесь нет?',
-    subtitle:
-      'Добавьте точку или маршрут — это поможет другим путешественникам.',
+    get title() { return i18nT('sharedStatic:components.common.ContributionBanner.znaete_mesto_kotorogo_zdes_net_f35f5706') },
+    get subtitle() { return i18nT('sharedStatic:components.common.ContributionBanner.dobavte_tochku_ili_marshrut_eto_pomozhet_dru_6553e4f3') },
   },
   history: {
     icon: 'clock',
-    title: 'Были в интересном месте? Добавьте его!',
-    subtitle:
-      'Просмотренные маршруты — лучшее напоминание о поездках. Если среди них есть любимые места — поделитесь ими с сообществом. Это бесплатно и занимает несколько минут.',
+    get title() { return i18nT('sharedStatic:components.common.ContributionBanner.byli_v_interesnom_meste_dobavte_ego_d1075909') },
+    get subtitle() { return i18nT('sharedStatic:components.common.ContributionBanner.prosmotrennye_marshruty_luchshee_napominanie_111e8abd') },
   },
   about: {
     icon: 'users',
-    title: 'Станьте частью сообщества путешественников',
-    subtitle:
-      'Metravel строится на опыте реальных людей. Спасибо всем, кто уже добавил свои маршруты! Присоединяйтесь — добавьте место, которое хочется рекомендовать другим.',
+    get title() { return i18nT('sharedStatic:components.common.ContributionBanner.stante_chastyu_soobschestva_puteshestvenniko_ff32b805') },
+    get subtitle() { return i18nT('sharedStatic:components.common.ContributionBanner.metravel_stroitsya_na_opyte_realnyh_lyudey_s_b9631c41') },
   },
   default: {
     icon: 'map-pin',
-    title: 'Помогите расширить карту',
-    subtitle:
-      'Если сайт оказался полезным — добавьте своё место. Спасибо всем, кто уже делится маршрутами: именно благодаря вам это работает.',
+    get title() { return i18nT('sharedStatic:components.common.ContributionBanner.pomogite_rasshirit_kartu_3cbcccdf') },
+    get subtitle() { return i18nT('sharedStatic:components.common.ContributionBanner.esli_sayt_okazalsya_poleznym_dobavte_svoe_me_e4283029') },
   },
 }
 
@@ -153,7 +147,7 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
           <View style={[styles.buttons, isMobile ? styles.buttonsMobile : styles.buttonsDesktop]}>
             {!isAuthenticated && (
               <Button
-                label="Зарегистрироваться"
+                label={i18nT('shared:components.common.ContributionBanner.zaregistrirovatsya_f38770f0')}
                 onPress={handleRegister}
                 variant="primary"
                 size={isCompact ? 'sm' : 'md'}
@@ -161,11 +155,11 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
                 icon={<Feather name="user-plus" size={16} color={colors.textOnPrimary} />}
                 iconPosition="left"
                 style={styles.primaryBtn}
-                accessibilityLabel="Зарегистрироваться и добавить место"
+                accessibilityLabel={i18nT('shared:components.common.ContributionBanner.zaregistrirovatsya_i_dobavit_mesto_160382f2')}
               />
             )}
             <Button
-              label="Добавить место"
+              label={i18nT('shared:components.common.ContributionBanner.dobavit_mesto_fc32c378')}
               onPress={handleAddPlace}
               variant={isAuthenticated ? 'primary' : 'outline'}
               size={isCompact ? 'sm' : 'md'}
@@ -173,7 +167,7 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
               icon={<Feather name="plus" size={16} color={isAuthenticated ? colors.textOnPrimary : colors.primary} />}
               iconPosition="left"
               style={isAuthenticated ? styles.primaryBtn : styles.outlineBtn}
-              accessibilityLabel="Добавить место на карту"
+              accessibilityLabel={i18nT('shared:components.common.ContributionBanner.dobavit_mesto_na_kartu_b151a49c')}
             />
           </View>
         </View>

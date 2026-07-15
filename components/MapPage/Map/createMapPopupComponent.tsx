@@ -28,6 +28,8 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { osrmRoute } from '@/api/external/osrm';
 import { buildPlaceTitleParts, stripCountryFromCategoryString } from './placeTitle';
 import { useHasUserLocation, type UserLocationSignal } from './userLocationSignal';
+import { translate as i18nT } from '@/i18n'
+
 
 interface CreatePopupComponentArgs {
   userLocation?: { lat: number; lng: number } | null;
@@ -165,9 +167,9 @@ export const createMapPopupComponent = ({
       // navigator.clipboard отсутствовал → копирование было silent no-op (#502).
       try {
         await Clipboard.setStringAsync(coord);
-        void showToast({ type: 'success', text1: 'Координаты скопированы', position: 'bottom' });
+        void showToast({ type: 'success', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.koordinaty_skopirovany_1a76ccfe'), position: 'bottom' });
       } catch {
-        void showToast({ type: 'error', text1: 'Не удалось скопировать координаты', position: 'bottom' });
+        void showToast({ type: 'error', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_skopirovat_koordinaty_e165149d'), position: 'bottom' });
       }
     }, [coord]);
 
@@ -359,7 +361,7 @@ export const createMapPopupComponent = ({
         { lat: normalizedCoord.lat, lng: normalizedCoord.lng },
       );
       if (!Number.isFinite(originToDest) || originToDest < 100) {
-        void showToast({ type: 'info', text1: 'Вы уже на месте', position: 'bottom' });
+        void showToast({ type: 'info', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.vy_uzhe_na_meste_9b62a74f'), position: 'bottom' });
         return;
       }
 
@@ -368,7 +370,7 @@ export const createMapPopupComponent = ({
         CoordinateConverter.formatCoordinates({ lat: normalizedCoord.lat, lng: normalizedCoord.lng });
 
       routeStore.clearRouteAndSetMode('route');
-      routeStore.addPoint({ lat: userLat, lng: userLng }, 'Моё местоположение');
+      routeStore.addPoint({ lat: userLat, lng: userLng }, i18nT('map:components.MapPage.Map.createMapPopupComponent.moe_mestopolozhenie_ca0ae548'));
       routeStore.addPoint({ lat: normalizedCoord.lat, lng: normalizedCoord.lng }, destinationLabel);
       handlePress();
     }, [handlePress, normalizedCoord, point.address, popupTitle.title, userLat, userLng]);
@@ -376,12 +378,12 @@ export const createMapPopupComponent = ({
     const handleAddPoint = useCallback(async () => {
       if (!authReady) return;
       if (!isAuthenticated) {
-        void showToast({ type: 'info', text1: 'Войдите, чтобы сохранить точку', position: 'bottom' });
+        void showToast({ type: 'info', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.voydite_chtoby_sohranit_tochku_17cbe5b6'), position: 'bottom' });
         return;
       }
       if (isAdding) return;
       if (!normalizedCoord) {
-        void showToast({ type: 'info', text1: 'Не удалось распознать координаты', position: 'bottom' });
+        void showToast({ type: 'info', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_raspoznat_koordinaty_706f0bec'), position: 'bottom' });
         return;
       }
 
@@ -391,10 +393,10 @@ export const createMapPopupComponent = ({
         setIsAdding(true);
         try {
           await removeSaved();
-          void showToast({ type: 'success', text1: 'Точка убрана из моих точек', position: 'bottom' });
+          void showToast({ type: 'success', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.tochka_ubrana_iz_moih_tochek_577546f5'), position: 'bottom' });
           invalidateUserPoints?.();
         } catch {
-          void showToast({ type: 'error', text1: 'Не удалось убрать точку', position: 'bottom' });
+          void showToast({ type: 'error', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_ubrat_tochku_110b4219'), position: 'bottom' });
         } finally {
           setIsAdding(false);
         }
@@ -404,7 +406,7 @@ export const createMapPopupComponent = ({
       const categoryNameString = categoryLabel || undefined;
 
       const payload: Partial<{ [key: string]: any }> = {
-        name: point.address || 'Точка маршрута',
+        name: point.address || i18nT('map:components.MapPage.Map.createMapPopupComponent.tochka_marshruta_206db207'),
         address: point.address,
         latitude: normalizedCoord.lat,
         longitude: normalizedCoord.lng,
@@ -436,12 +438,12 @@ export const createMapPopupComponent = ({
       setIsAdding(true);
       try {
         await createPoint(payload);
-        void showToast({ type: 'success', text1: 'Точка добавлена в мои точки', position: 'bottom' });
+        void showToast({ type: 'success', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.tochka_dobavlena_v_moi_tochki_9a63cfc3'), position: 'bottom' });
         invalidateUserPoints?.();
         // Не закрываем попап: пользователь должен увидеть, что кнопка стала
         // «Сохранено», чтобы понять про un-save (toggle, #334).
       } catch {
-        void showToast({ type: 'error', text1: 'Не удалось сохранить точку', position: 'bottom' });
+        void showToast({ type: 'error', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_sohranit_tochku_99188f48'), position: 'bottom' });
       } finally {
         setIsAdding(false);
       }
@@ -463,18 +465,18 @@ export const createMapPopupComponent = ({
     const questSubtitle = useMemo(() => {
       if (!questMeta) return undefined;
       const stepCount = typeof questMeta.points === 'number' ? questMeta.points : 0;
-      const stepWord = stepCount === 1 ? 'шаг' : stepCount >= 2 && stepCount <= 4 ? 'шага' : 'шагов';
+      const stepWord = stepCount === 1 ? i18nT('map:components.MapPage.Map.createMapPopupComponent.shag_72f70013') : stepCount >= 2 && stepCount <= 4 ? i18nT('map:components.MapPage.Map.createMapPopupComponent.shaga_bec8550a') : i18nT('map:components.MapPage.Map.createMapPopupComponent.shagov_a4067391');
       const difficultyLabel =
         questMeta.difficulty === 'easy'
-          ? 'лёгкий'
+          ? i18nT('map:components.MapPage.Map.createMapPopupComponent.legkiy_3e464a1e')
           : questMeta.difficulty === 'medium'
-            ? 'средний'
+            ? i18nT('map:components.MapPage.Map.createMapPopupComponent.sredniy_03ea64b9')
             : questMeta.difficulty === 'hard'
-              ? 'сложный'
+              ? i18nT('map:components.MapPage.Map.createMapPopupComponent.slozhnyy_5a71e4d3')
               : null;
       const parts = [
         [questMeta.cityName, questMeta.countryName].filter(Boolean).join(', ') || null,
-        questMeta.durationMin ? `${questMeta.durationMin} мин` : null,
+        questMeta.durationMin ? i18nT('map:components.MapPage.Map.createMapPopupComponent.value1_min_f86f860f', { value1: questMeta.durationMin }) : null,
         stepCount > 0 ? `${stepCount} ${stepWord}` : null,
         difficultyLabel,
       ].filter(Boolean);
@@ -486,7 +488,7 @@ export const createMapPopupComponent = ({
       const cityId = String(questMeta.cityId ?? '').trim();
       const id = String(questMeta.id ?? '').trim();
       if (!cityId || !id) {
-        void showToast({ type: 'error', text1: 'Не удалось открыть квест', position: 'bottom' });
+        void showToast({ type: 'error', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_otkryt_kvest_7dab4cc4'), position: 'bottom' });
         return;
       }
       handlePress();
@@ -531,27 +533,27 @@ export const createMapPopupComponent = ({
           primaryActionOverride={
             isQuest
               ? {
-                  label: 'Начать квест',
+                  label: i18nT('map:components.MapPage.Map.createMapPopupComponent.nachat_kvest_aaf2fcf4'),
                   icon: 'play',
                   onPress: handleStartQuest,
-                  accessibilityLabel: 'Начать квест',
-                  tooltip: 'Перейти к прохождению квеста',
+                  accessibilityLabel: i18nT('map:components.MapPage.Map.createMapPopupComponent.nachat_kvest_aaf2fcf4'),
+                  tooltip: i18nT('map:components.MapPage.Map.createMapPopupComponent.pereyti_k_prohozhdeniyu_kvesta_d1d35a62'),
                 }
               : undefined
           }
           addDisabled={!authReady || !normalizedCoord || isAdding}
           isSaved={isQuest ? false : isSaved}
-          addLabel={!isQuest && isSaved ? 'В точках' : 'Мои точки'}
+          addLabel={!isQuest && isSaved ? i18nT('map:components.MapPage.Map.createMapPopupComponent.v_tochkah_a582e74c') : i18nT('map:components.MapPage.Map.createMapPopupComponent.moi_tochki_df7be800')}
           addTooltip={
             !authReady
-              ? 'Загрузка…'
+              ? i18nT('map:components.MapPage.Map.createMapPopupComponent.zagruzka_80ba0ae0')
               : !isAuthenticated
-                ? 'Войдите, чтобы сохранить точку'
+                ? i18nT('map:components.MapPage.Map.createMapPopupComponent.voydite_chtoby_sohranit_tochku_17cbe5b6')
                 : !normalizedCoord
-                  ? 'Координаты точки недоступны'
+                  ? i18nT('map:components.MapPage.Map.createMapPopupComponent.koordinaty_tochki_nedostupny_debc7a97')
                   : isSaved
-                    ? 'Убрать из моих точек'
-                    : 'Сохранить в мои точки'
+                    ? i18nT('map:components.MapPage.Map.createMapPopupComponent.ubrat_iz_moih_tochek_87bf91bc')
+                    : i18nT('map:components.MapPage.Map.createMapPopupComponent.sohranit_v_moi_tochki_d74b4957')
           }
           isAdding={isAdding}
           compactLayout={compactLayout}

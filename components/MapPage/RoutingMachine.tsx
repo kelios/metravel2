@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useCallback } from 'react'
 import { useRouting } from './useRouting'
 import { showRouteBuiltToast, showRouteErrorToast } from '@/utils/mapToasts'
 import { useElevation } from '@/components/map-core/useElevation'
+import type { RoutingErrorCode } from '@/utils/routingHelpers'
 
 interface RoutingMachineProps {
     routePoints: [number, number][]
@@ -52,6 +53,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         distance: number
         duration: number
         coords: string
+        errorCode: RoutingErrorCode | null
     } | null>(null)
     const lastSentRef = useRef<{
         loading: boolean
@@ -59,6 +61,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         distance: number
         duration: number
         coords: string
+        errorCode: RoutingErrorCode | null
     } | null>(null)
 
     // Use custom hook for routing logic
@@ -120,6 +123,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             distance: routingState.distance,
             duration: routingState.duration,
             coords: coordsKeyForSync,
+            errorCode: routingState.errorCode,
         }
 
         const prevState = prevStateRef.current
@@ -133,6 +137,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             prevState.error !== currentState.error ||
             prevState.distance !== currentState.distance ||
             prevState.duration !== currentState.duration ||
+            prevState.errorCode !== currentState.errorCode ||
             prevState.coords !== currentState.coords
 
         if (hasChanged) {
@@ -145,6 +150,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 lastSent.error !== currentState.error ||
                 lastSent.distance !== currentState.distance ||
                 lastSent.duration !== currentState.duration ||
+                lastSent.errorCode !== currentState.errorCode ||
                 lastSent.coords !== currentState.coords
 
             if (!isNew) return
@@ -157,7 +163,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             // Передаем ошибку только если она есть
             if (typeof routingState.error === 'string' && routingState.error) {
                 try {
-                    setErrors({ routing: routingState.error })
+                    setErrors({ routing: routingState.error, routingCode: routingState.errorCode })
                     showRouteErrorToast(routingState.error)
                 } catch {
                     // noop
@@ -209,6 +215,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     }, [
         routingState.loading,
         routingState.error,
+        routingState.errorCode,
         routingState.distance,
         routingState.duration,
         coordsKeyForSync,

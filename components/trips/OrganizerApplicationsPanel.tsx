@@ -11,6 +11,8 @@ import type { TripApplication } from '@/api/publicTrips';
 import { useDecideApplication, useTripApplications } from '@/hooks/usePublicTripsApi';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   tripId: number;
@@ -80,9 +82,7 @@ function ApplicationRow({
           <View style={styles.unverifiedNote} testID="trip-socials-unverified">
             <Feather name="alert-triangle" size={11} color={colors.textMuted} />
             <Text style={styles.unverifiedNoteText}>
-              MeTravel не проверяет подлинность аккаунтов. Открывайте ссылки с
-              осторожностью.
-            </Text>
+              {i18nT('trips:components.trips.OrganizerApplicationsPanel.metravel_ne_proveryaet_podlinnost_akkauntov__70f03d5e')}</Text>
           </View>
         </>
       ) : null}
@@ -90,7 +90,7 @@ function ApplicationRow({
       {isDecidable(application) ? (
         <View style={styles.actions}>
           <Button
-            label="Принять"
+            label={i18nT('trips:components.trips.OrganizerApplicationsPanel.prinyat_28ac7eb9')}
             size="sm"
             onPress={() => onDecide('approve')}
             loading={pending}
@@ -98,7 +98,7 @@ function ApplicationRow({
             testID={`trip-application-${application.id}-approve`}
           />
           <Button
-            label="Отклонить"
+            label={i18nT('trips:components.trips.OrganizerApplicationsPanel.otklonit_19f0ce3e')}
             size="sm"
             variant="outline"
             onPress={() => onDecide('reject')}
@@ -106,7 +106,7 @@ function ApplicationRow({
             testID={`trip-application-${application.id}-reject`}
           />
           <Button
-            label="Вопрос"
+            label={i18nT('trips:components.trips.OrganizerApplicationsPanel.vopros_626ba9ba')}
             size="sm"
             variant="ghost"
             icon={<Feather name="message-circle" size={14} color={colors.primaryDark} />}
@@ -118,9 +118,7 @@ function ApplicationRow({
 
       {askOpen ? (
         <Text style={styles.askHint}>
-          Напишите заявителю в личных сообщениях или по ссылке из его профиля,
-          чтобы уточнить детали перед решением.
-        </Text>
+          {i18nT('trips:components.trips.OrganizerApplicationsPanel.napishite_zayavitelyu_v_lichnyh_soobscheniya_f8870ab5')}</Text>
       ) : null}
     </View>
   );
@@ -149,16 +147,16 @@ function OrganizerApplicationsPanel({ tripId }: Props) {
     );
   }
   if (isError) {
-    return <Text style={styles.empty}>Не удалось загрузить заявки.</Text>;
+    return <Text style={styles.empty}>{i18nT('trips:components.trips.OrganizerApplicationsPanel.ne_udalos_zagruzit_zayavki_767920dc')}</Text>;
   }
 
   const applications = data ?? [];
 
   return (
     <View style={styles.wrap} testID="organizer-applications-panel">
-      <Text style={styles.title}>Заявки на участие ({applications.length})</Text>
+      <Text style={styles.title}>{i18nT('trips:components.trips.OrganizerApplicationsPanel.zayavki_na_uchastie_93e5d5c2')}{applications.length})</Text>
       {applications.length === 0 ? (
-        <Text style={styles.empty}>Заявок пока нет. Поделитесь поездкой, чтобы её увидели.</Text>
+        <Text style={styles.empty}>{i18nT('trips:components.trips.OrganizerApplicationsPanel.zayavok_poka_net_podelites_poezdkoy_chtoby_e_36da2e6a')}</Text>
       ) : (
         applications.map((a) => (
           <ApplicationRow

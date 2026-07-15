@@ -3,6 +3,9 @@ import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import { getGoogleSignInButtonTheme } from './googleSignInButtonTheme';
+import { translate as i18nT } from '@/i18n'
+import { useHydrationReady } from '@/hooks/useHydrationReady';
+
 
 interface GoogleSignInButtonProps {
     onSuccess: (credential: string) => void;
@@ -42,6 +45,38 @@ declare global {
 const GOOGLE_GSI_SCRIPT_ID = 'google-gsi-client-script';
 const LOOPBACK_WEB_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
+export function getGoogleAvailability(hasClientId: boolean, hydrationReady: boolean) {
+    if (!hasClientId) {
+        return {
+            enabled: false,
+            fallbackText: i18nT('auth:components.auth.GoogleSignInButton.google_sign_in_ne_nastroen_e2df8d6f'),
+        };
+    }
+
+    // Keep SSR and the first hydration render identical. Host-specific policy is
+    // applied immediately after this component commits via useSyncExternalStore.
+    if (!hydrationReady || typeof window === 'undefined') {
+        return { enabled: true, fallbackText: '' };
+    }
+
+    const hostname = String(window.location.hostname || '').toLowerCase();
+    const isLoopbackHost = LOOPBACK_WEB_HOSTS.has(hostname);
+    if (!isLoopbackHost) {
+        return { enabled: true, fallbackText: '' };
+    }
+
+    const localOverride = String(process.env.EXPO_PUBLIC_ENABLE_GOOGLE_SIGN_IN_LOCAL || '').trim().toLowerCase() === 'true';
+    const hasInjectedGoogle = Boolean(window.google?.accounts?.id);
+    if (localOverride || hasInjectedGoogle) {
+        return { enabled: true, fallbackText: '' };
+    }
+
+    return {
+        enabled: false,
+        fallbackText: i18nT('auth:components.auth.GoogleSignInButton.google_sign_in_nedostupen_na_localhost_ispol_9023147b'),
+    };
+}
+
 export default function GoogleSignInButton({ onSuccess, onError, disabled }: GoogleSignInButtonProps) {
     const colors = useThemedColors();
     const { isDark } = useTheme();
@@ -58,40 +93,17 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
 
     const googleClientId = String(process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '').trim();
     const hasClientId = googleClientId.length > 0;
-    const googleAvailability = useMemo(() => {
-        if (!hasClientId) {
-            return {
-                enabled: false,
-                fallbackText: 'Google Sign-In не настроен.',
-            };
-        }
-        if (typeof window === 'undefined') {
-            return { enabled: true, fallbackText: '' };
-        }
-
-        const hostname = String(window.location.hostname || '').toLowerCase();
-        const isLoopbackHost = LOOPBACK_WEB_HOSTS.has(hostname);
-        if (!isLoopbackHost) {
-            return { enabled: true, fallbackText: '' };
-        }
-
-        const localOverride = String(process.env.EXPO_PUBLIC_ENABLE_GOOGLE_SIGN_IN_LOCAL || '').trim().toLowerCase() === 'true';
-        const hasInjectedGoogle = Boolean(window.google?.accounts?.id);
-        if (localOverride || hasInjectedGoogle) {
-            return { enabled: true, fallbackText: '' };
-        }
-
-        return {
-            enabled: false,
-            fallbackText: 'Google Sign-In недоступен на localhost. Используйте email и пароль.',
-        };
-    }, [hasClientId]);
+    const hydrationReady = useHydrationReady();
+    const googleAvailability = useMemo(
+        () => getGoogleAvailability(hasClientId, hydrationReady),
+        [hasClientId, hydrationReady],
+    );
     const shouldShowFallback = !googleAvailability.enabled;
     const isButtonDisabled = disabled || !isGoogleLoaded || shouldShowFallback || !hasClientId;
 
     useEffect(() => {
         if (!hasClientId) {
-            onErrorRef.current?.('Google Sign-In не настроен: отсутствует EXPO_PUBLIC_GOOGLE_CLIENT_ID');
+            onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.google_sign_in_ne_nastroen_otsutstvuet_expo__4517e59c'));
             return;
         }
         if (!googleAvailability.enabled) return;
@@ -101,7 +113,7 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
             if (!cancelled) setIsGoogleLoaded(true);
         };
         const handleScriptError = () => {
-            if (!cancelled) onErrorRef.current?.('Не удалось загрузить Google Sign-In');
+            if (!cancelled) onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.ne_udalos_zagruzit_google_sign_in_3373f8ec'));
         };
         let attachedScript: HTMLScriptElement | null = null;
 
@@ -159,7 +171,7 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
                     if (response.credential) {
                         onSuccessRef.current(response.credential);
                     } else {
-                        onErrorRef.current?.('Не удалось получить данные от Google');
+                        onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.ne_udalos_poluchit_dannye_ot_google_cf8f67c9'));
                     }
                 },
             });
@@ -167,7 +179,7 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
             if (__DEV__) {
                 console.error('Google Sign-In initialization error:', error);
             }
-            onErrorRef.current?.('Ошибка инициализации Google Sign-In');
+            onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.oshibka_initsializatsii_google_sign_in_0e857099'));
         }
     }, [googleAvailability.enabled, googleClientId, hasClientId, isGoogleLoaded]);
 
@@ -191,7 +203,7 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
             if (__DEV__) {
                 console.error('Google Sign-In button render error:', error);
             }
-            onErrorRef.current?.('Ошибка отображения кнопки Google Sign-In');
+            onErrorRef.current?.(i18nT('auth:components.auth.GoogleSignInButton.oshibka_otobrazheniya_knopki_google_sign_in_9e8d05a4'));
         }
     }, [googleAvailability.enabled, hasClientId, isDark, isGoogleLoaded]);
 
@@ -199,10 +211,11 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
         <View
             style={[
                 styles.button,
-                isButtonDisabled && styles.buttonDisabled,
+                disabled && styles.buttonDisabled,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Войти через Google"
+            accessibilityLabel={i18nT('auth:components.auth.GoogleSignInButton.voyti_cherez_google_43bd772c')}
+            accessibilityState={{ disabled: isButtonDisabled }}
         >
             {shouldShowFallback ? (
                 <View style={styles.fallbackContainer}>
@@ -211,7 +224,7 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
             ) : !isGoogleLoaded && (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="small" color={colors.text} />
-                    <Text style={styles.loadingText}>Загрузка Google Sign-In...</Text>
+                    <Text style={styles.loadingText}>{i18nT('auth:components.auth.GoogleSignInButton.zagruzka_google_sign_in_33b991c3')}</Text>
                 </View>
             )}
             <div

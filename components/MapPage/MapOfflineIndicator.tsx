@@ -8,6 +8,8 @@ import { Platform, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 interface MapOfflineIndicatorProps {
   visible: boolean
@@ -30,13 +32,12 @@ const MapOfflineIndicatorInner: React.FC<MapOfflineIndicatorProps> = ({
       style={[styles.wrap, { top: topInset + 10 }]}
       testID="map-offline-indicator"
       accessibilityRole="alert"
-      accessibilityLabel="Нет подключения к интернету. Карта работает из кэша."
+      accessibilityLabel={i18nT('map:components.MapPage.MapOfflineIndicator.net_podklyucheniya_k_internetu_karta_rabotae_edb3f192')}
     >
       <View style={styles.pill}>
         <Feather name="wifi-off" size={13} color={colors.textOnPrimary} />
         <Text style={styles.text} numberOfLines={1}>
-          Офлайн — карта из кэша
-        </Text>
+          {i18nT('map:components.MapPage.MapOfflineIndicator.oflayn_karta_iz_kesha_e279b297')}</Text>
       </View>
     </View>
   )

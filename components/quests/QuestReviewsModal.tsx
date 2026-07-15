@@ -8,6 +8,8 @@ import { useQuestReviews } from '@/hooks/useQuestsApi'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { QuestReview } from '@/api/quests'
+import { formatDate, translate as i18nT } from '@/i18n'
+
 
 type Props = {
   questId: string
@@ -19,7 +21,7 @@ const formatReviewDate = (iso: string | null): string | null => {
   if (!iso) return null
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return null
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+  return formatDate(date, { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 function ReviewItem({ review, styles }: { review: QuestReview; styles: ReturnType<typeof createStyles> }) {
@@ -30,7 +32,7 @@ function ReviewItem({ review, styles }: { review: QuestReview; styles: ReturnTyp
         <UserAvatar uri={review.authorAvatar} size="md" />
         <View style={styles.reviewHeaderText}>
           <Text style={styles.reviewAuthor} numberOfLines={1}>
-            {review.authorName || 'Путешественник'}
+            {review.authorName || i18nT('quests:components.quests.QuestReviewsModal.defaultAuthorName')}
           </Text>
           {dateText ? <Text style={styles.reviewDate}>{dateText}</Text> : null}
         </View>
@@ -39,14 +41,14 @@ function ReviewItem({ review, styles }: { review: QuestReview; styles: ReturnTyp
 
       {review.liked ? (
         <View style={styles.reviewBlock}>
-          <Text style={styles.reviewBlockLabel}>Понравилось</Text>
+          <Text style={styles.reviewBlockLabel}>{i18nT('quests:components.quests.QuestReviewsModal.ponravilos_dc466c74')}</Text>
           <Text style={styles.reviewBlockText}>{review.liked}</Text>
         </View>
       ) : null}
 
       {review.disliked ? (
         <View style={styles.reviewBlock}>
-          <Text style={styles.reviewBlockLabel}>Что улучшить</Text>
+          <Text style={styles.reviewBlockLabel}>{i18nT('quests:components.quests.QuestReviewsModal.chto_uluchshit_74a4d291')}</Text>
           <Text style={styles.reviewBlockText}>{review.disliked}</Text>
         </View>
       ) : null}
@@ -63,20 +65,20 @@ function QuestReviewsModal({ questId, visible, onClose }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel="Закрыть отзывы">
+      <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel={i18nT('quests:components.quests.QuestReviewsModal.zakryt_otzyvy_3d58b380')}>
         <Pressable
           style={styles.sheet}
           onPress={(e) => e.stopPropagation()}
           testID="quest-reviews-modal"
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Отзывы о квесте</Text>
+            <Text style={styles.title}>{i18nT('quests:components.quests.QuestReviewsModal.otzyvy_o_kveste_0e87f487')}</Text>
             <Pressable
               onPress={onClose}
               hitSlop={10}
               style={styles.closeButton}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть"
+              accessibilityLabel={i18nT('quests:components.quests.QuestReviewsModal.zakryt_bc1e31bc')}
               testID="quest-reviews-close"
             >
               <Feather name="x" size={20} color={colors.text} />
@@ -89,19 +91,19 @@ function QuestReviewsModal({ questId, visible, onClose }: Props) {
             </View>
           ) : isError ? (
             <View style={styles.stateBox} testID="quest-reviews-error">
-              <Text style={styles.stateText}>Не удалось загрузить отзывы</Text>
+              <Text style={styles.stateText}>{i18nT('quests:components.quests.QuestReviewsModal.ne_udalos_zagruzit_otzyvy_651269a8')}</Text>
               <Pressable
                 onPress={() => refetch()}
                 style={styles.retryButton}
                 accessibilityRole="button"
-                accessibilityLabel="Повторить"
+                accessibilityLabel={i18nT('quests:components.quests.QuestReviewsModal.povtorit_5faeeb55')}
               >
-                <Text style={styles.retryText}>Повторить</Text>
+                <Text style={styles.retryText}>{i18nT('quests:components.quests.QuestReviewsModal.povtorit_5faeeb55')}</Text>
               </Pressable>
             </View>
           ) : reviews.length === 0 ? (
             <View style={styles.stateBox} testID="quest-reviews-empty">
-              <Text style={styles.stateText}>Пока нет отзывов</Text>
+              <Text style={styles.stateText}>{i18nT('quests:components.quests.QuestReviewsModal.poka_net_otzyvov_5b24df62')}</Text>
             </View>
           ) : (
             <ScrollView

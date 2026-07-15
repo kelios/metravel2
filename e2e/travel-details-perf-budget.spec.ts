@@ -701,6 +701,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, mobile)'
     ]).catch(() => {});
 
     const metrics = await collectMetrics(page);
+    const layoutShiftDebug = await collectLayoutShiftDebug(page);
 
     const report = {
       viewport: 'mobile (375x667)',
@@ -709,6 +710,8 @@ test.describe('@perf Travel Details — Performance Budget (prod build, mobile)'
       tbt: `${Math.round(metrics.tbt)}ms`,
       cls: metrics.cls.toFixed(4),
       longTaskCount: metrics.longTaskCount,
+      clsEntries: metrics.clsEntries,
+      layoutShiftDebug,
     };
 
     console.log('\n📱 MOBILE PERFORMANCE REPORT');

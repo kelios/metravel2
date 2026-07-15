@@ -1,18 +1,16 @@
 // StickySearchBar.tsx
 // ✅ НОВЫЙ КОМПОНЕНТ: Sticky поисковая строка с быстрыми действиями
 
-import { useState, useRef, useEffect, useCallback, memo, useMemo, type ComponentProps, type ReactNode } from 'react';
+import { useState, useRef, useEffect, useCallback, memo, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   View,
   TextInput,
-  StyleSheet,
   Pressable,
   Text,
   Platform,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -25,6 +23,9 @@ import {
   getStickySearchViewportState,
   type QuickFilterChip,
 } from '@/components/mainPage/stickySearchBarModel';
+import { translate as i18nT } from '@/i18n'
+import { useStickySearchBarStyles as useStyles } from './StickySearchBar.styles';
+
 
 interface StickySearchBarProps {
   search: string;
@@ -51,445 +52,6 @@ interface StickySearchBarProps {
   };
 }
 
-const spacing = DESIGN_TOKENS.spacing;
-const radii = DESIGN_TOKENS.radii;
-
-const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => StyleSheet.create({
-  container: {
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: radii.lg,
-    paddingHorizontal: Platform.select({ default: spacing.xs, web: spacing.xs }),
-    paddingVertical: Platform.select({ default: spacing.xxs, web: spacing.xxs }),
-    gap: Platform.select({ default: spacing.xs, web: spacing.xs }),
-    minHeight: Platform.select({ default: 46, web: 48 }),
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        backgroundColor: colors.surfaceElevated,
-        boxShadow: colors.boxShadows.card,
-      } as any,
-    }),
-  },
-  containerMobile: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xxs,
-    minHeight: 42,
-    borderRadius: radii.md,
-  },
-  containerFlush: {
-    paddingHorizontal: 0,
-  },
-  containerMobileWeb: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    minHeight: 0,
-    // Мобильный GPU: живой backdrop-blur запрещён — статичный фрост (правило CLAUDE.md)
-    backgroundColor: colors.surfaceMuted,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'none',
-        WebkitBackdropFilter: 'none',
-      } as any,
-    }),
-  },
-  inner: {
-    width: '100%',
-    ...Platform.select({
-      web: {
-        maxWidth: 1120,
-        marginLeft: 'auto',
-        marginRight: 'auto',
-      } as any,
-    }),
-  },
-  innerFlush: {
-    ...Platform.select({
-      web: {
-        maxWidth: '100%',
-        marginLeft: 0,
-        marginRight: 0,
-      } as any,
-    }),
-  },
-  containerFocused: {
-    borderColor: colors.primary,
-    ...Platform.select({
-      web: {
-        boxShadow: `${colors.boxShadows.card}, 0 0 0 3px ${colors.primaryAlpha30}`,
-      } as any,
-    }),
-  },
-  contentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
-    ...Platform.select({
-      web: {
-        justifyContent: 'space-between',
-      } as any,
-    }),
-  },
-  contentRowMobile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'nowrap',
-  },
-  searchBox: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-    borderRadius: 0,
-    borderWidth: 0,
-    borderColor: 'transparent',
-    paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.sm }),
-    paddingVertical: Platform.select({ default: spacing.xxs, web: spacing.xxs }),
-    gap: spacing.xs,
-    height: Platform.select({ default: 38, web: 40 }),
-    ...Platform.select({
-      web: {
-        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-      } as any,
-    }),
-  },
-  searchBoxMobile: {
-    flex: 1,
-    minWidth: 0,
-    marginBottom: 0,
-    height: 38,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xxs,
-    gap: 6,
-  },
-  input: {
-    flex: 1,
-    fontSize: Platform.select({ default: 14, web: 15 }),
-    fontWeight: '400',
-    color: colors.text,
-    padding: 0,
-    lineHeight: Platform.select({ default: 20, web: 22 }),
-    ...Platform.select({
-      web: {
-        outlineStyle: 'none',
-        boxShadow: 'none',
-        borderColor: 'transparent',
-      },
-    }),
-  },
-  inputMobile: {
-    fontSize: 16,
-  },
-  clearButton: {
-    padding: spacing.xs,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-  shortcutHint: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  shortcutText: {
-    fontSize: 11,
-    // The shortcut chip is a secondary affordance, not muted decoration; textSecondary keeps
-    // the role explicit (palettes give both tokens the same value, so contrast is unchanged).
-    color: colors.textSecondary,
-    fontFamily: Platform.select({
-      web: 'monospace',
-      default: 'monospace',
-    }),
-  },
-  // SRCH-06: Quick-filter chips
-  quickFiltersRow: {
-    flexDirection: 'row',
-    flexWrap: 'nowrap',
-    gap: spacing.xs,
-    paddingTop: spacing.xs,
-    ...Platform.select({
-      web: { overflowX: 'auto', paddingBottom: 2 } as any,
-    }),
-  },
-  quickChip: {
-    flexShrink: 0,
-    minHeight: 36,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
-  },
-  actionsDesktop: {
-    flexShrink: 0,
-    flexWrap: 'nowrap',
-    padding: 0,
-    borderRadius: 0,
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  resultsInline: {
-    paddingHorizontal: spacing.sm,
-    height: Platform.select({ default: 40, web: 52 }),
-    minWidth: Platform.select({ default: 0, web: 216 }),
-    ...(Platform.OS === 'web' ? ({ width: 216 } as any) : null),
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  mobileSummaryRow: {
-    minHeight: 20,
-    paddingHorizontal: spacing.xs,
-    paddingTop: spacing.xs,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    flexWrap: 'wrap',
-  },
-  mobileSummaryText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '700',
-  },
-  pendingStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: 20,
-  },
-  pendingStatusText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  actionsMobile: {
-    flexShrink: 0,
-    justifyContent: 'flex-start',
-  },
-  actionButton: {
-    // Web desktop matches the results-pill / clear-all height (52) so the action row reads
-    // as a single visual band; native stays compact at 42 to keep the touch row dense.
-    width: Platform.select({ default: 42, web: 52 }),
-    height: Platform.select({ default: 42, web: 52 }),
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    position: 'relative',
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-      },
-    }),
-  },
-  actionButtonHovered: {
-    backgroundColor: colors.surfaceElevated,
-    borderColor: colors.borderStrong,
-  },
-  actionButtonMobile: {
-    width: DESIGN_TOKENS.touchTarget.minWidth,
-    height: DESIGN_TOKENS.touchTarget.minHeight,
-    borderRadius: 12,
-  },
-  actionButtonMobileWeb: {
-    width: DESIGN_TOKENS.touchTarget.minWidth,
-    height: DESIGN_TOKENS.touchTarget.minHeight,
-    borderRadius: 12,
-  },
-  actionButtonActive: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primaryAlpha40,
-  },
-  badge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
-  },
-  badgeDot: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-  },
-  badgeCount: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textOnPrimary,
-    lineHeight: 12,
-  },
-  clearAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.sm,
-    height: Platform.select({ default: 46, web: 52 }),
-    borderRadius: radii.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-  clearAllText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  resultsText: {
-    fontSize: 15,
-    color: colors.text,
-    fontWeight: '600',
-    ...(Platform.OS === 'web'
-      ? ({
-          width: '100%',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          fontVariantNumeric: 'tabular-nums',
-        } as any)
-      : null),
-  },
-  resultsLabel: {
-    fontSize: 10,
-    color: colors.textMuted,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0,
-    marginBottom: 2,
-  },
-  searchBoxFocused: {
-    borderColor: 'transparent',
-    backgroundColor: 'transparent',
-  },
-  clearButtonIconWrap: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: colors.surfaceMuted,
-  },
-  inlineIconSlot: {
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  actionIconSlot: {
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  shortcutHintDesktop: {
-    backgroundColor: colors.surfaceElevated,
-    borderColor: colors.borderLight,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radii.pill,
-  },
-  recommendationAccent: {
-    position: 'absolute',
-    bottom: 6,
-    width: 16,
-    height: 2,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
-  },
-  historyPanel: {
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    gap: 2,
-  },
-  historyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xs,
-    paddingBottom: spacing.xxs,
-  },
-  historyHeaderText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    color: colors.textMuted,
-  },
-  historyClearAll: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    minHeight: 44,
-    paddingHorizontal: spacing.xs,
-    justifyContent: 'center',
-    ...Platform.select({ web: { cursor: 'pointer' } as any }),
-  },
-  historyClearAllText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  historyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 44,
-    borderRadius: radii.sm,
-    ...Platform.select({ web: { cursor: 'pointer' } as any }),
-  },
-  historyRowMain: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.xs,
-    minWidth: 0,
-  },
-  historyRowText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.text,
-  },
-  historyRemove: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Platform.select({ web: { cursor: 'pointer' } as any }),
-  },
-}), [colors]);
-
 function StickySearchBar({
   search,
   onSearchChange,
@@ -498,7 +60,7 @@ function StickySearchBar({
   isSearchPending = false,
   flush = false,
   resultsCount,
-  placeholder = 'Найти путешествия...',
+  placeholder = i18nT('home:components.mainPage.StickySearchBar.nayti_puteshestviya_91417b58'),
   onToggleRecommendations,
   isRecommendationsVisible,
   onClearAll,
@@ -711,13 +273,13 @@ function StickySearchBar({
             placeholderTextColor={colors.textMuted}
             style={[styles.input, isMobile && styles.inputMobile]}
             returnKeyType="search"
-            accessibilityLabel="Поиск путешествий"
+            accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.poisk_puteshestviy_e43cf138')}
             {...Platform.select({
               web: {
                 // @ts-ignore -- aria-label is a web-only ARIA attribute not in RN TextInput types
                 'aria-label': isMobile
-                  ? 'Поиск путешествий'
-                  : `Поиск путешествий. Нажмите ${shortcutLabel} для быстрого доступа`,
+                  ? i18nT('home:components.mainPage.StickySearchBar.poisk_puteshestviy_e43cf138')
+                  : i18nT('home:components.mainPage.StickySearchBar.poisk_puteshestviy_nazhmite_value1_dlya_byst_da8afc47', { value1: shortcutLabel }),
               },
             })}
           />
@@ -725,10 +287,10 @@ function StickySearchBar({
             <Pressable
               onPress={clearSearch}
               accessibilityRole="button"
-              accessibilityLabel="Очистить поиск"
+              accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.ochistit_poisk_b1c2bdab')}
               {...Platform.select({
                 web: {
-                  title: 'Очистить поиск',
+                  title: i18nT('home:components.mainPage.StickySearchBar.ochistit_poisk_b1c2bdab'),
                 } as any,
               })}
               style={[styles.clearButton, { pointerEvents: 'box-only' }, globalFocusStyles.focusable]}
@@ -740,7 +302,7 @@ function StickySearchBar({
           )}
           {showPendingState && (
             <View style={styles.inlineIconSlot} testID="search-pending-indicator">
-              <ActivityIndicator size="small" color={colors.primaryDark} accessibilityLabel="Ищем маршруты" />
+              <ActivityIndicator size="small" color={colors.primaryDark} accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.ischem_marshruty_fe4e25a6')} />
             </View>
           )}
           {!isMobile && Platform.OS === 'web' && (
@@ -775,12 +337,12 @@ function StickySearchBar({
               >
                 {showPendingState ? (
                   <View style={styles.pendingStatusRow} testID="search-pending-status">
-                    <ActivityIndicator size="small" color={colors.primaryDark} accessibilityLabel="Ищем маршруты" />
-                    <Text style={styles.pendingStatusText}>Ищем...</Text>
+                    <ActivityIndicator size="small" color={colors.primaryDark} accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.ischem_marshruty_fe4e25a6')} />
+                    <Text style={styles.pendingStatusText}>{i18nT('home:components.mainPage.StickySearchBar.ischem_ff4b9bf4')}</Text>
                   </View>
               ) : (
                 <>
-                  <Text style={styles.resultsLabel}>Результаты</Text>
+                  <Text style={styles.resultsLabel}>{i18nT('home:components.mainPage.StickySearchBar.rezultaty_54e0674a')}</Text>
                   <Text style={styles.resultsText} testID="results-count-text">
                     {resultsCount !== undefined
                       ? `${resultsCount} ${getTravelLabel(resultsCount)}`
@@ -794,8 +356,8 @@ function StickySearchBar({
           {/* Рекомендации */}
           {onToggleRecommendations && (
             renderActionButton({
-              accessibilityLabel: isRecommendationsVisible ? 'Скрыть идеи путешествий' : 'Показать идеи путешествий',
-              accessibilityHint: 'Персональные рекомендации маршрутов',
+              accessibilityLabel: isRecommendationsVisible ? i18nT('home:components.mainPage.StickySearchBar.skryt_idei_puteshestviy_7fd2b644') : i18nT('home:components.mainPage.StickySearchBar.pokazat_idei_puteshestviy_16cd9af1'),
+              accessibilityHint: i18nT('home:components.mainPage.StickySearchBar.personalnye_rekomendatsii_marshrutov_d0292367'),
               active: !!isRecommendationsVisible,
               iconColor: isRecommendationsVisible ? colors.primary : colors.textMuted,
               iconName: 'compass',
@@ -810,8 +372,8 @@ function StickySearchBar({
           {/* Кнопка фильтров: показываем на мобильных и compact-web ширинах, где сайдбар работает оверлеем */}
           {onFiltersPress && isMobile && (
             renderActionButton({
-              accessibilityHint: hasActiveFilters ? `Активно фильтров: ${activeFiltersCount ?? 0}` : undefined,
-              accessibilityLabel: 'Открыть фильтры',
+              accessibilityHint: hasActiveFilters ? i18nT('home:components.mainPage.StickySearchBar.aktivno_filtrov_value1_d76351a7', { value1: activeFiltersCount ?? 0 }) : undefined,
+              accessibilityLabel: i18nT('home:components.mainPage.StickySearchBar.otkryt_filtry_8dcfd76a'),
               active: hasActiveFilters,
               badgeCount: hasActiveFilters ? activeFiltersCount : undefined,
               iconColor: hasActiveFilters ? colors.primary : colors.textMuted,
@@ -831,7 +393,7 @@ function StickySearchBar({
               accessibilityRole="button"
               {...Platform.select({
                 web: {
-                  title: 'Сбросить условия',
+                  title: i18nT('home:components.mainPage.StickySearchBar.sbrosit_usloviya_c412986e'),
                 } as any,
               })}
               style={[
@@ -840,12 +402,12 @@ function StickySearchBar({
                 ({ pointerEvents: showClearAll ? 'auto' : 'none' } as any),
                 globalFocusStyles.focusable,
               ]}
-              accessibilityLabel="Сбросить все фильтры и поиск"
+              accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.sbrosit_vse_filtry_i_poisk_96874bf6')}
             >
               <View style={styles.inlineIconSlot}>
                 <Feather name="x-circle" size={14} color={colors.textMuted} />
               </View>
-              {!isMobile && <Text style={styles.clearAllText}>Сбросить</Text>}
+              {!isMobile && <Text style={styles.clearAllText}>{i18nT('home:components.mainPage.StickySearchBar.sbrosit_48d8ad20')}</Text>}
             </Pressable>
           )}
         </View>
@@ -853,7 +415,7 @@ function StickySearchBar({
       {showMobileSummary ? (
         <View style={styles.mobileSummaryRow}>
           {showPendingState ? (
-            <Text style={styles.mobileSummaryText}>Ищем...</Text>
+            <Text style={styles.mobileSummaryText}>{i18nT('home:components.mainPage.StickySearchBar.ischem_ff4b9bf4')}</Text>
           ) : null}
         </View>
       ) : null}
@@ -862,25 +424,25 @@ function StickySearchBar({
           style={styles.historyPanel}
           testID="search-history-panel"
           accessibilityRole={Platform.OS === 'web' ? undefined : ('menu' as any)}
-          accessibilityLabel="Недавние запросы"
+          accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.nedavnie_zaprosy_82a34095')}
         >
           <View style={styles.historyHeader}>
-            <Text style={styles.historyHeaderText}>Недавние запросы</Text>
+            <Text style={styles.historyHeaderText}>{i18nT('home:components.mainPage.StickySearchBar.nedavnie_zaprosy_82a34095')}</Text>
             <Pressable
               testID="search-history-clear-all"
               onPress={() => runHistoryActionOnPress(() => void clearHistory())}
               accessibilityRole="button"
-              accessibilityLabel="Очистить историю поиска"
+              accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.ochistit_istoriyu_poiska_cd08f48a')}
               {...Platform.select({
                 web: {
-                  title: 'Очистить историю',
+                  title: i18nT('home:components.mainPage.StickySearchBar.ochistit_istoriyu_f9889e79'),
                   onMouseDown: (event: unknown) => runHistoryActionOnMouseDown(event, () => void clearHistory()),
                 } as any,
               })}
               style={styles.historyClearAll}
             >
               <Feather name="trash-2" size={13} color={colors.textSecondary} />
-              <Text style={styles.historyClearAllText}>Очистить</Text>
+              <Text style={styles.historyClearAllText}>{i18nT('home:components.mainPage.StickySearchBar.ochistit_fd85ffe7')}</Text>
             </Pressable>
           </View>
           {history.map((query) => (
@@ -889,7 +451,7 @@ function StickySearchBar({
                 testID={`search-history-item-${query}`}
                 onPress={() => runHistoryActionOnPress(() => applyHistoryQuery(query))}
                 accessibilityRole="button"
-                accessibilityLabel={`Найти: ${query}`}
+                accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.nayti_value1_0d916130', { value1: query })}
                 {...Platform.select({
                   web: {
                     title: query,
@@ -907,10 +469,10 @@ function StickySearchBar({
                 testID={`search-history-remove-${query}`}
                 onPress={() => runHistoryActionOnPress(() => void removeQuery(query))}
                 accessibilityRole="button"
-                accessibilityLabel={`Удалить из истории: ${query}`}
+                accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.udalit_iz_istorii_value1_f59529ef', { value1: query })}
                 {...Platform.select({
                   web: {
-                    title: 'Удалить',
+                    title: i18nT('home:components.mainPage.StickySearchBar.udalit_da76c0e4'),
                     onMouseDown: (event: unknown) => runHistoryActionOnMouseDown(event, () => void removeQuery(query)),
                   } as any,
                 })}
@@ -925,7 +487,7 @@ function StickySearchBar({
       </View>
       {/* SRCH-06: Quick-filter chips */}
       {quickFilters && quickFilters.length > 0 && (
-        <View style={styles.quickFiltersRow} accessibilityRole="toolbar" accessibilityLabel="Быстрые фильтры">
+        <View style={styles.quickFiltersRow} accessibilityRole="toolbar" accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.bystrye_filtry_8a6ebfa3')}>
           {quickFilters.map((chip) => (
             <Chip
               key={chip.id}

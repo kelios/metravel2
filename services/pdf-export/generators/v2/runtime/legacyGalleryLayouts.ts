@@ -7,6 +7,8 @@ import type {
   GallerySettings,
   MasonrySettings,
 } from '@/types/pdf-gallery';
+import { translate as i18nT } from '@/i18n'
+
 
 function getLegacyImageFilter(settings: GallerySettings | FullGallerySettings): string | undefined {
   return (settings as any)?.theme?.imageFilter ?? (settings as any)?.imageFilter;
@@ -572,7 +574,7 @@ export class GalleryLayoutFactory {
 
   static generateGallery(photos: GalleryPhoto[], settings: FullGallerySettings): string {
     if (!photos || photos.length === 0) {
-      return '<div class="gallery-empty">Нет фотографий для отображения</div>';
+      return `<div class="gallery-empty">${i18nT("export:services.pdf_export.generators.v2.runtime.legacyGalleryLayouts.div_class_gallery_empty_net_fotografiy_dlya__c639f478.text01")}</div>`;
     }
 
     const layout = settings.layout || 'grid';

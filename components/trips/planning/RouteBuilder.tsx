@@ -3,7 +3,7 @@
 // (web-safe, без нативных drag-либ), inline-добавление точки, применение шаблонов
 // и живая сводка через estimateRouteSummary. Только владелец может редактировать.
 import React, { useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import { fetchPlacesCatalog } from '@/api/places';
@@ -29,7 +29,10 @@ import {
   useUpdateTripRoute,
 } from '@/hooks/usePlannedTripsApi';
 import { trackRoutePointAdded } from '@/utils/tripAnalytics';
-import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+import { createStyles } from './RouteBuilder.styles';
+
 
 interface Props {
   trip: PlannedTrip;
@@ -113,10 +116,10 @@ const coordinatesFromFields = (
   const lat = parseNumber(latText);
   const lng = parseNumber(lngText);
   if (lat == null || lng == null) {
-    return { coordinates: null, error: 'Укажите широту и долготу числами.' };
+    return { coordinates: null, error: i18nT('trips:components.trips.planning.RouteBuilder.ukazhite_shirotu_i_dolgotu_chislami_06a43fa9') };
   }
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-    return { coordinates: null, error: 'Широта должна быть от -90 до 90, долгота от -180 до 180.' };
+    return { coordinates: null, error: i18nT('trips:components.trips.planning.RouteBuilder.shirota_dolzhna_byt_ot_90_do_90_dolgota_ot_1_964ccc95') };
   }
 
   return { coordinates: [lng, lat], error: null };
@@ -246,7 +249,7 @@ function RouteBuilder({ trip }: Props) {
     if (editingIndex == null) return;
     const name = editName.trim();
     if (!name) {
-      setEditError('Введите название точки.');
+      setEditError(i18nT('trips:components.trips.planning.RouteBuilder.vvedite_nazvanie_tochki_65a2f141'));
       return;
     }
 
@@ -278,7 +281,7 @@ function RouteBuilder({ trip }: Props) {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     setRoute((prev) => {
       const nextIndex = prev.length;
-      const name = `Точка ${nextIndex + 1}`;
+      const name = i18nT('trips:components.trips.planning.RouteBuilder.tochka_value1_58a44f4e', { value1: nextIndex + 1 });
       const point: RoutePoint = {
         id: `map-${Date.now()}-${nextIndex}`,
         type: 'custom',
@@ -334,7 +337,7 @@ function RouteBuilder({ trip }: Props) {
           kind: 'travel',
           id: travel.id,
           title: travel.name,
-          subtitle: compactText(['Путешествие', travel.countryName]),
+          subtitle: compactText([i18nT('trips:components.trips.planning.RouteBuilder.puteshestvie_7cbf3a43'), travel.countryName]),
           description: travel.description || null,
           coordinates: travelCoordinates(travel),
           imageUrl: travel.travel_image_thumb_url || travel.travel_image_thumb_small_url || null,
@@ -418,7 +421,7 @@ function RouteBuilder({ trip }: Props) {
         <View style={styles.pointControls}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Редактировать точку"
+            accessibilityLabel={i18nT('trips:components.trips.planning.RouteBuilder.redaktirovat_tochku_8815b389')}
             onPress={() => handleStartEdit(point, index)}
             style={styles.ctrl}
             testID={`route-builder-edit-${index}`}
@@ -427,7 +430,7 @@ function RouteBuilder({ trip }: Props) {
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Поднять точку выше"
+            accessibilityLabel={i18nT('trips:components.trips.planning.RouteBuilder.podnyat_tochku_vyshe_23208202')}
             disabled={index === 0}
             onPress={() => handleMove(index, -1)}
             style={[styles.ctrl, index === 0 && styles.ctrlDisabled]}
@@ -436,7 +439,7 @@ function RouteBuilder({ trip }: Props) {
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Опустить точку ниже"
+            accessibilityLabel={i18nT('trips:components.trips.planning.RouteBuilder.opustit_tochku_nizhe_c1c13a3e')}
             disabled={index === route.length - 1}
             onPress={() => handleMove(index, 1)}
             style={[styles.ctrl, index === route.length - 1 && styles.ctrlDisabled]}
@@ -445,7 +448,7 @@ function RouteBuilder({ trip }: Props) {
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Удалить точку"
+            accessibilityLabel={i18nT('trips:components.trips.planning.RouteBuilder.udalit_tochku_37161453')}
             onPress={() => handleDelete(index)}
             style={styles.ctrl}
           >
@@ -459,7 +462,7 @@ function RouteBuilder({ trip }: Props) {
   if (!trip.isOwner) {
     return (
       <View style={styles.wrap} testID="route-builder">
-        <Text style={styles.heading}>Маршрут</Text>
+        <Text style={styles.heading}>{i18nT('trips:components.trips.planning.RouteBuilder.marshrut_49482da4')}</Text>
         <TripPlanRouteMap
           route={route}
           routeGeometry={routeGeometry}
@@ -476,7 +479,7 @@ function RouteBuilder({ trip }: Props) {
         {route.length ? (
           <View style={styles.pointList}>{route.map(renderPoint)}</View>
         ) : (
-          <Text style={styles.hint}>Маршрут пока не построен.</Text>
+          <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.marshrut_poka_ne_postroen_fbdcf5ed')}</Text>
         )}
         <RouteSummaryBar summary={summary} routingState={routingState} transport={trip.transport} />
       </View>
@@ -487,7 +490,7 @@ function RouteBuilder({ trip }: Props) {
 
   return (
     <View style={styles.wrap} testID="route-builder">
-      <Text style={styles.heading}>Конструктор маршрута</Text>
+      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.RouteBuilder.konstruktor_marshruta_187e063e')}</Text>
 
       <TripPlanRouteMap
         route={route}
@@ -506,11 +509,11 @@ function RouteBuilder({ trip }: Props) {
       {route.length ? (
         <View style={styles.pointList}>{route.map(renderPoint)}</View>
       ) : (
-        <Text style={styles.hint}>Добавьте первую точку маршрута ниже.</Text>
+        <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.dobavte_pervuyu_tochku_marshruta_nizhe_d7cb9f9e')}</Text>
       )}
 
       <View style={styles.addForm}>
-        <Text style={styles.label}>Добавить точку</Text>
+        <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.dobavit_tochku_60ab5746')}</Text>
         <View style={styles.chipRow}>
           {POINT_TYPES.map((type) => {
             const active = type === newType;
@@ -540,19 +543,19 @@ function RouteBuilder({ trip }: Props) {
             <TextInput
               value={siteQuery}
               onChangeText={setSiteQuery}
-              placeholder="Найти место или путешествие на MeTravel"
+              placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nayti_mesto_ili_puteshestvie_na_metravel_8780d31c')}
               placeholderTextColor={colors.textMuted}
               style={styles.input}
               testID="route-builder-site-search"
             />
             {siteSearchStatus === 'loading' ? (
-              <Text style={styles.hint}>Ищем совпадения...</Text>
+              <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.ischem_sovpadeniya_b077a7ac')}</Text>
             ) : null}
             {siteSearchStatus === 'error' ? (
-              <Text style={styles.errorText}>Не удалось загрузить варианты.</Text>
+              <Text style={styles.errorText}>{i18nT('trips:components.trips.planning.RouteBuilder.ne_udalos_zagruzit_varianty_a38206ee')}</Text>
             ) : null}
             {siteSearchStatus === 'ready' && !siteOptions.length ? (
-              <Text style={styles.hint}>Ничего не найдено.</Text>
+              <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.nichego_ne_naydeno_b39815ed')}</Text>
             ) : null}
             {siteOptions.length ? (
               <View style={styles.siteResults}>
@@ -576,7 +579,7 @@ function RouteBuilder({ trip }: Props) {
                     </View>
                     <View style={styles.siteOptionBody}>
                       <Text style={styles.siteOptionKind}>
-                        {option.kind === 'travel' ? 'Путешествие' : 'Место'}
+                        {option.kind === 'travel' ? i18nT('trips:components.trips.planning.RouteBuilder.puteshestvie_7cbf3a43') : i18nT('trips:components.trips.planning.RouteBuilder.mesto_3991f739')}
                       </Text>
                       <Text style={styles.siteOptionTitle} numberOfLines={1}>
                         {option.title}
@@ -598,7 +601,7 @@ function RouteBuilder({ trip }: Props) {
             <TextInput
               value={newName}
               onChangeText={setNewName}
-              placeholder="Название точки"
+              placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nazvanie_tochki_0cdacb0f')}
               placeholderTextColor={colors.textMuted}
               style={styles.input}
               testID="route-builder-name"
@@ -607,7 +610,7 @@ function RouteBuilder({ trip }: Props) {
               <TextInput
                 value={newLat}
                 onChangeText={setNewLat}
-                placeholder="Широта (lat)"
+                placeholder={i18nT('trips:components.trips.planning.RouteBuilder.shirota_lat_6d696d4a')}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="numbers-and-punctuation"
                 style={[styles.input, styles.coordInput]}
@@ -616,7 +619,7 @@ function RouteBuilder({ trip }: Props) {
               <TextInput
                 value={newLng}
                 onChangeText={setNewLng}
-                placeholder="Долгота (lng)"
+                placeholder={i18nT('trips:components.trips.planning.RouteBuilder.dolgota_lng_f08c3647')}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="numbers-and-punctuation"
                 style={[styles.input, styles.coordInput]}
@@ -626,13 +629,13 @@ function RouteBuilder({ trip }: Props) {
             <TextInput
               value={newDescription}
               onChangeText={setNewDescription}
-              placeholder="Описание (по желанию)"
+              placeholder={i18nT('trips:components.trips.planning.RouteBuilder.opisanie_po_zhelaniyu_3bb69cb4')}
               placeholderTextColor={colors.textMuted}
               style={styles.input}
               testID="route-builder-description"
             />
             <Button
-              label="Добавить точку"
+              label={i18nT('trips:components.trips.planning.RouteBuilder.dobavit_tochku_60ab5746')}
               onPress={handleAdd}
               variant="secondary"
               disabled={!newName.trim()}
@@ -645,7 +648,7 @@ function RouteBuilder({ trip }: Props) {
 
       {editingIndex != null ? (
         <View style={styles.editForm} testID="route-builder-edit-form">
-          <Text style={styles.label}>Редактировать точку</Text>
+          <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.redaktirovat_tochku_8815b389')}</Text>
           <View style={styles.chipRow}>
             {POINT_TYPES.map((type) => {
               const active = type === editType;
@@ -672,7 +675,7 @@ function RouteBuilder({ trip }: Props) {
           <TextInput
             value={editName}
             onChangeText={setEditName}
-            placeholder="Название точки"
+            placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nazvanie_tochki_0cdacb0f')}
             placeholderTextColor={colors.textMuted}
             style={styles.input}
             testID="route-builder-edit-name"
@@ -681,7 +684,7 @@ function RouteBuilder({ trip }: Props) {
             <TextInput
               value={editLat}
               onChangeText={setEditLat}
-              placeholder="Широта (lat)"
+              placeholder={i18nT('trips:components.trips.planning.RouteBuilder.shirota_lat_6d696d4a')}
               placeholderTextColor={colors.textMuted}
               keyboardType="numbers-and-punctuation"
               style={[styles.input, styles.coordInput]}
@@ -690,7 +693,7 @@ function RouteBuilder({ trip }: Props) {
             <TextInput
               value={editLng}
               onChangeText={setEditLng}
-              placeholder="Долгота (lng)"
+              placeholder={i18nT('trips:components.trips.planning.RouteBuilder.dolgota_lng_f08c3647')}
               placeholderTextColor={colors.textMuted}
               keyboardType="numbers-and-punctuation"
               style={[styles.input, styles.coordInput]}
@@ -700,7 +703,7 @@ function RouteBuilder({ trip }: Props) {
           <TextInput
             value={editDescription}
             onChangeText={setEditDescription}
-            placeholder="Описание или ссылка (по желанию)"
+            placeholder={i18nT('trips:components.trips.planning.RouteBuilder.opisanie_ili_ssylka_po_zhelaniyu_2a1ab272')}
             placeholderTextColor={colors.textMuted}
             style={styles.input}
             testID="route-builder-edit-description"
@@ -708,14 +711,14 @@ function RouteBuilder({ trip }: Props) {
           {editError ? <Text style={styles.errorText}>{editError}</Text> : null}
           <View style={styles.editActions}>
             <Button
-              label="Сохранить точку"
+              label={i18nT('trips:components.trips.planning.RouteBuilder.sohranit_tochku_467b8cde')}
               onPress={handleSaveEdit}
               variant="secondary"
               disabled={!editName.trim()}
               testID="route-builder-edit-save"
             />
             <Button
-              label="Отмена"
+              label={i18nT('trips:components.trips.planning.RouteBuilder.otmena_cb0c29f2')}
               onPress={handleCancelEdit}
               variant="ghost"
               testID="route-builder-edit-cancel"
@@ -726,7 +729,7 @@ function RouteBuilder({ trip }: Props) {
 
       {templates.length ? (
         <View style={styles.templates}>
-          <Text style={styles.label}>Шаблоны маршрута</Text>
+          <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.shablony_marshruta_083d49d2')}</Text>
           {templates.map((tpl) => (
             <View key={tpl.id} style={styles.templateRow}>
               <View style={styles.templateBody}>
@@ -734,7 +737,7 @@ function RouteBuilder({ trip }: Props) {
                 <Text style={styles.templateDescription}>{tpl.description}</Text>
               </View>
               <Button
-                label="Применить"
+                label={i18nT('trips:components.trips.planning.RouteBuilder.primenit_12ea5d97')}
                 onPress={() => handleApplyTemplate(tpl.points)}
                 variant="ghost"
                 testID={`route-builder-template-${tpl.id}`}
@@ -747,7 +750,7 @@ function RouteBuilder({ trip }: Props) {
       <RouteSummaryBar summary={summary} routingState={routingState} transport={trip.transport} />
 
       <Button
-        label="Сохранить маршрут"
+        label={i18nT('trips:components.trips.planning.RouteBuilder.sohranit_marshrut_31633565')}
         onPress={handleSave}
         loading={updateTripRoute.isPending}
         disabled={updateTripRoute.isPending}
@@ -757,125 +760,5 @@ function RouteBuilder({ trip }: Props) {
     </View>
   );
 }
-
-const createStyles = (colors: ThemedColors) =>
-  StyleSheet.create({
-    wrap: { gap: 12 },
-    heading: { fontSize: 18, fontWeight: '700', color: colors.text },
-    label: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: 4 },
-    hint: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
-    errorText: { fontSize: 13, color: colors.danger, lineHeight: 18 },
-    pointList: { gap: 8 },
-    pointRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 10,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      padding: 12,
-      backgroundColor: colors.surface,
-    },
-    pointIcon: { width: 22, alignItems: 'center', paddingTop: 1 },
-    pointBody: { flex: 1, gap: 2 },
-    pointType: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
-    pointName: { fontSize: 15, fontWeight: '600', color: colors.text },
-    pointDescription: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
-    descriptionLink: { color: colors.primaryDark, fontWeight: '700' },
-    pointCoordinates: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
-    pointControls: { flexDirection: 'row', gap: 4 },
-    ctrl: {
-      width: 32,
-      height: 32,
-      borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.surfaceMuted,
-    },
-    ctrlDisabled: { opacity: 0.4 },
-    addForm: {
-      gap: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      padding: 12,
-      backgroundColor: colors.surfaceMuted,
-    },
-    editForm: {
-      gap: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      padding: 12,
-      backgroundColor: colors.surface,
-    },
-    editActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    typeChip: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 999,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      backgroundColor: colors.surface,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    typeChipActive: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primary,
-    },
-    typeChipText: { fontSize: 13, color: colors.text },
-    typeChipTextActive: { color: colors.textOnPrimary, fontWeight: '600' },
-    input: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      color: colors.text,
-      backgroundColor: colors.surface,
-      fontSize: 14,
-      ...Platform.select({ web: { outlineWidth: 0 as any } }),
-    },
-    coordRow: { flexDirection: 'row', gap: 8 },
-    coordInput: { flex: 1 },
-    siteSearch: { gap: 8 },
-    siteResults: { gap: 6 },
-    siteOption: {
-      minHeight: 68,
-      paddingVertical: 7,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    siteOptionImage: {
-      width: 72,
-      height: 54,
-      borderRadius: 8,
-      overflow: 'hidden',
-      backgroundColor: colors.surface,
-      flexShrink: 0,
-    },
-    siteOptionBody: { flex: 1, minWidth: 0, gap: 1 },
-    siteOptionKind: { fontSize: 11, color: colors.textMuted, fontWeight: '700' },
-    siteOptionTitle: { fontSize: 14, color: colors.text, fontWeight: '700' },
-    siteOptionSubtitle: { fontSize: 12, color: colors.textSecondary },
-    templates: { gap: 8 },
-    templateRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      padding: 12,
-      backgroundColor: colors.surface,
-    },
-    templateBody: { flex: 1, gap: 2 },
-    templateTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
-    templateDescription: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
-  });
 
 export default React.memo(RouteBuilder);

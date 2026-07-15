@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Platform } from 'react-native';
+import { translate as i18nT } from '@/i18n'
+
 
 type PointPreviewItem = {
   id: string;
@@ -22,8 +24,8 @@ export function usePointListDisplayModel({
   const pointsCount = points.length;
   const countLabel = pointsCount > 0 ? ` (${pointsCount})` : '';
   const toggleLabel = showList
-    ? `Скрыть карточки точек${countLabel}`
-    : `Показать карточки точек${countLabel}`;
+    ? i18nT('travel:components.travel.hooks.usePointListDisplayModel.skryt_kartochki_tochek_value1_ee6511c3', { value1: countLabel })
+    : i18nT('travel:components.travel.hooks.usePointListDisplayModel.pokazat_kartochki_tochek_value1_5784d364', { value1: countLabel });
 
   const previewPoints = useMemo(() => points.slice(0, 3), [points]);
   const hiddenPreviewCount = Math.max(points.length - previewPoints.length, 0);

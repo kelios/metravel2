@@ -12,6 +12,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { webTouchScrollStyle } from '@/utils'
+import { translate as i18nT } from '@/i18n'
+
 
 // Android-приложение MeTravel сейчас доступно через закрытый Alpha-тест.
 // Open testing в Play Console заблокирован до получения production access.
@@ -23,16 +25,16 @@ const APP_ICON = require('@/assets/images/icon.png')
 type FeatherName = ComponentProps<typeof Feather>['name']
 
 const FEATURES: { icon: FeatherName; title: string; text: string }[] = [
-  { icon: 'map', title: 'Карта мест', text: 'Тысячи точек и маршрутов Беларуси и не только — офлайн-доступ к сохранённым местам.' },
-  { icon: 'flag', title: 'Городские квесты', text: 'Проходите квест-маршруты по городам прямо в приложении, с подсказками и ответами.' },
-  { icon: 'book-open', title: 'Путеводители', text: 'Статьи-путешествия с фото, точками на карте и практической информацией.' },
-  { icon: 'heart', title: 'Своё избранное', text: 'Сохраняйте маршруты и места, стройте собственные поездки и берите их с собой.' },
+  { icon: 'map', get title() { return i18nT('sharedStatic:app.app.karta_mest_ca36ea2c') }, get text() { return i18nT('sharedStatic:app.app.tysyachi_tochek_i_marshrutov_belarusi_i_ne_t_16972faa') } },
+  { icon: 'flag', get title() { return i18nT('sharedStatic:app.app.gorodskie_kvesty_bedf74f9') }, get text() { return i18nT('sharedStatic:app.app.prohodite_kvest_marshruty_po_gorodam_pryamo__09504292') } },
+  { icon: 'book-open', get title() { return i18nT('sharedStatic:app.app.putevoditeli_f648086c') }, get text() { return i18nT('sharedStatic:app.app.stati_puteshestviya_s_foto_tochkami_na_karte_6ee82ed6') } },
+  { icon: 'heart', get title() { return i18nT('sharedStatic:app.app.svoe_izbrannoe_46c5fb28') }, get text() { return i18nT('sharedStatic:app.app.sohranyayte_marshruty_i_mesta_stroyte_sobstv_239eb2e6') } },
 ]
 
 const STEPS: { title: string; text: string }[] = [
-  { title: 'Нажмите «Скачать»', text: 'Кнопка откроет страницу закрытого Alpha-теста MeTravel в Google Play.' },
-  { title: 'Присоединитесь к тесту', text: 'Если ваш аккаунт добавлен в список тестировщиков, нажмите «Стать тестировщиком» — это бесплатно.' },
-  { title: 'Установите приложение', text: 'После присоединения появится кнопка «Установить». Обновления приходят автоматически.' },
+  { get title() { return i18nT('sharedStatic:app.app.nazhmite_skachat_1073ac19') }, get text() { return i18nT('sharedStatic:app.app.knopka_otkroet_stranitsu_zakrytogo_alpha_tes_08367c82') } },
+  { get title() { return i18nT('sharedStatic:app.app.prisoedinites_k_testu_147930be') }, get text() { return i18nT('sharedStatic:app.app.esli_vash_akkaunt_dobavlen_v_spisok_testirov_c484118b') } },
+  { get title() { return i18nT('sharedStatic:app.app.ustanovite_prilozhenie_468f0c89') }, get text() { return i18nT('sharedStatic:app.app.posle_prisoedineniya_poyavitsya_knopka_ustan_0c176249') } },
 ]
 
 function AppDownloadScreen() {
@@ -43,9 +45,9 @@ function AppDownloadScreen() {
   const isWide = width >= 900
   const styles = useMemo(() => createStyles(colors, isWide), [colors, isWide])
 
-  const title = 'Приложение MeTravel для Android | Скачать'
+  const title = i18nT('shared:app.app.prilozhenie_metravel_dlya_android_skachat_f1964a43')
   const description =
-    'Скачайте мобильное приложение MeTravel для Android: карта мест и маршрутов, городские квесты и путеводители офлайн. Доступно в Google Play на тест-треке.'
+    i18nT('shared:app.app.skachayte_mobilnoe_prilozhenie_metravel_dlya_37f1b2df')
   const canonical = buildCanonicalUrl('/app')
 
   const handleDownload = useCallback(() => {
@@ -77,43 +79,37 @@ function AppDownloadScreen() {
 
         {/* Hero */}
         <View style={styles.hero}>
-          <Image source={APP_ICON} style={styles.appIcon} resizeMode="contain" accessibilityLabel="Иконка приложения MeTravel" />
-          <Eyebrow color={colors.primary} style={styles.eyebrow}>
-            МОБИЛЬНОЕ ПРИЛОЖЕНИЕ
-          </Eyebrow>
+          <Image source={APP_ICON} style={styles.appIcon} resizeMode="contain" accessibilityLabel={i18nT('shared:app.app.ikonka_prilozheniya_metravel_e4871974')} />
+          <Eyebrow color={colors.primaryText} style={styles.eyebrow}>
+            {i18nT('shared:app.app.mobilnoe_prilozhenie_462563b9')}</Eyebrow>
           <Heading level={1} align="center" color={colors.text}>
-            MeTravel — путешествия в кармане
-          </Heading>
+            {i18nT('shared:app.app.metravel_puteshestviya_v_karmane_7ec352c1')}</Heading>
           <Body align="center" color={colors.textMuted} style={styles.heroSubtitle}>
-            Карта мест, городские квесты и путеводители — офлайн, с сохранением избранного. Сейчас
-            приложение доступно для Android на этапе закрытого Alpha-тестирования.
-          </Body>
+            {i18nT('shared:app.app.karta_mest_gorodskie_kvesty_i_putevoditeli_o_0c74fdbb')}</Body>
 
           <View style={styles.ctaWrap}>
             <Button
-              label="Скачать из Google Play"
+              label={i18nT('shared:app.app.skachat_iz_google_play_ede112c1')}
               onPress={handleDownload}
               variant="primary"
               size="lg"
               icon={<Feather name="download" size={18} color={colors.textOnPrimary} />}
-              accessibilityLabel="Скачать приложение MeTravel из Google Play"
+              accessibilityLabel={i18nT('shared:app.app.skachat_prilozhenie_metravel_iz_google_play_833df22c')}
             />
             <Caption align="center" color={colors.textMuted} style={styles.platformNote}>
-              Android 8.0+ · бесплатно · версия для iOS готовится
-            </Caption>
+              {i18nT('shared:app.app.android_8_0_besplatno_versiya_dlya_ios_gotov_5102537e')}</Caption>
           </View>
 
           <View style={styles.badge}>
-            <Feather name="award" size={14} color={colors.primary} />
-            <Caption color={colors.primary}>Закрытый Alpha-тест — вы одни из первых</Caption>
+            <Feather name="award" size={14} color={colors.primaryText} />
+            <Caption color={colors.primaryText}>{i18nT('shared:app.app.zakrytyy_alpha_test_vy_odni_iz_pervyh_90569b3d')}</Caption>
           </View>
         </View>
 
         {/* Features */}
         <View style={styles.section}>
           <Heading level={2} align="center" color={colors.text}>
-            Что внутри
-          </Heading>
+            {i18nT('shared:app.app.chto_vnutri_89e8167a')}</Heading>
           <View style={styles.featureGrid}>
             {FEATURES.map((f) => (
               <View key={f.title} style={styles.featureCard}>
@@ -132,8 +128,7 @@ function AppDownloadScreen() {
         {/* How to install */}
         <View style={styles.section}>
           <Heading level={2} align="center" color={colors.text}>
-            Как установить
-          </Heading>
+            {i18nT('shared:app.app.kak_ustanovit_f9a49c93')}</Heading>
           <View style={styles.steps}>
             {STEPS.map((s, i) => (
               <View key={s.title} style={styles.step}>
@@ -154,11 +149,11 @@ function AppDownloadScreen() {
 
           <View style={styles.ctaWrap}>
             <Button
-              label="Открыть в Google Play"
+              label={i18nT('shared:app.app.otkryt_v_google_play_9d0a47cd')}
               onPress={handleDownload}
               variant="primary"
               size="lg"
-              accessibilityLabel="Открыть приложение MeTravel в Google Play"
+              accessibilityLabel={i18nT('shared:app.app.otkryt_prilozhenie_metravel_v_google_play_8566ec38')}
             />
           </View>
         </View>

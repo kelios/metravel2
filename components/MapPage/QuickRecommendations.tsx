@@ -8,16 +8,13 @@ import { parseCoordinateString } from '@/utils/coordinates'
 import MapIcon from './MapIcon'
 import PlaceListCard from '@/components/places/PlaceListCard'
 import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
+import { translate as i18nT } from '@/i18n'
+import { getTransportLabel } from './transportModes'
+
 
 const IS_WEB = Platform.OS === 'web'
 const DEFAULT_MAX_ITEMS = 3
 const DISTANCE_TIE_THRESHOLD_KM = 1
-
-const TRANSPORT_LABEL: Record<'car' | 'bike' | 'foot', string> = {
-  car: 'Авто',
-  bike: 'Велосипед',
-  foot: 'Пешком',
-}
 
 interface Props {
   places: any[]
@@ -98,7 +95,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
         <View style={styles.container}>
           <View style={styles.header}>
             <MapIcon name="star" size={20} color={colors.primaryDark} />
-            <Text style={styles.title}>Популярное рядом</Text>
+            <Text style={styles.title}>{i18nT('map:components.MapPage.QuickRecommendations.populyarnoe_ryadom_44171516')}</Text>
           </View>
           <View style={styles.cardStack}>
             <SkeletonCard styles={styles} />
@@ -119,7 +116,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
       const { title: placeTitle, subtitle: placeSubtitle } = buildPlaceTitleParts(place)
       const distanceBadges = [
         place.distanceText,
-        `${TRANSPORT_LABEL[transportMode]} ${place.travelTimeText}`,
+        `${getTransportLabel(transportMode)} ${place.travelTimeText}`,
       ]
       const badges = placeSubtitle ? [placeSubtitle, ...distanceBadges] : distanceBadges
       return (
@@ -146,7 +143,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
       <View style={styles.container}>
         <View style={styles.header}>
           <MapIcon name="star" size={20} color={colors.primaryDark} />
-          <Text style={styles.title}>Популярное рядом</Text>
+          <Text style={styles.title}>{i18nT('map:components.MapPage.QuickRecommendations.populyarnoe_ryadom_44171516')}</Text>
         </View>
         <View style={styles.cardStack}>{cards}</View>
       </View>

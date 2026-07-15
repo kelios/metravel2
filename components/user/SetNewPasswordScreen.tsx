@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
+import { translate as i18nT } from '@/i18n'
+
 
 type SetNewPasswordScreenProps = {
     route: {
@@ -25,12 +27,12 @@ const SetNewPasswordScreen: React.FC<SetNewPasswordScreenProps> = ({ route }) =>
     return (
         <View>
             <TextInput
-                placeholder="Новый пароль"
+                placeholder={i18nT('auth:components.user.SetNewPasswordScreen.novyy_parol_960e12df')}
                 value={newPassword}
                 onChangeText={setNewPasswordValue}
                 secureTextEntry
             />
-            <Button title="Установить новый пароль" onPress={handleSetNewPassword} />
+            <Button title={i18nT('auth:components.user.SetNewPasswordScreen.ustanovit_novyy_parol_3039d87d')} onPress={handleSetNewPassword} />
         </View>
     );
 };

@@ -18,12 +18,15 @@ import {
   getBreakpoint,
 } from './constants';
 import { getStyles } from './styles';
+import { translate as i18nT } from '@/i18n'
+
 
 type UsePopupLayoutArgs = {
   colors: ThemedColors;
   width: number;
   imageUrl?: string | null;
   addLabel: string;
+  isSaved: boolean;
   imageHeight?: number;
   compactLayout: boolean;
   fullscreenOnMobile: boolean;
@@ -34,6 +37,7 @@ export function usePopupLayout({
   width,
   imageUrl,
   addLabel,
+  isSaved,
   imageHeight,
   compactLayout,
   fullscreenOnMobile,
@@ -51,7 +55,9 @@ export function usePopupLayout({
   const isNarrow = bp === 'narrow';
   // На узком экране лейбл сохранения держим коротким, но не подменяем смысл:
   // это сохранение именно в «Мои точки», а не общий save рядом со статусами.
-  const compactLabel = isNarrow && addLabel === 'В точках' ? 'В точках' : addLabel;
+  const compactLabel = isNarrow && isSaved
+    ? i18nT('map:components.MapPage.Map.PlacePopupCard.usePopupLayout.v_tochkah_e3eff764')
+    : addLabel;
   const viewportGutter = bp === 'narrow' ? 24 : bp === 'compact' ? 32 : 48;
   const useFullscreenMobileOverlay = Platform.OS === 'web' && fullscreenOnMobile && viewportWidth <= 560;
   // Mobile bottom-card surface (MapPlaceBottomCard): compact content WITHOUT the

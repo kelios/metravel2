@@ -31,8 +31,8 @@ import { prepareWebImageFileForUpload } from '@/utils/webImageUpload'
 
 import { CountriesField } from './stepRoute/CountriesField'
 import {
-  DEFAULT_NEXT_LABEL,
-  DEFAULT_TITLE,
+  getDefaultNextLabel,
+  getDefaultTitle,
   getMatchedCountry,
   getProgressPercent,
   getReverseGeocodeCountry,
@@ -55,6 +55,8 @@ import { RouteCoachmark } from './stepRoute/RouteCoachmark'
 import { RouteMapCard } from './stepRoute/RouteMapCard'
 import { createStyles } from './stepRoute/styles'
 import type { TravelWizardStepRouteProps } from './stepRoute/types'
+import { translate as i18nT } from '@/i18n'
+
 
 function TravelWizardStepRoute({
   currentStep,
@@ -240,8 +242,8 @@ function TravelWizardStepRoute({
           if (hasToastBeenShown(error)) return
           void showToastMessage({
             type: 'error',
-            text1: 'Точка не сохранилась',
-            text2: 'Проверьте соединение — изменение сохранится при следующем действии.',
+            text1: i18nT('travel:components.travel.TravelWizardStepRoute.tochka_ne_sohranilas_c900f4d2'),
+            text2: i18nT('travel:components.travel.TravelWizardStepRoute.proverte_soedinenie_izmenenie_sohranitsya_pr_1fc5501c'),
           })
         })
       }, 800)
@@ -256,8 +258,8 @@ function TravelWizardStepRoute({
       const savedTravel = await onManualSave()
       void showToastMessage({
         type: 'success',
-        text1: 'Черновик сохранен',
-        text2: 'Вы можете вернуться к нему позже',
+        text1: i18nT('travel:components.travel.TravelWizardStepRoute.chernovik_sohranen_e41a2f03'),
+        text2: i18nT('travel:components.travel.TravelWizardStepRoute.vy_mozhete_vernutsya_k_nemu_pozzhe_6fb8edfd'),
       })
 
       if (quickDraftTimeoutRef.current != null) {
@@ -272,8 +274,8 @@ function TravelWizardStepRoute({
       if (!hasToastBeenShown(error)) {
         void showToastMessage({
           type: 'error',
-          text1: 'Ошибка сохранения',
-          text2: 'Попробуйте еще раз',
+          text1: i18nT('travel:components.travel.TravelWizardStepRoute.oshibka_sohraneniya_0aff33b4'),
+          text2: i18nT('travel:components.travel.TravelWizardStepRoute.poprobuyte_esche_raz_89657291'),
         })
       }
     }
@@ -350,8 +352,8 @@ function TravelWizardStepRoute({
     if (!isValidCoordinate(lat, lng)) {
       void showToastMessage({
         type: 'error',
-        text1: 'Некорректные координаты',
-        text2: 'Проверьте широту (-90..90) и долготу (-180..180)',
+        text1: i18nT('travel:components.travel.TravelWizardStepRoute.nekorrektnye_koordinaty_9c2e14d8'),
+        text2: i18nT('travel:components.travel.TravelWizardStepRoute.proverte_shirotu_90_90_i_dolgotu_180_180_8dd245e3'),
       })
       return
     }
@@ -439,8 +441,8 @@ function TravelWizardStepRoute({
     if (!coords) {
       void showToastMessage({
         type: 'error',
-        text1: 'Нет геолокации в фото',
-        text2: 'В этом файле не найден GPS в EXIF. Попробуйте другое фото или введите координаты вручную.',
+        text1: i18nT('travel:components.travel.TravelWizardStepRoute.net_geolokatsii_v_foto_e5e30ddf'),
+        text2: i18nT('travel:components.travel.TravelWizardStepRoute.v_etom_fayle_ne_nayden_gps_v_exif_poprobuyte_0c32ab0f'),
       })
       return
     }
@@ -461,8 +463,8 @@ function TravelWizardStepRoute({
       if (!isMountedRef.current) return
       void showToastMessage({
         type: 'error',
-        text1: 'Не удалось обработать фото',
-        text2: 'Попробуйте JPG или PNG, если HEIC не удалось преобразовать в браузере.',
+        text1: i18nT('travel:components.travel.TravelWizardStepRoute.ne_udalos_obrabotat_foto_57ec3f9c'),
+        text2: i18nT('travel:components.travel.TravelWizardStepRoute.poprobuyte_jpg_ili_png_esli_heic_ne_udalos_p_72ad42f8'),
       })
       return
     }
@@ -470,8 +472,8 @@ function TravelWizardStepRoute({
     if (!isMountedRef.current) return
     void showToastMessage({
       type: 'success',
-      text1: 'Координаты заполнены',
-      text2: 'Взяли GPS из EXIF фотографии.',
+      text1: i18nT('travel:components.travel.TravelWizardStepRoute.koordinaty_zapolneny_d9650afe'),
+      text2: i18nT('travel:components.travel.TravelWizardStepRoute.vzyali_gps_iz_exif_fotografii_81abe770'),
     })
   }, [setManualPhotoCoordinates, setManualPhotoPreview])
 
@@ -485,18 +487,18 @@ function TravelWizardStepRoute({
         <TravelWizardHeader
           canGoBack={true}
           onBack={onBack}
-          title={stepMeta?.title ?? DEFAULT_TITLE}
-          subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
+          title={stepMeta?.title ?? getDefaultTitle()}
+          subtitle={stepMeta?.subtitle ?? i18nT('travel:common.stepProgress', { value1: currentStep, value2: totalSteps })}
           progressPercent={progressPercent}
           errorCount={validation.errors.length}
           warningCount={validation.warnings.length}
           autosaveBadge={autosaveBadge}
           isSaveInFlight={isSaveInFlight}
           onPrimary={onNext}
-          primaryLabel={stepMeta?.nextLabel ?? DEFAULT_NEXT_LABEL}
+          primaryLabel={stepMeta?.nextLabel ?? getDefaultNextLabel()}
           onSave={onManualSave}
           onQuickDraft={onManualSave ? handleQuickDraft : undefined}
-          quickDraftLabel="Быстрый черновик"
+          quickDraftLabel={i18nT('travel:components.travel.TravelWizardStepRoute.bystryy_chernovik_35576f36')}
           tipTitle={stepMeta?.tipTitle}
           tipBody={stepMeta?.tipBody}
           currentStep={currentStep}
@@ -541,12 +543,11 @@ function TravelWizardStepRoute({
             <View style={[styles.card, isCompactLayout && styles.cardCompact]}>
               <View style={[styles.mapHeader, isCompactLayout && styles.mapHeaderCompact]}>
                 <View style={styles.flexFill}>
-                  <Text style={styles.mapTitle}>Ключевые точки маршрута</Text>
+                  <Text style={styles.mapTitle}>{i18nT('travel:components.travel.TravelWizardStepRoute.klyuchevye_tochki_marshruta_50aec662')}</Text>
                   <Text style={styles.mapHint}>
-                    Добавьте точки маршрута на карте. Для модерации потребуется минимум одна точка.
-                  </Text>
+                    {i18nT('travel:components.travel.TravelWizardStepRoute.dobavte_tochki_marshruta_na_karte_dlya_moder_a157e621')}</Text>
                 </View>
-                <Text style={styles.mapCount}>Точек: {markers.length}</Text>
+                <Text style={styles.mapCount}>{i18nT('travel:components.travel.TravelWizardStepRoute.tochek_7455fcf5')}{markers.length}</Text>
               </View>
 
               {isCoachmarkVisible && !hasPoints && (
@@ -557,7 +558,7 @@ function TravelWizardStepRoute({
 
               <LocationSearchInput
                 onLocationSelect={handleLocationSelect}
-                placeholder={isCompactLayout ? 'Поиск места' : 'Поиск места (например: Эйфелева башня, Париж)'}
+                placeholder={isCompactLayout ? i18nT('travel:components.travel.TravelWizardStepRoute.poisk_mesta_b4562617') : i18nT('travel:components.travel.TravelWizardStepRoute.poisk_mesta_naprimer_eyfeleva_bashnya_parizh_69988db5')}
                 scrollViewRef={scrollRef}
                 scrollOffsetRef={scrollOffsetRef}
               />
@@ -591,8 +592,7 @@ function TravelWizardStepRoute({
                   />
                   {!isFiltersLoading && (
                     <Text style={styles.countriesHint}>
-                      Заполняется автоматически по точкам маршрута на карте
-                    </Text>
+                      {i18nT('travel:components.travel.TravelWizardStepRoute.zapolnyaetsya_avtomaticheski_po_tochkam_mars_e1dd0ccc')}</Text>
                   )}
                 </View>
               </View>

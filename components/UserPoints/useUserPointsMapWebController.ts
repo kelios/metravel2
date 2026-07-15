@@ -9,6 +9,8 @@ import { isWebAutomation } from '@/utils/isWebAutomation'
 import { createLeafletLayer } from '@/utils/mapWebLayers'
 
 import { buildUserPointsTravelData, getUserPointsCenter, normalizeUserPoints } from './userPointsMapData'
+import { translate as i18nT } from '@/i18n'
+
 
 type UserPointsMapWebControllerArgs = {
   points: ImportedPoint[]
@@ -190,7 +192,7 @@ export function useUserPointsMapWebController({
 
           const nextDef = {
             id: `__fallback_osm_${idx}`,
-            title: 'OpenStreetMap (fallback)',
+            title: i18nT('map:components.UserPoints.useUserPointsMapWebController.openstreetmap_fallback_d7f00f7a'),
             kind: 'tile',
             url: nextUrl,
             attribution: '&copy; OpenStreetMap contributors',

@@ -78,9 +78,13 @@ test.describe('Travel CRUD (API)', () => {
       const createResp = await apiContext.put(UPsert_PATH, { data: { ...basePayload } });
       expect(createResp.ok()).toBeTruthy();
       const created = await createResp.json();
-      expect(created.id).toBeTruthy();
-      travelId = created.id;
-      createdTravels.add(travelId);
+      const createdId = created.id;
+      expect(createdId).toBeTruthy();
+      if (typeof createdId !== 'string' && typeof createdId !== 'number') {
+        throw new Error('Travel create response did not include a stable id');
+      }
+      travelId = createdId;
+      createdTravels.add(createdId);
 
       // Read
       const readResp = await apiContext.get(`${BASE_PATH}/${travelId}/`);

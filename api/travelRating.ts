@@ -5,6 +5,7 @@ import { apiClient, ApiError } from '@/api/client';
 import { isAbortError } from '@/api/travelQueryShared';
 import { devError } from '@/utils/logger';
 import { useAuthStore } from '@/stores/authStore';
+import { translate as i18nT } from '@/i18n';
 
 export type TravelRatingResponse = {
     rating: number;
@@ -33,7 +34,7 @@ export const rateTravel = async (params: RateTravelParams): Promise<TravelRating
     const { travelId, rating } = params;
 
     if (rating < 1 || rating > 5) {
-        throw new Error('Рейтинг должен быть от 1 до 5');
+        throw new Error(i18nT('errorsStatic:api.common.ratingRange'));
     }
 
     try {

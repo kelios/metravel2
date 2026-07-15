@@ -1,82 +1,100 @@
 // src/services/pdf-export/quotes/travelQuotes.ts
 // Набор travel-цитат для обложки и финальной страницы книги
 
+import { translate as i18nT, type TranslationKey } from '@/i18n';
+
 export interface TravelQuote {
   text: string;
   author?: string;
 }
 
-export const TRAVEL_QUOTES: TravelQuote[] = [
-  { text: 'Говорить на иностранном языке - значит завоевать его мир и культуру', author: 'Франц Фанон' },
-  { text: 'Ничто так не развивает ум, как путешествие', author: 'Эмиль Золя' },
-  { text: 'Путешествовать необходимо тем, кто учится', author: 'Марк Твен' },
-  { text: 'Посмотри на мир. Он куда удивительнее, чем сны', author: 'Рэй Брэдбери' },
-  { text: 'Инвестиции в поездки - это инвестиции в себя', author: 'Мэттью Карстен' },
-  { text: 'Жизнь – это либо отчаянное приключение, либо ничего', author: 'Хелен Келлер' },
-  { text: 'Дорога лучше всего измеряется не в милях, а в друзьях', author: 'Тим Кэхилл' },
-  { text: 'Путешествия лишают тебя дара речи, а потом превращают в лучшего рассказчика', author: 'Ибн Баттута' },
-  { text: 'Как же я люблю чувствовать себя безликим в городе, где я раньше никогда не был!', author: 'Билл Брайсон' },
-  { text: 'Никогда не бойтесь уехать прочь от морей, границ, стран и мыслей', author: 'Амин Маалуф' },
-  { text: 'Есть в этом что-то волшебное: уезжаешь одним человеком, а возвращаешься совершенно другим', author: 'Кейт Дуглас Уигген' },
-  { text: 'Путешествовать - значит развиваться', author: 'Пьер Бернандо' },
-  { text: 'Как только подхватываешь лихорадку путешественника, ты уже не можешь от нее излечиться и будешь заражен ей до конца жизни', author: 'Майкл Пейлин' },
-  { text: 'Ох, все те места, где ты побываешь!', author: 'Dr. Seuss' },
-  { text: 'У настоящего путешественника нет определенного плана и намерения куда-либо приехать', author: 'Лао Цзы' },
-  { text: 'Я не был везде, но это в моем списке', author: 'Сьюзен Зонтаг' },
-  { text: 'Путешественник видит то, что видит; туристы видят то, на что они приехали посмотреть', author: 'Г. К. Честертон' },
-  { text: 'Цель – не место, а способность смотреть на мир по-другому', author: 'Генри Миллер' },
-  { text: 'Хватит думать о ямах на дороге, наслаждайся приключением', author: 'Фитжугх Муллан' },
-  { text: 'Забирай только воспоминания, оставляй только следы', author: 'Chief Seattle' },
-  { text: 'Раз в году посещай место, где ты никогда раньше не был', author: 'Далай-лама' },
-  { text: 'Путешествия - это не то, в чем ты разбираешься. Это то, что ты делаешь', author: 'Гейл Форман' },
-  { text: 'Путешествовать – значит жить', author: 'Ханс Кристиан Андерсен' },
-  { text: 'Путешествовать – значит осознать, что все ошибаются насчет других стран', author: 'Олдос Хаксли' },
-  { text: 'Мир – это книга, и те, кто не путешествуют, успевают прочесть лишь первую страницу', author: 'Святой Августин' },
-  { text: 'Хотите путешествовать далеко и быстро? Путешествуйте налегке. Скиньте с себя зависть, нетерпимость, эгоизм и страхи', author: 'Чезаре Павезе' },
-  { text: 'Я встретил много людей в Европе. Я даже с собой познакомился', author: 'Джеймс Болдуин' },
-  { text: 'Не все, кто странствуют, сбились с пути', author: 'Дж. Р. Р. Толкин' },
-  { text: 'Путешествия помогают нам быть скромнее. Каждый из нас лишь крохотная песчинка в этой пустыне людей', author: 'Гюстав Флобер' },
-  { text: 'Люди способны найти и познать себя лишь в приключениях', author: 'Андре Жид' },
-  { text: 'Мы путешествуем не для того, чтобы сбежать от жизни, а для того, чтобы жизнь из нас не сбежала', author: 'Аноним' },
-  { text: 'Туристы не знают, где они уже побывали, а путешественники не знают, где они еще побывают', author: 'Пол Теру' },
-  { text: 'Не люди создают путешествия, а путешествия создают людей', author: 'Джон Стейнбек' },
-  { text: 'Предрассудки, нетерпимость и узколобость губительны для путешествий', author: 'Марк Твен' },
-  { text: 'Путешествия – это единственная вещь на свете, покупая которую становишься богаче', author: 'Аноним' },
-  { text: 'Если вы отказываетесь от еды, не чтите чужие традиции и религию и избегаете людей – лучше оставайтесь дома', author: 'Джеймс Миченер' },
-  { text: 'Я поменялась, увидев как сияет луна с другого берега', author: 'Мэри Энн Рэдмачер' },
-  { text: 'Если ты не знаешь, куда идешь, любая дорога подойдет', author: 'Льюис Кэрролл' },
-  { text: 'Сложно осознать, насколько прекрасно путешествие до тех пор, пока не положишь голову на старую, знакомую подушку', author: 'Лин Ютан' },
-  { text: 'Путешественник без способности к наблюдению сравним с птицей без крыльев', author: 'Мосли Эддин Саади' },
-  { text: 'Лишь тот, кто странствует, открывает новые пути', author: 'Норвежская пословица' },
-  { text: 'Мы путешествуем по миру, чтобы найти красоту; мы должны хранить её в себе, иначе она нам не откроется', author: 'Ральф Уолдо Эмерсон' },
-  { text: 'Чем дальше я уезжаю, тем больше приближаюсь к себе', author: 'Эндрю Маккарти' },
-  { text: 'Каждый мечтатель знает, что абсолютно реально скучать по месту, где ты никогда не был, даже больше, чем по тому, где был', author: 'Джудит Турман' },
-  { text: 'Живи, путешествуй, не сожалей ни о чем и благодари судьбу', author: 'Джек Керуак' },
-  { text: 'Важно не то, куда ты попадешь в конце, но какие приключения встретят тебя на этом пути', author: 'Пенелопа Райли' },
-  { text: 'Тот, кто живет, видит много. Тот, кто путешествует, видит больше', author: 'Арабская пословица' },
-  { text: 'Если вы думаете, что приключение опасно, попробуйте рутину. Она смертельна', author: 'Пауло Коэльо' },
-  { text: 'Путешествия учат толерантности', author: 'Бенджамин Дизраэли' },
-  { text: 'Приключение того стоит', author: 'Аристотель' },
-];
+type QuoteKeys = readonly [TranslationKey, TranslationKey];
 
-export const GALLERY_QUOTES: TravelQuote[] = [
-  { text: 'Каждое путешествие — это новая глава личной истории.', author: 'MeTravel.by' },
-  { text: 'Приключения начинаются там, где заканчивается привычное.', author: 'MeTravel.by' },
-  { text: 'Память держится на деталях, а фото возвращают нас туда снова.', author: 'MeTravel.by' },
-  { text: 'Истории пути живут в мгновениях, а не в километрах.', author: 'MeTravel.by' },
-  { text: 'Лучшие маршруты — те, где есть место неожиданности.', author: 'MeTravel.by' },
-  { text: 'Путешествие — это диалог с местом и собой.', author: 'MeTravel.by' },
-  { text: 'Мы запоминаем не места, а ощущения, которые они нам дарят.', author: 'MeTravel.by' },
-  { text: 'В каждом кадре — часть дороги и немного свободы.', author: 'MeTravel.by' },
-  { text: 'Путешествие — это смелость идти без гарантий.', author: 'MeTravel.by' },
-  { text: 'Каждая остановка — новая перспектива.', author: 'MeTravel.by' },
-  { text: 'Снимки — это следы, которые хочется оставить себе.', author: 'MeTravel.by' },
-  { text: 'Приключение складывается из простых шагов.', author: 'MeTravel.by' },
-  { text: 'Иногда достаточно одного поворота, чтобы началась история.', author: 'MeTravel.by' },
-  { text: 'Путешествия учат видеть красоту в мелочах.', author: 'MeTravel.by' },
-  { text: 'Путь становится значимым, когда в нём есть смысл.', author: 'MeTravel.by' },
-  { text: 'Открывая мир, мы открываем себя.', author: 'MeTravel.by' },
-];
+const TRAVEL_QUOTE_KEYS = [
+  ['export:services.pdfExport.quotes.travel.q01.text', 'export:services.pdfExport.quotes.travel.q01.author'],
+  ['export:services.pdfExport.quotes.travel.q02.text', 'export:services.pdfExport.quotes.travel.q02.author'],
+  ['export:services.pdfExport.quotes.travel.q03.text', 'export:services.pdfExport.quotes.travel.q03.author'],
+  ['export:services.pdfExport.quotes.travel.q04.text', 'export:services.pdfExport.quotes.travel.q04.author'],
+  ['export:services.pdfExport.quotes.travel.q05.text', 'export:services.pdfExport.quotes.travel.q05.author'],
+  ['export:services.pdfExport.quotes.travel.q06.text', 'export:services.pdfExport.quotes.travel.q06.author'],
+  ['export:services.pdfExport.quotes.travel.q07.text', 'export:services.pdfExport.quotes.travel.q07.author'],
+  ['export:services.pdfExport.quotes.travel.q08.text', 'export:services.pdfExport.quotes.travel.q08.author'],
+  ['export:services.pdfExport.quotes.travel.q09.text', 'export:services.pdfExport.quotes.travel.q09.author'],
+  ['export:services.pdfExport.quotes.travel.q10.text', 'export:services.pdfExport.quotes.travel.q10.author'],
+  ['export:services.pdfExport.quotes.travel.q11.text', 'export:services.pdfExport.quotes.travel.q11.author'],
+  ['export:services.pdfExport.quotes.travel.q12.text', 'export:services.pdfExport.quotes.travel.q12.author'],
+  ['export:services.pdfExport.quotes.travel.q13.text', 'export:services.pdfExport.quotes.travel.q13.author'],
+  ['export:services.pdfExport.quotes.travel.q14.text', 'export:services.pdfExport.quotes.travel.q14.author'],
+  ['export:services.pdfExport.quotes.travel.q15.text', 'export:services.pdfExport.quotes.travel.q15.author'],
+  ['export:services.pdfExport.quotes.travel.q16.text', 'export:services.pdfExport.quotes.travel.q16.author'],
+  ['export:services.pdfExport.quotes.travel.q17.text', 'export:services.pdfExport.quotes.travel.q17.author'],
+  ['export:services.pdfExport.quotes.travel.q18.text', 'export:services.pdfExport.quotes.travel.q18.author'],
+  ['export:services.pdfExport.quotes.travel.q19.text', 'export:services.pdfExport.quotes.travel.q19.author'],
+  ['export:services.pdfExport.quotes.travel.q20.text', 'export:services.pdfExport.quotes.travel.q20.author'],
+  ['export:services.pdfExport.quotes.travel.q21.text', 'export:services.pdfExport.quotes.travel.q21.author'],
+  ['export:services.pdfExport.quotes.travel.q22.text', 'export:services.pdfExport.quotes.travel.q22.author'],
+  ['export:services.pdfExport.quotes.travel.q23.text', 'export:services.pdfExport.quotes.travel.q23.author'],
+  ['export:services.pdfExport.quotes.travel.q24.text', 'export:services.pdfExport.quotes.travel.q24.author'],
+  ['export:services.pdfExport.quotes.travel.q25.text', 'export:services.pdfExport.quotes.travel.q25.author'],
+  ['export:services.pdfExport.quotes.travel.q26.text', 'export:services.pdfExport.quotes.travel.q26.author'],
+  ['export:services.pdfExport.quotes.travel.q27.text', 'export:services.pdfExport.quotes.travel.q27.author'],
+  ['export:services.pdfExport.quotes.travel.q28.text', 'export:services.pdfExport.quotes.travel.q28.author'],
+  ['export:services.pdfExport.quotes.travel.q29.text', 'export:services.pdfExport.quotes.travel.q29.author'],
+  ['export:services.pdfExport.quotes.travel.q30.text', 'export:services.pdfExport.quotes.travel.q30.author'],
+  ['export:services.pdfExport.quotes.travel.q31.text', 'export:services.pdfExport.quotes.travel.q31.author'],
+  ['export:services.pdfExport.quotes.travel.q32.text', 'export:services.pdfExport.quotes.travel.q32.author'],
+  ['export:services.pdfExport.quotes.travel.q33.text', 'export:services.pdfExport.quotes.travel.q33.author'],
+  ['export:services.pdfExport.quotes.travel.q34.text', 'export:services.pdfExport.quotes.travel.q34.author'],
+  ['export:services.pdfExport.quotes.travel.q35.text', 'export:services.pdfExport.quotes.travel.q35.author'],
+  ['export:services.pdfExport.quotes.travel.q36.text', 'export:services.pdfExport.quotes.travel.q36.author'],
+  ['export:services.pdfExport.quotes.travel.q37.text', 'export:services.pdfExport.quotes.travel.q37.author'],
+  ['export:services.pdfExport.quotes.travel.q38.text', 'export:services.pdfExport.quotes.travel.q38.author'],
+  ['export:services.pdfExport.quotes.travel.q39.text', 'export:services.pdfExport.quotes.travel.q39.author'],
+  ['export:services.pdfExport.quotes.travel.q40.text', 'export:services.pdfExport.quotes.travel.q40.author'],
+  ['export:services.pdfExport.quotes.travel.q41.text', 'export:services.pdfExport.quotes.travel.q41.author'],
+  ['export:services.pdfExport.quotes.travel.q42.text', 'export:services.pdfExport.quotes.travel.q42.author'],
+  ['export:services.pdfExport.quotes.travel.q43.text', 'export:services.pdfExport.quotes.travel.q43.author'],
+  ['export:services.pdfExport.quotes.travel.q44.text', 'export:services.pdfExport.quotes.travel.q44.author'],
+  ['export:services.pdfExport.quotes.travel.q45.text', 'export:services.pdfExport.quotes.travel.q45.author'],
+  ['export:services.pdfExport.quotes.travel.q46.text', 'export:services.pdfExport.quotes.travel.q46.author'],
+  ['export:services.pdfExport.quotes.travel.q47.text', 'export:services.pdfExport.quotes.travel.q47.author'],
+  ['export:services.pdfExport.quotes.travel.q48.text', 'export:services.pdfExport.quotes.travel.q48.author'],
+  ['export:services.pdfExport.quotes.travel.q49.text', 'export:services.pdfExport.quotes.travel.q49.author'],
+  ['export:services.pdfExport.quotes.travel.q50.text', 'export:services.pdfExport.quotes.travel.q50.author'],
+] as const satisfies readonly QuoteKeys[];
+
+const GALLERY_QUOTE_KEYS = [
+  ['export:services.pdfExport.quotes.gallery.q01.text', 'export:services.pdfExport.quotes.gallery.q01.author'],
+  ['export:services.pdfExport.quotes.gallery.q02.text', 'export:services.pdfExport.quotes.gallery.q02.author'],
+  ['export:services.pdfExport.quotes.gallery.q03.text', 'export:services.pdfExport.quotes.gallery.q03.author'],
+  ['export:services.pdfExport.quotes.gallery.q04.text', 'export:services.pdfExport.quotes.gallery.q04.author'],
+  ['export:services.pdfExport.quotes.gallery.q05.text', 'export:services.pdfExport.quotes.gallery.q05.author'],
+  ['export:services.pdfExport.quotes.gallery.q06.text', 'export:services.pdfExport.quotes.gallery.q06.author'],
+  ['export:services.pdfExport.quotes.gallery.q07.text', 'export:services.pdfExport.quotes.gallery.q07.author'],
+  ['export:services.pdfExport.quotes.gallery.q08.text', 'export:services.pdfExport.quotes.gallery.q08.author'],
+  ['export:services.pdfExport.quotes.gallery.q09.text', 'export:services.pdfExport.quotes.gallery.q09.author'],
+  ['export:services.pdfExport.quotes.gallery.q10.text', 'export:services.pdfExport.quotes.gallery.q10.author'],
+  ['export:services.pdfExport.quotes.gallery.q11.text', 'export:services.pdfExport.quotes.gallery.q11.author'],
+  ['export:services.pdfExport.quotes.gallery.q12.text', 'export:services.pdfExport.quotes.gallery.q12.author'],
+  ['export:services.pdfExport.quotes.gallery.q13.text', 'export:services.pdfExport.quotes.gallery.q13.author'],
+  ['export:services.pdfExport.quotes.gallery.q14.text', 'export:services.pdfExport.quotes.gallery.q14.author'],
+  ['export:services.pdfExport.quotes.gallery.q15.text', 'export:services.pdfExport.quotes.gallery.q15.author'],
+  ['export:services.pdfExport.quotes.gallery.q16.text', 'export:services.pdfExport.quotes.gallery.q16.author'],
+] as const satisfies readonly QuoteKeys[];
+
+function createQuote([textKey, authorKey]: QuoteKeys): TravelQuote {
+  return {
+    get text() {
+      return i18nT(textKey);
+    },
+    get author() {
+      return i18nT(authorKey);
+    },
+  };
+}
+
+export const TRAVEL_QUOTES: TravelQuote[] = TRAVEL_QUOTE_KEYS.map(createQuote);
+export const GALLERY_QUOTES: TravelQuote[] = GALLERY_QUOTE_KEYS.map(createQuote);
 
 export function pickRandomQuote(exclude?: TravelQuote): TravelQuote {
   const pool = exclude

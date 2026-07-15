@@ -13,6 +13,8 @@ import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
 import { LazyYouTube } from './LazyYouTubeSection'
 import QuestForCitySection from './QuestForCitySection'
+import { translate as i18nT } from '@/i18n'
+
 
 const LazyYouTubeSection = React.lazy(() =>
   Promise.resolve(import('./LazyYouTubeSection')).then((module) => ({ default: module.LazyYouTube })),
@@ -95,7 +97,7 @@ export const TravelDetailsContentSection: React.FC<{
           ref={anchors.description}
           testID="travel-details-description"
           collapsable={false}
-          accessibilityLabel="Описание маршрута"
+          accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.opisanie_marshruta_98e0c78f')}
           {...(Platform.OS === 'web' ? { 'data-section-key': 'description' } : {})}
         >
           <CollapsibleSection
@@ -110,11 +112,11 @@ export const TravelDetailsContentSection: React.FC<{
               <View style={styles.descriptionIntroWrapper}>
                 <Text style={styles.descriptionIntroText}>
                   {travel.monthName
-                    ? `лучший сезон: ${travel.monthName.toLowerCase()}${readingTimeLabel}`
+                    ? i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.luchshiy_sezon_value1_value2_302b32f3', { value1: travel.monthName.toLowerCase(), value2: readingTimeLabel })
                     : readingTimeLabel.replace(/^ · /, '')}
                 </Text>
               </View>
-              {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>Содержание маршрута</h2>}
+              {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>{i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.soderzhanie_marshruta_4fdeae71')}</h2>}
 
               <TravelDescription title={travel.name} htmlContent={descriptionContent.html} serverSanitized={descriptionContent.serverSanitized} noBox />
 
@@ -131,7 +133,7 @@ export const TravelDetailsContentSection: React.FC<{
           ref={setVideoSectionRef}
           style={[styles.sectionContainer, styles.contentStable]}
           collapsable={false}
-          accessibilityLabel="Видео маршрута"
+          accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.video_marshruta_f83c004c')}
           {...(Platform.OS === 'web' ? { 'data-section-key': 'video' } : {})}
         >
           <Text
@@ -139,9 +141,8 @@ export const TravelDetailsContentSection: React.FC<{
             accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
             aria-level={2 as any}
           >
-            Видео
-          </Text>
-          <Text style={styles.sectionSubtitle}>Одно нажатие — и ролик начнёт проигрываться</Text>
+            {i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.video_3036068c')}</Text>
+          <Text style={styles.sectionSubtitle}>{i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.odno_nazhatie_i_rolik_nachnet_proigryvatsya_9afa12cf')}</Text>
           <View style={SECTION_CONTENT_MARGIN_STYLE}>
             {shouldLoadVideo ? (
               <Suspense fallback={<View style={VIDEO_PLACEHOLDER_STYLE} />}>
@@ -156,14 +157,14 @@ export const TravelDetailsContentSection: React.FC<{
 
       {shouldUseMobileInsights && (
         <View
-          accessibilityLabel="Впечатления автора"
+          accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.vpechatleniya_avtora_2f076a9a')}
           style={[styles.sectionContainer, styles.mobileInsightTabsWrapper]}
         >
-          <Text style={styles.mobileInsightLabel}>Впечатления автора</Text>
+          <Text style={styles.mobileInsightLabel}>{i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.vpechatleniya_avtora_2f076a9a')}</Text>
           <View
             style={styles.mobileInsightTabs}
             accessibilityRole={'tablist' as any}
-            accessibilityLabel="Впечатления автора"
+            accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.vpechatleniya_avtora_2f076a9a')}
           >
             {insightConfigs.map((section) => (
               <Pressable
@@ -175,7 +176,7 @@ export const TravelDetailsContentSection: React.FC<{
                 ]}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: mobileInsightKey === section.key }}
-                accessibilityLabel={`Показать раздел ${section.label}`}
+                accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.pokazat_razdel_value1_3669c273', { value1: section.label })}
               >
                 <Text
                   style={[
@@ -198,20 +199,20 @@ export const TravelDetailsContentSection: React.FC<{
               key="recommendation"
               ref={anchors.recommendation}
               collapsable={false}
-              accessibilityLabel="Рекомендации"
+              accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.rekomendatsii_a20e5eec')}
               {...(Platform.OS === 'web' ? { 'data-section-key': 'recommendation' } : {})}
             >
               <CollapsibleSection
-                title="Рекомендации"
+                title={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.rekomendatsii_a20e5eec')}
                 initiallyOpen={!isMobile}
                 forceOpen={!isMobile && forceOpenKey === 'recommendation'}
                 iconName="tips-and-updates"
                 highlight="info"
-                badgeLabel="Опыт автора"
+                badgeLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.opyt_avtora_c4f274df')}
                 {...buildInsightControl('recommendation')}
               >
                 <View style={styles.descriptionContainer}>
-                  <TravelDescription title="Рекомендации" htmlContent={recommendationContent.html} serverSanitized={recommendationContent.serverSanitized} noBox />
+                  <TravelDescription title={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.rekomendatsii_a20e5eec')} htmlContent={recommendationContent.html} serverSanitized={recommendationContent.serverSanitized} noBox />
                 </View>
               </CollapsibleSection>
             </View>
@@ -222,20 +223,20 @@ export const TravelDetailsContentSection: React.FC<{
               key="plus"
               ref={anchors.plus}
               collapsable={false}
-              accessibilityLabel="Плюсы"
+              accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.plyusy_2eafad7c')}
               {...(Platform.OS === 'web' ? { 'data-section-key': 'plus' } : {})}
             >
               <CollapsibleSection
-                title="Плюсы"
+                title={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.plyusy_2eafad7c')}
                 initiallyOpen={!isMobile}
                 forceOpen={!isMobile && forceOpenKey === 'plus'}
                 iconName="thumb-up-alt"
                 highlight="positive"
-                badgeLabel="Что понравилось"
+                badgeLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.chto_ponravilos_134b7cf3')}
                 {...buildInsightControl('plus')}
               >
                 <View style={styles.descriptionContainer}>
-                  <TravelDescription title="Плюсы" htmlContent={plusContent.html} serverSanitized={plusContent.serverSanitized} noBox />
+                  <TravelDescription title={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.plyusy_2eafad7c')} htmlContent={plusContent.html} serverSanitized={plusContent.serverSanitized} noBox />
                 </View>
               </CollapsibleSection>
             </View>
@@ -246,20 +247,20 @@ export const TravelDetailsContentSection: React.FC<{
               key="minus"
               ref={anchors.minus}
               collapsable={false}
-              accessibilityLabel="Минусы"
+              accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.minusy_626a3d5e')}
               {...(Platform.OS === 'web' ? { 'data-section-key': 'minus' } : {})}
             >
               <CollapsibleSection
-                title="Минусы"
+                title={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.minusy_626a3d5e')}
                 initiallyOpen={!isMobile}
                 forceOpen={!isMobile && forceOpenKey === 'minus'}
                 iconName="thumb-down-alt"
                 highlight="negative"
-                badgeLabel="Что смутило"
+                badgeLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.chto_smutilo_72420632')}
                 {...buildInsightControl('minus')}
               >
                 <View style={styles.descriptionContainer}>
-                  <TravelDescription title="Минусы" htmlContent={minusContent.html} serverSanitized={minusContent.serverSanitized} noBox />
+                  <TravelDescription title={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.minusy_626a3d5e')} htmlContent={minusContent.html} serverSanitized={minusContent.serverSanitized} noBox />
                 </View>
               </CollapsibleSection>
             </View>

@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Adventure - приключенческая тема с динамичными акцентами
  */
 export const adventureTheme: PdfThemeConfig = {
   name: 'adventure',
-  displayName: 'Приключенческая',
-  description: 'Насыщенные цвета, динамичная типографика',
+  get displayName() { return i18nT('export:services.pdfExport.theme.adventure.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.adventure.description') },
   
   colors: {
     text: '#1a1a1a',

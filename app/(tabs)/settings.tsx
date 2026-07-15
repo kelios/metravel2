@@ -23,7 +23,7 @@ import { useIsFocused } from 'expo-router';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { useBiometricAuth } from '@/hooks/useBiometricAuth';
-import { webTouchScrollStyle } from '@/utils';
+import { getAppVersionInfo, webTouchScrollStyle } from '@/utils';
 import { createSettingsStyles } from '@/components/screens/settings/settings.styles';
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import StravaSettingsSection from '@/components/settings/StravaSettingsSection';
@@ -34,6 +34,10 @@ import BiometricSection from '@/components/settings/BiometricSection';
 import AccountSection from '@/components/settings/AccountSection';
 import DataManagementSection from '@/components/settings/DataManagementSection';
 import NavCardSection from '@/components/settings/NavCardSection';
+import AppVersionSection from '@/components/settings/AppVersionSection';
+import LanguageSection from '@/components/settings/LanguageSection';
+import { translate as i18nT } from '@/i18n'
+
 
 // Keep the Strava implementation for a future backend rollout, but hide the settings UI for now.
 const STRAVA_SETTINGS_ENABLED = false;
@@ -54,6 +58,7 @@ export default function SettingsScreen() {
     const { theme, setTheme } = useTheme();
     const colors = useThemedColors();
     const styles = useMemo(() => createSettingsStyles(colors), [colors]);
+    const appVersionInfo = useMemo(() => getAppVersionInfo(), []);
     const {
         clearHistory = async () => {},
         clearFavorites = async () => {},
@@ -123,20 +128,20 @@ export default function SettingsScreen() {
         () => [
             {
                 value: 'light' as Theme,
-                label: 'Светлая',
-                description: 'По умолчанию',
+                label: i18nT('profile:app.tabs.settings.svetlaya_5011d52d'),
+                description: i18nT('profile:app.tabs.settings.po_umolchaniyu_70591a06'),
                 icon: 'sun' as const,
             },
             {
                 value: 'dark' as Theme,
-                label: 'Тёмная',
-                description: 'Комфортно в темноте',
+                label: i18nT('profile:app.tabs.settings.temnaya_f8f50e31'),
+                description: i18nT('profile:app.tabs.settings.komfortno_v_temnote_cdb57379'),
                 icon: 'moon' as const,
             },
             {
                 value: 'auto' as Theme,
-                label: 'Системная',
-                description: 'Следовать настройкам устройства',
+                label: i18nT('profile:app.tabs.settings.sistemnaya_c4a54d45'),
+                description: i18nT('profile:app.tabs.settings.sledovat_nastroykam_ustroystva_3f8a9b61'),
                 icon: 'smartphone' as const,
             },
         ],
@@ -145,9 +150,9 @@ export default function SettingsScreen() {
 
     const messengerOptions = useMemo(
         () => [
-            { value: 'telegram' as const, label: 'Telegram' },
-            { value: 'whatsapp' as const, label: 'WhatsApp' },
-            { value: 'other' as const, label: 'Другой' },
+            { value: 'telegram' as const, label: i18nT('profile:app.tabs.settings.telegram_d271f81b') },
+            { value: 'whatsapp' as const, label: i18nT('profile:app.tabs.settings.whatsapp_b09b7709') },
+            { value: 'other' as const, label: i18nT('profile:app.tabs.settings.drugoy_8bd505f6') },
         ],
         []
     );
@@ -155,30 +160,30 @@ export default function SettingsScreen() {
     const handleDeleteAccount = useCallback(async () => {
         try {
             const confirmed = await confirmAction({
-                title: 'Удалить аккаунт',
-                message: 'Аккаунт и ваши путешествия будут удалены без возможности восстановления. Продолжить?',
-                confirmText: 'Удалить',
-                cancelText: 'Отмена',
+                title: i18nT('profile:app.tabs.settings.udalit_akkaunt_bb9a5af4'),
+                message: i18nT('profile:app.tabs.settings.akkaunt_i_vashi_puteshestviya_budut_udaleny__4fb3eb8e'),
+                confirmText: i18nT('profile:app.tabs.settings.udalit_67c7c30f'),
+                cancelText: i18nT('profile:app.tabs.settings.otmena_0a594e8d'),
             });
             if (!confirmed) return;
 
             await deleteCurrentUserAccount();
             await logout();
-            showToast({ type: 'success', text1: 'Аккаунт удалён', visibilityTime: 3000 });
+            showToast({ type: 'success', text1: i18nT('profile:app.tabs.settings.akkaunt_udalen_faef461b'), visibilityTime: 3000 });
             router.replace('/login');
         } catch (error) {
-            const message = error instanceof ApiError ? error.message : 'Не удалось удалить аккаунт';
-            showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+            const message = error instanceof ApiError ? error.message : i18nT('profile:app.tabs.settings.ne_udalos_udalit_akkaunt_18ea0cfd');
+            showToast({ type: 'error', text1: i18nT('profile:app.tabs.settings.oshibka_54cdc7a4'), text2: message, visibilityTime: 4000 });
         }
     }, [logout, router]);
 
     const handleLogout = useCallback(async () => {
         try {
             const confirmed = await confirmAction({
-                title: 'Выход из аккаунта',
-                message: 'Выйти из аккаунта?',
-                confirmText: 'Выйти',
-                cancelText: 'Отмена',
+                title: i18nT('profile:app.tabs.settings.vyhod_iz_akkaunta_001b3d7a'),
+                message: i18nT('profile:app.tabs.settings.vyyti_iz_akkaunta_6cb6575a'),
+                confirmText: i18nT('profile:app.tabs.settings.vyyti_63a0b3ce'),
+                cancelText: i18nT('profile:app.tabs.settings.otmena_0a594e8d'),
             });
             if (!confirmed) return;
 
@@ -194,18 +199,18 @@ export default function SettingsScreen() {
             if (typeof clearHistory !== 'function') return;
 
             const confirmed = await confirmAction({
-                title: 'Очистить историю',
-                message: 'Очистить историю просмотров?',
-                confirmText: 'Очистить',
-                cancelText: 'Отмена',
+                title: i18nT('profile:app.tabs.settings.ochistit_istoriyu_6ea9b985'),
+                message: i18nT('profile:app.tabs.settings.ochistit_istoriyu_prosmotrov_c3bd1dea'),
+                confirmText: i18nT('profile:app.tabs.settings.ochistit_7b65714a'),
+                cancelText: i18nT('profile:app.tabs.settings.otmena_0a594e8d'),
             });
             if (!confirmed) return;
 
             await clearHistory();
-            showToast({ type: 'success', text1: 'История очищена', visibilityTime: 2000 });
+            showToast({ type: 'success', text1: i18nT('profile:app.tabs.settings.istoriya_ochischena_c41440c0'), visibilityTime: 2000 });
         } catch (error) {
             console.error('Error clearing history:', error);
-            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось очистить историю', visibilityTime: 3000 });
+            showToast({ type: 'error', text1: i18nT('profile:app.tabs.settings.oshibka_54cdc7a4'), text2: i18nT('profile:app.tabs.settings.ne_udalos_ochistit_istoriyu_213a57c4'), visibilityTime: 3000 });
         }
     }, [clearHistory]);
 
@@ -214,18 +219,18 @@ export default function SettingsScreen() {
             if (typeof clearFavorites !== 'function') return;
 
             const confirmed = await confirmAction({
-                title: 'Очистить «Хочу поехать»',
-                message: 'Очистить «Хочу поехать»?',
-                confirmText: 'Очистить',
-                cancelText: 'Отмена',
+                title: i18nT('profile:app.tabs.settings.ochistit_hochu_poehat_dbb86f70'),
+                message: i18nT('profile:app.tabs.settings.ochistit_hochu_poehat_92eed92a'),
+                confirmText: i18nT('profile:app.tabs.settings.ochistit_7b65714a'),
+                cancelText: i18nT('profile:app.tabs.settings.otmena_0a594e8d'),
             });
             if (!confirmed) return;
 
             await clearFavorites();
-            showToast({ type: 'success', text1: '«Хочу поехать» очищен', visibilityTime: 2000 });
+            showToast({ type: 'success', text1: i18nT('profile:app.tabs.settings.hochu_poehat_ochischen_24932af0'), visibilityTime: 2000 });
         } catch (error) {
             console.error('Error clearing favorites:', error);
-            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось очистить «Хочу поехать»', visibilityTime: 3000 });
+            showToast({ type: 'error', text1: i18nT('profile:app.tabs.settings.oshibka_54cdc7a4'), text2: i18nT('profile:app.tabs.settings.ne_udalos_ochistit_hochu_poehat_d7481335'), visibilityTime: 3000 });
         }
     }, [clearFavorites]);
 
@@ -263,10 +268,10 @@ export default function SettingsScreen() {
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <EmptyState
                     icon="settings"
-                    title="Войдите в аккаунт"
-                    description="Войдите, чтобы управлять настройками и данными аккаунта."
+                    title={i18nT('profile:app.tabs.settings.voydite_v_akkaunt_d3790281')}
+                    description={i18nT('profile:app.tabs.settings.voydite_chtoby_upravlyat_nastroykami_i_danny_d8ac08ea')}
                     action={{
-                        label: 'Войти',
+                        label: i18nT('profile:app.tabs.settings.voyti_41ef2155'),
                         onPress: () => router.push(buildLoginHref({ redirect: '/settings', intent: 'settings' }) as any),
                     }}
                 />
@@ -279,8 +284,8 @@ export default function SettingsScreen() {
             {isFocused && (
                 <InstantSEO
                     headKey="settings"
-                    title="Настройки | Metravel"
-                    description="Настройки аккаунта"
+                    title={i18nT('profile:app.tabs.settings.nastroyki_metravel_4f02399c')}
+                    description={i18nT('profile:app.tabs.settings.nastroyki_akkaunta_f3ca340a')}
                     canonical={buildCanonicalUrl('/settings')}
                     robots="noindex, nofollow"
                 />
@@ -293,24 +298,24 @@ export default function SettingsScreen() {
                         <View style={styles.header}>
                             <View style={styles.headerRow}>
                                 <View style={styles.headerTitleBlock}>
-                                    <Text style={styles.title}>Настройки</Text>
+                                    <Text style={styles.title}>{i18nT('profile:app.tabs.settings.nastroyki_bc351c51')}</Text>
                                 </View>
                                 <Pressable
                                     style={[styles.backToProfileButton, globalFocusStyles.focusable]}
                                     onPress={handleBackToProfile}
                                     accessibilityRole="button"
-                                    accessibilityLabel="Назад"
+                                    accessibilityLabel={i18nT('profile:app.tabs.settings.nazad_5e0a7fb4')}
                                     {...Platform.select({ web: { cursor: 'pointer' } })}
                                 >
                                     <Feather name="arrow-left" size={16} color={colors.primaryDark} />
-                                    <Text style={styles.backToProfileButtonText}>Назад</Text>
+                                    <Text style={styles.backToProfileButtonText}>{i18nT('profile:app.tabs.settings.nazad_5e0a7fb4')}</Text>
                                 </Pressable>
                             </View>
                         </View>
                     )}
 
                     <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Профиль</Text>
+                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.profil_e0a36973')}</Text>
 
                     <ProfileSection
                         styles={styles}
@@ -362,7 +367,11 @@ export default function SettingsScreen() {
                         webFileInputRef={webFileInputRef}
                     />
 
-                    <Text style={styles.sectionTitle}>Тема</Text>
+                    <Text style={styles.sectionTitle}>{i18nT('common:language.settingTitle')}</Text>
+
+                    <LanguageSection styles={styles} colors={colors} />
+
+                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.tema_920e1112')}</Text>
 
                     <ThemeSection
                         styles={styles}
@@ -375,34 +384,34 @@ export default function SettingsScreen() {
                     {/* AND-17: Biometric authentication toggle (native only) */}
                     {showBiometricToggle ? (
                         <>
-                            <Text style={styles.sectionTitle}>Безопасность</Text>
+                            <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.bezopasnost_e58cbb03')}</Text>
                             <BiometricSection styles={styles} colors={colors} biometric={biometric} />
                         </>
                     ) : null}
 
                     {STRAVA_SETTINGS_ENABLED ? <StravaSettingsSection /> : null}
 
-                    <Text style={styles.sectionTitle}>Сообщения</Text>
+                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.soobscheniya_79276690')}</Text>
 
                     <NavCardSection
                         styles={styles}
                         colors={colors}
                         icon="mail"
-                        title="Личные сообщения"
-                        meta="Переписка с авторами путешествий"
-                        accessibilityLabel="Перейти к сообщениям"
+                        title={i18nT('profile:app.tabs.settings.lichnye_soobscheniya_478df083')}
+                        meta={i18nT('profile:app.tabs.settings.perepiska_s_avtorami_puteshestviy_07268df1')}
+                        accessibilityLabel={i18nT('profile:app.tabs.settings.pereyti_k_soobscheniyam_86385403')}
                         onPress={() => router.push('/messages' as any)}
                     />
 
-                    <Text style={styles.sectionTitle}>Приватность и данные</Text>
+                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.privatnost_i_dannye_1e79e641')}</Text>
 
                     <NavCardSection
                         styles={styles}
                         colors={colors}
                         icon="eye"
-                        title="Настройки приватности"
-                        meta="Кто видит ваши путешествия, маршруты и контакты"
-                        accessibilityLabel="Настройки приватности"
+                        title={i18nT('profile:app.tabs.settings.nastroyki_privatnosti_9f69f2ff')}
+                        meta={i18nT('profile:app.tabs.settings.kto_vidit_vashi_puteshestviya_marshruty_i_ko_5154416c')}
+                        accessibilityLabel={i18nT('profile:app.tabs.settings.nastroyki_privatnosti_9f69f2ff')}
                         onPress={() => router.push('/privacy-settings' as any)}
                     />
 
@@ -412,13 +421,13 @@ export default function SettingsScreen() {
                         styles={styles}
                         colors={colors}
                         icon="shield"
-                        title="Журнал безопасности"
-                        meta="История входов и действий с аккаунтом"
-                        accessibilityLabel="Журнал безопасности"
+                        title={i18nT('profile:app.tabs.settings.zhurnal_bezopasnosti_90168d71')}
+                        meta={i18nT('profile:app.tabs.settings.istoriya_vhodov_i_deystviy_s_akkauntom_e7295184')}
+                        accessibilityLabel={i18nT('profile:app.tabs.settings.zhurnal_bezopasnosti_90168d71')}
                         onPress={() => router.push('/security-journal' as any)}
                     />
 
-                    <Text style={styles.sectionTitle}>Аккаунт</Text>
+                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.akkaunt_72bc7b11')}</Text>
 
                     <AccountSection
                         styles={styles}
@@ -428,7 +437,7 @@ export default function SettingsScreen() {
                         handleDeleteAccount={handleDeleteAccount}
                     />
 
-                    <Text style={styles.sectionTitle}>Данные</Text>
+                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.dannye_f2b03773')}</Text>
 
                     <DataManagementSection
                         styles={styles}
@@ -437,6 +446,14 @@ export default function SettingsScreen() {
                         viewHistory={viewHistory}
                         handleClearFavorites={handleClearFavorites}
                         handleClearHistory={handleClearHistory}
+                    />
+
+                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.prilozhenie_853a0313')}</Text>
+
+                    <AppVersionSection
+                        styles={styles}
+                        colors={colors}
+                        versionInfo={appVersionInfo}
                     />
                     </View>
                 </View>

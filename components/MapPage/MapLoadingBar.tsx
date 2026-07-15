@@ -4,6 +4,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Platform, StyleSheet } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface MapLoadingBarProps {
   visible: boolean;
@@ -65,9 +67,9 @@ export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible
     <Animated.View
       style={[styles.container, { opacity, pointerEvents: 'none' }]}
       accessibilityRole="progressbar"
-      accessibilityLabel="Загрузка данных карты"
+      accessibilityLabel={i18nT('map:components.MapPage.MapLoadingBar.zagruzka_dannyh_karty_6b46de24')}
       {...(Platform.OS === 'web'
-        ? ({ 'aria-busy': visible, 'aria-label': 'Загрузка данных карты' } as any)
+        ? ({ 'aria-busy': visible, 'aria-label': i18nT('map:components.MapPage.MapLoadingBar.zagruzka_dannyh_karty_6b46de24') } as any)
         : null)}
     >
       <Animated.View

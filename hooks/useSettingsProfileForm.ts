@@ -15,6 +15,8 @@ import {
   useUpdateTelegramLink,
 } from '@/hooks/useTelegramLinkApi';
 import type { useUserProfile } from '@/hooks/useUserProfile';
+import { translate as i18nT } from '@/i18n'
+
 
 type UserProfile = ReturnType<typeof useUserProfile>['profile'];
 
@@ -85,7 +87,7 @@ export function useSettingsProfileForm({
     const first = normalizeAvatar(firstName) ?? '';
     const last = normalizeAvatar(lastName) ?? '';
     const full = `${first} ${last}`.trim();
-    return full || username || 'Пользователь';
+    return full || username || i18nT('profile:app.tabs.profile.defaultUserName');
   }, [firstName, lastName, username]);
 
   const hasUnsavedChanges = useMemo(() => {
@@ -129,11 +131,11 @@ export function useSettingsProfileForm({
       // ответ затрёт другую секцию).
       if (!mountedRef.current || seq !== saveSeqRef.current) return;
       setProfile(saved);
-      showToast({ type: 'success', text1: 'Профиль обновлён', visibilityTime: 3000 });
+      showToast({ type: 'success', text1: i18nT('profile:hooks.useSettingsProfileForm.profil_obnovlen_cf1dea9c'), visibilityTime: 3000 });
     } catch (error) {
       if (!mountedRef.current || seq !== saveSeqRef.current) return;
-      const message = error instanceof ApiError ? error.message : 'Не удалось обновить профиль';
-      showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+      const message = error instanceof ApiError ? error.message : i18nT('profile:hooks.useSettingsProfileForm.ne_udalos_obnovit_profil_71aacb1a');
+      showToast({ type: 'error', text1: i18nT('profile:hooks.useSettingsProfileForm.oshibka_d3c70bab'), text2: message, visibilityTime: 4000 });
     } finally {
       if (mountedRef.current && seq === saveSeqRef.current) setProfileSaving(false);
     }
@@ -153,13 +155,13 @@ export function useSettingsProfileForm({
         });
         if (!mountedRef.current || seq !== saveSeqRef.current) return;
         setProfile(saved);
-        showToast({ type: 'success', text1: 'Настройки уведомлений сохранены', visibilityTime: 2000 });
+        showToast({ type: 'success', text1: i18nT('profile:hooks.useSettingsProfileForm.nastroyki_uvedomleniy_sohraneny_9c74887c'), visibilityTime: 2000 });
       } catch (error) {
         if (!mountedRef.current || seq !== saveSeqRef.current) return;
         setEmailNotifyComments(Boolean(profile?.email_notify_comments));
         setEmailNotifyMessages(Boolean(profile?.email_notify_messages));
-        const message = error instanceof ApiError ? error.message : 'Не удалось обновить настройки уведомлений';
-        showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+        const message = error instanceof ApiError ? error.message : i18nT('profile:hooks.useSettingsProfileForm.ne_udalos_obnovit_nastroyki_uvedomleniy_ad5d8355');
+        showToast({ type: 'error', text1: i18nT('profile:hooks.useSettingsProfileForm.oshibka_d3c70bab'), text2: message, visibilityTime: 4000 });
       } finally {
         if (mountedRef.current && seq === saveSeqRef.current) setProfileSaving(false);
       }
@@ -220,10 +222,10 @@ export function useSettingsProfileForm({
       { telegramUsername },
       {
         onSuccess: () =>
-          showToast({ type: 'success', text1: 'Telegram сохранён', visibilityTime: 2000 }),
+          showToast({ type: 'success', text1: i18nT('profile:hooks.useSettingsProfileForm.telegram_sohranen_2f6d1b99'), visibilityTime: 2000 }),
         onError: (error) => {
-          const message = error instanceof ApiError ? error.message : 'Не удалось сохранить Telegram';
-          showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+          const message = error instanceof ApiError ? error.message : i18nT('profile:hooks.useSettingsProfileForm.ne_udalos_sohranit_telegram_6a429442');
+          showToast({ type: 'error', text1: i18nT('profile:hooks.useSettingsProfileForm.oshibka_d3c70bab'), text2: message, visibilityTime: 4000 });
         },
       },
     );
@@ -244,8 +246,8 @@ export function useSettingsProfileForm({
         await openExternalUrl(deeplink);
       },
       onError: (error) => {
-        const message = error instanceof ApiError ? error.message : 'Не удалось открыть Telegram';
-        showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+        const message = error instanceof ApiError ? error.message : i18nT('profile:hooks.useSettingsProfileForm.ne_udalos_otkryt_telegram_40f00994');
+        showToast({ type: 'error', text1: i18nT('profile:hooks.useSettingsProfileForm.oshibka_d3c70bab'), text2: message, visibilityTime: 4000 });
       },
     });
   }, [startTelegram]);
@@ -255,11 +257,11 @@ export function useSettingsProfileForm({
     confirmTelegram.mutate(pendingAuthToken, {
       onSuccess: () => {
         setPendingAuthToken(null);
-        showToast({ type: 'success', text1: 'Telegram подтверждён', visibilityTime: 2000 });
+        showToast({ type: 'success', text1: i18nT('profile:hooks.useSettingsProfileForm.telegram_podtverzhden_b62c389d'), visibilityTime: 2000 });
       },
       onError: (error) => {
-        const message = error instanceof ApiError ? error.message : 'Не удалось подтвердить Telegram';
-        showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+        const message = error instanceof ApiError ? error.message : i18nT('profile:hooks.useSettingsProfileForm.ne_udalos_podtverdit_telegram_37c42e4b');
+        showToast({ type: 'error', text1: i18nT('profile:hooks.useSettingsProfileForm.oshibka_d3c70bab'), text2: message, visibilityTime: 4000 });
       },
     });
   }, [confirmTelegram, pendingAuthToken]);
@@ -272,8 +274,8 @@ export function useSettingsProfileForm({
         {
           onError: (error) => {
             const message =
-              error instanceof ApiError ? error.message : 'Не удалось сохранить мессенджер';
-            showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+              error instanceof ApiError ? error.message : i18nT('profile:hooks.useSettingsProfileForm.ne_udalos_sohranit_messendzher_51f6dc54');
+            showToast({ type: 'error', text1: i18nT('profile:hooks.useSettingsProfileForm.oshibka_d3c70bab'), text2: message, visibilityTime: 4000 });
           },
         },
       );

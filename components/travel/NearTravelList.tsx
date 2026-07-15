@@ -24,12 +24,14 @@ import TravelTmlRound from '@/components/travel/TravelTmlRound';
 import TravelListItem from '@/components/listTravel/TravelListItem';
 import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { NEARBY_TRAVELS_SUBTITLE } from '@/constants/nearby';
+import { getNearbyTravelsSubtitle } from '@/constants/nearby';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import { useNearTravelData } from '@/hooks/useNearTravelData';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import { TravelMap } from '@/components/MapPage/TravelMap';
+import { translate as i18nT } from '@/i18n'
+
 
 // ✅ ОПТИМИЗАЦИЯ: Lazy import для map-компонента (тяжёлый, Leaflet внутри)
 const MapClientSideComponent = React.lazy(() =>
@@ -142,14 +144,14 @@ const MapContainer = memo(({
     return (
       <View style={[mapStyles.mapPlaceholder, { height }]}>
         <Text style={mapStyles.placeholderText}>
-          {isLoading ? 'Загрузка карты...' : 'Нет точек для карты'}
+          {isLoading ? i18nT('travel:components.travel.NearTravelList.zagruzka_karty_1215cf9a') : i18nT('travel:components.travel.NearTravelList.net_tochek_dlya_karty_4c27ee19')}
         </Text>
       </View>
     );
   }
 
   return (
-    <React.Suspense fallback={<ActivityIndicator size="small" color={colors.primaryDark} accessibilityLabel="Загрузка карты" />}>
+    <React.Suspense fallback={<ActivityIndicator size="small" color={colors.primaryDark} accessibilityLabel={i18nT('travel:components.travel.NearTravelList.zagruzka_karty_dafc7f62')} />}>
       <MapComponent
         travelData={points}
         compact
@@ -179,8 +181,8 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     const scrollViewRef = useRef<ScrollView>(null);
     const segmentOptions = useMemo(
       () => [
-        { key: 'list', label: 'Список', icon: 'view-list', iconSource: 'material' as const },
-        { key: 'map', label: 'Карта', icon: 'map', iconSource: 'material' as const },
+        { key: 'list', label: i18nT('travel:components.travel.NearTravelList.spisok_80236245'), icon: 'view-list', iconSource: 'material' as const },
+        { key: 'map', label: i18nT('travel:components.travel.NearTravelList.karta_14701f05'), icon: 'map', iconSource: 'material' as const },
       ],
       []
     );
@@ -537,16 +539,16 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       return (
         <View style={styles.errorContainer} onLayout={onLayout}>
           <Text style={styles.errorText}>
-            {error instanceof Error ? error.message : 'Не удалось загрузить маршруты. Попробуйте позже.'}
+            {error instanceof Error ? error.message : i18nT('travel:components.travel.NearTravelList.ne_udalos_zagruzit_marshruty_poprobuyte_pozz_d6ce6b01')}
           </Text>
           <Button
-            label="Повторить попытку"
+            label={i18nT('travel:components.travel.NearTravelList.povtorit_popytku_c1893c28')}
             onPress={() => refetchTravelsNear()}
             variant="primary"
             size="md"
             style={styles.retryButton}
             labelStyle={styles.retryButtonText}
-            accessibilityLabel="Повторить попытку"
+            accessibilityLabel={i18nT('travel:components.travel.NearTravelList.povtorit_popytku_c1893c28')}
           />
         </View>
       );
@@ -562,8 +564,8 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         <View style={embedded ? styles.embeddedSection : styles.section} onLayout={onLayout}>
           {showHeader && (
             <View style={styles.header}>
-              <Title style={styles.title}>Рядом можно посмотреть</Title>
-              <Text style={styles.subtitle}>{NEARBY_TRAVELS_SUBTITLE}</Text>
+              <Title style={styles.title}>{i18nT('travel:components.travel.NearTravelList.ryadom_mozhno_posmotret_127cfa0d')}</Title>
+              <Text style={styles.subtitle}>{getNearbyTravelsSubtitle()}</Text>
             </View>
           )}
           <View style={{ alignItems: 'center', paddingVertical: DESIGN_TOKENS.spacing.xl }}>
@@ -576,8 +578,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                 textAlign: 'center',
               }}
             >
-              Рядом пока нет других маршрутов
-            </Text>
+              {i18nT('travel:components.travel.NearTravelList.ryadom_poka_net_drugih_marshrutov_28eabcfe')}</Text>
           </View>
         </View>
       );
@@ -587,8 +588,8 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       <View style={embedded ? styles.embeddedSection : styles.section} onLayout={onLayout}>
         {showHeader && (
           <View style={styles.header}>
-            <Title style={styles.title}>Рядом можно посмотреть</Title>
-            <Text style={styles.subtitle}>Маршруты в радиусе ~60 км</Text>
+            <Title style={styles.title}>{i18nT('travel:components.travel.NearTravelList.ryadom_mozhno_posmotret_127cfa0d')}</Title>
+            <Text style={styles.subtitle}>{i18nT('travel:components.travel.NearTravelList.marshruty_v_radiuse_60_km_62529086')}</Text>
           </View>
         )}
 
@@ -598,7 +599,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
               options={segmentOptions}
               value={viewMode}
               onChange={(key) => setViewMode(key as Segment)}
-              accessibilityLabel="Переключатель вида"
+              accessibilityLabel={i18nT('travel:components.travel.NearTravelList.pereklyuchatel_vida_fe04e58c')}
             />
 
             {viewMode === 'map' ? (
@@ -632,13 +633,13 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   {visibleCount < travelsNear.length && (
                     <View style={styles.loadMoreContainer}>
                       <Button
-                        label={`Показать ещё (${travelsNear.length - visibleCount})`}
+                        label={i18nT('travel:components.travel.NearTravelList.pokazat_esche_value1_5bd22dbc', { value1: travelsNear.length - visibleCount })}
                         onPress={handleLoadMore}
                         variant="outline"
                         size="md"
                         style={styles.loadMoreButton}
                         labelStyle={styles.loadMoreButtonText}
-                        accessibilityLabel="Показать ещё"
+                        accessibilityLabel={i18nT('travel:components.travel.NearTravelList.pokazat_esche_bfa76db8')}
                       />
                     </View>
                   )}
@@ -652,7 +653,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
               options={segmentOptions}
               value={viewMode}
               onChange={(key) => setViewMode(key as Segment)}
-              accessibilityLabel="Переключатель вида"
+              accessibilityLabel={i18nT('travel:components.travel.NearTravelList.pereklyuchatel_vida_fe04e58c')}
               compact
               tone="subtle"
             />
@@ -668,13 +669,13 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   {visibleCount < travelsNear.length && (
                     <View style={styles.loadMoreContainer}>
                       <Button
-                        label="Загрузить ещё"
+                        label={i18nT('travel:components.travel.NearTravelList.zagruzit_esche_42e10ade')}
                         onPress={handleLoadMore}
                         variant="outline"
                         size="md"
                         style={styles.loadMoreButton}
                         labelStyle={styles.loadMoreButtonText}
-                        accessibilityLabel="Загрузить ещё путешествий"
+                        accessibilityLabel={i18nT('travel:components.travel.NearTravelList.zagruzit_esche_puteshestviy_91cbe3fc')}
                       />
                     </View>
                   )}
@@ -695,13 +696,13 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   visibleCount < travelsNear.length ? (
                     <View style={styles.loadMoreContainer}>
                       <Button
-                        label="Загрузить ещё"
+                        label={i18nT('travel:components.travel.NearTravelList.zagruzit_esche_42e10ade')}
                         onPress={handleLoadMore}
                         variant="outline"
                         size="md"
                         style={styles.loadMoreButton}
                         labelStyle={styles.loadMoreButtonText}
-                        accessibilityLabel="Загрузить ещё путешествий"
+                        accessibilityLabel={i18nT('travel:components.travel.NearTravelList.zagruzit_esche_puteshestviy_91cbe3fc')}
                       />
                     </View>
                   ) : isLoading ? (
@@ -732,8 +733,8 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         {isLoading && travelsNear.length === 0 && (
           <View style={styles.loadingOverlay}>
             <View style={styles.loadingContent}>
-              <ActivityIndicator size="large" color={colors.primaryDark} accessibilityLabel="Поиск мест рядом" />
-              <Text style={styles.loadingText}>Ищем интересные места рядом...</Text>
+              <ActivityIndicator size="large" color={colors.primaryDark} accessibilityLabel={i18nT('travel:components.travel.NearTravelList.poisk_mest_ryadom_cd19f801')} />
+              <Text style={styles.loadingText}>{i18nT('travel:components.travel.NearTravelList.ischem_interesnye_mesta_ryadom_49948c94')}</Text>
             </View>
           </View>
         )}

@@ -3,6 +3,8 @@ import type { Travel } from '@/types/types'
 import { queryKeys } from '@/api/queryKeys'
 import type { FilterOptions, FilterState } from './utils/listTravelTypes'
 import { getSortingLabel } from './utils/sortings'
+import { translate as i18nT } from '@/i18n'
+
 
 type TravelListPage = {
   data?: Travel[]
@@ -173,6 +175,16 @@ export const removeTravelFromInfiniteTravelsCache = (
   })
 }
 
+const includesLocalizedErrorToken = (
+  message: string,
+  key: Parameters<typeof i18nT>[0],
+): boolean =>
+  i18nT(key)
+    .split('|')
+    .map((token) => token.trim().toLocaleLowerCase())
+    .filter(Boolean)
+    .some((token) => message.includes(token))
+
 export const isTravelAlreadyDeletedError = (error: unknown): boolean => {
   const errorStatus =
     error && typeof error === 'object' && 'status' in error
@@ -184,29 +196,33 @@ export const isTravelAlreadyDeletedError = (error: unknown): boolean => {
     errorStatus === 404 ||
     errorMessageText.includes('404') ||
     errorMessageText.includes('not found') ||
-    errorMessageText.includes('не найден')
+    includesLocalizedErrorToken(
+      errorMessageText,
+      'travel:components.listTravel.ListTravelBaseHelpers.notFoundErrorTokens',
+    )
   )
 }
 
 export const describeTravelDeleteError = (
   error: unknown,
 ): { errorMessage: string; errorDetails: string } => {
-  let errorMessage = 'Не удалось удалить путешествие.'
-  let errorDetails = 'Попробуйте позже.'
+  let errorMessage = i18nT('travel:components.listTravel.ListTravelBase_helpers.ne_udalos_udalit_puteshestvie_4a44f6e4')
+  let errorDetails = i18nT('travel:components.listTravel.ListTravelBase_helpers.poprobuyte_pozzhe_c8da8052')
 
   if (error instanceof Error) {
-    if (error.message.includes('timeout') || error.message.includes('время ожидания')) {
-      errorMessage = 'Превышено время ожидания'
-      errorDetails = 'Проверьте подключение к интернету и попробуйте снова.'
-    } else if (error.message.includes('network') || error.message.includes('сеть')) {
-      errorMessage = 'Проблема с подключением'
-      errorDetails = 'Проверьте подключение к интернету и попробуйте снова.'
-    } else if (error.message.includes('404') || error.message.includes('не найдено')) {
-      errorMessage = 'Путешествие не найдено'
-      errorDetails = 'Возможно, оно уже было удалено.'
-    } else if (error.message.includes('403') || error.message.includes('доступ')) {
-      errorMessage = 'Нет доступа'
-      errorDetails = 'У вас нет прав для удаления этого путешествия.'
+    const normalizedMessage = error.message.toLocaleLowerCase()
+    if (normalizedMessage.includes('timeout') || includesLocalizedErrorToken(normalizedMessage, 'travel:components.listTravel.ListTravelBaseHelpers.timeoutErrorTokens')) {
+      errorMessage = i18nT('travel:components.listTravel.ListTravelBaseHelpers.timeoutTitle')
+      errorDetails = i18nT('travel:components.listTravel.ListTravelBaseHelpers.connectionDetails')
+    } else if (normalizedMessage.includes('network') || includesLocalizedErrorToken(normalizedMessage, 'travel:components.listTravel.ListTravelBaseHelpers.networkErrorTokens')) {
+      errorMessage = i18nT('travel:components.listTravel.ListTravelBaseHelpers.networkTitle')
+      errorDetails = i18nT('travel:components.listTravel.ListTravelBaseHelpers.connectionDetails')
+    } else if (normalizedMessage.includes('404') || includesLocalizedErrorToken(normalizedMessage, 'travel:components.listTravel.ListTravelBaseHelpers.notFoundErrorTokens')) {
+      errorMessage = i18nT('travel:components.listTravel.ListTravelBaseHelpers.notFoundTitle')
+      errorDetails = i18nT('travel:components.listTravel.ListTravelBaseHelpers.notFoundDetails')
+    } else if (normalizedMessage.includes('403') || includesLocalizedErrorToken(normalizedMessage, 'travel:components.listTravel.ListTravelBaseHelpers.accessErrorTokens')) {
+      errorMessage = i18nT('travel:components.listTravel.ListTravelBaseHelpers.accessTitle')
+      errorDetails = i18nT('travel:components.listTravel.ListTravelBaseHelpers.accessDetails')
     } else {
       errorDetails = error.message
     }
@@ -216,17 +232,17 @@ export const describeTravelDeleteError = (
 }
 
 export const SORT_LABEL_FALLBACKS: Record<string, string> = {
-  newest: 'Сначала новые',
-  oldest: 'Сначала старые',
-  popular_desc: 'Популярные ↓',
-  popular_asc: 'Популярные ↑',
-  rating_desc: 'Рейтинг ↓',
-  added_desc: 'Добавлены ↓',
-  added_asc: 'Добавлены ↑',
-  title_asc: 'Название А→Я',
-  title_desc: 'Название Я→А',
-  year_desc: 'Год ↓',
-  year_asc: 'Год ↑',
+  get newest() { return i18nT('travel:components.listTravel.sortings.newest') },
+  get oldest() { return i18nT('travel:components.listTravel.sortings.oldest') },
+  get popular_desc() { return i18nT('travel:components.listTravel.sortings.popularDesc') },
+  get popular_asc() { return i18nT('travel:components.listTravel.sortings.popularAsc') },
+  get rating_desc() { return i18nT('travel:components.listTravel.sortings.ratingDesc') },
+  get added_desc() { return i18nT('travel:components.listTravel.sortings.createdDesc') },
+  get added_asc() { return i18nT('travel:components.listTravel.sortings.createdAsc') },
+  get title_asc() { return i18nT('travel:components.listTravel.sortings.nameAsc') },
+  get title_desc() { return i18nT('travel:components.listTravel.sortings.nameDesc') },
+  get year_desc() { return i18nT('travel:components.listTravel.sortings.yearDesc') },
+  get year_asc() { return i18nT('travel:components.listTravel.sortings.yearAsc') },
 }
 
 export const getOptionName = (
@@ -295,7 +311,7 @@ export const buildActiveConditionChips = ({
   if (debSearch.trim()) {
     chips.push({
       key: 'search',
-      label: `Поиск: ${debSearch.trim()}`,
+      label: i18nT('travel:components.listTravel.ListTravelBase_helpers.poisk_value1_698bdda2', { value1: debSearch.trim() }),
       onRemove: () => setSearch(''),
     })
   }
@@ -311,26 +327,26 @@ export const buildActiveConditionChips = ({
     )
     chips.push({
       key: 'sort',
-      label: `Сортировка: ${sortLabel}`,
+      label: i18nT('travel:components.listTravel.ListTravelBase_helpers.sortirovka_value1_31551a22', { value1: sortLabel }),
       onRemove: () => onSelect('sort', undefined),
     })
   }
 
-  addArrayChip('countries', 'Страны', filter.countries, options?.countries)
-  addArrayChip('categories', 'Категории', filter.categories, options?.categories)
-  addArrayChip('categoryTravelAddress', 'Что посмотреть', filter.categoryTravelAddress, options?.categoryTravelAddress, {
+  addArrayChip('countries', i18nT('travel:components.listTravel.ListTravelBase_helpers.strany_66fde7cb'), filter.countries, options?.countries)
+  addArrayChip('categories', i18nT('travel:components.listTravel.ListTravelBase_helpers.kategorii_bfc0cf0b'), filter.categories, options?.categories)
+  addArrayChip('categoryTravelAddress', i18nT('travel:components.listTravel.ListTravelBase_helpers.chto_posmotret_5c23fb65'), filter.categoryTravelAddress, options?.categoryTravelAddress, {
     includeTitle: false,
   })
-  addArrayChip('transports', 'Транспорт', filter.transports, options?.transports)
-  addArrayChip('companions', 'Спутники', filter.companions, options?.companions)
-  addArrayChip('complexity', 'Сложность', filter.complexity, options?.complexity)
-  addArrayChip('month', 'Месяц', filter.month, options?.month)
-  addArrayChip('over_nights_stay', 'Ночлег', filter.over_nights_stay, options?.over_nights_stay)
+  addArrayChip('transports', i18nT('travel:components.listTravel.ListTravelBase_helpers.transport_4e9bce69'), filter.transports, options?.transports)
+  addArrayChip('companions', i18nT('travel:components.listTravel.ListTravelBase_helpers.sputniki_0b9def2a'), filter.companions, options?.companions)
+  addArrayChip('complexity', i18nT('travel:components.listTravel.ListTravelBase_helpers.slozhnost_91d3c863'), filter.complexity, options?.complexity)
+  addArrayChip('month', i18nT('travel:components.listTravel.ListTravelBase_helpers.mesyats_4afe8979'), filter.month, options?.month)
+  addArrayChip('over_nights_stay', i18nT('travel:components.listTravel.ListTravelBase_helpers.nochleg_7fd93f36'), filter.over_nights_stay, options?.over_nights_stay)
 
   if (filter.year) {
     chips.push({
       key: 'year',
-      label: `Год: ${filter.year}`,
+      label: i18nT('travel:components.listTravel.ListTravelBase_helpers.god_value1_cd0926cd', { value1: filter.year }),
       onRemove: () => onSelect('year', undefined),
     })
   }
@@ -338,7 +354,7 @@ export const buildActiveConditionChips = ({
   if (filter.draftsOnly === true) {
     chips.push({
       key: 'draftsOnly',
-      label: 'Черновики',
+      label: i18nT('travel:components.listTravel.ListTravelBase_helpers.chernoviki_18f19ca2'),
       onRemove: () => onSelect('draftsOnly', undefined),
     })
   }
@@ -346,7 +362,7 @@ export const buildActiveConditionChips = ({
   if (filter.publishedOnly === true) {
     chips.push({
       key: 'publishedOnly',
-      label: 'Опубликованные',
+      label: i18nT('travel:components.listTravel.ListTravelBase_helpers.opublikovannye_b91561a1'),
       onRemove: () => onSelect('publishedOnly', undefined),
     })
   }
@@ -380,7 +396,7 @@ export const buildEmptyStateMessage = ({
       .map((cat: any) => cat.name)
       .slice(0, 2)
     if (categoryNames.length > 0) {
-      activeFilters.push(`категории "${categoryNames.join('", "')}"${categoryNames.length < filter.categories.length ? ' и другие' : ''}`)
+      activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.kategorii_value1_value2_f79c6656', { value1: categoryNames.join('", "'), value2: categoryNames.length < filter.categories.length ? i18nT('travel:components.listTravel.ListTravelBaseHelpers.andOtherPlural') : '' }))
     }
   }
 
@@ -390,7 +406,7 @@ export const buildEmptyStateMessage = ({
       .map((t: any) => t.name)
       .slice(0, 2)
     if (transportNames.length > 0) {
-      activeFilters.push(`транспорт "${transportNames.join('", "')}"${transportNames.length < filter.transports.length ? ' и другой' : ''}`)
+      activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.transport_value1_value2_6990bba2', { value1: transportNames.join('", "'), value2: transportNames.length < filter.transports.length ? i18nT('travel:components.listTravel.ListTravelBaseHelpers.andOtherMasculine') : '' }))
     }
   }
 
@@ -400,40 +416,40 @@ export const buildEmptyStateMessage = ({
       .map((obj: any) => obj.name)
       .slice(0, 2)
     if (objectNames.length > 0) {
-      activeFilters.push(`что посмотреть "${objectNames.join('", "')}"${objectNames.length < filter.categoryTravelAddress.length ? ' и другие' : ''}`)
+      activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.chto_posmotret_value1_value2_d8d4cfc2', { value1: objectNames.join('", "'), value2: objectNames.length < filter.categoryTravelAddress.length ? i18nT('travel:components.listTravel.ListTravelBaseHelpers.andOtherPlural') : '' }))
     }
   }
 
   // Остальные фильтры - простые проверки с type guards
-  if (Array.isArray(filter.companions) && filter.companions.length > 0) activeFilters.push('спутники')
-  if (Array.isArray(filter.complexity) && filter.complexity.length > 0) activeFilters.push('сложность')
-  if (Array.isArray(filter.month) && filter.month.length > 0) activeFilters.push('месяц')
-  if (Array.isArray(filter.over_nights_stay) && filter.over_nights_stay.length > 0) activeFilters.push('ночлег')
-  if (filter.year) activeFilters.push(`год ${filter.year}`)
-  if (filter.sort) activeFilters.push('сортировка')
-  if (filter.draftsOnly === true) activeFilters.push('черновики')
-  if (filter.publishedOnly === true) activeFilters.push('опубликованные')
-  if (debSearch) activeFilters.push(`поиск "${debSearch}"`)
+  if (Array.isArray(filter.companions) && filter.companions.length > 0) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.sputniki_22bc408f'))
+  if (Array.isArray(filter.complexity) && filter.complexity.length > 0) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.slozhnost_86555384'))
+  if (Array.isArray(filter.month) && filter.month.length > 0) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.mesyats_91f374e2'))
+  if (Array.isArray(filter.over_nights_stay) && filter.over_nights_stay.length > 0) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.nochleg_26da5f51'))
+  if (filter.year) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.god_value1_779486da', { value1: filter.year }))
+  if (filter.sort) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.sortirovka_37dd0492'))
+  if (filter.draftsOnly === true) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.chernoviki_f3bb503d'))
+  if (filter.publishedOnly === true) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.opublikovannye_2c3a77ca'))
+  if (debSearch) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.poisk_value1_844fca95', { value1: debSearch }))
 
   // Формируем сообщение
   if (activeFilters.length === 0) {
     if (isMeTravel) {
       return {
         icon: 'map',
-        title: 'У вас пока нет путешествий',
+        title: i18nT('travel:components.listTravel.ListTravelBase_helpers.u_vas_poka_net_puteshestviy_2c20497b'),
         description:
-          'Создайте первое — расскажите о маршруте, добавьте фото и сохраните воспоминания.',
+          i18nT('travel:components.listTravel.ListTravelBase_helpers.sozdayte_pervoe_rasskazhite_o_marshrute_doba_41871790'),
         variant: 'empty' as const,
         action: {
-          label: 'Создать путешествие',
+          label: i18nT('travel:components.listTravel.ListTravelBase_helpers.sozdat_puteshestvie_1ae72747'),
           onPress: onCreateTravel,
         },
       }
     }
     return {
       icon: 'inbox',
-      title: 'Пока нет путешествий',
-      description: 'Путешествия появятся здесь, когда будут добавлены.',
+      title: i18nT('travel:components.listTravel.ListTravelBase_helpers.poka_net_puteshestviy_f1ec3679'),
+      description: i18nT('travel:components.listTravel.ListTravelBase_helpers.puteshestviya_poyavyatsya_zdes_kogda_budut_d_32234ae1'),
       variant: 'empty' as const,
     }
   }
@@ -441,24 +457,24 @@ export const buildEmptyStateMessage = ({
   // Формируем красивое описание
   let description: string
   if (activeFilters.length === 1) {
-    description = `По фильтру ${activeFilters[0]} ничего не найдено.`
+    description = i18nT('travel:components.listTravel.ListTravelBaseHelpers.oneFilterEmpty', { value1: activeFilters[0] })
   } else if (activeFilters.length === 2) {
-    description = `По фильтрам ${activeFilters[0]} и ${activeFilters[1]} ничего не найдено.`
+    description = i18nT('travel:components.listTravel.ListTravelBaseHelpers.twoFiltersEmpty', { value1: activeFilters[0], value2: activeFilters[1] })
   } else {
     const lastFilter = activeFilters[activeFilters.length - 1]
     const otherFilters = activeFilters.slice(0, -1).join(', ')
-    description = `По фильтрам ${otherFilters} и ${lastFilter} ничего не найдено.`
+    description = i18nT('travel:components.listTravel.ListTravelBaseHelpers.manyFiltersEmpty', { value1: otherFilters, value2: lastFilter })
   }
 
-  description += ' Попробуйте убрать фильтры или изменить запрос.'
+  description += i18nT('travel:components.listTravel.ListTravelBaseHelpers.filterSuggestionSuffix')
 
   const suggestions = debSearch
-    ? ['Проверьте написание', 'Попробуйте другие ключевые слова']
-    : ['Уберите один из фильтров', 'Выберите другую категорию']
+    ? [i18nT('travel:components.listTravel.ListTravelBase_helpers.proverte_napisanie_4b385427'), i18nT('travel:components.listTravel.ListTravelBase_helpers.poprobuyte_drugie_klyuchevye_slova_981edc0e')]
+    : [i18nT('travel:components.listTravel.ListTravelBase_helpers.uberite_odin_iz_filtrov_fde1af60'), i18nT('travel:components.listTravel.ListTravelBase_helpers.vyberite_druguyu_kategoriyu_84384258')]
 
   return {
     icon: 'search',
-    title: 'Ничего не найдено',
+    title: i18nT('travel:components.listTravel.ListTravelBase_helpers.nichego_ne_naydeno_1ef9b55a'),
     description,
     variant: 'search' as const,
     suggestions,

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import Head from 'expo-router/head';
 import { ensureSingleTitleTag, normalizeOgImageUrl } from '@/utils/seo';
+import { getActiveLocaleDefinition } from '@/i18n/format';
 
 type Props = {
   headKey?: string | null;
@@ -33,6 +34,7 @@ function StaticHead({
   children,
 }: Props) {
   const normalizedImage = normalizeOgImageUrl(image);
+  const locale = getActiveLocaleDefinition();
   const twitterCard = normalizedImage ? 'summary_large_image' : 'summary';
 
   useEffect(() => {
@@ -108,7 +110,7 @@ function StaticHead({
       {normalizedImage && imageHeight && <meta key="og:image:height" property="og:image:height" content={String(imageHeight)} />}
       {normalizedImage && imageAlt && <meta key="og:image:alt" property="og:image:alt" content={imageAlt} />}
       <meta key="og:site_name" property="og:site_name" content="MeTravel" />
-      <meta key="og:locale" property="og:locale" content="ru_RU" />
+      <meta key="og:locale" property="og:locale" content={locale.ogLocale} />
 
       {/* Twitter */}
       <meta key="twitter:card" name="twitter:card" content={twitterCard} />

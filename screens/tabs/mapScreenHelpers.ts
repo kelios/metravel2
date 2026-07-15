@@ -1,6 +1,7 @@
 import { DEFAULT_RADIUS_KM, formatRadiusLabel } from '@/constants/mapConfig'
+import { translate as i18nT } from '@/i18n'
+import { getTransportLabel, type TransportMode } from '@/components/MapPage/transportModes'
 
-export const TRANSPORT_LABELS: Record<string, string> = { bike: 'Велосипед', foot: 'Пешком' }
 
 export function buildQuickFiltersData(
   filtersPanelProps: any,
@@ -18,10 +19,10 @@ export function buildQuickFiltersData(
 
   const categoriesValue =
     selected.length === 0
-      ? 'Все'
+      ? i18nT('shared:screens.tabs.mapScreenHelpers.vse_6cde58a0')
       : selected.length === 1
         ? selected[0]
-        : `${selected.length} выбрано`
+        : i18nT('shared:screens.tabs.mapScreenHelpers.value1_vybrano_231632d5', { value1: selected.length })
 
   const radiusValue = formatRadiusLabel(currentRadius || DEFAULT_RADIUS_KM)
 
@@ -29,7 +30,7 @@ export function buildQuickFiltersData(
     Boolean(enabledOverlays?.[option.id]),
   ).length
   const overlaysValue =
-    enabledCount === 0 ? 'Выкл' : enabledCount === 1 ? '1 вкл' : `${enabledCount} вкл`
+    enabledCount === 0 ? i18nT('shared:screens.tabs.mapScreenHelpers.vykl_a6690835') : enabledCount === 1 ? i18nT('shared:screens.tabs.mapScreenHelpers.1_vkl_a8471bf0') : i18nT('shared:screens.tabs.mapScreenHelpers.value1_vkl_53e16bc6', { value1: enabledCount })
 
   return {
     selected,
@@ -55,7 +56,9 @@ export function buildActiveFilterItems(
   if (currentMode === 'route' && currentTransport !== 'car') {
     items.push({
       key: 'transport',
-      label: TRANSPORT_LABELS[currentTransport] ?? currentTransport,
+      label: ['car', 'bike', 'foot'].includes(currentTransport)
+        ? getTransportLabel(currentTransport as TransportMode)
+        : currentTransport,
     })
   }
   return items

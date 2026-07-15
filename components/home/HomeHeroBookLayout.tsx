@@ -6,6 +6,8 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import type { ThemedColors } from '@/hooks/useTheme'
 import HomeHeroSearchBar from './HomeHeroSearchBar'
 import type { QuickFilterParams } from './homeHeroShared'
+import { translate as i18nT } from '@/i18n'
+
 
 type MoodCard = {
   title: string
@@ -92,7 +94,7 @@ function HeroWeekEyebrow({
         color={iconColor}
         {...({ 'aria-hidden': true, focusable: false } as any)}
       />
-      <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
+      <Text style={styles.slideEyebrowText}>{i18nT('home:components.home.HomeHeroBookLayout.marshrut_nedeli_2ae93682')}</Text>
     </View>
   )
 }
@@ -154,7 +156,7 @@ function HeroPageNote({
         },
       ]}
       accessibilityRole="button"
-      accessibilityLabel={`${card.title}. Подобрать идею поездки`}
+      accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.value1_podobrat_ideyu_poezdki_228a0972', { value1: card.title })}
       accessibilityState={{ busy: active }}
     >
       <View style={[styles.pageNoteIcon, active && styles.pageNoteIconActive]}>
@@ -171,7 +173,7 @@ function HeroPageNote({
         </Text>
         {(active || card.meta) && (
           <Text style={[styles.pageNoteMeta, active && styles.pageNoteMetaActive]}>
-            {active ? 'Открываем...' : card.meta}
+            {active ? i18nT('home:components.home.HomeHeroBookLayout.otkryvaem_0d829dc9') : card.meta}
           </Text>
         )}
       </View>
@@ -231,7 +233,7 @@ function TabletFeaturedRoute({
         },
       ]}
       accessibilityRole="link"
-      accessibilityLabel={`Открыть маршрут: ${bookImage.title}. ${bookImage.subtitle}`}
+      accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.otkryt_marshrut_value1_value2_9356f203', { value1: bookImage.title, value2: bookImage.subtitle })}
     >
       <ImageCardMedia
         source={bookImage.source}
@@ -318,8 +320,8 @@ function HeroSlider({
           ]}
           {...((isWeb ? { dataSet: { bookSlider: 'true' } } : {}) as any)}
           accessibilityRole="link"
-          accessibilityLabel={`Маршрут недели: ${currentSlide.title}. ${currentSlide.subtitle}`}
-          accessibilityHint="Открыть маршрут"
+          accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.marshrut_nedeli_value1_value2_2e2fe69f', { value1: currentSlide.title, value2: currentSlide.subtitle })}
+          accessibilityHint={i18nT('home:components.home.HomeHeroBookLayout.otkryt_marshrut_6490dda0')}
         >
           {renderedSlideIndices.map((slideIndex) => {
             const slide = bookImages[slideIndex]
@@ -359,7 +361,7 @@ function HeroSlider({
                     <Text style={styles.slideTitle}>{slide.title}</Text>
                     <Text style={styles.slideSubtitle}>{slide.subtitle}</Text>
                     <View style={styles.slideActionPill}>
-                      <Text style={styles.slideActionText}>Открыть маршрут</Text>
+                      <Text style={styles.slideActionText}>{i18nT('home:components.home.HomeHeroBookLayout.otkryt_marshrut_6490dda0')}</Text>
                       <Feather name="arrow-up-right" size={12} color={sliderIconColor} />
                     </View>
                   </View>
@@ -393,7 +395,7 @@ function HeroSlider({
           <View
             style={styles.sliderNav}
             role="group"
-            {...({ 'aria-label': 'Навигация по слайдам' } as any)}
+            {...({ 'aria-label': i18nT('home:components.home.HomeHeroBookLayout.navigatsiya_po_slaydam_9bc3e838') } as any)}
           >
             <Pressable
               onPress={onPrevSlide}
@@ -412,7 +414,7 @@ function HeroSlider({
                   : [styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]
               }
               accessibilityRole="button"
-              accessibilityLabel="Предыдущий слайд"
+              accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.predyduschiy_slayd_9dd70d5f')}
             >
               {isWeb
                 ? (({ hovered }: any) => (
@@ -438,7 +440,7 @@ function HeroSlider({
               style={[
                 styles.sliderNavIndicator ?? { ...SLIDER_NAV_INDICATOR_FALLBACK, color: sliderIconColor },
               ]}
-              accessibilityLabel={`Слайд ${visibleSlide + 1} из ${bookImages.length}`}
+              accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.slayd_value1_iz_value2_91fd59a1', { value1: visibleSlide + 1, value2: bookImages.length })}
               {...({ 'aria-live': 'polite', 'aria-atomic': true } as any)}
             >
               {visibleSlide + 1}/{bookImages.length}
@@ -460,7 +462,7 @@ function HeroSlider({
                   : [styles.sliderNavBtn, hovered && styles.sliderNavBtnHover]
               }
               accessibilityRole="button"
-              accessibilityLabel="Следующий слайд"
+              accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.sleduyuschiy_slayd_83547ab9')}
             >
               {isWeb
                 ? (({ hovered }: any) => (
@@ -547,19 +549,19 @@ export default function HomeHeroBookLayout({
               <View>
                 {showChapterHeader && (
                   <View style={styles.chapterHeader}>
-                    <Text style={styles.chapterLabel}>Идеи путешествий</Text>
+                    <Text style={styles.chapterLabel}>{i18nT('home:components.home.HomeHeroBookLayout.idei_puteshestviy_21ae7112')}</Text>
                     <View style={styles.chapterDivider} />
                   </View>
                 )}
                 <View
                   accessibilityRole="header"
                   {...({ 'aria-level': 1 } as any)}
-                  accessibilityLabel="Куда поехать в эти выходные?"
+                  accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.kuda_poehat_v_eti_vyhodnye_018894bf')}
                 >
                   <Text style={styles.title}>
-                    Куда поехать{isNarrowLayout ? ' ' : '\n'}
+                    {i18nT('home:components.home.HomeHeroBookLayout.kuda_poehat_07cb7b59')}{isNarrowLayout ? ' ' : '\n'}
                   </Text>
-                  <Text style={styles.titleAccent}>в эти выходные?</Text>
+                  <Text style={styles.titleAccent}>{i18nT('home:components.home.HomeHeroBookLayout.v_eti_vyhodnye_c69482dd')}</Text>
                 </View>
 
                 <Text style={styles.subtitle}>{heroSubtitle}</Text>
@@ -594,7 +596,7 @@ export default function HomeHeroBookLayout({
                 <View testID="home-hero-cta-row" style={styles.buttonsContainer}>
                   <Button
                     onPress={onOpenSearch}
-                    label="Смотреть маршруты"
+                    label={i18nT('home:components.home.HomeHeroBookLayout.smotret_marshruty_4a0b9a63')}
                     loading={pendingAction === 'search'}
                     variant="primary"
                     size="md"
@@ -610,7 +612,7 @@ export default function HomeHeroBookLayout({
                     labelStyle={styles.primaryButtonText}
                     hoverStyle={styles.primaryButtonHover}
                     pressedStyle={styles.primaryButtonHover}
-                    accessibilityLabel="Смотреть маршруты"
+                    accessibilityLabel={i18nT('home:components.home.HomeHeroBookLayout.smotret_marshruty_4a0b9a63')}
                   />
                 </View>
               </View>

@@ -137,7 +137,7 @@ describe('QuestCard', () => {
         );
     });
 
-    it('marks a kids quest clearly without replacing its city label', () => {
+    it('asks to clarify age for a kids quest without replacing its city label', () => {
         const { getByTestId, getByText, queryByText } = renderWithQueryClient(
             <QuestCard
                 styles={styles}
@@ -148,8 +148,9 @@ describe('QuestCard', () => {
         );
 
         expect(getByTestId('quest-card-kids-krakow-dragon')).toBeTruthy();
-        expect(getByText('Для детей')).toBeTruthy();
+        expect(getByText('Уточнить возраст')).toBeTruthy();
         expect(getByText('Kraków')).toBeTruthy();
+        expect(queryByText('Для детей')).toBeNull();
         expect(queryByText('Детская сказка')).toBeNull();
     });
 

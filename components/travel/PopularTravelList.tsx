@@ -32,6 +32,8 @@ import {
   FLATLIST_CONFIG,
   FLATLIST_CONFIG_MOBILE,
 } from '@/components/listTravel/utils/listTravelConstants';
+import { translate as i18nT } from '@/i18n'
+
 
 type PopularTravelListProps = {
   onLayout?: (event: any) => void;
@@ -48,7 +50,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
   ({
      onLayout,
      scrollToAnchor,
-     title = "Популярные маршруты",
+     title = i18nT('travel:components.travel.PopularTravelList.populyarnye_marshruty_0c904445'),
      maxColumns = 3,
      showHeader = true,
      embedded = false,
@@ -319,8 +321,8 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
     if (isLoading) {
       return (
         <View style={styles.loadingContainer} onLayout={onLayout}>
-          <ActivityIndicator size="large" color={colors.primaryDark} accessibilityLabel="Загрузка популярных маршрутов" />
-          <Text style={styles.loadingText}>Загрузка популярных маршрутов…</Text>
+          <ActivityIndicator size="large" color={colors.primaryDark} accessibilityLabel={i18nT('travel:components.travel.PopularTravelList.zagruzka_populyarnyh_marshrutov_342c5d42')} />
+          <Text style={styles.loadingText}>{i18nT('travel:components.travel.PopularTravelList.zagruzka_populyarnyh_marshrutov_90e503db')}</Text>
         </View>
       );
     }
@@ -335,13 +337,13 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       return (
         <View style={styles.loadingContainer} onLayout={onLayout}>
           <Text style={styles.errorText}>
-            {hasError ? 'Не удалось загрузить маршруты' : 'Нет популярных маршрутов'}
+            {hasError ? i18nT('travel:components.travel.PopularTravelList.ne_udalos_zagruzit_marshruty_58db1357') : i18nT('travel:components.travel.PopularTravelList.net_populyarnyh_marshrutov_c2a18bc3')}
           </Text>
           {hasError && (
             <Pressable
               onPress={() => refetchPopular()}
               accessibilityRole="button"
-              accessibilityLabel="Повторить загрузку популярных маршрутов"
+              accessibilityLabel={i18nT('travel:components.travel.PopularTravelList.povtorit_zagruzku_populyarnyh_marshrutov_81d98afe')}
               style={({ pressed }) => ({
                 marginTop: 12,
                 minHeight: 44,
@@ -353,7 +355,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
                 opacity: pressed ? 0.7 : 1,
               })}
             >
-              <Text style={{ color: colors.primaryText, fontWeight: '600' }}>Повторить</Text>
+              <Text style={{ color: colors.primaryText, fontWeight: '600' }}>{i18nT('travel:components.travel.PopularTravelList.povtorit_e1691a79')}</Text>
             </Pressable>
           )}
         </View>

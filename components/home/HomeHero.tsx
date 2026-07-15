@@ -24,6 +24,8 @@ import {
   useHomeHeroSlider,
 } from './useHomeHeroSlider'
 import type { QuickFilterParams } from './homeHeroShared'
+import { translate as i18nT } from '@/i18n'
+
 
 const IS_WEB = Platform.OS === 'web'
 const DESKTOP_BOOK_VIEWPORT_RESERVE = 180
@@ -320,10 +322,10 @@ const HomeHero = memo(function HomeHero({
   )
 
   const heroSubtitle = isMobile
-    ? 'Реальные маршруты по Беларуси и Европе — с фото и GPS-треками.'
+    ? i18nT('home:components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_s_fot_9e18c02e')
     : showSideSlider && bookHeight > 0 && bookHeight < COMPACT_BOOK_MAX_HEIGHT
-      ? 'Реальные маршруты по Беларуси и Европе — с фото, заметками и GPS-треками.'
-      : 'Реальные маршруты по Беларуси и Европе от тех, кто там был — с фото, заметками и GPS-треками.'
+      ? i18nT('home:components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_s_fot_3bbf5fae')
+      : i18nT('home:components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_ot_te_3f0b1078')
 
   return (
     <View testID="home-hero" style={styles.container}>

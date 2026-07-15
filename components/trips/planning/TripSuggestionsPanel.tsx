@@ -16,6 +16,8 @@ import {
   useTripSuggestions,
 } from '@/hooks/usePlannedTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   trip: PlannedTrip;
@@ -87,7 +89,7 @@ function TripSuggestionsPanel({ trip }: Props) {
         {renderPoint(suggestion)}
         <View style={styles.actions}>
           <Button
-            label="Принять"
+            label={i18nT('trips:components.trips.planning.TripSuggestionsPanel.prinyat_9f837465')}
             onPress={() => handleDecide(suggestion, 'approve')}
             variant="primary"
             loading={busy}
@@ -95,7 +97,7 @@ function TripSuggestionsPanel({ trip }: Props) {
             testID={`trip-suggestion-approve-${suggestion.id}`}
           />
           <Button
-            label="Отклонить"
+            label={i18nT('trips:components.trips.planning.TripSuggestionsPanel.otklonit_6c337a45')}
             onPress={() => handleDecide(suggestion, 'reject')}
             variant="outline"
             disabled={busy}
@@ -120,7 +122,7 @@ function TripSuggestionsPanel({ trip }: Props) {
             suggestion.status === 'approved' ? styles.statusApproved : styles.statusRejected,
           ]}
         >
-          {suggestion.status === 'approved' ? 'Принято' : 'Отклонено'}
+          {suggestion.status === 'approved' ? i18nT('trips:components.trips.planning.TripSuggestionsPanel.prinyato_02a10594') : i18nT('trips:components.trips.planning.TripSuggestionsPanel.otkloneno_22fdaa5b')}
         </Text>
       </View>
       {renderPoint(suggestion)}
@@ -129,7 +131,7 @@ function TripSuggestionsPanel({ trip }: Props) {
 
   return (
     <View style={styles.wrap} testID="trip-suggestions-panel">
-      <Text style={styles.heading}>Предложенные точки</Text>
+      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.TripSuggestionsPanel.predlozhennye_tochki_69692242')}</Text>
 
       {suggestionsQuery.isLoading ? (
         <ActivityIndicator color={colors.primaryDark} />
@@ -138,7 +140,7 @@ function TripSuggestionsPanel({ trip }: Props) {
           {pending.length ? (
             <View style={styles.list}>{pending.map(renderPending)}</View>
           ) : (
-            <Text style={styles.hint}>Новых предложений нет.</Text>
+            <Text style={styles.hint}>{i18nT('trips:components.trips.planning.TripSuggestionsPanel.novyh_predlozheniy_net_3a21b715')}</Text>
           )}
 
           {history.length ? (

@@ -7,6 +7,8 @@ import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import MapPanel from '@/components/MapPage/MapPanel'
 import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar'
 import WeatherLegend from '@/components/MapPage/WeatherLegend'
+import { translate as i18nT } from '@/i18n'
+
 
 const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
 
@@ -91,15 +93,14 @@ export function MapCanvas({
             pressed && { opacity: 0.9 },
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Искать в этой области"
+          accessibilityLabel={i18nT('map:components.MapPage.MapCanvas.iskat_v_etoy_oblasti_80b413e4')}
           testID="map-search-this-area-desktop"
           onPress={onSearchThisArea}
           hitSlop={8}
         >
           <Feather name="refresh-cw" size={15} color={themedColors.textOnPrimary} />
           <Text style={styles.desktopSearchAreaButtonText} numberOfLines={1}>
-            Искать в этой области
-          </Text>
+            {i18nT('map:components.MapPage.MapCanvas.iskat_v_etoy_oblasti_80b413e4')}</Text>
         </Pressable>
       )}
       {mapReady ? (
@@ -114,7 +115,7 @@ export function MapCanvas({
         <Pressable
           style={styles.radiusPill}
           accessibilityRole="button"
-          accessibilityLabel={`Радиус поиска: ${currentRadius} км. Нажмите, чтобы изменить`}
+          accessibilityLabel={i18nT('map:components.MapPage.MapCanvas.radius_poiska_value1_km_nazhmite_chtoby_izme_d6b055e9', { value1: currentRadius })}
           testID="map-radius-pill"
           onPress={() => {
             handleSelectSearchTab()
@@ -132,13 +133,13 @@ export function MapCanvas({
           <Feather name="map-pin" size={13} color={themedColors.warning} />
           <Text style={styles.geoBannerText}>
             {Platform.OS === 'web'
-              ? 'Геолокация недоступна — разрешите доступ в настройках браузера'
-              : 'Геолокация недоступна — разрешите доступ в настройках устройства'}
+              ? i18nT('map:components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__ee671e92')
+              : i18nT('map:components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__f8c836df')}
           </Text>
           <Pressable
             onPress={dismissGeoBanner}
             accessibilityRole="button"
-            accessibilityLabel="Закрыть уведомление"
+            accessibilityLabel={i18nT('map:components.MapPage.MapCanvas.zakryt_uvedomlenie_ae069cb3')}
             hitSlop={10}
             style={({ pressed }) => [styles.geoBannerClose, pressed && PRESSED_OPACITY_06]}
           >

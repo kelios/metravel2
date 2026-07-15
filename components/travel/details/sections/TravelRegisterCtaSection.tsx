@@ -6,11 +6,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildRegistrationHref } from '@/utils/authNavigation'
 import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
-
-const HEADING = 'Сохраняй маршруты и любимые места'
-const SUBTITLE =
-  'Бесплатный аккаунт: собирай «Хочу поехать», планируй поездки и синхронизируй их на всех устройствах.'
-const CTA_LABEL = 'Создать бесплатный аккаунт'
+import { translate as i18nT } from '@/i18n'
 
 type TravelRegisterCtaSectionProps = {
   redirect?: string
@@ -20,6 +16,9 @@ export const TravelRegisterCtaSection: React.FC<TravelRegisterCtaSectionProps> =
   const { isAuthenticated } = useAuth()
   const colors = useThemedColors()
   const router = useRouter()
+  const heading = i18nT('travel:components.travel.details.sections.TravelRegisterCtaSection.heading')
+  const subtitle = i18nT('travel:components.travel.details.sections.TravelRegisterCtaSection.subtitle')
+  const ctaLabel = i18nT('travel:components.travel.details.sections.TravelRegisterCtaSection.cta')
 
   const handlePress = useCallback(() => {
     trackRegisterCtaClicked({ source: 'travel_article', intent: 'favorite', authState: 'guest' })
@@ -34,7 +33,7 @@ export const TravelRegisterCtaSection: React.FC<TravelRegisterCtaSectionProps> =
         styles.container,
         { backgroundColor: colors.surface, borderColor: colors.border },
       ]}
-      accessibilityLabel={HEADING}
+      accessibilityLabel={heading}
       accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
     >
       <Text
@@ -42,19 +41,19 @@ export const TravelRegisterCtaSection: React.FC<TravelRegisterCtaSectionProps> =
         accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
         aria-level={2 as any}
       >
-        {HEADING}
+        {heading}
       </Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{SUBTITLE}</Text>
+      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
       <Pressable
         onPress={handlePress}
         accessibilityRole="button"
-        accessibilityLabel={CTA_LABEL}
+        accessibilityLabel={ctaLabel}
         style={({ pressed }) => [
           styles.button,
           { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
         ]}
       >
-        <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>{CTA_LABEL}</Text>
+        <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>{ctaLabel}</Text>
       </Pressable>
     </View>
   )

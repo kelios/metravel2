@@ -5,6 +5,8 @@ import Feather from '@expo/vector-icons/Feather';
 import Button from '@/components/ui/Button';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getPlaceLabel } from '@/utils/pluralize';
+import { translate as i18nT } from '@/i18n'
+
 
 interface FiltersPanelFooterProps {
   styles: any;
@@ -43,15 +45,15 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
   const showMobileRadiusFooter = isMobile && mode === 'radius';
   const canOpenList = typeof onOpenList === 'function' && totalPoints > 0;
   const mobileOpenListLabel = totalPoints > 0
-    ? `Список · ${totalPoints} ${getPlaceLabel(totalPoints)}`
-    : 'Список мест'
+    ? i18nT('map:components.MapPage.FiltersPanelFooter.spisok_value1_value2_a33fbeca', { value1: totalPoints, value2: getPlaceLabel(totalPoints) })
+    : i18nT('map:components.MapPage.FiltersPanelFooter.spisok_mest_f24a46c4')
 
   const routeHelperText = React.useMemo(() => {
     if (mode !== 'route' || canBuildRoute) return null;
-    if (!startAddress && !endAddress) return 'Укажите точку старта и финиша';
-    if (!startAddress) return 'Укажите точку старта';
-    if (!endAddress) return 'Укажите точку финиша';
-    return 'Добавьте старт и финиш';
+    if (!startAddress && !endAddress) return i18nT('map:components.MapPage.FiltersPanelFooter.ukazhite_tochku_starta_i_finisha_f45fa99f');
+    if (!startAddress) return i18nT('map:components.MapPage.FiltersPanelFooter.ukazhite_tochku_starta_c5e75b16');
+    if (!endAddress) return i18nT('map:components.MapPage.FiltersPanelFooter.ukazhite_tochku_finisha_30a0813c');
+    return i18nT('map:components.MapPage.FiltersPanelFooter.dobavte_start_i_finish_c32c2290');
   }, [canBuildRoute, endAddress, mode, startAddress]);
 
   if (showMobileRadiusFooter) {
@@ -60,10 +62,10 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
         <View style={styles.footerButtons}>
           {!hideFooterReset && (
             <Button
-              label="Сбросить"
+              label={i18nT('map:components.MapPage.FiltersPanelFooter.sbrosit_0abc4036')}
               testID="filters-reset-button"
               onPress={onReset}
-              accessibilityLabel="Сбросить фильтры"
+              accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelFooter.sbrosit_filtry_fc81efcc')}
               variant="outline"
               style={styles.ctaButton}
             />
@@ -74,7 +76,7 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
               testID="filters-open-list-button"
               icon={<Feather name="list" size={16} color={colors.textOnPrimary} />}
               onPress={onOpenList}
-              accessibilityLabel="Открыть список мест"
+              accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelFooter.otkryt_spisok_mest_ca60a07e')}
               style={[styles.ctaButton, styles.ctaPrimary]}
             />
           )}
@@ -91,14 +93,14 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
       <View style={styles.footerButtons}>
         {!hideFooterReset && (
           <Button
-            label="Сбросить"
+            label={i18nT('map:components.MapPage.FiltersPanelFooter.sbrosit_0abc4036')}
             testID="filters-reset-button"
             onPress={() => {
               if (mode === 'route' && !routePointsLength) return;
               onReset();
             }}
             disabled={mode === 'route' && !routePointsLength}
-            accessibilityLabel="Сбросить"
+            accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelFooter.sbrosit_0abc4036')}
             variant="outline"
             style={styles.ctaButton}
           />
@@ -106,7 +108,7 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
 
         {onBuildRoute && mode === 'route' && (
           <Button
-            label={routingLoading ? 'Строим маршрут…' : ctaLabel}
+            label={routingLoading ? i18nT('map:components.MapPage.FiltersPanelFooter.stroim_marshrut_27b96e27') : ctaLabel}
             testID="filters-build-route-button"
             icon={
               routingLoading
@@ -128,7 +130,7 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
               onBuildRoute();
             }}
             disabled={!canBuildRoute || routingLoading}
-            accessibilityLabel={routingLoading ? 'Строим маршрут, подождите' : 'Построить маршрут'}
+            accessibilityLabel={routingLoading ? i18nT('map:components.MapPage.FiltersPanelFooter.stroim_marshrut_podozhdite_d4bd595d') : i18nT('map:components.MapPage.FiltersPanelFooter.postroit_marshrut_87c4a292')}
             style={[
               styles.ctaButton,
               styles.ctaPrimary,

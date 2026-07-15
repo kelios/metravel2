@@ -39,6 +39,8 @@ import {
 } from '@/utils/gamificationAnalytics';
 import { showToast } from '@/utils/toast';
 import { devWarn } from '@/utils/logger';
+import { translate as i18nT } from '@/i18n'
+
 
 export interface ShareBadgeSubject {
   achievementId: number;
@@ -58,7 +60,7 @@ interface Props {
 }
 
 const shareText = (name: string): string =>
-  `Моё достижение на MeTravel: «${name}». Собери свою коллекцию!`;
+  i18nT('achievements:components.achievements.ShareBadgeSheet.moe_dostizhenie_na_metravel_value1_soberi_sv_ffd07055', { value1: name });
 
 function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Props) {
   const colors = useThemedColors();
@@ -129,10 +131,10 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
     try {
       await Clipboard.setStringAsync(link);
       fireShared('copy');
-      showToast({ type: 'success', text1: 'Ссылка скопирована', visibilityTime: 2000 });
+      showToast({ type: 'success', text1: i18nT('achievements:components.achievements.ShareBadgeSheet.ssylka_skopirovana_1a73551f'), visibilityTime: 2000 });
     } catch (error) {
       devWarn('[ShareBadgeSheet] copy failed', error);
-      showToast({ type: 'error', text1: 'Не удалось скопировать', visibilityTime: 2500 });
+      showToast({ type: 'error', text1: i18nT('achievements:components.achievements.ShareBadgeSheet.ne_udalos_skopirovat_7fef3468'), visibilityTime: 2500 });
     }
   }, [linkFor, fireShared]);
 
@@ -196,7 +198,7 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
     });
     if (ok) {
       fireShared('download');
-      showToast({ type: 'success', text1: 'Картинка сохранена', visibilityTime: 2000 });
+      showToast({ type: 'success', text1: i18nT('achievements:components.achievements.ShareBadgeSheet.kartinka_sohranena_418e29df'), visibilityTime: 2000 });
     }
   }, [card, subject, fireShared]);
 
@@ -218,21 +220,21 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
   const channels: ChannelButton[] = [
     {
       key: 'copy',
-      label: 'Копировать ссылку',
+      label: i18nT('achievements:components.achievements.ShareBadgeSheet.kopirovat_ssylku_cf15e625'),
       icon: 'link',
       onPress: handleCopy,
       color: colors.textMuted,
     },
     {
       key: 'telegram',
-      label: 'Telegram',
+      label: i18nT('achievements:components.achievements.ShareBadgeSheet.telegram_c65a02fe'),
       icon: 'send',
       onPress: handleTelegram,
       color: colors.accent ?? colors.primary,
     },
     {
       key: 'facebook',
-      label: 'Facebook',
+      label: i18nT('achievements:components.achievements.ShareBadgeSheet.facebook_8957c24a'),
       icon: 'facebook',
       onPress: handleFacebook,
       color: colors.info ?? colors.primary,
@@ -242,7 +244,7 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
   if (Platform.OS === 'web') {
     channels.push({
       key: 'download',
-      label: 'Сохранить картинку',
+      label: i18nT('achievements:components.achievements.ShareBadgeSheet.sohranit_kartinku_32f98ead'),
       icon: 'download',
       onPress: handleDownload,
       color: colors.success ?? colors.primary,
@@ -252,7 +254,7 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
   if (canUseWebShare || Platform.OS !== 'web') {
     channels.push({
       key: 'native',
-      label: 'Ещё…',
+      label: i18nT('achievements:components.achievements.ShareBadgeSheet.esche_882f48d9'),
       icon: 'share-2',
       onPress: handleNativeShare,
       color: colors.primaryText,
@@ -261,15 +263,15 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть">
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={i18nT('achievements:components.achievements.ShareBadgeSheet.zakryt_967f1bbf')}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.header}>
-            <Text style={styles.heading}>Поделиться достижением</Text>
+            <Text style={styles.heading}>{i18nT('achievements:components.achievements.ShareBadgeSheet.podelitsya_dostizheniem_75a70bc0')}</Text>
             <Pressable
               style={styles.closeBtn}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть"
+              accessibilityLabel={i18nT('achievements:components.achievements.ShareBadgeSheet.zakryt_967f1bbf')}
             >
               <Feather name="x" size={20} color={colors.text} />
             </Pressable>
@@ -289,18 +291,17 @@ function ShareBadgeSheet({ visible, onClose, subject, context = 'detail' }: Prop
           {status === 'loading' ? (
             <View style={styles.statusRow}>
               <ActivityIndicator color={colors.primaryDark} />
-              <Text style={styles.statusText}>Готовим карточку…</Text>
+              <Text style={styles.statusText}>{i18nT('achievements:components.achievements.ShareBadgeSheet.gotovim_kartochku_2d3809e6')}</Text>
             </View>
           ) : null}
 
           {status === 'error' ? (
             <View style={styles.statusRow}>
               <Feather name="alert-triangle" size={16} color={colors.warning ?? colors.textMuted} />
-              <Text style={styles.statusText}>Не удалось создать карточку</Text>
-              <Pressable onPress={loadCard} accessibilityRole="button" accessibilityLabel="Повторить">
+              <Text style={styles.statusText}>{i18nT('achievements:components.achievements.ShareBadgeSheet.ne_udalos_sozdat_kartochku_595af4a6')}</Text>
+              <Pressable onPress={loadCard} accessibilityRole="button" accessibilityLabel={i18nT('achievements:components.achievements.ShareBadgeSheet.povtorit_d49cf974')}>
                 <Text style={[styles.statusText, { color: colors.primaryText, fontWeight: '700' }]}>
-                  Повторить
-                </Text>
+                  {i18nT('achievements:components.achievements.ShareBadgeSheet.povtorit_d49cf974')}</Text>
               </Pressable>
             </View>
           ) : null}

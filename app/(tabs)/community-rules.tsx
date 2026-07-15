@@ -1,52 +1,54 @@
 import LegalPage from '@/components/legal/LegalPage'
+import { translate as i18nT } from '@/i18n'
+
 
 export default function CommunityRulesScreen() {
   return (
     <LegalPage
       headKey="legal-community-rules"
-      seoTitle="Правила сообщества | Metravel"
-      seoDescription="Правила сообщества Metravel: как мы общаемся, какой контент приветствуется и что запрещено, как модерируются нарушения."
-      pageTitle="Правила сообщества"
+      seoTitle={i18nT('legal:app.tabs.community_rules.pravila_soobschestva_metravel_431ec805')}
+      seoDescription={i18nT('legal:app.tabs.community_rules.pravila_soobschestva_metravel_kak_my_obschae_f024d655')}
+      pageTitle={i18nT('legal:app.tabs.community_rules.pravila_soobschestva_24954009')}
       effectiveDate="20.06.2026"
       draftNotice
       intro={[
-        'Metravel — сообщество путешественников. Эти правила помогают сохранять его дружелюбным, полезным и безопасным для всех.',
+        i18nT('legal:app.tabs.community_rules.metravel_soobschestvo_puteshestvennikov_eti__5869b99f'),
       ]}
       sections={[
         {
-          heading: '1. Уважение',
+          heading: i18nT('legal:app.tabs.community_rules.1_uvazhenie_175f0e97'),
           paragraphs: [
-            'Общайтесь вежливо. Недопустимы оскорбления, травля, угрозы, разжигание ненависти по любому признаку.',
+            i18nT('legal:app.tabs.community_rules.obschaytes_vezhlivo_nedopustimy_oskorbleniya_5f520fc8'),
           ],
         },
         {
-          heading: '2. Полезный и честный контент',
+          heading: i18nT('legal:app.tabs.community_rules.2_poleznyy_i_chestnyy_kontent_9e163e56'),
           paragraphs: [
-            'Делитесь реальным опытом. Не публикуйте заведомо ложную информацию, накрутки и вводящие в заблуждение материалы.',
-            'Указывайте источники и предупреждайте о рисках, если описываете сложные или потенциально опасные маршруты.',
+            i18nT('legal:app.tabs.community_rules.delites_realnym_opytom_ne_publikuyte_zavedom_f8da4bfb'),
+            i18nT('legal:app.tabs.community_rules.ukazyvayte_istochniki_i_preduprezhdayte_o_ri_b1f22a80'),
           ],
         },
         {
-          heading: '3. Что запрещено',
+          heading: i18nT('legal:app.tabs.community_rules.3_chto_zaprescheno_5fc0fb1b'),
           paragraphs: [
-            'Спам, навязчивая реклама и массовые рассылки.',
-            'Незаконный контент, призывы к насилию, материалы 18+ без соответствующей маркировки там, где это применимо.',
-            'Публикация персональных данных третьих лиц без их согласия.',
-            'Нарушение авторских прав на тексты и фотографии.',
+            i18nT('legal:app.tabs.community_rules.spam_navyazchivaya_reklama_i_massovye_rassyl_1b93e204'),
+            i18nT('legal:app.tabs.community_rules.nezakonnyy_kontent_prizyvy_k_nasiliyu_materi_9967ee37'),
+            i18nT('legal:app.tabs.community_rules.publikatsiya_personalnyh_dannyh_tretih_lits__8a4a1747'),
+            i18nT('legal:app.tabs.community_rules.narushenie_avtorskih_prav_na_teksty_i_fotogr_6edf738a'),
           ],
         },
         {
-          heading: '4. Безопасность',
+          heading: i18nT('legal:app.tabs.community_rules.4_bezopasnost_9b47b855'),
           paragraphs: [
-            'MeTravel не проверяет подлинность аккаунтов и достоверность контактов пользователей. Будьте осторожны при общении и встречах оффлайн.',
-            'Не передавайте незнакомым людям конфиденциальную информацию и платёжные данные.',
+            i18nT('legal:app.tabs.community_rules.metravel_ne_proveryaet_podlinnost_akkauntov__63be411b'),
+            i18nT('legal:app.tabs.community_rules.ne_peredavayte_neznakomym_lyudyam_konfidents_012d884b'),
           ],
         },
         {
-          heading: '5. Модерация',
+          heading: i18nT('legal:app.tabs.community_rules.5_moderatsiya_535cd1db'),
           paragraphs: [
-            'Нарушения могут приводить к удалению контента, предупреждению или блокировке аккаунта.',
-            'Сообщить о нарушении можно по адресу metraveldev@gmail.com.',
+            i18nT('legal:app.tabs.community_rules.narusheniya_mogut_privodit_k_udaleniyu_konte_19c5a5d5'),
+            i18nT('legal:app.tabs.community_rules.soobschit_o_narushenii_mozhno_po_adresu_metr_6a4f0f8b'),
           ],
         },
       ]}

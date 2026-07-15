@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { POINTS_PRESETS } from './pointsListLogic';
+import { getPointsPresetLabel, POINTS_PRESETS } from './pointsListLogic';
 import { PointsListHeader } from './PointsListHeader';
 import type { PointsListStyles } from './types';
 
@@ -91,7 +91,10 @@ export const usePointsHeaderRenderer = ({
         onSearch={onSearch}
         filters={filters}
         onFilterChange={onFilterChange}
-        presets={POINTS_PRESETS.map((p) => ({ id: p.id, label: p.label }))}
+        presets={POINTS_PRESETS.map((preset) => ({
+          id: preset.id,
+          label: getPointsPresetLabel(preset),
+        }))}
         activePresetId={activePresetId}
         onPresetChange={onPresetChange}
         siteCategoryOptions={siteCategoryOptions}

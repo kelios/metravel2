@@ -9,6 +9,8 @@ import { TravelFormData } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
+import { translate as i18nT } from '@/i18n'
+
 
 const ArticleEditor = lazy(() => import('@/components/article/ArticleEditor'));
 
@@ -149,15 +151,15 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                 <TravelWizardHeader
                     canGoBack={true}
                     onBack={onBack}
-                    title={stepMeta?.title ?? 'Детали маршрута'}
-                    subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
+                    title={stepMeta?.title ?? i18nT('travel:components.travel.TravelWizardStepDetails.defaultTitle')}
+                    subtitle={stepMeta?.subtitle ?? i18nT('travel:common.stepProgress', { value1: currentStep, value2: totalSteps })}
                     progressPercent={progressPercent}
                     errorCount={validation.errors.length}
                     warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
                     isSaveInFlight={isSaveInFlight}
                     onPrimary={onNext}
-                    primaryLabel={stepMeta?.nextLabel ?? 'К публикации'}
+                    primaryLabel={stepMeta?.nextLabel ?? i18nT('travel:components.travel.TravelWizardStepDetails.defaultNext')}
                     onSave={onManualSave}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
@@ -195,22 +197,21 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                     <View style={styles.contentInner}>
                         <View style={styles.card}>
                             <View style={styles.progressHeader}>
-                                <Text style={styles.sectionTitle}>Для кого это путешествие</Text>
+                                <Text style={styles.sectionTitle}>{i18nT('travel:components.travel.TravelWizardStepDetails.dlya_kogo_eto_puteshestvie_c1ebae55')}</Text>
                                 <Text style={styles.progressValue}>
-                                    {recommendationFieldsFilled.filled} из {recommendationFieldsFilled.total}
+                                    {recommendationFieldsFilled.filled} {i18nT('travel:components.travel.TravelWizardStepDetails.iz_c59b2d5a')}{recommendationFieldsFilled.total}
                                 </Text>
                             </View>
                             <Text style={styles.sectionHint}>
-                                Опишите плюсы и минусы маршрута, ваши рекомендации и лайфхаки. Все поля необязательны, но повышают ценность путешествия для читателей.
-                            </Text>
+                                {i18nT('travel:components.travel.TravelWizardStepDetails.opishite_plyusy_i_minusy_marshruta_vashi_rek_6bb57742')}</Text>
                         </View>
 
                         <View style={styles.card}>
-                            <Text style={styles.editorLabel}>Плюсы</Text>
-                            <Suspense fallback={<Text style={styles.sectionHint}>Загрузка редактора…</Text>}>
+                            <Text style={styles.editorLabel}>{i18nT('travel:components.travel.TravelWizardStepDetails.plyusy_bed5f443')}</Text>
+                            <Suspense fallback={<Text style={styles.sectionHint}>{i18nT('travel:components.travel.TravelWizardStepDetails.zagruzka_redaktora_f3828df7')}</Text>}>
                                 <ArticleEditor
                                     key={`plus-${idTravelStr ?? 'new'}`}
-                                    label="Плюсы"
+                                    label={i18nT('travel:components.travel.TravelWizardStepDetails.plyusy_bed5f443')}
                                     content={formData.plus ?? ''}
                                     onChange={handlePlusChange}
                                     idTravel={idTravelStr}
@@ -221,11 +222,11 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                         </View>
 
                         <View style={styles.card}>
-                            <Text style={styles.editorLabel}>Минусы</Text>
-                            <Suspense fallback={<Text style={styles.sectionHint}>Загрузка редактора…</Text>}>
+                            <Text style={styles.editorLabel}>{i18nT('travel:components.travel.TravelWizardStepDetails.minusy_df05ea35')}</Text>
+                            <Suspense fallback={<Text style={styles.sectionHint}>{i18nT('travel:components.travel.TravelWizardStepDetails.zagruzka_redaktora_f3828df7')}</Text>}>
                                 <ArticleEditor
                                     key={`minus-${idTravelStr ?? 'new'}`}
-                                    label="Минусы"
+                                    label={i18nT('travel:components.travel.TravelWizardStepDetails.minusy_df05ea35')}
                                     content={formData.minus ?? ''}
                                     onChange={handleMinusChange}
                                     idTravel={idTravelStr}
@@ -236,11 +237,11 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                         </View>
 
                         <View style={styles.card}>
-                            <Text style={styles.editorLabel}>Рекомендации и лайфхаки</Text>
-                            <Suspense fallback={<Text style={styles.sectionHint}>Загрузка редактора…</Text>}>
+                            <Text style={styles.editorLabel}>{i18nT('travel:components.travel.TravelWizardStepDetails.rekomendatsii_i_layfhaki_252b62ee')}</Text>
+                            <Suspense fallback={<Text style={styles.sectionHint}>{i18nT('travel:components.travel.TravelWizardStepDetails.zagruzka_redaktora_f3828df7')}</Text>}>
                                 <ArticleEditor
                                     key={`rec-${idTravelStr ?? 'new'}`}
-                                    label="Рекомендации"
+                                    label={i18nT('travel:components.travel.TravelWizardStepDetails.rekomendatsii_4bf6a00a')}
                                     content={formData.recommendation ?? ''}
                                     onChange={handleRecommendationChange}
                                     idTravel={idTravelStr}

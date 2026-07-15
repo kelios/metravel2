@@ -165,59 +165,9 @@ const ensureSubscription = () => {
 const SSR_SNAPSHOT: DimensionsSnapshot = { width: 0, height: 0 };
 const getServerSnapshot = () => SSR_SNAPSHOT;
 
-// Track whether initial hydration is complete on web.
-// During hydration getSnapshot must return the same value the server used ({0,0})
-// to avoid React error #418. After hydration we flip the flag and notify
-// subscribers so every consumer re-renders with real window dimensions.
-let _hydrated = Platform.OS !== 'web';
-let _hydrationScheduled = false;
-
 const subscribe = (onStoreChange: () => void) => {
   subscribers.add(onStoreChange);
-  const snapshotChanged = ensureSubscription();
-
-  // Schedule the hydration→live switch exactly once.
-  // setTimeout(0) fires after React finishes hydrating the current tree.
-  if (!_hydrated && !_hydrationScheduled && Platform.OS === 'web') {
-    _hydrationScheduled = true;
-    const scheduleHydrated = () => {
-      _hydrated = true;
-      // Ensure currentSnapshot reflects real window dimensions
-      const webSnap = getWebWindowSnapshot();
-      if (
-        webSnap &&
-        (currentSnapshot.width !== webSnap.width ||
-          currentSnapshot.height !== webSnap.height)
-      ) {
-        currentSnapshot = webSnap;
-      }
-      // Notify all subscribers to re-render with real dimensions
-      subscribers.forEach((cb) => {
-        try {
-          cb();
-        } catch {
-          // noop
-        }
-      });
-    };
-    setTimeout(() => {
-      if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => requestAnimationFrame(scheduleHydrated));
-      } else {
-        scheduleHydrated();
-      }
-    }, 50);
-  }
-
-  // Do not notify synchronously during hydration — the snapshot hasn't
-  // changed from React's perspective (still SSR_SNAPSHOT).
-  if (snapshotChanged && _hydrated) {
-    try {
-      onStoreChange();
-    } catch {
-      // noop
-    }
-  }
+  ensureSubscription();
   return () => {
     subscribers.delete(onStoreChange);
     if (subscribers.size === 0 && subscription) {
@@ -230,13 +180,17 @@ const subscribe = (onStoreChange: () => void) => {
   };
 };
 
-const getSnapshot = () => (_hydrated ? currentSnapshot : SSR_SNAPSHOT);
+// React calls getServerSnapshot for SSR and the hydration render, then compares
+// it with getSnapshot after that consumer commits. Keeping this transition local
+// to useSyncExternalStore prevents one early subscriber from forcing live viewport
+// dimensions into sibling route trees that are still hydrating.
+const getSnapshot = () => currentSnapshot;
 
 // Width-only snapshot. Returns a primitive number so useSyncExternalStore
 // bails out of re-rendering when ONLY the height changes — exactly what the
 // mobile browser address bar does on every scroll frame as it collapses/expands.
 // Width-only consumers (breakpoints) stay still while the list scrolls.
-const getWidthSnapshot = () => (_hydrated ? currentSnapshot.width : 0);
+const getWidthSnapshot = () => currentSnapshot.width;
 const getServerWidthSnapshot = () => 0;
 
 /**
@@ -247,10 +201,6 @@ const getServerWidthSnapshot = () => 0;
  */
 export function useResponsiveWidth(): number {
   const width = useSyncExternalStore(subscribe, getWidthSnapshot, getServerWidthSnapshot);
-  if (Platform.OS === 'web' && _hydrated && width <= 0) {
-    const webWindowSnapshot = getWebWindowSnapshot();
-    if (webWindowSnapshot) return webWindowSnapshot.width;
-  }
   return width;
 }
 
@@ -305,18 +255,11 @@ export function useBreakpoints() {
  */
 export function useResponsive(): ResponsiveState {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const webWindowSnapshot = getWebWindowSnapshot();
-  const width =
-    Platform.OS === 'web' && _hydrated && snapshot.width <= 0 && webWindowSnapshot
-      ? webWindowSnapshot.width
-      : snapshot.width;
-  const height =
-    Platform.OS === 'web' && _hydrated && snapshot.height <= 0 && webWindowSnapshot
-      ? webWindowSnapshot.height
-      : snapshot.height;
+  const width = snapshot.width;
+  const height = snapshot.height;
   const isHydrated =
     Platform.OS !== 'web' ||
-    (_hydrated && width > 0 && height > 0);
+    (width > 0 && height > 0);
   const isPortrait = height > width;
   const orientation: Orientation = isPortrait ? 'portrait' : 'landscape';
 

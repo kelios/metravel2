@@ -14,6 +14,8 @@ import { useMyRareAwards } from '@/hooks/useAchievementsApi'
 import { useAuthStore } from '@/stores/authStore'
 import RareAwardCard from '@/components/achievements/RareAwardCard'
 import SectionState from '@/components/achievements/SectionState'
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   /** bare — без внешней карточки и заголовка (контент для хаба наград). */
@@ -42,8 +44,7 @@ function RareAwardsSection({ bare = false, testID, style }: Props) {
         </View>
       ) : (
         <Text style={styles.empty}>
-          Редкие награды вручает команда MeTravel за особый вклад в сообщество.
-        </Text>
+          {i18nT('achievements:components.achievements.RareAwardsSection.redkie_nagrady_vruchaet_komanda_metravel_za__1197bccc')}</Text>
       )}
     </SectionState>
   )
@@ -60,7 +61,7 @@ function RareAwardsSection({ bare = false, testID, style }: Props) {
     <View style={[styles.card, style]} testID={testID}>
       <View style={styles.headerRow}>
         <Feather name="star" size={16} color={colors.primaryDark} />
-        <Text style={styles.heading}>Редкие награды</Text>
+        <Text style={styles.heading}>{i18nT('achievements:components.achievements.RareAwardsSection.redkie_nagrady_986d6db5')}</Text>
       </View>
       {body}
     </View>

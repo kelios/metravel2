@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather'
 
 import CardActionPressable from '@/components/ui/CardActionPressable'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 const IS_WEB = Platform.OS === 'web'
 
@@ -71,7 +73,7 @@ const ActionListSheet: React.FC<Props> = ({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.root}>
         <Pressable
-          accessibilityLabel="Закрыть меню действий"
+          accessibilityLabel={i18nT('shared:components.ui.ActionListSheet.zakryt_menyu_deystviy_85947952')}
           accessibilityRole="button"
           onPress={onClose}
           style={styles.backdrop}
@@ -83,8 +85,8 @@ const ActionListSheet: React.FC<Props> = ({
               <Text style={styles.title}>{title}</Text>
               <CardActionPressable
                 accessibilityRole="button"
-                accessibilityLabel="Закрыть"
-                title="Закрыть"
+                accessibilityLabel={i18nT('shared:components.ui.ActionListSheet.zakryt_e47a2993')}
+                title={i18nT('shared:components.ui.ActionListSheet.zakryt_e47a2993')}
                 onPress={onClose}
                 enableWebClickFallback
                 style={({ pressed }) => [styles.closeBtn, pressed && styles.itemPressed]}

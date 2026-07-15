@@ -5,6 +5,8 @@ import { Link } from 'expo-router'
 import ConsentCheckbox from '@/components/legal/ConsentCheckbox'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 type Colors = ReturnType<typeof useThemedColors>
 
@@ -51,26 +53,22 @@ export default function QuestConsentGate({ title, coverUrl, onAccept, testID, ra
       {completionSlot}
 
       <View style={styles.card}>
-        <Text style={styles.lead}>Перед началом квеста подтвердите согласие с условиями.</Text>
+        <Text style={styles.lead}>{i18nT('quests:components.quests.QuestConsentGate.pered_nachalom_kvesta_podtverdite_soglasie_s_38fb802c')}</Text>
 
         <ConsentCheckbox
           checked={checked}
           onToggle={setChecked}
           testID="quest-consent-checkbox"
-          accessibilityLabel="Согласие с правилами и отказом от ответственности перед стартом квеста"
+          accessibilityLabel={i18nT('quests:components.quests.QuestConsentGate.soglasie_s_pravilami_i_otkazom_ot_otvetstven_2f6c5dbf')}
         >
-          Я понимаю, что прохожу квест самостоятельно и на собственный риск, информация может быть
-          неактуальной, и принимаю правила и отказ от ответственности.
-        </ConsentCheckbox>
+          {i18nT('quests:components.quests.QuestConsentGate.ya_ponimayu_chto_prohozhu_kvest_samostoyatel_3d348cd7')}</ConsentCheckbox>
 
         <View style={styles.linksRow}>
           <Link href={'/disclaimer' as any} style={styles.link}>
-            Отказ от ответственности
-          </Link>
+            {i18nT('quests:components.quests.QuestConsentGate.otkaz_ot_otvetstvennosti_1dc9bbb2')}</Link>
           <Text style={styles.linkSep}>·</Text>
           <Link href={'/community-rules' as any} style={styles.link}>
-            Правила сообщества
-          </Link>
+            {i18nT('quests:components.quests.QuestConsentGate.pravila_soobschestva_ffacfe0c')}</Link>
         </View>
 
         <Pressable
@@ -81,7 +79,7 @@ export default function QuestConsentGate({ title, coverUrl, onAccept, testID, ra
           accessibilityRole="button"
           accessibilityState={{ disabled: !checked }}
         >
-          <Text style={styles.startButtonText}>Начать квест</Text>
+          <Text style={styles.startButtonText}>{i18nT('quests:components.quests.QuestConsentGate.nachat_kvest_d3b974ac')}</Text>
         </Pressable>
       </View>
     </ScrollView>

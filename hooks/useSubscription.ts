@@ -10,6 +10,8 @@ import {
 import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
 import { showToast } from '@/utils/toast';
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * Hook to manage subscription state for a target user.
@@ -91,7 +93,7 @@ export function useSubscription(targetUserId: string | number | null | undefined
             if (context?.previous) {
                 queryClient.setQueryData(queryKeys.mySubscriptions(), context.previous);
             }
-            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось подписаться. Попробуйте позже.' });
+            showToast({ type: 'error', text1: i18nT('shared:hooks.useSubscription.oshibka_282b48f5'), text2: i18nT('shared:hooks.useSubscription.ne_udalos_podpisatsya_poprobuyte_pozzhe_0dfb8d0c') });
         },
         onSettled: () => invalidate(),
     });
@@ -117,7 +119,7 @@ export function useSubscription(targetUserId: string | number | null | undefined
             if (context?.previous) {
                 queryClient.setQueryData(queryKeys.mySubscriptions(), context.previous);
             }
-            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось отписаться. Попробуйте позже.' });
+            showToast({ type: 'error', text1: i18nT('shared:hooks.useSubscription.oshibka_282b48f5'), text2: i18nT('shared:hooks.useSubscription.ne_udalos_otpisatsya_poprobuyte_pozzhe_a1ce39c4') });
         },
         onSettled: () => invalidate(),
     });

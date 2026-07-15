@@ -9,6 +9,9 @@ import { DESIGN_COLORS } from '@/constants/designSystem';
 import { PointStatus } from '@/types/userPoints';
 import { bigDataCloudReverse } from '@/api/external/bigdatacloud';
 import { nominatimReverse } from '@/api/external/nominatim';
+import { translate as i18nT } from '@/i18n'
+import { getMapGeocoderLanguage } from '@/utils/mapLocale';
+
 
 type PointLike = Record<string, unknown>;
 
@@ -47,12 +50,13 @@ const getPrimaryPlaceName = (geocodeData: unknown, lat: number, lng: number): st
 
   const builtAddress = buildAddressFromGeocode(geocodeData, { lat, lng });
   const firstPart = String(builtAddress || '').split('·')[0]?.trim();
-  return firstPart || String(builtAddress || '').trim() || 'Новая точка';
+  return firstPart || String(builtAddress || '').trim() || i18nT('map:components.UserPoints.usePointsManualForm.novaya_tochka_4d3f685d');
 };
 
 const reverseGeocode = async (lat: number, lng: number): Promise<unknown | null> => {
+  const geocoderLanguage = getMapGeocoderLanguage();
   try {
-    const primary = await bigDataCloudReverse(lat, lng, 'ru');
+    const primary = await bigDataCloudReverse(lat, lng, geocoderLanguage);
     if (primary.ok) {
       return await primary.json();
     }
@@ -62,7 +66,7 @@ const reverseGeocode = async (lat: number, lng: number): Promise<unknown | null>
 
   try {
     const response = await nominatimReverse(
-      { lat, lng, zoom: 18, addressdetails: 1, extratags: 1, namedetails: 1, acceptLanguage: 'ru' },
+      { lat, lng, zoom: 18, addressdetails: 1, extratags: 1, namedetails: 1, acceptLanguage: geocoderLanguage },
     );
     if (!response.ok) return null;
     return await response.json();
@@ -102,7 +106,7 @@ export const usePointsManualForm = ({
   useEffect(() => {
     if (!showManualAdd) return;
     if (manualNameTouched) return;
-    setManualName(manualAutoName || 'Новая точка');
+    setManualName(manualAutoName || i18nT('map:components.UserPoints.usePointsManualForm.novaya_tochka_4d3f685d'));
   }, [manualAutoName, manualNameTouched, showManualAdd]);
 
   const resetManualForm = useCallback(() => {
@@ -154,7 +158,7 @@ export const usePointsManualForm = ({
 
       const id = Number(item.id);
       if (!Number.isFinite(id)) {
-        setManualError('Невозможно открыть точку: некорректный идентификатор');
+        setManualError(i18nT('map:components.UserPoints.usePointsManualForm.nevozmozhno_otkryt_tochku_nekorrektnyy_ident_0257c8ac'));
         return;
       }
 
@@ -209,7 +213,7 @@ export const usePointsManualForm = ({
       setManualCoords(coords);
       setManualLat(coords.lat.toFixed(6));
       setManualLng(coords.lng.toFixed(6));
-      setManualName('Новая точка');
+      setManualName(i18nT('map:components.UserPoints.usePointsManualForm.novaya_tochka_4d3f685d'));
       setShowManualAdd(true);
 
       const reqId = ++geocodeSeq.current;
@@ -237,15 +241,15 @@ export const usePointsManualForm = ({
     setManualError(null);
     const name = manualName.trim();
     if (!name) {
-      setManualError('Введите название точки');
+      setManualError(i18nT('map:components.UserPoints.usePointsManualForm.vvedite_nazvanie_tochki_28d3eba6'));
       return;
     }
     if (!manualCoords) {
-      setManualError('Укажите координаты');
+      setManualError(i18nT('map:components.UserPoints.usePointsManualForm.ukazhite_koordinaty_69d8e5dc'));
       return;
     }
     if ((manualCategoryIds || []).length === 0) {
-      setManualError('Выберите категорию');
+      setManualError(i18nT('map:components.UserPoints.usePointsManualForm.vyberite_kategoriyu_7b566566'));
       return;
     }
 
@@ -280,7 +284,7 @@ export const usePointsManualForm = ({
 
       closeManualAdd();
     } catch (error) {
-      setManualError(error instanceof Error ? error.message : 'Не удалось сохранить точку');
+      setManualError(error instanceof Error ? error.message : i18nT('map:components.UserPoints.usePointsManualForm.ne_udalos_sohranit_tochku_ce20a696'));
     } finally {
       setIsSavingManual(false);
     }

@@ -19,7 +19,6 @@ import {
   type ProfileTravelEngagementMetricKey,
 } from '@/components/profile/ProfileTravelEngagementSection'
 import EmptyState from '@/components/ui/EmptyState';
-import { isTravelListItem, normalizeToTravel } from '@/components/profile/travelNormalize';
 import { useMyTravels } from '@/hooks/useMyTravels';
 import type { Travel } from '@/types/types';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
@@ -53,20 +52,19 @@ import { mapProfileRank } from '@/api/user';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { getStorageBatch } from '@/utils/storageBatch';
 import { hapticImpact } from '@/utils/haptics';
-import { computeTravelEngagementSummary } from '@/utils/travelEngagementStats'
 import { useTravelStatusStore } from '@/stores/travelStatusStore'
 import { showToastMessage } from '@/utils/toast'
-import { isTravelDraft } from '@/utils/travelPublicationStatus'
 import { createProfileScreenStyles } from '@/components/screens/profile/profileScreen.styles';
+import { useProfileTravelSections } from '@/components/screens/profile/useProfileTravelSections';
 import {
   keyExtractor,
   PROFILE_TRAVELS_PER_PAGE,
-  withVisibleEngagementStats,
   type UserStats,
 } from '@/components/screens/profile/profileScreen.helpers';
+import { translate as i18nT } from '@/i18n'
 
-const isProfileTravelTab = (tab: ProfileTabKey) =>
-  tab === 'travels' || tab === 'publishedTravels' || tab === 'draftTravels';
+
+const isProfileTravelTab = (tab: ProfileTabKey) => tab === 'travels' || tab === 'publishedTravels' || tab === 'draftTravels';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -287,150 +285,32 @@ export default function ProfileScreen() {
     }
   }, [logout, router]);
 
-  const normalizedFavorites = useMemo<Travel[]>(() =>
-    (favorites || [])
-      .filter((f) => isTravelListItem(f))
-      .map((f) => normalizeToTravel({
-        id: f.id,
-        name: f.title,
-        title: f.title,
-        url: f.url,
-        imageUrl: f.imageUrl,
-        countryName: f.country,
-        cityName: f.city,
-      })),
-    [favorites]
-  );
-
-  const normalizedHistory = useMemo<Travel[]>(() =>
-    (viewHistory || [])
-      .filter((h) => isTravelListItem(h))
-      .map((h) => normalizeToTravel({
-        id: h.id,
-        name: h.title,
-        title: h.title,
-        url: h.url,
-        imageUrl: h.imageUrl,
-        countryName: h.country,
-        cityName: h.city,
-      })),
-    [viewHistory]
-  );
-
-  const profileTravels = useMemo<Travel[]>(() =>
-    myTravels.map(withVisibleEngagementStats),
-    [myTravels]
-  )
-
-  const draftTravels = useMemo<Travel[]>(
-    () => profileTravels.filter(isTravelDraft),
-    [profileTravels],
-  );
-
-  const publishedTravels = useMemo<Travel[]>(
-    () => profileTravels.filter((travel) => !isTravelDraft(travel)),
-    [profileTravels],
-  );
-
-  useEffect(() => {
-    if (activeTab !== 'countries' && activeTab !== 'worldmap') return;
-    if (travelsLoading || travelsLoadingMore || !travelsHasMore) return;
-    if (profileTravels.length === 0) return;
-    void loadMoreTravelsHook();
-  }, [
-    activeTab,
-    loadMoreTravelsHook,
-    profileTravels.length,
-    travelsHasMore,
-    travelsLoading,
-    travelsLoadingMore,
-  ]);
-
-  useEffect(() => {
-    if (activeTab !== 'publishedTravels' && activeTab !== 'draftTravels') return;
-    if (travelsLoading || travelsLoadingMore || !travelsHasMore) return;
-    if (profileTravels.length === 0) return;
-    void loadMoreTravelsHook();
-  }, [
-    activeTab,
-    loadMoreTravelsHook,
-    profileTravels.length,
-    travelsHasMore,
-    travelsLoading,
-    travelsLoadingMore,
-  ]);
-
-  const authoredMetricTravels = useMemo<Travel[]>(() => {
-    if (!activeTravelMetric) return [];
-    return profileTravels.filter((travel) => (travel.engagementStats?.[activeTravelMetric] ?? 0) > 0);
-  }, [activeTravelMetric, profileTravels]);
-
-  const authoredTravelEngagementScope = useMemo<'all' | 'loaded'>(() => {
-    if (engagementSummary) return 'all'
-    if (profileTravels.length === 0) return 'all'
-    return profileTravels.length >= stats.travelsCount || !travelsHasMore ? 'all' : 'loaded'
-  }, [engagementSummary, profileTravels.length, stats.travelsCount, travelsHasMore])
-
-  const authoredTravelEngagementSummary = useMemo(() => {
-    if (engagementSummary) return engagementSummary
-
-    if (!travelsLoading && stats.travelsCount === 0) {
-      return {
-        favoritesCount: 0,
-        wishlistCount: 0,
-        visitedCount: 0,
-        plannedCount: 0,
-      }
-    }
-
-    if (profileTravels.length > 0) {
-      return computeTravelEngagementSummary(profileTravels)
-    }
-
-    return null
-  }, [engagementSummary, profileTravels, stats.travelsCount, travelsLoading])
-
-  const personalTravelStatusSummary = useMemo(
-    () =>
-      personalTravelStatusEntries.reduce(
-        (acc, entry) => {
-          if (entry.status === 'visited') acc.visited += 1
-          if (entry.status === 'wishlist') acc.wishlist += 1
-          if (entry.status === 'planned') acc.planned += 1
-          return acc
-        },
-        { visited: 0, wishlist: 0, planned: 0 }
-      ),
-    [personalTravelStatusEntries]
-  )
-
-  const formatTripsCount = useCallback((count: number) => {
-    if (count === 0) return 'Пока пусто'
-    const mod10 = count % 10
-    const mod100 = count % 100
-    if (mod10 === 1 && mod100 !== 11) return `${count} поездка`
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} поездки`
-    return `${count} поездок`
-  }, [])
-
-  const currentData = useMemo<Travel[]>(() => {
-    if (activeTravelMetric) return authoredMetricTravels;
-    if (activeTab === 'travels') return profileTravels;
-    if (activeTab === 'publishedTravels') return publishedTravels;
-    if (activeTab === 'draftTravels') return draftTravels;
-    if (activeTab === 'favorites') return normalizedFavorites.map(withVisibleEngagementStats);
-    if (activeTab === 'history') return normalizedHistory.map(withVisibleEngagementStats);
-    return [];
-  }, [
-    activeTab,
-    activeTravelMetric,
-    authoredMetricTravels,
+  const {
+    authoredTravelEngagementScope,
+    authoredTravelEngagementSummary,
+    currentData,
     draftTravels,
-    normalizedFavorites,
-    normalizedHistory,
-    publishedTravels,
+    emptyStateProps,
+    formatTripsCount,
+    personalTravelStatusSummary,
     profileTravels,
-  ]);
+    publishedTravels,
+  } = useProfileTravelSections({
+    activeTab,
+    setActiveTab,
+    activeTravelMetric,
+    setActiveTravelMetric,
+    favorites,
+    viewHistory,
+    myTravels,
+    engagementSummary,
+    travelsCount: stats.travelsCount,
+    travelsLoading,
+    travelsLoadingMore,
+    travelsHasMore,
+    loadMoreTravels: loadMoreTravelsHook,
+    personalTravelStatusEntries,
+  });
 
   const handleTravelMetricPress = useCallback((metric: ProfileTravelEngagementMetricKey) => {
     setActiveTab('travels');
@@ -447,82 +327,11 @@ export default function ProfileScreen() {
     setWorldMapGestureActive(active);
   }, []);
 
-  const emptyStateProps = useMemo(() => {
-    if (activeTravelMetric) {
-      const copy = {
-        title: 'Нет маршрутов с этой метрикой',
-        description: 'Когда пользователи начнут сохранять, посещать или планировать эти маршруты, карточки появятся здесь.',
-      };
-
-      return {
-        icon: activeTravelMetric === 'visitedCount'
-          ? 'check-circle'
-          : activeTravelMetric === 'plannedCount'
-            ? 'calendar'
-            : 'heart',
-        title: copy.title,
-        description: copy.description,
-        variant: 'empty' as const,
-        action: { label: 'Показать все маршруты', onPress: () => setActiveTravelMetric(null) },
-      };
-    }
-
-    switch (activeTab) {
-      case 'travels':
-        return {
-          icon: 'map',
-          title: 'Ваши маршруты появятся здесь',
-          description: 'Добавьте первое путешествие — поделитесь маршрутом, фотографиями и впечатлениями с сообществом.',
-          variant: 'inspire' as const,
-          action: { label: 'Создать маршрут', onPress: () => router.push('/travel/new' as any) },
-          secondaryAction: { label: 'Начать квест', onPress: () => router.push('/quests' as any) },
-        };
-      case 'publishedTravels':
-        return {
-          icon: 'check-circle',
-          title: 'Опубликованных маршрутов пока нет',
-          description: 'Когда черновик будет опубликован, он появится здесь обычной карточкой.',
-          variant: 'empty' as const,
-          action: { label: 'Создать маршрут', onPress: () => router.push('/travel/new' as any) },
-          secondaryAction: draftTravels.length > 0
-            ? { label: 'Открыть черновики', onPress: () => setActiveTab('draftTravels') }
-            : undefined,
-        };
-      case 'draftTravels':
-        return {
-          icon: 'edit-3',
-          title: 'Черновиков пока нет',
-          description: 'Сохранённые без публикации путешествия будут лежать здесь.',
-          variant: 'empty' as const,
-          action: { label: 'Создать маршрут', onPress: () => router.push('/travel/new' as any) },
-          secondaryAction: publishedTravels.length > 0
-            ? { label: 'Открыть опубликованные', onPress: () => setActiveTab('publishedTravels') }
-            : undefined,
-        };
-      case 'favorites':
-        return {
-          icon: 'heart',
-          title: 'В «Хочу поехать» пока пусто',
-          description: 'Добавляйте сюда маршруты, куда хотите поехать: нажмите ♥ на карточке маршрута.',
-          variant: 'empty' as const,
-          action: { label: 'Найти маршруты', onPress: () => router.push('/travelsby' as any) },
-        };
-      case 'history':
-        return {
-          icon: 'clock',
-          title: 'История просмотров пуста',
-          description: 'Открытые маршруты будут сохраняться здесь автоматически.',
-          variant: 'empty' as const,
-          action: { label: 'Смотреть маршруты', onPress: () => router.push('/travelsby' as any) },
-        };
-      default: return { icon: 'layers', title: 'Пусто', description: '' };
-    }
-  }, [activeTab, activeTravelMetric, draftTravels.length, publishedTravels.length, router]);
-
   const displayName = useMemo(
-    () => (fullName || userInfo.name || 'Пользователь').trim(),
+    () => (fullName || userInfo.name || i18nT('profile:app.tabs.profile.defaultUserName')).trim(),
     [fullName, userInfo.name],
   );
+  const hasDisplayName = Boolean(fullName?.trim() || userInfo.name?.trim());
 
   const handleHeaderAction = useCallback((key: ProfileHeaderActionKey) => {
     if (key === 'messages') router.push('/messages');
@@ -538,33 +347,33 @@ export default function ProfileScreen() {
     try {
       if (activeTab === 'favorites') {
         const ok = await confirmAction({
-          title: 'Очистить «Хочу поехать»',
-          message: 'Удалить все маршруты из «Хочу поехать»?',
-          confirmText: 'Очистить',
-          cancelText: 'Отмена',
+          title: i18nT('profile:app.tabs.profile.ochistit_hochu_poehat_de703e72'),
+          message: i18nT('profile:app.tabs.profile.udalit_vse_marshruty_iz_hochu_poehat_a5c1de2c'),
+          confirmText: i18nT('profile:app.tabs.profile.ochistit_ef7ce3e3'),
+          cancelText: i18nT('profile:app.tabs.profile.otmena_0e762c35'),
         });
         if (!ok) return;
         await clearFavorites?.();
-        void showToastMessage({ type: 'success', text1: '«Хочу поехать» очищен' })
+        void showToastMessage({ type: 'success', text1: i18nT('profile:app.tabs.profile.hochu_poehat_ochischen_dbb99267') })
         return;
       }
 
       if (activeTab === 'history') {
         const ok = await confirmAction({
-          title: 'Очистить историю',
-          message: 'Удалить всю историю просмотров?',
-          confirmText: 'Очистить',
-          cancelText: 'Отмена',
+          title: i18nT('profile:app.tabs.profile.ochistit_istoriyu_ce6a05b3'),
+          message: i18nT('profile:app.tabs.profile.udalit_vsyu_istoriyu_prosmotrov_50f5efeb'),
+          confirmText: i18nT('profile:app.tabs.profile.ochistit_ef7ce3e3'),
+          cancelText: i18nT('profile:app.tabs.profile.otmena_0e762c35'),
         });
         if (!ok) return;
         await clearHistory?.();
-        void showToastMessage({ type: 'success', text1: 'История очищена' })
+        void showToastMessage({ type: 'success', text1: i18nT('profile:app.tabs.profile.istoriya_ochischena_7ccc2d99') })
       }
     } catch (error) {
       void showToastMessage({
         type: 'error',
-        text1: 'Не удалось очистить список',
-        text2: error instanceof Error ? error.message : 'Попробуйте позже.',
+        text1: i18nT('profile:app.tabs.profile.ne_udalos_ochistit_spisok_3c989153'),
+        text2: error instanceof Error ? error.message : i18nT('profile:app.tabs.profile.poprobuyte_pozzhe_ada0c782'),
       })
       console.error('Error clearing profile tab data:', error);
     }
@@ -611,7 +420,8 @@ export default function ProfileScreen() {
     name: displayName,
     email: userInfo.email,
     avatar: profile?.avatar,
-  }), [displayName, userInfo.email, profile?.avatar]);
+    hasDisplayName,
+  }), [displayName, userInfo.email, profile?.avatar, hasDisplayName]);
 
   const showClearButton = (activeTab === 'favorites' || activeTab === 'history') && currentData.length > 0;
 
@@ -887,10 +697,10 @@ export default function ProfileScreen() {
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <EmptyState
           icon="user"
-          title="Войдите в аккаунт"
-          description="Войдите, чтобы открыть профиль и управлять своими данными."
+          title={i18nT('profile:app.tabs.profile.voydite_v_akkaunt_eba2a87d')}
+          description={i18nT('profile:app.tabs.profile.voydite_chtoby_otkryt_profil_i_upravlyat_svo_d7506777')}
           action={{
-            label: 'Войти',
+            label: i18nT('profile:app.tabs.profile.voyti_bf809d29'),
             onPress: () => router.push(buildLoginHref({ redirect: '/profile', intent: 'profile' }) as any),
             style: profileLoginActionStyle,
           }}
@@ -906,8 +716,8 @@ export default function ProfileScreen() {
       {isFocused && (
         <InstantSEO
           headKey="profile"
-          title="Профиль | Metravel"
-          description="Профиль пользователя"
+          title={i18nT('profile:app.tabs.profile.profil_metravel_dd9708d4')}
+          description={i18nT('profile:app.tabs.profile.profil_polzovatelya_6c2e4229')}
           canonical={buildCanonicalUrl('/profile')}
           robots="noindex, nofollow"
         />

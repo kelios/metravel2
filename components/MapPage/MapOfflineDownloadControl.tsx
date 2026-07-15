@@ -23,6 +23,8 @@ import {
   type OfflineBBox,
   type OfflineRegion,
 } from '@/utils/mapTileCache';
+import { translate as i18nT } from '@/i18n'
+
 
 interface MapOfflineDownloadControlProps {
   bbox: OfflineBBox | null;
@@ -34,10 +36,10 @@ const MIN_Z = 10;
 const MAX_Z = 16;
 
 const formatBytes = (bytes: number): string => {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0 МБ';
+  if (!Number.isFinite(bytes) || bytes <= 0) return i18nT('map:components.MapPage.MapOfflineDownloadControl.0_mb_29612170');
   const mb = bytes / (1024 * 1024);
-  if (mb < 1) return `${Math.max(1, Math.round(bytes / 1024))} КБ`;
-  return `${mb.toFixed(mb < 10 ? 1 : 0)} МБ`;
+  if (mb < 1) return i18nT('map:components.MapPage.MapOfflineDownloadControl.value1_kb_f05a2351', { value1: Math.max(1, Math.round(bytes / 1024)) });
+  return i18nT('map:components.MapPage.MapOfflineDownloadControl.value1_mb_9aa814d9', { value1: mb.toFixed(mb < 10 ? 1 : 0) });
 };
 
 const MapOfflineDownloadControlInner: React.FC<MapOfflineDownloadControlProps> = ({
@@ -107,7 +109,7 @@ const MapOfflineDownloadControlInner: React.FC<MapOfflineDownloadControlProps> =
         style={[styles.fab, { bottom: bottomInset + 16 }]}
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel="Скачать эту область карты для офлайна"
+        accessibilityLabel={i18nT('map:components.MapPage.MapOfflineDownloadControl.skachat_etu_oblast_karty_dlya_oflayna_41a4b025')}
         testID="map-offline-download-fab"
         hitSlop={8}
       >
@@ -123,28 +125,27 @@ const MapOfflineDownloadControlInner: React.FC<MapOfflineDownloadControlProps> =
         <View style={styles.backdrop}>
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.title}>Офлайн-карта</Text>
+              <Text style={styles.title}>{i18nT('map:components.MapPage.MapOfflineDownloadControl.oflayn_karta_343c6379')}</Text>
               <Pressable
                 onPress={handleClose}
                 accessibilityRole="button"
-                accessibilityLabel="Закрыть"
+                accessibilityLabel={i18nT('map:components.MapPage.MapOfflineDownloadControl.zakryt_d59d2d32')}
                 hitSlop={10}
               >
                 <Feather name="x" size={22} color={colors.text} />
               </Pressable>
             </View>
 
-            <Text style={styles.subtitle}>Текущая область</Text>
+            <Text style={styles.subtitle}>{i18nT('map:components.MapPage.MapOfflineDownloadControl.tekuschaya_oblast_23bbcebd')}</Text>
             <View style={styles.estimateRow}>
               <Feather name="layers" size={15} color={colors.textMuted} />
               <Text style={styles.estimateText}>
-                {bbox ? `~${tileCount} тайлов · ${sizeLabel}` : 'Область недоступна'}
+                {bbox ? i18nT('map:components.MapPage.MapOfflineDownloadControl.value1_taylov_value2_4fa1ad44', { value1: tileCount, value2: sizeLabel }) : i18nT('map:components.MapPage.MapOfflineDownloadControl.oblast_nedostupna_b5e1348d')}
               </Text>
             </View>
             {tooLarge && (
               <Text style={styles.warn}>
-                Область слишком большая. Приблизьте карту и попробуйте снова.
-              </Text>
+                {i18nT('map:components.MapPage.MapOfflineDownloadControl.oblast_slishkom_bolshaya_priblizte_kartu_i_p_38e406f5')}</Text>
             )}
 
             {isBusy ? (
@@ -154,17 +155,17 @@ const MapOfflineDownloadControlInner: React.FC<MapOfflineDownloadControlProps> =
                 </View>
                 <Text style={styles.progressText}>
                   {state === 'estimating'
-                    ? 'Подготовка…'
+                    ? i18nT('map:components.MapPage.MapOfflineDownloadControl.podgotovka_7266bee4')
                     : `${progress.done} / ${progress.total}`}
                 </Text>
                 <Pressable
                   style={[styles.actionBtn, styles.cancelBtn]}
                   onPress={cancel}
                   accessibilityRole="button"
-                  accessibilityLabel="Отменить загрузку"
+                  accessibilityLabel={i18nT('map:components.MapPage.MapOfflineDownloadControl.otmenit_zagruzku_118163e4')}
                 >
                   <ActivityIndicator size="small" color={colors.text} />
-                  <Text style={styles.cancelText}>Отменить</Text>
+                  <Text style={styles.cancelText}>{i18nT('map:components.MapPage.MapOfflineDownloadControl.otmenit_a622bf87')}</Text>
                 </Pressable>
               </>
             ) : (
@@ -173,22 +174,22 @@ const MapOfflineDownloadControlInner: React.FC<MapOfflineDownloadControlProps> =
                 onPress={handleDownload}
                 disabled={!bbox || tooLarge}
                 accessibilityRole="button"
-                accessibilityLabel="Скачать эту область"
+                accessibilityLabel={i18nT('map:components.MapPage.MapOfflineDownloadControl.skachat_etu_oblast_ef068bfc')}
               >
                 <Feather name="download" size={16} color={colors.textOnPrimary} />
                 <Text style={styles.primaryText}>
-                  {state === 'done' ? 'Скачано ✓' : 'Скачать эту область'}
+                  {state === 'done' ? i18nT('map:components.MapPage.MapOfflineDownloadControl.skachano_ac9deca5') : i18nT('map:components.MapPage.MapOfflineDownloadControl.skachat_etu_oblast_ef068bfc')}
                 </Text>
               </Pressable>
             )}
 
             {state === 'error' && (
-              <Text style={styles.warn}>Не удалось скачать область. Проверьте сеть.</Text>
+              <Text style={styles.warn}>{i18nT('map:components.MapPage.MapOfflineDownloadControl.ne_udalos_skachat_oblast_proverte_set_7d6c909b')}</Text>
             )}
 
             {regions.length > 0 && (
               <>
-                <Text style={[styles.subtitle, styles.regionsHeader]}>Сохранённые области</Text>
+                <Text style={[styles.subtitle, styles.regionsHeader]}>{i18nT('map:components.MapPage.MapOfflineDownloadControl.sohranennye_oblasti_c5e7250b')}</Text>
                 <ScrollView style={styles.regionsList}>
                   {regions.map((region) => (
                     <View key={region.id} style={styles.regionRow}>
@@ -197,13 +198,13 @@ const MapOfflineDownloadControlInner: React.FC<MapOfflineDownloadControlProps> =
                           {region.name}
                         </Text>
                         <Text style={styles.regionMeta}>
-                          {region.tileCount} тайлов · {formatBytes(region.bytes)}
+                          {region.tileCount} {i18nT('map:components.MapPage.MapOfflineDownloadControl.taylov_f0091788')}{formatBytes(region.bytes)}
                         </Text>
                       </View>
                       <Pressable
                         onPress={() => handleDelete(region.id)}
                         accessibilityRole="button"
-                        accessibilityLabel={`Удалить область ${region.name}`}
+                        accessibilityLabel={i18nT('map:components.MapPage.MapOfflineDownloadControl.udalit_oblast_value1_0e5a7ce5', { value1: region.name })}
                         hitSlop={8}
                         style={styles.deleteBtn}
                       >

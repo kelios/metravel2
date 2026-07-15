@@ -13,7 +13,7 @@ export function hasActivePublicTripFilters(filters: PublicTripsFilters): boolean
 }
 
 const normalizeSearch = (value: string): string =>
-  value.trim().toLocaleLowerCase('ru-RU');
+  value.trim().toLowerCase();
 
 export function filterPublicTripsBySearch(
   trips: PublicTrip[],
@@ -32,7 +32,7 @@ export function filterPublicTripsBySearch(
     ]
       .filter((v): v is string => typeof v === 'string' && v.length > 0)
       .join(' ')
-      .toLocaleLowerCase('ru-RU');
+      .toLowerCase();
 
     return haystack.includes(needle);
   });

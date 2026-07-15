@@ -4,6 +4,8 @@ import { ActivityIndicator, Platform, View, Text } from 'react-native'
 import type { Travel } from '@/types/types'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
+import { translate as i18nT } from '@/i18n'
+
 
 const EXCURSION_CONTAINER_STYLE = { marginTop: 12 } as const
 const EXCURSION_FALLBACK_STYLE = { minHeight: 160, paddingVertical: 16, alignItems: 'center' as const }
@@ -15,7 +17,7 @@ const BelkrajWidgetComponent =
 
 const Fallback = () => (
   <View style={EXCURSION_FALLBACK_STYLE}>
-    <ActivityIndicator size="small" accessibilityLabel="Загрузка экскурсий" />
+    <ActivityIndicator size="small" accessibilityLabel={i18nT('travel:components.travel.details.sections.ExcursionsSection.zagruzka_ekskursiy_49fb29be')} />
   </View>
 )
 
@@ -40,7 +42,7 @@ export const ExcursionsSection: React.FC<{
           ref={anchors.excursions}
           style={[styles.sectionContainer, styles.contentStable, styles.webOptionalDeferredSection]}
           collapsable={false}
-          accessibilityLabel="Экскурсии"
+          accessibilityLabel={i18nT('travel:components.travel.details.sections.ExcursionsSection.ekskursii_ff03bd20')}
           accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
           data-section-key="excursions"
         >
@@ -48,8 +50,8 @@ export const ExcursionsSection: React.FC<{
             style={styles.sectionHeaderText}
             accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
             aria-level={2 as any}
-          >Экскурсии</Text>
-          <Text style={styles.sectionSubtitle}>Покажем экскурсии рядом с точками маршрута</Text>
+          >{i18nT('travel:components.travel.details.sections.ExcursionsSection.ekskursii_ff03bd20')}</Text>
+          <Text style={styles.sectionSubtitle}>{i18nT('travel:components.travel.details.sections.ExcursionsSection.pokazhem_ekskursii_ryadom_s_tochkami_marshru_e864b7dc')}</Text>
 
           <View style={[EXCURSION_CONTAINER_STYLE, styles.excursionsWidgetCard]}>
             <BelkrajWidgetComponent

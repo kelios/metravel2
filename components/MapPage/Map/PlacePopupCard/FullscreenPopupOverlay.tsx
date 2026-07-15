@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { translate as i18nT } from '@/i18n'
+
 
 const webCreatePortal: ((node: React.ReactNode, container: Element) => any) | null =
   Platform.OS === 'web'
@@ -109,8 +111,8 @@ const FullscreenPopupOverlay: React.FC<{
           <div
             role={onOpenFullscreenImage ? 'button' : undefined}
             tabIndex={onOpenFullscreenImage ? 0 : undefined}
-            title={onOpenFullscreenImage ? 'Открыть фото на весь экран' : undefined}
-            aria-label={onOpenFullscreenImage ? 'Открыть фото на весь экран' : undefined}
+            title={onOpenFullscreenImage ? i18nT('map:components.MapPage.Map.PlacePopupCard.FullscreenPopupOverlay.otkryt_foto_na_ves_ekran_b1a08a55') : undefined}
+            aria-label={onOpenFullscreenImage ? i18nT('map:components.MapPage.Map.PlacePopupCard.FullscreenPopupOverlay.otkryt_foto_na_ves_ekran_b1a08a55') : undefined}
             data-card-action="true"
             onClick={handleOpenFullscreenImage}
             onKeyDown={(event) => {
@@ -155,8 +157,8 @@ const FullscreenPopupOverlay: React.FC<{
             e.stopPropagation()
             handleClose()
           }}
-          aria-label="Закрыть"
-          title="Закрыть"
+          aria-label={i18nT('map:components.MapPage.Map.PlacePopupCard.FullscreenPopupOverlay.zakryt_a9918aa5')}
+          title={i18nT('map:components.MapPage.Map.PlacePopupCard.FullscreenPopupOverlay.zakryt_a9918aa5')}
           style={{
             position: 'absolute',
             top: 'max(12px, env(safe-area-inset-top, 12px))',
@@ -190,8 +192,8 @@ const FullscreenPopupOverlay: React.FC<{
             onTouchEnd={(e) => {
               handleOpenFullscreenImage(e)
             }}
-            aria-label="Открыть фото на весь экран"
-            title="Открыть фото на весь экран"
+            aria-label={i18nT('map:components.MapPage.Map.PlacePopupCard.FullscreenPopupOverlay.otkryt_foto_na_ves_ekran_b1a08a55')}
+            title={i18nT('map:components.MapPage.Map.PlacePopupCard.FullscreenPopupOverlay.otkryt_foto_na_ves_ekran_b1a08a55')}
             style={{
               position: 'absolute',
               bottom: 12,

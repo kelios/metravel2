@@ -10,6 +10,8 @@ import type { RoutePoint } from '@/types/route'
 import type { LatLng } from '@/types/coordinates'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
+import { translate as i18nT } from '@/i18n'
+
 
 const MOBILE_QUICK_CHIPS_LIMIT = 2
 const RECOMMENDATIONS_MAX_ITEMS = 3
@@ -135,7 +137,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
       chips.push(
         selectedCategoryNames.length === 1
           ? selectedCategoryNames[0]
-          : `Категорий: ${selectedCategoryNames.length}`,
+          : i18nT('map:components.MapPage.FiltersPanelBody.kategoriy_value1_c714bf80', { value1: selectedCategoryNames.length }),
       )
     }
     return chips.slice(0, MOBILE_QUICK_CHIPS_LIMIT)
@@ -211,25 +213,24 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
 
       {showEmptyState && (
         <View style={styles.noPointsToast} testID="filters-empty-state">
-          <Text style={styles.noPointsTitle}>Ничего не нашлось</Text>
+          <Text style={styles.noPointsTitle}>{i18nT('map:components.MapPage.FiltersPanelBody.nichego_ne_nashlos_a38e60b7')}</Text>
           <Text style={styles.noPointsSubtitle}>
-            Попробуйте увеличить радиус или сбросить фильтры
-          </Text>
+            {i18nT('map:components.MapPage.FiltersPanelBody.poprobuyte_uvelichit_radius_ili_sbrosit_filt_bb8091db')}</Text>
           <View style={styles.noPointsActions}>
             {nextRadiusOption && (
               <Button
-                label={`Увеличить до ${nextRadiusOption.name} км`}
+                label={i18nT('map:components.MapPage.FiltersPanelBody.uvelichit_do_value1_km_edbb1aa6', { value1: nextRadiusOption.name })}
                 onPress={() => onFilterChange('radius', nextRadiusOption.id)}
-                accessibilityLabel={`Увеличить радиус до ${nextRadiusOption.name} километров`}
+                accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelBody.uvelichit_radius_do_value1_kilometrov_92dd77b0', { value1: nextRadiusOption.name })}
                 size="sm"
                 style={styles.ctaButton}
               />
             )}
             {hasFilters && (
               <Button
-                label="Сбросить всё"
+                label={i18nT('map:components.MapPage.FiltersPanelBody.sbrosit_vse_edfb5473')}
                 onPress={onReset}
-                accessibilityLabel="Сбросить фильтры"
+                accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelBody.sbrosit_filtry_f14ca19f')}
                 size="sm"
                 variant="outline"
                 style={styles.ctaButton}
@@ -248,12 +249,12 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         <View style={styles.sectionCard} testID="filters-block-recommendations">
           <View style={styles.blockHeader}>
             <Text style={styles.blockTitle}>
-              {noPointsInRadius ? 'Попробуйте рядом с вами' : 'Рядом с вами'}
+              {noPointsInRadius ? i18nT('map:components.MapPage.FiltersPanelBody.poprobuyte_ryadom_s_vami_d54afec3') : i18nT('map:components.MapPage.FiltersPanelBody.ryadom_s_vami_21c39476')}
             </Text>
             <Text style={styles.blockHint}>
               {noPointsInRadius
-                ? 'Если в текущих фильтрах пусто, покажем ближайшие удачные варианты без жёсткого ограничения по радиусу.'
-                : 'Ближайшие точки в текущем радиусе.'}
+                ? i18nT('map:components.MapPage.FiltersPanelBody.esli_v_tekuschih_filtrah_pusto_pokazhem_bliz_13375bde')
+                : i18nT('map:components.MapPage.FiltersPanelBody.blizhayshie_tochki_v_tekuschem_radiuse_41544dd3')}
             </Text>
           </View>
           <QuickRecommendations

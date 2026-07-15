@@ -11,9 +11,11 @@ import PlaceFirstBadgesSection from '@/components/achievements/PlaceFirstBadgesS
 import { ProfileSectionsHub } from '@/components/screens/profile/ProfileSectionsHub';
 import { useMyAchievements } from '@/hooks/useAchievementsApi';
 import { useSeedGamificationFromAchievements } from '@/hooks/useGamification';
+import { translate as i18nT } from '@/i18n'
+
 
 interface ProfileOverviewTabProps {
-  userProp: { name: string; email: string; avatar?: string | null };
+  userProp: { name: string; email: string; avatar?: string | null; hasDisplayName: boolean };
   profile: Parameters<typeof ProfileCompleteness>[0]['profile'];
   travelsCount: number;
   userId?: string | number | null;
@@ -63,14 +65,14 @@ export function ProfileOverviewTab({
         onStartQuest={onStartQuest}
       />
       <ProfileSectionHeader
-        title="Награды и прогресс"
-        subtitle="Уровень, значки и достижения"
+        title={i18nT('profile:components.screens.profile.ProfileOverviewTab.nagrady_i_progress_16a7fb6d')}
+        subtitle={i18nT('profile:components.screens.profile.ProfileOverviewTab.uroven_znachki_i_dostizheniya_fe5cfa32')}
       />
       <AwardsHub requestedTab={awardsTab} />
       <PlaceFirstBadgesSection />
       <ProfileSectionHeader
-        title="Профиль"
-        subtitle="Заполните профиль, чтобы открыть больше возможностей"
+        title={i18nT('profile:components.screens.profile.ProfileOverviewTab.profil_e4ad6f7a')}
+        subtitle={i18nT('profile:components.screens.profile.ProfileOverviewTab.zapolnite_profil_chtoby_otkryt_bolshe_vozmoz_b09cb91a')}
       />
       <ProfileCompleteness user={userProp} profile={profile} travelsCount={travelsCount} />
       <ProfileSectionsHub userId={userId} />

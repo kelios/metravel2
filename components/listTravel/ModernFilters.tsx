@@ -1,5 +1,5 @@
 // Подкомпоненты вынесены в ./filters/
-import React, { memo, useState, useCallback, useMemo } from 'react';
+import React, { memo, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,13 @@ import {
   Platform,
   Animated,
   TextInput,
-  Dimensions,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/utils/pluralize';
 import { BREAKPOINTS } from './utils/listTravelConstants';
+import { useResponsiveWidth } from '@/hooks/useResponsive';
 
 // Подкомпоненты из filters/
 import {
@@ -27,6 +27,8 @@ import {
 
 export type { FilterOption, FilterGroup, FilterState } from './filters/types';
 import type { FilterGroup, FilterState } from './filters/types';
+import { translate as i18nT } from '@/i18n'
+
 
 function getModernFiltersReserveState(params: {
   filterGroups: FilterGroup[];
@@ -49,12 +51,12 @@ function getModernFiltersReserveState(params: {
   };
 }
 
-function getModernFiltersViewportState() {
+function getModernFiltersViewportState(width: number) {
   // Must match usesOverlaySidebar threshold in listTravelBaseModel (BREAKPOINTS.DESKTOP = 1440).
   // On compact web widths the sidebar is a fullscreen overlay, so it needs the sticky footer.
   const isNarrowWeb =
     Platform.OS === 'web'
-      && Dimensions.get('window').width < BREAKPOINTS.DESKTOP;
+      && width < BREAKPOINTS.DESKTOP;
 
   return {
     isNarrowWeb,
@@ -167,8 +169,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createModernFiltersStyles(colors), [colors]);
+  const viewportWidth = useResponsiveWidth();
 
-  const { isNarrowWeb, showsStickyFooter } = getModernFiltersViewportState();
+  const { isNarrowWeb, showsStickyFooter } = getModernFiltersViewportState(viewportWidth);
   const useOverlayChrome = !embeddedSidebar && isNarrowWeb;
   const shouldShowStickyFooter = !embeddedSidebar && showsStickyFooter;
   const { reserveMinHeight, shouldReserveSpace } = getModernFiltersReserveState({
@@ -180,7 +183,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
     // На десктопе раскрываем первые 2 группы фильтров по умолчанию для улучшения обнаруживаемости.
     // На мобильном и в overlay-режиме все свёрнуты — экономим место.
-    const { isNarrowWeb: narrow } = getModernFiltersViewportState();
+    const { isNarrowWeb: narrow } = getModernFiltersViewportState(viewportWidth);
     if (Platform.OS !== 'web' || narrow) return new Set<string>();
     const nonSortGroups = filterGroups.filter(g => g.key !== 'sort');
     return new Set(nonSortGroups.slice(0, 2).map(g => g.key));
@@ -191,6 +194,19 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
       return acc;
     }, {} as Record<string, Animated.Value>)
   );
+  const appliedDesktopDefaultsRef = useRef(Platform.OS !== 'web' || viewportWidth > 0);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || appliedDesktopDefaultsRef.current || viewportWidth <= 0) return;
+    appliedDesktopDefaultsRef.current = true;
+    if (viewportWidth < BREAKPOINTS.DESKTOP) return;
+
+    setExpandedGroups((current) => {
+      if (current.size > 0) return current;
+      const nonSortGroups = filterGroups.filter((group) => group.key !== 'sort');
+      return new Set(nonSortGroups.slice(0, 2).map((group) => group.key));
+    });
+  }, [filterGroups, viewportWidth]);
 
   const toggleGroup = useCallback((groupKey: string) => {
     setExpandedGroups(prev => {
@@ -279,10 +295,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             {Platform.OS !== 'web' && (
               <>
                 <Feather name="filter" size={16} color={colors.primaryDark} />
-                <Text style={styles.headerTitle}>Фильтры</Text>
+                <Text style={styles.headerTitle}>{i18nT('travel:components.listTravel.ModernFilters.filtry_11f4ea40')}</Text>
               </>
             )}
-            {optionalHint && <Text style={styles.optionalHint}>необязательно</Text>}
+            {optionalHint && <Text style={styles.optionalHint}>{i18nT('travel:components.listTravel.ModernFilters.neobyazatelno_6bf70c13')}</Text>}
             {!!resultsText && (
               <View
                 style={[
@@ -304,9 +320,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   (hovered || pressed) && styles.clearButtonPressed,
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel={`Очистить все фильтры (${activeFiltersCount})`}
+                accessibilityLabel={i18nT('travel:components.listTravel.ModernFilters.ochistit_vse_filtry_value1_0badfc04', { value1: activeFiltersCount })}
               >
-                <Text style={styles.clearButtonText}>Сбросить</Text>
+                <Text style={styles.clearButtonText}>{i18nT('travel:components.listTravel.ModernFilters.sbrosit_2f0ddae1')}</Text>
                 <View style={styles.clearButtonCountBadge}>
                   <Text style={styles.clearButtonCountText}>{activeFiltersCount}</Text>
                 </View>
@@ -347,9 +363,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 (hovered || pressed) && styles.toggleAllButtonPressed,
               ]}
               accessibilityRole="button"
-              accessibilityLabel={areAllGroupsExpanded ? 'Свернуть все группы фильтров' : 'Развернуть все группы фильтров'}
+              accessibilityLabel={areAllGroupsExpanded ? i18nT('travel:components.listTravel.ModernFilters.svernut_vse_gruppy_filtrov_c5e05236') : i18nT('travel:components.listTravel.ModernFilters.razvernut_vse_gruppy_filtrov_1022c93e')}
               {...(Platform.OS === 'web'
-                ? ({ title: areAllGroupsExpanded ? 'Свернуть все' : 'Развернуть все' } as any)
+                ? ({ title: areAllGroupsExpanded ? i18nT('travel:components.listTravel.ModernFilters.svernut_vse_957f730d') : i18nT('travel:components.listTravel.ModernFilters.razvernut_vse_a8506446') } as any)
                 : null)}
             >
               <View style={styles.toggleAllButtonInner}>
@@ -360,7 +376,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 />
                 {showToggleAllLabel && (
                   <Text style={styles.toggleAllButtonText} numberOfLines={1}>
-                    {areAllGroupsExpanded ? 'Свернуть' : 'Развернуть'}
+                    {areAllGroupsExpanded ? i18nT('travel:components.listTravel.ModernFilters.svernut_1fb6fffb') : i18nT('travel:components.listTravel.ModernFilters.razvernut_69ed5231')}
                   </Text>
                 )}
               </View>
@@ -373,7 +389,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   (hovered || pressed) && styles.closeButtonPressed,
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel="Закрыть фильтры"
+                accessibilityLabel={i18nT('travel:components.listTravel.ModernFilters.zakryt_filtry_65ea723a')}
               >
                 <Feather name="x" size={20} color={colors.textSecondary} />
               </Pressable>
@@ -392,11 +408,11 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 (hovered || pressed) && styles.moderationRowPressed,
               ]}
               accessibilityRole="checkbox"
-              accessibilityLabel="Показать черновики"
+              accessibilityLabel={i18nT('travel:components.listTravel.ModernFilters.pokazat_chernoviki_721ba67a')}
               accessibilityState={{ checked: !!draftsOnlyValue }}
               {...(Platform.OS === 'web'
                 ? ({
-                    title: 'Показывать только черновики автора',
+                    title: i18nT('travel:components.listTravel.ModernFilters.pokazyvat_tolko_chernoviki_avtora_266b3f38'),
                   } as any)
                 : null)}
             >
@@ -407,8 +423,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   draftsOnlyValue && styles.moderationLabelSelected,
                 ]}
               >
-                Показать черновики
-              </Text>
+                {i18nT('travel:components.listTravel.ModernFilters.pokazat_chernoviki_721ba67a')}</Text>
             </Pressable>
           )}
           {showModeration && onToggleModeration && (
@@ -420,11 +435,11 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 (hovered || pressed) && styles.moderationRowPressed,
               ]}
               accessibilityRole="checkbox"
-              accessibilityLabel="Только на модерации"
+              accessibilityLabel={i18nT('travel:components.listTravel.ModernFilters.tolko_na_moderatsii_2663efb3')}
               accessibilityState={{ checked: moderationValue === 0 }}
               {...(Platform.OS === 'web'
                 ? ({
-                    title: 'Показывать только путешествия, ожидающие модерации',
+                    title: i18nT('travel:components.listTravel.ModernFilters.pokazyvat_tolko_puteshestviya_ozhidayuschie__3e7a3fd7'),
                   } as any)
                 : null)}
             >
@@ -435,8 +450,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   moderationValue === 0 && styles.moderationLabelSelected,
                 ]}
               >
-                Только на модерации
-              </Text>
+                {i18nT('travel:components.listTravel.ModernFilters.tolko_na_moderatsii_2663efb3')}</Text>
             </Pressable>
           )}
         </View>
@@ -462,7 +476,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   size={16}
                   color={colors.textSecondary}
                 />
-                <Text style={styles.yearLabel}>Год</Text>
+                <Text style={styles.yearLabel}>{i18nT('travel:components.listTravel.ModernFilters.god_ad7f26e4')}</Text>
               </View>
               <TextInput
                 value={year ? String(year) : ''}
@@ -477,7 +491,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 keyboardType="numeric"
                 maxLength={4}
                 style={[styles.yearInput, yearFocused && styles.yearInputFocused]}
-                accessibilityLabel="Фильтр по году"
+                accessibilityLabel={i18nT('travel:components.listTravel.ModernFilters.filtr_po_godu_95020f4a')}
               />
             </View>
           </View>
@@ -521,7 +535,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                     (hovered || pressed) && styles.groupHeaderButtonPressed,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel={`${isExpanded ? 'Свернуть' : 'Развернуть'} ${group.title}`}
+                  accessibilityLabel={`${isExpanded ? i18nT('travel:components.listTravel.ModernFilters.svernut_1fb6fffb') : i18nT('travel:components.listTravel.ModernFilters.razvernut_69ed5231')} ${group.title}`}
                   accessibilityState={{ expanded: isExpanded }}
                 >
                   {group.icon && (
@@ -573,9 +587,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   {selectedCount > 0 && (
                     <View
                       style={styles.selectedSummaryRow}
-                      accessibilityLabel={`Выбрано: ${
-                        selectedNames.length > 0 ? selectedNames.join(', ') : selectedArray.join(', ')
-                      }`}
+                      accessibilityLabel={i18nT('travel:components.listTravel.ModernFilters.vybrano_value1_08feb12d', { value1: selectedNames.length > 0 ? selectedNames.join(', ') : selectedArray.join(', ') })}
                     >
                       {(selectedNames.length > 0 ? selectedNames : selectedArray.map(String)).map((name) => (
                         <View key={`${group.key}-${name}`} style={styles.selectedSummaryChip}>
@@ -620,9 +632,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               ]}
               onPress={onClearAll}
               accessibilityRole="button"
-              accessibilityLabel={`Сбросить все фильтры (${activeFiltersCount})`}
+              accessibilityLabel={i18nT('travel:components.listTravel.ModernFilters.sbrosit_vse_filtry_value1_7c7447fa', { value1: activeFiltersCount })}
             >
-              <Text style={styles.resetMobileButtonText}>Сбросить всё</Text>
+              <Text style={styles.resetMobileButtonText}>{i18nT('travel:components.listTravel.ModernFilters.sbrosit_vse_325adc51')}</Text>
             </Pressable>
           )}
           <Pressable
@@ -640,10 +652,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               onApply?.();
             }}
             accessibilityRole="button"
-            accessibilityLabel={activeFiltersCount > 0 ? `Показать результаты (фильтров: ${activeFiltersCount})` : 'Показать результаты'}
+            accessibilityLabel={activeFiltersCount > 0 ? i18nT('travel:components.listTravel.ModernFilters.pokazat_rezultaty_filtrov_value1_7e4c6fc1', { value1: activeFiltersCount }) : i18nT('travel:components.listTravel.ModernFilters.pokazat_rezultaty_0c2ce1f0')}
           >
             <Text style={styles.applyButtonText}>
-              {activeFiltersCount > 0 ? `Показать результаты · ${activeFiltersCount}` : 'Показать результаты'}
+              {activeFiltersCount > 0 ? i18nT('travel:components.listTravel.ModernFilters.pokazat_rezultaty_value1_46ec1ee2', { value1: activeFiltersCount }) : i18nT('travel:components.listTravel.ModernFilters.pokazat_rezultaty_0c2ce1f0')}
             </Text>
           </Pressable>
         </View>

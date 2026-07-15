@@ -19,6 +19,9 @@ import type {
 } from '@/api/publicTrips';
 import { TRIP_STATUS_LABEL } from '@/components/trips/tripFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+import { createCollator } from '@/i18n/format'
+
 
 interface Props {
   trips: PublicTrip[];
@@ -37,9 +40,7 @@ type FilterOption = {
 const STATUS_ORDER: PublicTripStatus[] = ['open', 'full', 'completed'];
 
 function uniq(values: (string | null)[]): string[] {
-  return Array.from(new Set(values.filter((v): v is string => !!v))).sort((a, b) =>
-    a.localeCompare(b, 'ru-RU'),
-  );
+  return Array.from(new Set(values.filter((v): v is string => !!v))).sort(createCollator().compare);
 }
 
 function PublicTripFilters({ trips, value, onChange, hasActive, onReset }: Props) {
@@ -54,20 +55,20 @@ function PublicTripFilters({ trips, value, onChange, hasActive, onReset }: Props
     () => [
       {
         key: 'status' as const,
-        label: 'Статус',
-        placeholder: 'Статус: все',
+        label: i18nT('trips:components.trips.PublicTripFilters.status_0b13cd1c'),
+        placeholder: i18nT('trips:components.trips.PublicTripFilters.status_vse_e0e715b2'),
         options: STATUS_ORDER.map((s) => ({ value: s, label: TRIP_STATUS_LABEL[s] })),
       },
       {
         key: 'region' as const,
-        label: 'Место',
-        placeholder: 'Место: все',
+        label: i18nT('trips:components.trips.PublicTripFilters.mesto_57335e66'),
+        placeholder: i18nT('trips:components.trips.PublicTripFilters.mesto_vse_0de344ca'),
         options: regions.map((r) => ({ value: r, label: r })),
       },
       {
         key: 'tripType' as const,
-        label: 'Тип',
-        placeholder: 'Тип: любой',
+        label: i18nT('trips:components.trips.PublicTripFilters.tip_67eb63d8'),
+        placeholder: i18nT('trips:components.trips.PublicTripFilters.tip_lyuboy_00023cd8'),
         options: types.map((t) => ({ value: t, label: t })),
       },
     ],
@@ -112,12 +113,12 @@ function PublicTripFilters({ trips, value, onChange, hasActive, onReset }: Props
           <Pressable
             onPress={onReset}
             accessibilityRole="button"
-            accessibilityLabel="Сбросить фильтры"
+            accessibilityLabel={i18nT('trips:components.trips.PublicTripFilters.sbrosit_filtry_95c5575f')}
             style={styles.resetButton}
             testID="trip-filter-reset"
           >
             <Feather name="x" size={15} color={colors.primaryDark} />
-            <Text style={styles.resetText}>Сбросить</Text>
+            <Text style={styles.resetText}>{i18nT('trips:components.trips.PublicTripFilters.sbrosit_e223c209')}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -134,7 +135,7 @@ function PublicTripFilters({ trips, value, onChange, hasActive, onReset }: Props
               style={styles.modalBackdrop}
               onPress={() => setOpenKey(null)}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть фильтры"
+              accessibilityLabel={i18nT('trips:components.trips.PublicTripFilters.zakryt_filtry_9ec9dcd9')}
             />
             <View style={styles.modalSheet}>
               <View style={styles.modalHeader}>
@@ -142,7 +143,7 @@ function PublicTripFilters({ trips, value, onChange, hasActive, onReset }: Props
                 <Pressable
                   onPress={() => setOpenKey(null)}
                   accessibilityRole="button"
-                  accessibilityLabel="Закрыть"
+                  accessibilityLabel={i18nT('trips:components.trips.PublicTripFilters.zakryt_cc5d5e01')}
                   hitSlop={8}
                 >
                   <Feather name="x" size={20} color={colors.text} />

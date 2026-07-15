@@ -5,6 +5,8 @@ import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useThemedColors } from '@/hooks/useTheme';
 import { webTouchScrollStyle } from '@/utils';
+import { translate as i18nT } from '@/i18n'
+
 const CONSENT_KEY = 'metravel_consent_v1';
 
 interface ConsentState {
@@ -97,8 +99,8 @@ export default function CookieSettingsScreen() {
     setTimeout(() => setSaved(false), 1000);
   };
 
-  const title = 'Настройки cookies и аналитики | Metravel';
-  const description = 'Страница управления настройками cookies и аналитических инструментов на сайте Metravel.';
+  const title = i18nT('legal:app.tabs.cookies.nastroyki_cookies_i_analitiki_metravel_7ef0a94f');
+  const description = i18nT('legal:app.tabs.cookies.stranitsa_upravleniya_nastroykami_cookies_i__b15f3958');
 
   return (
     <View style={styles.root}>
@@ -116,28 +118,20 @@ export default function CookieSettingsScreen() {
       <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.container}>
         {isWeb ? (
           <>
-            <Text style={styles.heading}>Настройки cookies и аналитики</Text>
+            <Text style={styles.heading}>{i18nT('legal:app.tabs.cookies.nastroyki_cookies_i_analitiki_0d2fbf1e')}</Text>
             <Text style={styles.paragraph}>
-              На этом экране вы можете изменить свой выбор относительно использования аналитических инструментов
-              (например, Яндекс.Метрика и Google Analytics 4). Технически необходимые файлы используются всегда для
-              корректной работы сайта.
-            </Text>
+              {i18nT('legal:app.tabs.cookies.na_etom_ekrane_vy_mozhete_izmenit_svoy_vybor_b082f7b9')}</Text>
 
             <View style={styles.block}>
-              <Text style={styles.subheading}>Обязательные файлы</Text>
+              <Text style={styles.subheading}>{i18nT('legal:app.tabs.cookies.obyazatelnye_fayly_b2bdbb34')}</Text>
               <Text style={styles.paragraph}>
-                Обязательные cookies и локальное хранилище используются для входа в аккаунт, сохранения настроек интерфейса
-                и обеспечения безопасности. Они включены всегда и не могут быть отключены, так как без них сайт работать не
-                будет.
-              </Text>
+                {i18nT('legal:app.tabs.cookies.obyazatelnye_cookies_i_lokalnoe_hranilische__36de273d')}</Text>
             </View>
 
             <View style={styles.block}>
-              <Text style={styles.subheading}>Аналитические инструменты</Text>
+              <Text style={styles.subheading}>{i18nT('legal:app.tabs.cookies.analiticheskie_instrumenty_58a1013f')}</Text>
               <Text style={styles.paragraph}>
-                Аналитика помогает лучше понимать, какие материалы и разделы сайта интересны пользователям, и развивать
-                проект. Вы можете разрешить или запретить использование аналитики в любое время.
-              </Text>
+                {i18nT('legal:app.tabs.cookies.analitika_pomogaet_luchshe_ponimat_kakie_mat_21a560d1')}</Text>
 
               <View style={styles.optionGroup}>
                 <Pressable
@@ -148,10 +142,9 @@ export default function CookieSettingsScreen() {
                     {analyticsAllowed === false && <View style={styles.radioInner} />}
                   </View>
                   <View style={styles.optionTextWrap}>
-                    <Text style={styles.optionTitle}>Только необходимые</Text>
+                    <Text style={styles.optionTitle}>{i18nT('legal:app.tabs.cookies.tolko_neobhodimye_99bdc974')}</Text>
                     <Text style={styles.optionDescription}>
-                      Аналитические инструменты отключены. Используются только технически необходимые файлы.
-                    </Text>
+                      {i18nT('legal:app.tabs.cookies.analiticheskie_instrumenty_otklyucheny_ispol_528afb5f')}</Text>
                   </View>
                 </Pressable>
 
@@ -163,43 +156,36 @@ export default function CookieSettingsScreen() {
                     {analyticsAllowed === true && <View style={styles.radioInner} />}
                   </View>
                   <View style={styles.optionTextWrap}>
-                    <Text style={styles.optionTitle}>Необходимые и аналитические</Text>
+                    <Text style={styles.optionTitle}>{i18nT('legal:app.tabs.cookies.neobhodimye_i_analiticheskie_c527c7ea')}</Text>
                     <Text style={styles.optionDescription}>
-                      Разрешить использование Яндекс.Метрики и Google Analytics 4 для сбора обезличенной статистики.
-                    </Text>
+                      {i18nT('legal:app.tabs.cookies.razreshit_ispolzovanie_yandeks_metriki_i_goo_80c2b3fe')}</Text>
                   </View>
                 </Pressable>
               </View>
             </View>
 
             <Pressable style={styles.saveButton} onPress={handleSave} disabled={analyticsAllowed === null}>
-              <Text style={styles.saveButtonText}>Сохранить настройки</Text>
+              <Text style={styles.saveButtonText}>{i18nT('legal:app.tabs.cookies.sohranit_nastroyki_94370de3')}</Text>
             </Pressable>
 
-            {saved && <Text style={styles.savedText}>Настройки сохранены.</Text>}
+            {saved && <Text style={styles.savedText}>{i18nT('legal:app.tabs.cookies.nastroyki_sohraneny_1ea5478e')}</Text>}
           </>
         ) : (
           <>
-            <Text style={styles.heading}>Конфиденциальность и аналитика</Text>
+            <Text style={styles.heading}>{i18nT('legal:app.tabs.cookies.konfidentsialnost_i_analitika_12436d8d')}</Text>
             <Text style={styles.paragraph}>
-              В мобильном приложении MeTravel не используются файлы cookie и веб-аналитика
-              (Яндекс.Метрика, Google Analytics) — они относятся только к сайту metravel.by.
-              Управлять настройками cookies можно в веб-версии сайта.
-            </Text>
+              {i18nT('legal:app.tabs.cookies.v_mobilnom_prilozhenii_metravel_ne_ispolzuyu_96853813')}</Text>
 
             <View style={styles.block}>
-              <Text style={styles.subheading}>Какие данные использует приложение</Text>
+              <Text style={styles.subheading}>{i18nT('legal:app.tabs.cookies.kakie_dannye_ispolzuet_prilozhenie_a0311a04')}</Text>
               <Text style={styles.paragraph}>
-                Локально на устройстве хранятся только данные, необходимые для работы приложения:
-                авторизация в аккаунте, настройки интерфейса и сохранённые материалы. Они не передаются
-                в аналитические сервисы.
-              </Text>
+                {i18nT('legal:app.tabs.cookies.lokalno_na_ustroystve_hranyatsya_tolko_danny_dea019a1')}</Text>
             </View>
           </>
         )}
 
         <Pressable style={styles.link} onPress={() => router.push('/privacy' as any)}>
-          <Text style={styles.linkText}>Подробнее о том, как мы обрабатываем данные — в Политике конфиденциальности.</Text>
+          <Text style={styles.linkText}>{i18nT('legal:app.tabs.cookies.podrobnee_o_tom_kak_my_obrabatyvaem_dannye_v_b9ab5eb4')}</Text>
         </Pressable>
       </ScrollView>
     </View>

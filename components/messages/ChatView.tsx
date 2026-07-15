@@ -24,6 +24,9 @@ import SafetyNotice from '@/components/ui/SafetyNotice'
 import type { Message } from '@/api/messages'
 import { routes } from '@/utils/routes'
 import { optimizeImageUrl } from '@/utils/imageOptimization'
+import { translate as i18nT } from '@/i18n'
+import { formatDate } from '@/i18n/format'
+
 
 const SEND_COOLDOWN_MS = 300
 const MAX_MESSAGE_LENGTH = 2000
@@ -47,13 +50,13 @@ function formatDateLabel(dateStr: string): string {
     a.getMonth() === b.getMonth() &&
     a.getFullYear() === b.getFullYear()
 
-  if (sameDay(date, now)) return 'Сегодня'
+  if (sameDay(date, now)) return i18nT('messages:components.messages.ChatView.segodnya_df282097')
 
   const yesterday = new Date(now)
   yesterday.setDate(yesterday.getDate() - 1)
-  if (sameDay(date, yesterday)) return 'Вчера'
+  if (sameDay(date, yesterday)) return i18nT('messages:components.messages.ChatView.vchera_c41c414f')
 
-  return date.toLocaleDateString('ru-RU', {
+  return formatDate(date, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -255,8 +258,7 @@ function ChatView({
           ListEmptyComponent={
             <View style={styles.emptyChat}>
               <Text style={styles.emptyChatText}>
-                Начните диалог — напишите сообщение
-              </Text>
+                {i18nT('messages:components.messages.ChatView.nachnite_dialog_napishite_soobschenie_20378a9c')}</Text>
             </View>
           }
         />
@@ -323,7 +325,7 @@ function ChatHeader({
           onPress={onBack}
           style={styles.backButton}
           accessibilityRole="button"
-          accessibilityLabel="Назад к списку диалогов"
+          accessibilityLabel={i18nT('messages:components.messages.ChatView.nazad_k_spisku_dialogov_292f1be1')}
         >
           <Feather name="arrow-left" size={22} color={colors.text} />
         </Pressable>
@@ -333,7 +335,7 @@ function ChatHeader({
         disabled={!otherUserId}
         style={styles.headerProfileLink}
         accessibilityRole="link"
-        accessibilityLabel={`Профиль ${otherUserName}`}
+        accessibilityLabel={i18nT('messages:components.messages.ChatView.profil_value1_45263dd4', { value1: otherUserName })}
       >
         <View style={styles.headerAvatar}>
           {otherUserAvatar ? (
@@ -349,7 +351,7 @@ function ChatHeader({
       {onDeleteThread && (
         <IconButton
           icon={<Feather name="trash-2" size={16} color={colors.textSecondary} />}
-          label="Удалить диалог"
+          label={i18nT('messages:components.messages.ChatView.udalit_dialog_a1169aef')}
           size="sm"
           onPress={onDeleteThread}
           showTooltip={IS_WEB}
@@ -395,19 +397,19 @@ function ChatComposer({
         style={styles.input}
         value={text}
         onChangeText={onChangeText}
-        placeholder="Написать сообщение..."
+        placeholder={i18nT('messages:components.messages.ChatView.napisat_soobschenie_b25c0db0')}
         placeholderTextColor={colors.textMuted}
         multiline
         maxLength={MAX_MESSAGE_LENGTH}
         onKeyPress={onKeyPress}
-        accessibilityLabel="Поле ввода сообщения"
+        accessibilityLabel={i18nT('messages:components.messages.ChatView.pole_vvoda_soobscheniya_ad55b6dc')}
       />
       <Pressable
         onPress={onSend}
         disabled={!canSend}
         style={sendButtonStyle}
         accessibilityRole="button"
-        accessibilityLabel="Отправить сообщение"
+        accessibilityLabel={i18nT('messages:components.messages.ChatView.otpravit_soobschenie_a91ab20b')}
       >
         {sending ? (
           <ActivityIndicator size="small" color={colors.textInverse} />

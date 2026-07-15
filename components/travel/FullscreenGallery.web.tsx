@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom';
 import ZoomableGalleryImage from '@/components/travel/ZoomableGalleryImage.web';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface FullscreenGalleryProps {
   visible: boolean;
@@ -81,7 +83,7 @@ export default function FullscreenGallery({
       data-testid="travel-fullscreen-gallery"
       role="dialog"
       aria-modal="true"
-      aria-label="Просмотр фотографий во весь экран"
+      aria-label={i18nT('travel:components.travel.FullscreenGallery.prosmotr_fotografiy_vo_ves_ekran_63f790d9')}
       style={{
         position: 'fixed',
         inset: 0,
@@ -127,7 +129,7 @@ export default function FullscreenGallery({
                 width="100%"
                 height="100%"
                 priority={index === currentIndex ? 'high' : 'normal'}
-                alt={img.alt || `Фото маршрута ${index + 1} из ${images.length}`}
+                alt={img.alt || i18nT('travel:components.travel.FullscreenGalleryWeb.routePhotoAlt', { value1: index + 1, value2: images.length })}
                 resetKey={`${visible}-${index}`}
                 onInteractionChange={(active) => {
                   setZoomedIndex((current) => {
@@ -143,7 +145,7 @@ export default function FullscreenGallery({
 
       <button
         type="button"
-        aria-label="Закрыть галерею"
+        aria-label={i18nT('travel:components.travel.FullscreenGallery.zakryt_galereyu_9e4ee562')}
         data-testid="travel-fullscreen-gallery-close"
         onClick={onClose}
         style={{

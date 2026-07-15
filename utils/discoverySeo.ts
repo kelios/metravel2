@@ -1,3 +1,5 @@
+import { translate as i18nT } from '@/i18n'
+import { getActiveLocaleDefinition } from '@/i18n/format'
 const SITE_URL = 'https://metravel.by';
 const WEBSITE_ID = `${SITE_URL}/#website`;
 const ORGANIZATION_ID = `${SITE_URL}/#organization`;
@@ -68,6 +70,7 @@ function buildBreadcrumbList(items: BreadcrumbItem[], id?: string) {
 }
 
 function buildBaseGraph() {
+  const locale = getActiveLocaleDefinition();
   return [
     {
       '@type': 'Organization',
@@ -80,7 +83,7 @@ function buildBaseGraph() {
       '@id': WEBSITE_ID,
       url: SITE_URL,
       name: 'MeTravel',
-      inLanguage: 'ru',
+      inLanguage: locale.htmlLang,
       publisher: { '@id': ORGANIZATION_ID },
     },
   ];
@@ -114,8 +117,8 @@ export function createMapStructuredData({
   const itemListId = `${canonical}#items`;
   const breadcrumb = buildBreadcrumbList(
     [
-      { name: 'Главная', item: `${SITE_URL}/` },
-      { name: 'Карта', item: canonical },
+      { name: i18nT('seoStatic:structuredData.home'), item: `${SITE_URL}/` },
+      { name: i18nT('seoStatic:structuredData.map'), item: canonical },
     ],
     breadcrumbId
   );
@@ -150,7 +153,7 @@ export function createMapStructuredData({
         url: canonical,
         name: title,
         description,
-        inLanguage: 'ru',
+        inLanguage: getActiveLocaleDefinition().htmlLang,
         isPartOf: { '@id': WEBSITE_ID },
         breadcrumb: { '@id': breadcrumbId },
         ...(itemListItems.length
@@ -160,7 +163,7 @@ export function createMapStructuredData({
           : null),
       },
       ...(itemListItems.length
-        ? [buildItemList(itemListItems, itemListId, 'Маршруты и точки на карте')]
+        ? [buildItemList(itemListItems, itemListId, i18nT('seo:utils.discoverySeo.marshruty_i_tochki_na_karte_66b1e613'))]
         : []),
       breadcrumb,
     ],
@@ -182,8 +185,8 @@ export function createQuestCatalogStructuredData({
   const itemListId = `${canonical}#items`;
   const breadcrumb = buildBreadcrumbList(
     [
-      { name: 'Главная', item: `${SITE_URL}/` },
-      { name: 'Квесты', item: canonical },
+      { name: i18nT('seoStatic:structuredData.home'), item: `${SITE_URL}/` },
+      { name: i18nT('seoStatic:structuredData.quests'), item: canonical },
     ],
     breadcrumbId
   );
@@ -236,12 +239,12 @@ export function createQuestCatalogStructuredData({
         url: canonical,
         name: title,
         description,
-        inLanguage: 'ru',
+        inLanguage: getActiveLocaleDefinition().htmlLang,
         isPartOf: { '@id': WEBSITE_ID },
         breadcrumb: { '@id': breadcrumbId },
         ...(items.length ? { mainEntity: { '@id': itemListId } } : null),
       },
-      ...(items.length ? [buildItemList(items, itemListId, 'Каталог квестов')] : []),
+      ...(items.length ? [buildItemList(items, itemListId, i18nT('seo:utils.discoverySeo.katalog_kvestov_ffeb5cb5'))] : []),
       breadcrumb,
     ],
   };
@@ -252,8 +255,8 @@ export function createQuestDetailStructuredData(input: QuestDetailInput) {
   const creativeWorkId = `${input.canonical}#quest`;
   const breadcrumb = buildBreadcrumbList(
     [
-      { name: 'Главная', item: `${SITE_URL}/` },
-      { name: 'Квесты', item: `${SITE_URL}/quests` },
+      { name: i18nT('seoStatic:structuredData.home'), item: `${SITE_URL}/` },
+      { name: i18nT('seoStatic:structuredData.quests'), item: `${SITE_URL}/quests` },
       { name: input.title, item: input.canonical },
     ],
     breadcrumbId
@@ -272,7 +275,7 @@ export function createQuestDetailStructuredData(input: QuestDetailInput) {
         url: input.canonical,
         name: input.title,
         description: input.description,
-        inLanguage: 'ru',
+        inLanguage: getActiveLocaleDefinition().htmlLang,
         isPartOf: { '@id': WEBSITE_ID },
         breadcrumb: { '@id': breadcrumbId },
         mainEntity: { '@id': creativeWorkId },

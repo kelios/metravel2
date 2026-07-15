@@ -2,16 +2,10 @@ import React, {
     forwardRef,
     useCallback,
     useEffect,
-    useLayoutEffect,
     useMemo,
     useRef,
     useState,
 } from 'react';
-import {
-    View,
-    Modal,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -37,9 +31,7 @@ import {
 } from './articleEditorMediaHelpers';
 import {
     requestArticleEditorQuillLoad,
-    restorePendingSelection,
     scheduleEmptyEditorPreload,
-    scheduleFullscreenRefresh,
 } from './articleEditorLifecycleHelpers';
 import {
     buildArticleEditorModalCallbacks,
@@ -60,6 +52,7 @@ import { getArticleEditorWebStyles } from './ArticleEditor.web.styles';
 import {
     ArticleEditorBody,
     ArticleEditorLoader,
+    ArticleEditorShell,
     ArticleEditorSurfaceContent,
 } from './ArticleEditor.web.parts';
 import { buildArticleEditorQuillModules } from './ArticleEditor.web.modules';
@@ -74,7 +67,6 @@ import {
     getSafeEditorHtmlFrom,
     openArticleEditorPreview,
     runAutosaveEffect,
-    runEnsureQuillContentEffect,
     runInitialForceSyncEffect,
     runPendingDroppedImageEffect,
     runRestoreStoredRangeEffect,
@@ -89,17 +81,15 @@ import {
     isTestEnv,
     isWeb,
     loadQuillEditorModule,
+    QuillEditor,
     win,
 } from './ArticleEditor.web.runtime';
-
-const QuillEditor =
-    isWeb && win
-        ? (React.lazy(() => loadQuillEditorModule!()) as any)
-        : undefined;
+import { useArticleEditorQuillSync } from './useArticleEditorQuillSync';
+import { translate as i18nT } from '@/i18n'
 
 const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
-    label = 'Описание',
-    placeholder = 'Введите описание…',
+    label = i18nT('shared:components.article.ArticleEditor.opisanie_aff7874f'),
+    placeholder = i18nT('shared:components.article.ArticleEditor.vvedite_opisanie_638bcc13'),
     content,
     onChange,
     onAutosave,
@@ -659,40 +649,16 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         [fireChange]
     );
 
-    useEffect(() => {
-        return runEnsureQuillContentEffect({
-            isWeb,
-            windowObject: win,
-            showHtml,
-            shouldLoadQuill,
-            ensureQuillContent,
-        });
-    }, [ensureQuillContent, shouldLoadQuill, showHtml]);
-
-    useLayoutEffect(() => {
-        if (!isWeb || !win) return;
-        if (showHtml) return;
-        if (!shouldLoadQuill) return;
-        restorePendingSelection({
-            getEditor: () => quillRef.current?.getEditor?.(),
-            pendingSelectionRestoreRef,
-        });
-    }, [html, shouldLoadQuill, showHtml]);
-
-    useEffect(() => {
-        if (!isWeb || !win) return;
-        if (showHtml) return;
-        if (!shouldLoadQuill) return;
-
-        const prev = lastFullscreenRef.current;
-        lastFullscreenRef.current = fullscreen;
-        if (prev === null || prev === fullscreen) return;
-
-        return scheduleFullscreenRefresh({
-            windowObject: win,
-            ensureQuillContent,
-        });
-    }, [fullscreen, showHtml, shouldLoadQuill, ensureQuillContent]);
+    useArticleEditorQuillSync({
+        ensureQuillContent,
+        fullscreen,
+        html,
+        lastFullscreenRef,
+        pendingSelectionRestoreRef,
+        quillRef,
+        shouldLoadQuill,
+        showHtml,
+    });
 
     const Loader = ({ canActivate = false }: { canActivate?: boolean }) => (
         <ArticleEditorLoader
@@ -816,14 +782,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         />
     );
 
-    return fullscreen ? (
-        <Modal visible animationType="slide">
-            <SafeAreaView style={dynamicStyles.fullWrap}>
-                <View style={dynamicStyles.fullInner}>{body}</View>
-            </SafeAreaView>
-        </Modal>
-    ) : (
-        <View style={dynamicStyles.wrap}>{body}</View>
+    return (
+        <ArticleEditorShell dynamicStyles={dynamicStyles} fullscreen={fullscreen}>
+            {body}
+        </ArticleEditorShell>
     );
 };
 

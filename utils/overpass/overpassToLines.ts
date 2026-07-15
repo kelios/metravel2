@@ -1,3 +1,5 @@
+import { translate as i18nT } from '@/i18n';
+
 export type OSMLineCoord = {
   lat: number;
   lng: number;
@@ -34,7 +36,7 @@ const elementToLine = (el: OverpassElement): OSMLineFeature | null => {
     tags['name:pl'] ||
     '';
 
-  const title = name || tags.route || 'Маршрут';
+  const title = name || tags.route || i18nT('sharedStatic:map.routeFallback');
 
   const coords = el.geometry
     .filter((g) => Number.isFinite(g?.lat) && Number.isFinite(g?.lon))

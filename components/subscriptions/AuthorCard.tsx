@@ -14,6 +14,8 @@ import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
+import { translate as i18nT } from '@/i18n'
+
 
 const WEB_HORIZONTAL_SCROLL_STYLE = {
   WebkitOverflowScrolling: 'touch' as const,
@@ -46,7 +48,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
   const fullName = useMemo(() => {
     const first = String(profile.first_name ?? '').trim();
     const last = String(profile.last_name ?? '').trim();
-    return `${first} ${last}`.trim() || 'Пользователь';
+    return `${first} ${last}`.trim() || i18nT('sharedStatic:user.fallbackName');
   }, [profile.first_name, profile.last_name]);
 
   const initials = useMemo(() => {
@@ -61,9 +63,9 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
 
   const travelCountText = useMemo(() => {
     const n = travelsTotal;
-    if (n === 1) return '1 путешествие';
-    if (n >= 2 && n < 5) return `${n} путешествия`;
-    return `${n} путешествий`;
+    if (n === 1) return i18nT('shared:components.subscriptions.AuthorCard.1_puteshestvie_bf5a4d11');
+    if (n >= 2 && n < 5) return i18nT('shared:components.subscriptions.AuthorCard.value1_puteshestviya_17b149a5', { value1: n });
+    return i18nT('shared:components.subscriptions.AuthorCard.value1_puteshestviy_2e6c250d', { value1: n });
   }, [travelsTotal]);
 
   const hiddenTravelsCount = Math.max(travelsTotal - travels.length, 0);
@@ -75,7 +77,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
           style={styles.authorInfo}
           onPress={() => onOpenProfile(authorUserId)}
           accessibilityRole="button"
-          accessibilityLabel={`Открыть профиль ${fullName}`}
+          accessibilityLabel={i18nT('shared:components.subscriptions.AuthorCard.otkryt_profil_value1_c79c62af', { value1: fullName })}
           {...Platform.select({ web: { cursor: 'pointer' } })}
         >
           <View style={styles.avatar}>
@@ -94,7 +96,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
           <View style={styles.authorTextBlock}>
             <Text style={styles.authorName} numberOfLines={1}>{fullName}</Text>
             <Text style={styles.authorSub}>
-              {isLoadingTravels ? 'Загрузка...' : travelCountText}
+              {isLoadingTravels ? i18nT('shared:components.subscriptions.AuthorCard.zagruzka_88497bbc') : travelCountText}
             </Text>
           </View>
         </Pressable>
@@ -104,7 +106,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
             style={[styles.actionButton, globalFocusStyles.focusable]}
             onPress={() => onMessage(authorUserId)}
             accessibilityRole="button"
-            accessibilityLabel={`Написать ${fullName}`}
+            accessibilityLabel={i18nT('shared:components.subscriptions.AuthorCard.napisat_value1_ec6efc1b', { value1: fullName })}
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
             <Feather name="mail" size={16} color={colors.primaryDark} />
@@ -113,7 +115,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
             style={[styles.actionButtonDanger, globalFocusStyles.focusable]}
             onPress={() => onUnsubscribe(authorUserId)}
             accessibilityRole="button"
-            accessibilityLabel={`Отписаться от ${fullName}`}
+            accessibilityLabel={i18nT('shared:components.subscriptions.AuthorCard.otpisatsya_ot_value1_d515ea14', { value1: fullName })}
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
             <Feather name="user-minus" size={16} color={colors.danger} />
@@ -126,7 +128,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
           <SkeletonLoader width="100%" height={180} borderRadius={12} />
         </View>
       ) : travels.length === 0 ? (
-        <Text style={styles.noTravels}>Нет опубликованных путешествий</Text>
+        <Text style={styles.noTravels}>{i18nT('shared:components.subscriptions.AuthorCard.net_opublikovannyh_puteshestviy_e2f9c564')}</Text>
       ) : (
         <ScrollView
           testID="subscription-travels-rail"
@@ -144,7 +146,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
                 <TabTravelCard
                   item={{
                     id: travel.id,
-                    title: travel.name || travel.title || 'Без названия',
+                    title: travel.name || travel.title || i18nT('sharedStatic:content.untitled'),
                     imageUrl: travel.travel_image_thumb_small_url || travel.travel_image_thumb_url || travel.imageUrl || null,
                     city: travel.cityName || travel.city || null,
                     country: travel.countryName || travel.country || null,
@@ -164,11 +166,11 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
               style={[styles.showMoreCard, globalFocusStyles.focusable]}
               onPress={() => onOpenProfile(authorUserId)}
               accessibilityRole="button"
-              accessibilityLabel="Показать все путешествия"
+              accessibilityLabel={i18nT('shared:components.subscriptions.AuthorCard.pokazat_vse_puteshestviya_b30dfeef')}
               {...Platform.select({ web: { cursor: 'pointer' } })}
             >
               <Feather name="arrow-right" size={24} color={colors.primaryDark} />
-              <Text style={styles.showMoreText}>Ещё {hiddenTravelsCount}</Text>
+              <Text style={styles.showMoreText}>{i18nT('shared:components.subscriptions.AuthorCard.esche_7e20b968')}{hiddenTravelsCount}</Text>
             </Pressable>
           )}
         </ScrollView>

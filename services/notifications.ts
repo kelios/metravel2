@@ -5,6 +5,8 @@
 
 import { Platform } from 'react-native';
 import { devError, devWarn } from '@/utils/logger';
+import { translate as i18nT } from '@/i18n'
+
 
 // --- Types ---
 
@@ -32,21 +34,21 @@ export type NotificationResponseHandler = (data: Record<string, unknown>) => voi
 export const NOTIFICATION_CHANNELS: NotificationChannel[] = [
   {
     id: 'messages',
-    name: 'Сообщения',
-    description: 'Новые сообщения в чатах и ответы на комментарии',
+    get name() { return i18nT('sharedStatic:notifications.messages.name') },
+    get description() { return i18nT('sharedStatic:services.notifications.novye_soobscheniya_v_chatah_i_otvety_na_komm_4fe15b34') },
     importance: 4, // HIGH
     vibrationPattern: [0, 250, 250, 250],
   },
   {
     id: 'updates',
-    name: 'Обновления',
-    description: 'Новые маршруты, обновления избранного, модерация',
+    get name() { return i18nT('sharedStatic:notifications.updates.name') },
+    get description() { return i18nT('sharedStatic:services.notifications.novye_marshruty_obnovleniya_izbrannogo_moder_601c7f00') },
     importance: 3, // DEFAULT
   },
   {
     id: 'recommendations',
-    name: 'Рекомендации',
-    description: 'Еженедельный дайджест и рекомендации маршрутов',
+    get name() { return i18nT('sharedStatic:notifications.recommendations.name') },
+    get description() { return i18nT('sharedStatic:services.notifications.ezhenedelnyy_daydzhest_i_rekomendatsii_marsh_a39d7cec') },
     importance: 2, // LOW
   },
 ];
@@ -328,8 +330,8 @@ export async function scheduleQuestReminder(
     await Notifications.scheduleNotificationAsync({
       identifier: questReminderId(questId),
       content: {
-        title: 'Продолжите приключение',
-        body: `Вы остановились на шаге ${step}/${total} в квесте «${title}». Продолжите прохождение!`,
+        title: i18nT('shared:services.notifications.prodolzhite_priklyuchenie_85f79e46'),
+        body: i18nT('shared:services.notifications.vy_ostanovilis_na_shage_value1_value2_v_kves_8393cf7d', { value1: step, value2: total, value3: title }),
         data: { url: `/quests/${deepLinkUrl}` },
         ...(Platform.OS === 'android' ? { channelId: 'recommendations' } : {}),
       },
@@ -377,4 +379,3 @@ export function extractDeepLinkFromNotification(data: Record<string, unknown>): 
   }
   return null;
 }
-

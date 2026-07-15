@@ -79,7 +79,7 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
     expect(document.querySelectorAll('h1').length).toBe(1)
   })
 
-  it('removes the visible .ssg-travel-h1 skeleton placeholder on mount', () => {
+  it('preserves the visible .ssg-travel-h1 until the SSG shell teardown', () => {
     const ssg = document.createElement('div')
     ssg.className = 'ssg-travel-h1'
     ssg.textContent = 'Тропа ведьм'
@@ -88,7 +88,7 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
 
     renderShell()
 
-    expect(document.querySelectorAll('.ssg-travel-h1').length).toBe(0)
+    expect(document.querySelectorAll('.ssg-travel-h1').length).toBe(1)
   })
 
   it('signals that the React first screen replaced the SSG shell', () => {

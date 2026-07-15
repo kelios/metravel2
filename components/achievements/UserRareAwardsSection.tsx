@@ -12,6 +12,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useUserRareAwards } from '@/hooks/useAchievementsApi';
 import RareAwardCard from '@/components/achievements/RareAwardCard';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   userId: string | number;
@@ -31,7 +33,7 @@ function UserRareAwardsSection({ userId, testID, style }: Props) {
     <View style={[styles.card, style]} testID={testID}>
       <View style={styles.headerRow}>
         <Feather name="star" size={16} color={colors.primaryDark} />
-        <Text style={styles.heading}>Редкие награды</Text>
+        <Text style={styles.heading}>{i18nT('achievements:components.achievements.UserRareAwardsSection.redkie_nagrady_145b33ae')}</Text>
       </View>
       <View style={styles.list}>
         {data.map((award) => (

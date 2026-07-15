@@ -3,6 +3,8 @@ import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig'
 import type { ParsedContentBlock } from '../../../parsers/ContentParser'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
 import type { PdfIconName } from './pdfVisualHelpers'
+import { translate as i18nT } from '@/i18n'
+
 
 type TravelContentVariant = 'runtime' | 'standalone'
 
@@ -143,7 +145,7 @@ export function renderTravelContentPageMarkup(args: {
           <div style="margin-bottom: ${spacing.sectionSpacing}; break-inside: auto; page-break-inside: auto;">
             ${
               variant === 'runtime'
-                ? buildSectionHeader('pen', colors.accent, colors.accentSoft, 'Описание')
+                ? buildSectionHeader('pen', colors.accent, colors.accentSoft, i18nT('export:services.pdf_export.generators.v2.runtime.travelContentPage.opisanie_1c179656'))
                 : `
             <div style="
               display: flex;
@@ -160,7 +162,7 @@ export function renderTravelContentPageMarkup(args: {
                 color: ${colors.accent};
                 margin: 0;
                 font-family: ${typography.headingFont};
-              ">Описание</h2>
+              ">${i18nT("export:services.pdf_export.generators.v2.runtime.travelContentPage.div_style_display_flex_align_items_center_ga_0e8ced0a.text01")}</h2>
             </div>`
             }
             <div${variant === 'runtime' ? ' class="description-block"' : ''} style="
@@ -191,14 +193,14 @@ export function renderTravelContentPageMarkup(args: {
                 color: ${colors.accent};
                 margin: 0;
                 font-family: ${typography.headingFont};
-              ">Описание</h2>
+              ">${i18nT("export:services.pdf_export.generators.v2.runtime.travelContentPage.div_style_margin_bottom_value1_div_style_dis_0250a896.text01")}</h2>
             </div>
             <p style="
               color: ${colors.textMuted};
               font-style: italic;
               margin: 0;
               font-family: ${typography.bodyFont};
-            ">Описание путешествия отсутствует</p>
+            ">${i18nT("export:services.pdf_export.generators.v2.runtime.travelContentPage.div_style_margin_bottom_value1_div_style_dis_0250a896.text02")}</p>
           </div>
         `
       : ''
@@ -213,7 +215,7 @@ export function renderTravelContentPageMarkup(args: {
           <div style="margin-bottom: ${spacing.sectionSpacing}; break-inside: auto; page-break-inside: auto;">
             ${
               variant === 'runtime'
-                ? buildSectionHeader('bulb', colors.infoBlock.icon, colors.infoBlock.background, 'Рекомендации')
+                ? buildSectionHeader('bulb', colors.infoBlock.icon, colors.infoBlock.background, i18nT('export:services.pdf_export.generators.v2.runtime.travelContentPage.rekomendatsii_9768c7c8'))
                 : `
             <div style="
               display: flex;
@@ -230,7 +232,7 @@ export function renderTravelContentPageMarkup(args: {
                 color: ${colors.accent};
                 margin: 0;
                 font-family: ${typography.headingFont};
-              ">Рекомендации</h2>
+              ">${i18nT("export:services.pdf_export.generators.v2.runtime.travelContentPage.div_style_display_flex_align_items_center_ga_18b16537.text01")}</h2>
             </div>`
             }
             <div style="
@@ -289,7 +291,7 @@ export function renderTravelContentPageMarkup(args: {
                     font-size: ${typography.h4.size};
                     font-weight: ${typography.h4.weight};
                     font-family: ${typography.headingFont};
-                  ">Плюсы</h3>
+                  ">${i18nT("export:services.pdf_export.generators.v2.runtime.travelContentPage.div_style_background_value1_border_radius_va_761264be.text01")}</h3>
                 </div>
                 <div style="
                   font-size: ${typography.small.size};
@@ -332,7 +334,7 @@ export function renderTravelContentPageMarkup(args: {
                     font-size: ${typography.h4.size};
                     font-weight: ${typography.h4.weight};
                     font-family: ${typography.headingFont};
-                  ">Минусы</h3>
+                  ">${i18nT("export:services.pdf_export.generators.v2.runtime.travelContentPage.div_style_background_value1_border_radius_va_961e5788.text01")}</h3>
                 </div>
                 <div style="
                   font-size: ${typography.small.size};
@@ -366,7 +368,7 @@ export function renderTravelContentPageMarkup(args: {
                     color: ${colors.accent};
                     margin: 0;
                     font-family: ${typography.headingFont};
-                  ">Плюсы</h3>
+                  ">${i18nT("export:services.pdf_export.generators.v2.runtime.travelContentPage.div_div_style_display_flex_align_items_cente_37f9d8f2.text01")}</h3>
                 </div>
                 <div style="
                   font-size: ${typography.body.size};
@@ -391,7 +393,7 @@ export function renderTravelContentPageMarkup(args: {
                     color: ${colors.textMuted};
                     margin: 0;
                     font-family: ${typography.headingFont};
-                  ">Минусы</h3>
+                  ">${i18nT("export:services.pdf_export.generators.v2.runtime.travelContentPage.div_div_style_display_flex_align_items_cente_f6f040a4.text01")}</h3>
                 </div>
                 <div style="
                   font-size: ${typography.body.size};
@@ -463,13 +465,13 @@ export function renderTravelContentPageMarkup(args: {
                 font-family: ${typography.headingFont};
               ">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="${colors.accent}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                Онлайн-версия
+                ${i18nT("export:services.pdf_export.generators.v2.runtime.travelContentPage.value1_div_class_travel_online_card_style_di_2997e202.text01")}
               </div>
               <div style="
                 line-height: 1.4;
                 color: ${colors.textSecondary};
                 margin-bottom: 6px;
-              ">Сканируйте QR-код для просмотра маршрута</div>
+              ">${i18nT("export:services.pdf_export.generators.v2.runtime.travelContentPage.value1_div_class_travel_online_card_style_di_2997e202.text02")}</div>
               <div style="
                 display: inline-flex;
                 align-items: center;
@@ -508,7 +510,7 @@ export function renderTravelContentPageMarkup(args: {
             gap: 16px;
             border: 1px solid ${colors.border};
           ">
-            <img src="${escapeHtml(qrCode)}" alt="QR код" style="width: 70px; height: 70px;" />
+            <img src="${escapeHtml(qrCode)}" alt="${i18nT("export:services.pdf_export.generators.v2.runtime.travelContentPage.div_style_margin_top_value1_padding_value2_b_5187cabe.text01")}" style="width: 70px; height: 70px;" />
             <div style="flex: 1;">
               <div style="
                 font-size: ${typography.body.size};
@@ -516,7 +518,7 @@ export function renderTravelContentPageMarkup(args: {
                 color: ${colors.text};
                 margin-bottom: 4px;
                 font-family: ${typography.bodyFont};
-              ">Читать онлайн</div>
+              ">${i18nT("export:services.pdf_export.generators.v2.runtime.travelContentPage.div_style_margin_top_value1_padding_value2_b_5187cabe.text02")}</div>
               <div style="
                 font-size: ${typography.caption.size};
                 color: ${colors.textMuted};

@@ -1,5 +1,7 @@
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { escapeHtml } from '@/utils/htmlUtils'
+import { translate as i18nT } from '@/i18n'
+
 
 type RichTextColors = {
   text: string
@@ -83,16 +85,16 @@ export function resolveInstagramTarget(rawUrl: string): InstagramTarget | null {
       const canonicalUrl = `https://www.instagram.com/${first}/${second}/`
       const labels = {
         p: {
-          title: 'Публикация в Instagram',
-          subtitle: 'Открыть пост в Instagram',
+          title: i18nT('shared:utils.instagramRichText.publikatsiya_v_instagram_8649a906'),
+          subtitle: i18nT('shared:utils.instagramRichText.otkryt_post_v_instagram_281cbced'),
         },
         reel: {
-          title: 'Reel в Instagram',
-          subtitle: 'Открыть reel в Instagram',
+          title: i18nT('shared:utils.instagramRichText.reel_v_instagram_1a623c64'),
+          subtitle: i18nT('shared:utils.instagramRichText.otkryt_reel_v_instagram_f1dfa78c'),
         },
         tv: {
-          title: 'Видео в Instagram',
-          subtitle: 'Открыть видео в Instagram',
+          title: i18nT('shared:utils.instagramRichText.video_v_instagram_1ad9e318'),
+          subtitle: i18nT('shared:utils.instagramRichText.otkryt_video_v_instagram_a88ccf39'),
         },
       } as const
 
@@ -109,16 +111,16 @@ export function resolveInstagramTarget(rawUrl: string): InstagramTarget | null {
         return {
           canonicalUrl: `https://www.instagram.com/stories/highlights/${third}/`,
           kind: 'story',
-          title: 'Актуальное в Instagram',
-          subtitle: 'Открыть актуальное в Instagram',
+          title: i18nT('shared:utils.instagramRichText.aktualnoe_v_instagram_6a15b022'),
+          subtitle: i18nT('shared:utils.instagramRichText.otkryt_aktualnoe_v_instagram_66789874'),
         }
       }
 
       return {
         canonicalUrl: `https://www.instagram.com/stories/${second}/${third}/`,
         kind: 'story',
-        title: `История @${encodeHtml(second)} в Instagram`,
-        subtitle: 'Открыть историю в Instagram',
+        title: i18nT('shared:utils.instagramRichText.istoriya_value1_v_instagram_9a8e2fa4', { value1: encodeHtml(second) }),
+        subtitle: i18nT('shared:utils.instagramRichText.otkryt_istoriyu_v_instagram_f71ba687'),
       }
     }
 

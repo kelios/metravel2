@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n'
 /**
  * Утилита для расчета расстояния и времени в пути
  */
@@ -40,12 +41,12 @@ function toRad(degrees: number): number {
  */
 export function formatDistance(distance: number): string {
   if (distance < 1) {
-    return `${Math.round(distance * 1000)} м`;
+    return i18nT('shared:utils.distanceCalculator.value1_m_b71cf84d', { value1: Math.round(distance * 1000) });
   }
   if (distance < 10) {
-    return `${distance.toFixed(1)} км`;
+    return i18nT('shared:utils.distanceCalculator.value1_km_e94147ae', { value1: distance.toFixed(1) });
   }
-  return `${Math.round(distance)} км`;
+  return i18nT('shared:utils.distanceCalculator.value1_km_e94147ae', { value1: Math.round(distance) });
 }
 
 /**
@@ -76,20 +77,20 @@ export function calculateTravelTime(
  */
 export function formatTravelTime(minutes: number): string {
   if (minutes < 1) {
-    return '< 1 мин';
+    return i18nT('shared:utils.distanceCalculator.lessThanOneMinute');
   }
   if (minutes < 60) {
-    return `${minutes} мин`;
+    return i18nT('shared:utils.distanceCalculator.value1_min_fe6f791a', { value1: minutes });
   }
 
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
 
   if (mins === 0) {
-    return `${hours} ч`;
+    return i18nT('shared:utils.distanceCalculator.value1_ch_3f6ab619', { value1: hours });
   }
 
-  return `${hours} ч ${mins} мин`;
+  return i18nT('shared:utils.distanceCalculator.value1_ch_value2_min_d6e2cc67', { value1: hours, value2: mins });
 }
 
 /**
@@ -112,4 +113,3 @@ export function getDistanceInfo(
     travelTimeText: formatTravelTime(travelTime),
   };
 }
-

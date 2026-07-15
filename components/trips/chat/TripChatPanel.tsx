@@ -22,21 +22,24 @@ import {
   useTripChat,
   useTripChatMessages,
 } from '@/hooks/useTripChatApi'
+import { translate as i18nT } from '@/i18n'
+import { formatDate } from '@/i18n/format'
+
 
 const IS_WEB = Platform.OS === 'web'
 const MAX_MESSAGE_LENGTH = 2000
 const SEND_COOLDOWN_MS = 300
 
 const STATUS_LABELS: Record<TripChatStatus, string> = {
-  planned: 'Планируется',
-  active: 'Активный чат',
-  archived: 'Архив',
+  get planned() { return i18nT('tripsStatic:tripChat.status.planned') },
+  get active() { return i18nT('tripsStatic:tripChat.status.active') },
+  get archived() { return i18nT('tripsStatic:tripChat.status.archived') },
 }
 
 function formatTime(createdAt: string): string {
   try {
     const date = new Date(createdAt)
-    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    return formatDate(date, { hour: '2-digit', minute: '2-digit' })
   } catch {
     return ''
   }
@@ -140,7 +143,7 @@ export function TripChatPanel({ tripId }: { tripId: number }) {
     return (
       <View style={[styles.container, styles.center]}>
         <Feather name="message-circle" size={28} color={colors.textMuted} />
-        <Text style={styles.stateText}>Не удалось загрузить чат поездки</Text>
+        <Text style={styles.stateText}>{i18nT('trips:components.trips.chat.TripChatPanel.ne_udalos_zagruzit_chat_poezdki_53161e42')}</Text>
       </View>
     )
   }
@@ -185,8 +188,8 @@ export function TripChatPanel({ tripId }: { tripId: number }) {
           <Feather name="message-square" size={26} color={colors.textMuted} />
           <Text style={styles.stateText}>
             {isArchived
-              ? 'В этом чате не было сообщений'
-              : 'Сообщений пока нет — начните общение'}
+              ? i18nT('trips:components.trips.chat.TripChatPanel.v_etom_chate_ne_bylo_soobscheniy_15d6f4b5')
+              : i18nT('trips:components.trips.chat.TripChatPanel.soobscheniy_poka_net_nachnite_obschenie_8b02574d')}
           </Text>
         </View>
       ) : (
@@ -201,7 +204,7 @@ export function TripChatPanel({ tripId }: { tripId: number }) {
       {isArchived ? (
         <View style={styles.archiveBanner}>
           <Feather name="archive" size={16} color={colors.textSecondary} />
-          <Text style={styles.archiveBannerText}>Поездка завершена — чат в архиве</Text>
+          <Text style={styles.archiveBannerText}>{i18nT('trips:components.trips.chat.TripChatPanel.poezdka_zavershena_chat_v_arhive_6952dd58')}</Text>
         </View>
       ) : (
         <View style={styles.inputContainer}>
@@ -209,12 +212,12 @@ export function TripChatPanel({ tripId }: { tripId: number }) {
             style={styles.input}
             value={text}
             onChangeText={setText}
-            placeholder="Написать сообщение..."
+            placeholder={i18nT('trips:components.trips.chat.TripChatPanel.napisat_soobschenie_d943bae5')}
             placeholderTextColor={colors.textMuted}
             multiline
             maxLength={MAX_MESSAGE_LENGTH}
             onKeyPress={handleKeyPress}
-            accessibilityLabel="Поле ввода сообщения чата поездки"
+            accessibilityLabel={i18nT('trips:components.trips.chat.TripChatPanel.pole_vvoda_soobscheniya_chata_poezdki_b4d0f452')}
           />
           <Pressable
             onPress={handleSend}
@@ -224,7 +227,7 @@ export function TripChatPanel({ tripId }: { tripId: number }) {
               canSend ? styles.sendButtonEnabled : styles.sendButtonDisabled,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Отправить сообщение"
+            accessibilityLabel={i18nT('trips:components.trips.chat.TripChatPanel.otpravit_soobschenie_83c2aa07')}
           >
             {sending ? (
               <ActivityIndicator size="small" color={colors.textInverse} />

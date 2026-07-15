@@ -5,6 +5,8 @@ import type { Travel } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { normalizeExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { translate as i18nT } from '@/i18n'
+
 
 interface TelegramDiscussionSectionProps {
   travel: Travel;
@@ -42,11 +44,9 @@ function TelegramDiscussionSection({ travel }: TelegramDiscussionSectionProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Обсуждение маршрута в Telegram</Text>
+      <Text style={styles.title}>{i18nT('travel:components.travel.TelegramDiscussionSection.obsuzhdenie_marshruta_v_telegram_a7792961')}</Text>
       <Text style={styles.subtitle}>
-        Задайте вопрос или поделитесь впечатлениями о маршруте
-        {travelName ? ` «${travelName}»` : ''} в нашем Telegram‑канале.
-      </Text>
+        {i18nT('travel:components.travel.TelegramDiscussionSection.zadayte_vopros_ili_podelites_vpechatleniyami_15f6b1d4')}{travelName ? ` «${travelName}»` : ''} {i18nT('travel:components.travel.TelegramDiscussionSection.v_nashem_telegram_kanale_d0dc2fd7')}</Text>
       <Pressable
         onPress={handleOpen}
         disabled={!hasUrl}
@@ -56,20 +56,18 @@ function TelegramDiscussionSection({ travel }: TelegramDiscussionSectionProps) {
           pressed && hasUrl && styles.buttonPressed,
         ]}
         accessibilityRole="button"
-        accessibilityLabel={hasUrl ? 'Открыть обсуждение в Telegram' : 'Скоро здесь будет обсуждение в Telegram'}
-        accessibilityHint={hasUrl ? 'Откроется внешнее приложение или вкладка' : undefined}
+        accessibilityLabel={hasUrl ? i18nT('travel:components.travel.TelegramDiscussionSection.otkryt_obsuzhdenie_v_telegram_ac2c9644') : i18nT('travel:components.travel.TelegramDiscussionSection.skoro_zdes_budet_obsuzhdenie_v_telegram_325d7065')}
+        accessibilityHint={hasUrl ? i18nT('travel:components.travel.TelegramDiscussionSection.otkroetsya_vneshnee_prilozhenie_ili_vkladka_f07c5d42') : undefined}
       >
         <Feather name="send" size={18} color={hasUrl ? colors.primary : colors.textMuted} />
         <Text style={styles.buttonText}>
-          {hasUrl ? 'Открыть чат в Telegram' : 'Скоро здесь будет чат в Telegram'}
+          {hasUrl ? i18nT('travel:components.travel.TelegramDiscussionSection.otkryt_chat_v_telegram_64956452') : i18nT('travel:components.travel.TelegramDiscussionSection.skoro_zdes_budet_chat_v_telegram_98a61847')}
         </Text>
       </Pressable>
       {/* P1-9: Admin hint only in dev mode */}
       {!hasUrl && __DEV__ && (
         <Text style={styles.helperText}>
-          Администратору: задайте EXPO_PUBLIC_TELEGRAM_DISCUSSION_URL в настройках окружения,
-          чтобы включить ссылку на канал.
-        </Text>
+          {i18nT('travel:components.travel.TelegramDiscussionSection.administratoru_zadayte_expo_public_telegram__c10c2ba6')}</Text>
       )}
     </View>
   );

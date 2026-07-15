@@ -11,6 +11,8 @@ import {
 } from '@/components/MapPage/Map/mapLinks'
 
 import { getQuestClipboard } from './questWizardMedia'
+import { translate as i18nT } from '@/i18n'
+
 
 export type QuestMapApp = 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme' | 'waze' | 'osm'
 
@@ -45,8 +47,8 @@ export const confirmQuestAsync = (title: string, message: string): Promise<boole
       title,
       message,
       [
-        { text: 'Отмена', style: 'cancel', onPress: () => resolve(false) },
-        { text: 'ОК', style: 'destructive', onPress: () => resolve(true) },
+        { text: i18nT('quests:components.quests.questWizardHelpers.otmena_9f846483'), style: 'cancel', onPress: () => resolve(false) },
+        { text: i18nT('quests:components.quests.questWizardHelpers.ok_eaabc1d8'), style: 'destructive', onPress: () => resolve(true) },
       ],
       { cancelable: true, onDismiss: () => resolve(false) },
     )
@@ -93,7 +95,7 @@ const openQuestMapCandidates = async (candidates: Array<string | undefined>) => 
     }
   }
 
-  notifyQuest('Не удалось открыть карты. Проверьте, что установлено нужное приложение.')
+  notifyQuest(i18nT('quests:components.quests.questWizardHelpers.ne_udalos_otkryt_karty_proverte_chto_ustanov_a0858d1f'))
   return false
 }
 
@@ -127,5 +129,5 @@ export const openQuestMap = async (point: QuestMapPoint, app: QuestMapApp) => {
 export const copyQuestCoords = async (point: Pick<QuestMapPoint, 'lat' | 'lng'>) => {
   const Clipboard = await getQuestClipboard()
   await Clipboard.setStringAsync(`${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`)
-  notifyQuest('Координаты скопированы')
+  notifyQuest(i18nT('quests:components.quests.questWizardHelpers.koordinaty_skopirovany_38015d96'))
 }

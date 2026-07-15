@@ -6,6 +6,8 @@ import { useMemo } from 'react'
 
 import { formatPlaces } from '@/utils/pluralize'
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
+import { translate as i18nT } from '@/i18n'
+
 
 type FiltersMode = 'radius' | 'route' | undefined
 
@@ -117,43 +119,43 @@ export function useMapMobileDerivations(
     [categoryTravelAddress],
   )
   const quickRadiusValue = useMemo(() => {
-    if (!activeRadius) return 'Выбор'
-    return `${activeRadius} км`
+    if (!activeRadius) return i18nT('map:hooks.map.useMapMobileDerivations.vybor_9b7adb0c')
+    return i18nT('map:hooks.map.useMapMobileDerivations.value1_km_1378ad0e', { value1: activeRadius })
   }, [activeRadius])
   const quickCategoriesValue = useMemo(() => {
-    if (quickFilterSelected.length === 0) return 'Все'
+    if (quickFilterSelected.length === 0) return i18nT('map:hooks.map.useMapMobileDerivations.vse_514353e4')
     if (quickFilterSelected.length === 1) return quickFilterSelected[0]
-    return `${quickFilterSelected.length} выбрано`
+    return i18nT('map:hooks.map.useMapMobileDerivations.value1_vybrano_575ea4fd', { value1: quickFilterSelected.length })
   }, [quickFilterSelected])
   const quickOverlaysValue = useMemo(() => {
     const enabledCount = quickOverlayOptions.filter(
       (option: { id: string }) => Boolean(quickEnabledOverlays?.[option.id]),
     ).length
-    if (enabledCount === 0) return 'Выкл'
-    if (enabledCount === 1) return '1 вкл'
-    return `${enabledCount} вкл`
+    if (enabledCount === 0) return i18nT('map:hooks.map.useMapMobileDerivations.vykl_f3a04629')
+    if (enabledCount === 1) return i18nT('map:hooks.map.useMapMobileDerivations.1_vkl_d23f2fde')
+    return i18nT('map:hooks.map.useMapMobileDerivations.value1_vkl_2f6b677c', { value1: enabledCount })
   }, [quickEnabledOverlays, quickOverlayOptions])
 
   const filterToolbarSummary = useMemo(() => {
     if (filtersMode === 'route') {
-      if (routingLoading) return 'Маршрут обновляется'
+      if (routingLoading) return i18nT('map:hooks.map.useMapMobileDerivations.marshrut_obnovlyaetsya_a8a3d750')
       if (canBuildRoute && routeDistance != null)
-        return 'Маршрут готов, можно открыть список мест'
+        return i18nT('map:hooks.map.useMapMobileDerivations.marshrut_gotov_mozhno_otkryt_spisok_mest_cb473cc6')
       return routePointsCount > 0
-        ? `Выбрано ${routePointsCount} из 2 точек`
-        : 'Отметьте на карте старт и финиш'
+        ? i18nT('map:hooks.map.useMapMobileDerivations.vybrano_value1_iz_2_tochek_6e4e2d24', { value1: routePointsCount })
+        : i18nT('map:hooks.map.useMapMobileDerivations.otmette_na_karte_start_i_finish_a420b96f')
     }
 
     // Радиус намеренно НЕ дублируем в сводке: он уже показан отдельным
     // тап-чипом «N км» в ряду чипов и (на native) плавающей пилюлей на карте.
     const parts = [
-      travelsData.length > 999 ? '999+ мест' : formatPlaces(travelsData.length),
+      travelsData.length > 999 ? i18nT('map:hooks.map.useMapMobileDerivations.999_mest_c3798c1b') : formatPlaces(travelsData.length),
     ]
 
     if (selectedCategories.length === 1) {
       parts.push(selectedCategories[0]!)
     } else if (selectedCategories.length > 1) {
-      parts.push(`${selectedCategories.length} кат.`)
+      parts.push(i18nT('map:hooks.map.useMapMobileDerivations.value1_kat_0f8b43c6', { value1: selectedCategories.length }))
     }
 
     return parts.join(' · ')
@@ -195,10 +197,10 @@ export function useMapMobileDerivations(
   // отдельной кнопкой-иконкой, а не вкладкой (решает усечение «Маршрут»).
   const panelTabsOptions = useMemo(
     () => [
-      { key: 'list', label: 'Места', icon: isNarrow ? undefined : 'list' },
+      { key: 'list', label: i18nT('map:hooks.map.useMapMobileDerivations.mesta_23f3aec0'), icon: isNarrow ? undefined : 'list' },
       {
         key: 'route',
-        label: 'Маршрут',
+        label: i18nT('map:hooks.map.useMapMobileDerivations.marshrut_c71f4ede'),
         icon: isNarrow ? undefined : 'alt-route',
       },
     ],

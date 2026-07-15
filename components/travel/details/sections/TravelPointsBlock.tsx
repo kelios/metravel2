@@ -18,6 +18,8 @@ import {
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
+import { translate as i18nT } from '@/i18n'
+
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 
@@ -54,20 +56,20 @@ export const TravelPointsBlock: React.FC<{
       const result = format === 'gpx' ? buildGpx(input) : buildKml(input)
       const saved = await saveRouteExportFile(
         result,
-        format === 'kml' ? 'Сохранить точки для офлайн-карт' : 'Сохранить точки маршрута',
+        format === 'kml' ? i18nT('travel:components.travel.details.sections.TravelPointsBlock.sohranit_tochki_dlya_oflayn_kart_8c53aa7a') : i18nT('travel:components.travel.details.sections.TravelPointsBlock.sohranit_tochki_marshruta_e800918a'),
       )
       if (!saved) throw new Error('save-unavailable')
       showToast({
         type: 'success',
         text1: Platform.OS === 'web'
-          ? `Файл ${format.toUpperCase()} сохранён`
-          : `Файл ${format.toUpperCase()} готов для карты`,
+          ? i18nT('travel:components.travel.details.sections.TravelPointsBlock.fayl_value1_sohranen_86fa3f3b', { value1: format.toUpperCase() })
+          : i18nT('travel:components.travel.details.sections.TravelPointsBlock.fayl_value1_gotov_dlya_karty_63707e91', { value1: format.toUpperCase() }),
         visibilityTime: 2000,
       })
     } catch {
       showToast({
         type: 'error',
-        text1: 'Не удалось передать точки',
+        text1: i18nT('travel:components.travel.details.sections.TravelPointsBlock.ne_udalos_peredat_tochki_85a7dc9b'),
         visibilityTime: 3000,
       })
     } finally {
@@ -80,7 +82,7 @@ export const TravelPointsBlock: React.FC<{
     if (!url) {
       showToast({
         type: 'info',
-        text1: 'Недостаточно точек для маршрута',
+        text1: i18nT('travel:components.travel.details.sections.TravelPointsBlock.nedostatochno_tochek_dlya_marshruta_5f4ab155'),
         visibilityTime: 2500,
       })
       return
@@ -96,7 +98,7 @@ export const TravelPointsBlock: React.FC<{
       testID="travel-details-points"
       style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
       collapsable={false}
-      accessibilityLabel="Координаты мест"
+      accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelPointsBlock.koordinaty_mest_149babcb')}
       accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
       {...(Platform.OS === 'web'
         ? { 'data-testid': 'travel-details-points', 'data-section-key': 'points' }
@@ -107,7 +109,7 @@ export const TravelPointsBlock: React.FC<{
           style={styles.sectionHeaderText}
           accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
           aria-level={2 as any}
-        >Координаты мест</Text>
+        >{i18nT('travel:components.travel.details.sections.TravelPointsBlock.koordinaty_mest_149babcb')}</Text>
         {canExportPoints ? (
           <View style={styles.pointsExportWrap}>
             <View
@@ -115,17 +117,17 @@ export const TravelPointsBlock: React.FC<{
               {...(Platform.OS === 'web'
                 ? ({
                     role: 'group',
-                    'aria-label': 'Экспорт точек маршрута',
+                    'aria-label': i18nT('travel:components.travel.details.sections.TravelPointsBlock.eksport_tochek_marshruta_32f3945f'),
                     'aria-describedby': 'travel-points-export-hint',
                   } as any)
                 : {})}
             >
               <Button
-                label="GPX"
+                label={i18nT('travel:components.travel.details.sections.TravelPointsBlock.gpx_560eddf5')}
                 size="sm"
                 variant="secondary"
                 icon={<Feather name="download" size={14} color={colors.text} />}
-                accessibilityLabel="Скачать все точки в GPX"
+                accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelPointsBlock.skachat_vse_tochki_v_gpx_ecbc7d1f')}
                 testID="travel-points-export-gpx"
                 onPress={() => handleExportPoints('gpx')}
                 loading={exportingFormat === 'gpx'}
@@ -134,11 +136,11 @@ export const TravelPointsBlock: React.FC<{
                 labelStyle={styles.pointsExportButtonText}
               />
               <Button
-                label="KML"
+                label={i18nT('travel:components.travel.details.sections.TravelPointsBlock.kml_ebbe16fa')}
                 size="sm"
                 variant="secondary"
                 icon={<Feather name="download" size={14} color={colors.text} />}
-                accessibilityLabel="Скачать все точки в KML для Organic Maps и MAPS.ME"
+                accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelPointsBlock.skachat_vse_tochki_v_kml_dlya_organic_maps_i_3f382085')}
                 testID="travel-points-export-kml"
                 onPress={() => handleExportPoints('kml')}
                 loading={exportingFormat === 'kml'}
@@ -147,11 +149,11 @@ export const TravelPointsBlock: React.FC<{
                 labelStyle={styles.pointsExportButtonText}
               />
               <Button
-                label="Google"
+                label={i18nT('travel:components.travel.details.sections.TravelPointsBlock.google_ebcfc697')}
                 size="sm"
                 variant="secondary"
                 icon={<Feather name="map" size={14} color={colors.text} />}
-                accessibilityLabel="Открыть все точки в Google Maps"
+                accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelPointsBlock.otkryt_vse_tochki_v_google_maps_67b6c145')}
                 testID="travel-points-open-google"
                 onPress={handleOpenGoogleMaps}
                 style={styles.pointsExportButton}
@@ -164,7 +166,7 @@ export const TravelPointsBlock: React.FC<{
               {...(Platform.OS === 'web'
                 ? ({ id: 'travel-points-export-hint' } as any)
                 : {})}
-            >KML — Organic Maps / MAPS.ME, GPX — навигаторы</Text>
+            >{i18nT('travel:components.travel.details.sections.TravelPointsBlock.kml_organic_maps_maps_me_gpx_navigatory_24953070')}</Text>
           </View>
         ) : null}
       </View>

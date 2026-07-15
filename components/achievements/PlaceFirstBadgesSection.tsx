@@ -15,6 +15,8 @@ import {
   useUserPlaceFirstBadges,
 } from '@/hooks/useGamification';
 import PlaceFirstBadgeCard from '@/components/achievements/PlaceFirstBadgeCard';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   /** userId — публичный профиль; не задан — собственный профиль. */
@@ -39,7 +41,7 @@ function PlaceFirstBadgesSection({ userId, testID, style }: Props) {
   return (
     <View style={[styles.wrap, style]} testID={testID}>
       <View style={styles.headerRow}>
-        <Text style={styles.heading}>Открытые места</Text>
+        <Text style={styles.heading}>{i18nT('achievements:components.achievements.PlaceFirstBadgesSection.otkrytye_mesta_a88b4940')}</Text>
         {data && data.length > 0 ? (
           <Text style={styles.count}>{data.length}</Text>
         ) : null}

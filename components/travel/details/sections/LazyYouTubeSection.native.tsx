@@ -14,6 +14,8 @@ import { useYoutubeEmbedModel } from '../hooks/useYoutubeEmbedModel'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { withLazy } from '../TravelDetailsLazy'
 import { Icon } from '../TravelDetailsIcons'
+import { translate as i18nT } from '@/i18n'
+
 
 const WebViewComponent = withLazy<React.ComponentType<any>>(() =>
   Promise.resolve(import('react-native-webview')).then((m: any) => ({
@@ -47,11 +49,11 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
         onPress={handlePreviewPress}
         style={styles.videoContainer}
         accessibilityRole="button"
-        accessibilityLabel="Смотреть видео"
+        accessibilityLabel={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.smotret_video_6c6623d8')}
       >
         <ImageCardMedia
           src={`https://img.youtube.com/vi/${id}/hqdefault.jpg`}
-          alt="Превью видео YouTube"
+          alt={i18nT('travel:components.travel.details.sections.LazyYouTubeSection.prevyu_video_youtube_8247752c')}
           fit="contain"
           blurBackground
           cachePolicy="memory-disk"
@@ -60,7 +62,7 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
         />
         <View style={styles.playOverlay}>
           <Icon name="play-circle-fill" size={64} color={colors.textOnDark} />
-          <Text style={styles.videoHintText}>Видео запустится автоматически</Text>
+          <Text style={styles.videoHintText}>{i18nT('travel:components.travel.details.sections.LazyYouTubeSection.video_zapustitsya_avtomaticheski_dd7a9992')}</Text>
         </View>
       </Pressable>
     )

@@ -7,6 +7,8 @@ import Feather from '@expo/vector-icons/Feather';
 import type { BookPreset, PresetCategory } from '@/types/pdf-presets';
 import { BOOK_PRESETS, PRESET_CATEGORIES } from '@/types/pdf-presets';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface PresetSelectorProps {
   onPresetSelect: (preset: BookPreset) => void;
@@ -30,8 +32,8 @@ export default function PresetSelector({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Быстрый старт</Text>
-      <Text style={styles.subtitle}>Выберите готовый пресет или настройте вручную</Text>
+      <Text style={styles.title}>{i18nT('export:components.export.PresetSelector.bystryy_start_2d99742b')}</Text>
+      <Text style={styles.subtitle}>{i18nT('export:components.export.PresetSelector.vyberite_gotovyy_preset_ili_nastroyte_vruchn_42e4c765')}</Text>
 
       {/* Фильтр по категориям */}
       {showCategories && (
@@ -39,7 +41,7 @@ export default function PresetSelector({
           <div style={styles.categoriesWebWrap as any}>
             <div style={styles.categoriesWebContent as any}>
               <CategoryChip
-                label="Все"
+                label={i18nT('export:components.export.PresetSelector.vse_21ff2b63')}
                 isSelected={selectedCategory === 'all'}
                 onPress={() => setSelectedCategory('all')}
                 styles={styles}
@@ -64,7 +66,7 @@ export default function PresetSelector({
           >
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <CategoryChip
-                label="Все"
+                label={i18nT('export:components.export.PresetSelector.vse_21ff2b63')}
                 isSelected={selectedCategory === 'all'}
                 onPress={() => setSelectedCategory('all')}
                 styles={styles}
@@ -167,18 +169,18 @@ function PresetCard({ preset, isSelected, onSelect, styles }: PresetCardProps) {
         <View style={styles.presetMetaBadges}>
           {preset.isDefault && (
             <View style={styles.metaBadge}>
-              <Text style={styles.metaBadgeText}>По умолчанию</Text>
+              <Text style={styles.metaBadgeText}>{i18nT('export:components.export.PresetSelector.po_umolchaniyu_5161d3bc')}</Text>
             </View>
           )}
           {preset.isCustom && (
             <View style={styles.metaBadge}>
-              <Text style={styles.metaBadgeText}>Мой</Text>
+              <Text style={styles.metaBadgeText}>{i18nT('export:components.export.PresetSelector.moy_a19e9cce')}</Text>
             </View>
           )}
           {isSelected && (
             <View style={styles.selectedPill}>
               <Feather name="check" size={16} color={styles.selectedPillIcon.color} />
-              <Text style={styles.selectedPillText}>Выбрано</Text>
+              <Text style={styles.selectedPillText}>{i18nT('export:components.export.PresetSelector.vybrano_24a40172')}</Text>
             </View>
           )}
         </View>
@@ -194,19 +196,19 @@ function PresetCard({ preset, isSelected, onSelect, styles }: PresetCardProps) {
 
         <View style={styles.presetFeatures}>
           {preset.settings.includeGallery && (
-            <FeatureBadge iconName="image" label="Галерея" styles={styles} />
+            <FeatureBadge iconName="image" label={i18nT('export:components.export.PresetSelector.galereya_9ba41acb')} styles={styles} />
           )}
           {preset.settings.includeMap && (
-            <FeatureBadge iconName="map" label="Карты" styles={styles} />
+            <FeatureBadge iconName="map" label={i18nT('export:components.export.PresetSelector.karty_7d0d519e')} styles={styles} />
           )}
           {preset.settings.includeChecklists && (
-            <FeatureBadge iconName="check-square" label="Чек-листы" styles={styles} />
+            <FeatureBadge iconName="check-square" label={i18nT('export:components.export.PresetSelector.chek_listy_1f6fc056')} styles={styles} />
           )}
         </View>
       </View>
 
       <View style={styles.presetFooter}>
-        <Text style={styles.presetCtaText}>Выбрать</Text>
+        <Text style={styles.presetCtaText}>{i18nT('export:components.export.PresetSelector.vybrat_caff556c')}</Text>
         <Feather name="chevron-right" size={18} color={styles.presetCtaIcon.color} />
       </View>
     </Pressable>

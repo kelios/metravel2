@@ -18,6 +18,8 @@ import {
 } from '@/components/trips/planning/tripPlanFormatting';
 import { useSuggestPoint } from '@/hooks/usePlannedTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   trip: PlannedTrip;
@@ -73,17 +75,16 @@ function TripSuggestPointForm({ trip }: Props) {
           setSent(true);
         },
         onError: () =>
-          setSubmitError('Не удалось отправить предложение. Попробуйте ещё раз позже.'),
+          setSubmitError(i18nT('trips:components.trips.planning.TripSuggestPointForm.ne_udalos_otpravit_predlozhenie_poprobuyte_e_f28adf9b')),
       },
     );
   };
 
   return (
     <View style={styles.wrap} testID="trip-suggest-form">
-      <Text style={styles.heading}>Предложить место</Text>
+      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.TripSuggestPointForm.predlozhit_mesto_a14ee3f0')}</Text>
       <Text style={styles.hint}>
-        Организатор увидит ваше предложение и решит, добавить ли точку в маршрут.
-      </Text>
+        {i18nT('trips:components.trips.planning.TripSuggestPointForm.organizator_uvidit_vashe_predlozhenie_i_resh_a68009ae')}</Text>
 
       <View style={styles.chipRow}>
         {POINT_TYPES.map((option) => {
@@ -114,7 +115,7 @@ function TripSuggestPointForm({ trip }: Props) {
           setName(t);
           setSent(false);
         }}
-        placeholder="Название точки"
+        placeholder={i18nT('trips:components.trips.planning.TripSuggestPointForm.nazvanie_tochki_ae15e7cb')}
         placeholderTextColor={colors.textMuted}
         style={styles.input}
         testID="trip-suggest-name"
@@ -123,7 +124,7 @@ function TripSuggestPointForm({ trip }: Props) {
         <TextInput
           value={lat}
           onChangeText={setLat}
-          placeholder="Широта (lat)"
+          placeholder={i18nT('trips:components.trips.planning.TripSuggestPointForm.shirota_lat_d33777ea')}
           placeholderTextColor={colors.textMuted}
           keyboardType="numbers-and-punctuation"
           style={[styles.input, styles.coordInput]}
@@ -132,7 +133,7 @@ function TripSuggestPointForm({ trip }: Props) {
         <TextInput
           value={lng}
           onChangeText={setLng}
-          placeholder="Долгота (lng)"
+          placeholder={i18nT('trips:components.trips.planning.TripSuggestPointForm.dolgota_lng_0789a676')}
           placeholderTextColor={colors.textMuted}
           keyboardType="numbers-and-punctuation"
           style={[styles.input, styles.coordInput]}
@@ -142,7 +143,7 @@ function TripSuggestPointForm({ trip }: Props) {
       <TextInput
         value={description}
         onChangeText={setDescription}
-        placeholder="Почему стоит заехать (по желанию)"
+        placeholder={i18nT('trips:components.trips.planning.TripSuggestPointForm.pochemu_stoit_zaehat_po_zhelaniyu_61a78f46')}
         placeholderTextColor={colors.textMuted}
         style={styles.input}
         testID="trip-suggest-desc"
@@ -155,12 +156,11 @@ function TripSuggestPointForm({ trip }: Props) {
       ) : null}
       {sent ? (
         <Text style={styles.success} testID="trip-suggest-success">
-          Предложение отправлено организатору.
-        </Text>
+          {i18nT('trips:components.trips.planning.TripSuggestPointForm.predlozhenie_otpravleno_organizatoru_b5e68561')}</Text>
       ) : null}
 
       <Button
-        label="Предложить"
+        label={i18nT('trips:components.trips.planning.TripSuggestPointForm.predlozhit_e82e20f5')}
         onPress={handleSuggest}
         loading={suggest.isPending}
         disabled={!name.trim() || suggest.isPending}

@@ -18,6 +18,8 @@ import {
   routingStateLabel,
 } from '@/components/trips/planning/tripPlanFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   summary: RouteSummary | null;
@@ -41,16 +43,16 @@ function RouteSummaryBar({ summary, routingState, transport }: Props) {
   if (!summary) {
     return (
       <View style={styles.wrap} testID="route-summary">
-        <Text style={styles.hint}>Маршрут не построен</Text>
+        <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteSummaryBar.marshrut_ne_postroen_91da795d')}</Text>
       </View>
     );
   }
 
   const chips: Chip[] = [
-    { icon: 'map', value: formatDistance(summary.distanceKm), label: 'Дистанция' },
-    { icon: 'clock', value: formatDuration(summary.durationMin), label: 'В пути' },
-    { icon: 'trending-up', value: formatElevation(summary.elevationGainM), label: 'Набор' },
-    { icon: 'map-pin', value: String(summary.stopsCount), label: 'Остановки' },
+    { icon: 'map', value: formatDistance(summary.distanceKm), label: i18nT('trips:components.trips.planning.RouteSummaryBar.distantsiya_5e3e6200') },
+    { icon: 'clock', value: formatDuration(summary.durationMin), label: i18nT('trips:components.trips.planning.RouteSummaryBar.v_puti_0359c071') },
+    { icon: 'trending-up', value: formatElevation(summary.elevationGainM), label: i18nT('trips:components.trips.planning.RouteSummaryBar.nabor_304b67d6') },
+    { icon: 'map-pin', value: String(summary.stopsCount), label: i18nT('trips:components.trips.planning.RouteSummaryBar.ostanovki_e5a7f959') },
   ];
 
   return (
@@ -75,7 +77,7 @@ function RouteSummaryBar({ summary, routingState, transport }: Props) {
             <Feather name={TRANSPORT_ICON_NAME[transport] as never} size={14} color={colors.primaryDark} />
             <Text style={styles.chipValue}>{TRANSPORT_LABEL[transport]}</Text>
           </View>
-          <Text style={styles.chipLabel}>Способ</Text>
+          <Text style={styles.chipLabel}>{i18nT('trips:components.trips.planning.RouteSummaryBar.sposob_fc449610')}</Text>
         </View>
       ) : null}
       {chips.map((chip) => (

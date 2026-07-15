@@ -538,7 +538,7 @@ describe('ProfileScreen', () => {
 
     expect((await findAllByText('Посетили')).length).toBeGreaterThan(0);
     expect(await findByText('Статистика по странам')).toBeTruthy();
-    expect((await findAllByText('12 мая 2024')).length).toBeGreaterThan(0);
+    expect((await findAllByText('12 мая 2024 г.')).length).toBeGreaterThan(0);
     expect(getAllByText('2 раза').length).toBeGreaterThan(0);
     expect(await findByText('Прогресс по регионам')).toBeTruthy();
     expect(getAllByText('Европа').length).toBeGreaterThan(0);

@@ -19,6 +19,8 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 interface MapMobilePopoverProps {
   colors: ThemedColors
@@ -72,7 +74,7 @@ const MapMobilePopoverInner: React.FC<MapMobilePopoverProps> = ({
         style={StyleSheet.absoluteFill}
         onPress={onRequestClose}
         accessibilityRole="button"
-        accessibilityLabel="Закрыть"
+        accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobilePopover.zakryt_fd8363db')}
         testID={testID ? `${testID}-backdrop` : undefined}
       />
 

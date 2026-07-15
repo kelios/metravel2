@@ -15,6 +15,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import type { Badge } from '@/api/achievements';
 import type { PlaceFirstBadge } from '@/api/gamification';
 import BadgeMedal from '@/components/achievements/BadgeMedal';
+import { formatDate as formatLocalizedDate, formatInteger, translate as i18nT } from '@/i18n'
+
 
 interface Props {
   item: PlaceFirstBadge;
@@ -30,7 +32,7 @@ const toBadge = (item: PlaceFirstBadge): Badge => ({
   description: item.authorStatus,
   categoryId: null,
   categorySlug: 'geo',
-  categoryName: 'Места',
+  categoryName: i18nT('achievements:components.achievements.PlaceFirstBadgeCard.mesta_ea476637'),
   categoryIcon: null,
   tier: item.tier,
   imageUrl: item.imageUrl,
@@ -45,7 +47,7 @@ const toBadge = (item: PlaceFirstBadge): Badge => ({
 const formatDate = (iso: string): string => {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('ru-RU', {
+  return formatLocalizedDate(d, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -71,9 +73,9 @@ function PlaceFirstBadgeCard({ item, testID, style }: Props) {
   };
 
   const stats: Array<{ icon: keyof typeof Feather.glyphMap; value: number; label: string }> = [
-    { icon: 'eye', value: item.views, label: 'просмотров' },
-    { icon: 'bookmark', value: item.saves, label: 'сохранений' },
-    { icon: 'map-pin', value: item.visits, label: 'посещений' },
+    { icon: 'eye', value: item.views, label: i18nT('achievements:components.achievements.PlaceFirstBadgeCard.prosmotrov_5bf2561c') },
+    { icon: 'bookmark', value: item.saves, label: i18nT('achievements:components.achievements.PlaceFirstBadgeCard.sohraneniy_c0f23756') },
+    { icon: 'map-pin', value: item.visits, label: i18nT('achievements:components.achievements.PlaceFirstBadgeCard.posescheniy_79a706dc') },
   ];
 
   return (
@@ -83,24 +85,24 @@ function PlaceFirstBadgeCard({ item, testID, style }: Props) {
       onPress={canOpen ? openPlace : undefined}
       disabled={!canOpen}
       accessibilityRole={canOpen ? 'button' : 'summary'}
-      accessibilityLabel={`Первооткрыватель места: ${item.placeName}${date ? `, открыто ${date}` : ''}`}
+      accessibilityLabel={i18nT('achievements:components.achievements.PlaceFirstBadgeCard.pervootkryvatel_mesta_value1_value2_1ce2a29a', { value1: item.placeName, value2: date ? i18nT('achievements:components.achievements.PlaceFirstBadgeCard.accessibility.openedOn', { value1: date }) : '' })}
     >
       <BadgeMedal badge={badge} size={64} earned />
       <View style={styles.body}>
         <View style={styles.statusRow}>
           <Feather name="award" size={13} color={colors.primaryDark} />
-          <Text style={styles.status}>{item.authorStatus} места</Text>
+          <Text style={styles.status}>{item.authorStatus} {i18nT('achievements:components.achievements.PlaceFirstBadgeCard.mesta_9ea7c2fe')}</Text>
         </View>
         <Text style={styles.placeName} numberOfLines={2}>
           {item.placeName}
         </Text>
-        {date ? <Text style={styles.date}>Открыто {date}</Text> : null}
+        {date ? <Text style={styles.date}>{i18nT('achievements:components.achievements.PlaceFirstBadgeCard.otkryto_66797293')}{date}</Text> : null}
 
         <View style={styles.statsRow}>
           {stats.map((s) => (
             <View key={s.label} style={styles.stat}>
               <Feather name={s.icon} size={13} color={colors.textMuted} />
-              <Text style={styles.statValue}>{s.value.toLocaleString('ru-RU')}</Text>
+              <Text style={styles.statValue}>{formatInteger(s.value)}</Text>
             </View>
           ))}
         </View>

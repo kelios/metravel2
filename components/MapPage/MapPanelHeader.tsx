@@ -6,6 +6,8 @@ import type { ThemedColors } from '@/hooks/useTheme'
 import { restartMapOnboarding } from '@/components/MapPage/MapOnboarding'
 import { showFiltersResetToast } from '@/utils/mapToasts'
 import { formatPlaces } from '@/utils/pluralize'
+import { translate as i18nT } from '@/i18n'
+
 
 type PanelTab = 'search' | 'route' | 'travels'
 
@@ -111,14 +113,14 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
     <View style={styles.tabsContainer}>
       {isMobile && <View style={styles.dragHandle} />}
 
-      <View style={styles.tabsSegment} accessibilityRole="tablist" aria-label="Панель карты">
+      <View style={styles.tabsSegment} accessibilityRole="tablist" aria-label={i18nT('map:components.MapPage.MapPanelHeader.panel_karty_951bb838')}>
         {isMobile && (
           <TabButton
             tab="search"
             activeTab={activeTab}
             icon="search"
-            label="Поиск"
-            accessibilityLabel="Поиск"
+            label={i18nT('map:components.MapPage.MapPanelHeader.poisk_787c6fe7')}
+            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.poisk_787c6fe7')}
             onPress={selectSearchTab}
             themedColors={themedColors}
             styles={styles}
@@ -128,8 +130,8 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
           tab="travels"
           activeTab={activeTab}
           icon="list"
-          label="Места"
-          accessibilityLabel={`Список: ${formatPlaces(travelsCount)}`}
+          label={i18nT('map:components.MapPage.MapPanelHeader.mesta_3ad2b948')}
+          accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.spisok_value1_272d2a31', { value1: formatPlaces(travelsCount) })}
           onPress={selectTravelsTab}
           themedColors={themedColors}
           styles={styles}
@@ -139,8 +141,8 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
           tab="route"
           activeTab={activeTab}
           icon="navigation"
-          label="Маршрут"
-          accessibilityLabel="Построение маршрута"
+          label={i18nT('map:components.MapPage.MapPanelHeader.marshrut_486762dc')}
+          accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.postroenie_marshruta_7aa011b1')}
           onPress={selectRouteTab}
           themedColors={themedColors}
           styles={styles}
@@ -162,8 +164,8 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
             hitSlop={10}
             accessibilityRole="button"
             accessibilityState={{ selected: filtersActive }}
-            accessibilityLabel="Фильтры"
-            {...({ title: 'Фильтры' } as any)}
+            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.filtry_95c57b1d')}
+            {...({ title: i18nT('map:components.MapPage.MapPanelHeader.filtry_95c57b1d') } as any)}
           >
             <Feather
               name="sliders"
@@ -181,8 +183,8 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
             onPress={restartMapOnboarding}
             hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel="Показать подсказки по карте"
-            {...({ title: 'Показать подсказки по карте' } as any)}
+            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd')}
+            {...({ title: i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd') } as any)}
           >
             <Feather name="help-circle" size={13} color={themedColors.textMuted} />
           </Pressable>
@@ -196,8 +198,8 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
             onPress={handleReset}
             hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel="Сбросить фильтры"
-            {...({ title: 'Сбросить фильтры' } as any)}
+            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.sbrosit_filtry_06292479')}
+            {...({ title: i18nT('map:components.MapPage.MapPanelHeader.sbrosit_filtry_06292479') } as any)}
           >
             <Feather name="rotate-cw" size={13} color={themedColors.textMuted} />
           </Pressable>
@@ -209,7 +211,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
           onPress={closeRightPanel}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Скрыть панель"
+          accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.skryt_panel_e9e1ec83')}
         >
           <Feather name="chevron-down" size={16} color={themedColors.textMuted} />
         </Pressable>

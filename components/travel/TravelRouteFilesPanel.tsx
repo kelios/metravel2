@@ -14,6 +14,8 @@ import {
 import type { ParsedRoutePoint, ParsedRoutePreview, TravelRouteFile } from '@/types/travelRoutes';
 import { downloadTravelRouteFile } from '@/utils/travelRouteDownload';
 import { parseRouteFilePreview } from '@/utils/routeFileParser';
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
   travelId?: string | number | null;
@@ -49,7 +51,7 @@ const getRouteFileExt = (fileName: string): string =>
 export default function TravelRouteFilesPanel({
   travelId,
   allowUpload = false,
-  title = 'Файлы маршрута (GPX, KML)',
+  title = i18nT('travel:components.travel.TravelRouteFilesPanel.fayly_marshruta_gpx_kml_0eba46c6'),
   onPreviewPointsChange,
   onPreviewDataChange,
   onRoutesChange,
@@ -86,7 +88,7 @@ export default function TravelRouteFilesPanel({
       setRoutes(loaded);
       onRoutesChange?.(loaded);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось загрузить файлы маршрута';
+      const message = err instanceof Error ? err.message : i18nT('travel:components.travel.TravelRouteFilesPanel.ne_udalos_zagruzit_fayly_marshruta_cad65a51');
       setError(message);
       onRoutesChange?.([]);
     } finally {
@@ -153,7 +155,7 @@ export default function TravelRouteFilesPanel({
         }
         await loadRoutes();
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Не удалось загрузить файл маршрута';
+        const message = err instanceof Error ? err.message : i18nT('travel:components.travel.TravelRouteFilesPanel.ne_udalos_zagruzit_fayl_marshruta_8385750e');
         setError(message);
       } finally {
         setIsUploading(false);
@@ -168,7 +170,7 @@ export default function TravelRouteFilesPanel({
 
       const ext = getRouteFileExt(file.name);
       if (!SUPPORTED_EXTENSIONS.has(ext)) {
-        setError('Поддерживаются только файлы .gpx и .kml');
+        setError(i18nT('travel:components.travel.TravelRouteFilesPanel.podderzhivayutsya_tolko_fayly_gpx_i_kml_a0b1e816'));
         return;
       }
 
@@ -189,7 +191,7 @@ export default function TravelRouteFilesPanel({
     const name = String(picked.name ?? 'route-file').trim();
     const ext = name.split('.').pop()?.toLowerCase();
     if (!ext || !SUPPORTED_EXTENSIONS.has(ext)) {
-      setError('Поддерживаются только файлы .gpx и .kml');
+      setError(i18nT('travel:components.travel.TravelRouteFilesPanel.podderzhivayutsya_tolko_fayly_gpx_i_kml_a0b1e816'));
       return;
     }
 
@@ -291,10 +293,10 @@ export default function TravelRouteFilesPanel({
       try {
         const started = await downloadTravelRouteFile(travelId, file);
         if (!started) {
-          setError('Не удалось скачать файл маршрута');
+          setError(i18nT('travel:components.travel.TravelRouteFilesPanel.ne_udalos_skachat_fayl_marshruta_97eb29cc'));
         }
       } catch {
-        setError('Не удалось скачать файл маршрута');
+        setError(i18nT('travel:components.travel.TravelRouteFilesPanel.ne_udalos_skachat_fayl_marshruta_97eb29cc'));
       }
     },
     [travelId],
@@ -308,7 +310,7 @@ export default function TravelRouteFilesPanel({
         await deleteTravelRouteFile(travelId, file.id);
         await loadRoutes();
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Не удалось удалить файл';
+        const message = err instanceof Error ? err.message : i18nT('travel:components.travel.TravelRouteFilesPanel.ne_udalos_udalit_fayl_2b28b42b');
         setError(message);
       }
     },
@@ -332,7 +334,7 @@ export default function TravelRouteFilesPanel({
             icon="upload"
             compact
           >
-            {isUploading ? 'Загрузка...' : 'Загрузить'}
+            {isUploading ? i18nT('travel:components.travel.TravelRouteFilesPanel.zagruzka_bdbc46c9') : i18nT('travel:components.travel.TravelRouteFilesPanel.zagruzit_1dbd3a1d')}
           </Button>
         ) : null}
       </View>
@@ -348,19 +350,19 @@ export default function TravelRouteFilesPanel({
       ) : null}
 
       {!travelId ? (
-        <Text style={styles.hint}>Сначала сохраните черновик путешествия, затем загрузите GPX/KML файл маршрута.</Text>
+        <Text style={styles.hint}>{i18nT('travel:components.travel.TravelRouteFilesPanel.snachala_sohranite_chernovik_puteshestviya_z_afd90788')}</Text>
       ) : null}
 
       {canManage && Platform.OS === 'web' ? (
-        <Text style={styles.hint}>Перетащите GPX/KML файл сюда или используйте кнопку загрузки.</Text>
+        <Text style={styles.hint}>{i18nT('travel:components.travel.TravelRouteFilesPanel.peretaschite_gpx_kml_fayl_syuda_ili_ispolzuy_380ff74a')}</Text>
       ) : null}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {isLoading ? <Text style={styles.hint}>Загружаем файлы маршрута...</Text> : null}
+      {isLoading ? <Text style={styles.hint}>{i18nT('travel:components.travel.TravelRouteFilesPanel.zagruzhaem_fayly_marshruta_db93dea8')}</Text> : null}
 
       {!isLoading && travelId && routes.length === 0 ? (
-        <Text style={styles.hint}>Файлы маршрута пока не добавлены.</Text>
+        <Text style={styles.hint}>{i18nT('travel:components.travel.TravelRouteFilesPanel.fayly_marshruta_poka_ne_dobavleny_1d5acd17')}</Text>
       ) : null}
 
       {routes.map((file) => {
@@ -376,18 +378,18 @@ export default function TravelRouteFilesPanel({
 
             <View style={styles.actionsRow}>
               <Pressable onPress={() => handleDownload(file)} style={styles.actionButton}>
-                <Text style={styles.actionText}>Скачать</Text>
+                <Text style={styles.actionText}>{i18nT('travel:components.travel.TravelRouteFilesPanel.skachat_9131db23')}</Text>
               </Pressable>
 
               {canPreview ? (
                 <Pressable onPress={() => void loadPreviewPoints(file)} style={styles.actionButton}>
-                  <Text style={styles.actionText}>На карте</Text>
+                  <Text style={styles.actionText}>{i18nT('travel:components.travel.TravelRouteFilesPanel.na_karte_bb912d13')}</Text>
                 </Pressable>
               ) : null}
 
               {canManage ? (
                 <Pressable onPress={() => void handleDelete(file)} style={styles.actionButton}>
-                  <Text style={[styles.actionText, { color: colors.danger }]}>Удалить</Text>
+                  <Text style={[styles.actionText, { color: colors.danger }]}>{i18nT('travel:components.travel.TravelRouteFilesPanel.udalit_9c366e41')}</Text>
                 </Pressable>
               ) : null}
             </View>

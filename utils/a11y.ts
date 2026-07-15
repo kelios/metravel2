@@ -6,6 +6,8 @@
  */
 
 import { Platform, AccessibilityRole } from 'react-native';
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * ARIA и Semantic Role Mapping
@@ -185,7 +187,7 @@ export const createSkipToContentLink = (mainContentId: string) => {
   return {
     id: 'skip-to-content',
     href: `#${mainContentId}`,
-    label: 'Skip to main content',
+    label: i18nT('shared:utils.a11y.skip_to_main_content_48220d7c'),
     ariaLabel: 'Skip to main content (press Enter)',
     style: {
       position: 'absolute' as const,

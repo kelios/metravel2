@@ -303,7 +303,7 @@ describe('fetchUserPlaceFirstBadges', () => {
     mockGet.mockResolvedValueOnce([])
     await fetchUserPlaceFirstBadges(99)
     expect(mockGet).toHaveBeenCalledWith(
-      '/achievements/place-badges/user/99/',
+      '/achievements/user/99/place-badges/',
       undefined,
       expect.objectContaining({ skipAuth: true }),
     )
@@ -313,7 +313,7 @@ describe('fetchUserPlaceFirstBadges', () => {
     mockGet.mockResolvedValueOnce([])
     await fetchUserPlaceFirstBadges('alice')
     expect(mockGet).toHaveBeenCalledWith(
-      '/achievements/place-badges/user/alice/',
+      '/achievements/user/alice/place-badges/',
       undefined,
       expect.anything(),
     )

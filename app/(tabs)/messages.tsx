@@ -27,6 +27,8 @@ import { buildCanonicalUrl } from '@/utils/seo';
 import { devError } from '@/utils/logger';
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import { useWebHydrationGate } from '@/hooks/useWebHydrationGate';
+import { translate as i18nT } from '@/i18n'
+
 
 const InstantSEO = React.lazy(() => import('@/components/seo/LazyInstantSEO'));
 
@@ -191,7 +193,7 @@ function MessagesScreenContent() {
         if (otherUserId != null && mergedNames.has(otherUserId)) {
             return mergedNames.get(otherUserId)!;
         }
-        return 'Пользователь';
+        return i18nT('messages:app.tabs.messages.polzovatel_3baf520c');
     }, [otherUserId, mergedNames]);
 
     const otherUserAvatar = useMemo(() => {
@@ -445,8 +447,8 @@ function MessagesScreenContent() {
                     <React.Suspense fallback={null}>
                         <InstantSEO
                             headKey="messages"
-                            title="Сообщения | Metravel"
-                            description="Личные сообщения"
+                            title={i18nT('messages:app.tabs.messages.soobscheniya_metravel_ccba5f8b')}
+                            description={i18nT('messages:app.tabs.messages.lichnye_soobscheniya_18511fc1')}
                             canonical={buildCanonicalUrl('/messages')}
                             robots="noindex,nofollow"
                         />
@@ -454,10 +456,10 @@ function MessagesScreenContent() {
                 )}
                 <EmptyState
                     icon="log-in"
-                    title="Войдите в аккаунт"
-                    description="Для доступа к сообщениям необходимо авторизоваться"
+                    title={i18nT('messages:app.tabs.messages.voydite_v_akkaunt_4c68ac56')}
+                    description={i18nT('messages:app.tabs.messages.dlya_dostupa_k_soobscheniyam_neobhodimo_avto_df1d2208')}
                     action={{
-                        label: 'Войти',
+                        label: i18nT('messages:app.tabs.messages.voyti_9426b865'),
                         onPress: () => router.push(buildLoginHref({ redirect: '/messages' }) as any),
                     }}
                 />
@@ -469,8 +471,8 @@ function MessagesScreenContent() {
         <React.Suspense fallback={null}>
             <InstantSEO
                 headKey="messages"
-                title="Сообщения | Metravel"
-                description="Личные сообщения"
+                title={i18nT('messages:app.tabs.messages.soobscheniya_metravel_ccba5f8b')}
+                description={i18nT('messages:app.tabs.messages.lichnye_soobscheniya_18511fc1')}
                 canonical={buildCanonicalUrl('/messages')}
                 robots="noindex,nofollow"
             />
@@ -531,8 +533,7 @@ function MessagesScreenContent() {
         <View style={[styles.emptyChat, { backgroundColor: colors.background }]}>
             <Feather name="message-circle" size={48} color={colors.textMuted} />
             <Text style={[styles.emptyChatText, { color: colors.textSecondary }]}>
-                Выберите диалог или начните новый
-            </Text>
+                {i18nT('messages:app.tabs.messages.vyberite_dialog_ili_nachnite_novyy_0cc840a3')}</Text>
         </View>
     );
 

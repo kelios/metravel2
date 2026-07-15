@@ -12,6 +12,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { TravelComment } from '../../types/comments';
+import { translate as i18nT } from '@/i18n'
+
 
 interface CommentFormProps {
   onSubmit: (text: string) => void | Promise<unknown>;
@@ -27,7 +29,7 @@ interface CommentFormProps {
 export function CommentForm({
   onSubmit,
   isSubmitting = false,
-  placeholder = 'Написать комментарий...',
+  placeholder = i18nT('travel:components.travel.CommentForm.napisat_kommentariy_a7fcfc3e'),
   replyTo,
   onCancelReply,
   editComment,
@@ -107,14 +109,14 @@ export function CommentForm({
         <View style={styles.replyBanner}>
           <Feather name="corner-down-right" size={14} color={colors.info} />
           <Text style={styles.replyText}>
-            Ответ на комментарий {replyTo.user_name || `пользователя #${replyTo.user}`}
+            {i18nT('travel:components.travel.CommentForm.otvet_na_kommentariy_a0809c56')}{replyTo.user_name || `пользователя #${replyTo.user}`}
           </Text>
         </View>
       )}
       {editComment && (
         <View style={styles.editBanner}>
           <Feather name="edit-2" size={14} color={colors.warning} />
-          <Text style={styles.editText}>Редактирование комментария</Text>
+          <Text style={styles.editText}>{i18nT('travel:components.travel.CommentForm.redaktirovanie_kommentariya_dd78c1d0')}</Text>
         </View>
       )}
       <View style={styles.inputContainer}>
@@ -128,14 +130,14 @@ export function CommentForm({
           maxLength={2000}
           autoFocus={autoFocus}
           editable={!submitting}
-          accessibilityLabel="Поле ввода комментария"
+          accessibilityLabel={i18nT('travel:components.travel.CommentForm.pole_vvoda_kommentariya_28d820cb')}
         />
         <View style={styles.actions}>
           {showCancel && (
             <Pressable
               onPress={handleCancel}
               style={styles.cancelButton}
-              accessibilityLabel="Отменить"
+              accessibilityLabel={i18nT('travel:components.travel.CommentForm.otmenit_74db5ada')}
               accessibilityRole="button"
             >
               <Feather name="x" size={18} color={colors.textMuted} />
@@ -145,7 +147,7 @@ export function CommentForm({
             onPress={() => void handleSubmit()}
             disabled={!text.trim() || submitting}
             style={[styles.sendButton, (!text.trim() || submitting) && styles.sendButtonDisabled]}
-            accessibilityLabel={editComment ? 'Сохранить изменения' : 'Отправить комментарий'}
+            accessibilityLabel={editComment ? i18nT('travel:components.travel.CommentForm.sohranit_izmeneniya_babe9090') : i18nT('travel:components.travel.CommentForm.otpravit_kommentariy_6c9d6765')}
             accessibilityRole="button"
           >
             {submitting ? (

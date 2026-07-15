@@ -1,20 +1,21 @@
 import { render } from '@testing-library/react-native';
 
-const mockRedirect = jest.fn(({ href }: { href: string }) => {
-  const { Text } = require('react-native');
-  return <Text testID="planned-trips-redirect">{href}</Text>;
-});
+const mockReplace = jest.fn();
 
 jest.mock('expo-router', () => ({
-  Redirect: (props: { href: string }) => mockRedirect(props),
+  useRouter: () => ({ replace: mockReplace }),
 }));
 
 describe('PlannedTripsRedirect', () => {
+  beforeEach(() => {
+    mockReplace.mockClear();
+  });
+
   it('uses /trips/my as the canonical trips dashboard', () => {
     const PlannedTripsRedirect = require('@/app/(tabs)/trips/plan/index').default;
-    const { getByTestId } = render(<PlannedTripsRedirect />);
+    const { toJSON } = render(<PlannedTripsRedirect />);
 
-    expect(getByTestId('planned-trips-redirect').props.children).toBe('/trips/my');
-    expect(mockRedirect).toHaveBeenCalledWith({ href: '/trips/my' });
+    expect(toJSON()).toBeNull();
+    expect(mockReplace).toHaveBeenCalledWith('/trips/my');
   });
 });

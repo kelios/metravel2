@@ -6,6 +6,9 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useResponsive } from '@/hooks/useResponsive';
+import { translate as i18nT } from '@/i18n'
+import { webAccessibilityProps } from '@/utils/webProps'
+
 
 type ConfirmDialogProps = {
     visible: boolean;
@@ -24,10 +27,10 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                                           visible,
                                           onClose,
                                           onConfirm,
-                                          title = 'Подтверждение',
-                                          message = 'Вы уверены, что хотите продолжить?',
-                                          confirmText = 'Удалить',
-                                          cancelText = 'Отмена',
+                                          title = i18nT('shared:components.ui.ConfirmDialog.podtverzhdenie_a57088b1'),
+                                          message = i18nT('shared:components.ui.ConfirmDialog.vy_uvereny_chto_hotite_prodolzhit_b54d78d2'),
+                                          confirmText = i18nT('shared:components.ui.ConfirmDialog.udalit_d71e1842'),
+                                          cancelText = i18nT('shared:components.ui.ConfirmDialog.otmena_53464360'),
                                           confirmTestID,
                                           cancelTestID,
                                       }) => {
@@ -86,26 +89,21 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                             },
                         ]}
                         {...Platform.select({
-                            web: {
+                            web: webAccessibilityProps({
                                 'data-testid': 'confirm-dialog',
-                                // @ts-ignore -- role dialog is a web-only ARIA role not in RN View types
                                 role: 'dialog',
-                                // @ts-ignore -- aria-modal is a web-only ARIA attribute not in RN View types
                                 'aria-modal': true,
-                                // @ts-ignore -- aria-labelledby is a web-only ARIA attribute not in RN View types
                                 'aria-labelledby': 'dialog-title',
-                                // @ts-ignore -- aria-describedby is a web-only ARIA attribute not in RN View types
                                 'aria-describedby': 'dialog-message',
-                            },
+                            }),
                         })}
                     >
                         <Text
                             style={styles.dialogTitle}
                             {...Platform.select({
-                                web: {
-                                    // @ts-ignore -- id is a web-only attribute not in RN Text types
+                                web: webAccessibilityProps({
                                     id: 'dialog-title',
-                                },
+                                }),
                             })}
                         >
                             {title}
@@ -113,10 +111,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         <Text
                             style={styles.dialogText}
                             {...Platform.select({
-                                web: {
-                                    // @ts-ignore -- id is a web-only attribute not in RN Text types
+                                web: webAccessibilityProps({
                                     id: 'dialog-message',
-                                },
+                                }),
                             })}
                         >
                             {message}
@@ -132,10 +129,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                                 accessibilityLabel={cancelText}
                                 {...Platform.select({
                                     web: {
-                                        // @ts-ignore -- ref forwarding for focus trap, web-only TouchableOpacity prop
                                         ref: cancelButtonRef as any,
-                                        // @ts-ignore -- tabIndex is a web-only attribute not in RN types
-                                        tabIndex: 0,
+                                        ...webAccessibilityProps({ tabIndex: 0 }),
                                     },
                                 })}
                             >
@@ -150,10 +145,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                                 accessibilityRole="button"
                                 accessibilityLabel={confirmText}
                                 {...Platform.select({
-                                    web: {
-                                        // @ts-ignore -- tabIndex is a web-only attribute not in RN types
-                                        tabIndex: 0,
-                                    },
+                                    web: webAccessibilityProps({ tabIndex: 0 }),
                                 })}
                             >
                                 <Text style={styles.deleteButton}>{confirmText.toUpperCase()}</Text>
@@ -194,21 +186,20 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     },
                 ]}
                 {...Platform.select({
-                    web: {
+                    web: webAccessibilityProps({
                         role: 'dialog',
                         'aria-modal': true,
                         'aria-labelledby': 'dialog-title',
                         'aria-describedby': 'dialog-message',
-                    },
+                    }),
                 })}
             >
                 <Dialog.Title 
                     style={styles.dialogTitle}
                     {...Platform.select({
-                        web: {
-                            // @ts-ignore -- id is a web-only attribute not in RN Dialog.Title types
+                        web: webAccessibilityProps({
                             id: 'dialog-title',
-                        },
+                        }),
                     })}
                 >
                     {title}
@@ -217,10 +208,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     <Text 
                         style={styles.dialogText}
                         {...Platform.select({
-                            web: {
-                                // @ts-ignore -- id is a web-only attribute not in RN Text types
+                            web: webAccessibilityProps({
                                 id: 'dialog-message',
-                            },
+                            }),
                         })}
                     >
                         {message}
@@ -238,10 +228,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         accessibilityLabel={cancelText}
                         {...Platform.select({
                             web: {
-                                // @ts-ignore -- ref forwarding for focus trap, web-only TouchableOpacity prop
                                 ref: cancelButtonRef as any,
-                                // @ts-ignore -- tabIndex is a web-only attribute not in RN types
-                                tabIndex: 0,
+                                ...webAccessibilityProps({ tabIndex: 0 }),
                             },
                         })}
                     >
@@ -257,10 +245,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         accessibilityRole="button"
                         accessibilityLabel={confirmText}
                         {...Platform.select({
-                            web: {
-                                // @ts-ignore -- tabIndex is a web-only attribute not in RN types
-                                tabIndex: 0,
-                            },
+                            web: webAccessibilityProps({ tabIndex: 0 }),
                         })}
                     >
                         <Text style={styles.deleteButton}>{confirmText.toUpperCase()}</Text>

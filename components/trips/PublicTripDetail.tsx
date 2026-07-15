@@ -21,6 +21,8 @@ import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { trackTripViewed } from '@/utils/tripAnalytics';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   tripId: number;
@@ -62,8 +64,8 @@ function PublicTripDetail({ tripId }: Props) {
   if (isError || !trip) {
     return (
       <View style={styles.center}>
-        <Text style={styles.empty}>Поездка не найдена.</Text>
-        <Button label="К каталогу" variant="outline" onPress={() => router.push('/trips')} />
+        <Text style={styles.empty}>{i18nT('trips:components.trips.PublicTripDetail.poezdka_ne_naydena_9fc200e6')}</Text>
+        <Button label={i18nT('trips:components.trips.PublicTripDetail.k_katalogu_98d7586e')} variant="outline" onPress={() => router.push('/trips')} />
       </View>
     );
   }
@@ -139,7 +141,7 @@ function PublicTripDetail({ tripId }: Props) {
           <Feather name="user" size={16} color={colors.textMuted} />
         </View>
         <Text style={styles.organizerText}>
-          Организатор: <Text style={styles.organizerName}>{trip.organizer.name}</Text>
+          {i18nT('trips:components.trips.PublicTripDetail.organizator_468e6261')}<Text style={styles.organizerName}>{trip.organizer.name}</Text>
         </Text>
       </Pressable>
 
@@ -149,15 +151,11 @@ function PublicTripDetail({ tripId }: Props) {
         needsContactAck ? (
           <View style={styles.ackBox} testID="trip-contact-ack">
             <Text style={styles.revealTitle}>
-              <Feather name="alert-triangle" size={14} color={colors.warning} /> Контакты участника
-            </Text>
+              <Feather name="alert-triangle" size={14} color={colors.warning} /> {i18nT('trips:components.trips.PublicTripDetail.kontakty_uchastnika_d254c9c4')}</Text>
             <Text style={styles.revealText}>
-              Дальше — место встречи и контакты другого человека. Используйте их
-              только для этой поездки и не передавайте третьим лицам. MeTravel не
-              отвечает за договорённости участников.
-            </Text>
+              {i18nT('trips:components.trips.PublicTripDetail.dalshe_mesto_vstrechi_i_kontakty_drugogo_che_4078fd5c')}</Text>
             <Button
-              label="Понятно"
+              label={i18nT('trips:components.trips.PublicTripDetail.ponyatno_5d11868c')}
               onPress={() => {
                 void contactConsent.grant();
               }}
@@ -167,10 +165,9 @@ function PublicTripDetail({ tripId }: Props) {
         ) : (
           <View style={styles.revealBox} testID="trip-reveal">
             <Text style={styles.revealTitle}>
-              <Feather name="unlock" size={14} color={colors.success} /> Детали для участников
-            </Text>
+              <Feather name="unlock" size={14} color={colors.success} /> {i18nT('trips:components.trips.PublicTripDetail.detali_dlya_uchastnikov_d5a9baa8')}</Text>
             {trip.meetingPoint ? (
-              <Text style={styles.revealText}>Место встречи: {trip.meetingPoint}</Text>
+              <Text style={styles.revealText}>{i18nT('trips:components.trips.PublicTripDetail.mesto_vstrechi_45944b40')}{trip.meetingPoint}</Text>
             ) : null}
             {trip.contactNote ? (
               <Text style={styles.revealText}>{trip.contactNote}</Text>
@@ -182,8 +179,7 @@ function PublicTripDetail({ tripId }: Props) {
         <View style={styles.lockedBox}>
           <Feather name="lock" size={14} color={colors.textMuted} />
           <Text style={styles.lockedText}>
-            Место встречи, чат и контакты откроются после одобрения вашей заявки.
-          </Text>
+            {i18nT('trips:components.trips.PublicTripDetail.mesto_vstrechi_chat_i_kontakty_otkroyutsya_p_cb9c3ae0')}</Text>
         </View>
       ) : null}
 
@@ -193,18 +189,16 @@ function PublicTripDetail({ tripId }: Props) {
       {/* Подтверждение только что отправленной заявки (#412) */}
       {justSubmitted ? (
         <View style={styles.revealBox} testID="trip-apply-confirmation">
-          <Text style={styles.revealTitle}>Заявка отправлена</Text>
+          <Text style={styles.revealTitle}>{i18nT('trips:components.trips.PublicTripDetail.zayavka_otpravlena_9d83d86e')}</Text>
           <Text style={styles.revealText}>
-            Организатор получит уведомление и решит по вашей заявке. Статус видно
-            в разделе «Мои поездки».
-          </Text>
+            {i18nT('trips:components.trips.PublicTripDetail.organizator_poluchit_uvedomlenie_i_reshit_po_8532d51e')}</Text>
         </View>
       ) : null}
 
       {/* Участник: статус своей заявки или форма подачи (#412/#414) */}
       {!trip.isOwner && alreadyApplied && !justSubmitted ? (
         <View style={styles.statusBox}>
-          <Text style={styles.statusLabel}>Ваша заявка</Text>
+          <Text style={styles.statusLabel}>{i18nT('trips:components.trips.PublicTripDetail.vasha_zayavka_eaf5db3d')}</Text>
           <TripStatusBadge kind="application" status={effectiveApplicationStatus!} />
         </View>
       ) : null}
@@ -220,14 +214,14 @@ function PublicTripDetail({ tripId }: Props) {
           </View>
         ) : (
           <View style={styles.applyBox}>
-            <Text style={styles.loginHint}>Войдите, чтобы подать заявку на поездку.</Text>
-            <Button label="Войти" onPress={() => router.push('/login')} fullWidth />
+            <Text style={styles.loginHint}>{i18nT('trips:components.trips.PublicTripDetail.voydite_chtoby_podat_zayavku_na_poezdku_844b77cd')}</Text>
+            <Button label={i18nT('trips:components.trips.PublicTripDetail.voyti_523b960e')} onPress={() => router.push('/login')} fullWidth />
           </View>
         )
       ) : null}
 
       {!trip.isOwner && trip.status === 'full' && !alreadyApplied ? (
-        <Text style={styles.empty}>Мест больше нет — заявки закрыты.</Text>
+        <Text style={styles.empty}>{i18nT('trips:components.trips.PublicTripDetail.mest_bolshe_net_zayavki_zakryty_a6624f05')}</Text>
       ) : null}
     </View>
   );

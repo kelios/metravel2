@@ -1,4 +1,6 @@
 import type { BuildHtmlDocumentParams } from './types'
+import { DEFAULT_LOCALE, i18n, translate as i18nT } from '@/i18n'
+
 
 // Узкая нижняя полоса печатной страницы под нативный номер (@page @bottom-center).
 // Печатная высота фиксированных страниц уменьшается на эту величину, чтобы каждая
@@ -14,10 +16,11 @@ export function buildPdfHtmlDocument({
   escapeHtml,
 }: BuildHtmlDocumentParams): string {
   const { colors, typography } = theme
+  const documentLocale = i18n.resolvedLanguage || DEFAULT_LOCALE
 
   // Водяной знак для free-тиров (#297). Деликатная полоска в правом нижнем углу,
   // не перекрывает кадр значимо; на каждой печатной странице (position: fixed).
-  const watermarkLabel = escapeHtml('Создано на metravel.by')
+  const watermarkLabel = escapeHtml(i18nT('export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.htmlDocument.sozdano_na_metravel_by_faba20d9'))
   const watermarkHtml = isPremium
     ? ''
     : `\n  <div class="metravel-watermark" aria-hidden="true">${watermarkLabel}</div>`
@@ -311,7 +314,7 @@ export function buildPdfHtmlDocument({
 
   return `
 <!doctype html>
-<html lang="ru">
+<html lang="${documentLocale}">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>

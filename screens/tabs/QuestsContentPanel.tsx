@@ -20,6 +20,8 @@ import type { MapMovePayload } from '@/components/MapPage/Map/types';
 
 import QuestCard from './QuestCard';
 import { pluralizeQuest, type QuestMeta } from './questsShared';
+import { translate as i18nT } from '@/i18n'
+
 
 type MapPoint = {
     id?: string | number;
@@ -143,12 +145,12 @@ export default function QuestsContentPanel({
                 <View style={styles.contentTitleBlock}>
                     <Text style={styles.contentTitle} numberOfLines={2}>
                         {searchActive
-                            ? 'Результаты поиска'
+                            ? i18nT('quests:screens.tabs.QuestsContentPanel.rezultaty_poiska_5ebb750c')
                             : selectedCityId === nearbyId
-                                ? (isMapAreaActive ? 'Квесты в этой области' : userLoc ? 'Квесты поблизости' : 'Все квесты')
+                                ? (isMapAreaActive ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_v_etoy_oblasti_f59f59da') : userLoc ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_poblizosti_02dcd1cf') : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd'))
                                 : selectedCityId === kidsFilterId
-                                    ? 'Квесты для детей'
-                                    : selectedCityName || 'Все квесты'}
+                                    ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_dlya_detey_fbda5ab0')
+                                    : selectedCityName || i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
                     </Text>
                     <View style={styles.contentCountRow}>
                         {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
@@ -157,12 +159,12 @@ export default function QuestsContentPanel({
                                 style={styles.resetFiltersChip}
                                 onPress={onResetFilters}
                                 accessibilityRole="button"
-                                accessibilityLabel="Сбросить фильтры и показать все квесты"
+                                accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.sbrosit_filtry_i_pokazat_vse_kvesty_79d935b0')}
                                 hitSlop={8}
                                 testID="quests-reset-filters"
                             >
                                 <Feather name="x" size={13} color={colors.primary} />
-                                <Text style={styles.resetFiltersChipText}>Все квесты</Text>
+                                <Text style={styles.resetFiltersChipText}>{i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}</Text>
                             </Pressable>
                         )}
                     </View>
@@ -173,7 +175,7 @@ export default function QuestsContentPanel({
                             style={[styles.headerIconBtn, viewMode === 'map' && styles.headerIconBtnActive]}
                             onPress={onToggleViewMode}
                             accessibilityRole="button"
-                            accessibilityLabel={viewMode === 'map' ? 'Показать список квестов' : 'Показать квесты на карте'}
+                            accessibilityLabel={viewMode === 'map' ? i18nT('quests:screens.tabs.QuestsContentPanel.pokazat_spisok_kvestov_a0806030') : i18nT('quests:screens.tabs.QuestsContentPanel.pokazat_kvesty_na_karte_afca9878')}
                             testID="quests-toggle-view-mode"
                         >
                             <Feather
@@ -186,7 +188,7 @@ export default function QuestsContentPanel({
                             style={styles.headerIconBtn}
                             onPress={onOpenFilterDrawer}
                             accessibilityRole="button"
-                            accessibilityLabel="Выбрать город"
+                            accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.vybrat_gorod_0bc4253e')}
                         >
                             <Feather name="filter" size={17} color={colors.text} />
                         </Pressable>
@@ -194,7 +196,7 @@ export default function QuestsContentPanel({
                             style={[styles.headerIconBtn, selectedCityId === kidsFilterId && styles.headerIconBtnActive]}
                             onPress={onShowKids}
                             accessibilityRole="button"
-                            accessibilityLabel="Показать квесты для детей"
+                            accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.pokazat_kvesty_dlya_detey_dd437d45')}
                             accessibilityState={{ selected: selectedCityId === kidsFilterId }}
                             testID="quests-show-kids"
                         >
@@ -209,7 +211,7 @@ export default function QuestsContentPanel({
                             onPress={onShowNearby}
                             disabled={geoRequesting}
                             accessibilityRole="button"
-                            accessibilityLabel={geoRequesting ? 'Ищем квесты рядом со мной' : 'Показать квесты рядом со мной'}
+                            accessibilityLabel={geoRequesting ? i18nT('quests:screens.tabs.QuestsContentPanel.ischem_kvesty_ryadom_so_mnoy_f5a72f30') : i18nT('quests:screens.tabs.QuestsContentPanel.pokazat_kvesty_ryadom_so_mnoy_d7a7ee55')}
                             testID="quests-show-nearby"
                         >
                             <Feather name="navigation" size={17} color={colors.text} />
@@ -224,12 +226,12 @@ export default function QuestsContentPanel({
                     style={styles.searchInput}
                     value={searchQuery}
                     onChangeText={onSearchChange}
-                    placeholder="Поиск по названию, городу или сюжету"
+                    placeholder={i18nT('quests:screens.tabs.QuestsContentPanel.poisk_po_nazvaniyu_gorodu_ili_syuzhetu_cb3eef48')}
                     placeholderTextColor={colors.textMuted}
                     returnKeyType="search"
                     autoCorrect={false}
                     clearButtonMode="never"
-                    accessibilityLabel="Поиск квестов по названию, городу или сюжету"
+                    accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.poisk_kvestov_po_nazvaniyu_gorodu_ili_syuzhe_8ff547ba')}
                     testID="quests-search-input"
                 />
                 {searchActive && (
@@ -237,7 +239,7 @@ export default function QuestsContentPanel({
                         style={styles.searchClearBtn}
                         onPress={() => onSearchChange('')}
                         accessibilityRole="button"
-                        accessibilityLabel="Очистить поиск"
+                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.ochistit_poisk_c6fc5f29')}
                         hitSlop={8}
                         testID="quests-search-clear"
                     >
@@ -269,8 +271,7 @@ export default function QuestsContentPanel({
                             <View style={styles.geoBanner} testID="quests-geo-banner">
                                 <Feather name="map-pin" size={13} color={colors.warning} />
                                 <Text style={styles.geoBannerText}>
-                                    Геолокация отключена. Показываем все квесты на карте.
-                                </Text>
+                                    {i18nT('quests:screens.tabs.QuestsContentPanel.geolokatsiya_otklyuchena_pokazyvaem_vse_kves_48d7a8ae')}</Text>
                             </View>
                         )}
 
@@ -290,11 +291,11 @@ export default function QuestsContentPanel({
                                         style={styles.mapSearchAreaBtn}
                                         onPress={onSearchMapArea}
                                         accessibilityRole="button"
-                                        accessibilityLabel="Искать в этой области"
+                                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.iskat_v_etoy_oblasti_2dbf958f')}
                                         testID="quests-map-search-area"
                                     >
                                         <Feather name="search" size={15} color={colors.textOnPrimary} />
-                                        <Text style={styles.mapSearchAreaBtnText}>Искать в этой области</Text>
+                                        <Text style={styles.mapSearchAreaBtnText}>{i18nT('quests:screens.tabs.QuestsContentPanel.iskat_v_etoy_oblasti_2dbf958f')}</Text>
                                     </Pressable>
                                 )}
                                 <Suspense fallback={<View style={styles.mapLoading}><ActivityIndicator color={colors.primary} /></View>}>
@@ -324,11 +325,11 @@ export default function QuestsContentPanel({
                                         style={styles.mapSearchAreaBtn}
                                         onPress={onSearchMapArea}
                                         accessibilityRole="button"
-                                        accessibilityLabel="Искать в этой области"
+                                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.iskat_v_etoy_oblasti_2dbf958f')}
                                         testID="quests-map-search-area"
                                     >
                                         <Feather name="search" size={15} color={colors.textOnPrimary} />
-                                        <Text style={styles.mapSearchAreaBtnText}>Искать в этой области</Text>
+                                        <Text style={styles.mapSearchAreaBtnText}>{i18nT('quests:screens.tabs.QuestsContentPanel.iskat_v_etoy_oblasti_2dbf958f')}</Text>
                                     </Pressable>
                                 )}
                                 <Map
@@ -355,8 +356,8 @@ export default function QuestsContentPanel({
                         {searchActive && questsAll.length === 0 && dataLoaded && (
                             <EmptyState
                                 icon="search"
-                                title="Ничего не найдено"
-                                description="Попробуйте другое название или город"
+                                title={i18nT('quests:screens.tabs.QuestsContentPanel.nichego_ne_naydeno_21857ccf')}
+                                description={i18nT('quests:screens.tabs.QuestsContentPanel.poprobuyte_drugoe_nazvanie_ili_gorod_980ce716')}
                                 variant="empty"
                                 iconSize={48}
                             />
@@ -365,8 +366,8 @@ export default function QuestsContentPanel({
                         {!searchActive && selectedCityId === nearbyId && userLoc && questsAll.length === 0 && dataLoaded && (
                             <EmptyState
                                 icon="map-pin"
-                                title="Рядом ничего не найдено"
-                                description="Посмотрите квесты в других городах или выберите область на карте"
+                                title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
+                                description={i18nT('quests:screens.tabs.QuestsContentPanel.posmotrite_kvesty_v_drugih_gorodah_ili_vyber_720d6ffd')}
                                 variant="empty"
                                 iconSize={48}
                             />
@@ -375,8 +376,8 @@ export default function QuestsContentPanel({
                         {!searchActive && !selectedCityId && dataLoaded && (
                             <EmptyState
                                 icon="compass"
-                                title="Выберите город"
-                                description={isMobile ? 'Нажмите «Город» чтобы выбрать' : 'Выберите город из списка слева'}
+                                title={i18nT('quests:screens.tabs.QuestsContentPanel.vyberite_gorod_023bdfab')}
+                                description={isMobile ? i18nT('quests:screens.tabs.QuestsContentPanel.nazhmite_gorod_chtoby_vybrat_bdb9cf3e') : i18nT('quests:screens.tabs.QuestsContentPanel.vyberite_gorod_iz_spiska_sleva_3a187f1e')}
                                 variant="empty"
                                 iconSize={48}
                             />
@@ -422,8 +423,8 @@ export default function QuestsContentPanel({
             {searchActive && dataLoaded && (
                 <EmptyState
                     icon="search"
-                    title="Ничего не найдено"
-                    description="Попробуйте другое название или город"
+                    title={i18nT('quests:screens.tabs.QuestsContentPanel.nichego_ne_naydeno_21857ccf')}
+                    description={i18nT('quests:screens.tabs.QuestsContentPanel.poprobuyte_drugoe_nazvanie_ili_gorod_980ce716')}
                     variant="empty"
                     iconSize={48}
                 />
@@ -432,8 +433,8 @@ export default function QuestsContentPanel({
             {!searchActive && selectedCityId === nearbyId && userLoc && dataLoaded && (
                 <EmptyState
                     icon="map-pin"
-                    title="Рядом ничего не найдено"
-                    description="Посмотрите квесты в других городах или выберите область на карте"
+                    title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
+                    description={i18nT('quests:screens.tabs.QuestsContentPanel.posmotrite_kvesty_v_drugih_gorodah_ili_vyber_720d6ffd')}
                     variant="empty"
                     iconSize={48}
                 />
@@ -442,8 +443,8 @@ export default function QuestsContentPanel({
             {!searchActive && !selectedCityId && dataLoaded && (
                 <EmptyState
                     icon="compass"
-                    title="Выберите город"
-                    description={isMobile ? 'Нажмите «Город» чтобы выбрать' : 'Выберите город из списка слева'}
+                    title={i18nT('quests:screens.tabs.QuestsContentPanel.vyberite_gorod_023bdfab')}
+                    description={isMobile ? i18nT('quests:screens.tabs.QuestsContentPanel.nazhmite_gorod_chtoby_vybrat_bdb9cf3e') : i18nT('quests:screens.tabs.QuestsContentPanel.vyberite_gorod_iz_spiska_sleva_3a187f1e')}
                     variant="empty"
                     iconSize={48}
                 />

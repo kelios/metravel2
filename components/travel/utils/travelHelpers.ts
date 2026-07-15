@@ -4,6 +4,8 @@
  */
 
 import { BREAKPOINTS, MENU_WIDTH, CONTENT_PADDING, MAX_CONTENT_WIDTH } from './travelConstants';
+import { formatDate as formatLocalizedDate, translate as i18nT } from '@/i18n'
+
 
 // ✅ ОПТИМИЗАЦИЯ: Определение типа устройства
 export function isMobile(width: number): boolean {
@@ -71,7 +73,7 @@ export function stripHtmlTags(html: string | null | undefined): string {
 
 // ✅ ОПТИМИЗАЦИЯ: Очистка HTML для описания
 export function stripToDescription(html?: string, maxLength: number = 160): string {
-  const FALLBACK = 'Найди место для путешествия и поделись своим опытом.';
+  const FALLBACK = i18nT('travel:components.travel.utils.travelHelpers.naydi_mesto_dlya_puteshestviya_i_podelis_svo_f40626eb');
   if (!html) return FALLBACK;
 
   const plain = html
@@ -243,7 +245,7 @@ export function formatDate(date: string | Date): string {
     day: 'numeric',
   };
   
-  return d.toLocaleDateString('ru-RU', options);
+  return formatLocalizedDate(d, options);
 }
 
 // ✅ ОПТИМИЗАЦИЯ: Проверка поддержки WebP

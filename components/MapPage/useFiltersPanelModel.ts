@@ -5,6 +5,8 @@ import { resolveExportedFunction } from '@/utils/moduleInterop';
 import { showRouteModeTip, showFiltersResetToast } from '@/utils/mapToasts';
 import { useRouteStore } from '@/stores/routeStore';
 import type { RoutePoint } from '@/types/route';
+import { translate as i18nT } from '@/i18n'
+
 
 let getFiltersPanelStylesSafe: ((...args: any[]) => any) | null = null;
 try {
@@ -136,12 +138,12 @@ const useFiltersPanelModel = ({
   );
 
   const ctaLabel = routingLoading
-    ? 'Строим…'
+    ? i18nT('map:components.MapPage.useFiltersPanelModel.stroim_a4e64969')
     : routeDistance != null
-      ? 'Пересчитать маршрут'
+      ? i18nT('map:components.MapPage.useFiltersPanelModel.pereschitat_marshrut_db9ce079')
       : canBuildRoute
-        ? 'Построить маршрут'
-        : 'Добавьте старт и финиш';
+        ? i18nT('map:components.MapPage.useFiltersPanelModel.postroit_marshrut_ca986f13')
+        : i18nT('map:components.MapPage.useFiltersPanelModel.dobavte_start_i_finish_17e117d1');
 
   const totalPoints = useMemo(() => {
     const dataset = filteredTravelsData ?? travelsData;

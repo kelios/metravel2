@@ -6,6 +6,8 @@ import { View, Text, StyleSheet, Pressable, Platform, Animated, LayoutAnimation 
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface CollapsibleBlockProps {
   id: string;
@@ -262,10 +264,10 @@ function CollapsibleBlock({
         <Pressable
           onPress={handleHide}
           style={styles.showHiddenButton}
-          accessibilityLabel={`Показать блок: ${title}`}
+          accessibilityLabel={i18nT('shared:components.ui.CollapsibleBlock.pokazat_blok_value1_344c683d', { value1: title })}
         >
           <Feather name="eye-off" size={14} color={colors.textMuted} />
-          <Text style={styles.showHiddenText}>Показать: {title}</Text>
+          <Text style={styles.showHiddenText}>{i18nT('shared:components.ui.CollapsibleBlock.pokazat_8b661577')}{title}</Text>
         </Pressable>
       </View>
     );
@@ -297,7 +299,7 @@ function CollapsibleBlock({
           style={styles.headerLeft}
           disabled={!collapsible}
           accessibilityRole={collapsible ? 'button' : undefined}
-          accessibilityLabel={collapsible ? `${isExpanded ? 'Свернуть' : 'Развернуть'}: ${title}` : title}
+          accessibilityLabel={collapsible ? `${isExpanded ? i18nT('shared:components.ui.CollapsibleBlock.svernut_87bd01e3') : i18nT('shared:components.ui.CollapsibleBlock.razvernut_86ab35d3')}: ${title}` : title}
           {...Platform.select({
             web: {
               cursor: collapsible ? 'pointer' : 'default',
@@ -322,8 +324,7 @@ function CollapsibleBlock({
             {/* ✅ UX УЛУЧШЕНИЕ: Индикатор что блок можно развернуть */}
             {collapsible && !isExpanded && (
               <Text style={styles.expandHint} numberOfLines={1}>
-                Нажмите чтобы развернуть
-              </Text>
+                {i18nT('shared:components.ui.CollapsibleBlock.nazhmite_chtoby_razvernut_3dc19c66')}</Text>
             )}
           </View>
         </Pressable>
@@ -335,7 +336,7 @@ function CollapsibleBlock({
             <Pressable
               onPress={handleToggle}
               style={styles.actionButton}
-              accessibilityLabel={isExpanded ? 'Свернуть блок' : 'Развернуть блок'}
+              accessibilityLabel={isExpanded ? i18nT('shared:components.ui.CollapsibleBlock.svernut_blok_ed41ac29') : i18nT('shared:components.ui.CollapsibleBlock.razvernut_blok_0acd6f55')}
               hitSlop={8}
               {...Platform.select({
                 web: {
@@ -363,7 +364,7 @@ function CollapsibleBlock({
             <Pressable
               onPress={handleHide}
               style={styles.actionButton}
-              accessibilityLabel="Скрыть блок"
+              accessibilityLabel={i18nT('shared:components.ui.CollapsibleBlock.skryt_blok_21d83071')}
               hitSlop={8}
               {...Platform.select({
                 web: {

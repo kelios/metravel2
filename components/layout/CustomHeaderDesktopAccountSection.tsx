@@ -9,6 +9,8 @@ import { buildLoginHref } from '@/utils/authNavigation'
 import AccountMenu from './AccountMenu'
 import CustomHeaderDesktopAccountShell from './CustomHeaderDesktopAccountShell'
 import { createAnchorStyles, createAvatarStyles, createCtaLoginStyles } from './headerStyles'
+import { translate as i18nT } from '@/i18n'
+
 
 type CustomHeaderDesktopAccountSectionProps = {
   styles: any
@@ -23,7 +25,7 @@ export default function CustomHeaderDesktopAccountSection({
   const { avatarUri, setAvatarLoadError } = useAvatarUri({ userAvatar, profileRefreshToken })
   const [menuRequested, setMenuRequested] = useState(false)
   const [openOnLoadKey, setOpenOnLoadKey] = useState(0)
-  const displayName = isAuthenticated && username ? username : 'Гость'
+  const displayName = isAuthenticated && username ? username : i18nT('navigation:components.layout.CustomHeaderDesktopAccountSection.gost_b231fbe4')
 
   const anchorStyles = useMemo(() => createAnchorStyles(colors), [colors])
   const avatarStyles = useMemo(() => createAvatarStyles(colors), [colors])

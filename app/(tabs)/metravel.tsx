@@ -1,13 +1,14 @@
 // app/metravel/index.tsx
-import { Suspense, lazy, useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { useMemo } from 'react';
+import { StyleSheet } from 'react-native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useIsFocused } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { translate as i18nT } from '@/i18n'
+import ListTravel from '@/components/listTravel/ListTravelBase';
 
-const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'));
 
 export default function MeTravelScreen() {
     const isFocused = useIsFocused();
@@ -21,8 +22,8 @@ export default function MeTravelScreen() {
             {isFocused && (
             <InstantSEO
                 headKey="metravel" // фиксированный ключ для этой страницы
-                title="Мои путешествия | Metravel"
-                description="Список ваших опубликованных и черновых путешествий на платформе Metravel."
+                title={i18nT('shared:app.tabs.metravel.moi_puteshestviya_metravel_6c9c863f')}
+                description={i18nT('shared:app.tabs.metravel.spisok_vashih_opublikovannyh_i_chernovyh_put_f707068f')}
                 canonical={canonical}
                 image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
                 ogType="website"
@@ -30,15 +31,7 @@ export default function MeTravelScreen() {
             />
             )}
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
-                <Suspense
-                    fallback={
-                        <View style={styles.loading}>
-                            <Text style={styles.loadingText}>Загрузка…</Text>
-                        </View>
-                    }
-                >
-                    <ListTravel />
-                </Suspense>
+                <ListTravel />
             </SafeAreaView>
         </>
     );
@@ -48,11 +41,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     container: {
         flex: 1,
         backgroundColor: colors.mutedBackground,
-    },
-    loading: {
-        padding: 16,
-    },
-    loadingText: {
-        color: colors.text,
     },
 });

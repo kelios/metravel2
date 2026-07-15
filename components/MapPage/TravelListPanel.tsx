@@ -29,6 +29,8 @@ import {
   PLACE_COUNT_BADGE_CAP,
 } from './TravelListPanel/helpers'
 import { getWebCardWidth } from './AddressListItem/utils'
+import { translate as i18nT } from '@/i18n'
+
 
 export { buildTravelListSummaryHint }
 
@@ -148,7 +150,7 @@ const TravelListPanel: React.FC<Props> = ({
   const footer = useMemo(() => {
     if (compactPreview) return null
     if (isLoading) return skeletonCards
-    if (!hasMore) return <Text style={styles.endText}>Это все места поблизости</Text>
+    if (!hasMore) return <Text style={styles.endText}>{i18nT('map:components.MapPage.TravelListPanel.eto_vse_mesta_poblizosti_202d27f3')}</Text>
     return null
   }, [compactPreview, hasMore, isLoading, skeletonCards, styles.endText])
 
@@ -187,12 +189,11 @@ const TravelListPanel: React.FC<Props> = ({
       >
         <View style={styles.listHeaderTitleRow}>
           <Text pointerEvents="none" style={styles.listHeaderTitle}>
-            Места рядом
-          </Text>
+            {i18nT('map:components.MapPage.TravelListPanel.mesta_ryadom_a41e7282')}</Text>
           <View pointerEvents="none" style={styles.listHeaderCountChip}>
             <Text style={styles.listHeaderCountChipText}>
               {placesCountLabel} {placesWord}
-              {hasRadiusContext ? ` · ${currentRadiusKm} км` : ''}
+              {hasRadiusContext ? i18nT('map:components.MapPage.TravelListPanel.value1_km_ff41a766', { value1: currentRadiusKm }) : ''}
             </Text>
           </View>
           {onOpenFilters && (
@@ -200,7 +201,7 @@ const TravelListPanel: React.FC<Props> = ({
               testID="travel-list-open-filters"
               onPress={onOpenFilters}
               accessibilityRole="button"
-              accessibilityLabel="Открыть фильтры"
+              accessibilityLabel={i18nT('map:components.MapPage.TravelListPanel.otkryt_filtry_cc6114eb')}
               hitSlop={8}
               style={({ pressed }) => [
                 styles.filtersIconButton,
@@ -213,8 +214,7 @@ const TravelListPanel: React.FC<Props> = ({
         </View>
 
         <Text pointerEvents="none" style={styles.listHeaderHint}>
-          Нажмите на карточку, чтобы сфокусировать карту.
-        </Text>
+          {i18nT('map:components.MapPage.TravelListPanel.nazhmite_na_kartochku_chtoby_sfokusirovat_ka_9ec94a60')}</Text>
       </View>
     )
   }, [compactPreview, currentRadiusKm, headerWidthStyle, isMobile, onOpenFilters, showMobileSummary, styles, themeColors, totalCount, travelsData.length])

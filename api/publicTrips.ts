@@ -8,10 +8,12 @@
 //   решение/отмена     PATCH /api/trip-applications/{id}/   {status: approved|rejected|canceled}
 //   нотификации        GET   /api/trip-notifications/      (paginated)
 //   пометить прочит.   PATCH /api/trip-notifications/{id}/  {is_read}
-// До верификации BE на проде сохранён мок-фолбэк (EXPO_PUBLIC_TRIPS_MOCK=true или 404/501/0 в DEV).
+// Production contract verified by board #919; mock fallback is development-only.
 
 import { apiClient, ApiError } from '@/api/client';
+import { resolveDevMockFlag } from '@/utils/devMockFlags';
 import { devWarn } from '@/utils/logger';
+import { translate as i18nT } from '@/i18n';
 import {
   MOCK_PUBLIC_TRIPS,
   MOCK_MY_APPLICATIONS,
@@ -215,7 +217,7 @@ const isProfileObject = (p: ProfileField | undefined): p is ProfileObject =>
 const profileName = (p: ProfileField | undefined, fallbackId?: number | null): string => {
   if (isProfileObject(p) && p.name?.trim()) return p.name.trim();
   if (typeof p === 'string' && p.trim()) return p.trim();
-  return fallbackId != null ? `#${fallbackId}` : 'Участник';
+  return fallbackId != null ? `#${fallbackId}` : i18nT('errorsStatic:api.plannedTrips.participantFallback');
 };
 
 const profileAvatar = (p: ProfileField | undefined): string | null =>
@@ -315,7 +317,9 @@ const mapApplication = (dto: TripApplicationDto): TripApplication => ({
 
 const tripTitleLabel = (title?: string | null): string => {
   const normalized = title?.trim();
-  return normalized ? `поездку «${normalized}»` : 'поездку';
+  return normalized
+    ? i18nT('errorsStatic:api.publicTrips.applicationTargetNamed', { title: normalized })
+    : i18nT('errorsStatic:api.publicTrips.applicationTarget');
 };
 
 const buildNotificationMessage = (
@@ -324,19 +328,19 @@ const buildNotificationMessage = (
 ): string => {
   const trip = tripTitleLabel(dto.trip_title);
   if (dto.notification_type === 'application_created') {
-    return `Новая заявка на ${trip}.`;
+    return i18nT('errorsStatic:api.publicTrips.newApplication', { target: trip });
   }
   switch (status) {
     case 'new':
-      return `Ваша заявка на ${trip} отправлена.`;
+      return i18nT('errorsStatic:api.publicTrips.applicationSent', { target: trip });
     case 'pending':
-      return `Ваша заявка на ${trip} на рассмотрении.`;
+      return i18nT('errorsStatic:api.publicTrips.applicationPending', { target: trip });
     case 'approved':
-      return `Ваша заявка на ${trip} одобрена.`;
+      return i18nT('errorsStatic:api.publicTrips.applicationApproved', { target: trip });
     case 'rejected':
-      return `Ваша заявка на ${trip} отклонена.`;
+      return i18nT('errorsStatic:api.publicTrips.applicationRejected', { target: trip });
     case 'cancelled':
-      return `Ваша заявка на ${trip} отменена.`;
+      return i18nT('errorsStatic:api.publicTrips.applicationCanceled', { target: trip });
     default:
       return dto.body ?? dto.title ?? '';
   }
@@ -393,7 +397,10 @@ export const isDuplicateTripApplicationError = (error: unknown): boolean => {
 
 // ── Мок-фолбэк (FE-guard: снять после верификации BE на проде + regression) ──
 
-const USE_MOCK = process.env.EXPO_PUBLIC_TRIPS_MOCK === 'true';
+const USE_MOCK = resolveDevMockFlag({
+  name: 'EXPO_PUBLIC_TRIPS_MOCK',
+  value: process.env.EXPO_PUBLIC_TRIPS_MOCK,
+});
 
 /** Бэкенд недоступен → 404/501/0. В DEV или под флагом отдаём мок. */
 const shouldFallbackToMock = (error: unknown): boolean => {
@@ -546,7 +553,7 @@ export async function submitApplication(
     id: Date.now(),
     tripId: input.tripId,
     tripTitle: MOCK_PUBLIC_TRIPS.find((t) => t.id === input.tripId)?.title ?? '',
-    applicant: { id: 0, name: 'Вы', avatarUrl: null, activitySummary: null, badges: [] },
+    applicant: { id: 0, name: i18nT('errorsStatic:api.plannedTrips.currentUser'), avatarUrl: null, activitySummary: null, badges: [] },
     message: input.message,
     socialLinks: input.socialLinks,
     status: 'new',

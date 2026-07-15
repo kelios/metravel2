@@ -17,6 +17,8 @@ import { useUserPointsMapWebController } from './useUserPointsMapWebController';
 import { useUserPointsMapWebRuntime } from './useUserPointsMapWebRuntime';
 import { useUserPointsMarkerIcons } from './useUserPointsMarkerIcons';
 import { buildUserPointsTravelData, getUserPointsCenter, normalizeUserPoints } from './userPointsMapData';
+import { translate as i18nT } from '@/i18n'
+
 
 interface UserPointsMapProps {
   /**
@@ -368,7 +370,7 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
     return (
       <View style={[styles.container, height ? { height } : null, loadingStyles.loadingWrap]}>
         <ActivityIndicator color={colors.primaryDark} />
-        <Text style={loadingStyles.loadingText}>Загрузка карты…</Text>
+        <Text style={loadingStyles.loadingText}>{i18nT('map:components.UserPoints.UserPointsMap.zagruzka_karty_0bb3386b')}</Text>
       </View>
     );
   }

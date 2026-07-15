@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { FilterGroup, FilterState } from './types';
 import SortOptionItem from './SortOptionItem';
+import { translate as i18nT } from '@/i18n'
+
 
 interface SortDropdownProps {
   sortGroup: FilterGroup;
@@ -43,7 +45,7 @@ const SortDropdown = memo(({
           Platform.OS === 'web' && hovered && !isExpanded && styles.sortDropdownTriggerHover,
         ]}
         accessibilityRole="button"
-        accessibilityLabel={`Сортировка: ${selectedOption?.name || 'Новые'}`}
+        accessibilityLabel={i18nT('travel:components.listTravel.filters.SortDropdown.sortirovka_value1_3ed247b0', { value1: selectedOption?.name || i18nT('travel:components.listTravel.sortings.newest') })}
         accessibilityState={{ expanded: isExpanded }}
       >
         <View style={styles.sortDropdownTriggerLeft}>
@@ -51,9 +53,9 @@ const SortDropdown = memo(({
             <Feather name="sliders" size={14} color={colors.textMuted} />
           </View>
           <View style={styles.sortDropdownTextContainer}>
-            <Text style={styles.sortDropdownLabel}>Сортировка:</Text>
+            <Text style={styles.sortDropdownLabel}>{i18nT('travel:components.listTravel.filters.SortDropdown.sortirovka_9e428456')}</Text>
             <Text style={styles.sortDropdownValue} numberOfLines={1}>
-              {selectedOption?.name || 'Новые'}
+              {selectedOption?.name || i18nT('travel:components.listTravel.sortings.newest')}
             </Text>
           </View>
         </View>

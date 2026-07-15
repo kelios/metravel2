@@ -5,13 +5,18 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { getTravelStatusCalendarDate, parseTravelStatusDateParts, type TravelStatusEntry } from '@/stores/travelStatusStore'
+import { translate as i18nT } from '@/i18n'
+import { formatDate } from '@/i18n/format'
 
-const MONTH_NAMES = [
-  'Январь', 'Февраль', 'Март', 'Апрель',
-  'Май', 'Июнь', 'Июль', 'Август',
-  'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
-]
-const DAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+const capitalize = (value: string) =>
+  value ? value.charAt(0).toLocaleUpperCase() + value.slice(1) : value
+
+const getMonthName = (year: number, month: number) =>
+  capitalize(formatDate(new Date(year, month - 1, 1), { month: 'long' }))
+
+const getWeekdayNames = () => Array.from({ length: 7 }, (_, index) =>
+  capitalize(formatDate(new Date(2024, 0, index + 1), { weekday: 'short' }).replace(/\.$/, '')),
+)
 
 type Props = {
   entries: TravelStatusEntry[]
@@ -37,6 +42,8 @@ export default function MiniCalendar({
 
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1) // 1-based
+  const monthName = getMonthName(year, month)
+  const weekdayNames = getWeekdayNames()
 
   useEffect(() => {
     const focusedParts = parseTravelStatusDateParts(focusDate)
@@ -205,18 +212,18 @@ export default function MiniCalendar({
           style={[styles.navBtn, globalFocusStyles.focusable]}
           onPress={prevMonth}
           accessibilityRole="button"
-          accessibilityLabel="Предыдущий месяц"
+          accessibilityLabel={i18nT('calendar:components.calendar.MiniCalendar.predyduschiy_mesyats_eee6533d')}
         >
           <Feather name="chevron-left" size={20} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>
-          {MONTH_NAMES[month - 1]} {year}
+          {monthName} {year}
         </Text>
         <Pressable
           style={[styles.navBtn, globalFocusStyles.focusable]}
           onPress={nextMonth}
           accessibilityRole="button"
-          accessibilityLabel="Следующий месяц"
+          accessibilityLabel={i18nT('calendar:components.calendar.MiniCalendar.sleduyuschiy_mesyats_116fbea3')}
         >
           <Feather name="chevron-right" size={20} color={colors.text} />
         </Pressable>
@@ -224,7 +231,7 @@ export default function MiniCalendar({
 
       {/* Day names */}
       <View style={styles.dayNamesRow}>
-        {DAY_NAMES.map((name) => (
+        {weekdayNames.map((name) => (
           <Text key={name} style={styles.dayName}>{name}</Text>
         ))}
       </View>
@@ -252,7 +259,7 @@ export default function MiniCalendar({
                 ]}
                 onPress={() => onDayPress?.(dayStr)}
                 accessibilityRole="button"
-                accessibilityLabel={`${cell.day} ${MONTH_NAMES[month - 1]}${isMarked ? ', есть поездки' : ''}`}
+                accessibilityLabel={`${formatDate(new Date(year, month - 1, cell.day), { day: 'numeric', month: 'long' })}${isMarked ? i18nT('calendar:components.calendar.MiniCalendar.est_poezdki_931b418d') : ''}`}
                 accessibilityState={{ selected: isSelected }}
                 testID={`mini-calendar-day-${dayStr}`}
               >

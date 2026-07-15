@@ -5,30 +5,33 @@ import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
-import { getQuestAgeCategory } from '@/utils/questAudience'
+import { getQuestAgeBadgeLabel, getQuestAgeCategory } from '@/utils/questAudience'
 import type { QuestMeta } from '@/utils/questAdapters'
+import { selectPlural, translate as i18nT } from '@/i18n'
+
 
 const CARD_MEDIA_SIZE = 132
 
-const DIFFICULTY_LABEL: Record<string, string> = {
-  easy: 'Легко',
-  medium: 'Средне',
-  hard: 'Сложно',
-}
+const createDifficultyLabels = (): Record<string, string> => ({
+  easy: i18nT('quests:components.quests.QuestForCityCard.difficulty.easy'),
+  medium: i18nT('quests:components.quests.QuestForCityCard.difficulty.medium'),
+  hard: i18nT('quests:components.quests.QuestForCityCard.difficulty.hard'),
+})
 
 function formatPoints(points: number): string {
-  const mod10 = points % 10
-  const mod100 = points % 100
-  if (mod10 === 1 && mod100 !== 11) return `${points} точка`
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return `${points} точки`
-  return `${points} точек`
+  return selectPlural(points, {
+    one: i18nT('quests:components.quests.QuestForCityCard.value1_tochka_48728e6c', { value1: points }),
+    few: i18nT('quests:components.quests.QuestForCityCard.value1_tochki_62e11867', { value1: points }),
+    many: i18nT('quests:components.quests.QuestForCityCard.value1_tochek_eabc4aac', { value1: points }),
+    other: i18nT('quests:components.quests.QuestForCityCard.value1_tochek_eabc4aac', { value1: points }),
+  })
 }
 
 function formatDuration(durationMin: number): string {
-  if (durationMin < 60) return `~${durationMin} мин`
+  if (durationMin < 60) return i18nT('quests:components.quests.QuestForCityCard.value1_min_7d3797a3', { value1: durationMin })
   const hours = durationMin / 60
   const rounded = Number.isInteger(hours) ? hours : hours.toFixed(1)
-  return `~${rounded} ч`
+  return i18nT('quests:components.quests.QuestForCityCard.value1_ch_b656463e', { value1: rounded })
 }
 
 type Props = {
@@ -45,13 +48,14 @@ type Props = {
  */
 export function QuestForCityCard({
   quest,
-  eyebrow = 'Городской квест-маршрут',
+  eyebrow = i18nT('quests:components.quests.QuestForCityCard.gorodskoy_kvest_marshrut_90737ec7'),
   imageLoading = 'eager',
   style,
 }: Props) {
   const router = useRouter()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
+  const difficultyLabels = createDifficultyLabels()
 
   const href = `/quests/${quest.cityId}/${quest.id}`
   const chips: { key: string; icon: keyof typeof Feather.glyphMap; label: string }[] = []
@@ -59,15 +63,16 @@ export function QuestForCityCard({
   if (quest.durationMin)
     chips.push({ key: 'duration', icon: 'clock', label: formatDuration(quest.durationMin) })
   const ageCategory = quest.ageCategory ?? getQuestAgeCategory(quest.tags)
-  if (ageCategory) chips.push({ key: 'age', icon: 'users', label: ageCategory.label })
-  if (quest.difficulty && DIFFICULTY_LABEL[quest.difficulty])
+  const ageBadgeLabel = getQuestAgeBadgeLabel(ageCategory)
+  if (ageBadgeLabel) chips.push({ key: 'age', icon: 'users', label: ageBadgeLabel })
+  if (quest.difficulty && difficultyLabels[quest.difficulty])
     chips.push({
       key: 'difficulty',
       icon: 'bar-chart-2',
-      label: DIFFICULTY_LABEL[quest.difficulty],
+      label: difficultyLabels[quest.difficulty],
     })
 
-  const cityLabel = quest.cityName ? `по городу ${quest.cityName}` : 'по этому городу'
+  const cityLabel = quest.cityName ? i18nT('quests:components.quests.QuestForCityCard.po_gorodu_value1_2e44f93b', { value1: quest.cityName }) : i18nT('quests:components.quests.QuestForCityCard.po_etomu_gorodu_57c3bf25')
   const coverUri = typeof quest.cover === 'string' ? quest.cover.trim() : ''
 
   return (
@@ -79,7 +84,7 @@ export function QuestForCityCard({
         (pressed || hovered) && styles.cardHover,
       ]}
       accessibilityRole="link"
-      accessibilityLabel={`Пройти квест ${cityLabel}: ${quest.title}`}
+      accessibilityLabel={i18nT('quests:components.quests.QuestForCityCard.proyti_kvest_value1_value2_54986608', { value1: cityLabel, value2: quest.title })}
     >
       <View style={styles.media}>
         <ImageCardMedia
@@ -93,7 +98,7 @@ export function QuestForCityCard({
           blurRadius={16}
           loading={imageLoading === 'lazy' ? 'lazy' : 'eager'}
           optimizeWeb={false}
-          alt={`Обложка квеста ${quest.title}`}
+          alt={i18nT('quests:components.quests.QuestForCityCard.oblozhka_kvesta_value1_28d57a5f', { value1: quest.title })}
           style={styles.image}
         />
       </View>

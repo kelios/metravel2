@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Travel Magazine - журнальная вёрстка с яркими акцентами
  */
 export const travelMagazineTheme: PdfThemeConfig = {
   name: 'travel-magazine',
-  displayName: 'Travel Magazine',
-  description: 'Журнальная вёрстка с яркими акцентами',
+  get displayName() { return i18nT('export:services.pdfExport.theme.travelMagazine.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.travelMagazine.description') },
   
   colors: {
     text: '#0a0a0a',

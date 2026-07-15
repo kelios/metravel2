@@ -12,6 +12,8 @@ import {
     type PrivacyAudience,
     type PrivacySettingsDto,
 } from '@/api/privacy';
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * Управление настройками приватности (видимость × аудитории).
@@ -52,8 +54,8 @@ export function usePrivacySettings() {
             }
             showToast({
                 type: 'error',
-                text1: 'Ошибка',
-                text2: 'Не удалось сохранить настройки приватности. Попробуйте позже.',
+                text1: i18nT('profile:hooks.usePrivacySettings.oshibka_572c75e2'),
+                text2: i18nT('profile:hooks.usePrivacySettings.ne_udalos_sohranit_nastroyki_privatnosti_pop_6adb578d'),
             });
         },
         onSuccess: (data) => {

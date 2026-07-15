@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   children: ReactNode;
@@ -77,14 +79,13 @@ class TravelFormErrorBoundary extends Component<Props, State> {
       return (
         <SafeAreaView style={styles.container}>
           <View style={styles.content}>
-            <Text style={styles.title}>Что-то пошло не так</Text>
+            <Text style={styles.title}>{i18nT('travel:components.travel.TravelFormErrorBoundary.chto_to_poshlo_ne_tak_44a971c2')}</Text>
             <Text style={styles.message}>
-              При создании путешествия произошла ошибка. Попробуйте ещё раз или начните заново.
-            </Text>
+              {i18nT('travel:components.travel.TravelFormErrorBoundary.pri_sozdanii_puteshestviya_proizoshla_oshibk_d9e4aa65')}</Text>
             
             {__DEV__ && this.state.error && (
               <View style={styles.errorDetails}>
-                <Text style={styles.errorTitle}>Детали ошибки (для разработки):</Text>
+                <Text style={styles.errorTitle}>{i18nT('travel:components.travel.TravelFormErrorBoundary.detali_oshibki_dlya_razrabotki_a09b56f0')}</Text>
                 <Text style={styles.errorText}>
                   {this.state.error.toString()}
                 </Text>
@@ -98,12 +99,12 @@ class TravelFormErrorBoundary extends Component<Props, State> {
 
             <View style={styles.actions}>
               <Button
-                label="Попробовать снова"
+                label={i18nT('travel:components.travel.TravelFormErrorBoundary.poprobovat_snova_e045b514')}
                 onPress={this.handleRetry}
                 variant="primary"
                 size="md"
                 style={[styles.button, styles.retryButton]}
-                accessibilityLabel="Попробовать снова"
+                accessibilityLabel={i18nT('travel:components.travel.TravelFormErrorBoundary.poprobovat_snova_e045b514')}
               />
             </View>
           </View>

@@ -36,6 +36,9 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/context/AuthContext';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import { webTouchScrollStyle } from '@/utils';
+import { buildLoginHref, resolvePostAuthPath } from '@/utils/authNavigation';
+import { translate as i18nT } from '@/i18n'
+
 
 export default function RegisterForm() {
     const [showPass, setShowPass] = useState(false);
@@ -66,15 +69,6 @@ export default function RegisterForm() {
     const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo');
     const canonical = buildCanonicalUrl(pathname || '/registration');
 
-    const resolvePostAuthPath = (): string => {
-        if (intent === 'create-book') return '/travel/new';
-        if (intent === 'build-pdf') return '/export';
-        if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
-            return redirect;
-        }
-        return '/';
-    };
-
     useEffect(() => {
         if (!isFocused) return;
         trackRegistrationViewed({ source: 'registration', intent, redirect });
@@ -99,12 +93,12 @@ export default function RegisterForm() {
                     method: 'email',
                     reason: 'api',
                 });
-                setMsg({ text: message || 'Не удалось зарегистрироваться.', error: true });
+                setMsg({ text: message || i18nT('authStatic:registration.failed'), error: true });
                 return;
             }
 
             // AUTH-03: Явное welcome-сообщение
-            setMsg({ text: 'Добро пожаловать! Аккаунт создан. Проверьте почту для подтверждения.', error: false });
+            setMsg({ text: i18nT('auth:components.auth.RegistrationForm.dobro_pozhalovat_akkaunt_sozdan_proverte_poc_7c94e26e'), error: false });
             resetForm();
             // Не разблокируем кнопку на успехе (finally вызовет setSubmitting(false)):
             // submitted держит её disabled до фактического router.replace.
@@ -116,7 +110,7 @@ export default function RegisterForm() {
             if (navTimerRef.current) clearTimeout(navTimerRef.current);
             navTimerRef.current = setTimeout(() => {
                 navTimerRef.current = null;
-                router.replace(resolvePostAuthPath() as any);
+                router.replace(resolvePostAuthPath({ redirect, intent }) as any);
             }, 1000);
         } catch (e: any) {
             trackRegistrationFailed({
@@ -126,7 +120,7 @@ export default function RegisterForm() {
                 method: 'email',
                 reason: 'exception',
             });
-            setMsg({ text: e?.message || 'Не удалось зарегистрироваться.', error: true });
+            setMsg({ text: e?.message || i18nT('authStatic:registration.failed'), error: true });
         } finally {
             setSubmitting(false);
         }
@@ -147,7 +141,7 @@ export default function RegisterForm() {
                 }
                 navigating = true;
                 setSubmitted(true);
-                router.replace(resolvePostAuthPath() as any);
+                router.replace(resolvePostAuthPath({ redirect, intent }) as any);
             } else {
                 trackRegistrationFailed({
                     source: 'registration',
@@ -156,7 +150,7 @@ export default function RegisterForm() {
                     method: 'google',
                     reason: 'api',
                 });
-                setMsg({ text: 'Не удалось войти через Google.', error: true });
+                setMsg({ text: i18nT('auth:components.auth.RegistrationForm.ne_udalos_voyti_cherez_google_549109b3'), error: true });
             }
         } catch (e: any) {
             trackRegistrationFailed({
@@ -166,7 +160,7 @@ export default function RegisterForm() {
                 method: 'google',
                 reason: 'exception',
             });
-            setMsg({ text: e?.message || 'Ошибка при входе через Google.', error: true });
+            setMsg({ text: e?.message || i18nT('authStatic:google.signInFailed'), error: true });
         } finally {
             // На успехе оставляем заблокированным до размонтирования (идёт навигация).
             if (!navigating) setGoogleBusy(false);
@@ -202,9 +196,9 @@ export default function RegisterForm() {
         [values.password],
     );
 
-    const title = 'Регистрация в Metravel: аккаунт и маршруты | Metravel';
+    const title = i18nT('auth:components.auth.RegistrationForm.registratsiya_v_metravel_akkaunt_i_marshruty_94d7b8e7');
     const description =
-        'Создайте аккаунт в Metravel, чтобы публиковать маршруты, сохранять идеи поездок, подписываться на авторов и вести личную книгу путешествий.';
+        i18nT('auth:components.auth.RegistrationForm.sozdayte_akkaunt_v_metravel_chtoby_publikova_7610c3f7');
 
     return (
         <>
@@ -264,7 +258,7 @@ export default function RegisterForm() {
 
                                             {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для username */}
                                             <FormFieldWithValidation
-                                                label="Имя пользователя"
+                                                label={i18nT('auth:components.auth.RegistrationForm.imya_polzovatelya_f7321ed7')}
                                                 error={touched.username && errors.username ? errors.username : null}
                                                 required
                                             >
@@ -285,7 +279,7 @@ export default function RegisterForm() {
                                                             styles.input,
                                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                                         ]}
-                                                        placeholder="Имя пользователя"
+                                                        placeholder={i18nT('auth:components.auth.RegistrationForm.imya_polzovatelya_f7321ed7')}
                                                         placeholderTextColor={colors.textMuted}
                                                         value={values.username}
                                                         onChangeText={handleChange('username')}
@@ -300,7 +294,7 @@ export default function RegisterForm() {
 
                                             {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для email */}
                                             <FormFieldWithValidation
-                                                label="Email"
+                                                label={i18nT('auth:components.auth.RegistrationForm.email_7e1a2f1e')}
                                                 error={touched.email && errors.email ? errors.email : null}
                                                 required
                                             >
@@ -321,7 +315,7 @@ export default function RegisterForm() {
                                                             styles.input,
                                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                                         ]}
-                                                        placeholder="Email"
+                                                        placeholder={i18nT('auth:components.auth.RegistrationForm.email_7e1a2f1e')}
                                                         placeholderTextColor={colors.textMuted}
                                                         value={values.email}
                                                         onChangeText={handleChange('email')}
@@ -337,9 +331,9 @@ export default function RegisterForm() {
 
                                             {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для пароля */}
                                             <FormFieldWithValidation
-                                                label="Пароль"
+                                                label={i18nT('auth:components.auth.RegistrationForm.parol_cf3a7cd2')}
                                                 error={touched.password && errors.password ? errors.password : null}
-                                                hint="Минимум 8 символов. Лучше использовать буквы, цифры и специальный символ."
+                                                hint={i18nT('auth:components.auth.RegistrationForm.minimum_8_simvolov_luchshe_ispolzovat_bukvy__47013a93')}
                                                 required
                                             >
                                                 <View style={[
@@ -359,7 +353,7 @@ export default function RegisterForm() {
                                                             styles.input,
                                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                                         ]}
-                                                        placeholder="Пароль"
+                                                        placeholder={i18nT('auth:components.auth.RegistrationForm.parol_cf3a7cd2')}
                                                         placeholderTextColor={colors.textMuted}
                                                         value={values.password}
                                                         onChangeText={handleChange('password')}
@@ -374,7 +368,7 @@ export default function RegisterForm() {
                                                         hitSlop={8}
                                                         style={styles.eyeButton}
                                                         accessibilityRole="button"
-                                                        accessibilityLabel={showPass ? 'Скрыть пароль' : 'Показать пароль'}
+                                                        accessibilityLabel={showPass ? i18nT('auth:components.auth.RegistrationForm.skryt_parol_69667518') : i18nT('auth:components.auth.RegistrationForm.pokazat_parol_63d309f3')}
                                                     >
                                                         <Feather
                                                             name={showPass ? 'eye-off' : 'eye'}
@@ -384,8 +378,7 @@ export default function RegisterForm() {
                                                     </Pressable>
                                                 </View>
                                                 <Text style={styles.passwordHint}>
-                                                    Минимум 8 символов. Лучше добавить цифру и специальный символ.
-                                                </Text>
+                                                    {i18nT('auth:components.auth.RegistrationForm.minimum_8_simvolov_luchshe_dobavit_tsifru_i__b3e7b48b')}</Text>
                                                 {passwordStrengthMeta && (
                                                     <View
                                                         style={styles.strengthContainer}
@@ -394,9 +387,9 @@ export default function RegisterForm() {
                                                             min: 0,
                                                             max: 100,
                                                             now: passwordStrengthMeta.progress,
-                                                            text: `Надёжность пароля: ${passwordStrengthMeta.label}`,
+                                                            text: i18nT('auth:components.auth.RegistrationForm.nadezhnost_parolya_value1_d7238316', { value1: passwordStrengthMeta.label }),
                                                         }}
-                                                        accessibilityLabel="Надёжность пароля"
+                                                        accessibilityLabel={i18nT('auth:components.auth.RegistrationForm.nadezhnost_parolya_da369b84')}
                                                     >
                                                         <View style={styles.strengthBarBg}>
                                                             <View
@@ -423,7 +416,7 @@ export default function RegisterForm() {
 
                                             {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для подтверждения пароля */}
                                             <FormFieldWithValidation
-                                                label="Повторите пароль"
+                                                label={i18nT('auth:components.auth.RegistrationForm.povtorite_parol_1e4f5f06')}
                                                 error={touched.confirmPassword && errors.confirmPassword ? errors.confirmPassword : null}
                                                 required
                                             >
@@ -444,7 +437,7 @@ export default function RegisterForm() {
                                                             styles.input,
                                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                                         ]}
-                                                        placeholder="Повторите пароль"
+                                                        placeholder={i18nT('auth:components.auth.RegistrationForm.povtorite_parol_1e4f5f06')}
                                                         placeholderTextColor={colors.textMuted}
                                                         value={values.confirmPassword}
                                                         onChangeText={handleChange('confirmPassword')}
@@ -460,19 +453,19 @@ export default function RegisterForm() {
 
                                             {/* ---------- button ---------- */}
                                             <Button
-                                                label={isSubmitting || submitted ? 'Подождите…' : 'Зарегистрироваться'}
+                                                label={isSubmitting || submitted ? i18nT('auth:components.auth.RegistrationForm.podozhdite_c6f74920') : i18nT('auth:components.auth.RegistrationForm.zaregistrirovatsya_3ca6aeb7')}
                                                 onPress={() => handleSubmit()}
                                                 disabled={isSubmitting || submitted || googleBusy}
                                                 loading={isSubmitting || submitted}
                                                 variant="primary"
                                                 size="lg"
                                                 style={styles.btn}
-                                                accessibilityLabel="Зарегистрироваться"
+                                                accessibilityLabel={i18nT('auth:components.auth.RegistrationForm.zaregistrirovatsya_3ca6aeb7')}
                                             />
 
                                             <View style={styles.dividerContainer}>
                                                 <View style={styles.dividerLine} />
-                                                <Text style={styles.dividerText}>или</Text>
+                                                <Text style={styles.dividerText}>{i18nT('auth:components.auth.RegistrationForm.ili_956a0bdd')}</Text>
                                                 <View style={styles.dividerLine} />
                                             </View>
 
@@ -483,20 +476,20 @@ export default function RegisterForm() {
                                             />
 
                                             <View style={styles.loginContainer}>
-                                                <Text style={styles.loginText}>Уже есть аккаунт? </Text>
+                                                <Text style={styles.loginText}>{i18nT('auth:components.auth.RegistrationForm.uzhe_est_akkaunt_3eaf8790')}</Text>
                                                 <Pressable
                                                     onPress={() =>
                                                         router.push(
                                                             (redirect && typeof redirect === 'string')
-                                                                ? (`/login?redirect=${encodeURIComponent(redirect)}${intent ? `&intent=${encodeURIComponent(intent)}` : ''}` as any)
+                                                                ? (buildLoginHref({ redirect, intent }) as any)
                                                                 : (`/login${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
                                                         )
                                                     }
                                                     disabled={isSubmitting || submitted || googleBusy}
                                                     accessibilityRole="button"
-                                                    accessibilityLabel="Войти в аккаунт"
+                                                    accessibilityLabel={i18nT('auth:components.auth.RegistrationForm.voyti_v_akkaunt_c9c50168')}
                                                 >
-                                                    <Text style={styles.loginLink}>Войти</Text>
+                                                    <Text style={styles.loginLink}>{i18nT('auth:components.auth.RegistrationForm.voyti_4b1b46b3')}</Text>
                                                 </Pressable>
                                             </View>
                                     </View>
@@ -592,7 +585,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         color: colors.textMuted,
     },
     // ✅ ИСПРАВЛЕНИЕ: Стили больше не используются (ошибки показываются через FormFieldWithValidation)
-    err: { color: colors.danger, marginBottom: 6, textAlign: 'left' },
+    err: { color: colors.dangerDark, marginBottom: 6, textAlign: 'left' },
     ok: { 
         color: colors.success, 
         marginBottom: 20, 

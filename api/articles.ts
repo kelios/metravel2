@@ -4,6 +4,7 @@ import { safeJsonParse } from '@/utils/safeJsonParse';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { Platform } from 'react-native';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
+import { translate as i18nT } from '@/i18n';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
@@ -291,7 +292,7 @@ export const fetchArticles = async (
       return { data: [], total: 0 };
     }
     if (options?.throwOnError) {
-      throw new Error('Не удалось загрузить статьи');
+      throw new Error(i18nT('errorsStatic:api.articles.loadListFailed'));
     }
     return { data: [], total: 0 };
   }
@@ -316,7 +317,7 @@ export const fetchArticle = async (
       return {} as Article;
     }
     if (options?.throwOnError) {
-      throw new Error('Не удалось загрузить статью');
+      throw new Error(i18nT('errorsStatic:api.articles.loadOneFailed'));
     }
     return {} as Article;
   }
@@ -328,7 +329,7 @@ export const fetchArticleBySlug = async (
 ): Promise<Article> => {
   const normalizedSlug = normalizeParamValue(String(slug || '')).replace(/^\/+|\/+$/g, '');
   if (!normalizedSlug) {
-    throw new Error('Пустой slug статьи');
+    throw new Error(i18nT('errorsStatic:api.articles.emptySlug'));
   }
 
   const safeSlug = encodeURIComponent(normalizedSlug);
@@ -363,7 +364,7 @@ export const fetchArticleBySlug = async (
         return await safeJsonParse<Article>(directRes, {} as Article);
       }
 
-      const notFoundError = new Error(`Статья со slug "${normalizedSlug}" не найдена`);
+      const notFoundError = new Error(i18nT('errorsStatic:api.articles.notFoundBySlug', { slug: normalizedSlug }));
       canonicalNotFound = true;
       if (options?.throwOnError) {
         throw notFoundError;
@@ -393,7 +394,7 @@ export const fetchArticleBySlug = async (
     }
   }
 
-  const notFoundError = new Error(`Статья со slug "${normalizedSlug}" не найдена`);
+  const notFoundError = new Error(i18nT('errorsStatic:api.articles.notFoundBySlug', { slug: normalizedSlug }));
   if (options?.throwOnError) {
     throw notFoundError;
   }

@@ -6,6 +6,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { translate as i18nT } from '@/i18n'
+
 
 type FeatherIconName = ComponentProps<typeof Feather>['name'];
 
@@ -42,16 +44,16 @@ type Props = {
 
 export default function ProfileCollectionHeader({
   title,
-  subtitle = 'Профиль',
+  subtitle = i18nT('profile:components.profile.ProfileCollectionHeader.profil_17d20d76'),
   onBackPress,
   breadcrumbs,
   onBreadcrumbPress,
   showClearButton = false,
   onClearPress,
-  clearAccessibilityLabel = 'Очистить',
-  clearButtonText = 'Очистить',
+  clearAccessibilityLabel = i18nT('profile:components.profile.ProfileCollectionHeader.ochistit_585aebf5'),
+  clearButtonText = i18nT('profile:components.profile.ProfileCollectionHeader.ochistit_585aebf5'),
   compactClear = false,
-  backAccessibilityLabel = 'Назад',
+  backAccessibilityLabel = i18nT('profile:components.profile.ProfileCollectionHeader.nazad_1a2cc10a'),
   dense = false,
 }: Props) {
   const colors = useThemedColors();
@@ -192,7 +194,7 @@ export default function ProfileCollectionHeader({
       {visibleBreadcrumbs.length > 0 && (
         <View
           style={styles.breadcrumbRow}
-          {...(Platform.OS === 'web' ? ({ role: 'navigation', 'aria-label': 'Breadcrumb' } as any) : {})}
+          {...(Platform.OS === 'web' ? ({ role: 'navigation', 'aria-label': i18nT('profile:components.profile.ProfileCollectionHeader.breadcrumb_ea080886') } as any) : {})}
         >
           {visibleBreadcrumbs.map((item, index) => {
             const isLast = index === visibleBreadcrumbs.length - 1;
@@ -215,7 +217,7 @@ export default function ProfileCollectionHeader({
                   }}
                   disabled={!isInteractive}
                   accessibilityRole="button"
-                  accessibilityLabel={isLast ? `Текущая страница: ${item.label}` : `Перейти на ${item.label}`}
+                  accessibilityLabel={isLast ? i18nT('profile:components.profile.ProfileCollectionHeader.tekuschaya_stranitsa_value1_8269506d', { value1: item.label }) : i18nT('profile:components.profile.ProfileCollectionHeader.pereyti_na_value1_c52f60b9', { value1: item.label })}
                   {...(Platform.OS === 'web' && isLast ? ({ 'aria-current': 'page' } as any) : {})}
                   style={({ pressed }) => [
                     styles.breadcrumbItem,
@@ -254,7 +256,7 @@ export default function ProfileCollectionHeader({
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
             <Feather name="arrow-left" size={16} color={colors.primaryDark} />
-            <Text style={styles.backToProfileButtonText}>Назад</Text>
+            <Text style={styles.backToProfileButtonText}>{i18nT('profile:components.profile.ProfileCollectionHeader.nazad_1a2cc10a')}</Text>
           </Pressable>
 
           {showClearButton && typeof onClearPress === 'function' && (

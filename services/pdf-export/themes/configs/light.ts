@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Светлая тема - много воздуха и мягкие цвета
  */
 export const lightTheme: PdfThemeConfig = {
   name: 'light',
-  displayName: 'Светлая',
-  description: 'Много воздуха, мягкие цвета, комфортное чтение',
+  get displayName() { return i18nT('export:services.pdfExport.theme.light.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.light.description') },
   
   colors: {
     text: '#0f172a',

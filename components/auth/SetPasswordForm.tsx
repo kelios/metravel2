@@ -13,6 +13,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { translate as i18nT } from '@/i18n'
+
 
 
 interface SetPasswordFormValues {
@@ -51,15 +53,15 @@ export default function SetPassword() {
             const success = await setNewPassword(password_reset_token as string, values.password);
             if (success) {
                 setDone(true);
-                setMsg({ text: 'Пароль успешно изменен', error: false });
+                setMsg({ text: i18nT('auth:components.auth.SetPasswordForm.parol_uspeshno_izmenen_3d2b96b5'), error: false });
                 navTimeoutRef.current = setTimeout(() => {
                     navigation.navigate('login' as never);
                 }, 1500);
             } else {
-                setMsg({ text: 'Не удалось изменить пароль', error: true });
+                setMsg({ text: i18nT('auth:components.auth.SetPasswordForm.ne_udalos_izmenit_parol_dd091b55'), error: true });
             }
         } catch (e: any) {
-            setMsg({ text: e?.message || 'Ошибка при изменении пароля', error: true });
+            setMsg({ text: e?.message || i18nT('authStatic:password.changeFailed'), error: true });
         } finally {
             setSubmitting(false);
         }
@@ -84,8 +86,8 @@ export default function SetPassword() {
             {isFocused && (
                 <InstantSEO
                     headKey="set-password"
-                    title="Смена пароля | Metravel"
-                    description="Смена пароля"
+                    title={i18nT('auth:components.auth.SetPasswordForm.smena_parolya_metravel_bf28783a')}
+                    description={i18nT('auth:components.auth.SetPasswordForm.smena_parolya_341ef61e')}
                     canonical={buildCanonicalUrl('/set-password')}
                     robots="noindex, nofollow"
                 />
@@ -99,8 +101,7 @@ export default function SetPassword() {
             <View style={styles.card}>
                     {!hasToken && (
                         <Text style={[styles.message, styles.err]}>
-                            Ссылка недействительна или устарела
-                        </Text>
+                            {i18nT('auth:components.auth.SetPasswordForm.ssylka_nedeystvitelna_ili_ustarela_d7694ae3')}</Text>
                     )}
                     {msg.text !== '' && (
                         <Text style={[styles.message, msg.error ? styles.err : styles.ok]}>
@@ -110,7 +111,7 @@ export default function SetPassword() {
 
                                 {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для пароля */}
                                 <FormFieldWithValidation
-                                    label="Новый пароль"
+                                    label={i18nT('auth:components.auth.SetPasswordForm.novyy_parol_e22841c5')}
                                     error={touched.password && errors.password ? errors.password : null}
                                     required
                                 >
@@ -120,7 +121,7 @@ export default function SetPassword() {
                                             touched.password && errors.password && styles.inputError,
                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                         ]}
-                                        placeholder="Новый пароль"
+                                        placeholder={i18nT('auth:components.auth.SetPasswordForm.novyy_parol_e22841c5')}
                                         placeholderTextColor={colors.textMuted}
                                         secureTextEntry
                                         value={values.password}
@@ -131,7 +132,7 @@ export default function SetPassword() {
 
                                 {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для подтверждения пароля */}
                                 <FormFieldWithValidation
-                                    label="Подтвердите пароль"
+                                    label={i18nT('auth:components.auth.SetPasswordForm.podtverdite_parol_4e3ca96e')}
                                     error={touched.confirmPassword && errors.confirmPassword ? errors.confirmPassword : null}
                                     required
                                 >
@@ -141,7 +142,7 @@ export default function SetPassword() {
                                             touched.confirmPassword && errors.confirmPassword && styles.inputError,
                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                         ]}
-                                        placeholder="Подтвердите пароль"
+                                        placeholder={i18nT('auth:components.auth.SetPasswordForm.podtverdite_parol_4e3ca96e')}
                                         placeholderTextColor={colors.textMuted}
                                         secureTextEntry
                                         value={values.confirmPassword}
@@ -151,13 +152,13 @@ export default function SetPassword() {
                                 </FormFieldWithValidation>
 
                                 <Button
-                                    label={done ? 'Готово' : isSubmitting ? 'Изменение...' : 'Сменить пароль'}
+                                    label={done ? i18nT('auth:components.auth.SetPasswordForm.gotovo_fbee8536') : isSubmitting ? i18nT('auth:components.auth.SetPasswordForm.izmenenie_80fe5ee5') : i18nT('auth:components.auth.SetPasswordForm.smenit_parol_5237ebd6')}
                                     onPress={() => handleSubmit()}
                                     disabled={isSubmitting || done || !hasToken}
                                     variant="primary"
                                     size="lg"
                                     style={styles.applyButton}
-                                    accessibilityLabel="Сменить пароль"
+                                    accessibilityLabel={i18nT('auth:components.auth.SetPasswordForm.smenit_parol_5237ebd6')}
                                 />
             </View>
         </View>
@@ -242,7 +243,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontWeight: '500',
     },
     err: {
-        color: colors.danger,
+        color: colors.dangerDark,
         backgroundColor: colors.dangerSoft,
         borderLeftWidth: 3,
         borderLeftColor: colors.danger,

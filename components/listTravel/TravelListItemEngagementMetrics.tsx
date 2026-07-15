@@ -3,6 +3,7 @@ import { Platform, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { TravelEngagementStats } from '@/utils/travelEngagementStats'
+import { translate as i18nT } from '@/i18n'
 
 const ENGAGEMENT_ICON_SIZE = 14
 const IS_WEB = Platform.OS === 'web' || typeof document !== 'undefined'
@@ -12,10 +13,10 @@ const ENGAGEMENT_METRICS: Array<{
   label: string
   icon: React.ComponentProps<typeof Feather>['name']
 }> = [
-  { key: 'favoritesCount', label: 'Сохранили', icon: 'heart' },
-  { key: 'wishlistCount', label: 'Хочу', icon: 'bookmark' },
-  { key: 'visitedCount', label: 'Были', icon: 'check-circle' },
-  { key: 'plannedCount', label: 'Планируют', icon: 'calendar' },
+  { key: 'favoritesCount', get label() { return i18nT('travel:components.listTravel.TravelListItemEngagementMetrics.saved') }, icon: 'heart' },
+  { key: 'wishlistCount', get label() { return i18nT('travel:components.listTravel.TravelListItemEngagementMetrics.wishlist') }, icon: 'bookmark' },
+  { key: 'visitedCount', get label() { return i18nT('travel:components.listTravel.TravelListItemEngagementMetrics.visited') }, icon: 'check-circle' },
+  { key: 'plannedCount', get label() { return i18nT('travel:components.listTravel.TravelListItemEngagementMetrics.planned') }, icon: 'calendar' },
 ]
 
 type Props = {

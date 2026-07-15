@@ -7,6 +7,7 @@
 // прод-Done требует реального image_url с таргета (см. Task Contract #384).
 
 import { apiClient, ApiError } from '@/api/client';
+import { resolveDevMockFlag } from '@/utils/devMockFlags';
 import { devWarn } from '@/utils/logger';
 import { getSiteBaseUrl } from '@/utils/seo';
 
@@ -50,7 +51,10 @@ const mapShareCard = (dto: ShareCardDto): ShareCard => ({
 // ── Мок-фолбэк (до готовности BE #382) ──────────────────────────────────────
 // Тот же контракт, что и в api/achievements.ts: под флагом или при 404/501/0 в DEV.
 
-const USE_MOCK = process.env.EXPO_PUBLIC_ACHIEVEMENTS_MOCK === 'true';
+const USE_MOCK = resolveDevMockFlag({
+  name: 'EXPO_PUBLIC_ACHIEVEMENTS_MOCK',
+  value: process.env.EXPO_PUBLIC_ACHIEVEMENTS_MOCK,
+});
 
 const shouldFallbackToMock = (error: unknown): boolean => {
   if (USE_MOCK) return true;

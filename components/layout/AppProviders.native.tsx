@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '@/context/AuthContext'
 import { FavoritesProvider } from '@/context/FavoritesProvider'
 import ThemedPaperProvider from '@/components/ui/ThemedPaperProvider'
+import { LocaleProvider } from '@/i18n/LocaleProvider'
 
 interface AppProvidersProps {
   queryClient: any
@@ -16,12 +17,14 @@ interface AppProvidersProps {
 
 export default function AppProviders({ queryClient, children }: AppProvidersProps) {
   return (
-    <ThemedPaperProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <FavoritesProvider>{children}</FavoritesProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </ThemedPaperProvider>
+    <LocaleProvider>
+      <ThemedPaperProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <FavoritesProvider>{children}</FavoritesProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ThemedPaperProvider>
+    </LocaleProvider>
   )
 }

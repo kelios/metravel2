@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Tropical — яркие тропические цвета: изумруд, горячий розовый, бирюза
  */
 export const tropicalTheme: PdfThemeConfig = {
   name: 'tropical',
-  displayName: 'Тропики',
-  description: 'Яркие тропические цвета — изумруд, бирюза, фуксия',
+  get displayName() { return i18nT('export:services.pdfExport.theme.tropical.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.tropical.description') },
 
   colors: {
     text: '#1a2a24',

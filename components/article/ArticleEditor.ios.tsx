@@ -26,10 +26,12 @@ import {
 } from './articleEditorConfig';
 import { buildArticleEditorNativeHtml } from './articleEditorNativeHtml';
 import type { ArticleEditorProps } from './articleEditor.types';
+import { translate as i18nT } from '@/i18n'
+
 
 const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
-  label = 'Описание',
-  placeholder = 'Введите описание…',
+  label = i18nT('shared:components.article.ArticleEditor.opisanie_2e106b75'),
+  placeholder = i18nT('shared:components.article.ArticleEditor.vvedite_opisanie_5aa2e118'),
   content,
   onChange,
   onAutosave,
@@ -223,14 +225,14 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   // Загрузка изображения
   const handleImagePick = useCallback(async () => {
     if (!isAuthenticated) {
-      Alert.alert('Авторизация', 'Войдите, чтобы загружать изображения');
+      Alert.alert(i18nT('shared:components.article.ArticleEditor.avtorizatsiya_458c0f15'), i18nT('shared:components.article.ArticleEditor.voydite_chtoby_zagruzhat_izobrazheniya_1419c326'));
       return;
     }
 
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Разрешение', 'Необходим доступ к галерее');
+        Alert.alert(i18nT('shared:components.article.ArticleEditor.razreshenie_9a13b5d8'), i18nT('shared:components.article.ArticleEditor.neobhodim_dostup_k_galeree_5656f9ab'));
         return;
       }
 
@@ -271,7 +273,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       }
     } catch (error) {
       console.error('Image upload error:', error);
-      Alert.alert('Ошибка', 'Не удалось загрузить изображение');
+      Alert.alert(i18nT('shared:components.article.ArticleEditor.oshibka_25f2899b'), i18nT('shared:components.article.ArticleEditor.ne_udalos_zagruzit_izobrazhenie_978317da'));
     } finally {
       setIsUploading(false);
     }
@@ -305,14 +307,14 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
           <UiIconButton
             icon={<Feather name="rotate-ccw" size={20} color={isReady ? colors.text : colors.textMuted} />}
             onPress={handleUndo}
-            label="Отменить"
+            label={i18nT('shared:components.article.ArticleEditor.otmenit_91e1ab0e')}
             disabled={!isReady}
             size="sm"
           />
           <UiIconButton
             icon={<Feather name="rotate-cw" size={20} color={isReady ? colors.text : colors.textMuted} />}
             onPress={handleRedo}
-            label="Повторить"
+            label={i18nT('shared:components.article.ArticleEditor.povtorit_fa300408')}
             disabled={!isReady}
             size="sm"
           />
@@ -320,7 +322,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
             <UiIconButton
               icon={isUploading ? <ActivityIndicator size="small" color={colors.primaryDark} /> : <Feather name="image" size={20} color={isReady ? colors.text : colors.textMuted} />}
               onPress={handleImagePick}
-              label="Добавить изображение"
+              label={i18nT('shared:components.article.ArticleEditor.dobavit_izobrazhenie_1bb89664')}
               disabled={!isReady || isUploading}
               size="sm"
             />
@@ -328,7 +330,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
           <UiIconButton
             icon={<Feather name="bookmark" size={20} color={isReady ? colors.text : colors.textMuted} />}
             onPress={handleInsertAnchor}
-            label="Вставить якорь"
+            label={i18nT('shared:components.article.ArticleEditor.vstavit_yakor_de41fd53')}
             disabled={!isReady}
             size="sm"
           />
@@ -352,7 +354,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
           renderLoading={() => (
             <View style={[styles.loading, { backgroundColor: colors.surface }]}>
               <ActivityIndicator size="large" color={colors.primaryDark} />
-              <Text style={[styles.loadingText, { color: colors.textMuted }]}>Загрузка редактора...</Text>
+              <Text style={[styles.loadingText, { color: colors.textMuted }]}>{i18nT('shared:components.article.ArticleEditor.zagruzka_redaktora_597c7bce')}</Text>
             </View>
           )}
         />
@@ -367,15 +369,13 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: DESIGN_TOKENS.spacing.lg }}>
           <View style={{ backgroundColor: colors.surface, borderRadius: DESIGN_TOKENS.radii.md, borderWidth: 1, borderColor: colors.border, padding: DESIGN_TOKENS.spacing.lg }}>
             <Text style={{ color: colors.text, fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '600', marginBottom: DESIGN_TOKENS.spacing.sm }}>
-              Вставить якорь
-            </Text>
+              {i18nT('shared:components.article.ArticleEditor.vstavit_yakor_de41fd53')}</Text>
             <Text style={{ color: colors.textSecondary, fontSize: DESIGN_TOKENS.typography.sizes.sm, marginBottom: DESIGN_TOKENS.spacing.md }}>
-              Идентификатор (например: day-3)
-            </Text>
+              {i18nT('shared:components.article.ArticleEditor.identifikator_naprimer_day_3_15cd49eb')}</Text>
             <TextInput
               value={anchorValue}
               onChangeText={setAnchorValue}
-              placeholder="day-3"
+              placeholder={i18nT('shared:components.article.ArticleEditor.day_3_52c0c0f1')}
               placeholderTextColor={colors.textSecondary}
               autoCapitalize="none"
               autoCorrect={false}
@@ -393,7 +393,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: DESIGN_TOKENS.spacing.sm }}>
               <Button
                 onPress={() => setAnchorModalVisible(false)}
-                label="Отмена"
+                label={i18nT('shared:components.article.ArticleEditor.otmena_ae83d861')}
                 variant="ghost"
                 size="sm"
               />
@@ -401,13 +401,13 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
                 onPress={() => {
                   const id = normalizeAnchorId(anchorValue);
                   if (!id) {
-                    Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)');
+                    Alert.alert(i18nT('shared:components.article.ArticleEditor.yakor_544e6926'), i18nT('shared:components.article.ArticleEditor.vvedite_korrektnyy_identifikator_naprimer_da_db9f44db'));
                     return;
                   }
                   setAnchorModalVisible(false);
                   webViewRef.current?.postMessage(JSON.stringify({ type: 'insert-anchor', id }));
                 }}
-                label="Вставить"
+                label={i18nT('shared:components.article.ArticleEditor.vstavit_76329a70')}
                 variant="primary"
                 size="sm"
               />

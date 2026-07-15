@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Sunset — тёплые закатные тона: коралл, золото, мягкий персик
  */
 export const sunsetTheme: PdfThemeConfig = {
   name: 'sunset',
-  displayName: 'Закат',
-  description: 'Тёплые закатные тона — коралл, золото, персик',
+  get displayName() { return i18nT('export:services.pdfExport.theme.sunset.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.sunset.description') },
 
   colors: {
     text: '#2d1b14',

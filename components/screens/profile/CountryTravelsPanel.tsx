@@ -10,6 +10,8 @@ import Feather from '@expo/vector-icons/Feather'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 const INITIAL_LIMIT = 6
 
@@ -128,20 +130,20 @@ export function CountryTravelsPanel({
       <Pressable
         onPress={() => setExpanded(true)}
         accessibilityRole="button"
-        accessibilityLabel={`Показать все маршруты (${hiddenCount})`}
+        accessibilityLabel={i18nT('profile:components.screens.profile.CountryTravelsPanel.pokazat_vse_marshruty_value1_c2b42b90', { value1: hiddenCount })}
         style={styles.showAll}
       >
-        <Text style={styles.showAllText}>Ещё {hiddenCount}</Text>
+        <Text style={styles.showAllText}>{i18nT('profile:components.screens.profile.CountryTravelsPanel.esche_e7efd189')}{hiddenCount}</Text>
         <Feather name="chevron-down" size={16} color={colors.text} />
       </Pressable>
     ) : travels.length > INITIAL_LIMIT ? (
       <Pressable
         onPress={onShowAll}
         accessibilityRole="button"
-        accessibilityLabel="Все маршруты"
+        accessibilityLabel={i18nT('profile:components.screens.profile.CountryTravelsPanel.vse_marshruty_04297191')}
         style={styles.showAll}
       >
-        <Text style={styles.showAllText}>Все маршруты</Text>
+        <Text style={styles.showAllText}>{i18nT('profile:components.screens.profile.CountryTravelsPanel.vse_marshruty_04297191')}</Text>
         <Feather name="arrow-right" size={16} color={colors.text} />
       </Pressable>
     ) : null

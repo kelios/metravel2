@@ -8,8 +8,8 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 export default function TripDetailScreen() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
-  const params = useLocalSearchParams<{ tripId?: string }>()
-  const tripId = Number(params.tripId)
+  const params = useLocalSearchParams<{ id?: string }>()
+  const tripId = Number(params.id)
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>

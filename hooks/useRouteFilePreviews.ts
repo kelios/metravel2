@@ -8,6 +8,8 @@ import { downloadTravelRouteFileBlob } from '@/api/travelRoutes'
 import { parseRouteFilePreviews } from '@/utils/routeFileParser'
 import { isWebAutomation } from '@/utils/isWebAutomation'
 import type { ParsedRoutePreview, TravelRouteFile } from '@/types/travelRoutes'
+import { translate as i18nT } from '@/i18n'
+
 
 const SUPPORTED_ROUTE_EXTENSIONS = new Set(['gpx', 'kml'])
 
@@ -171,8 +173,8 @@ export function useRouteFilePreviews({
               color: routeColorPalette[(index + previewIndex) % routeColorPalette.length],
               label:
                 validPreviews.length > 1
-                  ? `${file.original_name || 'Маршрут'} • трек ${previewIndex + 1}`
-                  : file.original_name || 'Маршрут',
+                  ? i18nT('shared:hooks.useRouteFilePreviews.value1_trek_value2_f84d09eb', { value1: file.original_name || i18nT('sharedStatic:route.fileFallback'), value2: previewIndex + 1 })
+                  : file.original_name || i18nT('sharedStatic:route.fileFallback'),
             }))
           })
         )

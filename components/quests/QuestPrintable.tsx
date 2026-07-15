@@ -21,6 +21,13 @@ import {
     buildPrintableLeafletMapDataUrl,
     buildPrintableMapSvg,
 } from './printable/map';
+import {
+    formatDate,
+    getActiveLocaleDefinition,
+    translate as i18nT,
+    translatePlural,
+} from '@/i18n'
+
 
 type PrintableProps = {
     title: string;
@@ -59,13 +66,14 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     const mapCanvasDataUrl = await buildPrintableCanvasMapDataUrl(mapPoints);
     const mapStaticUrl = mapCanvasDataUrl || await buildPrintableLeafletMapDataUrl(mapPoints);
     const mapSvg = buildPrintableMapSvg(mapPoints);
+    const locale = getActiveLocaleDefinition();
 
     const mapHtml = mapStaticUrl ? `
         <div class="map-card">
             <img
                 class="map-image"
                 src="${escInline(mapStaticUrl)}"
-                alt="Карта маршрута квеста"
+                alt="${escInline(i18nT('quests:components.quests.QuestPrintable.mapAlt'))}"
                 loading="eager"
                 referrerpolicy="no-referrer"
                 onerror="this.style.display='none';this.nextElementSibling.style.display='block';"
@@ -102,7 +110,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
                     <div class="task-box">
                         <div class="task-label-row">
                             <span class="task-label-icon">?</span>
-                            <span class="task-label-text">Задание</span>
+                            <span class="task-label-text">${escHtml(i18nT('quests:components.quests.QuestPrintable.task'))}</span>
                         </div>
                         <p class="task">${escHtml(step.task)}</p>
                         ${step.hint ? `
@@ -113,7 +121,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
                     </div>
                     ${hasCoords ? `
                     <div class="qr-nav">
-                        <span class="qr-nav-label">Навигация</span>
+                        <span class="qr-nav-label">${escHtml(i18nT('quests:components.quests.QuestPrintable.navigation'))}</span>
                         <div class="qr-items-row">
                             <div class="qr-item">
                                 <img src="${qrUrl(googleMapsUrl(step.lat, step.lng))}" width="${QR_NAV}" height="${QR_NAV}" alt="Google Maps">
@@ -121,7 +129,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
                             </div>
                             <div class="qr-item">
                                 <img src="${qrUrl(yandexMapsUrl(step.lat, step.lng))}" width="${QR_NAV}" height="${QR_NAV}" alt="Yandex Maps">
-                                <span>Яндекс</span>
+                                <span>${escHtml(i18nT('quests:components.quests.QuestFullMap.navigation.yandex'))}</span>
                             </div>
                             <div class="qr-item">
                                 <img src="${qrUrl(organicMapsUrl(step.lat, step.lng))}" width="${QR_NAV}" height="${QR_NAV}" alt="Organic Maps">
@@ -132,7 +140,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
                     ` : ''}
                     <div class="answer-box">
                         <div class="answer-header">
-                            <span class="answer-label">Мой ответ</span>
+                            <span class="answer-label">${escHtml(i18nT('quests:components.quests.QuestPrintable.myAnswer'))}</span>
                             <span class="answer-label-line"></span>
                         </div>
                         <div class="answer-lines">
@@ -146,14 +154,14 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
         </div>`;
     }).join('');
 
-    const today = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    const today = formatDate(new Date(), { day: 'numeric', month: 'long', year: 'numeric' });
 
     const html = `<!DOCTYPE html>
-<html lang="ru">
+<html lang="${locale.htmlLang}" dir="${locale.direction}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escHtml(title)} — Подарочная книга квеста</title>
+<title>${escHtml(title)} — ${escHtml(i18nT('quests:components.quests.QuestPrintable.bookTitle'))}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,900;1,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -164,7 +172,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
         <span class="toolbar-title">${escHtml(title)}</span>
         <button class="toolbar-btn" onclick="window.print()">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Сохранить PDF
+            ${escHtml(i18nT('quests:components.quests.QuestPrintable.savePdf'))}
         </button>
     </div>
 
@@ -177,20 +185,20 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
             <div class="cover-copy">
                 <div class="cover-copy-panel">
                     <div class="cover-top-row">
-                        <span class="cover-badge">&#10022; Подарочный квест</span>
+                        <span class="cover-badge">&#10022; ${escHtml(i18nT('quests:components.quests.QuestPrintable.giftQuest'))}</span>
                         <span class="cover-brand-top">metravel.by</span>
                     </div>
                     <h1>${escHtml(title)}</h1>
                     ${coverLead ? `<p class="cover-lead">${escHtml(coverLead)}</p>` : ''}
                     <div class="cover-meta">
-                        <span class="cover-meta-chip">&#9673; ${steps.length} шагов</span>
-                        <span class="cover-meta-chip">&#9654; Городское приключение</span>
+                        <span class="cover-meta-chip">&#9673; ${escHtml(translatePlural('quests:components.quests.QuestPrintable.stepsCount', steps.length))}</span>
+                        <span class="cover-meta-chip">&#9654; ${escHtml(i18nT('quests:components.quests.QuestPrintable.cityAdventure'))}</span>
                         <span class="cover-meta-chip">${today}</span>
                     </div>
                     <div class="cover-accent-line"></div>
                     <div class="cover-bottom">
                         <div class="cover-for-block">
-                            <div class="cover-for-label">Для</div>
+                            <div class="cover-for-label">${escHtml(i18nT('quests:components.quests.QuestPrintable.recipient'))}</div>
                             <span class="cover-for-line"></span>
                             <span class="cover-for-line"></span>
                         </div>
@@ -198,11 +206,11 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
                 </div>
             </div>
             <div class="cover-side">
-                <div class="cover-stamp">Коллекционный<br>печатный выпуск</div>
+                <div class="cover-stamp">${escHtml(i18nT('quests:components.quests.QuestPrintable.collectorEditionLine1'))}<br>${escHtml(i18nT('quests:components.quests.QuestPrintable.collectorEditionLine2'))}</div>
                 ${siteQr ? `
                 <div class="cover-qr-block">
-                    <img src="${siteQr}" width="${QR_SITE}" height="${QR_SITE}" alt="QR на квест">
-                    <span class="cover-qr-label">Открыть онлайн-версию</span>
+                    <img src="${siteQr}" width="${QR_SITE}" height="${QR_SITE}" alt="${escInline(i18nT('quests:components.quests.QuestPrintable.questQrAlt'))}">
+                    <span class="cover-qr-label">${escHtml(i18nT('quests:components.quests.QuestPrintable.openOnline'))}</span>
                 </div>
                 ` : ''}
             </div>
@@ -214,9 +222,9 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     <div class="intro-section">
         <div class="intro-bar"></div>
         <div class="intro-content">
-            <h2>Как пройти квест</h2>
+            <h2>${escHtml(i18nT('quests:components.quests.QuestPrintable.howToComplete'))}</h2>
             <p>${escHtml(intro.story)}</p>
-            <p class="intro-note">Записывайте ответы от руки. Проверить их можно позднее на сайте, отсканировав QR-код на обложке.</p>
+            <p class="intro-note">${escHtml(i18nT('quests:components.quests.QuestPrintable.introNote'))}</p>
         </div>
     </div>
     ` : ''}
@@ -225,7 +233,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     ${validSteps.length > 0 ? `
     <div class="map-section">
         <div class="section-label">
-            <span class="section-label-text">Карта маршрута</span>
+            <span class="section-label-text">${escHtml(i18nT('quests:components.quests.QuestPrintable.routeMap'))}</span>
             <span class="section-label-line"></span>
         </div>
         ${mapHtml}
@@ -234,8 +242,8 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
             <thead>
                 <tr>
                     <th class="num-cell">#</th>
-                    <th>Локация</th>
-                    <th>Координаты</th>
+                    <th>${escHtml(i18nT('quests:components.quests.QuestPrintable.location'))}</th>
+                    <th>${escHtml(i18nT('quests:components.quests.QuestPrintable.coordinates'))}</th>
                 </tr>
             </thead>
             <tbody>
@@ -253,7 +261,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
 
     <!-- ══════════ STEPS ══════════ -->
     <div class="section-label" style="margin-bottom: 20px;">
-        <span class="section-label-text">Шаги квеста</span>
+        <span class="section-label-text">${escHtml(i18nT('quests:components.quests.QuestPrintable.stepsSection'))}</span>
         <span class="section-label-line"></span>
     </div>
     ${stepsHtml}
@@ -267,7 +275,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
             <span class="doc-footer-dot"></span>
             <span>${today}</span>
         </div>
-        <span class="doc-footer-tagline">Создавайте свои маршруты и квесты на metravel.by</span>
+        <span class="doc-footer-tagline">${escHtml(i18nT('quests:components.quests.QuestPrintable.footerTagline'))}</span>
     </div>
 
     </main>

@@ -34,6 +34,8 @@ import { showToast } from '@/utils/toast'
 
 import { type PlacesStyles } from './PlacesScreen.styles'
 import { PRESSED_OPACITY } from './PlacesScreen.helpers'
+import { translate as i18nT } from '@/i18n'
+
 
 export const PlaceCard = React.memo(function PlaceCard({
   place,
@@ -71,59 +73,59 @@ export const PlaceCard = React.memo(function PlaceCard({
     return [
       {
         key: 'google',
-        label: 'Google',
+        label: i18nT('map:screens.tabs.PlacesScreen_parts.google_1ed2bb53'),
         icon: 'map-pin' as const,
         onPress: () => openUrl(buildGoogleMapsUrl(coord)),
-        accessibilityLabel: 'Открыть точку в Google Maps',
-        title: 'Google Maps',
+        accessibilityLabel: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_tochku_v_google_maps_e92ad312'),
+        title: i18nT('map:screens.tabs.PlacesScreen_parts.google_maps_21ccdb93'),
       },
       {
         key: 'apple',
-        label: 'Apple',
+        label: i18nT('map:screens.tabs.PlacesScreen_parts.apple_11b09cc1'),
         icon: 'map' as const,
         onPress: () => openUrl(buildAppleMapsUrl(coord)),
-        accessibilityLabel: 'Открыть точку в Apple Maps',
-        title: 'Apple Maps',
+        accessibilityLabel: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_tochku_v_apple_maps_4f8a4d4c'),
+        title: i18nT('map:screens.tabs.PlacesScreen_parts.apple_maps_f07affbe'),
       },
       {
         key: 'organic',
-        label: 'Organic',
+        label: i18nT('map:screens.tabs.PlacesScreen_parts.organic_17020c34'),
         icon: 'compass' as const,
         onPress: () => openUrl(buildOrganicMapsUrl(coord, place.title)),
-        accessibilityLabel: 'Открыть точку в Organic Maps',
-        title: 'Organic Maps',
+        accessibilityLabel: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_tochku_v_organic_maps_58bf3ebf'),
+        title: i18nT('map:screens.tabs.PlacesScreen_parts.organic_maps_e6811b80'),
       },
       {
         key: 'waze',
-        label: 'Waze',
+        label: i18nT('map:screens.tabs.PlacesScreen_parts.waze_70400860'),
         icon: 'navigation' as const,
         onPress: () => openUrl(buildWazeUrl(coord)),
-        accessibilityLabel: 'Открыть точку в Waze',
-        title: 'Waze',
+        accessibilityLabel: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_tochku_v_waze_f566b9af'),
+        title: i18nT('map:screens.tabs.PlacesScreen_parts.waze_70400860'),
       },
       {
         key: 'yandex-maps',
-        label: 'Яндекс Карты',
+        label: i18nT('map:screens.tabs.PlacesScreen_parts.yandeks_karty_7cc978d3'),
         icon: 'map' as const,
         onPress: () => openUrl(buildYandexMapsUrl(coord)),
-        accessibilityLabel: 'Открыть точку в Яндекс Картах',
-        title: 'Яндекс Карты',
+        accessibilityLabel: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_tochku_v_yandeks_kartah_dc0d96b1'),
+        title: i18nT('map:screens.tabs.PlacesScreen_parts.yandeks_karty_7cc978d3'),
       },
       {
         key: 'yandex',
-        label: 'Яндекс Нави',
+        label: i18nT('map:screens.tabs.PlacesScreen_parts.yandeks_navi_3ac1bd0a'),
         icon: 'navigation-2' as const,
         onPress: () => openUrl(buildYandexNaviUrl(coord)),
-        accessibilityLabel: 'Открыть точку в Яндекс Навигаторе',
-        title: 'Яндекс Навигатор',
+        accessibilityLabel: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_tochku_v_yandeks_navigatore_43357804'),
+        title: i18nT('map:screens.tabs.PlacesScreen_parts.yandeks_navigator_8d74e5ee'),
       },
       {
         key: 'osm',
-        label: 'OSM',
+        label: i18nT('map:screens.tabs.PlacesScreen_parts.osm_ed588289'),
         icon: 'map' as const,
         onPress: () => openUrl(buildOpenStreetMapUrl(coord)),
-        accessibilityLabel: 'Открыть точку в OpenStreetMap',
-        title: 'OpenStreetMap',
+        accessibilityLabel: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_tochku_v_openstreetmap_2749d390'),
+        title: i18nT('map:screens.tabs.PlacesScreen_parts.openstreetmap_b86b5aff'),
       },
     ]
   }, [place.coord, place.title])
@@ -155,9 +157,9 @@ export const PlaceCard = React.memo(function PlaceCard({
     if (!coord) return
     try {
       await Clipboard.setStringAsync(coord)
-      void showToast({ type: 'success', text1: 'Координаты скопированы', position: 'bottom' })
+      void showToast({ type: 'success', text1: i18nT('map:screens.tabs.PlacesScreen_parts.koordinaty_skopirovany_c418ae29'), position: 'bottom' })
     } catch {
-      void showToast({ type: 'error', text1: 'Не удалось скопировать координаты', position: 'bottom' })
+      void showToast({ type: 'error', text1: i18nT('map:screens.tabs.PlacesScreen_parts.ne_udalos_skopirovat_koordinaty_3d38f60d'), position: 'bottom' })
     }
   }, [place.coord])
 
@@ -172,7 +174,7 @@ export const PlaceCard = React.memo(function PlaceCard({
   const handleAddPoint = React.useCallback(async () => {
     if (!authReady) return
     if (!isAuthenticated) {
-      void showToast({ type: 'info', text1: 'Войдите, чтобы сохранить точку', position: 'bottom' })
+      void showToast({ type: 'info', text1: i18nT('map:screens.tabs.PlacesScreen_parts.voydite_chtoby_sohranit_tochku_cbf7d9b3'), position: 'bottom' })
       return
     }
     if (isAdding || !normalizedCoord) return
@@ -182,9 +184,9 @@ export const PlaceCard = React.memo(function PlaceCard({
       setIsAdding(true)
       try {
         await removeSaved()
-        void showToast({ type: 'success', text1: 'Точка убрана из моих точек', position: 'bottom' })
+        void showToast({ type: 'success', text1: i18nT('map:screens.tabs.PlacesScreen_parts.tochka_ubrana_iz_moih_tochek_87df65a9'), position: 'bottom' })
       } catch {
-        void showToast({ type: 'error', text1: 'Не удалось убрать точку', position: 'bottom' })
+        void showToast({ type: 'error', text1: i18nT('map:screens.tabs.PlacesScreen_parts.ne_udalos_ubrat_tochku_542a3a58'), position: 'bottom' })
       } finally {
         setIsAdding(false)
       }
@@ -193,7 +195,7 @@ export const PlaceCard = React.memo(function PlaceCard({
 
     const categoryName = place.category || undefined
     const payload: Record<string, unknown> = {
-      name: place.address || place.title || 'Точка',
+      name: place.address || place.title || i18nT('map:screens.tabs.PlacesScreen_parts.tochka_a9619593'),
       address: place.address,
       latitude: normalizedCoord.lat,
       longitude: normalizedCoord.lng,
@@ -208,9 +210,9 @@ export const PlaceCard = React.memo(function PlaceCard({
     setIsAdding(true)
     try {
       await createPoint(payload)
-      void showToast({ type: 'success', text1: 'Точка добавлена в мои точки', position: 'bottom' })
+      void showToast({ type: 'success', text1: i18nT('map:screens.tabs.PlacesScreen_parts.tochka_dobavlena_v_moi_tochki_c854cbfa'), position: 'bottom' })
     } catch {
-      void showToast({ type: 'error', text1: 'Не удалось сохранить точку', position: 'bottom' })
+      void showToast({ type: 'error', text1: i18nT('map:screens.tabs.PlacesScreen_parts.ne_udalos_sohranit_tochku_be4fcb92'), position: 'bottom' })
     } finally {
       setIsAdding(false)
     }
@@ -256,11 +258,11 @@ export const PlaceCard = React.memo(function PlaceCard({
               ? [
                   {
                     key: 'open-map',
-                    label: 'На карте',
+                    label: i18nT('map:screens.tabs.PlacesScreen_parts.na_karte_d98b1d80'),
                     icon: 'map-pin' as const,
                     onPress: () => onOpenMap(place),
-                    accessibilityLabel: 'Открыть место на карте',
-                    title: 'Открыть на карте',
+                    accessibilityLabel: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_mesto_na_karte_abcb0a9d'),
+                    title: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_na_karte_6b6df4a9'),
                   },
                 ]
               : []),
@@ -268,10 +270,10 @@ export const PlaceCard = React.memo(function PlaceCard({
               ? [
                   {
                     key: 'article',
-                    label: 'Статья',
+                    label: i18nT('map:screens.tabs.PlacesScreen_parts.statya_28264f10'),
                     icon: 'book-open' as const,
                     onPress: () => onOpenTravel(place),
-                    title: 'Открыть статью',
+                    title: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_statyu_6f4d1411'),
                   },
                 ]
               : []),
@@ -280,7 +282,7 @@ export const PlaceCard = React.memo(function PlaceCard({
         onCopyCoord={normalizedCoord ? handleCopyCoord : undefined}
         onShare={normalizedCoord ? handleShare : undefined}
         onAddPoint={normalizedCoord ? handleAddPoint : undefined}
-        addLabel={isSaved ? 'В точках' : 'Мои точки'}
+        addLabel={isSaved ? i18nT('map:screens.tabs.PlacesScreen_parts.v_tochkah_53f65e25') : i18nT('map:screens.tabs.PlacesScreen_parts.moi_tochki_df71d705')}
         addDisabled={!authReady || !normalizedCoord || isAdding}
         isAdding={isAdding}
         imageHeight={isMobileCard ? 240 : 280}

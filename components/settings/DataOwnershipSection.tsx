@@ -6,6 +6,8 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import Button from '@/components/ui/Button';
 import { useDataOwnership } from '@/hooks/useDataOwnership';
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * Управление своими данными: экспорт архива, удаление переписки/маршрутов,
@@ -32,13 +34,13 @@ export default function DataOwnershipSection() {
                     <Feather name="download-cloud" size={18} color={colors.primaryDark} />
                 </View>
                 <View style={styles.cardText}>
-                    <Text style={styles.cardTitle}>Мои данные</Text>
-                    <Text style={styles.cardMeta}>Экспорт и удаление ваших данных</Text>
+                    <Text style={styles.cardTitle}>{i18nT('profile:components.settings.DataOwnershipSection.moi_dannye_12de8ed5')}</Text>
+                    <Text style={styles.cardMeta}>{i18nT('profile:components.settings.DataOwnershipSection.eksport_i_udalenie_vashih_dannyh_4ea20ef6')}</Text>
                 </View>
             </View>
 
             <Button
-                label={isExporting ? 'Запрашиваем…' : 'Экспортировать мои данные'}
+                label={isExporting ? i18nT('profile:components.settings.DataOwnershipSection.zaprashivaem_c12db78a') : i18nT('profile:components.settings.DataOwnershipSection.eksportirovat_moi_dannye_5dbf40a3')}
                 onPress={exportData}
                 loading={isExporting}
                 disabled={isExporting}
@@ -55,12 +57,12 @@ export default function DataOwnershipSection() {
                 onPress={deleteMessages}
                 disabled={isDeletingMessages}
                 accessibilityRole="button"
-                accessibilityLabel="Удалить переписку"
+                accessibilityLabel={i18nT('profile:components.settings.DataOwnershipSection.udalit_perepisku_eb5f6cf8')}
                 {...Platform.select({ web: { cursor: 'pointer' } })}
             >
                 <Feather name="message-square" size={18} color={colors.danger} />
                 <Text style={styles.dangerButtonText}>
-                    {isDeletingMessages ? 'Удаляем…' : 'Удалить переписку'}
+                    {isDeletingMessages ? i18nT('profile:components.settings.DataOwnershipSection.udalyaem_77fa19fc') : i18nT('profile:components.settings.DataOwnershipSection.udalit_perepisku_eb5f6cf8')}
                 </Text>
             </Pressable>
 
@@ -69,12 +71,12 @@ export default function DataOwnershipSection() {
                 onPress={deleteRoutes}
                 disabled={isDeletingRoutes}
                 accessibilityRole="button"
-                accessibilityLabel="Удалить маршруты"
+                accessibilityLabel={i18nT('profile:components.settings.DataOwnershipSection.udalit_marshruty_f569fb47')}
                 {...Platform.select({ web: { cursor: 'pointer' } })}
             >
                 <Feather name="navigation" size={18} color={colors.danger} />
                 <Text style={styles.dangerButtonText}>
-                    {isDeletingRoutes ? 'Удаляем…' : 'Удалить маршруты'}
+                    {isDeletingRoutes ? i18nT('profile:components.settings.DataOwnershipSection.udalyaem_77fa19fc') : i18nT('profile:components.settings.DataOwnershipSection.udalit_marshruty_f569fb47')}
                 </Text>
             </Pressable>
 
@@ -83,12 +85,12 @@ export default function DataOwnershipSection() {
                 onPress={revokeConsents}
                 disabled={isRevokingConsents}
                 accessibilityRole="button"
-                accessibilityLabel="Отозвать согласия"
+                accessibilityLabel={i18nT('profile:components.settings.DataOwnershipSection.otozvat_soglasiya_a71fe389')}
                 {...Platform.select({ web: { cursor: 'pointer' } })}
             >
                 <Feather name="shield-off" size={18} color={colors.textMuted} />
                 <Text style={styles.subtleButtonText}>
-                    {isRevokingConsents ? 'Отзываем…' : 'Отозвать согласия'}
+                    {isRevokingConsents ? i18nT('profile:components.settings.DataOwnershipSection.otzyvaem_cc9508e0') : i18nT('profile:components.settings.DataOwnershipSection.otozvat_soglasiya_a71fe389')}
                 </Text>
             </Pressable>
         </View>

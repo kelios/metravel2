@@ -2,6 +2,8 @@
 // ✅ Утилита для проверки силы пароля
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { translate as i18nT } from '@/i18n'
+
 
 export interface PasswordStrength {
   score: number; // 0-4 (0 = очень слабый, 4 = очень сильный)
@@ -28,7 +30,7 @@ export function checkPasswordStrength(password: string): PasswordStrength {
   if (password.length >= 8) {
     score += 1;
   } else {
-    feedback.push('Пароль должен содержать минимум 8 символов');
+    feedback.push(i18nT('auth:utils.passwordStrength.parol_dolzhen_soderzhat_minimum_8_simvolov_be72e44d'));
   }
 
   if (password.length >= 12) {
@@ -39,28 +41,28 @@ export function checkPasswordStrength(password: string): PasswordStrength {
   if (/[a-zа-яё]/.test(password)) {
     score += 1;
   } else {
-    feedback.push('Добавьте строчные буквы');
+    feedback.push(i18nT('auth:utils.passwordStrength.dobavte_strochnye_bukvy_e00bac42'));
   }
 
   // Проверка наличия заглавных букв
   if (/[A-ZА-ЯЁ]/.test(password)) {
     score += 1;
   } else {
-    feedback.push('Добавьте заглавные буквы');
+    feedback.push(i18nT('auth:utils.passwordStrength.dobavte_zaglavnye_bukvy_03b32fce'));
   }
 
   // Проверка наличия цифр
   if (/\d/.test(password)) {
     score += 1;
   } else {
-    feedback.push('Добавьте цифры');
+    feedback.push(i18nT('auth:utils.passwordStrength.dobavte_tsifry_e055c31d'));
   }
 
   // Проверка наличия специальных символов
   if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
     score += 1;
   } else {
-    feedback.push('Добавьте специальные символы (!@#$%^&* и т.д.)');
+    feedback.push(i18nT('auth:utils.passwordStrength.dobavte_spetsialnye_simvoly_i_t_d_b4748276'));
   }
 
   // Ограничиваем максимальный score до 4
@@ -83,15 +85,15 @@ export function getPasswordStrengthLabel(score: number): string {
   switch (score) {
     case 0:
     case 1:
-      return 'Очень слабый';
+      return i18nT('auth:utils.passwordStrength.ochen_slabyy_7fa58b46');
     case 2:
-      return 'Слабый';
+      return i18nT('auth:utils.passwordStrength.slabyy_a24c1b95');
     case 3:
-      return 'Средний';
+      return i18nT('auth:utils.passwordStrength.sredniy_35ee0e24');
     case 4:
-      return 'Сильный';
+      return i18nT('auth:utils.passwordStrength.silnyy_2a67b36c');
     default:
-      return 'Очень слабый';
+      return i18nT('auth:utils.passwordStrength.ochen_slabyy_7fa58b46');
   }
 }
 

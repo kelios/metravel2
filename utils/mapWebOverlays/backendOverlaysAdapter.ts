@@ -1,5 +1,6 @@
 import type { BBox, OSMLineFeature, OSMPointFeature } from '@/utils/overpass';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
+import { translate as i18nT } from '@/i18n';
 
 /**
  * Canonical overlay path: backend proxy/cache `/api/map/overlays/` (BE #714).
@@ -135,7 +136,7 @@ export const backendFeatureToPoint = (feature: BackendOverlayFeature): OSMPointF
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
 
   const tags = tagsWithPopup(feature);
-  const title = String(feature.title || feature.popup?.title || '').trim() || 'Точка на карте';
+  const title = String(feature.title || feature.popup?.title || '').trim() || i18nT('sharedStatic:map.pointFallback');
   const osmUrl = tags['osm:url'] || tags.osmUrl || undefined;
 
   return { id: String(feature.id), lat, lng, title, tags, osmUrl };
@@ -169,7 +170,7 @@ export const backendFeatureToLine = (feature: BackendOverlayFeature): OSMLineFea
   if (coords.length < 2) return null;
 
   const tags = tagsWithPopup(feature);
-  const title = String(feature.title || feature.popup?.title || '').trim() || 'Маршрут';
+  const title = String(feature.title || feature.popup?.title || '').trim() || i18nT('sharedStatic:map.routeFallback');
   const osmUrl = tags['osm:url'] || tags.osmUrl || undefined;
 
   return { id: String(feature.id), title, tags, coords, osmUrl };

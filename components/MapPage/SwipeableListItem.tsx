@@ -4,6 +4,8 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { useThemedColors } from '@/hooks/useTheme';
 import MapIcon from './MapIcon';
 import CardActionPressable from '@/components/ui/CardActionPressable';
+import { translate as i18nT } from '@/i18n'
+
 
 interface SwipeableListItemProps {
   children: React.ReactNode;
@@ -66,7 +68,7 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
             { backgroundColor: isFavorite ? colors.warning : colors.accent },
           ]}
           onPress={handleFavorite}
-          accessibilityLabel={isFavorite ? 'Убрать из «Хочу поехать»' : 'Добавить в «Хочу поехать»'}
+          accessibilityLabel={isFavorite ? i18nT('map:components.MapPage.SwipeableListItem.ubrat_iz_hochu_poehat_6b91534d') : i18nT('map:components.MapPage.SwipeableListItem.dobavit_v_hochu_poehat_76409f76')}
         >
           <MapIcon
             name={isFavorite ? 'star' : 'star-border'}
@@ -74,7 +76,7 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
             color={colors.textOnPrimary}
           />
           <Text style={[styles.actionText, { color: colors.textOnPrimary }]}>
-            {isFavorite ? 'Убрать' : 'Желания'}
+            {isFavorite ? i18nT('map:components.MapPage.SwipeableListItem.ubrat_45c6d419') : i18nT('map:components.MapPage.SwipeableListItem.zhelaniya_ed825f5b')}
           </Text>
         </CardActionPressable>
       </Animated.View>
@@ -99,12 +101,11 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
         <CardActionPressable
           style={[styles.actionButton, { backgroundColor: colors.primary }]}
           onPress={handleBuildRoute}
-          accessibilityLabel="Построить маршрут сюда"
+          accessibilityLabel={i18nT('map:components.MapPage.SwipeableListItem.postroit_marshrut_syuda_3db1b91e')}
         >
           <MapIcon name="directions" size={24} color={colors.textOnPrimary} />
           <Text style={[styles.actionText, { color: colors.textOnPrimary }]}>
-            Маршрут
-          </Text>
+            {i18nT('map:components.MapPage.SwipeableListItem.marshrut_43ca4e50')}</Text>
         </CardActionPressable>
       </Animated.View>
     );

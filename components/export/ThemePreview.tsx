@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { usePdfPremium } from '@/hooks/usePdfPremium';
 import { isPremiumTheme } from '@/services/pdf-export/themes/themeTiers';
+import { translate as i18nT } from '@/i18n'
+
 
 export type PdfThemeName =
   | 'minimal'
@@ -46,8 +48,8 @@ interface ThemeInfo {
 const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   minimal: {
     id: 'minimal',
-    name: 'Минимал',
-    description: 'Чистый и простой дизайн',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.minimal.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.minimal.description') },
     colors: {
       primary: 'rgb(26, 26, 26)',
       secondary: 'rgb(102, 102, 102)',
@@ -62,8 +64,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   light: {
     id: 'light',
-    name: 'Светлая',
-    description: 'Мягкие цвета и много воздуха',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.light.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.light.description') },
     colors: {
       primary: 'rgb(30, 41, 59)',
       secondary: 'rgb(100, 116, 139)',
@@ -78,8 +80,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   dark: {
     id: 'dark',
-    name: 'Темная',
-    description: 'Элегантное темное оформление',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.dark.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.dark.description') },
     colors: {
       primary: 'rgb(241, 245, 249)',
       secondary: 'rgb(203, 213, 225)',
@@ -94,8 +96,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   'travel-magazine': {
     id: 'travel-magazine',
-    name: 'Журнал',
-    description: 'Яркий журнальный стиль',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.travelMagazine.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.travelMagazine.description') },
     colors: {
       primary: 'rgb(26, 26, 26)',
       secondary: 'rgb(74, 74, 74)',
@@ -110,8 +112,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   classic: {
     id: 'classic',
-    name: 'Классика',
-    description: 'Традиционная типографика',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.classic.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.classic.description') },
     colors: {
       primary: 'rgb(44, 24, 16)',
       secondary: 'rgb(90, 74, 66)',
@@ -126,8 +128,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   modern: {
     id: 'modern',
-    name: 'Модерн',
-    description: 'Современный геометрический стиль',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.modern.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.modern.description') },
     colors: {
       primary: 'rgb(24, 24, 27)',
       secondary: 'rgb(82, 82, 91)',
@@ -142,8 +144,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   romantic: {
     id: 'romantic',
-    name: 'Романтика',
-    description: 'Элегантный и нежный',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.romantic.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.romantic.description') },
     colors: {
       primary: 'rgb(74, 25, 66)',
       secondary: 'rgb(139, 90, 131)',
@@ -158,8 +160,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   adventure: {
     id: 'adventure',
-    name: 'Приключение',
-    description: 'Динамичный и смелый',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.adventure.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.adventure.description') },
     colors: {
       primary: 'rgb(26, 26, 26)',
       secondary: 'rgb(74, 74, 74)',
@@ -174,8 +176,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   'black-white': {
     id: 'black-white',
-    name: 'Ч/Б Газета',
-    description: 'Классическая монохромная печать',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.blackWhite.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.blackWhite.description') },
     colors: {
       primary: 'rgb(0, 0, 0)',
       secondary: 'rgb(74, 74, 74)',
@@ -190,8 +192,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   sepia: {
     id: 'sepia',
-    name: 'Сепия',
-    description: 'Винтажная газета 1920-х',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.sepia.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.sepia.description') },
     colors: {
       primary: 'rgb(62, 39, 35)',
       secondary: 'rgb(109, 76, 65)',
@@ -206,8 +208,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   newspaper: {
     id: 'newspaper',
-    name: 'Газета',
-    description: 'Яркая современная газетная верстка',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.newspaper.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.newspaper.description') },
     colors: {
       primary: 'rgb(26, 26, 26)',
       secondary: 'rgb(74, 74, 74)',
@@ -222,8 +224,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   ocean: {
     id: 'ocean',
-    name: 'Океан',
-    description: 'Глубокий синий с бирюзой',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.ocean.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.ocean.description') },
     colors: {
       primary: 'rgb(12, 27, 42)',
       secondary: 'rgb(91, 122, 149)',
@@ -238,8 +240,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   forest: {
     id: 'forest',
-    name: 'Лес',
-    description: 'Насыщенные зелёные и земляные тона',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.forest.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.forest.description') },
     colors: {
       primary: 'rgb(26, 46, 26)',
       secondary: 'rgb(90, 122, 90)',
@@ -254,8 +256,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   sunset: {
     id: 'sunset',
-    name: 'Закат',
-    description: 'Тёплый коралл и золото',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.sunset.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.sunset.description') },
     colors: {
       primary: 'rgb(45, 27, 20)',
       secondary: 'rgb(140, 107, 94)',
@@ -270,8 +272,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   nordic: {
     id: 'nordic',
-    name: 'Скандинавия',
-    description: 'Холодный минимализм',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.nordic.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.nordic.description') },
     colors: {
       primary: 'rgb(28, 37, 51)',
       secondary: 'rgb(122, 138, 158)',
@@ -286,8 +288,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   retro: {
     id: 'retro',
-    name: 'Ретро',
-    description: 'Стиль 70-х: горчица и бургунди',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.retro.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.retro.description') },
     colors: {
       primary: 'rgb(42, 31, 20)',
       secondary: 'rgb(138, 114, 96)',
@@ -302,8 +304,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   tropical: {
     id: 'tropical',
-    name: 'Тропики',
-    description: 'Изумруд, бирюза и фуксия',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.tropical.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.tropical.description') },
     colors: {
       primary: 'rgb(26, 42, 36)',
       secondary: 'rgb(90, 122, 110)',
@@ -318,8 +320,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   'editorial-luxe': {
     id: 'editorial-luxe',
-    name: 'Люкс-журнал',
-    description: 'Засечная типографика и золотой акцент',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.editorialLuxe.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.editorialLuxe.description') },
     colors: {
       primary: 'rgb(33, 29, 24)',
       secondary: 'rgb(74, 68, 60)',
@@ -334,8 +336,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   watercolor: {
     id: 'watercolor',
-    name: 'Акварель',
-    description: 'Пастельные тона и дружелюбные заголовки',
+    get name() { return i18nT('export:components.export.ThemePreview.theme.watercolor.name') },
+    get description() { return i18nT('export:components.export.ThemePreview.theme.watercolor.description') },
     colors: {
       primary: 'rgb(58, 64, 70)',
       secondary: 'rgb(92, 101, 109)',
@@ -379,7 +381,7 @@ export default function ThemePreview({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Выберите тему оформления</Text>
+      <Text style={styles.sectionTitle}>{i18nT('export:components.export.ThemePreview.vyberite_temu_oformleniya_7aab6079')}</Text>
       <ScrollView
         horizontal={compact}
         showsHorizontalScrollIndicator={false}
@@ -431,20 +433,20 @@ function PaywallSheet({ theme, styles, onClose, onUnlock }: PaywallSheetProps) {
           <View style={styles.paywallIcon}>
             <Feather name="lock" size={22} color={styles.paywallIconGlyph.color} />
           </View>
-          <Text style={styles.paywallTitle}>Премиум-шаблон</Text>
+          <Text style={styles.paywallTitle}>{i18nT('export:components.export.ThemePreview.premium_shablon_95830281')}</Text>
           <Text style={styles.paywallSubtitle}>
             {theme
-              ? `Тема «${theme.name}» доступна в премиум-версии книги.`
-              : 'Эта тема доступна в премиум-версии книги.'}
+              ? i18nT('export:components.export.ThemePreview.tema_value1_dostupna_v_premium_versii_knigi_fe088940', { value1: theme.name })
+              : i18nT('export:components.export.ThemePreview.eta_tema_dostupna_v_premium_versii_knigi_57c65b28')}
           </Text>
           <Pressable
             style={styles.paywallCta}
             onPress={() => theme && onUnlock(theme.id)}
           >
-            <Text style={styles.paywallCtaText}>Открыть премиум</Text>
+            <Text style={styles.paywallCtaText}>{i18nT('export:components.export.ThemePreview.otkryt_premium_252532ee')}</Text>
           </Pressable>
           <Pressable style={styles.paywallDismiss} onPress={onClose}>
-            <Text style={styles.paywallDismissText}>Не сейчас</Text>
+            <Text style={styles.paywallDismissText}>{i18nT('export:components.export.ThemePreview.ne_seychas_0537f0db')}</Text>
           </Pressable>
         </Pressable>
       </Pressable>

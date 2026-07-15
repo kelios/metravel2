@@ -16,6 +16,8 @@ import {
   trackFavoriteIntentGuest,
   trackRegisterCtaClicked,
 } from '@/utils/growthFunnelAnalytics'
+import { translate as i18nT } from '@/i18n'
+
 
 type ArticleActivationCtaSectionProps = {
   article: Article
@@ -113,7 +115,7 @@ function ArticleActivationCtaSection({ article, redirectPath }: ArticleActivatio
   return (
     <View
       style={styles.container}
-      accessibilityLabel="Сохраните идею поездки"
+      accessibilityLabel={i18nT('shared:components.article.ArticleActivationCtaSection.sohranite_ideyu_poezdki_e9d79ed7')}
       accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
     >
       <View style={styles.iconWrap}>
@@ -125,15 +127,13 @@ function ArticleActivationCtaSection({ article, redirectPath }: ArticleActivatio
           accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
           aria-level={2 as any}
         >
-          Сохраните идею поездки
-        </Text>
+          {i18nT('shared:components.article.ArticleActivationCtaSection.sohranite_ideyu_poezdki_e9d79ed7')}</Text>
         <Text style={styles.subtitle}>
-          Вернитесь к статье позже или добавьте своё место на карту путешественников.
-        </Text>
+          {i18nT('shared:components.article.ArticleActivationCtaSection.vernites_k_state_pozzhe_ili_dobavte_svoe_mes_d10e4e6f')}</Text>
       </View>
       <View style={styles.actions}>
         <Button
-          label={favoriteSaved ? 'Статья сохранена' : 'Сохранить статью'}
+          label={favoriteSaved ? i18nT('shared:components.article.ArticleActivationCtaSection.statya_sohranena_ad5e0f8d') : i18nT('shared:components.article.ArticleActivationCtaSection.sohranit_statyu_57b0ac99')}
           onPress={handleSaveArticle}
           variant="primary"
           size="md"
@@ -141,16 +141,16 @@ function ArticleActivationCtaSection({ article, redirectPath }: ArticleActivatio
           disabled={favoriteSaved}
           fullWidth
           icon={<Feather name={favoriteSaved ? 'check' : 'heart'} size={16} color={colors.textOnPrimary} />}
-          accessibilityLabel={favoriteSaved ? 'Статья уже сохранена' : 'Сохранить статью в избранное'}
+          accessibilityLabel={favoriteSaved ? i18nT('shared:components.article.ArticleActivationCtaSection.statya_uzhe_sohranena_bda1afd8') : i18nT('shared:components.article.ArticleActivationCtaSection.sohranit_statyu_v_izbrannoe_0655dcc5')}
         />
         <Button
-          label="Добавить место"
+          label={i18nT('shared:components.article.ArticleActivationCtaSection.dobavit_mesto_2bb06bfd')}
           onPress={handleAddPlace}
           variant="outline"
           size="md"
           fullWidth
           icon={<Feather name="plus" size={16} color={colors.primary} />}
-          accessibilityLabel="Добавить место на карту"
+          accessibilityLabel={i18nT('shared:components.article.ArticleActivationCtaSection.dobavit_mesto_na_kartu_4baaf781')}
         />
       </View>
     </View>

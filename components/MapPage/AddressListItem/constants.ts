@@ -7,12 +7,6 @@ export const isWebPlatform = () => Platform.OS === 'web'
 export const PRESSED_OPACITY = { opacity: 0.85 }
 export const PLACE_CARD_STYLE = { margin: 8 }
 
-export const TRANSPORT_LABELS: Record<'car' | 'bike' | 'foot', string> = {
-  car: 'Авто',
-  bike: 'Велосипед',
-  foot: 'Пешком',
-}
-
 export type Props = {
   travel: TravelCoords
   isMobile?: boolean

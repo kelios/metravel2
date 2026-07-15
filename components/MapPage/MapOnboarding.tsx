@@ -7,6 +7,8 @@ import type { ComponentProps } from 'react'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import Button from '@/components/ui/Button'
+import { translate as i18nT } from '@/i18n'
+
 
 type FeatherIconName = ComponentProps<typeof Feather>['name']
 
@@ -100,46 +102,41 @@ interface OnboardingStep {
   placement: TooltipPosition
 }
 
-const ONBOARDING_STEPS: OnboardingStep[] = [
+const getOnboardingSteps = (): OnboardingStep[] => [
   {
-    title: 'Карта путешествий',
-    description:
-      'Здесь отображаются интересные места и маршруты от других путешественников. Перемещайте и масштабируйте карту.',
+    title: i18nT('map:components.MapPage.MapOnboarding.karta_puteshestviy_87500481'),
+    description: i18nT('map:components.MapPage.MapOnboarding.zdes_otobrazhayutsya_interesnye_mesta_i_marshruty_7732a21e'),
     icon: 'map',
     targetTestID: 'map-panel',
     placement: 'bottom',
   },
   {
-    title: 'Настройте фильтры',
-    description:
-      'Радиус задаётся отдельной кнопкой прямо на карте, а категории — по кнопке фильтров. Так вы быстро отберёте подходящие места.',
+    title: i18nT('map:components.MapPage.MapOnboarding.nastroyte_filtry_11653829'),
+    description: i18nT('map:components.MapPage.MapOnboarding.radius_zadaetsya_otdelnoy_knopkoy_pryamo_na_karte_6947594b'),
     icon: 'filter',
     targetTestID: 'map-panel-tab-filters',
     placement: 'bottom',
   },
   {
-    title: 'Список мест',
-    description:
-      'Откройте вкладку «Места», чтобы увидеть все найденные места с расстояниями.',
+    title: i18nT('map:components.MapPage.MapOnboarding.spisok_mest_e8c5b25f'),
+    description: i18nT('map:components.MapPage.MapOnboarding.otkroyte_vkladku_mesta_chtoby_uvidet_vse_nayden_145b466e'),
     icon: 'list',
     targetTestID: 'map-panel-tab-travels',
     placement: 'bottom',
   },
   {
-    title: 'Стройте маршруты',
-    description:
-      'Переключитесь в режим маршрута, чтобы проложить путь между точками на карте.',
+    title: i18nT('map:components.MapPage.MapOnboarding.stroyte_marshruty_ba7a03e3'),
+    description: i18nT('map:components.MapPage.MapOnboarding.pereklyuchites_v_rezhim_marshruta_chtoby_prolozhit_1a9fc39e'),
     icon: 'navigation',
     targetTestID: 'filters-panel-header',
     placement: 'bottom',
   },
 ]
 
-const MOBILE_WEB_ONBOARDING_STEPS: OnboardingStep[] = [
+const getMobileWebOnboardingSteps = (): OnboardingStep[] => [
   {
-    title: 'С чего начать',
-    description:
-      'Нажмите «Найти места рядом», чтобы сразу получить подборку ближайших мест. Радиус задаётся отдельной кнопкой сверху на карте, а категории — по кнопке фильтров.',
+    title: i18nT('map:components.MapPage.MapOnboarding.s_chego_nachat_dfa48037'),
+    description: i18nT('map:components.MapPage.MapOnboarding.nazhmite_nayti_mesta_ryadom_chtoby_srazu_poluchit_e0f29476'),
     icon: 'search',
     targetTestID: 'map-mobile-find-nearby',
     placement: 'bottom',
@@ -217,7 +214,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
     () => mobileWebCoachmarkProp ?? isMobileWebViewport(),
   )
   const steps = useMemo(
-    () => (mobileWebCoachmark ? MOBILE_WEB_ONBOARDING_STEPS : ONBOARDING_STEPS),
+    () => (mobileWebCoachmark ? getMobileWebOnboardingSteps() : getOnboardingSteps()),
     [mobileWebCoachmark],
   )
   const [currentStep, setCurrentStep] = useState(0)
@@ -327,7 +324,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
         style={styles.backdrop}
         onPress={handleComplete}
         accessibilityRole="button"
-        accessibilityLabel="Закрыть подсказку"
+        accessibilityLabel={i18nT('map:components.MapPage.MapOnboarding.zakryt_podskazku_fba27182')}
         testID="onboarding-backdrop"
       />
 
@@ -372,14 +369,14 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
 
           <View style={styles.actions}>
             <Button
-              label="Пропустить"
+              label={i18nT('map:components.MapPage.MapOnboarding.propustit_511c8d6e')}
               onPress={handleComplete}
               variant="ghost"
               size="sm"
               testID="onboarding-skip"
             />
             <Button
-              label={isLastStep ? 'Готово' : 'Далее'}
+              label={isLastStep ? i18nT('map:components.MapPage.MapOnboarding.gotovo_bf48fa72') : i18nT('map:components.MapPage.MapOnboarding.dalee_c24ac17e')}
               onPress={handleNext}
               variant="primary"
               size="sm"

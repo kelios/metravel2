@@ -9,6 +9,8 @@ import { confirmAction } from '@/utils/confirmAction';
 import { showToast } from '@/utils/toast';
 import { requestContactAccess, type ContactAccessStatus } from '@/api/privacy';
 import { ApiError } from '@/api/client';
+import { translate as i18nT } from '@/i18n'
+
 
 export type SocialLink = {
     key: string;
@@ -49,10 +51,10 @@ export default function ProtectedContacts({
         if (!targetUserId || requesting) return;
         // FE-consent-contact-exchange: предупреждение перед раскрытием.
         const confirmed = await confirmAction({
-            title: 'Запросить контакты',
+            title: i18nT('profile:components.profile.ProtectedContacts.zaprosit_kontakty_17ae693d'),
             message:
-                'Запрос на раскрытие контактов будет отправлен пользователю. После одобрения он также увидит ваши контакты. Продолжить?',
-            confirmText: 'Запросить',
+                i18nT('profile:components.profile.ProtectedContacts.zapros_na_raskrytie_kontaktov_budet_otpravle_b34f78c5'),
+            confirmText: i18nT('profile:components.profile.ProtectedContacts.zaprosit_49cb2f29'),
         });
         if (!confirmed) return;
 
@@ -62,11 +64,11 @@ export default function ProtectedContacts({
             setAccess(res.status);
             showToast({
                 type: 'success',
-                text1: res.status === 'granted' ? 'Контакты раскрыты' : 'Запрос отправлен',
+                text1: res.status === 'granted' ? i18nT('profile:components.profile.ProtectedContacts.kontakty_raskryty_d7169a49') : i18nT('profile:components.profile.ProtectedContacts.zapros_otpravlen_34d2fb79'),
             });
         } catch (error) {
-            const message = error instanceof ApiError ? error.message : 'Не удалось отправить запрос';
-            showToast({ type: 'error', text1: 'Ошибка', text2: message });
+            const message = error instanceof ApiError ? error.message : i18nT('profile:components.profile.ProtectedContacts.ne_udalos_otpravit_zapros_c26699a2');
+            showToast({ type: 'error', text1: i18nT('profile:components.profile.ProtectedContacts.oshibka_327bf4ba'), text2: message });
         } finally {
             setRequesting(false);
         }
@@ -80,7 +82,7 @@ export default function ProtectedContacts({
                     style={[styles.socialChip, globalFocusStyles.focusable]}
                     onPress={() => openExternalUrl(String(s.value))}
                     accessibilityRole="link"
-                    accessibilityLabel={`Открыть ${s.label}`}
+                    accessibilityLabel={i18nT('profile:components.profile.ProtectedContacts.otkryt_value1_a2bb4ba1', { value1: s.label })}
                     {...Platform.select({ web: { cursor: 'pointer' } })}
                 >
                     <Text style={styles.socialChipText}>{s.label}</Text>
@@ -100,12 +102,12 @@ export default function ProtectedContacts({
         <View style={styles.gateCard}>
             <View style={styles.gateHeader}>
                 <Feather name="lock" size={16} color={colors.textMuted} />
-                <Text style={styles.gateTitle}>Контакты скрыты</Text>
+                <Text style={styles.gateTitle}>{i18nT('profile:components.profile.ProtectedContacts.kontakty_skryty_b9711aeb')}</Text>
             </View>
             <Text style={styles.gateMeta}>
                 {access === 'pending'
-                    ? 'Запрос на раскрытие контактов отправлен и ожидает одобрения.'
-                    : 'Контакты этого пользователя видны после одобрения заявки.'}
+                    ? i18nT('profile:components.profile.ProtectedContacts.zapros_na_raskrytie_kontaktov_otpravlen_i_oz_6d521f08')
+                    : i18nT('profile:components.profile.ProtectedContacts.kontakty_etogo_polzovatelya_vidny_posle_odob_73a72cb1')}
             </Text>
 
             {access === 'none' ? (
@@ -114,7 +116,7 @@ export default function ProtectedContacts({
                     onPress={handleRequest}
                     disabled={requesting}
                     accessibilityRole="button"
-                    accessibilityLabel="Запросить контакты"
+                    accessibilityLabel={i18nT('profile:components.profile.ProtectedContacts.zaprosit_kontakty_17ae693d')}
                     {...Platform.select({ web: { cursor: 'pointer' } })}
                 >
                     {requesting ? (
@@ -122,14 +124,14 @@ export default function ProtectedContacts({
                     ) : (
                         <>
                             <Feather name="user-plus" size={16} color={colors.primaryDark} />
-                            <Text style={styles.requestButtonText}>Запросить контакты</Text>
+                            <Text style={styles.requestButtonText}>{i18nT('profile:components.profile.ProtectedContacts.zaprosit_kontakty_17ae693d')}</Text>
                         </>
                     )}
                 </Pressable>
             ) : (
                 <View style={styles.pendingBadge}>
                     <Feather name="clock" size={14} color={colors.warning} />
-                    <Text style={styles.pendingText}>Заявка отправлена</Text>
+                    <Text style={styles.pendingText}>{i18nT('profile:components.profile.ProtectedContacts.zayavka_otpravlena_8639e445')}</Text>
                 </View>
             )}
         </View>

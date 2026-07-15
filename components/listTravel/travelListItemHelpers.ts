@@ -1,4 +1,5 @@
 import type { Travel } from '@/types/types'
+import { translate as i18nT } from '@/i18n'
 
 const WATERMARK_DOMAINS = [
   'shutterstock',
@@ -15,21 +16,21 @@ export const isLikelyWatermarked = (url: string | null | undefined): boolean => 
   return WATERMARK_DOMAINS.some((domain) => lower.includes(domain))
 }
 
-const PET_COMPANION_TOKENS = [
-  'собак',
-  'пёс',
-  'пес',
-  'псом',
-  'кот',
-  'кош',
-  'котом',
-  'кота',
-  'питом',
-  'животн',
-  'dog',
-  'cat',
-  'pet',
-]
+const getPetCompanionTokens = () =>
+  i18nT('travel:components.listTravel.travelListItemHelpers.petCompanionTokens')
+    .split('|')
+    .map((token) => token.trim().toLowerCase())
+    .filter(Boolean)
+
+const isPlaceholderAuthorName = (value: string): boolean => {
+  if (/^[.\s\u00B7\u2022_-]+$/.test(value)) return true
+  const normalized = value.toLocaleLowerCase()
+  return i18nT('travel:components.listTravel.travelListItemHelpers.placeholderAuthorPrefixes')
+    .split('|')
+    .map((prefix) => prefix.trim().toLocaleLowerCase())
+    .filter(Boolean)
+    .some((prefix) => normalized.startsWith(prefix))
+}
 
 export const hasPetCompanion = (companions: unknown): boolean => {
   if (!companions) return false
@@ -44,7 +45,7 @@ export const hasPetCompanion = (companions: unknown): boolean => {
           : ''
     const trimmed = value.trim().toLowerCase()
     if (!trimmed) continue
-    if (PET_COMPANION_TOKENS.some((token) => trimmed.includes(token))) return true
+    if (getPetCompanionTokens().some((token) => trimmed.includes(token))) return true
   }
   return false
 }
@@ -93,14 +94,14 @@ export const resolveTravelAuthorName = (travel: Travel, userName: unknown): stri
     (travel as any).ownerName
   if (directName && typeof directName === 'string' && directName.trim()) {
     const clean = directName.trim()
-    if (!/^[.\s\u00B7\u2022]+$|^Автор|^Пользователь|^User/i.test(clean)) {
+    if (!isPlaceholderAuthorName(clean)) {
       return clean
     }
   }
 
   if (typeof userName === 'string' && userName.trim()) {
     const clean = userName.trim()
-    if (!/^[.\s\u00B7\u2022]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i.test(clean)) {
+    if (!isPlaceholderAuthorName(clean)) {
       return clean
     }
   }

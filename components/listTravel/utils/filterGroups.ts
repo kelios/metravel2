@@ -1,5 +1,7 @@
 import type { FilterOptions, FilterState } from './listTravelTypes';
 import { buildSortingOptions } from './sortings';
+import { translate as i18nT } from '@/i18n'
+
 
 type FilterOption = {
   id: string;
@@ -100,7 +102,7 @@ export const buildTravelFilterGroups = ({
   if (!hideCountries) {
     groups.push({
       key: 'countries',
-      title: 'Страны',
+      title: i18nT('travel:components.listTravel.utils.filterGroups.strany_a1b4317d'),
       options: (options?.countries || [])
         .filter((country) => {
           const countryKey = country.country_id ?? country.id;
@@ -119,7 +121,7 @@ export const buildTravelFilterGroups = ({
   if (includeSort) {
     groups.push({
       key: 'sort',
-      title: 'Сортировка',
+      title: i18nT('travel:components.listTravel.utils.filterGroups.sortirovka_0d5f977f'),
       options: buildSortingOptions(options?.sortings || []),
       multiSelect: false,
       icon: 'sliders',
@@ -129,7 +131,7 @@ export const buildTravelFilterGroups = ({
   groups.push(
     {
       key: 'categories',
-      title: 'Категории',
+      title: i18nT('travel:components.listTravel.utils.filterGroups.kategorii_26af8102'),
       options: (options?.categories || [])
         .filter((item) => shouldIncludeFacetOption(facetCounts, selectedFilters, 'categories', 'categories', item.id))
         .map((item) => ({
@@ -142,7 +144,7 @@ export const buildTravelFilterGroups = ({
     },
     {
       key: 'categoryTravelAddress',
-      title: 'Что посмотреть',
+      title: i18nT('travel:components.listTravel.utils.filterGroups.chto_posmotret_7a5d05a8'),
       options: (options?.categoryTravelAddress || [])
         .filter((item) => shouldIncludeFacetOption(facetCounts, selectedFilters, 'categoryTravelAddress', 'categoryTravelAddress', item.id))
         .map((item) => ({
@@ -155,7 +157,7 @@ export const buildTravelFilterGroups = ({
     },
     {
       key: 'transports',
-      title: 'Транспорт',
+      title: i18nT('travel:components.listTravel.utils.filterGroups.transport_0e010c84'),
       options: (options?.transports || [])
         .filter((item) => shouldIncludeFacetOption(facetCounts, selectedFilters, 'transports', 'transports', item.id))
         .map((item) => ({
@@ -168,7 +170,7 @@ export const buildTravelFilterGroups = ({
     },
     {
       key: 'companions',
-      title: 'Спутники',
+      title: i18nT('travel:components.listTravel.utils.filterGroups.sputniki_a5028edd'),
       options: (options?.companions || [])
         .filter((item) => shouldIncludeFacetOption(facetCounts, selectedFilters, 'companions', 'companions', item.id))
         .map((item) => ({
@@ -181,7 +183,7 @@ export const buildTravelFilterGroups = ({
     },
     {
       key: 'complexity',
-      title: 'Сложность',
+      title: i18nT('travel:components.listTravel.utils.filterGroups.slozhnost_ff6026b9'),
       options: (options?.complexity || [])
         .filter((item) => shouldIncludeFacetOption(facetCounts, selectedFilters, 'complexity', 'complexity', item.id))
         .map((item) => ({
@@ -194,7 +196,7 @@ export const buildTravelFilterGroups = ({
     },
     {
       key: 'month',
-      title: 'Месяц',
+      title: i18nT('travel:components.listTravel.utils.filterGroups.mesyats_8a9d8ac3'),
       options: (options?.month || [])
         .filter((item) => shouldIncludeFacetOption(facetCounts, selectedFilters, 'month', 'month', item.id))
         .map((item) => ({
@@ -207,7 +209,7 @@ export const buildTravelFilterGroups = ({
     },
     {
       key: 'over_nights_stay',
-      title: 'Ночлег',
+      title: i18nT('travel:components.listTravel.utils.filterGroups.nochleg_67366da4'),
       options: (options?.over_nights_stay || [])
         .filter((item) => shouldIncludeFacetOption(facetCounts, selectedFilters, 'over_nights_stay', 'over_nights_stay', item.id))
         .map((item) => ({

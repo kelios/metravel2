@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Platform } from 'react-native'
 
 import { ensureSingleTitleTag } from '@/utils/seo'
+import { DEFAULT_LOCALE, i18n } from '@/i18n'
 
 type UseTravelDetailsHeadSyncArgs = {
   canonicalUrl?: string
@@ -29,8 +30,9 @@ export function useTravelDetailsHeadSync({
     if (Platform.OS !== 'web' || typeof document === 'undefined') return undefined
 
     const enforceHtmlLang = () => {
-      if (document.documentElement.getAttribute('lang') !== 'ru') {
-        document.documentElement.setAttribute('lang', 'ru')
+      const documentLocale = i18n.resolvedLanguage || DEFAULT_LOCALE
+      if (document.documentElement.getAttribute('lang') !== documentLocale) {
+        document.documentElement.setAttribute('lang', documentLocale)
       }
     }
 

@@ -4,9 +4,13 @@
 
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isAuthTokenStorageKey } from '@/utils/authPlatform';
+import { translate as i18nT } from '@/i18n'
 
-// Для web используем sessionStorage с базовым шифрованием
-// Для native будем использовать expo-secure-store (требует установки)
+
+// Web auth credentials are intentionally never stored here: web uses the
+// backend-managed HttpOnly cookie. Other web-only sensitive preferences keep
+// the legacy encrypted localStorage path until their own migration.
 
 const STORAGE_PREFIX = 'secure_';
 const ENCRYPTION_KEY = 'metravel_encryption_key_v1'; // В production должен быть уникальным для каждого пользователя
@@ -34,6 +38,18 @@ function getWebLocalStorage(): Storage | null {
     return window.localStorage ?? null;
   } catch {
     return null;
+  }
+}
+
+function purgeLegacyWebAuthCredential(key: string): void {
+  const fullKey = `${STORAGE_PREFIX}${key}`;
+  webMemoryStore.delete(fullKey);
+  const storage = getWebLocalStorage();
+  if (!storage) return;
+  try {
+    storage.removeItem(fullKey);
+  } catch {
+    // Best-effort migration for privacy modes where storage access is blocked.
   }
 }
 
@@ -90,6 +106,10 @@ function simpleDecrypt(encrypted: string, key: string): string {
 export async function setSecureItem(key: string, value: string): Promise<void> {
   try {
     if (Platform.OS === 'web') {
+      if (isAuthTokenStorageKey(key)) {
+        purgeLegacyWebAuthCredential(key);
+        return;
+      }
       const fullKey = `${STORAGE_PREFIX}${key}`;
       const encrypted = simpleEncrypt(value, ENCRYPTION_KEY);
       const ls = getWebLocalStorage();
@@ -111,10 +131,10 @@ export async function setSecureItem(key: string, value: string): Promise<void> {
         const SecureStore = require('expo-secure-store');
         await SecureStore.setItemAsync(key, value);
       } catch {
-        // Если SecureStore не установлен, используем AsyncStorage с предупреждением
-        if (__DEV__) {
-          console.warn('expo-secure-store не установлен. Используется AsyncStorage (небезопасно для production)');
+        if (!__DEV__) {
+          throw new Error('SecureStore unavailable for production credential storage');
         }
+        console.warn('expo-secure-store не установлен. Используется dev-only AsyncStorage fallback');
         await AsyncStorage.setItem(`${STORAGE_PREFIX}${key}`, value);
       }
     }
@@ -122,7 +142,7 @@ export async function setSecureItem(key: string, value: string): Promise<void> {
     if (__DEV__) {
       console.error('Ошибка при сохранении в secure storage:');
     }
-    throw new Error('Ошибка при сохранении в secure storage');
+    throw new Error(i18nT('shared:utils.secureStorage.oshibka_pri_sohranenii_v_secure_storage_d1fc71d2'));
   }
 }
 
@@ -132,6 +152,10 @@ export async function setSecureItem(key: string, value: string): Promise<void> {
 export async function getSecureItem(key: string): Promise<string | null> {
   try {
     if (Platform.OS === 'web') {
+      if (isAuthTokenStorageKey(key)) {
+        purgeLegacyWebAuthCredential(key);
+        return null;
+      }
       const fullKey = `${STORAGE_PREFIX}${key}`;
       const ls = getWebLocalStorage();
       let encrypted: string | null = null;
@@ -164,10 +188,8 @@ export async function getSecureItem(key: string): Promise<string | null> {
         const SecureStore = require('expo-secure-store');
         return await SecureStore.getItemAsync(key);
       } catch {
-        // Если SecureStore не установлен, используем AsyncStorage
-        if (__DEV__) {
-          console.warn('expo-secure-store не установлен. Используется AsyncStorage');
-        }
+        if (!__DEV__) return null;
+        console.warn('expo-secure-store не установлен. Используется dev-only AsyncStorage fallback');
         return await AsyncStorage.getItem(`${STORAGE_PREFIX}${key}`);
       }
     }
@@ -234,4 +256,3 @@ export async function isSecureStorageAvailable(): Promise<boolean> {
     return false;
   }
 }
-

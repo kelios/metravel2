@@ -12,8 +12,10 @@ import TravelPdfExportControl from '@/components/travel/TravelPdfExportControl'
 
 import { attachWebTitle, webOnly } from '../helpers'
 import { createStyles } from '../styles'
+import { translate as i18nT } from '@/i18n'
 
-// Детерминированное форматирование тысяч. toLocaleString('ru-RU') может давать
+
+// Детерминированное форматирование тысяч: встроенное locale-форматирование может давать
 // разный разделитель (U+00A0 в Node ICU vs U+202F в браузере) → расхождение
 // текста при гидрации и React #418. Группируем неразрывным пробелом сами.
 const formatViews = (n: number) =>
@@ -55,9 +57,11 @@ export const AuthorBlock = memo(function AuthorBlock({
   onWrite,
 }: AuthorBlockProps) {
   const showSubscribeAndWrite = !isOwn && !!authorUserId
-  const displayName = userName || 'Пользователь'
-  const editTitleRef = useMemo(() => attachWebTitle('Редактировать'), [])
-  const writeTitleRef = useMemo(() => attachWebTitle('Написать автору'), [])
+  const displayName = userName || i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.userFallback')
+  const editTitle = i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.redaktirovat_609c8bab')
+  const writeTitle = i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.napisat_avtoru_e9dfca99')
+  const editTitleRef = useMemo(() => attachWebTitle(editTitle), [editTitle])
+  const writeTitleRef = useMemo(() => attachWebTitle(writeTitle), [writeTitle])
 
   return (
     <View
@@ -92,7 +96,7 @@ export const AuthorBlock = memo(function AuthorBlock({
               disabled={!authorUserId}
               accessibilityRole={authorUserId ? 'button' : undefined}
               accessibilityLabel={
-                authorUserId ? `Открыть профиль автора ${displayName}` : undefined
+                authorUserId ? i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.otkryt_profil_avtora_value1_ef516528', { value1: displayName }) : undefined
               }
               style={({ pressed }) => [
                 styles.userNameWrap,
@@ -104,9 +108,9 @@ export const AuthorBlock = memo(function AuthorBlock({
                   ? ({
                       cursor: 'pointer',
                       role: 'button',
-                      'aria-label': `Открыть профиль автора ${displayName}`,
+                      'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.otkryt_profil_avtora_value1_ef516528', { value1: displayName }),
                       'data-author-name': true,
-                      title: `Открыть профиль автора ${displayName}`,
+                      title: i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.otkryt_profil_avtora_value1_ef516528', { value1: displayName }),
                     } as any)
                   : {},
               )}
@@ -137,7 +141,7 @@ export const AuthorBlock = memo(function AuthorBlock({
                 <Pressable
                   onPress={onEdit}
                   accessibilityRole="button"
-                  accessibilityLabel="Редактировать путешествие"
+                  accessibilityLabel={i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.redaktirovat_puteshestvie_8010aa7b')}
                   style={({ pressed }) => [
                     styles.actionBtn,
                     globalFocusStyles.focusable,
@@ -147,7 +151,7 @@ export const AuthorBlock = memo(function AuthorBlock({
                   {...webOnly({
                     'data-action-btn': true,
                     role: 'button',
-                    'aria-label': 'Редактировать путешествие',
+                    'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.redaktirovat_puteshestvie_8010aa7b'),
                   } as any)}
                 >
                   <Feather name="edit" size={18} color={textColor} />
@@ -174,7 +178,7 @@ export const AuthorBlock = memo(function AuthorBlock({
                   <Pressable
                     onPress={onWrite}
                     accessibilityRole="button"
-                    accessibilityLabel={`Написать автору ${displayName}`}
+                    accessibilityLabel={i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.napisat_avtoru_value1_191ed8f0', { value1: displayName })}
                     style={({ pressed }) => [
                       styles.actionBtn,
                       globalFocusStyles.focusable,
@@ -184,7 +188,7 @@ export const AuthorBlock = memo(function AuthorBlock({
                     {...webOnly({
                       'data-action-btn': true,
                       role: 'button',
-                      'aria-label': `Написать автору ${displayName}`,
+                      'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.napisat_avtoru_value1_191ed8f0', { value1: displayName }),
                     } as any)}
                   >
                     <Feather name="mail" size={18} color={textColor} />
@@ -211,9 +215,9 @@ export const AuthorBlock = memo(function AuthorBlock({
                 <View
                   style={styles.metaPill}
                   accessibilityRole={(Platform.OS === 'web') ? undefined : 'text'}
-                  accessibilityLabel={`${formatViews(views)} просмотров`}
+                  accessibilityLabel={i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.value1_prosmotrov_bde67a56', { value1: formatViews(views) })}
                   {...webOnly({
-                    'aria-label': `${formatViews(views)} просмотров`,
+                    'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.value1_prosmotrov_bde67a56', { value1: formatViews(views) }),
                   } as any)}
                 >
                   <Feather name="eye" size={14} color={mutedText} />

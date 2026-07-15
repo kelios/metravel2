@@ -6,6 +6,8 @@ import type { UserRank } from '@/api/achievements'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import Button from '@/components/ui/Button'
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   travelsCount: number
@@ -38,26 +40,25 @@ function ProfileFirstStepsCard({
         <Feather name="compass" size={18} color={colors.primaryDark} />
       </View>
       <View style={styles.content}>
-        <Text style={styles.title}>С чего начать</Text>
+        <Text style={styles.title}>{i18nT('profile:components.profile.ProfileFirstStepsCard.s_chego_nachat_19b582d7')}</Text>
         <Text style={styles.description}>
-          Добавьте первый маршрут или откройте квест, чтобы профиль начал собирать ваш прогресс.
-        </Text>
+          {i18nT('profile:components.profile.ProfileFirstStepsCard.dobavte_pervyy_marshrut_ili_otkroyte_kvest_c_36989c35')}</Text>
         <View style={styles.actions}>
           <Button
-            label="Создать маршрут"
+            label={i18nT('profile:components.profile.ProfileFirstStepsCard.sozdat_marshrut_cd4cd9b3')}
             onPress={onCreateRoute}
             variant="primary"
             size="sm"
             icon={<Feather name="map" size={15} color={colors.textOnPrimary} />}
-            accessibilityLabel="Создать первый маршрут"
+            accessibilityLabel={i18nT('profile:components.profile.ProfileFirstStepsCard.sozdat_pervyy_marshrut_9e1d0895')}
           />
           <Button
-            label="Начать квест"
+            label={i18nT('profile:components.profile.ProfileFirstStepsCard.nachat_kvest_b9119ff2')}
             onPress={onStartQuest}
             variant="outline"
             size="sm"
             icon={<Feather name="flag" size={15} color={colors.primaryDark} />}
-            accessibilityLabel="Начать первый квест"
+            accessibilityLabel={i18nT('profile:components.profile.ProfileFirstStepsCard.nachat_pervyy_kvest_74ad02e8')}
           />
         </View>
       </View>

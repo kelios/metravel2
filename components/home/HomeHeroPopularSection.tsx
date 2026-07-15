@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useVisibleCardCount } from '@/hooks/useVisibleCardCount'
 import type { ThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
+
 
 type BookImage = {
   source: any
@@ -78,7 +80,7 @@ function FeaturedRouteCard({
         },
       ]}
       accessibilityRole="link"
-      accessibilityLabel={`Открыть маршрут недели: ${image.title}. ${image.subtitle}`}
+      accessibilityLabel={i18nT('home:components.home.HomeHeroPopularSection.otkryt_marshrut_nedeli_value1_value2_2f601bf8', { value1: image.title, value2: image.subtitle })}
     >
       <ImageCardMedia
         source={image.source}
@@ -102,7 +104,7 @@ function FeaturedRouteCard({
             color={colors.textOnDark}
             {...({ 'aria-hidden': true, focusable: false } as any)}
           />
-          <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
+          <Text style={styles.slideEyebrowText}>{i18nT('home:components.home.HomeHeroPopularSection.marshrut_nedeli_b1be152b')}</Text>
         </View>
         <Text style={styles.featuredCardTitle} numberOfLines={1}>
           {image.title}
@@ -141,7 +143,7 @@ function PopularRouteCard({
         },
       ]}
       accessibilityRole="link"
-      accessibilityLabel={`Открыть маршрут: ${image.title}. ${image.subtitle}`}
+      accessibilityLabel={i18nT('home:components.home.HomeHeroPopularSection.otkryt_marshrut_value1_value2_e989c06b', { value1: image.title, value2: image.subtitle })}
     >
       <ImageCardMedia
         source={image.source}
@@ -208,17 +210,16 @@ export default function HomeHeroPopularSection({
           accessibilityRole="header"
           {...({ 'aria-level': 2 } as any)}
         >
-          Популярные маршруты
-        </Text>
+          {i18nT('home:components.home.HomeHeroPopularSection.populyarnye_marshruty_870b269e')}</Text>
         {!useMobileGrid && (
           <Pressable
             onPress={() => onOpenArticle('/search')}
             style={styles.popularSeeAll}
             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
             accessibilityRole="link"
-            accessibilityLabel="Смотреть все популярные маршруты"
+            accessibilityLabel={i18nT('home:components.home.HomeHeroPopularSection.smotret_vse_populyarnye_marshruty_f17aa35c')}
           >
-            <Text style={styles.popularSeeAllText}>Все</Text>
+            <Text style={styles.popularSeeAllText}>{i18nT('home:components.home.HomeHeroPopularSection.vse_5f903d3d')}</Text>
             <Feather name="arrow-right" size={14} color={colors.primaryDark} />
           </Pressable>
         )}

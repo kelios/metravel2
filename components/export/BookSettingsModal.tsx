@@ -25,6 +25,8 @@ import {
   resolveThemed,
 } from './BookSettingsModal.helpers';
 import { ChecklistFieldset, ModalFooter } from './BookSettingsModal.parts';
+import { translate as i18nT } from '@/i18n'
+
 // ✅ ИСПРАВЛЕНИЕ: Picker не используется в веб-версии модального окна
 // import { Picker } from '@react-native-picker/picker';
 
@@ -107,11 +109,11 @@ export default function BookSettingsModal({
     const errors: string[] = [];
 
     if (settings.subtitle && settings.subtitle.length > 150) {
-      errors.push('Подзаголовок не должен превышать 150 символов');
+      errors.push(i18nT('profile:components.export.BookSettingsModal.podzagolovok_ne_dolzhen_prevyshat_150_simvol_67705c6a'));
     }
 
     if (settings.includeChecklists && settings.checklistSections.length === 0) {
-      errors.push('Выберите хотя бы один раздел чек-листа или отключите чек-листы');
+      errors.push(i18nT('profile:components.export.BookSettingsModal.vyberite_hotya_by_odin_razdel_chek_lista_ili_18ec07d4'));
     }
 
     setValidationErrors(errors);
@@ -258,7 +260,7 @@ export default function BookSettingsModal({
       console.error('Failed to save PDF settings:', error);
       void showToast({
         type: 'error',
-        text1: 'Не удалось сохранить настройки PDF',
+        text1: i18nT('profile:components.export.BookSettingsModal.ne_udalos_sohranit_nastroyki_pdf_c17e83ed'),
         position: 'bottom',
       });
       if (mountedRef.current) setIsSaving(false);
@@ -283,7 +285,7 @@ export default function BookSettingsModal({
       console.error('Failed to generate preview:', error);
       void showToast({
         type: 'error',
-        text1: 'Не удалось создать превью PDF',
+        text1: i18nT('profile:components.export.BookSettingsModal.ne_udalos_sozdat_prevyu_pdf_66bbe2ed'),
         position: 'bottom',
       });
       if (mountedRef.current) setIsSaving(false);
@@ -293,6 +295,7 @@ export default function BookSettingsModal({
   if (Platform.OS !== 'web') {
     return null; // Только для web
   }
+  const hasSubtitleError = Boolean(settings.subtitle && settings.subtitle.length > 150);
 
   return (
     <Modal
@@ -380,7 +383,7 @@ export default function BookSettingsModal({
               flexWrap: 'wrap',
             }}
           >
-            <span>Настройки фотоальбома</span>
+            <span>{i18nT('profile:components.export.BookSettingsModal.nastroyki_fotoalboma_e7ea523f')}</span>
             {hasUnsavedChanges && (
               <span
                 style={{
@@ -394,10 +397,10 @@ export default function BookSettingsModal({
                   alignItems: 'center',
                   gap: '6px',
                 }}
-                title="У вас есть несохраненные изменения"
+                title={i18nT('profile:components.export.BookSettingsModal.u_vas_est_nesohranennye_izmeneniya_503e03aa')}
               >
                 <Feather name="circle" size={8} color={MODAL_COLORS.accent as any} />
-                <span>Не сохранено</span>
+                <span>{i18nT('profile:components.export.BookSettingsModal.ne_sohraneno_de358955')}</span>
               </span>
             )}
           </h2>
@@ -417,7 +420,7 @@ export default function BookSettingsModal({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: MODAL_COLORS.errorDark, marginBottom: '6px' }}>
                 <Feather name="alert-triangle" size={16} color={MODAL_COLORS.errorDark as any} />
-                <span>Исправьте ошибки:</span>
+                <span>{i18nT('profile:components.export.BookSettingsModal.ispravte_oshibki_76b3c61b')}</span>
               </div>
               <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: MODAL_COLORS.errorDark }}>
                 {validationErrors.map((error, index) => (
@@ -442,21 +445,19 @@ export default function BookSettingsModal({
             </span>
             <div>
               <div style={{ color: MODAL_COLORS.text, fontSize: '14px', fontWeight: 500 }}>
-                Выбрано путешествий:&nbsp;
-                <span style={{ fontWeight: 700, color: MODAL_COLORS.primary }}>{travelCount}</span>
+                {i18nT('profile:components.export.BookSettingsModal.vybrano_puteshestviy_nbsp_4b4623d9')}<span style={{ fontWeight: 700, color: MODAL_COLORS.primary }}>{travelCount}</span>
               </div>
               <div style={{ fontSize: '12px', color: MODAL_COLORS.textMuted, marginTop: '2px' }}>
                 {travelCount === 1
-                  ? 'Будет создана книга с одним путешествием'
-                  : `Будет создана книга с ${travelCount} путешествиями`}
+                  ? i18nT('profile:components.export.BookSettingsModal.budet_sozdana_kniga_s_odnim_puteshestviem_d6b28f6a')
+                  : i18nT('profile:components.export.BookSettingsModal.budet_sozdana_kniga_s_value1_puteshestviyami_a78b68c9', { value1: travelCount })}
               </div>
             </div>
           </div>
 
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
-              Порядок путешествий в книге
-            </label>
+              {i18nT('profile:components.export.BookSettingsModal.poryadok_puteshestviy_v_knige_3740cd72')}</label>
             <select
               value={settings.sortOrder}
               onChange={(e) => handleSettingsChange({ sortOrder: e.target.value as BookSettings['sortOrder'] })}
@@ -486,11 +487,11 @@ export default function BookSettingsModal({
                 e.target.style.boxShadow = 'none';
               }}
             >
-              <option value="manual">Как расположено в списке выбора</option>
-              <option value="date-desc">Сначала новые по году</option>
-              <option value="date-asc">Сначала старые по году</option>
-              <option value="country">По стране</option>
-              <option value="alphabetical">По названию</option>
+              <option value="manual">{i18nT('profile:components.export.BookSettingsModal.kak_raspolozheno_v_spiske_vybora_c2ec73ee')}</option>
+              <option value="date-desc">{i18nT('profile:components.export.BookSettingsModal.snachala_novye_po_godu_71456114')}</option>
+              <option value="date-asc">{i18nT('profile:components.export.BookSettingsModal.snachala_starye_po_godu_3c9621e6')}</option>
+              <option value="country">{i18nT('profile:components.export.BookSettingsModal.po_strane_7e37bb82')}</option>
+              <option value="alphabetical">{i18nT('profile:components.export.BookSettingsModal.po_nazvaniyu_e17e92ac')}</option>
             </select>
           </div>
 
@@ -568,7 +569,7 @@ export default function BookSettingsModal({
             >
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                title={showAdvanced ? 'Скрыть настройки обложки и заголовков' : 'Показать настройки обложки и заголовков'}
+                title={showAdvanced ? i18nT('profile:components.export.BookSettingsModal.skryt_nastroyki_oblozhki_i_zagolovkov_d3b42861') : i18nT('profile:components.export.BookSettingsModal.pokazat_nastroyki_oblozhki_i_zagolovkov_a979398b')}
                 style={{
                   padding: '10px 20px',
                   backgroundColor: 'transparent',
@@ -600,7 +601,7 @@ export default function BookSettingsModal({
                   size={18}
                   color={MODAL_COLORS.textMuted as any}
                 />
-                <span>{showAdvanced ? 'Скрыть детальные настройки' : 'Показать детальные настройки'}</span>
+                <span>{showAdvanced ? i18nT('profile:components.export.BookSettingsModal.skryt_detalnye_nastroyki_00de2214') : i18nT('profile:components.export.BookSettingsModal.pokazat_detalnye_nastroyki_6805c889')}</span>
               </button>
             </div>
 
@@ -608,8 +609,7 @@ export default function BookSettingsModal({
               <>
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
-                    Название книги
-                    <span style={{ color: MODAL_COLORS.error, marginLeft: '4px' }}>*</span>
+                    {i18nT('profile:components.export.BookSettingsModal.nazvanie_knigi_8e3417de')}<span style={{ color: MODAL_COLORS.error, marginLeft: '4px' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -639,7 +639,7 @@ export default function BookSettingsModal({
                       e.target.style.borderColor = MODAL_COLORS.border as any;
                       e.target.style.boxShadow = 'none';
                     }}
-                    placeholder="Мои путешествия"
+                    placeholder={i18nT('profile:components.export.BookSettingsModal.moi_puteshestviya_1e06ca97')}
                     aria-required="true"
                     aria-invalid={false}
                   />
@@ -647,8 +647,7 @@ export default function BookSettingsModal({
 
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
-                    Подзаголовок (опционально)
-                  </label>
+                    {i18nT('profile:components.export.BookSettingsModal.podzagolovok_optsionalno_de116b87')}</label>
                   <input
                     type="text"
                     value={settings.subtitle || ''}
@@ -656,7 +655,7 @@ export default function BookSettingsModal({
                     style={{
                       width: '100%',
                       padding: '12px 14px',
-                      border: `1.5px solid ${validationErrors.some(e => e.includes('Подзаголовок')) ? MODAL_COLORS.error : MODAL_COLORS.border}`,
+                      border: `1.5px solid ${hasSubtitleError ? MODAL_COLORS.error : MODAL_COLORS.border}`,
                       borderRadius: '12px',
                       fontSize: '15px',
                       minHeight: '44px',
@@ -674,22 +673,20 @@ export default function BookSettingsModal({
                       e.target.style.backgroundColor = MODAL_COLORS.surface;
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = validationErrors.some(err => err.includes('Подзаголовок')) ? (MODAL_COLORS.error as any) : (MODAL_COLORS.border as any);
+                      e.target.style.borderColor = hasSubtitleError ? (MODAL_COLORS.error as any) : (MODAL_COLORS.border as any);
                       e.target.style.boxShadow = 'none';
                     }}
-                    placeholder="Воспоминания 2024"
+                    placeholder={i18nT('profile:components.export.BookSettingsModal.vospominaniya_2024_26790f52')}
                     maxLength={150}
-                    aria-invalid={validationErrors.some(e => e.includes('Подзаголовок'))}
+                    aria-invalid={hasSubtitleError}
                   />
                   <div style={{ fontSize: '11px', color: MODAL_COLORS.textMuted, marginTop: '4px', textAlign: 'right' }}>
-                    {(settings.subtitle || '').length}/150 символов
-                  </div>
+                    {(settings.subtitle || '').length}{i18nT('profile:components.export.BookSettingsModal.150_simvolov_629dcb35')}</div>
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
-                    Тип обложки
-                  </label>
+                    {i18nT('profile:components.export.BookSettingsModal.tip_oblozhki_7559bcbb')}</label>
                   <select
                     value={settings.coverType}
                     onChange={(e) => handleCoverTypeChange(e.target.value as BookSettings['coverType'])}
@@ -719,11 +716,11 @@ export default function BookSettingsModal({
                       e.target.style.boxShadow = 'none';
                     }}
                   >
-                    <option value="auto">Автоматическая (лучшее фото)</option>
-                    <option value="first-photo">Первое фото первого путешествия</option>
-                    <option value="gradient">Градиент</option>
+                    <option value="auto">{i18nT('profile:components.export.BookSettingsModal.avtomaticheskaya_luchshee_foto_b3153151')}</option>
+                    <option value="first-photo">{i18nT('profile:components.export.BookSettingsModal.pervoe_foto_pervogo_puteshestviya_d2effeb3')}</option>
+                    <option value="gradient">{i18nT('profile:components.export.BookSettingsModal.gradient_11017575')}</option>
                     <option value="custom">
-                      {isPremium ? 'Свое изображение' : 'Свое изображение (премиум)'}
+                      {isPremium ? i18nT('profile:components.export.BookSettingsModal.svoe_izobrazhenie_5c69c342') : i18nT('profile:components.export.BookSettingsModal.svoe_izobrazhenie_premium_373d7f86')}
                     </option>
                   </select>
                 </div>
@@ -747,11 +744,9 @@ export default function BookSettingsModal({
                 />
                 <div>
                   <div style={{ fontWeight: 500, color: MODAL_COLORS.text, fontSize: '15px' }}>
-                    Включить оглавление
-                  </div>
+                    {i18nT('profile:components.export.BookSettingsModal.vklyuchit_oglavlenie_3a5ca805')}</div>
                   <div style={{ fontSize: '12px', color: MODAL_COLORS.textMuted, marginTop: '2px' }}>
-                    С миниатюрами и номерами страниц
-                  </div>
+                    {i18nT('profile:components.export.BookSettingsModal.s_miniatyurami_i_nomerami_stranits_0647b357')}</div>
                 </div>
               </label>
             </div>

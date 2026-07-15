@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import Head from 'expo-router/head';
 import { normalizeOgImageUrl } from '@/utils/seo';
+import { getActiveLocaleDefinition } from '@/i18n/format';
 
 type Props = {
     headKey?: string | null;
@@ -32,6 +33,7 @@ const InstantSEO: React.FC<Props> = ({
     children,
 }) => {
     const normalizedImage = normalizeOgImageUrl(image);
+    const locale = getActiveLocaleDefinition();
     const twitterCard = normalizedImage ? 'summary_large_image' : 'summary';
     useEffect(() => {
         if (typeof document === 'undefined' || !robots) return;
@@ -77,7 +79,7 @@ const InstantSEO: React.FC<Props> = ({
             {normalizedImage && imageHeight && <meta key="og:image:height" property="og:image:height" content={String(imageHeight)} />}
             {normalizedImage && imageAlt && <meta key="og:image:alt" property="og:image:alt" content={imageAlt} />}
             <meta key="og:site_name" property="og:site_name" content="MeTravel" />
-            <meta key="og:locale" property="og:locale" content="ru_RU" />
+            <meta key="og:locale" property="og:locale" content={locale.ogLocale} />
 
             {/* Twitter */}
             <meta key="twitter:card" name="twitter:card" content={twitterCard} />

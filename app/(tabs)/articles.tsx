@@ -22,6 +22,8 @@ import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/uti
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
 import { buildArticlesHrefFromSource, normalizeArticleListSourceHref } from '@/utils/articleNavigation'
+import { translate as i18nT } from '@/i18n'
+
 
 export default function TabOneScreen() {
   const initialPage = 0
@@ -99,7 +101,7 @@ export default function TabOneScreen() {
         <View style={styles.container}>
           <View style={styles.content}>
             <ErrorDisplay
-              message={error instanceof Error ? error.message : 'Не удалось загрузить статьи'}
+              message={error instanceof Error ? error.message : i18nT('shared:app.tabs.articles.ne_udalos_zagruzit_stati_0e12241c')}
               onRetry={() => refetch()}
               variant="error"
             />
@@ -116,8 +118,8 @@ export default function TabOneScreen() {
           <View style={styles.content}>
             <EmptyState
               icon="file-text"
-              title="Статей пока нет"
-              description={user_id ? "У этого пользователя пока нет опубликованных статей" : "Пока нет опубликованных статей"}
+              title={i18nT('shared:app.tabs.articles.statey_poka_net_11eef9a2')}
+              description={user_id ? i18nT('shared:app.tabs.articles.u_etogo_polzovatelya_poka_net_opublikovannyh_09fa84d1') : i18nT('shared:app.tabs.articles.poka_net_opublikovannyh_statey_76359aa9')}
               variant="empty"
             />
           </View>
@@ -131,8 +133,8 @@ export default function TabOneScreen() {
         {isFocused && (
           <InstantSEO
             headKey="articles"
-            title="Статьи о путешествиях, маршрутах и советах в дорогу | Metravel"
-            description="Статьи путешественников на платформе Metravel — советы по маршрутам, истории из поездок, полезные материалы и идеи для вашего следующего путешествия."
+            title={i18nT('shared:app.tabs.articles.stati_o_puteshestviyah_marshrutah_i_sovetah__d7db8d4c')}
+            description={i18nT('shared:app.tabs.articles.stati_puteshestvennikov_na_platforme_metrave_74ef2809')}
             canonical={buildCanonicalUrl('/articles')}
             image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
             ogType="website"
@@ -151,12 +153,12 @@ export default function TabOneScreen() {
                   clip: 'rect(0,0,0,0)',
                   whiteSpace: 'nowrap',
                   borderWidth: 0,
-              } as any}>Статьи о путешествиях, маршрутах и советах в дорогу | Metravel</h1>
+              } as any}>{i18nT('shared:app.tabs.articles.stati_o_puteshestviyah_marshrutah_i_sovetah__d7db8d4c')}</h1>
           )}
           <View style={styles.content}>
             {isError && (
               <ErrorDisplay
-                message={error instanceof Error ? error.message : 'Не удалось загрузить статьи'}
+                message={error instanceof Error ? error.message : i18nT('shared:app.tabs.articles.ne_udalos_zagruzit_stati_0e12241c')}
                 onRetry={() => refetch()}
                 variant="warning"
               />

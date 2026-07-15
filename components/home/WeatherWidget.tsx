@@ -8,6 +8,9 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useWeatherWidgetModel } from './hooks/useWeatherWidgetModel';
+import { translate as i18nT } from '@/i18n'
+import { formatDate } from '@/i18n/format'
+
 
 // ✅ УЛУЧШЕНИЕ: Импорт CSS для предотвращения проблем с текстом на hover
 if (Platform.OS === 'web') {
@@ -36,8 +39,8 @@ function WeatherWidget({ points, countryName, onSettled }: Props) {
     const fallbackIcon = status === 'error' ? 'alert-circle' : 'cloud';
     const fallbackText =
       status === 'error'
-        ? 'Не удалось загрузить прогноз. Проверьте координаты точки или подключение.'
-        : 'Загружаем прогноз...';
+        ? i18nT('home:components.home.WeatherWidget.ne_udalos_zagruzit_prognoz_proverte_koordina_af7a7335')
+        : i18nT('home:components.home.WeatherWidget.zagruzhaem_prognoz_58fcfd93');
 
     return (
       <View 
@@ -49,7 +52,7 @@ function WeatherWidget({ points, countryName, onSettled }: Props) {
                 style={[styles.title, { color: colors.text }]}
                 {...(Platform.OS === 'web' ? { 'data-weather-title': true } : {})}
               >
-                  Погода в {locationLabel}
+                  {i18nT('home:components.home.WeatherWidget.pogoda_v_cdab7f8f')}{locationLabel}
               </Text>
           </View>
 
@@ -99,7 +102,7 @@ function WeatherWidget({ points, countryName, onSettled }: Props) {
 
 function formatDateShort(dateStr: string): string {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric' });
+    return formatDate(date, { weekday: 'short', day: 'numeric' });
 }
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) => StyleSheet.create({

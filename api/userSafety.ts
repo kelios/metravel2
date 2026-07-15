@@ -8,12 +8,13 @@
 //   DELETE /user/{id}/block/    → 204
 //   GET    /user/blocked/       → пагинированный список UserProfileDto
 //
-// Пока эндпоинты не задеплоены на прод — в DEV (или под EXPO_PUBLIC_SAFETY_MOCK=true)
-// работаем на in-memory моке. В прод-бандл (__DEV__===false без флага) мок не попадает.
+// Production contract verified by board #919. In-memory mocks are development-only.
 
 import { apiClient, ApiError } from '@/api/client'
 import type { UserProfileDto } from '@/api/user'
+import { resolveDevMockFlag } from '@/utils/devMockFlags'
 import { devWarn } from '@/utils/logger'
+import { translate as i18nT } from '@/i18n'
 
 export type ReportReasonKey =
   | 'spam'
@@ -41,15 +42,18 @@ export interface ReportResult {
 
 // Дефолтный справочник причин — используется, если BE не отдаёт /report-reasons/.
 export const DEFAULT_REPORT_REASONS: ReportReason[] = [
-  { key: 'spam', label: 'Спам' },
-  { key: 'harassment', label: 'Оскорбления / харассмент' },
-  { key: 'scam', label: 'Мошенничество' },
-  { key: 'inappropriate_content', label: 'Неприемлемый контент' },
-  { key: 'fake_account', label: 'Фейковый аккаунт' },
-  { key: 'other', label: 'Другое' },
+  { key: 'spam', get label() { return i18nT('sharedStatic:userSafety.reason.spam') } },
+  { key: 'harassment', get label() { return i18nT('sharedStatic:userSafety.reason.harassment') } },
+  { key: 'scam', get label() { return i18nT('sharedStatic:userSafety.reason.scam') } },
+  { key: 'inappropriate_content', get label() { return i18nT('sharedStatic:userSafety.reason.inappropriateContent') } },
+  { key: 'fake_account', get label() { return i18nT('sharedStatic:userSafety.reason.fakeAccount') } },
+  { key: 'other', get label() { return i18nT('sharedStatic:userSafety.reason.other') } },
 ]
 
-const USE_MOCK = process.env.EXPO_PUBLIC_SAFETY_MOCK === 'true'
+const USE_MOCK = resolveDevMockFlag({
+  name: 'EXPO_PUBLIC_SAFETY_MOCK',
+  value: process.env.EXPO_PUBLIC_SAFETY_MOCK,
+})
 
 const shouldFallbackToMock = (error: unknown): boolean => {
   if (USE_MOCK) return true

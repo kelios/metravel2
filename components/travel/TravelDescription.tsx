@@ -12,6 +12,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import StableContent from '@/components/travel/StableContent';
+import { translate as i18nT } from '@/i18n'
+
 
 interface TravelDescriptionProps {
     htmlContent: string;
@@ -214,7 +216,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
 
           {/* Контент */}
           {isEmptyHtml ? (
-            <Text style={styles.placeholder}>Автор ещё не добавил описание</Text>
+            <Text style={styles.placeholder}>{i18nT('travel:components.travel.TravelDescription.avtor_esche_ne_dobavil_opisanie_ce4c5ca8')}</Text>
           ) : canParseHtml ? (
             <StableContent html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} serverSanitized={serverSanitized} />
           ) : (
@@ -226,7 +228,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                   : undefined
               }
             >
-              <Text style={styles.placeholder}>Загружаем описание…</Text>
+              <Text style={styles.placeholder}>{i18nT('travel:components.travel.TravelDescription.zagruzhaem_opisanie_4a65d6c3')}</Text>
             </View>
           )}
       </View>

@@ -5,6 +5,8 @@ import { Feather } from '@expo/vector-icons'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { globalFocusStyles } from '@/styles/globalFocus'
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   title: string
@@ -23,7 +25,7 @@ function ProfileSectionHeader({
   title,
   subtitle,
   onBack,
-  backLabel = 'Уровень',
+  backLabel = i18nT('profile:components.profile.ProfileSectionHeader.uroven_e2239f0f'),
   testID,
 }: Props) {
   const colors = useThemedColors()
@@ -35,7 +37,7 @@ function ProfileSectionHeader({
         <Pressable
           onPress={onBack}
           accessibilityRole="button"
-          accessibilityLabel={`Назад к разделу «${backLabel}»`}
+          accessibilityLabel={i18nT('profile:components.profile.ProfileSectionHeader.nazad_k_razdelu_value1_3ca73e99', { value1: backLabel })}
           style={({ pressed }) => [
             styles.crumb,
             globalFocusStyles.focusable,

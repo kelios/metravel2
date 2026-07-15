@@ -4,6 +4,8 @@
 
 import { Platform, Share } from 'react-native';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { translate as i18nT } from '@/i18n'
+
 
 interface ShareTravelParams {
   /** Travel ID or slug */
@@ -48,7 +50,7 @@ export async function shareTravel({ id, title, description }: ShareTravelParams)
       Platform.OS === 'ios'
         ? { message: title, url }
         : { message, title },
-      { dialogTitle: `Поделиться маршрутом «${title}»` },
+      { dialogTitle: i18nT('shared:utils.shareTravel.podelitsya_marshrutom_value1_3d1ef4de', { value1: title }) },
     );
 
     return result.action === Share.sharedAction;

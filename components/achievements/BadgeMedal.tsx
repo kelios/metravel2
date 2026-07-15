@@ -15,6 +15,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { Badge } from '@/api/achievements';
 import { TIER_VISUALS, tierLabel } from '@/components/achievements/badgeVisuals';
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   badge: Badge;
@@ -53,10 +55,10 @@ function BadgeMedal({
 
   const accessibilityLabel = useMemo(() => {
     const tl = tierLabel(badge.tier);
-    const state = earned ? 'получен' : 'не получен';
+    const state = earned ? i18nT('achievements:components.achievements.BadgeMedal.poluchen_42e75e2d') : i18nT('achievements:components.achievements.BadgeMedal.ne_poluchen_4d0b411e');
     const base = tl ? `${badge.name}, ${tl}, ${state}` : `${badge.name}, ${state}`;
     if (!earned && progress) {
-      return `${base}. Прогресс ${progress.current} из ${progress.threshold}`;
+      return i18nT('achievements:components.achievements.BadgeMedal.value1_progress_value2_iz_value3_a335fab2', { value1: base, value2: progress.current, value3: progress.threshold });
     }
     return base;
   }, [badge.name, badge.tier, earned, progress]);

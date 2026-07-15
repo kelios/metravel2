@@ -36,16 +36,16 @@ describe('applyWebTooltipAttributes', () => {
 })
 
 describe('buildWebAccessibilityAttributes', () => {
-  it('maps checked and disabled state to explicit ARIA attributes', () => {
+  it('maps toggle button state to aria-pressed', () => {
     expect(
       buildWebAccessibilityAttributes({ checked: true, disabled: false }),
     ).toEqual({
-      'aria-checked': 'true',
+      'aria-pressed': 'true',
       'aria-disabled': 'false',
     })
   })
 
-  it('maps selected, expanded and busy state to explicit ARIA attributes', () => {
+  it('maps selected button, expanded and busy state to valid button attributes', () => {
     expect(
       buildWebAccessibilityAttributes({
         selected: true,
@@ -53,9 +53,17 @@ describe('buildWebAccessibilityAttributes', () => {
         busy: true,
       }),
     ).toEqual({
-      'aria-selected': 'true',
+      'aria-pressed': 'true',
       'aria-expanded': 'false',
       'aria-busy': 'true',
+    })
+  })
+
+  it('keeps aria-checked for checkbox controls', () => {
+    expect(
+      buildWebAccessibilityAttributes({ checked: true }, 'checkbox'),
+    ).toEqual({
+      'aria-checked': 'true',
     })
   })
 })

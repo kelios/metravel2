@@ -1,3 +1,4 @@
+import { selectPlural, translate as i18nT } from '@/i18n'
 export type City = {
     id: string;
     name: string;
@@ -11,19 +12,19 @@ export type NearbyCity = City & { isNearby: true };
 export type { QuestMeta } from '@/utils/questAdapters';
 
 export const pluralizeQuest = (n: number): string => {
-    const abs = Math.abs(n) % 100;
-    const lastDigit = abs % 10;
-    if (abs > 10 && abs < 20) return `${n} квестов`;
-    if (lastDigit === 1) return `${n} квест`;
-    if (lastDigit >= 2 && lastDigit <= 4) return `${n} квеста`;
-    return `${n} квестов`;
+    return selectPlural(n, {
+        one: i18nT('shared:screens.tabs.questsShared.value1_kvest_ba4b63c8', { value1: n }),
+        few: i18nT('shared:screens.tabs.questsShared.value1_kvesta_d13d13d5', { value1: n }),
+        many: i18nT('shared:screens.tabs.questsShared.value1_kvestov_78e37d31', { value1: n }),
+        other: i18nT('shared:screens.tabs.questsShared.value1_kvestov_78e37d31', { value1: n }),
+    });
 };
 
 export const pluralizePoints = (n: number): string => {
-    const abs = Math.abs(n) % 100;
-    const lastDigit = abs % 10;
-    if (abs > 10 && abs < 20) return `${n} точек`;
-    if (lastDigit === 1) return `${n} точка`;
-    if (lastDigit >= 2 && lastDigit <= 4) return `${n} точки`;
-    return `${n} точек`;
+    return selectPlural(n, {
+        one: i18nT('shared:screens.tabs.questsShared.value1_tochka_e01ea7fd', { value1: n }),
+        few: i18nT('shared:screens.tabs.questsShared.value1_tochki_7a70f439', { value1: n }),
+        many: i18nT('shared:screens.tabs.questsShared.value1_tochek_590c7277', { value1: n }),
+        other: i18nT('shared:screens.tabs.questsShared.value1_tochek_590c7277', { value1: n }),
+    });
 };

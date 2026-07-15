@@ -1,5 +1,7 @@
 import { Pressable, Text } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+import { translate as i18nT } from '@/i18n'
+
 
 type NavigationProps = {
   colors: {
@@ -45,6 +47,8 @@ export function QuestStepPill({
   return (
     <Pressable
       onPress={onPress}
+      disabled={!unlocked}
+      accessibilityState={{ disabled: !unlocked }}
       style={[
         styles.stepPill,
         compact && styles.compactStepPill,
@@ -99,6 +103,8 @@ export function QuestStepDot({
   return (
     <Pressable
       onPress={onPress}
+      disabled={!unlocked}
+      accessibilityState={{ disabled: !unlocked }}
       style={[
         styles.stepDotMini,
         unlocked && styles.stepDotMiniUnlocked,
@@ -128,8 +134,8 @@ export function QuestFinalePill(props: NavigationProps & { compact?: boolean }) 
   return (
     <QuestStepPill
       {...props}
-      indexLabel="Ф"
-      label="Финал"
+      indexLabel={i18nT('quests:components.quests.questWizardNavigation.f_67cbee49')}
+      label={i18nT('quests:components.quests.questWizardNavigation.final_a5ec2c03')}
       compact={props.compact}
     />
   )
@@ -142,7 +148,7 @@ export function QuestFinaleDot(props: NavigationProps) {
       style={[props.styles.stepDotMini, props.active ? props.styles.stepDotMiniActive : props.styles.stepDotMiniUnlocked]}
       hitSlop={6}
     >
-      <Text style={[props.styles.stepDotMiniText, props.active && { color: props.colors.textOnPrimary }]}>Ф</Text>
+      <Text style={[props.styles.stepDotMiniText, props.active && { color: props.colors.textOnPrimary }]}>{i18nT('quests:components.quests.questWizardNavigation.f_67cbee49')}</Text>
     </Pressable>
   )
 }

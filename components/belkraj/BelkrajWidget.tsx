@@ -2,6 +2,8 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { getCountryCodeByCoords } from '@/utils/geoCountry';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
+import { translate as i18nT } from '@/i18n'
+
 
 interface TravelAddress {
     id: number;
@@ -234,7 +236,7 @@ function BelkrajWidget({
                 <iframe
                     ref={iframeRef}
                     src={iframeSrc}
-                    title="Belkraj partner offers"
+                    title={i18nT('shared:components.belkraj.BelkrajWidget.belkraj_partner_offers_b193ce0d')}
                     width="100%"
                     height={finalHeight}
                     loading="lazy"

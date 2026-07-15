@@ -25,7 +25,7 @@ import type { City, NearbyCity, QuestMeta } from './questsShared';
 import { createQuestCatalogStructuredData } from '@/utils/discoverySeo';
 import { getStyles } from './QuestsScreen.styles';
 import {
-    COUNTRY_NAMES,
+    getQuestCountryName,
     STORAGE_SELECTED_CITY,
     DEFAULT_NEARBY_RADIUS_KM,
     NEARBY_ID,
@@ -39,6 +39,8 @@ import {
     type QuestMapArea,
     type MapPoint,
 } from './QuestsScreen.helpers';
+import { createCollator, translate as i18nT } from '@/i18n'
+
 
 const { spacing, radii } = DESIGN_TOKENS;
 
@@ -164,7 +166,7 @@ export default function QuestsScreen() {
             const Location = await loadExpoLocation();
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                setGeoMessage('Разрешите доступ к геолокации, чтобы показать квесты рядом с вами.');
+                setGeoMessage(i18nT('quests:screens.tabs.QuestsScreen.razreshite_dostup_k_geolokatsii_chtoby_pokaz_46647348'));
                 return;
             }
             const pos = await Location.getCurrentPositionAsync({
@@ -172,7 +174,7 @@ export default function QuestsScreen() {
             });
             setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         } catch {
-            setGeoMessage('Не удалось определить местоположение. Проверьте разрешения браузера и попробуйте ещё раз.');
+            setGeoMessage(i18nT('quests:screens.tabs.QuestsScreen.ne_udalos_opredelit_mestopolozhenie_proverte_34451827'));
         } finally {
             setGeoRequesting(false);
         }
@@ -237,7 +239,7 @@ export default function QuestsScreen() {
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status !== 'granted' || cancelled) {
                     if (!cancelled && selectedCityId === NEARBY_ID && nearbyExplicit) {
-                        setGeoMessage('Геолокация запрещена. Показываем весь каталог, пока доступ не разрешён.');
+                        setGeoMessage(i18nT('quests:screens.tabs.QuestsScreen.geolokatsiya_zapreschena_pokazyvaem_ves_kata_b7ae192f'));
                     }
                     return;
                 }
@@ -250,7 +252,7 @@ export default function QuestsScreen() {
                 }
             } catch (error) {
                 if (!cancelled && selectedCityId === NEARBY_ID && nearbyExplicit) {
-                    setGeoMessage('Не удалось определить местоположение. Проверьте разрешения браузера и попробуйте ещё раз.');
+                    setGeoMessage(i18nT('quests:screens.tabs.QuestsScreen.ne_udalos_opredelit_mestopolozhenie_proverte_34451827'));
                 }
                 console.warn('Error requesting nearby location', error);
             }
@@ -283,7 +285,7 @@ export default function QuestsScreen() {
     // даёт дополнительный срез, но не заменяет городскую группировку.
 
     const citiesWithNearby: (City | NearbyCity)[] = useMemo(
-        () => [{ id: NEARBY_ID, name: 'Рядом', country: 'BY', isNearby: true } as NearbyCity, ...CITIES],
+        () => [{ id: NEARBY_ID, name: i18nT('quests:screens.tabs.QuestsScreen.ryadom_a27f6fda'), country: 'BY', isNearby: true } as NearbyCity, ...CITIES],
         [CITIES],
     );
 
@@ -315,6 +317,7 @@ export default function QuestsScreen() {
 
     // Group cities by country
     const citiesByCountry = useMemo(() => {
+        const collator = createCollator();
         const groups: Record<string, (City | NearbyCity)[]> = {};
         for (const city of visibleCities) {
             if (city.id === NEARBY_ID) continue; // Nearby handled separately
@@ -327,12 +330,12 @@ export default function QuestsScreen() {
             if (b === 'BY') return 1;
             if (a === 'OTHER') return 1;
             if (b === 'OTHER') return -1;
-            return (COUNTRY_NAMES[a] || a).localeCompare(COUNTRY_NAMES[b] || b, 'ru');
+            return collator.compare(getQuestCountryName(a), getQuestCountryName(b));
         });
         return sortedKeys.map(code => ({
             code,
-            name: COUNTRY_NAMES[code] || (code === 'OTHER' ? '' : code),
-            cities: groups[code].slice().sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+            name: code === 'OTHER' ? '' : getQuestCountryName(code),
+            cities: groups[code].slice().sort((a, b) => collator.compare(a.name, b.name)),
         }));
     }, [visibleCities]);
 
@@ -451,7 +454,7 @@ export default function QuestsScreen() {
                     coord: `${q.lat},${q.lng}`,
                     address: q.title,
                     travelImageThumbUrl: coverUri,
-                    categoryName: 'Квест',
+                    categoryName: i18nT('quests:screens.tabs.QuestsScreen.kvest_1033726e'),
                     articleUrl: questUrl,
                     urlTravel: questUrl,
                     questMeta: {
@@ -526,48 +529,48 @@ export default function QuestsScreen() {
     // ── SEO ──
     const selectedCityName =
         selectedCityId === NEARBY_ID
-            ? 'Рядом'
+            ? i18nT('quests:screens.tabs.QuestsScreen.ryadom_a27f6fda')
             : selectedCityId === KIDS_FILTER_ID
-                ? 'Для детей'
+                ? i18nT('quests:screens.tabs.QuestsScreen.dlya_detey_709e9049')
                 : CITIES.find((c) => c.id === selectedCityId)?.name ?? null;
 
     const titleText = useMemo(() => {
-        if (!selectedCityId) return 'Квесты | MeTravel';
+        if (!selectedCityId) return i18nT('quests:screens.tabs.QuestsScreen.kvesty_metravel_1ee1a636');
         if (selectedCityId === NEARBY_ID) {
             if (activeMapAreaCenter) {
-                return `Квесты: область на карте — ${questsAll.length} ${questsAll.length === 1 ? 'квест' : 'квестов'} | MeTravel`;
+                return i18nT('quests:screens.tabs.QuestsScreen.kvesty_oblast_na_karte_value1_value2_metrave_0008ee0f', { value1: questsAll.length, value2: i18nT('quests:screens.tabs.QuestsScreen.questNoun', { count: questsAll.length }) });
             }
             if (!userLoc) {
-                return 'Квесты: все города | MeTravel';
+                return i18nT('quests:screens.tabs.QuestsScreen.kvesty_vse_goroda_metravel_d59d9d53');
             }
             const suffix = userLoc
-                ? nearbyCount > 0 ? ` — ${nearbyCount} поблизости` : ' — рядом ничего не найдено'
-                : ' — геолокация отключена';
-            return `Квесты: Рядом${suffix} | MeTravel`;
+                ? nearbyCount > 0 ? i18nT('quests:screens.tabs.QuestsScreen.value1_poblizosti_5f29a880', { value1: nearbyCount }) : i18nT('quests:screens.tabs.QuestsScreen.ryadom_nichego_ne_naydeno_ac852a3a')
+                : i18nT('quests:screens.tabs.QuestsScreen.geolokatsiya_otklyuchena_c6dfaf4a');
+            return i18nT('quests:screens.tabs.QuestsScreen.kvesty_ryadom_value1_metravel_684d20db', { value1: suffix });
         }
         if (selectedCityId === KIDS_FILTER_ID) {
-            return `Квесты для детей: ${kidsQuests.length} ${kidsQuests.length === 1 ? 'квест' : 'квестов'} | MeTravel`;
+            return i18nT('quests:screens.tabs.QuestsScreen.kvesty_dlya_detey_value1_value2_metravel_3ce19948', { value1: kidsQuests.length, value2: i18nT('quests:screens.tabs.QuestsScreen.questNoun', { count: kidsQuests.length }) });
         }
         return selectedCityName
-            ? `Квесты: ${selectedCityName} | MeTravel`
-            : 'Все квесты | MeTravel';
+            ? i18nT('quests:screens.tabs.QuestsScreen.kvesty_value1_metravel_f8aef4dd', { value1: selectedCityName })
+            : i18nT('quests:screens.tabs.QuestsScreen.vse_kvesty_metravel_32e5b095');
     }, [selectedCityId, selectedCityName, nearbyCount, userLoc, activeMapAreaCenter, questsAll.length, kidsQuests.length]);
 
     const descText = useMemo(() => {
         if (selectedCityId === NEARBY_ID) {
             if (activeMapAreaCenter) {
-                return 'Офлайн-квесты в выбранной области карты. Перемещайте карту и уточняйте поиск по текущему району.';
+                return i18nT('quests:screens.tabs.QuestsScreen.oflayn_kvesty_v_vybrannoy_oblasti_karty_pere_8dffb3a7');
             }
             if (!userLoc) {
-                return 'Каталог офлайн-квестов во всех доступных городах. Разрешите геолокацию, чтобы увидеть приключения рядом с вами.';
+                return i18nT('quests:screens.tabs.QuestsScreen.katalog_oflayn_kvestov_vo_vseh_dostupnyh_gor_e333bc7d');
             }
-            return 'Офлайн-квесты рядом с вами и ваше текущее местоположение на карте.';
+            return i18nT('quests:screens.tabs.QuestsScreen.oflayn_kvesty_ryadom_s_vami_i_vashe_tekusche_26c07bc1');
         }
         if (selectedCityId === KIDS_FILTER_ID) {
-            return 'Городские квесты для детей: прогулки с заданиями, загадками и точками на карте.';
+            return i18nT('quests:screens.tabs.QuestsScreen.gorodskie_kvesty_dlya_detey_progulki_s_zadan_e9f23cbe');
         }
-        if (selectedCityName) return `Офлайн-квесты в городе ${selectedCityName}. Прогулки по точкам, задания и маршруты.`;
-        return 'Исследуйте города и парки с офлайн-квестами — приключения на карте рядом с вами.';
+        if (selectedCityName) return i18nT('quests:screens.tabs.QuestsScreen.oflayn_kvesty_v_gorode_value1_progulki_po_to_c1bef6e1', { value1: selectedCityName });
+        return i18nT('quests:screens.tabs.QuestsScreen.issleduyte_goroda_i_parki_s_oflayn_kvestami__76e12a53');
     }, [selectedCityId, selectedCityName, userLoc, activeMapAreaCenter]);
     const questsStructuredData = createQuestCatalogStructuredData({
         canonical: buildCanonicalUrl('/quests'),
@@ -616,7 +619,7 @@ export default function QuestsScreen() {
                         style={s.sidebarOverlay as ViewStyle}
                         onPress={() => setFilterDrawerOpen(false)}
                         accessibilityRole="button"
-                        accessibilityLabel="Закрыть меню"
+                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsScreen.zakryt_menyu_fbe0ff41')}
                     />
                     <View style={s.sidebarMobile as ViewStyle}>
                         <QuestsSidebar

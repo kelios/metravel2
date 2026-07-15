@@ -4,8 +4,16 @@ import * as Sharing from 'expo-sharing';
 
 import { buildGpx, downloadTextFileWeb } from '@/utils/routeExport';
 import { transliterate } from '@/utils/routeExport/normalize';
+import type { LngLat } from '@/utils/routeExport';
 
 import type { QuestStep } from './types';
+import {
+  buildQuestWalkingRouteGeometry,
+  getQuestRoutePoints,
+  type QuestRouteGeometrySource,
+} from './questRouteGeometry';
+import { translate as i18nT } from '@/i18n'
+
 
 export type QuestOfflineMapPoint = Pick<QuestStep, 'lat' | 'lng'> & {
   title?: string;
@@ -15,13 +23,25 @@ export type QuestOfflineMapPoint = Pick<QuestStep, 'lat' | 'lng'> & {
 export type QuestOfflineMapExportOptions = {
   title: string;
   steps: QuestOfflineMapPoint[];
+  routeTrack?: LngLat[];
+  routeSource?: QuestRouteGeometrySource;
+  requireRoutedTrack?: boolean;
 };
 
 export const getQuestOfflineMapPoints = (steps: QuestOfflineMapPoint[]) =>
-  steps.filter((step) => Number.isFinite(step.lat) && Number.isFinite(step.lng) && (step.lat !== 0 || step.lng !== 0));
+  getQuestRoutePoints(steps);
 
-export const buildQuestOfflineMapGpx = ({ title, steps }: QuestOfflineMapExportOptions) => {
+export const buildQuestOfflineMapGpx = ({
+  title,
+  steps,
+  routeTrack,
+  routeSource,
+}: QuestOfflineMapExportOptions) => {
   const points = getQuestOfflineMapPoints(steps);
+  const waypointTrack = points.map((point) => [point.lng, point.lat] as LngLat);
+  const routedTrack = Array.isArray(routeTrack) && routeTrack.length >= 2
+    ? routeTrack
+    : null;
   const fileBase = transliterate(title)
     .trim()
     .toLowerCase()
@@ -31,10 +51,12 @@ export const buildQuestOfflineMapGpx = ({ title, steps }: QuestOfflineMapExportO
 
   const file = buildGpx({
     name: title,
-    description: 'Точки квеста Metravel (GPX) для импорта в офлайн-карты (Organic Maps, Maps.me).',
-    track: points.map((point) => [point.lng, point.lat]),
+    description: routedTrack && routeSource === 'routed'
+      ? i18nT('quests:components.quests.questOfflineMapExport.peshiy_marshrut_kvesta_metravel_postroennyy__c574db7d')
+      : i18nT('quests:components.quests.questOfflineMapExport.tochki_kvesta_metravel_gpx_dlya_importa_v_of_d4cd350a'),
+    track: routedTrack ?? waypointTrack,
     waypoints: points.map((point, index) => ({
-      name: point.title || point.location || `Точка ${index + 1}`,
+      name: point.title || point.location || i18nT('quests:components.quests.QuestFullMap.pointFallback', { value1: index + 1 }),
       description: point.location,
       coordinates: [point.lng, point.lat],
     })),
@@ -46,11 +68,76 @@ export const buildQuestOfflineMapGpx = ({ title, steps }: QuestOfflineMapExportO
   };
 };
 
+export const buildQuestOfflineMapGeoJSON = ({
+  title,
+  steps,
+  routeTrack,
+  routeSource,
+}: QuestOfflineMapExportOptions) => {
+  const points = getQuestOfflineMapPoints(steps);
+  const waypointTrack = points.map((point) => [point.lng, point.lat] as LngLat);
+  const track = Array.isArray(routeTrack) && routeTrack.length >= 2 ? routeTrack : waypointTrack;
+  const source = routeTrack && routeSource ? routeSource : 'direct';
+
+  return JSON.stringify(
+    {
+      type: 'FeatureCollection',
+      features: [
+        ...points.map((point, index) => ({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [point.lng, point.lat] },
+          properties: { order: index + 1, title: point.title || i18nT('quests:components.quests.QuestFullMap.pointFallback', { value1: index + 1 }) },
+        })),
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: track,
+          },
+          properties: {
+            name: title || i18nT('quests:components.quests.questOfflineMapExport.defaultRouteTitle'),
+            routeSource: source,
+            approximate: source !== 'routed',
+          },
+        },
+      ],
+    },
+    null,
+    2,
+  );
+};
+
+const resolveRoutedTrackForExport = async (
+  options: QuestOfflineMapExportOptions,
+): Promise<Pick<QuestOfflineMapExportOptions, 'routeTrack' | 'routeSource'> | null> => {
+  if (Array.isArray(options.routeTrack) && options.routeTrack.length >= 2) {
+    return {
+      routeTrack: options.routeTrack,
+      routeSource: options.routeSource ?? 'routed',
+    };
+  }
+
+  const points = getQuestOfflineMapPoints(options.steps);
+  if (points.length < 2) return {};
+
+  const result = await buildQuestWalkingRouteGeometry(points);
+  if (result.source !== 'routed') return null;
+
+  return {
+    routeTrack: result.track,
+    routeSource: result.source,
+  };
+};
+
 export async function exportQuestOfflineMap(options: QuestOfflineMapExportOptions): Promise<boolean> {
   const points = getQuestOfflineMapPoints(options.steps);
   if (points.length === 0) return false;
 
-  const file = buildQuestOfflineMapGpx(options);
+  const requireRoutedTrack = options.requireRoutedTrack ?? true;
+  const routed = requireRoutedTrack ? await resolveRoutedTrackForExport(options) : null;
+  if (requireRoutedTrack && routed == null) return false;
+
+  const file = buildQuestOfflineMapGpx({ ...options, ...(routed ?? {}) });
 
   if (Platform.OS === 'web') {
     downloadTextFileWeb(file);
@@ -64,7 +151,7 @@ export async function exportQuestOfflineMap(options: QuestOfflineMapExportOption
   await FileSystem.writeAsStringAsync(fileUri, file.content);
   await Sharing.shareAsync(fileUri, {
     mimeType: file.mimeType,
-    dialogTitle: 'Открыть точки квеста (GPX) в офлайн-картах',
+    dialogTitle: i18nT('quests:components.quests.questOfflineMapExport.otkryt_tochki_kvesta_gpx_v_oflayn_kartah_10507e0d'),
     UTI: 'com.topografix.gpx',
   });
 
@@ -80,10 +167,14 @@ export async function openQuestOfflineMapInApp(options: QuestOfflineMapExportOpt
   const points = getQuestOfflineMapPoints(options.steps);
   if (points.length === 0) return false;
 
-  const file = buildQuestOfflineMapGpx(options);
+  const requireRoutedTrack = options.requireRoutedTrack ?? true;
+  const routed = requireRoutedTrack ? await resolveRoutedTrackForExport(options) : null;
+  if (requireRoutedTrack && routed == null) return false;
+
+  const file = buildQuestOfflineMapGpx({ ...options, ...(routed ?? {}) });
 
   if (Platform.OS !== 'web') {
-    return exportQuestOfflineMap(options);
+    return exportQuestOfflineMap({ ...options, ...(routed ?? {}) });
   }
 
   if (typeof navigator !== 'undefined' && typeof File !== 'undefined') {
@@ -93,8 +184,8 @@ export async function openQuestOfflineMapInApp(options: QuestOfflineMapExportOpt
       try {
         await nav.share({
           files: [shareFile],
-          title: 'Точки квеста (GPX)',
-          text: 'Откройте файл в офлайн-картах (Organic Maps, Maps.me).',
+          title: i18nT('quests:components.quests.questOfflineMapExport.tochki_kvesta_gpx_8959135b'),
+          text: i18nT('quests:components.quests.questOfflineMapExport.otkroyte_fayl_v_oflayn_kartah_organic_maps_m_477bcbf6'),
         });
         return true;
       } catch {

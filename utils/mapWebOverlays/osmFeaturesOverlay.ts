@@ -8,6 +8,8 @@ import {
   type OSMPointFeature,
 } from '@/utils/overpass';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { translate as i18nT } from '@/i18n'
+
 
 type LeafletMap = any;
 
@@ -120,14 +122,14 @@ export const attachOsmFeaturesOverlay = (
         const ele = p.tags?.ele;
         const eleNum = ele != null ? Number(ele) : NaN;
         const eleLine = Number.isFinite(eleNum)
-          ? `<div style="margin-top:4px;font-size:12px;color:${escapeHtml(DESIGN_TOKENS.colors.textMuted)}">Высота: ${Math.round(eleNum)} м</div>`
+          ? `<div style="margin-top:4px;font-size:12px;color:${escapeHtml(DESIGN_TOKENS.colors.textMuted)}">${i18nT("shared:utils.mapWebOverlays.osmFeaturesOverlay.div_style_margin_top_4px_font_size_12px_colo_0325279b.text01", { value2: Math.round(eleNum) })}</div>`
           : '';
 
         const html = `<div style="max-width:260px"><div style="font-weight:800;font-size:14px;color:${escapeHtml(
           DESIGN_TOKENS.colors.text,
         )};word-break:break-word">${escapeHtml(p.title)}</div>${eleLine}<div style="margin-top:6px;font-size:11px;color:${escapeHtml(
           DESIGN_TOKENS.colors.textSubtle,
-        )}">Источник: OpenStreetMap</div></div>`;
+        )}">${i18nT("shared:utils.mapWebOverlays.osmFeaturesOverlay.div_style_max_width_260px_div_style_font_wei_bd4abea5.text01")}</div></div>`;
 
         marker.bindPopup(html);
         marker.addTo(layerGroup);

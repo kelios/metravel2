@@ -1,7 +1,9 @@
 import type { Travel } from '@/types/types';
+import { DEFAULT_LOCALE, i18n, translate as i18nT } from '@/i18n'
 
-const SEO_HTML_FALLBACK = 'Найди место для путешествия и поделись своим опытом.';
-const TRAVEL_FALLBACK_DESCRIPTION = 'Путешествие на Metravel.';
+
+const getSeoHtmlFallback = () => i18nT('travel:utils.travelSeo.htmlFallback');
+const getTravelFallbackDescription = () => i18nT('travel:utils.travelSeo.descriptionFallback');
 const SEO_TITLE_MAX_LENGTH = 60;
 const SEO_TITLE_SUFFIX = ' | Metravel';
 const SITE_URL = 'https://metravel.by';
@@ -39,7 +41,7 @@ function getTravelCanonicalUrl(travel: Travel | null | undefined): string | null
 }
 
 export function stripHtmlForSeo(html?: string | null): string {
-  if (!html) return SEO_HTML_FALLBACK;
+  if (!html) return getSeoHtmlFallback();
 
   const stripped = html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -54,7 +56,7 @@ export function stripHtmlForSeo(html?: string | null): string {
     .replace(/\s+/g, ' ')
     .trim();
 
-  return stripped || SEO_HTML_FALLBACK;
+  return stripped || getSeoHtmlFallback();
 }
 
 function getFirstValidGalleryUrl(gallery: any[] | undefined): string | null {
@@ -111,7 +113,7 @@ export function humanizeTravelRouteKey(value?: string | number | null): string |
     .trim();
 
   if (!normalized) return null;
-  if (/^\d+$/.test(normalized)) return `Путешествие ${normalized}`;
+  if (/^\d+$/.test(normalized)) return i18nT('seo:utils.travelSeo.puteshestvie_value1_49e1afe0', { value1: normalized });
 
   const words = normalized
     .split(' ')
@@ -123,19 +125,21 @@ export function humanizeTravelRouteKey(value?: string | number | null): string |
 }
 
 export function buildTravelSeoFallbackTitle(routeKey?: string | number | null): string {
-  return buildTravelSeoTitle(humanizeTravelRouteKey(routeKey) ?? 'Путешествие');
+  return buildTravelSeoTitle(
+    humanizeTravelRouteKey(routeKey) ?? i18nT('travel:utils.travelSeo.titleFallback'),
+  );
 }
 
 export function buildTravelSeoFallbackDescription(routeKey?: string | number | null): string {
   const title = humanizeTravelRouteKey(routeKey);
-  if (!title) return TRAVEL_FALLBACK_DESCRIPTION;
+  if (!title) return getTravelFallbackDescription();
 
-  return `Маршрут ${title} на Metravel: описание поездки, фото, карта и советы путешественников.`;
+  return i18nT('seo:utils.travelSeo.marshrut_value1_na_metravel_opisanie_poezdki_148133d5', { value1: title });
 }
 
 export function getTravelSeoDescription(html?: string | null, maxLen = 160): string {
   const stripped = stripHtmlForSeo(html);
-  if (!stripped) return TRAVEL_FALLBACK_DESCRIPTION;
+  if (!stripped) return getTravelFallbackDescription();
   if (stripped.length <= maxLen) return stripped;
 
   const cut = stripped.slice(0, maxLen - 1);
@@ -231,13 +235,13 @@ export function createTravelBreadcrumbJsonLd(
       {
         '@type': 'ListItem',
         position: 1,
-        name: 'Главная',
+        name: i18nT('travel:utils.travelSeo.breadcrumb.home'),
         item: `${SITE_URL}/`,
       },
       {
         '@type': 'ListItem',
         position: 2,
-        name: 'Поиск',
+        name: i18nT('travel:utils.travelSeo.breadcrumb.search'),
         item: `${SITE_URL}/search`,
       },
       {
@@ -290,7 +294,7 @@ export function createTravelStructuredData(
             '@id': `${canonicalUrl}#breadcrumb`,
           }
         : undefined,
-      inLanguage: 'ru',
+      inLanguage: i18n.resolvedLanguage || DEFAULT_LOCALE,
     });
   }
 

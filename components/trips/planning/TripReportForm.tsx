@@ -15,6 +15,9 @@ import type { PlannedTrip, SubmitReportInput } from '@/api/plannedTrips';
 import { useSubmitTripReport } from '@/hooks/usePlannedTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { CatalogPlace } from '@/utils/placesCatalog';
+import { translate as i18nT } from '@/i18n'
+import { formatDate } from '@/i18n/format'
+
 
 interface Props {
   trip: PlannedTrip;
@@ -34,7 +37,7 @@ const formatPublishedAt = (value: string | null): string | null => {
   if (!value) return null;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString('ru-RU');
+  return formatDate(d);
 };
 
 const parsePlaceId = (value: string): number | null => {
@@ -68,7 +71,7 @@ const buildInitialVisitedPlaces = (trip: PlannedTrip): SelectedPlace[] => {
     byId.set(point.placeId, {
       id: point.placeId,
       title: point.name,
-      meta: 'Из маршрута поездки',
+      meta: i18nT('trips:components.trips.planning.TripReportForm.iz_marshruta_poezdki_6b47c647'),
     });
   });
   return [...byId.values()];
@@ -124,7 +127,7 @@ function TripReportForm({ trip }: Props) {
       .catch((error: unknown) => {
         if (isAbortError(error)) return;
         setPlaceResults([]);
-        setPlacesError('Не удалось загрузить места');
+        setPlacesError(i18nT('trips:components.trips.planning.TripReportForm.ne_udalos_zagruzit_mesta_7fc2f242'));
       })
       .finally(() => {
         if (!controller.signal.aborted) setPlacesLoading(false);
@@ -154,16 +157,16 @@ function TripReportForm({ trip }: Props) {
       <View style={styles.wrap} testID="trip-report-form">
         <View style={styles.publishedHead}>
           <Feather name="check-circle" size={18} color={colors.primaryDark} />
-          <Text style={styles.heading}>Отчёт опубликован</Text>
+          <Text style={styles.heading}>{i18nT('trips:components.trips.planning.TripReportForm.otchet_opublikovan_100bebe9')}</Text>
         </View>
         {report.summary ? (
           <Text style={styles.summaryText}>{report.summary}</Text>
         ) : null}
         {trip.publishedToCommunity ? (
-          <Text style={styles.note}>Маршрут добавлен в каталог сообщества</Text>
+          <Text style={styles.note}>{i18nT('trips:components.trips.planning.TripReportForm.marshrut_dobavlen_v_katalog_soobschestva_f666e7fa')}</Text>
         ) : null}
         {publishedAt ? (
-          <Text style={styles.hint}>Опубликовано {publishedAt}</Text>
+          <Text style={styles.hint}>{i18nT('trips:components.trips.planning.TripReportForm.opublikovano_012a83fe')}{publishedAt}</Text>
         ) : null}
       </View>
     );
@@ -187,19 +190,19 @@ function TripReportForm({ trip }: Props) {
     };
     submit.mutate(input, {
       onError: () =>
-        setSubmitError('Не удалось сохранить отчёт. Попробуйте ещё раз.'),
+        setSubmitError(i18nT('trips:components.trips.planning.TripReportForm.ne_udalos_sohranit_otchet_poprobuyte_esche_r_3e5c63e5')),
     });
   };
 
   return (
     <View style={styles.wrap} testID="trip-report-form">
-      <Text style={styles.heading}>Отчёт о поездке</Text>
+      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.TripReportForm.otchet_o_poezdke_78b8bc4f')}</Text>
 
-      <Text style={styles.label}>Как всё прошло</Text>
+      <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripReportForm.kak_vse_proshlo_203d70b5')}</Text>
       <TextInput
         value={summary}
         onChangeText={setSummary}
-        placeholder="Расскажите, как прошла поездка, что запомнилось, советы попутчикам"
+        placeholder={i18nT('trips:components.trips.planning.TripReportForm.rasskazhite_kak_proshla_poezdka_chto_zapomni_9974174e')}
         placeholderTextColor={colors.textMuted}
         multiline
         style={styles.textArea}
@@ -207,11 +210,10 @@ function TripReportForm({ trip }: Props) {
       />
       {touched && summaryTooShort ? (
         <Text style={styles.error}>
-          Опишите поездку — не короче {SUMMARY_MIN} символов
-        </Text>
+          {i18nT('trips:components.trips.planning.TripReportForm.opishite_poezdku_ne_koroche_fcdd6901')}{SUMMARY_MIN} {i18nT('trips:components.trips.planning.TripReportForm.simvolov_f0f55dc2')}</Text>
       ) : null}
 
-      <Text style={styles.label}>Посещённые места MeTravel</Text>
+      <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripReportForm.poseschennye_mesta_metravel_c389926f')}</Text>
       {selectedPlaces.length > 0 ? (
         <View style={styles.selectedPlaces} testID="trip-report-selected-places">
           {selectedPlaces.map((place) => (
@@ -220,7 +222,7 @@ function TripReportForm({ trip }: Props) {
               onPress={() => removePlace(place.id)}
               style={styles.selectedPlaceChip}
               accessibilityRole="button"
-              accessibilityLabel={`Убрать место ${place.title}`}
+              accessibilityLabel={i18nT('trips:components.trips.planning.TripReportForm.ubrat_mesto_value1_d09e3102', { value1: place.title })}
               testID={`trip-report-selected-place-${place.id}`}
             >
               <Text style={styles.selectedPlaceText} numberOfLines={1}>
@@ -231,12 +233,12 @@ function TripReportForm({ trip }: Props) {
           ))}
         </View>
       ) : (
-        <Text style={styles.hint}>Добавьте места, которые реально посетили в этой поездке</Text>
+        <Text style={styles.hint}>{i18nT('trips:components.trips.planning.TripReportForm.dobavte_mesta_kotorye_realno_posetili_v_etoy_c911cba7')}</Text>
       )}
       <TextInput
         value={placeQuery}
         onChangeText={setPlaceQuery}
-        placeholder="Найти место по названию или адресу"
+        placeholder={i18nT('trips:components.trips.planning.TripReportForm.nayti_mesto_po_nazvaniyu_ili_adresu_9c08a100')}
         placeholderTextColor={colors.textMuted}
         autoCapitalize="sentences"
         style={styles.input}
@@ -245,13 +247,13 @@ function TripReportForm({ trip }: Props) {
       {placeQuery.trim().length > 0 ? (
         <View style={styles.placeResults} testID="trip-report-place-results">
           {placeQuery.trim().length < PLACE_SEARCH_MIN ? (
-            <Text style={styles.hint}>Введите минимум {PLACE_SEARCH_MIN} символа</Text>
+            <Text style={styles.hint}>{i18nT('trips:components.trips.planning.TripReportForm.vvedite_minimum_f0e4805a')}{PLACE_SEARCH_MIN} {i18nT('trips:components.trips.planning.TripReportForm.simvola_1599ea15')}</Text>
           ) : placesLoading ? (
-            <Text style={styles.hint}>Ищем места...</Text>
+            <Text style={styles.hint}>{i18nT('trips:components.trips.planning.TripReportForm.ischem_mesta_d6e33a69')}</Text>
           ) : placesError ? (
             <Text style={styles.error}>{placesError}</Text>
           ) : placeResults.length === 0 ? (
-            <Text style={styles.hint}>Места не найдены</Text>
+            <Text style={styles.hint}>{i18nT('trips:components.trips.planning.TripReportForm.mesta_ne_naydeny_24356913')}</Text>
           ) : (
             placeResults.map((place) => {
               const selected = selectedPlaceIds.has(place.id);
@@ -296,8 +298,7 @@ function TripReportForm({ trip }: Props) {
           <Feather name="check" size={16} color={colors.primaryDark} />
         ) : null}
         <Text style={[styles.toggleText, publishToCommunity && styles.toggleTextActive]}>
-          Опубликовать маршрут в каталог сообщества
-        </Text>
+          {i18nT('trips:components.trips.planning.TripReportForm.opublikovat_marshrut_v_katalog_soobschestva_24060767')}</Text>
       </Pressable>
 
       {submitError ? (
@@ -307,7 +308,7 @@ function TripReportForm({ trip }: Props) {
       ) : null}
 
       <Button
-        label="Завершить поездку и опубликовать отчёт"
+        label={i18nT('trips:components.trips.planning.TripReportForm.zavershit_poezdku_i_opublikovat_otchet_acc78409')}
         onPress={handleSubmit}
         loading={submit.isPending}
         disabled={disabled}

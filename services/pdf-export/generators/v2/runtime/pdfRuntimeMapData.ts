@@ -1,6 +1,7 @@
 import type { TravelForBook } from '@/types/pdf-export'
 import type { ParsedRoutePreview } from '@/types/travelRoutes'
 import type { NormalizedLocation } from './types'
+import { translate as i18nT } from '@/i18n'
 
 type RouteLineCoord = [number, number]
 
@@ -79,9 +80,12 @@ export async function buildPdfMapRuntimeData({
 
         const distanceKm = calculateRouteDistanceFromPreview(parsed)
         if (distanceKm > 0) {
-          routeInfo = `${supportedFile.original_name || 'Загруженный маршрут'} • ${Math.round(distanceKm * 10) / 10} км`
+          routeInfo = i18nT('export:services.pdfExport.runtime.mapData.uploadedRouteWithDistance', {
+            value1: supportedFile.original_name || i18nT('export:services.pdfExport.runtime.mapData.uploadedRoute'),
+            value2: Math.round(distanceKm * 10) / 10,
+          })
         } else {
-          routeInfo = supportedFile.original_name || 'Загруженный маршрут'
+          routeInfo = supportedFile.original_name || i18nT('export:services.pdfExport.runtime.mapData.uploadedRoute')
         }
       }
     }

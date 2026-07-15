@@ -12,6 +12,8 @@ import { ApiError } from '@/api/client';
 import { setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import { showToast } from '@/utils/toast';
 import { compressAvatar } from '@/utils/imageCompressor';
+import { translate as i18nT } from '@/i18n'
+
 
 interface UseAvatarUploadOptions {
     onSuccess?: (updated: UserProfileDto) => void;
@@ -81,7 +83,7 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
 
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
-                showToast({ type: 'warning', text1: 'Разрешение', text2: 'Нужен доступ к галерее', visibilityTime: 3000 });
+                showToast({ type: 'warning', text1: i18nT('shared:hooks.useAvatarUpload.razreshenie_9b80cbe2'), text2: i18nT('shared:hooks.useAvatarUpload.nuzhen_dostup_k_galeree_1a8e0c34'), visibilityTime: 3000 });
                 return;
             }
 
@@ -107,7 +109,7 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
                 setAvatarPreviewUrl(compressedUri);
             }
         } catch {
-            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось выбрать изображение', visibilityTime: 3000 });
+            showToast({ type: 'error', text1: i18nT('shared:hooks.useAvatarUpload.oshibka_69b08b01'), text2: i18nT('shared:hooks.useAvatarUpload.ne_udalos_vybrat_izobrazhenie_125051f5'), visibilityTime: 3000 });
         }
     }, []);
 
@@ -129,7 +131,7 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
         const fileToUpload = fileOverride || avatarFile;
         if (!userId || !fileToUpload) {
             if (!fileToUpload) {
-                showToast({ type: 'warning', text1: 'Выберите изображение', text2: 'Сначала выберите фото для аватара', visibilityTime: 3000 });
+                showToast({ type: 'warning', text1: i18nT('shared:hooks.useAvatarUpload.vyberite_izobrazhenie_aeb880ba'), text2: i18nT('shared:hooks.useAvatarUpload.snachala_vyberite_foto_dlya_avatara_6ac2f097'), visibilityTime: 3000 });
             }
             return null;
         }
@@ -145,13 +147,13 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
             setAvatarFile(null);
             syncAvatar(saved.avatar);
             triggerProfileRefresh();
-            showToast({ type: 'success', text1: 'Аватар обновлён', visibilityTime: 3000 });
+            showToast({ type: 'success', text1: i18nT('shared:hooks.useAvatarUpload.avatar_obnovlen_bd2dbaee'), visibilityTime: 3000 });
             options?.onSuccess?.(saved);
             return saved;
         } catch (error) {
             if (!mountedRef.current) return null;
-            const message = error instanceof ApiError ? error.message : 'Не удалось обновить аватар';
-            showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+            const message = error instanceof ApiError ? error.message : i18nT('shared:hooks.useAvatarUpload.ne_udalos_obnovit_avatar_0554f04b');
+            showToast({ type: 'error', text1: i18nT('shared:hooks.useAvatarUpload.oshibka_69b08b01'), text2: message, visibilityTime: 4000 });
             return null;
         } finally {
             uploadingRef.current = false;
@@ -185,7 +187,7 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
                     // expo-image-picker на web кладёт настоящий File в asset.file — берём его.
                     const webFile = (asset as { file?: File }).file;
                     if (!webFile) {
-                        showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось прочитать файл изображения', visibilityTime: 3000 });
+                        showToast({ type: 'error', text1: i18nT('shared:hooks.useAvatarUpload.oshibka_69b08b01'), text2: i18nT('shared:hooks.useAvatarUpload.ne_udalos_prochitat_fayl_izobrazheniya_cf825c50'), visibilityTime: 3000 });
                         return;
                     }
                     file = webFile;
@@ -204,7 +206,7 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
         } catch (e) {
             if (!mountedRef.current) return;
             console.error(e);
-            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось выбрать изображение' });
+            showToast({ type: 'error', text1: i18nT('shared:hooks.useAvatarUpload.oshibka_69b08b01'), text2: i18nT('shared:hooks.useAvatarUpload.ne_udalos_vybrat_izobrazhenie_125051f5') });
             setIsUploading(false);
         }
     }, [isUploading, uploadAvatar, userId]);

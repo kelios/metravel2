@@ -6,6 +6,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { formatViewCount } from '@/components/travel/utils/travelHelpers';
+import { translate as i18nT } from '@/i18n';
 
 import { createTabCardTemplate, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
 
@@ -69,7 +70,7 @@ function TabTravelCard({
     [item?.id, testID]
   );
 
-  const title = item?.title || 'Без названия';
+  const title = item?.title || i18nT('travel:common.untitled');
 
   const location = useMemo(() => {
     return [item?.city, item?.country].filter(Boolean).join(', ');

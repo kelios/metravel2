@@ -3,6 +3,8 @@ import { Modal, Pressable, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
   styles: Record<string, any>;
@@ -36,16 +38,16 @@ export const PointsListActionsModal: React.FC<Props> = ({
           style={styles.actionsBackdrop}
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="Закрыть меню"
+          accessibilityLabel={i18nT('map:components.UserPoints.PointsListActionsModal.zakryt_menyu_31a2a732')}
         />
 
         <View style={styles.actionsModal}>
           <View style={styles.actionsHeader}>
-            <Text style={styles.actionsTitle}>Управление точками</Text>
+            <Text style={styles.actionsTitle}>{i18nT('map:components.UserPoints.PointsListActionsModal.upravlenie_tochkami_a5f80595')}</Text>
             <Pressable
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Закрыть меню действий"
+              accessibilityLabel={i18nT('map:components.UserPoints.PointsListActionsModal.zakryt_menyu_deystviy_93b02919')}
               style={styles.actionsCloseButton}
             >
               <Feather name="x" size={20} color={styles.actionsTitle.color} />
@@ -55,51 +57,51 @@ export const PointsListActionsModal: React.FC<Props> = ({
           {exportError ? <Text style={styles.manualErrorText}>{exportError}</Text> : null}
 
           <Button
-            label="Импортировать точки"
+            label={i18nT('map:components.UserPoints.PointsListActionsModal.importirovat_tochki_2bbbff1c')}
             onPress={onImport}
-            accessibilityLabel="Импортировать точки"
+            accessibilityLabel={i18nT('map:components.UserPoints.PointsListActionsModal.importirovat_tochki_2bbbff1c')}
             fullWidth
             style={styles.actionsButton}
           />
 
           <Button
-            label={isExporting ? 'Экспорт…' : 'Экспортировать KML'}
+            label={isExporting ? i18nT('map:components.UserPoints.PointsListActionsModal.eksport_18ea80fc') : i18nT('map:components.UserPoints.PointsListActionsModal.eksportirovat_kml_98dccbc3')}
             onPress={onExport}
-            accessibilityLabel="Экспортировать KML"
+            accessibilityLabel={i18nT('map:components.UserPoints.PointsListActionsModal.eksportirovat_kml_98dccbc3')}
             fullWidth
             loading={isExporting}
             style={styles.actionsButton}
           />
 
           <Button
-            label="Добавить вручную"
+            label={i18nT('map:components.UserPoints.PointsListActionsModal.dobavit_vruchnuyu_05015f8e')}
             onPress={onOpenManualAdd}
-            accessibilityLabel="Добавить вручную"
+            accessibilityLabel={i18nT('map:components.UserPoints.PointsListActionsModal.dobavit_vruchnuyu_05015f8e')}
             fullWidth
             style={styles.actionsButton}
           />
 
           <Button
-            label="Выбрать точки"
+            label={i18nT('map:components.UserPoints.PointsListActionsModal.vybrat_tochki_11cd887a')}
             onPress={onStartSelection}
-            accessibilityLabel="Выбрать точки"
+            accessibilityLabel={i18nT('map:components.UserPoints.PointsListActionsModal.vybrat_tochki_11cd887a')}
             fullWidth
             style={styles.actionsButton}
           />
 
           <Button
-            label="Удалить все точки"
+            label={i18nT('map:components.UserPoints.PointsListActionsModal.udalit_vse_tochki_f78e6889')}
             onPress={onDeleteAll}
-            accessibilityLabel="Удалить все точки"
+            accessibilityLabel={i18nT('map:components.UserPoints.PointsListActionsModal.udalit_vse_tochki_f78e6889')}
             fullWidth
             variant="danger"
             style={styles.actionsButton}
           />
 
           <Button
-            label="Отмена"
+            label={i18nT('map:components.UserPoints.PointsListActionsModal.otmena_bfdbf5e3')}
             onPress={onClose}
-            accessibilityLabel="Отмена"
+            accessibilityLabel={i18nT('map:components.UserPoints.PointsListActionsModal.otmena_bfdbf5e3')}
             fullWidth
             variant="ghost"
           />

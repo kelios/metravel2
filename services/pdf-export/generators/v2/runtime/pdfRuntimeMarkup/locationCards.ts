@@ -1,4 +1,6 @@
 import type { BuildLocationCardsParams } from './types'
+import { translate as i18nT } from '@/i18n'
+
 
 export function buildPdfLocationCards({
   locations,
@@ -48,7 +50,7 @@ export function buildPdfLocationCards({
               background: ${colors.surfaceAlt};
               position: relative;
             ">
-              <img src="${escapeHtml(location.thumbnailUrl!)}" alt="Точка ${index + 1}"
+              <img src="${escapeHtml(location.thumbnailUrl!)}" alt="${i18nT("export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.locationCards.div_style_width_80px_flex_shrink_0_backgroun_59c67203.text01", { value3: index + 1 })}"
                 style="width: 100%; height: 100%; object-fit: cover; display: block; ${getImageFilterStyle()}" />
               <div style="
                 position: absolute;
@@ -160,7 +162,7 @@ export function buildPdfLocationCards({
               border-left: 1px solid ${colors.border};
               background: ${colors.surfaceAlt};
             ">
-              <img src="${escapeHtml(qrCode)}" alt="QR точки ${index + 1}"
+              <img src="${escapeHtml(qrCode)}" alt="${i18nT("export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.locationCards.div_style_width_46px_padding_6px_display_fle_e61d8410.text01", { value4: index + 1 })}"
                 style="width: 34px; height: 34px; display: block;" />
             </div>
           ` : ''}

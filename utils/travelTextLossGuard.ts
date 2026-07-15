@@ -1,20 +1,27 @@
 import { confirmAction } from '@/utils/confirmAction'
+import { translate as i18nT } from '@/i18n'
+
 
 export type RichTextLossField = 'description' | 'plus' | 'minus' | 'recommendation'
 
 export type RichTextSnapshot = Partial<Record<RichTextLossField, string | null | undefined>>
 
 const FIELD_LABELS: Record<RichTextLossField, string> = {
-  description: 'описание',
-  plus: 'плюсы',
-  minus: 'минусы',
-  recommendation: 'рекомендации',
+  get description() { return i18nT('sharedStatic:utils.travelTextLossGuard.opisanie_92a9bc20') },
+  get plus() { return i18nT('travel:utils.travelTextLossGuard.field.plus') },
+  get minus() { return i18nT('travel:utils.travelTextLossGuard.field.minus') },
+  get recommendation() { return i18nT('travel:utils.travelTextLossGuard.field.recommendation') },
 }
 
 const GUARDED_FIELDS: RichTextLossField[] = ['description', 'plus', 'minus', 'recommendation']
 
 // Очевидные заглушки, которыми затирают реальный текст (см. инцидент travel/225: «<p>desc</p>»).
-const PLACEHOLDER_VALUES = new Set(['desc', 'test', 'тест', 'текст', 'placeholder'])
+const getPlaceholderValues = () => new Set(
+  i18nT('travel:utils.travelTextLossGuard.placeholderValues')
+    .split('|')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean),
+)
 
 const MIN_BASELINE_TEXT_LENGTH = 50
 const MIN_NEXT_TEXT_LENGTH = 10
@@ -33,7 +40,7 @@ function isDestructiveChange(baselineText: string, nextText: string): boolean {
 
   if (nextText.length === 0) return true
   if (nextText.length <= MIN_NEXT_TEXT_LENGTH) return true
-  if (PLACEHOLDER_VALUES.has(nextText.toLowerCase())) return true
+  if (getPlaceholderValues().has(nextText.toLowerCase())) return true
   if (nextText.length < baselineText.length * SHRINK_RATIO) return true
 
   return false
@@ -74,9 +81,9 @@ export async function confirmRichTextLossIfNeeded(
 
   const labels = lostFields.map((field) => FIELD_LABELS[field]).join(', ')
   return confirmAction({
-    title: 'Удаление текста',
-    message: `Вы удаляете большую часть текста (${labels}). Сохранить?`,
-    confirmText: 'Сохранить',
-    cancelText: 'Отмена',
+    title: i18nT('shared:utils.travelTextLossGuard.udalenie_teksta_a462d4b0'),
+    message: i18nT('shared:utils.travelTextLossGuard.vy_udalyaete_bolshuyu_chast_teksta_value1_so_5ee11217', { value1: labels }),
+    confirmText: i18nT('shared:utils.travelTextLossGuard.sohranit_6bb2a5f7'),
+    cancelText: i18nT('shared:utils.travelTextLossGuard.otmena_d5b1e3ab'),
   })
 }

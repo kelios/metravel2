@@ -1,4 +1,5 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Editorial Luxe - журнальная «люкс»-эстетика: глубокий нейтральный фон,
@@ -6,8 +7,8 @@ import type { PdfThemeConfig } from '../types'
  */
 export const editorialLuxeTheme: PdfThemeConfig = {
   name: 'editorial-luxe',
-  displayName: 'Editorial Luxe',
-  description: 'Журнальный люкс: засечная типографика и золотой акцент',
+  get displayName() { return i18nT('export:services.pdfExport.theme.editorialLuxe.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.editorialLuxe.description') },
 
   colors: {
     text: '#211d18',

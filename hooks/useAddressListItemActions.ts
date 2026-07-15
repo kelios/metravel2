@@ -13,6 +13,8 @@ import { getSiteBaseUrl } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { TravelCoords } from '@/types/types';
+import { translate as i18nT } from '@/i18n'
+
 
 const DEFAULT_TRAVEL_POINT_COLOR = DESIGN_COLORS.travelPoint;
 const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
@@ -52,9 +54,9 @@ export const openExternal = async (url?: string) => {
       allowRelative: true,
       baseUrl: getSiteBaseUrl(),
     });
-    if (!opened) await showToast({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
+    if (!opened) await showToast({ type: 'info', text1: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_otkryt_ssylku_e0811744'), position: 'bottom' });
   } catch {
-    await showToast({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
+    await showToast({ type: 'info', text1: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_otkryt_ssylku_e0811744'), position: 'bottom' });
   }
 };
 
@@ -114,14 +116,14 @@ export function useAddressListItemActions(travel: TravelCoords) {
       } else {
         await Clipboard.setStringAsync(coord);
       }
-      showToastInfo('Координаты скопированы');
-    } catch { showToastInfo('Не удалось скопировать'); }
+      showToastInfo(i18nT('shared:hooks.useAddressListItemActions.koordinaty_skopirovany_406138ef'));
+    } catch { showToastInfo(i18nT('shared:hooks.useAddressListItemActions.ne_udalos_skopirovat_571f0817')); }
   }, [coord, showToastInfo]);
 
   const openTelegram = useCallback(async () => {
     if (!coord) return;
     const mapUrl = buildMapUrl(coord);
-    const text = `Координаты: ${coord}`;
+    const text = i18nT('shared:hooks.useAddressListItemActions.koordinaty_value1_f527619f', { value1: coord });
     const deeplinks = [
       `tg://msg_url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`,
       `tg://share?text=${encodeURIComponent(`${text}\n${mapUrl}`)}`,
@@ -140,15 +142,15 @@ export function useAddressListItemActions(travel: TravelCoords) {
 
   const handleAddPoint = useCallback(async () => {
     if (!authReady) return;
-    if (!isAuthenticated) { void showToast({ type: 'info', text1: 'Войдите, чтобы сохранить точку', position: 'bottom' }); return; }
+    if (!isAuthenticated) { void showToast({ type: 'info', text1: i18nT('shared:hooks.useAddressListItemActions.voydite_chtoby_sohranit_tochku_990d6c7e'), position: 'bottom' }); return; }
     if (isAddingPoint) return;
     const lat = Number(travel.lat);
     const lng = Number(travel.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) { void showToast({ type: 'info', text1: 'Не удалось распознать координаты', position: 'bottom' }); return; }
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) { void showToast({ type: 'info', text1: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_raspoznat_koordinaty_1da8464d'), position: 'bottom' }); return; }
 
     const cleanedCategory = stripCountryFromCategoryString(rawCategoryName, address) || undefined;
     const payload: Record<string, unknown> = {
-      name: address || 'Точка маршрута', address, latitude: lat, longitude: lng,
+      name: address || i18nT('sharedStatic:route.pointFallback'), address, latitude: lat, longitude: lng,
       color: DEFAULT_TRAVEL_POINT_COLOR, status: DEFAULT_TRAVEL_POINT_STATUS,
       category: cleanedCategory, categoryName: cleanedCategory,
     };
@@ -162,13 +164,13 @@ export function useAddressListItemActions(travel: TravelCoords) {
     try {
       if (isSaved) {
         await removeSaved();
-        void showToast({ type: 'info', text1: 'Точка убрана из «Мои точки»', position: 'bottom' });
+        void showToast({ type: 'info', text1: i18nT('shared:hooks.useAddressListItemActions.tochka_ubrana_iz_moi_tochki_b104d947'), position: 'bottom' });
         return;
       }
       await createPoint(payload);
-      void showToast({ type: 'success', text1: 'Точка добавлена в «Мои точки»', position: 'bottom' });
+      void showToast({ type: 'success', text1: i18nT('shared:hooks.useAddressListItemActions.tochka_dobavlena_v_moi_tochki_000bc83b'), position: 'bottom' });
     } catch {
-      void showToast({ type: 'error', text1: 'Не удалось сохранить точку', position: 'bottom' });
+      void showToast({ type: 'error', text1: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_sohranit_tochku_3c69cb31'), position: 'bottom' });
     } finally { setIsAddingPoint(false); }
   }, [address, articleUrl, authReady, rawCategoryName, isAddingPoint, isAuthenticated, isSaved, removeSaved, createPoint, travel.lat, travel.lng, travelImageThumbUrl, urlTravel]);
 

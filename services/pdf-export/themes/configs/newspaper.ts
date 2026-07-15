@@ -1,4 +1,5 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Color Newspaper - цветная газета
@@ -6,8 +7,8 @@ import type { PdfThemeConfig } from '../types'
  */
 export const newspaperTheme: PdfThemeConfig = {
   name: 'newspaper',
-  displayName: 'Цветная газета',
-  description: 'Яркая современная газетная вёрстка с цветными акцентами',
+  get displayName() { return i18nT('export:services.pdfExport.theme.newspaper.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.newspaper.description') },
 
   colors: {
     text: '#1a1a1a',

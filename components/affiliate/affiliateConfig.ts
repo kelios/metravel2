@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n'
 /**
  * FE-2: Travelpayouts affiliate configuration.
  *
@@ -99,19 +100,19 @@ interface OfferPreset {
 const OFFER_PRESETS: OfferPreset[] = [
   {
     key: 'tours',
-    title: 'Экскурсии и гиды',
+    get title() { return i18nT('sharedStatic:components.affiliate.affiliateConfig.ekskursii_i_gidy_f1ac831f') },
     subtitle: (place) =>
-      place ? `Авторские экскурсии и местные гиды — ${place}` : 'Авторские экскурсии и местные гиды',
-    cta: 'Посмотреть экскурсии',
+      place ? i18nT('shared:components.affiliate.affiliateConfig.avtorskie_ekskursii_i_mestnye_gidy_value1_6ed5e467', { value1: place }) : i18nT('shared:components.affiliate.affiliateConfig.avtorskie_ekskursii_i_mestnye_gidy_c72427c3'),
+    get cta() { return i18nT('sharedStatic:affiliate.tours.cta') },
     templateEnv: () => process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE,
     buildDestinationUrl: buildTripsterUrl,
   },
   {
     key: 'hotels',
-    title: 'Где остановиться',
+    get title() { return i18nT('sharedStatic:components.affiliate.affiliateConfig.gde_ostanovitsya_213c0ed8') },
     subtitle: (place) =>
-      place ? `Отели и апартаменты — ${place}` : 'Отели и апартаменты рядом с маршрутом',
-    cta: 'Подобрать жильё',
+      place ? i18nT('shared:components.affiliate.affiliateConfig.oteli_i_apartamenty_value1_98297a64', { value1: place }) : i18nT('shared:components.affiliate.affiliateConfig.oteli_i_apartamenty_ryadom_s_marshrutom_e08415da'),
+    get cta() { return i18nT('sharedStatic:affiliate.hotels.cta') },
     templateEnv: () => process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE,
     buildDestinationUrl: buildOstrovokUrl,
   },

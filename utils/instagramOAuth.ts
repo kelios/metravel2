@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n'
 const DEFAULT_INSTAGRAM_OAUTH_SCOPES = [
   'instagram_basic',
   'instagram_content_publish',
@@ -84,7 +85,7 @@ export const getInstagramOAuthResolution = (): InstagramOAuthResolution => {
     return {
       isConfigured: false,
       config: null,
-      reason: 'Укажите EXPO_PUBLIC_META_APP_ID для подключения Instagram через Meta OAuth.',
+      reason: i18nT('shared:utils.instagramOAuth.ukazhite_expo_public_meta_app_id_dlya_podkly_952d0e1a'),
     }
   }
 
@@ -93,7 +94,7 @@ export const getInstagramOAuthResolution = (): InstagramOAuthResolution => {
     return {
       isConfigured: false,
       config: null,
-      reason: 'Не удалось определить redirect URI для Instagram OAuth.',
+      reason: i18nT('shared:utils.instagramOAuth.ne_udalos_opredelit_redirect_uri_dlya_instag_b755560a'),
     }
   }
 

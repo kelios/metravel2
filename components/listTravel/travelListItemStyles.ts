@@ -253,7 +253,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       fontSize: META_TEXT_FONT_SIZE,
       lineHeight: META_TEXT_LINE_HEIGHT,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-      color: colors.warning,
+      color: colors.warningDark,
     },
 
     engagementMetricsRow: {

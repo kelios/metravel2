@@ -12,6 +12,8 @@ import { useThemedColors } from '@/hooks/useTheme'
 import type { PointFilters as PointFiltersType } from '@/types/userPoints'
 
 import type { PointsListStyles } from './types'
+import { translate as i18nT } from '@/i18n'
+
 
 type ViewMode = 'list' | 'map'
 
@@ -107,17 +109,17 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   const local = React.useMemo(() => createLocalStyles(themed), [themed]);
   const canRecommend = total >= 3;
   const recommendationLabel = showingRecommendations
-    ? 'Выбрать другие случайные'
-    : 'Выбрать 3 случайные точки';
+    ? i18nT('map:components.UserPoints.PointsListHeader.vybrat_drugie_sluchaynye_77185bc2')
+    : i18nT('map:components.UserPoints.PointsListHeader.vybrat_3_sluchaynye_tochki_4ddd9506');
   const recommendationDescription = !canRecommend
-    ? 'Сохраните хотя бы 3 точки, и кнопка случайно выберет 3 из них.'
+    ? i18nT('map:components.UserPoints.PointsListHeader.sohranite_hotya_by_3_tochki_i_knopka_sluchay_73f1dd95')
     : showingRecommendations
-      ? 'Показаны 3 случайные точки из ваших сохранений. Нажмите, чтобы выбрать другие.'
-      : 'Не решили, куда поехать? Случайно выберем 3 точки из ваших сохранений и построим к ним маршрут.';
+      ? i18nT('map:components.UserPoints.PointsListHeader.pokazany_3_sluchaynye_tochki_iz_vashih_sohra_2b2a3228')
+      : i18nT('map:components.UserPoints.PointsListHeader.ne_reshili_kuda_poehat_sluchayno_vyberem_3_t_a7b29b4f');
   const viewModeOptions = React.useMemo(
     () => [
-      { key: 'map', label: 'Карта' },
-      { key: 'list', label: 'Список' },
+      { key: 'map', label: i18nT('map:components.UserPoints.PointsListHeader.karta_27054ef9') },
+      { key: 'list', label: i18nT('map:components.UserPoints.PointsListHeader.spisok_b0731a7f') },
     ],
     [],
   );
@@ -127,20 +129,19 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
       <View style={local.summaryCard}>
         <View style={local.summaryTopRow}>
           <View style={local.summaryTextBlock}>
-            <Text style={local.summaryEyebrow}>Ваши точки</Text>
-            <Text style={local.summaryTitle}>Управляйте сохранёнными местами</Text>
+            <Text style={local.summaryEyebrow}>{i18nT('map:components.UserPoints.PointsListHeader.vashi_tochki_4f58f81b')}</Text>
+            <Text style={local.summaryTitle}>{i18nT('map:components.UserPoints.PointsListHeader.upravlyayte_sohranennymi_mestami_56ebb898')}</Text>
             <Text style={local.summarySubtitle}>
-              Фильтруйте точки, настраивайте карту или нажмите «Случайный выбор», чтобы решить, куда поехать.
-            </Text>
+              {i18nT('map:components.UserPoints.PointsListHeader.filtruyte_tochki_nastraivayte_kartu_ili_nazh_d60229ee')}</Text>
           </View>
 
           <View style={local.statsGrid}>
             <View style={[styles.statPill, local.statCard]}>
-              <Text style={styles.statPillLabel}>Всего</Text>
+              <Text style={styles.statPillLabel}>{i18nT('map:components.UserPoints.PointsListHeader.vsego_f6d5c240')}</Text>
               <Text style={[styles.statPillValue, local.statValue]}>{total || 0}</Text>
             </View>
             <View style={[styles.statPill, local.statCard]}>
-              <Text style={styles.statPillLabel}>Найдено</Text>
+              <Text style={styles.statPillLabel}>{i18nT('map:components.UserPoints.PointsListHeader.naydeno_3670717b')}</Text>
               <Text style={[styles.statPillValue, local.statValue]}>{found || 0}</Text>
             </View>
           </View>
@@ -150,9 +151,9 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
           <View style={local.recommendationTextBlock}>
             <View style={local.recommendationEyebrowRow}>
               <Feather name="shuffle" size={13} color={themed.primaryDark} />
-              <Text style={local.recommendationEyebrow}>Случайный выбор из ваших точек</Text>
+              <Text style={local.recommendationEyebrow}>{i18nT('map:components.UserPoints.PointsListHeader.sluchaynyy_vybor_iz_vashih_tochek_b47a0775')}</Text>
             </View>
-            <Text style={local.recommendationTitle}>Куда поехать? Выберем за вас</Text>
+            <Text style={local.recommendationTitle}>{i18nT('map:components.UserPoints.PointsListHeader.kuda_poehat_vyberem_za_vas_2762a103')}</Text>
             <Text style={local.recommendationDescription}>{recommendationDescription}</Text>
           </View>
 
@@ -171,7 +172,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
           />
 
           {canRecommend ? (
-            <Text style={local.recommendationHint}>Случайные точки откроются в списке справа с готовыми маршрутами.</Text>
+            <Text style={local.recommendationHint}>{i18nT('map:components.UserPoints.PointsListHeader.sluchaynye_tochki_otkroyutsya_v_spiske_sprav_d9a43a42')}</Text>
           ) : null}
         </View>
 
@@ -182,7 +183,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
                 options={viewModeOptions}
                 value={_viewMode}
                 onChange={(key) => onViewModeChange(key as ViewMode)}
-                accessibilityLabel="Режим отображения точек"
+                accessibilityLabel={i18nT('map:components.UserPoints.PointsListHeader.rezhim_otobrazheniya_tochek_3cfbac2e')}
                 compact
               />
             </View>
@@ -190,7 +191,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
 
           <IconButton
             icon={<Feather name="settings" size={18} color={colors.text} />}
-            label="Управление точками"
+            label={i18nT('map:components.UserPoints.PointsListHeader.upravlenie_tochkami_f2146a1d')}
             onPress={onOpenActions}
             size="sm"
             testID="userpoints-actions-open"
@@ -200,7 +201,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
 
           <IconButton
             icon={<Feather name={showFilters ? 'eye-off' : 'filter'} size={18} color={colors.text} />}
-            label={showFilters ? 'Скрыть фильтры' : 'Показать фильтры'}
+            label={showFilters ? i18nT('map:components.UserPoints.PointsListHeader.skryt_filtry_abc229ca') : i18nT('map:components.UserPoints.PointsListHeader.pokazat_filtry_70087f13')}
             onPress={onToggleFilters}
             active={showFilters}
             size="sm"
@@ -210,7 +211,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
 
           <IconButton
             icon={<Feather name="sliders" size={18} color={colors.text} />}
-            label={showMapSettings ? 'Скрыть настройки карты' : 'Показать настройки карты'}
+            label={showMapSettings ? i18nT('map:components.UserPoints.PointsListHeader.skryt_nastroyki_karty_10b1129b') : i18nT('map:components.UserPoints.PointsListHeader.pokazat_nastroyki_karty_b3396a43')}
             onPress={onToggleMapSettings}
             active={showMapSettings}
             size="sm"
@@ -221,16 +222,16 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
       </View>
 
       <View style={local.searchBlock}>
-        <Text style={local.searchLabel}>Поиск по точкам</Text>
+        <Text style={local.searchLabel}>{i18nT('map:components.UserPoints.PointsListHeader.poisk_po_tochkam_f76d0d0d')}</Text>
         <View style={local.searchField}>
           <Feather name="search" size={16} color={colors.textMuted} />
           <TextInput
             style={[styles.searchInput, local.searchInput]}
-            placeholder="Поиск по названию..."
+            placeholder={i18nT('map:components.UserPoints.PointsListHeader.poisk_po_nazvaniyu_80c6e794')}
             value={searchQuery}
             onChangeText={onSearch}
             placeholderTextColor={colors.textMuted}
-            accessibilityLabel="Поиск по точкам"
+            accessibilityLabel={i18nT('map:components.UserPoints.PointsListHeader.poisk_po_tochkam_f76d0d0d')}
           />
         </View>
       </View>
@@ -240,19 +241,19 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
       {hasActiveFilters ? (
         <View style={local.activeFiltersBlock}>
           <View style={local.activeFiltersHeaderRow}>
-            <Text style={[styles.subtitle, local.activeFiltersLabel]}>Активные фильтры</Text>
+            <Text style={[styles.subtitle, local.activeFiltersLabel]}>{i18nT('map:components.UserPoints.PointsListHeader.aktivnye_filtry_62c0a188')}</Text>
             {isMobile ? (
               <IconButton
                 icon={<Feather name="x" size={18} color={colors.text} />}
-                label="Сбросить фильтры"
+                label={i18nT('map:components.UserPoints.PointsListHeader.sbrosit_filtry_dae77a88')}
                 onPress={onResetFilters}
                 size="sm"
               />
             ) : (
               <Button
-                label="Сбросить"
+                label={i18nT('map:components.UserPoints.PointsListHeader.sbrosit_8b57afc9')}
                 onPress={onResetFilters}
-                accessibilityLabel="Сбросить фильтры"
+                accessibilityLabel={i18nT('map:components.UserPoints.PointsListHeader.sbrosit_filtry_dae77a88')}
                 size="sm"
                 variant="secondary"
               />

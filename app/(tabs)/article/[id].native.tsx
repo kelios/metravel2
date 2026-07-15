@@ -23,6 +23,8 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
 import { normalizeArticleReturnHref } from '@/utils/articleNavigation'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
+import { translate as i18nT } from '@/i18n'
+
 
 export default function ArticleDetails() {
   const { width } = useResponsive()
@@ -110,7 +112,7 @@ export default function ArticleDetails() {
         }
 
         if (!loadedArticle?.id) {
-          throw new Error('Статья не найдена')
+          throw new Error(i18nT('shared:app.tabs.article.id.statya_ne_naydena_fda21643'))
         }
 
         if (!cancelled) {
@@ -118,7 +120,7 @@ export default function ArticleDetails() {
         }
       } catch (error: any) {
         if (!cancelled) {
-          setErrorMessage(error?.message || 'Не удалось загрузить статью')
+          setErrorMessage(error?.message || i18nT('sharedStatic:article.loadFailed'))
         }
       } finally {
         if (!cancelled) {
@@ -148,7 +150,7 @@ export default function ArticleDetails() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <Stack.Screen options={{ headerTitle: 'Статья', headerBackVisible: false }} />
+        <Stack.Screen options={{ headerTitle: i18nT('shared:app.tabs.article.id.statya_319c91fe'), headerBackVisible: false }} />
         <ArticleBackButton colors={colors} onPress={handleBack} styles={styles} />
         <ActivityIndicator style={styles.loader} color={colors.primaryDark} />
       </SafeAreaView>
@@ -158,11 +160,11 @@ export default function ArticleDetails() {
   if (!article || errorMessage) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <Stack.Screen options={{ headerTitle: 'Статья не найдена', headerBackVisible: false }} />
+        <Stack.Screen options={{ headerTitle: i18nT('shared:app.tabs.article.id.statya_ne_naydena_fda21643'), headerBackVisible: false }} />
         <ArticleBackButton colors={colors} onPress={handleBack} styles={styles} />
         <ScrollView style={styles.container} contentContainerStyle={styles.centerContent}>
-          <Title style={styles.errorTitle}>Статья не найдена</Title>
-          <SafeHtml html={errorMessage || 'Проверьте ссылку на статью.'} />
+          <Title style={styles.errorTitle}>{i18nT('shared:app.tabs.article.id.statya_ne_naydena_fda21643')}</Title>
+          <SafeHtml html={errorMessage || i18nT('sharedStatic:article.checkLink')} />
         </ScrollView>
       </SafeAreaView>
     )
@@ -213,11 +215,11 @@ function ArticleBackButton({
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel="Вернуться назад"
+        accessibilityLabel={i18nT('shared:app.tabs.article.id.vernutsya_nazad_83adf0e0')}
         style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
       >
         <Feather name="arrow-left" size={18} color={colors.text} />
-        <Text style={styles.backButtonText}>Назад</Text>
+        <Text style={styles.backButtonText}>{i18nT('shared:app.tabs.article.id.nazad_0a43c186')}</Text>
       </Pressable>
     </View>
   )

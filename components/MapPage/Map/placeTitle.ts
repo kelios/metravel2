@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n'
 /**
  * Shared title/subtitle derivation for map places.
  *
@@ -84,7 +85,7 @@ export const buildPlaceTitleParts = (point: PlaceTitleSource): PlaceTitleParts =
   }
 
   if (addressSegments.length === 0) {
-    return { title: 'Точка маршрута' }
+    return { title: i18nT('map:components.MapPage.Map.placeTitle.tochka_marshruta_5d3f867d') }
   }
 
   // No name: take the first meaningful segment as the title (skipping pure

@@ -29,6 +29,8 @@ import { useTravelDetailsContainerViewModel } from '@/components/travel/details/
 import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync'
 import type { Travel } from '@/types/types'
 import { cacheTravelOffline } from '@/hooks/useOfflineTravelCache'
+import { translate as i18nT } from '@/i18n'
+
 
 const SKELETON_FALLBACK = <TravelDetailsLoadingFallback />
 
@@ -153,7 +155,7 @@ export default function TravelDetailsContainer() {
     void addToHistory({
       id: travelId,
       type: 'travel',
-      title: travel?.name || 'Маршрут',
+      title: travel?.name || i18nT('travel:common.route'),
       imageUrl: travel?.travel_image_thumb_url || travel?.travel_image_thumb_small_url,
       url: travelUrl,
       country: travel?.countryName || undefined,
@@ -325,7 +327,7 @@ export default function TravelDetailsContainer() {
     travel,
   ])
 
-  const mainAriaLabel = `Детали путешествия: ${travel?.name || 'путешествие'}`
+  const mainAriaLabel = i18nT('travel:components.travel.details.TravelDetailsContainer.detali_puteshestviya_value1_80d67fb7', { value1: travel?.name || i18nT('travel:common.travelLower') })
   const topNotice = useMemo(
     () => <StaleContentBanner meta={staleContentMeta} testID="travel-details-stale-content-banner" />,
     [staleContentMeta],

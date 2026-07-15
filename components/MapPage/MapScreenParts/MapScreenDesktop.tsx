@@ -21,6 +21,8 @@ import {
   PRESSED_OPACITY_07,
   PRESSED_OPACITY_085,
 } from './shared'
+import { translate as i18nT } from '@/i18n'
+
 
 type MapScreenDesktopProps = {
   styles: any
@@ -124,15 +126,15 @@ export function MapScreenDesktopChrome({
             style={({ pressed }) => [styles.collapseToggle, pressed && PRESSED_OPACITY_07]}
             onPress={toggleDesktopCollapse}
             accessibilityRole="button"
-            accessibilityLabel="Развернуть панель"
-            {...({ title: 'Развернуть панель' } as any)}
+            accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.razvernut_panel_4e58160a')}
+            {...({ title: i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.razvernut_panel_4e58160a') } as any)}
           >
             <Feather name="chevron-right" size={18} color={themedColors.text} />
           </Pressable>
           <CollapsedIconButton
             icon="list"
-            label={`Список точек (${travelsCount})`}
-            title={`Список мест (${travelsCount})`}
+            label={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.spisok_tochek_value1_3daae6f8', { value1: travelsCount })}
+            title={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.spisok_mest_value1_fc47c6bb', { value1: travelsCount })}
             onPress={() => {
               toggleDesktopCollapse()
               selectTravelsTab()
@@ -144,8 +146,8 @@ export function MapScreenDesktopChrome({
           />
           <CollapsedIconButton
             icon="navigation"
-            label="Построение маршрута"
-            title="Построить маршрут"
+            label={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.postroenie_marshruta_c3fdf7cc')}
+            title={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.postroit_marshrut_20dc07d3')}
             onPress={() => {
               toggleDesktopCollapse()
               handleSelectRouteTab()
@@ -155,8 +157,8 @@ export function MapScreenDesktopChrome({
           />
           <CollapsedIconButton
             icon="sliders"
-            label="Фильтры"
-            title="Фильтры"
+            label={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.filtry_e60de25e')}
+            title={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.filtry_e60de25e')}
             onPress={() => {
               toggleDesktopCollapse()
               handleSelectSearchTab()
@@ -191,7 +193,7 @@ export function MapScreenDesktopChrome({
               style={({ pressed }) => [styles.collapseToggleInPanel, pressed && PRESSED_OPACITY_07]}
               onPress={toggleDesktopCollapse}
               accessibilityRole="button"
-              accessibilityLabel="Свернуть панель"
+              accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.svernut_panel_2b99d933')}
             >
               <Feather name="chevron-left" size={16} color={themedColors.textMuted} />
             </Pressable>
@@ -223,7 +225,7 @@ export function MapScreenDesktopChrome({
                 <Suspense
                   fallback={
                     <View style={styles.panelPlaceholder}>
-                      <Text style={styles.panelPlaceholderText}>Загрузка фильтров…</Text>
+                      <Text style={styles.panelPlaceholderText}>{i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.zagruzka_filtrov_611549f2')}</Text>
                     </View>
                   }
                 >
@@ -233,7 +235,7 @@ export function MapScreenDesktopChrome({
                 </Suspense>
               ) : (
                 <View style={styles.panelPlaceholder}>
-                  <Text style={styles.panelPlaceholderText}>Загрузка фильтров…</Text>
+                  <Text style={styles.panelPlaceholderText}>{i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.zagruzka_filtrov_611549f2')}</Text>
                 </View>
               )
             ) : (
@@ -359,7 +361,7 @@ export function MapScreenDesktopOverlays({
           style={({ pressed }) => [styles.fab, pressed && PRESSED_OPACITY_085]}
           onPress={openRightPanel}
           accessibilityRole="button"
-          accessibilityLabel="Фильтры и список мест"
+          accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.filtry_i_spisok_mest_06aa2123')}
         >
           <Feather name="sliders" size={22} color={themedColors.textOnPrimary} />
         </Pressable>
@@ -372,7 +374,7 @@ export function MapScreenDesktopOverlays({
             onPress={toggleRadius}
             accessibilityRole="button"
             accessibilityState={{ expanded: radiusOpen }}
-            accessibilityLabel={`Радиус${radiusBadge ? ` ${radiusBadge}` : ''}`}
+            accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.radius_value1_934e2db6', { value1: radiusBadge ? ` ${radiusBadge}` : '' })}
             hitSlop={6}
             style={({ pressed }) => [
               styles.desktopRadiusFab,
@@ -409,7 +411,7 @@ export function MapScreenDesktopOverlays({
             onPress={toggleLayers}
             accessibilityRole="button"
             accessibilityState={{ expanded: layersOpen }}
-            accessibilityLabel="Слои и настройки карты"
+            accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.sloi_i_nastroyki_karty_ed15c793')}
             hitSlop={6}
             style={({ pressed }) => [
               styles.desktopLayersFab,
@@ -441,7 +443,7 @@ export function MapScreenDesktopOverlays({
 
       {!mapReady && (
         <View style={[styles.loadingOverlay, POINTER_EVENTS_NONE]} testID="map-loading-overlay">
-          <ActivityIndicator color={themedColors.primary} accessibilityLabel="Загрузка карты" />
+          <ActivityIndicator color={themedColors.primary} accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.zagruzka_karty_8db9bcd2')} />
         </View>
       )}
 

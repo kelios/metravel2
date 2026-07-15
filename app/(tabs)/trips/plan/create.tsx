@@ -9,6 +9,8 @@ import { buildLoginHref } from '@/utils/authNavigation';
 import { buildTripPlanPrefill } from '@/utils/tripPlanLinks';
 import { LAYOUT } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { translate as i18nT } from '@/i18n'
+
 
 // Reserve space for the bottom tab bar / web dock so the last form control
 // (the "Запланировать поездку" submit button) is never hidden behind it.
@@ -40,7 +42,7 @@ export default function CreateTripScreen() {
     return (
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
         <View style={[styles.inner, styles.state]} testID="trip-create-auth-gate">
-          <Text style={styles.h1}>Войдите в аккаунт</Text>
+          <Text style={styles.h1}>{i18nT('trips:app.tabs.trips.plan.create.voydite_v_akkaunt_ec929ad4')}</Text>
           <Text style={styles.lead}>
             <Text
               accessibilityRole="link"
@@ -55,10 +57,8 @@ export default function CreateTripScreen() {
               style={styles.loginLink}
               testID="trip-create-login-link"
             >
-              Войдите
-            </Text>
-            , чтобы создавать поездки, собирать попутчиков и сохранять маршрут.
-          </Text>
+              {i18nT('trips:app.tabs.trips.plan.create.voydite_2712f737')}</Text>
+            {i18nT('trips:app.tabs.trips.plan.create.chtoby_sozdavat_poezdki_sobirat_poputchikov__7e4752ea')}</Text>
         </View>
       </ScrollView>
     );

@@ -9,6 +9,8 @@ import { openExternalUrl } from '@/utils/externalLinks'
 import { handleRichTextLinkPress } from '@/utils/internalLinks'
 
 import { isInstagramEmbedUrl, isYouTubeEmbedUrl } from './htmlTransform'
+import { translate as i18nT } from '@/i18n'
+
 
 type LazyInstagramProps = { url: string }
 type LightboxImage = { src: string; alt: string }
@@ -63,7 +65,7 @@ export function useStableContentRenderConfig({
             Platform.OS === 'web' ? [styles.instagramEmbedWrapper, styles.instagramEmbedWrapperWeb] : styles.instagramEmbedWrapper
           return (
             <View style={wrapperStyle}>
-              <Suspense fallback={<Text>Instagram…</Text>}>
+              <Suspense fallback={<Text>{i18nT('travel:components.travel.stableContent.useRenderConfig.instagram_d03ce4fd')}</Text>}>
                 <LazyInstagram url={url} />
               </Suspense>
             </View>
@@ -77,7 +79,7 @@ export function useStableContentRenderConfig({
             }
             return (
               <Pressable onPress={open} style={styles.ytStub}>
-                <Text style={styles.ytStubText}>Смотреть на YouTube</Text>
+                <Text style={styles.ytStubText}>{i18nT('travel:components.travel.stableContent.useRenderConfig.smotret_na_youtube_4bfeca55')}</Text>
               </Pressable>
             )
           }

@@ -11,6 +11,8 @@ import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { useVisibleCardCount } from '@/hooks/useVisibleCardCount';
+import { translate as i18nT } from '@/i18n'
+
 
 const COLLAPSED_KEY = 'personalization_collapsed';
 const ARROW_ICON_STYLE = { marginLeft: 6 } as const;
@@ -146,7 +148,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
 
     const hasFavorites = !onlyRecommendations && favorites && favorites.length > 0;
     const hasHistory = !onlyRecommendations && viewHistory && viewHistory.length > 0;
-    const renderSectionTitle = useCallback((title: string, href?: string | null, label = 'Смотреть все') => (
+    const renderSectionTitle = useCallback((title: string, href?: string | null, label = i18nT('travel:components.travel.PersonalizedRecommendations.smotret_vse_bf757be0')) => (
         <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{title}</Text>
             {href ? (
@@ -183,7 +185,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
                         <Feather name="chevron-down" size={20} color={colors.primaryDark} />
-                        <Text style={styles.expandButtonText}>Персонализация</Text>
+                        <Text style={styles.expandButtonText}>{i18nT('travel:components.travel.PersonalizedRecommendations.personalizatsiya_8f1a3bac')}</Text>
                     </Pressable>
                 </View>
             );
@@ -200,11 +202,11 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                                 <Feather name="star" size={24} color={colors.primaryDark} />
                             </View>
                             <View style={styles.titleContainer}>
-                                <Text style={styles.title}>Рекомендации для вас</Text>
+                                <Text style={styles.title}>{i18nT('travel:components.travel.PersonalizedRecommendations.rekomendatsii_dlya_vas_9f2c924b')}</Text>
                             </View>
                             {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
                         </View>
-                        <Text style={styles.subtitle}>Персональные рекомендации на основе ваших интересов</Text>
+                        <Text style={styles.subtitle}>{i18nT('travel:components.travel.PersonalizedRecommendations.personalnye_rekomendatsii_na_osnove_vashih_i_a4a59741')}</Text>
                     </>
                 )}
                     <View style={[styles.promptCard, isMobile ? styles.promptCardMobile : styles.promptCardDesktop]}>
@@ -214,8 +216,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                             </View>
                             <View style={styles.promptCopy}>
                                 <Text style={[styles.promptText, !isMobile && styles.promptTextDesktop]}>
-                                    Войдите, чтобы получать персональные рекомендации и сохранять понравившиеся маршруты
-                                </Text>
+                                    {i18nT('travel:components.travel.PersonalizedRecommendations.voydite_chtoby_poluchat_personalnye_rekomend_55bff68d')}</Text>
                             </View>
                         </View>
                         <Pressable 
@@ -223,7 +224,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                             onPress={handleLoginPress}
                             android_ripple={{ color: colors.primarySoft }}
                         >
-                            <Text style={styles.loginButtonText}>Войти или зарегистрироваться</Text>
+                            <Text style={styles.loginButtonText}>{i18nT('travel:components.travel.PersonalizedRecommendations.voyti_ili_zaregistrirovatsya_6e6efcab')}</Text>
                             <Feather name="arrow-right" size={18} color={colors.primaryDark} style={ARROW_ICON_STYLE as any} />
                         </Pressable>
                     </View>
@@ -244,11 +245,11 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                                 <Feather name="star" size={24} color={colors.primaryDark} />
                             </View>
                             <View style={styles.titleContainer}>
-                                <Text style={styles.title}>Рекомендации для вас</Text>
+                                <Text style={styles.title}>{i18nT('travel:components.travel.PersonalizedRecommendations.rekomendatsii_dlya_vas_9f2c924b')}</Text>
                             </View>
                             {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
                         </View>
-                        <Text style={styles.subtitle}>Рекомендации на основе ваших интересов</Text>
+                        <Text style={styles.subtitle}>{i18nT('travel:components.travel.PersonalizedRecommendations.rekomendatsii_na_osnove_vashih_interesov_42542e30')}</Text>
                     </>
                 )}
                 <View style={[styles.emptyCard, isMobile ? styles.promptCardMobile : styles.promptCardDesktop]}>
@@ -258,8 +259,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                         </View>
                         <View style={styles.promptCopy}>
                             <Text style={[styles.emptyText, !isMobile && styles.promptTextDesktop]}>
-                                Начните просматривать путешествия и добавлять их в «Хочу поехать», чтобы получать персональные рекомендации
-                            </Text>
+                                {i18nT('travel:components.travel.PersonalizedRecommendations.nachnite_prosmatrivat_puteshestviya_i_dobavl_9c7e1a3e')}</Text>
                         </View>
                     </View>
                 </View>
@@ -276,17 +276,17 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                             <Feather name="star" size={24} color={colors.primaryDark} />
                         </View>
                         <View style={styles.titleContainer}>
-                            <Text style={styles.title}>Рекомендации для вас</Text>
+                            <Text style={styles.title}>{i18nT('travel:components.travel.PersonalizedRecommendations.rekomendatsii_dlya_vas_9f2c924b')}</Text>
                         </View>
                         {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
                     </View>
-                    <Text style={styles.subtitle}>Рекомендации на основе ваших интересов</Text>
+                    <Text style={styles.subtitle}>{i18nT('travel:components.travel.PersonalizedRecommendations.rekomendatsii_na_osnove_vashih_interesov_42542e30')}</Text>
                 </>
             )}
 
             {hasFavorites && (
                 <View style={styles.section} testID="personalized-favorites-section">
-                    {renderSectionTitle('Хочу поехать', '/favorites', 'Смотреть все «Хочу поехать»')}
+                    {renderSectionTitle(i18nT('travel:components.travel.PersonalizedRecommendations.hochu_poehat_465ffbdd'), '/favorites', i18nT('travel:components.travel.PersonalizedRecommendations.smotret_vse_hochu_poehat_dc779511'))}
                     {isMobileWeb ? (
                         <View style={styles.mobileWebStack} testID="personalized-favorites-stack">
                             {favorites.slice(0, 2).map(item => (
@@ -325,7 +325,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
 
             {hasHistory && (
                 <View style={styles.section} testID="personalized-history-section">
-                    {renderSectionTitle('Недавно просмотрено', '/history', 'Смотреть всю историю')}
+                    {renderSectionTitle(i18nT('travel:components.travel.PersonalizedRecommendations.nedavno_prosmotreno_d89351d9'), '/history', i18nT('travel:components.travel.PersonalizedRecommendations.smotret_vsyu_istoriyu_224342eb'))}
                     {isMobileWeb ? (
                         <View style={styles.mobileWebStack} testID="personalized-history-stack">
                             {viewHistory.slice(0, 2).map(item => (
@@ -364,7 +364,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
 
             {recommendations.length > 0 && (
                 <View style={styles.section} testID="personalized-recommendations-list-section">
-                    {renderSectionTitle('Рекомендации', null)}
+                    {renderSectionTitle(i18nT('travel:components.travel.PersonalizedRecommendations.rekomendatsii_44105f7c'), null)}
                     {isMobileWeb ? (
                         <View style={styles.mobileWebStack} testID="personalized-recommendations-stack">
                             {recommendations.slice(0, 2).map(item => (

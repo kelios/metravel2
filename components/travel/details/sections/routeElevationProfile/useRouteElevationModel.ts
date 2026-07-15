@@ -11,6 +11,8 @@ import {
   parseProfileCoord,
   resolveNearestHintName,
 } from '../RouteElevationProfile.utils'
+import { translate as i18nT } from '@/i18n'
+
 
 export type ChartPoint = {
   index: number
@@ -267,13 +269,13 @@ export function useRouteElevationModel({
   const tooltipText = useMemo(() => {
     if (!activePoint) return null
     return {
-      title: `${formatProfileMeters(activePoint.sample.elevationM)} • ${formatProfileKm(activePoint.sample.distanceKm)}`,
+      title: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.value1_value2_0c864cf9', { value1: formatProfileMeters(activePoint.sample.elevationM), value2: formatProfileKm(activePoint.sample.distanceKm) }),
       subtitle:
         activePoint.sample.distanceKm <= 0.05
-          ? 'Старт маршрута'
+          ? i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.start_marshruta_12846be4')
           : activePoint.sample.distanceKm >= metrics.totalDistanceKm - 0.05
-            ? 'Финиш маршрута'
-            : 'Точка профиля',
+            ? i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.finish_marshruta_770dfcae')
+            : i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.tochka_profilya_3a0b0573'),
     }
   }, [activePoint, metrics.totalDistanceKm])
 
@@ -281,47 +283,47 @@ export function useRouteElevationModel({
     if (!metrics.hasElevation) {
       return [
         {
-          label: 'Дистанция',
+          label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.distantsiya_07dd7e60'),
           value: formatProfileKm(metrics.totalDistanceKm),
           icon: 'move',
           accent: true,
         },
-        { label: 'Высоты', value: 'Не найдены', icon: 'slash', accent: false },
+        { label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.vysoty_8a1f42c0'), value: i18nT('travel:common.notFoundPlural'), icon: 'slash', accent: false },
       ]
     }
     const cards = [
       {
-        label: 'Дистанция',
+        label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.distantsiya_07dd7e60'),
         value: formatProfileKm(metrics.totalDistanceKm),
         icon: 'move',
         accent: true,
       },
       {
-        label: 'Набор',
+        label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.nabor_555856df'),
         value: `+${formatProfileMeters(metrics.ascent)}`,
         icon: 'trending-up',
         accent: true,
       },
       {
-        label: 'Сброс',
+        label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.sbros_f5698d08'),
         value: `-${formatProfileMeters(metrics.descent)}`,
         icon: 'trending-down',
         accent: false,
       },
       {
-        label: 'Мин высота',
+        label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.min_vysota_27ab92fc'),
         value: formatProfileMeters(metrics.minElevation ?? 0),
         icon: 'corner-down-left',
         accent: false,
       },
       {
-        label: 'Макс высота',
+        label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.maks_vysota_1cd65c2a'),
         value: formatProfileMeters(metrics.maxElevation ?? 0),
         icon: 'corner-up-right',
         accent: false,
       },
       {
-        label: 'Перепад',
+        label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.perepad_e3dbde8c'),
         value: formatProfileMeters(metrics.elevationRange),
         icon: 'activity',
         accent: false,
@@ -332,15 +334,15 @@ export function useRouteElevationModel({
 
   const profileSummary = useMemo(() => {
     if (!metrics.hasElevation) {
-      return `Маршрут ${formatProfileKm(metrics.totalDistanceKm)} без данных о высотах`
+      return i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.marshrut_value1_bez_dannyh_o_vysotah_0fa6ac97', { value1: formatProfileKm(metrics.totalDistanceKm) })
     }
     const summaryParts = [
       formatProfileKm(metrics.totalDistanceKm),
-      `+${Math.round(metrics.ascent)} м набора`,
-      `пик ${formatProfileMeters(metrics.maxElevation ?? 0)}`,
+      i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.value1_m_nabora_e36ee2c8', { value1: Math.round(metrics.ascent) }),
+      i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.pik_value1_9b073c08', { value1: formatProfileMeters(metrics.maxElevation ?? 0) }),
     ]
     if (Number.isFinite(metrics.avgClimbMPerKm as number)) {
-      summaryParts.push(`${Math.round(metrics.avgClimbMPerKm as number)} м/км`)
+      summaryParts.push(i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.value1_m_km_ce1a520a', { value1: Math.round(metrics.avgClimbMPerKm as number) }))
     }
     return summaryParts.join(' • ')
   }, [metrics])
@@ -363,39 +365,39 @@ export function useRouteElevationModel({
     return [
       {
         key: 'start',
-        label: 'Старт',
+        label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.start_b2baf266'),
         icon: 'play',
         value: metrics.startSample
           ? formatProfileMeters(metrics.startSample.elevationM)
           : '—',
         caption: buildCaption(
           locationLabels.startName ?? '',
-          isCompactLayout ? 'Начало' : 'Начало маршрута',
+          isCompactLayout ? i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.nachalo_b67aefa1') : i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.nachalo_marshruta_06b801ed'),
         ),
       },
       {
         key: 'peak',
-        label: 'Высшая точка',
+        label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.vysshaya_tochka_cb6e8fca'),
         icon: 'triangle',
         value: metrics.peakSample
           ? formatProfileMeters(metrics.peakSample.elevationM)
           : '—',
         caption: buildCaption(
           locationLabels.peakName ?? '',
-          isCompactLayout ? 'Высшая точка' : 'Самая высокая точка',
+          isCompactLayout ? i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.vysshaya_tochka_cb6e8fca') : i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.samaya_vysokaya_tochka_ab085f89'),
           metrics.peakSample?.distanceKm ?? null,
         ),
       },
       {
         key: 'finish',
-        label: 'Финиш',
+        label: i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.finish_e010718b'),
         icon: 'flag',
         value: metrics.finishSample
           ? formatProfileMeters(metrics.finishSample.elevationM)
           : '—',
         caption: buildCaption(
           locationLabels.finishName ?? '',
-          isCompactLayout ? 'Финиш' : 'Конец маршрута',
+          isCompactLayout ? i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.finish_e010718b') : i18nT('travel:components.travel.details.sections.routeElevationProfile.useRouteElevationModel.konets_marshruta_3462dd6a'),
         ),
       },
     ]

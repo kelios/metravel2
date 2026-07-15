@@ -5,6 +5,8 @@
 
 import React from 'react';
 import { isValidCoordinate } from '@/utils/coordinateValidator';
+import { translate as i18nT } from '@/i18n'
+
 
 interface RouteMarkersLayerProps {
   /**
@@ -79,8 +81,7 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
               offset={[0, -10]}
               permanent={false}
             >
-              Старт
-            </Tooltip>
+              {i18nT('map:components.MapPage.Map.RouteMarkersLayer.start_9b7ad9c7')}</Tooltip>
           )}
         </Marker>
       )}
@@ -108,7 +109,7 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
                  offset={[0, -10]}
                  permanent={false}
                >
-                 Точка {index + 2}
+                 {i18nT('map:components.MapPage.Map.RouteMarkersLayer.tochka_77ecea35')}{index + 2}
                </Tooltip>
              )}
            </Marker>
@@ -140,8 +141,7 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
               offset={[0, -10]}
               permanent={false}
             >
-              Финиш
-            </Tooltip>
+              {i18nT('map:components.MapPage.Map.RouteMarkersLayer.finish_37fe48ff')}</Tooltip>
           )}
         </Marker>
       )}

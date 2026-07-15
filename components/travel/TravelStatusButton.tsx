@@ -21,6 +21,8 @@ import { useBreakpoints } from '@/hooks/useResponsive'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { showToast } from '@/utils/toast'
+import { translate as i18nT } from '@/i18n'
+
 
 const STATUS_OPTIONS: Array<{
   key: TravelStatus
@@ -28,9 +30,24 @@ const STATUS_OPTIONS: Array<{
   icon: React.ComponentProps<typeof Feather>['name']
   hint: string
 }> = [
-  { key: 'visited', label: 'Был здесь', icon: 'check-circle', hint: 'Уже посетил это место' },
-  { key: 'planned', label: 'Планирую', icon: 'calendar', hint: 'Собираюсь поехать' },
-  { key: 'wishlist', label: 'Хочу поехать', icon: 'bookmark', hint: 'В «Хочу поехать»' },
+  {
+    key: 'visited',
+    get label() { return i18nT('travel:components.travel.TravelStatusButton.option.visited.label') },
+    icon: 'check-circle',
+    get hint() { return i18nT('travel:components.travel.TravelStatusButton.option.visited.hint') },
+  },
+  {
+    key: 'planned',
+    get label() { return i18nT('travel:components.travel.TravelStatusButton.option.planned.label') },
+    icon: 'calendar',
+    get hint() { return i18nT('travel:components.travel.TravelStatusButton.option.planned.hint') },
+  },
+  {
+    key: 'wishlist',
+    get label() { return i18nT('travel:components.travel.TravelStatusButton.option.wishlist.label') },
+    icon: 'bookmark',
+    get hint() { return i18nT('travel:components.travel.TravelStatusButton.option.wishlist.hint') },
+  },
 ]
 
 type Props = {
@@ -141,7 +158,7 @@ export default function TravelStatusButton({
       const label = STATUS_OPTIONS.find((o) => o.key === status)?.label ?? status
       await showToast({ type: 'success', text1: label, position: 'bottom', visibilityTime: 2000 })
     } catch {
-      await showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось сохранить статус', position: 'bottom' })
+      await showToast({ type: 'error', text1: i18nT('travel:components.travel.TravelStatusButton.oshibka_1066f04c'), text2: i18nT('travel:components.travel.TravelStatusButton.ne_udalos_sohranit_status_4cf7d143'), position: 'bottom' })
     } finally {
       inFlightRef.current = false
     }
@@ -154,11 +171,11 @@ export default function TravelStatusButton({
 
   const handleConfirmDate = useCallback(async () => {
     if (!dateInput) {
-      setDateError('Укажите дату')
+      setDateError(i18nT('travel:components.travel.TravelStatusButton.ukazhite_datu_da202fa5'))
       return
     }
     if (!isValidDate(dateInput)) {
-      setDateError('Введите дату в формате ГГГГ-ММ-ДД')
+      setDateError(i18nT('travel:components.travel.TravelStatusButton.vvedite_datu_v_formate_gggg_mm_dd_37344e46'))
       return
     }
     setModalOpen(false)
@@ -183,9 +200,9 @@ export default function TravelStatusButton({
         },
         userId
       )
-      await showToast({ type: 'success', text1: 'Добавлено в планы', text2: dateInput, position: 'bottom', visibilityTime: 2000 })
+      await showToast({ type: 'success', text1: i18nT('travel:components.travel.TravelStatusButton.dobavleno_v_plany_dfb57b79'), text2: dateInput, position: 'bottom', visibilityTime: 2000 })
     } catch {
-      await showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось сохранить', position: 'bottom' })
+      await showToast({ type: 'error', text1: i18nT('travel:components.travel.TravelStatusButton.oshibka_1066f04c'), text2: i18nT('travel:components.travel.TravelStatusButton.ne_udalos_sohranit_1db862ee'), position: 'bottom' })
     } finally {
       inFlightRef.current = false
     }
@@ -197,7 +214,7 @@ export default function TravelStatusButton({
     inFlightRef.current = true
     try {
       await removeStatus(travelId, userId)
-      await showToast({ type: 'info', text1: 'Удалено из плана', position: 'bottom', visibilityTime: 2000 })
+      await showToast({ type: 'info', text1: i18nT('travel:components.travel.TravelStatusButton.udaleno_iz_plana_91e9ba44'), position: 'bottom', visibilityTime: 2000 })
     } catch {
       /* noop */
     } finally {
@@ -462,13 +479,13 @@ export default function TravelStatusButton({
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <Text style={styles.sheetTitle}>
-                {datePicking ? 'Укажите дату поездки' : 'Добавить в план'}
+                {datePicking ? i18nT('travel:components.travel.TravelStatusButton.ukazhite_datu_poezdki_1a5b34eb') : i18nT('travel:components.travel.TravelStatusButton.dobavit_v_plan_c8d5333c')}
               </Text>
               <Pressable
                 style={[styles.closeBtn, globalFocusStyles.focusable]}
                 onPress={() => setModalOpen(false)}
                 accessibilityRole="button"
-                accessibilityLabel="Закрыть"
+                accessibilityLabel={i18nT('travel:components.travel.TravelStatusButton.zakryt_ee95ca3d')}
                 hitSlop={8}
               >
                 <Feather name="x" size={22} color={colors.textSecondary} />
@@ -513,18 +530,18 @@ export default function TravelStatusButton({
                     style={[styles.removeRow, globalFocusStyles.focusable]}
                     onPress={handleRemove}
                     accessibilityRole="button"
-                    accessibilityLabel="Убрать из плана"
+                    accessibilityLabel={i18nT('travel:components.travel.TravelStatusButton.ubrat_iz_plana_3eacfe85')}
                   >
                     <Feather name="trash-2" size={18} color={colors.danger} />
-                    <Text style={styles.removeText}>Убрать из плана</Text>
+                    <Text style={styles.removeText}>{i18nT('travel:components.travel.TravelStatusButton.ubrat_iz_plana_3eacfe85')}</Text>
                   </Pressable>
                 </>
               )}
             </ScrollView>
           ) : (
             <View style={styles.dateSection}>
-              <Text style={styles.dateSectionTitle}>Дата поездки</Text>
-              <Text style={styles.dateSectionHint}>Выберите день в календаре.</Text>
+              <Text style={styles.dateSectionTitle}>{i18nT('travel:components.travel.TravelStatusButton.data_poezdki_240d7a94')}</Text>
+              <Text style={styles.dateSectionHint}>{i18nT('travel:components.travel.TravelStatusButton.vyberite_den_v_kalendare_0b5e3516')}</Text>
               <View style={styles.calendarWrap}>
                 <MiniCalendar
                   entries={[]}
@@ -538,7 +555,7 @@ export default function TravelStatusButton({
               <View style={styles.selectedDateBox}>
                 <Feather name="calendar" size={15} color={dateInput ? colors.primary : colors.textMuted} />
                 <Text style={styles.selectedDateText}>
-                  {dateInput ? `Выбрано: ${dateInput}` : 'Дата не выбрана'}
+                  {dateInput ? i18nT('travel:components.travel.TravelStatusButton.vybrano_value1_35052aee', { value1: dateInput }) : i18nT('travel:components.travel.TravelStatusButton.data_ne_vybrana_40b85060')}
                 </Text>
               </View>
               {!!dateError && <Text style={styles.dateError}>{dateError}</Text>}
@@ -547,17 +564,17 @@ export default function TravelStatusButton({
                   style={[styles.dateCancelBtn, globalFocusStyles.focusable]}
                   onPress={() => setDatePicking(false)}
                   accessibilityRole="button"
-                  accessibilityLabel="Назад к выбору статуса"
+                  accessibilityLabel={i18nT('travel:components.travel.TravelStatusButton.nazad_k_vyboru_statusa_582b29fd')}
                 >
-                  <Text style={styles.dateCancelText}>Назад</Text>
+                  <Text style={styles.dateCancelText}>{i18nT('travel:components.travel.TravelStatusButton.nazad_ef2effb6')}</Text>
                 </Pressable>
                 <Pressable
                   style={[styles.dateConfirmBtn, globalFocusStyles.focusable]}
                   onPress={handleConfirmDate}
                   accessibilityRole="button"
-                  accessibilityLabel="Сохранить дату"
+                  accessibilityLabel={i18nT('travel:components.travel.TravelStatusButton.sohranit_datu_ef1c2904')}
                 >
-                  <Text style={styles.dateConfirmText}>Сохранить</Text>
+                  <Text style={styles.dateConfirmText}>{i18nT('travel:components.travel.TravelStatusButton.sohranit_0d739b23')}</Text>
                 </Pressable>
               </View>
             </View>
@@ -569,7 +586,7 @@ export default function TravelStatusButton({
 
   // Compact mode — small overlay button with a visible status label.
   if (compact) {
-    const compactAccessibilityLabel = currentOption ? currentOption.label : 'Добавить в план'
+    const compactAccessibilityLabel = currentOption ? currentOption.label : i18nT('travel:components.travel.TravelStatusButton.dobavit_v_plan_c8d5333c')
     const compactLabel = currentOption?.label ?? idleLabel ?? null
     const compactIcon = (
       <Feather
@@ -591,7 +608,7 @@ export default function TravelStatusButton({
               role: 'button',
               'aria-label': compactAccessibilityLabel,
               'aria-pressed': Boolean(current),
-              title: 'Управление статусом путешествия',
+              title: i18nT('travel:components.travel.TravelStatusButton.upravlenie_statusom_puteshestviya_443c9fae'),
               'data-card-action': 'true',
               onClick: handleMainPress,
               onMouseEnter: isMobile ? undefined : () => setHovered(true),
@@ -629,7 +646,7 @@ export default function TravelStatusButton({
           onPress={handleMainPress}
           accessibilityRole="button"
           accessibilityLabel={compactAccessibilityLabel}
-          accessibilityHint="Управление статусом путешествия"
+          accessibilityHint={i18nT('travel:components.travel.TravelStatusButton.upravlenie_statusom_puteshestviya_443c9fae')}
           hitSlop={6}
         >
           {compactIcon}
@@ -645,8 +662,8 @@ export default function TravelStatusButton({
         style={[styles.btn, globalFocusStyles.focusable, style]}
         onPress={handleMainPress}
         accessibilityRole="button"
-        accessibilityLabel={currentOption ? currentOption.label : (idleLabel ?? 'Добавить в план')}
-        accessibilityHint="Управление статусом путешествия"
+        accessibilityLabel={currentOption ? currentOption.label : (idleLabel ?? i18nT('travel:components.travel.TravelStatusButton.addToPlanFallback'))}
+        accessibilityHint={i18nT('travel:components.travel.TravelStatusButton.upravlenie_statusom_puteshestviya_443c9fae')}
       >
         <Feather
           name={currentOption?.icon ?? 'plus-circle'}
@@ -654,7 +671,7 @@ export default function TravelStatusButton({
           color={current ? colors.primary : colors.textMuted}
         />
         <Text style={styles.btnText}>
-          {currentOption?.label ?? idleLabel ?? 'Добавить в план'}
+          {currentOption?.label ?? idleLabel ?? i18nT('travel:components.travel.TravelStatusButton.addToPlanFallback')}
         </Text>
         {current && current.status === 'planned' && current.plannedDate && (
           <Text style={[styles.btnText, { fontWeight: '400', fontSize: 13, color: colors.textSecondary }]}>

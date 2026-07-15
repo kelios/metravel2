@@ -52,20 +52,22 @@ import {
   DateEditorModal,
   SelectedDateFilter,
 } from '@/components/screens/calendar/calendarScreen.parts'
+import { translate as i18nT } from '@/i18n'
+
 
 function confirmRemoveFromCalendar(title: string, onConfirm: () => void) {
-  const cleanTitle = title?.trim() || 'этот маршрут'
+  const cleanTitle = title?.trim() || i18nT('calendarStatic:removeFallbackTravel')
   if (Platform.OS === 'web') {
-    if (typeof window !== 'undefined' && !window.confirm(`Убрать «${cleanTitle}» из календаря?`)) return
+    if (typeof window !== 'undefined' && !window.confirm(i18nT('calendar:app.tabs.calendar.ubrat_value1_iz_kalendarya_4710e4cf', { value1: cleanTitle }))) return
     onConfirm()
     return
   }
   Alert.alert(
-    'Убрать из календаря',
-    `«${cleanTitle}» исчезнет из календаря. Сам маршрут останется доступен.`,
+    i18nT('calendar:app.tabs.calendar.ubrat_iz_kalendarya_171623ca'),
+    i18nT('calendar:app.tabs.calendar.value1_ischeznet_iz_kalendarya_sam_marshrut__79185a97', { value1: cleanTitle }),
     [
-      { text: 'Отмена', style: 'cancel' },
-      { text: 'Убрать', style: 'destructive', onPress: onConfirm },
+      { text: i18nT('calendar:app.tabs.calendar.otmena_57439d65'), style: 'cancel' },
+      { text: i18nT('calendar:app.tabs.calendar.ubrat_77b9552b'), style: 'destructive', onPress: onConfirm },
     ]
   )
 }
@@ -76,9 +78,9 @@ function parseStatusParam(value: unknown): TravelStatus | null {
 }
 
 const CALENDAR_BREADCRUMBS: ProfileCollectionBreadcrumb[] = [
-  { label: 'Главная', path: '/', icon: 'home' },
-  { label: 'Профиль', path: '/profile' },
-  { label: 'Мой календарь', path: '/calendar' },
+  { get label() { return i18nT('calendarStatic:app.tabs.calendar.glavnaya_1fc899e5') }, path: '/', icon: 'home' },
+  { get label() { return i18nT('calendarStatic:app.tabs.calendar.profil_b32c82d5') }, path: '/profile' },
+  { get label() { return i18nT('calendarStatic:app.tabs.calendar.moy_kalendar_f9da1dd3') }, path: '/calendar' },
 ]
 
 export default function CalendarScreen() {
@@ -103,8 +105,8 @@ export default function CalendarScreen() {
   const seoBlock = useMemo(() => (
     <InstantSEO
       headKey="calendar"
-      title="Мой календарь | Metravel"
-      description="Мои планы и путешествия"
+      title={i18nT('calendar:app.tabs.calendar.moy_kalendar_metravel_1d39e960')}
+      description={i18nT('calendar:app.tabs.calendar.moi_plany_i_puteshestviya_a3cff280')}
       canonical={canonical}
       robots="noindex, nofollow"
     />
@@ -247,7 +249,7 @@ export default function CalendarScreen() {
     if (!dateEditor) return
 
     if (dateEditor.status === 'planned' && !dateEditor.value) {
-      setDateEditor({ ...dateEditor, error: 'Укажите дату' })
+      setDateEditor({ ...dateEditor, error: i18nT('calendar:app.tabs.calendar.ukazhite_datu_69ef3cd1') })
       return
     }
 
@@ -258,7 +260,7 @@ export default function CalendarScreen() {
     }
 
     if (dateEditor.value && !parseTravelStatusDateParts(dateEditor.value)) {
-      setDateEditor({ ...dateEditor, error: 'Введите дату в формате ГГГГ-ММ-ДД' })
+      setDateEditor({ ...dateEditor, error: i18nT('calendar:app.tabs.calendar.vvedite_datu_v_formate_gggg_mm_dd_6183452e') })
       return
     }
 
@@ -323,9 +325,9 @@ export default function CalendarScreen() {
         {seoBlock}
         <EmptyState
           icon="calendar"
-          title="Войдите в аккаунт"
-          description="Войдите, чтобы планировать путешествия и вести свой календарь."
-          action={{ label: 'Войти', onPress: handleLogin }}
+          title={i18nT('calendar:app.tabs.calendar.voydite_v_akkaunt_0eab41f5')}
+          description={i18nT('calendar:app.tabs.calendar.voydite_chtoby_planirovat_puteshestviya_i_ve_f13cf76a')}
+          action={{ label: i18nT('calendar:app.tabs.calendar.voyti_804d3851'), onPress: handleLogin }}
         />
       </SafeAreaView>
     )
@@ -353,7 +355,7 @@ export default function CalendarScreen() {
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {seoBlock}
       <ProfileCollectionHeader
-        title="Мой календарь"
+        title={i18nT('calendar:app.tabs.calendar.moy_kalendar_f9da1dd3')}
         onBackPress={handleBackToProfile}
         breadcrumbs={CALENDAR_BREADCRUMBS}
         onBreadcrumbPress={handleBreadcrumbPress}
@@ -398,10 +400,10 @@ export default function CalendarScreen() {
               isDateFilteredEmpty ? (
                 <EmptyState
                   icon="calendar"
-                  title="В этот день поездок нет"
-                  description={`За ${selectedDate} записей нет. Всего в разделе: ${activeEntries.length}. Сбросьте фильтр, чтобы увидеть все.`}
+                  title={i18nT('calendar:app.tabs.calendar.v_etot_den_poezdok_net_b39357eb')}
+                  description={i18nT('calendar:app.tabs.calendar.za_value1_zapisey_net_vsego_v_razdele_value2_1a757718', { value1: selectedDate, value2: activeEntries.length })}
                   variant="empty"
-                  action={{ label: 'Показать все', onPress: handleClearSelectedDate }}
+                  action={{ label: i18nT('calendar:app.tabs.calendar.pokazat_vse_302c971f'), onPress: handleClearSelectedDate }}
                 />
               ) : (
                 <EmptyState

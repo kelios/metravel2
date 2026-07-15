@@ -32,6 +32,8 @@ import { PointsListBulkModals } from './PointsListBulkModals'
 import { PointsListManualModal } from './PointsListManualModal'
 import { PointsListBulkMapBar } from './PointsListBulkMapBar'
 import EmptyState from '@/components/ui/EmptyState'
+import { translate as i18nT } from '@/i18n'
+
 
 const DEFAULT_POINT_COLORS: string[] = [
   'red',
@@ -350,9 +352,9 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
           <EmptyState
             icon="wifi-off"
             variant="error"
-            title="Не удалось загрузить точки"
-            description="Проверьте подключение к интернету и попробуйте ещё раз."
-            action={{ label: 'Повторить', onPress: () => refetch() }}
+            title={i18nT('map:components.UserPoints.PointsList.ne_udalos_zagruzit_tochki_a1d1dfdc')}
+            description={i18nT('map:components.UserPoints.PointsList.proverte_podklyuchenie_k_internetu_i_poprobu_e66933f1')}
+            action={{ label: i18nT('map:components.UserPoints.PointsList.povtorit_0641a83c'), onPress: () => refetch() }}
           />
         </View>
       );
@@ -362,9 +364,9 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         <EmptyState
           icon="map-pin"
           variant="empty"
-          title="У вас пока нет точек"
-          description="Сохраняйте интересные места на карте или добавьте свою точку вручную."
-          action={{ label: 'Добавить точку', onPress: openManualAdd }}
+          title={i18nT('map:components.UserPoints.PointsList.u_vas_poka_net_tochek_7f6af4ba')}
+          description={i18nT('map:components.UserPoints.PointsList.sohranyayte_interesnye_mesta_na_karte_ili_do_04659fd5')}
+          action={{ label: i18nT('map:components.UserPoints.PointsList.dobavit_tochku_c3c1a974'), onPress: openManualAdd }}
         />
       </View>
     );

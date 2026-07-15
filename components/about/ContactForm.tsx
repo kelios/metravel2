@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useAboutStyles } from './aboutStyles';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 type ContactFormProps = {
   response: { text: string; error: boolean };
@@ -75,8 +77,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   return (
   <View style={styles.contactSection}>
     <View style={styles.contactHeader}>
-      <Text style={styles.contactTitle}>Связаться с нами</Text>
-      <Text style={styles.contactSubtitle}>Есть вопросы или предложения? Напишите нам!</Text>
+      <Text style={styles.contactTitle}>{i18nT('home:components.about.ContactForm.svyazatsya_s_nami_6710884b')}</Text>
+      <Text style={styles.contactSubtitle}>{i18nT('home:components.about.ContactForm.est_voprosy_ili_predlozheniya_napishite_nam_9548fc8e')}</Text>
     </View>
 
     <View style={styles.form}>
@@ -94,7 +96,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         autoComplete="off"
-        placeholder="Do not fill"
+        placeholder={i18nT('home:components.about.ContactForm.do_not_fill_d576b690')}
       />
 
       <TextInput
@@ -104,7 +106,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({
           inputFocus.name && styles.inputFocused,
           globalFocusStyles.focusable,
         ]}
-        placeholder="Имя"
+        placeholder={i18nT('home:components.about.ContactForm.imya_8ff1243b')}
+        accessibilityLabel={i18nT('home:components.about.ContactForm.imya_8ff1243b')}
         placeholderTextColor={colors.textMuted}
         value={name}
         onChangeText={onChangeName}
@@ -117,7 +120,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       />
       {invalidName && (
         <View style={styles.errorContainer}>
-          <Text style={styles.fieldErr}>Укажите имя</Text>
+          <Text style={styles.fieldErr}>{i18nT('home:components.about.ContactForm.ukazhite_imya_111e75b0')}</Text>
         </View>
       )}
 
@@ -129,7 +132,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({
           inputFocus.email && styles.inputFocused,
           globalFocusStyles.focusable,
         ]}
-        placeholder="Email"
+        placeholder={i18nT('home:components.about.ContactForm.email_9d826bfd')}
+        accessibilityLabel={i18nT('home:components.about.ContactForm.email_9d826bfd')}
         placeholderTextColor={colors.textMuted}
         value={email}
         onChangeText={onChangeEmail}
@@ -144,7 +148,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       />
       {invalidEmail && (
         <View style={styles.errorContainer}>
-          <Text style={styles.fieldErr}>Неверный e-mail</Text>
+          <Text style={styles.fieldErr}>{i18nT('home:components.about.ContactForm.nevernyy_e_mail_31ba55fd')}</Text>
         </View>
       )}
 
@@ -157,7 +161,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({
           inputFocus.message && styles.inputFocused,
           globalFocusStyles.focusable,
         ]}
-        placeholder="Сообщение"
+        placeholder={i18nT('home:components.about.ContactForm.soobschenie_a7b64c0e')}
+        accessibilityLabel={i18nT('home:components.about.ContactForm.soobschenie_a7b64c0e')}
         placeholderTextColor={colors.textMuted}
         value={message}
         onChangeText={onChangeMessage}
@@ -168,10 +173,10 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         onBlur={onBlurMessage}
         onSubmitEditing={Platform.OS !== 'web' ? () => onSubmit() : undefined}
       />
-      <Text style={styles.helperText}>Shift+Enter — новая строка, Enter — отправить (web)</Text>
+      <Text style={styles.helperText}>{i18nT('home:components.about.ContactForm.shift_enter_novaya_stroka_enter_otpravit_web_26a15cc6')}</Text>
       {invalidMessage && (
         <View style={styles.errorContainer}>
-          <Text style={styles.fieldErr}>Напишите сообщение</Text>
+          <Text style={styles.fieldErr}>{i18nT('home:components.about.ContactForm.napishite_soobschenie_6a0a05bf')}</Text>
         </View>
       )}
 
@@ -180,16 +185,15 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         style={({ pressed }) => [styles.agreeRow, pressed && styles.agreeRowPressed]}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: agree }}
-        accessibilityLabel="Согласен на обработку персональных данных"
+        accessibilityLabel={i18nT('home:components.about.ContactForm.soglasen_na_obrabotku_personalnyh_dannyh_2823c5ba')}
       >
         <View style={[styles.checkbox, agree && styles.checkboxChecked]}>
           {agree ? <Feather name="check" size={15} color={colors.textOnPrimary} /> : null}
         </View>
         <Text style={[styles.agreeLabel, invalidAgree && styles.fieldErr]}>
-          Согласен(на) на обработку персональных данных
-        </Text>
+          {i18nT('home:components.about.ContactForm.soglasen_na_na_obrabotku_personalnyh_dannyh_ffa70353')}</Text>
       </Pressable>
-      {invalidAgree && <Text style={styles.fieldErr}>Нужно согласие</Text>}
+      {invalidAgree && <Text style={styles.fieldErr}>{i18nT('home:components.about.ContactForm.nuzhno_soglasie_add49b70')}</Text>}
 
       <Pressable
         onPress={onSubmit}
@@ -200,15 +204,15 @@ export const ContactForm: React.FC<ContactFormProps> = ({
           pressed && !isDisabled && styles.submitButtonPressed,
         ]}
         accessibilityRole="button"
-        accessibilityLabel={sending ? 'Отправка сообщения' : 'Отправить сообщение'}
+        accessibilityLabel={sending ? i18nT('home:components.about.ContactForm.otpravka_soobscheniya_49acc4df') : i18nT('home:components.about.ContactForm.otpravit_soobschenie_44e9eb71')}
       >
         {sending ? (
           <View style={styles.submitButtonContent}>
             <ActivityIndicator size="small" color={colors.textOnPrimary} style={{ marginRight: 8 }} />
-            <Text style={styles.submitButtonText}>Отправка…</Text>
+            <Text style={styles.submitButtonText}>{i18nT('home:components.about.ContactForm.otpravka_68816a2a')}</Text>
           </View>
         ) : (
-          <Text style={styles.submitButtonText}>Отправить</Text>
+          <Text style={styles.submitButtonText}>{i18nT('home:components.about.ContactForm.otpravit_879fca58')}</Text>
         )}
       </Pressable>
     </View>

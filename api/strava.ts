@@ -1,5 +1,6 @@
 import { apiClient } from '@/api/client';
 import { ApiError } from '@/api/clientErrors';
+import { translate as i18nT } from '@/i18n';
 
 export type StravaConnectionStatus =
   | 'not_connected'
@@ -208,7 +209,7 @@ const normalizeActivity = (payload: unknown): StravaActivitySummary | null => {
   if (!id) return null;
   return {
     id,
-    name: asString(payload.name ?? payload.title) ?? 'Активность Strava',
+    name: asString(payload.name ?? payload.title) ?? i18nT('errorsStatic:api.strava.activityFallback'),
     type: asString(payload.type),
     sportType: asString(payload.sport_type ?? payload.sportType),
     startDate: asString(payload.start_date ?? payload.startDate),
@@ -292,9 +293,9 @@ export const fetchStravaStatus = async (): Promise<StravaStatusResponse> => {
 
 export const startStravaConnect = async (): Promise<StravaConnectResponse> => {
   const payload = await apiClient.post<unknown>(STRAVA_ENDPOINTS.connectStart);
-  if (!isObject(payload)) throw new ApiError(502, 'Некорректный ответ Strava connect');
+  if (!isObject(payload)) throw new ApiError(502, i18nT('errorsStatic:api.strava.invalidConnectResponse'));
   const authUrl = asString(payload.authUrl ?? payload.auth_url);
-  if (!authUrl) throw new ApiError(502, 'Backend не вернул Strava authUrl');
+  if (!authUrl) throw new ApiError(502, i18nT('errorsStatic:api.strava.authUrlMissing'));
   return { authUrl };
 };
 

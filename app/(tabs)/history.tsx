@@ -26,6 +26,8 @@ import { pluralizeRu } from '@/utils/pluralize';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { useViewHistoryStore, type ViewHistoryItem } from '@/stores/viewHistoryStore';
+import { translate as i18nT } from '@/i18n'
+
 
 // На native глобальный HeaderContextBar уже показывает «Назад» + заголовок «История»
 // для /history (см. components/layout/customHeaderModel.ts), поэтому in-page шапку
@@ -296,7 +298,7 @@ export default function HistoryScreen() {
                         <View style={styles.cardCaptionRow}>
                             <Feather name="eye" size={13} color={colors.textMuted} />
                             <Text style={styles.cardCaptionText} numberOfLines={1}>
-                                Просмотрено {viewedLabel}
+                                {i18nT('shared:app.tabs.history.prosmotreno_708c9fc4')}{viewedLabel}
                             </Text>
                         </View>
                     ) : null}
@@ -310,10 +312,10 @@ export default function HistoryScreen() {
         if (!clearHistory) return;
 
         const confirmed = await confirmAction({
-            title: 'Очистить историю',
-            message: 'Очистить историю просмотров?',
-            confirmText: 'Очистить',
-            cancelText: 'Отмена',
+            title: i18nT('shared:app.tabs.history.ochistit_istoriyu_b56d803a'),
+            message: i18nT('shared:app.tabs.history.ochistit_istoriyu_prosmotrov_f8fc9029'),
+            confirmText: i18nT('shared:app.tabs.history.ochistit_60c1f61d'),
+            cancelText: i18nT('shared:app.tabs.history.otmena_373b932d'),
         });
         if (!confirmed) return;
 
@@ -331,7 +333,7 @@ export default function HistoryScreen() {
                             style={styles.nativeClearButton}
                             onPress={handleClear}
                             accessibilityRole="button"
-                            accessibilityLabel="Очистить историю просмотров"
+                            accessibilityLabel={i18nT('shared:app.tabs.history.ochistit_istoriyu_prosmotrov_9a61aea8')}
                         >
                             <Feather name="trash-2" size={16} color={colors.danger} />
                         </Pressable>
@@ -341,12 +343,12 @@ export default function HistoryScreen() {
 
             return (
                 <ProfileCollectionHeader
-                    title="Вы смотрели"
+                    title={i18nT('shared:app.tabs.history.vy_smotreli_e2be38ed')}
                     dense
                     onBackPress={handleBackToProfile}
                     showClearButton={showClear}
                     onClearPress={handleClear}
-                    clearAccessibilityLabel="Очистить историю просмотров"
+                    clearAccessibilityLabel={i18nT('shared:app.tabs.history.ochistit_istoriyu_prosmotrov_9a61aea8')}
                     compactClear
                 />
             );
@@ -364,11 +366,10 @@ export default function HistoryScreen() {
                         </View>
 
                         <View style={styles.summaryCopy}>
-                            <Text style={styles.summaryEyebrow}>Вы смотрели</Text>
-                            <Text style={styles.summaryTitle}>Быстрый возврат к тому, что уже смотрел</Text>
+                            <Text style={styles.summaryEyebrow}>{i18nT('shared:app.tabs.history.vy_smotreli_e2be38ed')}</Text>
+                            <Text style={styles.summaryTitle}>{i18nT('shared:app.tabs.history.bystryy_vozvrat_k_tomu_chto_uzhe_smotrel_8d05fc78')}</Text>
                             <Text style={styles.summaryDescription}>
-                                После сворачивания или перезапуска приложения здесь остаются последние маршруты и статьи.
-                            </Text>
+                                {i18nT('shared:app.tabs.history.posle_svorachivaniya_ili_perezapuska_prilozh_d129bc74')}</Text>
                         </View>
                     </View>
 
@@ -376,15 +377,14 @@ export default function HistoryScreen() {
                         <View style={styles.summaryMetaPill}>
                             <Feather name="layers" size={16} color={colors.primaryDark} />
                             <Text style={styles.summaryMetaText}>
-                                {data.length} {pluralizeRu(data.length, 'элемент', 'элемента', 'элементов')} в истории
-                            </Text>
+                                {data.length} {pluralizeRu(data.length, i18nT('shared:app.tabs.history.element_503c6985'), i18nT('shared:app.tabs.history.elementa_0031c492'), i18nT('shared:app.tabs.history.elementov_8c06bb27'))} {i18nT('shared:app.tabs.history.v_istorii_6c948436')}</Text>
                         </View>
 
                         {latestHistoryTitle ? (
                             <View style={styles.summaryMetaPill}>
                                 <Feather name="arrow-up-right" size={16} color={colors.primaryDark} />
                                 <Text style={styles.summaryMetaText} numberOfLines={1}>
-                                    Последнее: {latestHistoryTitle}
+                                    {i18nT('shared:app.tabs.history.poslednee_bc246b4e')}{latestHistoryTitle}
                                 </Text>
                             </View>
                         ) : null}
@@ -392,7 +392,7 @@ export default function HistoryScreen() {
 
                     <View style={styles.summaryActions}>
                         <Button
-                            label={latestHistoryItem ? 'Продолжить с последнего' : 'Продолжить поиск'}
+                            label={latestHistoryItem ? i18nT('shared:app.tabs.history.prodolzhit_s_poslednego_22c6c480') : i18nT('shared:app.tabs.history.prodolzhit_poisk_9044fea2')}
                             onPress={() =>
                                 latestHistoryItem
                                     ? router.push(latestHistoryItem.url as any)
@@ -403,7 +403,7 @@ export default function HistoryScreen() {
                             style={styles.summaryActionButton}
                         />
                         <Button
-                            label="Случайный маршрут"
+                            label={i18nT('shared:app.tabs.history.sluchaynyy_marshrut_5309a92b')}
                             onPress={() => router.push('/roulette')}
                             variant="outline"
                             size="md"
@@ -438,10 +438,10 @@ export default function HistoryScreen() {
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <EmptyState
                     icon="clock"
-                    title="Войдите в аккаунт"
-                    description="Войдите, чтобы сохранять историю просмотров и синхронизировать её между устройствами."
+                    title={i18nT('shared:app.tabs.history.voydite_v_akkaunt_329ef9aa')}
+                    description={i18nT('shared:app.tabs.history.voydite_chtoby_sohranyat_istoriyu_prosmotrov_0fcb9b17')}
                     action={{
-                        label: 'Войти',
+                        label: i18nT('shared:app.tabs.history.voyti_a42df773'),
                         onPress: () => router.push(buildLoginHref({ redirect: '/history', intent: 'history' }) as any),
                     }}
                 />
@@ -469,15 +469,15 @@ export default function HistoryScreen() {
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <EmptyState
                     icon="clock"
-                    title="Ты ещё не открывал маршруты"
-                    description="Открой любой маршрут — он автоматически сохранится в истории просмотров."
+                    title={i18nT('shared:app.tabs.history.ty_esche_ne_otkryval_marshruty_e7f97c1c')}
+                    description={i18nT('shared:app.tabs.history.otkroy_lyuboy_marshrut_on_avtomaticheski_soh_b6b47c2a')}
                     variant="empty"
                     action={{
-                        label: 'Начать исследовать',
+                        label: i18nT('shared:app.tabs.history.nachat_issledovat_e4fa48dc'),
                         onPress: () => router.push('/search'),
                     }}
                     secondaryAction={{
-                        label: 'Случайный маршрут',
+                        label: i18nT('shared:app.tabs.history.sluchaynyy_marshrut_5309a92b'),
                         onPress: () => router.push('/roulette'),
                     }}
                 />
@@ -490,8 +490,8 @@ export default function HistoryScreen() {
             {isFocused && (
                 <InstantSEO
                     headKey="history"
-                    title="Вы смотрели | Metravel"
-                    description="История просмотренных путешествий"
+                    title={i18nT('shared:app.tabs.history.vy_smotreli_metravel_b6568942')}
+                    description={i18nT('shared:app.tabs.history.istoriya_prosmotrennyh_puteshestviy_af016f88')}
                     canonical={buildCanonicalUrl('/history')}
                     robots="noindex, nofollow"
                 />

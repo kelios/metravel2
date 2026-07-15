@@ -18,6 +18,8 @@ import { hasToastBeenShown } from '@/utils/errorHelpers';
 import { showToastMessage } from '@/utils/toast';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { buildQuickDraftRoute } from '@/utils/travelQuickDraftNavigation';
+import { translate as i18nT } from '@/i18n'
+
 
 interface StepMeta {
   title?: string;
@@ -56,9 +58,6 @@ interface TravelWizardStepBasicProps {
 const EMPTY_ERRORS: string[] = [];
 const MIN_DRAFT_NAME_LENGTH = 3;
 const KEYBOARD_BEHAVIOR = Platform.OS === 'ios' ? 'padding' : 'height';
-const DEFAULT_TITLE = 'О маршруте';
-const DEFAULT_SUBTITLE = 'Укажите название и кратко опишите маршрут — это увидят в карточке и при публикации.';
-const DEFAULT_NEXT_LABEL = 'Далее';
 
 const getProgressPercent = (progress: number) => {
   const clampedProgress = Math.min(Math.max(progress, 0), 1);
@@ -161,8 +160,8 @@ function TravelWizardStepBasic({
     if (name.length < MIN_DRAFT_NAME_LENGTH) {
       void showToastMessage({
         type: 'error',
-        text1: 'Заполните название',
-        text2: 'Минимум 3 символа для сохранения черновика',
+        text1: i18nT('travel:components.travel.TravelWizardStepBasic.zapolnite_nazvanie_dcc2bb40'),
+        text2: i18nT('travel:components.travel.TravelWizardStepBasic.minimum_3_simvola_dlya_sohraneniya_chernovik_7c14db5e'),
       });
       return;
     }
@@ -171,8 +170,8 @@ function TravelWizardStepBasic({
       const savedTravel = await onManualSave();
       void showToastMessage({
         type: 'success',
-        text1: 'Черновик сохранен',
-        text2: 'Вы можете вернуться к нему позже',
+        text1: i18nT('travel:components.travel.TravelWizardStepBasic.chernovik_sohranen_7e87a328'),
+        text2: i18nT('travel:components.travel.TravelWizardStepBasic.vy_mozhete_vernutsya_k_nemu_pozzhe_3705c03d'),
       });
 
       setTimeout(() => {
@@ -182,8 +181,8 @@ function TravelWizardStepBasic({
       if (!hasToastBeenShown(error)) {
         void showToastMessage({
           type: 'error',
-          text1: 'Ошибка сохранения',
-          text2: 'Попробуйте еще раз',
+          text1: i18nT('travel:components.travel.TravelWizardStepBasic.oshibka_sohraneniya_aa67ed89'),
+          text2: i18nT('travel:components.travel.TravelWizardStepBasic.poprobuyte_esche_raz_55dd0b1f'),
         });
       }
     }
@@ -199,19 +198,19 @@ function TravelWizardStepBasic({
         <TravelWizardHeader
           canGoBack={!!onExit}
           onBack={onExit}
-          title={stepMeta?.title ?? DEFAULT_TITLE}
-          subtitle={stepMeta?.subtitle ?? DEFAULT_SUBTITLE}
+          title={stepMeta?.title ?? i18nT('travel:components.travel.TravelWizardStepBasic.default.title')}
+          subtitle={stepMeta?.subtitle ?? i18nT('travel:components.travel.TravelWizardStepBasic.default.subtitle')}
           progressPercent={progressPercent}
           errorCount={validation.errors.length}
           warningCount={validation.warnings.length}
           autosaveBadge={autosaveBadge}
           isSaveInFlight={isSaveInFlight}
           onPrimary={onGoNext}
-          primaryLabel={stepMeta?.nextLabel ?? DEFAULT_NEXT_LABEL}
+          primaryLabel={stepMeta?.nextLabel ?? i18nT('travel:components.travel.TravelWizardStepBasic.default.nextLabel')}
           onSave={onManualSave}
           onQuickDraft={handleQuickDraft}
-          quickDraftLabel="Быстрый черновик"
-          tipTitle={contextualTipsBody ? 'Советы' : stepMeta?.tipTitle}
+          quickDraftLabel={i18nT('travel:components.travel.TravelWizardStepBasic.bystryy_chernovik_fade1968')}
+          tipTitle={contextualTipsBody ? i18nT('travel:components.travel.TravelWizardStepBasic.sovety_2e15efc4') : stepMeta?.tipTitle}
           tipBody={contextualTipsBody ?? stepMeta?.tipBody}
           currentStep={currentStep}
           totalSteps={totalSteps}
@@ -252,14 +251,14 @@ function TravelWizardStepBasic({
           >
             <Animated.View style={[styles.contentInner, stepAnimatedStyle]}>
               <ValidatedTextInput
-                label="Название путешествия"
+                label={i18nT('travel:components.travel.TravelWizardStepBasic.nazvanie_puteshestviya_22bb42d3')}
                 value={formData.name || ''}
                 onChange={handleNameChange}
                 fieldName="name"
                 step={1}
                 required
-                placeholder="Например: Неделя в Грузии"
-                hint="Краткое и понятное название, которое отражает суть маршрута"
+                placeholder={i18nT('travel:components.travel.TravelWizardStepBasic.naprimer_nedelya_v_gruzii_87fa16d7')}
+                hint={i18nT('travel:components.travel.TravelWizardStepBasic.kratkoe_i_ponyatnoe_nazvanie_kotoroe_otrazha_1987dd88')}
                 nativeID="field-name"
               />
 

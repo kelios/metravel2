@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { validateTravelForm, ValidationError, ValidationResult, type TravelFormValidation } from '@/utils/formValidation';
+import { translate as i18nT } from '@/i18n'
+
 
 interface UseOptimizedValidationOptions {
   enabled?: boolean;
@@ -93,12 +95,12 @@ export function useOptimizedValidation<T extends object>(
             setState(prev => ({
               ...prev,
               isValidating: false,
-              errors: [{ field: 'general', message: 'Validation error occurred' }],
+              errors: [{ field: 'general', message: i18nT('seo:hooks.useOptimizedValidation.validation_error_occurred_0f691a61') }],
               isValid: false,
             }));
           }
           
-          resolve({ isValid: false, errors: [{ field: 'general', message: 'Validation error occurred' }] });
+          resolve({ isValid: false, errors: [{ field: 'general', message: i18nT('seo:hooks.useOptimizedValidation.validation_error_occurred_0f691a61') }] });
         }
       }, debounce);
     });
@@ -120,7 +122,7 @@ export function useOptimizedValidation<T extends object>(
       return result.errors.find(error => error.field === fieldName) || null;
     } catch (error) {
       console.error(`Field validation error for ${fieldName}:`, error);
-      return { field: fieldName, message: 'Validation error' };
+      return { field: fieldName, message: i18nT('seo:hooks.useOptimizedValidation.validation_error_c499bfe8') };
     }
   }, [data]);
 
@@ -131,7 +133,7 @@ export function useOptimizedValidation<T extends object>(
       return result.errors.filter(error => fieldNames.includes(error.field));
     } catch (error) {
       console.error('Fields validation error:', error);
-      return fieldNames.map(field => ({ field, message: 'Validation error' }));
+      return fieldNames.map(field => ({ field, message: i18nT('seo:hooks.useOptimizedValidation.validation_error_c499bfe8') }));
     }
   }, [data]);
 

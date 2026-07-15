@@ -18,6 +18,8 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { createMapStructuredData } from '@/utils/discoverySeo';
 import Map from '@/components/MapPage/Map';
+import { translate as i18nT } from '@/i18n'
+
 
 const LazyMap = React.lazy(() => import('@/components/MapPage/Map.web'));
 
@@ -72,7 +74,7 @@ export default function QuestsMapScreen() {
                     coord: `${m.lat},${m.lng}`,
                     address: m.title,
                     travelImageThumbUrl: coverUri,
-                    categoryName: 'Квест',
+                    categoryName: i18nT('quests:app.tabs.quests.map.kvest_c79877a6'),
                     urlTravel: `/quests/${m.cityId}/${m.id}`,
                     articleUrl: undefined,
                     questMeta: {
@@ -107,8 +109,8 @@ export default function QuestsMapScreen() {
         router.replace('/quests'); // всегда уходим на страницу квестов
     };
     const canonical = buildCanonicalUrl('/quests/map');
-    const title = 'Карта квестов и городских маршрутов | Metravel';
-    const description = 'Карта квестов Metravel: находите городские маршруты, точки старта и приключения по городам и паркам.';
+    const title = i18nT('quests:app.tabs.quests.map.karta_kvestov_i_gorodskih_marshrutov_metrave_07a69045');
+    const description = i18nT('quests:app.tabs.quests.map.karta_kvestov_metravel_nahodite_gorodskie_ma_4412b76b');
     const structuredData = useMemo(
         () =>
             createMapStructuredData({
@@ -162,7 +164,7 @@ export default function QuestsMapScreen() {
                     onPress={handleBack}
                     style={[styles.fabBack, { top: Math.max(12, insets.top + 4) }]}
                     accessibilityRole="button"
-                    accessibilityLabel="Назад"
+                    accessibilityLabel={i18nT('quests:app.tabs.quests.map.nazad_855672ef')}
                 >
                     <Feather name="arrow-left" size={18} color={colors.text} />
                 </Pressable>
@@ -173,10 +175,10 @@ export default function QuestsMapScreen() {
     if (!isWeb) {
         return (
             <View style={styles.fallback}>
-                <Text style={styles.fallbackText}>Карта доступна в веб-версии</Text>
+                <Text style={styles.fallbackText}>{i18nT('quests:app.tabs.quests.map.karta_dostupna_v_veb_versii_85f3b9c2')}</Text>
                 <Pressable onPress={handleBack} style={styles.backBtn}>
                     <Feather name="arrow-left" size={16} color={colors.textOnPrimary} />
-                    <Text style={styles.backBtnTxt}>Назад</Text>
+                    <Text style={styles.backBtnTxt}>{i18nT('quests:app.tabs.quests.map.nazad_855672ef')}</Text>
                 </Pressable>
             </View>
         );
@@ -185,8 +187,11 @@ export default function QuestsMapScreen() {
     if (questsLoading) {
         return (
             <View style={styles.fallback}>
-                <ActivityIndicator color={colors.primaryDark} />
-                <Text style={styles.fallbackText}>Загружаем карту квестов…</Text>
+                <ActivityIndicator
+                    color={colors.primaryDark}
+                    accessibilityLabel={i18nT('quests:app.tabs.quests.map.zagruzhaem_kartu_kvestov_6b50ed3f')}
+                />
+                <Text style={styles.fallbackText}>{i18nT('quests:app.tabs.quests.map.zagruzhaem_kartu_kvestov_6b50ed3f')}</Text>
             </View>
         );
     }
@@ -195,10 +200,10 @@ export default function QuestsMapScreen() {
         return (
             <View style={styles.fallback}>
                 <Feather name="map" size={48} color={colors.textMuted} />
-                <Text style={styles.fallbackText}>Нет квестов с координатами для отображения на карте</Text>
+                <Text style={styles.fallbackText}>{i18nT('quests:app.tabs.quests.map.net_kvestov_s_koordinatami_dlya_otobrazheniy_6ec1ec92')}</Text>
                 <Pressable onPress={handleBack} style={styles.backBtn}>
                     <Feather name="arrow-left" size={16} color={colors.textOnPrimary} />
-                    <Text style={styles.backBtnTxt}>К списку квестов</Text>
+                    <Text style={styles.backBtnTxt}>{i18nT('quests:app.tabs.quests.map.k_spisku_kvestov_e40d397b')}</Text>
                 </Pressable>
             </View>
         );
@@ -231,7 +236,10 @@ export default function QuestsMapScreen() {
             )}
             <Suspense fallback={
                 <View style={styles.fallback}>
-                    <ActivityIndicator color={colors.primaryDark} />
+                    <ActivityIndicator
+                        color={colors.primaryDark}
+                        accessibilityLabel={i18nT('quests:app.tabs.quests.map.zagruzhaem_kartu_kvestov_6b50ed3f')}
+                    />
                 </View>
             }>
                 <LazyMap
@@ -252,7 +260,7 @@ export default function QuestsMapScreen() {
                 onPress={handleBack}
                 style={[styles.fabBack, { top: Math.max(12, insets.top + 4) }]}
                 accessibilityRole="button"
-                accessibilityLabel="Назад"
+                accessibilityLabel={i18nT('quests:app.tabs.quests.map.nazad_855672ef')}
             >
                 <Feather name="arrow-left" size={18} color={colors.text} />
             </Pressable>

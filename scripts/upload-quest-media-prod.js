@@ -58,22 +58,22 @@ const QUEST_MEDIA = [
     },
     {
         quest_id: 'krakow-dragon', assetsDir: 'krakowDragon', cover: 'cover.png',
-        stepImages: { '1-rynek': '1.png', '2-mariacki': '2.png', '3-sukiennice': '3.png', '4-barbakan': '4.png', '5-kazimierz': '5.png', '6-wawel': '6.png', '7-smocza-jama': '7.png' },
+        stepImages: {},
         finaleVideo: 'krakowDragon.mp4',
     },
     {
         quest_id: 'pakocim-voices', assetsDir: 'pakocim', cover: 'cover.png',
-        stepImages: { '1-herb': '1.png', '2-palace': '1.png', '3-pond': '1.png', '4-oak': '1.png', '5-hedgehog': '1.png', '6-birdhouses': '1.png', '7-slona-woda': '1.png', '8-fort': '1.png', '9-bridge': '1.png', 'bonus-cafe': '1.png' },
+        stepImages: {},
         finaleVideo: 'prokocim.mp4',
     },
     {
         quest_id: 'barkovshchina-spirits', assetsDir: 'barkovshchina', cover: 'cover.png',
-        stepImages: { 'point-1': '1.png', 'point-1-2': '1.png', 'point-2': '1.png', 'point-2-2': '1.png', 'point-3': '1.png', 'point-3-2': '1.png' },
+        stepImages: {},
         finaleVideo: 'forest.mp4',
     },
     {
         quest_id: 'minsk-cmok', assetsDir: 'minskDragon', cover: 'cover.png',
-        stepImages: { '1-forest-memory': '1.png', '2-sun-memory': '1.png', '3-star-memory': '1.png', '4-voice-memory': '1.png', '5-memory-memory': '1.png', '6-word-memory': '1.png', '7-water-memory': '1.png' },
+        stepImages: {},
         finaleVideo: 'minskDragon.mp4',
     },
 ];

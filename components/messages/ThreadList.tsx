@@ -6,6 +6,8 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import type { MessageThread } from '@/api/messages';
+import { translate as i18nT } from '@/i18n'
+
 
 interface ThreadListProps {
     threads: MessageThread[];
@@ -49,11 +51,11 @@ function ThreadList({
                 setConfirmDeleteId((prev) => (prev === thread.id ? null : thread.id));
             } else {
                 Alert.alert(
-                    'Удалить диалог',
-                    'Вы уверены, что хотите удалить этот диалог?',
+                    i18nT('messages:components.messages.ThreadList.udalit_dialog_690a8668'),
+                    i18nT('messages:components.messages.ThreadList.vy_uvereny_chto_hotite_udalit_etot_dialog_cdd9a62d'),
                     [
-                        { text: 'Отмена', style: 'cancel' },
-                        { text: 'Удалить', style: 'destructive', onPress: () => onDeleteThread(thread.id) },
+                        { text: i18nT('messages:components.messages.ThreadList.otmena_c248c023'), style: 'cancel' },
+                        { text: i18nT('messages:components.messages.ThreadList.udalit_004e3e97'), style: 'destructive', onPress: () => onDeleteThread(thread.id) },
                     ],
                 );
             }
@@ -79,11 +81,11 @@ function ThreadList({
             }
 
             Alert.alert(
-                'Удалить диалог',
-                'Вы уверены, что хотите удалить этот диалог?',
+                i18nT('messages:components.messages.ThreadList.udalit_dialog_690a8668'),
+                i18nT('messages:components.messages.ThreadList.vy_uvereny_chto_hotite_udalit_etot_dialog_cdd9a62d'),
                 [
-                    { text: 'Отмена', style: 'cancel' },
-                    { text: 'Удалить', style: 'destructive', onPress: () => onDeleteThread(threadId) },
+                    { text: i18nT('messages:components.messages.ThreadList.otmena_c248c023'), style: 'cancel' },
+                    { text: i18nT('messages:components.messages.ThreadList.udalit_004e3e97'), style: 'destructive', onPress: () => onDeleteThread(threadId) },
                 ],
             );
         },
@@ -104,7 +106,7 @@ function ThreadList({
             if (otherId != null && participantNames.has(otherId)) {
                 return participantNames.get(otherId)!;
             }
-            return 'Пользователь';
+            return i18nT('messages:components.messages.ThreadList.polzovatel_3206a1df');
         },
         [getOtherParticipantId, participantNames]
     );
@@ -157,18 +159,23 @@ function ThreadList({
             const hasUnread = unreadCount > 0;
             return (
                 <View>
-                    <Pressable
-                        style={({ pressed }) => [
+                    <View
+                        style={[
                             styles.threadItem,
                             { backgroundColor: isSelected ? colors.primarySoft : colors.surface, borderColor: isSelected ? colors.primary : colors.borderLight },
                             hasUnread && !isSelected && { borderColor: colors.primary, borderWidth: 1.5 },
+                        ]}
+                    >
+                    <Pressable
+                        style={({ pressed }) => [
+                            styles.threadMainAction,
                             pressed && { opacity: 0.85 },
                         ]}
                         onPress={() => onSelectThread(item)}
                         onLongPress={() => handleLongPressThread(item)}
                         delayLongPress={500}
                         accessibilityRole="button"
-                        accessibilityLabel={hasUnread ? `Диалог с ${name}, ${unreadCount} непрочитанных` : `Диалог с ${name}`}
+                        accessibilityLabel={hasUnread ? i18nT('messages:components.messages.ThreadList.dialog_s_value1_value2_neprochitannyh_62b679f3', { value1: name, value2: unreadCount }) : i18nT('messages:components.messages.ThreadList.dialog_s_value1_0ed1fb8e', { value1: name })}
                     >
                     <View style={[styles.avatar, { backgroundColor: hasUnread ? colors.primary : colors.primarySoft }]}>
                         {avatarUrl ? (
@@ -201,37 +208,41 @@ function ThreadList({
                             </View>
                         </View>
                     </View>
-                    <View style={styles.threadActions}>
-                        {onDeleteThread && (
-                            <IconButton
-                                icon={<Feather name="trash-2" size={14} color={colors.textSecondary} />}
-                                label={`Удалить диалог с ${name}`}
-                                size="sm"
-                                onPress={() => handleDeletePress(item.id)}
-                                showTooltip={Platform.OS === 'web'}
-                            />
-                        )}
+                    <View style={styles.threadChevron}>
                         <Feather name="chevron-right" size={18} color={hasUnread ? colors.primary : colors.textMuted} />
                     </View>
                     </Pressable>
+                    {onDeleteThread && (
+                        <View style={styles.threadActions}>
+                            <IconButton
+                                icon={<Feather name="trash-2" size={14} color={colors.textSecondary} />}
+                                label={i18nT('messages:components.messages.ThreadList.udalit_dialog_s_value1_175bc2fd', { value1: name })}
+                                size="sm"
+                                style={styles.threadDeleteButton}
+                                onPress={() => handleDeletePress(item.id)}
+                                showTooltip={Platform.OS === 'web'}
+                            />
+                        </View>
+                    )}
+                    </View>
                 {confirmDeleteId === item.id && (
                     <View style={styles.deleteConfirmRow}>
                         <Pressable
                             onPress={() => handleConfirmDelete(item.id)}
                             style={[styles.deleteConfirmButton, { backgroundColor: colors.danger }]}
                             accessibilityRole="button"
-                            accessibilityLabel="Подтвердить удаление диалога"
+                            accessibilityLabel={i18nT('messages:components.messages.ThreadList.podtverdit_udalenie_dialoga_e5fd0b3d')}
                         >
                             <Feather name="trash-2" size={14} color={colors.textInverse} />
-                            <Text style={[styles.deleteConfirmText, { color: colors.textInverse }]}>Удалить диалог</Text>
+                            <Text style={[styles.deleteConfirmText, { color: colors.textInverse }]}>{i18nT('messages:components.messages.ThreadList.udalit_dialog_690a8668')}</Text>
                         </Pressable>
                         <Pressable
                             onPress={() => setConfirmDeleteId(null)}
                             style={[styles.deleteConfirmButton, { backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: colors.borderLight }]}
                             accessibilityRole="button"
-                            accessibilityLabel="Отмена"
+                            accessibilityLabel={i18nT('messages:components.messages.ThreadList.otmena_c248c023')}
                         >
-                            <Text style={[styles.deleteConfirmText, { color: colors.text }]}>Отмена</Text>
+                            <Text style={[styles.deleteConfirmText, { color: colors.text }]}>{i18nT('messages:components.messages.ThreadList.otmena_c248c023')}</Text>
                         </Pressable>
                     </View>
                 )}
@@ -252,12 +263,12 @@ function ThreadList({
                 ]}
                 onPress={onNewConversation}
                 accessibilityRole="button"
-                accessibilityLabel="Новый диалог"
+                accessibilityLabel={i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a')}
             >
                 <View style={[styles.newConversationIcon, { backgroundColor: colors.primary }]}>
                     <Feather name="edit" size={18} color={colors.textInverse} />
                 </View>
-                <Text style={[styles.newConversationText, { color: colors.primaryText }]}>Новый диалог</Text>
+                <Text style={[styles.newConversationText, { color: colors.primaryText }]}>{i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a')}</Text>
             </Pressable>
         );
     }, [onNewConversation, colors, styles]);
@@ -269,12 +280,12 @@ function ThreadList({
                 style={[styles.searchInput, { color: colors.text }]}
                 value={search}
                 onChangeText={setSearch}
-                placeholder="Поиск..."
+                placeholder={i18nT('messages:components.messages.ThreadList.poisk_b2d1212d')}
                 placeholderTextColor={colors.textMuted}
-                accessibilityLabel="Поиск диалогов"
+                accessibilityLabel={i18nT('messages:components.messages.ThreadList.poisk_dialogov_8088fbb1')}
             />
             {search.length > 0 && (
-                <Pressable onPress={() => setSearch('')} accessibilityLabel="Очистить поиск">
+                <Pressable onPress={() => setSearch('')} accessibilityLabel={i18nT('messages:components.messages.ThreadList.ochistit_poisk_4c8b47a5')}>
                     <Feather name="x" size={16} color={colors.textMuted} />
                 </Pressable>
             )}
@@ -298,9 +309,9 @@ function ThreadList({
                     style={[styles.retryButton, { backgroundColor: colors.primary }]}
                     onPress={onRefresh}
                     accessibilityRole="button"
-                    accessibilityLabel="Повторить"
+                    accessibilityLabel={i18nT('messages:components.messages.ThreadList.povtorit_d1eae179')}
                 >
-                    <Text style={styles.retryButtonText}>Повторить</Text>
+                    <Text style={styles.retryButtonText}>{i18nT('messages:components.messages.ThreadList.povtorit_d1eae179')}</Text>
                 </Pressable>
             </View>
         );
@@ -312,19 +323,18 @@ function ThreadList({
                 {searchBar}
                 <View style={styles.center}>
                     <Feather name="message-circle" size={48} color={colors.textMuted} />
-                    <Text style={[styles.emptyTitle, { color: colors.text }]}>Нет сообщений</Text>
+                    <Text style={[styles.emptyTitle, { color: colors.text }]}>{i18nT('messages:components.messages.ThreadList.net_soobscheniy_714b7881')}</Text>
                     <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                        Напишите автору путешествия, чтобы начать диалог
-                    </Text>
+                        {i18nT('messages:components.messages.ThreadList.napishite_avtoru_puteshestviya_chtoby_nachat_81bd050e')}</Text>
                     {onNewConversation && (
                         <Pressable
                             style={[styles.newConversationButton, { backgroundColor: colors.primary }]}
                             onPress={onNewConversation}
                             accessibilityRole="button"
-                            accessibilityLabel="Новый диалог"
+                            accessibilityLabel={i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a')}
                         >
                             <Feather name="edit" size={16} color={colors.textInverse} />
-                            <Text style={styles.newConversationButtonText}>Новый диалог</Text>
+                            <Text style={styles.newConversationButtonText}>{i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a')}</Text>
                         </Pressable>
                     )}
                 </View>
@@ -353,10 +363,9 @@ function ThreadList({
                 search.trim() ? (
                     <View style={styles.center}>
                         <Feather name="search" size={48} color={colors.textMuted} />
-                        <Text style={[styles.emptyTitle, { color: colors.text }]}>Ничего не найдено</Text>
+                        <Text style={[styles.emptyTitle, { color: colors.text }]}>{i18nT('messages:components.messages.ThreadList.nichego_ne_naydeno_86511b0f')}</Text>
                         <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                            Попробуйте изменить запрос
-                        </Text>
+                            {i18nT('messages:components.messages.ThreadList.poprobuyte_izmenit_zapros_dc40a3c8')}</Text>
                     </View>
                 ) : null
             }
@@ -372,12 +381,19 @@ const createStyles = (colors: ThemedColors) =>
         threadItem: {
             flexDirection: 'row',
             alignItems: 'center',
-            paddingHorizontal: DESIGN_TOKENS.spacing.md,
-            paddingVertical: DESIGN_TOKENS.spacing.md,
             marginHorizontal: DESIGN_TOKENS.spacing.md,
             marginBottom: DESIGN_TOKENS.spacing.xs,
             borderRadius: DESIGN_TOKENS.radii.md,
             borderWidth: 1,
+            overflow: 'hidden',
+        },
+        threadMainAction: {
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            minHeight: 74,
+            paddingLeft: DESIGN_TOKENS.spacing.md,
+            paddingVertical: DESIGN_TOKENS.spacing.md,
         },
         avatar: {
             width: 44,
@@ -400,7 +416,18 @@ const createStyles = (colors: ThemedColors) =>
         threadActions: {
             flexDirection: 'row',
             alignItems: 'center',
-            gap: DESIGN_TOKENS.spacing.xs,
+            paddingRight: DESIGN_TOKENS.spacing.sm,
+        },
+        threadDeleteButton: {
+            width: 44,
+            height: 44,
+            minWidth: 44,
+            minHeight: 44,
+        },
+        threadChevron: {
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: DESIGN_TOKENS.spacing.xs,
         },
         threadNameRow: {
             flexDirection: 'row',

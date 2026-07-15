@@ -3,6 +3,8 @@ import { Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 
 import { openExternalUrl } from '@/utils/externalLinks';
+import { translate as i18nT } from '@/i18n'
+
 
 type PointLike = {
   articleUrl?: string;
@@ -32,7 +34,7 @@ export function usePointListExternalActionsModel({
 
   const onShare = useCallback(async (coordStr: string) => {
     const mapUrl = buildMapUrl(coordStr);
-    const text = `Координаты: ${coordStr}`;
+    const text = i18nT('travel:components.travel.hooks.usePointListExternalActionsModel.koordinaty_value1_66e86e9f', { value1: coordStr });
 
     const tgDeepLinks = [
       `tg://msg_url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`,

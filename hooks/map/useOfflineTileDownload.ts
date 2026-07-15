@@ -4,6 +4,7 @@
 // в utils/mapTileCache.ts.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getThemedNativeBaseTileUrl } from '@/config/mapWebLayers';
+import { translate as i18nT } from '@/i18n';
 import {
   AVG_TILE_BYTES,
   downloadTileToDisk,
@@ -146,7 +147,7 @@ export function useOfflineTileDownload(): UseOfflineTileDownload {
 
         await registerRegion({
           id: `region-${Date.now()}`,
-          name: options?.name ?? 'Область карты',
+          name: options?.name ?? i18nT('map:hooks.map.useOfflineTileDownload.oblast_karty_72ba6f3a'),
           bbox,
           minZ,
           maxZ,

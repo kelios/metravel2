@@ -12,6 +12,8 @@ import { queryKeys } from '@/api/queryKeys';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import type { Travel } from '@/types/types';
 import type { FilterOptions } from '@/components/listTravel/utils/listTravelTypes';
+import { translate as i18nT } from '@/i18n'
+
 
 type FilterGroup = Parameters<typeof ModernFilters>[0]['filterGroups'][number];
 
@@ -167,12 +169,12 @@ export function useRoulette() {
       const first = countryList.find((c) => String(c.id) === String(countryIds[0]));
       if (first) {
         return countryIds.length > 1
-          ? `${first.name} и ещё ${countryIds.length - 1}`
+          ? i18nT('home:components.roulette.useRoulette.value1_i_esche_value2_6f94ef8e', { value1: String(first.name), value2: countryIds.length - 1 })
           : String(first.name);
       }
     }
 
-    return activeFiltersCount > 0 ? `Выбрано: ${activeFiltersCount}` : 'Без фильтров';
+    return activeFiltersCount > 0 ? i18nT('home:components.roulette.useRoulette.vybrano_value1_b84424f7', { value1: activeFiltersCount }) : i18nT('home:components.roulette.useRoulette.bez_filtrov_d6910ca1');
   }, [rouletteQueryParams, options, activeFiltersCount]);
 
   const {

@@ -2,6 +2,7 @@ import { Platform } from 'react-native'
 import type { ViewStyle } from 'react-native'
 import { BREAKPOINTS } from './utils/listTravelConstants'
 import { calculateColumns } from './utils/listTravelHelpers'
+import { translate as i18nT } from '@/i18n'
 
 export function buildCardsGridDynamicStyle(cardsGridStyle: ViewStyle, gapSize: number): ViewStyle[] {
   const styleArray: ViewStyle[] = [cardsGridStyle]
@@ -135,17 +136,17 @@ const FALLBACK_RELAXATION_PRESETS: Array<{
 }> = [
   {
     id: 'light',
-    label: 'Ослабили часть уточняющих фильтров',
+    get label() { return i18nT('travel:components.listTravel.listTravelBaseModel.fallback.light') },
     removedKeys: ['year', 'month', 'over_nights_stay', 'companions', 'complexity'],
   },
   {
     id: 'medium',
-    label: 'Убрали самые узкие уточнения и объекты',
+    get label() { return i18nT('travel:components.listTravel.listTravelBaseModel.fallback.medium') },
     removedKeys: ['year', 'month', 'over_nights_stay', 'companions', 'complexity', 'transports', 'categoryTravelAddress'],
   },
   {
     id: 'broad',
-    label: 'Оставили только самые общие условия',
+    get label() { return i18nT('travel:components.listTravel.listTravelBaseModel.fallback.broad') },
     removedKeys: [
       'year',
       'month',
@@ -160,7 +161,7 @@ const FALLBACK_RELAXATION_PRESETS: Array<{
   },
   {
     id: 'searchless',
-    label: 'Убрали текстовый запрос и оставили похожие маршруты',
+    get label() { return i18nT('travel:components.listTravel.listTravelBaseModel.fallback.searchless') },
     removedKeys: [
       'year',
       'month',

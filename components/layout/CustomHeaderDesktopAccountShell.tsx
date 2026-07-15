@@ -2,6 +2,8 @@ import Feather from '@expo/vector-icons/Feather'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import UserAvatar from './UserAvatar'
+import { translate as i18nT } from '@/i18n'
+
 
 type DesktopAccountShellProps = {
   anchorStyles: any
@@ -51,7 +53,7 @@ export default function CustomHeaderDesktopAccountShell({
         <Pressable
           onPress={onLoginPress}
           accessibilityRole="link"
-          accessibilityLabel="Войти в аккаунт"
+          accessibilityLabel={i18nT('navigation:components.layout.CustomHeaderDesktopAccountShell.voyti_v_akkaunt_aff337b8')}
           style={({ pressed }) => [
             ctaStyles.ctaLoginButton,
             !testIdSuffix && pressed && ctaStyles.ctaLoginButtonHover,
@@ -61,7 +63,7 @@ export default function CustomHeaderDesktopAccountShell({
           <View style={ctaStyles.ctaLoginIconSlot}>
             <Feather name="log-in" size={14} color={colors.textOnPrimary} />
           </View>
-          <Text style={ctaStyles.ctaLoginText}>Войти</Text>
+          <Text style={ctaStyles.ctaLoginText}>{i18nT('navigation:components.layout.CustomHeaderDesktopAccountShell.voyti_77afdc17')}</Text>
         </Pressable>
       ) : null}
 
@@ -71,8 +73,8 @@ export default function CustomHeaderDesktopAccountShell({
           onHoverIn={Platform.OS === 'web' ? onPreloadMenu : undefined}
           onFocus={onPreloadMenu}
           accessibilityRole="button"
-          accessibilityLabel={`Открыть меню аккаунта ${displayName}`}
-          accessibilityHint="Открыть меню аккаунта"
+          accessibilityLabel={i18nT('navigation:components.layout.CustomHeaderDesktopAccountShell.otkryt_menyu_akkaunta_value1_fb1179bc', { value1: displayName })}
+          accessibilityHint={i18nT('navigation:components.layout.CustomHeaderDesktopAccountShell.otkryt_menyu_akkaunta_b24ca4ee')}
           style={({ pressed }) => [
             anchorStyles.anchor,
             (pressed || pressedAnchorState) && anchorStyles.anchorHover,

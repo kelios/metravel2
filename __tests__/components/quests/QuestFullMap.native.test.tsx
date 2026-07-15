@@ -84,12 +84,16 @@ describe('QuestFullMap native marker status', () => {
 
     const html = getByTestId('quest-map-webview').props.source.html;
     expect(html).toContain('function isValidLatLng(point)');
-    expect(html).toContain('var rawRoutePoints =');
-    expect(html).toContain('rawRoutePoints.filter(isValidLatLng)');
+    expect(html).toContain('var rawWaypointPoints =');
+    expect(html).toContain('rawWaypointPoints.filter(isValidLatLng)');
+    expect(html).toContain('var rawRouteTrack =');
+    expect(html).toContain('routeIsRouted ? 5 : 4');
+    expect(html).toContain("dashArray: routeIsRouted ? null : '8 10'");
     expect(html).toContain('}).setView(initialCenter');
     expect(html).toContain('function hasStableMapSize()');
     expect(html).toContain('function ensureTileLayer()');
     expect(html).toContain('tileLayer.addTo(map)');
+    expect(html).toContain('routeHalo.addTo(map)');
     expect(html).toContain('Number.isFinite(nextZoom)');
     expect(html).toContain('updateWhenIdle: false');
     expect(html).toContain('updateWhenZooming: false');

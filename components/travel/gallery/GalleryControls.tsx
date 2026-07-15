@@ -1,6 +1,8 @@
 import React from 'react'
 import { Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+import { translate as i18nT } from '@/i18n'
+
 
 export type GalleryControlsStyles = {
   container: any
@@ -47,10 +49,10 @@ export const GalleryControls: React.FC<{
       >
         <View style={styles.titleRow}>
           <Feather name="camera" size={20} color={colors.text} />
-          <Text style={[styles.galleryTitle, { color: colors.text }]}>Галерея</Text>
+          <Text style={[styles.galleryTitle, { color: colors.text }]}>{i18nT('travel:components.travel.gallery.GalleryControls.galereya_16f9feaf')}</Text>
         </View>
         <Text style={[styles.imageCount, { color: colors.textMuted }]}>
-          Загружено <Text style={[styles.highlight, { color: colors.primaryText }]}>{imagesCount}</Text> из{' '}
+          {i18nT('travel:components.travel.gallery.GalleryControls.zagruzheno_4681bcc7')}<Text style={[styles.highlight, { color: colors.primaryText }]}>{imagesCount}</Text> {i18nT('travel:components.travel.gallery.GalleryControls.iz_75be492c')}{' '}
           {maxImages}
         </Text>
       </View>
@@ -72,7 +74,7 @@ export const GalleryControls: React.FC<{
           ]}
         >
           <Text style={[styles.dropzoneText, { color: colors.textMuted }]}>
-            {isDragActive ? 'Отпустите файлы...' : 'Перетащите сюда изображения'}
+            {isDragActive ? i18nT('travel:components.travel.gallery.GalleryControls.otpustite_fayly_5db5ec62') : i18nT('travel:components.travel.gallery.GalleryControls.peretaschite_syuda_izobrazheniya_261e6560')}
           </Text>
         </View>
       </div>
@@ -100,7 +102,7 @@ export const GalleryControls: React.FC<{
           </View>
           <Text style={[styles.batchProgressText, { color: colors.infoDark }]}
           >
-            Загрузка {batchUploadProgress.current} из {batchUploadProgress.total}
+            {i18nT('travel:components.travel.gallery.GalleryControls.zagruzka_aefa6291')}{batchUploadProgress.current} {i18nT('travel:components.travel.gallery.GalleryControls.iz_03953c46')}{batchUploadProgress.total}
           </Text>
         </View>
       )}
@@ -118,8 +120,7 @@ export const GalleryControls: React.FC<{
           <Feather name="alert-triangle" size={18} color={colors.warningDark} />
           <Text style={[styles.errorBannerText, { color: colors.warningDark }]}
           >
-            Некоторые изображения не удалось загрузить. Удалите их и попробуйте снова.
-          </Text>
+            {i18nT('travel:components.travel.gallery.GalleryControls.nekotorye_izobrazheniya_ne_udalos_zagruzit_u_81ccc07b')}</Text>
         </View>
       )}
     </>

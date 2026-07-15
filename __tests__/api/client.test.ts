@@ -32,7 +32,13 @@ Object.defineProperty(global, 'navigator', {
 describe('src/api/client.ts apiClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    Platform.OS = 'web' as typeof Platform.OS;
+    // Reset queued one-shot results as well as call history. Web cookie-auth
+    // deliberately skips secureStorage reads, so an unused queue entry must
+    // not leak into the following native test.
+    mockedFetchWithTimeout.mockReset();
+    mockedGetSecureItem.mockReset();
+    mockedRemoveSecureItems.mockReset();
+    Platform.OS = 'ios' as typeof Platform.OS;
     (navigator as any).onLine = true;
     mockedRemoveSecureItems.mockResolvedValue(undefined);
   });
@@ -41,7 +47,7 @@ describe('src/api/client.ts apiClient', () => {
     Platform.OS = originalPlatformOS;
   });
 
-  it('успешно делает GET запрос c токеном', async () => {
+  it('на native делает GET запрос c токеном', async () => {
     mockedGetSecureItem.mockResolvedValueOnce('token');
     mockedFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
@@ -59,6 +65,7 @@ describe('src/api/client.ts apiClient', () => {
   });
 
   it('на web не блокирует запрос заранее, если navigator.onLine=false', async () => {
+    Platform.OS = 'web' as typeof Platform.OS;
     (navigator as any).onLine = false;
     mockedGetSecureItem.mockResolvedValueOnce(null);
     mockedFetchWithTimeout.mockResolvedValueOnce({
@@ -179,6 +186,7 @@ describe('src/api/client.ts apiClient', () => {
   });
 
   it('uploadFormData повторяет transient 502 и завершает upload после второго ответа', async () => {
+    Platform.OS = 'web' as typeof Platform.OS;
     mockedGetSecureItem.mockResolvedValueOnce('token');
 
     mockedFetchWithTimeout
@@ -226,6 +234,7 @@ describe('src/api/client.ts apiClient', () => {
   });
 
   it('skipAuth: не читает и не отправляет токен', async () => {
+    Platform.OS = 'web' as typeof Platform.OS;
     mockedFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -237,6 +246,23 @@ describe('src/api/client.ts apiClient', () => {
     expect(result).toEqual({ ok: true });
     expect(mockedGetSecureItem).not.toHaveBeenCalled();
     const [, options] = mockedFetchWithTimeout.mock.calls[0];
+    expect((options as any).headers.Authorization).toBeUndefined();
+    expect((options as any).credentials).toBe('omit');
+  });
+
+  it('web использует HttpOnly-cookie credentials без чтения JS-токена', async () => {
+    Platform.OS = 'web' as typeof Platform.OS;
+    mockedFetchWithTimeout.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    } as any);
+
+    await expect(apiClient.get('/cookie-auth')).resolves.toEqual({ ok: true });
+
+    expect(mockedGetSecureItem).not.toHaveBeenCalled();
+    const [, options] = mockedFetchWithTimeout.mock.calls[0];
+    expect((options as any).credentials).toBe('include');
     expect((options as any).headers.Authorization).toBeUndefined();
   });
 

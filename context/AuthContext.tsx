@@ -42,17 +42,22 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
         };
     }, [invalidateAuthState]);
 
-    // Cross-tab sync: when another tab updates/clears the token in localStorage,
-    // re-check authentication so this tab doesn't use a stale or missing token.
+    // Cross-tab sync follows non-secret user metadata on web. Auth credentials
+    // live only in the shared HttpOnly cookie, so token-storage events are kept
+    // solely as a legacy migration signal.
     useEffect(() => {
         if (Platform.OS !== 'web' || typeof window === 'undefined') return;
         const onStorage = (e: StorageEvent) => {
-            if (e.key === 'secure_userToken') {
+            if (e.key === 'userId') {
                 if (!e.newValue) {
                     invalidateAuthState();
                 } else {
                     checkAuthentication();
                 }
+            } else if (e.key === 'secure_userToken') {
+                // A legacy token appearing/disappearing must never be consumed;
+                // re-checking also lets secureStorage purge the obsolete key.
+                checkAuthentication();
             }
         };
         window.addEventListener('storage', onStorage);

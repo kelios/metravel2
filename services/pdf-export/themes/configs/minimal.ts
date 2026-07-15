@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Минималистичная тема - чистая и простая
  */
 export const minimalTheme: PdfThemeConfig = {
   name: 'minimal',
-  displayName: 'Минималистичная',
-  description: 'Чистое и простое оформление с акцентом на контент',
+  get displayName() { return i18nT('export:services.pdfExport.theme.minimal.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.minimal.description') },
   
   colors: {
     text: '#0f172a',

@@ -15,6 +15,7 @@ import {
 } from './clusterFitBounds'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useTheme } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
 
 import { buildClusterIconHtml } from './mapMarkerStyles'
 
@@ -448,7 +449,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       const marker = L.marker([coords.lat, coords.lng], {
         icon: markerIcon,
         opacity: markerOpacity,
-        alt: point.address || 'Точка на карте',
+        alt: point.address || i18nT('map:components.MapPage.Map.MarkerClusterGroup.tochka_na_karte_13493b1e'),
         title: point.address || '',
       })
 

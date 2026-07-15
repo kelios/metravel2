@@ -17,6 +17,8 @@ import { showToastMessage } from '@/utils/toast';
 import { useMarkerImageUpload } from '@/hooks/useMarkerImageUpload';
 import { useTravelFormPersistence } from '@/hooks/useTravelFormPersistence';
 import { type RichTextSnapshot } from '@/utils/travelTextLossGuard';
+import { translate as i18nT } from '@/i18n'
+
 
 interface UseTravelFormDataOptions {
   travelId: string | null;
@@ -161,8 +163,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
           if (!canEdit) {
             void showToastMessage({
               type: 'error',
-              text1: 'Нет доступа',
-              text2: 'Вы можете редактировать только свои путешествия',
+              text1: i18nT('shared:hooks.useTravelFormData.net_dostupa_dcf4ac7e'),
+              text2: i18nT('shared:hooks.useTravelFormData.vy_mozhete_redaktirovat_tolko_svoi_puteshest_87802f54'),
             });
             // ✅ FIX: Явно устанавливаем hasAccess в false при отсутствии доступа
             setHasAccess(false);
@@ -206,7 +208,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         const status = apiError?.status ?? -1;
         const message =
           apiError?.message ||
-          (error instanceof Error ? error.message : 'Не удалось загрузить путешествие');
+          (error instanceof Error ? error.message : i18nT('shared:hooks.useTravelFormData.ne_udalos_zagruzit_puteshestvie_dedc5237'));
 
         console.error('Ошибка загрузки путешествия:', error);
 
@@ -218,8 +220,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
           }
           void showToastMessage({
             type: 'error',
-            text1: 'Требуется вход',
-            text2: 'Войдите в аккаунт, чтобы редактировать путешествие',
+            text1: i18nT('shared:hooks.useTravelFormData.trebuetsya_vhod_a9409079'),
+            text2: i18nT('shared:hooks.useTravelFormData.voydite_v_akkaunt_chtoby_redaktirovat_putesh_ac54a316'),
           });
           setHasAccess(false);
           setLoadError({ status, message });
@@ -231,8 +233,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         if (status === 403) {
           void showToastMessage({
             type: 'error',
-            text1: 'Нет доступа',
-            text2: 'Вы можете редактировать только свои путешествия',
+            text1: i18nT('shared:hooks.useTravelFormData.net_dostupa_dcf4ac7e'),
+            text2: i18nT('shared:hooks.useTravelFormData.vy_mozhete_redaktirovat_tolko_svoi_puteshest_87802f54'),
           });
           setHasAccess(false);
           setLoadError({ status, message });
@@ -242,8 +244,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         if (status === 404) {
           void showToastMessage({
             type: 'error',
-            text1: 'Путешествие не найдено',
-            text2: 'Возможно, оно было удалено или недоступно',
+            text1: i18nT('shared:hooks.useTravelFormData.puteshestvie_ne_naydeno_b702d0aa'),
+            text2: i18nT('shared:hooks.useTravelFormData.vozmozhno_ono_bylo_udaleno_ili_nedostupno_3184f15f'),
           });
           setHasAccess(false);
           setLoadError({ status, message });
@@ -252,8 +254,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
         void showToastMessage({
           type: 'error',
-          text1: 'Ошибка загрузки',
-          text2: status === 0 ? message : 'Не удалось загрузить путешествие',
+          text1: i18nT('shared:hooks.useTravelFormData.oshibka_zagruzki_659172a9'),
+          text2: status === 0 ? message : i18nT('shared:hooks.useTravelFormData.ne_udalos_zagruzit_puteshestvie_dedc5237'),
         });
 
         // Don't redirect away: keep the user on the edit screen and allow retry.

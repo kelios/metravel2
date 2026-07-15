@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n'
 // utils/formValidation.ts
 // ✅ УЛУЧШЕНИЕ: Утилиты для валидации формы создания путешествия
 
@@ -57,19 +58,19 @@ export function validateName(name: string | undefined | null): ValidationError |
   if (!name || name.trim().length === 0) {
     return {
       field: 'name',
-      message: 'Название обязательно для заполнения',
+      message: i18nT('errors:utils.formValidation.nazvanie_obyazatelno_dlya_zapolneniya_6eb95801'),
     };
   }
   if (name.trim().length < 3) {
     return {
       field: 'name',
-      message: 'Название должно содержать минимум 3 символа',
+      message: i18nT('errors:utils.formValidation.nazvanie_dolzhno_soderzhat_minimum_3_simvola_bf588f66'),
     };
   }
   if (name.trim().length > 200) {
     return {
       field: 'name',
-      message: 'Название не должно превышать 200 символов',
+      message: i18nT('errors:utils.formValidation.nazvanie_ne_dolzhno_prevyshat_200_simvolov_c5e64d65'),
     };
   }
   return null;
@@ -135,7 +136,7 @@ export function getModerationIssues(
   if (nameError) {
     missing.push({
       key: 'name',
-      label: 'Название',
+      label: i18nT('errors:utils.formValidation.nazvanie_569bb861'),
       targetStep: 1,
       anchorId: 'travelwizard-basic-name',
     });
@@ -145,7 +146,7 @@ export function getModerationIssues(
   if (descriptionError) {
     missing.push({
       key: 'description',
-      label: 'Описание',
+      label: i18nT('errors:utils.formValidation.opisanie_fd0e899c'),
       targetStep: 1,
       anchorId: 'travelwizard-basic-description',
     });
@@ -155,7 +156,7 @@ export function getModerationIssues(
   if (countriesError) {
     missing.push({
       key: 'countries',
-      label: 'Страны (минимум одна)',
+      label: i18nT('errors:utils.formValidation.strany_minimum_odna_cb1fb7cb'),
       targetStep: 2,
       anchorId: 'travelwizard-route-countries',
     });
@@ -165,7 +166,7 @@ export function getModerationIssues(
   if (categoriesError) {
     missing.push({
       key: 'categories',
-      label: 'Категории (минимум одна)',
+      label: i18nT('errors:utils.formValidation.kategorii_minimum_odna_2425408b'),
       targetStep: 5,
       anchorId: 'travelwizard-extras-categories',
     });
@@ -178,7 +179,7 @@ export function getModerationIssues(
   if (markersError) {
     missing.push({
       key: 'route',
-      label: 'Маршрут (минимум одна точка)',
+      label: i18nT('errors:utils.formValidation.marshrut_minimum_odna_tochka_4def96d5'),
       targetStep: 2,
       anchorId: 'markers-list-root',
     });
@@ -190,7 +191,7 @@ export function getModerationIssues(
   if (!hasPhotos) {
     missing.push({
       key: 'photos',
-      label: 'Фото или обложка',
+      label: i18nT('errors:utils.formValidation.foto_ili_oblozhka_eb83919e'),
       targetStep: 3,
       anchorId: 'travelwizard-media-cover',
     });
@@ -206,13 +207,13 @@ export function validateDescription(description: string | undefined | null): Val
   if (!description || description.trim().length === 0) {
     return {
       field: 'description',
-      message: 'Описание обязательно для заполнения',
+      message: i18nT('errors:utils.formValidation.opisanie_obyazatelno_dlya_zapolneniya_6e663676'),
     };
   }
   if (description.trim().length < 50) {
     return {
       field: 'description',
-      message: 'Опишите маршрут чуть подробнее (минимум 50 символов), чтобы путешественникам было понятно, чего ожидать.',
+      message: i18nT('errors:utils.formValidation.opishite_marshrut_chut_podrobnee_minimum_50__71c170a7'),
     };
   }
   return null;
@@ -225,7 +226,7 @@ export function validateCountries(countries: string[] | undefined | null): Valid
   if (!countries || countries.length === 0) {
     return {
       field: 'countries',
-      message: 'Выберите хотя бы одну страну',
+      message: i18nT('errors:utils.formValidation.vyberite_hotya_by_odnu_stranu_6d706075'),
     };
   }
   return null;
@@ -238,7 +239,7 @@ export function validateCategories(categories: string[] | undefined | null): Val
   if (!categories || categories.length === 0) {
     return {
       field: 'categories',
-      message: 'Выберите хотя бы одну категорию',
+      message: i18nT('errors:utils.formValidation.vyberite_hotya_by_odnu_kategoriyu_87ec77b6'),
     };
   }
   return null;
@@ -251,7 +252,7 @@ export function validateMarkers(markers: unknown[] | undefined | null): Validati
   if (!markers || markers.length === 0) {
     return {
       field: 'coordsMeTravel',
-      message: 'Добавьте хотя бы одну точку маршрута на карте',
+      message: i18nT('errors:utils.formValidation.dobavte_hotya_by_odnu_tochku_marshruta_na_ka_baf962d7'),
     };
   }
   return null;
@@ -275,7 +276,7 @@ export function validateYear(year: string | number | undefined | null): Validati
   if (isNaN(yearNum) || yearNum < 1900 || yearNum > currentYear + 1) {
     return {
       field: 'year',
-      message: `Год должен быть от 1900 до ${currentYear + 1}`,
+      message: i18nT('errors:utils.formValidation.god_dolzhen_byt_ot_1900_do_value1_60553492', { value1: currentYear + 1 }),
     };
   }
   return null;
@@ -298,7 +299,7 @@ export function validateDays(days: string | number | undefined | null): Validati
   if (isNaN(daysNum) || daysNum < 1 || daysNum > 365) {
     return {
       field: 'number_days',
-      message: 'Количество дней должно быть от 1 до 365',
+      message: i18nT('errors:utils.formValidation.kolichestvo_dney_dolzhno_byt_ot_1_do_365_bb7a91c9'),
     };
   }
   return null;
@@ -321,7 +322,7 @@ export function validatePeople(people: string | number | undefined | null): Vali
   if (isNaN(peopleNum) || peopleNum < 1 || peopleNum > 100) {
     return {
       field: 'number_peoples',
-      message: 'Количество людей должно быть от 1 до 100',
+      message: i18nT('errors:utils.formValidation.kolichestvo_lyudey_dolzhno_byt_ot_1_do_100_638b929a'),
     };
   }
   return null;
@@ -338,7 +339,7 @@ export function validateYouTubeLink(link: string | undefined | null): Validation
   if (!youtubeRegex.test(link.trim())) {
     return {
       field: 'youtube_link',
-      message: 'Введите корректную ссылку на YouTube',
+      message: i18nT('errors:utils.formValidation.vvedite_korrektnuyu_ssylku_na_youtube_05431d43'),
     };
   }
   return null;

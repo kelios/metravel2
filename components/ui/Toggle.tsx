@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { View, Pressable, StyleSheet, Platform, ViewStyle } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface ToggleProps {
   value: boolean;
@@ -32,7 +34,7 @@ export const Toggle: React.FC<ToggleProps> = ({
     : ({
         accessibilityRole: 'switch',
         accessibilityState: { checked: value, disabled },
-        accessibilityLabel: value ? 'Включено' : 'Выключено',
+        accessibilityLabel: value ? i18nT('shared:components.ui.Toggle.vklyucheno_f9570372') : i18nT('shared:components.ui.Toggle.vyklyucheno_b3b084c0'),
         'aria-checked': value,
         'aria-disabled': disabled || undefined,
       } as any);

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 
 import { useThemedColors } from '@/hooks/useTheme'
+import { translate as i18nT } from '@/i18n'
 
 type Colors = ReturnType<typeof useThemedColors>
 
@@ -12,9 +13,6 @@ interface DataFreshnessNoticeProps {
   style?: object
   testID?: string
 }
-
-const DEFAULT_TEXT =
-  'Информация может быть неактуальной: режим работы, цены и доступность мест меняются. Проверяйте данные перед поездкой.'
 
 /**
  * Информационное предупреждение об актуальности данных.
@@ -31,7 +29,7 @@ export default function DataFreshnessNotice({ text, style, testID }: DataFreshne
       accessibilityRole="alert"
     >
       <Feather name="info" size={16} color={colors.warning} style={styles.icon} />
-      <Text style={styles.text}>{text ?? DEFAULT_TEXT}</Text>
+      <Text style={styles.text}>{text ?? i18nT('legalStatic:dataFreshness.default')}</Text>
     </View>
   )
 }

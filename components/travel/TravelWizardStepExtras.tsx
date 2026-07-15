@@ -11,6 +11,8 @@ import { TravelFormData, Travel, type TravelFilters } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import { useResponsive } from '@/hooks/useResponsive';
+import { translate as i18nT } from '@/i18n'
+
 
 interface TravelWizardStepExtrasProps {
     currentStep: number;
@@ -171,15 +173,15 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                 <TravelWizardHeader
                     canGoBack={true}
                     onBack={onBack}
-                    title={stepMeta?.title ?? 'Доп. параметры'}
-                    subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
+                    title={stepMeta?.title ?? i18nT('travel:components.travel.TravelWizardStepExtras.defaultTitle')}
+                    subtitle={stepMeta?.subtitle ?? i18nT('travel:common.stepProgress', { value1: currentStep, value2: totalSteps })}
                     progressPercent={progressPercent}
                     errorCount={validation.errors.length}
                     warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
                     isSaveInFlight={isSaveInFlight}
                     onPrimary={onNext}
-                    primaryLabel={stepMeta?.nextLabel ?? 'К публикации'}
+                    primaryLabel={stepMeta?.nextLabel ?? i18nT('travel:components.travel.TravelWizardStepExtras.defaultNext')}
                     onSave={onManualSave}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
@@ -209,10 +211,9 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                         <View ref={categoriesAnchorRef} nativeID="travelwizard-extras-categories" />
 
                         <View style={styles.requiredCard}>
-                            <Text style={styles.requiredTitle}>Обязательно для публикации</Text>
+                            <Text style={styles.requiredTitle}>{i18nT('travel:components.travel.TravelWizardStepExtras.obyazatelno_dlya_publikatsii_be1f0d43')}</Text>
                             <Text style={styles.requiredHint}>
-                                Выберите хотя бы одну категорию. Без этого маршрут сохранится как черновик, но не отправится на модерацию.
-                            </Text>
+                                {i18nT('travel:components.travel.TravelWizardStepExtras.vyberite_hotya_by_odnu_kategoriyu_bez_etogo__4fe1f249')}</Text>
                             <FiltersUpsertComponent
                                 filters={filters}
                                 formData={formData}
@@ -235,9 +236,9 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                         <GroupedFiltersSection
                             group={{
                                 id: 'main',
-                                title: 'Дополнительные параметры',
+                                title: i18nT('travel:components.travel.TravelWizardStepExtras.dopolnitelnye_parametry_f23550b2'),
                                 iconName: 'sliders',
-                                description: 'Категории, транспорт, сложность, время путешествия и другие детали',
+                                description: i18nT('travel:components.travel.TravelWizardStepExtras.kategorii_transport_slozhnost_vremya_puteshe_2ede47d3'),
                                 defaultExpanded: true,
                             }}
                             filledCount={groupsFilledCounts.main}

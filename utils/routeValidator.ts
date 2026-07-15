@@ -1,5 +1,7 @@
 import type { RoutePoint, ValidationResult } from '@/types/route';
 import { CoordinateConverter } from './coordinateConverter';
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * Route validation utilities
@@ -19,19 +21,19 @@ export class RouteValidator {
 
     // 1. Check minimum points
     if (points.length < 2) {
-      errors.push('Добавьте минимум 2 точки для построения маршрута');
+      errors.push(i18nT('shared:utils.routeValidator.dobavte_minimum_2_tochki_dlya_postroeniya_ma_452331ce'));
       return { valid: false, errors, warnings };
     }
 
     // 2. Check maximum points
     if (points.length > this.MAX_POINTS) {
-      errors.push(`Максимальное количество точек: ${this.MAX_POINTS}`);
+      errors.push(i18nT('shared:utils.routeValidator.maksimalnoe_kolichestvo_tochek_value1_b74f0b85', { value1: this.MAX_POINTS }));
     }
 
     // 3. Check for invalid coordinates
     for (let i = 0; i < points.length; i++) {
       if (!CoordinateConverter.isValid(points[i].coordinates)) {
-        errors.push(`Точка ${i + 1} имеет некорректные координаты`);
+        errors.push(i18nT('shared:utils.routeValidator.tochka_value1_imeet_nekorrektnye_koordinaty_1164d491', { value1: i + 1 }));
       }
     }
 
@@ -45,7 +47,7 @@ export class RouteValidator {
         
         if (distance < this.MIN_DISTANCE) {
           errors.push(
-            `Точки "${points[i].address}" и "${points[j].address}" слишком близко (${Math.round(distance)} м)`
+            i18nT('shared:utils.routeValidator.tochki_value1_i_value2_slishkom_blizko_value_b5a84d9d', { value1: points[i].address, value2: points[j].address, value3: Math.round(distance) })
           );
         }
       }
@@ -66,17 +68,17 @@ export class RouteValidator {
     // 6. Warnings
     if (totalDistance > this.WARNING_DISTANCE) {
       warnings.push(
-        `Длинный маршрут (${CoordinateConverter.formatDistance(totalDistance)}) может содержать много точек интереса`
+        i18nT('shared:utils.routeValidator.dlinnyy_marshrut_value1_mozhet_soderzhat_mno_59e35fbe', { value1: CoordinateConverter.formatDistance(totalDistance) })
       );
     }
 
     if (points.length > 5) {
-      warnings.push('Большое количество точек может увеличить время построения маршрута');
+      warnings.push(i18nT('shared:utils.routeValidator.bolshoe_kolichestvo_tochek_mozhet_uvelichit__0276fba8'));
     }
 
     // Check for points crossing country borders (simplified check for Belarus)
     if (this.crossesBelarusBorder(points)) {
-      warnings.push('Маршрут может пересекать границу Беларуси');
+      warnings.push(i18nT('shared:utils.routeValidator.marshrut_mozhet_peresekat_granitsu_belarusi_d4c365cc'));
     }
 
     return {
@@ -95,7 +97,7 @@ export class RouteValidator {
 
     // Check max points
     if (existingPoints.length >= this.MAX_POINTS) {
-      errors.push(`Достигнуто максимальное количество точек (${this.MAX_POINTS})`);
+      errors.push(i18nT('shared:utils.routeValidator.dostignuto_maksimalnoe_kolichestvo_tochek_va_877de0cc', { value1: this.MAX_POINTS }));
       return { valid: false, errors, warnings };
     }
 
@@ -108,7 +110,7 @@ export class RouteValidator {
       
       if (distance < this.MIN_DISTANCE) {
         errors.push(
-          `Точка слишком близко к "${point.address}" (${Math.round(distance)} м)`
+          i18nT('shared:utils.routeValidator.tochka_slishkom_blizko_k_value1_value2_m_9383282b', { value1: point.address, value2: Math.round(distance) })
         );
       }
     }

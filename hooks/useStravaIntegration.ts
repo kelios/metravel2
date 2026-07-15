@@ -16,6 +16,8 @@ import { queryKeys } from '@/api/queryKeys';
 import { useAuth } from '@/context/AuthContext';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { showToast } from '@/utils/toast';
+import { translate as i18nT } from '@/i18n'
+
 
 const DEFAULT_PER_PAGE = 10;
 
@@ -137,16 +139,16 @@ export function useStravaIntegration() {
       if (!opened) {
         showToast({
           type: 'error',
-          text1: 'Не удалось открыть Strava',
-          text2: 'Проверьте, что backend вернул корректную HTTPS-ссылку OAuth.',
+          text1: i18nT('shared:hooks.useStravaIntegration.ne_udalos_otkryt_strava_92e1019d'),
+          text2: i18nT('shared:hooks.useStravaIntegration.proverte_chto_backend_vernul_korrektnuyu_htt_558436ca'),
         });
       }
     },
     onError: (error) => {
       showToast({
         type: 'error',
-        text1: 'Strava пока недоступна',
-        text2: getErrorMessage(error, 'Backend OAuth endpoint ещё не готов.'),
+        text1: i18nT('shared:hooks.useStravaIntegration.strava_poka_nedostupna_a0734257'),
+        text2: getErrorMessage(error, i18nT('shared:hooks.useStravaIntegration.backend_oauth_endpoint_esche_ne_gotov_cf8c5f56')),
       });
     },
   });
@@ -160,19 +162,19 @@ export function useStravaIntegration() {
       invalidateStrava();
       showToast({
         type: 'success',
-        text1: 'Strava отключена',
+        text1: i18nT('shared:hooks.useStravaIntegration.strava_otklyuchena_403aefef'),
         text2:
           response.message ||
           (response.queuedForDeletion
-            ? 'Удаление локального кеша поставлено в очередь.'
-            : 'Локальные токены и кеш Strava удалены.'),
+            ? i18nT('shared:hooks.useStravaIntegration.udalenie_lokalnogo_kesha_postavleno_v_ochere_0b1d88a7')
+            : i18nT('shared:hooks.useStravaIntegration.lokalnye_tokeny_i_kesh_strava_udaleny_a6edaf10')),
       });
     },
     onError: (error) => {
       showToast({
         type: 'error',
-        text1: 'Не удалось отключить Strava',
-        text2: getErrorMessage(error, 'Попробуйте позже.'),
+        text1: i18nT('shared:hooks.useStravaIntegration.ne_udalos_otklyuchit_strava_8c6dd46c'),
+        text2: getErrorMessage(error, i18nT('shared:hooks.useStravaIntegration.poprobuyte_pozzhe_ad217916')),
       });
     },
   });

@@ -5,6 +5,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
+import { translate as i18nT } from '@/i18n'
+
 
 export type ProfileQuickActionKey = 'messages' | 'subscriptions' | 'settings' | 'userpoints' | 'calendar';
 
@@ -17,41 +19,43 @@ export interface ProfileQuickActionsProps {
   excludeKeys?: ProfileQuickActionKey[];
 }
 
-const ITEMS: Array<{
+type QuickActionItem = {
   key: ProfileQuickActionKey;
   title: string;
   icon: React.ComponentProps<typeof Feather>['name'];
   accessibilityHint: string;
-}> = [
+};
+
+const createQuickActionItems = (): QuickActionItem[] => [
   {
     key: 'messages',
-    title: 'Чаты',
+    title: i18nT('profile:components.profile.ProfileQuickActions.items.messages.label'),
     icon: 'message-circle',
-    accessibilityHint: 'Перейти к сообщениям и диалогам',
+    accessibilityHint: i18nT('profile:components.profile.ProfileQuickActions.items.messages.hint'),
   },
   {
     key: 'subscriptions',
-    title: 'Подписки',
+    title: i18nT('profile:components.profile.ProfileQuickActions.items.subscriptions.label'),
     icon: 'users',
-    accessibilityHint: 'Перейти к подпискам и авторам',
+    accessibilityHint: i18nT('profile:components.profile.ProfileQuickActions.items.subscriptions.hint'),
   },
   {
     key: 'userpoints',
-    title: 'Мои точки',
+    title: i18nT('profile:components.profile.ProfileQuickActions.items.userpoints.label'),
     icon: 'map-pin',
-    accessibilityHint: 'Перейти к сохранённым точкам на карте',
+    accessibilityHint: i18nT('profile:components.profile.ProfileQuickActions.items.userpoints.hint'),
   },
   {
     key: 'calendar',
-    title: 'Календарь',
+    title: i18nT('profile:components.profile.ProfileQuickActions.items.calendar.label'),
     icon: 'calendar',
-    accessibilityHint: 'Перейти к календарю путешествий',
+    accessibilityHint: i18nT('profile:components.profile.ProfileQuickActions.items.calendar.hint'),
   },
   {
     key: 'settings',
-    title: 'Настройки',
+    title: i18nT('profile:components.profile.ProfileQuickActions.items.settings.label'),
     icon: 'settings',
-    accessibilityHint: 'Перейти к настройкам профиля',
+    accessibilityHint: i18nT('profile:components.profile.ProfileQuickActions.items.settings.hint'),
   },
 ];
 
@@ -63,11 +67,11 @@ export function ProfileQuickActions({
 }: ProfileQuickActionsProps) {
   const colors = useThemedColors();
   const { isDesktop } = useResponsive();
+  const items = createQuickActionItems();
 
-  const visibleItems = useMemo(
-    () => (excludeKeys?.length ? ITEMS.filter((item) => !excludeKeys.includes(item.key)) : ITEMS),
-    [excludeKeys]
-  );
+  const visibleItems = excludeKeys?.length
+    ? items.filter((item) => !excludeKeys.includes(item.key))
+    : items;
 
   const styles = useMemo(
     () =>
@@ -155,7 +159,7 @@ export function ProfileQuickActions({
     [colors]
   );
 
-  const renderChip = (item: (typeof ITEMS)[number], extraStyle?: object) => {
+  const renderChip = (item: QuickActionItem, extraStyle?: object) => {
     const showBadge = item.key === 'messages' && unreadMessagesCount > 0;
 
     return (
@@ -164,7 +168,7 @@ export function ProfileQuickActions({
         onPress={() => onPress(item.key)}
         accessibilityRole="menuitem"
         accessibilityLabel={
-          showBadge ? `${item.title}, ${unreadMessagesCount} непрочитанных` : item.title
+          showBadge ? i18nT('profile:components.profile.ProfileQuickActions.value1_value2_neprochitannyh_c3a0b009', { value1: item.title, value2: unreadMessagesCount }) : item.title
         }
         accessibilityHint={item.accessibilityHint}
         style={({ pressed }) => [

@@ -1,14 +1,15 @@
 // api/tripChat.ts
 // Слой чата участников поездки (Sprint 15 / блок 6, тикеты #418/#422).
-// Контракт (BE ещё не задеплоен):
+// Production contract verified by board #919:
 //   thread/статус   GET  /api/trips/{trip_id}/chat/
 //   сообщения       GET  /api/trip-chats/{thread_id}/messages/?cursor={cursor}&limit={n}
 //   отправить       POST /api/trip-chats/{thread_id}/messages/   { text }
 //   пометить чит.   POST /api/trip-chats/{thread_id}/mark-read/  { last_read_message_id? }
 // Когда поездка completed → chat отдаёт status="archived", can_post=false, POST → 403.
-// До верификации BE на проде сохранён мок-фолбэк (EXPO_PUBLIC_TRIPS_MOCK=true или 0/404/501 в DEV).
+// Explicit mock and missing-endpoint fallback are development-only.
 
 import { apiClient, ApiError } from '@/api/client'
+import { resolveDevMockFlag } from '@/utils/devMockFlags'
 import { devWarn } from '@/utils/logger'
 
 // ── Доменные типы (camelCase) ──────────────────────────────────────────────
@@ -96,7 +97,10 @@ const mapMarkRead = (dto: MarkTripChatReadDto): MarkTripChatReadResult => ({
 
 // ── Мок-фолбэк (FE-guard: снять после верификации BE на проде + regression) ──
 
-const USE_MOCK = process.env.EXPO_PUBLIC_TRIPS_MOCK === 'true'
+const USE_MOCK = resolveDevMockFlag({
+  name: 'EXPO_PUBLIC_TRIPS_MOCK',
+  value: process.env.EXPO_PUBLIC_TRIPS_MOCK,
+})
 
 /** Бэкенд недоступен → 0/404/501. В DEV или под флагом отдаём мок. */
 const shouldFallbackToMock = (error: unknown): boolean => {

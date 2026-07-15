@@ -20,6 +20,8 @@ import {
   SEMANTIC_ACTION_ICON,
   type NavigationActionKind,
 } from './navigationActionMeta'
+import { translate as i18nT } from '@/i18n'
+
 
 type PointNavigationMenuProps = {
   coord?: string | null
@@ -31,7 +33,7 @@ const PRESSED_OPACITY = { opacity: 0.72 } as const
 
 export default function PointNavigationMenu({
   coord,
-  label = 'Открыть в навигаторе',
+  label = i18nT('navigation:components.navigation.PointNavigationMenu.otkryt_v_navigatore_42bff582'),
   testIDPrefix = 'point-navigation',
 }: PointNavigationMenuProps) {
   const colors = useThemedColors()
@@ -51,43 +53,43 @@ export default function PointNavigationMenu({
         key: 'google',
         label: NAVIGATION_ACTION_LABELS.google,
         url: buildGoogleMapsUrl(value),
-        accessibilityLabel: 'Открыть точку в Google Maps',
+        accessibilityLabel: i18nT('navigation:components.navigation.PointNavigationMenu.otkryt_tochku_v_google_maps_7f67f5c3'),
       },
       {
         key: 'apple',
         label: NAVIGATION_ACTION_LABELS.apple,
         url: buildAppleMapsUrl(value),
-        accessibilityLabel: 'Открыть точку в Apple Maps',
+        accessibilityLabel: i18nT('navigation:components.navigation.PointNavigationMenu.otkryt_tochku_v_apple_maps_d4faa850'),
       },
       {
         key: 'organic',
         label: NAVIGATION_ACTION_LABELS.organic,
         url: buildOrganicMapsUrl(value),
-        accessibilityLabel: 'Открыть точку в Organic Maps',
+        accessibilityLabel: i18nT('navigation:components.navigation.PointNavigationMenu.otkryt_tochku_v_organic_maps_2bec0c04'),
       },
       {
         key: 'waze',
         label: NAVIGATION_ACTION_LABELS.waze,
         url: buildWazeUrl(value),
-        accessibilityLabel: 'Открыть точку в Waze',
+        accessibilityLabel: i18nT('navigation:components.navigation.PointNavigationMenu.otkryt_tochku_v_waze_4f5d0468'),
       },
       {
         key: 'yandex-maps',
         label: NAVIGATION_ACTION_LABELS['yandex-maps'],
         url: buildYandexMapsUrl(value),
-        accessibilityLabel: 'Открыть точку в Яндекс Картах',
+        accessibilityLabel: i18nT('navigation:components.navigation.PointNavigationMenu.otkryt_tochku_v_yandeks_kartah_4a5a6174'),
       },
       {
         key: 'yandex',
         label: NAVIGATION_ACTION_LABELS.yandex,
         url: buildYandexNaviUrl(value),
-        accessibilityLabel: 'Открыть точку в Яндекс Навигаторе',
+        accessibilityLabel: i18nT('navigation:components.navigation.PointNavigationMenu.otkryt_tochku_v_yandeks_navigatore_13bec111'),
       },
       {
         key: 'osm',
         label: NAVIGATION_ACTION_LABELS.osm,
         url: buildOpenStreetMapUrl(value),
-        accessibilityLabel: 'Открыть точку в OpenStreetMap',
+        accessibilityLabel: i18nT('navigation:components.navigation.PointNavigationMenu.otkryt_tochku_v_openstreetmap_3f6c4f7d'),
       },
     ]
     return items.filter((item) => item.url)

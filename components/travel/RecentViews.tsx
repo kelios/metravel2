@@ -14,6 +14,8 @@ import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import FavoriteButton from '@/components/travel/FavoriteButton';
 import { useRouter } from 'expo-router';
 import type { Travel } from '@/types/types';
+import { translate as i18nT } from '@/i18n'
+
 
 interface RecentViewsProps {
   maxItems?: number;
@@ -222,7 +224,7 @@ function RecentViews({
     return (
       <View style={styles.compactContainer}>
         <Text style={styles.compactText}>
-          Недавно просмотрено: {recentTravels.length}
+          {i18nT('travel:components.travel.RecentViews.nedavno_prosmotreno_b486a4fb')}{recentTravels.length}
         </Text>
       </View>
     );
@@ -233,26 +235,26 @@ function RecentViews({
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Feather name="clock" size={16} color={colors.primaryDark} />
-          <Text style={styles.title}>Недавние просмотры</Text>
+          <Text style={styles.title}>{i18nT('travel:components.travel.RecentViews.nedavnie_prosmotry_81119e79')}</Text>
         </View>
         <View style={styles.headerActions}>
           <Pressable
             onPress={() => router.push('/history' as any)}
             style={styles.seeAllButton}
-            accessibilityLabel="Смотреть всю историю просмотров"
+            accessibilityLabel={i18nT('travel:components.travel.RecentViews.smotret_vsyu_istoriyu_prosmotrov_2114c615')}
             accessibilityRole="link"
           >
-            <Text style={styles.seeAllText}>Все</Text>
+            <Text style={styles.seeAllText}>{i18nT('travel:components.travel.RecentViews.vse_1e184a50')}</Text>
             <Feather name="arrow-right" size={14} color={colors.primaryDark} />
           </Pressable>
           <Pressable
             onPress={handleClear}
             style={styles.clearButton}
-            accessibilityLabel="Очистить историю просмотров"
+            accessibilityLabel={i18nT('travel:components.travel.RecentViews.ochistit_istoriyu_prosmotrov_68ac8b8c')}
             accessibilityRole="button"
           >
             <Feather name="trash-2" size={14} color={colors.textMuted} />
-            <Text style={styles.clearButtonText}>Очистить</Text>
+            <Text style={styles.clearButtonText}>{i18nT('travel:components.travel.RecentViews.ochistit_19a0c193')}</Text>
           </Pressable>
         </View>
       </View>

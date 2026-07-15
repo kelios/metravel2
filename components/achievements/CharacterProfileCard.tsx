@@ -21,6 +21,8 @@ import {
   type InventoryIconKey,
 } from '@/components/achievements/GamificationIcons'
 import type { CharacterDetail } from '@/api/gamification'
+import { translate as i18nT } from '@/i18n'
+
 
 interface Props {
   /** userId — публичный профиль; не задан — собственный (выбор пути доступен). */
@@ -48,9 +50,9 @@ const detailIcon = (slug: string): InventoryIconKey =>
 // Человекочитаемый статус детали снаряжения: надета / открыта / заблокирована
 // (с указанием уровня разблокировки, если BE его отдал).
 const detailStatusLabel = (d: CharacterDetail): string => {
-  if (d.equipped) return 'Надето'
-  if (d.unlocked) return 'Открыто'
-  return d.minLevel != null ? `С уровня ${d.minLevel}` : 'Заблокировано'
+  if (d.equipped) return i18nT('profile:components.achievements.CharacterProfileCard.nadeto_d5cdf6b4')
+  if (d.unlocked) return i18nT('profile:components.achievements.CharacterProfileCard.otkryto_165b1817')
+  return d.minLevel != null ? i18nT('profile:components.achievements.CharacterProfileCard.s_urovnya_value1_29011d9c', { value1: d.minLevel }) : i18nT('profile:components.achievements.CharacterProfileCard.zablokirovano_1bfff8ed')
 }
 
 /** Блок персонажа в профиле: уровень + визуальные детали + выбор пути. FE-character-profile. */
@@ -72,10 +74,10 @@ function CharacterProfileCard({ userId, bare = false, testID, style }: Props) {
 
   const styles = useMemo(() => getStyles(colors), [colors])
 
-  // Сырое имя ветки (Собачья/Лисья/…) обрамляем как «Ветка «…»», а не как крупный
-  // заголовок персонажа. Дефолт 'Персонаж' из маппера ветку не обозначает — прячем.
+  // Сырое имя ветки (Собачья/Лисья/…) показываем только при наличии стабильного
+  // pathSlug. Так UI не зависит от локализованного дефолтного имени маппера.
   const rawBranch = data?.pathName ?? data?.name ?? null
-  const branchName = rawBranch && rawBranch !== 'Персонаж' && rawBranch !== '' ? rawBranch : null
+  const branchName = data?.pathSlug && rawBranch?.trim() ? rawBranch : null
 
   if (isError) return null
   if (isOwn && !isAuthenticated) return null
@@ -88,17 +90,17 @@ function CharacterProfileCard({ userId, bare = false, testID, style }: Props) {
         <CharacterHeadIcon slug={data?.pathSlug ?? null} size={44} />
         <View style={styles.headerBody}>
           <Text style={styles.name}>
-            {isOwn ? 'Ваш персонаж' : 'Персонаж путешественника'}
+            {isOwn ? i18nT('profile:components.achievements.CharacterProfileCard.vash_personazh_1a70cf65') : i18nT('profile:components.achievements.CharacterProfileCard.personazh_puteshestvennika_d731c61d')}
           </Text>
           <Text style={styles.meta}>
-            {branchName ? `Ветка «${branchName}»` : ''}
+            {branchName ? i18nT('profile:components.achievements.CharacterProfileCard.vetka_value1_66769f8f', { value1: branchName }) : ''}
             {branchName && data ? ' · ' : ''}
-            {data ? `уровень ${data.level}` : ''}
+            {data ? i18nT('profile:components.achievements.CharacterProfileCard.uroven_value1_dc4881cc', { value1: data.level }) : ''}
           </Text>
           <Text style={styles.headerHint} numberOfLines={2}>
             {isOwn
-              ? 'Персонаж растёт по направлениям активности — выберите ветку развития.'
-              : 'Персонаж растёт по направлениям активности путешественника.'}
+              ? i18nT('profile:components.achievements.CharacterProfileCard.personazh_rastet_po_napravleniyam_aktivnosti_9da29bdc')
+              : i18nT('profile:components.achievements.CharacterProfileCard.personazh_rastet_po_napravleniyam_aktivnosti_6be4f132')}
           </Text>
         </View>
       </View>
@@ -108,8 +110,8 @@ function CharacterProfileCard({ userId, bare = false, testID, style }: Props) {
           <>
             {data.details.length > 0 ? (
               <View style={styles.gearBlock}>
-                <Text style={styles.gearTitle}>Снаряжение персонажа</Text>
-                <Text style={styles.gearHint}>Открывается по мере роста уровня.</Text>
+                <Text style={styles.gearTitle}>{i18nT('profile:components.achievements.CharacterProfileCard.snaryazhenie_personazha_0c1f2bd4')}</Text>
+                <Text style={styles.gearHint}>{i18nT('profile:components.achievements.CharacterProfileCard.otkryvaetsya_po_mere_rosta_urovnya_024aa5aa')}</Text>
                 <View style={styles.details}>
                   {data.details.map((d: CharacterDetail) => (
                     <View

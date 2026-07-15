@@ -10,10 +10,13 @@ import {
     NativeSyntheticEvent,
     TextInputSubmitEditingEventData,
 } from "react-native";
+import Feather from '@expo/vector-icons/Feather';
 import { IconButton, Menu } from "@/ui/paper";
 import { useResponsive } from '@/hooks/useResponsive';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 type Props = {
     currentPage: number; // 0-based
@@ -104,7 +107,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginHorizontal: DESIGN_TOKENS.spacing.xs / 2,
     },
     mobileInput: {
-        width: 36,
+        width: 44,
+        minHeight: 44,
         textAlign: "center",
         paddingVertical: DESIGN_TOKENS.spacing.xs / 4,
         paddingHorizontal: DESIGN_TOKENS.spacing.xs / 2,
@@ -148,8 +152,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     iconDesktop: {
         margin: 0,
-        width: 32,
-        height: 32,
+        width: 44,
+        height: 44,
     },
     desktopInputContainer: {
         flexDirection: "row",
@@ -162,7 +166,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         color: colors.textMuted,
     },
     desktopInput: {
-        width: 36,
+        width: 44,
+        minHeight: 44,
         textAlign: "center",
         paddingVertical: DESIGN_TOKENS.spacing.xs / 4,
         paddingHorizontal: DESIGN_TOKENS.spacing.xs / 2,
@@ -187,7 +192,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderRadius: DESIGN_TOKENS.radii.pill,
         gap: DESIGN_TOKENS.spacing.xs / 4,
         marginLeft: DESIGN_TOKENS.spacing.xs / 2,
-        minHeight: 28, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+        minHeight: 44,
     },
     desktopItemsText: {
         color: colors.textOnPrimary,
@@ -275,12 +280,14 @@ function PaginationComponent({
               <View style={styles.centerContainer}>
                   <View style={styles.minimalNav}>
                       <IconButton
-                        icon="chevron-left"
+                        icon={({ size }: { size: number }) => (
+                            <Feather name="chevron-left" size={size} color={colors.text} />
+                        )}
                         size={16}
                         onPress={goPrev}
                         disabled={currentPage === 0}
                         style={styles.iconMinimal}
-                        accessibilityLabel="Предыдущая страница"
+                        accessibilityLabel={i18nT('shared:components.ui.PaginationComponent.predyduschaya_stranitsa_b461eb43')}
                       />
 
                       <Text style={styles.minimalText}>
@@ -288,12 +295,14 @@ function PaginationComponent({
                       </Text>
 
                       <IconButton
-                        icon="chevron-right"
+                        icon={({ size }: { size: number }) => (
+                            <Feather name="chevron-right" size={size} color={colors.text} />
+                        )}
                         size={16}
                         onPress={goNext}
                         disabled={currentPage + 1 >= totalPages}
                         style={styles.iconMinimal}
-                        accessibilityLabel="Следующая страница"
+                        accessibilityLabel={i18nT('shared:components.ui.PaginationComponent.sleduyuschaya_stranitsa_b4472dd4')}
                       />
 
                       <Menu
@@ -303,7 +312,7 @@ function PaginationComponent({
                             <TouchableOpacity
                               style={styles.minimalItemsButton}
                               onPress={() => setMenuVisible(true)}
-                              accessibilityLabel="Элементов на странице"
+                              accessibilityLabel={i18nT('shared:components.ui.PaginationComponent.elementov_na_stranitse_6139edbe')}
                             >
                                 <Text style={styles.minimalItemsText}>{itemsPerPage}</Text>
                             </TouchableOpacity>
@@ -339,12 +348,14 @@ function PaginationComponent({
               <View style={styles.centerContainer}>
                   <View style={styles.mobileNav}>
                       <IconButton
-                        icon="chevron-left"
+                        icon={({ size }: { size: number }) => (
+                            <Feather name="chevron-left" size={size} color={colors.text} />
+                        )}
                         size={18}
                         onPress={goPrev}
                         disabled={currentPage === 0}
                         style={styles.iconMobile}
-                        accessibilityLabel="Предыдущая страница"
+                        accessibilityLabel={i18nT('shared:components.ui.PaginationComponent.predyduschaya_stranitsa_b461eb43')}
                       />
 
 	                      <View style={styles.mobileInputContainer}>
@@ -357,18 +368,20 @@ function PaginationComponent({
 	                            onSubmitEditing={() => onSubmit()}
 	                            onBlur={() => onSubmit()}
 	                            returnKeyType="done"
-	                            accessibilityLabel="Текущая страница"
+	                            accessibilityLabel={i18nT('shared:components.ui.PaginationComponent.tekuschaya_stranitsa_1e19b782')}
 	                          />
                           <Text style={styles.mobileTotal}>/ {totalPages}</Text>
                       </View>
 
                       <IconButton
-                        icon="chevron-right"
+                        icon={({ size }: { size: number }) => (
+                            <Feather name="chevron-right" size={size} color={colors.text} />
+                        )}
                         size={18}
                         onPress={goNext}
                         disabled={currentPage + 1 >= totalPages}
                         style={styles.iconMobile}
-                        accessibilityLabel="Следующая страница"
+                        accessibilityLabel={i18nT('shared:components.ui.PaginationComponent.sleduyuschaya_stranitsa_b4472dd4')}
                       />
 
                       <Menu
@@ -378,7 +391,7 @@ function PaginationComponent({
                             <TouchableOpacity
                               style={styles.mobileItemsButton}
                               onPress={() => setMenuVisible(true)}
-                              accessibilityLabel="Элементов на странице"
+                              accessibilityLabel={i18nT('shared:components.ui.PaginationComponent.elementov_na_stranitse_6139edbe')}
                             >
                                 <Text style={styles.mobileItemsText}>{itemsPerPage}</Text>
                             </TouchableOpacity>
@@ -391,7 +404,7 @@ function PaginationComponent({
                                   setMenuVisible(false);
                                   if (option !== itemsPerPage) onItemsPerPageChange(option);
                               }}
-                              title={`${option} на стр.`}
+                              title={i18nT('shared:components.ui.PaginationComponent.value1_na_str_7c487abf', { value1: option })}
                             />
                           ))}
                       </Menu>
@@ -412,16 +425,18 @@ function PaginationComponent({
           <View style={styles.centerContainer}>
               <View style={styles.desktopNav}>
                   <IconButton
-                    icon="chevron-left"
+                    icon={({ size }: { size: number }) => (
+                        <Feather name="chevron-left" size={size} color={colors.text} />
+                    )}
                     size={18}
                     onPress={goPrev}
                     disabled={currentPage === 0}
                     style={styles.iconDesktop}
-                    accessibilityLabel="Предыдущая страница"
+                    accessibilityLabel={i18nT('shared:components.ui.PaginationComponent.predyduschaya_stranitsa_b461eb43')}
                   />
 
 	                  <View style={styles.desktopInputContainer}>
-	                      <Text style={styles.desktopLabel}>Стр.</Text>
+	                      <Text style={styles.desktopLabel}>{i18nT('shared:components.ui.PaginationComponent.str_32d3b558')}</Text>
 	                      <TextInput
 	                        style={styles.desktopInput}
 	                        value={pageInput}
@@ -431,17 +446,20 @@ function PaginationComponent({
 	                        onSubmitEditing={() => onSubmit()}
 	                        onBlur={() => onSubmit()}
 	                        returnKeyType="done"
+	                        accessibilityLabel={i18nT('shared:components.ui.PaginationComponent.tekuschaya_stranitsa_1e19b782')}
 	                      />
-	                      <Text style={styles.desktopTotal}>из {totalPages}</Text>
+	                      <Text style={styles.desktopTotal}>{i18nT('shared:components.ui.PaginationComponent.iz_f4230cda')}{totalPages}</Text>
 	                  </View>
 
                   <IconButton
-                    icon="chevron-right"
+                    icon={({ size }: { size: number }) => (
+                        <Feather name="chevron-right" size={size} color={colors.text} />
+                    )}
                     size={18}
                     onPress={goNext}
                     disabled={currentPage + 1 >= totalPages}
                     style={styles.iconDesktop}
-                    accessibilityLabel="Следующая страница"
+                    accessibilityLabel={i18nT('shared:components.ui.PaginationComponent.sleduyuschaya_stranitsa_b4472dd4')}
                   />
 
                   <Menu
@@ -451,7 +469,7 @@ function PaginationComponent({
                         <TouchableOpacity
                           style={styles.desktopItemsButton}
                           onPress={() => setMenuVisible(true)}
-                          accessibilityLabel="Элементов на странице"
+                          accessibilityLabel={i18nT('shared:components.ui.PaginationComponent.elementov_na_stranitse_6139edbe')}
                         >
                             <Text style={styles.desktopItemsText}>{itemsPerPage}</Text>
                             <Text style={styles.desktopItemsIcon}>▼</Text>
@@ -465,7 +483,7 @@ function PaginationComponent({
                               setMenuVisible(false);
                               if (option !== itemsPerPage) onItemsPerPageChange(option);
                           }}
-                          title={`${option} на странице`}
+                          title={i18nT('shared:components.ui.PaginationComponent.value1_na_stranitse_b10db32c', { value1: option })}
                         />
                       ))}
                   </Menu>

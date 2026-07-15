@@ -7,6 +7,8 @@ import {
   ProfileTravelEngagementSummary,
   type ProfileTravelEngagementMetricKey,
 } from '@/components/profile/ProfileTravelEngagementSection';
+import { translate as i18nT } from '@/i18n'
+
 
 interface ProfileStatsTabProps {
   travelsCount: number;
@@ -49,10 +51,10 @@ export function ProfileStatsTab({
   return (
     <View style={styles.wrap}>
       <ProfileSectionHeader
-        title="Статистика маршрутов"
-        subtitle="Как сообщество взаимодействует с вашими маршрутами"
+        title={i18nT('profile:components.screens.profile.ProfileStatsTab.statistika_marshrutov_0d3cf72d')}
+        subtitle={i18nT('profile:components.screens.profile.ProfileStatsTab.kak_soobschestvo_vzaimodeystvuet_s_vashimi_m_71f410df')}
         onBack={onBackToOverview}
-        backLabel="Уровень"
+        backLabel={i18nT('profile:components.screens.profile.ProfileStatsTab.uroven_9cb90129')}
       />
       <ProfileTravelEngagementSummary
         summary={authoredTravelEngagementSummary}
@@ -65,8 +67,8 @@ export function ProfileStatsTab({
         summaryScope={authoredTravelEngagementScope}
       />
       <ProfileSectionHeader
-        title="Мои поездки"
-        subtitle="Личные отметки: где были, что хотите и что планируете"
+        title={i18nT('profile:components.screens.profile.ProfileStatsTab.moi_poezdki_64c36557')}
+        subtitle={i18nT('profile:components.screens.profile.ProfileStatsTab.lichnye_otmetki_gde_byli_chto_hotite_i_chto__7150bddf')}
       />
       <PersonalStatusSummary
         visited={personalTravelStatusSummary.visited}

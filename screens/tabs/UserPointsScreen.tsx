@@ -8,6 +8,8 @@ import { router } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import EmptyState from '@/components/ui/EmptyState';
+import { translate as i18nT } from '@/i18n'
+
 
 export default function UserPointsScreen() {
   const [showImportWizard, setShowImportWizard] = useState(false);
@@ -30,10 +32,10 @@ export default function UserPointsScreen() {
       <View style={styles.authContainer}>
         <EmptyState
           icon="map-pin"
-          title="Войдите, чтобы управлять точками"
-          description="Для сохранения и просмотра ваших точек на карте необходимо войти в аккаунт."
+          title={i18nT('shared:screens.tabs.UserPointsScreen.voydite_chtoby_upravlyat_tochkami_c083ffa1')}
+          description={i18nT('shared:screens.tabs.UserPointsScreen.dlya_sohraneniya_i_prosmotra_vashih_tochek_n_5b5b8307')}
           action={{
-            label: 'Войти',
+            label: i18nT('shared:screens.tabs.UserPointsScreen.voyti_784c8ba4'),
             onPress: () => router.push(buildLoginHref({ redirect: '/userpoints', intent: 'userpoints' }) as any),
           }}
           variant="empty"

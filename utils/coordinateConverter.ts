@@ -1,4 +1,6 @@
 import type { LatLng, LatLngTuple, LatLngBounds } from '@/types/coordinates';
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * Coordinate conversion utilities
@@ -157,9 +159,9 @@ export class CoordinateConverter {
    */
   static formatDistance(meters: number): string {
     if (meters < 1000) {
-      return `${Math.round(meters)} м`;
+      return i18nT('shared:utils.coordinateConverter.value1_m_7499185a', { value1: Math.round(meters) });
     }
-    return `${(meters / 1000).toFixed(1)} км`;
+    return i18nT('shared:utils.coordinateConverter.value1_km_c01fe287', { value1: (meters / 1000).toFixed(1) });
   }
 
   /**

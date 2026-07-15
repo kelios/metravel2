@@ -20,6 +20,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { AuthorWithTravels, SubscriptionTab } from '@/hooks/useSubscriptionsData';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { translate as i18nT } from '@/i18n'
+
 
 type WebEnhancedViewStyle = ViewStyle & { boxShadow?: string; cursor?: 'pointer' };
 type WebEnhancedTextStyle = TextStyle & { outlineStyle?: 'none' };
@@ -82,11 +84,11 @@ export default function SubscriptionsTabContent({
     if (!showTabBar || !onChangeTab) return null;
 
     return (
-      <View style={styles.tabBar}>
+      <View style={styles.tabBar} accessibilityRole="tablist">
         {(['subscriptions', 'subscribers'] as const).map((tab) => {
           const isActive = activeTab === tab;
           const count = tab === 'subscriptions' ? subscriptions.length : subscribers.length;
-          const label = tab === 'subscriptions' ? 'Подписки' : 'Подписчики';
+          const label = tab === 'subscriptions' ? i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpiski_d6c645a6') : i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpischiki_fc40a23e');
           return (
             <Pressable
               key={tab}
@@ -114,12 +116,12 @@ export default function SubscriptionsTabContent({
         style={[styles.searchInput, { color: colors.text }]}
         value={search}
         onChangeText={setSearch}
-        placeholder="Поиск по имени..."
+        placeholder={i18nT('shared:components.subscriptions.SubscriptionsTabContent.poisk_po_imeni_d9595c41')}
         placeholderTextColor={colors.textMuted}
-        accessibilityLabel="Поиск по подпискам"
+        accessibilityLabel={i18nT('shared:components.subscriptions.SubscriptionsTabContent.poisk_po_podpiskam_c8a8ffba')}
       />
       {search.length > 0 ? (
-        <Pressable onPress={() => setSearch('')} accessibilityLabel="Очистить поиск">
+        <Pressable onPress={() => setSearch('')} accessibilityLabel={i18nT('shared:components.subscriptions.SubscriptionsTabContent.ochistit_poisk_8fa83cac')}>
           <Feather name="x" size={16} color={colors.textMuted} />
         </Pressable>
       ) : null}
@@ -131,10 +133,10 @@ export default function SubscriptionsTabContent({
       return (
         <EmptyState
           icon="users"
-          title="Вы ещё ни на кого не подписаны"
-          description="Подпишитесь на авторов, чтобы видеть их путешествия здесь."
+          title={i18nT('shared:components.subscriptions.SubscriptionsTabContent.vy_esche_ni_na_kogo_ne_podpisany_5e3d37ec')}
+          description={i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpishites_na_avtorov_chtoby_videt_ih_putes_17ba432e')}
           variant="empty"
-          action={{ label: 'Найти путешествия', onPress: onFindTravels }}
+          action={{ label: i18nT('shared:components.subscriptions.SubscriptionsTabContent.nayti_puteshestviya_1951ac15'), onPress: onFindTravels }}
         />
       );
     }
@@ -145,7 +147,7 @@ export default function SubscriptionsTabContent({
         <View style={styles.header}>
           <Text style={styles.subtitle}>
             {subscriptions.length}{' '}
-            {subscriptions.length === 1 ? 'автор' : subscriptions.length < 5 ? 'автора' : 'авторов'}
+            {subscriptions.length === 1 ? i18nT('shared:components.subscriptions.SubscriptionsTabContent.avtor_5d6c4cc2') : subscriptions.length < 5 ? i18nT('shared:components.subscriptions.SubscriptionsTabContent.avtora_ab6b344d') : i18nT('shared:components.subscriptions.SubscriptionsTabContent.avtorov_1228ef6a')}
           </Text>
         </View>
         {filteredAuthors.map((author) => (
@@ -160,7 +162,7 @@ export default function SubscriptionsTabContent({
         ))}
         {filteredAuthors.length === 0 && search.trim() ? (
           <View style={styles.noResults}>
-            <Text style={[styles.noResultsText, { color: colors.textMuted }]}>Ничего не найдено</Text>
+            <Text style={[styles.noResultsText, { color: colors.textMuted }]}>{i18nT('shared:components.subscriptions.SubscriptionsTabContent.nichego_ne_naydeno_bf51f155')}</Text>
           </View>
         ) : null}
       </>
@@ -172,8 +174,8 @@ export default function SubscriptionsTabContent({
       return (
         <EmptyState
           icon="users"
-          title="У вас пока нет подписчиков"
-          description="Публикуйте путешествия, чтобы привлечь подписчиков."
+          title={i18nT('shared:components.subscriptions.SubscriptionsTabContent.u_vas_poka_net_podpischikov_6c98b691')}
+          description={i18nT('shared:components.subscriptions.SubscriptionsTabContent.publikuyte_puteshestviya_chtoby_privlech_pod_921c01f5')}
           variant="empty"
         />
       );
@@ -185,7 +187,7 @@ export default function SubscriptionsTabContent({
         <View style={styles.header}>
           <Text style={styles.subtitle}>
             {subscribers.length}{' '}
-            {subscribers.length === 1 ? 'подписчик' : subscribers.length < 5 ? 'подписчика' : 'подписчиков'}
+            {subscribers.length === 1 ? i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpischik_015c98e8') : subscribers.length < 5 ? i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpischika_5468c76c') : i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpischikov_047f694a')}
           </Text>
         </View>
         {filteredSubscribers.map((profile) => (
@@ -198,7 +200,7 @@ export default function SubscriptionsTabContent({
         ))}
         {filteredSubscribers.length === 0 && search.trim() ? (
           <View style={styles.noResults}>
-            <Text style={[styles.noResultsText, { color: colors.textMuted }]}>Ничего не найдено</Text>
+            <Text style={[styles.noResultsText, { color: colors.textMuted }]}>{i18nT('shared:components.subscriptions.SubscriptionsTabContent.nichego_ne_naydeno_bf51f155')}</Text>
           </View>
         ) : null}
       </>

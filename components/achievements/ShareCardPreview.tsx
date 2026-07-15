@@ -21,6 +21,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import type { Badge } from '@/api/achievements';
 import BadgeMedal from '@/components/achievements/BadgeMedal';
 import { TIER_VISUALS } from '@/components/achievements/badgeVisuals';
+import { translate as i18nT } from '@/i18n'
+
 
 export interface ShareCardSubject {
   badge: Badge;
@@ -50,7 +52,7 @@ function ShareCardPreview({ subject, testID, style }: Props) {
       {subject.isRare ? (
         <View style={[styles.ribbon, { backgroundColor: tier.ring }]}>
           <Feather name="star" size={11} color="#1A1A1A" />
-          <Text style={styles.ribbonText}>Редкая награда</Text>
+          <Text style={styles.ribbonText}>{i18nT('achievements:components.achievements.ShareCardPreview.redkaya_nagrada_847c785d')}</Text>
         </View>
       ) : null}
 
@@ -85,8 +87,8 @@ function ShareCardPreview({ subject, testID, style }: Props) {
 
       <View style={styles.brandRow}>
         <Feather name="map-pin" size={12} color={colors.primaryDark} />
-        <Text style={styles.brand}>metravel.by</Text>
-        <Text style={styles.cta}>Собери свою коллекцию</Text>
+        <Text style={styles.brand}>{i18nT('achievements:components.achievements.ShareCardPreview.metravel_by_8afe6b7c')}</Text>
+        <Text style={styles.cta}>{i18nT('achievements:components.achievements.ShareCardPreview.soberi_svoyu_kollektsiyu_61067247')}</Text>
       </View>
     </Frame>
   );

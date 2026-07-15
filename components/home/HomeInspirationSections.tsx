@@ -10,6 +10,8 @@ import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import { createSectionsStyles } from './homeInspirationStyles'
+import { translate as i18nT } from '@/i18n'
+
 
 const NAV_FEEDBACK_MS = 700
 // Extend the touch area of the quick-filter chips so the effective hit target
@@ -56,42 +58,42 @@ type FilterGroup = {
 
 const FILTER_GROUPS: FilterGroup[] = [
   {
-    title: 'На выходные',
-    description: 'Маршруты без долгого планирования',
+    get title() { return i18nT('homeStatic:components.home.HomeInspirationSections.na_vyhodnye_8fc71152') },
+    get description() { return i18nT('homeStatic:components.home.HomeInspirationSections.marshruty_bez_dolgogo_planirovaniya_b612f94c') },
     icon: 'calendar',
     chips: [
-      { label: 'Без ночлега', filters: { over_nights_stay: [8] }, route: '/search' },
-      { label: 'До 100 км', filters: { radius: 100 }, route: '/map' },
-      { label: 'Лето', filters: { month: [6, 7, 8] }, route: '/search' },
+      { get label() { return i18nT('homeStatic:components.home.HomeInspirationSections.bez_nochlega_1832bda6') }, filters: { over_nights_stay: [8] }, route: '/search' },
+      { get label() { return i18nT('homeStatic:components.home.HomeInspirationSections.do_100_km_f0bf8037') }, filters: { radius: 100 }, route: '/map' },
+      { get label() { return i18nT('homeStatic:components.home.HomeInspirationSections.leto_be227bd1') }, filters: { month: [6, 7, 8] }, route: '/search' },
     ],
   },
   {
-    title: 'Рядом на карте',
-    description: 'Идеи поблизости, если хочется уехать сегодня',
+    get title() { return i18nT('homeStatic:components.home.HomeInspirationSections.ryadom_na_karte_1bf34f33') },
+    get description() { return i18nT('homeStatic:components.home.HomeInspirationSections.idei_poblizosti_esli_hochetsya_uehat_segodny_b6e76dbd') },
     icon: 'map-pin',
     chips: [
-      { label: 'До 30 км', filters: { radius: 30 }, route: '/map' },
-      { label: 'До 60 км', filters: { radius: 60 }, route: '/map' },
+      { get label() { return i18nT('homeStatic:components.home.HomeInspirationSections.do_30_km_4dac04f8') }, filters: { radius: 30 }, route: '/map' },
+      { get label() { return i18nT('homeStatic:components.home.HomeInspirationSections.do_60_km_a479d6ea') }, filters: { radius: 60 }, route: '/map' },
     ],
   },
   {
-    title: 'Природа',
-    description: 'Озера, горы и водопады в готовых маршрутах',
+    get title() { return i18nT('homeStatic:components.home.HomeInspirationSections.priroda_b4d2310b') },
+    get description() { return i18nT('homeStatic:components.home.HomeInspirationSections.ozera_gory_i_vodopady_v_gotovyh_marshrutah_ab1fff59') },
     icon: 'image',
     chips: [
-      { label: 'Озеро', filters: { categoryTravelAddress: [84] }, route: '/search' },
-      { label: 'Гора', filters: { categoryTravelAddress: [26] }, route: '/search' },
-      { label: 'Водопад', filters: { categoryTravelAddress: [20] }, route: '/search' },
+      { get label() { return i18nT('homeStatic:components.home.HomeInspirationSections.ozero_1f18c48a') }, filters: { categoryTravelAddress: [84] }, route: '/search' },
+      { get label() { return i18nT('homeStatic:components.home.HomeInspirationSections.gora_12fcc647') }, filters: { categoryTravelAddress: [26] }, route: '/search' },
+      { get label() { return i18nT('homeStatic:components.home.HomeInspirationSections.vodopad_a42cf66c') }, filters: { categoryTravelAddress: [20] }, route: '/search' },
     ],
   },
   {
-    title: 'Город и квесты',
-    description: 'Прогулки, легенды и короткие городские маршруты',
+    get title() { return i18nT('homeStatic:components.home.HomeInspirationSections.gorod_i_kvesty_1d72cff3') },
+    get description() { return i18nT('homeStatic:components.home.HomeInspirationSections.progulki_legendy_i_korotkie_gorodskie_marshr_8f40c368') },
     icon: 'quest-route',
     chips: [
-      { label: 'Город', filters: { categories: [19, 20] }, route: '/search' },
-      { label: 'Квесты', route: '/quests' },
-      { label: 'Замок', filters: { categoryTravelAddress: [43] }, route: '/search' },
+      { get label() { return i18nT('homeStatic:components.home.HomeInspirationSections.gorod_c7c1f594') }, filters: { categories: [19, 20] }, route: '/search' },
+      { get label() { return i18nT('homeStatic:components.home.HomeInspirationSections.kvesty_2fd4c82d') }, route: '/quests' },
+      { get label() { return i18nT('homeStatic:components.home.HomeInspirationSections.zamok_f9caaec3') }, filters: { categoryTravelAddress: [43] }, route: '/search' },
     ],
   },
 ]
@@ -135,11 +137,11 @@ function QuickFilterChips({
               isPending && styles.chipSelected,
             ]}
             accessibilityRole="button"
-            accessibilityLabel={`Подбор ${chip.label}`}
+            accessibilityLabel={i18nT('home:components.home.HomeInspirationSections.podbor_value1_cabeb492', { value1: chip.label })}
             accessibilityState={{ selected: isSelected, busy: isPending, disabled: isPending }}
           >
             <Text style={[styles.chipText, (isSelected || isPending) && styles.chipTextSelected]}>
-              {isPending ? 'Открываем...' : chip.label}
+              {isPending ? i18nT('home:components.home.HomeInspirationSections.otkryvaem_f8c1c832') : chip.label}
             </Text>
           </Pressable>
         )
@@ -201,17 +203,15 @@ function HomeInspirationSections() {
               <View style={styles.quickFiltersHeaderLeft}>
                 <View style={styles.quickFiltersBadge}>
                   <Feather name="sliders" size={13} color={colors.primaryDark} />
-                  <Text style={styles.quickFiltersBadgeText}>Быстрый подбор</Text>
+                  <Text style={styles.quickFiltersBadgeText}>{i18nT('home:components.home.HomeInspirationSections.bystryy_podbor_9f29b482')}</Text>
                 </View>
                 <Text style={styles.quickFiltersTitle}>
-                  Найдите маршрут под свой день
-                </Text>
+                  {i18nT('home:components.home.HomeInspirationSections.naydite_marshrut_pod_svoy_den_fbbb5c11')}</Text>
                 <Text style={styles.quickFiltersSubtitle}>
-                  Выберите сценарий — откроем поездки, квесты или карту рядом.
-                </Text>
+                  {i18nT('home:components.home.HomeInspirationSections.vyberite_stsenariy_otkroem_poezdki_kvesty_il_09369e46')}</Text>
               </View>
               <Button
-                label="Открыть каталог"
+                label={i18nT('home:components.home.HomeInspirationSections.otkryt_katalog_0319432a')}
                 onPress={handleOpenArticles}
                 loading={openingAllRoutes}
                 icon={<Feather name="arrow-right" size={16} color={colors.primaryText} />}

@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, StatusBar, TextInput, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import Constants from 'expo-constants'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { AboutHeader } from '@/components/about/AboutHeader'
 import { AboutIntroCard } from '@/components/about/AboutIntroCard'
@@ -15,11 +14,12 @@ import { useAboutStyles } from '@/components/about/aboutStyles'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import { showToast } from '@/utils/toast'
 import { openExternalUrl } from '@/utils/externalLinks'
-import { webTouchScrollStyle } from '@/utils'
+import { getAppVersionInfo, webTouchScrollStyle } from '@/utils'
+import { translate as i18nT } from '@/i18n'
+
 
 const EMAIL = 'metraveldev@gmail.com'
 const MAIL_SUBJECT = 'Info metravel.by'
-const MAIL_BODY = 'Добрый день!'
 const SOCIAL_LINKS = {
   instagram: 'https://www.instagram.com/metravelby/',
   tiktok: 'https://www.tiktok.com/@metravel.by',
@@ -33,10 +33,7 @@ function ContactScreen() {
   const router = useRouter()
   const isFocused = useIsFocused()
 
-  const appVersion =
-    (Constants as any)?.expoConfig?.version ||
-    (Constants as any)?.manifest?.version ||
-    'unknown'
+  const appVersionInfo = useMemo(() => getAppVersionInfo(), [])
 
   const [webBuildVersion, setWebBuildVersion] = useState<string>('')
 
@@ -49,9 +46,9 @@ function ContactScreen() {
   }, [])
 
   const canonical = buildCanonicalUrl('/contact')
-  const title = 'Контакты и обратная связь | Metravel'
+  const title = i18nT('shared:app.contact.kontakty_i_obratnaya_svyaz_metravel_eed33a58')
   const description =
-    'Свяжитесь с командой Metravel: вопросы, предложения, идеи партнерства и обратная связь по маршрутам, статьям и сервису.'
+    i18nT('shared:app.contact.svyazhites_s_komandoy_metravel_voprosy_predl_d5e43273')
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -91,15 +88,15 @@ function ContactScreen() {
     if (hp.trim()) return
 
     if (!name.trim() || !email.trim() || !message.trim()) {
-      setResp({ text: 'Заполните все поля.', error: true })
+      setResp({ text: i18nT('shared:app.contact.zapolnite_vse_polya_234c6903'), error: true })
       return
     }
     if (!isEmailValid(email)) {
-      setResp({ text: 'Введите корректный e-mail.', error: true })
+      setResp({ text: i18nT('shared:app.contact.vvedite_korrektnyy_e_mail_ef61c0d3'), error: true })
       return
     }
     if (!agree) {
-      setResp({ text: 'Требуется согласие на обработку данных.', error: true })
+      setResp({ text: i18nT('shared:app.contact.trebuetsya_soglasie_na_obrabotku_dannyh_2416363c'), error: true })
       return
     }
 
@@ -113,18 +110,18 @@ function ContactScreen() {
       }
       showToast({
         type: 'success',
-        text1: 'Сообщение отправлено',
-        text2: 'Спасибо за обратную связь!',
+        text1: i18nT('shared:app.contact.soobschenie_otpravleno_4b7a54a4'),
+        text2: i18nT('shared:app.contact.spasibo_za_obratnuyu_svyaz_a4daf7e4'),
         visibilityTime: 4000,
       })
     } catch (error: any) {
       if (mountedRef.current) {
-        setResp({ text: error?.message || 'Не удалось отправить сообщение.', error: true })
+        setResp({ text: error?.message || i18nT('sharedStatic:contact.sendFailed'), error: true })
       }
       showToast({
         type: 'error',
-        text1: 'Ошибка отправки',
-        text2: error?.message || 'Попробуйте позже',
+        text1: i18nT('shared:app.contact.oshibka_otpravki_334e0495'),
+        text2: error?.message || i18nT('sharedStatic:errors.tryLater'),
         visibilityTime: 4000,
       })
     } finally {
@@ -142,7 +139,7 @@ function ContactScreen() {
   }, [handleSubmit])
 
   const sendMail = useCallback(() => {
-    const url = `mailto:${EMAIL}?subject=${encodeURIComponent(MAIL_SUBJECT)}&body=${encodeURIComponent(MAIL_BODY)}`
+    const url = `mailto:${EMAIL}?subject=${encodeURIComponent(MAIL_SUBJECT)}&body=${encodeURIComponent(i18nT('sharedStatic:contact.mailBody'))}`
     void openExternalUrl(url, {
       allowedProtocols: ['mailto:'],
       onError: (error) => {
@@ -225,7 +222,7 @@ function ContactScreen() {
                     onOpenCookies={() => router.push('/cookies' as any)}
                     socialLinks={SOCIAL_LINKS}
                     versionInfo={{
-                      appVersion: String(appVersion),
+                      ...appVersionInfo,
                       ...(Platform.OS === 'web' ? { webBuildVersion } : {}),
                     }}
                   />

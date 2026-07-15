@@ -20,6 +20,8 @@ import { hapticNotification } from '@/utils/haptics'
 import QuestPointNavigator from './QuestPointNavigator'
 import { copyQuestCoords, openQuestMap, type QuestMapApp } from './questWizardHelpers'
 import type { QuestPoiInfo } from './types'
+import { translate as i18nT } from '@/i18n'
+
 
 const SHOULD_USE_NATIVE_DRIVER = false
 
@@ -102,12 +104,12 @@ function ImageZoomModal({
             </Animated.View>
           </PinchGestureHandler>
         </GestureHandlerRootView>
-        <Pressable style={styles.closeButton} onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Закрыть просмотр фото">
+        <Pressable style={styles.closeButton} onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel={i18nT('quests:components.quests.questWizardStepCard.zakryt_prosmotr_foto_ce5e2b00')}>
           <Text style={styles.closeButtonText}>✕</Text>
         </Pressable>
         {Platform.OS !== 'web' && (
           <View style={styles.zoomHintContainer}>
-            <Text style={styles.zoomHint}>Используйте два пальца, чтобы увеличить фото</Text>
+            <Text style={styles.zoomHint}>{i18nT('quests:components.quests.questWizardStepCard.ispolzuyte_dva_paltsa_chtoby_uvelichit_foto_03ee3a2e')}</Text>
           </View>
         )}
       </View>
@@ -217,9 +219,9 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     const poiInfo = step.poiInfo
     if (!poiInfo) return []
     return [
-      poiInfo.isMuseum ? { key: 'type', label: 'Тип', value: 'Музей' } : null,
-      poiInfo.openingHours ? { key: 'hours', label: 'Часы работы', value: poiInfo.openingHours } : null,
-      poiInfo.ticketPrice ? { key: 'price', label: 'Билеты', value: poiInfo.ticketPrice } : null,
+      poiInfo.isMuseum ? { key: 'type', label: i18nT('quests:components.quests.questWizardStepCard.tip_bbadeb50'), value: i18nT('quests:components.quests.questWizardStepCard.poiType.museum') } : null,
+      poiInfo.openingHours ? { key: 'hours', label: i18nT('quests:components.quests.questWizardStepCard.chasy_raboty_64c942b8'), value: poiInfo.openingHours } : null,
+      poiInfo.ticketPrice ? { key: 'price', label: i18nT('quests:components.quests.questWizardStepCard.bilety_e9c72fb2'), value: poiInfo.ticketPrice } : null,
     ].filter((row): row is { key: string; label: string; value: string } => Boolean(row))
   }, [step.poiInfo])
   const showVisitorInfo = visitorInfoRows.length > 0 || Boolean(visitorWebsiteUrl)
@@ -235,7 +237,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       return
     }
     if (!trimmed) {
-      setError('Введите ответ')
+      setError(i18nT('quests:components.quests.questWizardStepCard.vvedite_otvet_a0ee4604'))
       shake()
       hapticNotification('warning')
       return
@@ -253,7 +255,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         Keyboard.dismiss()
       }, 200)
     } else {
-      setError('Неверный ответ')
+      setError(i18nT('quests:components.quests.questWizardStepCard.nevernyy_otvet_22371740'))
       onWrongAttempt()
       shake()
       hapticNotification('error')
@@ -273,7 +275,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
           <Pressable
             onPress={openDefaultMap}
             accessibilityRole="button"
-            accessibilityLabel={`Открыть в картах: ${step.location}`}
+            accessibilityLabel={i18nT('quests:components.quests.questWizardStepCard.otkryt_v_kartah_value1_6472f175', { value1: step.location })}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
             hitSlop={6}
           >
@@ -294,7 +296,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         <View style={[styles.section, styles.visitorInfoCard]} testID="quest-step-visitor-info">
           <View style={styles.visitorInfoHeader}>
             <Feather name="info" size={16} color={colors.brandText} />
-            <Text style={styles.visitorInfoTitle}>Информация для посетителей</Text>
+            <Text style={styles.visitorInfoTitle}>{i18nT('quests:components.quests.questWizardStepCard.informatsiya_dlya_posetiteley_051342b6')}</Text>
           </View>
           {visitorInfoRows.map((row) => (
             <View key={row.key} style={styles.visitorInfoRow}>
@@ -307,11 +309,11 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
               style={styles.visitorInfoLink}
               onPress={openVisitorWebsite}
               accessibilityRole="link"
-              accessibilityLabel="Открыть сайт места"
+              accessibilityLabel={i18nT('quests:components.quests.questWizardStepCard.otkryt_sayt_mesta_3b99f2eb')}
               hitSlop={6}
             >
               <Feather name="external-link" size={14} color={colors.brandText} />
-              <Text style={styles.visitorInfoLinkText}>Сайт места</Text>
+              <Text style={styles.visitorInfoLinkText}>{i18nT('quests:components.quests.questWizardStepCard.sayt_mesta_9e0f7d94')}</Text>
             </Pressable>
           )}
         </View>
@@ -323,8 +325,8 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         {step.id !== 'intro' && !isPassed && (
           isAutoPassStep
             ? (
-              <Pressable style={styles.primaryButton} onPress={() => onSubmit('ok')} hitSlop={6} accessibilityRole="button" accessibilityLabel="Далее">
-                <Text style={styles.buttonText}>Далее</Text>
+              <Pressable style={styles.primaryButton} onPress={() => onSubmit('ok')} hitSlop={6} accessibilityRole="button" accessibilityLabel={i18nT('quests:components.quests.questWizardStepCard.dalee_74add698')}>
+                <Text style={styles.buttonText}>{i18nT('quests:components.quests.questWizardStepCard.dalee_74add698')}</Text>
               </Pressable>
             ) : (
               <>
@@ -332,7 +334,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                   <Animated.View style={[{ flex: 1 }, { transform: [{ translateX: shakeAnim }] }]}>
                     <TextInput
                       style={[styles.input, error ? styles.inputError : null, globalFocusStyles.focusable]}
-                      placeholder="Ваш ответ..."
+                      placeholder={i18nT('quests:components.quests.questWizardStepCard.vash_otvet_21a01dd5')}
                       placeholderTextColor={colors.textMuted}
                       value={value}
                       onChangeText={setValue}
@@ -343,7 +345,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                       autoCorrect={false}
                     />
                   </Animated.View>
-                  <Pressable style={styles.checkButton} onPress={handleCheck} hitSlop={6} accessibilityRole="button" accessibilityLabel="Проверить ответ">
+                  <Pressable style={styles.checkButton} onPress={handleCheck} hitSlop={6} accessibilityRole="button" accessibilityLabel={i18nT('quests:components.quests.questWizardStepCard.proverit_otvet_76814505')}>
                     <Feather name="arrow-right" size={24} color={colors.textOnPrimary} />
                   </Pressable>
                 </View>
@@ -354,19 +356,18 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                 )}
                 <View style={styles.inlineActions}>
                   {step.hint && (
-                    <Pressable onPress={onToggleHint} hitSlop={8} accessibilityRole="button" accessibilityLabel={hintVisible ? 'Скрыть подсказку' : 'Показать подсказку'}>
-                      <Text style={styles.linkText}>{hintVisible ? 'Скрыть подсказку' : 'Подсказка'}</Text>
+                    <Pressable onPress={onToggleHint} hitSlop={8} accessibilityRole="button" accessibilityLabel={hintVisible ? i18nT('quests:components.quests.questWizardStepCard.skryt_podskazku_57f34c03') : i18nT('quests:components.quests.questWizardStepCard.pokazat_podskazku_fea5f2bc')}>
+                      <Text style={styles.linkText}>{hintVisible ? i18nT('quests:components.quests.questWizardStepCard.skryt_podskazku_57f34c03') : i18nT('quests:components.quests.questWizardStepCard.podskazka_e3530449')}</Text>
                     </Pressable>
                   )}
                   {step.hint && (<Text style={styles.linkSeparator}>·</Text>)}
-                  <Pressable onPress={onSkip} hitSlop={8} accessibilityRole="button" accessibilityLabel="Пропустить шаг">
-                    <Text style={styles.linkText}>Пропустить</Text>
+                  <Pressable onPress={onSkip} hitSlop={8} accessibilityRole="button" accessibilityLabel={i18nT('quests:components.quests.questWizardStepCard.propustit_shag_1965c65e')}>
+                    <Text style={styles.linkText}>{i18nT('quests:components.quests.questWizardStepCard.propustit_0358f4b6')}</Text>
                   </Pressable>
                 </View>
                 {step.hint && !hintVisible && hintSuggested && (
                   <Text style={styles.hintPrompt}>
-                    Застряли? Откройте подсказку выше.
-                  </Text>
+                    {i18nT('quests:components.quests.questWizardStepCard.zastryali_otkroyte_podskazku_vyshe_128fae28')}</Text>
                 )}
               </>
             )
@@ -374,7 +375,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
 
         {step.hint && (
           <View style={[styles.hintContainer, !hintVisible && Platform.select({ web: { visibility: 'hidden' } as any, default: { display: 'none' } })]}>
-            <Text style={styles.hintText}>Подсказка: {step.hint}</Text>
+            <Text style={styles.hintText}>{i18nT('quests:components.quests.questWizardStepCard.podskazka_5453c538')}{step.hint}</Text>
           </View>
         )}
       </View>
@@ -385,7 +386,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
             {isPassed && (
               <View style={[styles.answerMapPane, styles.answerPane]}>
                 <View style={styles.answerContainer}>
-                  <Text style={styles.answerLabel}>Ваш ответ:</Text>
+                  <Text style={styles.answerLabel}>{i18nT('quests:components.quests.questWizardStepCard.vash_otvet_540d4fc8')}</Text>
                   <Text style={styles.answerValue} numberOfLines={3}>{savedAnswer}</Text>
                 </View>
               </View>
@@ -396,30 +397,30 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                 {showLocationControls && (
                   <>
                     <View style={styles.navRow}>
-                      <Pressable style={styles.navButton} onPress={openDefaultMap} hitSlop={6} accessibilityRole="button" accessibilityLabel="Открыть навигацию">
-                        <Text style={styles.navButtonText}>Навигация</Text>
+                      <Pressable style={styles.navButton} onPress={openDefaultMap} hitSlop={6} accessibilityRole="button" accessibilityLabel={i18nT('quests:components.quests.questWizardStepCard.otkryt_navigatsiyu_4d8f628e')}>
+                        <Text style={styles.navButtonText}>{i18nT('quests:components.quests.questWizardStepCard.navigatsiya_01b17385')}</Text>
                       </Pressable>
-                      <Pressable style={styles.navToggle} onPress={toggleNavigationOptions} hitSlop={6} accessibilityRole="button" accessibilityLabel={navExpanded ? 'Скрыть варианты навигации' : 'Показать варианты навигации'}>
+                      <Pressable style={styles.navToggle} onPress={toggleNavigationOptions} hitSlop={6} accessibilityRole="button" accessibilityLabel={navExpanded ? i18nT('quests:components.quests.questWizardStepCard.skryt_varianty_navigatsii_6ab5fa55') : i18nT('quests:components.quests.questWizardStepCard.pokazat_varianty_navigatsii_1872f9c6')}>
                         <Text style={styles.navToggleText}>{navExpanded ? '▲' : '▼'}</Text>
                       </Pressable>
-                      <Pressable style={styles.coordsButton} onPress={copyCoords} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Копировать координаты ${step.lat.toFixed(4)}, ${step.lng.toFixed(4)}`}>
+                      <Pressable style={styles.coordsButton} onPress={copyCoords} hitSlop={6} accessibilityRole="button" accessibilityLabel={i18nT('quests:components.quests.questWizardStepCard.kopirovat_koordinaty_value1_value2_6750202e', { value1: step.lat.toFixed(4), value2: step.lng.toFixed(4) })}>
                         <Text style={styles.coordsButtonText}>{step.lat.toFixed(4)}, {step.lng.toFixed(4)}</Text>
                       </Pressable>
                       {step.image && (
-                        <Pressable style={styles.photoToggle} onPress={onToggleMap} hitSlop={8} accessibilityRole="button" accessibilityLabel={showMap ? 'Скрыть фото' : 'Показать фото'}>
-                          <Text style={styles.photoToggleText}>{showMap ? 'Скрыть фото' : 'Фото'}</Text>
+                        <Pressable style={styles.photoToggle} onPress={onToggleMap} hitSlop={8} accessibilityRole="button" accessibilityLabel={showMap ? i18nT('quests:components.quests.questWizardStepCard.skryt_foto_3ae447b6') : i18nT('quests:components.quests.questWizardStepCard.pokazat_foto_5729b6d2')}>
+                          <Text style={styles.photoToggleText}>{showMap ? i18nT('quests:components.quests.questWizardStepCard.skryt_foto_3ae447b6') : i18nT('quests:components.quests.questWizardStepCard.foto_39b57795')}</Text>
                         </Pressable>
                       )}
                     </View>
                     {navExpanded && (
                       <View style={styles.navDropdown}>
-                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('google')}><Text style={styles.navOptionText}>Google Maps</Text></Pressable>
-                        {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => openNavigationOption('apple')}><Text style={styles.navOptionText}>Apple Maps</Text></Pressable>)}
-                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('organic')}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>
-                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('waze')}><Text style={styles.navOptionText}>Waze</Text></Pressable>
-                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('yandex')}><Text style={styles.navOptionText}>Яндекс.Навигатор</Text></Pressable>
-                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('mapsme')}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>
-                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('osm')}><Text style={styles.navOptionText}>OpenStreetMap</Text></Pressable>
+                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('google')}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardStepCard.google_maps_5202efe6')}</Text></Pressable>
+                        {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => openNavigationOption('apple')}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardStepCard.apple_maps_7e7eb0fd')}</Text></Pressable>)}
+                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('organic')}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardStepCard.organic_maps_85e3792b')}</Text></Pressable>
+                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('waze')}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardStepCard.waze_219962a9')}</Text></Pressable>
+                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('yandex')}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardStepCard.yandeks_navigator_889d6713')}</Text></Pressable>
+                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('mapsme')}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardStepCard.maps_me_e3d32aec')}</Text></Pressable>
+                        <Pressable style={styles.navOption} onPress={() => openNavigationOption('osm')}><Text style={styles.navOptionText}>{i18nT('quests:components.quests.questWizardStepCard.openstreetmap_94cca6ca')}</Text></Pressable>
                       </View>
                     )}
                   </>
@@ -427,7 +428,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
 
                 {showMap && step.image && (
                   <>
-                    <Text style={styles.photoHint}>Это статичное фото-подсказка, не интерактивная карта.</Text>
+                    <Text style={styles.photoHint}>{i18nT('quests:components.quests.questWizardStepCard.eto_statichnoe_foto_podskazka_ne_interaktivn_290925e0')}</Text>
                     <Pressable style={styles.imagePreview} onPress={openImageModal}>
                       <ImageCardMedia
                         source={imageSource}
@@ -435,10 +436,10 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                         blurBackground
                         allowCriticalWebBlur
                         blurRadius={16}
-                        alt={step.title ? `Фото-подсказка для шага ${step.title}` : 'Фото-подсказка'}
+                        alt={step.title ? i18nT('quests:components.quests.questWizardStepCard.foto_podskazka_dlya_shaga_value1_1956118e', { value1: step.title }) : i18nT('quests:components.quests.questWizardStepCard.foto_podskazka_ef3dfff5')}
                         style={styles.previewImage}
                       />
-                      <View style={styles.imageOverlay}><Text style={styles.overlayText}>Нажмите для увеличения</Text></View>
+                      <View style={styles.imageOverlay}><Text style={styles.overlayText}>{i18nT('quests:components.quests.questWizardStepCard.nazhmite_dlya_uvelicheniya_55e02b7a')}</Text></View>
                     </Pressable>
                   </>
                 )}
@@ -457,7 +458,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
 
       {step.id === 'intro' && (
         <Pressable style={styles.startButton} onPress={handleCheck} hitSlop={6}>
-          <Text style={styles.startButtonText}>Начать квест</Text>
+          <Text style={styles.startButtonText}>{i18nT('quests:components.quests.questWizardStepCard.nachat_kvest_2847e749')}</Text>
         </Pressable>
       )}
 
@@ -478,7 +479,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
           { pointerEvents: 'none' } as any,
         ]}
       >
-        <View style={styles.flipBadge}><Text style={styles.flipText}>✓ Правильно!</Text></View>
+        <View style={styles.flipBadge}><Text style={styles.flipText}>{i18nT('quests:components.quests.questWizardStepCard.pravilno_2f264674')}</Text></View>
       </Animated.View>
     </Animated.View>
   )

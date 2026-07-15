@@ -2,12 +2,12 @@
 // Слой заявок на раскрытие контактов (BE-contact-protection #446 база + #419 расширение).
 // Контракт (тикет #419/#424), пути относительно apiClient.baseURL (`/api`):
 //   POST  /user/{user_id}/contact-request/  → { status }   (уже live; обёртка в api/privacy.ts)
-//   GET   /contact-requests/?direction=&status=            (#419, ещё нет на BE)
-//   PATCH /contact-requests/{id}/  { status }              (#419, ещё нет на BE)
-// До верификации #419 на проде — мок-фолбэк (EXPO_PUBLIC_TRIPS_MOCK=true или 404/501/0 в DEV),
-// паттерн идентичен api/publicTrips.ts.
+//   GET   /contact-requests/?direction=&status=
+//   PATCH /contact-requests/{id}/  { status }
+// Production contract verified by board #919; mock fallback is development-only.
 
 import { apiClient, ApiError } from '@/api/client';
+import { resolveDevMockFlag } from '@/utils/devMockFlags';
 import { devWarn } from '@/utils/logger';
 // POST-обёртка уже существует — переиспользуем, не дублируем.
 import { requestContactAccess, type ContactAccessStatus } from '@/api/privacy';
@@ -107,7 +107,10 @@ const mapRequest = (dto: ContactAccessRequestDto): ContactAccessRequest => ({
 
 // ── Мок-фолбэк (FE-guard: снять после верификации BE #419 на проде + regression) ──
 
-const USE_MOCK = process.env.EXPO_PUBLIC_TRIPS_MOCK === 'true';
+const USE_MOCK = resolveDevMockFlag({
+  name: 'EXPO_PUBLIC_TRIPS_MOCK',
+  value: process.env.EXPO_PUBLIC_TRIPS_MOCK,
+});
 
 const shouldFallbackToMock = (error: unknown): boolean => {
   if (USE_MOCK) return true;

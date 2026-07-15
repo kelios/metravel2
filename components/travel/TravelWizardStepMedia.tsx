@@ -26,12 +26,14 @@ import { useThemedColors } from '@/hooks/useTheme';
 import type { Travel, TravelFormData } from '@/types/types';
 import { showToastMessage } from '@/utils/toast';
 import { validateStep } from '@/utils/travelWizardValidation';
+import { translate as i18nT } from '@/i18n'
+
 
 const MEDIA_COVER_ANCHOR_ID = 'travelwizard-media-cover';
-const COVER_ADVICE_ITEMS = [
-    'Лучший формат: горизонтальный 16:9 (минимум 1200×675px)',
-    'Избегайте коллажей и текста на изображении',
-    'Используйте качественные фотографии с хорошим освещением',
+const getCoverAdviceItems = () => [
+    i18nT('travel:components.travel.TravelWizardStepMedia.coverAdvice.format'),
+    i18nT('travel:components.travel.TravelWizardStepMedia.coverAdvice.noCollage'),
+    i18nT('travel:components.travel.TravelWizardStepMedia.coverAdvice.quality'),
 ];
 
 interface TravelWizardStepMediaProps {
@@ -242,8 +244,8 @@ function useCoverDeletion(travelId: string | null | undefined, setFormData: Trav
         } catch {
             void showToastMessage({
                 type: 'error',
-                text1: 'Не удалось удалить обложку',
-                text2: 'Проверьте соединение и попробуйте ещё раз',
+                text1: i18nT('travel:components.travel.TravelWizardStepMedia.ne_udalos_udalit_oblozhku_5506754e'),
+                text2: i18nT('travel:components.travel.TravelWizardStepMedia.proverte_soedinenie_i_poprobuyte_esche_raz_900a3e83'),
             });
         } finally {
             isDeletingRef.current = false;
@@ -313,9 +315,9 @@ const CoverAdviceCard = React.memo(function CoverAdviceCard({ styles, primaryCol
                 <Feather name="info" size={18} color={primaryColor} />
             </View>
             <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>Совет по обложке</Text>
+                <Text style={styles.tipTitle}>{i18nT('travel:components.travel.TravelWizardStepMedia.sovet_po_oblozhke_f3c29ca4')}</Text>
                 <View style={styles.tipList} {...(Platform.OS === 'web' ? ({ role: 'list' } as any) : {})}>
-                    {COVER_ADVICE_ITEMS.map((item) => (
+                    {getCoverAdviceItems().map((item) => (
                         <Text
                             key={item}
                             style={styles.tipBody}
@@ -325,7 +327,7 @@ const CoverAdviceCard = React.memo(function CoverAdviceCard({ styles, primaryCol
                         </Text>
                     ))}
                 </View>
-                <Text style={styles.tipStats}>Путешествия с обложкой получают в 3 раза больше просмотров</Text>
+                <Text style={styles.tipStats}>{i18nT('travel:components.travel.TravelWizardStepMedia.puteshestviya_s_oblozhkoy_poluchayut_v_3_raz_adb656d4')}</Text>
             </View>
         </View>
     );
@@ -356,10 +358,9 @@ const CoverSection = React.memo(function CoverSection({
 }: CoverSectionProps) {
     return (
         <View ref={anchorRef} style={styles.section} nativeID={MEDIA_COVER_ANCHOR_ID}>
-            <Text style={styles.sectionTitle}>Главное изображение</Text>
+            <Text style={styles.sectionTitle}>{i18nT('travel:components.travel.TravelWizardStepMedia.glavnoe_izobrazhenie_ad4b6cfb')}</Text>
             <Text style={styles.sectionHint}>
-                Обложка маршрута, которая будет показываться в списках и на странице путешествия.
-            </Text>
+                {i18nT('travel:components.travel.TravelWizardStepMedia.oblozhka_marshruta_kotoraya_budet_pokazyvats_c7c655e3')}</Text>
 
             <CoverAdviceCard styles={styles} primaryColor={primaryColor} />
 
@@ -372,13 +373,12 @@ const CoverSection = React.memo(function CoverSection({
                     onUpload={onCoverChange}
                     onPreviewChange={onCoverChange}
                     onRequestRemove={onRequestDeleteCover}
-                    placeholder="Перетащите обложку путешествия"
+                    placeholder={i18nT('travel:components.travel.TravelWizardStepMedia.peretaschite_oblozhku_puteshestviya_83cdbe65')}
                     maxSizeMB={10}
                 />
                 {showDraftHint && (
                     <Text style={styles.infoText}>
-                        Превью будет сохранено. После сохранения черновика фото загрузится на сервер.
-                    </Text>
+                        {i18nT('travel:components.travel.TravelWizardStepMedia.prevyu_budet_sohraneno_posle_sohraneniya_che_e84e022d')}</Text>
                 )}
             </View>
         </View>
@@ -400,15 +400,14 @@ const GalleryMediaSection = React.memo(function GalleryMediaSection({
 }: GalleryMediaSectionProps) {
     return (
         <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Галерея путешествия</Text>
+            <Text style={styles.sectionTitle}>{i18nT('travel:components.travel.TravelWizardStepMedia.galereya_puteshestviya_0e6981ba')}</Text>
             <Text style={styles.sectionHint}>
-                Фотографии повышают доверие и помогают читателям лучше понять маршрут. Рекомендуем добавить 3–10 снимков.
-            </Text>
+                {i18nT('travel:components.travel.TravelWizardStepMedia.fotografii_povyshayut_doverie_i_pomogayut_ch_bc746649')}</Text>
             {Platform.OS === 'web' && GallerySectionLazy ? (
                 <Suspense
                     fallback={
                         <View style={styles.lazyFallback}>
-                            <Text style={styles.lazyFallbackText}>Загрузка галереи…</Text>
+                            <Text style={styles.lazyFallbackText}>{i18nT('travel:components.travel.TravelWizardStepMedia.zagruzka_galerei_2f46ef0d')}</Text>
                         </View>
                     }
                 >
@@ -431,10 +430,10 @@ const VideoSection = React.memo(function VideoSection({ styles, value, onChange 
     return (
         <View style={styles.section}>
             <YoutubeLinkComponent
-                label="Видео о путешествии (YouTube-ссылка)"
+                label={i18nT('travel:components.travel.TravelWizardStepMedia.video_o_puteshestvii_youtube_ssylka_75ad25b1')}
                 value={value}
                 onChange={onChange}
-                hint="Вставьте ссылку на ролик на YouTube, например: https://www.youtube.com/watch?v=..."
+                hint={i18nT('travel:components.travel.TravelWizardStepMedia.vstavte_ssylku_na_rolik_na_youtube_naprimer__9b6841ff')}
             />
         </View>
     );
@@ -566,15 +565,15 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                 <TravelWizardHeader
                     canGoBack
                     onBack={onBack}
-                    title={stepMeta?.title ?? 'Медиа путешествия'}
-                    subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
+                    title={stepMeta?.title ?? i18nT('travel:components.travel.TravelWizardStepMedia.defaultTitle')}
+                    subtitle={stepMeta?.subtitle ?? i18nT('travel:common.stepProgress', { value1: currentStep, value2: totalSteps })}
                     progressPercent={getProgressPercent(progress)}
                     errorCount={validation.errors.length}
                     warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
                     isSaveInFlight={isSaveInFlight}
                     onPrimary={onNext}
-                    primaryLabel={stepMeta?.nextLabel ?? 'К деталям'}
+                    primaryLabel={stepMeta?.nextLabel ?? i18nT('travel:components.travel.TravelWizardStepMedia.defaultNext')}
                     onSave={onManualSave}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
@@ -626,10 +625,10 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                     visible={isDeleteDialogOpen}
                     onClose={closeDeleteDialog}
                     onConfirm={confirmDeleteCover}
-                    title="Удалить обложку"
-                    message="Вы уверены, что хотите удалить главное изображение путешествия?"
-                    confirmText="Удалить"
-                    cancelText="Отмена"
+                    title={i18nT('travel:components.travel.TravelWizardStepMedia.udalit_oblozhku_a2bdb3d5')}
+                    message={i18nT('travel:components.travel.TravelWizardStepMedia.vy_uvereny_chto_hotite_udalit_glavnoe_izobra_4d548581')}
+                    confirmText={i18nT('travel:components.travel.TravelWizardStepMedia.udalit_71f38991')}
+                    cancelText={i18nT('travel:components.travel.TravelWizardStepMedia.otmena_bd4b67b1')}
                 />
             </KeyboardAvoidingView>
         </SafeAreaView>

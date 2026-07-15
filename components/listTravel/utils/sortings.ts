@@ -1,20 +1,22 @@
+import { createCollator, translate as i18nT } from '@/i18n'
+
 const SORTING_NAME_MAP: Record<string, string> = {
-  newest: 'Сначала новые',
-  oldest: 'Сначала старые',
-  popular_desc: 'Популярные ↓',
-  popular_asc: 'Популярные ↑',
-  updated_desc: 'Обновлены ↓',
-  created_desc: 'Добавлены ↓',
-  created_asc: 'Добавлены ↑',
-  name_asc: 'Название А→Я',
-  name_desc: 'Название Я→А',
-  year_desc: 'Год ↓',
-  year_asc: 'Год ↑',
-  days_desc: 'Длительность ↓',
-  days_asc: 'Длительность ↑',
-  people_desc: 'Людей ↓',
-  people_asc: 'Людей ↑',
-  rating_desc: 'Рейтинг ↓',
+  get newest() { return i18nT('travel:components.listTravel.sortings.newest') },
+  get oldest() { return i18nT('travel:components.listTravel.sortings.oldest') },
+  get popular_desc() { return i18nT('travel:components.listTravel.sortings.popularDesc') },
+  get popular_asc() { return i18nT('travel:components.listTravel.sortings.popularAsc') },
+  get updated_desc() { return i18nT('travel:components.listTravel.sortings.updatedDesc') },
+  get created_desc() { return i18nT('travel:components.listTravel.sortings.createdDesc') },
+  get created_asc() { return i18nT('travel:components.listTravel.sortings.createdAsc') },
+  get name_asc() { return i18nT('travel:components.listTravel.sortings.nameAsc') },
+  get name_desc() { return i18nT('travel:components.listTravel.sortings.nameDesc') },
+  get year_desc() { return i18nT('travel:components.listTravel.sortings.yearDesc') },
+  get year_asc() { return i18nT('travel:components.listTravel.sortings.yearAsc') },
+  get days_desc() { return i18nT('travel:components.listTravel.sortings.daysDesc') },
+  get days_asc() { return i18nT('travel:components.listTravel.sortings.daysAsc') },
+  get people_desc() { return i18nT('travel:components.listTravel.sortings.peopleDesc') },
+  get people_asc() { return i18nT('travel:components.listTravel.sortings.peopleAsc') },
+  get rating_desc() { return i18nT('travel:components.listTravel.sortings.ratingDesc') },
 };
 
 const HIDDEN_SORTINGS = new Set([
@@ -57,7 +59,7 @@ export const getSortingLabel = (sortingId: string, fallbackName?: string): strin
   if (normalizedId && SORTING_NAME_MAP[normalizedId]) {
     return SORTING_NAME_MAP[normalizedId];
   }
-  return String(fallbackName || normalizedId || 'Сортировка');
+  return String(fallbackName || normalizedId || i18nT('travel:components.listTravel.sortings.fallback'));
 };
 
 export const buildSortingOptions = (sortings: Array<{ id?: unknown; name?: unknown }> = []) => {
@@ -74,7 +76,7 @@ export const buildSortingOptions = (sortings: Array<{ id?: unknown; name?: unkno
       if (aIdx !== undefined && bIdx !== undefined) return aIdx - bIdx;
       if (aIdx !== undefined) return -1;
       if (bIdx !== undefined) return 1;
-      return a.id.localeCompare(b.id, 'ru');
+      return createCollator().compare(a.id, b.id);
     })
     .map((sorting) => ({
       id: sorting.id,

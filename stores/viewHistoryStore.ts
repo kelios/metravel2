@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { devError } from '@/utils/logger';
 import { safeJsonParseString } from '@/utils/safeJsonParse';
+import { translate as i18nT } from '@/i18n';
 
 const VIEW_HISTORY_KEY = 'metravel_view_history';
 const SERVER_HISTORY_CACHE_KEY = 'metravel_view_history_server';
@@ -67,7 +68,7 @@ const mergeHistoryItems = (items: ViewHistoryItem[]): ViewHistoryItem[] => {
     for (const item of items) {
         const key = getHistoryIdentity(item);
         const existing = byIdentity.get(key);
-        if (!existing || item.viewedAt >= existing.viewedAt) {
+        if (!existing || item.viewedAt > existing.viewedAt) {
             byIdentity.set(key, item);
         }
     }
@@ -189,7 +190,7 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
             const userHistory: ViewHistoryItem[] = historyArr.map((t) => ({
                 id: t.id,
                 type: 'travel' as const,
-                title: t.name || 'Без названия',
+                title: t.name || i18nT('errorsStatic:stores.content.untitled'),
                 url: t.slug ? `/travels/${t.slug}` : (t.url ? String(t.url).split('?')[0].split('#')[0] : `/travels/${t.id}`),
                 imageUrl: t.travel_image_thumb_url,
                 viewedAt: ((): number => {

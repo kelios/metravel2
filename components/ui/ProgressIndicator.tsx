@@ -5,6 +5,8 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n'
+
 
 interface ProgressIndicatorProps {
   progress: number; // 0-100
@@ -148,8 +150,7 @@ function ProgressIndicator({
                 },
               })}
             >
-              Отменить
-            </Text>
+              {i18nT('shared:components.ui.ProgressIndicator.otmenit_ac1629b1')}</Text>
           </View>
         )}
       </View>

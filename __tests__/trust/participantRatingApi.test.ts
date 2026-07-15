@@ -1,6 +1,6 @@
 // __tests__/trust/participantRatingApi.test.ts
 // Trust & Safety (Sprint 16, FE-431/FE-434): unit-тесты api/participantRating.ts —
-// POST/GET контракт оценки участника, валидация 1..5, тихий null на 403/404.
+// POST/GET контракт оценки участника, валидация 1..5 и typed failures.
 // __DEV__=false + без EXPO_PUBLIC_TRIPS_MOCK → бьём по apiClient (не in-memory мок).
 
 delete process.env.EXPO_PUBLIC_TRIPS_MOCK
@@ -25,6 +25,10 @@ jest.mock('@/utils/logger', () => ({
   devWarn: jest.fn(),
   devError: jest.fn(),
   devLog: jest.fn(),
+}))
+
+jest.mock('@/utils/devMockFlags', () => ({
+  resolveDevMockFlag: jest.fn(() => false),
 }))
 
 import { apiClient, ApiError } from '@/api/client'
@@ -72,8 +76,17 @@ describe('getMyParticipantRating', () => {
     expect(await getMyParticipantRating(10, 5)).toBeNull()
   })
 
-  it('returns null on 403 (not a participant / trip not completed)', async () => {
-    mockGet.mockRejectedValueOnce(new ApiError(403))
-    expect(await getMyParticipantRating(10, 5)).toBeNull()
+  it.each([401, 403, 404, 501, 500])('preserves HTTP %s as a typed API failure', async (status) => {
+    const error = new ApiError(status)
+    mockGet.mockRejectedValueOnce(error)
+
+    await expect(getMyParticipantRating(10, 5)).rejects.toBe(error)
+  })
+
+  it('preserves retryable network failures', async () => {
+    const error = new ApiError(0, 'offline')
+    mockGet.mockRejectedValueOnce(error)
+
+    await expect(getMyParticipantRating(10, 5)).rejects.toBe(error)
   })
 })

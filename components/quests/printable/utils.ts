@@ -1,5 +1,6 @@
 import type { QuestStep } from '../types';
 import { QR_NAV, type PrintableMapPoint } from './constants';
+import { translate as i18nT } from '@/i18n';
 
 export function qrUrl(data: string, size = QR_NAV): string {
   return `https://quickchart.io/qr?text=${encodeURIComponent(data)}&size=${size * 2}&margin=1&format=png`;
@@ -22,7 +23,7 @@ export function buildPrintableMapPoints(steps: QuestStep[]): PrintableMapPoint[]
       lat: step.lat,
       lng: step.lng,
       num: index + 1,
-      location: step.location || `Точка ${index + 1}`,
+      location: step.location || i18nT('quests:components.quests.QuestFullMap.pointFallback', { value1: index + 1 }),
     }));
 }
 

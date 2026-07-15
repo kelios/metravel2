@@ -6,6 +6,8 @@ import Button from '@/components/ui/Button'
 import { useThemedColors } from '@/hooks/useTheme'
 
 import type { TravelListStyles } from './styles'
+import { translate as i18nT } from '@/i18n'
+
 
 export function EmptyState({
   styles,
@@ -29,7 +31,7 @@ export function EmptyState({
   }> = []
   if (onExpandRadius) {
     actions.push({
-      label: 'Увеличить радиус поиска',
+      label: i18nT('map:components.MapPage.TravelListPanel.EmptyState.uvelichit_radius_poiska_527c2df0'),
       onPress: onExpandRadius,
       variant: 'primary',
       testID: 'empty-expand-radius',
@@ -37,7 +39,7 @@ export function EmptyState({
   }
   if (onResetFilters) {
     actions.push({
-      label: 'Сбросить фильтры',
+      label: i18nT('map:components.MapPage.TravelListPanel.EmptyState.sbrosit_filtry_9441f9e4'),
       onPress: onResetFilters,
       variant: 'outline',
       testID: 'empty-reset-filters',
@@ -45,7 +47,7 @@ export function EmptyState({
   }
   if (onOpenFilters) {
     actions.push({
-      label: 'Изменить фильтры',
+      label: i18nT('map:components.MapPage.TravelListPanel.EmptyState.izmenit_filtry_f89a6d6d'),
       onPress: onOpenFilters,
       variant: 'ghost',
       testID: 'empty-open-filters',
@@ -53,7 +55,7 @@ export function EmptyState({
   }
   if (onClosePanel) {
     actions.push({
-      label: 'Вернуться на карту',
+      label: i18nT('map:components.MapPage.TravelListPanel.EmptyState.vernutsya_na_kartu_59eb3e35'),
       onPress: onClosePanel,
       variant: 'ghost',
       testID: 'empty-back-to-map',
@@ -62,14 +64,14 @@ export function EmptyState({
 
   return (
     <View style={styles.emptyContainer}>
-      <View style={styles.emptyIconCircle} accessibilityLabel="Ничего не нашлось">
+      <View style={styles.emptyIconCircle} accessibilityLabel={i18nT('map:components.MapPage.TravelListPanel.EmptyState.nichego_ne_nashlos_3ea759ca')}>
         <Feather name="map-pin" size={36} color={themeColors.textMuted} />
       </View>
-      <Text style={styles.emptyText}>Ничего не нашлось</Text>
+      <Text style={styles.emptyText}>{i18nT('map:components.MapPage.TravelListPanel.EmptyState.nichego_ne_nashlos_3ea759ca')}</Text>
       <Text style={styles.emptyHint}>
         {actions.length > 0
-          ? 'В этой области нет мест по текущим фильтрам. Выберите действие ниже:'
-          : 'В этой области нет мест по текущим фильтрам. Измените радиус или фильтры поиска.'}
+          ? i18nT('map:components.MapPage.TravelListPanel.EmptyState.v_etoy_oblasti_net_mest_po_tekuschim_filtram_e47649dc')
+          : i18nT('map:components.MapPage.TravelListPanel.EmptyState.v_etoy_oblasti_net_mest_po_tekuschim_filtram_4a50e9a9')}
       </Text>
       <View style={styles.emptyActions}>
         {actions.map((action) => (

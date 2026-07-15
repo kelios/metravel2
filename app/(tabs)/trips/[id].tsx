@@ -1,31 +1,28 @@
-import React, { Suspense, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
+import PublicTripDetail from '@/components/trips/PublicTripDetail';
+import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-
-const PublicTripDetail = React.lazy(
-  () => import('@/components/trips/PublicTripDetail'),
-);
 
 export default function TripDetailScreen() {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const params = useLocalSearchParams<{ tripId?: string }>();
-  const tripId = Number(params.tripId);
+  const params = useLocalSearchParams<{ id?: string }>();
+  const hydrationReady = useHydrationReady();
+  const tripId = hydrationReady ? Number(params.id) : Number.NaN;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.inner}>
-        <Suspense
-          fallback={
-            <View style={styles.center}>
-              <ActivityIndicator />
-            </View>
-          }
-        >
-          {Number.isFinite(tripId) ? <PublicTripDetail tripId={tripId} /> : null}
-        </Suspense>
+        {Number.isFinite(tripId) ? (
+          <PublicTripDetail tripId={tripId} />
+        ) : (
+          <View style={styles.center}>
+            <ActivityIndicator />
+          </View>
+        )}
       </View>
     </ScrollView>
   );

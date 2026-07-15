@@ -30,6 +30,7 @@
 import { apiClient, ApiError } from '@/api/client'
 import { devError } from '@/utils/logger'
 import { useAuthStore } from '@/stores/authStore'
+import { translate as i18nT } from '@/i18n'
 
 export type QuestReviewRecord = {
   id: number
@@ -66,7 +67,7 @@ export const submitQuestReview = async (
   const { questId, rating, liked, disliked } = params
 
   if (rating < 1 || rating > 5) {
-    throw new Error('Рейтинг должен быть от 1 до 5')
+    throw new Error(i18nT('errorsStatic:api.common.ratingRange'))
   }
 
   try {

@@ -1,4 +1,5 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Illustrated Journey - уникальная иллюстрированная тема
@@ -6,8 +7,8 @@ import type { PdfThemeConfig } from '../types'
  */
 export const illustratedTheme: PdfThemeConfig = {
   name: 'illustrated',
-  displayName: 'Illustrated Journey',
-  description: 'Уникальная иллюстрированная тема с декоративными элементами',
+  get displayName() { return i18nT('export:services.pdfExport.theme.illustrated.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.illustrated.description') },
   
   colors: {
     text: '#2d2d2d',

@@ -327,6 +327,89 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         color: colors.textMuted,
         fontWeight: '500',
     },
+    stepSelectTrigger: {
+        minHeight: 28,
+        maxWidth: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+        paddingVertical: DESIGN_TOKENS.spacing.xxs,
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        backgroundColor: colors.surfaceMuted,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    stepSelectTriggerActive: {
+        backgroundColor: colors.primarySoft,
+        borderColor: colors.primaryAlpha40,
+    },
+    stepSelectTriggerText: {
+        minWidth: 0,
+        flexShrink: 1,
+        fontSize: 12,
+        color: colors.textMuted,
+        fontWeight: '700',
+    },
+    stepSelectPanel: {
+        marginTop: DESIGN_TOKENS.spacing.xs,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+        overflow: 'hidden',
+        ...(Platform.OS === 'web'
+            ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+            : (DESIGN_TOKENS.shadowsNative.light as any)),
+    },
+    stepSelectItem: {
+        minHeight: 48,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.sm,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.xs,
+    },
+    stepSelectItemActive: {
+        backgroundColor: colors.primarySoft,
+    },
+    stepSelectBadge: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    stepSelectBadgeActive: {
+        backgroundColor: colors.primarySoft,
+        borderColor: colors.primaryAlpha40,
+    },
+    stepSelectBadgeText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.textMuted,
+    },
+    stepSelectItemTextGroup: {
+        flex: 1,
+        minWidth: 0,
+    },
+    stepSelectItemTitle: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: colors.text,
+    },
+    stepSelectItemTitleActive: {
+        color: colors.primaryText,
+    },
+    stepSelectItemSubtitle: {
+        marginTop: 2,
+        fontSize: 12,
+        fontWeight: '500',
+        color: colors.textMuted,
+    },
     progressStatusGroup: {
         flex: 1,
         minWidth: 0,
@@ -346,7 +429,7 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
     },
     progressErrorText: {
         fontSize: 11,
-        color: colors.danger,
+        color: colors.dangerDark,
         fontWeight: '700',
     },
     belowProgressRow: {

@@ -41,6 +41,8 @@ import {
   isWeb,
   useRightColumnStyles,
 } from '@/components/listTravel/useRightColumnStyles'
+import { translate as i18nT } from '@/i18n'
+
 
 interface RightColumnProps {
   search: string
@@ -428,9 +430,9 @@ const RightColumn: React.FC<RightColumnProps> = (
                 isWeb ? { flexDirection: 'row', alignItems: 'center', gap: 8 } : null,
               ]}
             >
-              <ActivityIndicator size="small" accessibilityLabel="Загружаем ещё маршруты" />
+              <ActivityIndicator size="small" accessibilityLabel={i18nT('travel:components.listTravel.RightColumn.zagruzhaem_esche_marshruty_bcf67a00')} />
               {isWeb ? (
-                <Text style={{ fontSize: 13, color: colors.textMuted }}>Загружаем ещё...</Text>
+                <Text style={{ fontSize: 13, color: colors.textMuted }}>{i18nT('travel:components.listTravel.RightColumn.zagruzhaem_esche_3a0d6373')}</Text>
               ) : null}
             </View>
           ) : null}
@@ -572,7 +574,7 @@ const RightColumn: React.FC<RightColumnProps> = (
               <Pressable
                 key={chip.key}
                 accessibilityRole="button"
-                accessibilityLabel={`Убрать условие: ${chip.label}`}
+                accessibilityLabel={i18nT('travel:components.listTravel.RightColumn.ubrat_uslovie_value1_0b9ee9b1', { value1: chip.label })}
                 onPress={chip.onRemove}
                 style={activeConditionChipStyles.chip as any}
                 testID={`active-condition-chip-${chip.key}`}
@@ -614,22 +616,22 @@ const RightColumn: React.FC<RightColumnProps> = (
               {isOffline ? (
                 <EmptyState
                   icon="wifi-off"
-                  title="Нет подключения"
-                  description="Проверьте интернет-соединение и попробуйте снова."
+                  title={i18nT('travel:components.listTravel.RightColumn.net_podklyucheniya_fb445d25')}
+                  description={i18nT('travel:components.listTravel.RightColumn.proverte_internet_soedinenie_i_poprobuyte_sn_99ebb55e')}
                   variant="error"
                   action={{
-                    label: 'Повторить',
+                    label: i18nT('travel:components.listTravel.RightColumn.povtorit_340c3e03'),
                     onPress: () => refetch(),
                   }}
                 />
               ) : (
                 <EmptyState
                   icon="alert-circle"
-                  title="Ошибка загрузки"
-                  description="Не удалось загрузить путешествия."
+                  title={i18nT('travel:components.listTravel.RightColumn.oshibka_zagruzki_3d856d87')}
+                  description={i18nT('travel:components.listTravel.RightColumn.ne_udalos_zagruzit_puteshestviya_7460434d')}
                   variant="error"
                   action={{
-                    label: 'Повторить',
+                    label: i18nT('travel:components.listTravel.RightColumn.povtorit_340c3e03'),
                     onPress: () => refetch(),
                   }}
                 />
@@ -653,7 +655,7 @@ const RightColumn: React.FC<RightColumnProps> = (
                       ? getEmptyStateMessage.action
                       : activeFiltersCount > 0 || search
                         ? {
-                            label: 'Сбросить условия',
+                            label: i18nT('travel:components.listTravel.RightColumn.sbrosit_usloviya_60d7d2cf'),
                             onPress: () => {
                               onClearAll?.();
                               setSearch?.('');

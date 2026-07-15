@@ -9,6 +9,8 @@ import {
 } from '@/utils/mapFiltersStorage';
 import { fetchFiltersMap } from '@/api/map';
 import { DEFAULT_RADIUS_KM, RADIUS_OPTIONS } from '@/constants/mapConfig';
+import { translate as i18nT } from '@/i18n'
+
 
 export interface FiltersData {
   categories: { id: string; name: string }[];
@@ -123,7 +125,7 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
       } catch (err) {
         if (isMounted) {
           logError(err, { scope: 'map', step: 'loadFilters' });
-          setError('Не удалось загрузить фильтры');
+          setError(i18nT('map:hooks.map.useMapFilters.ne_udalos_zagruzit_filtry_4d480f39'));
         }
       } finally {
         if (isMounted) {

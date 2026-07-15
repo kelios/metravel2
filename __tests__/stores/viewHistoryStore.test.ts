@@ -45,6 +45,10 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('viewHistoryStore', () => {
   describe('initial state', () => {
     it('has correct defaults', () => {
@@ -95,6 +99,49 @@ describe('viewHistoryStore', () => {
       const history = useViewHistoryStore.getState().viewHistory;
       expect(history).toHaveLength(1);
       expect(history[0].title).toBe('New');
+    });
+
+    it('keeps the newest metadata when duplicate additions share a timestamp', async () => {
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1234);
+      const auth = { isAuthenticated: false, userId: null };
+
+      await act(() => useViewHistoryStore.getState().addToHistory(makeItem(1, 'Old'), auth));
+      await act(() =>
+        useViewHistoryStore.getState().addToHistory(
+          { ...makeItem(1, 'New'), imageUrl: '/new.jpg', url: '/travels/new' },
+          auth,
+        ),
+      );
+
+      expect(useViewHistoryStore.getState().viewHistory).toEqual([
+        expect.objectContaining({
+          id: 1,
+          title: 'New',
+          imageUrl: '/new.jpg',
+          url: '/travels/new',
+          viewedAt: 1234,
+        }),
+      ]);
+      nowSpy.mockRestore();
+    });
+
+    it('keeps distinct history types even when ids and timestamps match', async () => {
+      jest.spyOn(Date, 'now').mockReturnValue(1234);
+      const auth = { isAuthenticated: false, userId: null };
+
+      await act(() => useViewHistoryStore.getState().addToHistory(makeItem(1), auth));
+      await act(() =>
+        useViewHistoryStore.getState().addToHistory(
+          { ...makeItem(1, 'Article'), type: 'article', url: '/article/1' },
+          auth,
+        ),
+      );
+
+      expect(useViewHistoryStore.getState().viewHistory).toHaveLength(2);
+      expect(useViewHistoryStore.getState().viewHistory.map((item) => item.type).sort()).toEqual([
+        'article',
+        'travel',
+      ]);
     });
 
     it('limits history to 50 items', async () => {
@@ -182,6 +229,20 @@ describe('viewHistoryStore', () => {
 
       await act(() => useViewHistoryStore.getState().loadLocal(null));
       expect(useViewHistoryStore.getState().viewHistory).toEqual([]);
+    });
+  });
+
+  describe('loadServerCached', () => {
+    it('uses the first source deterministically when cache timestamps are equal', async () => {
+      const server = { ...makeItem(1, 'Server'), viewedAt: 100 };
+      const local = { ...makeItem(1, 'Local'), viewedAt: 100 };
+      (AsyncStorage.getItem as jest.Mock).mockImplementation(async (key: string) =>
+        key.includes('server') ? JSON.stringify([server]) : JSON.stringify([local]),
+      );
+
+      await act(() => useViewHistoryStore.getState().loadServerCached('42'));
+
+      expect(useViewHistoryStore.getState().viewHistory).toEqual([server]);
     });
   });
 

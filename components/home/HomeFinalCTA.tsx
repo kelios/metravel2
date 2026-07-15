@@ -11,6 +11,8 @@ import { ResponsiveContainer } from '@/components/layout'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import Button from '@/components/ui/Button'
 import { buildLoginHref } from '@/utils/authNavigation'
+import { translate as i18nT } from '@/i18n'
+
 
 interface HomeFinalCTAProps {
   travelsCount?: number
@@ -19,9 +21,9 @@ interface HomeFinalCTAProps {
 type CtaState = 'guest' | 'empty' | 'started'
 
 const TRUST_BADGES = [
-  { icon: 'check-circle', label: 'Бесплатно' },
-  { icon: 'shield', label: 'Без карты' },
-  { icon: 'zap', label: 'Мгновенно' },
+  { icon: 'check-circle', get label() { return i18nT('homeStatic:components.home.HomeFinalCTA.besplatno_7db7b3ed') } },
+  { icon: 'shield', get label() { return i18nT('homeStatic:components.home.HomeFinalCTA.bez_karty_a228f55b') } },
+  { icon: 'zap', get label() { return i18nT('homeStatic:components.home.HomeFinalCTA.mgnovenno_3314e6a0') } },
 ] as const
 
 function getCtaState(isAuthenticated: boolean, travelsCount: number): CtaState {
@@ -32,22 +34,19 @@ function getCtaState(isAuthenticated: boolean, travelsCount: number): CtaState {
 
 const CTA_COPY: Record<CtaState, { eyebrow: string; button: string; subtitle: string }> = {
   guest: {
-    eyebrow: 'Ваши маршруты в одном месте',
-    button: 'Начать бесплатно',
-    subtitle:
-      'Сохраняйте маршруты с фото и заметками, чтобы быстро находить их снова и при необходимости собрать PDF.',
+    get eyebrow() { return i18nT('homeStatic:finalCta.guest.eyebrow') },
+    get button() { return i18nT('homeStatic:finalCta.guest.button') },
+    get subtitle() { return i18nT('homeStatic:components.home.HomeFinalCTA.sohranyayte_marshruty_s_foto_i_zametkami_cht_ba8853fc') },
   },
   empty: {
-    eyebrow: 'Первая поездка в подборке',
-    button: 'Добавить первую поездку',
-    subtitle:
-      'Добавьте первую поездку, чтобы все маршруты, фото и заметки были собраны в одном месте.',
+    get eyebrow() { return i18nT('homeStatic:finalCta.empty.eyebrow') },
+    get button() { return i18nT('homeStatic:finalCta.empty.button') },
+    get subtitle() { return i18nT('homeStatic:components.home.HomeFinalCTA.dobavte_pervuyu_poezdku_chtoby_vse_marshruty_983090c8') },
   },
   started: {
-    eyebrow: 'Подборка уже собирается',
-    button: 'Открыть мою книгу',
-    subtitle:
-      'У вас уже есть сохранённые поездки. Добавляйте новые маршруты и собирайте PDF, когда он понадобится.',
+    get eyebrow() { return i18nT('homeStatic:finalCta.started.eyebrow') },
+    get button() { return i18nT('homeStatic:finalCta.started.button') },
+    get subtitle() { return i18nT('homeStatic:components.home.HomeFinalCTA.u_vas_uzhe_est_sohranennye_poezdki_dobavlyay_857c5e5a') },
   },
 }
 
@@ -109,11 +108,11 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
           <View
             style={styles.titleRow}
             accessibilityRole="header"
-            accessibilityLabel="Соберите свою подборку поездок"
+            accessibilityLabel={i18nT('home:components.home.HomeFinalCTA.soberite_svoyu_podborku_poezdok_57c9a5b7')}
             {...({ 'aria-level': 2 } as any)}
           >
-            <Text style={styles.title}>Соберите свою</Text>
-            <Text style={styles.titleAccent}>подборку поездок</Text>
+            <Text style={styles.title}>{i18nT('home:components.home.HomeFinalCTA.soberite_svoyu_e15c2830')}</Text>
+            <Text style={styles.titleAccent}>{i18nT('home:components.home.HomeFinalCTA.podborku_poezdok_92aaf48c')}</Text>
           </View>
 
           <Text style={styles.subtitle}>{copy.subtitle}</Text>
@@ -135,7 +134,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
             />
             <Button
               onPress={handleOpenSearch}
-              label="Смотреть маршруты"
+              label={i18nT('home:components.home.HomeFinalCTA.smotret_marshruty_59ba4955')}
               variant="secondary"
               size="lg"
               fullWidth={isMobile}
@@ -144,7 +143,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
               labelStyle={styles.secondaryButtonText}
               hoverStyle={styles.secondaryButtonHover}
               pressedStyle={styles.secondaryButtonHover}
-              accessibilityLabel="Смотреть маршруты"
+              accessibilityLabel={i18nT('home:components.home.HomeFinalCTA.smotret_marshruty_59ba4955')}
             />
           </View>
 

@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n'
 export const cleanTravelTitle = (title: string, country: string | null | undefined): string => {
   if (!country || !title) return title;
 
@@ -5,8 +6,8 @@ export const cleanTravelTitle = (title: string, country: string | null | undefin
   if (!countryText) return title;
 
   const countryPatterns = [
-    `в ${countryText}`,
-    `в ${countryText.toLowerCase()}`,
+    i18nT('shared:utils.cleanTravelTitle.v_value1_9136f2be', { value1: countryText }),
+    i18nT('shared:utils.cleanTravelTitle.v_value1_9136f2be', { value1: countryText.toLowerCase() }),
     countryText,
     countryText.toLowerCase(),
   ];

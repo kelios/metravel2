@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { devError } from '@/utils/logger';
 import { safeJsonParseString } from '@/utils/safeJsonParse';
 import type { FavoriteItem } from '@/stores/favoritesStore';
+import { translate as i18nT } from '@/i18n';
 
 const SERVER_RECOMMENDATIONS_CACHE_KEY = 'metravel_recommendations_server';
 const getUserApi = async () => import('@/api/user');
@@ -94,7 +95,7 @@ export const useRecommendationsStore = create<RecommendationsState>((set, get) =
             const userRecommended: FavoriteItem[] = recArr.map((t) => ({
                 id: t.id,
                 type: 'travel' as const,
-                title: t.name || 'Без названия',
+                title: t.name || i18nT('errorsStatic:stores.content.untitled'),
                 url: t.slug ? `/travels/${t.slug}` : (t.url ? String(t.url).split('?')[0].split('#')[0] : `/travels/${t.id}`),
                 imageUrl: t.travel_image_thumb_url,
                 addedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),

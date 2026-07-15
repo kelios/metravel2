@@ -16,6 +16,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
+import { translate as i18nT } from '@/i18n'
+
 
 // Keep the search input on the plain RN TextInput across platforms. The map
 // sheet already leaves the field above the dock, and this avoids a native
@@ -50,7 +52,7 @@ interface MapSearchInputProps {
 const MapSearchInput: React.FC<MapSearchInputProps> = ({
   value,
   onChange,
-  placeholder = 'Поиск мест...',
+  placeholder = i18nT('map:components.MapPage.MapSearchInput.poisk_mest_60640625'),
   onClear,
   resultsCount,
   testID = 'map-search-input',
@@ -162,15 +164,15 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
           autoCorrect={false}
           returnKeyType="search"
           inputMode="search"
-          accessibilityLabel="Поиск мест на карте"
-          accessibilityHint="Введите название места для поиска"
+          accessibilityLabel={i18nT('map:components.MapPage.MapSearchInput.poisk_mest_na_karte_4fd4bc4a')}
+          accessibilityHint={i18nT('map:components.MapPage.MapSearchInput.vvedite_nazvanie_mesta_dlya_poiska_baa10a27')}
         />
         {showClear && (
           <Pressable
             onPress={handleClear}
             style={({ pressed }) => [styles.clearButton, pressed && { opacity: 0.6 }]}
             accessibilityRole="button"
-            accessibilityLabel="Очистить поиск"
+            accessibilityLabel={i18nT('map:components.MapPage.MapSearchInput.ochistit_poisk_d606bb1e')}
             hitSlop={8}
           >
             <Feather name="x" size={16} color={colors.textMuted} />
@@ -180,8 +182,8 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
       {showResultsHint && (
         <Text style={styles.resultsHint}>
           {resultsCount === 0
-            ? 'Ничего не найдено, попробуйте другой запрос'
-            : `На карте подходит: ${resultsCount}`}
+            ? i18nT('map:components.MapPage.MapSearchInput.nichego_ne_naydeno_poprobuyte_drugoy_zapros_417ca1dd')
+            : i18nT('map:components.MapPage.MapSearchInput.na_karte_podhodit_value1_ca0e0146', { value1: resultsCount })}
         </Text>
       )}
     </View>

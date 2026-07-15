@@ -9,6 +9,8 @@ import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/uti
 import FloatingActionButton from '@/components/ui/FloatingActionButton';
 import ListTravel from '@/components/listTravel/ListTravelRoute';
 import { trackContentCreateCtaClicked } from '@/utils/growthFunnelAnalytics';
+import { translate as i18nT } from '@/i18n'
+
 
 export default function TravelsByScreen() {
     const pathname = usePathname();
@@ -35,9 +37,9 @@ export default function TravelsByScreen() {
         router.push('/travel/new' as any);
     }, [router]);
 
-    const title = 'Маршруты по Беларуси, идеи поездок и маршрутов | Metravel';
+    const title = i18nT('shared:app.tabs.travelsby.marshruty_po_belarusi_idei_poezdok_i_marshru_7b50b51d');
     const description =
-        'Подборка маршрутов и мест по Беларуси: идеи для выходных и больших поездок. Фото, точки на карте и советы путешественников.';
+        i18nT('shared:app.tabs.travelsby.podborka_marshrutov_i_mest_po_belarusi_idei__c3f9de78');
 
     return (
         <>
@@ -71,7 +73,7 @@ export default function TravelsByScreen() {
                     <Suspense
                         fallback={
                             <View style={styles.loading}>
-                                <Text style={styles.loadingText}>Загрузка…</Text>
+                                <Text style={styles.loadingText}>{i18nT('shared:app.tabs.travelsby.zagruzka_6e1743d2')}</Text>
                             </View>
                         }
                     >
@@ -84,7 +86,7 @@ export default function TravelsByScreen() {
                 {isAuthenticated && Platform.OS !== 'web' && (
                     <FloatingActionButton
                         icon="plus"
-                        label="Создать маршрут"
+                        label={i18nT('shared:app.tabs.travelsby.sozdat_marshrut_d02b8145')}
                         onPress={handleCreateTravelPress}
                         testID="fab-create-travel"
                     />

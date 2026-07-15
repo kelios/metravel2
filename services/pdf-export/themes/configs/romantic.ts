@@ -1,12 +1,13 @@
 import type { PdfThemeConfig } from '../types'
+import { translate as i18nT } from '@/i18n'
 
 /**
  * Romantic - романтическая тема с пастельными цветами
  */
 export const romanticTheme: PdfThemeConfig = {
   name: 'romantic',
-  displayName: 'Романтическая',
-  description: 'Пастельные цвета, мягкие формы',
+  get displayName() { return i18nT('export:services.pdfExport.theme.romantic.displayName') },
+  get description() { return i18nT('export:services.pdfExport.theme.romantic.description') },
   
   colors: {
     text: '#4a4a4a',

@@ -10,6 +10,8 @@ import type { BookExportFormat, BookExportSettingsPayload } from '@/api/bookExpo
 import { downloadBookExportArtifact, requestServerBookExport } from '@/api/bookExportApi';
 import type { BookHtmlExportService } from '@/services/book/BookHtmlExportService';
 import { activePdfEntitlementSource } from '@/services/pdf-export/entitlement/PdfEntitlementSource';
+import { translate as i18nT } from '@/i18n'
+
 
 type UpdateProgress = (
   stage: ExportStage,
@@ -121,8 +123,8 @@ async function tryServerBookExport(
     });
     if (!job) return false;
 
-    updateProgress(ExportStage.RENDERING, 90, 'Скачивание готовой книги...', [
-      'Серверный экспорт ✓',
+    updateProgress(ExportStage.RENDERING, 90, i18nT('export:hooks.usePdfExportRuntime.skachivanie_gotovoy_knigi_fe0424ef'), [
+      i18nT('export:hooks.usePdfExportRuntime.servernyy_eksport_d0e26c9d'),
     ]);
     const artifact = await downloadBookExportArtifact(job);
     if (artifact.contentType?.includes('text/html')) {
@@ -247,8 +249,8 @@ async function loadDetailedTravels(
     updateProgress?.(
       ExportStage.VALIDATING,
       Math.min(5, 2 + Math.round((results.length / selected.length) * 3)),
-      'Проверка данных...',
-      [`Путешествия (${results.length}/${selected.length})`],
+      i18nT('export:hooks.usePdfExportRuntime.proverka_dannyh_59cc6efe'),
+      [i18nT('export:hooks.usePdfExportRuntime.puteshestviya_value1_value2_5f60a9bd', { value1: results.length, value2: selected.length })],
     );
   }
 
@@ -268,8 +270,8 @@ export async function runPdfExport({
 }: RunPdfExportOptions): Promise<void> {
   if (Platform.OS !== 'web') {
     Alert.alert(
-      'Недоступно',
-      'Просмотр книги и печать доступны только в веб-версии MeTravel',
+      i18nT('export:hooks.usePdfExportRuntime.nedostupno_33f2b2de'),
+      i18nT('export:hooks.usePdfExportRuntime.prosmotr_knigi_i_pechat_dostupny_tolko_v_veb_8f59a809'),
     );
     return;
   }
@@ -280,12 +282,12 @@ export async function runPdfExport({
   const startTime = Date.now();
 
   try {
-    updateProgress(ExportStage.VALIDATING, 2, 'Проверка данных...', ['Проверка путешествий']);
+    updateProgress(ExportStage.VALIDATING, 2, i18nT('export:hooks.usePdfExportRuntime.proverka_dannyh_59cc6efe'), [i18nT('export:hooks.usePdfExportRuntime.proverka_puteshestviy_aee0e81c')]);
 
     if (await tryServerBookExport(selected, settings, updateProgress)) {
       const elapsedTime = Math.round((Date.now() - startTime) / 1000);
       if (isMountedRef.current) {
-        updateProgress(ExportStage.COMPLETE, 100, `Готово! (${elapsedTime} сек)`, ['Документ создан ✓']);
+        updateProgress(ExportStage.COMPLETE, 100, i18nT('export:hooks.usePdfExportRuntime.gotovo_value1_sek_32520275', { value1: elapsedTime }), [i18nT('export:hooks.usePdfExportRuntime.dokument_sozdan_67abc478')]);
       }
       return;
     }
@@ -293,41 +295,41 @@ export async function runPdfExport({
     const htmlService = await getBookHtmlExportService();
 
     if (!isMountedRef.current) {
-      Alert.alert('Ошибка', 'Предпросмотр книги недоступен');
+      Alert.alert(i18nT('export:hooks.usePdfExportRuntime.oshibka_488ce4fc'), i18nT('export:hooks.usePdfExportRuntime.predprosmotr_knigi_nedostupen_7f86d03a'));
       return;
     }
 
     const travelsForExport = await loadDetailedTravels(selected, settings, config, travelCacheRef, updateProgress);
     if (!travelsForExport.length) {
-      Alert.alert('Внимание', 'Выберите хотя бы одно путешествие для экспорта');
+      Alert.alert(i18nT('export:hooks.usePdfExportRuntime.vnimanie_9c60f2f4'), i18nT('export:hooks.usePdfExportRuntime.vyberite_hotya_by_odno_puteshestvie_dlya_eks_f99df420'));
       return;
     }
 
     const isPremium = activePdfEntitlementSource.getIsPremium();
 
-    updateProgress(ExportStage.VALIDATING, 5, 'Данные проверены', ['Проверка путешествий ✓']);
-    updateProgress(ExportStage.TRANSFORMING, 7, 'Подготовка контента...', [
-      'Нормализация данных',
-      'Сортировка путешествий',
+    updateProgress(ExportStage.VALIDATING, 5, i18nT('export:hooks.usePdfExportRuntime.dannye_provereny_5a8fde8e'), [i18nT('export:hooks.usePdfExportRuntime.proverka_puteshestviy_9adc24e8')]);
+    updateProgress(ExportStage.TRANSFORMING, 7, i18nT('export:hooks.usePdfExportRuntime.podgotovka_kontenta_eee24f1a'), [
+      i18nT('export:hooks.usePdfExportRuntime.normalizatsiya_dannyh_6f8652c4'),
+      i18nT('export:hooks.usePdfExportRuntime.sortirovka_puteshestviy_deff53ee'),
     ]);
-    updateProgress(ExportStage.GENERATING_HTML, 15, 'Генерация страниц...', [
-      'Обложка',
-      'Оглавление',
-      `Путешествия (0/${travelsForExport.length})`,
+    updateProgress(ExportStage.GENERATING_HTML, 15, i18nT('export:hooks.usePdfExportRuntime.generatsiya_stranits_a090c210'), [
+      i18nT('export:hooks.usePdfExportRuntime.oblozhka_23ce81a0'),
+      i18nT('export:hooks.usePdfExportRuntime.oglavlenie_e901879a'),
+      i18nT('export:hooks.usePdfExportRuntime.puteshestviya_0_value1_4b5537f8', { value1: travelsForExport.length }),
     ]);
 
     const html = await htmlService.generateTravelsHtml(travelsForExport, settings, { isPremium });
 
-    updateProgress(ExportStage.GENERATING_HTML, 30, 'Страницы сгенерированы', [
-      'Обложка ✓',
-      'Оглавление ✓',
-      `Путешествия (${travelsForExport.length}/${travelsForExport.length}) ✓`,
+    updateProgress(ExportStage.GENERATING_HTML, 30, i18nT('export:hooks.usePdfExportRuntime.stranitsy_sgenerirovany_882dd947'), [
+      i18nT('export:hooks.usePdfExportRuntime.oblozhka_e5e8ac7b'),
+      i18nT('export:hooks.usePdfExportRuntime.oglavlenie_48edcef4'),
+      i18nT('export:hooks.usePdfExportRuntime.puteshestviya_value1_value2_e3f09fc3', { value1: travelsForExport.length, value2: travelsForExport.length }),
     ]);
-    updateProgress(ExportStage.LOADING_IMAGES, 50, 'Загрузка изображений...', [
-      'Обработка фотографий',
+    updateProgress(ExportStage.LOADING_IMAGES, 50, i18nT('export:hooks.usePdfExportRuntime.zagruzka_izobrazheniy_77a50e30'), [
+      i18nT('export:hooks.usePdfExportRuntime.obrabotka_fotografiy_753bf7ed'),
     ]);
-    updateProgress(ExportStage.RENDERING, 85, 'Создание PDF...', [
-      'Финализация документа',
+    updateProgress(ExportStage.RENDERING, 85, i18nT('export:hooks.usePdfExportRuntime.sozdanie_pdf_8f661cc0'), [
+      i18nT('export:hooks.usePdfExportRuntime.finalizatsiya_dokumenta_bd98e906'),
     ]);
 
     await openBookPreview(html);
@@ -335,13 +337,13 @@ export async function runPdfExport({
     const elapsedTime = Math.round((Date.now() - startTime) / 1000);
 
     if (isMountedRef.current) {
-      updateProgress(ExportStage.COMPLETE, 100, `Готово! (${elapsedTime} сек)`, ['Документ создан ✓']);
+      updateProgress(ExportStage.COMPLETE, 100, i18nT('export:hooks.usePdfExportRuntime.gotovo_value1_sek_32520275', { value1: elapsedTime }), [i18nT('export:hooks.usePdfExportRuntime.dokument_sozdan_67abc478')]);
     }
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
     if (isMountedRef.current) {
       setError(error);
-      Alert.alert('Ошибка', error.message);
+      Alert.alert(i18nT('export:hooks.usePdfExportRuntime.oshibka_488ce4fc'), error.message);
       setCurrentStage(ExportStage.ERROR);
     }
   } finally {

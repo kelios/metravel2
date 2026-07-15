@@ -7,11 +7,17 @@ import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { retry, isRetryableError } from '@/utils/retry';
 import { getSecureItem } from '@/utils/secureStorage';
 import {
+    getApiRequestCredentials,
+    hasUsableAuthCredential,
+    shouldUseStoredAuthToken,
+} from '@/utils/authPlatform';
+import {
     isRecoverablePublicStaleError,
     readPublicStalePayload,
     savePublicStalePayload,
 } from '@/utils/publicStaleCache';
 import { normalizeTravelItem } from './travelsNormalize';
+import { translate as i18nT } from '@/i18n';
 import {
     LONG_TIMEOUT,
     TOKEN_KEY,
@@ -106,8 +112,11 @@ export const fetchTravelFacets = async (
         }
 
         const url = `${GET_TRAVEL_FACETS}?${new URLSearchParams(searchParams).toString()}`;
-        const authToken = isPendingReview ? await getSecureItem(TOKEN_KEY) : null;
+        const authToken = isPendingReview && shouldUseStoredAuthToken()
+            ? await getSecureItem(TOKEN_KEY)
+            : null;
         const init: RequestInit = {
+            ...getApiRequestCredentials(!isPendingReview),
             ...(authToken ? { headers: { Authorization: `Token ${authToken}` } } : {}),
             ...(options?.signal ? { signal: options.signal } : {}),
         };
@@ -220,10 +229,15 @@ export const fetchTravels = async (
         const urlTravel = `${GET_TRAVELS}?${params}`;
         publicStaleEndpoint = !isUserScoped && !isPendingReview ? urlTravel : '';
 
-        const authToken = allowDrafts || isPendingReview ? await getSecureItem(TOKEN_KEY) : null;
-        const canIncludeDrafts = allowDrafts && !!authToken;
-        const canIncludePendingReview = isPendingReview && !!authToken;
+        const needsAuth = allowDrafts || isPendingReview;
+        const authToken = needsAuth && shouldUseStoredAuthToken()
+            ? await getSecureItem(TOKEN_KEY)
+            : null;
+        const canUseAuth = hasUsableAuthCredential(authToken);
+        const canIncludeDrafts = allowDrafts && canUseAuth;
+        const canIncludePendingReview = isPendingReview && canUseAuth;
         const baseInit: RequestInit = {
+            ...getApiRequestCredentials(!needsAuth),
             ...(authToken ? { headers: { Authorization: `Token ${authToken}` } } : {}),
             ...(options?.signal ? { signal: options.signal } : {}),
         };
@@ -250,13 +264,13 @@ export const fetchTravels = async (
                 return { data: [], total: 0 };
             }
             throw createTravelQueryError(
-                `Не удалось загрузить путешествия: ${res.status} ${res.statusText || 'Unknown error'}`.trim(),
+                i18nT('errorsStatic:api.travelList.loadFailed', { details: `${res.status} ${res.statusText || 'Unknown error'}`.trim() }),
                 res.status
             );
         }
 
         if (result === parseFallback) {
-            throw createTravelQueryError('API путешествий вернул непарсируемый ответ.');
+            throw createTravelQueryError(i18nT('errorsStatic:api.travelList.invalidJson'));
         }
 
         const { items, total } = unwrapTravelsList(result);
@@ -270,7 +284,7 @@ export const fetchTravels = async (
             if (__DEV__) {
                 devWarn('API returned unexpected structure:', result);
             }
-            throw createTravelQueryError('API путешествий вернул неожиданный формат данных.');
+            throw createTravelQueryError(i18nT('errorsStatic:api.travelList.invalidShape'));
         }
 
         const normalized = items.map(normalizeTravelItem);
@@ -352,13 +366,13 @@ export const fetchRandomTravels = async (
                 return { data: [], total: 0 };
             }
             throw createTravelQueryError(
-                `Не удалось загрузить случайные путешествия: ${res.status} ${res.statusText || 'Unknown error'}`.trim(),
+                i18nT('errorsStatic:api.travelList.randomLoadFailed', { details: `${res.status} ${res.statusText || 'Unknown error'}`.trim() }),
                 res.status
             );
         }
 
         if (result === parseFallback) {
-            throw createTravelQueryError('API случайных путешествий вернул непарсируемый ответ.');
+            throw createTravelQueryError(i18nT('errorsStatic:api.travelList.randomInvalidJson'));
         }
 
         if (Array.isArray(result)) {
@@ -377,7 +391,7 @@ export const fetchRandomTravels = async (
             if (__DEV__) {
                 devWarn('API returned unexpected random structure:', result);
             }
-            throw createTravelQueryError('API случайных путешествий вернул неожиданный формат данных.');
+            throw createTravelQueryError(i18nT('errorsStatic:api.travelList.randomInvalidShape'));
         }
 
         return {

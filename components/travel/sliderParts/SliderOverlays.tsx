@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather'
 import type { SliderImage } from './types'
 import Arrow from './Arrow'
 import Dot from './Dot'
+import { translate as i18nT } from '@/i18n'
+
 
 const isWeb = Platform.OS === 'web'
 
@@ -58,7 +60,7 @@ function SliderOverlays({
             <>
               <TouchableOpacity
                 accessibilityRole="button"
-                accessibilityLabel="Previous slide"
+                accessibilityLabel={i18nT('travel:components.travel.sliderParts.SliderOverlays.previous_slide_0743e7c4')}
                 onPress={() => {
                   dismissSwipeHint()
                   enablePrefetch()
@@ -79,7 +81,7 @@ function SliderOverlays({
               </TouchableOpacity>
               <TouchableOpacity
                 accessibilityRole="button"
-                accessibilityLabel="Next slide"
+                accessibilityLabel={i18nT('travel:components.travel.sliderParts.SliderOverlays.next_slide_1cfb465a')}
                 onPress={() => {
                   dismissSwipeHint()
                   enablePrefetch()

@@ -9,42 +9,44 @@ import { Toggle } from '@/components/ui/Toggle';
 import { SelectionGroup } from '@/components/ui/SelectionGroup';
 import { LayoutCard, type GalleryLayoutInfo } from './LayoutCard';
 import type { GalleryLayout, CaptionPosition } from '@/types/pdf-gallery';
+import { translate as i18nT } from '@/i18n'
+
 
 const GALLERY_LAYOUTS: GalleryLayoutInfo[] = [
   {
     id: 'grid',
-    name: 'Сетка',
-    description: 'Классическая раскладка с одинаковыми размерами',
+    get name() { return i18nT('export:components.export.GalleryLayoutSelector.layout.grid.name') },
+    get description() { return i18nT('export:components.export.GalleryLayoutSelector.layout.grid.description') },
     iconName: 'grid',
-    bestFor: 'Универсальная раскладка для любых фото',
+    get bestFor() { return i18nT('export:components.export.GalleryLayoutSelector.layout.grid.bestFor') },
   },
   {
     id: 'masonry',
-    name: 'Мозаика',
-    description: 'Pinterest-style с разной высотой фото',
+    get name() { return i18nT('export:components.export.GalleryLayoutSelector.layout.masonry.name') },
+    get description() { return i18nT('export:components.export.GalleryLayoutSelector.layout.masonry.description') },
     iconName: 'grid',
-    bestFor: 'Фото с разными пропорциями',
+    get bestFor() { return i18nT('export:components.export.GalleryLayoutSelector.layout.masonry.bestFor') },
   },
   {
     id: 'collage',
-    name: 'Коллаж',
-    description: 'Одно большое фото + несколько маленьких',
+    get name() { return i18nT('export:components.export.GalleryLayoutSelector.layout.collage.name') },
+    get description() { return i18nT('export:components.export.GalleryLayoutSelector.layout.collage.description') },
     iconName: 'layout',
-    bestFor: 'Выделение ключевого фото',
+    get bestFor() { return i18nT('export:components.export.GalleryLayoutSelector.layout.collage.bestFor') },
   },
   {
     id: 'polaroid',
-    name: 'Полароид',
-    description: 'Ретро стиль с белыми рамками',
+    get name() { return i18nT('export:components.export.GalleryLayoutSelector.layout.polaroid.name') },
+    get description() { return i18nT('export:components.export.GalleryLayoutSelector.layout.polaroid.description') },
     iconName: 'square',
-    bestFor: 'Винтажный стиль, воспоминания',
+    get bestFor() { return i18nT('export:components.export.GalleryLayoutSelector.layout.polaroid.bestFor') },
   },
   {
     id: 'slideshow',
-    name: 'Слайдшоу',
-    description: 'Одно фото на страницу',
+    get name() { return i18nT('export:components.export.GalleryLayoutSelector.layout.slideshow.name') },
+    get description() { return i18nT('export:components.export.GalleryLayoutSelector.layout.slideshow.description') },
     iconName: 'image',
-    bestFor: 'Крупные фото с подробными подписями',
+    get bestFor() { return i18nT('export:components.export.GalleryLayoutSelector.layout.slideshow.bestFor') },
   },
 ];
 
@@ -100,7 +102,7 @@ export default function GalleryLayoutSelector({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Раскладка галереи</Text>
+      <Text style={styles.title}>{i18nT('export:components.export.GalleryLayoutSelector.raskladka_galerei_d0bddf26')}</Text>
       
       {/* Выбор раскладки */}
       {Platform.OS === 'web' ? (
@@ -129,7 +131,7 @@ export default function GalleryLayoutSelector({
         {/* Колонки (только для grid и masonry) */}
         {(selectedLayout === 'grid' || selectedLayout === 'masonry') && onColumnsChange && (
           <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Колонок:</Text>
+            <Text style={styles.settingLabel}>{i18nT('export:components.export.GalleryLayoutSelector.kolonok_49b4f8c6')}</Text>
             <SelectionGroup
               options={[1, 2, 3, 4]}
               value={columns}
@@ -141,14 +143,14 @@ export default function GalleryLayoutSelector({
         {/* Фото на странице */}
         {(selectedLayout === 'grid' || selectedLayout === 'polaroid') && onPhotosPerPageChange && (
           <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Фото на странице:</Text>
+            <Text style={styles.settingLabel}>{i18nT('export:components.export.GalleryLayoutSelector.foto_na_stranitse_d47b7141')}</Text>
             <SelectionGroup
               options={[
                 { value: 1, label: '1' },
                 { value: 2, label: '2' },
                 { value: 3, label: '3' },
                 { value: 4, label: '4' },
-                { value: 0, label: 'Все' },
+                { value: 0, label: i18nT('export:components.export.GalleryLayoutSelector.vse_615bd522') },
               ]}
               value={photosPerPage}
               onChange={onPhotosPerPageChange}
@@ -160,11 +162,11 @@ export default function GalleryLayoutSelector({
           (selectedLayout === 'grid' || selectedLayout === 'polaroid') &&
           onTwoPerPageLayoutChange && (
             <View style={styles.settingRow}>
-              <Text style={styles.settingLabel}>2 фото:</Text>
+              <Text style={styles.settingLabel}>{i18nT('export:components.export.GalleryLayoutSelector.2_foto_58e63034')}</Text>
               <SelectionGroup
                 options={[
-                  { value: 'vertical', label: 'Вертикально' },
-                  { value: 'horizontal', label: 'Горизонтально' },
+                  { value: 'vertical', label: i18nT('export:components.export.GalleryLayoutSelector.vertikalno_d9f1b104') },
+                  { value: 'horizontal', label: i18nT('export:components.export.GalleryLayoutSelector.gorizontalno_e78d0ea4') },
                 ]}
                 value={twoPerPageLayout}
                 onChange={onTwoPerPageLayoutChange}
@@ -175,7 +177,7 @@ export default function GalleryLayoutSelector({
         {/* Подписи */}
         {onShowCaptionsChange && (
           <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Подписи к фото:</Text>
+            <Text style={styles.settingLabel}>{i18nT('export:components.export.GalleryLayoutSelector.podpisi_k_foto_caa4cc8e')}</Text>
             <Toggle
               value={showCaptions}
               onValueChange={onShowCaptionsChange}
@@ -186,12 +188,12 @@ export default function GalleryLayoutSelector({
         {/* Позиция подписей */}
         {showCaptions && onCaptionPositionChange && selectedLayout !== 'polaroid' && (
           <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Позиция:</Text>
+            <Text style={styles.settingLabel}>{i18nT('export:components.export.GalleryLayoutSelector.pozitsiya_b1c1fd6b')}</Text>
             <SelectionGroup
               options={[
-                { value: 'top', label: 'Сверху' },
-                { value: 'bottom', label: 'Снизу' },
-                { value: 'overlay', label: 'Поверх' },
+                { value: 'top', label: i18nT('export:components.export.GalleryLayoutSelector.sverhu_9e51cd60') },
+                { value: 'bottom', label: i18nT('export:components.export.GalleryLayoutSelector.snizu_78ac3509') },
+                { value: 'overlay', label: i18nT('export:components.export.GalleryLayoutSelector.poverh_dc946194') },
               ]}
               value={captionPosition}
               onChange={onCaptionPositionChange}
@@ -202,12 +204,12 @@ export default function GalleryLayoutSelector({
         {/* Отступы */}
         {onSpacingChange && (
           <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Отступы:</Text>
+            <Text style={styles.settingLabel}>{i18nT('export:components.export.GalleryLayoutSelector.otstupy_50a9780a')}</Text>
             <SelectionGroup
               options={[
-                { value: 'compact', label: 'Компактно' },
-                { value: 'normal', label: 'Обычно' },
-                { value: 'spacious', label: 'Просторно' },
+                { value: 'compact', label: i18nT('export:components.export.GalleryLayoutSelector.kompaktno_08e72636') },
+                { value: 'normal', label: i18nT('export:components.export.GalleryLayoutSelector.obychno_7740f652') },
+                { value: 'spacious', label: i18nT('export:components.export.GalleryLayoutSelector.prostorno_f6ed5bea') },
               ]}
               value={spacing}
               onChange={onSpacingChange}

@@ -5,6 +5,8 @@
 
 import { Platform } from 'react-native'
 import * as React from 'react'
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * Check if unload/beforeunload is allowed by Permissions Policy
@@ -81,7 +83,7 @@ export function useBeforeUnload(
  * Create a beforeunload handler that shows confirmation
  */
 export function createBeforeUnloadHandler(
-  message: string = 'У вас есть несохранённые изменения. Вы уверены?'
+  message: string = i18nT('shared:utils.beforeunloadGuard.u_vas_est_nesohranennye_izmeneniya_vy_uveren_f161aac6')
 ): (event: BeforeUnloadEvent) => string {
   return (event: BeforeUnloadEvent) => {
     event.preventDefault()

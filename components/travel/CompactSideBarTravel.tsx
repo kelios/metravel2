@@ -46,6 +46,8 @@ import { AuthorBlock } from './compactSideBar/parts/AuthorBlock'
 import { NavRow } from './compactSideBar/parts/NavRow'
 import { WeatherPlaceholder } from './compactSideBar/parts/WeatherPlaceholder'
 import { WidgetFallback } from './compactSideBar/parts/WidgetFallback'
+import { translate as i18nT } from '@/i18n'
+
 
 if (Platform.OS === 'web') {
   require('./CompactSideBarTravel.web.css')
@@ -150,13 +152,13 @@ function CompactSideBarTravel({
   const notifyUnavailable = useCallback((label: string) => {
     if ((Platform.OS === 'web')) {
       try {
-        window.alert?.('Раздел недоступен')
+        window.alert?.(i18nT('travel:components.travel.CompactSideBarTravel.razdel_nedostupen_52d85d28'))
       } catch {
         /* noop */
       }
       return
     }
-    Alert.alert?.('Недоступно', `Раздел «${label}» недоступен`)
+    Alert.alert?.(i18nT('travel:components.travel.CompactSideBarTravel.nedostupno_d9fa1777'), i18nT('travel:components.travel.CompactSideBarTravel.razdel_value1_nedostupen_7285035f', { value1: label }))
   }, [])
 
   const isSectionAvailable = useCallback(
@@ -169,7 +171,7 @@ function CompactSideBarTravel({
 
   const handleNavLinkPress = useCallback(
     (key: string) => {
-      const label = navLinks.find((l) => l.key === key)?.label ?? 'Раздел'
+      const label = navLinks.find((l) => l.key === key)?.label ?? i18nT('travel:components.travel.CompactSideBarTravel.sectionFallback')
       if (!isSectionAvailable(key)) {
         notifyUnavailable(label)
         return
@@ -219,17 +221,17 @@ function CompactSideBarTravel({
   const handleDownloadRoute = useCallback(async () => {
     const travelId = (travel as any)?.id
     if (!travelId || isRouteDownloading || !supportedRouteFile) {
-      if (!supportedRouteFile) notifyUnavailable('Скачать маршрут')
+      if (!supportedRouteFile) notifyUnavailable(i18nT('travel:components.travel.CompactSideBarTravel.skachat_marshrut_4c1eda2d'))
       return
     }
     setIsRouteDownloading(true)
     try {
       const started = await downloadTravelRouteFile(travelId, supportedRouteFile)
       if (!started) {
-        notifyUnavailable('Скачать маршрут')
+        notifyUnavailable(i18nT('travel:components.travel.CompactSideBarTravel.skachat_marshrut_4c1eda2d'))
       }
     } catch {
-      notifyUnavailable('Скачать маршрут')
+      notifyUnavailable(i18nT('travel:components.travel.CompactSideBarTravel.skachat_marshrut_4c1eda2d'))
     } finally {
       setIsRouteDownloading(false)
     }
@@ -269,9 +271,9 @@ function CompactSideBarTravel({
                   pressed && styles.closeTopBtnPressed,
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel="Закрыть меню"
+                accessibilityLabel={i18nT('travel:components.travel.CompactSideBarTravel.zakryt_menyu_3aadf09e')}
                 hitSlop={8}
-                {...webOnly({ role: 'button', 'aria-label': 'Закрыть меню' } as any)}
+                {...webOnly({ role: 'button', 'aria-label': i18nT('travel:components.travel.CompactSideBarTravel.zakryt_menyu_3aadf09e') } as any)}
               >
                 <Feather name="x" size={20} color={textColor} />
               </Pressable>
@@ -317,12 +319,12 @@ function CompactSideBarTravel({
               onPress={handleDownloadRoute}
               disabled={isRouteDownloading}
               accessibilityRole="button"
-              accessibilityLabel="Скачать маршрут"
+              accessibilityLabel={i18nT('travel:components.travel.CompactSideBarTravel.skachat_marshrut_4c1eda2d')}
               accessibilityState={{ disabled: isRouteDownloading, busy: isRouteDownloading }}
               {...webOnly({
                 'data-sidebar-link': true,
                 role: 'button',
-                'aria-label': 'Скачать маршрут',
+                'aria-label': i18nT('travel:components.travel.CompactSideBarTravel.skachat_marshrut_4c1eda2d'),
               } as any)}
             >
               <View style={styles.activeIndicator} />
@@ -347,7 +349,7 @@ function CompactSideBarTravel({
                     { color: mutedText },
                   ]}
                 >
-                  {isRouteDownloading ? 'Скачивание...' : 'Скачать маршрут'}
+                  {isRouteDownloading ? i18nT('travel:components.travel.CompactSideBarTravel.skachivanie_cab4e4f1') : i18nT('travel:components.travel.CompactSideBarTravel.skachat_marshrut_4c1eda2d')}
                 </Text>
               </View>
             </Pressable>
@@ -383,11 +385,11 @@ function CompactSideBarTravel({
             onPress={closeMenu}
             style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
             accessibilityRole="button"
-            accessibilityLabel="Закрыть меню"
-            {...webOnly({ role: 'button', 'aria-label': 'Закрыть меню' } as any)}
+            accessibilityLabel={i18nT('travel:components.travel.CompactSideBarTravel.zakryt_menyu_3aadf09e')}
+            {...webOnly({ role: 'button', 'aria-label': i18nT('travel:components.travel.CompactSideBarTravel.zakryt_menyu_3aadf09e') } as any)}
           >
             <Feather name="x" size={20} color={colors.textInverse} />
-            <Text style={[styles.closeTxt, { color: colors.textInverse }]}>Закрыть</Text>
+            <Text style={[styles.closeTxt, { color: colors.textInverse }]}>{i18nT('travel:components.travel.CompactSideBarTravel.zakryt_250cc0ad')}</Text>
           </Pressable>
         </View>
       )}

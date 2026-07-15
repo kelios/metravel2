@@ -20,12 +20,13 @@ import { useGuestQuestFlow } from '@/components/quests/useGuestQuestFlow';
 import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
 import { stringifyJsonLd } from '@/utils/jsonLd';
-import { pluralizeRu } from '@/utils/pluralize';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { buildQuestSeoMetadata } from '@/utils/questSeo';
 
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
+import { getFormatLocale, translate as i18nT } from '@/i18n'
+
 
 const QuestWizard = React.lazy<React.ComponentType<QuestWizardProps>>(() =>
   Promise.resolve(import('@/components/quests/QuestWizard')).then((module: any) => ({ default: module.QuestWizard || module.default })),
@@ -69,8 +70,8 @@ const getRouteParam = (value: string | string[] | undefined): string => {
 const getQuestSeo = (bundle: FrontendQuestBundle | null, questId: string, isLoading: boolean): QuestSeoModel => {
   if (isLoading) {
     return {
-      title: 'Загружаем квест…',
-      description: 'Пожалуйста, подождите — готовим маршрут и задания.',
+      title: i18nT('quests:app.tabs.quests.city.questId.zagruzhaem_kvest_9a5fb67c'),
+      description: i18nT('quests:app.tabs.quests.city.questId.pozhaluysta_podozhdite_gotovim_marshrut_i_za_943cce87'),
       headKey: `quest-loading-${questId}`,
       ogType: 'website',
     };
@@ -78,8 +79,8 @@ const getQuestSeo = (bundle: FrontendQuestBundle | null, questId: string, isLoad
 
   if (!bundle) {
     return {
-      title: 'Квест не найден',
-      description: 'Проверьте адрес страницы или выберите квест из общего списка.',
+      title: i18nT('quests:app.tabs.quests.city.questId.kvest_ne_nayden_6b07f517'),
+      description: i18nT('quests:app.tabs.quests.city.questId.proverte_adres_stranitsy_ili_vyberite_kvest__4ee930bc'),
       headKey: 'quest-not-found',
       ogType: 'website',
       robots: 'noindex, nofollow',
@@ -90,6 +91,8 @@ const getQuestSeo = (bundle: FrontendQuestBundle | null, questId: string, isLoad
     title: bundle.title,
     cityName: bundle.city?.name,
     points: bundle.steps.length,
+    translate: i18nT,
+    locale: getFormatLocale(),
   });
 
   return {
@@ -233,14 +236,14 @@ const LoadingState = ({
     {isFocused ? (
       <InstantSEO
         headKey="quest-loading"
-        title="Загружаем квест…"
-        description="Готовим маршрут и задания."
+        title={i18nT('quests:app.tabs.quests.city.questId.zagruzhaem_kvest_9a5fb67c')}
+        description={i18nT('quests:app.tabs.quests.city.questId.gotovim_marshrut_i_zadaniya_cae5ee77')}
         canonical={canonical}
         ogType="website"
       />
     ) : null}
     <ActivityIndicator color={colors.primaryDark} />
-    <Text style={[styles.stateText, { marginTop: 12 }]}>Загружаем квест…</Text>
+    <Text style={[styles.stateText, { marginTop: 12 }]}>{i18nT('quests:app.tabs.quests.city.questId.zagruzhaem_kvest_9a5fb67c')}</Text>
   </CenteredPage>
 );
 
@@ -264,8 +267,8 @@ const ErrorState = ({
       {isFocused ? (
         <InstantSEO
           headKey="quest-not-found"
-          title={isLoadError ? 'Не удалось загрузить квест' : 'Квест не найден'}
-          description={bundleError || 'Проверь адрес или выбери квест из списка.'}
+          title={isLoadError ? i18nT('quests:app.tabs.quests.city.questId.ne_udalos_zagruzit_kvest_37c9397e') : i18nT('quests:app.tabs.quests.city.questId.kvest_ne_nayden_6b07f517')}
+          description={bundleError || i18nT('quests:app.tabs.quests.city.questId.notFoundDescription')}
           canonical={buildCanonicalUrl(QUEST_LIST_ROUTE)}
           ogType="website"
           robots="noindex, nofollow"
@@ -273,24 +276,22 @@ const ErrorState = ({
       ) : null}
       <View style={styles.stateCard}>
         <Icon name="alert-circle" size={28} color={colors.textMuted} />
-        <Text style={styles.stateTitle}>{isLoadError ? 'Не удалось загрузить квест' : 'Квест не найден'}</Text>
-        <Text style={styles.stateText}>{bundleError || 'Проверь адрес или выбери квест из списка.'}</Text>
+        <Text style={styles.stateTitle}>{isLoadError ? i18nT('quests:app.tabs.quests.city.questId.ne_udalos_zagruzit_kvest_37c9397e') : i18nT('quests:app.tabs.quests.city.questId.kvest_ne_nayden_6b07f517')}</Text>
+        <Text style={styles.stateText}>{bundleError || i18nT('quests:app.tabs.quests.city.questId.notFoundDescription')}</Text>
         {isLoadError ? (
           <PrimaryAction icon="refresh-cw" onPress={onRetry} styles={styles} colors={colors}>
-            Повторить
-          </PrimaryAction>
+            {i18nT('quests:app.tabs.quests.city.questId.povtorit_35493473')}</PrimaryAction>
         ) : null}
         {isLoadError ? (
           <Link href={QUEST_LIST_ROUTE} asChild>
             <Pressable style={styles.secondaryButton}>
               <Icon name="arrow-left" color={colors.text} size={16} />
-              <Text style={styles.secondaryButtonText}>К списку квестов</Text>
+              <Text style={styles.secondaryButtonText}>{i18nT('quests:app.tabs.quests.city.questId.k_spisku_kvestov_27c3b0f7')}</Text>
             </Pressable>
           </Link>
         ) : (
           <PrimaryQuestLink icon="arrow-left" styles={styles} colors={colors}>
-            К списку квестов
-          </PrimaryQuestLink>
+            {i18nT('quests:app.tabs.quests.city.questId.k_spisku_kvestov_27c3b0f7')}</PrimaryQuestLink>
         )}
       </View>
     </CenteredPage>
@@ -326,13 +327,13 @@ export default function QuestByIdScreen() {
   const ratingSlot = useMemo(() => {
     if (ratingMeta.ratingCount === 0) return null;
     const avg = (ratingMeta.ratingAvg ?? 0).toFixed(1);
-    const countLabel = `${ratingMeta.ratingCount} ${pluralizeRu(ratingMeta.ratingCount, 'отзыв', 'отзыва', 'отзывов')}`;
+    const countLabel = i18nT('quests:app.tabs.quests.city.questId.reviewCount', { count: ratingMeta.ratingCount });
     return (
       <Pressable
         onPress={() => setReviewsVisible(true)}
         style={styles.metaChip}
         accessibilityRole="button"
-        accessibilityLabel={`Отзывы, рейтинг ${avg} из 5, ${countLabel}`}
+        accessibilityLabel={i18nT('quests:app.tabs.quests.city.questId.otzyvy_reyting_value1_iz_5_value2_9269c56a', { value1: avg, value2: countLabel })}
         testID="quest-detail-rating"
       >
         <Feather name="star" size={13} color={colors.warning} />

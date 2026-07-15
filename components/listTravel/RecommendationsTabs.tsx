@@ -28,6 +28,10 @@ import TabTravelCard from './TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import {
+  RecommendationsAuthGate,
+  RecommendationsEmptyState,
+} from './RecommendationsTabs.parts';
+import {
   PersonalizedRecommendations,
   WeeklyHighlights,
 } from './recommendationsDeferred';
@@ -41,45 +45,19 @@ import {
   type CollectionItem,
   type TabType,
 } from './recommendationsTabsModel';
+import { translate as i18nT } from '@/i18n'
+
 
 interface RecommendationsTabsProps {
   forceVisible?: boolean;
   onVisibilityChange?: (visible: boolean) => void;
 }
 
-const ARROW_ICON_STYLE = { marginLeft: 6 } as const;
 const PREVIEW_CARD_WIDTH = 208;
 const PREVIEW_CARD_GAP = 16;
 const SHELF_CARD_WIDTH = 220;
 
 type TabStyles = ReturnType<typeof createRecommendationsTabsStyles>;
-
-const AuthGate = ({
-  message,
-  onLogin,
-  styles,
-  colors,
-}: {
-  message: string;
-  onLogin: () => void;
-  styles: TabStyles;
-  colors: ReturnType<typeof useThemedColors>;
-}) => (
-  <View style={styles.gateContainer}>
-    <View style={styles.gateCard}>
-      <View style={styles.gateIcon}>
-        <Feather name="lock" size={24} color={colors.primaryDark} />
-      </View>
-      <View style={styles.gateCopy}>
-        <Text style={styles.gateText}>{message}</Text>
-      </View>
-      <Pressable style={styles.gateButton} onPress={onLogin} accessibilityRole="button">
-        <Text style={styles.gateButtonText}>Войти</Text>
-        <Feather name="arrow-right" size={18} color={colors.primaryDark} style={ARROW_ICON_STYLE as any} />
-      </Pressable>
-    </View>
-  </View>
-);
 
 /* ---------------- Skeletons ---------------- */
 
@@ -157,7 +135,7 @@ const SavedCollectionHeader = ({
   <View style={styles.favoritesHeaderRow}>
     <View style={styles.headerTitleBlock}>
       <Text style={styles.favoritesHeaderTitle}>{title}</Text>
-      <Text style={styles.headerSubtitle}>{count} шт.</Text>
+      <Text style={styles.headerSubtitle}>{count} {i18nT('travel:components.listTravel.RecommendationsTabs.sht_ff238378')}</Text>
     </View>
 
     <View style={styles.headerActions}>
@@ -167,7 +145,7 @@ const SavedCollectionHeader = ({
         accessibilityRole="button"
         accessibilityLabel={seeAllLabel}
       >
-        <Text style={styles.seeAllButtonText}>Смотреть все</Text>
+        <Text style={styles.seeAllButtonText}>{i18nT('travel:components.listTravel.RecommendationsTabs.smotret_vse_dab0b9ab')}</Text>
         <Feather name="chevron-right" size={16} color={colors.primaryDark} />
       </Pressable>
 
@@ -179,7 +157,7 @@ const SavedCollectionHeader = ({
           accessibilityLabel={clearLabel}
         >
           <Feather name="trash-2" size={16} color={colors.danger} />
-          <Text style={styles.favoritesClearButtonText}>Очистить</Text>
+          <Text style={styles.favoritesClearButtonText}>{i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_a2502648')}</Text>
         </Pressable>
       )}
     </View>
@@ -232,7 +210,7 @@ const ShelfHeader = ({
         accessibilityRole="button"
         accessibilityLabel={seeAllLabel}
       >
-        <Text style={styles.shelfSeeAllText}>Все</Text>
+        <Text style={styles.shelfSeeAllText}>{i18nT('travel:components.listTravel.RecommendationsTabs.vse_718194eb')}</Text>
         <Feather name="chevron-right" size={16} color={colors.primaryDark} />
       </Pressable>
     </View>
@@ -300,7 +278,7 @@ const RecommendationsTabs = memo(
         if (typeof clearFavorites !== 'function') return;
 
         if (typeof window !== 'undefined' && (window as any).confirm) {
-          const confirmed = window.confirm('Очистить «Хочу поехать»?');
+          const confirmed = window.confirm(i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_hochu_poehat_65feb3a9'));
           if (!confirmed) return;
         }
 
@@ -315,7 +293,7 @@ const RecommendationsTabs = memo(
         if (typeof clearHistory !== 'function') return;
 
         if (typeof window !== 'undefined' && (window as any).confirm) {
-          const confirmed = window.confirm('Очистить историю просмотров?');
+          const confirmed = window.confirm(i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_istoriyu_prosmotrov_95782295'));
           if (!confirmed) return;
         }
 
@@ -521,19 +499,19 @@ const RecommendationsTabs = memo(
 
             {showHistory && (
               <CardShelf
-                accessibilityLabel="Недавно смотрели"
+                accessibilityLabel={i18nT('travel:components.listTravel.RecommendationsTabs.nedavno_smotreli_6e75a30d')}
                 testID="recommendations-history-shelf"
                 styles={styles}
               >
                 <ShelfHeader
-                  clearLabel="Очистить историю просмотров"
+                  clearLabel={i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_istoriyu_prosmotrov_aba556ba')}
                   colors={colors}
                   count={viewHistory.length}
                   onClear={typeof clearHistory === 'function' ? handleClearHistory : undefined}
                   onSeeAll={() => router.push('/history' as any)}
-                  seeAllLabel="Смотреть всю историю просмотров"
+                  seeAllLabel={i18nT('travel:components.listTravel.RecommendationsTabs.smotret_vsyu_istoriyu_prosmotrov_c486385e')}
                   styles={styles}
-                  title="Недавно смотрели"
+                  title={i18nT('travel:components.listTravel.RecommendationsTabs.nedavno_smotreli_6e75a30d')}
                 />
                 {renderMobileRail(viewHistory, 'history', 'recommendations-history-rail')}
               </CardShelf>
@@ -542,14 +520,14 @@ const RecommendationsTabs = memo(
             {showFavorites && (
               <CardShelf testID="recommendations-favorites-shelf" styles={styles}>
                 <ShelfHeader
-                  clearLabel="Очистить «Хочу поехать»"
+                  clearLabel={i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_hochu_poehat_ad8210f6')}
                   colors={colors}
                   count={favorites.length}
                   onClear={typeof clearFavorites === 'function' ? handleClearFavorites : undefined}
                   onSeeAll={() => router.push('/favorites' as any)}
-                  seeAllLabel="Смотреть все «Хочу поехать»"
+                  seeAllLabel={i18nT('travel:components.listTravel.RecommendationsTabs.smotret_vse_hochu_poehat_ded3ec15')}
                   styles={styles}
-                  title="Хочу поехать"
+                  title={i18nT('travel:components.listTravel.RecommendationsTabs.hochu_poehat_e6276dfa')}
                 />
                 {renderMobileRail(favorites, 'favorites', 'recommendations-favorites-rail')}
               </CardShelf>
@@ -567,7 +545,7 @@ const RecommendationsTabs = memo(
           <View style={styles.collapsedHeader}>
             <Pressable testID="recommendations-tabs-expand" onPress={toggleCollapse} style={styles.expandButton} accessibilityRole="button">
               <Feather name="chevron-down" size={20} color={colors.primaryDark} />
-              <Text style={styles.expandText}>Показать рекомендации</Text>
+              <Text style={styles.expandText}>{i18nT('travel:components.listTravel.RecommendationsTabs.pokazat_rekomendatsii_21bdd03a')}</Text>
             </Pressable>
           </View>
           <View style={styles.collapsedSpacer} />
@@ -609,8 +587,8 @@ const RecommendationsTabs = memo(
         case 'favorites':
           if (!isAuthenticated) {
             return renderTabPane(
-              <AuthGate
-                message="«Хочу поехать» будет доступно после регистрации или авторизации"
+              <RecommendationsAuthGate
+                message={i18nT('travel:components.listTravel.RecommendationsTabs.hochu_poehat_budet_dostupno_posle_registrats_24fe6d17')}
                 onLogin={() => router.push(buildLoginHref({ intent: 'favorites' }) as any)}
                 styles={styles}
                 colors={colors}
@@ -619,18 +597,18 @@ const RecommendationsTabs = memo(
           }
           return renderTabPane(
             favorites.length === 0 ? (
-              <EmptyState message="В «Хочу поехать» пока пусто" icon="heart" styles={styles} colors={colors} />
+              <RecommendationsEmptyState message={i18nT('travel:components.listTravel.RecommendationsTabs.v_hochu_poehat_poka_pusto_2942a4b0')} icon="heart" styles={styles} colors={colors} />
             ) : (
               <View>
                 <SavedCollectionHeader
-                  clearLabel="Очистить «Хочу поехать»"
+                  clearLabel={i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_hochu_poehat_ad8210f6')}
                   colors={colors}
                   count={favorites.length}
                   onClear={typeof clearFavorites === 'function' ? handleClearFavorites : undefined}
                   onSeeAll={() => router.push('/favorites' as any)}
-                  seeAllLabel="Смотреть все «Хочу поехать»"
+                  seeAllLabel={i18nT('travel:components.listTravel.RecommendationsTabs.smotret_vse_hochu_poehat_ded3ec15')}
                   styles={styles}
-                  title="Хочу поехать"
+                  title={i18nT('travel:components.listTravel.RecommendationsTabs.hochu_poehat_e6276dfa')}
                 />
 
                 {renderCardCollection(
@@ -651,8 +629,8 @@ const RecommendationsTabs = memo(
         case 'history':
           if (!isAuthenticated) {
             return renderTabPane(
-              <AuthGate
-                message="История просмотров будет доступна после регистрации или авторизации"
+              <RecommendationsAuthGate
+                message={i18nT('travel:components.listTravel.RecommendationsTabs.istoriya_prosmotrov_budet_dostupna_posle_reg_c6632c3d')}
                 onLogin={() => router.push(buildLoginHref({ intent: 'history' }) as any)}
                 styles={styles}
                 colors={colors}
@@ -661,18 +639,18 @@ const RecommendationsTabs = memo(
           }
           return renderTabPane(
             viewHistory.length === 0 ? (
-              <EmptyState message="История просмотров пуста" icon="clock" styles={styles} colors={colors} />
+              <RecommendationsEmptyState message={i18nT('travel:components.listTravel.RecommendationsTabs.istoriya_prosmotrov_pusta_d2c9428a')} icon="clock" styles={styles} colors={colors} />
             ) : (
               <View>
                 <SavedCollectionHeader
-                  clearLabel="Очистить историю просмотров"
+                  clearLabel={i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_istoriyu_prosmotrov_aba556ba')}
                   colors={colors}
                   count={viewHistory.length}
                   onClear={typeof clearHistory === 'function' ? handleClearHistory : undefined}
                   onSeeAll={() => router.push('/history' as any)}
-                  seeAllLabel="Смотреть всю историю просмотров"
+                  seeAllLabel={i18nT('travel:components.listTravel.RecommendationsTabs.smotret_vsyu_istoriyu_prosmotrov_c486385e')}
                   styles={styles}
-                  title="История"
+                  title={i18nT('travel:components.listTravel.RecommendationsTabs.istoriya_32242be0')}
                 />
 
                 {renderCardCollection(
@@ -787,27 +765,5 @@ const RecommendationsTabs = memo(
 );
 
 RecommendationsTabs.displayName = 'RecommendationsTabs';
-
-/* ---------------- Empty State Helper ---------------- */
-
-const EmptyState = ({
-  message,
-  icon,
-  styles,
-  colors,
-}: {
-  message: string;
-  icon: any;
-  styles: TabStyles;
-  colors: ReturnType<typeof useThemedColors>;
-}) => (
-  <View style={styles.emptyState}>
-    <Feather name={icon} size={48} color={colors.textTertiary} />
-    <Text style={styles.emptyText}>{message}</Text>
-  </View>
-);
-
-/* ---------------- Styles ---------------- */
-
 
 export default RecommendationsTabs;

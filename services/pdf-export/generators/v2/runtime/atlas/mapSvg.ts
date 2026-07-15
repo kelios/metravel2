@@ -3,6 +3,8 @@
 
 import type { PdfThemeConfig } from '../../../../themes/PdfThemeConfig'
 import type { AtlasTravelEntry } from './types'
+import { translate as i18nT } from '@/i18n'
+
 
 type ProjectedPoint = {
   x: number
@@ -79,10 +81,10 @@ export function buildAtlasMapSvg(
 
   if (!points.length) {
     return `
-      <svg viewBox="0 0 ${viewBoxW} ${viewBoxH}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block;" role="img" aria-label="Атлас">
+      <svg viewBox="0 0 ${viewBoxW} ${viewBoxH}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block;" role="img" aria-label="${i18nT("export:services.pdf_export.generators.v2.runtime.atlas.mapSvg.svg_viewbox_0_0_value1_value2_preserveaspect_b036a94b.text01")}">
         <rect x="0" y="0" width="${viewBoxW}" height="${viewBoxH}" rx="6" fill="${colors.surfaceAlt}" />
         <text x="${viewBoxW / 2}" y="${viewBoxH / 2}" text-anchor="middle" font-size="6" fill="${colors.textMuted}">
-          Недостаточно координат для атласа
+          ${i18nT("export:services.pdf_export.generators.v2.runtime.atlas.mapSvg.svg_viewbox_0_0_value1_value2_preserveaspect_b036a94b.text02")}
         </text>
       </svg>
     `
@@ -124,7 +126,7 @@ export function buildAtlasMapSvg(
     .join('')
 
   return `
-    <svg viewBox="0 0 ${viewBoxW} ${viewBoxH}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block;" overflow="hidden" role="img" aria-label="Карта всех точек книги">
+    <svg viewBox="0 0 ${viewBoxW} ${viewBoxH}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block;" overflow="hidden" role="img" aria-label="${i18nT("export:services.pdf_export.generators.v2.runtime.atlas.mapSvg.svg_viewbox_0_0_value1_value2_preserveaspect_a325132e.text01")}">
       <defs>
         <linearGradient id="atlasBg" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="${colors.surfaceAlt}" />

@@ -7,6 +7,8 @@ import CardActionPressable from '@/components/ui/CardActionPressable';
 import { QualityIndicator } from '@/components/travel/ValidationFeedback';
 import type { ThemedColors } from '@/hooks/useTheme';
 import type { ModerationIssue } from '@/utils/formValidation';
+import { translate as i18nT } from '@/i18n'
+
 
 type BackendStatusTone = 'success' | 'warning' | 'muted';
 
@@ -47,7 +49,7 @@ export default function PublishStatusSummaryPanel({
     return (
         <>
             <View style={[styles.card, styles.statusChipCard]}>
-                <Text style={styles.cardTitle}>Текущий статус</Text>
+                <Text style={styles.cardTitle}>{i18nT('travel:components.travel.PublishStatusSummaryPanel.tekuschiy_status_382752e0')}</Text>
                 <View style={styles.statusChipRow}>
                     <View
                         style={[
@@ -61,30 +63,29 @@ export default function PublishStatusSummaryPanel({
                     </View>
                     <Text style={styles.statusChipHint}>
                         {pendingModeration
-                            ? 'Маршрут отправлен на модерацию, ожидает решения администратора.'
-                            : 'Это статус, который уже сохранён. Ниже вы можете выбрать новый (черновик или модерация).'}
+                            ? i18nT('travel:components.travel.PublishStatusSummaryPanel.marshrut_otpravlen_na_moderatsiyu_ozhidaet_r_69b645e9')
+                            : i18nT('travel:components.travel.PublishStatusSummaryPanel.eto_status_kotoryy_uzhe_sohranen_nizhe_vy_mo_eff24d3d')}
                     </Text>
                 </View>
             </View>
 
             {!pendingModeration && (
                 <View style={[styles.card, styles.statusCard]}>
-                    <Text style={styles.cardTitle}>Статус публикации</Text>
+                    <Text style={styles.cardTitle}>{i18nT('travel:components.travel.PublishStatusSummaryPanel.status_publikatsii_1fc92ecd')}</Text>
                     <View style={styles.statusOptions}>
                         <CardActionPressable
                             style={[styles.statusOption, status === 'draft' && styles.statusOptionActive]}
                             onPress={() => onStatusChange('draft')}
                             disabled={userPendingModeration}
-                            accessibilityLabel="Сохранить как черновик"
+                            accessibilityLabel={i18nT('travel:components.travel.PublishStatusSummaryPanel.sohranit_kak_chernovik_1e0b8a83')}
                         >
                             <View style={styles.radioOuter}>
                                 {status === 'draft' && <View style={styles.radioInner} />}
                             </View>
                             <View style={styles.statusTextCol}>
-                                <Text style={styles.statusLabel}>Сохранить как черновик</Text>
+                                <Text style={styles.statusLabel}>{i18nT('travel:components.travel.PublishStatusSummaryPanel.sohranit_kak_chernovik_1e0b8a83')}</Text>
                                 <Text style={styles.statusHint}>
-                                    Черновик виден только вам. Его можно дополнять и отправить на модерацию позже.
-                                </Text>
+                                    {i18nT('travel:components.travel.PublishStatusSummaryPanel.chernovik_viden_tolko_vam_ego_mozhno_dopolny_9ac19698')}</Text>
                             </View>
                         </CardActionPressable>
 
@@ -94,16 +95,15 @@ export default function PublishStatusSummaryPanel({
                             style={[styles.statusOption, status === 'moderation' && styles.statusOptionActive]}
                             onPress={() => onStatusChange('moderation')}
                             disabled={userPendingModeration}
-                            accessibilityLabel="Отправить на модерацию"
+                            accessibilityLabel={i18nT('travel:components.travel.PublishStatusSummaryPanel.otpravit_na_moderatsiyu_2f661fac')}
                         >
                             <View style={styles.radioOuter}>
                                 {status === 'moderation' && <View style={styles.radioInner} />}
                             </View>
                             <View style={styles.statusTextCol}>
-                                <Text style={styles.statusLabel}>Отправить на модерацию</Text>
+                                <Text style={styles.statusLabel}>{i18nT('travel:components.travel.PublishStatusSummaryPanel.otpravit_na_moderatsiyu_2f661fac')}</Text>
                                 <Text style={styles.statusHint}>
-                                    После одобрения маршрут станет публичным и появится в списке путешествий.
-                                </Text>
+                                    {i18nT('travel:components.travel.PublishStatusSummaryPanel.posle_odobreniya_marshrut_stanet_publichnym__f29685c4')}</Text>
                             </View>
                         </CardActionPressable>
                     </View>
@@ -116,10 +116,9 @@ export default function PublishStatusSummaryPanel({
 
             {status === 'moderation' && missingForModeration.length > 0 && (
                 <View style={[styles.card, styles.bannerError]}>
-                    <Text style={styles.bannerTitle}>Нужно дополнить перед модерацией</Text>
+                    <Text style={styles.bannerTitle}>{i18nT('travel:components.travel.PublishStatusSummaryPanel.nuzhno_dopolnit_pered_moderatsiey_1285b2fa')}</Text>
                     <Text style={styles.bannerDescription}>
-                        Проверьте отмеченные пункты чек-листа. Без них мы не сможем отправить маршрут на модерацию.
-                    </Text>
+                        {i18nT('travel:components.travel.PublishStatusSummaryPanel.proverte_otmechennye_punkty_chek_lista_bez_n_484295dd')}</Text>
                     {missingForModeration.map(issue => {
                         const isClickable = !!onNavigateToIssue;
 
@@ -167,11 +166,11 @@ export default function PublishStatusSummaryPanel({
             )}
 
             <View style={[styles.card, styles.qualityCard]}>
-                <Text style={styles.cardTitle}>Качество заполнения</Text>
+                <Text style={styles.cardTitle}>{i18nT('travel:components.travel.PublishStatusSummaryPanel.kachestvo_zapolneniya_c17c9a41')}</Text>
                 <QualityIndicator level={qualityScore.level} score={qualityScore.score} />
                 {qualityScore.suggestions.length > 0 && (
                     <View style={styles.suggestionsContainer}>
-                        <Text style={styles.suggestionsTitle}>Рекомендации для улучшения:</Text>
+                        <Text style={styles.suggestionsTitle}>{i18nT('travel:components.travel.PublishStatusSummaryPanel.rekomendatsii_dlya_uluchsheniya_59d39358')}</Text>
                         {qualityScore.suggestions.map((suggestion, idx) => (
                             <Text key={idx} style={styles.suggestionItem}>• {suggestion}</Text>
                         ))}

@@ -1,62 +1,64 @@
 import LegalPage from '@/components/legal/LegalPage'
+import { translate as i18nT } from '@/i18n'
+
 
 export default function TermsScreen() {
   return (
     <LegalPage
       headKey="legal-terms"
-      seoTitle="Пользовательское соглашение | Metravel"
-      seoDescription="Пользовательское соглашение Metravel: условия использования сервиса, права и обязанности пользователей, правила публикации контента."
-      pageTitle="Пользовательское соглашение"
+      seoTitle={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_metravel_a107cf93')}
+      seoDescription={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_metravel_usloviya_860ebcea')}
+      pageTitle={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_13d561c9')}
       effectiveDate="20.06.2026"
       draftNotice
       intro={[
-        'Настоящее Пользовательское соглашение регулирует использование сайта и сервисов Metravel (далее — «Сервис»). Регистрируясь и используя Сервис, вы принимаете условия Соглашения.',
+        i18nT('legal:app.tabs.terms.nastoyaschee_polzovatelskoe_soglashenie_regu_15e5e27a'),
       ]}
       sections={[
         {
-          heading: '1. Аккаунт',
+          heading: i18nT('legal:app.tabs.terms.1_akkaunt_978a3a7c'),
           paragraphs: [
-            'Для части функций требуется регистрация. Вы обязуетесь предоставлять достоверные данные и отвечаете за сохранность своих учётных данных.',
-            'Вы несёте ответственность за действия, совершённые под вашим аккаунтом.',
+            i18nT('legal:app.tabs.terms.dlya_chasti_funktsiy_trebuetsya_registratsiy_40a945b7'),
+            i18nT('legal:app.tabs.terms.vy_nesete_otvetstvennost_za_deystviya_sovers_86ded067'),
           ],
         },
         {
-          heading: '2. Контент пользователей',
+          heading: i18nT('legal:app.tabs.terms.2_kontent_polzovateley_d2a6fead'),
           paragraphs: [
-            'Публикуя материалы (тексты, фотографии, маршруты, точки), вы подтверждаете, что обладаете необходимыми правами на них и не нарушаете права третьих лиц.',
-            'Вы предоставляете Сервису неисключительное право отображать ваш контент в рамках работы Сервиса. Права на сам контент остаются за вами.',
-            'Запрещено публиковать незаконные, оскорбительные, вводящие в заблуждение материалы, спам и рекламу без согласования.',
+            i18nT('legal:app.tabs.terms.publikuya_materialy_teksty_fotografii_marshr_2e0c0e2a'),
+            i18nT('legal:app.tabs.terms.vy_predostavlyaete_servisu_neisklyuchitelnoe_988417e0'),
+            i18nT('legal:app.tabs.terms.zaprescheno_publikovat_nezakonnye_oskorbitel_bbb53e2a'),
           ],
         },
         {
-          heading: '3. Допустимое использование',
+          heading: i18nT('legal:app.tabs.terms.3_dopustimoe_ispolzovanie_3835e5b1'),
           paragraphs: [
-            'Запрещается вмешиваться в работу Сервиса, использовать автоматизированный сбор данных без разрешения, обходить ограничения и нарушать безопасность.',
-            'Администрация вправе ограничить или прекратить доступ при нарушении условий Соглашения.',
+            i18nT('legal:app.tabs.terms.zapreschaetsya_vmeshivatsya_v_rabotu_servisa_5ecc50fe'),
+            i18nT('legal:app.tabs.terms.administratsiya_vprave_ogranichit_ili_prekra_2a09028d'),
           ],
         },
         {
-          heading: '4. Отказ от гарантий',
+          heading: i18nT('legal:app.tabs.terms.4_otkaz_ot_garantiy_f275e5a0'),
           paragraphs: [
-            'Сервис предоставляется «как есть». Информация о путешествиях и местах носит справочный характер — см. Отказ от ответственности.',
-            'Мы не гарантируем бесперебойную работу Сервиса и сохранность данных при сбоях.',
+            i18nT('legal:app.tabs.terms.servis_predostavlyaetsya_kak_est_informatsiy_f035abaa'),
+            i18nT('legal:app.tabs.terms.my_ne_garantiruem_bespereboynuyu_rabotu_serv_861a559b'),
           ],
         },
         {
-          heading: '5. Персональные данные',
+          heading: i18nT('legal:app.tabs.terms.5_personalnye_dannye_0accb3bd'),
           paragraphs: [
-            'Обработка персональных данных описана в Политике конфиденциальности. Используя Сервис, вы соглашаетесь с её условиями.',
+            i18nT('legal:app.tabs.terms.obrabotka_personalnyh_dannyh_opisana_v_polit_d54a3f2b'),
           ],
         },
         {
-          heading: '6. Изменения',
+          heading: i18nT('legal:app.tabs.terms.6_izmeneniya_2e26ccb0'),
           paragraphs: [
-            'Условия Соглашения могут обновляться. Продолжая пользоваться Сервисом после изменений, вы принимаете обновлённую редакцию.',
+            i18nT('legal:app.tabs.terms.usloviya_soglasheniya_mogut_obnovlyatsya_pro_ed813383'),
           ],
         },
         {
-          heading: '7. Контакты',
-          paragraphs: ['По вопросам, связанным с Соглашением, пишите на metraveldev@gmail.com.'],
+          heading: i18nT('legal:app.tabs.terms.7_kontakty_4e2c6ee8'),
+          paragraphs: [i18nT('legal:app.tabs.terms.po_voprosam_svyazannym_s_soglasheniem_pishit_9361863c')],
         },
       ]}
     />

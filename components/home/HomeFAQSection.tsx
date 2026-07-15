@@ -14,6 +14,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { ResponsiveContainer } from '@/components/layout'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsive } from '@/hooks/useResponsive'
+import { translate as i18nT } from '@/i18n'
+
 
 const IS_WEB = Platform.OS === 'web'
 
@@ -25,24 +27,24 @@ type FaqItem = { q: string; a: string }
 
 const FAQ_ITEMS: readonly FaqItem[] = [
   {
-    q: 'Это бесплатно?',
-    a: 'Да, полностью бесплатно. Смотреть маршруты можно без регистрации. Регистрация нужна только чтобы сохранять поездки и собирать книгу.',
+    get q() { return i18nT('homeStatic:faq.free.question') },
+    get a() { return i18nT('homeStatic:faq.free.answer') },
   },
   {
-    q: 'Нужна регистрация, чтобы смотреть маршруты?',
-    a: 'Нет. Маршруты открыты для всех. Регистрация нужна только если хочешь сохранять поездки и собирать свою книгу.',
+    get q() { return i18nT('homeStatic:faq.registration.question') },
+    get a() { return i18nT('homeStatic:faq.registration.answer') },
   },
   {
-    q: 'Как собрать книгу из поездок?',
-    a: 'Открой раздел «Экспорт», выбери нужные поездки и стиль — и скачай готовый PDF. Занимает пару минут.',
+    get q() { return i18nT('homeStatic:faq.book.question') },
+    get a() { return i18nT('homeStatic:faq.book.answer') },
   },
   {
-    q: 'Поездки видны только мне?',
-    a: 'Да. Всё, что ты сохраняешь, остаётся личным — ты сам решаешь, чем делиться, а что оставить для себя.',
+    get q() { return i18nT('homeStatic:faq.privacy.question') },
+    get a() { return i18nT('homeStatic:faq.privacy.answer') },
   },
   {
-    q: 'PDF можно распечатать?',
-    a: 'Да, книга формируется в печатном формате. Можно сохранить файл или отправить в типографию.',
+    get q() { return i18nT('homeStatic:faq.print.question') },
+    get a() { return i18nT('homeStatic:faq.print.answer') },
   },
 ]
 
@@ -68,7 +70,7 @@ function FAQItemCard({
         accessibilityRole="button"
         accessibilityLabel={item.q}
         accessibilityState={{ expanded: isOpen }}
-        accessibilityHint={isOpen ? 'Свернуть ответ' : 'Развернуть ответ'}
+        accessibilityHint={isOpen ? i18nT('home:components.home.HomeFAQSection.svernut_otvet_defd85e4') : i18nT('home:components.home.HomeFAQSection.razvernut_otvet_e5327dd9')}
         {...(IS_WEB
           ? ({
               'aria-expanded': isOpen,
@@ -85,7 +87,7 @@ function FAQItemCard({
       >
         <View style={styles.questionWrap}>
           <View style={styles.questionMetaRow}>
-            <Text style={styles.questionMeta}>Вопрос {index + 1}</Text>
+            <Text style={styles.questionMeta}>{i18nT('home:components.home.HomeFAQSection.vopros_8958223d')}{index + 1}</Text>
           </View>
           <Text style={[styles.question, isOpen && styles.questionOpen]}>{item.q}</Text>
         </View>
@@ -148,12 +150,11 @@ function HomeFAQSection() {
               color={colors.primaryDark}
               {...({ 'aria-hidden': true, focusable: false } as any)}
             />
-            <Text style={styles.eyebrowText}>FAQ</Text>
+            <Text style={styles.eyebrowText}>{i18nT('home:components.home.HomeFAQSection.faq_c6699415')}</Text>
           </View>
           <Text style={styles.title} accessibilityRole="header" {...({ 'aria-level': 2 } as any)}>
-            Всё, что нужно знать
-          </Text>
-          <Text style={styles.subtitle}>Ответы на самые частые вопросы о сервисе</Text>
+            {i18nT('home:components.home.HomeFAQSection.vse_chto_nuzhno_znat_396085b8')}</Text>
+          <Text style={styles.subtitle}>{i18nT('home:components.home.HomeFAQSection.otvety_na_samye_chastye_voprosy_o_servise_89a8f45a')}</Text>
         </View>
 
         <View style={styles.inner}>

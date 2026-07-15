@@ -2,6 +2,8 @@
 // ✅ Утилита для безопасного парсинга JSON из Response
 
 import { devError } from './logger';
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * Безопасно парсит JSON из Response
@@ -21,7 +23,7 @@ export async function safeJsonParse<T = any>(
             if (fallback !== undefined) {
                 return fallback;
             }
-            throw new Error('Пустой ответ от сервера');
+            throw new Error(i18nT('shared:utils.safeJsonParse.pustoy_otvet_ot_servera_fc178b46'));
         }
 
         try {
@@ -46,7 +48,7 @@ export async function safeJsonParse<T = any>(
                 return fallback;
             }
             
-            throw new Error(`Не удалось прочитать ответ сервера. Статус: ${response.status}`);
+            throw new Error(i18nT('shared:utils.safeJsonParse.ne_udalos_prochitat_otvet_servera_status_val_db6ec120', { value1: response.status }));
         }
     } catch (error) {
         if (fallback !== undefined) {
@@ -71,7 +73,7 @@ export function safeJsonParseString<T = any>(
             if (fallback !== undefined) {
                 return fallback;
             }
-            throw new Error('Пустая строка для парсинга');
+            throw new Error(i18nT('shared:utils.safeJsonParse.pustaya_stroka_dlya_parsinga_a07b05ce'));
         }
 
         const parsed = JSON.parse(text);
@@ -93,7 +95,7 @@ export function safeJsonParseString<T = any>(
             return fallback;
         }
         
-        throw new Error('Не удалось распарсить JSON строку');
+        throw new Error(i18nT('shared:utils.safeJsonParse.ne_udalos_rasparsit_json_stroku_64f97834'));
     }
 }
 

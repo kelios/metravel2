@@ -4,6 +4,8 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { translate as i18nT } from '@/i18n'
+
 
 /**
  * AND-10: Компонент «Синхронизация данных...»
@@ -60,13 +62,12 @@ function SyncIndicatorNative() {
         { backgroundColor: colors.info },
       ]}
       accessibilityRole="alert"
-      accessibilityLabel="Синхронизация данных"
+      accessibilityLabel={i18nT('shared:components.ui.SyncIndicator.sinhronizatsiya_dannyh_b1e3ca28')}
     >
       <View style={styles.content}>
         <ActivityIndicator size="small" color={colors.textInverse} />
         <Text style={[styles.text, { color: colors.textInverse }]}>
-          Синхронизация данных...
-        </Text>
+          {i18nT('shared:components.ui.SyncIndicator.sinhronizatsiya_dannyh_80179835')}</Text>
       </View>
     </Animated.View>
   );

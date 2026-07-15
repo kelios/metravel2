@@ -10,12 +10,14 @@ Run canonical governance checks from repo root:
 - `npm run governance:verify`
 - `yarn guard:external-links`
 - `npm run guard:external-links`
+- `npm run guard:type-debt`
 
 ## Local selective checks
 
 Use the same changed-file selective rules locally before a full run:
 
 - `npm run typecheck`
+- `npm run typecheck:e2e`
 - `npm run check:fast`
 - `npm run check:fast:dry`
 - `npm run check:fast:json`
@@ -31,8 +33,9 @@ Use the same changed-file selective rules locally before a full run:
 
 Behavior:
 
-- `typecheck` is currently an explicit full-project audit command; use it before wider refactors and debt-reduction work;
-- `check:fast` is the default lightweight workflow for a finished logical block: it runs selective checks, `guard:external-links`, and ESLint only for changed lintable files;
+- `typecheck` is the production TypeScript audit; `typecheck:e2e` is the non-emitting Playwright contract check for every `e2e/**/*.ts` file;
+- `guard:type-debt` compares production `as any`, TypeScript suppression and ESLint-disable counts against `scripts/type-debt-baseline.json` per domain and per file. Any increase fails. `guard:type-debt:update` is reserved for an explicitly reviewed baseline change after the new debt is justified;
+- `check:fast` is the default lightweight workflow for a finished logical block: it runs selective checks, `guard:external-links`, `guard:type-debt`, and ESLint only for changed lintable files;
 - the `check:fast` ESLint step uses a local cache and `--max-warnings=0`, so repeat runs stay fast while new warnings in touched files still fail the block;
 - local selective checks now include targeted app Jest suites for travel/map/account/messages changes in addition to schema/validator selective runners;
 - `check:e2e:changed` selects a stable subset of Playwright smoke specs by changed area (travel/search/map/account/messages) and is intended for pre-push / preflight validation;
@@ -45,6 +48,22 @@ Behavior:
 - `--base-ref <ref>` compares `HEAD` against `git merge-base HEAD <ref>`;
 - `--changed-files-file <path>` reuses an explicit newline-separated file list;
 - dry-run JSON returns both selective decisions in one payload, which makes CI/local diagnostics easier to compare.
+
+## High-risk coverage slices
+
+- `npm run test:coverage:export-settings` is the reproducible branch/function/line
+  baseline for `BookSettingsModal` and its focused helpers. The modal is no longer
+  hidden by `coveragePathIgnorePatterns`; its existing interaction, validation and
+  premium-gate tests now contribute to ordinary Jest coverage.
+- The old `components/ArticleEditor.web.tsx` exclusion was stale after the editor
+  moved to `components/article/`; current editor modules are already measurable.
+- Retained exclusions are explicit migration queues: `components/Map*` and
+  `components/MapPage/**` still require bridge/permission branch coverage plus
+  browser/device evidence; map/image upload requires upload/network decision tests;
+  `ImageGalleryComponent` requires cross-platform media branch coverage; and
+  `GalleryLayoutSelector` remains excluded until it has direct selection and
+  accessibility interaction tests. Coverage exclusions must not be replaced with
+  blanket mocks or lower thresholds.
 
 ## Validator Contracts
 
