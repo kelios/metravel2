@@ -1,6 +1,8 @@
+import { beResources } from './locales/be'
 import { enResources } from './locales/en'
 import { plResources } from './locales/pl'
 import { ruResources } from './locales/ru'
+import { ukResources } from './locales/uk'
 
 export const DEFAULT_NAMESPACE = 'common' as const
 
@@ -17,11 +19,15 @@ export type LocaleResourceContract = {
 export const defineLocaleResources = <T extends LocaleResourceContract>(locale: T): T => locale
 
 const typedRuResources = defineLocaleResources(ruResources)
+const typedBeResources = defineLocaleResources(beResources)
+const typedUkResources = defineLocaleResources(ukResources)
 const typedPlResources = defineLocaleResources(plResources)
 const typedEnResources = defineLocaleResources(enResources)
 
 export const resources = {
   ru: typedRuResources,
+  be: typedBeResources,
+  uk: typedUkResources,
   pl: typedPlResources,
   en: typedEnResources,
 } as const

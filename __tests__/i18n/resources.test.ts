@@ -63,7 +63,7 @@ describe('i18n resources', () => {
     const placeholders = (value: string) =>
       [...value.matchAll(placeholderPattern)].map((match) => match[1]).sort()
 
-    for (const locale of ['pl', 'en'] as const) {
+    for (const locale of ['be', 'uk', 'pl', 'en'] as const) {
       for (const [namespace, entries] of Object.entries(resources.ru)) {
         const translatedEntries = resources[locale][namespace as keyof typeof resources.ru]
         for (const [key, sourceValue] of Object.entries(entries)) {
@@ -88,6 +88,25 @@ describe('i18n resources', () => {
           // their declarations would corrupt layout rather than localize UI.
           if (executableStylePattern.test(value)) continue
           if (/[\u0400-\u04ff]/.test(value)) residue.push(`${namespace}:${key}`)
+        }
+      }
+      expect({ locale, residue }).toEqual({ locale, residue: [] })
+    }
+  })
+
+  it('does not leave Russian-only alphabet residue in Belarusian or Ukrainian UI', () => {
+    const executableStylePattern = /(?:^|\n)\s*[.#][\w.{#-][^\n{]*\{|(?:^|\n)\s*@(?:media|supports|keyframes)\b/
+    const forbiddenLetters = {
+      be: /[иъщ]/i,
+      uk: /[ыэёъ]/i,
+    } as const
+
+    for (const locale of ['be', 'uk'] as const) {
+      const residue: string[] = []
+      for (const [namespace, entries] of Object.entries(resources[locale])) {
+        for (const [key, value] of Object.entries(entries)) {
+          if (executableStylePattern.test(value)) continue
+          if (forbiddenLetters[locale].test(value)) residue.push(`${namespace}:${key}`)
         }
       }
       expect({ locale, residue }).toEqual({ locale, residue: [] })
@@ -134,6 +153,8 @@ describe('i18n resources', () => {
 
   it('translates typed keys and interpolation with a fixed locale', () => {
     const fixedRu = getFixedTranslator('ru')
+    const fixedBe = getFixedTranslator('be')
+    const fixedUk = getFixedTranslator('uk')
     const fixedPl = getFixedTranslator('pl')
     const fixedEn = getFixedTranslator('en')
 
@@ -144,15 +165,22 @@ describe('i18n resources', () => {
         value2: 5,
       }),
     ).toBe('мест: 2 из 5')
+    expect(fixedBe('common:language.settingTitle')).toBe('Мова інтэрфейсу')
+    expect(fixedUk('common:language.settingTitle')).toBe('Мова інтерфейсу')
     expect(fixedPl('common:language.settingTitle')).toBe('Język interfejsu')
     expect(fixedEn('common:language.settingTitle')).toBe('Interface language')
   })
 
   it('uses locale plural rules instead of component-level grammar branches', () => {
+    const fixedBe = getFixedTranslator('be')
+    const fixedUk = getFixedTranslator('uk')
+
     expect(translatePlural('travel:common.characterNoun', 1)).toBe('символ')
     expect(translatePlural('travel:common.characterNoun', 2)).toBe('символа')
     expect(translatePlural('travel:common.characterNoun', 5)).toBe('символов')
     expect(translatePlural('export:services.pdfExport.runtime.map.pointNoun', 21)).toBe('точка')
+    expect(fixedBe('travel:common.characterNoun', { count: 2 })).toBe('знакі')
+    expect(fixedUk('travel:common.characterNoun', { count: 2 })).toBe('символи')
   })
 
   it('returns the configured fallback instead of leaking an unknown key', () => {

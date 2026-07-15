@@ -9,15 +9,15 @@ import { Page } from '@playwright/test';
  */
 export async function isAuthenticated(page: Page): Promise<boolean> {
   try {
-    const hasToken = await page.evaluate(() => {
+    const hasUserMetadata = await page.evaluate(() => {
       try {
-        const token = window.localStorage.getItem('secure_userToken');
-        return typeof token === 'string' && token.length > 0;
+        const userId = window.localStorage.getItem('userId');
+        return typeof userId === 'string' && userId.length > 0;
       } catch {
         return false;
       }
     });
-    return hasToken;
+    return hasUserMetadata;
   } catch {
     return false;
   }
@@ -69,13 +69,12 @@ export async function getCurrentUser(page: Page): Promise<{
   try {
     return await page.evaluate(() => {
       try {
-        const token = window.localStorage.getItem('secure_userToken');
         const userId = window.localStorage.getItem('userId');
         const userName = window.localStorage.getItem('userName');
         const isSuperuser = window.localStorage.getItem('isSuperuser') === 'true';
 
         return {
-          isAuthenticated: typeof token === 'string' && token.length > 0,
+          isAuthenticated: typeof userId === 'string' && userId.length > 0,
           userId,
           userName,
           isSuperuser,
@@ -100,35 +99,47 @@ export async function getCurrentUser(page: Page): Promise<{
 }
 
 /**
- * Simple XOR encrypt used for seeding fake auth tokens in localStorage.
+ * Kept for native-credential fixtures and request payload compatibility. Web
+ * auth helpers below must not persist this value in browser storage.
  */
 export function simpleEncrypt(text: string, key: string): string {
   let result = '';
-  for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  for (let index = 0; index < text.length; index += 1) {
+    result += String.fromCharCode(text.charCodeAt(index) ^ key.charCodeAt(index % key.length));
   }
   return `enc1:${Buffer.from(result, 'binary').toString('base64')}`;
 }
 
-/**
- * Seeds fake auth tokens into localStorage via addInitScript.
- * Useful when E2E_EMAIL/E2E_PASSWORD are not available.
- */
-export async function ensureAuthedStorageFallback(page: Page): Promise<void> {
-  const encrypted = simpleEncrypt('e2e-fake-token', 'metravel_encryption_key_v1');
-  const encryptedRefresh = simpleEncrypt('e2e-fake-refresh-token', 'metravel_encryption_key_v1');
-  await page.addInitScript((payload: { encrypted: string; encryptedRefresh: string }) => {
-    try {
-      window.localStorage.setItem('secure_userToken', payload.encrypted);
-      window.localStorage.setItem('secure_refreshToken', payload.encryptedRefresh);
+type FakeAuthOptions = {
+  isSuperuser?: boolean;
+  userId?: string;
+  userName?: string;
+};
 
-      window.localStorage.setItem('userId', '1');
-      window.localStorage.setItem('userName', 'E2E User');
-      window.localStorage.setItem('isSuperuser', 'false');
+/**
+ * Seeds non-secret user metadata via addInitScript. Pair with
+ * mockFakeAuthApis() so the cookie-session probe succeeds without a real login.
+ */
+export async function ensureAuthedStorageFallback(
+  page: Page,
+  options: FakeAuthOptions = {},
+): Promise<void> {
+  const payload = {
+    userId: options.userId ?? '1',
+    userName: options.userName ?? 'E2E User',
+    isSuperuser: options.isSuperuser === true ? 'true' : 'false',
+  };
+  await page.addInitScript((metadata: typeof payload) => {
+    try {
+      window.localStorage.removeItem('secure_userToken');
+      window.localStorage.removeItem('secure_refreshToken');
+      window.localStorage.setItem('userId', metadata.userId);
+      window.localStorage.setItem('userName', metadata.userName);
+      window.localStorage.setItem('isSuperuser', metadata.isSuperuser);
     } catch {
       // ignore
     }
-  }, { encrypted, encryptedRefresh });
+  }, payload);
 }
 
 /**
@@ -137,6 +148,17 @@ export async function ensureAuthedStorageFallback(page: Page): Promise<void> {
  * Call this BEFORE navigating to any page that requires auth.
  */
 export async function mockFakeAuthApis(page: Page): Promise<void> {
+  await page.route('**/api/user/me/verifications/**', (route) => {
+    if (route.request().method() === 'GET') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({}),
+      });
+    }
+    return route.continue();
+  });
+
   await page.route('**/api/user/*/profile/**', (route) => {
     if (route.request().method() === 'GET') {
       return route.fulfill({
@@ -165,8 +187,8 @@ export async function waitForAuth(page: Page, timeoutMs = 5000): Promise<boolean
     await page.waitForFunction(
       () => {
         try {
-          const token = window.localStorage.getItem('secure_userToken');
-          return typeof token === 'string' && token.length > 0;
+          const userId = window.localStorage.getItem('userId');
+          return typeof userId === 'string' && userId.length > 0;
         } catch {
           return false;
         }

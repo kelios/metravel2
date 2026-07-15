@@ -1,0 +1,13 @@
+export const common = {
+  'i18n.missingTranslation': "Пераклад недаступны",
+  'language.ru': "Руская",
+  'language.be': 'Беларуская',
+  'language.uk': 'Українська',
+  'language.pl': "Polski",
+  'language.en': "English",
+  'language.settingTitle': "Мова інтэрфейсу",
+  'language.settingDescription': "Абярыце мову сайта і праграмы. Налада захаваецца на гэтай прыладзе.",
+  'language.system': "Як у сістэме",
+  'language.systemDescription': "Выкарыстоўваць мову прылады, калі яна падтрымліваецца",
+  'language.headerLabel': "Змяніць мову",
+} as const

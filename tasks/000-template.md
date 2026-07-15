@@ -43,6 +43,10 @@ User-visible result:
 
 Data/API contract:
 
+Platform impact:
+
+Localization impact:
+
 Dependencies:
 
 Fallback/mock policy:

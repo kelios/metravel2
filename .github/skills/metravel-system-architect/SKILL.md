@@ -26,6 +26,8 @@ Existing code to reuse:
 Affected files/modules:
 Data/API impact:
 UI impact:
+Platform impact: web | Android | iOS | shared | none
+Localization impact: RU/BE/UK/PL/EN | selected locales | none
 External-link impact:
 Risks:
 Implementation steps:
@@ -48,6 +50,10 @@ Residual risk:
 ## Rules
 
 - Prefer reuse of existing components, hooks, services, and utilities.
+- Design one shared Expo/React Native product contract and isolate only
+  technical web/Android/iOS adapters.
+- Define translation keys/namespaces, RU/BE/UK/PL/EN coverage, formatting,
+  accessibility/SEO impact, and `npm run test:i18n` when localization is affected.
 - Keep implementation steps small enough for one programmer pass.
 - Treat direct external-link usage, hardcoded component hex colors, skipped tests, dead imports, and broken UI states as review findings.
 - Require browser verification for visible web UI changes.

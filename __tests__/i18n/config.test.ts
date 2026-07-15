@@ -39,10 +39,13 @@ describe('i18n config', () => {
     })
   })
 
-  it('resolves Polish and English locale candidates', () => {
+  it('resolves every non-default locale candidate', () => {
     jest.isolateModules(() => {
-      const { resolveSupportedLocale } = require('@/i18n/config')
+      const { resolveSupportedLocale, SUPPORTED_LOCALES } = require('@/i18n/config')
 
+      expect(SUPPORTED_LOCALES).toEqual(['ru', 'be', 'uk', 'pl', 'en'])
+      expect(resolveSupportedLocale(['be-BY'])).toBe('be')
+      expect(resolveSupportedLocale(['uk-UA'])).toBe('uk')
       expect(resolveSupportedLocale(['pl-PL'])).toBe('pl')
       expect(resolveSupportedLocale(['en-GB'])).toBe('en')
     })

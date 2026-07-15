@@ -18,7 +18,10 @@ It runs:
 - `./verify-security-fixes.sh`
 - `npm run audit:high`
 - `npm run test:run`
+- `npm run e2e`
 - `npm run build:web:prod`
+- `npm run guard:eager-web:fail`
+- `npm run guard:bundle-budget:fail`
 
 Notes:
 - `npm run lint` includes `npm run guard:external-links`.
@@ -60,11 +63,14 @@ Use the ops wrapper instead:
 bash /d/metravel/ops/deploy-frontend.sh
 ```
 
-The wrapper is the documented fallback for this machine. It verifies branch `main` and SSH access,
-stops competing build/e2e processes, runs `DEPLOY=0 bash ./build-prod.sh prod`, checks `dist/prod`,
+The wrapper is the documented fallback for this machine. It verifies branch `main`, SSH access and
+operation safety, runs `DEPLOY=0 bash ./build-prod.sh prod`, checks `dist/prod`,
 uploads the build with `tar+ssh`, atomically swaps `static/dist` on `metravel-prod`, overlays old
 Expo chunks, restarts `app` and `nginx`, runs health checks, and rolls back automatically from
 `static/dist.bak` if health verification fails.
+
+Do not launch it while another build/deploy/e2e operation owns the corresponding
+lock or target, and do not kill another session's process to make room.
 
 Manual rollback command if the wrapper reports a broken deploy:
 
@@ -112,16 +118,15 @@ Sitemap ownership:
 - Frontend release/build scripts must not generate or overwrite production sitemap files.
 - If sitemap contents are wrong, fix the backend generator or backend deploy configuration, then verify with `npm run test:seo:postdeploy`.
 
-## Mobile travel Lighthouse budget guard (#816)
+## Mobile travel Lighthouse budget guard
 
 Runtime-metric regression tripwire for the mobile travel-details page, complementing
 the byte-level guards (`guard:bundle-budget`, `guard:eager-web`) that gate `release:check`.
 
 - Guard: `scripts/guard-lighthouse-mobile-budget.js` (npm `guard:lighthouse:mobile` / `:fail`).
 - Budget: `config/lighthouse-budget-mobile.json` (score ≥ 60, LCP ≤ 4000ms, CLS ≤ 0.1, TBT ≤ 600ms, FCP ≤ 3000ms).
-- The guard is **report-consuming and deterministic**: its fixture self-test
-  (`__tests__/scripts/lighthouse-mobile-budget-guard.test.ts`) proves it catches the bad
-  Sorapis baseline and passes a good one, and runs inside `test:run` (i.e. `release:check`).
+- The guard is **report-consuming and deterministic**; its fixture self-test runs
+  inside `test:run` and therefore inside `release:check`.
 
 Required post-deploy gate (environment-dependent, not wired as a release blocker):
 
@@ -130,13 +135,11 @@ npm run lighthouse:produrl:travel:mobile -- --url https://metravel.by/travels/<s
 npm run guard:lighthouse:mobile:fail   # reads ./lighthouse-report.produrl.mobile.json
 ```
 
-- Produce the report with **APPLIED throttling** (`--throttling-method=devtools`). The
-  Lighthouse `simulate`/lantern model inflates CLS attribution to the hero block and
-  reports a phantom ~0.15 hero shift that does not occur on real throttled devices (#814);
-  real applied-throttling CLS on travel-details is ~0.07–0.10 (within the 0.1 budget).
-- Mobile LCP is hydration/bundle-bound; its removable eager weight was already shipped
-  (#764/#765) and the residual is irreducible framework runtime. The hard release gate for
-  that floor is the byte budget, so the LCP line here is a tracked tripwire, not a blocker.
+- Produce the report with the throttling method required by
+  `config/lighthouse-budget-mobile.json`; the config, not historical measurements in
+  documentation, owns metric thresholds and method.
+- Fresh Lighthouse evidence is a post-deploy gate. Byte guards remain part of
+  `release:check`; neither substitutes for the other.
 
 ## Web cache policy (do not revert)
 

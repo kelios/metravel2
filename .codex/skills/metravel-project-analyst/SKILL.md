@@ -19,6 +19,10 @@ Read first:
 ## What To Inspect
 
 - App shape: routes, screens, reusable UI, hooks, services, API clients, utilities, tests, scripts, and deployment files.
+- Platform shape: shared Expo/React Native code, web adapters, Android/iOS files,
+  native modules/config boundaries, and available device/simulator validation.
+- Localization shape: locale registry, RU/BE/UK/PL/EN resources, web/native
+  runtime split, formatting helpers, UI-literal governance, and i18n tests.
 - Active feature areas and existing feature maps.
 - High-risk contracts: external links, image/media rendering, design tokens, auth/e2e secrets, server paths, release and caching rules.
 - Validation surface: targeted checks, fast/preflight checks, governance scripts, Jest, Playwright, production build, Lighthouse.
@@ -34,6 +38,8 @@ Return one compact artifact:
 Scope:
 Project shape:
 Active feature areas:
+Platform impact:
+Localization impact:
 Validation map:
 Risk hotspots:
 Recommended agents/skills:

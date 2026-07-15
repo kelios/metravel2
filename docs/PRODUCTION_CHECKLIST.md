@@ -1,133 +1,121 @@
-# ✅ Production Release Checklist
+# Production release checklist
 
-- [ ] **Финальная проверка**
+Актуализировано: 2026-07-15.
+
+Checklist описывает действия, но не подтверждает, что конкретный релиз уже
+прошёл. Evidence прикладывается к release/task на MCP board.
+
+## Authorization and target
+
+- [ ] Явно указан target: web `dev` / `preprod` / `prod`, iOS или Android.
+- [ ] Для production rollout/submit есть отдельное явное разрешение пользователя.
+- [ ] Текущая ветка — `main`; working tree и scope проверены.
+- [ ] Нет чужого build/deploy/test процесса или активного lock для того же target.
+- [ ] Секреты читаются только из разрешённых env/secret stores и не попадают в
+      вывод, screenshots или commit.
+
+Android EAS/cloud build и submit не запускаются без явного запроса на точное
+действие в текущей задаче.
+
+## Pre-release gate
+
+- [ ] Запущен единый gate:
+
   ```bash
   npm run release:check
   ```
-  Включает `lint`, `typecheck`, security-аудит, тесты, e2e и production web build.
-- [ ] **Policy guards (external links)**
-  ```bash
-  npm run guard:external-links
-  ```
-- [ ] **Governance verification**
+
+  Он включает lint, typecheck, security checks, dependency audit, Jest, E2E,
+  production web build и bundle/eager-web guards под общим quality lock.
+
+- [ ] Если scope требует отдельной governance-проверки:
+
   ```bash
   npm run governance:verify
   ```
-- [ ] **Canonical governance reference:** `docs/TESTING.md#governance-commands`
-- [ ] **Testing**
-  ```bash
-  npm run test:coverage  # Цель: > 60%
-  npm run e2e            # Критические пути
-  ```
 
-- [ ] **Performance (mobile + desktop)**
-
-  Целевые скоры: Desktop ≥ 70, Mobile ≥ 60.
+- [ ] External-link policy проверена каноническим alias:
 
   ```bash
-  # Desktop:
-  npx lighthouse https://metravel.by/ --preset=desktop --only-categories=performance --chrome-flags="--headless --no-sandbox"
-
-  # Mobile:
-  npx lighthouse https://metravel.by/ --form-factor=mobile --screenEmulation.mobile --throttling.cpuSlowdownMultiplier=4 --only-categories=performance --chrome-flags="--headless --no-sandbox"
+  npm run guard:external-links
   ```
 
-  Для локальных билдов:
+  Canonical command reference: `docs/TESTING.md#governance-commands`.
+
+- [ ] Падения разобраны и исправлены; skipped/unrun проверки не выданы за pass.
+- [ ] Для travel hero/slider/details отдельно выполнены обе стороны контракта:
+
+  ```bash
+  npm run verify:slider
+  npm run verify:slider-perf
+  ```
+
+  Запуск — через общий quality-gate wrapper по правилам `AGENTS.md`.
+
+## Web artifact and deploy
+
+- [ ] Production artifact создан канонической командой:
+
   ```bash
   npm run build:web:prod
-  npx serve dist/prod -l 3000 -s
   ```
 
-  Yarn-скрипты:
+- [ ] Build-only preview при необходимости:
+
   ```bash
-  yarn lighthouse:travel:mobile
-  yarn lighthouse:travel:desktop
-  yarn lighthouse:produrl:travel:mobile
-  yarn lighthouse:produrl:travel:desktop
-  yarn lighthouse:produrl:summary
+  DEPLOY=0 ./build-prod.sh prod
   ```
 
-## 📱 Релиз по платформам
+- [ ] Deploy выполняется только project-owned release path:
+  - `./build-prod.sh <target>` на машине с рабочим `rsync`;
+  - documented Windows/Codex wrapper из `docs/RELEASE.md`;
+  - `scripts/fix-prod.sh` только для явно запрошенного emergency recovery.
+- [ ] Custom `rsync`/`scp`/SSH deploy sequence не используется.
+- [ ] Production `sitemap.xml` не генерируется и не перезаписывается frontend.
 
-### iOS
-```bash
-npm run ios:prebuild
-npm run ios:build:prod
-npm run ios:submit:latest
-```
+## Native release
 
-### Android
-```bash
-npm run android:prebuild
-npm run android:build:prod
-npm run android:submit:latest
-```
+Для store-операций используй `docs/ANDROID_OWNER_GUIDE.md` и project scripts в
+`package.json`.
 
-### Web
-```bash
-npm run build:web:prod
-DEPLOY=0 ./build-prod.sh prod
-```
+- [ ] iOS/Android target, version/build number и store track подтверждены.
+- [ ] Android closed testing соответствует `alpha`; public Production — отдельное
+      решение.
+- [ ] Перед Android store build пройден локальный USB device flow, если он входит
+      в acceptance scope.
+- [ ] Store listing, privacy, data-safety/app-access requirements проверены в
+      консоли.
+- [ ] Результат submit/build проверен в EAS/store, а не только по exit code CLI.
 
-Production deploy command depends on the machine:
+## Post-deploy
 
-```bash
-# Normal machine with working rsync:
-./build-prod.sh prod
+- [ ] Production health и основные routes отвечают без white screen/5xx.
+- [ ] SEO smoke:
 
-# This Windows/Codex machine:
-bash /d/metravel/ops/deploy-frontend.sh
-```
-
-The Windows/Codex wrapper builds with `DEPLOY=0`, uploads via `tar+ssh`, performs an atomic swap,
-restarts `app` and `nginx`, verifies health, and auto-rolls back on failed health checks.
-
-Emergency frontend recovery only:
-
-```bash
-scripts/fix-prod.sh
-```
-
-Use this only through the DevOps deploy workflow when the normal production deploy path is unavailable
-or explicit recovery is requested. It has its own remote deploy lock, prod artifact config gate, static
-asset swap, old Expo chunk overlap, nginx restart, and live chunk verification. Do not replace approved
-deploy paths with custom `rsync`, `scp`, or SSH deploy commands.
-
----
-
-## 📊 Post-Release Monitoring
-
-**Первые 24 часа:**
-- [ ] Crash rate < 1%
-- [ ] API errors < 1%
-- [ ] App load time < 3s
-- [ ] No critical bugs reported
-- [ ] Post-deploy SEO audit
   ```bash
   npm run test:seo:postdeploy
   ```
-- [ ] SEO: 1 canonical, 1 description (no duplicates)
-- [ ] Staging: `robots: noindex,nofollow`
-- [ ] Analytics не запускается без consent
-- [ ] PageSpeed SEO Score ≥ 95
 
-**Первая неделя:**
-- [ ] User retention D1 > 40%
-- [ ] No critical security issues
-- [ ] Performance metrics stable
+- [ ] Raw HTML содержит ожидаемые title/description/canonical/robots/OG/JSON-LD.
+- [ ] Analytics запускается только после consent.
+- [ ] Console/network не содержат новых критических ошибок.
+- [ ] Fresh performance измеряется по реальному URL; budget и throttling method
+      берутся из `config/lighthouse-budget-mobile.json` и scripts:
 
----
+  ```bash
+  npm run lighthouse:produrl:travel:mobile -- --url https://metravel.by/travels/<slug>
+  npm run guard:lighthouse:mobile:fail
+  ```
 
-## 🎯 Быстрые команды
+- [ ] Не возвращён service-worker runtime/static cache и нет инструкции
+      пользователю очищать кэш.
 
-```bash
-npm run release:check       # Проверка перед релизом
-eas whoami                  # Проверка EAS
-eas secret:list             # Секреты
-npm run build:all:prod      # Сборка всех платформ
-```
+## Handoff
 
----
+- [ ] Указаны target, commit/artifact/version и время релиза.
+- [ ] Перечислены реально запущенные команды и результаты.
+- [ ] Приложены production/browser/device evidence по scope.
+- [ ] Residual risks и blockers сформулированы явно.
+- [ ] Board task обновлён только после выполнения его Task Contract/Done gate.
 
-**Последнее обновление:** 2 марта 2026  
-**Статус:** ✅ Все проверки пройдены, проект готов к деплою
+Подробности deploy path и rollback: `docs/RELEASE.md`.

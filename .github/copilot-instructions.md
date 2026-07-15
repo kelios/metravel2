@@ -20,7 +20,10 @@
 
 ## Обязательный рабочий процесс
 
-1. Сначала пойми scope задачи и найди существующие компоненты, хуки, утилиты и docs по этой зоне.
+1. Сначала пойми scope задачи, явно укажи platform impact
+   (`web | Android | iOS | shared | none`) и localization impact
+   (`RU/BE/UK/PL/EN | selected locales | none`), затем найди существующие
+   компоненты, хуки, утилиты и docs по этой зоне.
 2. Предпочитай локальные изменения вместо широких переписываний.
 3. Перед созданием нового кода сначала проверь, можно ли переиспользовать существующие примитивы из `components/ui`, готовые фичевые компоненты, `hooks/`, `utils/`, `api/*Queries.ts`, `stores/`.
 4. При рефакторинге сохраняй внешнее поведение и публичные контракты, если задача явно не требует их менять.
@@ -32,6 +35,8 @@
 - `$metravel-feature-builder` — фичи, багфиксы, рефакторинг, API, services, SEO.
 - `$metravel-hook-builder` — вынос и проектирование focused hooks, упрощение компонентов через локальную hook-логику, работа с `hooks/` без новых `any`.
 - `$metravel-ui-guardrails` — видимый UI, media, placeholders, icons, tokens, external links.
+- `$metravel-i18n-guardrails` — UI copy, RU/BE/UK/PL/EN resources, locale
+  state/storage, Intl/plurals, accessibility, SEO locale и web/native lifecycle.
 - `$metravel-quality-fixer` — полный цикл lint + Jest + Playwright, исправление падений и повторная валидация до зелёного baseline.
 - `$metravel-test-runner` — выбор и запуск минимально достаточных Jest/integration/governance checks.
 - `$metravel-test-writer` — написание/обновление unit, integration и governance тестов без `.skip`.
@@ -50,6 +55,10 @@
 - Не хардкодь hex-цвета в компонентах; используй `DESIGN_TOKENS` и существующую theme/token систему.
 - Не используй emoji как production-иконки; предпочитай `@expo/vector-icons/Feather`.
 - Не добавляй новые `any` в `api/`, `hooks/`, `stores/`.
+- Общий Expo/React Native code должен сохранять production web,
+  Android и iOS/iPadOS; технические различия выноси в platform files.
+- Новый app-owned UI text добавляй через `@/i18n` в RU/BE/UK/PL/EN;
+  даты/числа/plurals — через `i18n/format.ts`, с проверкой `npm run test:i18n`.
 
 ## Как действовать по типам задач
 
@@ -92,4 +101,3 @@
 - Сначала короткий план.
 - Затем конкретные изменения и результаты проверок.
 - Ссылайся на файлы через `path/to/file.tsx:line`, когда это уместно.
-

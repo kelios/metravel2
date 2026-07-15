@@ -5,14 +5,19 @@ description: Implement, refactor, or debug features in the metravel Expo/React N
 
 # Metravel Feature Builder
 
-Read `docs/RULES.md`, `docs/README.md`, and the task triage section in `docs/CODEX.md` before changing code. Then load only the extra docs that match the task:
+Read `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, and the task triage section in `docs/CODEX.md` before changing code. Then load only the extra docs that match the task:
 
 - Read `docs/DEVELOPMENT.md` for local workflow, selective checks, route-point-from-photo flow, and SEO utility usage.
 - Read `docs/TESTING.md` when choosing targeted validation.
 - Read `docs/features/travel.md`, `docs/features/map.md`, or `docs/features/places.md` for feature-specific work.
 - Read `docs/RELEASE.md` only when the task touches release or deployment flow.
+- Use `$metravel-i18n-guardrails` for app-owned UI copy, accessibility,
+  locale state/formatting, SEO locale, or translation resources.
 
 Implement the smallest change that solves the task.
+
+Before editing, record `Platform impact: web | Android | iOS | shared | none`
+and `Localization impact: RU/BE/UK/PL/EN | selected locales | none`.
 
 - Before editing, run `git status --short` and keep unrelated user changes separate.
 - Put temporary screenshots, traces, logs, JSON reports, and other debug output only under ignored local folders such as `.codex-temp/` or `.codex-debug/`; remove stale or unnecessary debug artifacts before handoff.
@@ -32,6 +37,8 @@ Follow these repo-specific rules while building features:
 - For `/places`, preserve the point-level contract from `docs/features/places.md`: render places/coordinates, not travel cards; keep country/category/search filters, 20-item incremental loading, map focus links, and centralized external-link helpers.
 - For route-point-from-photo work, preserve the documented flow in `docs/DEVELOPMENT.md`: keep local `blob:` preview in UI state, never send `blob:` URLs to backend, and upload the real point photo after the backend returns a point id.
 - For e2e auth or test accounts, use `.env.e2e` values if they already exist; never print secrets.
+- Localize app-owned UI through `@/i18n`, keep RU/BE/UK/PL/EN keys complete,
+  and use `i18n/format.ts` for locale-sensitive output.
 
 Choose validation by scope after each finished logical block and before wrapping up:
 
@@ -40,6 +47,8 @@ Choose validation by scope after each finished logical block and before wrapping
 - Medium change: run the relevant targeted tests plus lint/selective checks for the affected module set.
 - Large or cross-cutting change: run `npm run lint` and `npm run test:run`.
 - If the change affects visible web UI, verify it in a real browser flow, capture a screenshot, and confirm the browser console has no new errors.
+- If localization is affected, run `npm run test:i18n`; shared native scope needs
+  separate Android/iOS evidence or an exact `verify pending` blocker.
 
 Avoid dev-environment false positives:
 

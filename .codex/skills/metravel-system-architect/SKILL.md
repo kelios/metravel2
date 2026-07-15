@@ -26,6 +26,8 @@ Existing code to reuse:
 Affected files/modules:
 Data/API impact:
 UI impact:
+Platform impact: web | Android | iOS | shared | none
+Localization impact: RU/BE/UK/PL/EN | selected locales | none
 External-link impact:
 Task Contract:
 Risks:
@@ -49,8 +51,13 @@ Residual risk:
 ## Rules
 
 - Prefer reuse of existing components, hooks, services, and utilities.
+- Design against one Expo/React Native architecture. Separate technical platform
+  adapters from shared product behavior and name validation per affected platform.
+- For app-owned UI copy or locale-sensitive behavior, define translation
+  namespaces/keys, formatting, accessibility/SEO impact, RU/BE/UK/PL/EN coverage,
+  and `npm run test:i18n`. Require a separate API contract for localized server content.
 - Keep implementation steps small enough for one programmer pass.
-- For FE/BE board work, require the `Task Contract` from `docs/TASK_BOARD_MCP.md`; incomplete scope, Data/API contract, dependencies, validation, or Done gate is a design blocker.
+- For FE/BE board work, require the `Task Contract` from `docs/TASK_BOARD_MCP.md`; incomplete scope, Data/API contract, platform/localization impact, dependencies, validation, or Done gate is a design blocker.
 - Treat direct external-link usage, hardcoded component hex colors, skipped tests, dead imports, and broken UI states as review findings.
 - Require browser verification for visible web UI changes.
 - Require `npm run guard:external-links` or `npm run governance:verify` when external navigation changes.

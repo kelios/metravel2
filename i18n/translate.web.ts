@@ -24,6 +24,8 @@ type LoadedTranslation = { value: string; plurals?: CompiledPluralForms }
 
 const MISSING_TRANSLATIONS: Record<SupportedLocale, string> = {
   ru: 'Перевод недоступен',
+  be: 'Пераклад недаступны',
+  uk: 'Переклад недоступний',
   pl: 'Tłumaczenie niedostępne',
   en: 'Translation not available',
 }
@@ -76,10 +78,20 @@ export const loadWebLocale = async (locale: SupportedLocale): Promise<void> => {
   if (existing) return existing
 
   const promise = (async () => {
-    const resources =
-      locale === 'en'
-        ? (await import('./locales/en')).enResources
-        : (await import('./locales/pl')).plResources
+    let resources: LocaleResources
+    switch (locale) {
+      case 'be':
+        resources = (await import('./locales/be')).beResources
+        break
+      case 'uk':
+        resources = (await import('./locales/uk')).ukResources
+        break
+      case 'en':
+        resources = (await import('./locales/en')).enResources
+        break
+      default:
+        resources = (await import('./locales/pl')).plResources
+    }
     loadedCatalogs.set(locale, compileLocaleCatalog(resources))
   })()
   localeLoadPromises.set(locale, promise)

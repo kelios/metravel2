@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Test Runner"
   short_description: "Run the right Jest and governance checks for the touched scope."
-  default_prompt: "Use $metravel-test-runner to choose the narrowest reliable metravel test commands for this task, check the operation gate before starting tests, analyze failures, rerun after fixes, and report any unrelated blocker explicitly."
+  default_prompt: "Use $metravel-test-runner to choose the narrowest reliable checks for the affected web/Android/iOS and RU/BE/UK/PL/EN contract, then analyze and rerun failures safely."

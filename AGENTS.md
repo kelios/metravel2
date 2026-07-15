@@ -13,6 +13,14 @@
 - Рабочая директория приложения: корень репозитория, папка с `package.json`.
 - Источник правил проекта: `docs/RULES.md` и `docs/README.md`.
 - Карта работы Codex и skills: `docs/CODEX.md`.
+- Приложение — единая Expo/React Native архитектура для production web,
+  Android и iOS/iPadOS. Перед любой задачей явно определи platform impact:
+  `web | Android | iOS | shared | none`; правка shared-кода не должна ломать
+  непроверенные платформы.
+- Production UI многоязычен: RU/BE/UK/PL/EN, default/fallback — RU.
+  Источник locale contract — `i18n/config.ts`, resource contract —
+  `i18n/resources.ts`. Перед любой задачей явно определи localization
+  impact: `all current locales | selected locales | none`.
 - Работай только с веткой `main`: перед изменениями проверь текущую ветку, не создавай и не переключайся на другие ветки без явной новой инструкции пользователя.
 - В этом workspace AI-агент делает только frontend/app/docs изменения. Backend/Django/API/server (`../metravel-backend`, `area=back`) можно только анализировать read-only, проверять безопасными probes и оформлять/обновлять задачи на борде; backend working tree, миграции, тесты, настройки и server code не редактировать.
 - Если frontend-задача требует backend-контракта или исправления на сервере, не маскируй это mock-фолбэком: зафиксируй blocker, создай/обнови `area=back` задачу и оставь frontend-часть `blocked_by`/`depends_on` до runtime evidence.
@@ -36,6 +44,9 @@
 - `$metravel-quest-geo-verifier` - read-only субагент гео-сверки точек квестов через OSM/Nominatim и локальные geocheck scripts.
 - `$metravel-hook-builder` - проектирование, вынос и рефакторинг focused React hooks в `hooks/` и рядом с фичами без нарушения public contracts.
 - `$metravel-ui-guardrails` - видимый UI, layout, media, placeholders, icons, design tokens, external links.
+- `$metravel-i18n-guardrails` - многоязычный UI и locale-sensitive логика на web,
+  Android и iOS: translation keys/resources, language persistence, Intl/plurals,
+  accessibility, SEO locale и i18n validation.
 - `$metravel-design-auditor` - read-only сквозной аудит нескольких экранов: design-system consistency, responsive/mobile parity, состояния, accessibility и evidence matrix.
 - `$metravel-visual-asset-designer` - генерация и интеграция брендовых raster icons/badges/app/marketing assets через imagegen по `docs/ICON_ART_PROMPTS.md`; не подменяет Feather icons или фотореалистичные travel/article media.
 - `$metravel-child-quest-visuals` - отдельный автор визуалов детских/семейных/подростковых квестов: возрастной режим, акварель/сказка/анимация, сюжетная читаемость обложки, imagegen, prompt и production verification.
@@ -56,7 +67,7 @@
 - `$metravel-production-smoke` - read-only smoke production `metravel.by` после deploy или при подозрении на 502/white screen/static/API/sitemap регрессию.
 - `$metravel-docs-maintainer` - обновление `docs/`, `AGENTS.md`, `.codex/skills` и правил для Codex.
 - `$metravel-prompt-maintainer` - аудит и поддержка `docs/*PROMPTS.md`, `assets/**/PROMPT.md`, skill metadata/default prompts, воспроизводимости и prompt-governance без написания самого article/quest content.
-- `$metravel-task-contract` - обязательный контракт FE/BE задач на борде: scope, user-visible result, Data/API contract, dependencies, fallback/mock policy, validation и Done gate перед стартом/review/done.
+- `$metravel-task-contract` - обязательный контракт FE/BE задач на борде: scope, user-visible result, Data/API contract, platform/localization impact, dependencies, fallback/mock policy, validation и Done gate перед стартом/review/done.
 - `$metravel-ticket-board` - оператор общего MCP task board: list/create/update/sync задач и спринтов без правки feature-кода.
 - `$metravel-sprint-reviewer` - приёмка тикетов активного спринта на MCP task board по Task Contract/Done gate с реальными тестами/browser/API evidence.
 - `$metravel-backend-diagnostician` - read-only диагностика backend/API проблем, 5xx/contract mismatch, backend status sync и создание/обновление back-задач с evidence.
@@ -77,7 +88,8 @@
 ## 3. Базовый рабочий процесс
 
 1. Перед правками изучи релевантные файлы в `docs/`.
-2. Быстро определи тип задачи, нужные skills, риск-зону и план проверки по `docs/CODEX.md`.
+2. Быстро определи тип задачи, нужные skills, риск-зону, platform
+   impact, localization impact и план проверки по `docs/CODEX.md`.
 3. Для сложных, неясных или многошаговых задач используй `$metravel-codex-orchestrator` как верхний self-check: triage → skills → промты ролей → validation → handoff.
 4. Проверь текущую ветку и `git status --short`; если ветка не `main`, остановись и уточни дальнейшие действия.
 5. Внеси минимально достаточные изменения.
@@ -117,7 +129,17 @@
 - Не заменяй Android device validation mobile-web viewport, Expo web export, EAS preview/development/production build или dev-client/export flow без явного разрешения пользователя.
 - `unauthorized`, отсутствие устройства или поломка локальной сборки/установки фиксируй конкретно: команда, результат и следующий безопасный шаг.
 
-### 3.3 Координация долгих операций
+### 3.3 iOS/iPadOS testing and builds
+
+- iOS — реальная app-платформа, а не производная от web/Android. Если shared
+  или native-правка затрагивает iOS, проверь тот же сценарий на доступном
+  simulator/device; web или Android evidence не заменяют iOS validation.
+- Без simulator/device укажи `verify pending` с точным непроверенным сценарием;
+  не заявляй iOS-ready по одному typecheck или web smoke.
+- iOS EAS/cloud builds и submit запускай только по явному запросу на точное
+  build/submit действие.
+
+### 3.4 Координация долгих операций
 
 - Деплой, release/build, production web build, Android local/EAS build or install, server rebuild/restart, full/preflight проверки, Playwright/e2e, Lighthouse и другие долгие операции с общими артефактами считаются эксклюзивными.
 - Перед запуском такой операции проверь, не идет ли уже операция того же типа и target: активные процессы (`ps`/`pgrep -af` по `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `docker compose`, `nginx`, `systemctl`) и lock-файлы вроде `dist/.prod-build.lock` или `.codex-temp/ops/*.lock`, если они есть.
@@ -186,6 +208,21 @@
 - Используй `DESIGN_TOKENS` из `constants/designSystem.ts`.
 - CSS-переменные web живут в `app/global.css`.
 
+### 4.5 Многоязычность
+
+- Новый app-owned UI text не хардкодь: используй `useTranslation()` из
+  `@/i18n`, а вне React — `translate()`/`getFixedTranslator()`.
+- Любой новый translation key добавляй в RU/BE/UK/PL/EN в одной задаче;
+  RU resources — типизированный key baseline.
+- Даты, числа, валюты, списки, relative time, plural и sorting форматируй
+  через `i18n/format.ts`; не хардкодь `ru-RU` и не пиши plural rules через `%`.
+- Не переводи на клиенте user/editorial/API content, названия мест,
+  комментарии, сообщения и stable backend codes; для этого нужен отдельный
+  content-locale/API contract.
+- Правки i18n provider/config/storage, SEO locale и shared copy проверяй на web
+  hydration и native cold restart. При любом localization impact запусти
+  `npm run test:i18n` плюс проверки по feature scope.
+
 ## 5. Производительность и релиз
 
 ### 5.1 Локально перед деплоем
@@ -207,7 +244,7 @@
 - Если в ходе работы найдена реальная ошибка, исправь ее в рамках текущей задачи; исключение только для проблем вне scope или без доступной проверки, тогда явно зафиксируй блокер и не маскируй проблему.
 - Не создавай новые отчеты без необходимости: обновляй существующую документацию в `docs/`.
 - Новые FE/BE/backend задачи создавай на общем MCP task board через `ticket-board` по правилам `docs/TASK_BOARD_MCP.md`.
-- Каждая задача на борде должна содержать Task Contract, sprint, область (`front`/`back`) и явные зависимости/блокеры; для этого используй `$metravel-task-contract`.
+- Каждая задача на борде должна содержать Task Contract, sprint, область (`front`/`back`), platform/localization impact и явные зависимости/блокеры; для этого используй `$metravel-task-contract`.
 - На борде используются только рабочие области `front` и `back`: Android/iOS/native баги приложения заводи как `area=front` с префиксом `[AND-...]`/`[IOS-...]` и device-validation в описании; backend/API/server задачи заводи как `area=back`.
 - Не создавай новые локальные `tasks/*.md` как обычный workflow. Локальные task-файлы допустимы только как временный fallback/migration draft при недоступном борде, после чего задачу нужно перенести на борд и убрать локальный черновик.
 - Все новые задачи, включая Android QA баги, должны быть созданы или обновлены на борде в текущем активном спринте до handoff; локальный fallback не считается завершением задачи, если board token можно обновить через `.env.e2e`.
@@ -218,4 +255,8 @@
 - Запущены проверки по масштабу задачи.
 - Не нарушены правила external links и governance.
 - UI-поведение не сломано на web/mobile.
+- Platform impact проверен для web/Android/iOS; непроверенный device scope
+  явно помечен `verify pending`.
+- Localization impact явно указан; для затронутого UI нет новых
+  hardcoded strings, а `npm run test:i18n` прошёл.
 - Документация обновлена только при необходимости и в правильном месте.

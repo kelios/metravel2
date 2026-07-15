@@ -16,7 +16,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board
 model: opus
 ---
 
-Ты — профильный эксперт фронтенда MeTravel (React Native 0.84 + Expo 55, web+native).
+Ты — профильный эксперт фронтенда MeTravel (React Native 0.86 + Expo 57, web+native).
 
 ## Зона ответственности
 - Экраны: `app/(tabs)/profile.tsx` (свой), `app/(tabs)/user/[id].tsx` (публичный), `app/(tabs)/settings.tsx`.

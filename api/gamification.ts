@@ -2,7 +2,7 @@
 // Слой геймификации-2 (Sprint 10): бейдж первооткрывателя места, RPG-линейки
 // прогрессии (Собачья/Кабанья/Лисья/Птичья), 4 типа активности
 // (Исследователь/Читатель/Автор/Участник), персонажи + выбор пути.
-// Контракт зеркалит docs/features/social-trips-gamification-backlog.md (Sprint A).
+// Контракт описан в docs/features/social-trips-gamification-roadmap.md.
 // Production contract verified by board #919; mocks and missing-endpoint
 // fallbacks are development-only.
 

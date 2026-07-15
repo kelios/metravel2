@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Page, Response } from '@playwright/test';
 
 import { test, expect } from './fixtures';
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation';
@@ -38,6 +38,50 @@ async function fillLoginForm(page: Page, email: string, password: string): Promi
   await passwordInput.fill(password);
 }
 
+async function clearCredentialInputs(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    for (const input of document.querySelectorAll<HTMLInputElement>(
+      'input[type="email"], input[type="password"]',
+    )) {
+      input.value = '';
+    }
+  });
+}
+
+async function loginRespectingRateLimit(
+  page: Page,
+  email: string,
+  password: string,
+): Promise<Response> {
+  let lastResponse: Response | null = null;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await fillLoginForm(page, email, password);
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).pathname.endsWith('/api/user/login/'),
+      { timeout: 60_000 },
+    );
+
+    await page.getByRole('button', { name: /^Войти$/ }).click();
+    const response = await responsePromise;
+    lastResponse = response;
+    await clearCredentialInputs(page);
+
+    if (response.status() !== 429 || attempt === 3) return response;
+
+    const retryAfterSeconds = Number(response.headers()['retry-after']);
+    const retryDelayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+      ? retryAfterSeconds * 1000
+      : 30_000 * attempt;
+    await page.waitForTimeout(retryDelayMs);
+  }
+
+  if (!lastResponse) throw new Error('Login did not produce a response');
+  return lastResponse;
+}
+
 async function expectNoJavaScriptAuthTokens(page: Page): Promise<void> {
   const presentKeys = await page.evaluate((keys) => {
     const found: string[] = [];
@@ -54,6 +98,16 @@ async function expectNoJavaScriptAuthTokens(page: Page): Promise<void> {
 async function getWebAuthCookie(page: Page) {
   const cookies = await page.context().cookies();
   return cookies.find((cookie) => cookie.name === WEB_AUTH_COOKIE);
+}
+
+async function getSafeResponseError(response: Response): Promise<string> {
+  try {
+    const payload = await response.json() as Record<string, unknown>;
+    const detail = payload.detail || payload.error || payload.message;
+    return typeof detail === 'string' ? detail : 'no public error detail';
+  } catch {
+    return 'non-JSON response';
+  }
 }
 
 test.describe('HttpOnly-cookie web auth', () => {
@@ -74,28 +128,8 @@ test.describe('HttpOnly-cookie web auth', () => {
     await preacceptCookies(page);
     await gotoWithRetry(page, '/login');
     await expectNoJavaScriptAuthTokens(page);
-    await fillLoginForm(page, email, password);
-
-    const loginResponsePromise = page.waitForResponse(
-      (response) =>
-        response.request().method() === 'POST' &&
-        new URL(response.url()).pathname.endsWith('/api/user/login/'),
-      { timeout: 60_000 },
-    );
-
-    await page.getByRole('button', { name: /^Войти$/ }).click();
-    const loginResponse = await loginResponsePromise;
+    const loginResponse = await loginRespectingRateLimit(page, email, password);
     expect(loginResponse.ok(), `Login returned HTTP ${loginResponse.status()}`).toBe(true);
-
-    // Playwright error-context snapshots include current input values. Clear the
-    // credential fields before any assertion that could fail and write an artifact.
-    await page.evaluate(() => {
-      for (const input of document.querySelectorAll<HTMLInputElement>(
-        'input[type="email"], input[type="password"]',
-      )) {
-        input.value = '';
-      }
-    });
     await gotoWithRetry(page, '/profile');
 
     const profileMenu = page.getByRole('button', { name: 'Меню профиля' }).first();
@@ -122,8 +156,15 @@ test.describe('HttpOnly-cookie web auth', () => {
     await expectNoJavaScriptAuthTokens(page);
 
     await profileMenu.click();
-    const logoutButton = page.getByRole('button', { name: /^Выйти$/ }).first();
+    const logoutButton = page.getByRole('button', { name: /^Выйти из аккаунта$/ }).first();
     await expect(logoutButton).toBeVisible({ timeout: 20_000 });
+
+    const csrfCookie = (await page.context().cookies()).find((cookie) => cookie.name === 'csrftoken');
+    expect(csrfCookie, 'Logout requires the backend csrftoken cookie').toBeTruthy();
+    const csrfCookieIsReadable = await page.evaluate(() =>
+      document.cookie.split(';').some((cookie) => cookie.trim().startsWith('csrftoken=')),
+    );
+    expect(csrfCookieIsReadable, 'csrftoken must be readable so the SPA can send X-CSRFToken').toBe(true);
 
     const logoutResponsePromise = page.waitForResponse(
       (response) =>
@@ -134,7 +175,16 @@ test.describe('HttpOnly-cookie web auth', () => {
 
     await logoutButton.click();
     const logoutResponse = await logoutResponsePromise;
-    expect(logoutResponse.ok(), `Logout returned HTTP ${logoutResponse.status()}`).toBe(true);
+    const logoutRequestHeaders = await logoutResponse.request().allHeaders();
+    expect(
+      Boolean(logoutRequestHeaders['x-csrftoken']),
+      'Logout request must mirror csrftoken in X-CSRFToken',
+    ).toBe(true);
+    const logoutError = logoutResponse.ok() ? '' : await getSafeResponseError(logoutResponse);
+    expect(
+      logoutResponse.ok(),
+      `Logout returned HTTP ${logoutResponse.status()}: ${logoutError}`,
+    ).toBe(true);
 
     await page.waitForURL((url) => url.pathname.includes('/login'), { timeout: 30_000 });
     await expect(page.getByRole('button', { name: /^Войти$/ })).toBeVisible({ timeout: 30_000 });

@@ -5,17 +5,21 @@ description: Apply metravel UI guardrails for screens, cards, interactions, imag
 
 # Metravel UI Guardrails
 
-Read `docs/RULES.md` before any UI change. Then load the exact supporting references that match the task:
+Read `AGENTS.md` and `docs/RULES.md` before any UI change. Then load the exact supporting references that match the task:
 
 - Read `docs/adr/0001-no-direct-linking-openurl.md` for external-link governance intent.
 - Read `docs/adr/0002-images-via-image-card-media.md` for image/card architecture decisions.
 - Read `docs/DEVELOPMENT.md` when the task changes SEO, page structure, or visible web flows.
+- Use `$metravel-i18n-guardrails` for UI copy, accessibility, validation/errors,
+  locale state/formatting, or SEO locale.
 
 Build UI by extending existing primitives first:
 
 - Reuse `components/ui` and existing feature components before inventing new one-off building blocks.
 - Prefer the existing `Button`, `IconButton`, and `Chip` primitives for small controls.
 - Keep layout stable across loading, success, and error states.
+- Keep the same mobile product contract across web, Android, and iOS/iPadOS.
+  Design labels and states for RU/BE/UK/PL/EN expansion and plural differences.
 - Fix all real UI problems found while working in the touched flow: overlap, broken mobile/desktop layout, invalid icons, non-neutral placeholders, console errors, broken interactions, and direct external-link violations.
 - If a UI problem cannot be fixed safely in the current scope, document the blocker and exact scenario instead of leaving it implicit.
 
@@ -27,6 +31,7 @@ Enforce the repository's UI contracts:
 - Use `@expo/vector-icons/Feather` by default for production icons. Avoid emoji as icons.
 - Verify icon names belong to the chosen family; do not copy names across icon families.
 - Use `DESIGN_TOKENS` from `constants/designSystem.ts` and web CSS variables from `app/global.css`; do not hardcode hex colors.
+- Do not hardcode app-owned UI strings; use `@/i18n` and `i18n/format.ts`.
 
 Handle images and placeholders the metravel way:
 
@@ -55,3 +60,4 @@ Verify visual changes before finishing:
 - Capture a screenshot to confirm final rendering, storing it only in ignored local debug folders such as `.codex-temp/` or `.codex-debug/`.
 - Check the browser console for new errors.
 - Run `npm run guard:external-links` or `npm run governance:verify` whenever link handling or policy-sensitive UI changed.
+- Run `npm run test:i18n` whenever UI copy or locale-sensitive behavior changed.

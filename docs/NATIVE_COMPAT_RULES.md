@@ -1,10 +1,10 @@
 # Правила native-совместимости (web-first проект → Android/iOS)
 
-Кодекс, рождённый первым запуском native-приложения (2026-06-11), пополняется по мере
-новых native-багов (правила 8-10 — из device-QA 2026-06-22). Каждый пункт —
-реальный баг, стоивший EAS-сборки или часа отладки. Нарушения ловит
-`__tests__/config/native-compat-governance.test.ts` (механические правила) и
-skill `android-native-audit` (семантические).
+Load-bearing правила для текущего Expo SDK 57 / React Native 0.86 приложения.
+Механические нарушения ловит
+`__tests__/config/native-compat-governance.test.ts`, а семантическую/device
+проверку ведут `$metravel-android-developer`, `$metravel-ios-developer` и
+`$metravel-mobile-tester`.
 
 ## 0. ГЛАВНОЕ: web — прод, его не ломаем. Несовместимо → отдельные файлы
 
@@ -16,10 +16,10 @@ skill `android-native-audit` (семантические).
   semantics. Держится это **общими компонентами**, а не совпадением реализаций:
   расхождение лечится общим компонентом/хуком, платформенный файл меняет только
   движок/инсеты/тени. Проверяется не автогвардом, а глазами при правке — web в
-  браузере (mobile) + native device-verify; сквозной аудит — skill
-  `metravel-design-audit` (ось «устройство-эталон»). Контракт карты/карточки места
-  (эталон структуры и порядка действий) — `docs/features/map.md` §Mobile parity
-  contract; владелец — агент `map-expert`.
+  браузере (mobile) + native device-verify; сквозной аудит —
+  `$metravel-design-auditor`. Контракт карты/карточки места находится в
+  `docs/features/map.md#pointplace-mobile-contract`; владелец домена —
+  `$metravel-map-expert`.
 - Если платформы несовместимы — **не перекраивать общий компонент условиями**,
   а разводить по файлам: `Component.web.tsx` + `Component.native.tsx`
   (или `.android.tsx`/`.ios.tsx`) — Metro сам выберет нужный. Примеры в репо:
@@ -29,8 +29,8 @@ skill `android-native-audit` (семантические).
   `Platform.OS === 'web'`-гейт допустим; расходится **структура, поведение или
   зависимости** → отдельные платформенные файлы, общую логику — в общий хук/утиль.
 - Любая правка ОБЩЕГО (не платформенного) файла ради native обязана пройти
-  web-проверку до сдачи: прод-бандл в браузере, консоль без ошибок
-  (`npm run build:web` + smoke главной/карты/путешествия) — не только typecheck.
+  web-проверку до сдачи: production build и браузер, консоль без ошибок
+  (`npm run build:web:prod` + релевантный smoke) — не только typecheck.
 
 ## 1. Платформенные трансформы сборки — только под свою платформу
 
@@ -54,7 +54,7 @@ skill `android-native-audit` (семантические).
 
 ## 3. Динамический `import()` — никогда не чейнить напрямую
 
-- Metro (SDK 56) возвращает для синхронно-доступных модулей «голый» thenable
+- Metro pipeline может вернуть для синхронно-доступных модулей «голый» thenable
   (web prod: только `.then`) или сам объект модуля (native prod: вообще не
   thenable). Прямые `import(...).then/.catch/.finally` падают.
 - **Правило:** `Promise.resolve(import('...'))` всегда, когда результат
@@ -84,7 +84,8 @@ skill `android-native-audit` (семантические).
 
 - `window`, `document`, `localStorage`, `navigator`, observers, DOM-события —
   только в `.web.tsx` или под `Platform.OS === 'web'` / `typeof window !== 'undefined'`
-  **на уровне эффекта/функции**. Систематический поиск — skill `android-native-audit`.
+  **на уровне эффекта/функции**. Систематический поиск —
+  `$metravel-android-developer` + governance test.
 
 ## 7. Отладка на устройстве — EAS сборки дорогие, локальная USB-сборка по умолчанию
 
@@ -115,7 +116,7 @@ skill `android-native-audit` (семантические).
 
 ## 8. Legacy-методы expo-модулей, которые THROW в рантайме (а не deprecation-warn)
 
-- `expo-file-system` (SDK 56) выкинул из ГЛАВНОГО экспорта legacy-методы
+- Текущий `expo-file-system` сохраняет legacy-методы вне главного modern entry:
   (`writeAsStringAsync`, `readAsStringAsync`, `cacheDirectory`, `documentDirectory`,
   `makeDirectoryAsync`, `deleteAsync`, `getInfoAsync`…): они помечены
   `@deprecated … will throw in runtime` и в теле делают `throw` — typecheck и web
@@ -157,6 +158,4 @@ skill `android-native-audit` (семантические).
 | Codex Android developer | `.codex/skills/metravel-android-developer/SKILL.md` |
 | Codex iOS developer | `.codex/skills/metravel-ios-developer/SKILL.md` |
 | Codex mobile tester | `.codex/skills/metravel-mobile-tester/SKILL.md` |
-| Legacy Claude агент-эксперт | `.claude/agents/android-expert.md` |
-| Legacy Claude скилл-аудит | `.claude/skills/android-native-audit/SKILL.md` |
 | Каноническая карта проекта | `AGENTS.md` + `docs/CODEX.md` |

@@ -50,11 +50,17 @@ describe('web compile-time localization', () => {
     expect(translatePlural(compiledNoun, 2)).toBe('символа')
   })
 
-  it('loads Polish and English resources outside the eager bundle', async () => {
+  it('loads every non-default locale outside the eager bundle', async () => {
     const languageName = {
       h: hashTranslationKey('common:language.ru'),
       v: 'Русский',
     } as unknown as TranslationKey
+
+    await loadWebLocale('be')
+    expect(getFixedTranslator('be')(languageName)).toBe('Руская')
+
+    await loadWebLocale('uk')
+    expect(getFixedTranslator('uk')(languageName)).toBe('Російська')
 
     await loadWebLocale('en')
     expect(getFixedTranslator('en')(languageName)).toBe('Russian')

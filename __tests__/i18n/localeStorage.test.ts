@@ -14,7 +14,7 @@ describe('locale preference storage contract', () => {
     expect(resolveLocalePreference(preference)).toBe('ru')
   })
 
-  it.each(['pl', 'en'] as const)('persists the %s locale explicitly', (locale) => {
+  it.each(['be', 'uk', 'pl', 'en'] as const)('persists the %s locale explicitly', (locale) => {
     const preference = parseLocalePreference(
       JSON.stringify({ version: 1, mode: 'explicit', locale }),
     )

@@ -41,12 +41,14 @@ model: sonnet
    - **Acceptance Criteria** — проверяемые `- [ ]` критерии (наблюдаемые факты).
    - **Gherkin Tests** — `Feature/Scenario` с `Given/When/Then` о поведении.
    - **Task Contract** — обязательный контракт FE/BE задачи: `Scope`, `User-visible result`,
-     `Data/API contract`, `Dependencies`, `Fallback/mock policy`, `Validation`, `Done gate`
+     `Data/API contract`, `Platform impact`, `Localization impact`, `Dependencies`,
+     `Fallback/mock policy`, `Validation`, `Done gate`
      по правилу `docs/TASK_BOARD_MCP.md`. **Уровень детализации — архитекторский:** заполняй
      конкретикой, а не плейсхолдерами. `Data/API contract` для BE — endpoint, method, auth,
      точные request/response shape (поля + типы), миграции/seed; для FE — какие endpoints/
      fields/events потребляются и какие UI states появляются. `Dependencies` — реальные board id
-     связанных задач. Не хватает данных для такого уровня — задай ОДИН уточняющий вопрос или
+     связанных задач. `Platform impact` фиксирует web/Android/iOS/shared/none,
+     `Localization impact` — RU/BE/UK/PL/EN/selected/none и i18n validation. Не хватает данных для такого уровня — задай ОДИН уточняющий вопрос или
      делегируй проработку `$metravel-system-architect`; не оставляй контракт декоративным.
    - **Assignment** — `Primary owner` и `Support agents` (маппинг ролей на реальных
      агентов проекта — таблица в `README.md`).

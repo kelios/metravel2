@@ -1,188 +1,118 @@
-# Project docs
+# Project documentation
 
-## Current project
+`docs/` — источник проектных правил и feature contracts. Полный каталог и
+классификация файлов находятся в `docs/INDEX.md`.
 
-- The current project is `metravel2`.
-- The application root is `./` (this folder contains `package.json`).
-- Run all `npm` commands from this folder.
+## Канонические документы
 
-## Important docs
+- `ARCHITECTURE.md` — текущая архитектура и feature/runtime boundaries;
+- `RULES.md` — обязательные development/UI/security/operation правила;
+- `CODEX.md` — AI triage, skills и validation matrix;
+- `DEVELOPMENT.md` — local setup и day-to-day workflow;
+- `TESTING.md` — Jest, Playwright, governance и quality gates;
+- `MANUAL_TEST_CASES.md` — повторяемые browser/mobile/device cases;
+- `RELEASE.md` и `PRODUCTION_CHECKLIST.md` — release/deploy workflow;
+- `DESIGN_SYSTEM.md` — design tokens и visual roles;
+- `features/` — domain maps; `adr/` — принятые architecture decisions.
 
-See `INDEX.md` for full docs map.
+Общий application contract: единый Expo/React Native codebase для
+production web, Android и iOS/iPadOS; production UI поддерживает
+RU/BE/UK/PL/EN. Перед задачей фиксируй platform/localization impact по
+`AGENTS.md` и `CODEX.md`; implementation-детали i18n — в
+`DEVELOPMENT.md#localization`.
 
-- `CODEX.md` - Codex workflow, AI task triage, validation matrix, and project skills map
-- `ARCHITECTURE.md` — архитектура проекта, карта frontend-функциональности и обзор backend API-интеграции
-- `RULES.md` — development and UI rules (incl. external-link policy)
-- `DEVELOPMENT.md` — local setup and dev workflow
-- `DESIGN_SYSTEM.md` — design-token decisions and palette roles
-- `TESTING.md` — Jest + Playwright + CI quality gate
-- `MANUAL_TEST_CASES.md` — ручные web/mobile/Android тест-кейсы, включая Android USB/local-build smoke
-- `RELEASE.md` — release/deploy checklist
-- `PRODUCTION_CHECKLIST.md` — production release checklist
-- `EXTERNAL_LINK_GOVERNANCE_PR_SUMMARY.md` — external-links governance PR summary/template
+Dated analytics/SEO/content files — snapshots, а не live source of truth.
+Legacy local workboard files — compatibility tooling, а не task state.
 
-## Agent skills quick map
+## Быстрый старт
 
-Полная карта skills, экономичный route и критерии повышения до multi-agent workflow живут в `CODEX.md`. Для быстрого запуска начинай с одного профильного skill:
-
-- Документация, правила, skills: `$metravel-docs-maintainer`; prompt specs, asset prompts и skill default prompts: `$metravel-prompt-maintainer`.
-- Обычная разработка: `$metravel-domain-router` для travel/map/profile/achievements/quests/PDF/new pages, затем профильный доменный субагент (`$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, `$metravel-quest-expert`) и `$metravel-feature-builder`; добавляй `$metravel-ui-guardrails`, `$metravel-hook-builder`, `$metravel-refactor-surgeon` или `$metravel-test-writer` только если затронуты UI, hooks, large component split или тесты.
-- Анализ: `$metravel-project-analyst`, `$metravel-business-analyst`, `$metravel-growth-analyst`, `$metravel-performance-analyst`, `$metravel-security-reviewer`, `$metravel-design-auditor`, `$metravel-seo-index-operator` или `$metravel-backend-diagnostician` по домену.
-- Проверки и автоматизация: `$metravel-test-runner` для узких команд, `$metravel-release-checks` для выбора gate, `$metravel-quality-fixer` для полного fix-and-rerun цикла.
-- Browser/e2e и QA: `$metravel-e2e-runner`, `$metravel-browser-reviewer`, `$metravel-qa-agent`, `$metravel-mobile-tester`.
-- Native/store: `$metravel-android-developer`, `$metravel-ios-developer`; mobile evidence — `$metravel-mobile-tester`; explicit Google Play operations — `$metravel-google-play-operator`; reciprocity campaign — `$metravel-play-campaign-tester`.
-- Generated raster assets: `$metravel-visual-asset-designer` + `$metravel-prompt-maintainer`; для детских/семейных/подростковых quest covers добавляй `$metravel-child-quest-visuals`; стандартные UI icons остаются на primitives/Feather.
-- Статьи, travel-guide drafts и media: `$metravel-article-editor-agent` (creative prose — только после отдельного подтверждения).
-- Квесты: `$metravel-quest-writer` для нового квеста, `$metravel-quest-editor` для существующего контента, `$metravel-quest-geo-verifier` для координат, `$metravel-quest-expert` для feature code.
-- Board tasks: `$metravel-ticket-board` для операций с MCP task board; `$metravel-task-contract` для обязательного Task Contract; `$metravel-sprint-reviewer` для приёмки active sprint.
-- Review/release: `$metravel-code-reviewer`, `$metravel-system-architect`, `$metravel-production-smoke`, `$metravel-devops-agent`.
-- Сложные цепочки: `$metravel-codex-orchestrator` для triage; `$metravel-agent-workflow` только когда нужны отдельные роли discovery/design/implementation/QA/review/deploy.
-
-## Quick start
+Запускайте команды из корня с `package.json`. Требуется Node `>=22.13.1` и Yarn
+`1.22.22`.
 
 ```bash
-yarn install
+nvm use
+corepack enable
+corepack prepare yarn@1.22.22 --activate
+yarn install --frozen-lockfile
 yarn start
 ```
 
-## Node.js
-
-- Current project baseline: Node `>= 22.13.1` (see `.nvmrc`).
-- После установки/переключения Node через `nvm` активируй зафиксированный package
-  manager: `corepack enable && corepack prepare yarn@1.22.22 --activate`.
-
-### Web
+Web и базовые проверки:
 
 ```bash
 yarn web
-```
-
-### Tests
-
-- Watch mode:
-
-```bash
-yarn test
-```
-
-- Single run (recommended for CI/local checks):
-
-```bash
+yarn check:fast
+yarn lint
 yarn test:run
 ```
 
-- Localization contract:
+Production web export:
 
 ```bash
-yarn test:i18n
+yarn build:web:prod
 ```
 
-- Coverage:
+Перед full/preflight/e2e/build/deploy/Lighthouse/Android install проверьте
+operation gate из `AGENTS.md` и `RULES.md`.
 
-```bash
-yarn test:coverage
-```
+## Backend boundary
 
-### E2E (Playwright)
+Этот workspace не содержит backend implementation. Backend/Django/API/server
+можно анализировать read-only; исправления оформляются как `area=back` tasks на
+MCP board. Frontend не маскирует отсутствующий contract mock-only fallback.
 
-```bash
-yarn e2e
-```
+API origin задаётся `EXPO_PUBLIC_API_URL`; API clients нормализуют `/api` path.
+OpenAPI/Redoc URL строится от текущего configured origin. Не закрепляйте в
+документации частный LAN host.
 
-### Lint
+Auth contract использует backend session/token semantics через общий API client.
+Credentials и tokens берутся только из gitignored env/secret files и никогда не
+копируются в docs или логи.
 
-```bash
-yarn lint
-```
+## API family map
 
-## Backend API
+Точные DTO и fallback rules принадлежат соответствующим `api/*.ts`, normalizers
+и tests. Основные endpoint families:
 
-- Base URL: `EXPO_PUBLIC_API_URL` (must include host; `/api` suffix is added automatically by clients)
-- Redoc: [`http://192.168.50.36/api/schema/redoc/`](http://192.168.50.36/api/schema/redoc/)
-- OpenAPI schema: `${EXPO_PUBLIC_API_URL}/api/schema/`
-- Auth: `Authorization: Token <token>`
-- Backend ownership: this frontend workspace may analyze backend/API behavior read-only and create/update `area=back` board tasks, but must not edit backend code, migrations, tests, settings, or server files.
-- Task tracking: create new frontend/backend tasks on the shared MCP task board through `ticket-board` in the current active sprint; see `docs/TASK_BOARD_MCP.md`. Android/iOS/native app bugs are frontend tasks (`area=front`) with platform context in the title/description; backend/API/server work is `area=back`. If the board returns `401`, refresh the staff token through `.env.e2e` before using any local fallback. Local `tasks/` files are only transitional fallback/templates, not the default workflow.
+### Auth and user
 
-### Auth
-- `POST /api/user/login/` → `{ token, name, email, id, is_superuser }`
-- `POST /api/user/logout/` → `204`
-- `POST /api/user/registration/` → creates account
-- `POST /api/user/confirm-registration/` → confirms via code
-- `POST /api/user/reset-password-link/` → sends reset link
-- `POST /api/user/set-password-after-reset/` → sets new password
-- `POST /api/user/sendpassword/` → sends password recovery code
-- `POST /api/user/refresh/` → `{ access, refresh? }` (refresh flow via `apiClient`)
+- `/api/user/login/`, `/logout/`, `/registration/`, confirmation/reset flows;
+- `/api/user/{id}/profile/` и profile update/avatar upload;
+- `/api/user/{id}/favorite-travels/`, `/history/`, recommendations и travel
+  statuses;
+- subscriptions, contacts, messages и user points через профильные adapters.
 
-### Travels
-- `GET /api/travels/` → list (`results + count` or `data + total`)
-- `GET /api/travels/random/` → array of travel cards
-- `GET /api/travels/of-month/` → featured travels of month
-- `GET /api/travels/{id}/near/` → nearby travels (404 → empty)
-- `GET /api/travels/popular/` → popular travels
-- `GET /api/travels/search_travels_for_map/?page&perPage&where` → geo list for map
-- `POST /api/travels/near-route/` (body: GeoJSON LineString + tolerance meters) → travels along route
-- `PUT /api/travels/upsert/` (auth) → create/update travel, returns saved Travel
+### Travel and articles
 
-### Travel actions
-- `PATCH /api/travels/{id}/mark-as-favorite/` (auth) → mark favorite
-- `PATCH /api/travels/{id}/unmark-as-favorite/` (auth) → unmark favorite
+- `/api/travels/` — public/user lists;
+- `/api/travels/{id}/`, `/by-slug/{slug}/`, `/resolve-slug/{slug}/` — detail;
+- `/api/travels/upsert/` — create/edit save contract;
+- favorite/rating/comments/routes/media actions — отдельные typed adapters;
+- `/api/articles/` — article list/detail/editor-related contract.
 
-### Articles
-- `GET /api/articles?page&perPage&where` → `{ data, total }` or array
-- `GET /api/articles/{id}` → single Article
+### Map, quests and social
 
-### Filters, countries, feedback, AI
-- `GET /api/getFiltersTravel/` → filters: countries, categories, transports, companions, complexity, month, over_nights_stay, categoryTravelAddress, year
-- `GET /api/countriesforsearch/` → countries for search form
-- `GET /api/countries/` → all countries
-- `POST /api/feedback/` → sends feedback
-- `POST /api/chat` → AI assistant reply (validated message)
+- map search/clusters/filter/routing families — `api/map.ts` и map hooks;
+- quests — quest adapters/hooks;
+- planned/public trips, chat, Telegram/contact flows — `api/*Trips*`,
+  `api/trip*`, `api/contactRequests.ts`;
+- achievements/gamification — `api/achievements*.ts`, `api/gamification*.ts`.
 
-### User profile & history (auth)
-- `GET /api/user/{id}/profile/` → profile
-- `PUT /api/user/{id}/profile/update/` → update profile fields
-- `PUT /api/user/{id}/profile/avatar-upload/` (JSON or multipart) → update avatar
-- `GET /api/user/{id}/favorite-travels/` → list of favorite travels
-- `GET /api/user/{id}/history/` → list of viewed travels
-- `DELETE /api/user/{id}/clear-history/` → clears history
-- `DELETE /api/user/{id}/clear-favorite/` → clears favorites
-- `GET /api/user/{id}/recommended-travels/` → recommended travels
+При расхождении этой карты с adapter code источником факта является код; docs
+обновляются в той же задаче.
 
-### Примеры запросов
+## Task tracking
 
-Авторизация (получить токен):
+Общий MCP task board — единственный постоянный backlog. Каждая задача содержит
+active sprint, `area=front|back`, Task Contract, dependencies, validation и Done
+gate. При `401` сначала обновляется staff token по `TASK_BOARD_MCP.md` через
+`.env.e2e`; локальный `tasks/000-template.md` допустим только как временный
+fallback.
 
-```bash
-curl -X POST http://192.168.50.36/api/user/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"******"}'
-```
+## Governance templates
 
-Список путешествий с токеном:
+- `EXTERNAL_LINK_GOVERNANCE_PR_SUMMARY.md` — краткое описание governance change;
+- `EXTERNAL_LINK_GOVERNANCE_PR_BODY.md` — PR body template.
 
-```bash
-curl -X GET "http://192.168.50.36/api/travels/?page=1&perPage=10" \
-  -H "Authorization: Token <token>"
-```
-
-Типичный ответ списка путешествий:
-
-```json
-{
-  "results": [
-    {
-      "id": 123,
-      "name": "Alps hike",
-      "slug": "alps-hike",
-      "url": "/travels/alps-hike",
-      "countryName": "Switzerland",
-      "travel_image_thumb_url": "https://.../thumb.jpg",
-      "countUnicIpView": "10",
-      "publish": 1,
-      "moderation": 1
-    }
-  ],
-  "count": 1
-}
-```
+Каноническая external-link policy находится в `RULES.md`, команды — в
+`TESTING.md#governance-commands`.

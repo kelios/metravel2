@@ -202,15 +202,17 @@ export default function RegisterForm() {
 
     return (
         <>
-            <InstantSEO
-                headKey="register"
-                title={title}
-                description={description}
-                canonical={canonical}
-                image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
-                ogType="website"
-                robots="noindex, nofollow"
-            />
+            {isFocused ? (
+                <InstantSEO
+                    headKey="register"
+                    title={title}
+                    description={description}
+                    canonical={canonical}
+                    image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+                    ogType="website"
+                    robots="noindex, nofollow"
+                />
+            ) : null}
 
             <KeyboardAvoidingView
                 style={{ flex: 1, backgroundColor: colors.backgroundSecondary }}

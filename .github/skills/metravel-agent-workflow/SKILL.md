@@ -19,8 +19,10 @@ Read first:
 Default feature flow:
 
 1. Business Analyst: produce a concise feature brief and acceptance criteria.
-2. System Architect: map the brief to existing code, constraints, risk, and validation.
-3. Designer: use `$metravel-ui-guardrails` for visible UI states and web/mobile behavior.
+2. System Architect: map the brief to existing code, constraints, web/Android/iOS
+   and RU/BE/UK/PL/EN impact, risk, and validation.
+3. Designer: use `$metravel-ui-guardrails` for visible UI states and web/mobile
+   behavior; add `$metravel-i18n-guardrails` for localization impact.
 4. Programmer: use `$metravel-feature-builder` to implement the smallest sufficient diff.
 5. QA Agent: use `$metravel-qa-agent` to test and create structured bug reports.
 6. Reviewer: use `$metravel-system-architect` in review mode to check the diff, tests, and rule compliance.
@@ -41,6 +43,8 @@ Default bug loop:
 - Do not deploy production from vague wording; require an explicit `prod` deploy request and a clean environment gate.
 - Keep unrelated user changes separate; never revert files outside the task.
 - Preserve project rules for external links, design tokens, e2e secrets, server paths, and scope-based validation.
+- Require every handoff to state platform and localization impact; unavailable
+  native evidence remains `verify pending`, not an inferred pass.
 - For visible web UI changes, require browser verification, screenshot, and console check before final handoff.
 - If a role finds a real issue in the touched scope, route it to implementation before handoff unless it is explicitly blocked.
 

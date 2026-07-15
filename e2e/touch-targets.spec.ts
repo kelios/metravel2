@@ -12,8 +12,8 @@ import {
  *  - cookie consent buttons (ConsentBanner local `minHeight: 44`)
  *  - travel-detail favorite + "Добавить в план" controls
  *
- * Deferred web targets are tracked in docs/DESIGN_HANDOFF_2026-06-02.md instead of
- * being encoded as skipped tests in this suite.
+ * Additional manual coverage belongs in docs/MANUAL_TEST_CASES.md; unresolved
+ * defects belong on the MCP task board instead of skipped tests.
  */
 
 const MIN_TARGET = 44

@@ -48,15 +48,14 @@ const openAccountMenu = async (page: any) => {
   return menu
 }
 
-const taskBoardItem = (page: any) => page.getByRole('menuitem', { name: 'Борд задач' })
+const menuAction = (page: any, name: string) =>
+  page.getByTestId('web-menu-panel').getByRole('button', { name, exact: true })
+
+const taskBoardItem = (page: any) => menuAction(page, 'Борд задач')
 
 test.describe('@smoke AccountMenu: task-board item visibility', () => {
   test('superuser sees the task-board item', async ({ page }) => {
-    await ensureAuthedStorageFallback(page)
-    // override default isSuperuser='false' set by the fallback helper
-    await page.addInitScript(() => {
-      window.localStorage.setItem('isSuperuser', 'true')
-    })
+    await ensureAuthedStorageFallback(page, { isSuperuser: true })
     await mockFakeAuthApis(page)
 
     await page.setViewportSize({ width: 1280, height: 720 })
@@ -67,7 +66,7 @@ test.describe('@smoke AccountMenu: task-board item visibility', () => {
 
     await expect(taskBoardItem(page)).toBeVisible({ timeout: 10_000 })
     // sanity: regular account items are present too
-    await expect(page.getByRole('menuitem', { name: 'Выход' })).toBeVisible()
+    await expect(menuAction(page, 'Выход')).toBeVisible()
   })
 
   test('regular authenticated user does NOT see the task-board item', async ({ page }) => {
@@ -81,7 +80,7 @@ test.describe('@smoke AccountMenu: task-board item visibility', () => {
     await openAccountMenu(page)
 
     // account menu is open (Выход present), but no task-board entry
-    await expect(page.getByRole('menuitem', { name: 'Выход' })).toBeVisible({ timeout: 10_000 })
+    await expect(menuAction(page, 'Выход')).toBeVisible({ timeout: 10_000 })
     await expect(taskBoardItem(page)).toHaveCount(0)
   })
 })
@@ -97,7 +96,7 @@ test.describe('@smoke AccountMenu: task-board item hidden for guest', () => {
     await openAccountMenu(page)
 
     // guest menu shows login entry, never the task board
-    await expect(page.getByRole('menuitem', { name: 'Войти' })).toBeVisible({ timeout: 10_000 })
+    await expect(menuAction(page, 'Войти')).toBeVisible({ timeout: 10_000 })
     await expect(taskBoardItem(page)).toHaveCount(0)
   })
 })

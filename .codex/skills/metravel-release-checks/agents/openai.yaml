@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Release Checks"
   short_description: "Pick the right metravel validation flow."
-  default_prompt: "Use $metravel-release-checks to choose and run the right locked checks, fix failures in scope, route explicit Google Play mutations to $metravel-google-play-operator, and route deploy execution to $metravel-devops-agent."
+  default_prompt: "Use $metravel-release-checks to choose locked validation for the affected web/Android/iOS and RU/BE/UK/PL/EN contract, fixing failures in scope and preserving explicit release authority gates."

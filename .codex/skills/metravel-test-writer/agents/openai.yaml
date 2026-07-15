@@ -1,5 +1,4 @@
 interface:
   display_name: "Metravel Test Writer"
   short_description: "Write stable tests for real metravel contracts."
-  default_prompt: "Use $metravel-test-writer to add or update metravel tests at the nearest reliable level, keep assertions stable, avoid skipped tests, and validate the new coverage with the smallest useful command."
-
+  default_prompt: "Use $metravel-test-writer to add stable coverage at the nearest level, including platform boundaries and localization contracts when affected, without skipped tests."

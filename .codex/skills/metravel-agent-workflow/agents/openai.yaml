@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Agent Workflow"
   short_description: "Coordinate specialists, native QA, review, and release"
-  default_prompt: "Use $metravel-agent-workflow to coordinate the minimal analyst, domain, Android/iOS, design/security review, QA, Google Play, and DevOps roles while preserving authority and validation gates."
+  default_prompt: "Use $metravel-agent-workflow to coordinate the minimal roles while carrying web/Android/iOS and RU/BE/UK/PL/EN impact through analysis, implementation, QA, review, and release gates."

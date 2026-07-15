@@ -2,7 +2,7 @@
 // (см. BadgeEmblem.tsx): состаренная бумага + тонкая линия + лента-баннер + рамка тира.
 // `ring`/`highlight`/`shade` тиров переиспользуются как цвета рамки/ленты эмблемы;
 // `badgeIcon` оставлен для legacy-потребителей (a11y/иконки), мотив рисует `badgeMotif`.
-// Цвета тиров держим едиными с docs/ACHIEVEMENTS_BADGE_PROMPTS.md.
+// Контракт визуального направления: docs/ACHIEVEMENTS_DESIGN.md.
 
 import type { Feather } from '@expo/vector-icons';
 import type { BadgeTier } from '@/api/achievements';

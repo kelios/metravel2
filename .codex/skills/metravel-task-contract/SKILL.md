@@ -16,6 +16,8 @@ Board-first rule:
 
 Read first:
 
+- `AGENTS.md`
+- `docs/RULES.md`
 - `docs/TASK_BOARD_MCP.md`
 - `docs/CODEX.md`
 - Relevant feature docs from `docs/features/` only when needed.
@@ -30,6 +32,8 @@ Every `area=front` or `area=back` board task must include:
 Scope:
 User-visible result:
 Data/API contract:
+Platform impact:
+Localization impact:
 Dependencies:
 Fallback/mock policy:
 Validation:
@@ -39,7 +43,10 @@ Done gate:
 ## Rules
 
 - Do not create a FE/BE task without the contract block.
-- Architect-level detail is mandatory: concrete request/response shapes (fields + types), real board ids for dependencies, concrete validation commands/URLs. Placeholder or empty fields mean the task is not ready — send it back to `$metravel-system-architect` or ask one clarifying question.
+- Architect-level detail is mandatory: concrete request/response shapes (fields + types), web/Android/iOS impact, RU/BE/UK/PL/EN impact, real board ids for dependencies, and concrete validation commands/URLs. Placeholder or empty fields mean the task is not ready — send it back to `$metravel-system-architect` or ask one clarifying question.
+- `Platform impact` must name `web | Android | iOS | shared | none` and the
+  required browser/device evidence. `Localization impact` must name affected
+  locales or `none`; localization work includes namespaces/keys and `npm run test:i18n`.
 - Do not move a task to `todo` for implementation until the contract has concrete, testable acceptance.
 - Do not move a task to `done` unless the `Done gate` evidence exists.
 - For BE tasks that unblock FE, require deploy-target API evidence for the exact endpoints/fields/events.

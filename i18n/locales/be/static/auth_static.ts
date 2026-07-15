@@ -1,0 +1,12 @@
+export const authStaticResources = {
+  "google.unavailable.text": "Google Sign-In не настроены",
+  "google.unavailable.a11y": "Google Sign-In не настроены для мабільнага прыкладання",
+  "accountConfirmation.failed": "Не ўдалося пацвердзіць уліковы запіс. {{details}}",
+  "accountConfirmation.error": "Адбылася памылка пры пацверджанні ўліковага запісу. {{details}}",
+  "registration.failed": "Не ўдалося зарэгістравацца.",
+  "google.signInFailed": "Памылка пры ўваходзе праз Google.",
+  "password.changeFailed": "Памылка пры змене пароля",
+  "utils.registrationPasswordStrength.silnyy_ac37343d": "Моцны",
+  "utils.registrationPasswordStrength.slabyy_14e7800f": "Слабы",
+  "utils.registrationPasswordStrength.sredniy_5f9e23d5": "Сярэдні",
+} as const

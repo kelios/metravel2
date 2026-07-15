@@ -8,6 +8,36 @@
 - Implementation ownership in this workspace is frontend/app/docs only. Backend/Django/API/server work in `../metravel-backend` or `area=back` is analysis-only: read source, run safe read-only probes, and create/update board tasks with evidence, but do not edit backend files, migrations, tests, settings, or server code from this repository.
 - If a frontend task depends on missing or broken backend behavior, leave a concrete blocker and link/create the `area=back` task instead of shipping a mock-only or silently failing frontend path.
 
+## Application architecture and localization
+
+- Metravel is one Expo/React Native application with production web, Android,
+  and iOS/iPadOS surfaces. `package.json`, `app.json`, `android/`, `ios/`, and
+  platform files are implementation evidence; no platform is an optional copy
+  of another.
+- Before every task, record `Platform impact: web | Android | iOS | shared | none`
+  and `Localization impact: all current locales | selected locales | none`.
+  `none` must be a considered conclusion, not an omitted check.
+- Shared components, hooks, services, API adapters, and state must preserve all
+  affected platforms. Platform files may adapt engines, permissions, safe areas,
+  storage, or native APIs, but must not silently fork product behavior.
+- The production locale registry is defined by `i18n/config.ts`; it currently
+  contains RU/BE/UK/PL/EN with RU as default/fallback. `i18n/resources.ts` and the
+  Russian resources define the typed namespace/key contract.
+- Localize app-owned UI copy, accessibility text, validation, errors, toasts,
+  empty states, legal/SEO/PDF UI, and display dictionaries. Do not client-translate
+  user/editorial/API content, place names, comments, messages, or stable backend
+  codes without a separate content-locale/API contract.
+- Use `useTranslation()` from `@/i18n` in React code and the shared translation
+  helpers outside React. Use `i18n/format.ts` for locale-sensitive formatting,
+  plural selection, and collation; do not hardcode `ru-RU` or manual plural rules.
+- Add every new translation key to all production locales in the same change.
+  Preserve deterministic web SSR/hydration and the existing native locale/storage
+  lifecycle; do not add locale URL prefixes or `hreflang` without a separate SEO
+  routing contract.
+- Any localization-impacting change must pass `npm run test:i18n` plus the normal
+  feature checks. Shared native changes require platform-appropriate evidence;
+  web, Android, and iOS evidence are not interchangeable.
+
 ## Development workflow
 
 - Before starting any change, review relevant files in `docs/`.
@@ -184,15 +214,16 @@ npx serve dist/prod -l 3000 -s
 # Use the Network IP from the output, e.g. http://192.168.50.10:3000
 ```
 
-**Target scores:**
-- Desktop: ≥ 70 (current: Home 92, Search 91, Map 89)
-- Mobile: ≥ 60 (current: Home 65–68, Search 63–65, Map 62–64)
-- Mobile scores are limited by entry bundle size (4.7MB) on Lighthouse 4× CPU throttling
+**Budgets and evidence:**
 
-**Important:**
-- If port 3000 is occupied: `lsof -ti:3000 | xargs kill -9`
-- Add `--output=json --output-path=/tmp/lh-report.json` to save reports for analysis
-- If you find unused code during work, remove it.
+- Не хранить здесь моментальные Lighthouse scores как «current»: baseline должен
+  указывать абсолютную дату, URL/build и form factor.
+- Числовые release budgets берутся из committed performance configs и guard
+  defaults, а не из старого отчёта.
+- Если порт занят, не убивать чужой процесс. Выбрать свободный порт либо
+  дождаться владельца операции по operation-gate rule выше.
+- JSON reports сохранять только в ignored `.codex-temp/`/`.codex-debug/` или
+  системный temp и удалять, когда evidence больше не нужен.
 
 ### Timeout policy
 

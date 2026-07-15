@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Mobile Tester"
   short_description: "Test mobile web, Android, and iOS with evidence"
-  default_prompt: "Use $metravel-mobile-tester to compare the requested mobile flow across mobile web, a locally built USB Android app, and an available iOS simulator/device, then return safe evidence and route platform bugs to the matching developer skill."
+  default_prompt: "Use $metravel-mobile-tester to compare the same flow and affected locales across mobile web, a local USB Android build, and an available iOS simulator/device with separate evidence."

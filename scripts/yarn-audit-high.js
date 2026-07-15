@@ -94,6 +94,16 @@ const formatPolicySummary = (counts, ignoredCount) => {
   ].join(', ');
 };
 
+// Yarn v1 reports completed audits with a severity bitmask rather than a
+// conventional zero status: info=1, low=2, moderate=4, high=8, critical=16.
+const getExpectedAuditExitCode = (counts) => {
+  return (counts.info > 0 ? 1 : 0)
+    + (counts.low > 0 ? 2 : 0)
+    + (counts.moderate > 0 ? 4 : 0)
+    + (counts.high > 0 ? 8 : 0)
+    + (counts.critical > 0 ? 16 : 0);
+};
+
 const evaluateSuccessfulAudit = (output) => {
   const parsed = parseJsonLines(output);
   if (parsed.error) {
@@ -113,7 +123,9 @@ const evaluateSuccessfulAudit = (output) => {
   if (summaryResult.error) {
     return failClosed(summaryResult.error);
   }
+  const expectedChildStatus = getExpectedAuditExitCode(summaryResult.counts);
 
+  const advisoryCounts = createCounts();
   const ignoredCounts = createCounts();
   let ignoredCount = 0;
 
@@ -128,6 +140,7 @@ const evaluateSuccessfulAudit = (output) => {
       return failClosed('malformed audit advisory record');
     }
 
+    advisoryCounts[severity] += 1;
     if (IGNORED_MODULES.has(moduleName)) {
       ignoredCounts[severity] += 1;
       ignoredCount += 1;
@@ -136,7 +149,7 @@ const evaluateSuccessfulAudit = (output) => {
 
   const counts = { ...summaryResult.counts };
   for (const severity of SEVERITIES) {
-    if (ignoredCounts[severity] > counts[severity]) {
+    if (advisoryCounts[severity] > counts[severity]) {
       return failClosed('audit summary/advisory mismatch');
     }
     counts[severity] -= ignoredCounts[severity];
@@ -148,6 +161,7 @@ const evaluateSuccessfulAudit = (output) => {
       exitCode: 1,
       stdout: '',
       stderr: `yarn audit: found high/critical vulnerabilities (${policySummary})\n`,
+      expectedChildStatus,
     };
   }
 
@@ -155,6 +169,7 @@ const evaluateSuccessfulAudit = (output) => {
     exitCode: 0,
     stdout: `yarn audit: OK (${policySummary})\n`,
     stderr: '',
+    expectedChildStatus,
   };
 };
 
@@ -167,18 +182,23 @@ const evaluateAuditResult = (result) => {
     return failClosed('audit command could not start');
   }
 
-  if (result?.status !== 0) {
-    const reason = containsErrorRecord
-      ? 'registry/tool error and unsuccessful child exit'
-      : 'unsuccessful child exit';
+  if (containsErrorRecord) {
+    const reason = result?.status === 0
+      ? 'registry/tool error record'
+      : 'registry/tool error and unsuccessful child exit';
     return failClosed(reason);
   }
 
-  if (containsErrorRecord) {
-    return failClosed('registry/tool error record');
+  const outcome = evaluateSuccessfulAudit(output);
+  if (!isNonNegativeInteger(outcome.expectedChildStatus)) {
+    return outcome;
   }
 
-  return evaluateSuccessfulAudit(output);
+  if (result?.status !== outcome.expectedChildStatus) {
+    return failClosed('unexpected child exit status for audit summary');
+  }
+
+  return outcome;
 };
 
 const runAudit = ({ spawnAudit = spawnSync, stdout = process.stdout, stderr = process.stderr } = {}) => {

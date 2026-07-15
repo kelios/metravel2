@@ -14,7 +14,7 @@
 - `metravel_travel_draft_new` — создание нового travel (до первого сейва).
 - `metravel_travel_draft_<id>` — существующий travel.
 - Пока id не отрезолвился у существующего travel — ключ `null`, черновик **не** пишется
-  и **не** читается (защита от осиротевших `_null`-черновиков, тикет #171/172).
+  и **не** читается (защита от осиротевших `_null`-черновиков).
 - При переходе `_new` → `_<id>` (первый сейв нового travel, F-09) старый ключ и
   pending-дебаунс уничтожаются — иначе ложный диалог после reload.
 - Формат: `{ data: TravelFormData (stripUndefinedDeep), timestamp: Date.now() }`.
@@ -84,7 +84,7 @@ upsert-ответ → `applySavedData`), поэтому полный deep-equal 
 
 Менять список полей — только синхронно с тестами
 `__tests__/hooks/useDraftRecovery.test.ts` (кейсы «phantom draft / real edit») и с
-оглядкой на контракт модерации #555.
+оглядкой на `docs/TRAVEL_SAVE_MODERATION_CONTRACT.md`.
 
 ## Верификация
 

@@ -27,6 +27,10 @@ Residual risk:
 - Correctness against the stated task and existing product contract
 - Reuse of existing components, hooks, utils, and query/store boundaries
 - Project-rule compliance: external links, design tokens, images, no skipped tests, no new `any` in `api/`, `hooks/`, `stores/`
+- Platform impact across production web, Android, and iOS/iPadOS, with justified
+  technical adapters and separate runtime evidence
+- Localization impact: `@/i18n`, RU/BE/UK/PL/EN key parity, `i18n/format.ts`,
+  API-content boundary, and `npm run test:i18n` when affected
 - Validation adequacy: the narrowest reliable checks were run and rerun after fixes
 - Visible web UI changes include browser verification and no new console errors
 - No known real failures are left in the touched scope without an explicit blocker
@@ -37,4 +41,3 @@ Residual risk:
 - Flag missing tests or missing browser/e2e verification when the change needs them.
 - If a review issue is actually outside scope, say why and state the next verification step.
 - Do not approve reload hacks, cache-busting workarounds, direct `window.open(...)`, or other policy regressions.
-

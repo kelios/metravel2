@@ -16,6 +16,8 @@ Use this skill when the main job is to run tests rather than write product code.
 - Use `npm run check:fast` for a finished small logical block.
 - Use `npm run check:preflight` before handoff for medium changes or when selective e2e matters.
 - Use `npm run governance:verify` or `npm run guard:external-links` for governance-sensitive work.
+- Use `npm run test:i18n` for UI copy, translation resources, locale
+  state/storage, formatting/plurals, accessibility, or SEO locale changes.
 - Use full `npm run lint` and `npm run test:run` only for large or cross-cutting changes.
 
 ## Failure handling
@@ -29,5 +31,6 @@ Use this skill when the main job is to run tests rather than write product code.
 
 - Run commands from the repo root.
 - Use feature docs from `docs/features/` when you need scope-specific test context.
+- Choose checks from explicit web/Android/iOS and RU/BE/UK/PL/EN impact; one
+  platform's evidence does not prove another platform.
 - For performance or browser behavior, hand off to `$metravel-performance-analyst` or `$metravel-e2e-runner` instead of inferring from unit-test output.
-

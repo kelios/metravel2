@@ -32,18 +32,23 @@ test('#585 quest fullscreen map popup opens route in all navigators', async ({ p
     await page.waitForTimeout(400)
   }
 
-  // Accept the quest disclaimer checkbox, then start the wizard
-  const disclaimer = page.getByText('Я понимаю', { exact: false }).first()
-  if (await disclaimer.isVisible().catch(() => false)) {
-    await disclaimer.click().catch(() => {})
-    await page.waitForTimeout(400)
+  // Accept the quest disclaimer checkbox, then start the wizard. Clicking the
+  // adjacent label text does not toggle the actual accessible control on web.
+  const consentCheckbox = page.getByTestId('quest-consent-checkbox')
+  if (await consentCheckbox.isVisible().catch(() => false)) {
+    const consentStart = page.getByTestId('quest-consent-start')
+    await expect(async () => {
+      if (!(await consentStart.isEnabled())) await consentCheckbox.click()
+      await expect(consentStart).toBeEnabled({ timeout: 1_000 })
+    }).toPass({ timeout: 30_000, intervals: [500, 1_000] })
+
+    await consentStart.click()
   }
-  await page.getByText('Начать квест', { exact: false }).first().click()
-  await page.waitForTimeout(2500)
 
   // Expand the quest map to fullscreen
-  await page.getByLabel('Открыть карту квеста на весь экран').first().click()
-  await page.waitForTimeout(2500)
+  const openFullscreenMap = page.getByLabel('Открыть карту квеста на весь экран').first()
+  await expect(openFullscreenMap).toBeVisible({ timeout: 30_000 })
+  await openFullscreenMap.click()
 
   // Open a marker popup (markers from inline + fullscreen share .qmark)
   const markers = page.locator('.qmark')

@@ -24,6 +24,11 @@ Read first:
 - Do not treat missing production-hosted media in local dev as a frontend bug by itself.
 - Do not infer production performance from Expo dev bundles.
 - Confirm that each reported bug is reproducible and user-visible or validation-relevant.
+- Record platform impact and localization impact before testing. For shared flows,
+  do not infer Android/iOS from web; use `$metravel-mobile-tester` for device evidence.
+- When UI copy or locale behavior is affected, exercise the changed flow in the
+  relevant RU/BE/UK/PL/EN locales, including long-label layout, accessibility,
+  formatting/plurals, persisted language, and web reload/native cold restart.
 
 ## Bug Report Contract
 
@@ -36,6 +41,8 @@ Title:
 Severity: critical | high | medium | low
 Area:
 Environment:
+Platform:
+Locale:
 Steps to reproduce:
 Expected:
 Actual:
@@ -51,6 +58,7 @@ If no bug is found, return:
 ## QA Pass
 
 Scope tested:
+Platforms/locales tested:
 Commands/browser flows:
 Evidence:
 Residual risk:

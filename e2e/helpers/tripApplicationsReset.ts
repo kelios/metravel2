@@ -61,16 +61,18 @@ export async function resetTripApplicationsViaAdmin(
     if (!loginPageResp.ok()) {
       throw new Error(`Django admin login page returned ${loginPageResp.status()}`)
     }
+    const resolvedLoginUrl = loginPageResp.url()
+    const adminOrigin = new URL(resolvedLoginUrl).origin
 
     // Step 2b: extract csrftoken from response cookies
     let csrf = csrftokenFromContext(await adminCtx.storageState())
     if (!csrf) throw new Error('No csrftoken after GET /admin/login/')
 
     // Step 2c: POST /admin/login/ with superuser credentials
-    const loginResp = await adminCtx.post('/admin/login/', {
+    const loginResp = await adminCtx.post(resolvedLoginUrl, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Referer: `${apiBase}/admin/login/`,
+        Referer: resolvedLoginUrl,
       },
       form: {
         username: process.env.E2E_EMAIL ?? '',
@@ -85,15 +87,21 @@ export async function resetTripApplicationsViaAdmin(
       throw new Error(`Django admin login POST returned ${loginResp.status()}`)
     }
 
+    const authenticatedState = await adminCtx.storageState()
+    if (!authenticatedState.cookies.some((cookie) => cookie.name === 'sessionid')) {
+      throw new Error(`Django admin login did not create a session cookie (HTTP ${loginResp.status()})`)
+    }
+
     // Refresh csrf after login (Django rotates it on successful auth)
-    csrf = csrftokenFromContext(await adminCtx.storageState()) || csrf
+    csrf = csrftokenFromContext(authenticatedState) || csrf
 
     // ── 3. Delete each application ───────────────────────────────────────────
     for (const appId of appIds) {
       const deleteUrl = `/admin/trips/tripapplication/${appId}/delete/`
 
       // GET the delete confirmation page (may rotate csrf again)
-      const deletePageResp = await adminCtx.get(deleteUrl, {
+      const resolvedDeleteUrl = new URL(deleteUrl, adminOrigin).toString()
+      const deletePageResp = await adminCtx.get(resolvedDeleteUrl, {
         headers: { Accept: 'text/html' },
       })
 
@@ -104,10 +112,10 @@ export async function resetTripApplicationsViaAdmin(
       csrf = csrftokenFromContext(await adminCtx.storageState()) || csrf
 
       // POST to confirm deletion
-      const confirmResp = await adminCtx.post(deleteUrl, {
+      const confirmResp = await adminCtx.post(resolvedDeleteUrl, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          Referer: `${apiBase}${deleteUrl}`,
+          Referer: resolvedDeleteUrl,
         },
         form: {
           post: 'yes',

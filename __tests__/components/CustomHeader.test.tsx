@@ -44,7 +44,7 @@ jest.mock('@/i18n/LocaleProvider', () => ({
     useLocale: () => ({
         locale: 'ru',
         preference: { version: 1, mode: 'explicit', locale: 'ru' },
-        supportedLocales: ['ru', 'pl', 'en'],
+        supportedLocales: ['ru', 'be', 'uk', 'pl', 'en'],
         isHydrated: true,
         setLocale: jest.fn(),
         useSystemLocale: jest.fn(),

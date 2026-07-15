@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Task Contract"
   short_description: "Require FE/BE board task contracts before work or Done."
-  default_prompt: "Use $metravel-task-contract to create or review the mandatory Task Contract block for metravel FE/BE board tasks, including API/data dependencies, active sprint, fallback policy, validation, and Done gate evidence. For visible UI/UX work, require durable Design evidence with normative states/platforms and never use .codex-temp as a board attachment. If the board returns 401, refresh the staff token through .env.e2e per docs/TASK_BOARD_MCP.md before using local fallback."
+  default_prompt: "Use $metravel-task-contract to require scope, data/API, web/Android/iOS impact, RU/BE/UK/PL/EN impact, dependencies, validation, and Done-gate evidence before a board task starts or closes."

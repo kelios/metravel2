@@ -25,12 +25,14 @@ Read first:
 | Achievements and badges | `api/achievements.ts`, `api/achievementsMock.ts`, `hooks/useAchievementsApi.ts`, `components/achievements/**`, `__tests__/achievements/**` | Use `$metravel-achievements-expert`; treat `api/achievements.ts` as BE contract. Keep mock fallback explicit, React Query keys stable, peer-badge optimistic updates rollback-safe, and badge media via `ImageCardMedia`. |
 | Quests | `components/quests/**`, `app/(tabs)/quests/**`, `api/quests.ts`, `utils/questAdapters.ts`, `hooks/useQuestsApi.ts`, `scripts/*quest*` | Use `$metravel-quest-expert` for code, `$metravel-quest-writer` for new authored quests, `$metravel-quest-editor` for existing content, and `$metravel-quest-geo-verifier` for coordinate validation. |
 | SEO/index/content | `components/seo/**`, `utils/seo/**`, article/travel rich text, `docs/GROWTH_PLAN.md` | Use `$metravel-seo-index-operator` for GSC/indexing routines and `$metravel-article-editor-agent` for article API content edits. |
+| Localization | `i18n/**`, `types/i18next.d.ts`, `__tests__/i18n/**`, any user-facing copy/formatting/SEO locale | Use `$metravel-i18n-guardrails`; keep RU/BE/UK/PL/EN key parity, web SSR/hydration, native locale persistence, and API-content boundaries. |
 | PDF/export | travel export/PDF components, print preview, book settings/templates | Preserve print behavior and browser verification. If the task is only visual export UI, use `$metravel-ui-guardrails`; if it is data/logic, use `$metravel-feature-builder`. |
 | New page or redesign | `app/**`, screen components, `components/ui`, design tokens | Reuse existing primitives, `useResponsive`, `useThemedColors`, `DESIGN_TOKENS`, SEO helpers, and browser verification. |
 
 ## Workflow
 
-1. Identify the domain from the changed files, route, or user wording.
+1. Identify the domain from the changed files, route, or user wording, then
+   record platform impact for web/Android/iOS and localization impact for RU/BE/UK/PL/EN.
 2. Load only the matching feature docs and nearby tests/components.
 3. If a board ticket is involved, read its Task Contract before editing.
 4. Choose the smallest specialist set:
@@ -38,9 +40,11 @@ Read first:
    - quest content: `$metravel-quest-writer` for new quests, `$metravel-quest-editor` for existing copy, `$metravel-quest-geo-verifier` for coordinates
    - general code: `$metravel-feature-builder`
    - visible UI: `$metravel-ui-guardrails`
+   - UI copy, locale state, formatting, SEO locale: `$metravel-i18n-guardrails`
    - tests: `$metravel-test-writer` / `$metravel-test-runner`
    - large split: `$metravel-refactor-surgeon`
    - browser verification/fix pass: `$metravel-browser-reviewer`
-5. Validate with the narrowest checks that cover the domain and add browser/device evidence when required.
+5. Validate with the narrowest checks that cover the domain and add browser/device
+   evidence when required; add `npm run test:i18n` for localization impact.
 
 Do not create a separate mini-architecture for a domain. Reuse existing components, hooks, query keys, stores, and API adapters unless a real duplication or boundary problem is in scope.

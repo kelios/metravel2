@@ -189,7 +189,35 @@ const hopByHopHeaders = new Set([
   'upgrade',
 ])
 
-const buildProxyHeaders = (headers, upstreamHost) => {
+const isSameLocalProxyHost = (url, requestHost) => {
+  if (!requestHost) return false
+
+  try {
+    const requestUrl = new URL(`http://${requestHost}`)
+    const samePort = url.port === requestUrl.port
+    const sameHostname =
+      url.hostname === requestUrl.hostname ||
+      (['127.0.0.1', 'localhost'].includes(url.hostname) &&
+        ['127.0.0.1', 'localhost'].includes(requestUrl.hostname))
+    return samePort && sameHostname
+  } catch {
+    return false
+  }
+}
+
+const rewriteLocalProxyUrl = (value, requestHost, upstreamOrigin) => {
+  if (!value) return value
+
+  try {
+    const parsed = new URL(value)
+    if (!isSameLocalProxyHost(parsed, requestHost)) return value
+    return new URL(`${parsed.pathname}${parsed.search}${parsed.hash}`, `${upstreamOrigin}/`).toString()
+  } catch {
+    return value
+  }
+}
+
+const buildProxyHeaders = (headers, upstreamUrl) => {
   const result = {}
   for (const [key, value] of Object.entries(headers || {})) {
     if (!key) continue
@@ -198,7 +226,23 @@ const buildProxyHeaders = (headers, upstreamHost) => {
     if (lower === 'host') continue
     result[key] = value
   }
-  result.host = upstreamHost
+
+  const requestHost = headers && headers.host
+  if (typeof result.origin === 'string') {
+    try {
+      const originUrl = new URL(result.origin)
+      if (isSameLocalProxyHost(originUrl, requestHost)) {
+        result.origin = upstreamUrl.origin
+      }
+    } catch {
+      // Preserve malformed/non-URL origins so the upstream can reject them.
+    }
+  }
+  if (typeof result.referer === 'string') {
+    result.referer = rewriteLocalProxyUrl(result.referer, requestHost, upstreamUrl.origin)
+  }
+
+  result.host = upstreamUrl.host
   return result
 }
 
@@ -225,7 +269,10 @@ const proxyRequest = (req, res, target) => {
         path: upstreamUrl.pathname + upstreamUrl.search,
         method: req.method,
         agent: isHttps ? httpsAgent : httpAgent,
-        headers: buildProxyHeaders(req.headers, upstreamUrl.host),
+        // The browser talks to this local reverse proxy, while Django validates
+        // unsafe requests against the upstream origin. Rewrite only this proxy's
+        // own Origin/Referer; unrelated origins remain untouched and rejectable.
+        headers: buildProxyHeaders(req.headers, upstreamUrl),
         ...(isHttps && allowInsecureProxy ? { rejectUnauthorized: false } : null),
       },
       (proxyRes) => {

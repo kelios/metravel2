@@ -1,41 +1,95 @@
 # Docs index
 
-Source of truth: `docs/` (see `docs/RULES.md`).
+Актуализировано: 2026-07-15.
 
-## Canonical docs
+`docs/RULES.md` определяет обязательные правила. Не каждый файл в `docs/`
+является source of truth: dated snapshots и legacy adapters классифицированы
+отдельно.
 
-- `docs/CODEX.md` - Codex workflow, AI task triage, validation matrix, and full project skills map
-- `docs/ARCHITECTURE.md` — архитектура проекта, карта frontend-функциональности и обзор backend API-интеграции
-- `docs/RULES.md` — mandatory project rules and policies
-- `docs/README.md` — project docs quick start + API reference
-- `docs/DEVELOPMENT.md` — local setup and day-to-day workflow
-- `docs/DESIGN_SYSTEM.md` — design-token decisions, including the orange accent roles
-- `docs/TESTING.md` — Jest + Playwright (E2E) + CI quality gate
-- `docs/MANUAL_TEST_CASES.md` — manual QA matrix and Android USB/local-build smoke cases
-- `docs/RELEASE.md` — release/deploy flow
-- `docs/PRODUCTION_CHECKLIST.md` — production checklist
-- `docs/AGENT_WORKBOARD.md` — active agent board for current multi-agent work
-- `docs/AGENT_WORKBOARD_AUTOMATION.md` — safe local automation plan and runner contract for the agent board
-- `docs/Mobile Application Notes.md` — working notes for mobile application observations and follow-up items
-- `docs/TRAVEL_PERFORMANCE_REFACTOR.md` — рабочая спецификация performance refactor для travel details web
-- `docs/POLISH_CAMINO_PDF_UI_AUDIT.md` — постраничный UI-аудит PDF и пошаговый план редизайна
+## Канонические документы
+
+- `docs/INDEX.md` — классификация всех файлов в `docs/`;
+- `docs/README.md` — quick start и API family map;
+- `docs/ARCHITECTURE.md` — текущая архитектура и runtime boundaries;
+- `docs/RULES.md` — обязательные project policies;
+- `docs/CODEX.md` — AI triage, skills и validation matrix;
+- `docs/DEVELOPMENT.md` — local development workflow;
+- `docs/TESTING.md` — test/governance/quality-gate commands;
+- `docs/MANUAL_TEST_CASES.md` — повторяемая QA/device матрица;
+- `docs/DESIGN_SYSTEM.md` — design tokens и palette roles;
+- `docs/RELEASE.md` — release/deploy flow;
+- `docs/PRODUCTION_CHECKLIST.md` — production checklist;
+- `docs/NATIVE_COMPAT_RULES.md` — web/native compatibility contract;
+- `docs/TASK_BOARD_MCP.md` — единый task board и Task Contract workflow.
+
+## Feature maps и load-bearing contracts
+
+- `docs/features/README.md` — правила feature maps;
+- `docs/features/travel.md` — catalog/detail/wizard ownership;
+- `docs/features/map.md` — web/native map engines, bridge и place contract;
+- `docs/features/places.md` — places catalog;
+- `docs/features/user.md` — profile, collections и author stats;
+- `docs/features/calendar.md` — travel status calendar;
+- `docs/features/social-trips-gamification-roadmap.md` — current social
+  trips/gamification feature map, не backlog;
+- `docs/features/map-current-location-route-mobile-mock.svg` — mobile map state
+  mock;
+- `docs/TRAVEL_SAVE_MODERATION_CONTRACT.md` — save ≠ moderation;
+- `docs/TRAVEL_DRAFT_RECOVERY.md` — local draft persistence/recovery;
+- `docs/TRAVEL_PERFORMANCE_REFACTOR.md` — current travel details performance
+  contract;
+- `docs/ACHIEVEMENTS_DESIGN.md` — achievements/ranks/peer/rare contract;
+- `docs/PERF_014_EAGER_BUNDLE_AUDIT.md` — rationale и guard contract для web
+  eager bundle;
+- `docs/ICON_ART_PROMPTS.md` — canonical raster icon/art prompt specification.
+
+`docs/features/TEMPLATE.md` — шаблон новой feature map; не runtime document.
 
 ## Architecture decisions
 
-- `docs/adr/README.md` — процесс и шаблон ADR
-- `docs/adr/0001-no-direct-linking-openurl.md`
-- `docs/adr/0002-images-via-image-card-media.md`
-- `docs/adr/0003-root-runtime-patches-and-metro-stubs.md`
+- `docs/adr/README.md` — ADR process;
+- `docs/adr/0001-no-direct-linking-openurl.md`;
+- `docs/adr/0002-images-via-image-card-media.md`;
+- `docs/adr/0003-root-runtime-patches-and-metro-stubs.md`;
+- `docs/adr/TEMPLATE.md` — шаблон ADR.
 
-## Feature maps
+## Native/store operations
 
-- `docs/features/README.md` — шаблон и план карт фич
-- `docs/features/places.md` — каталог отдельных точек `/places`
-- `docs/features/user.md` — профиль, collections, calendar statuses, author stats
-- `docs/features/social-trips-gamification-roadmap.md` — product backlog для геймификации, совместных поездок, trust и privacy
-- `docs/features/map-current-location-route-mobile-mock.svg` — UI contract mock for current location, route-from-me, denied-location, and route-ready states on mobile web and Android
+- `docs/ANDROID_OWNER_GUIDE.md` — owner-only Android build/Play flow;
+- `docs/ANDROID_STORE_LISTING.md` — текущий store listing draft.
 
-## Governance templates
+EAS build/submit и public production rollout требуют отдельного явного запроса;
+обычная Android QA использует локальную USB-сборку.
 
-- `docs/EXTERNAL_LINK_GOVERNANCE_PR_SUMMARY.md` — governance change summary
-- `docs/EXTERNAL_LINK_GOVERNANCE_PR_BODY.md` — PR body template
+## External-link governance templates
+
+- `docs/EXTERNAL_LINK_GOVERNANCE_PR_SUMMARY.md`;
+- `docs/EXTERNAL_LINK_GOVERNANCE_PR_BODY.md`.
+
+Каноническая policy остаётся в `docs/RULES.md`, а команды — в
+`docs/TESTING.md#governance-commands`.
+
+## Growth/content artifacts
+
+Стратегия и append-only operational logs:
+
+- `docs/GROWTH_PLAN.md` — шестимесячный plan с baseline/review dates;
+- `docs/ARTICLE_ATTENTION_LOG.md` — журнал article attention cycles;
+- `docs/QUEST_DEMAND_LOG.md` — журнал quest demand cycles.
+
+Dated snapshots — использовать только с указанным окном данных и не называть
+«текущими» без нового замера:
+
+- `docs/ANALYTICS_AUDIT_2026-07.md` — snapshot 2026-07-02;
+- `docs/SEO_AUDIT_2026-07-11.md` — snapshot 2026-07-11;
+- `docs/SOCIAL_CONTENT_PACK_2026-07.md` — content pack по июльскому GSC snapshot.
+
+## Legacy local tooling
+
+Эти файлы не являются task source of truth:
+
+- `docs/AGENT_WORKBOARD.md` — compatibility adapter;
+- `docs/AGENT_WORKBOARD_AUTOMATION.md` — local evidence runner notes;
+- `docs/AGENT_WORKBOARD_LOCAL.html` — legacy local viewer.
+
+Постоянный backlog находится только на MCP task board.

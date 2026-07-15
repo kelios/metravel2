@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Feature Builder"
   short_description: "Build metravel features with docs-first workflow."
-  default_prompt: "Use $metravel-feature-builder to implement or refactor a metravel frontend/app feature with repo rules, reuse-first coding, fixing every real issue found in scope, and scope-based validation. Do not edit backend/Django/API/server repositories; for backend blockers, diagnose read-only and create/update an area=back board task. For /places, follow docs/features/places.md and keep the catalog point-level: places first, map focus and travel link second."
+  default_prompt: "Use $metravel-feature-builder to implement the smallest safe metravel frontend/app change after recording web/Android/iOS and RU/BE/UK/PL/EN impact, reusing project architecture, and running scope-based validation."

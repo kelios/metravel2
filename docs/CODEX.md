@@ -11,6 +11,19 @@
 
 Backend boundary: в этом frontend workspace Codex не реализует backend/Django/API/server изменения. Backend можно анализировать read-only через `$metravel-backend-diagnostician`, безопасные probes и `area=back` задачи на борде; backend working tree не редактируется.
 
+## Обязательный architecture impact
+
+Любая задача начинается с двух явных выводов:
+
+- `Platform impact: web | Android | iOS | shared | none`;
+- `Localization impact: RU/BE/UK/PL/EN | selected locales | none`.
+
+Проект — единое Expo/React Native приложение. Shared-правка требует
+анализа web, Android и iOS/iPadOS, а новый app-owned UI text — общего
+i18n-контракта для RU/BE/UK/PL/EN. Если ось не затронута, укажи `none`;
+не оставляй её непроверенной. Канонические детали живут в `docs/RULES.md`,
+`docs/DEVELOPMENT.md#localization` и `i18n/config.ts`.
+
 ## Как выбирать skill
 
 - `$metravel-feature-builder`: используй для фич, багфиксов, рефакторинга, API-логики, hooks, services и SEO.
@@ -25,6 +38,9 @@ Backend boundary: в этом frontend workspace Codex не реализует b
 - `$metravel-quest-geo-verifier`: используй для read-only сверки координат quest points с реальными объектами через OSM/Nominatim/geocheck.
 - `$metravel-hook-builder`: используй, когда основная задача — вынести, спроектировать или упростить focused React hooks в `hooks/` или рядом с фичей, сохранив контракты и не добавляя новые `any`.
 - `$metravel-ui-guardrails`: добавляй при любых видимых UI-изменениях, работе с media, icons, placeholders, tokens или external links.
+- `$metravel-i18n-guardrails`: добавляй при изменении UI copy, accessibility,
+  validation/errors, language settings, locale storage, translation resources,
+  Intl/plural/formatting, SEO locale, geocoder language или PDF/export text.
 - `$metravel-design-auditor`: используй для read-only сквозного аудита нескольких экранов, consistency matrix, design-token drift, responsive/mobile parity и UI-state/accessibility evidence.
 - `$metravel-visual-asset-designer`: используй для брендовых raster icons, badge/app/marketing art и наборов ассетов через imagegen; обычные UI-actions остаются на существующих primitives/Feather, published travel/article media — только real/licensed/local или photorealistic raster.
 - `$metravel-child-quest-visuals`: используй вместе с imagegen для детских, семейных, сказочных, парковых и подростковых quest covers; выбирай один возрастной режим и показывай роль/цель/подсказку сюжета вместо взрослой travel-фотографии.
@@ -70,6 +86,7 @@ Backend boundary: в этом frontend workspace Codex не реализует b
 | Класс задачи | Стартовый маршрут | Когда повышать уровень |
 | --- | --- | --- |
 | Документация, правила, skills | `$metravel-docs-maintainer`; добавь `$metravel-prompt-maintainer` только для prompt specs, asset prompts или `agents/openai.yaml` | Добавь `$metravel-codex-orchestrator`, если меняется workflow нескольких ролей, правила проверок или skill-selection policy. |
+| Локализация и locale-sensitive UI | `$metravel-i18n-guardrails` + профильный domain/feature skill | Добавь `$metravel-system-architect` для content-locale/API или locale-specific URL/SEO contract; mobile skills — для provider/storage/native lifecycle. |
 | Простая автоматизация и проверки | `$metravel-test-runner` для узких тестов; `$metravel-release-checks` для выбора gate; `$metravel-ticket-board` + `$metravel-task-contract` для задач на борде | `$metravel-quality-fixer` только для полного quality-gate/fix цикла; `$metravel-devops-agent` только для явного build/deploy/release target. |
 | Read-only анализ проекта | `$metravel-project-analyst` | `$metravel-agent-workflow` нужен только если анализ сразу передается в BA/architect/implementation/QA/review цепочку. |
 | Product/growth/performance/security/design анализ | `$metravel-business-analyst`, `$metravel-growth-analyst`, `$metravel-performance-analyst`, `$metravel-security-reviewer` или `$metravel-design-auditor` по домену | Добавь architect/implementation только когда анализ явно должен перейти в правки; review-запрос сам по себе остаётся read-only. |
@@ -95,6 +112,7 @@ Claude-конфигурация остаётся историческим ист
 | `play-tester`, `play-update-watcher` | `$metravel-play-campaign-tester`; общий operational state пока живёт в `.claude/play-testing/` без дублирования |
 | `metravel-design-audit`, `metravel-design-system`, `review-uiux` | `$metravel-design-auditor` для read-only evidence, `$metravel-ui-guardrails` для implementation contract, `$metravel-browser-reviewer` для fix/reverify |
 | `metravel-page-new`, `metravel-screen-redesign` | `$metravel-domain-router` + `$metravel-feature-builder` + `$metravel-ui-guardrails` |
+| language switcher, localization, translated UI | `$metravel-i18n-guardrails` + профильный feature/test skill; locale contract бери из `i18n/config.ts`, а не из legacy prompt |
 | `metravel-icon-art` | `$metravel-visual-asset-designer` + `$metravel-prompt-maintainer` + built-in `imagegen` |
 | `review-security` | `$metravel-security-reviewer` |
 | `review-performance`, `metravel-slider-perf-guard` | `$metravel-performance-analyst`; slider/perf bilateral gate включён в skill |
@@ -135,11 +153,12 @@ Claude slash-команды переносятся как skill-routes, а не 
 | Тип задачи | Минимальный контекст | Обязательные акценты |
 | --- | --- | --- |
 | Feature, bugfix, refactor | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, профильный feature-doc при наличии | переиспользование существующих компонентов, hooks, utils; минимальный diff |
+| Localization / user-facing copy | `AGENTS.md`, `docs/RULES.md`, `docs/DEVELOPMENT.md#localization`, `$metravel-i18n-guardrails`, `i18n/config.ts`, ближайшие i18n tests | RU/BE/UK/PL/EN key parity, без hardcoded UI strings/`ru-RU`, web hydration + native locale lifecycle, `npm run test:i18n` |
 | Domain-specific feature work | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `$metravel-domain-router`, профильный feature-doc при наличии | выбрать domain owner map для travel/map/profile/achievements/quests/PDF/new pages; затем подключить доменного субагента (`$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, `$metravel-quest-expert`) и feature/ui/test/refactor skills по фактическому scope |
 | Hooks / logic extraction | `AGENTS.md`, `docs/RULES.md`, `docs/DEVELOPMENT.md`, профильный feature-doc, ближайшие существующие hooks | выносить focused hook без лишней абстракции, сохранять client/server state boundaries, не добавлять новые `any` |
 | Component split / file complexity | `AGENTS.md`, `docs/RULES.md`, `docs/CODEX.md`, `$metravel-refactor-surgeon`, ближайшие tests | behavior-preserving extraction, explicit props, no business-logic rewrite, targeted checks + browser evidence for visible UI |
 | Backend task planning | `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-ticket-board`, `$metravel-task-contract`, `$metravel-backend-diagnostician` | backend только analysis-only: безопасно воспроизведи/сверь контракт, но не редактируй backend repo; новые FE/BE/backend задачи создавай на общем MCP task board через `$metravel-ticket-board` (`metravel_task_create`); заполняй `area=front/back`, active sprint, Task Contract, dependencies/blockers и validation/Done gate; при `HTTP 401` сначала обнови staff token через `.env.e2e` по `docs/TASK_BOARD_MCP.md`; локальные `tasks/*.md` используй только как временный fallback после неуспешного token refresh с последующим sync/import |
-| Task board FE/BE contract | `docs/TASK_BOARD_MCP.md`, `$metravel-ticket-board`, `$metravel-task-contract`, профильный feature-doc при наличии | каждая FE/BE задача на борде должна иметь `Task Contract`: scope, user-visible result, data/API contract, dependencies, fallback/mock policy, validation и Done gate; без runtime evidence не двигать в `done` |
+| Task board FE/BE contract | `docs/TASK_BOARD_MCP.md`, `$metravel-ticket-board`, `$metravel-task-contract`, профильный feature-doc при наличии | каждая FE/BE задача на борде должна иметь `Task Contract`: scope, user-visible result, data/API contract, platform/localization impact, dependencies, fallback/mock policy, validation и Done gate; без runtime evidence не двигать в `done` |
 | Приёмка спринта / закрытие тикетов | `AGENTS.md`, `docs/RULES.md`, `docs/TASK_BOARD_MCP.md`, `$metravel-sprint-reviewer`, `$metravel-task-contract` | только board acceptance; проход по `review`/`testing` тикетам активного спринта; без Task Contract и runtime evidence не двигать в `done`; проваленные вернуть в `review`/`blocked_by` с evidence |
 | Видимый UI, media, icons, tokens | всё из feature-контекста + `$metravel-ui-guardrails` | проверка в браузере на web, screenshot, отсутствие новых console errors |
 | Mobile parity / map-place point cards | `docs/RULES.md`, `docs/NATIVE_COMPAT_RULES.md`, `docs/features/map.md`, `docs/features/places.md`, `docs/features/travel.md`, `$metravel-map-expert`, `$metravel-travel-expert`, `$metravel-ui-guardrails`, `$metravel-mobile-tester` для проверки | mobile web, Android и iOS должны совпадать по визуальному контракту; Android device QA требует локальной сборки, установленной по USB; map/place/travel-point карточки используют общий fullscreen point/place template; travel point card tap только фокусит/подсвечивает маркер, marker tap открывает popup |
@@ -186,6 +205,7 @@ Claude slash-команды переносятся как skill-routes, а не 
 Use $<skill-name> for <scope>.
 Context: <relevant docs/files/diff/logs>.
 Constraints: follow AGENTS.md, docs/RULES.md, docs/CODEX.md; keep unrelated changes separate; do not print secrets.
+Architecture: platform impact <web/Android/iOS/shared/none>; localization impact <RU/BE/UK/PL/EN/none>.
 Output: <role artifact>.
 Validation: <expected checks/evidence>.
 ```
@@ -196,8 +216,8 @@ Validation: <expected checks/evidence>.
 2. `$metravel-project-analyst` при широком или неясном scope формирует `Project Analysis`: структура, активные фичи, validation map, risk hotspots, recommended agents.
 3. `$metravel-growth-analyst` анализирует GA4/GSC/Yandex/manual stats, SEO/organic рост, registration/auth/content funnels и instrumentation gaps, когда задача начинается со статистики или поведения пользователей.
 4. `$metravel-business-analyst` формирует `Feature Brief`: problem, audience, user stories, acceptance criteria, non-goals, metrics, risks, open questions.
-5. `$metravel-system-architect` формирует `Technical Design`: reuse points, affected modules, API/data/UI/external-link impact, implementation steps, validation plan.
-6. `$metravel-ui-guardrails` формирует UI contract для видимых web/mobile состояний, если задача затрагивает интерфейс.
+5. `$metravel-system-architect` формирует `Technical Design`: reuse points, affected modules, API/data/UI/external-link impact, platform/localization impact, implementation steps, validation plan.
+6. `$metravel-ui-guardrails` формирует UI contract для видимых web/mobile состояний, если задача затрагивает интерфейс; `$metravel-i18n-guardrails` фиксирует RU/BE/UK/PL/EN contract для UI copy и locale-sensitive логики.
 7. `$metravel-domain-router` выбирает feature-owner map для travel/map/profile/achievements/quests/PDF/new pages, если scope доменный.
 8. Доменный субагент уточняет ограничения и проверки: `$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert` или `$metravel-quest-expert`; для нового quest content используй `$metravel-quest-writer`, для правки существующего — `$metravel-quest-editor`, для координат — `$metravel-quest-geo-verifier`.
 9. `$metravel-android-developer` или `$metravel-ios-developer` подключай для platform-specific поведения, native crashes, Expo modules и platform files; Android QA выполняй через локальную USB-сборку, iOS не объявляй verified без simulator/device evidence.
@@ -247,6 +267,9 @@ Validation: <expected checks/evidence>.
 - DevOps agent не деплоит `prod` без явного production deploy запроса, не меняет серверные/SSL пути без проверки на целевом host и не пишет самодельные `rsync`/`scp`/SSH deploy-команды в обход утвержденных scripts/wrapper.
 - Article Editor Agent не выводит токены из `.secrets`, не использует интернет-картинки без явного разрешения, самостоятельно меняет только images/media, переспросом подтверждает любые творческие текстовые правки, делает rollback snapshot перед записью и проверяет результат после write.
 - Designer не создает отдельную дизайн-систему: использует `components/ui`, `DESIGN_TOKENS`, Feather icons и существующие feature-компоненты.
+- Каждая роль явно фиксирует platform и localization impact. Programmer/Designer
+  не добавляют hardcoded app-owned UI text; Architect/Reviewer/QA не пропускают
+  web/Android/iOS и RU/BE/UK/PL/EN impact в design, validation и findings.
 - Orchestrator держит unrelated user changes отдельно и не завершает задачу с известными реальными проблемами в затронутом scope.
 - Для visible web UI обязательны browser preview, screenshot и console check.
 
@@ -272,6 +295,8 @@ Skills:
 Текущая ветка:
 Вероятные файлы:
 Риск-зона:
+Platform impact: web | Android | iOS | shared | none
+Localization impact: RU/BE/UK/PL/EN | selected locales | none
 Проверки:
 Operation gate:
 Нужна UI/browser проверка:
@@ -292,6 +317,8 @@ Operation gate:
 | Среднее изменение перед PR | `npm run check:preflight` |
 | Изменения в web UI | relevant targeted checks + browser preview + screenshot + console check |
 | Android/native изменения | локальная Android-сборка, установленная на USB-телефон, + релевантные `AND-USB-*`; Android EAS/production builds только по явному запросу |
+| iOS/iPadOS изменения | targeted checks + тот же flow на simulator/device; без него `verify pending`, но не iOS-ready |
+| Localization / UI copy / locale formatting | `npm run test:i18n` + feature checks; проверка затронутых locales и platform lifecycle |
 | External-link policy | `npm run guard:external-links` или `npm run governance:verify` |
 | Крупное или сквозное изменение | `npm run lint` и `npm run test:run` |
 | Release/performance | `npm run build:web:prod` + релевантные Lighthouse/performance scripts из `docs/RULES.md` |
@@ -322,6 +349,8 @@ deploys with `tar+ssh`, performs an atomic server swap, verifies health, and rol
 - Routes/pages: `app/`, `screens/`.
 - Reusable UI: `components/ui`, затем feature-компоненты в `components/`.
 - Business logic: `hooks/`, `services/`, `api/`, `utils/`.
+- Localization: `i18n/config.ts`, `i18n/resources.ts`, `i18n/locales/**`,
+  `i18n/format.ts`, `types/i18next.d.ts`, `__tests__/i18n/**`.
 - Android/native rules and device cases: `docs/NATIVE_COMPAT_RULES.md`, `docs/MANUAL_TEST_CASES.md`, `e2e/maestro/`, `app.json`, `eas.json`, platform files `*.android.tsx`, `*.native.tsx`, `*.ios.tsx`, `*.web.tsx`.
 - Places catalog: `docs/features/places.md`, `screens/tabs/PlacesScreen.tsx`, `api/places.ts`, `utils/placesCatalog.ts`, `components/places/`.
 - Design tokens: `constants/designSystem.ts`, web CSS variables in `app/global.css`.
@@ -342,6 +371,8 @@ deploys with `tar+ssh`, performs an atomic server swap, verifies health, and rol
 - Рекомендуемый UI metadata-файл: `agents/openai.yaml`.
 - Не добавляй README/CHANGELOG внутри папки skill: инструкции должны быть в `SKILL.md`, а длинные справки - в `references/` только при реальной необходимости.
 - Описывай в `description`, когда skill должен срабатывать. Тело `SKILL.md` должно быть коротким и операционным.
+- Для implementation/review/test skills делай обязательным architecture preflight:
+  platform impact для web/Android/iOS и localization impact для RU/BE/UK/PL/EN.
 - Для prompt specs, asset-level `PROMPT.md` и `agents/openai.yaml` используй `$metravel-prompt-maintainer`; сохраняй точный prompt рядом с ассетом и не считай chat/commit history единственным источником воспроизводимости.
 - После изменений prompt/skill metadata запускай `npm run audit:prompts`.
 - После изменения skill проверяй структуру валидатором `skill-creator`, если он доступен.

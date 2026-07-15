@@ -1,6 +1,6 @@
 import type { Travel } from '@/types/types'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
-import { createCollator, translate as i18nT } from '@/i18n'
+import { SUPPORTED_LOCALES, createCollator, translate as i18nT } from '@/i18n'
 
 
 type CountryDescriptor = {
@@ -325,7 +325,7 @@ const getLocalizedCountryCodeIndex = () => {
 
   const DisplayNames = (Intl as unknown as { DisplayNames?: IntlDisplayNamesConstructor }).DisplayNames
   if (DisplayNames) {
-    ;['ru', 'pl', 'en'].forEach((locale) => {
+    SUPPORTED_LOCALES.forEach((locale) => {
       const regionNames = new DisplayNames(locale, { type: 'region' })
       ISO_COUNTRY_CODES.forEach((code) => {
         const label = regionNames.of(code)

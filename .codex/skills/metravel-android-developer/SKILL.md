@@ -23,6 +23,8 @@ Read first:
 - Android/native runtime: Expo modules, permissions, notifications, SecureStore, image picker/media, sharing, WebBrowser, navigation, and native-only app startup.
 - Native map behavior: keep web Leaflet code out of native bundles and native map/WebView code out of web bundles.
 - Native crash triage from a local Android build, `adb logcat`, or EAS logs only when that EAS build was explicitly requested.
+- Android locale lifecycle: `expo-localization`, versioned locale preference,
+  cold restart, RU/BE/UK/PL/EN resources, Intl/plural behavior, and translated accessibility text.
 
 ## Rules
 
@@ -36,6 +38,8 @@ Read first:
 - Guard web APIs (`window`, `document`, `localStorage`, `navigator`, DOM observers/events) inside effects/functions or move them to `.web` files.
 - Chain dynamic imports only through `Promise.resolve(import(...))` when using `.then`, `.catch`, `.finally`, stored promises, or returned promises.
 - Keep external navigation inside `utils/externalLinks.ts` helpers.
+- Follow `$metravel-i18n-guardrails` for user-facing text. Shared/native copy
+  uses the common resources; do not add Android-only hardcoded strings or manual locale formatting.
 - Do not print secrets from `.env*`, EAS, Google Play, or device logs.
 - Do not edit `app.json`, `eas.json`, `plugins/**`, or release scripts unless the user explicitly asks for build/config changes.
 - Expo/EAS Android build credits are limited: do not run `eas build --platform android`, `npm run android:build:*`, `npm run build:all:*`, Android production builds, or Android submit commands unless the user explicitly asks for that exact Android build/submit in the current task.
@@ -106,6 +110,8 @@ npx jest __tests__/config/native-compat-governance.test.ts --runInBand
 ```
 
 - For code changes, run the relevant targeted tests plus `npm run check:fast` when the logical block is finished.
+- For locale or UI-copy changes, run `npm run test:i18n` and verify language
+  persistence plus the changed flow after a real app restart on the USB device.
 - If a shared file changed for native reasons, also verify web scope with a production web build or clearly mark `verify pending` if environment blocks it.
 - Do not claim "works on Android" until a local build was installed on the USB phone and the relevant `AND-USB-*` cases passed. Without local-build device evidence, report `verify pending` with the exact build/install blocker.
 

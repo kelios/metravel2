@@ -24,6 +24,8 @@ Create a compact feature brief:
 Problem:
 Audience:
 User stories:
+Platforms: web | Android | iOS | shared | none
+Locales: RU/BE/UK/PL/EN | selected locales | none
 Acceptance criteria:
 Non-goals:
 Content/data assumptions:
@@ -41,6 +43,8 @@ from `docs/TASK_BOARD_MCP.md`:
 Scope:
 User-visible result:
 Data/API contract:
+Platform impact:
+Localization impact:
 Dependencies:
 Fallback/mock policy:
 Validation:
@@ -52,7 +56,10 @@ Done gate:
 - Do not write implementation code.
 - Prefer measurable acceptance criteria over broad intent.
 - Keep non-goals explicit so engineering does not overbuild.
-- Mention user-facing web/mobile differences when they affect scope.
+- Define the same product outcome across web, Android, and iOS/iPadOS; list only
+  technical platform differences that the product actually requires.
+- State whether acceptance criteria apply to RU/BE/UK/PL/EN. Separate app-owned
+  UI localization from API/editorial content that needs a backend locale contract.
 - For FE/BE dependencies, name the required board ids or the concrete endpoint/field/event that must unblock the work.
 - Flag external-link, authentication, media, SEO, moderation, or admin implications when present.
 - If a requirement conflicts with project rules, call out the conflict and propose the closest compliant behavior.

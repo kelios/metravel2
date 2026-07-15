@@ -8,7 +8,7 @@ jest.mock('@/i18n/LocaleProvider', () => {
   const state = {
     locale: 'ru',
     preference: { version: 1, mode: 'explicit', locale: 'ru' },
-    supportedLocales: ['ru', 'pl', 'en'],
+    supportedLocales: ['ru', 'be', 'uk', 'pl', 'en'],
     isHydrated: true,
     setLocale: jest.fn(async () => undefined),
     useSystemLocale: jest.fn(async () => undefined),
@@ -55,16 +55,18 @@ describe('language selection surfaces', () => {
     jest.clearAllMocks()
   })
 
-  it('opens the header picker and selects Polish without authentication', () => {
+  it('opens the header picker and selects Ukrainian without authentication', () => {
     const { getByTestId, getByLabelText } = render(<LanguageSwitcher />)
 
     fireEvent.press(getByTestId('header-language-switcher'))
     expect(getByLabelText('Русский')).toBeTruthy()
+    expect(getByLabelText('Беларуская')).toBeTruthy()
+    expect(getByLabelText('Українська')).toBeTruthy()
     expect(getByLabelText('Polski')).toBeTruthy()
     expect(getByLabelText('English')).toBeTruthy()
 
-    fireEvent.press(getByTestId('header-language-option-pl'))
-    expect(localeState.setLocale).toHaveBeenCalledWith('pl')
+    fireEvent.press(getByTestId('header-language-option-uk'))
+    expect(localeState.setLocale).toHaveBeenCalledWith('uk')
   })
 
   it('offers explicit languages and opt-in system mode in account settings', () => {
@@ -72,8 +74,8 @@ describe('language selection surfaces', () => {
       <LanguageSection colors={colors} styles={styles} />,
     )
 
-    fireEvent.press(getByLabelText('English'))
-    expect(localeState.setLocale).toHaveBeenCalledWith('en')
+    fireEvent.press(getByLabelText('Беларуская'))
+    expect(localeState.setLocale).toHaveBeenCalledWith('be')
 
     fireEvent.press(getByLabelText('Как в системе'))
     expect(localeState.useSystemLocale).toHaveBeenCalledTimes(1)

@@ -1,122 +1,97 @@
-# Контракт сохранения и модерации путешествия (Travel save/moderation)
+# Контракт сохранения и модерации travel
 
-> **Load-bearing.** Этот документ — единый источник правды по логике сохранения travel
-> (создание/редактирование в мастере). Любой агент, который трогает редактирование/создание
-> статьи (`components/travel/**`, `hooks/useTravelForm*`, `api/misc.ts saveFormData`,
-> бэкенд `travels/serializers.py TravelUpsertSerializer`), ОБЯЗАН свериться с ним и не
-> ломать инвариант. См. также тикет борда **#555**.
+Актуализировано: 2026-07-15.
 
-## Главный инвариант (бизнес-правило)
+Load-bearing контракт для `components/travel/**`,
+`hooks/useTravelFormPersistence.ts`, `hooks/useTravelWizard.ts` и
+`api/misc.ts::saveFormData`.
 
-1. **Сохранение контента НИКОГДА не блокируется валидацией полноты.** Автосейв и любое
-   ручное сохранение (добавление/редактирование точки, текст, фото) всегда персистят
-   состояние как есть. **Пользователь не должен терять данные.** Статус публикации при
-   content-save не меняется.
+## Главный инвариант
 
-2. **Валидация полноты для модерации (у каждой точки `categories`, обязательные поля и
-   т.п.) выполняется РОВНО ОДИН РАЗ** — в момент, когда пользователь отправляет
-   **ещё‑не‑промодерированную** статью на модерацию/публикацию (явное действие «Отправить
-   на модерацию»/«Опубликовать»).
+**Save ≠ moderate.**
 
-3. **После модерации правки доверяем.** Если статья уже промодерирована (`moderation=true`
-   в БД: статусы `approved`/`published`), пользователь может свободно дополнять её (новые
-   точки и т.д.). Такие сохранения обрабатываются **как для черновика** — без валидации
-   полноты. Повторно модерацию не прогоняем.
+- Content-save, autosave и инкрементальное сохранение точки персистят данные как
+  есть и не меняют publication status.
+- Полнота для модерации проверяется только при явном действии пользователя
+  «Отправить на модерацию»/«Опубликовать».
+- После модерации автор может свободно дополнять travel; обычная правка не
+  запускает повторную moderation validation.
+- Ошибка backend endpoint не маскируется fake-success или локальным
+  «успешно сохранено».
 
-Короче: **save ≠ moderate.** Модерация — однократный гейт на переходе
-`draft → approved/published`. Всё остальное (черновик-сейв, автосейв, пост-модерационные
-правки) сохраняется свободно.
+Пользовательские данные нельзя терять ради прохождения validation.
 
-## State machine статуса (бэкенд `Travel`)
+## Status model
 
-| publication_status | publish | moderation | смысл |
-|---|---|---|---|
-| `draft`     | false | false | черновик, не проходил модерацию |
-| `approved`  | false | true  | прошёл модерацию, ещё не опубликован |
-| `published` | true  | true  | опубликован (модерацию проходил) |
+| `publication_status` | `publish` | `moderation` | Смысл |
+| --- | --- | --- | --- |
+| `draft` | false | false | черновик |
+| `approved` | false | true | прошёл модерацию, ещё не опубликован |
+| `published` | true | true | опубликован |
 
-«Промодерировано» = `moderation === true` (то есть `approved` или `published`).
+Поля `publish` и `moderation` описывают текущий status, а не намерение
+текущего запроса.
 
-## Когда валидация полноты ДОЛЖНА срабатывать
+## Frontend flow
 
-Валидация выполняется **тогда и только тогда**, когда выполнены ОБА условия:
+- Глобальный autosave живёт в `hooks/useTravelFormPersistence.ts`.
+- Инкрементальное сохранение route point идёт из
+  `components/travel/TravelWizardStepRoute.tsx` через `onManualSave`.
+- Ручное сохранение использует `intent='save'`.
+- Явный submit на модерацию/публикацию использует `intent='publish'`.
+- Все пути сходятся в `api/misc.ts::saveFormData` и
+  `PUT /travels/upsert/`.
 
-- статья сейчас **НЕ промодерирована** (текущее в БД `moderation === false`), И
-- запрос — **явный submit на модерацию/публикацию** (`enforce_moderation_validation === true`).
+Перед отправкой `saveFormData` добавляет:
 
-Во всех остальных случаях — **пропускаем** (просто сохраняем):
-
-- автосейв / content-save любого статуса;
-- любое сохранение уже промодерированной статьи (`moderation === true` в БД), включая
-  добавление точек без категорий — это пост-модерационная правка, ей доверяем.
-
-## Как это устроено на фронте (анализ сохранения)
-
-Точки входа сохранения в мастере travel:
-
-- **Глобальный автосейв** — `useImprovedAutoSave` (debounce 5s) в
-  `hooks/useTravelFormPersistence.ts`. Намеренно **выключен** при `publish || moderation`
-  (чтобы не долбить upsert у терминального статуса). Для промодерированных статей идут
-  только явные сейвы (ниже).
-- **Инкрементальный сейв точки** — `components/travel/TravelWizardStepRoute.tsx`:
-  `saveRoute → onManualSave` (debounce 800ms при добавлении точки). Сюда же —
-  редактирование категорий/адреса точки и точка из фото.
-- **Ручное сохранение / публикация** — `handleManualSave` в
-  `hooks/useTravelFormPersistence.ts`. Несёт FE-`intent`:
-  - `intent='save'` — обычное сохранение/инкрементальный сейв точки;
-  - `intent='publish'` — ЯВНАЯ отправка на модерацию/публикация (кнопка в
-    `components/travel/TravelWizardStepPublish.tsx`).
-- Все пути сходятся в `api/misc.ts` → `saveFormData` → `PUT /travels/upsert/` с **полным**
-  payload путешествия (`publish`, `moderation`, весь массив `coordsMeTravel` с их
-  `categories`).
-
-**FE-контракт с бэком:** `saveFormData` кладёт в payload
-`enforce_moderation_validation: intent === 'publish'`. Это единственный сигнал «это submit
-на модерацию», а не «сохрани контент». Поля `publish`/`moderation` в payload отражают
-ТЕКУЩИЙ статус, а не действие, — по ним нельзя судить о намерении (у опубликованного всегда
-`publish=true`).
-
-FE-модерационная проверка полноты (`validateReadyForModeration`) на фронте выполняется
-тоже только при `intent='publish'` (`api/misc.ts`). Она показывает пользователю, чего не
-хватает ДО отправки на модерацию.
-
-## Как это должно быть на бэке (`travels/serializers.py`)
-
-`TravelUpsertSerializer._validate_coordinate_categories_for_publication` (добавлен коммитом
-`1f26e49`, 2026-06-23) сейчас гоняется на КАЖДОМ upsert при `publish||moderation=true` —
-это нарушает инвариант (ломает автосейв промодерированных статей). Должно быть:
-
-```python
-def _should_enforce_moderation_validation(self, data, current_moderation: bool) -> bool:
-    # Уже промодерировано → доверяем автору, не валидируем правки.
-    if current_moderation:
-        return False
-    # Не промодерировано → валидируем только на явном submit.
-    return bool(data.get('enforce_moderation_validation'))
+```ts
+{
+  ...payload,
+  enforce_moderation_validation: intent === 'publish',
+}
 ```
 
-Нюанс реализации: `TravelUpsertSerializer` — plain `Serializer` без `instance`, текущий
-`moderation` из БД на этапе `validate()` недоступен. Бэку нужно либо передать текущее
-состояние записи в сериализатор, либо перенести проверку в `UpsertTravelService` (после
-`get_object_or_404`). Детали и acceptance — в тикете **#555**.
+`validateReadyForModeration` запускается на frontend только при
+`intent='publish'`. На `intent='save'` отсутствие категории или другого
+publication-required поля не должно блокировать persistence текущей правки.
 
-## Временный FE-guard (снять после бэк-фикса)
+Route-point save отправляется сразу, включая новую точку без категории: ей нужен
+server id для последующей загрузки media. Старые mitigation/defer guards для
+uncategorized point удалены и не должны возвращаться.
 
-Пока бэк гоняет валидацию на каждом upsert, в `TravelWizardStepRoute.tsx` работает
-митигейшн `deferSaveIfUncategorized`: у промодерированной статьи не шлём точку без
-категории (бэк всё равно вернёт 400) и подсказываем, какие точки без категории.
+## Expected backend behavior
 
-Это **load-bearing guard под баг #555**, а НЕ целевое поведение. Целевое — сохранять
-свободно. Снять guard (и покрыть FE-regression-тестом на «автосейв промодерированной
-статьи с точкой без категории → 200») **только после** того, как бэк-фикс верифицирован
-(код на `origin/master` + наблюдаемое поведение). См. FE-guard rule в `CLAUDE.md`.
+Backend должен применять проверку полноты только когда одновременно:
 
-## Чек-лист для агента, трогающего сохранение travel
+1. текущая запись ещё не промодерирована;
+2. `enforce_moderation_validation === true`.
 
-- [ ] Content-save/автосейв не блокируется валидацией полноты ни при каком статусе.
-- [ ] Валидация полноты — только при `enforce_moderation_validation=true` И текущем
-      `moderation=false`.
-- [ ] Промодерированную статью (`moderation=true`) правим как черновик — без валидации.
-- [ ] Не теряем данные пользователя на автосейве.
-- [ ] Не путаем «текущий статус» (`publish`/`moderation` в payload) с «намерением»
-      (`enforce_moderation_validation`).
+Во всех остальных случаях upsert сохраняет контент без publication validation.
+Frontend workspace не редактирует реализацию Django; mismatch подтверждается
+read-only probe и оформляется как `area=back` task с Task Contract.
+
+Нельзя обходить backend mismatch новым mock fallback или возвращением
+frontend-дефера, который снова создаёт риск потери данных.
+
+## Safe change checklist
+
+- [ ] `intent='save'` и `intent='publish'` не смешаны.
+- [ ] Текущий `publish/moderation` status не трактуется как intent.
+- [ ] Autosave/route save не блокируется publication validation.
+- [ ] Полный payload не перетирает более свежий form snapshot.
+- [ ] Ошибка сохранения видна пользователю и не превращается в fake success.
+- [ ] Draft recovery остаётся отдельным слоем по
+      `docs/TRAVEL_DRAFT_RECOVERY.md`.
+
+## Validation
+
+Минимальный regression scope:
+
+- `__tests__/api/misc.behavior.test.ts`;
+- `__tests__/components/TravelWizardStepRoute.test.tsx`;
+- `__tests__/components/travel/TravelWizardStepPublish.test.tsx`;
+- `__tests__/hooks/useTravelWizard.test.ts`;
+- draft/text-loss tests, если изменён merge/autosave path.
+
+Production readiness backend-dependent сценария требует реального upsert payload и
+response evidence; unit tests проверяют frontend contract, но не deployment.

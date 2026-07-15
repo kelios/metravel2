@@ -21,6 +21,8 @@ Select checks by change scope instead of defaulting to the heaviest run every ti
 Use the project-specific command map:
 
 - External-link or governance-sensitive changes: run `npm run guard:external-links` or `npm run governance:verify`.
+- Localization, app-owned UI copy, locale provider/storage, formatting, or SEO
+  locale changes: run `npm run test:i18n` plus the affected feature checks.
 - Before PR or after notable refactor: run `npm run check:preflight`.
 - Changes in travel/search/map/account/messages flows that need browser smoke coverage: use `npm run check:e2e:changed`.
 - Full release confidence: run `npm run release:check`.
@@ -29,6 +31,9 @@ Keep release and performance validation aligned with repo policy:
 
 - Build web for production checks with `npm run build:web:prod`.
 - Android release/store builds are not part of ordinary release checks: do not run Android EAS/cloud builds, Android production builds/submits, or dev-client/export Android QA routes unless the user explicitly asks for that exact Android path. Android QA uses local build/install on the USB-connected phone by default.
+- Shared app changes need separate web, Android, and iOS validation decisions.
+  Do not mark a release platform-ready from another platform's evidence; report
+  unavailable simulator/device coverage as `verify pending`.
 - Route explicit Google Play build/submit/track work to `$metravel-google-play-operator`; release-checks may prepare gates but must not infer store mutation authority.
 - Treat deploy execution and rollback as `$metravel-devops-agent` work, not release-checks work.
 - For production deploy command selection, defer to `docs/RELEASE.md` and `$metravel-devops-agent`.

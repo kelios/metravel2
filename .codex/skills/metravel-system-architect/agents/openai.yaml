@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel System Architect"
   short_description: "Design and review metravel changes against project constraints."
-  default_prompt: "Use $metravel-system-architect to map the metravel requirement or bug report to existing modules, produce a technical design and validation plan, or review a diff for rule compliance and residual risk."
+  default_prompt: "Use $metravel-system-architect to map the requirement to existing modules and define data, UI, web/Android/iOS, RU/BE/UK/PL/EN, risk, and validation contracts."

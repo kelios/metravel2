@@ -6,34 +6,19 @@ import { getTravelsListPath } from './helpers/routes';
 const STORAGE_STATE_PATH = 'e2e/.auth/storageState.json';
 const STORAGE_STATE_B_PATH = 'e2e/.auth/storageState.b.json';
 
-function simpleEncrypt(text: string, key: string): string {
-  let result = '';
-  for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-  }
-  return `enc1:${Buffer.from(result, 'binary').toString('base64')}`;
-}
-
-function simpleDecrypt(base64: string, key: string): string {
-  const raw = Buffer.from(String(base64 || ''), 'base64').toString('binary');
-  let result = '';
-  for (let i = 0; i < raw.length; i++) {
-    result += String.fromCharCode(raw.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-  }
-  return result;
-}
-
 function ensureEnv(name: string): string | null {
   const v = process.env[name];
   return v && v.trim().length > 0 ? v.trim() : null;
 }
 
-function readStorageStateValue(filePath: string, key: string): string {
+function readStorageStateValue(filePath: string, originUrl: string, key: string): string {
   try {
     if (!fs.existsSync(filePath)) return '';
     const json = JSON.parse(fs.readFileSync(filePath, 'utf8')) as any;
     const origins: any[] = Array.isArray(json?.origins) ? json.origins : [];
+    const expectedOrigin = new URL(originUrl).origin;
     for (const origin of origins) {
+      if (origin?.origin !== expectedOrigin) continue;
       const ls: any[] = Array.isArray(origin?.localStorage) ? origin.localStorage : [];
       const entry = ls.find((item) => item?.name === key);
       const value = String(entry?.value ?? '').trim();
@@ -45,35 +30,20 @@ function readStorageStateValue(filePath: string, key: string): string {
   return '';
 }
 
-function tokenFromStorageState(filePath: string): string {
-  const encrypted = readStorageStateValue(filePath, 'secure_userToken');
-  if (!encrypted) return '';
-  const withPrefix = encrypted.startsWith('enc1:') ? encrypted.slice('enc1:'.length) : encrypted;
-  const looksBase64 = /^[A-Za-z0-9+/]+=*$/.test(withPrefix) && withPrefix.length % 4 === 0;
-  if (!looksBase64) return encrypted;
-  return simpleDecrypt(withPrefix, 'metravel_encryption_key_v1').trim();
-}
+async function storageStateHasValidSession(filePath: string, baseURL: string): Promise<boolean> {
+  if (!fs.existsSync(filePath)) return false;
+  const userId = readStorageStateValue(filePath, baseURL, 'userId');
+  if (!userId) return false;
 
-function userIdFromStorageState(filePath: string): string {
-  return readStorageStateValue(filePath, 'userId');
-}
-
-async function storageStateHasValidToken(filePath: string, apiBase: string | null): Promise<boolean> {
-  const token = tokenFromStorageState(filePath);
-  if (!token) return false;
-  if (!apiBase) return true;
-
-  const userId = userIdFromStorageState(filePath);
   const api = await request.newContext({
-    baseURL: apiBase,
-    extraHTTPHeaders: { Authorization: `Token ${token}` },
+    baseURL,
+    storageState: filePath,
   });
   try {
-    const probePath = userId ? `/api/user/${userId}/profile/` : '/api/user/profile/';
-    const resp = await api.get(probePath);
-    return resp.status() !== 401 && resp.status() !== 403;
+    const resp = await api.get('/api/user/me/verifications/');
+    return resp.ok();
   } catch {
-    return true;
+    return false;
   } finally {
     await api.dispose();
   }
@@ -180,39 +150,17 @@ async function fillLoginForm(page: any, email: string, password: string) {
   return true;
 }
 
-function installFakeAuth(context: any) {
-  const encrypted = simpleEncrypt('e2e-fake-token', 'metravel_encryption_key_v1');
-  context.addInitScript((value: string) => {
-    try {
-      window.localStorage.setItem('secure_userToken', value);
-    } catch {
-      // ignore
-    }
-  }, encrypted);
-
-  context.addInitScript(() => {
-    try {
-      window.localStorage.setItem('userId', '1');
-      window.localStorage.setItem('userName', 'E2E User');
-      window.localStorage.setItem('isSuperuser', 'false');
-    } catch {
-      // ignore
-    }
-  });
-}
-
 /**
- * Логинит один аккаунт через API (или UI-fallback) и пишет storageState.
- * Возвращает true если запись удалась с реальным токеном, false — анонимно.
+ * Logs one account in through the local web proxy and stores the HttpOnly
+ * session cookie plus non-secret display metadata in Playwright storageState.
  */
 async function writeStorageStateForAccount(opts: {
-  apiBase: string | null;
   email: string;
   password: string;
   baseURL: string;
   outputPath: string;
 }): Promise<void> {
-  const { apiBase, email, password, baseURL, outputPath } = opts;
+  const { email, password, baseURL, outputPath } = opts;
 
   const browser = await chromium.launch();
   const context = await browser.newContext();
@@ -230,56 +178,45 @@ async function writeStorageStateForAccount(opts: {
     return;
   }
 
-  // Try API login first.
-  if (apiBase) {
-    try {
-      const api = await request.newContext({
-        baseURL: apiBase,
-        extraHTTPHeaders: { 'Content-Type': 'application/json' },
+  // BrowserContext.request shares its cookie jar with pages. Logging in through
+  // the local proxy therefore preserves the backend Set-Cookie as HttpOnly web
+  // session state without exposing the returned token to JavaScript storage.
+  try {
+    let response: Awaited<ReturnType<typeof context.request.post>> | null = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      response = await context.request.post(`${baseURL}/api/user/login/`, {
+        data: { email, password },
       });
-      let resp: any = null;
-      for (let attempt = 1; attempt <= 3; attempt += 1) {
-        resp = await api.post('/api/user/login/', { data: { email, password } });
-        if (resp.ok() || resp.status() !== 429 || attempt === 3) break;
-        await new Promise((resolve) => setTimeout(resolve, 30_000 * attempt));
-      }
-      if (resp.ok()) {
-        const json = (await resp.json().catch(() => null)) as any;
-        const token = String(json?.token ?? '').trim();
-        const userId = json?.id != null ? String(json.id) : '';
-        const userName = String(json?.name ?? json?.email ?? '').trim();
-        const isSuperuser = json?.is_superuser ? 'true' : 'false';
-        if (token) {
-          const encrypted = simpleEncrypt(token, 'metravel_encryption_key_v1');
-          await context.addInitScript((value: string) => {
-            try {
-              window.localStorage.setItem('secure_userToken', value);
-            } catch {
-              // ignore
-            }
-          }, encrypted);
-          await context.addInitScript(
-            (payload: { userId: string; userName: string; isSuperuser: string }) => {
-              try {
-                if (payload.userId) window.localStorage.setItem('userId', payload.userId);
-                if (payload.userName) window.localStorage.setItem('userName', payload.userName);
-                window.localStorage.setItem('isSuperuser', payload.isSuperuser);
-              } catch {
-                // ignore
-              }
-            },
-            { userId, userName, isSuperuser }
-          );
-          await api.dispose();
-          await page.goto(`${baseURL}${getTravelsListPath()}`, { waitUntil: 'domcontentloaded', timeout: 120_000 }).catch(() => null);
+      if (response.ok() || response.status() !== 429 || attempt === 3) break;
+      await new Promise((resolve) => setTimeout(resolve, 30_000 * attempt));
+    }
+
+    if (response?.ok()) {
+      const json = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+      const userId = json?.id != null ? String(json.id) : '';
+      const userName = String(json?.name ?? json?.email ?? '').trim();
+      const isSuperuser = json?.is_superuser ? 'true' : 'false';
+
+      if (userId) {
+        await page.evaluate(
+          (metadata: { userId: string; userName: string; isSuperuser: string }) => {
+            window.localStorage.removeItem('secure_userToken');
+            window.localStorage.removeItem('secure_refreshToken');
+            window.localStorage.setItem('userId', metadata.userId);
+            window.localStorage.setItem('userName', metadata.userName);
+            window.localStorage.setItem('isSuperuser', metadata.isSuperuser);
+          },
+          { userId, userName, isSuperuser },
+        );
+        const probe = await context.request.get(`${baseURL}/api/user/me/verifications/`);
+        if (probe.ok()) {
           await done();
           return;
         }
       }
-      await api.dispose();
-    } catch {
-      // fall back to UI login
     }
+  } catch {
+    // Fall back to the UI login below.
   }
 
   // UI login fallback.
@@ -299,8 +236,8 @@ async function writeStorageStateForAccount(opts: {
         page
           .waitForFunction(() => {
             try {
-              const v = window.localStorage?.getItem('secure_userToken');
-              return typeof v === 'string' && v.length > 0;
+              const userId = window.localStorage?.getItem('userId');
+              return typeof userId === 'string' && userId.length > 0;
             } catch {
               return false;
             }
@@ -319,9 +256,6 @@ export default async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0]?.use?.baseURL as string | undefined;
   const email = ensureEnv('E2E_EMAIL');
   const password = ensureEnv('E2E_PASSWORD');
-
-  const apiBaseRaw = ensureEnv('E2E_API_URL') || ensureEnv('EXPO_PUBLIC_API_URL');
-  const apiBase = apiBaseRaw ? apiBaseRaw.replace(/\/+$/, '') : null;
 
   fs.mkdirSync(path.dirname(STORAGE_STATE_PATH), { recursive: true });
 
@@ -346,25 +280,17 @@ export default async function globalSetup(config: FullConfig) {
   }
 
   // Account A (primary E2E account, owner).
-  if (await storageStateHasValidToken(STORAGE_STATE_PATH, apiBase)) {
-    // Reuse the token issued by a previous shard. Avoid hammering /api/user/login/
+  if (await storageStateHasValidSession(STORAGE_STATE_PATH, baseURL)) {
+    // Reuse the cookie session issued by a previous shard. Avoid hammering /api/user/login/
     // across the 16-shard local e2e runner and tripping backend rate limits.
   } else if (!email || !password) {
-    // No creds → write fake-auth state.
+    // No credentials means the default state is intentionally a guest session.
     const browser = await chromium.launch();
     const context = await browser.newContext();
-    const page = await context.newPage();
-    try {
-      await page.goto(`${baseURL}${getTravelsListPath()}`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-    } catch {
-      // ignore
-    }
-    installFakeAuth(context);
     await context.storageState({ path: STORAGE_STATE_PATH });
     await browser.close();
   } else {
     await writeStorageStateForAccount({
-      apiBase,
       email,
       password,
       baseURL,
@@ -376,12 +302,11 @@ export default async function globalSetup(config: FullConfig) {
   // Gracefully skip if creds not set; specs that need B check for the file at runtime.
   const emailB = ensureEnv('E2E_EMAIL2');
   const passwordB = ensureEnv('E2E_PASSWORD2');
-  if (await storageStateHasValidToken(STORAGE_STATE_B_PATH, apiBase)) {
+  if (await storageStateHasValidSession(STORAGE_STATE_B_PATH, baseURL)) {
     // Reuse existing applicant state across shards.
-  } else if (emailB && passwordB && apiBase) {
+  } else if (emailB && passwordB) {
     try {
       await writeStorageStateForAccount({
-        apiBase,
         email: emailB,
         password: passwordB,
         baseURL,

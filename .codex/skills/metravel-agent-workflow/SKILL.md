@@ -26,7 +26,10 @@ Default feature flow:
 4. System Architect: map the brief to existing code, constraints, risk, and validation.
 5. Domain Router: use `$metravel-domain-router` for travel/map/profile/achievements/quests/PDF/new-page owner maps.
 6. Domain Expert: use `$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, or `$metravel-quest-expert` for domain-specific constraints; use `$metravel-quest-writer` for new authored quest content, `$metravel-quest-editor` for existing content, and `$metravel-quest-geo-verifier` for coordinates.
-7. Designer: use `$metravel-ui-guardrails` for visible UI states and web/mobile behavior; use `$metravel-design-auditor` for cross-screen evidence and `$metravel-visual-asset-designer` for requested raster assets.
+7. Designer and localization: use `$metravel-ui-guardrails` for visible UI states
+   and web/mobile behavior; add `$metravel-i18n-guardrails` for UI copy, locale
+   state/formatting, accessibility, SEO locale, and RU/BE/UK/PL/EN coverage; use
+   `$metravel-design-auditor` for cross-screen evidence and `$metravel-visual-asset-designer` for requested raster assets.
 8. Native Developer: use `$metravel-android-developer` or `$metravel-ios-developer` for platform implementation, crashes, platform files, or Expo native modules.
 9. Refactor Surgeon: use `$metravel-refactor-surgeon` for behavior-preserving large component splits.
 10. Programmer: use `$metravel-feature-builder` to implement the smallest sufficient diff.
@@ -71,6 +74,9 @@ Default bug loop:
 - Before assigning deploy, build, Android install, server rebuild/restart, full/preflight tests, Playwright/e2e, or Lighthouse work, check the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if the same target is already running, do not start a second agent command.
 - Keep unrelated user changes separate; never revert files outside the task.
 - Preserve project rules for external links, design tokens, e2e secrets, server paths, and scope-based validation.
+- Require every role handoff to state platform impact and localization impact.
+  Implementation/review/QA must cover production web, Android, iOS/iPadOS, and
+  RU/BE/UK/PL/EN where affected; unavailable native evidence is `verify pending`.
 - For visible web UI changes, require browser verification, screenshot, and console check before final handoff.
 - If a role finds a real issue in the touched scope, route it to implementation before handoff unless it is explicitly blocked.
 

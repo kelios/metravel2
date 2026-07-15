@@ -1,368 +1,48 @@
-# E2E Тесты для создания/редактирования путешествий
+# Playwright E2E
 
-**Дата создания:** 01.01.2026  
-**Статус:** ✅ Готово к запуску
+`e2e/` содержит browser smoke, regression и performance сценарии. Общие правила,
+quality-gate lock и troubleshooting находятся в `docs/TESTING.md`.
 
----
+## Запуск
 
-## 📁 Структура тестов
+Полный поддерживаемый entrypoint:
 
-### Основные файлы:
-
-1. **`travel-wizard.spec.ts`** — Полный flow создания и редактирования
-2. **`travel-wizard-features.spec.ts`** — Тесты специфичных функций
-
----
-
-## 🎯 Что покрывают тесты
-
-### travel-wizard.spec.ts (Основной flow):
-
-#### Создание путешествия:
-- ✅ Полный flow через все 6 шагов
-- ✅ Quick Mode (быстрый черновик)
-- ✅ Валидация при Quick Draft без названия
-- ✅ Превью карточки
-- ✅ Навигация через милестоны (desktop)
-- ✅ Автосохранение изменений
-
-#### Редактирование путешествия:
-- ✅ Открытие существующего путешествия
-- ✅ Изменение названия и сохранение
-- ✅ Добавление новой точки к маршруту
-
-#### Валидация и ошибки:
-- ✅ Ошибка при попытке сохранить без названия
-- ✅ Предупреждения на шаге публикации
-- ✅ Сохранение точки без фото (автосохранение v2)
-
-#### Адаптивность:
-- ✅ Работа на мобильных устройствах
-- ✅ Скрытие милестонов на mobile
-
----
-
-### travel-wizard-features.spec.ts (Специфичные функции):
-
-#### Quick Mode:
-- ✅ Создание черновика с минимальным заполнением
-- ✅ Валидация при коротком названии (< 3 символов)
-- ✅ Работа на desktop и mobile
-
-#### Поиск мест на карте:
-- ✅ Поиск и добавление точки
-- ✅ Empty state если ничего не найдено
-- ✅ Loading indicator при поиске
-- ✅ Очистка поля кнопкой X
-- ✅ Debounce (500ms)
-
-#### Превью карточки:
-- ✅ Открытие и закрытие модального окна
-- ✅ Закрытие по клику вне окна
-- ✅ Placeholder если нет обложки
-- ✅ Обрезка длинного описания до 150 символов
-- ✅ Показ статистики (дни, точки, страны)
-
-#### Группировка параметров (Шаг 5):
-- ✅ Открытие/закрытие группы
-- ✅ Обновление счетчика заполненных полей (N/11)
-
-#### Милестоны:
-- ✅ Показ на desktop
-- ✅ Скрытие на mobile
-- ✅ Подсветка текущего шага
-- ✅ Галочка для пройденных шагов
-
-#### Разделенный чеклист (Шаг 6):
-- ✅ Показ двух секций (обязательные + рекомендуемые)
-- ✅ Преимущества для рекомендуемых пунктов
-- ✅ Счетчик готовности (N/6)
-
----
-
-## 🏗 Стратегия тестирования
-
-Тесты разделены на три уровня с помощью тегов в `test.describe()`:
-
-| Уровень | Тег | Цель | Время |
-|---------|-----|------|-------|
-| **Smoke** | `@smoke` | Критический путь — страницы загружаются, API работает | ~2 мин |
-| **Perf** | `@perf` | CLS, Web Vitals, бюджеты производительности | ~5 мин |
-| **Regression** | _(все)_ | Полный набор — все тесты | ~15 мин |
-
-### Запуск по уровню:
 ```bash
-# Только smoke (быстрая проверка перед деплоем)
-E2E_SUITE=smoke npx playwright test
-
-# Только performance аудиты
-E2E_SUITE=perf npx playwright test
-
-# Полный regression (по умолчанию)
-npx playwright test
+yarn e2e
 ```
 
-### Параллелизация
+Проверка изменившегося scope:
 
-Тесты запускаются параллельно (`fullyParallel: true`):
-- **Локально:** 50% CPU ядер
-- **CI:** 2 воркера (стабильность важнее скорости)
-
----
-
-## 🚀 Запуск тестов
-
-### Установка зависимостей:
 ```bash
-npm install --save-dev @playwright/test
-npx playwright install
+yarn check:e2e:changed:dry
+yarn check:e2e:changed
 ```
 
-### Запуск всех E2E тестов:
-```bash
-npx playwright test
-```
+Не запускайте второй Playwright/full gate, если в workspace уже идёт такая
+операция. Прямой `playwright test` допустим только через согласованный
+quality-gate wrapper или repository script, который уже владеет lock.
 
-### Запуск конкретного файла:
-```bash
-npx playwright test travel-wizard.spec.ts
-npx playwright test travel-wizard-features.spec.ts
-```
+## Авторизация
 
-### Запуск с UI:
-```bash
-npx playwright test --ui
-```
+- credentials берутся только из `.env.e2e`;
+- session создаёт `e2e/global-setup.ts` и переиспользуют fixtures;
+- значения email/password/token не печатаются, не попадают в screenshots,
+  traces или committed files;
+- authenticated QA выполняется только обратимыми действиями тестового аккаунта.
 
-### Запуск в headed режиме (с браузером):
-```bash
-npx playwright test --headed
-```
+## Структура
 
-### Запуск конкретного теста:
-```bash
-npx playwright test -g "должен создать полное путешествие"
-```
+- `fixtures.ts` — общий test fixture и auth/session wiring;
+- `global-setup.ts` — программный login/storage state;
+- `helpers/` — navigation/API/diagnostic helpers;
+- `*.spec.ts` — feature/browser contracts;
+- `maestro/` — отдельные device flows, см. `e2e/maestro/README.md`.
 
-### Запуск только на определенном браузере:
-```bash
-npx playwright test --project=chromium
-npx playwright test --project=firefox
-npx playwright test --project=webkit
-```
+Точные spec-файлы и проекты меняются; не поддерживайте вручную список «всех
+существующих тестов» в этом README. Для поиска используйте `rg --files e2e`.
 
-### Debug режим:
-```bash
-npx playwright test --debug
-```
+## Артефакты
 
----
-
-## 🎬 Запуск на разных устройствах
-
-### Desktop:
-```bash
-npx playwright test --project=chromium
-```
-
-### Mobile:
-```bash
-npx playwright test --project="Mobile Chrome"
-npx playwright test --project="Mobile Safari"
-```
-
----
-
-## 📊 Отчеты
-
-### HTML отчет:
-```bash
-npx playwright test
-npx playwright show-report
-```
-
-### Скриншоты при ошибках:
-Автоматически сохраняются в `test-results/`
-
-### Видео тестов:
-Настроено в `playwright.config.ts`
-
----
-
-## ⚙️ Конфигурация
-
-Файл: `playwright.config.ts`
-
-```typescript
-export default defineConfig({
-  testDir: './e2e',
-  timeout: 60000,
-  retries: 2,
-  use: {
-    baseURL: 'http://localhost:8081',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-  },
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
-  ],
-});
-```
-
----
-
-## 📝 Написание новых тестов
-
-### Шаблон теста:
-```typescript
-test('название теста', async ({ page }) => {
-  await page.goto('/travel/new');
-  
-  // Ваш тест здесь
-  await expect(page.locator('text=...')).toBeVisible();
-});
-```
-
-### Best practices:
-
-1. **Используйте data-testid:**
-   ```typescript
-   await page.click('[data-testid="submit-button"]');
-   ```
-
-2. **Ждите элементы правильно:**
-   ```typescript
-   await expect(page.locator('text=...')).toBeVisible({ timeout: 5000 });
-   ```
-
-3. **Группируйте тесты:**
-   ```typescript
-   test.describe('Группа тестов', () => {
-     test.beforeEach(async ({ page }) => {
-       // Подготовка перед каждым тестом
-     });
-     
-     test('тест 1', async ({ page }) => {});
-     test('тест 2', async ({ page }) => {});
-   });
-   ```
-
-4. **Используйте test.step для читаемости:**
-   ```typescript
-   await test.step('Шаг 1: Заполнение формы', async () => {
-     // ...
-   });
-   ```
-
-5. **Проверяйте автосохранение:**
-   ```typescript
-   await page.waitForSelector('text=Сохранено', { timeout: 10000 });
-   ```
-
----
-
-## 🐛 Troubleshooting
-
-### Проблема: Тесты не находят элементы
-**Решение:** Увеличьте timeout или добавьте waitForSelector
-
-### Проблема: Тесты падают из-за автосохранения
-**Решение:** Добавьте ожидание:
-```typescript
-await page.waitForTimeout(6000); // Ждем автосохранение (5 сек + запас)
-```
-
-### Проблема: Тесты работают локально, но падают в CI
-**Решение:** Проверьте переменные окружения и baseURL
-
-### Проблема: Слишком долго выполняются
-**Решение:** Используйте параллельный запуск:
-```bash
-npx playwright test --workers=4
-```
-
----
-
-## 🎯 План развития
-
-### Планируемые тесты:
-
-- [ ] Тесты для загрузки изображений (обложка, точки маршрута)
-- [ ] Тесты для YouTube видео
-- [ ] Тесты для выбора категорий и фильтров
-- [ ] Тесты для выбора стран
-- [ ] Тесты для редактирования описаний точек
-- [ ] Тесты для удаления точек
-- [ ] Тесты для изменения порядка точек
-- [ ] Тесты для модерации (админ)
-- [ ] Тесты для публикации vs черновика
-- [ ] Тесты для accessibility (a11y)
-
-### План интеграции:
-
-- [ ] Интеграция с CI/CD (GitHub Actions)
-- [ ] Автоматический запуск на PR
-- [ ] Slack уведомления при падении тестов
-- [ ] Отчеты в Allure
-
----
-
-## 📈 Покрытие
-
-### Текущее покрытие E2E тестами:
-
-| Функция | Покрытие |
-|---------|----------|
-| Создание путешествия | ✅ 90% |
-| Редактирование | ✅ 70% |
-| Quick Mode | ✅ 100% |
-| Поиск мест | ✅ 90% |
-| Превью карточки | ✅ 90% |
-| Группировка параметров | ✅ 80% |
-| Милестоны | ✅ 80% |
-| Разделенный чеклист | ✅ 70% |
-| Автосохранение | ✅ 80% |
-
-**Общее покрытие:** ~85%
-
----
-
-## 🔗 Связанные документы
-
-- `IMPLEMENTATION_REPORT.md` — отчет о реализации
-- `TESTING_REPORT.md` — unit тесты
-- `UPSERT_TRAVEL_DOCUMENTATION.md` — документация компонента
-
----
-
-## ✅ Статус
-
-**Готово к использованию:** ✅
-
-Тесты покрывают все основные функции создания и редактирования путешествий. Можно запускать в CI/CD.
-
----
-
-**Автор:** GitHub Copilot  
-**Дата:** 01.01.2026  
-**Версия:** 1.0.0
+Screenshots, traces, videos и reports должны оставаться в ignored папках
+`test-results/`, `playwright-report/`, `.codex-temp/` или `.codex-debug/`.
+После фикса перезапустите затронутый сценарий и не оставляйте `.skip`.

@@ -26,12 +26,17 @@ Read first:
   iOS-only layout.
 - Interaction quality: no covered CTAs, no horizontal scroll, stable sheets/modals, reachable close buttons, touch targets near 44px, no broken placeholders, no emoji icons in production UI.
 - Runtime health: console errors on web, Metro/runtime errors on native, and relevant `adb logcat` crash lines when available.
+- Localization parity: RU/BE/UK/PL/EN language selection and persistence,
+  translated labels/accessibility text, long-label layout, dates/numbers/plurals,
+  web reload, Android cold restart, and iOS cold restart when the flow is affected.
 
 ## Parity Contract
 
 - Compare mobile web, Android, and iOS against the same intended mobile UX.
   Differences in safe area or native map engine are acceptable; different visual
   hierarchy, action order, card proportions, or tap behavior are bugs.
+- Compare the same locale on all affected platforms. A translated web pass does
+  not prove native resource loading, storage, formatting, or accessibility behavior.
 - For map/place/travel-point checks, verify the shared point/place card:
   fullscreen within visible app chrome, hero image about 70%, title/meta,
   coordinates + copy, article/page action, expandable navigation choices, and
@@ -85,6 +90,7 @@ Return one compact artifact:
 Scope:
 Environment:
 Scenarios tested:
+Locales tested:
 Test cases:
 Findings:
 Evidence:

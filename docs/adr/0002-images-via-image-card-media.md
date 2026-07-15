@@ -23,7 +23,8 @@
 
 ### Положительные
 
-- LCP-оптимизации (`scripts/lighthouse-travel-score.js`, `UNLOAD_POLICY_FIX.md`) применяются в одной точке.
+- LCP/media optimizations применяются в одной точке и проверяются по
+  `docs/TRAVEL_PERFORMANCE_REFACTOR.md`.
 - Единая стратегия skeleton/placeholder.
 - ИИ получает однозначное правило.
 
@@ -36,4 +37,4 @@
 - `components/ui/ImageCardMedia.tsx`
 - `components/ui/UnifiedTravelCard.tsx`
 - `scripts/check-image-architecture.js`
-- `docs/UNLOAD_POLICY_FIX.md`, `docs/SLIDER_LOADING_OPTIMIZATION.md`
+- `docs/RULES.md`, `docs/TRAVEL_PERFORMANCE_REFACTOR.md`

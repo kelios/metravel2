@@ -1,58 +1,53 @@
-# Instagram → статьи: разовая настройка ключей
+# Instagram article tooling: local credentials
 
-Чтобы вставить твои посты @metravelby в релевантные статьи **в формате как в примере**
-(iframe-эмбед конкретного поста), нужны публичные ссылки на посты. В выгрузке Instagram
-их нет — берём их из Meta Graph API. Нужно **два ключа**, оба кладутся в папку `.secrets/`
-(она в `.gitignore`, в git не попадёт). **Ничего не вставляй в чат — только в файлы.**
+Instagram helper scripts используют два gitignored файла. Значения нельзя
+вставлять в чат, логи, screenshots или commit.
 
----
+Перед созданием файлов проверьте:
 
-## Ключ 1 — токен Instagram (чтобы получить ссылки на посты)
+```bash
+git check-ignore .secrets/instagram-token.json
+git check-ignore .secrets/metravel-token.json
+```
 
-1. Открой **Graph API Explorer**: https://developers.facebook.com/tools/explorer/
-2. Справа вверху **Meta App** → выбери приложение metravel (то, чей App ID в `.env`).
-3. **User or Page** → выбери **User Token**.
-4. **Permissions** (Add permissions) — добавь:
-   - `instagram_basic`
-   - `pages_show_list`
-   - `pages_read_engagement`
-   - `business_management`
-5. Нажми **Generate Access Token** → войди и подтверди доступ.
-6. Скопируй полученную строку токена.
-7. Создай файл **`D:\metravel\metravel2\.secrets\instagram-token.json`** с таким содержимым
-   (вставь токен вместо `СЮДА_ТОКЕН`):
+## Instagram Graph token
 
-   ```json
-   { "access_token": "СЮДА_ТОКЕН" }
-   ```
+Получите short-lived user token в Meta Graph API Explorer с минимально нужными
+permissions для чтения media account и сохраните локально:
 
-> Токен из Explorer короткоживущий (~1–2 часа) — этого хватит, скрипт скачает все посты
-> за один проход. Если истечёт — просто сгенерируй заново и перезапиши файл.
+```json
+{ "access_token": "..." }
+```
 
----
+Путь: `.secrets/instagram-token.json`.
 
-## Ключ 2 — токен metravel.by (чтобы сохранить правки в статьи)
+Не документируйте конкретный token, App ID или аккаунт. Если Meta отклоняет
+token, создайте новый через официальный Explorer и замените локальный файл.
 
-1. Открой https://metravel.by и **войди** под своим аккаунтом (автор статей).
-2. Нажми **F12** → вкладка **Application** (или «Приложение») → слева **Local Storage** →
-   `https://metravel.by`.
-3. Найди ключ **`userToken`**, скопируй его значение.
-4. Создай файл **`D:\metravel\metravel2\.secrets\metravel-token.json`**:
+## MeTravel API token
 
-   ```json
-   { "token": "СЮДА_ЗНАЧЕНИЕ_userToken" }
-   ```
+Не копируйте token из browser localStorage: web auth может использовать
+HttpOnly-cookie, а ручное извлечение создаёт утечку. Получите token
+программным login helper из разрешённого test/author account в `.env.e2e` и
+запишите только в:
 
----
+```json
+{ "token": "..." }
+```
 
-## После того как оба файла на месте
+Путь: `.secrets/metravel-token.json`.
 
-Скажи мне «ключи на месте» — дальше я делаю всё сам:
+Перед любой write-операцией проверьте владельца token и сделайте backup исходной
+article payload. Авторство новой статьи определяется token при создании и не
+должно предполагаться по локальному default.
 
-1. `node scripts/instagram-media.js` — скачаю все посты с ссылками/подписями/датами.
-2. сошью с GPS из выгрузки, подберу посты под каждую статью (гео точек + ключевые слова + дата);
-3. покажу таблицу подбора;
-4. соберу эмбеды и сохраню в статьи через API;
-5. проверю результат на живом сайте.
+## Скрипты
 
-Файлы с данными пишутся в `.cache/instagram/` (тоже в `.gitignore`).
+- `node scripts/instagram-media.js` — получить media metadata;
+- `node scripts/instagram-match.js` — подготовить сопоставление;
+- `node scripts/instagram-publish.js` — mutating publish step, только после
+  проверки backup, автора и выбранных записей.
+
+Промежуточные данные остаются в ignored cache. Creative article text и массовая
+production write-операция требуют отдельного явного подтверждения по
+`AGENTS.md`.

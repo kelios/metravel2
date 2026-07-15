@@ -1,7 +1,7 @@
 // Моковые данные геймификации-2 — используются, пока BE (place-first-badge,
 // progression-lines, activity-types, character-paths) не готов. Активируются флагом
 // EXPO_PUBLIC_ACHIEVEMENTS_MOCK=true или при 404 эндпоинта в DEV.
-// Контракт зеркалит docs/features/social-trips-gamification-backlog.md (Sprint A).
+// Контракт описан в docs/features/social-trips-gamification-roadmap.md.
 
 import type {
   CharacterDetail,

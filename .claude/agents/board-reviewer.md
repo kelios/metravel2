@@ -31,12 +31,15 @@ model: sonnet
 Через `metravel_tasks_list(sprint=<N>, status=testing)` и `status=review` — основные кандидаты на
 приёмку (`testing` — QA-колонка перед `done`, `review` — после код-ревью). Дополнительно бери
 `status=todo` со старой пометкой «handoff: reviewer/releaser». Тикеты в `backlog`/`in_progress` не
-трогаешь. Разделяй области: `area=front` / `back` / `android` / `ios`.
+трогаешь. В active workflow используются только `area=front` / `back`;
+Android/iOS/native задачи — `area=front` с platform context в title/description.
 
 ## Алгоритм по каждому тикету
 1. **Прочитай контракт.** `metravel_task_get(id)` → найди в `description` блок `## Task Contract`.
    Нет блока или поля пустые → **не принимай**: верни в `review` с заметкой «contract incomplete:
    <каких полей нет>», сошлись на `docs/TASK_BOARD_MCP.md`. Это refinement-долг, не приёмка.
+   Обязательно сверь `Platform impact` и `Localization impact`; shared-правка
+   без web/Android/iOS evidence и i18n-правка без RU/BE/UK/PL/EN contract не проходят Done gate.
 2. **Собери gate.** Из `Done gate` + `Validation` + `Acceptance Criteria` выпиши конкретные
    проверки: команды (`npm run test:run -- <scope>`, `typecheck`, e2e), runtime-пробы
    (`curl` к endpoint, browser flow, нужный UI state), target env (`dev`/`prod`/local).

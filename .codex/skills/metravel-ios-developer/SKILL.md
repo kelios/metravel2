@@ -19,6 +19,8 @@ Read first:
 
 - `.ios.tsx`, `.native.tsx`, `.web.tsx`, and narrow `Platform.OS === 'ios'` branches.
 - WKWebView/Safari behavior, safe-area/notch/home-indicator layout, iOS permissions, Keychain/SecureStore, APNs, Face ID/Touch ID, sharing, SFSafariViewController, deep links, and Universal Links.
+- iOS locale lifecycle: `expo-localization`, versioned preference storage,
+  RU/BE/UK/PL/EN resources, Intl/plurals, translated accessibility text, and cold restart behavior.
 - `components/MapPage/Map.ios.tsx`: keep Leaflet/react-leaflet out of native bundles and preserve the shared map/card UI contract.
 
 ## Rules
@@ -30,6 +32,8 @@ Read first:
 - Require HTTPS for iOS resources. Treat ATS failures, APNs permission order, and missing `NS*UsageDescription` values as configuration findings.
 - Do not edit `app.json`, `eas.json`, `plugins/**`, or release scripts unless the user explicitly asked for that configuration change.
 - Use `utils/externalLinks.ts`, `utils/secureStorage.ts`, and the project image wrappers instead of direct platform calls.
+- Follow `$metravel-i18n-guardrails`; do not add iOS-only hardcoded app copy or
+  locale formatting outside `i18n/format.ts`.
 - Route backend/API gaps to an `area=back` board task; never edit backend code from this workspace.
 - Never claim iOS readiness from web or Android evidence alone.
 
@@ -38,8 +42,10 @@ Read first:
 1. Reproduce or map the iOS-only path and read the whole guarded effect/function before calling a web API reference unsafe.
 2. Check adjacent Android/web implementations and preserve the common mobile contract.
 3. Implement the smallest platform split or guard.
-4. Run targeted tests, native compatibility governance, and `npm run check:fast` for a finished code block.
-5. Verify shared-file changes on web. Verify iOS on an available simulator/device; if none is available, report `verify pending` with the exact missing path.
+4. Run targeted tests, native compatibility governance, and `npm run check:fast` for a finished code block; add `npm run test:i18n` when locale behavior or UI copy changed.
+5. Verify shared-file changes on web. Verify iOS on an available simulator/device,
+   including cold restart and persisted language when localization is affected;
+   if none is available, report `verify pending` with the exact missing path.
 6. Do not start any EAS iOS build or submit unless the user explicitly requested that exact build/submit in the current task.
 
 ## Handoff

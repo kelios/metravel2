@@ -84,6 +84,9 @@ test.describe('@smoke Google auth', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
+        headers: {
+          'set-cookie': 'authToken=e2e-google-session; Path=/; HttpOnly; Secure; SameSite=Lax',
+        },
         body: JSON.stringify({
           token: 'e2e-auth-token',
           refresh: 'e2e-refresh-token',
@@ -156,12 +159,18 @@ test.describe('@smoke Google auth', () => {
     const authSnapshot = await page.evaluate(() => {
       return {
         secureUserToken: window.localStorage.getItem('secure_userToken'),
+        secureRefreshToken: window.localStorage.getItem('secure_refreshToken'),
         userId: window.localStorage.getItem('userId'),
         userName: window.localStorage.getItem('userName'),
       };
     });
 
-    expect(authSnapshot.secureUserToken).toBeTruthy();
+    const authCookie = (await page.context().cookies()).find((cookie) => cookie.name === 'authToken');
+    expect(authCookie, 'Google login must establish the HttpOnly web session').toBeTruthy();
+    expect(authCookie?.httpOnly).toBe(true);
+    expect(authCookie?.secure).toBe(true);
+    expect(authSnapshot.secureUserToken).toBeNull();
+    expect(authSnapshot.secureRefreshToken).toBeNull();
     expect(authSnapshot.userId).toBe('42');
     expect(authSnapshot.userName).toContain('E2E');
   });

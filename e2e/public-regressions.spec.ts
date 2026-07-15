@@ -25,20 +25,18 @@ const expectOneVisible = async (locators: Locator[], timeout = 20_000) => {
 }
 
 const expectCanonicalPath = async (page: Page, path: string) => {
-  await page.waitForFunction(
-    (expectedPath) => {
-      const canonical = document.querySelector('link[rel="canonical"]')?.getAttribute('href')
-      return typeof canonical === 'string' && canonical.includes(String(expectedPath))
-    },
-    path,
-    { timeout: 20_000 }
-  )
-
-  const canonicalHrefs = await page.locator('link[rel="canonical"]').evaluateAll((links) =>
-    links.map((link) => link.getAttribute('href')).filter(Boolean)
-  )
-  expect(canonicalHrefs.length, `canonical link for ${path} should be present`).toBeGreaterThan(0)
-  expect(canonicalHrefs.some((href) => href?.includes(path))).toBe(true)
+  const canonicalLinks = page.locator('link[rel="canonical"]')
+  await expect
+    .poll(
+      async () => {
+        const hrefs = await canonicalLinks.evaluateAll((links) =>
+          links.map((link) => link.getAttribute('href')).filter(Boolean)
+        )
+        return hrefs.some((href) => href?.includes(path))
+      },
+      { timeout: 20_000, message: `canonical link for ${path} should be present` },
+    )
+    .toBe(true)
 }
 
 test.describe('@smoke Public regressions', () => {

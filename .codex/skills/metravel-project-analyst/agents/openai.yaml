@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Project Analyst"
   short_description: "Map repository structure, risks, validation, and agent handoff."
-  default_prompt: "Use $metravel-project-analyst to analyze the metravel repository read-only, summarize project shape, active feature areas, validation surface, risk hotspots, recommended skills or agents, and next steps without printing secrets or editing files."
+  default_prompt: "Use $metravel-project-analyst to map the repository read-only, including shared web/Android/iOS architecture, RU/BE/UK/PL/EN localization, validation, risks, and recommended skills."

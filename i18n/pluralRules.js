@@ -34,7 +34,13 @@ function selectPluralCategory(count, locale) {
   // Hermes in the current Android shell may not expose Intl.PluralRules. Keep
   // every supported production locale functional without a startup polyfill.
   const normalizedLocale = String(locale).toLowerCase();
-  if (normalizedLocale.startsWith('ru')) return selectRussianPluralCategory(count);
+  if (
+    normalizedLocale.startsWith('ru') ||
+    normalizedLocale.startsWith('be') ||
+    normalizedLocale.startsWith('uk')
+  ) {
+    return selectRussianPluralCategory(count);
+  }
   if (normalizedLocale.startsWith('pl')) return selectPolishPluralCategory(count);
   if (normalizedLocale.startsWith('en')) return Math.abs(count) === 1 ? 'one' : 'other';
   return 'other';

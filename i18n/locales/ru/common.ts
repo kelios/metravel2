@@ -1,6 +1,8 @@
 export const common = {
   'i18n.missingTranslation': 'Перевод недоступен',
   'language.ru': 'Русский',
+  'language.be': 'Беларуская',
+  'language.uk': 'Українська',
   'language.pl': 'Polski',
   'language.en': 'English',
   'language.settingTitle': 'Язык интерфейса',

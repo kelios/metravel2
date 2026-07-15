@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Domain Router"
   short_description: "Map feature areas to owners and checks."
-  default_prompt: "Use $metravel-domain-router to choose the right metravel feature domain, files, specialist skills, and validation before implementation."
+  default_prompt: "Use $metravel-domain-router to choose the metravel domain, files, platform and localization impact, specialist skills, and validation before implementation."

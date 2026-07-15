@@ -28,7 +28,8 @@ Read first:
 
 - Board is the source of truth for frontend and backend work.
 - Use only `area=front` or `area=back` in the active workflow. Android/iOS/native app bugs are frontend tasks (`area=front`) with platform context in the title/description; backend/API/server tasks are `area=back`.
-- Every new `area=front` or `area=back` task needs active sprint, Task Contract, dependencies/blockers, validation, and Done gate.
+- Every new `area=front` or `area=back` task needs active sprint, Task Contract,
+  `Platform impact`, `Localization impact`, dependencies/blockers, validation, and Done gate.
 - Visible UI/UX tasks must reference durable `Design evidence` (tracked `docs/` mock or stable Figma URL) and name the required states/platforms. The current board API has no file-attachment field, so never reference a temporary `.codex-temp/` artifact as the task attachment.
 - Human work and agent work must be separate tasks linked by `blocked_by_id`, `depends_on_ids`, or `related_to_ids`.
 - If board tools return HTTP 401, refresh the staff token through `.env.e2e` following `docs/TASK_BOARD_MCP.md`; never print token values.
@@ -38,7 +39,8 @@ Read first:
 ## Workflow
 
 1. Read the existing sprint/task state before mutating.
-2. For new tasks, fill Task Contract and any required UI `Design evidence` before `todo`/handoff.
+2. For new tasks, fill Task Contract including web/Android/iOS and RU/BE/UK/PL/EN
+   impact, plus any required UI `Design evidence`, before `todo`/handoff.
 3. For status updates, preserve existing description and append concise evidence/blocker notes.
 4. For human-needed work, set `needs_human=true` and keep the body human-readable without agent mechanics.
 5. Verify the updated task or board after mutation.

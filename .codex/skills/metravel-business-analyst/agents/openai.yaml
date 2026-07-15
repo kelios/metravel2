@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Business Analyst"
   short_description: "Shape product ideas into acceptance criteria and risks."
-  default_prompt: "Use $metravel-business-analyst to turn the metravel idea into a concise feature brief with user stories, acceptance criteria, non-goals, metrics, risks, and open questions before implementation."
+  default_prompt: "Use $metravel-business-analyst to shape the idea into testable outcomes, explicitly covering affected web/Android/iOS surfaces and RU/BE/UK/PL/EN locales before implementation."

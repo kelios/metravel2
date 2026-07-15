@@ -28,13 +28,15 @@ Read first:
 1. Load the active sprint or requested task.
 2. For each candidate in `review` or `testing`, read the full description, dependencies, blockers, and Task Contract.
 3. Reject refinement gaps before runtime work:
-   - missing `Scope`, `User-visible result`, `Data/API contract`, `Dependencies`, `Fallback/mock policy`, `Validation`, or `Done gate`
+   - missing `Scope`, `User-visible result`, `Data/API contract`, `Platform impact`,
+     `Localization impact`, `Dependencies`, `Fallback/mock policy`, `Validation`, or `Done gate`
    - unresolved blocking dependency
    - `needs_human=true` without the human step completed
 4. Run or inspect the exact validation required by the Done gate:
    - targeted tests or governance checks
    - browser/API probes against the target environment
    - device/mobile evidence when the contract requires it
+   - `npm run test:i18n` and affected RU/BE/UK/PL/EN evidence when localization is impacted
 5. Append evidence to the task description without erasing prior history.
 6. Move passing tasks to `done`. Move failing tasks back to `review` or `blocked_by` with a concise blocker.
 

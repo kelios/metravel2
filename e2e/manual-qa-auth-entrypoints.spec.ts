@@ -54,7 +54,7 @@ test.describe('@smoke Manual QA automation: auth entrypoints', () => {
     await accountButton.click();
 
     const menu = page.getByTestId('web-menu-panel');
-    const loginItem = page.getByRole('menuitem', { name: 'Войти' });
+    const loginItem = menu.getByRole('button', { name: 'Войти', exact: true });
 
     const menuOpened = await Promise.race([
       menu.waitFor({ state: 'visible', timeout: 10_000 }).then(() => true).catch(() => false),
@@ -102,7 +102,9 @@ test.describe('@smoke Manual QA automation: auth entrypoints', () => {
 
     await openGuestAccountMenu(page);
 
-    const registerButton = page.getByRole('menuitem', { name: 'Зарегистрироваться' });
+    const registerButton = page
+      .getByTestId('web-menu-panel')
+      .getByRole('button', { name: 'Зарегистрироваться', exact: true });
     await expect(registerButton).toBeVisible();
 
     await Promise.all([

@@ -1,157 +1,101 @@
-# Фича: user
+# User/profile feature map
 
-**Последняя актуализация:** 2026-05-18
-**Ответственный:** team
+Актуализировано: 2026-07-15.
 
-## TL;DR
+Документ описывает личный и публичный профиль, settings, collections,
+subscriptions, travel-status calendar, author engagement и profile integrations.
+Наличие frontend adapter не подтверждает production deployment backend endpoint.
 
-Профиль пользователя объединяет личные данные, список своих путешествий, локальные/серверные коллекции (`избранное`, `история`, `календарные статусы`) и author-facing статистику по его опубликованным путешествиям.
+## Routes
 
-Важно: личные календарные статусы пользователя живут только в `/calendar` и не должны подменять author-facing статистику в профиле.
-
-## Точки входа
-
-| Путь | Назначение |
+| Route | Назначение |
 | --- | --- |
-| `app/(tabs)/profile.tsx` | основной экран профиля |
-| `app/(tabs)/calendar.tsx` | личный календарь поездок |
-| `components/profile/*` | header, stats, tabs, quick actions |
-| `components/travel/TravelStatusButton.tsx` | управление статусом поездки на карточке/деталях |
-| `hooks/useMyTravels.ts` | загрузка списка авторских путешествий |
-| `api/user.ts` | профиль, избранное, история, рекомендации |
+| `/profile` | личный профиль |
+| `/user/:id` | публичный профиль |
+| `/settings` | редактирование профиля и account actions |
+| `/favorites` | избранные travels |
+| `/history` | история просмотров |
+| `/subscriptions` | subscriptions/subscribers |
+| `/calendar` | personal travel statuses |
+| `/userpoints` | пользовательские geo points |
 
-## Ключевые компоненты
+## Ownership
 
-```text
-<ProfileScreen>
- ├─ <ProfileHeader>
- ├─ <ProfileTravelEngagementSummary>
- ├─ <PersonalStatusSummary>
- ├─ <ProfileCompleteness>
- ├─ <ProfileQuickActions>
- ├─ <ProfileTabs>
- └─ список карточек путешествий автора (RenderTravelItem)
-```
+- `app/(tabs)/profile.tsx` и `app/(tabs)/user/[id].tsx` — route
+  composition;
+- `components/screens/profile/` — личные/public sections, countries/world map,
+  author travels и stats;
+- `components/profile/` — header, completeness, quick actions, contacts,
+  safety и reusable profile blocks;
+- `hooks/useUserProfile*.ts`, `useSettingsProfileForm.ts`,
+  `useSubscriptionsData.ts`, `useMyTravels.ts` — data/form ownership;
+- `api/user.ts` — profile, collections, statuses, country progress,
+  subscriptions;
+- `api/contactRequests.ts` — protected-contact requests;
+- `stores/travelStatusStore.ts` — local/API-merged travel statuses.
 
-## Данные
+## Data contracts
 
-### Серверный стейт
+### Profile
 
-| Источник | Что есть сейчас |
-| --- | --- |
-| `GET /api/user/{id}/profile/` | профиль пользователя |
-| `GET /api/user/{id}/favorite-travels/` | серверное избранное |
-| `GET /api/user/{id}/history/` | серверная история |
-| `GET /api/user/{id}/recommended-travels/` | рекомендации |
-| `GET /api/user/{id}/travel-statuses/` | серверные `planned / visited / wishlist` для текущего пользователя |
-| `GET /api/travels/?where={user_id}` | список путешествий автора для профиля |
+`GET /api/user/{id}/profile/` нормализуется через `api/user.ts`. Optional
+fields (cover, premium, contact access, verification/safety, participant rating,
+`rank_summary`) должны давать graceful unavailable state, а не fake data.
 
-### Клиентский стейт
+`rank_summary` использует общий achievements mapper для первого paint; если поле
+не пришло, UI сохраняет fallback на achievements query.
 
-| Store / Context | Роль |
-| --- | --- |
-| `FavoritesContext` | избранное, история, рекомендации |
-| `travelStatusStore` | локальный fallback / UI для статусов поездок |
+### Collections and subscriptions
 
-## Author stats в профиле
+- favorite/history/recommended adapters находятся в `api/user.ts`;
+- subscriptions/subscribers — auth-required server state;
+- UI не должен смешивать личные collections с author-facing aggregates;
+- server state не дублируется новым Zustand store без offline/client-only причины.
 
-### Что уже реализовано на фронте
+### Author engagement
 
-В профиле пользователя есть два готовых UI-слоя:
+`api/travelUserQueries.ts` и `useMyTravels.ts` поддерживают optional
+`engagement_summary` и per-travel engagement fields. UI показывает
+favorites/wishlist/visited/planned metrics, когда backend прислал их, и
+корректный unavailable/derived state — когда summary отсутствует.
 
-1. **Общая статистика** по всем путешествиям автора:
-   - сколько раз путешествия сохранили в избранное,
-    - сколько пользователей отметили `Был`,
-   - сколько пользователей выбрали `Планирую`.
-2. **Детализация по каждому путешествию** автора.
+Frontend implementation не доказывает, что aggregates доступны для каждого
+production payload; это проверяется network evidence. Не добавляй отдельный
+roundtrip или выдуманные нули, пока API contract не требует этого явно.
 
-Фронтенд уже умеет автоматически подхватывать эти данные, если backend начнёт отдавать их в payload списка авторских путешествий.
+### Travel statuses
 
-### Чего сейчас не хватает на backend
+Explicit `visited|planned|wishlist` синхронизируются через user travel-status
+API и объединяются с authored published travels. Детали — в
+`docs/features/calendar.md`.
 
-Текущая schema содержит CRUD для **личных** travel statuses пользователя, но **не содержит author-facing aggregates** по путешествиям автора.
+### Contacts, trust and safety
 
-То есть сейчас backend знает:
-- что **текущий** пользователь хочет / планирует / посетил,
+Protected contacts, requests, verification, rating, report/block surfaces
+backend-dependent. Hidden contact нельзя раскрывать через fallback, cache или
+альтернативный profile payload. Mutation success показывается только после
+реального response.
 
-но не отдаёт:
-- сколько **других пользователей** добавили путешествие автора в избранное,
-- сколько выбрали `visited`,
-- сколько выбрали `planned`.
+## UI contracts
 
-## Рекомендуемый backend-контракт
+- Личный и публичный профиль различают owner-only actions.
+- Empty/loading/error/access states видимы и стабильны.
+- External social links открываются только через `utils/externalLinks.ts`.
+- Avatar/cover media используют shared image layer и нейтральный fallback.
+- Achievements/profile integrations следуют
+  `docs/ACHIEVEMENTS_DESIGN.md`.
+- Web/mobile/native сохраняют одинаковую information architecture и actions.
 
-Чтобы фронт сразу начал показывать статистику без дополнительного запроса, рекомендуемый путь — расширить ответ списка авторских путешествий.
+## Validation
 
-### 1. Расширить `GET /api/travels/?where={"user_id": <id>}`
+- profile/API/hooks: ближайшие tests в `__tests__/api`,
+  `__tests__/hooks` и `__tests__/components/profile`;
+- finished block: `npm run check:fast`;
+- visible web change: browser screenshot + console/network;
+- auth/contact/status mutation: real API evidence;
+- native-visible change: локальная Android build/install + relevant
+  `AND-USB-*` cases.
 
-```json
-{
-  "count": 24,
-  "engagement_summary": {
-    "favorites_count": 87,
-    "visited_count": 31,
-    "planned_count": 12
-  },
-  "results": [
-    {
-      "id": 101,
-      "name": "Poland Camino",
-      "slug": "poland-camino",
-      "url": "/travels/poland-camino",
-      "countryName": "Poland",
-      "travel_image_thumb_url": "https://...",
-      "engagement_stats": {
-        "favorites_count": 42,
-        "visited_count": 15,
-        "planned_count": 7
-      }
-    }
-  ]
-}
-```
-
-### 2. Семантика полей
-
-- `favorites_count` — количество **других пользователей**, которые сохранили путешествие автора в избранное.
-- `visited_count` — количество пользователей со статусом `visited` для этого путешествия.
-- `planned_count` — количество пользователей со статусом `planned` для этого путешествия.
-- В summary — агрегаты по всем опубликованным путешествиям автора.
-
-### 3. Валидация backend
-
-- Считать только опубликованные и доступные пользователю путешествия автора.
-- Для `favorites_count` не учитывать самого автора.
-- Для `visited_count` / `planned_count` не учитывать самого автора.
-- Нули отдавать явно как `0`, а не скрывать поле.
-- При отсутствии статистики всё равно отдавать структуру с нулями — это позволит фронту не показывать placeholder `—`.
-
-## Почему именно так
-
-- Профиль уже загружает список путешествий автора; расширение существующего payload избавляет от дополнительного network roundtrip.
-- Общая summary не зависит от пагинации на фронте.
-- Детализация по каждому путешествию приходит рядом с самим travel item и не требует merge нескольких источников.
-
-## Проверки
-
-Для UI-изменений профиля:
-
-```bash
-npm run check:fast
-```
-
-Если меняется логика профиля/коллекций/статусов и задевается несколько зон:
-
-```bash
-npm run check:preflight
-```
-
-## Связанные документы
-
-- `docs/README.md`
-- `docs/RULES.md`
-- `docs/features/calendar.md`
-- `app/(tabs)/profile.tsx`
-- `hooks/useMyTravels.ts`
-- `utils/travelEngagementStats.ts`
+Missing backend contract оформляется как `area=back` task с Task Contract;
+frontend не подменяет его development mock в production.
 

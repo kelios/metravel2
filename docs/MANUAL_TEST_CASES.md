@@ -82,28 +82,30 @@
 
 #### Трассируемость покрытия (TD-025)
 
-Каждый кейс привязан к автоматизации; `unit` верифицированы прогоном (14 suites / 132 tests passed, 2026-06-03), `e2e` — Playwright-специи (прогон env-gated: требует e2e web-сервер + `E2E_API_URL` backend; edit-flow TR-WIZ-17/18 реально прогнаны 2026-06-03 против backend `192.168.50.36` — `2 passed`), `manual` — только ручной прогон.
+Колонка coverage указывает существующую автоматизацию, но не является результатом
+текущего прогона. `e2e` требует настроенный web server/backend из `.env.e2e`, а
+`manual`/device cases выполняются в заявленной среде. Результат фиксируется на board.
 
 | Кейс | Приоритет | Автоматизация | Статус |
 |------|-----------|---------------|--------|
-| TR-WIZ-01 | P1 | e2e `travel-wizard.spec.ts › должен создать полное путешествие через все шаги`; unit `UpsertTravel.authReady` | ✅ unit verified |
-| TR-WIZ-02 | P1 | e2e `travel-wizard.spec.ts › ошибку при попытке сохранить без названия`, `travel-wizard-features.spec.ts › валидацию при коротком названии`; unit `travelWizardValidation`, `formValidation.travelWizard` | ✅ unit verified |
-| TR-WIZ-03 | P1 | e2e `travel-wizard.spec.ts › добавить новую точку к существующему маршруту`, `travel-wizard-features.spec.ts › Поиск мест на карте`; unit `TravelWizardStepRoute` | ✅ unit verified |
-| TR-WIZ-04 | P2 | unit `TravelWizardStepMedia` | ✅ unit verified |
-| TR-WIZ-05 | P1 | unit `UpsertTravel.step5FiltersRace`, `UpsertTravel.filtersCategories`, `FiltersUpsertComponent.filtersNormalization` | ✅ unit verified |
+| TR-WIZ-01 | P1 | e2e `travel-wizard.spec.ts › должен создать полное путешествие через все шаги`; unit `UpsertTravel.authReady` | unit + e2e |
+| TR-WIZ-02 | P1 | e2e `travel-wizard.spec.ts › ошибку при попытке сохранить без названия`, `travel-wizard-features.spec.ts › валидацию при коротком названии`; unit `travelWizardValidation`, `formValidation.travelWizard` | unit + e2e |
+| TR-WIZ-03 | P1 | e2e `travel-wizard.spec.ts › добавить новую точку к существующему маршруту`, `travel-wizard-features.spec.ts › Поиск мест на карте`; unit `TravelWizardStepRoute` | unit + e2e |
+| TR-WIZ-04 | P2 | unit `TravelWizardStepMedia` | unit |
+| TR-WIZ-05 | P1 | unit `UpsertTravel.step5FiltersRace`, `UpsertTravel.filtersCategories`, `FiltersUpsertComponent.filtersNormalization` | unit |
 | TR-WIZ-06 | P2 | e2e `travel-wizard-features.spec.ts › Группировка параметров (Шаг 5)` | e2e (env-gated) |
-| TR-WIZ-07 | P1 | e2e `travel-wizard.spec.ts › должен автосохранять изменения`, `сохранить точку без фото (автосохранение v2)`; unit `useUpsertTravelController` | ✅ unit verified |
-| TR-WIZ-08 | P2 | e2e `travel-wizard.spec.ts › показать превью карточки`, `travel-wizard-features.spec.ts › Превью карточки`; unit `FiltersUpsertComponent.preview` | ✅ unit verified |
+| TR-WIZ-07 | P1 | e2e `travel-wizard.spec.ts › должен автосохранять изменения`, `сохранить точку без фото (автосохранение v2)`; unit `useUpsertTravelController` | unit + e2e |
+| TR-WIZ-08 | P2 | e2e `travel-wizard.spec.ts › показать превью карточки`, `travel-wizard-features.spec.ts › Превью карточки`; unit `FiltersUpsertComponent.preview` | unit + e2e |
 | TR-WIZ-09 | P2 | e2e `travel-wizard.spec.ts › милестоны для навигации (desktop)`, `travel-wizard-features.spec.ts › Милестоны` | e2e (env-gated) |
 | TR-WIZ-10 | P3 | e2e `travel-wizard-features.spec.ts › подсвечивать текущий шаг`, `галочку для пройденных шагов` | e2e (env-gated) |
 | TR-WIZ-11 | P1 | e2e `draft-recovery.spec.ts › appears only on page open when stale draft exists` | e2e (env-gated) |
 | TR-WIZ-12 | P3 | manual (offline travel wizard) | manual |
-| TR-WIZ-13 | P1 | e2e `travel-wizard.spec.ts › предупреждения на шаге публикации`, `travel-wizard-features.spec.ts › Разделенный чеклист (Шаг 6)`; unit `TravelWizardStepPublish` | ✅ unit verified |
+| TR-WIZ-13 | P1 | e2e `travel-wizard.spec.ts › предупреждения на шаге публикации`, `travel-wizard-features.spec.ts › Разделенный чеклист (Шаг 6)`; unit `TravelWizardStepPublish` | unit + e2e |
 | TR-WIZ-14 | P3 | manual (admin role) | manual |
 | TR-WIZ-15 | P2 | e2e `travel-wizard.spec.ts › быстрый черновик (Quick Mode)`, `travel-wizard-features.spec.ts › Quick Mode` | e2e (env-gated) |
 | TR-WIZ-16 | P2 | e2e `travel-wizard.spec.ts › ошибку при Quick Draft без названия` | e2e (env-gated) |
-| TR-WIZ-17 | P1 | e2e `travel-wizard.spec.ts › открыть существующее путешествие для редактирования`; unit `UpsertTravel.createEditFlow` | ✅ e2e + unit verified |
-| TR-WIZ-18 | P1 | e2e `travel-wizard.spec.ts › изменить название и сохранить`; unit `UpsertTravel.createEditFlow` | ✅ e2e + unit verified |
+| TR-WIZ-17 | P1 | e2e `travel-wizard.spec.ts › открыть существующее путешествие для редактирования`; unit `UpsertTravel.createEditFlow` | unit + e2e |
+| TR-WIZ-18 | P1 | e2e `travel-wizard.spec.ts › изменить название и сохранить`; unit `UpsertTravel.createEditFlow` | unit + e2e |
 | TR-WIZ-19 | P2 | e2e `travel-wizard.spec.ts › добавлять точку через фото` | e2e (env-gated) |
 | TR-WIZ-20 | P2 | e2e `travel-wizard.spec.ts › должен работать на мобильных устройствах`, `travel-wizard-features.spec.ts › скрывать милестоны на mobile` | e2e (env-gated) |
 | TR-WIZ-21 | P1 | e2e `travel-wizard.spec.ts › не должен логировать Maximum update depth` | e2e (env-gated) |
@@ -122,7 +124,7 @@
 | MAP-04 | Геолокация | Разрешён доступ | Нажать `crosshair` | Карта центрируется на текущей позиции, маркер «Ваше местоположение» (голубой) |
 | MAP-05 | Отказ в геолокации | Доступ запрещён | Нажать `crosshair` | Корректное сообщение, без краша |
 | MAP-06 | Легенда | — | Развернуть легенду (левый низ) | Показаны цвета: жёлтый=Путешествия, зелёный=Старт, красный=Финиш, голубой=Вы |
-| MAP-07 | Кластеризация | Много маркеров | Осмотреть карту на низком зуме | Маркеры сгруппированы в круглые кластеры с числом · ✅ web |
+| MAP-07 | Кластеризация | Много маркеров | Осмотреть карту на низком зуме | Маркеры сгруппированы в круглые кластеры с числом |
 | MAP-08 | Клик по кластеру | Есть кластер | Кликнуть кластер | Карта зумится/центрируется на bounds; на максимуме — spiderfy |
 | MAP-09 | Распад кластеров | — | Зум до 18+ | Кластеры распадаются на отдельные маркеры |
 | MAP-10 | Поиск по карте | — | Ввести текст в «Поиск мест...» | Счётчик «На карте подходит: N», маркеры фильтруются |
@@ -167,7 +169,7 @@
 | PL-13 | Закрытие попапа | Попап открыт | Клик вне попапа / кнопка закрытия | Попап закрывается |
 | PL-14 | Double-click меню (web) | web | Double-click по маркеру | Появляется всплывающее меню |
 | PL-15 | Компактный layout | Узкий экран <420px | Открыть попап | Компактная вёрстка, контент читаем |
-| PL-16 | Fullscreen overlay | Mobile web <560px | Открыть попап | Попап открывается как fullscreen overlay · ✅ e2e: mobile fullscreen overlay открывается/закрывается по тапу маркера, без orphan-портала; desktop — leaflet-попап закрывается кнопкой |
+| PL-16 | Fullscreen overlay | Mobile web <560px | Открыть попап | Попап открывается/закрывается без orphan-портала; desktop Leaflet popup закрывается кнопкой |
 
 ---
 
@@ -283,23 +285,25 @@
 
 #### Трассируемость покрытия (TD-026)
 
-`unit` верифицированы прогоном (11 suites / 87 tests passed, 2026-06-03); `e2e` — Playwright (`quest-video.spec.ts`, прогон против `E2E_API_URL`); `manual` — ручной прогон (см. также T-027 guest-evidence на доске).
+Coverage ниже перечисляет unit/e2e/manual surfaces, но не хранит pass status.
+Playwright использует настроенный `E2E_API_URL`; свежий результат прикладывается к
+board task.
 
 | Кейс | Приоритет | Автоматизация | Статус |
 |------|-----------|---------------|--------|
-| QST-01 | P1 | unit `QuestsContentPanel`, `useQuestsApi`, `api/quests` | ✅ unit verified |
+| QST-01 | P1 | unit `QuestsContentPanel`, `useQuestsApi`, `api/quests` | unit |
 | QST-02 | P2 | manual (T-027 guest evidence) | manual |
 | QST-03 | P1 | e2e `quest-video.spec.ts` (страница квеста грузится); unit `api/quests` | e2e (env-gated) |
 | QST-04 | P2 | e2e `quest-video.spec.ts` (URL видео, детект ошибок) | e2e (env-gated) |
-| QST-05 | P2 | unit `useQuestWizardProgress` | ✅ unit verified |
-| QST-06 | P2 | unit `questLocationSelection` | ✅ unit verified |
+| QST-05 | P2 | unit `useQuestWizardProgress` | unit |
+| QST-06 | P2 | unit `questLocationSelection` | unit |
 | QST-07 | P2 | manual (T-027: Беларусь 2 / Армения 1 / Польша 2) | manual |
 | QST-08 | P3 | manual (T-027: 6 точек / 60 мин / Легко) | manual |
-| QST-09 | P2 | unit `useQuestWizardProgress` | ✅ unit verified |
-| QST-10 | P2 | unit `QuestWizard.offline` | ✅ unit verified |
-| QST-11 | P3 | unit `QuestPrintable` | ✅ unit verified |
-| QST-12 | P2 | unit `questAdapters.fixMediaUrl`, `questAdapters` | ✅ unit verified |
-| QST-13 | P3 | unit `quest-screen-title` | ✅ unit verified |
+| QST-09 | P2 | unit `useQuestWizardProgress` | unit |
+| QST-10 | P2 | unit `QuestWizard.offline` | unit |
+| QST-11 | P3 | unit `QuestPrintable` | unit |
+| QST-12 | P2 | unit `questAdapters.fixMediaUrl`, `questAdapters` | unit |
+| QST-13 | P3 | unit `quest-screen-title` | unit |
 | QST-14 | P2 | manual | manual |
 | QST-15 | P2 | manual (T-027: console=0, overflowX=false) | manual |
 | QST-16 | P1 | unit `QuestFullMap.native`; Maestro `quest-intro-map-points.yaml` | repeatable device e2e |
@@ -308,9 +312,11 @@
 
 ---
 
-## Раздел 11. Android QA — классы пропущенных багов (добавлено 2026-06-24)
+## Раздел 11. Android QA — regression classes
 
-> Источник: Android QA раунд 2, 33 находки. Каждый класс — это категория регресса, которую предыдущие прогоны пропускали. Пронумерованные классы BUG-CLASS-1..8 соответствуют файлу `e2e/mobile-regression-android-qa.spec.ts` (Playwright, viewport 390×844) и юнит-тестам.
+> Классы BUG-CLASS-1..8 соответствуют повторяемым регрессиям в
+> `e2e/mobile-regression-android-qa.spec.ts` (Playwright, viewport 390×844),
+> unit tests и native manual cases.
 >
 > Статус автоматизации:
 > - **e2e** — `e2e/mobile-regression-android-qa.spec.ts`
@@ -402,7 +408,7 @@
 | LAY-03 | Подборка месяца: нет наложения блоков | Mobile | Прокрутить к разделу «Подборка месяца» | Блоки не перекрываются, текст читаем | manual |
 | LAY-04 | Dock не занимает полэкрана | Mobile, любой маршрут | Открыть любой экран с dock | Высота dock ≤120px | e2e (footer-layout-invariants + mobile-regression) |
 
-#### Трассируемость покрытия Android QA round 2 (2026-06-24)
+#### Трассируемость Android QA coverage
 
 | Класс | Юнит | e2e Playwright | Только ручной |
 |-------|------|----------------|---------------|
@@ -445,11 +451,12 @@
 
 Используй этот набор, когда Android-устройство подключено по USB и нужно подтвердить native-поведение, а не только mobile web. Перед прогоном укажи: модель устройства, Android/API, локальный build/install command, backend/API URL, аккаунт (`гость` или e2e-аккаунт без вывода секрета).
 
-Аудит перед клиентским показом, 2026-07-05:
+Правила client demo gate:
 
 - Android-чеклист покрывает правильные риск-классы, но полный `AND-USB-01..31` слишком широк для короткой демонстрации и смешивает smoke, regression и store-submission проверки.
 - Для показа заказчику сначала проходи компактный **Customer Demo Gate** ниже; полный P1/P2 набор оставь для release/store readiness или если менялись соответствующие поверхности.
-- `e2e/maestro/recommendation-shelves.yaml` зелёный с 2026-07-05; Android QA теперь выполняется на локально собранной и установленной по USB сборке, а dev-client/Metro route допустим только как явно разрешённое исключение.
+- Android QA выполняется на локально собранной и установленной по USB сборке;
+  dev-client/Metro route допустим только как явно разрешённое исключение.
 - Любой красный P0/P1 demo-кейс перед показом либо чинится, либо явно исключается из демонстрационного сценария с причиной и owner'ом; silently show-around запрещён.
 
 Предусловия:
@@ -459,10 +466,14 @@
 - Android EAS/cloud builds, Android production builds/submits и Expo export/dev-client route не используются без явного разрешения пользователя.
 - Артефакты складываются только в ignored-папки (`.codex-temp/`, `.codex-debug/`, `test-results/`, `playwright-report/`) и не содержат токены/пароли.
 
-Ревью покрытия от 2026-06-23:
+Группировка Android coverage:
 
-- Уже покрыто: readiness/launch, runtime health, базовая навигация, поиск, детали маршрута, share/export, карта, permissions, auth, квестовые native-регрессии и recommendation shelves.
-- Добавленные пробелы: standalone-сборка без Metro, app/deep links, lifecycle и cold restart, offline/recovery, soft keyboard, native media upload, push/deep-link routing, external intents и rich embedded content.
+- Основной набор: readiness/launch, runtime health, базовая навигация, поиск,
+  детали маршрута, share/export, карта, permissions, auth, квестовые native-регрессии
+  и recommendation shelves.
+- Отдельные risk slices: standalone-сборка без Metro, app/deep links, lifecycle и
+  cold restart, offline/recovery, soft keyboard, native media upload,
+  push/deep-link routing, external intents и rich embedded content.
 - Для Android local-build QA P1-минимум: `AND-USB-01..06`, `AND-USB-08`, `AND-USB-10`, `AND-USB-13..18`, `AND-USB-21..31`; P2-кейсы `AND-USB-07`, `AND-USB-09`, `AND-USB-19..20` проходить перед store submission или когда менялись соответствующие поверхности.
 
 #### Customer Demo Gate для Android
@@ -575,242 +586,14 @@ Owners/follow-up:
 | **iOS** | Симулятор/устройство | WebView + Leaflet native map, нативный share/picker, haptic feedback, KeyboardAvoidingView |
 | **Android** | Эмулятор/устройство | WebView + Leaflet native map, нативный share/picker, кнопка «назад» системы |
 
-### Прогон от 2026-06-02 (ручной guest + авторизованный e2e-регресс)
 
-> **Среда:** статическая прод-сборка (`npm run build:web` → `dist/`, git HEAD 81784ee+rebuild), отдаётся `serve-web-build.js` с same-origin API-прокси → **локальный** бэкенд `http://192.168.50.36` (НЕ прод — чтобы авторизованные write-действия не били live). Локальный бэкенд: 335 путешествий. Ручной прогон — браузер preview (Web Desktop 1440×900), аккаунт **гость**. Авторизованный регресс — Playwright (`.env.e2e` через global-setup, секреты вне логов), порт 8095.
+## Политика evidence
 
-**⚠️ Инфраструктурный root-cause (важно для воспроизводимости):**
-- Вся нестабильность прошлых попыток (`ERR_CONNECTION_REFUSED`, случайный «Not found», падения сервера) была вызвана **`git push` из PhpStorm**: его `githooks/pre-push` → `npm run check:preflight` → 16-шардовый `run-e2e-changed`, который поднимал СВОЙ `e2e-webserver` на порту **8085** — том же, что использовался для QA. Шарды респавнились и воевали за порт. По решению пользователя дерево `git push`+pre-push было убито (PhpStorm не тронут); авторизованный регресс перенесён на порт **8095**, чтобы повторный push не конфликтовал.
-- **Артефакт harness-сервера (НЕ баг продукта):** `serve-web-build.js` отдаёт «Not found» на HTTP-уровне для части валидных deep-link роутов (`/`, `/home`, `/calendar`, `/about`). `e2e-webserver.js` (используется Playwright) их обслуживает корректно → соответствующие кейсы валидируются в e2e, не в ручном preview.
-- **Ограничение ручного драйвера:** RN-web `Pressable`-кнопки не реагируют на синтетический `.click()` из preview-eval (поля `fill` и навигация работают). Интерактивные нажатия (сортировка, submit логина, табы карты) проверены через e2e.
+Этот файл хранит повторяемые test cases, а не журнал конкретных прогонов.
+Результаты запуска фиксируются в MCP task board с абсолютной датой, environment,
+commit/build, командами и ссылками на ignored screenshots/traces. Старые матрицы
+результатов не копируются вперёд как текущий статус.
 
-**Ручной guest-прогон (Web Desktop, что реально отрендерилось):**
-
-| ID | Web Desktop | Результат |
-|----|:-----------:|-----------|
-| TR-LIST-01 | ✅ | 3-колоночная сетка, «330 путешествий», sidebar (Страны со счётчиками: Беларусь 161…), сортировка «Новые», фильтр года 2026, рейтинг ★5.0, просмотры (3.9K/38.8K), кнопки ♥/＋, **картинки contain+blur** (blur-полосы по бокам видны) |
-| TR-LIST-02 | ✅ | Поиск «Бескид»: 330 → **7 путешествий**, все результаты релевантны, чип «Поиск: Бескид» |
-| TR-LIST-03 | ✅ | Очистка поиска → снова 330, чип убран |
-| TR-LIST-08 | ⚠️→e2e | Дропдаун сортировки не раскрылся синтетическим кликом (RN-web Pressable); функционал покрыт e2e |
-| TR-DET-01 | ✅ | Детали грузятся: автор (Julia, 3902 просм., «Все путешествия автора»), навигация секций (Галерея/Описание/Экскурсии/Карта/Координаты/Рядом ~60км/Популярные/Комментарии/Скачать), погода, hero-галерея |
-| TR-DET-02 | ✅ | Hero-слайдер «1/7», **contain+blur** подтверждён визуально (резкое фото по центру, размытый фон по бокам) |
-| TR-DET-10 | ✅* | Кнопка ♥ присутствует (сохранение под логином — см. e2e) |
-| TR-DET-15 | ✅ | У гостя на чужих деталях нет кнопок «Редактировать»/«Удалить» |
-| TR-DET-17 | ✅ | Невалидный slug → «не найдено» + «На главную» |
-| MAP-01 | ✅ | Leaflet рендерится (тайлы OSM, центр Минск/Вильнюс), кластеры (нумерованные круги 5/3/5/2/6), маркеры мест |
-| MAP-02 | ✅ | Кнопки зума +/− в топ-баре |
-| MAP-04 | ✅ | Кнопка геолокации (crosshair) присутствует |
-| MAP-07 | ✅ | Кластеризация: нумерованные круги |
-| MAP-12 | ✅ | Категории со счётчиками (Костёл 2, Парковка 3, Руины дворца 3, Озеро 1, Памятник 1, Родник 2…) |
-| MAP-13 | ✅ | Радиус 60/100/200/400 км + пунктирный круг радиуса |
-| MAP-14 | ✅ | «Оверлеи Выкл» + иконка слоёв |
-| MAP-16 | ✅ | Табы sidebar: Поиск / Маршрут / Места 23 |
-| MAP-RT-02 | ✅ | Route builder: режимы транспорта (Авто/Вело/пешком) |
-| AUTH-04 | ✅ | Пустая форма логина → «Email обязателен», «Пароль обязателен», переход заблокирован |
-| AUTH-05 | ✅ | Ссылка «Забыли пароль?» присутствует |
-| AUTH-06 | ✅ | «Google Sign-In недоступен на localhost. Используйте email и пароль.» |
-| AUTH-02 | ⚠️→e2e | Submit логина не сработал синтетическим кликом (RN-web Pressable); покрыт e2e |
-| PROF-02 | ✅ | Гость на `/profile` → «Войдите в аккаунт» + «Войдите, чтобы открыть профиль и управлять своими данными» + «Войти» |
-
-> Кейсы с deep-link «Not found» в статике (`/`=HOME-01, `/calendar`=CAL-*, `/about`=MISC-04) ручным preview не подтверждены из-за артефакта `serve-web-build` (см. выше) → результат берётся из e2e-регресса ниже.
-
-**Авторизованный e2e-регресс (Playwright chromium, порт 8095, прокси→локальный бэкенд, логин `.env.e2e` через global-setup):**
-
-> Полный набор **423 теста, 2 воркера, retries=1** → **418 passed · 4 flaky (прошли на ретрае) · 1 failed**, время 19.3 мин. **0 инфраструктурных сбоев** (нет `ERR_CONNECTION_REFUSED`/`EADDRINUSE`/baseURL-timeout — изоляция на порт 8095 сработала).
-
-- ✅ **Авторизованные пути §1–10 зелёные** (global-setup логинится `.env.e2e`): комментарии (создание/лайк/ответ/редактирование/удаление/threading), рейтинг полным циклом, кнопка ред. автора, права гостя/админа, wizard (flow/валидация/автосейв/превью/милестоны/mobile), travel CRUD, календарь, рулетка, сообщения (вкл. unread), подписки, баллы (+импорт 5 форматов), квесты (+видео), профиль/logout, footer/legal/consent, layout-responsive, карта (кластеры/маршрут/попапы/mobile-панель), детали (слайдер 23 теста, видео, share, a11y, 404+retry).
-- ⚠️ **1 failed:** `filters-sorting-ux.spec.ts:583 › results count updates when filters change` → `AggregateError: All promises were rejected`. Диагноз — **тот же известный флейк локатора фильтров**, что и в прогоне 2026-06-01 (`getVisibleFilterCheckbox`/`Promise.any` отклоняет все варианты локатора в таймаут). **Не дефект продукта:** остальные тесты, кликающие чекбоксы фильтров (group-clear, count-badge, clear-all), зелёные. Рекомендация команде: стабилизировать локатор в тесте.
-- ⚠️ **4 flaky (зелёные на ретрае, тайминговые):** `filters-year › year filter can be set`, `map-page › desktop popup link navigates to travel details`, `map-travel-card-no-image › consistent card dimensions`, `metravel edit › Редактировать` локатор.
-
-**Итог прогона 2026-06-02:** продуктовых дефектов не обнаружено. Ручной guest-прогон подтвердил рендер/контент §1–3,5,6 на Web Desktop; авторизованный e2e-регресс зелёный (единственное падение — известный тестовый флейк, не баг). iOS/Android — `verify pending` (среда недоступна). Web Mobile ручным preview не догнан (бюджет), но mobile-кейсы частично покрыты e2e-проектами (`map-mobile-panel`, `mobile-menu-closes-on-nav`, `layout-responsive`).
-
----
-
-### Матрица результатов
-
-> Прогон от 2026-06-01. Web-проверка выполнена на **статической прод-сборке** (`npm run build:web` → `dist/`), отдаётся `E2E Web Server` на `localhost:8085` с same-origin API-прокси → локальный бэкенд `http://192.168.50.36`. Аккаунт: **гость** (авторизация e2e не сработала — в шапке «Гость»; действия, требующие логина, не проверены). iOS/Android из этой среды недоступны → `verify pending`.
-
-**История окружения (важно для воспроизводимости):**
-1. Dev-сервер (Metro, `:8081`) воспроизводимо **падает OOM** при on-demand бандлинге тяжёлых роутов (`/search`, `/map`) под нехваткой памяти (swap ~5.8G/7G). Интерактивный QA в dev-режиме невозможен.
-2. Решение — **статическая прод-сборка**: 78 роутов экспортированы, отдаются статикой → без on-demand бандлинга экраны грузятся стабильно (карта и детали прошли).
-3. Нюанс: приложение зовёт **относительный `/api`** (same-origin), поэтому отдавать надо через сервер с API-прокси (`E2E Web Server`, 8085), а не «голой» статикой.
-4. `E2E Web Server` периодически зависает/теряется preview-хэндлом — единичные шаги приходилось перезапускать.
-
-| ID | Web Desktop | Web Mobile | iOS | Android | Примечание |
-|----|:-----------:|:----------:|:---:|:-------:|------------|
-| TR-LIST-01 | ✅ | ✅ | — | — | Desktop: сайдбар фильтров + 3 колонки, «380 путешествий». Mobile (≤723px): 1 колонка + нижние табы. Картинки contain+blur |
-| TR-LIST-02 | ✅ | — | — | — | Поиск «Бескид»: 380 → 13 результатов (фильтрация работает); e2e: поиск фильтрует список |
-| TR-LIST-03 | ✅ | — | — | — | e2e: поиск очищается, список восстанавливается |
-| TR-LIST-04 | ✅ | — | — | — | e2e: группы фильтров раскрываются/сворачиваются; results count обновляется при смене фильтров |
-| TR-LIST-05 | ✅ | — | — | — | e2e: бейдж количества выбранных фильтров; «toggle all groups» работает |
-| TR-LIST-06 | ✅ | — | — | — | e2e: group clear очищает только свою группу |
-| TR-LIST-07 | ✅ | — | — | — | e2e: «Очистить все» сбрасывает все фильтры |
-| TR-LIST-08 | ✅ | — | — | — | e2e: дропдаун сортировки раскрывается, выбор обновляет отображение и закрывает дропдаун |
-| TR-LIST-11 | ✅ | ✅ | — | — | Рейтинг/просмотры на карточках; e2e (10 тестов): секция рейтинга, гость→login prompt, авторизованный — интерактивные звёзды, «Ваша оценка», клик отправляет/меняет оценку, оптимистичный апдейт, hover, рейтинг на карточке |
-| TR-LIST-15 | ✅ | — | — | — | e2e (travel-persistence): создание с заполненными полями сохраняется после переоткрытия; порядок галереи персистится |
-| TR-LIST-12 | ✅ | ✅ | — | — | Кнопки избранное (♥) и статус (＋) на карточке присутствуют |
-| TR-LIST-03..07,09,10,13..16 | — | — | — | — | Не пройдены (нехватка времени/нестабильность); 13..16 требуют логина |
-| TR-DET-01 | ✅ | ✅ | — | — | Деталь грузится полностью: hero-галерея, навигация секций, автор, факты, погода. Mobile: хедер «НАВИГАЦИЯ» + back |
-| TR-DET-02 | ✅ | ✅ | — | — | Галерея-слайдер «1/10», фон-blur, contain. e2e (23 теста): счётчик ±, точки (mobile)/скрыты (desktop), стрелки, границы, свайп, a11y (aria/клавиатура/alt), одно фото, autoplay off, виртуализация, нет blur-bleed от соседних слайдов |
-| TR-DET-10 | ✅* | ✅* | — | — | Кнопка избранного (♥ / «В избранное») присутствует; сохранение под логином не проверено (гость) |
-| TR-DET-17 | ✅ | — | — | — | Несуществующий слаг → экран «Путешествие не найдено» + «На главную» |
-| TR-DET-06 | ✅ | — | — | — | e2e: YouTube-видео отображается если доступно |
-| TR-DET-08 | ✅ | — | — | — | e2e: секция комментариев видна; гость видит, но не может взаимодействовать |
-| TR-DET-09 | ✅ | — | — | — | e2e (авторизованный): создание/лайк/ответ/редактирование/удаление комментария, threading, refresh, ARIA, клавиатура; админ — удаление любого |
-| TR-DET-13 | ✅ | — | — | — | e2e: экспорт в PDF (если доступен) |
-| TR-DET-14 | ✅ | — | — | — | e2e: кнопка редактирования видна авторизованному автору; статус модерации отображается |
-| TR-DET-03 | ✅ | — | — | — | e2e: описание отображается без скриптов |
-| TR-DET-04 | ✅ | — | — | — | e2e: список координат точек отображается |
-| TR-DET-05 | ✅ | — | — | — | e2e: карта маршрута появляется при прокрутке в зону видимости |
-| TR-DET-11 | ✅ | — | — | — | e2e: меню «Поделиться» открывается; копирование ссылки в буфер |
-| TR-DET-12 | ✅ | — | — | — | e2e: шаринг в Facebook |
-| TR-DET-16 | ✅ | — | — | — | e2e (travel-crud API): create/edit/delete путешествия |
-| TR-DET-04 | ✅ | — | — | — | e2e: список координат точек; клик по карточке точки открывает попап на карте без навигации |
-| TR-DET-15 | ✅ | — | — | — | e2e (metravel-edit-delete): создание → редактирование из `/metravel` → удаление |
-| TR-DET-07 | — | — | — | — | Похожие путешествия — отдельным кейсом не догнано |
-| TR-WIZ-01..06 | ✅ | ✅ | — | — | e2e: полный flow через все шаги; mobile-адаптивность wizard |
-| TR-WIZ-02 | ✅ | — | — | — | e2e: ошибка при сохранении/Quick Draft без названия |
-| TR-WIZ-07 | ✅ | — | — | — | e2e: автосохранение изменений (v2) |
-| TR-WIZ-08 | ✅ | — | — | — | e2e: превью карточки; превью на шаге 2 (иконка глаз) |
-| TR-WIZ-09 | ✅ | — | — | — | e2e: милестоны для навигации (desktop) |
-| TR-WIZ-13 | ✅ | — | — | — | e2e: предупреждения на шаге публикации; быстрый черновик (Quick Mode) |
-| TR-WIZ-11 | ✅ | — | — | — | e2e (draft-recovery): попап восстановления появляется при открытии при наличии stale-черновика и не повторяется при автосохранении |
-| TR-WIZ-10,12,14 | — | — | — | — | Цвета прогресс-бара / оффлайн / модерация-админ — отдельными кейсами не догнаны |
-| MAP-01 | ✅ | ✅ | — | — | Leaflet рендерится (тайлы OSM, центр Минск), маркеры-треугольники |
-| MAP-02 | ✅ | ✅ | — | — | Контролы zoom +/− и crosshair (геолокация) присутствуют |
-| MAP-10 | ✅ | ✅ | — | — | Поиск: Desktop «Найти место по названию...», Mobile «Найти места рядом» |
-| MAP-07 | ✅ | — | — | — | Кластеры рендерятся как нумерованные круги (6/5/4/3/2…) при подгрузке мест в радиусе |
-| MAP-08 | ✅ | ✅ | — | — | e2e: клик/тап по кластеру разворачивает (zoom-to-area), карта остаётся интерактивной |
-| MAP-15 | ✅ | — | — | — | e2e: смена радиуса сохраняется в localStorage (map-filters) |
-| MAP-RT-01 | ✅ | — | — | — | e2e: переключение в режим «Маршрут» показывает route builder |
-| MAP-RT-04 | ✅ | — | — | — | e2e: polyline маршрута виден после ввода старт/финиш координат |
-| MAP-RT-05 | ✅ | — | — | — | e2e: при сбое API — error UI + retry восстанавливает |
-| MAP-12 | ✅ | — | — | — | Категории подгружаются по радиусу: Костёл (2), Музей (1), Озеро (1), Памятник (1), Парковка (3), Руины дворца (3) и т.д. Фильтр «Что посмотреть Все» в топ-баре |
-| MAP-13 | ✅ | ✅ | — | — | Радиус 60/100/200/400 км + пунктирный круг радиуса на карте |
-| MAP-14 | ✅ | — | — | — | «Оверлеи Выкл» + иконка слоёв присутствуют |
-| MAP-16 | ✅ | — | — | — | Табы сайдбара: Поиск / Маршрут / Места (бейдж «Места 24»); e2e: открытие таба «Места», клик карточки → попап+фокус карты |
-| MAP-18 | — | ✅ | — | — | e2e (mobile): compact preview открывает list-панель, кнопка закрытия сворачивает обратно, без фликера |
-| MAP-09 | ✅ | — | — | — | e2e: маркеры рендерятся, попап открывается по клику |
-| MAP-03..06,11,17,19 | — | — | — | — | Не догнаны (зум-жесты, геолокация, экспорт GPX/KML и т.д.) |
-| MAP-RT-04 | ✅ | — | — | — | e2e (route-visual + route-line): линия маршрута видима (visible/opacity=1/stroke, snapshot ДО/ПОСЛЕ) |
-| MAP-RT-02/03 | — | — | — | — | Виды транспорта / старт-финиш маркеры — не догнаны |
-| PL-01 | ✅ | — | — | — | Попап места (PlacePopupCard) открывается по клику на пин |
-| PL-02 | ✅ | — | — | — | Фото места в попапе («ЭкоТериПарк») |
-| PL-03 | ✅* | — | — | — | Иконка «развернуть» (maximize) на фото присутствует; сам fullscreen-просмотр не открывал |
-| PL-04 | ✅ | — | — | — | Заголовок «Новосёлковский сельский Совет» + подзаголовок (район/область) |
-| PL-06 | ✅ | — | — | — | Координаты «53.4929478,28.0577087» |
-| PL-07 | ✅* | — | — | — | Кнопка копирования координат присутствует (буфер не верифицировал) |
-| PL-08/09 | ✅ | — | — | — | Primary-кнопка «Открыть страницу» (стрелка); e2e: ссылка попапа навигирует на страницу деталей |
-| PL-10 | ✅ | — | — | — | Внешние карты: Google, Organic, Waze, Яндекс (чипы) |
-| PL-11 | ✅ | — | — | — | Чип Telegram присутствует |
-| PL-12 | ✅* | — | — | — | Чип «Сохранить» присутствует; сохранение под логином не проверено (гость) |
-| PL-13 | ✅ | — | — | — | Кнопка закрытия × присутствует; e2e: попап открывается по клику и закрывается кнопкой |
-| PL-05,14,15,16 | — | — | — | — | Расстояние (нужен маршрут), double-click меню, компактный/overlay layout — не догнаны |
-
-**Автоматический e2e-прогон (Playwright, chromium, статическая прод-сборка на :8085):**
-- Батч 1 — `search` + `map-page` + `open-travel`: **26/26 passed**.
-- Батч 2 — `filters-sorting-ux` + `travel-detail-interactions` + `travel-comments` + `map-popup-close`: **33 passed**, 5 «падений» были из-за смерти webServer под конец прогона (`ERR_CONNECTION_REFUSED`), не баги.
-- Перепрогон `filters-sorting-ux` отдельно: **13/14 passed**.
-- Батч 3 — `travel-wizard` + `travel-crud` + `map-route-visual` + `travel-route-line` + `travels`: **45/45 passed** (wizard полный flow/валидация/автосейв/превью/милестоны/mobile; детали: секции/описание/видео/карта/координаты/share/копир./a11y/mobile/404+retry; линия маршрута видима; CRUD create/edit/delete).
-- **Авторизованные пути покрыты через e2e** (global-setup логинится `.env.e2e`): комментарии (создание/лайк/ответ/редактирование/удаление/threading), кнопка ред. автора, права гостя/админа.
-- ⚠️ **Единственное падение:** `filters-sorting-ux › filter options have hover state on desktop` — `AggregateError: All promises were rejected` (оба ретрая). Диагноз: `getVisibleFilterCheckbox` раскрывает группу и через `getFirstGroupFilterCheckbox` гоняет несколько локаторов (`Promise.any`); AggregateError = все варианты локатора отклонились в таймаут. **Вероятно флейк локатора hover-теста, а не дефект продукта** — другие тесты, кликающие чекбоксы фильтров (group-clear, count-badge, clear-all), зелёные. Рекомендация команде: стабилизировать локатор в тесте. Артефакт: `test-results/filters-sorting-ux--smoke--8905a-have-hover-state-on-desktop-chromium/`.
-
-- Батч 4 — `auth-smoke` + `auth-logout` + `calendar` + `roulette` + `subscriptions` + `messages` + `footer-more` + `quest-video`: **55/55 passed**.
-- Батч 5 — `integration-core-flows` + `public-regressions` + `layout-responsive` + `mobile-menu-closes-on-nav` + `manual-qa-footer-navigation` + `google-signin` + `messages-unread`: **27/27 passed**.
-- Батч 6 — `user-points` + `travel-wizard-features`: **22 passed**, 3 «падения» = смерть webServer (`ERR_CONNECTION_REFUSED`), не баги. Подтверждено: **поиск мест на карте в wizard** (найти/empty/loading/очистка X/debounce), Quick Mode, превью карточки; user-points (карта+поиск+рекомендации, auto-zoom, клик карточки→попап).
-
-- Батч A — `travel-rating` + `travel-persistence` + `metravel-edit-delete` + `draft-recovery` + `points-map-popup`: **15/15 passed** (рейтинг полным циклом, персист полей/галереи, edit→delete, draft-recovery, точка→попап).
-- Батч C — `user-points` + `user-points-import` + `slider-comprehensive` + `gallery-delete-broken-image` + `messages-conversation`: **42/42 passed** (слайдер галереи 23 теста, user-points 6 + импорт 5 форматов, переписка двух юзеров 8, удаление битого фото).
-- Батч B — `filters-year` + `home-quick-filters-nightstay` + `manual-qa-auth-entrypoints` + `map-mobile-panel-content` + `qa-pending-scenarios` + `travel-map-popup-close`: **16/16 passed** (год-фильтр, quick-filter «палатка»→ночлег, auth-entrypoints/гостевое меню/регистрация, mobile-панель карты list/radius/route, 404/SEO/cookies/privacy/about, fullscreen-попап места mobile open/close + desktop + без orphan-портала).
-
-### Прицельная ручная проверка 5 флоу (гость, статическая сборка)
-
-| Флоу | Статус | Детали |
-|------|:------:|--------|
-| **Экспорт в PDF** | ✅ | Из деталей (Share→PDF) — e2e (TC-028). Книга `/export`: гость — auth-gate «Войдите, чтобы собрать PDF-книгу»; **авторизованно (e2e-логин) — реальный UI: «Выберите путешествия для экспорта · Выбрать все · Сохранить PDF»** ✅ |
-| **Поиск по карте** | ✅ | Ввод «Костёл» → на карте 3 пина (бейдж «Места 3»), «На карте подходит: 24»; маркеры фильтруются |
-| **Построение маршрута** | ✅ | Таб «Маршрут»: транспорт (Авто/пешком/вело), поля Старт/Финиш, подсказки; видимая polyline подтверждена e2e (route-line/route-visual) |
-| **Поиск случайных (рулетка)** | ✅ | `/roulette`: hero, фильтры стран со счётчиками, компас «Случайный маршрут»; spin→результаты — e2e; «Подобрать маршруты» применяет выбор (Беларусь 162) → список |
-| **Прохождение квестов** | ✅ | `/quests`: «Приключения», дерево городов, «Показать на карте», карточка квеста. Гость — auth-gate «Войдите, чтобы начать квест». **Авторизованно (e2e-логин, `/quests/krakow/krakow-dragon`) — полный walkthrough: прогресс «0 / 7» + «Сбросить», 7 точек + Финал, «Как пройти квест?», «Экскурсии рядом»** ✅; видео квеста — e2e (quest-video) |
-
-### Авторизованный прогон (e2e-логин)
-
-> StorageState от `e2e/global-setup.ts` (логин `.env.e2e` через `/api/user/login/`; e2e-аккаунт валиден и на локальном `192.168.50.36`, и на проде — проверено status 200 + token). Временный спек `e2e/_authed-gated-flows.spec.ts` (удалён после прогона). **2/2 passed.**
-> Важно: устаревший `e2e/.auth/storageState.json` (старый токен) давал ложный «гость»/«Not found» — удаление + свежий логин починили сессию. Рекомендация CI: чистить storageState или инвалидировать по TTL.
-
-| Флоу | Статус | Авторизованный результат |
-|------|:------:|--------------------------|
-| PDF-книга `/export` | ✅ | UI экспорта: выбор путешествий, «Выбрать все», «Сохранить PDF» (гостю — auth-gate) |
-| Прохождение квеста | ✅ | Walkthrough «Тайна Краковского дракона»: прогресс 0/7, 7 точек + Финал, инструкции (гостю — auth-gate) |
-
-### Матрица результатов — разделы 4–10 (прочие страницы)
-
-> Источник: e2e-батч 4 (chromium, статическая сборка, авторизация через `.env.e2e`).
-
-| ID | Web Desktop | Web Mobile | iOS | Android | Примечание |
-|----|:-----------:|:----------:|:---:|:-------:|------------|
-| AUTH-01 | ✅ | — | — | — | e2e: вход, travels-страница грузится со storageState |
-| AUTH-12 | ✅ | — | — | — | e2e: logout из профиля |
-| AUTH-06 | ✅ | — | — | — | Наблюдение: «Google Sign-In недоступен на localhost»; e2e: login via Google callback аутентифицирует |
-| AUTH-02..05,07..11 | — | — | — | — | Отдельными UI-кейсами не догнаны |
-| CAL-01 | ✅ | — | — | — | e2e: авторизованный видит календарь с тремя табами; гость — login prompt |
-| CAL-02 | ✅ | — | — | — | e2e: MiniCalendar grid на табе «Планирую» |
-| CAL-03 | ✅ | — | — | — | e2e: навигация по месяцам; пустые состояния по табам; нет console errors |
-| CAL-05 | ✅ | — | — | — | e2e: гость видит login prompt на `/calendar` |
-| ROUL-01..05 | ✅ | — | — | — | e2e: spin → результаты (или пусто) на `/roulette` |
-| MSG-01..07 | ✅ | ✅ | — | — | e2e (35 + 13 unread): список/диалоги/отправка/удаление, бейджи непрочитанных, авторизация |
-| SUB-01 | ✅ | — | — | — | e2e: переключение табов Подписки/Подписчики |
-| SUB-02 | ✅ | — | — | — | e2e: поиск фильтрует список подписок |
-| SUB-04 | ✅ | — | — | — | e2e: страница доступна из account menu |
-| UP-01 | ✅ | — | — | — | e2e: `/userpoints` — карта+тайлы, поиск+рекомендации, auto-zoom, клик карточки→попап, geocoding-fallback |
-| UP-02 | ✅ | — | — | — | e2e: selection mode + map view, bulk update/delete selected/all (mock API); импорт JSON/KML/GeoJSON/GPX/KMZ |
-| QST-03 | ✅ | — | — | — | e2e (quest-video): страница квеста грузится, видео в финале |
-| QST-04 | ✅ | — | — | — | e2e: URL видео из API, детект ошибок загрузки видео в консоли |
-| QST-01,02,05 | — | — | — | — | Список/карта квестов/прохождение — отдельно не догнаны |
-| MISC-01 | ✅ | ✅ | — | — | e2e: «Ещё» открывает модалку с legal+support; desktop footer nav и mobile dock «More» навигируют с видимым баннером |
-| MISC-02 | — | ✅ | — | — | e2e: мобильное меню закрывается после выбора пункта навигации |
-| MISC-03 | ✅ | — | — | — | e2e: legal-страницы отдают canonical SEO и основной контент |
-| MISC-07 | ✅ | — | — | — | e2e: принятие consent скрывает баннер и сохраняет настройку аналитики |
-| MISC-04 | ✅ | — | — | — | e2e: about-страница грузится с контентом; privacy-страница грузится; 404 unknown route показывает not-found с навигацией |
-| MISC-08 | ✅ | ✅ | — | — | e2e (layout-responsive): нет горизонтального скролла, сетка адаптируется (mobile/tablet/desktop), стабильность после resize, CLS-проверка |
-| HOME-01 | ✅ | — | — | — | e2e (core-flows): список рендерит карточки после загрузки API; карта показывает карточки; рулетка возвращает карточки |
-| HOME-02 | ✅ | — | — | — | e2e: quick-filter «палатка» навигирует в поиск и применяет фильтр «ночлег» |
-| HOME-03..10 | — | — | — | — | Остальные секции главной (FAQ/CTA/weekend) UI-кейсами не догнаны |
-| AUTH-05 | ✅ | — | — | — | e2e: login→registration ссылка работает; гостевое account-меню навигирует; регистрация из меню |
-| AUTH-guest | ✅ | — | — | — | e2e: гостевые auth-поверхности открывают login и registration страницы |
-| PROF-*, SET-*, FAV-*, HIST-*, UP-* | — | — | — | — | Профильные/настройки/избранное-история/баллы UI-спеки в прогон не включены → можно догнать |
-
-**Инфраструктурно подтверждено:**
-- ✅ API отдаёт реальные данные (200) после переключения `EXPO_PUBLIC_API_URL` на рабочий бэкенд `http://192.168.50.36` (в `.env` был мёртвый порт `127.0.0.1:8112` → 502). Деталь по slug/id отдаётся с завершающим слешем (`/api/travels/by-slug/{slug}/`).
-- ✅ Шапка (desktop): Идеи поездок · Беларусь · Карта · Места · Случайный маршрут · Квесты · Instagram-гиды по Беларуси · Войти · Гость.
-- ✅ Нижняя таб-навигация (mobile): Маршруты · Беларусь · Карта · Места · Профиль · Ещё.
-- ✅ Consent-баннер (Отклонить/Принять) и футер «© MeTravel 2020–2026» рендерятся.
-
-**Экран входа (наблюдение):** форма «Вход» рендерится — Email/Пароль (с показом пароля), «Войти», «Забыли пароль?», «Зарегистрируйтесь». На localhost: «Google Sign-In недоступен на localhost. Используйте email и пароль».
-
-**Не проверено и почему:**
-- Все действия под логином (сохранение избранного, статусы Был/Планирую/Хочу, отправка комментария, wizard создания/редактирования) — **прогон шёл как гость**. Программный логin e2e-аккаунтом не выполнял намеренно: инъекция токена/ввод пароля светили бы секрет в логах tool-call. **Рекомендация:** прогнать auth-кейсы через Playwright auth-setup (`.env.e2e`), который держит секреты вне логов.
-- Построение маршрута (MAP-RT-*): в попапе primary был «Открыть страницу», режим маршрута не активировался.
-- MAP-RT расстояние в попапе (PL-05) — требует активного маршрута.
-- iOS/Android — среда недоступна.
-
-### Платформенные отличия (на что смотреть отдельно)
-
-| Область | Mobile | Web |
-|---------|--------|-----|
-| Список | 1 колонка, фильтры в modal-overlay | 2–3 колонки, sidebar ~320px sticky |
-| Слайдер/галерея | RN Animated, свайп | Web-компонент, стрелки |
-| Карта | WebView + Leaflet (native), bottom sheet | Leaflet, боковая панель + resize |
-| Поделиться | Native Share API, picker | Web Share API + кнопки соцсетей |
-| Загрузка фото | Системный picker | File input + drag-and-drop |
-| Попап места | Fullscreen overlay (<560px) | Карточка 352px, autoPan |
-| Фокус/ввод | Haptic, KeyboardAvoidingView | Focus outline, без клавиатурного сдвига |
-
-### Кросс-функциональные проверки (на обеих платформах)
-
-- [x] Гость vs авторизованный: ✅ e2e — гость видит комментарии без кнопок взаимодействия; авторизованный создаёт/лайкает/редактирует/удаляет; кнопка ред. видна только автору
-- [ ] Глубокие ссылки: прямой переход по URL деталей/карты работает
-- [ ] Производительность: нет фризов при скролле списка и панорамировании карты
-- [ ] Консоль/логи: нет ошибок и необработанных промисов
-- [ ] Локализация: тексты на нужном языке, без «дыр» в переводах
-- [ ] Адаптив: проверить breakpoints 600 / 1024 / 1440 px
+При изменении поведения обновляйте сам case и ближайшую автоматизацию. Не
+добавляйте `.skip`; failed/blocked сценарий получает board task и повторный прогон
+после исправления.

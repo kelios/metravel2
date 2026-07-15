@@ -11,6 +11,8 @@ import {
 describe('locale-aware formatting', () => {
   it('uses the registry language tag', () => {
     expect(getFormatLocale('ru')).toBe('ru-RU')
+    expect(getFormatLocale('be')).toBe('be-BY')
+    expect(getFormatLocale('uk')).toBe('uk-UA')
     expect(getFormatLocale('pl')).toBe('pl-PL')
     expect(getFormatLocale('en')).toBe('en-US')
   })
@@ -48,6 +50,10 @@ describe('locale-aware formatting', () => {
       expect(selectPlural(11, forms, 'ru')).toBe('many')
       expect(selectPlural(21, forms, 'ru')).toBe('one')
       expect(selectPlural(1.5, forms, 'ru')).toBe('other')
+      expect(selectPlural(2, forms, 'be')).toBe('few')
+      expect(selectPlural(5, forms, 'be')).toBe('many')
+      expect(selectPlural(2, forms, 'uk')).toBe('few')
+      expect(selectPlural(5, forms, 'uk')).toBe('many')
       expect(selectPlural(1, forms, 'pl')).toBe('one')
       expect(selectPlural(2, forms, 'pl')).toBe('few')
       expect(selectPlural(5, forms, 'pl')).toBe('many')

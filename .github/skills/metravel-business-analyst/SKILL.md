@@ -24,6 +24,8 @@ Create a compact feature brief:
 Problem:
 Audience:
 User stories:
+Platforms: web | Android | iOS | shared | none
+Locales: RU/BE/UK/PL/EN | selected locales | none
 Acceptance criteria:
 Non-goals:
 Content/data assumptions:
@@ -37,6 +39,9 @@ Open questions:
 - Do not write implementation code.
 - Prefer measurable acceptance criteria over broad intent.
 - Keep non-goals explicit so engineering does not overbuild.
-- Mention user-facing web/mobile differences when they affect scope.
+- Define one product outcome across web, Android, and iOS/iPadOS, naming only
+  required technical platform differences.
+- State RU/BE/UK/PL/EN acceptance and separate app UI localization from
+  API/editorial content that needs a server locale contract.
 - Flag external-link, authentication, media, SEO, moderation, or admin implications when present.
 - If a requirement conflicts with project rules, call out the conflict and propose the closest compliant behavior.

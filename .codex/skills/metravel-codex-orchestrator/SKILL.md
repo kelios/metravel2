@@ -26,6 +26,8 @@ Required skills:
 Docs to read:
 Branch/status:
 Risk zones:
+Platform impact: web | Android | iOS | shared | none
+Localization impact: RU/BE/UK/PL/EN | selected locales | none
 Validation plan:
 Operation gate:
 Needs browser/mobile/native check:
@@ -47,6 +49,9 @@ If the branch is not `main`, stop before editing and ask how to proceed.
 - Use `$metravel-hook-builder` when the main work is hook extraction or hook-boundary cleanup.
 - Use `$metravel-refactor-surgeon` for behavior-preserving extraction of large components or file-complexity guard failures.
 - Use `$metravel-ui-guardrails` for visible UI, layout, icons, images, placeholders, tokens, or external-link interaction.
+- Use `$metravel-i18n-guardrails` for app-owned UI copy, accessibility,
+  errors/validation, locale settings/storage, translations, formatting, SEO locale,
+  geocoder language, or PDF/export text.
 - Use `$metravel-design-auditor` for cross-screen design consistency audits and `$metravel-visual-asset-designer` for requested branded raster assets.
 - Use `$metravel-browser-reviewer` for visible web diff review, browser evidence, console/network checks, and fix/reverify loops.
 - Use `$metravel-android-developer` for Android/native implementation, crashes, Expo modules, permissions, SecureStore, push, platform files, or local USB Android build/install verification.
@@ -84,6 +89,10 @@ Do not leak desired conclusions into QA/reviewer prompts; pass raw scope, diff, 
 ## Work Rules
 
 - Prefer existing components, hooks, services, utilities, and tests before adding abstractions.
+- Treat the project as one Expo/React Native app across production web, Android,
+  and iOS/iPadOS. Require an explicit platform/localization impact decision before implementation.
+- Require RU/BE/UK/PL/EN resource parity for new app-owned UI copy and
+  `npm run test:i18n` for localization changes.
 - Keep edits small and local.
 - Treat backend/Django/API/server work as analysis-only in this frontend workspace. Do not route any role to edit backend working trees; create/update `area=back` board tasks for backend blockers.
 - Fix real issues found in the touched scope before handoff.
@@ -105,5 +114,7 @@ Before final response, verify:
 - Changed files are intentional.
 - Relevant checks ran, or blockers are explicit.
 - External-link, UI, native, release, and secret rules were not violated.
+- Platform impact was covered with separate web/Android/iOS evidence or an exact
+  `verify pending` blocker; localization impact and affected locales were verified.
 - Any known real issue in touched scope is fixed or documented as blocked.
 - Final answer lists changed files, validation, and residual risks without dumping secrets or noisy logs.

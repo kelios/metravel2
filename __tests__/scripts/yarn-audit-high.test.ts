@@ -80,7 +80,7 @@ describe('yarn audit high wrapper', () => {
     const outcome = evaluateAuditResult({ status: 2, stdout: validZeroAudit, stderr: '' })
 
     expect(outcome.exitCode).toBe(1)
-    expect(outcome.stderr).toContain('unsuccessful child exit')
+    expect(outcome.stderr).toContain('unexpected child exit status')
     expect(outcome.stderr).not.toContain('yarn audit: OK')
   })
 
@@ -94,7 +94,7 @@ describe('yarn audit high wrapper', () => {
 
   it('preserves advisory counts and reports the explicit ignored-module policy', () => {
     const outcome = evaluateAuditResult({
-      status: 0,
+      status: 14,
       stdout: fixture('valid-advisory-stream.jsonl'),
       stderr: '',
     })
@@ -108,11 +108,33 @@ describe('yarn audit high wrapper', () => {
     const highAudit = fixture('valid-advisory-stream.jsonl')
       .replace('"module_name":"node-forge"', '"module_name":"unignored-package"')
 
-    const outcome = evaluateAuditResult({ status: 0, stdout: highAudit, stderr: '' })
+    const outcome = evaluateAuditResult({ status: 14, stdout: highAudit, stderr: '' })
 
     expect(outcome.exitCode).toBe(1)
     expect(outcome.stdout).toBe('')
     expect(outcome.stderr).toContain('high/critical vulnerabilities')
     expect(outcome.stderr).toContain('high/critical: 1')
+  })
+
+  it('rejects a child status that does not match the trustworthy summary bitmask', () => {
+    const outcome = evaluateAuditResult({
+      status: 0,
+      stdout: fixture('valid-advisory-stream.jsonl'),
+      stderr: '',
+    })
+
+    expect(outcome.exitCode).toBe(1)
+    expect(outcome.stdout).toBe('')
+    expect(outcome.stderr).toContain('unexpected child exit status')
+  })
+
+  it('rejects an advisory stream that contradicts its summary counts', () => {
+    const mismatchedAudit = fixture('valid-advisory-stream.jsonl')
+      .replace('"high":1', '"high":0')
+    const outcome = evaluateAuditResult({ status: 6, stdout: mismatchedAudit, stderr: '' })
+
+    expect(outcome.exitCode).toBe(1)
+    expect(outcome.stdout).toBe('')
+    expect(outcome.stderr).toContain('audit summary/advisory mismatch')
   })
 })
