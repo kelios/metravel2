@@ -1,6 +1,6 @@
 ---
 name: metravel-google-play-operator
-description: Prepare, build, submit, promote, and verify metravel Android releases in Google Play, including EAS production AAB status, closed-testing track verification, versionCode checks, store readiness, and release blockers. Use only for an explicit Android/Google Play build, submit, publish, promote, or status request. Never consume EAS quota, submit, or promote to production without explicit authority in the current task.
+description: Prepare, locally build, submit, and verify metravel Android production releases in Google Play without EAS cloud quota. Protect closed-testing tracks, verify versionCode/upload signing, and report Play eligibility blockers.
 ---
 
 # Metravel Google Play Operator
@@ -13,33 +13,45 @@ Read first:
 - `docs/RULES.md`
 - `docs/RELEASE.md`
 - `docs/PRODUCTION_CHECKLIST.md`
-- `eas.json` and relevant `package.json` scripts as the current source of truth
+- `docs/ANDROID_OWNER_GUIDE.md`
+- `package.json`, `android/app/build.gradle`, and Android release scripts
 
 ## Authority Gates
 
-- Status/readiness checks are read-only and may run when requested.
-- Run an EAS build, submit, track mutation, rollout, or promotion only when the user explicitly requested that exact action and target in the current task.
-- `production` means the public Play track and requires separate explicit authority; do not infer it from “release” or “publish a test build.”
-- Android device QA defaults to a local USB build. Do not burn EAS quota for testing.
+- Android EAS/cloud build and submit are disabled. Never run an EAS Android or
+  `--platform all` command; re-enabling requires a new explicit user decision.
+- Standing authority permits a local Android production build and Production
+  submit when an Android production release is the active task. Do not infer
+  store mutation from unrelated development or QA work.
+- `alpha`, `internal`, `beta`, testers, countries and the active closed-testing
+  release are protected. Never mutate or promote them through this workflow.
+- A status check uses a temporary Play edit and deletes it without commit.
 
 ## Current Release Contract
 
 - Package: `by.metravel.app`.
-- Use project-owned npm wrappers from `package.json`; do not invent direct upload or ad-hoc credential scripts when a repository path exists.
-- Treat `eas.json` as authoritative for profile, artifact type, credentials path, and track. The intended closed-testing track is `alpha`; `internal` does not update closed testers.
-- Production Play accepts a new AAB/versionCode. If a built version already exists in another track, verify whether promotion is sufficient before rebuilding or resubmitting.
-- Never print service-account JSON, private keys, EAS tokens, or auth responses. Confirm credential files are ignored before use.
+- Use project-owned npm wrappers; Android build is local Gradle and Play upload is
+  `scripts/android-play-release.js`.
+- `app.json` is the version source. Release signing must use the four
+  `METRAVEL_ANDROID_KEYSTORE_*` variables and must never fall back to debug key.
+- Only `production` is writable. Dry-run validates and deletes the edit; actual
+  commit requires the explicit production wrapper.
+- Never print service-account JSON, keystore passwords, private keys, access
+  tokens, or auth responses. Confirm credential files are ignored before use.
 
 ## Workflow
 
-1. Preflight: confirm `main`, inspect `git status --short`, check the exclusive operation gate, verify EAS identity and credential presence without exposing values, and record the requested target.
+1. Preflight: confirm `main`, inspect `git status --short`, check the exclusive operation gate, verify local signing/service-account presence without exposing values, and record target `production`.
 2. Before a release build, require the documented release checks and successful local USB Android smoke for the changed native scope.
-3. Only with explicit build authority, run the project production AAB wrapper and monitor the returned build id/status.
-4. Only with explicit submit authority, submit the intended build through the project wrapper.
-5. Verify the actual Play track and versionCode through a read-only Play/EAS status path. Do not trust submit output alone.
-6. If the version landed outside the requested test track, stop unless promotion was explicitly authorized; do not rebuild merely to move the same versionCode.
-7. Update only the relevant board ticket when one was provided; do not mark release work done without track evidence.
+3. Run `npm run android:build:prod` and verify the local AAB metadata/upload certificate.
+4. Run `npm run android:submit:latest`; it must validate and delete the temporary production edit without commit.
+5. If dry-run is green and Play eligibility allows it, run `npm run android:submit:production`.
+6. Verify production status/versionCode and confirm protected tracks were unchanged. Do not trust submit output alone.
+7. On `FAILED_PRECONDITION`, stop retries, confirm the temporary edit was deleted, and report the exact Play Console eligibility action.
+8. Update only the relevant board ticket; do not mark release work done without production track evidence.
 
 ## Handoff
 
-Report requested target, checks, build id/versionCode, actual track state, submit/promotion result, worktree changes caused by tooling, and remaining owner/Play Console actions. Never include secrets.
+Report requested target, checks, artifact/versionCode/upload certificate, actual
+production state, protected-track evidence, worktree changes, and remaining Play
+Console actions. Never include secrets.

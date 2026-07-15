@@ -81,7 +81,13 @@ npm run test:run
   - this is scoped to local/preview QA against the dev server only; never use it for destructive or irreversible actions;
   - never print, echo, log, screenshot, or commit the credential values — keep them only in `.env.e2e`.
 - Android build/testing policy (mandatory):
-  - Expo/EAS Android build credits are limited; do not run Android EAS/cloud builds (`eas build --platform android`, `npm run android:build:*`, `npm run build:all:*`) and do not create Android production builds/submits unless the user explicitly asks for that exact Android build/submit in the current task;
+  - Android EAS/cloud builds and submits are disabled: never run
+    `eas build --platform android`, `eas submit --platform android` or an EAS
+    `--platform all` command. Build Android locally with the project Gradle
+    wrapper and publish only through the production-only Google Play API script;
+  - the active closed-testing surfaces (`alpha`, `internal`, `beta`, testers,
+    countries and their releases) are protected and must not be changed by the
+    production release automation;
   - Android device QA requires a locally built Android app installed over USB on the connected phone, for example `cd android && ./gradlew :app:installDebug` or `:app:assembleDebug` plus `adb install -r ...`;
   - do not substitute mobile web viewport evidence, Expo web export, EAS preview/development/production builds, or dev-client/export flows for Android device validation without explicit user approval;
   - if local build/install is blocked, report the exact command, result, and next safe step instead of claiming Android verification passed.

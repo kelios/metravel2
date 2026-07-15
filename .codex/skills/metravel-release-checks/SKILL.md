@@ -30,7 +30,9 @@ Use the project-specific command map:
 Keep release and performance validation aligned with repo policy:
 
 - Build web for production checks with `npm run build:web:prod`.
-- Android release/store builds are not part of ordinary release checks: do not run Android EAS/cloud builds, Android production builds/submits, or dev-client/export Android QA routes unless the user explicitly asks for that exact Android path. Android QA uses local build/install on the USB-connected phone by default.
+- Android EAS/cloud builds and submits are disabled. Android QA uses local
+  build/install on USB; an active Android production release uses the local
+  Gradle/production-only Play path from `$metravel-google-play-operator`.
 - Shared app changes need separate web, Android, and iOS validation decisions.
   Do not mark a release platform-ready from another platform's evidence; report
   unavailable simulator/device coverage as `verify pending`.

@@ -1,211 +1,51 @@
-/**
- * Тесты для проверки существования всех маршрутов (ссылок) в приложении
- * Проверяет, что все ссылки ведут на существующие страницы
- */
+import fs from 'node:fs'
+import path from 'node:path'
 
-import * as fs from 'fs';
-import * as path from 'path';
+const APP_DIR = path.resolve(__dirname, '../../app/(tabs)')
 
-describe('Routes Existence Tests', () => {
-  const appDir = path.join(__dirname, '../../app/(tabs)');
-  
-  // Получаем все пути из компонентов
-  const navItems = [
-    { path: '/search', label: 'Маршруты' },
-    { path: '/travelsby', label: 'Беларусь' },
-    { path: '/map', label: 'Карта' },
-    { path: '/quests', label: 'Квесты' },
-  ];
+const STATIC_ROUTES = [
+  '/',
+  '/accountconfirmation',
+  '/export',
+  '/login',
+  '/map',
+  '/metravel',
+  '/profile',
+  '/quests',
+  '/registration',
+  '/search',
+  '/set-password',
+  '/travel/new',
+  '/travelsby',
+]
 
-  const userMenuPaths = [
-    '/profile',
-    '/metravel',
-    '/travel/new',
-    '/export',
-    '/login',
-    '/registration',
-  ];
+const DYNAMIC_ROUTES = [
+  '/quests/[city]/[questId]',
+  '/travel/[id]',
+  '/travels/[param]',
+]
 
-  const breadcrumbPaths = [
-    '/',
-    '/search',
-    '/travelsby',
-    '/map',
-    '/quests',
-    '/profile',
-    '/login',
-    '/registration',
-    '/metravel',
-    '/export',
-    '/set-password',
-    '/accountconfirmation',
-  ];
+const routeExists = (routePath: string): boolean => {
+  const cleanPath = routePath.replace(/^\//, '')
+  if (!cleanPath) return fs.existsSync(path.join(APP_DIR, 'index.tsx'))
 
-  const hasIndexFile = (dir: string) =>
-    fs.existsSync(path.join(dir, 'index.tsx')) || fs.existsSync(path.join(dir, 'index.ts'));
+  const candidate = path.join(APP_DIR, cleanPath)
+  if (fs.existsSync(`${candidate}.tsx`) || fs.existsSync(`${candidate}.ts`)) return true
+  if (!fs.existsSync(candidate) || !fs.statSync(candidate).isDirectory()) return false
+  return fs.existsSync(path.join(candidate, 'index.tsx')) || fs.existsSync(path.join(candidate, 'index.ts'))
+}
 
-  // Функция для проверки существования файла маршрута
-  const routeExists = (routePath: string): boolean => {
-    try {
-      const cleanPath = routePath.startsWith('/') ? routePath.slice(1) : routePath;
-      if (cleanPath === '' || cleanPath === 'index') {
-        return fs.existsSync(path.join(appDir, 'index.tsx'));
-      }
+describe('app route files', () => {
+  it.each(STATIC_ROUTES)('contains the static route %s', (routePath) => {
+    expect(routeExists(routePath)).toBe(true)
+  })
 
-      const parts = cleanPath.split('/').filter(Boolean);
-      let currentDir = appDir;
+  it.each(DYNAMIC_ROUTES)('contains the dynamic route %s', (routePath) => {
+    expect(routeExists(routePath)).toBe(true)
+  })
 
-      for (let i = 0; i < parts.length; i++) {
-        const part = parts[i];
-        const isLast = i === parts.length - 1;
-        const potentialDir = path.join(currentDir, part);
-
-        if (isLast) {
-          const fileBase = path.join(currentDir, part);
-          if (fs.existsSync(`${fileBase}.tsx`) || fs.existsSync(`${fileBase}.ts`)) {
-            return true;
-          }
-          if (fs.existsSync(potentialDir) && fs.statSync(potentialDir).isDirectory()) {
-            return hasIndexFile(potentialDir);
-          }
-          return false;
-        }
-
-        if (fs.existsSync(potentialDir) && fs.statSync(potentialDir).isDirectory()) {
-          currentDir = potentialDir;
-          continue;
-        }
-
-        return false;
-      }
-
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  describe('Navigation Items Routes', () => {
-    navItems.forEach(({ path: routePath, label }) => {
-      it(`should have route for "${label}" (${routePath})`, () => {
-        expect(routeExists(routePath)).toBe(true);
-      });
-    });
-  });
-
-  describe('User Menu Routes', () => {
-    userMenuPaths.forEach((routePath) => {
-      it(`should have route for user menu item: ${routePath}`, () => {
-        expect(routeExists(routePath)).toBe(true);
-      });
-    });
-  });
-
-  describe('Breadcrumb Routes', () => {
-    breadcrumbPaths.forEach((routePath) => {
-      it(`should have route for breadcrumb: ${routePath}`, () => {
-        // Главная страница всегда существует
-        if (routePath === '/') {
-          expect(routeExists(routePath)).toBe(true);
-          return;
-        }
-        expect(routeExists(routePath)).toBe(true);
-      });
-    });
-  });
-
-  describe('Dynamic Routes', () => {
-    const dynamicRoutes = [
-      '/travels/[param]',
-      '/travel/[id]',
-      '/quests/[city]/[questId]',
-    ];
-
-    dynamicRoutes.forEach((routePath) => {
-      it(`should have dynamic route: ${routePath}`, () => {
-        expect(routeExists(routePath)).toBe(true);
-      });
-    });
-  });
-
-  describe('Links from CustomHeader', () => {
-    const customHeaderPaths = [
-      '/search',
-      '/travelsby',
-      '/map',
-      '/quests',
-    ];
-
-    customHeaderPaths.forEach((routePath) => {
-      it(`should exist route used in CustomHeader: ${routePath}`, () => {
-        expect(routeExists(routePath)).toBe(true);
-      });
-    });
-  });
-
-  describe('Links from RenderRightMenu', () => {
-    const renderRightMenuPaths = [
-      '/profile',
-      '/metravel',
-      '/travel/new',
-      '/export',
-      '/login',
-      '/registration',
-    ];
-
-    renderRightMenuPaths.forEach((routePath) => {
-      it(`should exist route used in RenderRightMenu: ${routePath}`, () => {
-        expect(routeExists(routePath)).toBe(true);
-      });
-    });
-  });
-
-  describe('Links from Breadcrumbs', () => {
-    const breadcrumbTestCases = [
-      { path: '/travels/test-slug', shouldSkip: true }, // Пропускаем slug в breadcrumbs
-      { path: '/map', shouldSkip: false },
-      { path: '/quests', shouldSkip: false },
-      { path: '/profile', shouldSkip: false },
-      { path: '/travelsby', shouldSkip: false },
-    ];
-
-    breadcrumbTestCases.forEach(({ path: routePath, shouldSkip }) => {
-      if (shouldSkip) {
-        it(`should skip intermediate "Путешествия" for ${routePath}`, () => {
-          // Этот тест проверяет логику breadcrumbs, а не существование маршрута
-          expect(routePath.startsWith('/travels/')).toBe(true);
-        });
-      } else {
-        it(`should have route for breadcrumb path: ${routePath}`, () => {
-          expect(routeExists(routePath)).toBe(true);
-        });
-      }
-    });
-  });
-
-  describe('All routes from _layout.tsx', () => {
-    const layoutRoutes = [
-      'index',
-      'travelsby',
-      'map',
-      'travels/[param]',
-      'about',
-      'login',
-      'registration',
-      'set-password',
-      'travel/new',
-      'travel/[id]',
-      'metravel',
-      'profile',
-      'accountconfirmation',
-    ];
-
-    layoutRoutes.forEach((routeName) => {
-      it(`should have route defined in _layout.tsx: ${routeName}`, () => {
-        // Преобразуем имя маршрута в путь
-        const routePath = routeName === 'index' ? '/' : `/${routeName}`;
-        expect(routeExists(routePath)).toBe(true);
-      });
-    });
-  });
-});
+  it('keeps the route contract free of duplicate entries', () => {
+    const allRoutes = [...STATIC_ROUTES, ...DYNAMIC_ROUTES]
+    expect(new Set(allRoutes).size).toBe(allRoutes.length)
+  })
+})

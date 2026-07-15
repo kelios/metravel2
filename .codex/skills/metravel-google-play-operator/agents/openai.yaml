@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Google Play Operator"
-  short_description: "Build, submit, and verify Play releases"
-  default_prompt: "Use $metravel-google-play-operator for the explicitly requested Google Play build, submit, track verification, or release status task."
+  short_description: "Local Android build and safe Play Production release"
+  default_prompt: "Use $metravel-google-play-operator to build Android locally without EAS, validate the temporary Play production edit, protect all testing tracks, and commit only the production release when eligibility is green."

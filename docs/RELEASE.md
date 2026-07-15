@@ -147,15 +147,18 @@ npm run guard:lighthouse:mobile:fail   # reads ./lighthouse-report.produrl.mobil
 - Never require users to manually clear browser cache after deploy.
 - Any change that re-enables SW runtime/static cache or adds "clear cache" UX is prohibited.
 
-## Mobile builds (EAS)
+## Mobile builds
 
 See scripts in `package.json`:
 
-Android EAS/build gate:
+Android release contract:
 
-- Expo/EAS Android build credits are limited. Codex must not run Android EAS/cloud builds, Android production builds, or Android submit commands unless the user explicitly asks for that exact Android build/submit in the current task.
-- Android QA before handoff uses a locally built app installed over USB on the connected phone by default, not an EAS preview/development/production build and not an Expo export/dev-client substitute.
-- The Android commands below are release/store operations, not the default validation path.
+- Android EAS/cloud build and submit are disabled. Do not use an EAS Android or
+  `--platform all` command.
+- Android QA uses a locally built app installed over USB. Production uses a
+  locally signed Gradle AAB and the project-owned Google Play API client.
+- `alpha`, `internal`, `beta`, tester/country settings and the active closed test
+  are protected from this production release path.
 
 ### iOS
 
@@ -170,7 +173,9 @@ npm run ios:submit:latest
 ```bash
 npm run android:prebuild
 npm run android:build:prod
-npm run android:submit:latest
+npm run android:submit:latest       # validate temporary production edit, no commit
+npm run android:submit:production   # commit production edit
+npm run android:play:status         # temporary read-only edit, then delete
 ```
 
 ## Secrets / credentials
@@ -178,4 +183,9 @@ npm run android:submit:latest
 See `PRODUCTION_CHECKLIST.md`.
 
 - Do not commit production secrets into `.env.*`.
-- Configure secrets in EAS.
+- Configure iOS cloud secrets in EAS.
+- Keep Android upload-keystore credentials in the local secret store as the four
+  `METRAVEL_ANDROID_KEYSTORE_*` variables. Keep the Google Play service-account
+  key gitignored; never print either credential set.
+- On the primary macOS release host, `android-build.sh` may load the two passwords
+  from the documented macOS Keychain services; it never prints them.

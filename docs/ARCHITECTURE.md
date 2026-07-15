@@ -45,7 +45,7 @@ Production health, Lighthouse и device readiness подтверждаются �
 | --- | --- |
 | Framework | Expo SDK 57, Expo Router 57, React 19.2, React Native 0.86 |
 | Web | React Native Web, Metro web bundler, static export в `dist/prod` |
-| Native | Expo iOS/Android сборки через EAS |
+| Native | Expo/React Native; iOS cloud via EAS, Android local Gradle builds |
 | Язык | TypeScript 6 strict mode, alias `@/*` на корень репозитория |
 | Server state | `@tanstack/react-query` |
 | Client state | Zustand stores + React contexts |
@@ -55,7 +55,7 @@ Production health, Lighthouse и device readiness подтверждаются �
 | Медиа | `expo-image`, upload helpers, CDN/media URL normalization |
 | Auth storage | Native: `expo-secure-store`; web source поддерживает backend-managed HttpOnly cookie без JS token; deployed behavior подтверждается отдельным auth runtime probe |
 | Тесты | Jest/JSDOM, Jest Expo preset, Playwright Chromium |
-| Build/deploy | `npm run build:web:prod`, `build-prod.sh`, EAS scripts |
+| Build/deploy | `npm run build:web:prod`, `build-prod.sh`, iOS EAS, local Android Gradle + Play API |
 
 ## Запуск Приложения
 
@@ -908,8 +908,9 @@ server paths или SSL paths без проверки существования
 ### Native builds
 
 `app.json` задает bundle IDs, permissions, universal/app links, plugins и Expo
-Router async-route behavior. `eas.json` задает development, preview и production
-build profiles.
+Router async-route behavior. `eas.json` содержит только iOS cloud profiles;
+Android release собирается локальным Gradle и публикуется через production-only
+Google Play API client.
 
 Common scripts:
 
@@ -920,6 +921,7 @@ npm run ios:submit:latest
 npm run android:prebuild
 npm run android:build:prod
 npm run android:submit:latest
+npm run android:submit:production
 ```
 
 ## Поверхность Проверок

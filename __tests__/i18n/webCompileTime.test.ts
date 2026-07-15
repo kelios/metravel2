@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 
 import { transformSync } from '@babel/core'
@@ -33,6 +34,19 @@ describe('web compile-time localization', () => {
     expect(result?.code).toContain('p:')
     expect(result?.code).not.toContain('Russian')
     expect(result?.code).not.toContain('Rosyjski')
+  })
+
+  it('inlines JSON-backed quest SEO resources before Metro bundles the helper', () => {
+    const filename = path.resolve(process.cwd(), 'utils/questSeo.js')
+    const result = transformSync(fs.readFileSync(filename, 'utf8'), {
+      caller: { name: 'metro', platform: 'web' },
+      filename,
+    })
+
+    expect(result?.code).not.toContain('seo:utils.questSeo.')
+    expect(result?.code).toContain('Городской квест')
+    expect(result?.code).toContain('h:')
+    expect(result?.code).toContain('v:')
   })
 
   it('keeps interpolation and Russian plural rules in the eager runtime', () => {

@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Android Developer"
   short_description: "Implement and debug Android/native compatibility."
-  default_prompt: "Use $metravel-android-developer to implement Android behavior without regressing web/iOS or RU/BE/UK/PL/EN localization, then validate it with a local USB-installed build unless an exact EAS action was explicitly requested."
+  default_prompt: "Use $metravel-android-developer to implement Android behavior without regressing web/iOS or RU/BE/UK/PL/EN localization, then validate it with a local Gradle USB-installed build. Never use Android EAS/cloud build or submit."

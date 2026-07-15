@@ -31,6 +31,24 @@ const readObjectEntries = (filePath) => {
     ts.ScriptKind.TS,
   )
   const entries = new Map()
+  const jsonImports = new Map()
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement)) continue
+    const importName = statement.importClause?.name?.text
+    const importPath = statement.moduleSpecifier
+    if (
+      !importName ||
+      !ts.isStringLiteral(importPath) ||
+      !importPath.text.endsWith('.json')
+    ) {
+      continue
+    }
+    jsonImports.set(
+      importName,
+      path.resolve(path.dirname(filePath), importPath.text),
+    )
+  }
 
   const visit = (node) => {
     const initializer = ts.isVariableDeclaration(node)
@@ -38,6 +56,18 @@ const readObjectEntries = (filePath) => {
       : undefined
     if (initializer && ts.isObjectLiteralExpression(initializer)) {
       for (const property of initializer.properties) {
+        if (
+          ts.isSpreadAssignment(property) &&
+          ts.isIdentifier(property.expression)
+        ) {
+          const jsonPath = jsonImports.get(property.expression.text)
+          if (!jsonPath) continue
+          const jsonEntries = JSON.parse(fs.readFileSync(jsonPath, 'utf8'))
+          for (const [key, value] of Object.entries(jsonEntries)) {
+            if (typeof value === 'string') entries.set(key, value)
+          }
+          continue
+        }
         if (!ts.isPropertyAssignment(property)) continue
         const name = property.name
         const value = property.initializer

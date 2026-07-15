@@ -3,6 +3,8 @@ import path from 'node:path';
 import { chromium, request, type FullConfig } from '@playwright/test';
 import { getTravelsListPath } from './helpers/routes';
 
+const { resolveE2EAuthMode } = require('../scripts/e2e-target-safety');
+
 const STORAGE_STATE_PATH = 'e2e/.auth/storageState.json';
 const STORAGE_STATE_B_PATH = 'e2e/.auth/storageState.b.json';
 
@@ -254,6 +256,7 @@ async function writeStorageStateForAccount(opts: {
 
 export default async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0]?.use?.baseURL as string | undefined;
+  const authMode = resolveE2EAuthMode(process.env);
   const email = ensureEnv('E2E_EMAIL');
   const password = ensureEnv('E2E_PASSWORD');
 
@@ -266,16 +269,23 @@ export default async function globalSetup(config: FullConfig) {
   // `webServer` can be started in parallel with `globalSetup`. Avoid flaky connection refused errors.
   await waitForBaseURL(baseURL, 600_000);
 
+  if (authMode === 'guest') {
+    const browser = await chromium.launch();
+    const context = await browser.newContext();
+    await context.storageState({ path: STORAGE_STATE_PATH });
+    await context.storageState({ path: STORAGE_STATE_B_PATH });
+    await browser.close();
+    return;
+  }
+
+  if (!email || !password) {
+    throw new Error('E2E_AUTH_MODE=required needs E2E_EMAIL and E2E_PASSWORD.');
+  }
+
   // Account A (primary E2E account, owner).
   if (await storageStateHasValidSession(STORAGE_STATE_PATH, baseURL)) {
     // Reuse the cookie session issued by a previous shard. Avoid hammering /api/user/login/
     // across the 16-shard local e2e runner and tripping backend rate limits.
-  } else if (!email || !password) {
-    // No credentials means the default state is intentionally a guest session.
-    const browser = await chromium.launch();
-    const context = await browser.newContext();
-    await context.storageState({ path: STORAGE_STATE_PATH });
-    await browser.close();
   } else {
     await writeStorageStateForAccount({
       email,

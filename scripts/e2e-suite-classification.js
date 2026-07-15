@@ -4,6 +4,7 @@ const PRODUCTION_SMOKE_SUITE = 'production-smoke'
 // These specs create, update, upload, reset, or delete real backend records.
 // They are intentionally absent from the default deterministic regression suite.
 const LIVE_CONTRACT_SPECS = [
+  'auth-logout.spec.ts',
   'draft-recovery.spec.ts',
   'image-upload.spec.ts',
   'metravel-edit-delete.spec.ts',

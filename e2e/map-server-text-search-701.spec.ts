@@ -34,6 +34,61 @@ const readServerTotal = async (resp: any): Promise<number> => {
     : NaN;
 };
 
+const mockPoint = (id: number, address: string) => ({
+  id,
+  coord: `53.90${id},27.55${id}`,
+  address,
+  travelImageThumbUrl: '',
+  categoryName: 'Природа',
+  articleUrl: '',
+  urlTravel: `/travels/e2e-map-search-${id}`,
+});
+
+async function installMapApiMock(page: any) {
+  await page.route('**/api/filterformap/**', (route: any) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      countries: [],
+      categories: [],
+      categoryTravelAddress: [],
+      companions: [],
+      complexity: [],
+      month: [],
+      over_nights_stay: [],
+      transports: [],
+      year: [],
+    }),
+  }));
+  await page.route('**/api/travels/search_travels_for_map/**', (route: any) => {
+    const query = String(parseWhere(route.request().url())?.query ?? '').trim();
+    const results = query
+      ? [mockPoint(1, `${query}: тестовое озеро`), mockPoint(2, `${query}: тестовый парк`)]
+      : [mockPoint(1, 'Тестовое озеро'), mockPoint(2, 'Тестовый парк')];
+
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ results, total: query ? 57 : 75 }),
+    });
+  });
+  await page.route('**/api/map/clusters/**', (route: any) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ clusters: [], markers: [], total_count: 0 }),
+  }));
+  await page.route('**/api/getFiltersTravel/**', (route: any) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({}),
+  }));
+  await page.route('**/api/countries/**', (route: any) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([]),
+  }));
+}
+
 const gotoMap = async (page: any) => {
   await page.goto('/map', { waitUntil: 'domcontentloaded', timeout: 120_000 });
   const panel = page.getByTestId('filters-panel');
@@ -49,6 +104,7 @@ const gotoMap = async (page: any) => {
 test.describe('@smoke #701 map text search is server-side', () => {
   test.beforeEach(async ({ page }) => {
     await installTileMock(page);
+    await installMapApiMock(page);
     await preacceptCookies(page);
   });
 
@@ -56,14 +112,6 @@ test.describe('@smoke #701 map text search is server-side', () => {
     await gotoMap(page);
     const panel = page.getByTestId('filters-panel');
     await expect(panel).toBeVisible({ timeout: 90_000 });
-
-    // Wait for an initial (no-query) map request to settle.
-    await page
-      .waitForResponse(
-        (r: any) => r.ok() && /\/api\/travels\/search_travels_for_map\//.test(r.url()),
-        { timeout: 90_000 },
-      )
-      .catch(() => null);
 
     // Record every search request URL from now on.
     const searchRequests: string[] = [];
@@ -77,27 +125,20 @@ test.describe('@smoke #701 map text search is server-side', () => {
     const search = page.getByTestId('map-search-input');
     await expect(search).toBeVisible({ timeout: 30_000 });
 
+    const queryRequestPromise = page.waitForRequest((req: any) => {
+      const url = req.url();
+      if (!/\/api\/travels\/search_travels_for_map\//.test(url)) return false;
+      return parseWhere(url)?.query === 'замок';
+    });
+
     // Type "замок" character-by-character quickly (simulate real typing).
     await search.click();
     await search.pressSequentially('замок', { delay: 40 });
 
-    // A request carrying where.query should go out.
-    const queryReq = await page
-      .waitForRequest(
-        (req: any) => {
-          const url = req.url();
-          if (!/\/api\/travels\/search_travels_for_map\//.test(url)) return false;
-          const where = parseWhere(url);
-          return typeof where?.query === 'string' && where.query.trim().length > 0;
-        },
-        { timeout: 30_000 },
-      )
-      .catch(() => null);
+    const queryReq = await queryRequestPromise;
 
-    expect(queryReq, 'a search_travels_for_map request with where.query must be sent').toBeTruthy();
-
-    const where = parseWhere(queryReq!.url());
-    expect(where?.query).toContain('замок');
+    const where = parseWhere(queryReq.url());
+    expect(where?.query).toBe('замок');
 
     // Debounce assertion: 5 keystrokes must NOT produce ~5 query requests.
     // Give the debounce window time to flush, then count query-bearing requests.
@@ -107,11 +148,9 @@ test.describe('@smoke #701 map text search is server-side', () => {
       return typeof w?.query === 'string' && w.query.trim().length > 0;
     });
      
-    console.info('[#701] total search reqs after query:', searchRequests.length,
-      '| query-bearing reqs:', queryBearing.length,
-      '| queries:', queryBearing.map((u) => parseWhere(u)?.query));
-    // Debounced (300ms) → at most a couple of distinct query snapshots, definitely < 5.
-    expect(queryBearing.length, `query requests: ${queryBearing.length}`).toBeLessThan(5);
+    const distinctQueries = [...new Set(queryBearing.map((url) => parseWhere(url)?.query))];
+    expect(distinctQueries, 'debounce must not send intermediate per-keystroke queries')
+      .toEqual(['замок']);
   });
 
   test('desktop: counter matches server total (not the ≤30 loaded page)', async ({ page }) => {
@@ -122,46 +161,16 @@ test.describe('@smoke #701 map text search is server-side', () => {
     const search = page.getByTestId('map-search-input');
     await expect(search).toBeVisible({ timeout: 30_000 });
 
-    const candidates = ['озеро', 'парк', 'костел', 'замок', 'минск'];
-    let serverTotal = NaN;
-    let selectedQuery = '';
+    const responsePromise = page.waitForResponse((response: any) => {
+      if (!response.ok()) return false;
+      if (!/\/api\/travels\/search_travels_for_map\//.test(response.url())) return false;
+      return parseWhere(response.url())?.query === 'озеро';
+    });
 
-    for (const candidate of candidates) {
-      const responsePromise = page
-        .waitForResponse(
-          (r: any) => {
-            if (!r.ok()) return false;
-            const url = r.url();
-            if (!/\/api\/travels\/search_travels_for_map\//.test(url)) return false;
-            const where = parseWhere(url);
-            return where?.query === candidate;
-          },
-          { timeout: 30_000 },
-        )
-        .catch(() => null);
-
-      await search.click();
-      await search.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
-      await search.press('Backspace');
-      await search.pressSequentially(candidate, { delay: 40 });
-
-      const resp = await responsePromise;
-      expect(
-        resp,
-        `a search_travels_for_map response with where.query="${candidate}" must be captured`,
-      ).toBeTruthy();
-
-      serverTotal = await readServerTotal(resp);
-      if (Number.isFinite(serverTotal) && serverTotal > 0) {
-        selectedQuery = candidate;
-        break;
-      }
-    }
-
-    expect(
-      serverTotal,
-      `at least one stable map query should return a positive server total; tried ${candidates.join(', ')}`,
-    ).toBeGreaterThan(0);
+    await search.fill('озеро');
+    const response = await responsePromise;
+    const serverTotal = await readServerTotal(response);
+    expect(serverTotal).toBe(57);
 
     // The counter hint should reflect the (large) server total, not a ≤30 page.
     const hint = panel.getByText(/На карте подходит:\s*\d+/);
@@ -170,7 +179,6 @@ test.describe('@smoke #701 map text search is server-side', () => {
     const shown = Number((hintText.match(/(\d+)/) || [])[1]);
 
      
-    console.info('[#701] query:', selectedQuery, '| counter shown:', shown, '| server total:', serverTotal);
     expect(Number.isFinite(shown)).toBe(true);
     expect(shown, `hint=${shown} serverTotal=${serverTotal}`).toBe(serverTotal);
   });
@@ -208,22 +216,16 @@ test.describe('@smoke #701 map text search is server-side', () => {
 
     const search = page.getByTestId('map-search-input');
     await expect(search).toBeVisible({ timeout: 20_000 });
+    const queryRequestPromise = page.waitForRequest((req: any) => {
+      const url = req.url();
+      if (!/\/api\/travels\/search_travels_for_map\//.test(url)) return false;
+      return parseWhere(url)?.query === 'озеро';
+    });
+
     await search.click();
     await search.pressSequentially('озеро', { delay: 40 });
 
-    const queryReq = await page
-      .waitForRequest(
-        (req: any) => {
-          const url = req.url();
-          if (!/\/api\/travels\/search_travels_for_map\//.test(url)) return false;
-          const where = parseWhere(url);
-          return typeof where?.query === 'string' && where.query.trim().length > 0;
-        },
-        { timeout: 30_000 },
-      )
-      .catch(() => null);
-
-    expect(queryReq, 'mobile: search_travels_for_map with where.query must be sent').toBeTruthy();
-    expect(parseWhere(queryReq!.url())?.query).toContain('озеро');
+    const queryReq = await queryRequestPromise;
+    expect(parseWhere(queryReq.url())?.query).toBe('озеро');
   });
 });

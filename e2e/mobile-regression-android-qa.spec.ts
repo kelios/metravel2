@@ -20,9 +20,10 @@
 
 import { test, expect } from './fixtures';
 import {
+  FALLBACK_TRAVEL_SLUG,
   preacceptCookies,
   gotoWithRetry,
-  openFallbackTravelDetails,
+  mockFallbackTravelDetails,
 } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
@@ -182,38 +183,20 @@ test.describe('@mobile BUG-CLASS-2: header ≤20% viewport height', () => {
 // ─── BUG-CLASS-3: Back navigation goes to source, not Home ──────────────────
 
 test.describe('@mobile BUG-CLASS-3: back navigation returns to source', () => {
-  test('back from travel details returns to /search, not /', async ({ page }) => {
+  test('back from travel details honors the list returnTo path', async ({ page }) => {
     await setMobileViewport(page);
 
-    // Navigate to list, then to details via link click
     const expectedReturnPath = getTravelsListPath();
+    await mockFallbackTravelDetails(page);
     await gotoWithRetry(page, expectedReturnPath);
-
-    // Find a card link and navigate
-    const cardLink = page
-      .locator('[data-testid="travel-card-link"]')
-      .first();
-    const cardLinkVisible = await cardLink
-      .waitFor({ state: 'visible', timeout: 30_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!cardLinkVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'No travel cards visible (API unavailable); using fallback mock',
-      });
-      const opened = await openFallbackTravelDetails(page);
-      if (!opened) return;
-    } else {
-      await cardLink.click();
-      await expect
-        .poll(() => new URL(page.url()).pathname, { timeout: 30_000 })
-        .toMatch(/^\/travels\//);
-    }
+    await gotoWithRetry(
+      page,
+      `/travels/${FALLBACK_TRAVEL_SLUG}?returnTo=${encodeURIComponent(expectedReturnPath)}`,
+    );
 
     // We're now on /travels/<slug>
     expect(isTravelDetailsPath(new URL(page.url()).pathname)).toBe(true);
+    await expect(page.getByTestId('travel-details-page')).toBeVisible({ timeout: 30_000 });
 
     // Click the details context-bar back button if available, otherwise use browser history.
     // A broad aria-label search can match unrelated in-page controls and make this flaky.
@@ -221,16 +204,8 @@ test.describe('@mobile BUG-CLASS-3: back navigation returns to source', () => {
       .getByTestId('header-context-bar')
       .getByRole('button', { name: /^Назад$/ })
       .first();
-    const backVisible = await backBtn
-      .waitFor({ state: 'visible', timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (backVisible) {
-      await backBtn.click();
-    } else {
-      await page.goBack();
-    }
+    await expect(backBtn).toBeVisible({ timeout: 10_000 });
+    await backBtn.click();
 
     await expect
       .poll(() => new URL(page.url()).pathname, { timeout: 15_000 })

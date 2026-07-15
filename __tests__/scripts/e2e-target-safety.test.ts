@@ -1,6 +1,7 @@
 const {
   DEFAULT_LOCAL_E2E_API_URL,
   isMetravelProductionUrl,
+  resolveE2EAuthMode,
   resolveE2ETargets,
 } = require('@/scripts/e2e-target-safety')
 
@@ -8,6 +9,7 @@ describe('e2e target safety', () => {
   it('defaults API traffic to the local backend', () => {
     expect(resolveE2ETargets({})).toMatchObject({
       apiUrl: DEFAULT_LOCAL_E2E_API_URL,
+      authMode: 'guest',
       productionTarget: false,
     })
   })
@@ -55,6 +57,14 @@ describe('e2e target safety', () => {
       E2E_SUITE: 'live-contract',
       E2E_API_URL: 'http://127.0.0.1:8000',
       E2E_ALLOW_LIVE_MUTATIONS: '1',
-    })).toMatchObject({ suite: 'live-contract', productionTarget: false })
+    })).toMatchObject({ suite: 'live-contract', authMode: 'required', productionTarget: false })
+  })
+
+  it('rejects ambiguous auth modes and guest live-contract runs', () => {
+    expect(() => resolveE2EAuthMode({ E2E_AUTH_MODE: 'optional' })).toThrow(/guest or required/)
+    expect(() => resolveE2EAuthMode({
+      E2E_SUITE: 'live-contract',
+      E2E_AUTH_MODE: 'guest',
+    })).toThrow(/requires E2E_AUTH_MODE=required/)
   })
 })

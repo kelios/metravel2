@@ -7,10 +7,34 @@ import {
 
 const CALENDAR_URL = '/calendar';
 
+async function mockSharedShellApis(page: import('@playwright/test').Page) {
+  await page.route('**/api/getFiltersTravel/**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      categories: [],
+      categoryTravelAddress: [],
+      companions: [],
+      complexity: [],
+      month: [],
+      over_nights_stay: [],
+      sortings: [],
+      transports: [],
+      year: [],
+    }),
+  }));
+  await page.route('**/api/countries/**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([]),
+  }));
+}
+
 // Helper: seed fake auth + mock APIs
 async function setupFakeAuth(page: import('@playwright/test').Page) {
   await ensureAuthedStorageFallback(page);
   await mockFakeAuthApis(page);
+  await mockSharedShellApis(page);
   await page.route('**/api/user/*/travel-statuses/**', (route) => {
     if (route.request().method() === 'GET') {
       return route.fulfill({
@@ -21,6 +45,7 @@ async function setupFakeAuth(page: import('@playwright/test').Page) {
     }
     return route.continue();
   });
+
 }
 
 // Helper: mock authored travels API; календарь добавляет опубликованные авторские маршруты как default "Был".
@@ -29,8 +54,7 @@ async function mockMyTravels(
   travels: unknown[] = []
 ) {
   await page.route('**/api/travels/**', (route) => {
-    const url = route.request().url();
-    if (url.includes('user_id') || url.includes('where')) {
+    if (route.request().method() === 'GET') {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -43,6 +67,7 @@ async function mockMyTravels(
 
 test.describe('Calendar @smoke', () => {
   test('unauthenticated user sees login prompt on /calendar', async ({ page }) => {
+    await mockSharedShellApis(page);
     await page.context().clearCookies();
     await page.addInitScript(() => {
       try {
@@ -72,29 +97,9 @@ test.describe('Calendar @smoke', () => {
     const plannedTab = page.getByRole('button', { name: /Планирую/i });
     const wishlistTab = page.getByRole('button', { name: /Хочу/i });
 
-    const authPrompt = page.getByText(/Войдите в аккаунт/i).first();
-    const reachedState = await Promise.race([
-      wasTab.first().waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'tabs' as const).catch(() => null),
-      authPrompt.waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'auth' as const).catch(() => null),
-    ]);
-
-    if (reachedState === 'auth') {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Calendar page is showing auth prompt in current env; skipping tabs assertion',
-      });
-      return;
-    }
-
-    await Promise.all([
-      wasTab.first().waitFor({ state: 'visible', timeout: 15_000 }),
-      plannedTab.first().waitFor({ state: 'visible', timeout: 15_000 }),
-      wishlistTab.first().waitFor({ state: 'visible', timeout: 15_000 }),
-    ]);
-
-    await expect(wasTab.first()).toBeVisible();
-    await expect(plannedTab.first()).toBeVisible();
-    await expect(wishlistTab.first()).toBeVisible();
+    await expect(wasTab.first()).toBeVisible({ timeout: 15_000 });
+    await expect(plannedTab.first()).toBeVisible({ timeout: 15_000 });
+    await expect(wishlistTab.first()).toBeVisible({ timeout: 15_000 });
   });
 
   test('tab switching works — Был / Планирую / Хочу', async ({ page }) => {
@@ -103,66 +108,20 @@ test.describe('Calendar @smoke', () => {
     await preacceptCookies(page);
     await gotoWithRetry(page, CALENDAR_URL);
 
-    const authPromptVisible = await page
-      .getByText(/Войдите в аккаунт/i)
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    if (authPromptVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Auth prompt visible; skipping tab switching assertion',
-      });
-      return;
-    }
-
     // Click "Был" tab
     const wasTab = page.getByRole('button', { name: /Был/i }).first();
-    const isWasVisible = await wasTab
-      .waitFor({ state: 'visible', timeout: 15_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!isWasVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Calendar tabs not available in current env; skipping',
-      });
-      return;
-    }
-
+    await expect(wasTab).toBeVisible({ timeout: 15_000 });
     await wasTab.click();
-    await page.waitForTimeout(300);
-
-    // After clicking "Был", hint text should be visible
-    const visitedHint = page.getByText(/посещённые поездки за этот день|добавь её прямо в карточке/i);
-    const hasHint = await visitedHint
-      .first()
-      .waitFor({ state: 'visible', timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (hasHint) {
-      await expect(visitedHint.first()).toBeVisible();
-    }
+    await expect(page.getByText(/посещённые поездки за этот день|добавь её прямо в карточке/i).first())
+      .toBeVisible({ timeout: 5_000 });
 
     // Click "Планирую" tab
     const plannedTab = page.getByRole('button', { name: /Планирую/i }).first();
     await plannedTab.click();
     await page.waitForTimeout(300);
 
-    // MiniCalendar should appear for "Планирую" tab
-    const calendarHint = page.getByText(/Открой путешествие.*Планирую/i);
-    const hasCalendarHint = await calendarHint
-      .first()
-      .waitFor({ state: 'visible', timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (hasCalendarHint) {
-      await expect(calendarHint.first()).toBeVisible();
-    }
+    await expect(page.getByText(/Нет запланированных поездок/i).first())
+      .toBeVisible({ timeout: 5_000 });
 
     // Click "Хочу" tab
     const wishlistTab = page.getByRole('button', { name: /Хочу/i }).first();
@@ -170,15 +129,7 @@ test.describe('Calendar @smoke', () => {
     await page.waitForTimeout(300);
 
     const wishlistHint = page.getByText(/«Хочу поехать» на этот день|статус «Хочу поехать»/i);
-    const hasWishlistHint = await wishlistHint
-      .first()
-      .waitFor({ state: 'visible', timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (hasWishlistHint) {
-      await expect(wishlistHint.first()).toBeVisible();
-    }
+    await expect(wishlistHint.first()).toBeVisible({ timeout: 5_000 });
   });
 
   test('"Был" tab shows authored travels as default visited without an explicit user status', async ({ page }) => {
@@ -203,37 +154,10 @@ test.describe('Calendar @smoke', () => {
     await preacceptCookies(page);
     await gotoWithRetry(page, CALENDAR_URL);
 
-    const authPromptVisible = await page
-      .getByText(/Войдите в аккаунт/i)
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    if (authPromptVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Auth prompt visible; skipping authored travels assertion',
-      });
-      return;
-    }
-
     // Navigate to "Был" tab
     const wasTab = page.getByRole('button', { name: /Был/i }).first();
-    const isVisible = await wasTab
-      .waitFor({ state: 'visible', timeout: 15_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!isVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Calendar tabs not available; skipping authored travels assertion',
-      });
-      return;
-    }
-
+    await expect(wasTab).toBeVisible({ timeout: 15_000 });
     await wasTab.click();
-    await page.waitForTimeout(500);
 
     // Authored published travel appears in "Был" as a derived default status.
     const travelCard = page.getByText(/Тестовое путешествие E2E/i);
@@ -249,60 +173,16 @@ test.describe('Calendar @smoke', () => {
     await preacceptCookies(page);
     await gotoWithRetry(page, CALENDAR_URL);
 
-    const authPromptVisible = await page
-      .getByText(/Войдите в аккаунт/i)
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    if (authPromptVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Auth prompt visible; skipping MiniCalendar assertion',
-      });
-      return;
-    }
-
     const plannedTab = page.getByRole('button', { name: /Планирую/i }).first();
-    const isVisible = await plannedTab
-      .waitFor({ state: 'visible', timeout: 15_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!isVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Calendar tabs not visible; skipping MiniCalendar assertion',
-      });
-      return;
-    }
-
+    await expect(plannedTab).toBeVisible({ timeout: 15_000 });
     await plannedTab.click();
-    await page.waitForTimeout(500);
 
     // MiniCalendar shows month navigation arrows and day numbers
     const prevArrow = page.getByRole('button', { name: /предыдущий месяц|пред/i });
     const nextArrow = page.getByRole('button', { name: /следующий месяц|след/i });
 
-    const hasPrev = await prevArrow
-      .first()
-      .waitFor({ state: 'visible', timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-    const hasNext = await nextArrow
-      .first()
-      .waitFor({ state: 'visible', timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    // At least one navigation arrow should be rendered when MiniCalendar is shown
-    if (!hasPrev && !hasNext) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'MiniCalendar navigation arrows not found (env limitation); skipping',
-      });
-      return;
-    }
+    await expect(prevArrow.first()).toBeVisible({ timeout: 5_000 });
+    await expect(nextArrow.first()).toBeVisible({ timeout: 5_000 });
 
     // Calendar should display current month name
     const currentYear = new Date().getFullYear().toString();
@@ -316,56 +196,16 @@ test.describe('Calendar @smoke', () => {
     await preacceptCookies(page);
     await gotoWithRetry(page, CALENDAR_URL);
 
-    const authPromptVisible = await page
-      .getByText(/Войдите в аккаунт/i)
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    if (authPromptVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Auth prompt visible; skipping month navigation assertion',
-      });
-      return;
-    }
-
     const plannedTab = page.getByRole('button', { name: /Планирую/i }).first();
-    const isVisible = await plannedTab
-      .waitFor({ state: 'visible', timeout: 15_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!isVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Calendar tabs not visible; skipping month navigation assertion',
-      });
-      return;
-    }
-
+    await expect(plannedTab).toBeVisible({ timeout: 15_000 });
     await plannedTab.click();
-    await page.waitForTimeout(500);
 
     const nextArrow = page.getByRole('button', { name: /следующий месяц|след/i }).first();
-    const hasNext = await nextArrow
-      .waitFor({ state: 'visible', timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!hasNext) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'MiniCalendar next arrow not visible; skipping navigation test',
-      });
-      return;
-    }
-
-    await nextArrow.click();
-    await page.waitForTimeout(300);
-
-    // After clicking next, the calendar should still be visible (no crash)
     await expect(nextArrow).toBeVisible({ timeout: 5_000 });
+    const monthLabel = page.locator('text=/^[А-ЯЁA-Z][а-яёa-z]+ \\d{4}$/').first();
+    const initialMonth = await monthLabel.textContent();
+    await nextArrow.click();
+    await expect(monthLabel).not.toHaveText(initialMonth ?? '', { timeout: 5_000 });
   });
 
   test('empty state shown for each tab when no data', async ({ page }) => {
@@ -374,59 +214,31 @@ test.describe('Calendar @smoke', () => {
     await preacceptCookies(page);
     await gotoWithRetry(page, CALENDAR_URL);
 
-    const authPromptVisible = await page
-      .getByText(/Войдите в аккаунт/i)
-      .first()
-      .isVisible()
-      .catch(() => false);
+    const expectedEmptyStates = [
+      { tabName: /Был/i, emptyState: /Нет посещённых мест/i },
+      { tabName: /Планирую/i, emptyState: /Нет запланированных поездок/i },
+      { tabName: /Хочу/i, emptyState: /В «Хочу поехать» пока пусто/i },
+    ];
 
-    if (authPromptVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Auth prompt visible; skipping empty state assertion',
-      });
-      return;
-    }
-
-    const wasTab = page.getByRole('button', { name: /Был/i }).first();
-    const isVisible = await wasTab
-      .waitFor({ state: 'visible', timeout: 15_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!isVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Calendar tabs not visible; skipping empty state assertion',
-      });
-      return;
-    }
-
-    for (const tabName of [/Был/i, /Планирую/i, /Хочу/i]) {
+    for (const { tabName, emptyState } of expectedEmptyStates) {
       const tab = page.getByRole('button', { name: tabName }).first();
+      await expect(tab).toBeVisible({ timeout: 15_000 });
       await tab.click();
-      await page.waitForTimeout(300);
-
-      // Each tab should show empty state or a hint when no data
-      const hasContent = await Promise.race([
-        page.getByText(/нет|пуст|найди|добавляй/i).first()
-          .waitFor({ state: 'visible', timeout: 5_000 })
-          .then(() => true)
-          .catch(() => false),
-      ]);
-
-      if (hasContent) {
-        const emptyText = page.getByText(/нет|пуст|найди|добавляй/i).first();
-        await expect(emptyText).toBeVisible();
-      }
+      await expect(page.getByText(emptyState).first()).toBeVisible({ timeout: 5_000 });
     }
   });
 
 
   test('calendar page has no console errors on load', async ({ page }) => {
     const errors: string[] = [];
+    const failedResponses: string[] = [];
     page.on('console', (msg) => {
       if (msg.type() === 'error') errors.push(msg.text());
+    });
+    page.on('response', (response) => {
+      if (response.status() >= 400) {
+        failedResponses.push(`${response.status()} ${response.url()}`);
+      }
     });
 
     await setupFakeAuth(page);
@@ -435,42 +247,10 @@ test.describe('Calendar @smoke', () => {
     await gotoWithRetry(page, CALENDAR_URL);
     await page.waitForTimeout(2_000);
 
-    const authPromptVisible = await page
-      .getByText(/Войдите в аккаунт/i)
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    if (authPromptVisible) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Auth prompt visible; skipping console errors check',
-      });
-      return;
-    }
-
-    const hasExpectedLocalProdApiCorsNoise = errors.some(
-      (e) =>
-        e.includes("from origin 'http://127.0.0.1:8085'") &&
-        /https:\/\/metravel\.by\/api\/(countries|getFiltersTravel)\//.test(e),
-    );
-
-    const critical = errors.filter(
-      (e) =>
-        !e.includes('401') &&
-        !e.includes('403') &&
-        !e.includes('favicon') &&
-        !e.includes('ResizeObserver') &&
-        !e.includes('Non-Error exception') &&
-        !e.includes('Loading chunk') &&
-        !(
-          hasExpectedLocalProdApiCorsNoise &&
-          (e.includes('https://metravel.by/api/countries/') ||
-            e.includes('https://metravel.by/api/getFiltersTravel/') ||
-            e.includes('Failed to load resource: net::ERR_FAILED'))
-        )
-    );
-
-    expect(critical, `Console errors on /calendar: ${critical.join('\n')}`).toHaveLength(0);
+    expect(
+      errors,
+      `Console errors on /calendar: ${errors.join('\n')}\nFailed responses: ${failedResponses.join('\n')}`,
+    ).toHaveLength(0);
+    expect(failedResponses, `Failed responses on /calendar: ${failedResponses.join('\n')}`).toHaveLength(0);
   });
 });

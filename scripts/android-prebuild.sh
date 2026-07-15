@@ -69,11 +69,6 @@ if [ ! -f "app.json" ]; then
     exit 1
 fi
 
-if [ ! -f "eas.json" ]; then
-    log_error "eas.json не найден"
-    exit 1
-fi
-
 log_success "Конфигурация проверена"
 
 # 5. Проверка переменных окружения
@@ -139,13 +134,13 @@ else
 fi
 
 # 10. Проверка keystore (для production)
-log_info "Шаг 10: Проверка keystore..."
-if [ -f "android-keystore.jks" ]; then
-    log_success "Keystore найден: android-keystore.jks"
+log_info "Шаг 10: Проверка локальной release-подписи..."
+if [ -n "${METRAVEL_ANDROID_KEYSTORE_PATH:-}" ] && [ -f "${METRAVEL_ANDROID_KEYSTORE_PATH}" ]; then
+    log_success "Release keystore найден через METRAVEL_ANDROID_KEYSTORE_PATH"
 else
-    log_warning "Keystore не найден"
-    log_warning "Для production сборки создайте keystore:"
-    log_warning "  keytool -genkeypair -v -storetype PKCS12 -keystore android-keystore.jks -alias metravel -keyalg RSA -keysize 2048 -validity 10000"
+    log_warning "Release keystore не настроен"
+    log_warning "Production AAB потребует METRAVEL_ANDROID_KEYSTORE_PATH и остальные"
+    log_warning "METRAVEL_ANDROID_KEYSTORE_* переменные из локального secret store"
 fi
 
 # 11. Финальная проверка
@@ -155,7 +150,7 @@ log_success "  Prebuild проверки завершены!"
 log_success "========================================="
 echo ""
 log_info "Проект готов к сборке. Запустите:"
-echo "  - Development: ./scripts/android-build.sh (выберите опцию 1)"
-echo "  - Preview: ./scripts/android-build.sh (выберите опцию 2)"
-echo "  - Production: ./scripts/android-build.sh (выберите опцию 3)"
+echo "  - Development/USB: ./scripts/android-build.sh debug"
+echo "  - Production AAB: ./scripts/android-build.sh production"
+echo "Обе команды локальные и не используют EAS/Expo cloud credits."
 echo ""

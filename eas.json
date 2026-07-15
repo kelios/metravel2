@@ -10,10 +10,6 @@
       "ios": {
         "simulator": true,
         "buildConfiguration": "Debug"
-      },
-      "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug"
       }
     },
     "preview": {
@@ -22,9 +18,6 @@
       "ios": {
         "simulator": false,
         "buildConfiguration": "Release"
-      },
-      "android": {
-        "buildType": "apk"
       }
     },
     "production": {
@@ -33,10 +26,6 @@
       "ios": {
         "simulator": false,
         "buildConfiguration": "Release",
-        "autoIncrement": true
-      },
-      "android": {
-        "buildType": "app-bundle",
         "autoIncrement": true
       }
     }
@@ -47,10 +36,6 @@
         "appleId": "savran.juli@example.com",
         "ascAppId": "METRAVEL_APP_ID",
         "appleTeamId": "METRAVEL_TEAM_ID"
-      },
-      "android": {
-        "serviceAccountKeyPath": "./google-play-service-account.json",
-        "track": "alpha"
       }
     }
   }

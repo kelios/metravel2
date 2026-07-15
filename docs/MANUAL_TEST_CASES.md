@@ -463,7 +463,9 @@ board task.
 
 - `adb devices -l` показывает ровно нужное устройство со статусом `device`; `unauthorized` = blocked до подтверждения RSA на телефоне.
 - Сборка выполнена локально и установлена на телефон: `cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`.
-- Android EAS/cloud builds, Android production builds/submits и Expo export/dev-client route не используются без явного разрешения пользователя.
+- Android EAS/cloud builds/submits запрещены. Production собирается локальным
+  Gradle и публикуется production-only Play API; Expo export/dev-client не
+  заменяет USB device validation.
 - Артефакты складываются только в ignored-папки (`.codex-temp/`, `.codex-debug/`, `test-results/`, `playwright-report/`) и не содержат токены/пароли.
 
 Группировка Android coverage:

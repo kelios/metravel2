@@ -54,14 +54,14 @@ describe('useListTravelFilters', () => {
 
     const second = result.current.queryParams;
 
-    // '' нормализуется в 0, поэтому первый объект может содержать [0, 3]
+    // Пустые элементы не должны превращаться в валидный numeric ID 0.
     expect(first).toEqual({
-      countries: [0, 3],
+      countries: [3],
       publish: 1,
       moderation: 1,
     });
 
-    // После повторного onSelect с "чистыми" значениями массив стран нормализуется до [3]
+    // Повторный эквивалентный выбор сохраняет тот же нормализованный контракт.
     expect(second).toEqual({
       countries: [3],
       publish: 1,

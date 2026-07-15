@@ -57,7 +57,9 @@ i18n-контракта для RU/BE/UK/PL/EN. Если ось не затрон
 - `$metravel-code-reviewer`: используй для focused review diff'а, поиска рисков, rule violations, validation gaps и остаточных проблем перед handoff или approve.
 - `$metravel-security-reviewer`: используй для frontend security review по XSS/sanitization, URLs/redirects, secrets/tokens, WebView/deep links и production dependencies; review остаётся read-only без явного запроса на fix.
 - `$metravel-devops-agent`: используй для подготовки, запуска и проверки deploy на `dev`, `preprod` или `prod`, включая preflight, secret hygiene, server-path safety, approved deploy-command selection, rollback/recovery и post-deploy validation.
-- `$metravel-google-play-operator`: используй только для явного Android Google Play build/submit/track status/promotion запроса; closed testing проверяется в `alpha`, public production требует отдельного explicit gate.
+- `$metravel-google-play-operator`: локальная Android production AAB-сборка и
+  production-only Play API без EAS; `alpha`/`internal`/`beta` и closed-testing
+  настройки защищены.
 - `$metravel-production-smoke`: используй для read-only production health check `metravel.by` после deploy, при 502/white screen/static/API/sitemap подозрениях или регулярном smoke.
 - `$metravel-docs-maintainer`: используй при изменении `docs/`, `AGENTS.md`, `.codex/skills` или правил работы Codex.
 - `$metravel-prompt-maintainer`: используй для аудита и обновления `docs/*PROMPTS.md`, `assets/**/PROMPT.md`, skill UI metadata/default prompts, prompt-template consistency и воспроизводимости generated assets; сам creative article/quest content остаётся у профильного content skill.
@@ -69,7 +71,7 @@ i18n-контракта для RU/BE/UK/PL/EN. Если ось не затрон
 - `$metravel-codex-orchestrator`: используй как верхний self-check для сложных или многошаговых задач: triage, минимальный набор skills, role prompts, validation plan, handoff и final self-check по правилам проекта.
 - `$metravel-agent-workflow`: используй для координации ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
 - `$metravel-project-analyst`: используй для read-only анализа структуры проекта, активных фич, зависимостей, validation surface, risk hotspots и выбора следующих агентов перед крупной задачей.
-- `$metravel-android-developer`: используй для Android/native разработки и отладки Expo/React Native: platform files, native crashes, Expo modules, permissions, SecureStore, push, native map, web-first код в Android bundle; после фиксов сверяй Android device coverage с `docs/MANUAL_TEST_CASES.md` `AND-USB-*` на локально собранной и установленной по USB сборке; не запускай Android EAS/production builds без явного запроса.
+- `$metravel-android-developer`: используй для Android/native разработки и отладки Expo/React Native: platform files, native crashes, Expo modules, permissions, SecureStore, push, native map, web-first код в Android bundle; после фиксов сверяй Android device coverage с `docs/MANUAL_TEST_CASES.md` `AND-USB-*` на локально собранной и установленной по USB сборке; Android EAS запрещён.
 - `$metravel-ios-developer`: используй для iPhone/iPad, `.ios.tsx`, WebKit/WKWebView, safe-area, APNs, Face ID, ATS, Universal Links, iOS permissions и native-map parity; не заявляй iOS-ready без simulator/device evidence и не запускай EAS iOS build/submit без явного запроса.
 - `$metravel-mobile-tester`: используй для read-only QA мобильных сценариев на mobile web, Android и доступном iOS simulator/device: responsive layout, touch targets, navigation, USB Android local-build smoke, Maestro flows, screenshots/logs/evidence и retest; не подменяй device QA web/EAS evidence без явного запроса.
 - `$metravel-play-campaign-tester`: используй для настроенной Google Play reciprocity campaign: ежедневный USB-device pass, community assignments, app updates, screenshots/crash evidence и общий campaign log; не выполняй покупки, отзывы, удаления, смену аккаунта или переписку без отдельного разрешения.
@@ -257,9 +259,10 @@ Validation: <expected checks/evidence>.
 - Project Analyst только анализирует и не меняет файлы, если пользователь отдельно не попросил перейти к docs/code changes.
 - Backend Diagnostician не правит backend/frontend код; он дает диагноз, read-only probes и board follow-up.
 - Mobile Tester по умолчанию не меняет код; он дает evidence и баг-репорты для `$metravel-android-developer`, `$metravel-ios-developer`, `$metravel-feature-builder` или `$metravel-ui-guardrails`. Для Android evidence использует локально собранную и установленную по USB сборку; для iOS нужен доступный simulator/device; dev-client/export/EAS route допустим только по явному запросу пользователя.
-- Android Developer не меняет release/build configs (`app.json`, `eas.json`, `plugins/**`, `scripts/**`) без явного запроса, не запускает Android EAS/cloud/production builds или submits без явной команды пользователя и не заявляет Android-ready без local-build device evidence.
+- Android Developer не меняет release/build configs (`app.json`, `eas.json`, `plugins/**`, `scripts/**`) без явного запроса, никогда не запускает Android EAS/cloud build/submit и не заявляет Android-ready без local-build device evidence. Local production release передаётся Google Play Operator.
 - iOS Developer соблюдает те же config/EAS gates и не заявляет iOS-ready без simulator/device evidence.
-- Google Play Operator не запускает build/submit/promotion и не меняет track без явного запроса на точное действие; `alpha` и public `production` не взаимозаменяемы.
+- Google Play Operator использует только local Gradle + production-only Play API;
+  `alpha`, `internal`, `beta`, testers и countries не меняет.
 - Programmer не начинает реализацию без bug report, feature brief или явного user request.
 - Refactor Surgeon не меняет бизнес-логику и не делает редизайн; только behavior-preserving extraction.
 - Sprint Reviewer не пишет feature code и не двигает `done` без runtime evidence.
@@ -316,7 +319,7 @@ Operation gate:
 | Нужно понять scope без запуска | `npm run check:fast:dry` или `npm run check:changed:dry` |
 | Среднее изменение перед PR | `npm run check:preflight` |
 | Изменения в web UI | relevant targeted checks + browser preview + screenshot + console check |
-| Android/native изменения | локальная Android-сборка, установленная на USB-телефон, + релевантные `AND-USB-*`; Android EAS/production builds только по явному запросу |
+| Android/native изменения | локальная Android-сборка, установленная на USB-телефон, + релевантные `AND-USB-*`; Android EAS/cloud запрещён |
 | iOS/iPadOS изменения | targeted checks + тот же flow на simulator/device; без него `verify pending`, но не iOS-ready |
 | Localization / UI copy / locale formatting | `npm run test:i18n` + feature checks; проверка затронутых locales и platform lifecycle |
 | External-link policy | `npm run guard:external-links` или `npm run governance:verify` |

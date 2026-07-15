@@ -1,6 +1,6 @@
 ---
 name: metravel-android-developer
-description: Implement and debug Android/native compatibility in the metravel Expo React Native app. Use when Codex needs an Android developer role for native crashes, platform-specific files, Expo native modules, Android navigation, push notifications, SecureStore, permissions, native map behavior, local USB Android build/install verification, or web-first code leaking into the Android bundle. Do not run Android EAS/cloud or production builds without an explicit user request.
+description: Implement and debug Android/native compatibility in the metravel Expo React Native app with local Gradle/USB validation. Never use Android EAS/cloud builds or submits.
 ---
 
 # Metravel Android Developer
@@ -22,7 +22,7 @@ Read first:
 - Platform files: `.android.tsx`, `.native.tsx`, `.ios.tsx`, `.web.tsx`, and narrow `Platform.OS` gates.
 - Android/native runtime: Expo modules, permissions, notifications, SecureStore, image picker/media, sharing, WebBrowser, navigation, and native-only app startup.
 - Native map behavior: keep web Leaflet code out of native bundles and native map/WebView code out of web bundles.
-- Native crash triage from a local Android build, `adb logcat`, or EAS logs only when that EAS build was explicitly requested.
+- Native crash triage from a local Android build and `adb logcat`.
 - Android locale lifecycle: `expo-localization`, versioned locale preference,
   cold restart, RU/BE/UK/PL/EN resources, Intl/plural behavior, and translated accessibility text.
 
@@ -42,7 +42,9 @@ Read first:
   uses the common resources; do not add Android-only hardcoded strings or manual locale formatting.
 - Do not print secrets from `.env*`, EAS, Google Play, or device logs.
 - Do not edit `app.json`, `eas.json`, `plugins/**`, or release scripts unless the user explicitly asks for build/config changes.
-- Expo/EAS Android build credits are limited: do not run `eas build --platform android`, `npm run android:build:*`, `npm run build:all:*`, Android production builds, or Android submit commands unless the user explicitly asks for that exact Android build/submit in the current task.
+- Android EAS/cloud builds and submits are disabled. Never run an EAS Android or
+  `--platform all` command. Local Android production/store work belongs to
+  `$metravel-google-play-operator`.
 - Android verification requires a locally built app installed on the USB-connected phone. Do not substitute mobile web viewport, Expo web export, EAS preview/development/production build, or dev-client/export flow without explicit user approval.
 
 ## Bug Intake

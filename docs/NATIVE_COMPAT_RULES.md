@@ -87,12 +87,14 @@ Load-bearing правила для текущего Expo SDK 57 / React Native 0
   **на уровне эффекта/функции**. Систематический поиск —
   `$metravel-android-developer` + governance test.
 
-## 7. Отладка на устройстве — EAS сборки дорогие, локальная USB-сборка по умолчанию
+## 7. Отладка и Android release — только локальная сборка
 
-- Expo/EAS Android build credits are limited. Codex **не запускает** Android
-  EAS/cloud builds (`eas build --platform android`, `npm run android:build:*`,
-  `npm run build:all:*`) и Android submit/production build без явного запроса
-  пользователя именно на эту Android-сборку в текущей задаче.
+- Android EAS/cloud build и submit отключены проектной политикой. Не запускать
+  `eas build --platform android`, `eas submit --platform android` или EAS
+  `--platform all`. Production AAB собирается локально, публикация выполняется
+  production-only Google Play API скриптом.
+- Release automation не меняет `alpha`, `internal`, `beta`, testers, countries
+  или текущую closed-testing сборку.
 - Android QA по умолчанию: телефон подключён по USB, `adb devices -l` показывает
   `device`, приложение собрано локально и установлено на телефон:
   `cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` +
@@ -100,7 +102,7 @@ Load-bearing правила для текущего Expo SDK 57 / React Native 0
 - Не заменять Android device verification mobile-web viewport, Expo web export,
   EAS preview/development/production build или dev-client/export flow без
   явного разрешения пользователя.
-- Перед разрешённой сборкой/установкой — operation gate: проверить конкурирующие
+- Перед сборкой/установкой — operation gate: проверить конкурирующие
   `gradlew`, `adb install`, `eas build`, `expo run:android`, full/preflight/e2e
   процессы и lock-файлы. Для native-рисков прогнать релевантные governance/тесты
   до handoff.

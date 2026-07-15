@@ -4,7 +4,7 @@ import { clearResolvedRouteKeys } from '../../components/MapPage/useRouting';
 
 global.fetch = jest.fn();
 
-describe('RoutingMachine E2E Tests', () => {
+describe('RoutingMachine integration', () => {
   const mockSetRoutingLoading = jest.fn();
   const mockSetErrors = jest.fn();
   const mockSetRouteDistance = jest.fn();
@@ -118,7 +118,7 @@ describe('RoutingMachine E2E Tests', () => {
     });
   });
 
-  it('should calculate correct distance using Haversine formula', async () => {
+  it('uses the distance returned by the routing contract', async () => {
     const startPoint: [number, number] = [27.5590, 53.9006];
     const endPoint: [number, number] = [27.5700, 53.9100];
 

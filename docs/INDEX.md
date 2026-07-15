@@ -58,8 +58,8 @@
 - `docs/ANDROID_OWNER_GUIDE.md` — owner-only Android build/Play flow;
 - `docs/ANDROID_STORE_LISTING.md` — текущий store listing draft.
 
-EAS build/submit и public production rollout требуют отдельного явного запроса;
-обычная Android QA использует локальную USB-сборку.
+Android EAS build/submit запрещены; Android production использует local Gradle и
+production-only Play API, а обычная QA — локальную USB-сборку.
 
 ## External-link governance templates
 

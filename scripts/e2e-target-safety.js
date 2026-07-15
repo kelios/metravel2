@@ -25,8 +25,22 @@ const isMetravelProductionUrl = (rawValue) => {
   return hostname === 'metravel.by' || hostname.endsWith('.metravel.by')
 }
 
+const resolveE2EAuthMode = (env = process.env) => {
+  const suite = String(env.E2E_SUITE || '').trim().toLowerCase()
+  const fallback = suite === LIVE_CONTRACT_SUITE ? 'required' : 'guest'
+  const authMode = String(env.E2E_AUTH_MODE || fallback).trim().toLowerCase()
+  if (!['guest', 'required'].includes(authMode)) {
+    throw new Error(`E2E_AUTH_MODE must be guest or required, received: ${authMode}`)
+  }
+  if (suite === LIVE_CONTRACT_SUITE && authMode !== 'required') {
+    throw new Error('The live-contract suite requires E2E_AUTH_MODE=required.')
+  }
+  return authMode
+}
+
 const resolveE2ETargets = (env = process.env) => {
   const suite = String(env.E2E_SUITE || '').trim().toLowerCase()
+  const authMode = resolveE2EAuthMode(env)
   const apiUrl = String(env.E2E_API_URL || DEFAULT_LOCAL_E2E_API_URL).trim()
   const baseUrl = String(env.BASE_URL || '').trim()
   const productionTarget = isMetravelProductionUrl(apiUrl) || isMetravelProductionUrl(baseUrl)
@@ -54,6 +68,7 @@ const resolveE2ETargets = (env = process.env) => {
 
   return {
     apiUrl,
+    authMode,
     baseUrl,
     productionTarget,
     suite,
@@ -65,5 +80,6 @@ module.exports = {
   LIVE_CONTRACT_SUITE,
   PRODUCTION_SMOKE_SUITE,
   isMetravelProductionUrl,
+  resolveE2EAuthMode,
   resolveE2ETargets,
 }

@@ -1,44 +1,24 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
+import {
+  ensureAuthedStorageFallback,
+  mockFakeAuthApis,
+} from './helpers/auth'
 
 /**
  * Trip planning — planner happy-path (Sprint 13, FE-trip-tests #406).
- *
- * Auth setup mirrors public-trips.spec.ts: storageState.json for account A.
  *
  * The create flow mocks only POST /trips/planned/ locally so this spec does not
  * depend on a deployed planner backend and does not enable the global trip mock
  * flag that would affect public-trips real-BE coverage.
  */
 
-import fs from 'node:fs'
-
-const STORAGE_STATE_A = 'e2e/.auth/storageState.json'
-const hasAState = () => fs.existsSync(STORAGE_STATE_A)
-
-function requireAuthState() {
-  if (!hasAState()) {
-    throw new Error(`${STORAGE_STATE_A} is required; run the Playwright global setup first`)
-  }
-}
-
-function readUserIdFromState(filePath: string): number {
-  try {
-    const json = JSON.parse(fs.readFileSync(filePath, 'utf8')) as any
-    const origins: any[] = Array.isArray(json?.origins) ? json.origins : []
-    for (const origin of origins) {
-      const ls: any[] = Array.isArray(origin?.localStorage) ? origin.localStorage : []
-      const entry = ls.find((x: any) => x?.name === 'userId')
-      const id = Number(entry?.value)
-      if (Number.isFinite(id) && id > 0) return id
-    }
-  } catch {
-    // fall through to the stable fallback below
-  }
-  return 1
+async function setupFakeAuth(page: import('@playwright/test').Page) {
+  await ensureAuthedStorageFallback(page)
+  await mockFakeAuthApis(page)
 }
 
 async function mockCreateTrip(page: import('@playwright/test').Page) {
-  const ownerId = readUserIdFromState(STORAGE_STATE_A)
+  const ownerId = 1
 
   await page.route('**/api/trips/planned/', async (route) => {
     const request = route.request()
@@ -108,8 +88,7 @@ function seedConsent(page: import('@playwright/test').Page) {
 
 test.describe('Trip planner — happy path', () => {
   test('navigates to /trips/plan and renders the planner page', async ({ page }) => {
-    requireAuthState()
-
+    await setupFakeAuth(page)
     await seedConsent(page)
     await page.goto('/trips/plan', { waitUntil: 'domcontentloaded' })
 
@@ -118,41 +97,29 @@ test.describe('Trip planner — happy path', () => {
     await expect(page.getByTestId('my-trips-segments')).toBeVisible()
   })
 
-  test('creates a trip via the form and navigates to the plan page', async ({ browser }) => {
-    requireAuthState()
+  test('creates a trip via the form and navigates to the plan page', async ({ page }) => {
+    await setupFakeAuth(page)
+    await seedConsent(page)
+    await mockCreateTrip(page)
+    await page.goto('/trips/plan/create', { waitUntil: 'domcontentloaded' })
 
-    const ctx = await browser.newContext({
-      storageState: STORAGE_STATE_A,
-    })
-    const page = await ctx.newPage()
+    const form = page.getByTestId('trip-create-form')
+    await expect(form).toBeVisible({ timeout: 15_000 })
 
-    try {
-      await seedConsent(page)
-      await mockCreateTrip(page)
-      await page.goto('/trips/plan/create', { waitUntil: 'domcontentloaded' })
+    // Fill required fields.
+    await page.getByTestId('trip-create-title').fill('E2E тест-поездка')
+    await page.getByTestId('trip-create-start-date').fill('2026-09-01')
+    await page.getByTestId('trip-create-seats').clear()
+    await page.getByTestId('trip-create-seats').fill('4')
 
-      const form = page.getByTestId('trip-create-form')
-      await expect(form).toBeVisible({ timeout: 15_000 })
+    // Toggle consent checkbox.
+    await page.getByTestId('trip-create-consent').click()
 
-      // Fill required fields.
-      await page.getByTestId('trip-create-title').fill('E2E тест-поездка')
-      await page.getByTestId('trip-create-start-date').fill('2026-09-01')
-      await page.getByTestId('trip-create-seats').clear()
-      await page.getByTestId('trip-create-seats').fill('4')
+    // Submit must now be enabled.
+    const submitBtn = page.getByTestId('trip-create-submit')
+    await expect(submitBtn).toBeEnabled({ timeout: 5_000 })
+    await submitBtn.click()
 
-      // Toggle consent checkbox.
-      await page.getByTestId('trip-create-consent').click()
-
-      // Submit must now be enabled.
-      const submitBtn = page.getByTestId('trip-create-submit')
-      await expect(submitBtn).toBeEnabled({ timeout: 5_000 })
-      await submitBtn.click()
-
-      // After submit the app should navigate away from the create form.
-      // Either to a detail plan page or back to the trips list.
-      await expect(page).toHaveURL(/\/trips\/plan\/99001$/, { timeout: 15_000 })
-    } finally {
-      await ctx.close()
-    }
+    await expect(page).toHaveURL(/\/trips\/plan\/99001$/, { timeout: 15_000 })
   })
 })

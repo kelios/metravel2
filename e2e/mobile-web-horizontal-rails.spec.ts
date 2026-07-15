@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures'
-import { gotoWithRetry, preacceptCookies, tid } from './helpers/navigation'
+import { gotoWithRetry, tid } from './helpers/navigation'
+import { seedNecessaryConsent } from './helpers/storage'
 
 type StackState = {
   cardCount: number
@@ -71,49 +72,44 @@ async function getWeeklyHighlightsStackState(
 }
 
 test.describe('Mobile web recommendation card stacks', () => {
-  test('weekly highlights renders cards vertically without a horizontal rail', async ({ browser }) => {
-    const context = await browser.newContext({
-      viewport: { width: 390, height: 844 },
-      userAgent:
-        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-      hasTouch: true,
-      isMobile: true,
+  test.use({
+    viewport: { width: 390, height: 844 },
+    userAgent:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    hasTouch: true,
+    isMobile: true,
+  })
+
+  test('weekly highlights renders cards vertically without a horizontal rail', async ({ page }) => {
+    await page.addInitScript(seedNecessaryConsent)
+    await page.addInitScript(() => {
+      try {
+        sessionStorage.setItem('recommendations_visible', 'true')
+        sessionStorage.removeItem('weekly_highlights_collapsed')
+      } catch {
+        // noop
+      }
     })
-    const page = await context.newPage()
+    await installTravelsOfMonthMock(page)
 
-    try {
-      await preacceptCookies(page)
-      await installTravelsOfMonthMock(page)
-      await page.addInitScript(() => {
-        try {
-          sessionStorage.setItem('recommendations_visible', 'true')
-          sessionStorage.removeItem('weekly_highlights_collapsed')
-        } catch {
-          // noop
-        }
-      })
+    await gotoWithRetry(page, '/travelsby')
+    await expect(page.locator(tid('recommendations-list-header'))).toBeVisible({ timeout: 30_000 })
+    await expect(page.locator(tid('weekly-highlights-stack'))).toBeVisible({ timeout: 30_000 })
+    await expect(page.locator(tid('weekly-highlights-rail'))).toHaveCount(0)
 
-      await gotoWithRetry(page, '/travelsby')
-      await page.locator(tid('recommendations-list-header')).waitFor({ state: 'visible', timeout: 30_000 })
-      await page.locator(tid('weekly-highlights-stack')).waitFor({ state: 'visible', timeout: 30_000 })
-      await expect(page.locator(tid('weekly-highlights-rail'))).toHaveCount(0)
+    await expect
+      .poll(async () => {
+        const state = await getWeeklyHighlightsStackState(page)
+        return state?.cardCount ?? 0
+      }, { timeout: 30_000 })
+      .toBeGreaterThan(1)
 
-      await expect
-        .poll(async () => {
-          const state = await getWeeklyHighlightsStackState(page)
-          return state?.cardCount ?? 0
-        }, { timeout: 30_000 })
-        .toBeGreaterThan(1)
-
-      const stackState = await getWeeklyHighlightsStackState(page)
-      expect(stackState).not.toBeNull()
-      expect(stackState?.cardCount ?? 0).toBeGreaterThan(1)
-      expect(stackState?.stackScrollWidth ?? 0).toBeLessThanOrEqual((stackState?.stackClientWidth ?? 0) + 1)
-      expect(stackState?.secondCardTop ?? 0).toBeGreaterThan(stackState?.firstCardTop ?? 0)
-      expect(stackState?.firstCardWidth ?? 0).toBeGreaterThan((stackState?.stackClientWidth ?? 0) * 0.9)
-      expect(stackState?.secondCardWidth ?? 0).toBeGreaterThan((stackState?.stackClientWidth ?? 0) * 0.9)
-    } finally {
-      await context.close()
-    }
+    const stackState = await getWeeklyHighlightsStackState(page)
+    expect(stackState).not.toBeNull()
+    expect(stackState?.cardCount ?? 0).toBeGreaterThan(1)
+    expect(stackState?.stackScrollWidth ?? 0).toBeLessThanOrEqual((stackState?.stackClientWidth ?? 0) + 1)
+    expect(stackState?.secondCardTop ?? 0).toBeGreaterThan(stackState?.firstCardTop ?? 0)
+    expect(stackState?.firstCardWidth ?? 0).toBeGreaterThan((stackState?.stackClientWidth ?? 0) * 0.9)
+    expect(stackState?.secondCardWidth ?? 0).toBeGreaterThan((stackState?.stackClientWidth ?? 0) * 0.9)
   })
 })

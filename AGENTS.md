@@ -63,7 +63,9 @@
 - `$metravel-code-reviewer` - focused code review diff'а, поиск рисков, rule violations, validation gaps и остаточных проблем перед handoff.
 - `$metravel-security-reviewer` - evidence-backed frontend security review: XSS/sanitization, unsafe URLs/redirects, secrets/tokens, WebView/deep links и production dependencies; read-only без явного запроса на fixes.
 - `$metravel-devops-agent` - подготовка, запуск и проверка deploy на dev/preprod/prod с preflight, secret hygiene и post-deploy validation.
-- `$metravel-google-play-operator` - Android Google Play build/submit/track verification/promotion только по явному запросу на точное действие и target; closed testing = `alpha`, public production требует отдельного разрешения.
+- `$metravel-google-play-operator` - локальная Android production AAB-сборка и
+  production-only Google Play API без EAS; closed-testing tracks и настройки
+  защищены от изменений.
 - `$metravel-production-smoke` - read-only smoke production `metravel.by` после deploy или при подозрении на 502/white screen/static/API/sitemap регрессию.
 - `$metravel-docs-maintainer` - обновление `docs/`, `AGENTS.md`, `.codex/skills` и правил для Codex.
 - `$metravel-prompt-maintainer` - аудит и поддержка `docs/*PROMPTS.md`, `assets/**/PROMPT.md`, skill metadata/default prompts, воспроизводимости и prompt-governance без написания самого article/quest content.
@@ -123,7 +125,15 @@
 
 ### 3.2 Android device testing and builds
 
-- Expo/EAS Android build credits are limited. Do not run Android EAS/cloud builds (`eas build --platform android`, `npm run android:build:*`, `npm run build:all:*`) and do not create Android production builds/submits unless the user explicitly asks for that exact Android build/submit in the current task.
+- Android EAS/cloud builds and submits are disabled by project policy: do not run
+  `eas build --platform android`, `eas submit --platform android` or any
+  `--platform all` command. Android production artifacts are built locally by
+  `npm run android:build:prod`; store operations use the project Google Play API
+  script. Re-enabling Android EAS requires a new explicit user decision.
+- Current standing release authorization permits the agent to prepare and run the
+  local Android production build/Production submit when an Android release is the
+  active task. This never authorizes changing `alpha`, `internal`, `beta`, tester
+  lists, countries, or the active closed-testing release.
 - Если задачу нужно проверить на Android, считай, что Android-телефон подключён к этому компьютеру по USB-кабелю: сначала проверь `adb devices -l`.
 - Если `adb` показывает устройство со статусом `device`, сначала собери Android локально и установи сборку на телефон (`cd android && ./gradlew :app:installDebug` или `:app:assembleDebug` + `adb install -r ...`), затем самостоятельно тестируй нужный Android-сценарий по `docs/MANUAL_TEST_CASES.md` `AND-USB-*`.
 - Не заменяй Android device validation mobile-web viewport, Expo web export, EAS preview/development/production build или dev-client/export flow без явного разрешения пользователя.
