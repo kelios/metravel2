@@ -33,12 +33,6 @@ module.exports = {
   ],
   coveragePathIgnorePatterns: [
     '/node_modules/',
-    '<rootDir>/components/Map',
-    '<rootDir>/components/MapPage/',
-    '<rootDir>/components/MapUploadComponent',
-    '<rootDir>/components/imageUpload/',
-    '<rootDir>/components/travel/ImageGalleryComponent',
-    '<rootDir>/components/export/GalleryLayoutSelector.tsx',
   ],
   transformIgnorePatterns: [
     `node_modules/(?!${allowListedModules})`,

@@ -60,78 +60,22 @@ function readProcessCommand(pid) {
   }
 }
 
-function killProcess(pid, signal) {
-  try {
-    process.kill(pid, signal);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function killStaleLocalWebServers(port) {
+function findManagedLocalWebServers(port) {
   const listeningPids = listListeningPids(port);
-  const stalePids = [];
-
-  for (const pid of listeningPids) {
-    if (pid === process.pid) continue;
-
+  return listeningPids.filter((pid) => {
+    if (pid === process.pid) return false;
     const command = readProcessCommand(pid);
-    const isManagedE2EServer =
-      command.includes(path.join('scripts', 'serve-web-build.js')) && command.includes(rootDir);
-
-    if (!isManagedE2EServer) continue;
-
-    console.warn(
-      `[e2e-run] Port ${port} is occupied by stale local server (pid=${pid}). Stopping it before continuing.`
-    );
-
-    if (killProcess(pid, 'SIGTERM')) {
-      stalePids.push(pid);
-    }
-  }
-
-  return stalePids;
+    return command.includes(path.join('scripts', 'serve-web-build.js')) && command.includes(rootDir);
+  });
 }
 
-async function waitForPortRelease(port, stalePids, timeoutMs = 5000) {
-  if (!Array.isArray(stalePids) || stalePids.length === 0) return;
-
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const remaining = listListeningPids(port).filter((pid) => stalePids.includes(pid));
-    if (remaining.length === 0) return;
-    await sleep(150);
-  }
-
-  const remaining = listListeningPids(port).filter((pid) => stalePids.includes(pid));
-  if (remaining.length === 0) return;
-
-  for (const pid of remaining) {
+async function observeManagedWebServer(port) {
+  const pids = findManagedLocalWebServers(port);
+  if (pids.length > 0) {
     console.warn(
-      `[e2e-run] Port ${port} is still occupied after SIGTERM (pid=${pid}). Sending SIGKILL.`
-    );
-    killProcess(pid, 'SIGKILL');
-  }
-
-  const killDeadline = Date.now() + 2000;
-  while (Date.now() < killDeadline) {
-    const active = listListeningPids(port).filter((pid) => remaining.includes(pid));
-    if (active.length === 0) return;
-    await sleep(100);
-  }
-
-  const active = listListeningPids(port).filter((pid) => remaining.includes(pid));
-  if (active.length > 0) {
-    throw new Error(
-      `[e2e-run] Failed to free port ${port}; lingering server pid(s): ${active.join(', ')}`
+      `[e2e-run] Leaving existing managed server untouched on port ${port} (pid=${pids.join(',')}).`
     );
   }
-}
-
-async function cleanupManagedWebServer(port) {
-  const staleServerPids = killStaleLocalWebServers(port);
-  await waitForPortRelease(port, staleServerPids);
 }
 
 function runPlaywright(args) {
@@ -205,12 +149,12 @@ async function runFastPlaywrightPass({
           `[e2e-run] Fast pass shard ${shardIndex}/${shardCount} failed (attempt ${attempt}/${shardRetries + 1}): ${message}`
         );
         console.warn(`[e2e-run] Retrying fast pass shard ${shardIndex}/${shardCount}...`);
-        await cleanupManagedWebServer(port);
+        await observeManagedWebServer(port);
         await sleep(1500);
       }
     }
 
-    await cleanupManagedWebServer(port);
+    await observeManagedWebServer(port);
   }
 }
 
@@ -261,7 +205,7 @@ async function main() {
     );
   }
   process.env.E2E_WEB_PORT = String(selectedPort);
-  await cleanupManagedWebServer(selectedPort);
+  await observeManagedWebServer(selectedPort);
 
   const outputRootArgIndex = forwarded.findIndex((a) => a === '--output');
   const outputRoot =
@@ -311,12 +255,12 @@ async function main() {
           `[e2e-run] Perf pass failed (attempt ${perfAttempt}/${perfRetries + 1}): ${message}`
         );
         console.warn('[e2e-run] Retrying perf pass...');
-        await cleanupManagedWebServer(selectedPort);
+        await observeManagedWebServer(selectedPort);
         await sleep(1500);
       }
     }
   } finally {
-    await cleanupManagedWebServer(selectedPort);
+    await observeManagedWebServer(selectedPort);
   }
 }
 
