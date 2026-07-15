@@ -72,24 +72,49 @@ function StaticHead({
   useEffect(() => {
     if (typeof document === 'undefined' || !canonical) return;
 
-    const canonicalLinks = Array.from(document.querySelectorAll('link[rel="canonical"]')) as HTMLLinkElement[];
-    const canonicalLink = canonicalLinks[0] ?? document.createElement('link');
-    canonicalLink.setAttribute('rel', 'canonical');
-    canonicalLink.setAttribute('href', canonical);
+    const syncCanonical = () => {
+      const canonicalLinks = Array.from(document.querySelectorAll('link[rel="canonical"]')) as HTMLLinkElement[];
+      const canonicalLink = canonicalLinks[0] ?? document.createElement('link');
+      if (canonicalLink.getAttribute('rel') !== 'canonical') {
+        canonicalLink.setAttribute('rel', 'canonical');
+      }
+      if (canonicalLink.getAttribute('href') !== canonical) {
+        canonicalLink.setAttribute('href', canonical);
+      }
 
-    if (!canonicalLink.parentNode) {
-      document.head.appendChild(canonicalLink);
-    }
+      if (!canonicalLink.parentNode) {
+        document.head.appendChild(canonicalLink);
+      }
 
-    canonicalLinks.slice(1).forEach((link) => link.parentNode?.removeChild(link));
+      canonicalLinks.slice(1).forEach((link) => link.parentNode?.removeChild(link));
 
-    let ogUrl = document.querySelector('meta[property="og:url"]') as HTMLMetaElement | null;
-    if (!ogUrl) {
-      ogUrl = document.createElement('meta');
-      ogUrl.setAttribute('property', 'og:url');
-      document.head.appendChild(ogUrl);
-    }
-    ogUrl.setAttribute('content', canonical);
+      let ogUrl = document.querySelector('meta[property="og:url"]') as HTMLMetaElement | null;
+      if (!ogUrl) {
+        ogUrl = document.createElement('meta');
+        ogUrl.setAttribute('property', 'og:url');
+        document.head.appendChild(ogUrl);
+      }
+      if (ogUrl.getAttribute('content') !== canonical) {
+        ogUrl.setAttribute('content', canonical);
+      }
+    };
+
+    syncCanonical();
+
+    // Expo Head can reconcile its static route tags after client navigation.
+    // Keep the focused screen authoritative during that short transition.
+    const observer = new MutationObserver(syncCanonical);
+    observer.observe(document.head, {
+      childList: true,
+      attributes: true,
+      attributeFilter: ['href', 'content'],
+    });
+    const timeout = window.setTimeout(() => observer.disconnect(), 5000);
+
+    return () => {
+      window.clearTimeout(timeout);
+      observer.disconnect();
+    };
   }, [canonical]);
 
   return (

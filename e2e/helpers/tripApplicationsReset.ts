@@ -64,8 +64,10 @@ export async function resetTripApplicationsViaAdmin(
     const resolvedLoginUrl = loginPageResp.url()
     const adminOrigin = new URL(resolvedLoginUrl).origin
 
-    // Step 2b: extract csrftoken from response cookies
-    let csrf = csrftokenFromContext(await adminCtx.storageState())
+    // Step 2b: use Django's masked hidden form token. The cookie stores the
+    // underlying secret and is not a portable substitute across Django versions.
+    const loginHtml = await loginPageResp.text()
+    let csrf = csrfTokenFromHtml(loginHtml) || csrftokenFromContext(await adminCtx.storageState())
     if (!csrf) throw new Error('No csrftoken after GET /admin/login/')
 
     // Step 2c: POST /admin/login/ with superuser credentials
@@ -84,7 +86,15 @@ export async function resetTripApplicationsViaAdmin(
 
     // Django redirects to /admin/ on success (302)
     if (loginResp.status() !== 302 && loginResp.status() !== 200) {
-      throw new Error(`Django admin login POST returned ${loginResp.status()}`)
+      const responseText = await loginResp.text().catch(() => '')
+      const csrfReason = responseText
+        .match(/Reason given for failure:\s*<\/p>\s*<pre>\s*([^<]+?)\s*<\/pre>/i)?.[1]
+        ?.replace(/\s+/g, ' ')
+        .trim()
+      throw new Error(
+        `Django admin login POST returned ${loginResp.status()}` +
+          (csrfReason ? `: ${csrfReason}` : ''),
+      )
     }
 
     const authenticatedState = await adminCtx.storageState()
@@ -108,8 +118,12 @@ export async function resetTripApplicationsViaAdmin(
       // Accept 200 (form shown) or 302/404 (already gone)
       if (deletePageResp.status() === 404) continue
 
-      // Re-read csrf after the GET (Django can rotate per-request in strict mode)
-      csrf = csrftokenFromContext(await adminCtx.storageState()) || csrf
+      // Prefer the masked token rendered by Django's confirmation form.
+      const deleteHtml = await deletePageResp.text().catch(() => '')
+      csrf =
+        csrfTokenFromHtml(deleteHtml) ||
+        csrftokenFromContext(await adminCtx.storageState()) ||
+        csrf
 
       // POST to confirm deletion
       const confirmResp = await adminCtx.post(resolvedDeleteUrl, {
@@ -141,4 +155,11 @@ export async function resetTripApplicationsViaAdmin(
 function csrftokenFromContext(state: { cookies: Array<{ name: string; value: string }> }): string {
   const cookie = state.cookies.find((c) => c.name === 'csrftoken')
   return cookie?.value ?? ''
+}
+
+function csrfTokenFromHtml(html: string): string {
+  const input = String(html || '').match(
+    /<input[^>]*name=["']csrfmiddlewaretoken["'][^>]*value=["']([^"']+)["'][^>]*>/i,
+  )
+  return input?.[1]?.trim() ?? ''
 }

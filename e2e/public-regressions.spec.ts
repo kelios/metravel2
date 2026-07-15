@@ -32,11 +32,11 @@ const expectCanonicalPath = async (page: Page, path: string) => {
         const hrefs = await canonicalLinks.evaluateAll((links) =>
           links.map((link) => link.getAttribute('href')).filter(Boolean)
         )
-        return hrefs.some((href) => href?.includes(path))
+        return hrefs.join(' | ')
       },
       { timeout: 20_000, message: `canonical link for ${path} should be present` },
     )
-    .toBe(true)
+    .toContain(path)
 }
 
 test.describe('@smoke Public regressions', () => {
