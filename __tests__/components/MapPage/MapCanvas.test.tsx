@@ -25,6 +25,8 @@ const baseProps = {
     mapArea: {},
     radiusPill: {},
     radiusPillText: {},
+    locationQualityPill: {},
+    locationQualityText: {},
     geoBanner: {},
     geoBannerText: {},
     geoBannerBody: {},
@@ -159,5 +161,61 @@ describe('MapCanvas', () => {
 
     expect(openLocationSettings).toHaveBeenCalledTimes(1)
     expect(screen.queryByTestId('map-geo-retry')).toBeNull()
+  })
+
+  it('shows when a trusted live fix is temporarily refreshing', () => {
+    const screen = render(
+      <MapCanvas
+        {...baseProps}
+        showProgress={false}
+        locationState={{
+          status: 'current',
+          coordinates: { latitude: 52.2, longitude: 20.98 },
+          accuracy: 8,
+          timestamp: Date.now(),
+          canAskAgain: true,
+          isRefreshing: true,
+        }}
+        coordinatesSource="geolocation"
+      />,
+    )
+
+    expect(screen.getByTestId('map-location-quality')).toBeTruthy()
+    expect(screen.getByText('Обновляем местоположение…')).toBeTruthy()
+  })
+
+  it('shows low accuracy and stale live-fix states without replacing the user point', () => {
+    const lowAccuracy = render(
+      <MapCanvas
+        {...baseProps}
+        showProgress={false}
+        locationState={{
+          status: 'current',
+          coordinates: { latitude: 52.2, longitude: 20.98 },
+          accuracy: 180,
+          timestamp: Date.now(),
+          canAskAgain: true,
+        }}
+        coordinatesSource="geolocation"
+      />,
+    )
+    expect(lowAccuracy.getByText('Низкая точность геолокации')).toBeTruthy()
+    lowAccuracy.unmount()
+
+    const stale = render(
+      <MapCanvas
+        {...baseProps}
+        showProgress={false}
+        locationState={{
+          status: 'current',
+          coordinates: { latitude: 52.2, longitude: 20.98 },
+          accuracy: 8,
+          timestamp: Date.now() - 31_000,
+          canAskAgain: true,
+        }}
+        coordinatesSource="geolocation"
+      />,
+    )
+    expect(stale.getByText('Местоположение давно не обновлялось')).toBeTruthy()
   })
 })

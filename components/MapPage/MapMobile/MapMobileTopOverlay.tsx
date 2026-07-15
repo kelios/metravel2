@@ -179,6 +179,9 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
       ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.izmenit_tochku_starta_marshruta_6dc69e91')
       : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_vybrano_value1_iz_2_tochek_926447de', { value1: Math.min(routePointCount, 2) })
     : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_da7efcc5')
+  const routePrimaryLabel = hasUserLocation
+    ? i18nT('map:components.MapPage.Map.PlacePopupCard.index.marshrut_ot_menya_617360ad')
+    : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_da7efcc5')
   const routeHintText = routeManualStartActive && routePointCount === 0
     ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.kosnites_karty_chtoby_vybrat_novyy_start_mar_1cc95c5d')
     : routePointCount === 1
@@ -357,35 +360,35 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             </Pressable>
           )}
 
-          <View
-            style={styles.routeToolbar}
-            pointerEvents="auto"
-            testID="map-mobile-route-toolbar"
-          >
-            <Pressable
-              testID="map-mobile-route-button"
-              onPress={onEnterRouteMode}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isRouteMode }}
-              accessibilityLabel={routeAccessibilityLabel}
-              hitSlop={6}
-              style={({ pressed }) => [
-                styles.iconButton,
-                isRouteMode && styles.iconButtonActive,
-                pressed && styles.iconButtonPressed,
-              ]}
+          {isRouteMode && (
+            <View
+              style={styles.routeToolbar}
+              pointerEvents="auto"
+              testID="map-mobile-route-toolbar"
             >
-              <Feather name="navigation" size={ICON_SIZE} color={isRouteMode ? colors.primary : colors.text} />
-              {!!routeProgressLabel && (
-                <View style={styles.routeProgressBadge} pointerEvents="none">
-                  <RNText style={styles.badgeText} numberOfLines={1}>
-                    {routeProgressLabel}
-                  </RNText>
-                </View>
-              )}
-            </Pressable>
+              <Pressable
+                testID="map-mobile-route-button"
+                onPress={onEnterRouteMode}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isRouteMode }}
+                accessibilityLabel={routeAccessibilityLabel}
+                hitSlop={6}
+                style={({ pressed }) => [
+                  styles.iconButton,
+                  styles.iconButtonActive,
+                  pressed && styles.iconButtonPressed,
+                ]}
+              >
+                <Feather name="navigation" size={ICON_SIZE} color={colors.primary} />
+                {!!routeProgressLabel && (
+                  <View style={styles.routeProgressBadge} pointerEvents="none">
+                    <RNText style={styles.badgeText} numberOfLines={1}>
+                      {routeProgressLabel}
+                    </RNText>
+                  </View>
+                )}
+              </Pressable>
 
-            {isRouteMode && (
               <Pressable
                 testID="map-mobile-transport-button"
                 onPress={onToggleTransport}
@@ -401,9 +404,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               >
                 <MapIcon name={TRANSPORT_ICON[transportMode]} size={ICON_SIZE} color={colors.text} />
               </Pressable>
-            )}
 
-            {isRouteMode && (
               <Pressable
                 testID="map-mobile-route-clear-button"
                 onPress={onClearRoute}
@@ -414,9 +415,28 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               >
                 <Feather name="x" size={ICON_SIZE} color={colors.text} />
               </Pressable>
-            )}
-          </View>
+            </View>
+          )}
         </View>
+
+        {!isRouteMode && (
+          <Pressable
+            testID="map-mobile-route-button"
+            onPress={onEnterRouteMode}
+            accessibilityRole="button"
+            accessibilityLabel={routeAccessibilityLabel}
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.routePrimaryButton,
+              pressed && styles.iconButtonPressed,
+            ]}
+          >
+            <Feather name="navigation" size={ICON_SIZE} color={colors.textOnPrimary} />
+            <RNText style={styles.routePrimaryButtonText} numberOfLines={1}>
+              {routePrimaryLabel}
+            </RNText>
+          </Pressable>
+        )}
 
         {showRouteSummary && (
           <View

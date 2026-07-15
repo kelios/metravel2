@@ -232,4 +232,71 @@ describe('MapLogicComponent radius zoom initialization', () => {
     expect(map.fitBounds).not.toHaveBeenCalled();
     expect(map.setView).not.toHaveBeenCalled();
   });
+
+  it('keeps the fitted viewport stable on a later live-location tick', async () => {
+    const map = {
+      fitBounds: jest.fn(),
+      setView: jest.fn(),
+      closePopup: jest.fn(),
+      getZoom: jest.fn(() => 14),
+      getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.56 })),
+      on: jest.fn(),
+      off: jest.fn(),
+    };
+    const useMap = jest.fn(() => map);
+    const useMapEvents = jest.fn(() => null);
+    const mockBounds = {
+      pad: jest.fn(() => 'padded-bounds'),
+      getSouthWest: () => ({ lat: 53, lng: 27 }),
+      getNorthEast: () => ({ lat: 54, lng: 28 }),
+      isValid: () => true,
+      extend: jest.fn(),
+    };
+    const L = {
+      latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
+      latLngBounds: jest.fn(() => mockBounds),
+    };
+    const baseProps = {
+      mapClickHandler: () => undefined,
+      mode: 'radius',
+      coordinates: { lat: 53.9, lng: 27.56 },
+      userLocation: { lat: 53.9, lng: 27.56 },
+      disableFitBounds: false,
+      L,
+      circleCenter: { lat: 53.9, lng: 27.56 },
+      radiusInMeters: 60000,
+      fitBoundsPadding: { paddingTopLeft: [0, 0], paddingBottomRight: [0, 0] },
+      setMapZoom: jest.fn(),
+      mapRef: { current: null },
+      onMapReady: jest.fn(),
+      savedMapViewRef: { current: null },
+      hasInitializedRef: { current: true },
+      lastModeRef: { current: 'radius' },
+      lastAutoFitKeyRef: { current: null },
+      leafletBaseLayerRef: { current: null },
+      leafletOverlayLayersRef: { current: new Map() },
+      leafletControlRef: { current: null },
+      useMap,
+      useMapEvents,
+      hintCenter: { lat: 53.9, lng: 27.56 },
+    };
+    const travelData = [{ id: 1, coord: '53.9,27.56', address: 'A' }];
+    const { rerender } = render(<MapLogicComponent {...baseProps} travelData={travelData} />);
+    await act(async () => {});
+    expect(map.fitBounds).toHaveBeenCalledTimes(1);
+    map.fitBounds.mockClear();
+    map.setView.mockClear();
+
+    rerender(
+      <MapLogicComponent
+        {...baseProps}
+        userLocation={{ lat: 53.9111, lng: 27.5695 }}
+        travelData={travelData}
+      />
+    );
+    await act(async () => {});
+
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    expect(map.setView).not.toHaveBeenCalled();
+  });
 });

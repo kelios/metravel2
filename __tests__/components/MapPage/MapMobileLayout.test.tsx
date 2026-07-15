@@ -428,7 +428,8 @@ describe('MapMobileLayout', () => {
       )
 
       // Radius mode: no contextual route icons yet.
-      expect(screen.getByTestId('map-mobile-route-toolbar')).toBeTruthy()
+      expect(screen.queryByTestId('map-mobile-route-toolbar')).toBeNull()
+      expect(screen.getByText('Построить маршрут')).toBeTruthy()
       expect(screen.queryByTestId('map-mobile-transport-button')).toBeNull()
       expect(screen.queryByTestId('map-mobile-route-clear-button')).toBeNull()
 
@@ -488,6 +489,8 @@ describe('MapMobileLayout', () => {
           filtersPanelProps={filtersPanelProps}
         />,
       )
+
+      expect(screen.getByText('Маршрут от меня')).toBeTruthy()
 
       fireEvent.press(screen.getByTestId('map-mobile-route-button'))
 

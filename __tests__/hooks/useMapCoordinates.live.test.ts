@@ -26,6 +26,7 @@ describe('useMapCoordinates live location updates', () => {
     ;(Platform as any).OS = 'web'
 
     let watchSuccess: ((position: GeolocationPosition) => void) | null = null
+    let watchError: ((error: GeolocationPositionError) => void) | null = null
     const getCurrentPosition = jest.fn((success: PositionCallback) => {
       success({
         coords: {
@@ -36,8 +37,9 @@ describe('useMapCoordinates live location updates', () => {
         timestamp: 1000,
       } as GeolocationPosition)
     })
-    const watchPosition = jest.fn((success: PositionCallback) => {
+    const watchPosition = jest.fn((success: PositionCallback, error: PositionErrorCallback) => {
       watchSuccess = success
+      watchError = error
       return 77
     })
     const clearWatch = jest.fn()
@@ -72,6 +74,20 @@ describe('useMapCoordinates live location updates', () => {
     expect(watchPosition).toHaveBeenCalledTimes(1)
 
     act(() => {
+      watchError?.({
+        code: 2,
+        message: 'temporarily unavailable',
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3,
+      } as GeolocationPositionError)
+    })
+    expect(result.current.locationState).toEqual(expect.objectContaining({
+      status: 'current',
+      isRefreshing: true,
+    }))
+
+    act(() => {
       watchSuccess?.({
         coords: {
           latitude: 52.2004,
@@ -82,7 +98,9 @@ describe('useMapCoordinates live location updates', () => {
       } as GeolocationPosition)
     })
 
-    expect(result.current.coordinates).toEqual({ latitude: 52.2004, longitude: 20.9804 })
+    expect(result.current.coordinates).toEqual({ latitude: 52.2, longitude: 20.98 })
+    expect(result.current.currentLocation).toEqual({ latitude: 52.2004, longitude: 20.9804 })
+    expect(result.current.locationState).not.toHaveProperty('isRefreshing')
 
     unmount()
     expect(clearWatch).toHaveBeenCalledWith(77)
@@ -399,5 +417,36 @@ describe('useMapCoordinates live location updates', () => {
 
     expect(requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1)
     expect(result.current.locationState.status).toBe('denied')
+  })
+
+  it('starts location work only while the map screen is focused and clears the watch on blur', async () => {
+    ;(Platform as any).OS = 'web'
+    const getCurrentPosition = jest.fn((success: PositionCallback) => {
+      success({
+        coords: { latitude: 52.2, longitude: 20.98, accuracy: 8 },
+        timestamp: 1000,
+      } as GeolocationPosition)
+    })
+    const watchPosition = jest.fn(() => 91)
+    const clearWatch = jest.fn()
+    Object.defineProperty(global, 'navigator', {
+      configurable: true,
+      value: { geolocation: { getCurrentPosition, watchPosition, clearWatch } },
+    })
+
+    const { rerender } = renderHook(
+      ({ focused }: { focused: boolean }) => useMapCoordinates({ isFocused: focused }),
+      { initialProps: { focused: false } },
+    )
+
+    expect(getCurrentPosition).not.toHaveBeenCalled()
+    expect(watchPosition).not.toHaveBeenCalled()
+
+    rerender({ focused: true })
+    await waitFor(() => expect(watchPosition).toHaveBeenCalledTimes(1))
+    expect(getCurrentPosition).toHaveBeenCalledTimes(1)
+
+    rerender({ focused: false })
+    expect(clearWatch).toHaveBeenCalledWith(91)
   })
 })

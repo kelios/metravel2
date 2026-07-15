@@ -1050,6 +1050,48 @@ function questRouteKey(quest) {
   return { cityId, questId, path: `/quests/${cityId}/${questId}` };
 }
 
+function buildQuestCityAliasMap(quests) {
+  const countsByCity = new Map();
+
+  for (const quest of Array.isArray(quests) ? quests : []) {
+    const route = questRouteKey(quest);
+    if (!route) continue;
+
+    const alias = route.questId.match(/^([a-z0-9]+)(?:-|$)/i)?.[1]?.toLowerCase();
+    if (!alias || alias === route.cityId.toLowerCase()) continue;
+
+    const counts = countsByCity.get(route.cityId) || new Map();
+    counts.set(alias, (counts.get(alias) || 0) + 1);
+    countsByCity.set(route.cityId, counts);
+  }
+
+  const aliases = new Map();
+  for (const [cityId, counts] of countsByCity) {
+    const winner = [...counts.entries()].sort(([aliasA, countA], [aliasB, countB]) => {
+      if (countA !== countB) return countB - countA;
+      return aliasA < aliasB ? -1 : aliasA > aliasB ? 1 : 0;
+    })[0]?.[0];
+    if (winner) aliases.set(cityId, winner);
+  }
+
+  return aliases;
+}
+
+function questRouteVariants(quest, cityAliasMap) {
+  const primary = questRouteKey(quest);
+  if (!primary) return [];
+
+  const citySegments = [primary.cityId];
+  const alias = cityAliasMap?.get(primary.cityId);
+  if (alias && alias !== primary.cityId) citySegments.push(alias);
+
+  return citySegments.map((cityId) => ({
+    cityId,
+    questId: primary.questId,
+    path: `/quests/${cityId}/${primary.questId}`,
+  }));
+}
+
 function buildQuestSeoDescription(quest) {
   return buildQuestSeoMetadata({
     title: quest?.title,
@@ -1717,9 +1759,9 @@ const STATIC_PAGES = [
   },
   {
     route: '/travelsby',
-    title: 'Маршруты по Беларуси и идеи путешествий | Metravel',
+    title: 'Что посмотреть в Беларуси: места и маршруты | Metravel',
     description:
-      'Открывайте Беларусь через маршруты, идеи поездок и заметки путешественников: достопримечательности, природа и готовые планы на выходные.',
+      'Что посмотреть в Беларуси: замки, усадьбы, озёра, города и готовые маршруты на выходные. Фото, карта, координаты и советы путешественников.',
     breadcrumb: 'Путешествия',
   },
   {
@@ -2093,9 +2135,11 @@ async function main() {
     const questBaseHtml = fs.existsSync(questTemplatePath)
       ? fs.readFileSync(questTemplatePath, 'utf8')
       : baseHtml;
+    const questCityAliasMap = buildQuestCityAliasMap(quests);
 
     console.log(`\n🧩 Generating ${quests.length} quest pages...`);
     let questGenerated = 0;
+    let questAliasesGenerated = 0;
     for (const quest of quests) {
       const route = questRouteKey(quest);
       if (!route) continue;
@@ -2136,8 +2180,12 @@ async function main() {
       html = injectJsonLd(html, buildQuestJsonLd({ title, description, canonical, image, quest: questBundle || quest }), 'quest');
       html = injectQuestIntroSection(html, { title: name, description, quest, bundle: questBundle });
 
-      writeFileSafe(path.join(DIST_DIR, 'quests', route.cityId, `${route.questId}.html`), html);
-      writeFileSafe(path.join(DIST_DIR, 'quests', route.cityId, route.questId, 'index.html'), html);
+      const routeVariants = questRouteVariants(quest, questCityAliasMap);
+      for (const variant of routeVariants) {
+        writeFileSafe(path.join(DIST_DIR, 'quests', variant.cityId, `${variant.questId}.html`), html);
+        writeFileSafe(path.join(DIST_DIR, 'quests', variant.cityId, variant.questId, 'index.html'), html);
+      }
+      questAliasesGenerated += Math.max(0, routeVariants.length - 1);
       questGenerated++;
     }
 
@@ -2158,7 +2206,7 @@ async function main() {
     }
 
     totalPages += questGenerated;
-    console.log(`  ✅ Generated: ${questGenerated} quest pages + crawlable index`);
+    console.log(`  ✅ Generated: ${questGenerated} quest pages + ${questAliasesGenerated} city aliases + crawlable index`);
   }
 
   // --- 3. Article pages ---
@@ -2338,6 +2386,8 @@ if (typeof module !== 'undefined' && module.exports) {
     buildQuestSeoDescription,
     buildQuestSeoMetadata,
     buildQuestJsonLd,
+    buildQuestCityAliasMap,
+    questRouteVariants,
     buildQuestPromoCatalog,
     findTravelQuestPromoMatches,
     injectTravelQuestPromoSection,

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -12,6 +12,8 @@ import type { CoordinatesSource, MapLocationState } from '@/hooks/map/useMapCoor
 
 
 const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
+const LOCATION_STALE_AFTER_MS = 30_000
+const LOCATION_LOW_ACCURACY_METERS = 100
 
 const MAP_PANEL_PLACEHOLDER = <MapPageSkeleton inline />
 
@@ -91,6 +93,15 @@ export function MapCanvas({
   onSearchThisArea,
 }: MapCanvasProps) {
   useMapPopupCss()
+  const [locationClock, setLocationClock] = useState(() => Date.now())
+  const currentLocationTimestamp = locationState.status === 'current' ? locationState.timestamp : null
+  useEffect(() => {
+    if (locationState.status !== 'current') return
+    setLocationClock(Date.now())
+    const interval = setInterval(() => setLocationClock(Date.now()), 15_000)
+    return () => clearInterval(interval)
+  }, [currentLocationTimestamp, locationState.status])
+
   const hasCachedViewport = coordinatesSource === 'cache' && locationState.status !== 'current'
   const canRetryLocation =
     locationState.status === 'cached' ||
@@ -105,6 +116,22 @@ export function MapCanvas({
     : Platform.OS === 'web'
       ? i18nT('map:components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__ee671e92')
       : i18nT('map:components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__f8c836df')
+  const locationQuality = locationState.status === 'current'
+    ? locationState.isRefreshing
+      ? 'refreshing'
+      : typeof locationState.accuracy === 'number' && locationState.accuracy > LOCATION_LOW_ACCURACY_METERS
+        ? 'lowAccuracy'
+        : locationClock - locationState.timestamp > LOCATION_STALE_AFTER_MS
+          ? 'stale'
+          : null
+    : null
+  const locationQualityMessage = locationQuality === 'refreshing'
+    ? i18nT('map:components.MapPage.MapCanvas.mestopolozhenie_obnovlyaetsya_live_1')
+    : locationQuality === 'lowAccuracy'
+      ? i18nT('map:components.MapPage.MapCanvas.nizkaya_tochnost_geolokatsii_live_2')
+      : locationQuality === 'stale'
+        ? i18nT('map:components.MapPage.MapCanvas.mestopolozhenie_davno_ne_obnovlyalos_live_3')
+        : null
 
   return (
     <View
@@ -153,6 +180,22 @@ export function MapCanvas({
           <Text style={styles.radiusPillText}>{formatRadiusLabel(currentRadius)}</Text>
           <Feather name="chevron-down" size={11} color={themedColors.textMuted} />
         </Pressable>
+      )}
+      {!!locationQualityMessage && (
+        <View
+          style={styles.locationQualityPill}
+          testID="map-location-quality"
+          accessibilityLiveRegion="polite"
+        >
+          <Feather
+            name={locationQuality === 'refreshing' ? 'refresh-cw' : 'crosshair'}
+            size={13}
+            color={themedColors.warning}
+          />
+          <Text style={styles.locationQualityText} numberOfLines={2}>
+            {locationQualityMessage}
+          </Text>
+        </View>
       )}
       {showGeoBanner && (
         <View style={styles.geoBanner} testID="map-geo-banner">

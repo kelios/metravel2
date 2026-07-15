@@ -314,11 +314,12 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       }
     }
 
-    // Radius mode: when userLocation becomes available/changes, allow auto-fit to run again.
-    // This keeps default behavior: show results around current position (radius default is handled upstream).
+    // Radius mode: allow one auto-fit when trusted userLocation first becomes
+    // available. Live ticks must not repeatedly reset the viewport after a
+    // deliberate pan; follow-mode performs its own explicit recentering.
     if (mode === 'radius' && hasValidUserLocation) {
       const key = getCoarseAutoFitLocationKey(userLocation);
-      if (lastUserLocationKeyRef.current !== key) {
+      if (lastUserLocationKeyRef.current === null) {
         lastUserLocationKeyRef.current = key;
         hasInitializedRef.current = false;
         lastAutoFitKeyRef.current = null;
@@ -410,7 +411,8 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     const radiusKey = circleCenter && Number.isFinite(radiusInMeters)
       ? `r:${getCoarseAutoFitLocationKey(circleCenter)}:${Number(radiusInMeters).toFixed(0)}`
       : 'no-radius';
-    const autoFitKey = `${mode}:${dataKey}:${getCoarseAutoFitLocationKey(userLocation)}:${radiusKey}`;
+    const initialLocationKey = lastUserLocationKeyRef.current ?? getCoarseAutoFitLocationKey(userLocation);
+    const autoFitKey = `${mode}:${dataKey}:${initialLocationKey}:${radiusKey}`;
     if (lastAutoFitKeyRef.current === autoFitKey) return;
 
     const hasValidCircle = hasValidRadiusCircle;

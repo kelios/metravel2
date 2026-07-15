@@ -65,34 +65,52 @@ async function installMapApiMocks(page: any) {
   await page.route('**/api/travels/near-route/**', async (route: any) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }),
   )
+  await page.route('**/api/routing/route/**', async (route: any) => {
+    const payload = route.request().postDataJSON()
+    const points = Array.isArray(payload?.points) ? payload.points : []
+    const geometry = points.map((point: any) => [Number(point.lng), Number(point.lat)])
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        geometry,
+        distance_m: 11_400,
+        duration_s: 1_620,
+        provider: 'e2e',
+      }),
+    })
+  })
 }
 
 async function seedMobileMapEnvironment(page: any) {
+  await page.context().grantPermissions(['geolocation'])
+  await page.context().setGeolocation({ latitude: 53.9006, longitude: 27.559, accuracy: 10 })
   await page.addInitScript(() => {
     try {
       window.localStorage.setItem('metravel_map_onboarding_completed', 'true')
     } catch {
       // noop
     }
+  })
+}
+
+async function seedControllableLiveLocation(page: any) {
+  await page.context().grantPermissions(['geolocation'])
+  await page.context().setGeolocation({ latitude: 53.9006, longitude: 27.559, accuracy: 8 })
+  await page.addInitScript(() => {
     try {
-      const coords = {
-        latitude: 53.9006,
-        longitude: 27.559,
-        accuracy: 10,
-        altitude: null,
-        altitudeAccuracy: null,
-        heading: null,
-        speed: null,
-      }
-      const makePosition = () => ({ coords, timestamp: Date.now() })
-      ;(navigator as any).geolocation = {
-        getCurrentPosition: (success: any) => success(makePosition()),
-        watchPosition: (success: any) => {
-          success(makePosition())
-          return 1
-        },
-        clearWatch: () => undefined,
-      }
+      window.localStorage.setItem('metravel_map_onboarding_completed', 'true')
+    } catch {
+      // noop
+    }
+  })
+}
+
+async function seedDeniedLocation(page: any) {
+  await page.context().clearPermissions()
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem('metravel_map_onboarding_completed', 'true')
     } catch {
       // noop
     }
@@ -133,8 +151,24 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
     const radiusBtn = byTid(page, 'map-mobile-radius-button')
     const hint = byTid(page, 'map-mobile-route-hint')
 
+    await test.step('Selected place offers a one-tap route from the trusted position', async () => {
+      const marker = page.locator('.metravel-pin-marker').first()
+      await expect(marker).toBeVisible({ timeout: 30_000 })
+      await marker.click({ force: true })
+      const cardAction = byTid(page, 'popup-primary-action')
+      await expect(cardAction).toContainText('Маршрут от меня', { timeout: 15_000 })
+      await cardAction.click({ force: true })
+      await expect(byTid(page, 'map-mobile-route-summary')).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByText('11.4 км', { exact: true })).toBeVisible()
+      await expect(page.getByText('27 мин', { exact: true })).toBeVisible()
+      await expect(page.getByText('2/2', { exact: true })).toBeVisible()
+      await byTid(page, 'map-mobile-route-clear-button').click({ force: true })
+      await expect(radiusBtn).toBeVisible({ timeout: 15_000 })
+    })
+
     await test.step('Radius mode: route entry visible, contextual icons hidden', async () => {
       await expect(routeBtn).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByText('Маршрут от меня', { exact: true })).toBeVisible()
       await expect(radiusBtn).toBeVisible()
       await expect(transportBtn).toHaveCount(0)
       await expect(clearBtn).toHaveCount(0)
@@ -190,5 +224,102 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
       await expect(transportBtn).toHaveCount(0, { timeout: 15_000 })
       await expect(clearBtn).toHaveCount(0, { timeout: 15_000 })
     })
+  })
+
+  test('denied location keeps fallback out of the route and offers a manual start', async ({ page }) => {
+    await preacceptCookies(page)
+    await seedDeniedLocation(page)
+    await installTileMock(page)
+    await installMapApiMocks(page)
+    await gotoMobileMap(page)
+
+    await expect(page.getByText('Построить маршрут', { exact: true })).toBeVisible()
+    await byTid(page, 'map-mobile-route-button').click({ force: true })
+    await expect(page.getByText('0/2', { exact: true })).toBeVisible()
+    await expect(byTid(page, 'map-mobile-route-request-location')).toBeVisible()
+    await expect(byTid(page, 'map-mobile-route-manual-start')).toBeVisible()
+    await byTid(page, 'map-mobile-route-manual-start').click({ force: true })
+    await expect(
+      page.getByText('Коснитесь карты, чтобы выбрать новый старт маршрута.', { exact: true }),
+    ).toBeVisible()
+  })
+
+  test('live marker follows, manual pan disables follow, and blur cleans up', async ({ page }) => {
+    await preacceptCookies(page)
+    await seedControllableLiveLocation(page)
+    await installTileMock(page)
+    await installMapApiMocks(page)
+    await gotoMobileMap(page)
+
+    const map = page.locator('.leaflet-container').first()
+    const userMarker = page.locator('[aria-label="Вы здесь"]').first()
+    await expect(userMarker).toBeVisible({ timeout: 30_000 })
+    await map.evaluate((el: any) => {
+      el.__liveLocationIdentity = 'same-map'
+      const geolocation = navigator.geolocation as any
+      const originalClearWatch = geolocation.clearWatch.bind(geolocation)
+      ;(window as any).__metravelGeoClearCount = 0
+      geolocation.clearWatch = (watchId: number) => {
+        ;(window as any).__metravelGeoClearCount += 1
+        originalClearWatch(watchId)
+      }
+    })
+
+    await byTid(page, 'map-center-user-quick').click({ force: true })
+    await page.waitForTimeout(300)
+    const followedMarkerBox = await userMarker.boundingBox()
+    expect(followedMarkerBox).toBeTruthy()
+    await page.context().setGeolocation({ latitude: 53.9106, longitude: 27.569, accuracy: 7 })
+
+    await expect.poll(async () => {
+      const cached = await page.evaluate(() => {
+        const raw = window.localStorage.getItem('metravel:lastKnownCoords')
+        return raw ? JSON.parse(raw) : null
+      })
+      return Number(cached?.latitude)
+    }).toBeCloseTo(53.9106, 4)
+    await expect.poll(async () => {
+      const markerBox = await userMarker.boundingBox()
+      if (!markerBox || !followedMarkerBox) return 0
+      return Math.hypot(markerBox.x - followedMarkerBox.x, markerBox.y - followedMarkerBox.y)
+    }).toBeGreaterThan(50)
+    expect(await map.evaluate((el: any) => el.__liveLocationIdentity)).toBe('same-map')
+
+    // Let the programmatic follow animation settle before a genuine user drag.
+    await page.waitForTimeout(800)
+    const mapBox = await map.boundingBox()
+    expect(mapBox).toBeTruthy()
+    if (mapBox) {
+      await page.mouse.move(mapBox.x + mapBox.width / 2, mapBox.y + mapBox.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(mapBox.x + mapBox.width / 2 + 120, mapBox.y + mapBox.height / 2)
+      await page.mouse.up()
+    }
+    await page.waitForTimeout(300)
+    const pannedMarkerBox = await userMarker.boundingBox()
+    expect(pannedMarkerBox).toBeTruthy()
+    if (pannedMarkerBox && followedMarkerBox) {
+      expect(Math.abs(pannedMarkerBox.x - followedMarkerBox.x)).toBeGreaterThan(50)
+    }
+    await page.context().setGeolocation({ latitude: 53.9111, longitude: 27.5695, accuracy: 7 })
+    await expect.poll(async () => {
+      const cached = await page.evaluate(() => {
+        const raw = window.localStorage.getItem('metravel:lastKnownCoords')
+        return raw ? JSON.parse(raw) : null
+      })
+      return Number(cached?.latitude)
+    }).toBeCloseTo(53.9111, 4)
+    await expect.poll(async () => {
+      const markerBox = await userMarker.boundingBox()
+      if (!markerBox || !pannedMarkerBox) return 999
+      return Math.hypot(markerBox.x - pannedMarkerBox.x, markerBox.y - pannedMarkerBox.y)
+    }).toBeLessThan(40)
+
+    await page.context().clearPermissions()
+    await expect(page.getByText('Обновляем местоположение…', { exact: true })).toBeVisible()
+    await expect(userMarker).toBeVisible()
+
+    await page.getByTestId('footer-item-home').click({ force: true })
+    await expect.poll(() => page.evaluate(() => (window as any).__metravelGeoClearCount)).toBeGreaterThan(0)
   })
 })

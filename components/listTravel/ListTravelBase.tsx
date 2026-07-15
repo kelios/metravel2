@@ -61,7 +61,7 @@ import type { ListTravelBaseProps } from './ListTravelBase.types'
 
 const EMPTY_FALLBACK_STEPS: ReturnType<typeof buildListTravelFallbackSteps> = [];
 
-function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
+function ListTravelBase({ catalogIntro, primaryAction }: ListTravelBaseProps = {}) {
     const colors = useThemedColors();
     const hydrationReady = useHydrationReady();
     const { viewportState, width } = useListTravelViewportState();
@@ -750,6 +750,7 @@ function ListTravelBase({ primaryAction }: ListTravelBaseProps = {}) {
         containerStyle: sidebarContainerStyle,
       }}
       rightColumn={{
+        listIntroContent: catalogIntro,
         search,
         setSearch,
         onClearAll: handleClearAll,

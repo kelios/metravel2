@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AppState, Linking, Platform } from 'react-native';
+import { useIsFocused } from 'expo-router';
 import { logError, logMessage } from '@/utils/logger';
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
@@ -35,7 +36,7 @@ export type LocationSnapshot = Coordinates & {
 
 export type MapLocationState =
   | { status: 'loading'; coordinates: null; accuracy: null; timestamp: null; canAskAgain: true }
-  | { status: 'current'; coordinates: Coordinates; accuracy: number | null; timestamp: number; canAskAgain: true }
+  | { status: 'current'; coordinates: Coordinates; accuracy: number | null; timestamp: number; canAskAgain: true; isRefreshing?: boolean }
   | { status: 'cached'; coordinates: Coordinates; accuracy: number | null; timestamp: number | null; canAskAgain: true }
   | { status: 'denied'; coordinates: null; accuracy: null; timestamp: null; canAskAgain: boolean }
   | { status: 'unavailable'; coordinates: null; accuracy: null; timestamp: null; canAskAgain: false }
@@ -108,7 +109,9 @@ function distanceMeters(a: Coordinates, b: Coordinates): number {
  * На web стартует с кеша/дефолта, затем получает current fix; только подтверждённый
  * fix становится current/userLocation, а viewport anchors остаются недоверенными.
  */
-export function useMapCoordinates() {
+export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
+  const routeIsFocused = useIsFocused();
+  const isFocused = options.isFocused ?? routeIsFocused;
   const lastTrustedLocationRef = useRef<LocationSnapshot | null>(null);
   const liveWatchCleanupRef = useRef<(() => void) | null>(null);
   const liveWatchActiveRef = useRef(false);
@@ -183,13 +186,29 @@ export function useMapCoordinates() {
 
     if (!options.force && prev) {
       const movedEnough = distanceMeters(prev, next) >= LIVE_LOCATION_MIN_DISTANCE_M;
-      if (!movedEnough) return false;
+      if (!movedEnough) {
+        lastTrustedLocationRef.current = next;
+        setLocationState({
+          status: 'current',
+          coordinates: { latitude: prev.latitude, longitude: prev.longitude },
+          accuracy: next.accuracy ?? null,
+          timestamp: next.timestamp ?? Date.now(),
+          canAskAgain: true,
+        });
+        cacheWebCoordinates(next);
+        return false;
+      }
     }
 
     lastTrustedLocationRef.current = next;
     const coords = { latitude, longitude };
-    setCoordinates(coords);
-    setCoordinatesSource('geolocation');
+    // The initial/explicit fix owns the viewport anchor. Foreground watch ticks
+    // update only the trusted user marker; otherwise every GPS movement also
+    // moves the radius/search center and defeats manual pan/follow-off.
+    if (options.force || !prev) {
+      setCoordinates(coords);
+      setCoordinatesSource('geolocation');
+    }
     setLocationState({
       status: 'current',
       coordinates: coords,
@@ -201,6 +220,14 @@ export function useMapCoordinates() {
     cacheWebCoordinates(next);
     return true;
   }, [cacheWebCoordinates]);
+
+  const markLiveLocationRefreshing = useCallback(() => {
+    setLocationState((current) =>
+      current.status === 'current'
+        ? { ...current, isRefreshing: true }
+        : current,
+    );
+  }, []);
 
   const clearLocationWatch = useCallback(() => {
     const cleanup = liveWatchCleanupRef.current;
@@ -235,6 +262,7 @@ export function useMapCoordinates() {
         () => {
           // Temporary watch failures keep the last trusted point visible; fallback
           // centers must still never become current user position.
+          markLiveLocationRefreshing();
         },
         {
           enableHighAccuracy: true,
@@ -250,8 +278,9 @@ export function useMapCoordinates() {
     } catch {
       liveWatchActiveRef.current = false;
       liveWatchCleanupRef.current = null;
+      markLiveLocationRefreshing();
     }
-  }, [applyTrustedLocation]);
+  }, [applyTrustedLocation, markLiveLocationRefreshing]);
 
   const startNativeLocationWatch = useCallback(async () => {
     if (Platform.OS === 'web') return;
@@ -297,16 +326,18 @@ export function useMapCoordinates() {
       liveWatchStartingRef.current = false;
       liveWatchActiveRef.current = false;
       liveWatchCleanupRef.current = null;
+      markLiveLocationRefreshing();
     }
-  }, [applyTrustedLocation]);
+  }, [applyTrustedLocation, markLiveLocationRefreshing]);
 
   const startLocationWatch = useCallback(() => {
+    if (!isFocused) return;
     if (Platform.OS === 'web') {
       startWebLocationWatch();
       return;
     }
     void startNativeLocationWatch();
-  }, [startNativeLocationWatch, startWebLocationWatch]);
+  }, [isFocused, startNativeLocationWatch, startWebLocationWatch]);
 
   const requestWebLocation = useCallback(async (signal?: AbortSignal) => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -514,6 +545,10 @@ export function useMapCoordinates() {
   }, [applyTrustedLocation, clearLocationWatch, requestWebLocation, startLocationWatch]);
 
   useEffect(() => {
+    if (!isFocused) {
+      clearLocationWatch();
+      return;
+    }
     const abortController = new AbortController();
     requestLocation(abortController.signal);
 
@@ -521,9 +556,13 @@ export function useMapCoordinates() {
       abortController.abort();
       clearLocationWatch();
     };
-  }, [clearLocationWatch, requestLocation]);
+  }, [clearLocationWatch, isFocused, requestLocation]);
 
   useEffect(() => {
+    if (!isFocused) {
+      clearLocationWatch();
+      return;
+    }
     if (Platform.OS === 'web') {
       if (locationState.status !== 'current') return;
       if (typeof document === 'undefined') return;
@@ -559,7 +598,7 @@ export function useMapCoordinates() {
     return () => {
       subscription.remove();
     };
-  }, [clearLocationWatch, locationState.status, requestLocation, startLocationWatch]);
+  }, [clearLocationWatch, isFocused, locationState.status, requestLocation, startLocationWatch]);
 
   const updateCoordinates = useCallback((lat: number, lng: number) => {
     if (isValidCoordinate(lat, lng)) {

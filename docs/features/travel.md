@@ -145,6 +145,26 @@ Zustand/context остаются для client/UI state.
 | `api/travelRoutes.ts` | `/api/travels/{id}/routes/` list/upload/delete/download |
 | `api/instagramPublish.ts` | optional Instagram publish integration |
 
+### Social publish UI contract
+
+Шаг 6 wizard использует одну карточку публикации для owner/admin и не смешивает
+две разные операции:
+
+- Instagram action публикует подготовленную галерею и caption в подключённый
+  Instagram Business account;
+- Facebook action публикует link-post на зафиксированную сервером Metravel Page:
+  текст поста плюс canonical URL сохранённой статьи `/travels/{slug}`; preview
+  берётся из Open Graph страницы, а Page ID не редактируется и не передаётся
+  клиентом.
+
+Normative states для обеих actions на web, Android и iOS: `idle`, `connecting`,
+`publishing`, `published`, `already_published`, `not_connected`, `error`.
+Используются существующие `Button`/Feather primitives; видимые подписи и
+accessibility labels локализуются в RU/BE/UK/PL/EN. Facebook action остаётся
+скрытой до появления подтверждённого backend capability, чтобы UI не предлагал
+неработающую публикацию. Токены Meta, app secret и целевой Page ID принадлежат
+backend-конфигурации и никогда не попадают в frontend bundle или request body.
+
 `getFiltersTravel` не содержит `countries` или `year`: `countries` объединяются
 клиентом только после отдельной runtime-валидации country endpoint, а `year`
 остаётся пользовательским selection/input state. Невалидный обязательный массив

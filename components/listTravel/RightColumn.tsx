@@ -45,6 +45,7 @@ import { translate as i18nT } from '@/i18n'
 
 
 interface RightColumnProps {
+  listIntroContent?: React.ReactNode
   search: string
   setSearch: (value: string) => void
   onClearAll?: () => void
@@ -110,6 +111,7 @@ interface RightColumnProps {
 
 const RightColumn: React.FC<RightColumnProps> = (
   ({
+     listIntroContent,
      search,
      setSearch,
      onClearAll,
@@ -385,26 +387,37 @@ const RightColumn: React.FC<RightColumnProps> = (
         Platform.OS === 'web' && !isMobile ? RECOMMENDATIONS_TOTAL_HEIGHT : undefined
 
       return (
-        <View
-          testID="recommendations-list-header"
-          onLayout={showRecommendations ? handleRecommendationsLayout : undefined}
-          style={
-            showRecommendations
-              ? {
-                  marginBottom: 24,
-                  ...(desktopHeight ? { height: desktopHeight, overflow: 'hidden' } : {}),
-                }
-              : { height: 0, overflow: 'hidden' }
-          }
-        >
-          {showRecommendations && (
-            <Suspense fallback={<RecommendationsPlaceholder />}>
-              <RecommendationsTabs />
-            </Suspense>
-          )}
-        </View>
+        <>
+          {listIntroContent ? (
+            <View style={paddingHorizontalStyle}>{listIntroContent}</View>
+          ) : null}
+          <View
+            testID="recommendations-list-header"
+            onLayout={showRecommendations ? handleRecommendationsLayout : undefined}
+            style={
+              showRecommendations
+                ? {
+                    marginBottom: 24,
+                    ...(desktopHeight ? { height: desktopHeight, overflow: 'hidden' } : {}),
+                  }
+                : { height: 0, overflow: 'hidden' }
+            }
+          >
+            {showRecommendations && (
+              <Suspense fallback={<RecommendationsPlaceholder />}>
+                <RecommendationsTabs />
+              </Suspense>
+            )}
+          </View>
+        </>
       )
-    }, [showRecommendations, handleRecommendationsLayout, isMobile]);
+    }, [
+      handleRecommendationsLayout,
+      isMobile,
+      listIntroContent,
+      paddingHorizontalStyle,
+      showRecommendations,
+    ]);
 
     const handleRecommendationsToggle = useCallback(() => {
       const nextVisible = !showRecommendations
@@ -522,6 +535,8 @@ const RightColumn: React.FC<RightColumnProps> = (
       webScrollHandler,
     ])
 
+    const showStandaloneListIntro = !!listIntroContent && loadedResultsContent == null
+
     return (
       <View testID={testID} style={containerStyle}>
         {/* Search Header - Sticky */}
@@ -589,7 +604,19 @@ const RightColumn: React.FC<RightColumnProps> = (
         ) : null}
 
         {/* Cards + Recommendations */}
-        <View testID="cards-scroll-container" style={cardsWrapperStyle}>
+        <View
+          testID="cards-scroll-container"
+          style={[
+            cardsWrapperStyle,
+            showStandaloneListIntro && Platform.OS === 'web'
+              ? ({ overflowY: 'auto' } as any)
+              : undefined,
+          ]}
+        >
+          {showStandaloneListIntro ? (
+            <View style={paddingHorizontalStyle}>{listIntroContent}</View>
+          ) : null}
+
           {shouldShowSkeleton && isRecommendationsVisible && (
             <View
               style={recommendationsSkeletonStyle}

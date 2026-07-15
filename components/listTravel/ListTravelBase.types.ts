@@ -1,6 +1,8 @@
 import type Feather from '@expo/vector-icons/Feather';
+import type { ReactNode } from 'react';
 
 export type ListTravelBaseProps = {
+  catalogIntro?: ReactNode;
   primaryAction?: {
     accessibilityHint?: string;
     iconName: keyof typeof Feather.glyphMap;
