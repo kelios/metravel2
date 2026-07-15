@@ -1,5 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 
 let mockResponsiveState = {
@@ -142,6 +143,26 @@ describe('TravelWizardHeader', () => {
 
     fireEvent.press(getByTestId('travel-wizard-save'));
     expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks the current milestone as selected and completed milestones with a check', () => {
+    const { getByLabelText } = render(
+      <TravelWizardHeader
+        title="Медиа"
+        subtitle="Шаг 3 из 6"
+        progressPercent={50}
+        currentStep={3}
+        totalSteps={6}
+        onStepSelect={jest.fn()}
+      />
+    );
+
+    const completedStep = getByLabelText(/Перейти к шагу 1/);
+    const currentStep = getByLabelText(/Перейти к шагу 3/);
+
+    expect(completedStep.props.accessibilityState).toEqual({ selected: false, disabled: false });
+    expect(completedStep.findByType(Feather).props.name).toBe('check');
+    expect(currentStep.props.accessibilityState).toEqual({ selected: true, disabled: false });
   });
 
   it('shows an in-progress save state and blocks duplicate save presses', () => {

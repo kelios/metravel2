@@ -10,10 +10,9 @@ export interface MapProps {
   travel?: { data?: Point[] };
   coordinates: Coordinates;
   /**
-   * True when `coordinates` is the non-user DEFAULT center (no real geolocation,
-   * no cache, no explicit anchor). When true the web map skips deriving a real
-   * "you are here" position from `coordinates`. Explicit origin flag — replaces
-   * Minsk coordinate-matching so a user near Minsk is still treated as real.
+   * True when `coordinates` is a non-user viewport/search anchor. Only explicit
+   * false allows the legacy map to derive a user position from this prop;
+   * undefined fails closed.
    */
   coordinatesAreFallback?: boolean;
   userLocation?: Coordinates | null;
@@ -43,6 +42,8 @@ export interface MapProps {
   categoryFilterUnresolved?: boolean;
   onMapUiApiReady?: (api: MapUiApi | null) => void;
   onUserLocationChange?: (loc: Coordinates | null) => void;
+  /** Delegate an explicit location/center request to the owning state hook. */
+  onRequestUserLocation?: () => void | Promise<void>;
   /**
    * F-49 — fired (debounced) on map pan/zoom end with the new map center, so the
    * caller can offer a Google-Maps-style "Search this area" action.

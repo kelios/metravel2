@@ -36,15 +36,13 @@ type UseMapUserLocationArgs = {
   coordinates: any
   providedUserLocation?: Coordinates | null
   /**
-   * Explicit origin flag from useMapCoordinates: true when `coordinates` is the
-   * non-user DEFAULT center. Preferred over isFallbackMinskCenter so a user
-   * physically near Minsk is still treated as a real location. When undefined,
-   * we fall back to the legacy Minsk coordinate-matching (defensive-only).
+   * Explicit origin flag from useMapCoordinates. Only false permits legacy
+   * derivation from `coordinates`; true/undefined fail closed.
    */
   coordinatesAreFallback?: boolean
   mapRef: React.MutableRefObject<any>
   onUserLocationChange?: (coords: Coordinates | null) => void
-  isFallbackMinskCenter: (lat: number, lng: number) => boolean
+  onRequestUserLocation?: () => void | Promise<void>
 }
 
 export function useMapUserLocation({
@@ -53,7 +51,7 @@ export function useMapUserLocation({
   coordinatesAreFallback,
   mapRef,
   onUserLocationChange,
-  isFallbackMinskCenter,
+  onRequestUserLocation,
 }: UseMapUserLocationArgs) {
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
   const geoRequestedRef = useRef(false)
@@ -81,17 +79,15 @@ export function useMapUserLocation({
     }
   }, [onUserLocationChange, userLocation])
 
-  // Whether the given coordinates represent a REAL user position. Prefer the
-  // explicit origin flag; only fall back to Minsk coordinate-matching when the
-  // flag wasn't supplied (legacy/native callers).
+  // Whether the legacy coordinates prop represents a REAL user position.
+  // Trust is explicit and fail-closed; numeric comparison with a city/default
+  // center is not part of the contract.
   const coordinatesAreRealUser = useCallback(
     (lat: number, lng: number) => {
       if (!isValidCoordinate(lat, lng)) return false
-      if (coordinatesAreFallback === true) return false
-      if (coordinatesAreFallback === false) return true
-      return !isFallbackMinskCenter(lat, lng)
+      return coordinatesAreFallback === false
     },
-    [coordinatesAreFallback, isFallbackMinskCenter],
+    [coordinatesAreFallback],
   )
 
   useEffect(() => {
@@ -113,6 +109,16 @@ export function useMapUserLocation({
   }, [coordinates, coordinatesAreRealUser, providedUserLocation])
 
   const requestUserLocation = useCallback(async (notifyOnFailure = false) => {
+    // The main map is controlled by useMapCoordinates. Delegate explicit center
+    // requests to that owner so permission/status/current stay one atomic state.
+    if (providedUserLocation !== undefined && onRequestUserLocation) {
+      try {
+        await onRequestUserLocation()
+      } catch {
+        if (notifyOnFailure) showGeolocationErrorToast()
+      }
+      return
+    }
     if (geoRequestedRef.current) return
     geoRequestedRef.current = true
     try {
@@ -145,17 +151,20 @@ export function useMapUserLocation({
       geoRequestedRef.current = false
       if (notifyOnFailure) showGeolocationErrorToast()
     }
-  }, [])
+  }, [onRequestUserLocation, providedUserLocation])
 
   // Автозапрос геолокации при монтировании, если нет валидной пользовательской локации
   useEffect(() => {
+    // A defined prop (including null) makes this a controlled consumer. The
+    // owner performs the only automatic permission/location request.
+    if (providedUserLocation !== undefined) return
     const lat = Number((coordinates as any)?.latitude)
     const lng = Number((coordinates as any)?.longitude)
     // Запрашиваем геолокацию только если координаты не являются валидной пользовательской локацией
     if (!coordinatesAreRealUser(lat, lng)) {
       void requestUserLocation()
     }
-  }, [coordinates, coordinatesAreRealUser, requestUserLocation])
+  }, [coordinates, coordinatesAreRealUser, providedUserLocation, requestUserLocation])
 
   const userLocationLatLng = useMemo(() => {
     if (!userLocation) return null

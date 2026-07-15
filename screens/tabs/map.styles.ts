@@ -605,23 +605,28 @@ export const getStyles = (
       },
       geoBanner: {
         position: 'absolute',
-        bottom: isMobile && Platform.OS === 'web' ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT + 16 : 20,
+        // The permission state is primary mobile feedback, so keep it directly
+        // below the safe-area toolbar (design states 1/3) instead of letting a
+        // bottom sheet or browser footer cover it. Desktop retains the compact
+        // bottom-left placement.
+        top: isMobile ? Math.max(insetTop, 8) + 68 : undefined,
+        bottom: isMobile ? undefined : 20,
         left: 16,
         right: isMobile ? 16 : undefined,
-        maxWidth: isMobile ? undefined : 280,
+        maxWidth: isMobile ? undefined : 420,
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: 8,
         paddingHorizontal: 14,
         paddingVertical: 9,
-        backgroundColor: themedColors.surface,
+        backgroundColor: themedColors.warningSoft,
         borderRadius: 14,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: themedColors.warningSoft,
+        borderColor: themedColors.warning,
         zIndex: 1010,
         ...(Platform.OS === 'web'
           ? ({
-              backgroundColor: themedColors.surfaceAlpha40,
+              backgroundColor: themedColors.warningSoft,
               boxShadow: '0 8px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.05)',
               backdropFilter: 'blur(18px)',
               WebkitBackdropFilter: 'blur(18px)',
@@ -629,10 +634,46 @@ export const getStyles = (
           : themedColors.shadows.medium),
       },
       geoBannerText: {
-        flex: 1,
         fontSize: 13,
         fontWeight: '500',
         color: themedColors.text,
+      },
+      geoBannerBody: {
+        flex: 1,
+        gap: 8,
+      },
+      geoBannerActions: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+      },
+      geoBannerActionPrimary: {
+        minHeight: 44,
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+        borderRadius: 10,
+        backgroundColor: themedColors.warning,
+        ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+      },
+      geoBannerActionPrimaryText: {
+        color: themedColors.textOnPrimary,
+        fontSize: 12,
+        fontWeight: '700',
+      },
+      geoBannerActionSecondary: {
+        minHeight: 44,
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+        borderRadius: 10,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: themedColors.border,
+        backgroundColor: themedColors.surface,
+        ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+      },
+      geoBannerActionSecondaryText: {
+        color: themedColors.text,
+        fontSize: 12,
+        fontWeight: '700',
       },
       geoBannerClose: {
         width: 24,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { AppState, Platform } from 'react-native';
+import { AppState, Linking, Platform } from 'react-native';
 import { logError, logMessage } from '@/utils/logger';
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
@@ -17,7 +17,7 @@ export interface Coordinates {
  * default centers are useful anchors, but they must NOT masquerade as current
  * user position. This replaces brittle coordinate-matching (isFallbackMinskCenter).
  */
-export type CoordinatesSource = 'geolocation' | 'cache' | 'default';
+export type CoordinatesSource = 'geolocation' | 'cache' | 'default' | 'manual';
 
 export const DEFAULT_COORDINATES: Coordinates = {
   latitude: DEFAULT_MAP_CENTER.latitude,
@@ -28,10 +28,18 @@ const NATIVE_LOCATION_TIMEOUT_MS = 12000;
 const LIVE_LOCATION_MIN_DISTANCE_M = 12;
 const LIVE_LOCATION_MAXIMUM_AGE_MS = 15000;
 
-type LocationSnapshot = Coordinates & {
+export type LocationSnapshot = Coordinates & {
   accuracy?: number | null;
   timestamp?: number;
 };
+
+export type MapLocationState =
+  | { status: 'loading'; coordinates: null; accuracy: null; timestamp: null; canAskAgain: true }
+  | { status: 'current'; coordinates: Coordinates; accuracy: number | null; timestamp: number; canAskAgain: true }
+  | { status: 'cached'; coordinates: Coordinates; accuracy: number | null; timestamp: number | null; canAskAgain: true }
+  | { status: 'denied'; coordinates: null; accuracy: null; timestamp: null; canAskAgain: boolean }
+  | { status: 'unavailable'; coordinates: null; accuracy: null; timestamp: null; canAskAgain: false }
+  | { status: 'error'; coordinates: null; accuracy: null; timestamp: null; canAskAgain: boolean };
 
 class LocationTimeoutError extends Error {
   constructor() {
@@ -62,6 +70,26 @@ function isValidCoordinate(lat: number, lng: number): boolean {
   );
 }
 
+function readWebCachedLocation(): LocationSnapshot | null {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(WEB_LAST_COORDS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<LocationSnapshot>;
+    const latitude = Number(parsed?.latitude);
+    const longitude = Number(parsed?.longitude);
+    if (!isValidCoordinate(latitude, longitude)) return null;
+    return {
+      latitude,
+      longitude,
+      accuracy: typeof parsed.accuracy === 'number' ? parsed.accuracy : null,
+      timestamp: typeof parsed.timestamp === 'number' ? parsed.timestamp : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function distanceMeters(a: Coordinates, b: Coordinates): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const earthRadiusM = 6371000;
@@ -77,67 +105,58 @@ function distanceMeters(a: Coordinates, b: Coordinates): number {
 
 /**
  * Хук для управления координатами пользователя.
- * На web стартует с кеша/дефолта и запрашивает геолокацию только по явному действию.
+ * На web стартует с кеша/дефолта, затем получает current fix; только подтверждённый
+ * fix становится current/userLocation, а viewport anchors остаются недоверенными.
  */
 export function useMapCoordinates() {
   const lastTrustedLocationRef = useRef<LocationSnapshot | null>(null);
   const liveWatchCleanupRef = useRef<(() => void) | null>(null);
   const liveWatchActiveRef = useRef(false);
   const liveWatchStartingRef = useRef(false);
+  const appWentInactiveRef = useRef(false);
+  const settingsReturnPendingRef = useRef(false);
 
-  const readWebCachedCoordinates = useCallback((): Coordinates | null => {
-    if (Platform.OS !== 'web') return null;
-    if (typeof window === 'undefined') return null;
-    try {
-      const raw = window.localStorage.getItem(WEB_LAST_COORDS_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw) as Partial<Coordinates>;
-      const lat = Number(parsed?.latitude);
-      const lng = Number(parsed?.longitude);
-      if (!isValidCoordinate(lat, lng)) return null;
-      return { latitude: lat, longitude: lng };
-    } catch {
-      return null;
-    }
-  }, []);
+  const [initialCachedLocation] = useState<LocationSnapshot | null>(() => readWebCachedLocation());
+  const readWebCachedCoordinates = useCallback(() => readWebCachedLocation(), []);
 
   // Initialize with last known coordinates on web to avoid default-center flicker.
-  const [coordinates, setCoordinates] = useState<Coordinates>(() => {
-    const cached = Platform.OS === 'web' ? (() => {
-      if (typeof window === 'undefined') return null;
-      try {
-        const raw = window.localStorage.getItem(WEB_LAST_COORDS_KEY);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw) as Partial<Coordinates>;
-        const lat = Number(parsed?.latitude);
-        const lng = Number(parsed?.longitude);
-        return isValidCoordinate(lat, lng) ? { latitude: lat, longitude: lng } : null;
-      } catch {
-        return null;
-      }
-    })() : null;
-    return cached ?? DEFAULT_COORDINATES;
-  });
+  const [coordinates, setCoordinates] = useState<Coordinates>(
+    () => initialCachedLocation
+      ? {
+          latitude: initialCachedLocation.latitude,
+          longitude: initialCachedLocation.longitude,
+        }
+      : DEFAULT_COORDINATES,
+  );
   // Origin of the current viewport coordinates. Cache is last-known viewport
   // only: it may center the map, but it is not a trusted current user position.
-  const [coordinatesSource, setCoordinatesSource] = useState<CoordinatesSource>(() => {
-    if (Platform.OS !== 'web') return 'default';
-    if (typeof window === 'undefined') return 'default';
-    try {
-      const raw = window.localStorage.getItem(WEB_LAST_COORDS_KEY);
-      if (!raw) return 'default';
-      const parsed = JSON.parse(raw) as Partial<Coordinates>;
-      return isValidCoordinate(Number(parsed?.latitude), Number(parsed?.longitude))
-        ? 'cache'
-        : 'default';
-    } catch {
-      return 'default';
-    }
-  });
+  const [coordinatesSource, setCoordinatesSource] = useState<CoordinatesSource>(
+    initialCachedLocation ? 'cache' : 'default',
+  );
+  const [locationState, setLocationState] = useState<MapLocationState>(() =>
+    initialCachedLocation
+      ? {
+          status: 'cached',
+          coordinates: {
+            latitude: initialCachedLocation.latitude,
+            longitude: initialCachedLocation.longitude,
+          },
+          accuracy: initialCachedLocation.accuracy ?? null,
+          timestamp: initialCachedLocation.timestamp ?? null,
+          canAskAgain: true,
+        }
+      : {
+          status: 'loading',
+          coordinates: null,
+          accuracy: null,
+          timestamp: null,
+          canAskAgain: true,
+        },
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const cacheWebCoordinates = useCallback((next: Coordinates) => {
+  const cacheWebCoordinates = useCallback((next: LocationSnapshot) => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     try {
       window.localStorage.setItem(WEB_LAST_COORDS_KEY, JSON.stringify(next));
@@ -171,8 +190,15 @@ export function useMapCoordinates() {
     const coords = { latitude, longitude };
     setCoordinates(coords);
     setCoordinatesSource('geolocation');
+    setLocationState({
+      status: 'current',
+      coordinates: coords,
+      accuracy: next.accuracy ?? null,
+      timestamp: next.timestamp ?? Date.now(),
+      canAskAgain: true,
+    });
     setError(null);
-    cacheWebCoordinates(coords);
+    cacheWebCoordinates(next);
     return true;
   }, [cacheWebCoordinates]);
 
@@ -286,10 +312,24 @@ export function useMapCoordinates() {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       const cached = readWebCachedCoordinates();
       if (cached) {
-        setCoordinates(cached);
+        setCoordinates({ latitude: cached.latitude, longitude: cached.longitude });
         setCoordinatesSource('cache');
+        setLocationState({
+          status: 'cached',
+          coordinates: { latitude: cached.latitude, longitude: cached.longitude },
+          accuracy: cached.accuracy ?? null,
+          timestamp: cached.timestamp ?? null,
+          canAskAgain: true,
+        });
       } else {
         setCoordinatesSource('default');
+        setLocationState({
+          status: 'unavailable',
+          coordinates: null,
+          accuracy: null,
+          timestamp: null,
+          canAskAgain: false,
+        });
       }
       setIsLoading(false);
       return;
@@ -317,20 +357,37 @@ export function useMapCoordinates() {
         resolve();
       };
 
-      const handleError = () => {
+      const handleError = (positionError: GeolocationPositionError) => {
         if (signal?.aborted) {
           resolve();
           return;
         }
         const cached = readWebCachedCoordinates();
         if (cached) {
-          setCoordinates(cached);
+          setCoordinates({ latitude: cached.latitude, longitude: cached.longitude });
           setCoordinatesSource('cache');
         } else {
           setCoordinates(DEFAULT_COORDINATES);
           setCoordinatesSource('default');
         }
         clearLocationWatch();
+        setLocationState(
+          positionError.code === positionError.PERMISSION_DENIED
+            ? {
+                status: 'denied',
+                coordinates: null,
+                accuracy: null,
+                timestamp: null,
+                canAskAgain: true,
+              }
+            : {
+                status: 'error',
+                coordinates: null,
+                accuracy: null,
+                timestamp: null,
+                canAskAgain: true,
+              },
+        );
         setError(i18nT('map:hooks.map.useMapCoordinates.mestopolozhenie_ne_opredeleno_8f1bec27'));
         resolve();
       };
@@ -346,6 +403,17 @@ export function useMapCoordinates() {
   const requestLocation = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     setError(null);
+    setLocationState((current) =>
+      current.status === 'current'
+        ? current
+        : {
+            status: 'loading',
+            coordinates: null,
+            accuracy: null,
+            timestamp: null,
+            canAskAgain: true,
+          },
+    );
 
     try {
       if (Platform.OS === 'web') {
@@ -354,20 +422,27 @@ export function useMapCoordinates() {
       }
 
       const Location = await loadExpoLocation();
-      const { status } = await withTimeout(
+      const permission = await withTimeout(
         Location.requestForegroundPermissionsAsync(),
         NATIVE_LOCATION_TIMEOUT_MS,
       );
 
       if (signal?.aborted) return;
 
-      if (status !== 'granted') {
+      if (permission.status !== 'granted') {
         logMessage('[map] Location permission denied, using default coordinates', 'info', {
           scope: 'map',
           step: 'getLocation',
         });
         setCoordinates(DEFAULT_COORDINATES);
         setCoordinatesSource('default');
+        setLocationState({
+          status: 'denied',
+          coordinates: null,
+          accuracy: null,
+          timestamp: null,
+          canAskAgain: permission.canAskAgain !== false,
+        });
         setError(i18nT('map:hooks.map.useMapCoordinates.mestopolozhenie_ne_opredeleno_8f1bec27'));
         setIsLoading(false);
         clearLocationWatch();
@@ -401,6 +476,13 @@ export function useMapCoordinates() {
         });
         setCoordinates(DEFAULT_COORDINATES);
         setCoordinatesSource('default');
+        setLocationState({
+          status: 'error',
+          coordinates: null,
+          accuracy: null,
+          timestamp: null,
+          canAskAgain: true,
+        });
       }
     } catch (err) {
       if (signal?.aborted) return;
@@ -416,6 +498,13 @@ export function useMapCoordinates() {
       setError(i18nT('map:hooks.map.useMapCoordinates.ne_udalos_opredelit_mestopolozhenie_ad63da94'));
       setCoordinates(DEFAULT_COORDINATES);
       setCoordinatesSource('default');
+      setLocationState({
+        status: 'error',
+        coordinates: null,
+        accuracy: null,
+        timestamp: null,
+        canAskAgain: true,
+      });
       clearLocationWatch();
     } finally {
       if (!signal?.aborted) {
@@ -435,9 +524,8 @@ export function useMapCoordinates() {
   }, [clearLocationWatch, requestLocation]);
 
   useEffect(() => {
-    if (coordinatesSource !== 'geolocation') return;
-
     if (Platform.OS === 'web') {
+      if (locationState.status !== 'current') return;
       if (typeof document === 'undefined') return;
       const handleVisibilityChange = () => {
         if (document.visibilityState === 'hidden') {
@@ -454,22 +542,31 @@ export function useMapCoordinates() {
 
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        startLocationWatch();
+        if (locationState.status === 'current') {
+          settingsReturnPendingRef.current = false;
+          startLocationWatch();
+        } else if (appWentInactiveRef.current && settingsReturnPendingRef.current) {
+          settingsReturnPendingRef.current = false;
+          void requestLocation();
+        }
+        appWentInactiveRef.current = false;
         return;
       }
+      appWentInactiveRef.current = true;
       clearLocationWatch();
     });
 
     return () => {
       subscription.remove();
     };
-  }, [clearLocationWatch, coordinatesSource, startLocationWatch]);
+  }, [clearLocationWatch, locationState.status, requestLocation, startLocationWatch]);
 
   const updateCoordinates = useCallback((lat: number, lng: number) => {
     if (isValidCoordinate(lat, lng)) {
-      // An explicit programmatic pin is a deliberate position choice, not a
-      // silent default — treat it as a real location for marker/centering.
-      applyTrustedLocation({ latitude: lat, longitude: lng }, { force: true });
+      // Explicit pins/search anchors move the viewport only. They must never
+      // become a synthetic current user position or route origin.
+      setCoordinates({ latitude: lat, longitude: lng });
+      setCoordinatesSource('manual');
     } else {
       logMessage('[map] Attempted to set invalid coordinates', 'warning', {
         scope: 'map',
@@ -477,20 +574,48 @@ export function useMapCoordinates() {
         lng,
       });
     }
-  }, [applyTrustedLocation]);
+  }, []);
+
+  const openLocationSettings = useCallback(async () => {
+    if (Platform.OS === 'web') return false;
+    try {
+      settingsReturnPendingRef.current = true;
+      await Linking.openSettings();
+      return true;
+    } catch (settingsError) {
+      settingsReturnPendingRef.current = false;
+      logError(settingsError, { scope: 'map', step: 'openLocationSettings' });
+      return false;
+    }
+  }, []);
 
   // True when coordinates are not a live/current geolocation fix. Downstream
   // uses this to avoid false "you are here", distance, and route-origin states
   // from default or cached viewport anchors.
   const coordinatesAreFallback = coordinatesSource !== 'geolocation';
+  const currentLocation = locationState.status === 'current' ? locationState.coordinates : null;
 
   return useMemo(() => ({
     coordinates,
     coordinatesSource,
     coordinatesAreFallback,
+    locationState,
+    currentLocation,
     isLoading,
     error,
     updateCoordinates,
     refreshLocation: requestLocation,
-  }), [coordinates, coordinatesSource, coordinatesAreFallback, isLoading, error, updateCoordinates, requestLocation]);
+    openLocationSettings,
+  }), [
+    coordinates,
+    coordinatesSource,
+    coordinatesAreFallback,
+    locationState,
+    currentLocation,
+    isLoading,
+    error,
+    updateCoordinates,
+    requestLocation,
+    openLocationSettings,
+  ]);
 }

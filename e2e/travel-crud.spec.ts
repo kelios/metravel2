@@ -54,13 +54,8 @@ const basePayload = {
 test.describe('Travel CRUD (API)', () => {
   test('create, edit, delete travel via API', async ({ baseURL, createdTravels }) => {
     const token = process.env.E2E_API_TOKEN;
-    if (!token) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'E2E_API_TOKEN is missing; CRUD API flow was not exercised',
-      });
-      return;
-    }
+    expect(token, 'E2E_API_TOKEN is required for the live-contract CRUD flow').toBeTruthy();
+    if (!token) throw new Error('E2E_API_TOKEN is required');
     const targetBase = baseURL ?? process.env.BASE_URL;
     expect(targetBase).toBeTruthy();
 

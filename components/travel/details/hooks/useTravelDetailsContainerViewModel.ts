@@ -17,6 +17,7 @@ type UseTravelDetailsContainerViewModelArgs = {
   isWebAutomation: boolean
   lcpLoaded: boolean
   navigationSetOptions: (options: { title: string }) => void
+  openSection: (key: string) => void
   postLcpRuntimeReady: boolean
   scrollTo: (key: string) => void
   scrollY: Animated.Value
@@ -39,6 +40,7 @@ export function useTravelDetailsContainerViewModel({
   isWebAutomation,
   lcpLoaded,
   navigationSetOptions,
+  openSection,
   postLcpRuntimeReady,
   scrollTo,
   scrollY,
@@ -74,6 +76,7 @@ export function useTravelDetailsContainerViewModel({
   const scrollToWithMenuClose = useCallback(
     (key: string) => {
       setActiveSection(key)
+      openSection(key)
       // Lazy sections (map/points/excursions/near/popular/comments) may not be
       // mounted yet when the sticky sub-nav is tapped. A one-shot scrollTo then
       // silently no-ops — on native the anchor ref is still null, on web the
@@ -90,7 +93,7 @@ export function useTravelDetailsContainerViewModel({
       scrollTo(key)
       if (isMobile) closeMenu()
     },
-    [scrollTo, isMobile, closeMenu, setActiveSection]
+    [scrollTo, isMobile, closeMenu, openSection, setActiveSection]
   )
 
   const scrollToMapSection = useCallback(() => {

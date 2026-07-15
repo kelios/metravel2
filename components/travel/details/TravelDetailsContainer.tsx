@@ -130,7 +130,7 @@ export default function TravelDetailsContainer() {
   const { data, layout, menu, navigation: travelNavigation, performance, scroll } = details
   const { error, isError, isLoading, isMissingParam, refetch, slug, staleContentMeta, travel } = data
   const { contentHorizontalPadding, sideMenuPlatformStyles } = layout
-  const { activeSection, anchors, forceOpenKey, scrollRef, scrollTo, setActiveSection } =
+  const { activeSection, anchors, forceOpenKey, openSection, scrollRef, scrollTo, setActiveSection } =
     travelNavigation
   const {
     deferAllowed,
@@ -218,6 +218,7 @@ export default function TravelDetailsContainer() {
     isWebAutomation,
     lcpLoaded,
     navigationSetOptions: navigation.setOptions,
+    openSection,
     postLcpRuntimeReady,
     scrollTo,
     scrollY,

@@ -12,14 +12,16 @@ import {
 
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { withLazy } from './TravelDetailsLazy'
+import { lazyWithRetry } from '@/utils/chunkReload'
 import { useTravelDeferredSectionsModel } from './hooks/useTravelDeferredSectionsModel'
 import TravelDeferredAuthorSection from './TravelDeferredAuthorSection'
 import TravelDeferredRatingSection from './TravelDeferredRatingSection'
 
-const CommentsSectionLazy = withLazy(() =>
+const CommentsSectionLazy = lazyWithRetry(() =>
   Promise.resolve(import('@/components/travel/CommentsSection')).then((module) => ({
     default: module.CommentsSection,
   })),
+  { name: 'CommentsSection' },
 )
 const TravelDetailsSidebarSectionLazy = withLazy(() =>
   Promise.resolve(import('./sections/TravelDetailsSidebarSection')).then((module) => ({

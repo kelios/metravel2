@@ -168,15 +168,8 @@ async function uploadTravelImage(
 test.describe('Travel persistence', () => {
   test('creates travel with filled fields and keeps them after reopen', async ({ page, createdTravels }) => {
     const ctx = await apiContextFromEnv().catch(() => null);
-    if (!ctx) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'API auth context is not available; persistence flow was not exercised.',
-      });
-      await page.goto('/travelsby', { waitUntil: 'domcontentloaded', timeout: 120_000 });
-      await expect(page.locator('body')).toBeVisible();
-      return;
-    }
+    expect(ctx, 'Live-contract API auth context is required for persistence').toBeTruthy();
+    if (!ctx) throw new Error('Live-contract API auth context is unavailable');
 
     const filtersApi = await apiRequestContext(ctx);
     const filtersResponse = await filtersApi.get('/api/getFiltersTravel/');
@@ -303,14 +296,7 @@ test.describe('Travel persistence', () => {
     const editUrl = `/travel/${travelId}`;
     await page.goto(editUrl, { waitUntil: 'domcontentloaded', timeout: 120_000 });
     const nameInput = page.getByPlaceholder('Например: Неделя в Грузии');
-    const canOpenEditForm = await nameInput.isVisible({ timeout: 10_000 }).catch(() => false);
-    if (!canOpenEditForm) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Edit UI is not available in current auth/session context; API persistence assertions were executed.',
-      });
-      return;
-    }
+    await expect(nameInput, 'Seeded owner must be able to open the edit wizard').toBeVisible({ timeout: 30_000 });
     await expect(nameInput).toHaveValue(travelName, { timeout: 60_000 });
 
     const step3Milestone = page.getByLabel('Перейти к шагу 3');
@@ -345,13 +331,8 @@ test.describe('Travel persistence', () => {
 
   test('persists gallery order via the dedicated reorder endpoint', async ({ createdTravels }) => {
     const ctx = await apiContextFromEnv().catch(() => null);
-    if (!ctx) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'API auth context is not available; reorder endpoint was not exercised.',
-      });
-      return;
-    }
+    expect(ctx, 'Live-contract API auth context is required for gallery reorder').toBeTruthy();
+    if (!ctx) throw new Error('Live-contract API auth context is unavailable');
 
     const unique = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const created = await createOrUpdateTravel(ctx, {
@@ -402,13 +383,7 @@ test.describe('Travel persistence', () => {
       ])
     ).filter((img): img is UploadedImage => Boolean(img && img.id && img.url));
 
-    if (uploaded.length < 2) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Image upload unavailable in current env; reorder endpoint not exercised.',
-      });
-      return;
-    }
+    expect(uploaded, 'Two uploaded images are required to verify gallery ordering').toHaveLength(2);
 
     const reversedIds = [...uploaded].reverse().map((img) => img.id);
 

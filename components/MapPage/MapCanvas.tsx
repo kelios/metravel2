@@ -8,6 +8,7 @@ import MapPanel from '@/components/MapPage/MapPanel'
 import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar'
 import WeatherLegend from '@/components/MapPage/WeatherLegend'
 import { translate as i18nT } from '@/i18n'
+import type { CoordinatesSource, MapLocationState } from '@/hooks/map/useMapCoordinates'
 
 
 const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
@@ -54,7 +55,12 @@ type MapCanvasProps = {
   currentRadius: any
   shouldShowFloatingRadiusPill: boolean
   showGeoBanner: boolean
+  locationState: MapLocationState
+  coordinatesSource: CoordinatesSource
   dismissGeoBanner: () => void
+  retryLocation: () => void
+  openLocationSettings: () => void
+  startManualRoute: () => void
   handleSelectSearchTab: () => void
   openRightPanel: () => void
   canSearchThisArea?: boolean
@@ -73,13 +79,33 @@ export function MapCanvas({
   currentRadius,
   shouldShowFloatingRadiusPill,
   showGeoBanner,
+  locationState,
+  coordinatesSource,
   dismissGeoBanner,
+  retryLocation,
+  openLocationSettings,
+  startManualRoute,
   handleSelectSearchTab,
   openRightPanel,
   canSearchThisArea,
   onSearchThisArea,
 }: MapCanvasProps) {
   useMapPopupCss()
+  const hasCachedViewport = coordinatesSource === 'cache' && locationState.status !== 'current'
+  const canRetryLocation =
+    locationState.status === 'cached' ||
+    locationState.status === 'error' ||
+    (locationState.status === 'denied' && locationState.canAskAgain)
+  const canOpenSettings =
+    Platform.OS !== 'web' &&
+    locationState.status === 'denied' &&
+    !locationState.canAskAgain
+  const geoBannerMessage = hasCachedViewport
+    ? i18nT('map:components.MapPage.MapCanvas.poslednee_izvestnoe_mestopolozhenie_ne_tekuschee_5c56a128')
+    : Platform.OS === 'web'
+      ? i18nT('map:components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__ee671e92')
+      : i18nT('map:components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__f8c836df')
+
   return (
     <View
       style={styles.mapArea}
@@ -131,11 +157,56 @@ export function MapCanvas({
       {showGeoBanner && (
         <View style={styles.geoBanner} testID="map-geo-banner">
           <Feather name="map-pin" size={13} color={themedColors.warning} />
-          <Text style={styles.geoBannerText}>
-            {Platform.OS === 'web'
-              ? i18nT('map:components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__ee671e92')
-              : i18nT('map:components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__f8c836df')}
-          </Text>
+          <View style={styles.geoBannerBody}>
+            <Text style={styles.geoBannerText}>{geoBannerMessage}</Text>
+            <View style={styles.geoBannerActions}>
+              {canRetryLocation && (
+                <Pressable
+                  testID="map-geo-retry"
+                  onPress={retryLocation}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.geoBannerActionPrimary,
+                    pressed && PRESSED_OPACITY_06,
+                  ]}
+                >
+                  <Text style={styles.geoBannerActionPrimaryText}>
+                    {locationState.status === 'denied'
+                      ? i18nT('map:components.MapPage.MapCanvas.razreshit_dostup_28ec6443')
+                      : i18nT('map:components.MapPage.MapCanvas.povtorit_66ddcbbc')}
+                  </Text>
+                </Pressable>
+              )}
+              {canOpenSettings && (
+                <Pressable
+                  testID="map-geo-open-settings"
+                  onPress={openLocationSettings}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.geoBannerActionPrimary,
+                    pressed && PRESSED_OPACITY_06,
+                  ]}
+                >
+                  <Text style={styles.geoBannerActionPrimaryText}>
+                    {i18nT('map:components.MapPage.MapCanvas.otkryt_nastroyki_ecb067f5')}
+                  </Text>
+                </Pressable>
+              )}
+              <Pressable
+                testID="map-geo-manual-start"
+                onPress={startManualRoute}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.geoBannerActionSecondary,
+                  pressed && PRESSED_OPACITY_06,
+                ]}
+              >
+                <Text style={styles.geoBannerActionSecondaryText}>
+                  {i18nT('map:components.MapPage.MapCanvas.ukazat_start_vruchnuyu_84e450cb')}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
           <Pressable
             onPress={dismissGeoBanner}
             accessibilityRole="button"

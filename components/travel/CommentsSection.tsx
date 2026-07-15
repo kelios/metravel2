@@ -55,7 +55,11 @@ export function CommentsSection({
   } = useCommentsData(travelId, { enabled: isEnabled });
 
   if (isLoading && !isRefreshing) {
-    return <View style={styles.centerContainer} testID="comments-skeleton"><CommentsSkeleton /></View>;
+    return (
+      <View nativeID="comments" style={styles.centerContainer} testID="comments-skeleton">
+        <CommentsSkeleton />
+      </View>
+    );
   }
 
   if (hasError) {

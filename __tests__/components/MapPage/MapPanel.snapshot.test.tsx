@@ -130,4 +130,27 @@ describe('MapPanel native map rendering', () => {
       expect(onUserLocationChange).toHaveBeenCalledWith(null)
     })
   })
+
+  it('keeps a trusted user fix separate from a URL or search viewport center', async () => {
+    const onUserLocationChange = jest.fn()
+
+    renderWithQueryClient(
+      <MapPanel
+        travelsData={[]}
+        coordinates={{ latitude: 48.8566, longitude: 2.3522 }}
+        coordinatesAreFallback
+        userLocation={{ latitude: 52.2, longitude: 20.98 }}
+        setRouteDistance={jest.fn()}
+        setFullRouteCoords={jest.fn()}
+        onUserLocationChange={onUserLocationChange}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(onUserLocationChange).toHaveBeenCalledWith({
+        latitude: 52.2,
+        longitude: 20.98,
+      })
+    })
+  })
 })

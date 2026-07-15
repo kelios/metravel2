@@ -2,13 +2,12 @@ import { test, expect } from './fixtures';
 import { request } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
-import { simpleEncrypt } from './helpers/auth';
+import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
 
 const tinyJpegBuffer = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEBUQEBAVFRUVFRUVFRUVFRUVFRUVFRUWFhUVFRUYHSggGBolGxUVITEhJSkrLi4uFx8zODMsNygtLisBCgoKDg0OGhAQGi0fHyUtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIAAEAAQMBEQACEQEDEQH/xAAXAAEBAQEAAAAAAAAAAAAAAAAAAQID/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEAMQAAAB6A//xAAVEAEBAAAAAAAAAAAAAAAAAAABAP/aAAgBAQABBQJf/8QAFBEBAAAAAAAAAAAAAAAAAAAAEP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAEP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAEP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAEP/aAAgBAQABPyF//9k=', 'base64');
 
 const e2eEmail = process.env.E2E_EMAIL;
 const e2ePassword = process.env.E2E_PASSWORD;
-const travelId = process.env.E2E_TRAVEL_ID;
 
 const USE_REAL_API = process.env.E2E_USE_REAL_API === '1';
 
@@ -50,22 +49,6 @@ const maybeMockTravelFilters = async (page: Page) => {
       });
     });
   }
-};
-
-const ensureAuthedStorageFallback = async (page: Page) => {
-  const encrypted = simpleEncrypt('e2e-fake-token', 'metravel_encryption_key_v1');
-  await page.evaluate((payload) => {
-    try {
-      window.localStorage.setItem('secure_userToken', payload.encrypted);
-      window.localStorage.setItem('userId', payload.userId);
-      window.localStorage.setItem('userName', payload.userName);
-      window.localStorage.setItem('isSuperuser', payload.isSuperuser);
-    } catch {
-      // ignore
-    }
-  }, { encrypted, userId: '1', userName: 'E2E User', isSuperuser: 'false' });
-
-  return true;
 };
 
 const maybeMockNominatimSearch = async (page: Page) => {
@@ -242,47 +225,20 @@ const maybeAcceptCookies = async (page: Page) => {
   }
 };
 
-const ensureCanCreateTravel = async (page: Page): Promise<boolean> => {
+const ensureCanCreateTravel = async (page: Page): Promise<void> => {
   await maybeAcceptCookies(page);
   const authGate = page.getByText('Войдите, чтобы создать путешествие', { exact: true });
   const nameInput = page.getByPlaceholder('Например: Неделя в Грузии');
   if (await authGate.isVisible().catch(() => false)) {
-    if (!e2eEmail || !e2ePassword) {
-      await ensureAuthedStorageFallback(page);
-      await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
-      await maybeAcceptCookies(page);
-      await authGate.waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => null);
-      if (await authGate.isVisible().catch(() => false)) {
-        await expect(authGate).toBeVisible();
-        return false;
-      }
-      return true;
-    }
-
-    // Best-effort login: do not skip purely based on a helper returning false.
-    // Some deployments can keep URL on /login or delay storage updates.
+    // Live-contract mode authenticates against the configured backend. The
+    // deterministic regression mode is seeded in the file-level beforeEach.
     await maybeLogin(page);
     await page.goto('/travel/new');
     await maybeAcceptCookies(page);
-
-    // Auth state on RN-web can take a moment to hydrate from storage.
-    await authGate.waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => null);
-
-    // If we're still gated after the login attempt, treat it as env/config issue.
-    if (await authGate.isVisible().catch(() => false)) {
-      await expect(authGate).toBeVisible();
-      return false;
-    }
   }
-  const wizardReady = await nameInput.isVisible({ timeout: 10_000 }).catch(() => false);
-  if (!wizardReady) {
-    test.info().annotations.push({
-      type: 'note',
-      description: 'Wizard name input is not visible in current env; skipping create-travel assertion',
-    });
-    return false;
-  }
-  return true;
+
+  await expect(authGate).toBeHidden({ timeout: 15_000 });
+  await expect(nameInput).toBeVisible({ timeout: 15_000 });
 };
 
 const dismissDraftRecoveryDialog = async (page: Page) => {
@@ -333,6 +289,7 @@ const clickWizardMenuAction = async (page: Page, testId: string, name: RegExp) =
 };
 
 const maybeLogin = async (page: Page) => {
+  if (!USE_REAL_API) return true;
   if (!e2eEmail || !e2ePassword) return false;
 
   await page.goto('/login');
@@ -625,16 +582,13 @@ const fillRichDescription = async (page: Page, text: string) => {
   const editor = page.locator('.ql-editor').first();
   const editorVisible = await editor.isVisible({ timeout: 15_000 }).catch(() => false);
   if (!editorVisible) {
-    // On mobile viewports the Quill editor may not render; fall back to a plain textarea/input.
+    // Some responsive layouts use a plain editor instead of Quill.
     const fallback = page.locator('textarea, [contenteditable="true"]').first();
-    if (await fallback.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await fallback.click();
-      await page.keyboard.press('ControlOrMeta+A');
-      await page.keyboard.press('Backspace');
-      await page.keyboard.type(text);
-      return;
-    }
-    // No description field available – skip silently (some wizard layouts omit it on mobile).
+    await expect(fallback).toBeVisible({ timeout: 5_000 });
+    await fallback.click();
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.type(text);
     return;
   }
   await editor.click();
@@ -642,6 +596,12 @@ const fillRichDescription = async (page: Page, text: string) => {
   await page.keyboard.press('Backspace');
   await page.keyboard.type(text);
 };
+
+test.beforeEach(async ({ page }) => {
+  if (USE_REAL_API) return;
+  await ensureAuthedStorageFallback(page, { userId: '1', userName: 'E2E User' });
+  await mockFakeAuthApis(page);
+});
 
 /**
  * E2E тесты для создания путешествия
@@ -674,7 +634,7 @@ test.describe('Создание путешествия - Полный flow', () 
   test('должен создать полное путешествие через все шаги', async ({ page }) => {
     // Шаг 0: Переход к созданию
     await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
     await expect(page).toHaveURL(/\/travel\/new/);
 
     // Шаг 1: Основная информация
@@ -900,7 +860,7 @@ test.describe('Создание путешествия - Полный flow', () 
     await page.route('**/api/travels/**', fulfillDraftSave)
 
     await page.goto('/travel/new');
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
 
     // Шаг 1: Только название
     await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toBeVisible();
@@ -929,7 +889,7 @@ test.describe('Создание путешествия - Полный flow', () 
 
   test('должен показать ошибку при Quick Draft без названия', async ({ page }) => {
     await page.goto('/travel/new');
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
 
     // Не заполняем название
     const quickDraftButton = page.getByRole('button', { name: /быстрый черновик/i }).first();
@@ -971,7 +931,7 @@ test.describe('Создание путешествия - Полный flow', () 
 
   test('должен показать превью карточки', async ({ page }) => {
     await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
 
     await fillMinimumValidBasics(page, 'Тестовое путешествие');
     await waitForAutosaveOk(page).catch(() => null);
@@ -1009,7 +969,7 @@ test.describe('Создание путешествия - Полный flow', () 
     await page.setViewportSize({ width: 1280, height: 720 });
 
     await page.goto('/travel/new');
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
 
     // Заполняем название чтобы можно было перейти дальше
     await fillMinimumValidBasics(page, 'Тест милестонов');
@@ -1031,7 +991,7 @@ test.describe('Создание путешествия - Полный flow', () 
 
   test('должен автосохранять изменения', async ({ page }) => {
     await page.goto('/travel/new');
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
 
     // Default e2e mode uses mocked API so the suite can run without a backend.
     // Proxying to a real backend is allowed only when explicitly enabled.
@@ -1108,23 +1068,18 @@ test.describe('Создание путешествия - Полный flow', () 
     });
 
     // Заполняем название
-    const waitUpsertResponse = (timeout: number) =>
-      page
-        .waitForResponse(
-          (r) => r.request().method() === 'PUT' && r.url().includes('/travels/upsert/'),
-          { timeout }
-        )
-        .catch(() => null);
-
     const upsertReqPromise = page
       .waitForRequest(
         (r) => r.method() === 'PUT' && r.url().includes('/travels/upsert/'),
-        { timeout: 90_000 }
-      )
-      .catch(() => null);
+        { timeout: 20_000 }
+      );
 
     // Arm response waiter BEFORE any autosave could fire.
-    const autoUpsertRespPromise = waitUpsertResponse(120_000);
+    const autoUpsertRespPromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PUT' && response.url().includes('/travels/upsert/'),
+      { timeout: 20_000 },
+    );
 
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест автосохранения');
 
@@ -1134,22 +1089,10 @@ test.describe('Создание путешествия - Полный flow', () 
     // debounce автосейва = 5s, плюс время запроса
     await page.waitForTimeout(6500);
 
-    const upsertReq = await upsertReqPromise;
-    expect(upsertReq, 'Expected autosave to send PUT /travels/upsert/').toBeTruthy();
-    if (!upsertReq) return;
-
-    let upsertResp = await autoUpsertRespPromise;
-
-    // Fallback: autosave request can be in-flight/hung (CORS/network). In that case
-    // trigger manual save via UI (same endpoint) to make the test deterministic.
-    if (!upsertResp) {
-      const manualUpsertRespPromise = waitUpsertResponse(120_000);
-      await page.locator('button:has-text("Сохранить")').first().click({ timeout: 30_000 }).catch(() => null);
-      upsertResp = await manualUpsertRespPromise;
-    }
-
-    expect(upsertResp, 'Expected travel save (auto or manual) to produce a /travels/upsert/ response').toBeTruthy();
-    if (!upsertResp) return;
+    const [upsertReq, upsertResp] = await Promise.all([upsertReqPromise, autoUpsertRespPromise]);
+    expect(upsertReq.postDataJSON()).toMatchObject({
+      data: expect.objectContaining({ name: 'Тест автосохранения' }),
+    });
 
     const status = upsertResp.status();
     const bodyText = await upsertResp.text().catch(() => '');
@@ -1168,7 +1111,8 @@ test.describe('Создание путешествия - Полный flow', () 
     const savedId = saved && typeof saved.id !== 'undefined' ? saved.id : null;
     expect(savedId, `Expected autosave upsert response to include id. Body: ${bodyText}`).toBeTruthy();
 
-    // When running without a real backend, the upsert is mocked and there is no /api/travels/:id/ to read from.
+    // The deterministic contract ends at the browser/API boundary. Live mode
+    // additionally verifies persistence by reading the saved record back.
     if (!USE_REAL_API) return;
 
     // Проверяем сохранение напрямую через API (стабильнее, чем UI роут /travel/:id,
@@ -1210,7 +1154,7 @@ test.describe('Создание путешествия - Полный flow', () 
 
   test('должен добавлять точку через фото и после сохранения показывать фото у этой точки', async ({ page }) => {
     await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
 
     let seenUpload = false;
     let capturedUpsertPayload: any = null;
@@ -1338,108 +1282,21 @@ test.describe('Создание путешествия - Полный flow', () 
     await expect(page.getByText('Есть фото').first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test('должен открыть существующее путешествие для редактирования', async ({ page }) => {
-    if (!travelId) {
-      await page.goto('/metravel', { waitUntil: 'domcontentloaded' });
-      await expect(page.locator('body')).toBeVisible();
-      return;
-    }
-    // Переходим в список путешествий
-    await page.goto('/metravel');
-
-    // Находим первое путешествие и кликаем "Редактировать"
-    const editButton = page.locator('button:has-text("Редактировать"), a[href^="/travel/"]').first();
-
-    if (await editButton.isVisible()) {
-      await editButton.click();
-
-      // Проверяем что открылся визард редактирования
-      await expect(page).toHaveURL(/\/travel\/(?:new|\d+)/);
-      await expect(page.getByPlaceholder('Например: Неделя в Грузии')).not.toBeEmpty();
-    }
-  });
-
-  test('должен изменить название и сохранить', async ({ page }) => {
-    if (!travelId) {
-      await page.goto('/metravel', { waitUntil: 'domcontentloaded' });
-      await expect(page.locator('body')).toBeVisible();
-      return;
-    }
-    await page.goto(`/travel/${travelId}`);
-
-    // Изменяем название
-    const nameInput = page.getByPlaceholder('Например: Неделя в Грузии');
-    await nameInput.clear();
-    await nameInput.fill('Измененное название путешествия');
-
-    await waitForAutosaveOk(page);
-
-    // Переходим к публикации
-    await page.click('[aria-label^="Перейти к шагу 6"]');
-
-    // Сохраняем изменения
-    await page.click('button:has-text("Сохранить")');
-
-    // Проверяем успешное сохранение
-    await expect(page).toHaveURL(/\/metravel|\/travels\//, { timeout: 10000 });
-  });
-
-  test('должен добавить новую точку к существующему маршруту', async ({ page }) => {
-    if (!travelId) {
-      await page.goto('/metravel', { waitUntil: 'domcontentloaded' });
-      await expect(page.locator('body')).toBeVisible();
-      return;
-    }
-    await page.goto(`/travel/${travelId}`);
-
-    // Переходим к шагу 2
-    await page.click('[aria-label^="Перейти к шагу 2"]');
-
-    // Проверяем текущее количество точек
-    const pointsText = await page.locator('text=/Точек: \\d+/').textContent();
-    const currentPoints = parseInt(pointsText?.match(/\\d+/)?.[0] || '0');
-
-    // Добавляем новую точку через поиск
-    await page.fill('[placeholder*="Поиск места"]', 'Батуми');
-    await page.waitForSelector('text=Батуми', { timeout: 5000 });
-    await page.click('text=Батуми >> nth=0');
-
-    // Проверяем что точка добавилась
-    await expect(page.locator(`text=Точек: ${currentPoints + 1}`)).toBeVisible({ timeout: 5000 });
-
-    // Ждем автосохранение
-    await waitForAutosaveOk(page).catch(() => null);
-  });
 });
 
 test.describe('Валидация и ошибки', () => {
   test.beforeEach(async ({ page }) => {
     // Ensure stable state for this suite (mocks + no draft dialogs).
-    await page.addInitScript((payload) => {
+    await page.addInitScript(() => {
       try {
         // Prevent draft recovery dialog from blocking interactions.
         window.localStorage.removeItem('metravel_travel_draft_new');
         Object.keys(window.localStorage)
           .filter((k) => k.startsWith('metravel_travel_draft_'))
           .forEach((k) => window.localStorage.removeItem(k));
-
-        // In mocked mode, autosave requires an auth token to exist in storage,
-        // otherwise it fails before hitting any mocked network route.
-        if (payload.shouldSeedAuth) {
-          window.localStorage.setItem('secure_userToken', payload.encrypted);
-          window.localStorage.setItem('userId', payload.userId);
-          window.localStorage.setItem('userName', payload.userName);
-          window.localStorage.setItem('isSuperuser', payload.isSuperuser);
-        }
       } catch {
         // ignore
       }
-    }, {
-      shouldSeedAuth: !USE_REAL_API && (!e2eEmail || !e2ePassword),
-      encrypted: simpleEncrypt('e2e-fake-token', 'metravel_encryption_key_v1'),
-      userId: '1',
-      userName: 'E2E User',
-      isSuperuser: 'false',
     });
 
     await installDraftRecoveryAutoDismiss(page);
@@ -1452,7 +1309,7 @@ test.describe('Валидация и ошибки', () => {
 
   test('должен перейти к маршруту и показать ошибки текущего шага без обязательных данных', async ({ page }) => {
     await page.goto('/travel/new');
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
 
     // Навигация по шагам свободная: неполный шаг 1 не блокирует переход.
     await clickNext(page);
@@ -1466,7 +1323,7 @@ test.describe('Валидация и ошибки', () => {
 
   test('должен показать предупреждения на шаге публикации', async ({ page }) => {
     await page.goto('/travel/new');
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
 
     // Минимально заполняем
     await fillMinimumValidBasics(page, 'Тестовое путешествие');
@@ -1501,7 +1358,7 @@ test.describe('Валидация и ошибки', () => {
 
   test('должен сохранить точку без фото (автосохранение v2)', async ({ page }) => {
     await page.goto('/travel/new');
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
 
     // Заполняем название
     await fillMinimumValidBasics(page, 'Тест без фото');
@@ -1526,7 +1383,7 @@ test.describe('Адаптивность (Mobile)', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
 
     // Проверяем что милестоны скрыты на mobile
     await expect(page.locator('[aria-label^="Перейти к шагу 1"]')).not.toBeVisible();
@@ -1581,7 +1438,7 @@ test.describe('Регрессии: web стабильность wizard', () => {
     const guard = installNoConsoleErrorsGuard(page);
 
     await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
 
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('E2E: depth regression');
     await fillRichDescription(page, 'Описание для e2e: достаточно длинное, чтобы пройти шаг 1. '.repeat(3));
@@ -1600,7 +1457,7 @@ test.describe('Регрессии: web стабильность wizard', () => {
 
   test('превью должно открываться на шаге 2 (иконка глаз)', async ({ page }) => {
     await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
 
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('E2E: preview from step 2');
     await fillRichDescription(page, 'Описание для e2e: достаточно длинное, чтобы пройти шаг 1. '.repeat(3));
@@ -1631,7 +1488,7 @@ test.describe('Регрессии: web стабильность wizard', () => {
     const guard = installNoConsoleErrorsGuard(page);
 
     await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
-    if (!(await ensureCanCreateTravel(page))) return;
+    await ensureCanCreateTravel(page);
 
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('E2E: point category select');
     await fillRichDescription(page, 'Описание для e2e: достаточно длинное, чтобы пройти шаг 1. '.repeat(3));

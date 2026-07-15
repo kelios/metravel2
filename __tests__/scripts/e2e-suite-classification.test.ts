@@ -24,4 +24,14 @@ describe('e2e suite classification', () => {
     expect(new Set(all).size).toBe(all.length)
     expect(all.filter((file: string) => !fs.existsSync(path.resolve(__dirname, '../../e2e', file)))).toEqual([])
   })
+
+  it('keeps live-contract prerequisites fail-closed instead of downgrading to smoke', () => {
+    const weakFallback = /falling back to (?:a )?ui smoke|running a minimal smoke|(?:was |were )?not exercised|skipping:/i
+    const violations = LIVE_CONTRACT_SPECS.filter((file: string) => {
+      const source = fs.readFileSync(path.resolve(__dirname, '../../e2e', file), 'utf8')
+      return weakFallback.test(source)
+    })
+
+    expect(violations).toEqual([])
+  })
 })

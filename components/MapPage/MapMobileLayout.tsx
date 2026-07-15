@@ -368,6 +368,23 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   }, [userLocation?.latitude, userLocation?.longitude])
   const [routeAutoStartPending, setRouteAutoStartPending] = useState(false)
   const [routeManualStartActive, setRouteManualStartActive] = useState(false)
+  const previousRouteModeRef = useRef(storeMode)
+
+  useEffect(() => {
+    const previousMode = previousRouteModeRef.current
+    previousRouteModeRef.current = storeMode
+    if (
+      previousMode !== 'route' &&
+      storeMode === 'route' &&
+      routePointCount === 0 &&
+      !trustedUserLocation &&
+      !routeAutoStartPending
+    ) {
+      // External entry (for example the geolocation banner's «manual start»)
+      // must enter the tap-a-start flow directly instead of asking for GPS again.
+      setRouteManualStartActive(true)
+    }
+  }, [routeAutoStartPending, routePointCount, storeMode, trustedUserLocation])
 
   const seedRouteStartFromUser = useCallback(() => {
     if (!trustedUserLocation) return false

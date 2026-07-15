@@ -10,7 +10,6 @@ import type { MapUiApi } from '@/types/mapUi';
 import type { MapClustersFilters } from '@/api/map';
 import type { MapMovePayload } from './Map/types';
 import type { ComponentType } from 'react';
-import { isFallbackMinskCenter } from './Map/fallbackCenter';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -29,6 +28,8 @@ const LazyWebMap = React.lazy(() =>
 interface MapPanelProps {
     travelsData: any[];
     coordinates: LatLng | null;
+    /** Trusted current user fix, independent from the viewport/query center. */
+    userLocation?: LatLng | null;
     /**
      * True when `coordinates` is not a trusted current geolocation fix. Cached,
      * default and explicit viewport anchors must not draw a real "you are here"
@@ -53,6 +54,7 @@ interface MapPanelProps {
     categoryFilterUnresolved?: boolean;
     onMapUiApiReady?: (api: MapUiApi | null) => void;
     onUserLocationChange?: ((loc: LatLng | null) => void) | undefined;
+    onRequestUserLocation?: () => void | Promise<void>;
     onMapMove?: (center: MapMovePayload) => void;
     hideFloatingControls?: boolean;
     onMarkerSelect?: (point: any) => void;
@@ -83,6 +85,7 @@ function Placeholder({ text = i18nT('map:components.MapPage.MapPanel.karta_dostu
 const MapPanel: React.FC<MapPanelProps> = ({
                                                travelsData,
                                                coordinates,
+                                               userLocation,
                                                coordinatesAreFallback,
                                                routePoints = [],
                                                fullRouteCoords = [],
@@ -102,6 +105,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                categoryFilterUnresolved,
                                                onMapUiApiReady,
                                                onUserLocationChange,
+                                               onRequestUserLocation,
                                                onMapMove,
                                                hideFloatingControls = false,
                                                onMarkerSelect,
@@ -128,24 +132,28 @@ const MapPanel: React.FC<MapPanelProps> = ({
         return coordinates;
     }, [coordinates]);
 
-    // Реальная гео пользователя для нативного маркера «вы здесь». coordinates на
-    // native приходит из useMapCoordinates и при denied/timeout/cache не является
-    // current user position. Явный флаг имеет приоритет; isFallbackMinskCenter
-    // оставлен defensive-only на случай отсутствия флага.
+    // Реальная гео пользователя для нативного маркера «вы здесь». Production
+    // callers pass `userLocation` explicitly; the legacy coordinates branch is
+    // fail-closed and trusted only with coordinatesAreFallback={false}. Numeric
+    // comparison with the Minsk/default center is intentionally forbidden.
     // null → синяя точка не рисуется.
-    const nativeUserLocation = useMemo<LatLng | null>(() => {
-        if (!coordinates) return null;
+    const resolvedUserLocation = useMemo<LatLng | null>(() => {
+        if (userLocation !== undefined) {
+            const latitude = Number(userLocation?.latitude);
+            const longitude = Number(userLocation?.longitude);
+            if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+            return { latitude, longitude };
+        }
+        if (coordinatesAreFallback !== false || !coordinates) return null;
         const { latitude, longitude } = coordinates;
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-        if (coordinatesAreFallback === true) return null;
-        if (coordinatesAreFallback === undefined && isFallbackMinskCenter(latitude, longitude)) return null;
         return { latitude, longitude };
-    }, [coordinates, coordinatesAreFallback]);
+    }, [coordinates, coordinatesAreFallback, userLocation]);
 
     useEffect(() => {
         if (isWeb) return;
-        onUserLocationChange?.(nativeUserLocation);
-    }, [isWeb, nativeUserLocation, onUserLocationChange]);
+        onUserLocationChange?.(resolvedUserLocation);
+    }, [isWeb, onUserLocationChange, resolvedUserLocation]);
 
     // ✅ ИСПРАВЛЕНИЕ: Функция для обработки ошибок и регенерации ключа карты
     const handleMapError = useCallback(() => {
@@ -172,7 +180,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                 <Map
                     travel={nativeTravelProp}
                     coordinates={safeCoordinates}
-                    userLocation={nativeUserLocation}
+                    userLocation={resolvedUserLocation}
                     routePoints={routePoints}
                     fullRouteCoords={fullRouteCoords}
                     mapClusterFilters={mapClusterFilters}
@@ -185,6 +193,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                     onMarkerSelect={onMarkerSelect}
                     onMapMove={onMapMove}
                     onMapUiApiReady={onMapUiApiReady}
+                    onRequestUserLocation={onRequestUserLocation}
                     enableOfflineDownload
                 />
             </View>
@@ -200,6 +209,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                       travel={travelProp}
                       coordinates={safeCoordinates}
                       coordinatesAreFallback={coordinatesAreFallback}
+                      userLocation={resolvedUserLocation}
                       routePoints={routePoints}
                       fullRouteCoords={fullRouteCoords}
                       placesAlongRoute={placesAlongRoute}
@@ -218,6 +228,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                       categoryFilterUnresolved={categoryFilterUnresolved}
                       onMapUiApiReady={onMapUiApiReady}
                       onUserLocationChange={onUserLocationChange}
+                      onRequestUserLocation={onRequestUserLocation}
                       onMapMove={onMapMove}
                       hideFloatingControls={hideFloatingControls}
                       onMarkerSelect={onMarkerSelect}

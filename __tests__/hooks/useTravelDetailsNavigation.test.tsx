@@ -86,6 +86,42 @@ describe('useTravelDetailsNavigation', () => {
     expect(setActiveSection).toHaveBeenCalledWith('gallery')
   })
 
+  it('opens a lazy section directly without waiting for the global event bridge', () => {
+    const scrollTo = jest.fn()
+    const scrollRef = {
+      current: {
+        scrollTo: jest.fn(),
+        getScrollableNode: () => ({ getBoundingClientRect: jest.fn() }),
+      },
+    }
+
+    useScrollNavigation.mockReturnValue({
+      anchors: { gallery: { current: null }, comments: { current: null } },
+      scrollTo,
+      scrollRef,
+    })
+    useActiveSection.mockReturnValue({
+      activeSection: 'gallery',
+      setActiveSection: jest.fn(),
+    })
+
+    const startTransition = jest.fn((callback: () => void) => callback())
+    const { result } = renderHook(() =>
+      useTravelDetailsNavigation({
+        headerOffset: 72,
+        slug: 'minsk',
+        startTransition,
+      }),
+    )
+
+    act(() => result.current.openSection('comments'))
+    expect(result.current.forceOpenKey).toBe('comments')
+    expect(startTransition).not.toHaveBeenCalled()
+
+    act(() => jest.advanceTimersByTime(1200))
+    expect(scrollTo).toHaveBeenCalledWith('comments')
+  })
+
   it('applies data-section-key for anchors that mount lazily (regression)', () => {
     const scrollTo = jest.fn()
     const scrollRef = {

@@ -248,10 +248,17 @@ export const createMapPopupComponent = ({
     });
 
     useEffect(() => {
-      if (!normalizedCoord) return;
       const uLat = typeof userLat === 'number' ? userLat : null;
       const uLng = typeof userLng === 'number' ? userLng : null;
-      if (uLat === null || uLng === null) return;
+      if (!normalizedCoord || uLat === null || uLng === null) {
+        abortDriveRef.current?.abort();
+        abortDriveRef.current = null;
+        lastDriveKeyRef.current = null;
+        setIsDrivingLoading(false);
+        setDrivingDistanceMeters(null);
+        setDrivingDurationSeconds(null);
+        return;
+      }
 
       const driveKey = `${uLat.toFixed(6)},${uLng.toFixed(6)}->${normalizedCoord.lat.toFixed(6)},${normalizedCoord.lng.toFixed(6)}`;
       if (lastDriveKeyRef.current === driveKey) return;

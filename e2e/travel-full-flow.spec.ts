@@ -53,50 +53,24 @@ test.describe('Travel full flow (API seed + UI verify)', () => {
     // If the app points to a different API base than the one used for seeding,
     // the travel will not be visible in UI and the test becomes non-deterministic.
     const canSeedViaApi = hasCreds && !!apiBase && (!appApiBase || appApiBase === apiBase);
-    if (!canSeedViaApi) {
-      // No skipping: run a minimal deterministic UI smoke instead.
-      await page.goto('/travelsby', { waitUntil: 'domcontentloaded', timeout: 120_000 });
-      await expect(page.locator('body')).toBeVisible();
-      await expect(page).not.toHaveURL(/\/login/);
-      return;
-    }
+    expect(
+      canSeedViaApi,
+      'Live full-flow requires E2E_EMAIL/E2E_PASSWORD and E2E_API_URL matching EXPO_PUBLIC_API_URL',
+    ).toBe(true);
+    if (!canSeedViaApi) throw new Error('Live-contract API credentials or API base are unavailable');
 
-    let apiCtx: any = null;
-    try {
-      apiCtx = await apiLogin(email, password);
-    } catch (err: any) {
-      test.info().annotations.push({
-        type: 'note',
-        description: `API login failed (${String(err?.message || err)}). Falling back to UI smoke.`,
-      });
-      await page.goto('/travelsby', { waitUntil: 'domcontentloaded', timeout: 120_000 });
-      await expect(page.locator('body')).toBeVisible();
-      await expect(page).not.toHaveURL(/\/login/);
-      return;
-    }
+    const apiCtx: any = await apiLogin(email, password);
 
     const uniqueSuffix = `${Date.now()}`;
     const initialName = `E2E Full Flow ${uniqueSuffix}`;
     const editedName = `E2E Full Flow Edited ${uniqueSuffix}`;
 
-    let created: any = null;
-    try {
-      created = await createOrUpdateTravel(apiCtx, {
-        ...basePayload,
-        name: initialName,
-        publish: true,
-        moderation: false,
-      });
-    } catch (err: any) {
-      test.info().annotations.push({
-        type: 'note',
-        description: `Travel upsert failed (${String(err?.message || err)}). Falling back to UI smoke.`,
-      });
-      await page.goto('/travelsby', { waitUntil: 'domcontentloaded', timeout: 120_000 });
-      await expect(page.locator('body')).toBeVisible();
-      await expect(page).not.toHaveURL(/\/login/);
-      return;
-    }
+    const created: any = await createOrUpdateTravel(apiCtx, {
+      ...basePayload,
+      name: initialName,
+      publish: true,
+      moderation: false,
+    });
 
     const travelId = created?.id;
     expect(travelId, 'Upsert did not return id').toBeTruthy();
@@ -123,24 +97,15 @@ test.describe('Travel full flow (API seed + UI verify)', () => {
             );
           },
           { timeout: 60_000 }
-        )
-        .catch(() => null);
+        );
 
       await page.goto(detailsPath, { waitUntil: 'domcontentloaded', timeout: 120_000 });
 
       const travelApiResp = await travelApiRespPromise;
-      if (travelApiResp) {
-        if (!travelApiResp.ok()) {
-          test.info().annotations.push({
-            type: 'note',
-            description: `Travel details API failed: ${travelApiResp.status()} ${travelApiResp.url()}. Falling back to UI smoke.`,
-          });
-          await page.goto('/travelsby', { waitUntil: 'domcontentloaded', timeout: 120_000 });
-          await expect(page.locator('body')).toBeVisible();
-          await expect(page).not.toHaveURL(/\/login/);
-          return;
-        }
-      }
+      expect(
+        travelApiResp.ok(),
+        `Travel details API failed: ${travelApiResp.status()} ${travelApiResp.url()}`,
+      ).toBe(true);
 
       await expect(
         page

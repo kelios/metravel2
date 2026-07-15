@@ -15,6 +15,7 @@ export interface UseTravelDetailsNavigationArgs {
 export interface UseTravelDetailsNavigationReturn {
   anchors: AnchorsMap
   scrollTo: (key: string) => void
+  openSection: (key: string) => void
   scrollRef: RefObject<unknown>
   activeSection: string
   setActiveSection: (section: string) => void
@@ -48,7 +49,7 @@ export function normalizeMalformedTravelHashUrl(rawHref: string): string | null 
 export function useTravelDetailsNavigation({
   headerOffset,
   slug,
-  startTransition,
+  startTransition: _startTransition,
 }: UseTravelDetailsNavigationArgs): UseTravelDetailsNavigationReturn {
   const { anchors: rawAnchors, scrollTo, scrollRef } = useScrollNavigation()
   const anchors = rawAnchors as AnchorsMap
@@ -264,9 +265,12 @@ export function useTravelDetailsNavigation({
 
   const handleSectionOpen = useCallback(
     (key: string) => {
-      startTransition(() => setForceOpenKey(key))
+      // A direct user action must commit the lazy-section key immediately.
+      // Wrapping this update in a transition can retain the previous skeleton
+      // while the newly requested chunk suspends, leaving the section stranded.
+      setForceOpenKey(key)
     },
-    [startTransition]
+    []
   )
 
   useEffect(() => {
@@ -416,9 +420,10 @@ export function useTravelDetailsNavigation({
   return useMemo(() => ({
     anchors,
     scrollTo,
+    openSection: handleSectionOpen,
     scrollRef,
     activeSection,
     setActiveSection,
     forceOpenKey,
-  }), [anchors, scrollTo, scrollRef, activeSection, setActiveSection, forceOpenKey])
+  }), [anchors, scrollTo, handleSectionOpen, scrollRef, activeSection, setActiveSection, forceOpenKey])
 }

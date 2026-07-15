@@ -55,7 +55,6 @@ const getFirstParamText = (value: unknown): string => {
 // query anchor to surface the "Search this area" affordance, so a cheap
 // haversine is plenty (no need for the full CoordinateConverter on this path).
 const EARTH_RADIUS_KM = 6371;
-const SAME_LOCATION_EPSILON = 0.00001;
 const distanceKm = (
   a: { latitude: number; longitude: number },
   b: { latitude: number; longitude: number },
@@ -83,31 +82,15 @@ export function useMapScreenController() {
     coordinates,
     coordinatesSource,
     coordinatesAreFallback,
+    locationState,
+    currentLocation,
     error: geoError,
     refreshLocation,
+    openLocationSettings,
   } = useMapCoordinates();
-
-  // Actual current user location reported by the map implementation (web Leaflet).
-  // This should be the primary source for radius-mode queries.
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
-    null
-  );
-  const handleUserLocationChange = useCallback(
-    (loc: { latitude: number; longitude: number } | null) => {
-      setUserLocation((prev) => {
-        if (!loc) return prev === null ? prev : null;
-        if (
-          prev &&
-          Math.abs(prev.latitude - loc.latitude) < SAME_LOCATION_EPSILON &&
-          Math.abs(prev.longitude - loc.longitude) < SAME_LOCATION_EPSILON
-        ) {
-          return prev;
-        }
-        return loc;
-      });
-    },
-    []
-  );
+  // Trusted user position is owned by useMapCoordinates. Viewport/search/URL
+  // anchors are intentionally separate and can never become a route origin.
+  const userLocation = currentLocation;
 
   // F-49 — "Search this area" (Google/Organic-Maps style).
   // searchAreaCenter — explicit anchor chosen by tapping the floating button;
@@ -620,12 +603,18 @@ export function useMapScreenController() {
     setSearchAreaCenter(null);
     setIsFollowingUser(true);
     void refreshLocation?.();
+    if (!userLocation) return;
     try {
       mapUiApi?.centerOnUser?.();
     } catch {
       // noop
     }
-  }, [mapUiApi, refreshLocation]);
+  }, [mapUiApi, refreshLocation, userLocation]);
+
+  const startManualRouteFromLocationState = useCallback(() => {
+    setIsFollowingUser(false);
+    useRouteStore.getState().clearRouteAndSetMode('route');
+  }, []);
 
   useEffect(() => {
     if (!isFollowingUser) return;
@@ -701,14 +690,16 @@ export function useMapScreenController() {
     return { latitude: source.latitude, longitude: source.longitude };
   }, [coordinates, queryCoordinates]);
 
-  // The panel center is a non-user fallback only when it resolves to the raw
-  // default center: there is no explicit anchor (search-area / URL pin / real
-  // user location) AND the geolocation coordinates themselves are the default.
-  // In that case the map must not draw a real "you are here" marker even though
-  // the default center sits in Minsk.
+  // Viewport trust is explicit: search/URL anchors are never a user fix, and the
+  // only trusted branch is currentLocation from useMapCoordinates. Numeric
+  // equality with Minsk (or any other coordinate) is deliberately irrelevant.
   const mapPanelCoordinatesAreFallback = useMemo(() => {
-    const hasExplicitAnchor = !!(searchAreaCenter || urlCoordinates || userLocation);
-    return !hasExplicitAnchor && coordinatesAreFallback;
+    // Query precedence is search-area → URL → current location → viewport.
+    // Only the explicit current-location branch is trusted. URL/search anchors
+    // remain viewport positions even when their numeric values happen to match GPS.
+    if (searchAreaCenter || urlCoordinates) return true;
+    if (userLocation) return false;
+    return coordinatesAreFallback;
   }, [searchAreaCenter, urlCoordinates, userLocation, coordinatesAreFallback]);
 
   // Map panel props
@@ -717,6 +708,7 @@ export function useMapScreenController() {
       travelsData,
       coordinates: mapPanelCoordinates,
       coordinatesAreFallback: mapPanelCoordinatesAreFallback,
+      userLocation,
       routePoints,
       fullRouteCoords,
       mode,
@@ -733,7 +725,7 @@ export function useMapScreenController() {
       setRoutingError,
       onMapClick: handleMapClick,
       onMapUiApiReady: handleMapUiApiReady,
-      onUserLocationChange: handleUserLocationChange,
+      onRequestUserLocation: refreshLocation,
       // F-49 — report map center on pan/zoom so we can offer "Search this area".
       onMapMove: handleMapMove,
       // #207 — on mobile-web a marker tap surfaces a bottom card instead of the
@@ -762,7 +754,8 @@ export function useMapScreenController() {
       setRoutingError,
       handleMapClick,
       handleMapUiApiReady,
-      handleUserLocationChange,
+      refreshLocation,
+      userLocation,
       handleMapMove,
       isMobile,
       handleMarkerSelect,
@@ -982,6 +975,9 @@ export function useMapScreenController() {
     buildRouteTo: buildRouteToStable,
     focusPlace: focusPlaceStable,
     centerOnUser,
+    refreshLocation,
+    openLocationSettings,
+    startManualRouteFromLocationState,
     showAllPlaces,
     zoomIn,
     zoomOut,
@@ -995,6 +991,7 @@ export function useMapScreenController() {
 
     // Geolocation
     geoError,
+    locationState,
     hasUserLocation: Boolean(userLocation),
 
     // Additional data for mobile layout
@@ -1047,6 +1044,9 @@ export function useMapScreenController() {
     buildRouteToStable,
     focusPlaceStable,
     centerOnUser,
+    refreshLocation,
+    openLocationSettings,
+    startManualRouteFromLocationState,
     showAllPlaces,
     zoomIn,
     zoomOut,
@@ -1054,6 +1054,7 @@ export function useMapScreenController() {
     handleSearchThisArea,
     panelRef,
     geoError,
+    locationState,
     userLocation,
     coordinates,
     coordinatesSource,

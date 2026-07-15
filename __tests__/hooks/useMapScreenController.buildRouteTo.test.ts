@@ -4,10 +4,27 @@ const mockUpdateCoordinates = jest.fn()
 const mockRefreshLocation = jest.fn()
 const mockBuildRouteTo = jest.fn()
 const mockUseRouteController = jest.fn()
+const mockSearchParams: Record<string, string> = {}
+const mockMapCoordinatesState: Record<string, any> = {
+  coordinates: { latitude: 53.9, longitude: 27.5667 },
+  coordinatesSource: 'default',
+  coordinatesAreFallback: true,
+  currentLocation: null,
+  locationState: {
+    status: 'denied',
+    coordinates: null,
+    accuracy: null,
+    timestamp: null,
+    canAskAgain: true,
+  },
+  updateCoordinates: mockUpdateCoordinates,
+  refreshLocation: mockRefreshLocation,
+  openLocationSettings: jest.fn(),
+}
 
 jest.mock('expo-router', () => ({
   usePathname: () => '/map',
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => mockSearchParams,
 }))
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -15,13 +32,7 @@ jest.mock('react-native-safe-area-context', () => ({
 }))
 
 jest.mock('@/hooks/map/useMapCoordinates', () => ({
-  useMapCoordinates: () => ({
-    coordinates: { latitude: 53.9, longitude: 27.5667 },
-    coordinatesSource: 'default',
-    coordinatesAreFallback: true,
-    updateCoordinates: mockUpdateCoordinates,
-    refreshLocation: mockRefreshLocation,
-  }),
+  useMapCoordinates: () => mockMapCoordinatesState,
 }))
 
 jest.mock('@/hooks/map/useMapFilters', () => ({
@@ -134,6 +145,20 @@ describe('useMapScreenController.buildRouteTo', () => {
   beforeEach(() => {
     mockUpdateCoordinates.mockClear()
     mockRefreshLocation.mockClear()
+    Object.keys(mockSearchParams).forEach((key) => delete mockSearchParams[key])
+    Object.assign(mockMapCoordinatesState, {
+      coordinates: { latitude: 53.9, longitude: 27.5667 },
+      coordinatesSource: 'default',
+      coordinatesAreFallback: true,
+      currentLocation: null,
+      locationState: {
+        status: 'denied',
+        coordinates: null,
+        accuracy: null,
+        timestamp: null,
+        canAskAgain: true,
+      },
+    })
     mockUseRouteController.mockClear()
     mockUseRouteController.mockReturnValue({
       mode: 'radius',
@@ -200,7 +225,7 @@ describe('useMapScreenController.buildRouteTo', () => {
 
   it('keeps following live location after recenter until the user moves the map', async () => {
     const centerOnUser = jest.fn()
-    const { result } = renderHook(() => useMapScreenController())
+    const { result, rerender } = renderHook(() => useMapScreenController())
 
     act(() => {
       result.current.mapPanelProps.onMapUiApiReady?.({
@@ -224,15 +249,25 @@ describe('useMapScreenController.buildRouteTo', () => {
       result.current.centerOnUser()
     })
     expect(mockRefreshLocation).toHaveBeenCalledTimes(1)
-    expect(centerOnUser).toHaveBeenCalledTimes(1)
+    expect(centerOnUser).not.toHaveBeenCalled()
 
     act(() => {
-      result.current.mapPanelProps.onUserLocationChange?.({
-        latitude: 52.2,
-        longitude: 20.98,
+      Object.assign(mockMapCoordinatesState, {
+        coordinates: { latitude: 52.2, longitude: 20.98 },
+        coordinatesSource: 'geolocation',
+        coordinatesAreFallback: false,
+        currentLocation: { latitude: 52.2, longitude: 20.98 },
+        locationState: {
+          status: 'current',
+          coordinates: { latitude: 52.2, longitude: 20.98 },
+          accuracy: 8,
+          timestamp: 1000,
+          canAskAgain: true,
+        },
       })
+      rerender()
     })
-    expect(centerOnUser).toHaveBeenCalledTimes(2)
+    expect(centerOnUser).toHaveBeenCalledTimes(1)
 
     act(() => {
       result.current.mapPanelProps.onMapMove?.({
@@ -240,11 +275,49 @@ describe('useMapScreenController.buildRouteTo', () => {
         longitude: 20.981,
         userInitiated: true,
       })
-      result.current.mapPanelProps.onUserLocationChange?.({
-        latitude: 52.202,
-        longitude: 20.982,
+      Object.assign(mockMapCoordinatesState, {
+        coordinates: { latitude: 52.202, longitude: 20.982 },
+        currentLocation: { latitude: 52.202, longitude: 20.982 },
+        locationState: {
+          status: 'current',
+          coordinates: { latitude: 52.202, longitude: 20.982 },
+          accuracy: 7,
+          timestamp: 2000,
+          canAskAgain: true,
+        },
       })
+      rerender()
     })
-    expect(centerOnUser).toHaveBeenCalledTimes(2)
+    expect(centerOnUser).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps URL coordinates as viewport-only while routing from the trusted current fix', () => {
+    Object.assign(mockSearchParams, { lat: '48.8566', lng: '2.3522' })
+    Object.assign(mockMapCoordinatesState, {
+      coordinates: { latitude: 52.2, longitude: 20.98 },
+      coordinatesSource: 'geolocation',
+      coordinatesAreFallback: false,
+      currentLocation: { latitude: 52.2, longitude: 20.98 },
+      locationState: {
+        status: 'current',
+        coordinates: { latitude: 52.2, longitude: 20.98 },
+        accuracy: 8,
+        timestamp: 1000,
+        canAskAgain: true,
+      },
+    })
+
+    const { result } = renderHook(() => useMapScreenController())
+
+    expect(mockUseRouteController).toHaveBeenCalledWith(
+      expect.objectContaining({
+        originCoordinates: { latitude: 52.2, longitude: 20.98 },
+      }),
+    )
+    expect(result.current.mapPanelProps).toEqual(expect.objectContaining({
+      coordinates: { latitude: 48.8566, longitude: 2.3522 },
+      coordinatesAreFallback: true,
+      userLocation: { latitude: 52.2, longitude: 20.98 },
+    }))
   })
 })

@@ -251,7 +251,9 @@ describe('CommentsSection', () => {
 
       render(<CommentsSection travelId={123} />, { wrapper });
 
-      expect(screen.getByTestId('comments-skeleton')).toBeTruthy();
+      const skeleton = screen.getByTestId('comments-skeleton');
+      expect(skeleton).toBeTruthy();
+      expect(skeleton.props.nativeID).toBe('comments');
     });
 
     it('should show empty state when thread errors but comments load fine', () => {

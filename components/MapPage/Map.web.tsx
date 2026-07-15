@@ -41,7 +41,6 @@ import {
   normalizeLngLatWithHint as normalizeLngLatWithHintHelper,
 } from './Map/mapWebGeometry'
 import { queryKeys } from '@/api/queryKeys'
-import { isFallbackMinskCenter } from './Map/fallbackCenter'
 import { beginProgrammaticMapMove, isProgrammaticMapMoveActive } from './Map/programmaticMoveSignal'
 import {
   buildServerClusterRenderData,
@@ -122,11 +121,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const {
     travel = { data: [] },
     coordinates,
-    // Intentionally NOT defaulted to false: `undefined` means "origin unknown",
-    // letting useMapUserLocation fall back to legacy Minsk coordinate-matching.
-    // Only an explicit true/false from the controller overrides that.
+    // Intentionally NOT defaulted: trust is explicit and undefined fails closed.
     coordinatesAreFallback,
     userLocation: providedUserLocation,
+    onRequestUserLocation,
     routePoints,
     fullRouteCoords,
     onMapClick,
@@ -264,7 +262,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     coordinatesAreFallback,
     mapRef,
     onUserLocationChange,
-    isFallbackMinskCenter,
+    onRequestUserLocation,
   })
 
   // The radius guard below uses radius*2 as the cutoff, so sub-100m GPS jitter

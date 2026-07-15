@@ -102,12 +102,16 @@ export default function MapScreen() {
     focusPlace,
     travelsCount,
     centerOnUser,
+    refreshLocation,
+    openLocationSettings,
+    startManualRouteFromLocationState,
     showAllPlaces,
     canSearchThisArea,
     handleSearchThisArea,
     panelRef,
-    geoError,
+    locationState,
     coordinates,
+    coordinatesSource,
     transportMode,
     selectedPlace,
     clearSelectedPlace,
@@ -117,7 +121,12 @@ export default function MapScreen() {
   const [geoBannerDismissed, setGeoBannerDismissed] = useState(false)
   const [shouldLoadOnboarding, setShouldLoadOnboarding] = useState(false)
   const dismissGeoBanner = useCallback(() => setGeoBannerDismissed(true), [])
-  const showGeoBanner = Boolean(geoError && !geoBannerDismissed)
+  const isMobileRouteMode = isMobile && routingSlice.mode === 'route'
+  const showGeoBanner = Boolean(
+    !geoBannerDismissed &&
+      !isMobileRouteMode &&
+      ['cached', 'denied', 'unavailable', 'error'].includes(locationState.status),
+  )
 
   useEffect(() => {
     if (!isWeb || typeof document === 'undefined') return
@@ -133,8 +142,13 @@ export default function MapScreen() {
   }, [isMobile, isWeb])
 
   useEffect(() => {
-    if (!geoError && geoBannerDismissed) setGeoBannerDismissed(false)
-  }, [geoError, geoBannerDismissed])
+    if (
+      (locationState.status === 'loading' || locationState.status === 'current') &&
+      geoBannerDismissed
+    ) {
+      setGeoBannerDismissed(false)
+    }
+  }, [geoBannerDismissed, locationState.status])
 
   useEffect(() => {
     if (shouldLoadOnboarding) return
@@ -387,7 +401,16 @@ export default function MapScreen() {
         currentRadius={currentRadius}
         shouldShowFloatingRadiusPill={shouldShowFloatingRadiusPill}
         showGeoBanner={showGeoBanner}
+        locationState={locationState}
+        coordinatesSource={coordinatesSource}
         dismissGeoBanner={dismissGeoBanner}
+        retryLocation={() => {
+          void refreshLocation()
+        }}
+        openLocationSettings={() => {
+          void openLocationSettings()
+        }}
+        startManualRoute={startManualRouteFromLocationState}
         handleSelectSearchTab={handleSelectSearchTab}
         openRightPanel={openRightPanel}
         canSearchThisArea={canSearchThisArea}
@@ -405,7 +428,12 @@ export default function MapScreen() {
       shouldShowFloatingRadiusPill,
       styles,
       showGeoBanner,
+      locationState,
+      coordinatesSource,
       dismissGeoBanner,
+      refreshLocation,
+      openLocationSettings,
+      startManualRouteFromLocationState,
       themedColors,
       handleSelectSearchTab,
       openRightPanel,

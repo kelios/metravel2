@@ -449,6 +449,30 @@ describe('MapMobileLayout', () => {
       expect(mockSnapToHalf).not.toHaveBeenCalled()
     })
 
+    it('enters manual tap-start directly when route mode is requested by the location banner', async () => {
+      const { filtersPanelProps } = buildFiltersProps()
+      const screen = render(
+        <MapMobileLayout
+          mapComponent={<View testID="mock-map" />}
+          travelsData={[]}
+          coordinates={{ latitude: 53.9, longitude: 27.56 }}
+          transportMode="car"
+          buildRouteTo={jest.fn()}
+          onCenterOnUser={jest.fn()}
+          onOpenFilters={jest.fn()}
+          filtersPanelProps={filtersPanelProps}
+        />,
+      )
+
+      await act(async () => {
+        useRouteStore.getState().clearRouteAndSetMode('route')
+      })
+
+      expect(screen.getByText('Коснитесь карты: 1-я точка — старт, 2-я — финиш')).toBeTruthy()
+      expect(screen.queryByTestId('map-mobile-route-request-location')).toBeNull()
+      expect(useRouteStore.getState().points).toHaveLength(0)
+    })
+
     it('seeds route mode with trusted current location as 1/2 start', () => {
       const { filtersPanelProps } = buildFiltersProps()
       const screen = render(

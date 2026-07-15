@@ -53,14 +53,11 @@ test.describe('Draft travel owner preview', () => {
   test('creates a draft and owner can view description on details page', async ({ page, createdTravels }) => {
     test.setTimeout(240_000);
     const ctx = await apiContextFromEnv().catch(() => null);
-    if (!ctx?.apiBase || !ctx?.token) {
-      test.info().annotations.push({
-        type: 'note',
-        description:
-          'Missing E2E auth context (set E2E_EMAIL/E2E_PASSWORD or E2E_API_TOKEN + E2E_API_URL). Draft owner preview was not exercised.',
-      });
-      return;
-    }
+    expect(
+      ctx?.apiBase && ctx?.token,
+      'Live-contract auth is required (E2E_EMAIL/E2E_PASSWORD or E2E_API_TOKEN + E2E_API_URL)',
+    ).toBeTruthy();
+    if (!ctx?.apiBase || !ctx?.token) throw new Error('Live-contract auth context is unavailable');
 
     const title = 'Модынь  - одна из самых высоких вершин Бескидов (1029)';
     const uniqueSuffix = `${Date.now()}`;

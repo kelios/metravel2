@@ -1,7 +1,6 @@
-import { renderHook, waitFor } from '@testing-library/react-native'
+import { act, renderHook, waitFor } from '@testing-library/react-native'
 
 import { useMapUserLocation } from '@/components/MapPage/Map/useMapUserLocation'
-import { isFallbackMinskCenter } from '@/components/MapPage/Map/fallbackCenter'
 
 // Geolocation auto-request must not fire in these tests; stub expo-location so a
 // missing real location never resolves to a position.
@@ -16,6 +15,7 @@ function setup(
   coordinates: any,
   coordinatesAreFallback?: boolean,
   providedUserLocation?: { latitude: number; longitude: number } | null,
+  onRequestUserLocation?: () => void | Promise<void>,
 ) {
   const mapRef = { current: null } as any
   return renderHook(() =>
@@ -24,7 +24,7 @@ function setup(
       coordinatesAreFallback,
       providedUserLocation,
       mapRef,
-      isFallbackMinskCenter,
+      onRequestUserLocation,
     }),
   )
 }
@@ -46,10 +46,9 @@ describe('useMapUserLocation — explicit origin flag (#bug2)', () => {
     expect(result.current.userLocationLatLng).toBeNull()
   })
 
-  it('falls back to Minsk coordinate-matching when the flag is absent (legacy)', async () => {
+  it('fails closed when the explicit origin flag is absent', async () => {
     const { result } = setup(MINSK, undefined)
     await new Promise((r) => setTimeout(r, 0))
-    // Legacy behavior: Minsk-matching center is treated as fallback -> no marker.
     expect(result.current.userLocationLatLng).toBeNull()
   })
 
@@ -73,9 +72,28 @@ describe('useMapUserLocation — explicit origin flag (#bug2)', () => {
 
   it('does not turn the map center into a user marker when location is explicitly absent', async () => {
     const MAP_AREA = { latitude: 52.23, longitude: 21.01 }
+    const Location = require('expo-location')
+    Location.requestForegroundPermissionsAsync.mockClear()
     const { result } = setup(MAP_AREA, undefined, null)
 
     await new Promise((r) => setTimeout(r, 0))
     expect(result.current.userLocationLatLng).toBeNull()
+    expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled()
+  })
+
+  it('delegates an explicit center request to the controlled location owner', async () => {
+    const onRequestUserLocation = jest.fn().mockResolvedValue(undefined)
+    const { result } = setup(
+      { latitude: 52.23, longitude: 21.01 },
+      true,
+      null,
+      onRequestUserLocation,
+    )
+
+    await act(async () => {
+      await result.current.centerOnUserLocation()
+    })
+
+    expect(onRequestUserLocation).toHaveBeenCalledTimes(1)
   })
 })

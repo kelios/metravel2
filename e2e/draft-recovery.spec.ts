@@ -12,30 +12,13 @@ test.describe('Draft recovery popup', () => {
     const appApiBase = (process.env.EXPO_PUBLIC_API_URL || '').trim().replace(/\/+$/, '');
     const canSeedViaApi = hasCreds && !!apiBase && (!appApiBase || appApiBase === apiBase);
 
-    if (!canSeedViaApi) {
-      test.info().annotations.push({
-        type: 'note',
-        description:
-          'E2E_API_URL/E2E_EMAIL/E2E_PASSWORD not configured or API base mismatch; running a minimal smoke instead',
-      });
-      await page.goto('/travelsby', { waitUntil: 'domcontentloaded', timeout: 120_000 });
-      await expect(page.locator('body')).toBeVisible();
-      await expect(page).not.toHaveURL(/\/login/);
-      return;
-    }
+    expect(
+      canSeedViaApi,
+      'Draft recovery live-contract requires E2E_EMAIL/E2E_PASSWORD and matching E2E_API_URL',
+    ).toBe(true);
+    if (!canSeedViaApi) throw new Error('Live-contract API credentials or API base are unavailable');
 
-    const apiCtx = await apiLogin(email, password).catch((e: unknown) => {
-      const msg = String((e as any)?.message || e);
-      test.info().annotations.push({
-        type: 'note',
-        description: `Skipping: apiLogin failed (${msg})`,
-      });
-      return null;
-    });
-
-    if (!apiCtx) {
-      return;
-    }
+    const apiCtx = await apiLogin(email, password);
 
     const uniqueSuffix = `${Date.now()}`;
     const created = await createOrUpdateTravel(apiCtx, {
@@ -75,18 +58,7 @@ test.describe('Draft recovery popup', () => {
       visa: false,
       publish: false,
       moderation: false,
-    }).catch((e: unknown) => {
-      const msg = String((e as any)?.message || e);
-      test.info().annotations.push({
-        type: 'note',
-        description: `Skipping: could not upsert travel for draft recovery (${msg})`,
-      });
-      return null;
     });
-
-    if (!created) {
-      return;
-    }
 
     const travelId = String(created?.id ?? '').trim();
     expect(travelId, 'Upsert did not return id').toBeTruthy();
@@ -140,12 +112,10 @@ test.describe('Draft recovery popup', () => {
         }
       })();
 
-      if (!landedPath.includes(`/travel/${travelId}`)) {
-        test.info().annotations.push({
-          type: 'note',
-          description: `Unexpected redirect while opening editor (expected /travel/${travelId}, got ${landedPath || landedUrl})`,
-        });
-      }
+      expect(
+        landedPath,
+        `Expected editor /travel/${travelId}, got ${landedPath || landedUrl}`,
+      ).toContain(`/travel/${travelId}`);
 
       // Ensure we're not stuck on Home/Login due to auth or routing issues.
       await expect(page).not.toHaveURL(/\/login(\?|$)/, { timeout: 30_000 });
@@ -186,37 +156,10 @@ test.describe('Draft recovery popup', () => {
         loadError.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
       ]);
 
-      if (await homeHeadline.isVisible().catch(() => false)) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Editor route redirected to home; skipping draft recovery assertion for this environment',
-        });
-        return;
-      }
-
-      if (await loginTitle.isVisible().catch(() => false)) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Editor route redirected to login; skipping draft recovery assertion for this environment',
-        });
-        return;
-      }
-
-      if (await noAccess.isVisible().catch(() => false)) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Editor route showed no-access screen; skipping draft recovery assertion for this environment',
-        });
-        return;
-      }
-
-      if (await loadError.isVisible().catch(() => false)) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Editor failed to load travel; skipping draft recovery assertion for this environment',
-        });
-        return;
-      }
+      await expect(homeHeadline, 'Editor unexpectedly redirected home').toBeHidden();
+      await expect(loginTitle, 'Editor unexpectedly redirected to login').toBeHidden();
+      await expect(noAccess, 'Owner unexpectedly received a no-access screen').toBeHidden();
+      await expect(loadError, 'Editor failed to load the seeded travel').toBeHidden();
 
       // Hard assert: if we are on the editor with a seeded draft, the dialog MUST appear.
       await draftTitle.waitFor({ state: 'visible', timeout: 15_000 });

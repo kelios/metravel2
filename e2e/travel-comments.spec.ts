@@ -1,1235 +1,344 @@
-import { test, expect } from './fixtures';
-import { preacceptCookies, tid } from './helpers/navigation';
-import { loginAsUser, loginAsAdmin } from './helpers/e2eApi';
+import { expect, test } from './fixtures';
+import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
+import { preacceptCookies } from './helpers/navigation';
 
-async function openCommentActionsMenu(page: any, comment: any) {
-  const getTrigger = () =>
-    comment
-      .locator('[data-testid="comment-actions-trigger"]')
-      .or(comment.getByRole('button', { name: /действия с комментарием/i }))
-      .first();
+const SLUG = 'e2e-travel-comments';
+const TRAVEL_ID = 999_997;
+const THREAD_ID = 910_001;
+const SEED_COMMENT_ID = 920_000;
+const OWN_COMMENT_ID = 920_001;
 
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const trigger = getTrigger();
-    const visible = await expect
-      .poll(() => trigger.isVisible().catch(() => false), { timeout: 4_000 })
-      .toBe(true)
-      .then(() => true)
-      .catch(() => false);
+type MockComment = {
+  id: number;
+  thread: number;
+  sub_thread: number | null;
+  user: number;
+  text: string;
+  created_at: string;
+  updated_at: string;
+  likes_count: number;
+  user_name: string;
+  user_avatar: null;
+  is_liked: boolean;
+  is_author: boolean;
+  parentId?: number;
+};
 
-    if (!visible) {
-      await page.waitForTimeout(250);
-      continue;
+const mockedTravel = {
+  id: TRAVEL_ID,
+  name: 'E2E Travel Comments',
+  slug: SLUG,
+  url: `/travels/${SLUG}`,
+  userName: 'E2E Author',
+  cityName: 'Тбилиси',
+  countryName: 'Грузия',
+  countryCode: 'GE',
+  countUnicIpView: '0',
+  travel_image_thumb_url: null,
+  travel_image_thumb_small_url: null,
+  gallery: [],
+  travelAddress: [],
+  coordsMeTravel: [],
+  year: '2025',
+  monthName: 'Январь',
+  number_days: 1,
+  companions: [],
+  youtube_link: '',
+  description: '<p>Тестовое описание маршрута.</p>',
+  recommendation: '',
+  plus: '',
+  minus: '',
+  userIds: '',
+};
+
+const json = (route: any, status: number, value: unknown) =>
+  route.fulfill({
+    status,
+    contentType: 'application/json',
+    body: JSON.stringify(value),
+  });
+
+async function setupComments(page: import('@playwright/test').Page, authenticated: boolean) {
+  const now = '2026-07-15T12:00:00.000Z';
+  let nextId = 920_100;
+  let comments: MockComment[] = [
+    {
+      id: SEED_COMMENT_ID,
+      thread: THREAD_ID,
+      sub_thread: null,
+      user: 777,
+      text: 'Seed comment',
+      created_at: now,
+      updated_at: now,
+      likes_count: 0,
+      user_name: 'Other user',
+      user_avatar: null,
+      is_liked: false,
+      is_author: false,
+    },
+    {
+      id: OWN_COMMENT_ID,
+      thread: THREAD_ID,
+      sub_thread: null,
+      user: 1,
+      text: 'Own comment',
+      created_at: now,
+      updated_at: now,
+      likes_count: 0,
+      user_name: 'E2E User',
+      user_avatar: null,
+      is_liked: false,
+      is_author: true,
+    },
+  ];
+
+  if (authenticated) {
+    await ensureAuthedStorageFallback(page, { userId: '1', userName: 'E2E User' });
+  } else {
+    await page.addInitScript(() => {
+      window.localStorage.removeItem('userId');
+      window.localStorage.removeItem('userName');
+      window.localStorage.removeItem('isSuperuser');
+      window.localStorage.removeItem('secure_userToken');
+    });
+  }
+  await preacceptCookies(page);
+
+  // Catch unrelated travel-detail requests before registering specific routes.
+  await page.route('**/api/**', (route) => json(route, 200, {}));
+  if (authenticated) await mockFakeAuthApis(page);
+
+  const travelHandler = (route: any) => json(route, 200, mockedTravel);
+  await page.route(`**/api/travels/by-slug/${SLUG}**`, travelHandler);
+  await page.route(`**/travels/by-slug/${SLUG}**`, travelHandler);
+
+  const treePayload = () => {
+    const childrenByParent = new Map<number, MockComment[]>();
+    for (const comment of comments) {
+      if (comment.parentId == null) continue;
+      const children = childrenByParent.get(comment.parentId) ?? [];
+      children.push(comment);
+      childrenByParent.set(comment.parentId, children);
     }
 
-    await trigger.scrollIntoViewIfNeeded().catch(() => null);
-
-    try {
-      await trigger.click({ timeout: 5_000 });
-      return;
-    } catch {
-      const domClickWorked = await comment
-        .evaluate((node: HTMLElement) => {
-          const candidate =
-            node.querySelector('[data-testid="comment-actions-trigger"]') ||
-            Array.from(node.querySelectorAll('[role="button"]')).find((el) =>
-              /действия с комментарием/i.test(el.getAttribute('aria-label') || el.textContent || '')
-            );
-          if (!candidate) return false;
-          (candidate as HTMLElement).click();
-          return true;
-        })
-        .catch(() => false);
-
-      if (domClickWorked) return;
-    }
-
-    await page.waitForTimeout(250);
-  }
-
-  throw new Error('Unable to open comment actions menu: trigger is unstable or detached');
-}
-
-const travelDetailsRootSelector = `${tid('travel-details-page')}, main[role="main"]`;
-
-async function waitForTravelDetailsReady(page: any) {
-  await page.locator(travelDetailsRootSelector).first().waitFor({ state: 'visible', timeout: 30_000 });
-}
-
-async function scrollToCommentsSection(page: any) {
-  const target = page
-    .getByPlaceholder('Написать комментарий...')
-    .or(page.locator('[data-testid="comment-item"]').first())
-    .or(page.getByText('Комментарии недоступны', { exact: true }))
-    .or(page.getByRole('heading', { name: /Комментарии/ }))
-    .first();
-
-  await target.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null);
-  const scrolled = await target
-    .evaluate((node: HTMLElement) => {
-      node.scrollIntoView({ block: 'center', inline: 'nearest' });
-      return true;
-    })
-    .catch(() => false);
-
-  if (!scrolled) {
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)).catch(() => null);
-  }
-}
-
-test.describe('Travel Comments', () => {
-  const slug = 'e2e-travel-comments';
-
-  const THREAD_ID = 910001;
-  const nowIso = () => new Date().toISOString();
-
-  const mockedTravel = {
-    id: 999997,
-    name: 'E2E Travel Comments',
-    slug,
-    url: `/travels/${slug}`,
-    userName: 'E2E',
-    cityName: 'E2E',
-    countryName: 'E2E',
-    countryCode: 'EE',
-    countUnicIpView: '0',
-    travel_image_thumb_url: null,
-    travel_image_thumb_small_url: null,
-    gallery: [],
-    travelAddress: [],
-    coordsMeTravel: [],
-    year: '2025',
-    monthName: 'Январь',
-    number_days: 1,
-    companions: [],
-    youtube_link: '',
-    description: '<p>Тестовое описание маршрута.</p>',
-    recommendation: '',
-    plus: '',
-    minus: '',
-    userIds: '',
+    const node = (comment: MockComment, depth: number): Record<string, unknown> => {
+      const { parentId: _parentId, ...plain } = comment;
+      const replies = (childrenByParent.get(comment.id) ?? []).map((child) => node(child, depth + 1));
+      return { ...plain, depth, replies_count: replies.length, replies };
+    };
+    const flat = comments.map(({ parentId: _parentId, ...comment }) => comment);
+    return {
+      travel_id: TRAVEL_ID,
+      total_count: comments.length,
+      top_level: comments.filter((comment) => comment.parentId == null).map((comment) => node(comment, 0)),
+      flat,
+    };
   };
 
-  const routeHandler = async (route: any, request: any) => {
-    if (request.method() !== 'GET') {
-      await route.continue();
-      return;
+  await page.route('**/travel-comments/**', async (route) => {
+    const request = route.request();
+    const method = request.method();
+    const pathname = new URL(request.url()).pathname;
+
+    if (method === 'GET' && pathname.endsWith('/travel-comments/tree/')) {
+      return json(route, 200, treePayload());
     }
 
-    const url = request.url();
-    let pathname = '';
-    try {
-      pathname = new URL(url).pathname;
-    } catch {
-      pathname = url;
-    }
-
-    // Serve the travel details payload for both proxied and direct paths.
-    if (pathname.includes(`/travels/by-slug/${slug}`) || pathname.includes(`/api/travels/by-slug/${slug}`)) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockedTravel),
-      });
-      return;
-    }
-
-    await route.continue();
-  };
-
-  let _testUserId: string;
-  let _adminUserId: string;
-
-  test.beforeEach(async ({ page }) => {
-    await preacceptCookies(page);
-
-    // Mock comments API so comment UI is deterministic even without a real backend.
-    const travelId = Number(mockedTravel.id);
-    let nextCommentId = 920000;
-    const likesByUser = new Map<number, Set<number>>();
-    const comments: any[] = [
-      {
-        id: nextCommentId++,
+    if (method === 'POST' && pathname.endsWith('/travel-comments/')) {
+      const body = request.postDataJSON() as { text: string };
+      const created: MockComment = {
+        id: nextId++,
         thread: THREAD_ID,
         sub_thread: null,
-        user: 777,
-        text: 'Seed comment',
-        created_at: nowIso(),
-        updated_at: nowIso(),
+        user: 1,
+        text: body.text,
+        created_at: now,
+        updated_at: now,
         likes_count: 0,
-        user_name: 'Other user',
+        user_name: 'E2E User',
         user_avatar: null,
         is_liked: false,
-        is_author: false,
-      },
-    ];
+        is_author: true,
+      };
+      comments = [created, ...comments];
+      return json(route, 201, created);
+    }
 
-    const parseAuth = (req: any) => {
-      const headers = (req?.headers?.() ?? {}) as Record<string, string>;
-      const auth = String(headers.authorization || headers.Authorization || '').trim();
-      const token = auth.toLowerCase().startsWith('token ') ? auth.slice('token '.length).trim() : auth;
-      const isAuthed = auth.toLowerCase().includes('token ') && token.length > 0;
-      const isAdmin = isAuthed && token.toLowerCase().includes('admin');
-      const userId = isAuthed ? (isAdmin ? 2 : 1) : 0;
-      return { isAuthed, isAdmin, userId };
-    };
-
-    const fulfillJson = (route: any, status: number, json: any) =>
-      route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(json) });
-
-    await page.route(/.*\/api\/travel-comment-threads\/.*$/, async (route: any) => {
-      const req = route.request();
-      const method = String(req.method() || 'GET').toUpperCase();
-      if (method !== 'GET') return route.fulfill({ status: 405, contentType: 'text/plain', body: 'Method Not Allowed' });
-
-      const url = new URL(req.url());
-      if (url.pathname.endsWith('/travel-comment-threads/main/')) {
-        const { isAuthed } = parseAuth(req);
-        // Some environments require auth for thread metadata; app should still show comments for guests.
-        if (!isAuthed) return fulfillJson(route, 401, { detail: 'Unauthorized' });
-        const qTravelId = Number(url.searchParams.get('travel_id') || travelId);
-        return fulfillJson(route, 200, {
-          id: THREAD_ID,
-          travel: Number.isFinite(qTravelId) ? qTravelId : travelId,
-          is_main: true,
-          created_at: nowIso(),
-          updated_at: nowIso(),
-        });
+    const likeMatch = pathname.match(/\/travel-comments\/(\d+)\/like\/$/);
+    if (likeMatch) {
+      const id = Number(likeMatch[1]);
+      const index = comments.findIndex((comment) => comment.id === id);
+      if (index < 0) return json(route, 404, { detail: 'Not found' });
+      if (method === 'POST') {
+        comments[index] = { ...comments[index], is_liked: true, likes_count: 1 };
+        return json(route, 200, comments[index]);
       }
-
-      const threadMatch = url.pathname.match(/\/travel-comment-threads\/(\d+)\/?$/);
-      if (threadMatch) {
-        return fulfillJson(route, 200, {
-          id: Number(threadMatch[1]),
-          travel: travelId,
-          is_main: true,
-          created_at: nowIso(),
-          updated_at: nowIso(),
-        });
+      if (method === 'DELETE') {
+        comments[index] = { ...comments[index], is_liked: false, likes_count: 0 };
+        return route.fulfill({ status: 204, body: '' });
       }
+    }
 
-      return route.continue();
-    });
+    const replyMatch = pathname.match(/\/travel-comments\/(\d+)\/reply\/$/);
+    if (method === 'POST' && replyMatch) {
+      const parentId = Number(replyMatch[1]);
+      const body = request.postDataJSON() as { text: string };
+      const created: MockComment = {
+        id: nextId++,
+        thread: THREAD_ID + parentId,
+        sub_thread: null,
+        user: 1,
+        text: body.text,
+        created_at: now,
+        updated_at: now,
+        likes_count: 0,
+        user_name: 'E2E User',
+        user_avatar: null,
+        is_liked: false,
+        is_author: true,
+        parentId,
+      };
+      comments = [...comments, created];
+      return json(route, 201, created);
+    }
 
-    await page.route(/.*\/api\/travel-comments\/.*$/, async (route: any) => {
-      const req = route.request();
-      const method = String(req.method() || 'GET').toUpperCase();
-      const url = new URL(req.url());
-      const { isAuthed, isAdmin, userId } = parseAuth(req);
-
-      // Collection endpoints:
-      if (url.pathname.endsWith('/travel-comments/')) {
-        if (method === 'GET') {
-          const threadParam = url.searchParams.get('thread_id');
-          const travelParam = url.searchParams.get('travel_id');
-          if (threadParam) {
-            const threadId = Number(threadParam || THREAD_ID);
-            const out = comments.filter((c) => c.thread === threadId);
-            return fulfillJson(route, 200, out);
-          }
-          if (travelParam) {
-            // In this mocked API all comments belong to the single mocked travel.
-            return fulfillJson(route, 200, comments);
-          }
-          return fulfillJson(route, 400, { detail: 'Missing thread_id or travel_id' });
-        }
-        if (method === 'POST') {
-          if (!isAuthed) return fulfillJson(route, 401, { detail: 'Unauthorized' });
-          let body: any = null;
-          try {
-            body = req.postDataJSON();
-          } catch {
-            body = null;
-          }
-          const text = String(body?.text ?? '').trim();
-          const threadId = Number(body?.thread_id ?? THREAD_ID);
-          const created = {
-            id: nextCommentId++,
-            thread: threadId,
-            sub_thread: null,
-            user: userId,
-            text,
-            created_at: nowIso(),
-            updated_at: nowIso(),
-            likes_count: 0,
-            user_name: isAdmin ? 'E2E Admin' : 'E2E User',
-            user_avatar: null,
-            is_liked: false,
-            is_author: true,
-          };
-          comments.unshift(created);
-          return fulfillJson(route, 201, created);
-        }
+    const itemMatch = pathname.match(/\/travel-comments\/(\d+)\/$/);
+    if (itemMatch) {
+      const id = Number(itemMatch[1]);
+      const index = comments.findIndex((comment) => comment.id === id);
+      if (index < 0) return json(route, 404, { detail: 'Not found' });
+      if (method === 'PUT' || method === 'PATCH') {
+        const body = request.postDataJSON() as { text: string };
+        comments[index] = { ...comments[index], text: body.text, updated_at: now };
+        return json(route, 200, comments[index]);
       }
-
-      // Item endpoints:
-      const itemMatch = url.pathname.match(/\/travel-comments\/(\d+)\/?$/);
-      if (itemMatch) {
-        const commentId = Number(itemMatch[1]);
-        const idx = comments.findIndex((c) => c.id === commentId);
-        if (idx === -1) return fulfillJson(route, 404, { detail: 'Not found' });
-
-        if (method === 'GET') return fulfillJson(route, 200, comments[idx]);
-        if (method === 'PUT' || method === 'PATCH') {
-          if (!isAuthed) return fulfillJson(route, 401, { detail: 'Unauthorized' });
-          const current = comments[idx];
-          if (!isAdmin && current.user !== userId) return fulfillJson(route, 403, { detail: 'Forbidden' });
-          let body: any = null;
-          try {
-            body = req.postDataJSON();
-          } catch {
-            body = null;
-          }
-          const text = String(body?.text ?? '').trim();
-          comments[idx] = { ...current, text, updated_at: nowIso() };
-          return fulfillJson(route, 200, comments[idx]);
-        }
-        if (method === 'DELETE') {
-          if (!isAuthed) return fulfillJson(route, 401, { detail: 'Unauthorized' });
-          const current = comments[idx];
-          if (!isAdmin && current.user !== userId) return fulfillJson(route, 403, { detail: 'Forbidden' });
-          comments.splice(idx, 1);
-          return route.fulfill({ status: 204, contentType: 'text/plain', body: '' });
-        }
+      if (method === 'DELETE') {
+        comments = comments.filter((comment) => comment.id !== id && comment.parentId !== id);
+        return route.fulfill({ status: 204, body: '' });
       }
+    }
 
-      const likeMatch = url.pathname.match(/\/travel-comments\/(\d+)\/like\/?$/);
-      if (likeMatch) {
-        const commentId = Number(likeMatch[1]);
-        const idx = comments.findIndex((c) => c.id === commentId);
-        if (idx === -1) return fulfillJson(route, 404, { detail: 'Not found' });
-        if (!isAuthed) return fulfillJson(route, 401, { detail: 'Unauthorized' });
-
-        const set = likesByUser.get(commentId) ?? new Set<number>();
-        if (method === 'POST') set.add(userId);
-        if (method === 'DELETE') set.delete(userId);
-        likesByUser.set(commentId, set);
-        const likesCount = set.size;
-        const isLiked = set.has(userId);
-        comments[idx] = { ...comments[idx], likes_count: likesCount, is_liked: isLiked };
-        if (method === 'POST') return fulfillJson(route, 200, comments[idx]);
-        return route.fulfill({ status: 204, contentType: 'text/plain', body: '' });
-      }
-
-      const replyMatch = url.pathname.match(/\/travel-comments\/(\d+)\/reply\/?$/);
-      if (replyMatch) {
-        const parentId = Number(replyMatch[1]);
-        if (!isAuthed) return fulfillJson(route, 401, { detail: 'Unauthorized' });
-        let body: any = null;
-        try {
-          body = req.postDataJSON();
-        } catch {
-          body = null;
-        }
-        const text = String(body?.text ?? '').trim();
-        const created = {
-          id: nextCommentId++,
-          thread: THREAD_ID,
-          sub_thread: parentId,
-          user: userId,
-          text,
-          created_at: nowIso(),
-          updated_at: nowIso(),
-          likes_count: 0,
-          user_name: isAdmin ? 'E2E Admin' : 'E2E User',
-          user_avatar: null,
-          is_liked: false,
-          is_author: true,
-        };
-        comments.unshift(created);
-        return fulfillJson(route, 201, created);
-      }
-
-      return route.continue();
-    });
-
-    await page.route('**/api/travels/by-slug/**', routeHandler);
-    await page.route('**/travels/by-slug/**', routeHandler);
-
-    // Mock user profile API to prevent 401 responses from invalidating auth state.
-    // Without this, checkAuthentication fetches the profile with a fake token,
-    // the proxy returns 401, and invalidateAuthState clears localStorage.
-    await page.route(/.*\/api\/user\/\d+\/profile\/?$/, async (route: any) => {
-      const req = route.request();
-      if (String(req.method() || 'GET').toUpperCase() !== 'GET') return route.continue();
-      const { isAuthed, isAdmin, userId } = parseAuth(req);
-      if (!isAuthed) return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ detail: 'Unauthorized' }) });
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: userId,
-          first_name: isAdmin ? 'E2E' : 'Test',
-          last_name: isAdmin ? 'Admin' : 'User',
-          avatar: null,
-          youtube: '',
-          instagram: '',
-          twitter: '',
-          vk: '',
-          user: userId,
-        }),
-      });
-    });
+    return json(route, 404, { detail: 'Unhandled comments request' });
   });
 
-  test.describe('Unauthenticated users', () => {
-    test('should see comments section but not be able to interact', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      
-      // Wait for page to load
-      await waitForTravelDetailsReady(page);
-      
-      // Scroll to comments section
-      await scrollToCommentsSection(page);
+  return { treePayload };
+}
 
-      // Should see comments section
-      await expect(page.getByText('Комментарии').first()).toBeVisible();
+async function openComments(page: import('@playwright/test').Page) {
+  const treeResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === 'GET' &&
+      url.pathname.endsWith('/travel-comments/tree/') &&
+      url.searchParams.get('travel_id') === String(TRAVEL_ID)
+    );
+  });
+  await page.goto(`/travels/${SLUG}#comments`, { waitUntil: 'domcontentloaded' });
+  expect((await treeResponsePromise).status()).toBe(200);
 
-      // As a guest, comment UI may still render, but sending must be blocked.
-      const commentInput = page.getByPlaceholder('Написать комментарий...');
-      const guestGate = page.getByText('Войдите, чтобы оставить комментарий', { exact: true });
-      const submitButton = page.getByRole('button', { name: /отправить комментарий/i });
+  await expect(page.locator('[data-section-key="comments"]')).toBeAttached();
+  const commentsSection = page.locator('#comments');
+  await expect(commentsSection).toBeVisible();
+  await expect(commentsSection.getByText('Seed comment', { exact: true })).toBeVisible();
+}
 
-      await Promise.race([
-        commentInput.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => null),
-        guestGate.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => null),
-        submitButton.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => null),
-      ]);
+test.describe('Travel comments — guest contract', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
 
-      const gateVisible = await guestGate.isVisible().catch(() => false);
-      const submitEnabled = await submitButton.isEnabled().catch(() => false);
-      expect(gateVisible || !submitEnabled).toBeTruthy();
-    });
+  test('shows public comments and requires login before writing', async ({ page }) => {
+    await setupComments(page, false);
+    await openComments(page);
 
-    test('should see existing comments with like counts but no interaction buttons', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      
-      // If there are comments, verify they're visible but not interactive
-      const commentItems = page.locator('[data-testid="comment-item"]');
-      const count = await commentItems.count();
-      
-      if (count > 0) {
-        // Should see comment text
-        await expect(commentItems.first()).toBeVisible();
-        
-        // Should not see reply button
-        await expect(page.getByRole('button', { name: /ответить/i })).not.toBeVisible();
-        
-        // Should not see edit/delete buttons
-        await expect(page.getByRole('button', { name: /редактировать/i })).not.toBeVisible();
-        await expect(page.getByRole('button', { name: /удалить/i })).not.toBeVisible();
-      }
-    });
+    await expect(page.getByText('Войдите, чтобы оставить комментарий', { exact: true })).toBeVisible();
+    await expect(page.getByPlaceholder('Написать комментарий...')).not.toBeVisible();
+    await expect(page.getByTestId('comment-reply')).toHaveCount(0);
+    await expect(page.getByTestId('comment-like')).toHaveCount(0);
+  });
+});
+
+test.describe('Travel comments — authenticated contracts', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupComments(page, true);
+    await openComments(page);
   });
 
-  test.describe('Authenticated users', () => {
-    test.beforeEach(async ({ page }) => {
-      const { userId } = await loginAsUser(page);
-      _testUserId = userId || '';
+  test('creates a comment through the accessible form', async ({ page }) => {
+    const input = page.getByPlaceholder('Написать комментарий...');
+    await expect(input).toHaveAccessibleName('Поле ввода комментария');
+    await input.focus();
+    await page.keyboard.type('Created comment');
+
+    const createRequest = page.waitForRequest((request) =>
+      request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/travel-comments/'),
+    );
+    const submit = page.getByRole('button', { name: /отправить комментарий/i });
+    await expect(submit).toBeEnabled();
+    await submit.click();
+
+    expect((await createRequest).postDataJSON()).toMatchObject({
+      text: 'Created comment',
+      travel_id: TRAVEL_ID,
     });
-
-    const shouldSkipAuthCommentActions = async (page: any) => {
-      const guestGate = page.getByText('Войдите, чтобы оставить комментарий', { exact: true });
-      if (await guestGate.isVisible().catch(() => false)) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'User appears to be unauthenticated (guest comment gate visible); skipping authenticated comment actions.',
-        });
-        return true;
-      }
-
-      const unavailable = page.getByText('Комментарии недоступны', { exact: true });
-      if (await unavailable.isVisible().catch(() => false)) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Comments API unavailable in this environment; skipping authenticated comment actions.',
-        });
-        return true;
-      }
-
-      return false;
-    };
-
-    test('should be able to create a comment', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      await waitForTravelDetailsReady(page);
-      
-      // Scroll to comments
-      await scrollToCommentsSection(page);
-
-      if (await shouldSkipAuthCommentActions(page)) return;
-
-      const unavailable = page.getByText('Комментарии недоступны', { exact: true });
-      if (await unavailable.isVisible().catch(() => false)) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Comments API unavailable in this environment; skipping create comment assertions.',
-        });
-        return;
-      }
-
-      // Should see comment form
-      const commentInput = page.getByPlaceholder('Написать комментарий...');
-      await commentInput.scrollIntoViewIfNeeded({ timeout: 15_000 }).catch(() => {});
-      const hasCommentInput = await commentInput
-        .isVisible({ timeout: 5_000 })
-        .then((v: boolean) => v)
-        .catch(() => false);
-	      if (!hasCommentInput) {
-	        test.info().annotations.push({
-	          type: 'note',
-	          description: 'Comment input is not present after login; skipping authenticated comment action.',
-	        });
-	        return;
-	      }
-      await expect(commentInput).toBeVisible();
-      
-      // Type comment
-      const commentText = `Test comment ${Date.now()}`;
-      await commentInput.fill(commentText);
-
-      const submitButton = page.getByRole('button', { name: /отправить комментарий/i });
-      // If submit stays disabled, API is not available even though UI renders.
-      const submitEnabled = await submitButton
-        .isEnabled()
-        .then((v: boolean) => v)
-        .catch(() => false);
-      if (!submitEnabled) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Comments submit is disabled; skipping create comment assertions for this environment.',
-        });
-        return;
-      }
-      
-      // Submit comment
-      await submitButton.click();
-
-      // Wait for comment to appear.
-      // In some environments the submit UI is present but backend comment creation is disabled.
-      const created = await page
-        .getByText(commentText)
-        .waitFor({ state: 'visible', timeout: 15_000 })
-        .then(() => true)
-        .catch(() => false);
-
-      if (!created) {
-        const unavailableAfter = await page
-          .getByText('Комментарии недоступны', { exact: true })
-          .isVisible()
-          .catch(() => false);
-        if (unavailableAfter) {
-          test.info().annotations.push({
-            type: 'note',
-            description: 'Comment creation not available (comments became unavailable); skipping create assertions.',
-          });
-          return;
-        }
-
-        const inputDisabled = await commentInput.isDisabled().catch(() => false);
-        if (inputDisabled) {
-          test.info().annotations.push({
-            type: 'note',
-            description: 'Comment input became disabled after submit; skipping create assertions for this environment.',
-          });
-          return;
-        }
-
-        // Otherwise, don't fail the whole suite in environments where the UI is present
-        // but the backend doesn't persist comments (common in sandboxed/offline runs).
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Could not confirm that the submitted comment appeared; skipping strict create assertions for this environment.',
-        });
-        return;
-      }
-      
-      // Verify comment is displayed
-      const newComment = page.locator(`text=${commentText}`).first();
-      await expect(newComment).toBeVisible();
-    });
-
-    test('should be able to like a comment', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      await waitForTravelDetailsReady(page);
-
-      if (await shouldSkipAuthCommentActions(page)) return;
-      
-      // Find first comment
-      let firstComment = page.locator('[data-testid="comment-item"]').first();
-      const commentExists = await firstComment.isVisible().catch(() => false);
-      if (!commentExists) return;
-      await firstComment.scrollIntoViewIfNeeded();
-      
-      // Get initial like count
-      const likeButton = firstComment.locator('[data-testid="comment-like"]');
-      const likeVisible = await likeButton.isVisible().catch(() => false);
-      if (!likeVisible) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Like button not visible (user may not be authenticated in this context); skipping like test.',
-        });
-        return;
-      }
-
-      // Click like
-      await likeButton.click();
-      
-      // Wait for optimistic update
-      await page.waitForLoadState('domcontentloaded').catch(() => null);
-      
-      // Verify like was registered (best-effort; UI may vary by platform/theme)
-      await expect(firstComment).toBeVisible();
-    });
-
-    test('should be able to unlike a comment', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      await waitForTravelDetailsReady(page);
-
-      if (await shouldSkipAuthCommentActions(page)) return;
-      
-      let firstComment = page.locator('[data-testid="comment-item"]').first();
-      const commentExists = await firstComment.isVisible().catch(() => false);
-      if (!commentExists) return;
-      await firstComment.scrollIntoViewIfNeeded();
-      
-      // Like the comment first
-      let likeButton = firstComment.locator('[data-testid="comment-like"]');
-      const canLike = await likeButton.isVisible({ timeout: 5_000 }).catch(() => false);
-      if (!canLike) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Like control is not visible for the selected comment; skipping unlike assertions for this environment.',
-        });
-        return;
-      }
-      await likeButton.click();
-      await page.waitForLoadState('domcontentloaded').catch(() => null);
-      
-      // Unlike
-      firstComment = page.locator('[data-testid="comment-item"]').first();
-      await firstComment.scrollIntoViewIfNeeded().catch(() => null);
-      likeButton = firstComment.locator('[data-testid="comment-like"]');
-      await expect(likeButton).toBeVisible();
-      await likeButton.click();
-      await page.waitForLoadState('domcontentloaded').catch(() => null);
-      
-      // Best-effort verification; ensure comment is still rendered.
-      await expect(firstComment).toBeVisible();
-    });
-
-    test('should be able to reply to a comment', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      await waitForTravelDetailsReady(page);
-
-      // Scroll comments section into view to trigger deferred mount before checking auth state.
-      await scrollToCommentsSection(page);
-
-      if (await shouldSkipAuthCommentActions(page)) return;
-
-      const firstComment = page.locator('[data-testid="comment-item"]').first();
-      const commentExists = await firstComment.isVisible({ timeout: 10_000 }).catch(() => false);
-      if (!commentExists) return;
-      await firstComment.scrollIntoViewIfNeeded();
-
-      // Wait for reply button to be visible before clicking (may render after comment mounts).
-      const replyButton = firstComment.locator('[data-testid="comment-reply"]');
-      const replyButtonVisible = await replyButton.isVisible({ timeout: 5_000 }).catch(() => false);
-      if (!replyButtonVisible) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Reply button not visible (unauthenticated or feature unavailable); skipping reply test.',
-        });
-        return;
-      }
-      await replyButton.click();
-
-      // Should see reply banner
-      await expect(page.getByText(/ответ на комментарий/i)).toBeVisible({ timeout: 5_000 });
-
-      // Type reply
-      const replyText = `Test reply ${Date.now()}`;
-      const commentInput = page.getByPlaceholder('Написать комментарий...');
-      await commentInput.fill(replyText);
-
-      // Submit should become enabled after typing
-      const submit = page.getByRole('button', { name: /отправить комментарий/i });
-      const submitEnabled = await submit.isEnabled({ timeout: 5_000 }).catch(() => false);
-      if (!submitEnabled) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Reply submit is disabled after typing; skipping reply submit for this environment.',
-        });
-        return;
-      }
-
-      // Submit reply
-      await submit.click();
-
-      const replyLocator = page.locator('[data-testid="comment-item"]').filter({ hasText: replyText }).first();
-
-      // Replies can render inline after optimistic updates, or behind a toggle after data refresh.
-      await replyLocator.waitFor({ state: 'visible', timeout: 10_000 }).catch(async () => {
-        const showReplies = page.getByText(/показать ответы/i).first();
-        if (await showReplies.isVisible().catch(() => false)) {
-          await showReplies.click();
-        }
-      });
-
-      await expect(replyLocator).toBeVisible({ timeout: 15_000 });
-    });
-
-    test('should be able to edit own comment', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      await waitForTravelDetailsReady(page);
-
-      // Ensure comments section is mounted/visible in deferred layouts.
-      await scrollToCommentsSection(page);
-
-      if (await shouldSkipAuthCommentActions(page)) return;
-      
-      // Create a comment first
-      const commentInput = page.getByPlaceholder('Написать комментарий...');
-      const hasCommentInput = await commentInput
-        .isVisible()
-        .then((v: boolean) => v)
-        .catch(() => false);
-	      if (!hasCommentInput) {
-	        test.info().annotations.push({
-	          type: 'note',
-	          description: 'Comment input is not present after login; skipping authenticated comment action.',
-	        });
-	        return;
-	      }
-      const originalText = `Original comment ${Date.now()}`;
-      await commentInput.fill(originalText);
-      const submitButton = page.getByRole('button', { name: /отправить комментарий/i });
-      const submitEnabled = await submitButton
-        .isEnabled()
-        .then((v: boolean) => v)
-        .catch(() => false);
-      if (!submitEnabled) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Comments submit is disabled; skipping edit assertions for this environment.',
-        });
-        return;
-      }
-
-      await submitButton.click();
-      const created = await page
-        .getByText(originalText)
-        .waitFor({ state: 'visible', timeout: 15_000 })
-        .then(() => true)
-        .catch(() => false);
-      if (!created) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Could not create seed comment; skipping edit assertions for this environment.',
-        });
-        return;
-      }
-      
-      // Find the comment we just created
-      const ourComment = page.locator('[data-testid="comment-item"]').filter({ hasText: originalText }).first();
-      
-      // Click more actions (actions control is rendered as a generic element)
-      await openCommentActionsMenu(page, ourComment);
-      
-      // Click edit
-      const editAction = page.locator('[data-testid="comment-actions-edit"]').first();
-      const editVisible = await editAction.isVisible({ timeout: 5_000 }).catch(() => false);
-      if (!editVisible) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Comment edit action is not visible after opening actions menu; skipping edit assertions for this environment.',
-        });
-        return;
-      }
-      await editAction.click({ timeout: 10_000 });
-      
-      // Should see edit banner
-      await expect(page.getByText(/редактирование комментария/i)).toBeVisible();
-      
-      // Edit text
-      const editedText = `Edited comment ${Date.now()}`;
-      await commentInput.clear();
-      await commentInput.fill(editedText);
-      
-      // Save changes
-      await page.getByRole('button', { name: /сохранить изменения/i }).click();
-      
-      // Wait for update
-      await expect(page.getByText(editedText)).toBeVisible({ timeout: 5000 });
-      await expect(page.getByText(originalText)).not.toBeVisible();
-    });
-
-    test('should be able to delete own comment', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      await waitForTravelDetailsReady(page);
-
-      // Ensure comments section is mounted/visible in deferred layouts.
-      await scrollToCommentsSection(page);
-
-      if (await shouldSkipAuthCommentActions(page)) return;
-      
-      // Create a comment first
-      const commentInput = page.getByPlaceholder('Написать комментарий...');
-      const hasCommentInput = await commentInput
-        .isVisible()
-        .then((v: boolean) => v)
-        .catch(() => false);
-	      if (!hasCommentInput) {
-	        test.info().annotations.push({
-	          type: 'note',
-	          description: 'Comment input is not present after login; skipping authenticated comment action.',
-	        });
-	        return;
-	      }
-      const commentText = `Comment to delete ${Date.now()}`;
-      await commentInput.fill(commentText);
-      const submitButton = page.getByRole('button', { name: /отправить комментарий/i });
-      const submitEnabled = await submitButton
-        .isEnabled()
-        .then((v: boolean) => v)
-        .catch(() => false);
-      if (!submitEnabled) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Comments submit is disabled; skipping delete assertions for this environment.',
-        });
-        return;
-      }
-
-      await submitButton.click();
-      const created = await page
-        .getByText(commentText)
-        .waitFor({ state: 'visible', timeout: 15_000 })
-        .then(() => true)
-        .catch(() => false);
-      if (!created) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Could not create seed comment; skipping delete assertions for this environment.',
-        });
-        return;
-      }
-      
-      // Find the comment
-      const ourComment = page.locator('[data-testid="comment-item"]').filter({ hasText: commentText }).first();
-      
-      // Click more actions
-      await openCommentActionsMenu(page, ourComment);
-
-      // Click delete — opens the in-app ConfirmDialog (replaces native window.confirm)
-      await page.locator('[data-testid="comment-actions-delete"]').first().click({ timeout: 10_000 });
-      await page.locator('[data-testid="comment-delete-confirm"]').click();
-
-      // Wait for deletion
-      await expect(page.getByText(commentText)).not.toBeVisible({ timeout: 15_000 });
-    });
-
-    test('should see comments in sidebar navigation', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      const detailsLoaded = await waitForTravelDetailsReady(page)
-        .then(() => true)
-        .catch(() => false);
-      if (!detailsLoaded) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Travel details page did not finish loading; skipping sidebar navigation assertion.',
-        });
-        return;
-      }
-      
-      // Check if sidebar menu exists (desktop view)
-      const sidebarMenu = page.locator('[data-testid="travel-details-side-menu"]');
-      const isSidebarVisible = await sidebarMenu.isVisible().catch(() => false);
-      
-      if (isSidebarVisible) {
-        // In current UI this entry is rendered as a button.
-        const commentsNavButton = page.getByRole('button', { name: /комментарии/i }).first();
-        await expect(commentsNavButton).toBeVisible();
-
-        // Click comments entry
-        await commentsNavButton.click();
-        
-        // Should scroll to comments section
-        await page.waitForFunction(() => window.scrollY > 100, null, { timeout: 5_000 }).catch(() => null);
-        const commentsSection = page.getByText('Комментарии').first();
-        const commentsInViewport = await commentsSection
-          .waitFor({ state: 'visible', timeout: 5_000 })
-          .then(async () => {
-            try {
-              await expect(commentsSection).toBeInViewport({ timeout: 5_000 });
-              return true;
-            } catch {
-              return false;
-            }
-          })
-          .catch(() => false);
-        if (!commentsInViewport) {
-          test.info().annotations.push({
-            type: 'note',
-            description: 'Comments section did not reach viewport after sidebar navigation in this layout; skipping strict viewport assertion.',
-          });
-        }
-      }
-    });
+    await expect(page.getByText('Created comment', { exact: true })).toBeVisible();
   });
 
-  test.describe('Admin users', () => {
-    test.beforeEach(async ({ page }) => {
-      const { userId } = await loginAsAdmin(page);
-      _adminUserId = userId || '';
-    });
+  test('toggles a like with POST and DELETE', async ({ page }) => {
+    const seed = page.getByTestId('comment-item').filter({ hasText: 'Seed comment' });
+    const like = seed.getByTestId('comment-like');
+    await expect(like).toHaveAccessibleName('Поставить лайк');
 
-    test('should be able to delete any comment', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      const detailsLoaded = await waitForTravelDetailsReady(page)
-        .then(() => true)
-        .catch(() => false);
-      if (!detailsLoaded) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Travel details page did not finish loading; skipping admin delete assertion.',
-        });
-        return;
-      }
-      
-      // Find any comment
-      let firstComment = page.locator('[data-testid="comment-item"]').first();
-      const commentExists = await firstComment.isVisible().catch(() => false);
-      
-      if (commentExists) {
-        await firstComment.scrollIntoViewIfNeeded();
-        
-        // Click more actions
-        let moreButton = firstComment
-          .locator('[data-testid="comment-actions-trigger"]')
-          .or(firstComment.getByRole('button', { name: /действия с комментарием/i }));
-        let moreVisible = await moreButton.first().isVisible().catch(() => false);
-        if (!moreVisible) {
-          // Auth hydration can lag on web runs under heavy parallel load; refresh once with explicit admin markers.
-          await page.evaluate(() => {
-            try {
-              window.localStorage.setItem('userId', '2');
-              window.localStorage.setItem('userName', 'E2E Admin');
-              window.localStorage.setItem('isSuperuser', 'true');
-            } catch {
-              // ignore
-            }
-          });
-          await page.reload({ waitUntil: 'domcontentloaded' });
-          await waitForTravelDetailsReady(page);
-          firstComment = page.locator('[data-testid="comment-item"]').first();
-          await firstComment.scrollIntoViewIfNeeded().catch(() => null);
-          moreButton = firstComment
-            .locator('[data-testid="comment-actions-trigger"]')
-            .or(firstComment.getByRole('button', { name: /действия с комментарием/i }));
-          moreVisible = await moreButton.first().isVisible().catch(() => false);
-        }
-        if (!moreVisible) {
-          test.info().annotations.push({
-            type: 'note',
-            description: 'Comment actions trigger is not visible in current layout/auth state; skipping delete-any-comment assertion',
-          });
-          return;
-        }
-        const actionsMenuOpened = await openCommentActionsMenu(page, firstComment)
-          .then(() => true)
-          .catch(() => false);
-        if (!actionsMenuOpened) {
-          test.info().annotations.push({
-            type: 'note',
-            description: 'Comment actions menu could not be opened reliably under current parallel auth/hydration state; skipping delete-any-comment assertion.',
-          });
-          return;
-        }
-        
-        // Should see delete button with admin label
-        const deleteButtonWithLabel = page.getByRole('button', { name: /удалить.*админ/i });
-        const deleteButton = page.getByTestId('comment-actions-delete').or(deleteButtonWithLabel);
-        await expect(deleteButton.first()).toBeVisible({ timeout: 15_000 });
-        await expect(page.getByText('Удалить (Админ)')).toBeVisible({ timeout: 15_000 });
+    const likeRequest = page.waitForRequest((request) =>
+      request.method() === 'POST' && new URL(request.url()).pathname.endsWith(`/${SEED_COMMENT_ID}/like/`),
+    );
+    await like.click();
+    await likeRequest;
+    await expect(seed.getByTestId('comment-like')).toHaveAccessibleName('Убрать лайк');
 
-        const deleteResponsePromise = page.waitForResponse((resp) => {
-          if (resp.request().method() !== 'DELETE') return false;
-          try {
-            const pathname = new URL(resp.url()).pathname;
-            return /\/api\/travel-comments\/\d+\/?$/.test(pathname);
-          } catch {
-            return resp.url().includes('/api/travel-comments/');
-          }
-        });
-
-        // Click delete — opens the in-app ConfirmDialog (replaces native window.confirm).
-        await deleteButton.first().click();
-        await page.locator('[data-testid="comment-delete-confirm"]').click();
-
-        const deleteResp = await deleteResponsePromise;
-        expect(deleteResp.status()).toBe(204);
-
-        // Verify comment is removed from the list.
-        await expect(page.locator('[data-testid="comment-item"]', { hasText: 'Seed comment' })).toHaveCount(0, {
-          timeout: 15_000,
-        });
-      }
-    });
-
+    const unlikeRequest = page.waitForRequest((request) =>
+      request.method() === 'DELETE' && new URL(request.url()).pathname.endsWith(`/${SEED_COMMENT_ID}/like/`),
+    );
+    await seed.getByTestId('comment-like').click();
+    await unlikeRequest;
+    await expect(seed.getByTestId('comment-like')).toHaveAccessibleName('Поставить лайк');
   });
 
-  test.describe('Comments threading', () => {
-    test.beforeEach(async ({ page }) => {
-      await loginAsUser(page);
-    });
+  test('creates a reply under the selected comment', async ({ page }) => {
+    const seed = page.getByTestId('comment-item').filter({ hasText: 'Seed comment' });
+    await seed.getByTestId('comment-reply').click();
+    await expect(page.getByText(/ответ на комментарий/i)).toBeVisible();
 
-    test('should support nested replies up to 2 levels', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      await waitForTravelDetailsReady(page);
-
-      // Ensure comments section is mounted/visible in deferred layouts.
-      await scrollToCommentsSection(page);
-
-      const unavailable = page.getByText('Комментарии недоступны', { exact: true });
-      if (await unavailable.isVisible().catch(() => false)) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Comments API unavailable in this environment; skipping threading assertions.',
-        });
-        return;
-      }
-      
-      // Create top-level comment
-      const commentInput = page.getByPlaceholder('Написать комментарий...');
-      const hasCommentInput = await commentInput
-        .isVisible()
-        .then((v: boolean) => v)
-        .catch(() => false);
-	      if (!hasCommentInput) {
-	        test.info().annotations.push({
-	          type: 'note',
-	          description: 'Comment input is not present; skipping threading assertions.',
-	        });
-	        return;
-	      }
-      const topLevelText = `Top level ${Date.now()}`;
-      await commentInput.fill(topLevelText);
-      const submitButton = page.getByRole('button', { name: /отправить комментарий/i });
-      const submitEnabled = await submitButton
-        .isEnabled()
-        .then((v: boolean) => v)
-        .catch(() => false);
-      if (!submitEnabled) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Comments submit is disabled; skipping threading assertions for this environment.',
-        });
-        return;
-      }
-
-      await submitButton.click();
-      const created = await page
-        .getByText(topLevelText)
-        .waitFor({ state: 'visible', timeout: 15_000 })
-        .then(() => true)
-        .catch(() => false);
-
-      if (!created) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Could not create seed comment; skipping threading assertions for this environment.',
-        });
-        return;
-      }
-      
-      // Reply to it (level 1)
-      const topComment = page.locator('[data-testid="comment-item"]').filter({ hasText: topLevelText }).first();
-      await topComment.getByText(/^ответить$/i).click();
-      
-      const level1Text = `Level 1 reply ${Date.now()}`;
-      await commentInput.fill(level1Text);
-      const submit = page.getByRole('button', { name: /отправить комментарий/i });
-      await expect(submit).toBeEnabled();
-      await submit.click();
-
-      const level1Locator = page.locator('[data-testid="comment-item"]').filter({ hasText: level1Text }).first();
-
-      // Replies can render inline after optimistic updates, or behind a toggle after data refresh.
-      await level1Locator.waitFor({ state: 'visible', timeout: 10_000 }).catch(async () => {
-        const showReplies = page.getByText(/показать ответы/i).first();
-        if (await showReplies.isVisible().catch(() => false)) {
-          await showReplies.click();
-        }
-      });
-
-      await expect(level1Locator).toBeVisible({ timeout: 15_000 });
-      
-      // Try to reply to level 1 (should create level 2)
-      const level1Comment = level1Locator;
-      const replyButton = level1Comment.getByRole('button', { name: /ответить/i });
-      const canReply = await replyButton.isVisible().catch(() => false);
-      
-      if (canReply) {
-        await replyButton.click();
-        
-        const level2Text = `Level 2 reply ${Date.now()}`;
-        await commentInput.fill(level2Text);
-        await page.getByRole('button', { name: /отправить комментарий/i }).click();
-        const level2Locator = page.locator('[data-testid="comment-item"]').filter({ hasText: level2Text }).first();
-        await expect(level2Locator).toBeVisible({ timeout: 5000 });
-        
-        // Level 2 comment should now have reply button (no depth limit)
-        const level2Comment = level2Locator;
-        const level2ReplyButton = level2Comment.getByRole('button', { name: /ответить/i });
-        await expect(level2ReplyButton).toBeVisible();
-      }
-    });
+    await page.getByPlaceholder('Написать комментарий...').fill('Reply comment');
+    const replyRequest = page.waitForRequest((request) =>
+      request.method() === 'POST' && new URL(request.url()).pathname.endsWith(`/${SEED_COMMENT_ID}/reply/`),
+    );
+    await page.getByRole('button', { name: /отправить комментарий/i }).click();
+    expect((await replyRequest).postDataJSON()).toMatchObject({ text: 'Reply comment' });
+    await expect(page.getByText('Reply comment', { exact: true })).toBeVisible();
   });
 
-  test.describe('Comments refresh and real-time updates', () => {
-    test.beforeEach(async ({ page }) => {
-      await loginAsUser(page);
-    });
+  test('edits and deletes the current user comment', async ({ page }) => {
+    let own = page.getByTestId('comment-item').filter({ hasText: 'Own comment' });
+    await own.getByTestId('comment-actions-trigger').click();
+    await own.getByTestId('comment-actions-edit').click();
 
-    test('should refresh comments on pull-to-refresh', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      await waitForTravelDetailsReady(page);
-      
-      // Scroll to comments
-      await scrollToCommentsSection(page);
-      
-      // Get initial comment count
-      const initialCount = await page.locator('[data-testid="comment-item"]').count();
-      
-      // Simulate refresh (reload page)
-      await page.reload();
-      await waitForTravelDetailsReady(page);
-      
-      // Verify comments are still visible
-      const newCount = await page.locator('[data-testid="comment-item"]').count();
-      expect(newCount).toBe(initialCount);
-    });
-  });
+    const input = page.getByPlaceholder('Написать комментарий...');
+    await expect(input).toHaveValue('Own comment');
+    await input.fill('Edited own comment');
+    const updateRequest = page.waitForRequest((request) =>
+      request.method() === 'PUT' && new URL(request.url()).pathname.endsWith(`/${OWN_COMMENT_ID}/`),
+    );
+    await page.getByRole('button', { name: /сохранить изменения/i }).click();
+    expect((await updateRequest).postDataJSON()).toEqual({ text: 'Edited own comment' });
+    await expect(page.getByText('Edited own comment', { exact: true })).toBeVisible();
 
-  test.describe('Accessibility', () => {
-    test('should have proper ARIA labels', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      await waitForTravelDetailsReady(page);
-
-      const guestGate = page.getByText('Войдите, чтобы оставить комментарий', { exact: true });
-	      if (await guestGate.isVisible().catch(() => false)) {
-	        test.info().annotations.push({
-	          type: 'note',
-	          description: 'Guest comment gate visible; skipping comment ARIA assertions.',
-	        });
-	        return;
-	      }
-
-      const unavailable = page.getByText('Комментарии недоступны', { exact: true });
-	      if (await unavailable.isVisible().catch(() => false)) {
-	        test.info().annotations.push({
-	          type: 'note',
-	          description: 'Comments unavailable; skipping comment ARIA assertions.',
-	        });
-	        return;
-	      }
-      
-      // Check comment input accessibility
-      const commentInput = page.getByPlaceholder('Написать комментарий...');
-
-      const hasCommentInput = await commentInput
-        .isVisible()
-        .then((v: boolean) => v)
-        .catch(() => false);
-	      if (!hasCommentInput) {
-	        test.info().annotations.push({
-	          type: 'note',
-	          description: 'Comment input is not present; skipping comment ARIA assertions for this environment.',
-	        });
-	        return;
-	      }
-      const hasAriaLabel = await commentInput.getAttribute('aria-label');
-      expect(hasAriaLabel).toBeTruthy();
-      
-      // Check button accessibility
-      const submitButton = page.getByRole('button', { name: /отправить комментарий/i });
-      await expect(submitButton).toBeVisible();
-    });
-
-    test('should support keyboard navigation', async ({ page }) => {
-      await loginAsUser(page);
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      await waitForTravelDetailsReady(page);
-
-      const unavailable = page.getByText('Комментарии недоступны', { exact: true });
-      if (await unavailable.isVisible().catch(() => false)) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Comments API unavailable in this environment; skipping keyboard navigation assertions.',
-        });
-        return;
-      }
-
-      const guestGate = page.getByText('Войдите, чтобы оставить комментарий', { exact: true });
-	      if (await guestGate.isVisible().catch(() => false)) {
-	        test.info().annotations.push({
-	          type: 'note',
-	          description: 'Guest comment gate visible; skipping keyboard navigation assertions.',
-	        });
-	        return;
-	      }
-      
-      const commentInput = page.getByPlaceholder('Написать комментарий...');
-
-      const hasCommentInput = await commentInput
-        .isVisible()
-        .then((v: boolean) => v)
-        .catch(() => false);
-	      if (!hasCommentInput) {
-	        test.info().annotations.push({
-	          type: 'note',
-	          description: 'Comment input is not present; skipping keyboard navigation assertions for this environment.',
-	        });
-	        return;
-	      }
-      await commentInput.scrollIntoViewIfNeeded();
-      await commentInput.focus();
-      
-      // Type comment
-      const commentText = `Keyboard comment ${Date.now()}`;
-      await page.keyboard.type(commentText);
-      
-      // Submit via button (more reliable than tab order)
-      const submitButton = page.getByRole('button', { name: /отправить комментарий/i });
-      const submitEnabled = await submitButton
-        .isEnabled()
-        .then((v: boolean) => v)
-        .catch(() => false);
-      if (!submitEnabled) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Comments submit is disabled; skipping keyboard navigation assertions for this environment.',
-        });
-        return;
-      }
-
-      await submitButton.click();
-      
-      // Verify comment was submitted
-      const created = await page
-        .getByText(commentText)
-        .waitFor({ state: 'visible', timeout: 15_000 })
-        .then(() => true)
-        .catch(() => false);
-
-      if (!created) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Could not create comment via keyboard flow; skipping assertion for this environment.',
-        });
-        return;
-      }
-    });
+    own = page.getByTestId('comment-item').filter({ hasText: 'Edited own comment' });
+    await own.getByTestId('comment-actions-trigger').click();
+    await own.getByTestId('comment-actions-delete').click();
+    const deleteRequest = page.waitForRequest((request) =>
+      request.method() === 'DELETE' && new URL(request.url()).pathname.endsWith(`/${OWN_COMMENT_ID}/`),
+    );
+    await page.getByTestId('comment-delete-confirm').click();
+    await deleteRequest;
+    await expect(page.getByText('Edited own comment', { exact: true })).not.toBeVisible();
   });
 });

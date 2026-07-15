@@ -1,5 +1,5 @@
-import { render } from '@testing-library/react-native'
-import { View } from 'react-native'
+import { fireEvent, render } from '@testing-library/react-native'
+import { Platform, View } from 'react-native'
 
 import { MapCanvas } from '@/components/MapPage/MapCanvas'
 
@@ -27,6 +27,12 @@ const baseProps = {
     radiusPillText: {},
     geoBanner: {},
     geoBannerText: {},
+    geoBannerBody: {},
+    geoBannerActions: {},
+    geoBannerActionPrimary: {},
+    geoBannerActionPrimaryText: {},
+    geoBannerActionSecondary: {},
+    geoBannerActionSecondaryText: {},
     geoBannerClose: {},
   },
   themedColors: {
@@ -53,12 +59,29 @@ const baseProps = {
   currentRadius: '',
   shouldShowFloatingRadiusPill: false,
   showGeoBanner: false,
+  locationState: {
+    status: 'denied' as const,
+    coordinates: null,
+    accuracy: null,
+    timestamp: null,
+    canAskAgain: true,
+  },
+  coordinatesSource: 'default' as const,
   dismissGeoBanner: jest.fn(),
+  retryLocation: jest.fn(),
+  openLocationSettings: jest.fn(),
+  startManualRoute: jest.fn(),
   handleSelectSearchTab: jest.fn(),
   openRightPanel: jest.fn(),
 }
 
 describe('MapCanvas', () => {
+  const originalPlatform = Platform.OS
+
+  afterEach(() => {
+    ;(Platform as any).OS = originalPlatform
+  })
+
   beforeEach(() => {
     mockMapLoadingBar.mockClear()
   })
@@ -71,5 +94,70 @@ describe('MapCanvas', () => {
   it('shows the top loading bar when the screen asks for map progress', () => {
     render(<MapCanvas {...baseProps} showProgress />)
     expect(mockMapLoadingBar).toHaveBeenLastCalledWith({ visible: true })
+  })
+
+  it('offers a retry and a manual start when location permission can be requested again', () => {
+    const retryLocation = jest.fn()
+    const startManualRoute = jest.fn()
+    const screen = render(
+      <MapCanvas
+        {...baseProps}
+        showProgress={false}
+        showGeoBanner
+        retryLocation={retryLocation}
+        startManualRoute={startManualRoute}
+      />,
+    )
+
+    fireEvent.press(screen.getByTestId('map-geo-retry'))
+    fireEvent.press(screen.getByTestId('map-geo-manual-start'))
+
+    expect(retryLocation).toHaveBeenCalledTimes(1)
+    expect(startManualRoute).toHaveBeenCalledTimes(1)
+  })
+
+  it('labels cached coordinates as last-known rather than current', () => {
+    const screen = render(
+      <MapCanvas
+        {...baseProps}
+        showProgress={false}
+        showGeoBanner
+        coordinatesSource="cache"
+        locationState={{
+          status: 'cached',
+          coordinates: { latitude: 52.2, longitude: 20.98 },
+          accuracy: null,
+          timestamp: 1000,
+          canAskAgain: true,
+        }}
+      />,
+    )
+
+    expect(screen.getByText(/последнее известное местоположение/i)).toBeTruthy()
+  })
+
+  it('opens native settings when permission cannot be requested again', () => {
+    ;(Platform as any).OS = 'android'
+    const openLocationSettings = jest.fn()
+    const screen = render(
+      <MapCanvas
+        {...baseProps}
+        showProgress={false}
+        showGeoBanner
+        openLocationSettings={openLocationSettings}
+        locationState={{
+          status: 'denied',
+          coordinates: null,
+          accuracy: null,
+          timestamp: null,
+          canAskAgain: false,
+        }}
+      />,
+    )
+
+    fireEvent.press(screen.getByTestId('map-geo-open-settings'))
+
+    expect(openLocationSettings).toHaveBeenCalledTimes(1)
+    expect(screen.queryByTestId('map-geo-retry')).toBeNull()
   })
 })
