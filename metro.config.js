@@ -152,6 +152,17 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 const RNW_SLIM_ENABLED = process.env.EXPO_PUBLIC_RNW_SLIM === '1'
 config.resolver.resolveRequest = ((orig) => {
   return (context, moduleName, platform) => {
+    // Expo's icon wrapper reads a process-global font cache in its constructor.
+    // During static hydration the root shell can load Feather before a lazy route
+    // boundary hydrates, so that boundary renders glyphs on the client while its
+    // server HTML contains empty icon placeholders. Keep every web icon neutral
+    // until its own component commits; native continues to use the package entry.
+    if (platform === 'web' && moduleName === '@expo/vector-icons/Feather') {
+      return {
+        filePath: path.resolve(__dirname, 'metro-stubs/FeatherHydrationSafe.web.tsx'),
+        type: 'sourceFile',
+      }
+    }
     // I2.2: RNW slim aliasing (opt-in)
     if (RNW_SLIM_ENABLED && platform === 'web' && moduleName === 'react-native') {
       return {

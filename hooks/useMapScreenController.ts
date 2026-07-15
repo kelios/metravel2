@@ -7,12 +7,6 @@ import type { Point as MapPoint } from '@/components/MapPage/Map/types';
 import type { MapMovePayload } from '@/components/MapPage/Map/types';
 import type { MapUiApi } from '@/types/mapUi';
 import type { TravelCoords } from '@/types/types';
-import {
-  getActiveOverlayLayers,
-  getExclusiveGroupSiblings,
-  WEATHER_TEMP_LAYER_ID,
-  WEATHER_TEMP_LABELS_LAYER_ID,
-} from '@/config/mapWebLayers';
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getStyles } from '@/screens/tabs/map.styles';
@@ -28,6 +22,7 @@ import { useMapFilters } from '@/hooks/map/useMapFilters';
 import { useMapDataController } from '@/hooks/map/useMapDataController';
 import { useMapPanelState, useMapResponsive } from '@/hooks/map/useMapPanelState';
 import { useRouteController } from '@/hooks/map/useRouteController';
+import { useMapOverlays } from '@/hooks/map/useMapOverlays';
 import {
   FiltersPanelComponent,
   FiltersProviderComponent,
@@ -448,89 +443,12 @@ export function useMapScreenController() {
     ? travelsData.length
     : Math.max(total ?? 0, travelsData.length);
 
-  const activeOverlayLayers = useMemo(() => getActiveOverlayLayers(), []);
-  const overlayOptions = useMemo(
-    () =>
-      activeOverlayLayers
-        .filter(
-          (layer) =>
-            layer.kind.startsWith('osm-overpass-') ||
-            layer.kind === 'weather-temp-labels' ||
-            Boolean(layer.url),
-        )
-        .map((layer) => ({
-          id: layer.id,
-          title: layer.title,
-          category: layer.category,
-          subtitle: layer.subtitle,
-          badge: layer.badge,
-        })),
-    [activeOverlayLayers],
-  );
-  const [enabledOverlays, setEnabledOverlays] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    getActiveOverlayLayers().forEach((layer) => {
-      initial[layer.id] = Boolean(layer.defaultEnabled);
-    });
-    return initial;
-  });
-
-  const handleOverlayToggle = useCallback((id: string, enabled: boolean) => {
-    setEnabledOverlays((prev) => {
-      if (prev[id] === enabled) return prev;
-      const next = { ...prev, [id]: enabled };
-
-      // Radio-поведение внутри exclusiveGroup: включение одного слоя
-      // выключает остальные слои той же группы (три погодных heatmap-тайла).
-      if (enabled) {
-        for (const siblingId of getExclusiveGroupSiblings(id)) {
-          if (next[siblingId]) next[siblingId] = false;
-        }
-      }
-
-      // Связка «Температура» ↔ числовые подписи °C: подписи не входят в
-      // heatmap-группу, но следуют за заливкой температуры, чтобы пользователь
-      // сразу видел реальные градусы числами.
-      if (id === WEATHER_TEMP_LAYER_ID) {
-        next[WEATHER_TEMP_LABELS_LAYER_ID] = enabled;
-      } else if (prev[WEATHER_TEMP_LAYER_ID] && next[WEATHER_TEMP_LAYER_ID] === false) {
-        // Температура выключилась косвенно (включили другой heatmap той же группы) —
-        // убираем «осиротевшие» °C-подписи, чтобы числа температуры не висели
-        // поверх карты осадков/облачности. Кейс «подписи отдельно без заливки»
-        // (temp и так был выключен) при этом не трогаем.
-        next[WEATHER_TEMP_LABELS_LAYER_ID] = false;
-      }
-
-      return next;
-    });
-  }, []);
-
-  const resetOverlays = useCallback(() => {
-    setEnabledOverlays(() => {
-      const next: Record<string, boolean> = {};
-      activeOverlayLayers.forEach((layer) => {
-        next[layer.id] = Boolean(layer.defaultEnabled);
-      });
-      return next;
-    });
-  }, [activeOverlayLayers]);
-
-  const controlledOverlayIds = useMemo(
-    () => overlayOptions.map((layer) => layer.id),
-    [overlayOptions],
-  );
-
-  // Apply overlay state even if the user toggled it before the map API became ready.
-  useEffect(() => {
-    if (!mapUiApi) return;
-    controlledOverlayIds.forEach((id) => {
-      try {
-        mapUiApi.setOverlayEnabled(id, Boolean(enabledOverlays[id]));
-      } catch {
-        // noop
-      }
-    });
-  }, [controlledOverlayIds, enabledOverlays, mapUiApi]);
+  const {
+    enabledOverlays,
+    handleOverlayToggle,
+    overlayOptions,
+    resetOverlays,
+  } = useMapOverlays(mapUiApi);
 
   const resolvedCategoryTravelAddressOptions = useMemo(() => {
     const apiOptions = Array.isArray(filters.categoryTravelAddress)

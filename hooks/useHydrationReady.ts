@@ -1,20 +1,18 @@
 import { Platform } from 'react-native'
-import { useSyncExternalStore } from 'react'
-
-const subscribe = () => () => undefined
-const getClientSnapshot = () => true
-const getServerSnapshot = () => false
+import { useEffect, useState } from 'react'
 
 /**
  * Returns false for SSR and the first web hydration render, then switches to
  * true immediately after this consumer commits. Native renders are always ready.
  */
 export function useHydrationReady(): boolean {
-  const hydrationReady = useSyncExternalStore(
-    subscribe,
-    getClientSnapshot,
-    getServerSnapshot,
-  )
+  const [hydrationReady, setHydrationReady] = useState(Platform.OS !== 'web')
 
-  return Platform.OS !== 'web' || hydrationReady
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      setHydrationReady(true)
+    }
+  }, [])
+
+  return hydrationReady
 }

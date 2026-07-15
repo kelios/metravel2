@@ -186,6 +186,11 @@ test.describe('Quests list -> detail', () => {
       await expect(page).toHaveURL(QUEST_DETAIL_URL_RE)
       await expect(page.locator('text=/Квест|Quest/i').first()).toBeVisible({ timeout: WAIT_MS })
 
+      await expect(page.getByTestId('quest-map-toolbar')).toBeVisible({ timeout: WAIT_MS })
+      await expect(page.getByTestId('quest-map-route-status')).toBeVisible({ timeout: WAIT_MS })
+      await expect(page.locator('.leaflet-container')).toBeVisible({ timeout: WAIT_MS })
+      await expect(page.locator('.leaflet-marker-icon').first()).toBeVisible({ timeout: WAIT_MS })
+
       // Detail screen must also avoid horizontal overflow.
       await expectNoHorizontalScroll(page)
     } else {

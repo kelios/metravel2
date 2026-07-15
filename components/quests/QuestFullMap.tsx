@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
     View,
-    StyleSheet,
     Platform,
     Text,
     TouchableOpacity,
@@ -30,6 +29,7 @@ import {
     getNavigationActionVisual,
     NAVIGATION_ACTION_LABELS,
 } from '@/components/navigation/navigationActionMeta';
+import { createQuestFullMapStyles } from './questFullMapStyles';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -182,7 +182,7 @@ function QuestFullMap({
     const insets = useSafeAreaInsets();
     const { height: viewportHeight } = useWindowDimensions();
     const colors = useThemedColors();
-    const styles = useMemo(() => createStyles(colors), [colors]);
+    const styles = useMemo(() => createQuestFullMapStyles(colors), [colors]);
     const fullscreenMapHeight = Math.max(360, Math.round(viewportHeight - insets.top));
     const bounds = useMemo(() => {
         if (!steps?.length) return undefined;
@@ -731,212 +731,5 @@ function QuestFullMap({
     );
 }
 
-const createStyles = (colors: ThemedColors) => StyleSheet.create({
-    wrap: {
-        width: '100%',
-        borderRadius: 16,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: colors.surface,
-    },
-    toolbar: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        backgroundColor: colors.backgroundSecondary,
-        minHeight: 44,
-    },
-    toolbarTitle: {
-        fontWeight: '700',
-        color: colors.text,
-        fontSize: 14,
-        flex: 1,
-        marginRight: 8,
-    },
-    webButtons: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    toolbarActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    routeStatus: {
-        minHeight: 36,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-        backgroundColor: colors.surface,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    routeStatusText: {
-        flex: 1,
-        color: colors.text,
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    btn: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        backgroundColor: colors.primary,
-    },
-    btnTxt: {
-        color: colors.textOnPrimary,
-        fontWeight: '600',
-        fontSize: 12,
-    },
-    mobileMenuButton: {
-        padding: 8,
-        borderRadius: 8,
-        backgroundColor: colors.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    fullscreenOverlay: {
-        ...(Platform.OS === 'web'
-            ? ({ position: 'fixed' } as any)
-            : { position: 'absolute' }),
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 1000,
-        backgroundColor: colors.background,
-    },
-    fullscreenClose: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: colors.backgroundSecondary,
-    },
-    mapBox: {
-        flex: 1,
-        minHeight: 420,
-    },
-    map: {
-        width: '100%',
-        height: '100%',
-    },
-    loadingText: {
-        textAlign: 'center',
-        padding: 20,
-        color: colors.textMuted,
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: colors.overlay,
-        justifyContent: 'flex-end',
-    },
-    modalContent: {
-        backgroundColor: colors.surface,
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        padding: 20,
-        paddingBottom: 30,
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        marginBottom: 20,
-        color: colors.text,
-    },
-    modalOption: {
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-    },
-    modalOptionText: {
-        fontSize: 16,
-        color: colors.text,
-        textAlign: 'center',
-    },
-    cancelOption: {
-        marginTop: 10,
-        backgroundColor: colors.backgroundSecondary,
-        borderRadius: 12,
-        borderBottomWidth: 0,
-    },
-    cancelOptionText: {
-        fontSize: 16,
-        color: colors.textMuted,
-        fontWeight: '600',
-        textAlign: 'center',
-    },
-    popupTitle: {
-        fontWeight: 'bold',
-        fontSize: 14,
-        marginBottom: 4,
-        color: colors.text,
-    },
-    popupCoords: {
-        fontSize: 12,
-        color: colors.textMuted,
-    },
-    popupNavLabel: {
-        marginTop: 10,
-        marginBottom: 6,
-        fontSize: 12,
-        fontWeight: '700',
-        color: colors.text,
-    },
-    popupNavGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 6,
-    },
-    popupNavChip: {
-        flexGrow: 1,
-        flexBasis: '30%',
-        minWidth: 86,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingVertical: 6,
-        paddingHorizontal: 8,
-        borderRadius: 999,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: colors.borderLight,
-        backgroundColor: colors.surface,
-        ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-    },
-    popupNavIcon: {
-        width: 22,
-        height: 22,
-        borderRadius: 999,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    popupNavChipText: {
-        flexShrink: 1,
-        fontSize: 12,
-        fontWeight: '700',
-        color: colors.text,
-    },
-    touchHints: {
-        padding: 12,
-        backgroundColor: colors.backgroundSecondary,
-        borderTopWidth: 1,
-        borderTopColor: colors.border,
-    },
-    hintText: {
-        fontSize: 12,
-        color: colors.textMuted,
-        textAlign: 'center',
-    },
-});
 
 export default React.memo(QuestFullMap);

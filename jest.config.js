@@ -24,12 +24,15 @@ module.exports = {
   },
   modulePathIgnorePatterns: [
     '<rootDir>/.claude/',
+    '<rootDir>/.codex-temp/',
   ],
   testPathIgnorePatterns: [
     '<rootDir>/.claude/',
+    '<rootDir>/.codex-temp/',
   ],
   watchPathIgnorePatterns: [
     '<rootDir>/.claude/',
+    '<rootDir>/.codex-temp/',
   ],
   coveragePathIgnorePatterns: [
     '/node_modules/',

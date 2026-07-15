@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { Dimensions, Platform } from 'react-native';
 import { METRICS } from '@/constants/layout';
+import { useHydrationReady } from '@/hooks/useHydrationReady';
 
 type Breakpoint = keyof typeof METRICS.breakpoints;
 type Orientation = 'portrait' | 'landscape';
@@ -200,8 +201,9 @@ const getServerWidthSnapshot = () => 0;
  * useResponsive() to avoid per-frame re-renders during mobile-web scroll.
  */
 export function useResponsiveWidth(): number {
-  const width = useSyncExternalStore(subscribe, getWidthSnapshot, getServerWidthSnapshot);
-  return width;
+  const hydrationReady = useHydrationReady();
+  const liveWidth = useSyncExternalStore(subscribe, getWidthSnapshot, getServerWidthSnapshot);
+  return hydrationReady ? liveWidth : getServerWidthSnapshot();
 }
 
 /**
@@ -254,12 +256,16 @@ export function useBreakpoints() {
  * }
  */
 export function useResponsive(): ResponsiveState {
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const hydrationReady = useHydrationReady();
+  const liveSnapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  // Expo Router hydrates lazy route boundaries after the root shell has already
+  // committed. A global external store may be live by then, so getServerSnapshot
+  // alone cannot protect those late boundaries. Keep each consumer on the SSR
+  // dimensions until that consumer itself commits, then reveal the live viewport.
+  const snapshot = hydrationReady ? liveSnapshot : getServerSnapshot();
   const width = snapshot.width;
   const height = snapshot.height;
-  const isHydrated =
-    Platform.OS !== 'web' ||
-    (width > 0 && height > 0);
+  const isHydrated = hydrationReady;
   const isPortrait = height > width;
   const orientation: Orientation = isPortrait ? 'portrait' : 'landscape';
 

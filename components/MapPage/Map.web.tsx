@@ -5,12 +5,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { isValidCoordinate } from '@/utils/coordinateValidator'
-import { DEFAULT_RADIUS_KM, DEFAULT_MAP_CENTER } from '@/constants/mapConfig'
+import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig'
 import { LAYOUT } from '@/constants/layout'
 import { createMapPopupComponent } from './Map/createMapPopupComponent'
 import { useUserLocationSignal } from './Map/userLocationSignal'
-import { useMapClusters } from '@/hooks/map/useMapClusters'
-import { useMapViewportSnapshot } from '@/hooks/map/useMapViewportSnapshot'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { resolveRoutingApiKey } from '@/utils/routingApiKey'
@@ -31,7 +29,7 @@ import {
 
 import { useLeafletLoader } from '@/hooks/useLeafletLoader'
 import { useMapPopupAutoPan } from './Map/useMapPopupAutoPan'
-import { useMapUserLocation } from './Map/useMapUserLocation'
+import { useMapRenderData } from './Map/useMapRenderData'
 import { useMapWebLayoutEffects } from './Map/useMapWebLayoutEffects'
 import {
   buildRouteLineLatLngObjects,
@@ -42,11 +40,6 @@ import {
 } from './Map/mapWebGeometry'
 import { queryKeys } from '@/api/queryKeys'
 import { beginProgrammaticMapMove, isProgrammaticMapMoveActive } from './Map/programmaticMoveSignal'
-import {
-  buildServerClusterRenderData,
-  filterServerClusterRenderDataByRadius,
-  getRadiusFilterLimit,
-} from './Map/serverClusterRenderData'
 
 type ReactLeafletNS = typeof import('react-leaflet')
 
@@ -244,135 +237,35 @@ const MapPageComponent: React.FC<Props> = (props) => {
     [travel?.data],
   )
 
-  const coordinatesLatLng = useMemo(
-    () => ({ lat: safeCoordinates.latitude, lng: safeCoordinates.longitude }),
-    [safeCoordinates.latitude, safeCoordinates.longitude],
-  )
-
-  const radiusInMeters = useMemo(() => {
-    if (mode !== 'radius') return null
-    const radiusKm = parseInt(radius || String(DEFAULT_RADIUS_KM), 10)
-    if (isNaN(radiusKm) || radiusKm <= 0) return DEFAULT_RADIUS_KM * 1000
-    return radiusKm * 1000
-  }, [mode, radius])
-
-  const { centerOnUserLocation, userLocationLatLng } = useMapUserLocation({
+  const {
+    canRenderMap,
+    centerOnUserLocation,
+    coordinatesLatLng,
+    filteredTravelData,
+    radiusInMeters,
+    renderedMarkers,
+    renderedServerClusters,
+    userLocationLatLng,
+  } = useMapRenderData({
+    travelData,
+    safeCoordinates,
     coordinates,
     providedUserLocation,
     coordinatesAreFallback,
     mapRef,
+    markerByCoordRef,
     onUserLocationChange,
     onRequestUserLocation,
-  })
-
-  // The radius guard below uses radius*2 as the cutoff, so sub-100m GPS jitter
-  // is irrelevant. Coarsen the center to ~3 decimals (~100m) so a stream of
-  // GPS updates doesn't re-run this O(n) filter on every tick.
-  const filterCenter = useMemo(() => {
-    const c = userLocationLatLng ?? coordinatesLatLng
-    if (!c || !Number.isFinite(c.lat) || !Number.isFinite(c.lng)) return null
-    return { lat: Math.round(c.lat * 1000) / 1000, lng: Math.round(c.lng * 1000) / 1000 }
-  }, [userLocationLatLng, coordinatesLatLng])
-
-  const filteredTravelData = useMemo(() => {
-    // pointsOnly (каталог квестов) = «показать ровно эти точки»: родитель уже
-    // отобрал их по выбранному городу/поиску, поэтому радиусный отсев вокруг
-    // геолокации пользователя не должен выкидывать далёкие маркеры города.
-    if (mode !== 'radius' || pointsOnly) return travelData
-    if (!Array.isArray(travelData) || travelData.length === 0) return travelData
-
-    const center = filterCenter ?? coordinatesLatLng
-    const hasValidCenter = CoordinateConverter.isValid(center)
-    const hasValidRadius =
-      Number.isFinite(radiusInMeters as any) && !!radiusInMeters && (radiusInMeters as number) > 0
-    const guardRadius = hasValidCenter && hasValidRadius
-      ? getRadiusFilterLimit(radiusInMeters as number)
-      : null
-
-    return travelData.filter((p) => {
-      try {
-        const ll = strToLatLng(String((p as any)?.coord ?? ''), hasValidCenter ? center : null)
-        if (!ll) return false
-        const coords = { lat: ll[1], lng: ll[0] }
-        if (!CoordinateConverter.isValid(coords)) return false
-        if (guardRadius == null) return true
-        const d = CoordinateConverter.distance(center, coords)
-        return Number.isFinite(d) && d <= guardRadius
-      } catch {
-        return false
-      }
-    })
-    // filterCenter.lat/lng used instead of filterCenter object to avoid recompute on identity churn
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, pointsOnly, radiusInMeters, travelData, filterCenter?.lat, filterCenter?.lng, coordinatesLatLng])
-
-  // When the marker dataset changes identity, the cluster layer rebuilds its
-  // markers. The cleanup runs before children re-register on the next commit,
-  // so clearing here drops detached Leaflet markers from the previous dataset
-  // (which openPopup lookups would otherwise resolve and hold) without wiping
-  // freshly-registered markers.
-  const markerByCoordRefStable = markerByCoordRef
-  useEffect(() => {
-    const index = markerByCoordRefStable.current
-    return () => {
-      index.clear()
-    }
-  }, [filteredTravelData, markerByCoordRefStable])
-
-  // Markers are rendered by the imperative MarkerClusterGroup (Leaflet
-  // markercluster), which does its own zoom-based clustering. Building markers
-  // directly from filteredTravelData avoids the dead useMapMarkers/useClustering
-  // path (an O(n) JS clustering pass) re-running on every zoom — that result was
-  // never consumed here (only TravelMap.web.tsx uses it).
-  const markers = filteredTravelData
-  const travelMarkerOpacity = mode === 'route' ? 0.7 : 1
-  const canRenderMap = leafletReady && !!(L && rl)
-  const viewportSnapshot = useMapViewportSnapshot(
-    mapInstance,
-    Number.isFinite(safeCoordinates.zoom) ? Number(safeCoordinates.zoom) : DEFAULT_ZOOM,
-    IS_WEB && mode === 'radius' && !pointsOnly && canRenderMap,
-  )
-  const serverClusterQuery = useMapClusters({
-    bbox: viewportSnapshot.bbox,
-    zoom: viewportSnapshot.zoom,
-    filters: mapClusterFilters,
-    enabled: IS_WEB && mode === 'radius' && !pointsOnly && canRenderMap,
-  })
-  const serverClusterRenderData = useMemo(
-    () => buildServerClusterRenderData(serverClusterQuery.data),
-    [serverClusterQuery.data],
-  )
-  const radiusFilteredServerClusterRenderData = useMemo(() => {
-    const center = filterCenter ?? coordinatesLatLng
-    return mode === 'radius'
-      ? filterServerClusterRenderDataByRadius(serverClusterRenderData, center, radiusInMeters)
-      : serverClusterRenderData
-    // filterCenter.lat/lng used instead of filterCenter object to avoid recompute on identity churn
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    coordinatesLatLng,
-    filterCenter?.lat,
-    filterCenter?.lng,
     mode,
-    radiusInMeters,
-    serverClusterRenderData,
-  ])
-  // Когда категория выбрана, но не смапилась в числовой backend-ID, серверные
-  // кластеры не отфильтрованы по категории (эндпоинт получил пустой category и
-  // вернул всё) — используем клиентски отфильтрованный по имени `markers`, иначе
-  // снятие категории не убирало бы маркеры.
-  const shouldUseServerClusterData =
-    mode === 'radius' &&
-    !serverClusterQuery.isError &&
-    radiusFilteredServerClusterRenderData.hasServerData &&
-    !categoryFilterUnresolved
-  const renderedMarkers = shouldUseServerClusterData && radiusFilteredServerClusterRenderData.markers.length > 0
-    ? radiusFilteredServerClusterRenderData.markers
-    : markers
-  const renderedServerClusters =
-    shouldUseServerClusterData && radiusFilteredServerClusterRenderData.clusters.length > 0
-      ? radiusFilteredServerClusterRenderData.clusters
-      : []
+    radius,
+    pointsOnly,
+    mapInstance,
+    leafletReady,
+    leafletRuntimeReady: Boolean(L && rl),
+    mapClusterFilters,
+    categoryFilterUnresolved,
+  })
+  const travelMarkerOpacity = mode === 'route' ? 0.7 : 1
 
   const handleMarkerZoom = useCallback(
     (point: Point, coords: { lat: number; lng: number }, clickedMarker?: any) => {
