@@ -44,4 +44,17 @@ describe('e2e target safety', () => {
       /valid http\(s\) URL/,
     )
   })
+
+  it('requires explicit mutation opt-in for the live-contract suite', () => {
+    expect(() => resolveE2ETargets({
+      E2E_SUITE: 'live-contract',
+      E2E_API_URL: 'http://127.0.0.1:8000',
+    })).toThrow(/E2E_ALLOW_LIVE_MUTATIONS=1/)
+
+    expect(resolveE2ETargets({
+      E2E_SUITE: 'live-contract',
+      E2E_API_URL: 'http://127.0.0.1:8000',
+      E2E_ALLOW_LIVE_MUTATIONS: '1',
+    })).toMatchObject({ suite: 'live-contract', productionTarget: false })
+  })
 })

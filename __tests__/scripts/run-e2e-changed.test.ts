@@ -47,7 +47,7 @@ describe('run-e2e-changed', () => {
   })
 
   it('discovers the complete regression spec set without production-only probes', () => {
-    expect(ALL_E2E_SPECS.length).toBeGreaterThan(80)
+    expect(ALL_E2E_SPECS.length).toBeGreaterThan(70)
     expect(ALL_E2E_SPECS).toContain('e2e/quests-list-detail.spec.ts')
     expect(ALL_E2E_SPECS).not.toContain('e2e/prod-media-smoke.spec.ts')
   })
@@ -79,6 +79,10 @@ describe('run-e2e-changed', () => {
     expect(getSpecsForChangedFiles(['e2e/quests-list-detail.spec.ts'])).toEqual([
       'e2e/quests-list-detail.spec.ts',
     ])
+  })
+
+  it('leaves live-mutation specs to the explicit live-contract suite', () => {
+    expect(getSpecsForChangedFiles(['e2e/public-trips.spec.ts'])).toEqual([])
   })
 
   it('fans out infrastructure changes to the complete regression suite', () => {

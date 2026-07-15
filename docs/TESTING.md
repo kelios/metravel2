@@ -38,7 +38,7 @@ Behavior:
 - `check:fast` is the default lightweight workflow for a finished logical block: it runs selective checks, `guard:external-links`, `guard:type-debt`, and ESLint only for changed lintable files;
 - the `check:fast` ESLint step uses a local cache and `--max-warnings=0`, so repeat runs stay fast while new warnings in touched files still fail the block;
 - local selective checks now include targeted app Jest suites for travel/map/account/messages changes in addition to schema/validator selective runners;
-- `check:e2e:changed` selects a stable subset of Playwright smoke specs by changed area (travel/search/map/account/messages) and is intended for pre-push / preflight validation;
+- `check:e2e:changed` selects Playwright specs by changed area (travel/search/map/account/messages/quests/places/articles/calendar/trips/roulette/export/i18n-security), always includes a directly changed regression spec, and fans shared E2E infrastructure changes out to the complete deterministic regression set;
 - `check:preflight` extends `check:fast` with changed-file complexity validation and selective Playwright smoke coverage, so larger local changes hit both code-level and browser-level gates before push;
 - `check:preflight` resolves changed files once and reuses the same scope for fast checks, complexity guard, and selective e2e;
 - Cross-session quality gate: `check:fast`, `check:changed`, `check:e2e:changed`, `check:preflight`, `test:run`, `e2e`, and `release:check` acquire the same atomic `.codex-temp/ops/quality-gate.lock` through `scripts/run-with-quality-gate-lock.js`. A concurrent session exits immediately with owner PID/name instead of starting another Jest/Playwright/build pipeline. Nested commands in `release:check` reuse the parent lock; dead-owner locks are recovered automatically. Jest also acquires this lock from its shared `globalSetup`, which protects direct targeted `npx jest` runs. Do not bypass the wrapper with direct Playwright commands.
@@ -49,6 +49,14 @@ Behavior:
 - `--changed-files-file <path>` reuses an explicit newline-separated file list;
 - dry-run JSON returns both selective decisions in one payload, which makes CI/local diagnostics easier to compare.
 
+## Playwright suite safety
+
+- `npm run e2e` runs the deterministic regression suite. It defaults API traffic to `http://127.0.0.1:8000`; an omitted E2E API target never falls through to production.
+- Specs that create, update, upload, reset, or delete real backend records are classified in `scripts/e2e-suite-classification.js` and excluded from the default suite. Run them only with an explicit non-production target and mutation opt-in: `E2E_API_URL=http://... E2E_ALLOW_LIVE_MUTATIONS=1 npm run e2e:live-contract`.
+- Production browser/API targets are blocked unless both `E2E_SUITE=production-smoke` and `E2E_ALLOW_PRODUCTION_API=1` are set. `npm run e2e:production-smoke` selects only the read-only production specs.
+- Missing/unreachable `baseURL` and a configured-but-invalid second-account session fail global setup instead of creating an empty state and reporting authenticated scenarios as passed.
+- `test-quality-governance.test.ts` rejects focused/disabled tests, literal boolean assertions, and diagnostic/manual filenames in the automated spec tree.
+
 ## High-risk coverage slices
 
 - `npm run test:coverage:export-settings` is the reproducible branch/function/line
@@ -57,13 +65,9 @@ Behavior:
   premium-gate tests now contribute to ordinary Jest coverage.
 - The old `components/ArticleEditor.web.tsx` exclusion was stale after the editor
   moved to `components/article/`; current editor modules are already measurable.
-- Retained exclusions are explicit migration queues: `components/Map*` and
-  `components/MapPage/**` still require bridge/permission branch coverage plus
-  browser/device evidence; map/image upload requires upload/network decision tests;
-  `ImageGalleryComponent` requires cross-platform media branch coverage; and
-  `GalleryLayoutSelector` remains excluded until it has direct selection and
-  accessibility interaction tests. Coverage exclusions must not be replaced with
-  blanket mocks or lower thresholds.
+- Stale blanket exclusions for maps, upload, gallery, and export layout were removed.
+  Their existing tests now contribute to ordinary Jest coverage; missing branches must
+  remain visible in coverage reports instead of being hidden by configuration.
 
 ## Validator Contracts
 
@@ -79,6 +83,11 @@ Behavior:
   - In PR runs, CI manages a marker-based PR comment lifecycle for validator guard:
 
 ## Smoke Suite Baselines
+
+`npm run test:smoke:critical` is intentionally a compact 10-suite product matrix
+(auth, travel, profile, subscriptions, export, map, quests, places, filters, theme).
+Quality-pipeline and documentation-contract tests remain in governance/full Jest and
+are not counted as critical user-flow smoke.
 
 Smoke trend baseline (`SMOKE_DURATION_PREVIOUS_SECONDS`):
 

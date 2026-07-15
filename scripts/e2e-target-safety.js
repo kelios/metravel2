@@ -1,5 +1,8 @@
 const DEFAULT_LOCAL_E2E_API_URL = 'http://127.0.0.1:8000'
-const PRODUCTION_SMOKE_SUITE = 'production-smoke'
+const {
+  LIVE_CONTRACT_SUITE,
+  PRODUCTION_SMOKE_SUITE,
+} = require('./e2e-suite-classification')
 
 const parseHttpUrl = (rawValue, label) => {
   let parsed
@@ -28,6 +31,14 @@ const resolveE2ETargets = (env = process.env) => {
   const baseUrl = String(env.BASE_URL || '').trim()
   const productionTarget = isMetravelProductionUrl(apiUrl) || isMetravelProductionUrl(baseUrl)
 
+  if (suite === LIVE_CONTRACT_SUITE) {
+    if (!String(env.E2E_API_URL || '').trim() || env.E2E_ALLOW_LIVE_MUTATIONS !== '1') {
+      throw new Error(
+        'Live-contract E2E requires an explicit E2E_API_URL and E2E_ALLOW_LIVE_MUTATIONS=1.',
+      )
+    }
+  }
+
   if (productionTarget) {
     const explicitlyAllowed = env.E2E_ALLOW_PRODUCTION_API === '1'
     if (!explicitlyAllowed || suite !== PRODUCTION_SMOKE_SUITE) {
@@ -51,6 +62,7 @@ const resolveE2ETargets = (env = process.env) => {
 
 module.exports = {
   DEFAULT_LOCAL_E2E_API_URL,
+  LIVE_CONTRACT_SUITE,
   PRODUCTION_SMOKE_SUITE,
   isMetravelProductionUrl,
   resolveE2ETargets,

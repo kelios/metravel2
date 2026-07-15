@@ -14,6 +14,8 @@
     "web": "npx expo start --web",
     "web:prod": "NODE_ENV=production npx expo start --web",
     "e2e": "node scripts/run-with-quality-gate-lock.js e2e -- node scripts/e2e-run.js",
+    "e2e:live-contract": "E2E_SUITE=live-contract node scripts/run-with-quality-gate-lock.js e2e:live-contract -- node scripts/e2e-run.js",
+    "e2e:production-smoke": "E2E_SUITE=production-smoke node scripts/run-with-quality-gate-lock.js e2e:production-smoke -- node scripts/e2e-run.js",
     "e2e:headed": "node scripts/run-with-quality-gate-lock.js e2e:headed -- node node_modules/playwright/cli.js test --headed",
     "e2e:ui": "node scripts/run-with-quality-gate-lock.js e2e:ui -- node node_modules/playwright/cli.js test --ui",
     "test": "jest --watchAll",

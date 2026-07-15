@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
-const { PRODUCTION_SMOKE_SUITE, resolveE2ETargets } = require('./scripts/e2e-target-safety');
+const { resolveE2ETargets } = require('./scripts/e2e-target-safety');
+const { getE2ESuiteSelection } = require('./scripts/e2e-suite-classification');
 
 function clearColorEnv() {
   if (Object.prototype.hasOwnProperty.call(process.env, 'NO_COLOR')) {
@@ -66,7 +67,7 @@ const grepForSuite: Record<string, RegExp | undefined> = {
   smoke: /@smoke/,
   perf: /@perf/,
 };
-const productionSmokeSpecs = ['prod-media-smoke.spec.ts', 'public-regressions.spec.ts'];
+const suiteSelection = getE2ESuiteSelection(E2E_SUITE);
 
 const hasPlaywrightCore = (() => {
   try {
@@ -96,7 +97,7 @@ export default defineConfig({
   timeout: 120_000,
   workers: process.env.CI ? 2 : '50%',
   ...(grepForSuite[E2E_SUITE] ? { grep: grepForSuite[E2E_SUITE] } : {}),
-  ...(E2E_SUITE === PRODUCTION_SMOKE_SUITE ? { testMatch: productionSmokeSpecs } : {}),
+  ...suiteSelection,
   globalSetup: './e2e/global-setup.ts',
   webServer: USE_EXISTING_SERVER
     ? undefined

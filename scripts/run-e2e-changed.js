@@ -3,6 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const { readChangedFilesWithMeta } = require('./changed-files-utils')
 const { resolveChangedFilesInput } = require('./run-local-selective-checks')
+const { LIVE_CONTRACT_SPECS, PRODUCTION_SMOKE_SPECS } = require('./e2e-suite-classification')
 
 const E2E_CATEGORY_DEFINITIONS = [
   {
@@ -143,7 +144,6 @@ const E2E_CATEGORY_DEFINITIONS = [
     ],
     specs: [
       'e2e/planned-trips.spec.ts',
-      'e2e/public-trips.spec.ts',
     ],
   },
   {
@@ -198,7 +198,8 @@ const discoverRegressionSpecs = () => {
   return fs.readdirSync(e2eDir)
     .filter((fileName) => fileName.endsWith('.spec.ts'))
     .filter((fileName) => !fileName.startsWith('_'))
-    .filter((fileName) => fileName !== 'prod-media-smoke.spec.ts')
+    .filter((fileName) => !LIVE_CONTRACT_SPECS.includes(fileName))
+    .filter((fileName) => !PRODUCTION_SMOKE_SPECS.includes(fileName))
     .map((fileName) => `e2e/${fileName}`)
     .sort()
 }
@@ -257,7 +258,12 @@ const getSpecsForChangedFiles = (changedFiles, { forceAll = false } = {}) => {
   }
 
   const matchedCategories = new Set(getMatchedCategories(changedFiles))
-  const directlyChangedSpecs = files.filter((filePath) => /^e2e\/[^/]+\.spec\.ts$/.test(filePath))
+  const directlyChangedSpecs = files
+    .filter((filePath) => /^e2e\/[^/]+\.spec\.ts$/.test(filePath))
+    .filter((filePath) => {
+      const fileName = path.basename(filePath)
+      return !LIVE_CONTRACT_SPECS.includes(fileName) && !PRODUCTION_SMOKE_SPECS.includes(fileName)
+    })
 
   return [...new Set(
     [
