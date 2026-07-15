@@ -1,6 +1,76 @@
 import { test, expect } from '@playwright/test';
 import { preacceptCookies } from './helpers/navigation';
 
+const SEO_TRAVEL_SLUG = 'kostel-svyatogo-antoniya-paduanskogo';
+const SEO_TRAVEL_ID = 91_002;
+const SEO_TRAVEL_IMAGE = 'https://metravel.by/media/e2e/seo-travel-cover.jpg';
+
+const mockedSeoTravel = {
+  id: SEO_TRAVEL_ID,
+  name: 'Костёл святого Антония Падуанского',
+  slug: SEO_TRAVEL_SLUG,
+  url: `/travels/${SEO_TRAVEL_SLUG}`,
+  userName: 'E2E Author',
+  cityName: 'Поставы',
+  countryName: 'Беларусь',
+  countryCode: 'BY',
+  countUnicIpView: '0',
+  travel_image_thumb_url: SEO_TRAVEL_IMAGE,
+  travel_image_thumb_small_url: SEO_TRAVEL_IMAGE,
+  gallery: [
+    {
+      id: 1,
+      url: SEO_TRAVEL_IMAGE,
+      width: 1200,
+      height: 800,
+      updated_at: '2026-07-15T12:00:00.000Z',
+    },
+  ],
+  travelAddress: [],
+  coordsMeTravel: [],
+  year: '2026',
+  monthName: 'Июль',
+  number_days: 1,
+  companions: [],
+  youtube_link: '',
+  description:
+    '<p>Детерминированное описание путешествия для проверки мета-тегов страницы и карточек социальных сетей.</p>',
+  recommendation: '',
+  plus: '',
+  minus: '',
+  userIds: '',
+};
+
+async function mockTravelSeoApis(page: import('@playwright/test').Page): Promise<void> {
+  // Production HTML can start its own preload before React mounts. Disable it
+  // so this SEO contract is driven solely by the deterministic route fixture.
+  await page.addInitScript(() => {
+    (window as Window & { __metravelTravelPreloadScriptLoaded?: boolean })
+      .__metravelTravelPreloadScriptLoaded = true;
+  });
+
+  await page.route('**/api/**', (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (
+      pathname.includes(`/travels/by-slug/${SEO_TRAVEL_SLUG}/`) ||
+      pathname.includes(`/travels/resolve-slug/${SEO_TRAVEL_SLUG}/`) ||
+      pathname.endsWith(`/travels/${SEO_TRAVEL_ID}/`)
+    ) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockedSeoTravel),
+      });
+    }
+
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: '{}',
+    });
+  });
+}
+
 /**
  * E2E SEO regression tests for travel detail pages.
  *
@@ -71,11 +141,12 @@ function countMetaTags(html: string, attribute: 'name' | 'property', value: stri
 }
 
 test.describe('SEO: travel detail page meta tags', () => {
-  const TRAVEL_SLUG = 'kostel-svyatogo-antoniya-paduanskogo';
+  const TRAVEL_SLUG = SEO_TRAVEL_SLUG;
   const TRAVEL_PATH = `/travels/${TRAVEL_SLUG}`;
   let html = '';
 
   test.beforeEach(async ({ page }) => {
+    await mockTravelSeoApis(page);
     html = await getRenderedHtml(page, TRAVEL_PATH);
   });
 

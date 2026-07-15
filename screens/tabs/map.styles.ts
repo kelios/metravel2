@@ -25,6 +25,7 @@ export const getStyles = (
   const webViewportReservedHeight = isMobile
     ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT
     : WEB_HEADER_RESERVED_HEIGHT;
+  const webPointerCursor = Platform.OS === 'web' ? { cursor: 'pointer' as const } : {};
 
   return StyleSheet.create({
     container: {
@@ -656,7 +657,7 @@ export const getStyles = (
         borderRadius: isMobile ? 999 : 10,
         backgroundColor: themedColors.warning,
         flexShrink: 1,
-        ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+        ...webPointerCursor,
       },
       geoBannerActionPrimaryText: {
         color: themedColors.textOnPrimary,
@@ -673,7 +674,7 @@ export const getStyles = (
         borderColor: themedColors.border,
         backgroundColor: themedColors.surface,
         flexShrink: 1,
-        ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+        ...webPointerCursor,
       },
       geoBannerActionSecondaryText: {
         color: themedColors.text,

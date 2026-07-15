@@ -1090,9 +1090,9 @@ test.describe('Создание путешествия - Полный flow', () 
     await page.waitForTimeout(6500);
 
     const [upsertReq, upsertResp] = await Promise.all([upsertReqPromise, autoUpsertRespPromise]);
-    expect(upsertReq.postDataJSON()).toMatchObject({
-      data: expect.objectContaining({ name: 'Тест автосохранения' }),
-    });
+    expect(upsertReq.postDataJSON()).toEqual(
+      expect.objectContaining({ name: 'Тест автосохранения' }),
+    );
 
     const status = upsertResp.status();
     const bodyText = await upsertResp.text().catch(() => '');

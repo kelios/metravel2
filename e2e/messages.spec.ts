@@ -3,7 +3,6 @@ import { assertNoHorizontalScroll, gotoWithRetry, preacceptCookies } from './hel
 import {
   MOCK_MESSAGES,
   MOCK_USERS,
-  createMockThreads,
   openAuthenticatedMessages,
 } from './helpers/messages';
 

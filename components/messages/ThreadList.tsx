@@ -111,7 +111,7 @@ function ThreadList({
             }
             return i18nT('messages:components.messages.ThreadList.polzovatel_3206a1df');
         },
-        [getOtherParticipantId, participantNames]
+        [currentUserIdNum, getOtherParticipantId, participantNames]
     );
 
     const getOtherParticipantAvatar = useCallback(

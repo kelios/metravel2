@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Page, Route } from '@playwright/test'
 import { test, expect } from './fixtures'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
 import { expectNoHorizontalScroll } from './helpers/layoutAsserts'
@@ -6,6 +6,101 @@ import { isRecoverableReactHydrationError } from './helpers/consoleGuards'
 
 const WAIT_MS = 30_000
 const QUEST_DETAIL_URL_RE = /\/quests\/[^/]+\/[^/?#]+/
+const QUEST_ID = 'e2e-minsk-quest'
+
+const questCity = {
+  id: 1,
+  name: 'Минск',
+  lat: 53.9023,
+  lng: 27.5619,
+  country_code: 'BY',
+}
+
+const questMeta = {
+  id: 91_001,
+  quest_id: QUEST_ID,
+  title: 'E2E-квест по Минску',
+  points: 1,
+  city_id: String(questCity.id),
+  city_name: questCity.name,
+  country_id: '1',
+  country_name: 'Беларусь',
+  country_code: questCity.country_code,
+  lat: questCity.lat,
+  lng: questCity.lng,
+  duration_min: 45,
+  difficulty: 'easy',
+  tags: {},
+  pet_friendly: true,
+  cover_url: null,
+  rating_avg: null,
+  rating_count: 0,
+  user_rating: null,
+  completions_count: 0,
+  is_completed_by_me: false,
+  first_completer: null,
+}
+
+const questBundle = {
+  id: questMeta.id,
+  quest_id: QUEST_ID,
+  title: questMeta.title,
+  cover_url: null,
+  steps: [
+    {
+      id: 1,
+      step_id: 'start',
+      title: 'Площадь Свободы',
+      location: 'Площадь Свободы, Минск',
+      story: 'Детерминированная E2E-история для проверки страницы квеста.',
+      task: 'Введите любое слово.',
+      hint: 'Подойдёт любой непустой ответ.',
+      answer_pattern: { type: 'any_text', value: { min_length: 1 } },
+      lat: questCity.lat,
+      lng: questCity.lng,
+      maps_url: 'https://www.openstreetmap.org/?mlat=53.9023&mlon=27.5619',
+      image_url: null,
+      order: 1,
+      is_intro: false,
+      country_code: questCity.country_code,
+    },
+  ],
+  finale: {
+    text: 'Квест завершён.',
+    video_url: null,
+    poster_url: null,
+  },
+  intro: null,
+  storage_key: QUEST_ID,
+  city: questCity,
+  rating_avg: null,
+  rating_count: 0,
+  user_rating: null,
+  completions_count: 0,
+  is_completed_by_me: false,
+  first_completer: null,
+}
+
+const fulfillJson = (route: Route, value: unknown) =>
+  route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(value),
+  })
+
+const mockQuestApis = async (page: Page) => {
+  await page.route('**/api/**', (route) => {
+    const pathname = new URL(route.request().url()).pathname
+
+    if (pathname.endsWith('/quests/cities/')) return fulfillJson(route, [questCity])
+    if (pathname.includes(`/quests/by-quest-id/${QUEST_ID}/`)) return fulfillJson(route, questBundle)
+    if (pathname.includes(`/quests/quest${QUEST_ID}/reviews/`)) return fulfillJson(route, [])
+    if (pathname.endsWith('/quests/near-location/')) return fulfillJson(route, { results: [], count: 0 })
+    if (pathname.endsWith('/quests/')) return fulfillJson(route, [questMeta])
+
+    return fulfillJson(route, {})
+  })
+}
 
 // The catalog can legitimately render in several end states depending on the
 // e2e backend data: real cards, an empty/error fallback, or the bare heading.
@@ -59,6 +154,7 @@ test.describe('Quests list -> detail', () => {
 
     await preacceptCookies(page)
     await page.setViewportSize({ width: 1280, height: 900 })
+    await mockQuestApis(page)
 
     await gotoWithRetry(page, '/quests')
     await waitForQuestCatalogReady(page)

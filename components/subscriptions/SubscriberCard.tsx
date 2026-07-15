@@ -30,7 +30,7 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
 
   const fullName = useMemo(() => {
     return resolveProfileFullName(profile) || i18nT('sharedStatic:user.fallbackName');
-  }, [profile.first_name, profile.last_name]);
+  }, [profile]);
 
   const initials = useMemo(() => {
     return fullName

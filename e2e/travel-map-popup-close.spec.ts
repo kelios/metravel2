@@ -6,7 +6,7 @@
  */
 
 import { test, expect } from './fixtures'
-import { preacceptCookies, navigateToFirstTravel, openFallbackTravelDetails } from './helpers/navigation'
+import { preacceptCookies, openFallbackTravelDetails } from './helpers/navigation'
 
 /** Mock tile requests with 1×1 transparent PNG to speed up tests */
 async function installTileMock(page: import('@playwright/test').Page) {
@@ -196,7 +196,7 @@ test.describe('Travel detail page — map popup close @smoke', () => {
     await preacceptCookies(page)
     await installTileMock(page)
 
-    const navigated = await navigateToFirstTravel(page)
+    const navigated = await openFallbackTravelDetails(page)
     expect(navigated, 'No travel cards available').toBe(true)
 
     const hasMarkers = await scrollToMapAndWaitForMarkers(page)
