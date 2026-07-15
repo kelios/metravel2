@@ -109,6 +109,10 @@ interface RightColumnProps {
   }
 }
 
+const standaloneListIntroScrollStyle: ViewStyle & { overflowY: 'auto' } = {
+  overflowY: 'auto',
+}
+
 const RightColumn: React.FC<RightColumnProps> = (
   ({
      listIntroContent,
@@ -609,7 +613,7 @@ const RightColumn: React.FC<RightColumnProps> = (
           style={[
             cardsWrapperStyle,
             showStandaloneListIntro && Platform.OS === 'web'
-              ? ({ overflowY: 'auto' } as any)
+              ? standaloneListIntroScrollStyle
               : undefined,
           ]}
         >

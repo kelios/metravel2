@@ -205,7 +205,11 @@ See `RULES.md`.
 **Для нових сторінок завжди використовуйте централізовані SEO утиліти:**
 
 ```tsx
-import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
+import {
+  buildCanonicalUrl,
+  buildOgImageUrl,
+  DEFAULT_OG_IMAGE_PATH,
+} from '@/utils/seo';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -222,7 +226,7 @@ export default function MyPage() {
           title="My Page | Metravel"
           description="Page description"
           canonical={buildCanonicalUrl(pathname || '/my-page')}
-          image={buildOgImageUrl('/og-preview.jpg')}
+          image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
           ogType="website"
         />
       )}

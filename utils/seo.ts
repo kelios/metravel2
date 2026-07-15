@@ -46,9 +46,9 @@ export function buildCanonicalUrl(pathname: string): string {
 /**
  * Builds Open Graph image URL.
  * 
- * @param imagePath - Relative image path (e.g., "/og-preview.jpg")
+ * @param imagePath - Relative image path (e.g., "/og-home.jpg")
  * @example
- * buildOgImageUrl("/og-preview.jpg") // => "https://metravel.by/og-preview.jpg"
+ * buildOgImageUrl("/og-home.jpg") // => "https://metravel.by/og-home.jpg"
  */
 export function buildOgImageUrl(imagePath: string): string {
   const base = getSiteBaseUrl();

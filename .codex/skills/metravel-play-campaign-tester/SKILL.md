@@ -4,8 +4,9 @@ description: >-
   Run the metravel Google Play closed-testing reciprocity campaign on the configured USB Android
   device: inspect community assignments, exercise configured apps, capture evidence, check crashes
   and available updates, and maintain the campaign log/version snapshot. Use for “daily testing pass”,
-  “test campaign apps”, or “check campaign updates”. Do not buy, review, uninstall, leave tests,
-  message people, or change accounts without explicit user authority.
+  “test campaign apps”, “check campaign updates”, or when testing must be likely to count as real
+  Google Play closed-testing usage. Do not buy, review, uninstall, leave tests, message people, or
+  change accounts without explicit user authority.
 ---
 
 # Metravel Play Campaign Tester
@@ -33,6 +34,25 @@ The directory name is legacy; Codex and Claude intentionally share the same camp
 3. Perform only clearly authorized in-app task confirmations after the real test. Do not post incentivized Play reviews/ratings, make purchases, enter personal data, message people, switch accounts, leave testing programs, or uninstall apps.
 4. If an assignment requires an install or another material external action, do it only when the user’s campaign request clearly authorizes that action; otherwise log it for the owner.
 5. Update the current day in `LOG.md` with completed count, assignments, crashes, skipped packages, and blockers.
+
+## Google-Countable Testing Standard
+
+The goal is honest closed-testing activity that a developer and Google Play reviewer could reasonably treat as real app usage, not just opening the app for a screenshot.
+
+For every assigned app:
+
+1. Read the assignment instructions before testing. If instructions exist, follow the deepest safe path they request: sign in only with provided test credentials, enter only neutral test data, and avoid personal accounts or sensitive data.
+2. Launch the installed app from the device, not only the Play listing. If the community app opens Google Play first, tap only the safe `Open`/`Открыть` control for the intended package.
+3. Spend a real session in the app. Prefer at least one meaningful in-app action: navigate to a second screen, use a core feature, create neutral test content, submit a test form, play a level, run analysis, join with a provided test code, or view a real dashboard/result.
+4. Avoid shallow proof. A home page, splash screen, login screen, permission prompt, ad, error page, or Play Store page counts only when the app is blocked and no safe deeper action is possible. If proof is shallow, record the blocker and include it in the proof note.
+5. Capture proof after the meaningful action, with visible in-app state that shows the tested feature or result. When possible, keep status bars and app identity visible, and prefer screenshots that would survive manual partner review.
+6. Stay in the app long enough to look like a real test session. For apps with explicit duration instructions, follow them. Otherwise do not rapid-fire open/capture/close when a short interaction path is available.
+7. Check for crashes or obvious blocking failures after the interaction. If the app crashes, capture/log it and upload proof only if the assignment accepts crash/blocker evidence.
+8. Submit proof only after the real test is complete. If a proof is rejected, read the rejection reason, perform a deeper valid action, and re-upload a better proof instead of resubmitting the same screenshot.
+
+Safety limits still apply: never click ads, buy, rate/review, use personal social accounts, expose private data, switch Google accounts, leave test programs, message people, or uninstall/reinstall unless explicitly authorized by the user.
+
+Partner review rule: accept partner proof only when it shows genuine use of our app or the instructed flow. Reject proof that is only Play Store, an error page, a generic home screen with no use, a fake/irrelevant screenshot, or insufficient evidence, and give a concise actionable reason.
 
 ## Update Check
 

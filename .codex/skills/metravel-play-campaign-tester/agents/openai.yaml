@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Play Campaign Tester"
-  short_description: "Run daily closed-testing campaign checks"
-  default_prompt: "Use $metravel-play-campaign-tester to run the requested daily Google Play closed-testing campaign pass on the connected device."
+  short_description: "Run real-use Google Play closed-testing passes"
+  default_prompt: "Use $metravel-play-campaign-tester to run the requested daily Google Play closed-testing campaign pass on the connected device, exercising each app deeply enough to count as real closed-testing usage before uploading proof."
