@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "preinstall": "node scripts/ensure-node-version.js",
+    "check:node": "node scripts/ensure-node-version.js",
     "audit:prompts": "node .codex/skills/metravel-prompt-maintainer/scripts/validate-project-prompts.js",
     "check-deps": "node scripts/check-dependencies.js",
     "check:image-architecture": "node scripts/check-image-architecture.js",
@@ -375,7 +377,14 @@
     "expo-image-loader": "57.0.0"
   },
   "packageManager": "yarn@1.22.22",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=22.13.1 <23",
+      "onFail": "error"
+    }
+  },
   "engines": {
-    "node": ">=22.13.1"
+    "node": ">=22.13.1 <23"
   }
 }

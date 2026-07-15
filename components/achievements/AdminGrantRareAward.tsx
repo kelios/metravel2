@@ -67,13 +67,15 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
     reset();
   };
 
-  const canSubmit =
-    selectedSlug != null && reason.trim().length > 0 && !grant.isPending;
+  const selectedAward = catalog?.find((item) => item.slug === selectedSlug);
+  const canSubmit = selectedSlug != null && !grant.isPending;
 
   const submit = () => {
     if (!canSubmit || !selectedSlug) return;
+    const normalizedReason =
+      reason.trim() || selectedAward?.description?.trim() || selectedAward?.title.trim() || selectedSlug;
     grant.mutate(
-      { userId: recipientId, awardSlug: selectedSlug, reason: reason.trim() },
+      { userId: recipientId, awardSlug: selectedSlug, reason: normalizedReason },
       { onSuccess: () => setDone(true) },
     );
   };

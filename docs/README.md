@@ -26,8 +26,8 @@ Legacy local workboard files — compatibility tooling, а не task state.
 
 ## Быстрый старт
 
-Запускайте команды из корня с `package.json`. Требуется Node `>=22.13.1` и Yarn
-`1.22.22`.
+Запускайте команды из корня с `package.json`. Требуется Node `>=22.13.1 <23` и
+Yarn `1.22.22`.
 
 ```bash
 nvm use
@@ -36,6 +36,11 @@ corepack prepare yarn@1.22.22 --activate
 yarn install --frozen-lockfile
 yarn start
 ```
+
+Версия Node закреплена в `.node-version` и `.nvmrc`. Install, quality-gate
+проверки и web build wrappers падают сразу, если в PATH оказался Node 20 или
+другая неподдерживаемая версия; в этом случае запустите `nvm use` из корня
+репозитория.
 
 Web и базовые проверки:
 

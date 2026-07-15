@@ -105,7 +105,10 @@ describe('TravelAuthorQuickLink', () => {
     expect(mockSubscribePress).toHaveBeenCalledWith(42)
 
     fireEvent.press(getByLabelText('Написать автору Мария Иванова'))
-    expect(mockPush).toHaveBeenCalledWith('/messages?userId=42')
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/messages',
+      params: { userId: '42' },
+    })
 
     fireEvent.press(getByLabelText('Открыть все путешествия автора Мария Иванова'))
     expect(mockPush).toHaveBeenCalledWith('/search?user_id=42')

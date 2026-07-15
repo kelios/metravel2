@@ -406,6 +406,14 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     clearSelectedPlace?.()
     setActivePopover(null)
     const currentPoints = useRouteStore.getState().points
+    if (routeMode === 'route' && currentPoints.length > 0) {
+      clearRouteAndSetMode('route')
+      setFiltersMode?.('route')
+      setRouteAutoStartPending(false)
+      setRouteManualStartActive(true)
+      return
+    }
+
     if (currentPoints.length === 0 && seedRouteStartFromUser()) {
       return
     }
@@ -420,7 +428,14 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       setRouteManualStartActive(true)
     }
     setFiltersMode?.('route')
-  }, [clearRouteAndSetMode, clearSelectedPlace, seedRouteStartFromUser, storeSetMode, setFiltersMode])
+  }, [
+    clearRouteAndSetMode,
+    clearSelectedPlace,
+    routeMode,
+    seedRouteStartFromUser,
+    storeSetMode,
+    setFiltersMode,
+  ])
 
   const requestLocationForRoute = useCallback(() => {
     setRouteAutoStartPending(true)
@@ -429,15 +444,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   }, [onCenterOnUser])
 
   const startManualRoute = useCallback(() => {
-    if (useRouteStore.getState().points.length === 0) {
-      clearRouteAndSetMode('route')
-    } else {
-      storeSetMode('route')
-    }
+    clearRouteAndSetMode('route')
     setFiltersMode?.('route')
     setRouteAutoStartPending(false)
     setRouteManualStartActive(true)
-  }, [clearRouteAndSetMode, setFiltersMode, storeSetMode])
+  }, [clearRouteAndSetMode, setFiltersMode])
 
   useEffect(() => {
     if (!routeAutoStartPending) return

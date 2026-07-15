@@ -73,4 +73,20 @@ describe('AdminGrantRareAward — submit', () => {
       expect.any(Object),
     )
   })
+
+  it('uses the selected award description when the reason field is empty', () => {
+    mockIsSuperuser = true
+    const { getByLabelText } = render(
+      <AdminGrantRareAward recipientId={42} recipientName="Иван" />,
+    )
+
+    fireEvent.press(getByLabelText('Выдать редкую награду'))
+    fireEvent.press(getByLabelText('Амбассадор'))
+    fireEvent.press(getByLabelText('Выдать награду'))
+
+    expect(mockMutate).toHaveBeenCalledWith(
+      { userId: 42, awardSlug: 'ambassador', reason: 'd' },
+      expect.any(Object),
+    )
+  })
 })

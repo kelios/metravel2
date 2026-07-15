@@ -16,6 +16,11 @@ yarn install --frozen-lockfile
 cp .env.dev .env
 ```
 
+Проектный runtime — Node `>=22.13.1 <23`, источник версии — `.node-version` и
+`.nvmrc`. Если shell, тесты или скрипты подхватили Node 20, repository guard
+остановит install/quality-gate/build/env entrypoint с подсказкой выполнить
+`nvm use` в корне проекта.
+
 ## Start
 
 ```bash

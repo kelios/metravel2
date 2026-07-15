@@ -34,9 +34,10 @@ import { translate as i18nT } from '@/i18n'
 
 type ActivePopover = 'radius' | 'layers' | 'transport' | null
 
-const BUTTON_SIZE = 44
-const TOOLBAR_EDGE_OFFSET = 12
-const TOOLBAR_GAP = 8
+const BUTTON_SIZE = 38
+const ICON_SIZE = 18
+const TOOLBAR_EDGE_OFFSET = 10
+const TOOLBAR_GAP = 6
 const BUTTON_STEP = BUTTON_SIZE + TOOLBAR_GAP
 const RADIUS_POPOVER_RIGHT = TOOLBAR_EDGE_OFFSET + BUTTON_STEP * 2
 const LAYERS_POPOVER_RIGHT = TOOLBAR_EDGE_OFFSET + BUTTON_STEP
@@ -174,12 +175,14 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   const needsRouteStartChoice =
     isRouteMode && routePointCount === 0 && !hasUserLocation && !routeManualStartActive
   const routeAccessibilityLabel = isRouteMode
-    ? routePointCount === 1
-      ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.marshrut_ot_menya_vyberite_mesto_naznacheniy_ae2deeeb')
+    ? routePointCount > 0
+      ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.izmenit_tochku_starta_marshruta_6dc69e91')
       : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_vybrano_value1_iz_2_tochek_926447de', { value1: Math.min(routePointCount, 2) })
     : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_da7efcc5')
-  const routeHintText = routePointCount === 1
-    ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.start_zadan_moe_mestopolozhenie_vyberite_mes_0022783b')
+  const routeHintText = routeManualStartActive && routePointCount === 0
+    ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.kosnites_karty_chtoby_vybrat_novyy_start_mar_1cc95c5d')
+    : routePointCount === 1
+    ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.start_zadan_vyberite_mesto_naznacheniya_na__592e64c1')
     : needsRouteStartChoice
       ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.tekuschee_polozhenie_ne_opredeleno_razreshit_7df55703')
       : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.kosnites_karty_1_ya_tochka_start_2_ya_finish_462b6762')
@@ -230,7 +233,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   // чтобы кнопки не прилипали к самому краю там, где safe-area == 0.
   const resolvedTopPadding = Math.max(topInset, 8) + 8
   // Поповеры открываются прямо под своим рядом иконок.
-  const basePopoverTop = resolvedTopPadding + BUTTON_SIZE + 8
+  const basePopoverTop = resolvedTopPadding + BUTTON_SIZE + 6
   const popoverTop = basePopoverTop + (showRouteSummary ? ROUTE_SUMMARY_POPOVER_OFFSET : 0)
   const routePopoverTop = popoverTop
   const layersPopoverRight = isRouteMode
@@ -258,7 +261,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         hitSlop={6}
         style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
       >
-        <Feather name="crosshair" size={20} color={colors.primaryDark} />
+        <Feather name="crosshair" size={ICON_SIZE} color={colors.primaryDark} />
       </Pressable>
 
       <View style={styles.toolbarStack} pointerEvents="box-none">
@@ -271,7 +274,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             hitSlop={6}
             style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
           >
-            <Feather name="sliders" size={20} color={colors.text} />
+            <Feather name="sliders" size={ICON_SIZE} color={colors.text} />
           </Pressable>
 
           {!isRouteMode && (
@@ -288,7 +291,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 pressed && styles.iconButtonPressed,
               ]}
             >
-              <Feather name="target" size={20} color={colors.text} />
+              <Feather name="target" size={ICON_SIZE} color={colors.text} />
               {!!radiusBadge && (
                 <View style={styles.badge} pointerEvents="none">
                   <RNText style={styles.badgeText} numberOfLines={1}>
@@ -312,7 +315,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               pressed && styles.iconButtonPressed,
             ]}
           >
-            <Feather name="layers" size={20} color={colors.text} />
+            <Feather name="layers" size={ICON_SIZE} color={colors.text} />
           </Pressable>
 
           <Pressable
@@ -323,7 +326,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             hitSlop={6}
             style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
           >
-            <Feather name="list" size={20} color={colors.text} />
+            <Feather name="list" size={ICON_SIZE} color={colors.text} />
             {!!listBadge && (
               <View style={styles.badge} pointerEvents="none">
                 <RNText style={styles.badgeText} numberOfLines={1}>
@@ -350,7 +353,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 pressed && styles.iconButtonPressed,
               ]}
             >
-              <Feather name="maximize" size={20} color={colors.text} />
+              <Feather name="maximize" size={ICON_SIZE} color={colors.text} />
             </Pressable>
           )}
 
@@ -372,7 +375,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 pressed && styles.iconButtonPressed,
               ]}
             >
-              <Feather name="navigation" size={20} color={isRouteMode ? colors.primary : colors.text} />
+              <Feather name="navigation" size={ICON_SIZE} color={isRouteMode ? colors.primary : colors.text} />
               {!!routeProgressLabel && (
                 <View style={styles.routeProgressBadge} pointerEvents="none">
                   <RNText style={styles.badgeText} numberOfLines={1}>
@@ -396,7 +399,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                   pressed && styles.iconButtonPressed,
                 ]}
               >
-                <MapIcon name={TRANSPORT_ICON[transportMode]} size={20} color={colors.text} />
+                <MapIcon name={TRANSPORT_ICON[transportMode]} size={ICON_SIZE} color={colors.text} />
               </Pressable>
             )}
 
@@ -409,7 +412,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 hitSlop={6}
                 style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
               >
-                <Feather name="x" size={20} color={colors.text} />
+                <Feather name="x" size={ICON_SIZE} color={colors.text} />
               </Pressable>
             )}
           </View>

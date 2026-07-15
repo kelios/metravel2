@@ -1,4 +1,4 @@
-import { Platform } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
 
 import OptimizedFavoriteButton from '@/components/travel/OptimizedFavoriteButton'
@@ -70,6 +70,22 @@ describe('OptimizedFavoriteButton', () => {
     )
 
     expect(screen.getByLabelText('Добавить в «Хочу поехать»').props['data-card-action']).toBe('true')
+  })
+
+  it('keeps the web hit area at the 44px accessibility minimum', () => {
+    render(
+      <OptimizedFavoriteButton
+        id={42}
+        type="travel"
+        title="Test travel"
+        url="/travels/test-travel"
+      />
+    )
+
+    expect(StyleSheet.flatten(screen.getByTestId('favorite-button').props.style)).toMatchObject({
+      height: 44,
+      width: 44,
+    })
   })
 
   it('adds an authenticated Android travel result to favorites without showing an error toast', async () => {

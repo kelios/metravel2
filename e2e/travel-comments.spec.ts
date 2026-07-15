@@ -225,6 +225,12 @@ async function setupComments(page: import('@playwright/test').Page, authenticate
 }
 
 async function openComments(page: import('@playwright/test').Page) {
+  await page.goto(`/travels/${SLUG}`, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#root')).toHaveAttribute('data-travel-details-ready', 'true');
+  const commentsSlot = page.locator('[data-section-key="comments"]');
+  await expect(commentsSlot).toBeAttached();
+  const commentsButton = page.getByRole('button', { name: 'Перейти к разделу Комментарии' });
+  await expect(commentsButton).toBeVisible();
   const treeResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return (
@@ -233,13 +239,12 @@ async function openComments(page: import('@playwright/test').Page) {
       url.searchParams.get('travel_id') === String(TRAVEL_ID)
     );
   });
-  await page.goto(`/travels/${SLUG}#comments`, { waitUntil: 'domcontentloaded' });
-  expect((await treeResponsePromise).status()).toBe(200);
+  await commentsButton.click();
+  await commentsSlot.scrollIntoViewIfNeeded();
+  const treeResponse = await treeResponsePromise;
+  expect(treeResponse.status()).toBe(200);
 
-  await expect(page.locator('[data-section-key="comments"]')).toBeAttached();
-  const commentsSection = page.locator('#comments');
-  await expect(commentsSection).toBeVisible();
-  await expect(commentsSection.getByText('Seed comment', { exact: true })).toBeVisible();
+  await expect(commentsSlot.getByText('Seed comment', { exact: true })).toBeVisible();
 }
 
 test.describe('Travel comments — guest contract', () => {

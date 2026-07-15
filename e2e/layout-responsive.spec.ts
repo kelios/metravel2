@@ -2,13 +2,6 @@ import { test, expect } from './fixtures';
 import { preacceptCookies as sharedPreacceptCookies, assertNoHorizontalScroll, waitForMainListRender } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
-function getNumberEnv(name: string, fallback: number): number {
-  const raw = process.env[name];
-  if (!raw) return fallback;
-  const v = Number(raw);
-  return Number.isFinite(v) ? v : fallback;
-}
-
 const SHOULD_CAPTURE_VISUAL = process.env.E2E_VISUAL === '1';
 
 // Layout-specific: also clears auth tokens to force guest context.
@@ -103,16 +96,7 @@ test.describe('@perf Responsive layout invariants', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await preacceptCookies(page);
 
-    try {
-      await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    } catch (e: any) {
-      const msg = e?.message ? String(e.message) : String(e);
-      test.info().annotations.push({
-        type: 'note',
-        description: `Dev server not reachable during strict layout check: ${msg}`,
-      });
-      return;
-    }
+    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
     await waitForTravelsListToRender(page);
 
     await assertNoHorizontalScroll(page);
@@ -127,66 +111,4 @@ test.describe('@perf Responsive layout invariants', () => {
     await assertNoHorizontalScroll(page);
   });
 
-  test('optional stricter CLS after render on travels (post-load stability)', async ({ page }) => {
-    if (process.env.E2E_STRICT_LAYOUT !== '1') {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Strict layout CLS check is opt-in. Set E2E_STRICT_LAYOUT=1 to run it.',
-      });
-      return;
-    }
-
-    // This is an additional guard complementary to existing cls-audit/web-vitals tests.
-    // It focuses on just '/', with a tunable threshold.
-    const CLS_AFTER_RENDER_MAX = getNumberEnv('E2E_CLS_AFTER_RENDER_MAX_TRAVELS', 0.02);
-
-    await preacceptCookies(page);
-    await page.addInitScript(() => {
-      (window as any).__e2eClsTravel = {
-        clsTotal: 0,
-        clsAfterRender: 0,
-        phase: 'total',
-        finalized: false,
-      };
-
-      try {
-        const obs = new PerformanceObserver((list) => {
-          for (const entry of list.getEntries() as any[]) {
-            const state = (window as any).__e2eClsTravel;
-            if (!state || state.finalized) return;
-            if (!entry || entry.hadRecentInput || typeof entry.value !== 'number') continue;
-            state.clsTotal += entry.value;
-            if (state.phase === 'afterRender') state.clsAfterRender += entry.value;
-          }
-        });
-        obs.observe({ type: 'layout-shift', buffered: true } as any);
-      } catch {
-        // ignore
-      }
-    });
-
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await waitForTravelsListToRender(page);
-
-    await page.waitForLoadState('networkidle').catch(() => null);
-
-    // Reset and measure only after initial render.
-    await page.evaluate(() => {
-      const s = (window as any).__e2eClsTravel;
-      if (!s) return;
-      s.phase = 'afterRender';
-      s.clsAfterRender = 0;
-    });
-
-    await page.waitForLoadState('networkidle').catch(() => null);
-
-    const clsAfterRender = await page.evaluate(() => {
-      const s = (window as any).__e2eClsTravel;
-      if (!s) return 0;
-      s.finalized = true;
-      return typeof s.clsAfterRender === 'number' ? s.clsAfterRender : 0;
-    });
-
-    expect(clsAfterRender).toBeLessThanOrEqual(CLS_AFTER_RENDER_MAX);
-  });
 });

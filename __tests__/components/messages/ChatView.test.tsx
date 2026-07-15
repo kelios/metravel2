@@ -1,4 +1,5 @@
 import { render, fireEvent } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import ChatView from '@/components/messages/ChatView';
 import type { Message } from '@/api/messages';
 
@@ -52,6 +53,15 @@ describe('ChatView', () => {
         fireEvent.changeText(input, 'Новое сообщение');
         fireEvent.press(getByLabelText('Отправить сообщение'));
         expect(onSend).toHaveBeenCalledWith('Новое сообщение');
+    });
+
+    it('does not reserve the global dock inset when reserveBottomDock is false', () => {
+        const { getByTestId } = render(
+            <ChatView {...defaultProps} reserveBottomDock={false} />
+        );
+        const composerStyle = StyleSheet.flatten(getByTestId('message-composer').props.style);
+
+        expect(composerStyle.paddingBottom).toBeLessThan(56);
     });
 
     it('does not call onSend with empty text', () => {

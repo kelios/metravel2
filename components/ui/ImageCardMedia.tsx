@@ -452,6 +452,14 @@ function ImageCardMedia({
     if (!webPlaceholderSrc) return false;
     return !shouldRevealWebMedia;
   }, [blurOnly, shouldRevealWebMedia, webPlaceholderSrc]);
+  const webMediaInstanceKey = useMemo(() => {
+    if (recyclingKey) return recyclingKey;
+    if (currentImageIdentityKey) return currentImageIdentityKey;
+    if (webMainSrc) return webMainSrc;
+    if (webBlurSrc) return webBlurSrc;
+    return 'web-media';
+  }, [currentImageIdentityKey, recyclingKey, webBlurSrc, webMainSrc]);
+
   const webImageProps = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
     return {};
@@ -556,11 +564,7 @@ function ImageCardMedia({
         <>
           {Platform.OS === 'web' && shouldRenderWebBlurBackground && webBlurSrc ? (
             <WebBlurBackdrop
-              // Stable positional key (no image identity): on list recycling React
-              // reuses this node and swaps the background src instead of remounting,
-              // so the previous decoded backdrop holds until the new one is ready
-              // (prevents the empty-frame flash while scrolling the catalog).
-              key="blur-web-media"
+              key={`blur-${webMediaInstanceKey}`}
               src={webBlurSrc}
               alt={alt || ''}
               width={typeof width === 'number' ? width : 400}
@@ -574,7 +578,7 @@ function ImageCardMedia({
           ) : null}
           {shouldRenderWebPlaceholder && webPlaceholderSrc ? (
             <img
-              key="placeholder-web-media"
+              key={`placeholder-${webMediaInstanceKey}`}
               aria-hidden="true"
               src={webPlaceholderSrc}
               alt=""
@@ -599,13 +603,7 @@ function ImageCardMedia({
           ) : null}
           {Platform.OS === 'web' && !isJest && !blurOnly && webMainSrc ? (
             <WebMainImage
-              // Stable positional key (no image identity): reused across catalog
-              // recycling so only `src`/`srcSet` change on the same <img>. The
-              // browser keeps the previously decoded frame visible until the new
-              // source decodes, eliminating the empty-frame flash on scroll. Load
-              // state stays correct via the identity effects (webLoaded reset +
-              // WebMainImage's own [src] reset), which do not depend on remounting.
-              key="main-web-media"
+              key={`main-${webMediaInstanceKey}`}
               src={webMainSrc}
               srcSet={webSrcSet}
               sizes={webSizes}

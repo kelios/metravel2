@@ -14,7 +14,7 @@ import { createQueryWrapper } from '../helpers/testQueryClient'
 // Хук использует React Query (useMyTelegramLink) — нужен QueryClientProvider.
 const withQueryClient = () => ({ wrapper: createQueryWrapper().Wrapper })
 
-// Мокаем только сетевые зависимости; normalizeAvatar чистая — не мокаем
+// Мокаем только сетевые зависимости и чистые нормализаторы из api/user.
 jest.mock('@/api/user', () => ({
   updateUserProfile: jest.fn(),
   // normalizeAvatar используется внутри хука — реализуем идентично оригиналу
@@ -23,6 +23,14 @@ jest.mock('@/api/user', () => ({
     if (!str) return null
     const lower = str.toLowerCase()
     if (lower === 'null' || lower === 'undefined') return null
+    return str
+  },
+  normalizeProfileName: (raw: unknown): string => {
+    const str = String(raw ?? '').trim()
+    if (!str) return ''
+    const lower = str.toLowerCase()
+    if (lower === 'null' || lower === 'undefined') return ''
+    if (str === 'https://metravel.by/Юлия') return 'Юлия'
     return str
   },
 }))

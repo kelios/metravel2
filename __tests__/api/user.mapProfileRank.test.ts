@@ -1,4 +1,4 @@
-import { mapProfileRank, type UserProfileDto } from '@/api/user';
+import { mapProfileRank, normalizeProfileName, type UserProfileDto } from '@/api/user';
 
 const baseProfile = {
   id: 1,
@@ -44,5 +44,16 @@ describe('mapProfileRank (#847)', () => {
     expect(mapProfileRank(baseProfile)).toBeNull();
     expect(mapProfileRank(null)).toBeNull();
     expect(mapProfileRank(undefined)).toBeNull();
+  });
+});
+
+describe('normalizeProfileName', () => {
+  it('does not treat plain names as media URLs', () => {
+    expect(normalizeProfileName('Елена')).toBe('Елена');
+  });
+
+  it('recovers names polluted by the metravel.by media URL normalizer', () => {
+    expect(normalizeProfileName('https://metravel.by/Елена')).toBe('Елена');
+    expect(normalizeProfileName('https://metravel.by/%D0%95%D0%BB%D0%B5%D0%BD%D0%B0')).toBe('Елена');
   });
 });

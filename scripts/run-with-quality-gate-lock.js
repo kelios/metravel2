@@ -2,6 +2,8 @@
 
 'use strict'
 
+require('./ensure-node-version').assertSupportedNode()
+
 const { spawn } = require('node:child_process')
 const {
   acquireQualityGateLock,

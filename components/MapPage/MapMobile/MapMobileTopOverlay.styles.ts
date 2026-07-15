@@ -3,7 +3,7 @@ import { Platform, StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
 
-const BUTTON_SIZE = 44
+const BUTTON_SIZE = 38
 
 const shadowWeb = {
   boxShadow: '0 2px 10px rgba(15,23,42,0.12)',
@@ -26,7 +26,7 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       right: 0,
       bottom: 0,
       zIndex: 1500,
-      paddingHorizontal: 12,
+      paddingHorizontal: 10,
       flexDirection: 'row',
       alignItems: 'flex-start',
       justifyContent: 'space-between',
@@ -34,13 +34,14 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     toolbar: {
       flexDirection: 'row',
       alignItems: 'center',
-      // Правая группа: 4 кнопки по 44px + 3 зазора по 8 = 200px.
+      // Правая группа остаётся одноcтрочной даже на узких телефонах:
+      // видимая кнопка 38px, touch-target добирается hitSlop в компоненте.
       // Локация вынесена в левый край root, поэтому ряд не перегружает 320px.
-      gap: 8,
+      gap: 6,
     },
     toolbarStack: {
       alignItems: 'flex-end' as const,
-      gap: 8,
+      gap: 6,
     },
     routeToolbar: {
       flexDirection: 'row',
@@ -66,12 +67,12 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     },
     badge: {
       position: 'absolute' as const,
-      top: -4,
-      right: -4,
-      minWidth: 20,
-      height: 18,
+      top: -3,
+      right: -3,
+      minWidth: 18,
+      height: 16,
       paddingHorizontal: 4,
-      borderRadius: 9,
+      borderRadius: 8,
       backgroundColor: colors.primary,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
@@ -80,12 +81,12 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     },
     routeProgressBadge: {
       position: 'absolute' as const,
-      top: -4,
-      right: -8,
-      minWidth: 26,
-      height: 18,
+      top: -3,
+      right: -6,
+      minWidth: 24,
+      height: 16,
       paddingHorizontal: 4,
-      borderRadius: 9,
+      borderRadius: 8,
       backgroundColor: colors.primary,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
@@ -93,23 +94,23 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       borderColor: colors.surface,
     },
     badgeText: {
-      fontSize: 10,
-      lineHeight: 12,
+      fontSize: 9,
+      lineHeight: 11,
       fontWeight: '700' as const,
       color: colors.textOnPrimary,
     },
     routeHint: {
       position: 'absolute' as const,
-      top: BUTTON_SIZE + 60,
-      left: 12,
-      right: 12,
+      top: BUTTON_SIZE + 54,
+      left: 10,
+      right: 10,
       flexDirection: 'row',
       alignItems: 'center' as const,
       flexWrap: 'wrap' as const,
-      gap: 8,
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      borderRadius: 12,
+      gap: 6,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 10,
       // Статичный «фрост»-фон (правило проекта: без живого blur на мобиле).
       backgroundColor: colors.surfaceMuted,
       ...(Platform.OS === 'web' ? shadowWeb : shadowNative),
@@ -117,7 +118,7 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     routeHintText: {
       flex: 1,
       fontSize: 12,
-      lineHeight: 16,
+      lineHeight: 15,
       fontWeight: '600' as const,
       color: colors.text,
     },
@@ -125,28 +126,28 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       width: '100%',
       flexDirection: 'row',
       alignItems: 'center' as const,
-      gap: 8,
-      marginTop: 4,
+      gap: 6,
+      marginTop: 2,
     },
     routeHintActionPrimary: {
-      minHeight: 34,
+      minHeight: 32,
       flexGrow: 1,
       flexBasis: 0,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       paddingHorizontal: 10,
-      borderRadius: 10,
+      borderRadius: 9,
       backgroundColor: colors.primary,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     routeHintActionSecondary: {
-      minHeight: 34,
+      minHeight: 32,
       flexGrow: 1,
       flexBasis: 0,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       paddingHorizontal: 10,
-      borderRadius: 10,
+      borderRadius: 9,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,

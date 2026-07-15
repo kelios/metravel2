@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+require('./ensure-node-version').assertSupportedNode()
+
 const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')

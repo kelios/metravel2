@@ -61,18 +61,6 @@ async function seedVisited(page: Page, items: StatusItem[]) {
   );
 }
 
-async function skipIfAuthGate(page: Page): Promise<boolean> {
-  const gate = await page
-    .getByText(/Войдите в аккаунт/i)
-    .first()
-    .isVisible()
-    .catch(() => false);
-  if (gate) {
-    test.info().annotations.push({ type: 'note', description: 'Auth gate shown in env; skipping' });
-  }
-  return gate;
-}
-
 test.describe('Calendar — visited placement (#878/#880) @smoke', () => {
   test('dateless visit (prod shape: year int + month array, no exact date) renders as a card and gets a calendar marker', async ({ page }) => {
     await seedVisited(page, [
@@ -83,7 +71,6 @@ test.describe('Calendar — visited placement (#878/#880) @smoke', () => {
     ]);
     await preacceptCookies(page);
     await gotoWithRetry(page, CALENDAR_URL);
-    if (await skipIfAuthGate(page)) return;
 
     // Реальная поездка без точной даты всё равно видна карточкой.
     await expect(page.getByText('Озеро Гарда').first()).toBeVisible({ timeout: 15_000 });
@@ -100,7 +87,6 @@ test.describe('Calendar — visited placement (#878/#880) @smoke', () => {
     ]);
     await preacceptCookies(page);
     await gotoWithRetry(page, CALENDAR_URL);
-    if (await skipIfAuthGate(page)) return;
 
     // Без выбранной даты видны ВСЕ три визита (счётчик «Был (3)» = список из 3), несмотря на разные месяцы/годы.
     await expect(page.getByText('Озеро Гарда велодорожка').first()).toBeVisible({ timeout: 15_000 });
@@ -118,7 +104,6 @@ test.describe('Calendar — visited placement (#878/#880) @smoke', () => {
     ]);
     await preacceptCookies(page);
     await gotoWithRetry(page, CALENDAR_URL);
-    if (await skipIfAuthGate(page)) return;
 
     // Без выбранной даты обе поездки видны.
     await expect(page.getByText('Рим').first()).toBeVisible({ timeout: 15_000 });

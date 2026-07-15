@@ -109,6 +109,7 @@ interface ChatViewProps {
   hideBackButton?: boolean
   onDeleteMessage?: (messageId: number) => void
   onDeleteThread?: () => void
+  reserveBottomDock?: boolean
 }
 
 function ChatView({
@@ -126,6 +127,7 @@ function ChatView({
   hideBackButton,
   onDeleteMessage,
   onDeleteThread,
+  reserveBottomDock = true,
 }: ChatViewProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -156,7 +158,7 @@ function ChatView({
     ? 0
     : !IS_IOS && keyboardHeight > 0
       ? keyboardHeight + DESIGN_TOKENS.spacing.xs
-      : DOCK_CONTENT_HEIGHT + insets.bottom + DESIGN_TOKENS.spacing.sm
+      : (reserveBottomDock ? DOCK_CONTENT_HEIGHT : 0) + insets.bottom + DESIGN_TOKENS.spacing.sm
 
   const [text, setText] = useState('')
   const lastSentAtRef = useRef(0)
@@ -392,7 +394,13 @@ function ChatComposer({
   )
 
   return (
-    <View style={[styles.inputContainer, bottomInset > 0 && { paddingBottom: bottomInset }]}>
+    <View
+      testID="message-composer"
+      style={[
+        styles.inputContainer,
+        { paddingBottom: bottomInset > 0 ? bottomInset : DESIGN_TOKENS.spacing.sm },
+      ]}
+    >
       <TextInput
         style={styles.input}
         value={text}

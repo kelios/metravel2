@@ -60,7 +60,7 @@ function MessagesScreenContent() {
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
     const isDesktop = Platform.OS === 'web' && !isMobile;
-    const params = useLocalSearchParams<{ userId?: string; threadId?: string }>();
+    const params = useLocalSearchParams<{ userId?: string | string[]; user_id?: string | string[]; threadId?: string | string[] }>();
 
     const [selectedThread, setSelectedThread] = useState<MessageThread | null>(null);
     const [initialLoading, setInitialLoading] = useState(false);
@@ -69,6 +69,19 @@ function MessagesScreenContent() {
     const handledUserDeepLink = useRef<string | null>(null);
     const pendingUserDeepLink = useRef<string | null>(null);
     const handledThreadDeepLink = useRef<string | null>(null);
+
+    const targetUserIdParam = useMemo(() => {
+        const raw = params.userId ?? params.user_id;
+        return Array.isArray(raw) ? raw[0] : raw;
+    }, [params.userId, params.user_id]);
+    const targetThreadIdParam = useMemo(() => {
+        const raw = params.threadId;
+        return Array.isArray(raw) ? raw[0] : raw;
+    }, [params.threadId]);
+    const messagesAuthRedirect = useMemo(() => {
+        if (!targetUserIdParam) return '/messages';
+        return `/messages?userId=${encodeURIComponent(targetUserIdParam)}`;
+    }, [targetUserIdParam]);
 
     const canFetch = authReady && isAuthenticated;
     const {
@@ -205,17 +218,17 @@ function MessagesScreenContent() {
 
     // Диплинк: открыть диалог с конкретным пользователем
     useEffect(() => {
-        if (!params.userId || !isAuthenticated || !authReady) return;
+        if (!targetUserIdParam || !isAuthenticated || !authReady) return;
         if (userDismissedDeepLink.current) return;
         // Обрабатываем диплинк один раз на значение userId — иначе эффект
         // перезапускается на каждый poll threads и переоткрывает диалог.
-        if (handledUserDeepLink.current === params.userId) return;
-        if (pendingUserDeepLink.current === params.userId) return;
-        const targetUserId = Number(params.userId);
+        if (handledUserDeepLink.current === targetUserIdParam) return;
+        if (pendingUserDeepLink.current === targetUserIdParam) return;
+        const targetUserId = Number(targetUserIdParam);
         if (isNaN(targetUserId)) return;
 
         let cancelled = false;
-        pendingUserDeepLink.current = params.userId;
+        pendingUserDeepLink.current = targetUserIdParam;
         // Opening a chat with a specific user (e.g. «Написать автору») must show the
         // conversation, not a leftover «Новый диалог» recipient picker.
         setShowPicker(false);
@@ -249,7 +262,7 @@ function MessagesScreenContent() {
                         unread_count: 0,
                     });
                 }
-                handledUserDeepLink.current = params.userId ?? null;
+                handledUserDeepLink.current = targetUserIdParam;
             } catch (e) {
                 devError('MessagesScreen: fetchThreadByUser error:', e);
                 // Still open a virtual thread so user can send
@@ -260,9 +273,9 @@ function MessagesScreenContent() {
                     last_message_created_at: null,
                     unread_count: 0,
                 });
-                handledUserDeepLink.current = params.userId ?? null;
+                handledUserDeepLink.current = targetUserIdParam;
             } finally {
-                if (pendingUserDeepLink.current === params.userId) {
+                if (pendingUserDeepLink.current === targetUserIdParam) {
                     pendingUserDeepLink.current = null;
                 }
                 if (!cancelled) setInitialLoading(false);
@@ -271,23 +284,23 @@ function MessagesScreenContent() {
 
         return () => {
             cancelled = true;
-            if (pendingUserDeepLink.current === params.userId) {
+            if (pendingUserDeepLink.current === targetUserIdParam) {
                 pendingUserDeepLink.current = null;
             }
         };
-    }, [params.userId, isAuthenticated, authReady, userId, threads]);
+    }, [targetUserIdParam, isAuthenticated, authReady, userId, threads]);
 
     // Диплинк: открыть конкретный диалог по ID
     useEffect(() => {
-        if (!params.threadId || !isAuthenticated || !authReady) return;
+        if (!targetThreadIdParam || !isAuthenticated || !authReady) return;
         // Один раз на значение threadId. Ждём, пока threads загрузятся (тогда find
         // найдёт диалог), но не зацикливаем refreshThreads → новый threads → refresh.
-        if (handledThreadDeepLink.current === params.threadId) return;
-        const tid = Number(params.threadId);
+        if (handledThreadDeepLink.current === targetThreadIdParam) return;
+        const tid = Number(targetThreadIdParam);
         if (isNaN(tid)) return;
         const found = threads.find((t) => t.id === tid);
         if (found) {
-            handledThreadDeepLink.current = params.threadId;
+            handledThreadDeepLink.current = targetThreadIdParam;
             setSelectedThread(found);
             if (found.id >= 0) {
                 setThreadUnreadCount(found.id, 0);
@@ -295,7 +308,7 @@ function MessagesScreenContent() {
                 refreshThreads();
             }
         }
-    }, [params.threadId, isAuthenticated, authReady, threads, markRead, refreshThreads, setThreadUnreadCount]);
+    }, [targetThreadIdParam, isAuthenticated, authReady, threads, markRead, refreshThreads, setThreadUnreadCount]);
 
     const handleSelectThread = useCallback((thread: MessageThread) => {
         setSelectedThread(thread);
@@ -460,7 +473,7 @@ function MessagesScreenContent() {
                     description={i18nT('messages:app.tabs.messages.dlya_dostupa_k_soobscheniyam_neobhodimo_avto_df1d2208')}
                     action={{
                         label: i18nT('messages:app.tabs.messages.voyti_9426b865'),
-                        onPress: () => router.push(buildLoginHref({ redirect: '/messages' }) as any),
+                        onPress: () => router.push(buildLoginHref({ redirect: messagesAuthRedirect }) as any),
                     }}
                 />
             </View>
@@ -526,6 +539,7 @@ function MessagesScreenContent() {
             hideBackButton={isDesktop}
             onDeleteMessage={handleDeleteMessage}
             onDeleteThread={selectedThread.id >= 0 ? () => handleDeleteThread(selectedThread.id) : undefined}
+            reserveBottomDock={false}
         />
     ) : null;
 

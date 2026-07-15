@@ -158,7 +158,9 @@ export function MapCanvas({
         <View style={styles.geoBanner} testID="map-geo-banner">
           <Feather name="map-pin" size={13} color={themedColors.warning} />
           <View style={styles.geoBannerBody}>
-            <Text style={styles.geoBannerText}>{geoBannerMessage}</Text>
+            <Text style={styles.geoBannerText} numberOfLines={2}>
+              {geoBannerMessage}
+            </Text>
             <View style={styles.geoBannerActions}>
               {canRetryLocation && (
                 <Pressable
@@ -170,7 +172,7 @@ export function MapCanvas({
                     pressed && PRESSED_OPACITY_06,
                   ]}
                 >
-                  <Text style={styles.geoBannerActionPrimaryText}>
+                  <Text style={styles.geoBannerActionPrimaryText} numberOfLines={1}>
                     {locationState.status === 'denied'
                       ? i18nT('map:components.MapPage.MapCanvas.razreshit_dostup_28ec6443')
                       : i18nT('map:components.MapPage.MapCanvas.povtorit_66ddcbbc')}
@@ -187,7 +189,7 @@ export function MapCanvas({
                     pressed && PRESSED_OPACITY_06,
                   ]}
                 >
-                  <Text style={styles.geoBannerActionPrimaryText}>
+                  <Text style={styles.geoBannerActionPrimaryText} numberOfLines={1}>
                     {i18nT('map:components.MapPage.MapCanvas.otkryt_nastroyki_ecb067f5')}
                   </Text>
                 </Pressable>
@@ -201,7 +203,7 @@ export function MapCanvas({
                   pressed && PRESSED_OPACITY_06,
                 ]}
               >
-                <Text style={styles.geoBannerActionSecondaryText}>
+                <Text style={styles.geoBannerActionSecondaryText} numberOfLines={1}>
                   {i18nT('map:components.MapPage.MapCanvas.ukazat_start_vruchnuyu_84e450cb')}
                 </Text>
               </Pressable>

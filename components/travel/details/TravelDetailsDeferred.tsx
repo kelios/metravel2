@@ -127,6 +127,7 @@ export const TravelDeferredSections: React.FC<{
       <View
         ref={setRatingRef}
         collapsable={false}
+        {...(Platform.OS === 'web' ? { 'data-section-key': 'rating' } : {})}
       >
         {shouldLoadRatingSection ? (
           <TravelDeferredRatingSection travel={travel} />

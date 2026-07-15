@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   normalizeAvatar,
+  normalizeProfileName,
   updateUserProfile,
   type UpdateUserProfilePayload,
 } from '@/api/user';
@@ -72,8 +73,8 @@ export function useSettingsProfileForm({
     // сбросила бы несохранённый ввод. Но первичную гидрацию пропускать нельзя —
     // до неё пустая форма всегда «грязная» относительно непустого профиля.
     if (hydratedRef.current && hasUnsavedChangesRef.current) return;
-    setFirstName(normalizeAvatar(profile.first_name) ?? '');
-    setLastName(normalizeAvatar(profile.last_name) ?? '');
+    setFirstName(normalizeProfileName(profile.first_name));
+    setLastName(normalizeProfileName(profile.last_name));
     setYoutube(profile.youtube || '');
     setInstagram(profile.instagram || '');
     setTwitter(profile.twitter || '');
@@ -84,8 +85,8 @@ export function useSettingsProfileForm({
   }, [profile, setAvatarPreviewUrl]);
 
   const derivedDisplayName = useMemo(() => {
-    const first = normalizeAvatar(firstName) ?? '';
-    const last = normalizeAvatar(lastName) ?? '';
+    const first = normalizeProfileName(firstName);
+    const last = normalizeProfileName(lastName);
     const full = `${first} ${last}`.trim();
     return full || username || i18nT('profile:app.tabs.profile.defaultUserName');
   }, [firstName, lastName, username]);

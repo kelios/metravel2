@@ -502,9 +502,43 @@ describe('MapMobileLayout', () => {
         }),
       )
       expect(screen.getByText('1/2')).toBeTruthy()
-      expect(screen.getByText('Старт задан: Моё местоположение. Выберите место назначения на карте.')).toBeTruthy()
+      expect(screen.getByText('Старт задан. Выберите место назначения на карте.')).toBeTruthy()
       expect(screen.queryByTestId('map-mobile-route-request-location')).toBeNull()
       expect(mockSnapToHalf).not.toHaveBeenCalled()
+    })
+
+    it('lets the user replace the current-location start with a manually selected start', () => {
+      const { filtersPanelProps } = buildFiltersProps()
+      const screen = render(
+        <MapMobileLayout
+          mapComponent={<View testID="mock-map" />}
+          travelsData={[]}
+          coordinates={{ latitude: 53.9, longitude: 27.56 }}
+          userLocation={{ latitude: 52.2, longitude: 20.98 }}
+          transportMode="car"
+          buildRouteTo={jest.fn()}
+          onCenterOnUser={jest.fn()}
+          onOpenFilters={jest.fn()}
+          filtersPanelProps={filtersPanelProps}
+        />,
+      )
+
+      fireEvent.press(screen.getByTestId('map-mobile-route-button'))
+      expect(useRouteStore.getState().points).toEqual([
+        expect.objectContaining({
+          coordinates: { lat: 52.2, lng: 20.98 },
+          address: 'Моё местоположение',
+          type: 'start',
+        }),
+      ])
+
+      fireEvent.press(screen.getByTestId('map-mobile-route-button'))
+
+      expect(useRouteStore.getState().mode).toBe('route')
+      expect(useRouteStore.getState().points).toHaveLength(0)
+      expect(screen.getByText('0/2')).toBeTruthy()
+      expect(screen.getByText('Коснитесь карты, чтобы выбрать новый старт маршрута.')).toBeTruthy()
+      expect(screen.queryByTestId('map-mobile-route-request-location')).toBeNull()
     })
 
     it('auto-seeds the pending route start when current location arrives later', async () => {

@@ -177,6 +177,27 @@ export const normalizeAvatar = (raw: unknown): string | null => {
     return normalizeAvatarUrl(str) || null;
 };
 
+export const normalizeProfileName = (raw: unknown): string => {
+    const str = String(raw ?? '').trim();
+    if (!str) return '';
+    const lower = str.toLowerCase();
+    if (lower === 'null' || lower === 'undefined') return '';
+
+    try {
+        const parsed = new URL(str);
+        const host = parsed.hostname.toLowerCase();
+        const pathParts = parsed.pathname.split('/').filter(Boolean);
+        const isMetravelHost = host === 'metravel.by' || host.endsWith('.metravel.by');
+        if (isMetravelHost && pathParts.length === 1 && !parsed.search && !parsed.hash) {
+            return decodeURIComponent(pathParts[0]).trim();
+        }
+    } catch {
+        // Plain names are expected here.
+    }
+
+    return str;
+};
+
 const normalizeProfile = (profile: UserProfileDto): UserProfileDto => ({
     ...profile,
     avatar: normalizeAvatar(profile.avatar),
