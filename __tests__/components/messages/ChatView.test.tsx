@@ -61,7 +61,7 @@ describe('ChatView', () => {
         );
         const composerStyle = StyleSheet.flatten(getByTestId('message-composer').props.style);
 
-        expect(composerStyle.paddingBottom).toBeLessThan(56);
+        expect(composerStyle?.paddingBottom ?? 0).toBeLessThan(56);
     });
 
     it('does not call onSend with empty text', () => {

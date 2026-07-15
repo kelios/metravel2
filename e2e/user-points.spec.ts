@@ -17,7 +17,7 @@ function uniqueName(prefix: string) {
   return `${prefix} ${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 }
 
-async function ensureUserPointsAccessible(page: any): Promise<boolean> {
+async function openUserPoints(page: any): Promise<void> {
   await mockFakeAuthApis(page);
   await ensureAuthedStorageFallback(page);
   await page.goto('/userpoints', { waitUntil: 'domcontentloaded' });
@@ -26,18 +26,9 @@ async function ensureUserPointsAccessible(page: any): Promise<boolean> {
     await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
   }
 
-  const rootVisible = await page
-    .getByTestId('userpoints-screen')
-    .first()
-    .isVisible()
-    .catch(() => false);
-  const mapVisible = await page
-    .locator('.leaflet-container')
-    .first()
-    .isVisible()
-    .catch(() => false);
-
-  return rootVisible || mapVisible;
+  await expect(
+    page.getByTestId('userpoints-screen').first().or(page.locator('.leaflet-container').first()),
+  ).toBeVisible({ timeout: 30_000 });
 }
 
 test.describe('User points', () => {
@@ -185,13 +176,7 @@ test.describe('User points', () => {
       address: 'Kraków',
     });
 
-    if (!(await ensureUserPointsAccessible(page))) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'User points screen is not available in current env; skipping assertions',
-      });
-      return;
-    }
+    await openUserPoints(page);
 
     // Wait for Leaflet container.
     await expect(page.locator('.leaflet-container').first()).toBeVisible({ timeout: 30_000 });
@@ -283,13 +268,7 @@ test.describe('User points', () => {
       address: 'B',
     });
 
-    if (!(await ensureUserPointsAccessible(page))) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'User points screen is not available in current env; skipping assertions',
-      });
-      return;
-    }
+    await openUserPoints(page);
     await expect(page.locator('.leaflet-container').first()).toBeVisible({ timeout: 30_000 });
     // Tile loading can be flaky in CI/local due to layer initialization timing.
     // For this regression we only need the map + markers to exist.
@@ -367,13 +346,7 @@ test.describe('User points', () => {
       address: 'Kraków',
     });
 
-    if (!(await ensureUserPointsAccessible(page))) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'User points screen is not available in current env; skipping assertions',
-      });
-      return;
-    }
+    await openUserPoints(page);
     await expect(page.locator('.leaflet-container').first()).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('.leaflet-tile-pane')).toHaveCount(1, { timeout: 30_000 });
     await expect(page.locator('.leaflet-control-attribution')).toHaveCount(1, { timeout: 30_000 });
@@ -424,13 +397,7 @@ test.describe('User points', () => {
     await installNominatimMock(page, { lat: 52.2297, lon: 21.0122, display_name: 'Warsaw, Poland' });
     await installUserPointsApiMock(page);
 
-    if (!(await ensureUserPointsAccessible(page))) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'User points screen is not available in current env; skipping assertions',
-      });
-      return;
-    }
+    await openUserPoints(page);
     await expect(page.locator('.leaflet-container').first()).toBeVisible({ timeout: 30_000 });
 
     await openFiltersPanelTab(page);
@@ -625,13 +592,7 @@ test.describe('User points', () => {
 	    try {
 	      await test.step('Open /userpoints', async () => {
 	        await preacceptCookies(page);
-	        if (!(await ensureUserPointsAccessible(page))) {
-          test.info().annotations.push({
-            type: 'note',
-            description: 'User points screen is not available in current env; skipping assertions',
-          });
-          return;
-        }
+	        await openUserPoints(page);
         userPointsAvailable = true;
         await expect(page).not.toHaveURL(/\/login/);
         await expect(page.getByTestId('userpoints-screen')).toBeVisible({ timeout: 30_000 });
@@ -743,13 +704,7 @@ test.describe('User points', () => {
     });
 
     await preacceptCookies(page);
-    if (!(await ensureUserPointsAccessible(page))) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'User points screen is not available in current env; skipping assertions',
-      });
-      return;
-    }
+    await openUserPoints(page);
     await expect(page.getByTestId('userpoints-screen')).toBeVisible({ timeout: 30_000 });
     await openListPanelTab(page);
 

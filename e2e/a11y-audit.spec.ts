@@ -3,7 +3,6 @@ import {
   preacceptCookies,
   gotoWithRetry,
   waitForMainListRender,
-  openFallbackTravelDetails,
 } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
@@ -15,6 +14,53 @@ import { getTravelsListPath } from './helpers/routes';
  * violations. Any new violation category fails the test.
  */
 const AXE_PATH = require.resolve('axe-core/axe.min.js');
+const A11Y_TRAVEL_SLUG = 'e2e-a11y-travel';
+
+async function openDeterministicTravelDetails(page: import('@playwright/test').Page) {
+  await page.route('**/api/**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({}),
+  }));
+  await page.route(`**/api/travels/by-slug/${A11Y_TRAVEL_SLUG}**`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      id: 990_081,
+      slug: A11Y_TRAVEL_SLUG,
+      name: 'Доступный тестовый маршрут',
+      url: `/travels/${A11Y_TRAVEL_SLUG}`,
+      userName: 'E2E Author',
+      cityName: 'Краков',
+      countryName: 'Польша',
+      countryCode: 'PL',
+      countUnicIpView: '0',
+      travel_image_thumb_url: null,
+      travel_image_thumb_small_url: null,
+      gallery: [],
+      travelAddress: [],
+      coordsMeTravel: [],
+      year: '2025',
+      monthName: 'Июль',
+      number_days: 1,
+      companions: [],
+      youtube_link: '',
+      description: '<p>Описание доступного тестового маршрута.</p>',
+      recommendation: '',
+      plus: '',
+      minus: '',
+      userIds: '',
+      publish: true,
+      moderation: true,
+      rating: 0,
+      rating_count: 0,
+      user_rating: null,
+    }),
+  }));
+
+  await gotoWithRetry(page, `/travels/${A11Y_TRAVEL_SLUG}`);
+  await expect(page.getByTestId('travel-details-page')).toBeVisible({ timeout: 30_000 });
+}
 
 // All previously-tracked debt is resolved — the gate enforces zero. If a new,
 // hard-to-fix violation appears, add its rule id here with a tracking note.
@@ -68,14 +114,7 @@ test.describe('Accessibility (WCAG 2.1 AA) — no regressions', () => {
 
   test('travel detail', async ({ page }) => {
     await preacceptCookies(page);
-    const opened = await openFallbackTravelDetails(page);
-    if (!opened) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Fallback travel details did not render; skipping detail a11y scan.',
-      });
-      return;
-    }
+    await openDeterministicTravelDetails(page);
     await page.waitForTimeout(1500);
     assertNoNewViolations(await runAxe(page), 'travel detail');
   });

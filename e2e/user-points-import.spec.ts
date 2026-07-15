@@ -18,7 +18,7 @@ type MockPoint = {
 };
 
 test.describe('User points import (mock API)', () => {
-  async function ensureUserPointsAccessible(page: any): Promise<boolean> {
+  async function openUserPoints(page: any): Promise<void> {
     await mockFakeAuthApis(page);
     await ensureAuthedStorageFallback(page);
     await page.goto('/userpoints', { waitUntil: 'domcontentloaded' });
@@ -27,12 +27,7 @@ test.describe('User points import (mock API)', () => {
       await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
     }
 
-    const rootVisible = await page
-      .getByTestId('userpoints-screen')
-      .first()
-      .isVisible()
-      .catch(() => false);
-    return rootVisible;
+    await expect(page.getByTestId('userpoints-screen').first()).toBeVisible({ timeout: 30_000 });
   }
 
   async function openFiltersPanelTab(page: any) {
@@ -198,13 +193,7 @@ test.describe('User points import (mock API)', () => {
       });
 
       await preacceptCookies(page);
-      if (!(await ensureUserPointsAccessible(page))) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'User points screen is not available in current env; skipping import assertion',
-        });
-        return;
-      }
+      await openUserPoints(page);
       await expect(page.getByTestId('userpoints-screen')).toBeVisible({ timeout: 30_000 });
 
       await openImportWizard(page);

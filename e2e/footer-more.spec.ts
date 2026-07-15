@@ -26,49 +26,28 @@ test.describe('Footer dock (web mobile) - More modal', () => {
     if (lastError) throw lastError;
 
     const dock = page.getByTestId('footer-dock-wrapper');
-    if (!(await dock.isVisible({ timeout: 5_000 }).catch(() => false))) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Footer dock not rendered on this variant',
-      });
-      return;
-    }
+    await expect(dock).toBeVisible({ timeout: 30_000 });
 
     // On web mobile the dock is fixed; we reserve space via bottom-gutter.
     await expect(page.getByTestId('bottom-gutter')).toBeVisible({ timeout: 30_000 });
 
     // "Ещё" must exist in the dock.
-    const moreLink = dock.getByRole('link', { name: /ещ[её]/i }).first();
-    const moreButton = dock.getByRole('button', { name: /ещ[её]/i }).first();
-    const linkVisible = await moreLink.isVisible().catch(() => false);
-    const moreInDock = linkVisible ? moreLink : moreButton;
-    const hasMore = await moreInDock.isVisible({ timeout: 15_000 }).catch(() => false);
-    if (!hasMore) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Footer dock "Ещё" action is not present in this variant',
-      });
-      return;
-    }
-    await expect(moreInDock).toBeVisible();
+    const moreInDock = dock.getByTestId('footer-item-more');
+    await expect(moreInDock).toBeVisible({ timeout: 15_000 });
 
     // Layout invariant: "Ещё" should stay near the visual center in minimal state.
     // Allow proportional tolerance for responsive spacing changes across mobile widths.
     const [bb, dockBb] = await Promise.all([moreInDock.boundingBox(), dock.boundingBox()]);
-    if (!bb || !dockBb) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Skipped center-alignment check: bounding box unavailable on this web layout variant',
-      });
-    } else {
-      const itemCenterX = bb.x + bb.width / 2;
-      const dockCenterX = dockBb.x + dockBb.width / 2;
-      const maxAllowedOffset = Math.max(110, dockBb.width * 0.35);
-      expect(
-        Math.abs(itemCenterX - dockCenterX),
-        `expected "Ещё" to stay near center within ${Math.round(maxAllowedOffset)}px`,
-      ).toBeLessThanOrEqual(maxAllowedOffset);
-    }
+    expect(bb, 'More action must have a measurable box').not.toBeNull();
+    expect(dockBb, 'Footer dock must have a measurable box').not.toBeNull();
+    if (!bb || !dockBb) throw new Error('Footer dock bounding boxes are unavailable');
+    const itemCenterX = bb.x + bb.width / 2;
+    const dockCenterX = dockBb.x + dockBb.width / 2;
+    const maxAllowedOffset = Math.max(110, dockBb.width * 0.35);
+    expect(
+      Math.abs(itemCenterX - dockCenterX),
+      `expected "Ещё" to stay near center within ${Math.round(maxAllowedOffset)}px`,
+    ).toBeLessThanOrEqual(maxAllowedOffset);
 
     // Open More modal.
     await moreInDock.click();
