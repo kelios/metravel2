@@ -1,0 +1,4 @@
+{"type":"auditAdvisory","data":{"resolution":{"id":1001,"path":"app>moderate-package","dev":false},"advisory":{"module_name":"moderate-package","severity":"moderate"}}}
+{"type":"auditAdvisory","data":{"resolution":{"id":1002,"path":"app>low-package","dev":false},"advisory":{"module_name":"low-package","severity":"low"}}}
+{"type":"auditAdvisory","data":{"resolution":{"id":1003,"path":"app>expo>@expo/cli>node-forge","dev":false},"advisory":{"module_name":"node-forge","severity":"high"}}}
+{"type":"auditSummary","data":{"vulnerabilities":{"info":0,"low":1,"moderate":1,"high":1,"critical":0},"dependencies":200,"devDependencies":300,"optionalDependencies":5,"totalDependencies":505}}
