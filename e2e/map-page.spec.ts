@@ -52,6 +52,34 @@ function buildMockMapPoints(options: {
   return points;
 }
 
+async function installMobileFiltersPanelMocks(page: any, points: any[]) {
+  await page.route('**/api/filterformap/**', async (route: any) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        countries: [],
+        categories: [],
+        categoryTravelAddress: [{ id: 84, name: 'Замки' }],
+        companions: [],
+        complexity: [],
+        month: [],
+        over_nights_stay: [],
+        transports: [],
+        year: [],
+      }),
+    });
+  });
+
+  await page.route('**/api/travels/search_travels_for_map/**', async (route: any) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ results: points, total: points.length }),
+    });
+  });
+}
+
 const getCanonicalHref = async (page: any): Promise<string | null> => {
   return page.evaluate(() => {
     const el = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
@@ -90,6 +118,22 @@ const getMobileListPanelContent = (page: any) =>
       ].join(', '),
     )
     .first();
+
+const openMobileMapSheet = async (page: any) => {
+  const toggle = getMobilePanelEntry(page);
+  await expect(toggle).toBeVisible({ timeout: 20_000 });
+  await toggle.click();
+  await expect(page.getByRole('dialog', { name: 'Панель карты' })).toBeVisible({ timeout: 20_000 });
+  await expect(getMobileListPanelContent(page)).toBeVisible({ timeout: 20_000 });
+};
+
+const openFiltersWithSingleClick = async (page: any, actionTestId: string) => {
+  const action = page.getByTestId(actionTestId).first();
+  await expect(action).toBeVisible({ timeout: 20_000 });
+  await expectTopmostAtCenter(page, action, actionTestId);
+  await action.click();
+  await expect(page.getByTestId('filters-block-main')).toBeVisible({ timeout: 10_000 });
+};
 
 const maybeRecoverFromMapErrorScreen = async (page: any) => {
   const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
@@ -1247,47 +1291,36 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(getMobileListPanelContent(page)).toBeVisible();
   });
 
-  test('mobile: filters button opens filters when panel is open', async ({ page }) => {
+  test('mobile: list filters action opens filters with one regular click', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 375, height: 720 });
+    await installMobileFiltersPanelMocks(
+      page,
+      buildMockMapPoints({ center: { lat: 53.9, lng: 27.56 }, count: 1 }),
+    );
 
     await gotoMapWithRecovery(page);
+    await openMobileMapSheet(page);
+    await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({ timeout: 20_000 });
+    await openFiltersWithSingleClick(page, 'travel-list-open-filters');
 
-    // Open the panel
-    const toggle = getMobilePanelEntry(page);
-    await expect(toggle).toBeVisible({ timeout: 20_000 });
-    await toggle.click();
+    await testInfo.attach('mobile-list-filters-open', {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
+  });
 
-    await expect(getMobileListPanelContent(page)).toBeVisible({ timeout: 20_000 });
+  test('mobile: empty-state filters action opens filters with one regular click', async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 375, height: 720 });
+    await installMobileFiltersPanelMocks(page, []);
 
-    await expect
-      .poll(
-        async () => {
-          if (await page.getByTestId('filters-block-main').isVisible().catch(() => false)) {
-            return true;
-          }
+    await gotoMapWithRecovery(page);
+    await openMobileMapSheet(page);
+    await expect(page.getByTestId('empty-open-filters')).toBeVisible({ timeout: 20_000 });
+    await openFiltersWithSingleClick(page, 'empty-open-filters');
 
-          const listFiltersButton = page.getByTestId('travel-list-open-filters');
-          const emptyFiltersButton = page.getByTestId('empty-open-filters');
-          if (await listFiltersButton.isVisible().catch(() => false)) {
-            await listFiltersButton.click({ force: true }).catch(() => null);
-          } else if (await emptyFiltersButton.isVisible().catch(() => false)) {
-            await emptyFiltersButton.click({ force: true }).catch(() => null);
-          }
-
-          await page
-            .getByTestId('map-mobile-filters-loading')
-            .waitFor({ state: 'hidden', timeout: 1_000 })
-            .catch(() => null);
-
-          return page.getByTestId('filters-block-main').isVisible().catch(() => false);
-        },
-        { timeout: 15_000 },
-      )
-      .toBe(true);
-
-    // Verify the filters view is active in the mobile sheet.
-    // The current mobile contract shows the filters body immediately,
-    // while compact context chips appear only when there are real search/category refinements.
-    await expect(page.getByTestId('filters-block-main')).toBeVisible({ timeout: 10_000 });
+    await testInfo.attach('mobile-empty-filters-open', {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
   });
 });

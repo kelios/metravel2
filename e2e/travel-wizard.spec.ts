@@ -15,23 +15,23 @@ const maybeMockTravelFilters = async (page: Page) => {
   if (USE_REAL_API) return;
 
   const payload = {
-    countries: [
-      { country_id: '250', title_ru: 'Франция' },
-      { country_id: '268', title_ru: 'Грузия' },
-      { country_id: '643', title_ru: 'Россия' },
-    ],
-    categories: [{ id: '1', name: 'Город' }],
-    transports: [{ id: '1', name: 'Авто' }],
-    companions: [{ id: '1', name: 'Соло' }],
-    complexity: [{ id: '1', name: 'Легко' }],
-    month: [{ id: '1', name: 'Январь' }],
-    over_nights_stay: [{ id: '1', name: 'Отель' }],
-    year: [{ id: '2026', name: '2026' }],
+    categories: [{ id: 1, name: 'Город' }],
+    transports: [{ id: 1, name: 'Авто' }],
+    companions: [{ id: 1, name: 'Соло' }],
+    complexity: [{ id: 1, name: 'Легко' }],
+    month: [{ id: 1, name: 'Январь' }],
+    over_nights_stay: [{ id: 1, name: 'Отель' }],
     categoryTravelAddress: [
-      { id: '1', name: 'Башня' },
-      { id: '2', name: 'Ресторан' },
+      { id: 1, name: 'Башня' },
+      { id: 2, name: 'Ресторан' },
     ],
+    sortings: [{ id: 'created-desc', name: 'Сначала новые', sortBy: 'created_at', sortOrder: 'desc' }],
   };
+  const countriesPayload = [
+    { country_id: 250, title_ru: 'Франция' },
+    { country_id: 268, title_ru: 'Грузия' },
+    { country_id: 643, title_ru: 'Россия' },
+  ];
 
   const patterns = [
     '**/api/getFiltersTravel/**',
@@ -46,6 +46,16 @@ const maybeMockTravelFilters = async (page: Page) => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(payload),
+      });
+    });
+  }
+
+  for (const pattern of ['**/api/countries/**', '**/api/countries/', '**/countries/**', '**/countries/']) {
+    await page.route(pattern, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(countriesPayload),
       });
     });
   }
