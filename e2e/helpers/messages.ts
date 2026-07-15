@@ -62,11 +62,15 @@ type MessagingMockOptions = {
   threads?: MessageThread[];
   users?: MessagingUser[];
   messages?: Message[];
+  deleteThreadStatus?: number;
+  deferThreadDelete?: boolean;
 };
 
 export type MessagingMockTracker = {
   markReadThreadIds: number[];
   sentPayloads: Array<{ participants?: number[]; text?: string }>;
+  deletedThreadIds: number[];
+  releaseThreadDelete: () => void;
 };
 
 async function fulfillJson(route: Route, body: unknown, status = 200) {
@@ -81,10 +85,16 @@ export async function installMessagingMocks(
   page: Page,
   options: MessagingMockOptions = {},
 ): Promise<MessagingMockTracker> {
-  const threads = options.threads ?? createMockThreads();
+  let threads = options.threads ?? createMockThreads();
   const users = options.users ?? MOCK_USERS;
   const messages = options.messages ?? MOCK_MESSAGES;
-  const tracker: MessagingMockTracker = { markReadThreadIds: [], sentPayloads: [] };
+  let releaseThreadDelete: (() => void) | null = null;
+  const tracker: MessagingMockTracker = {
+    markReadThreadIds: [],
+    sentPayloads: [],
+    deletedThreadIds: [],
+    releaseThreadDelete: () => releaseThreadDelete?.(),
+  };
 
   await page.route('**/api/message-threads/*/mark-read/**', async (route) => {
     const match = new URL(route.request().url()).pathname.match(/message-threads\/(\d+)\/mark-read/);
@@ -105,6 +115,33 @@ export async function installMessagingMocks(
   await page.route('**/api/message-threads/', (route) => {
     if (route.request().method() === 'GET') return fulfillJson(route, threads);
     return route.fallback();
+  });
+
+  await page.route('**/api/message-threads/*/', async (route) => {
+    const request = route.request();
+    if (request.method() !== 'DELETE') {
+      await route.fallback();
+      return;
+    }
+
+    const match = new URL(request.url()).pathname.match(/message-threads\/(\d+)\/$/);
+    const threadId = Number(match?.[1]);
+    tracker.deletedThreadIds.push(threadId);
+
+    if (options.deferThreadDelete) {
+      await new Promise<void>((resolve) => {
+        releaseThreadDelete = resolve;
+      });
+      releaseThreadDelete = null;
+    }
+
+    const status = options.deleteThreadStatus ?? 204;
+    if (status >= 200 && status < 300) {
+      threads = threads.filter((thread) => thread.id !== threadId);
+      await route.fulfill({ status, body: '' });
+      return;
+    }
+    await fulfillJson(route, { detail: 'Delete failed' }, status);
   });
 
   await page.route('**/api/messages/**', async (route) => {

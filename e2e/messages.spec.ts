@@ -95,6 +95,51 @@ test.describe('Messages — deterministic user flows', () => {
     await expect(page.getByLabel('Назад к списку диалогов')).toHaveCount(0);
   });
 
+  test('desktop confirms and optimistically removes an active thread after 204', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const tracker = await openAuthenticatedMessages(page, '/messages', {
+      deferThreadDelete: true,
+    });
+
+    const alexey = page.getByLabel(THREAD_ALEXEY);
+    await expect(alexey).toBeVisible({ timeout: 20_000 });
+    await alexey.click();
+    await expect(page.getByLabel('Поле ввода сообщения')).toBeVisible();
+
+    await page.getByLabel('Удалить диалог с Алексей Петров').click();
+    const confirm = page.getByLabel('Подтвердить удаление диалога');
+    await expect(confirm).toBeVisible();
+    await confirm.click();
+
+    await expect.poll(() => tracker.deletedThreadIds).toContain(10);
+    await expect(alexey).toHaveCount(0);
+    await expect(page.getByText('Выберите диалог или начните новый')).toBeVisible();
+
+    tracker.releaseThreadDelete();
+    await expect(alexey).toHaveCount(0);
+  });
+
+  test('desktop restores an optimistically removed thread after delete failure', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const tracker = await openAuthenticatedMessages(page, '/messages', {
+      deferThreadDelete: true,
+      deleteThreadStatus: 500,
+    });
+
+    const alexey = page.getByLabel(THREAD_ALEXEY);
+    await expect(alexey).toBeVisible({ timeout: 20_000 });
+    await alexey.click();
+    await page.getByLabel('Удалить диалог с Алексей Петров').click();
+    await page.getByLabel('Подтвердить удаление диалога').click();
+
+    await expect.poll(() => tracker.deletedThreadIds).toContain(10);
+    await expect(alexey).toHaveCount(0);
+    tracker.releaseThreadDelete();
+
+    await expect(alexey).toBeVisible();
+    await expect(page.getByLabel('Поле ввода сообщения')).toBeVisible();
+  });
+
   test('mobile replaces the list with chat and returns through the back action', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await openAuthenticatedMessages(page);
