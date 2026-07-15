@@ -1,6 +1,7 @@
 import { LONG_TIMEOUT } from '@/api/apiConfig';
 import { apiClient } from '@/api/client';
 import { mapRank, type RankSummaryDto, type UserRank } from '@/api/achievements';
+import { normalizeAvatarUrl } from '@/utils/mediaUrl';
 
 export type CardViewTravelDto = {
     id: number;
@@ -173,7 +174,7 @@ export const normalizeAvatar = (raw: unknown): string | null => {
     if (!str) return null;
     const lower = str.toLowerCase();
     if (lower === 'null' || lower === 'undefined') return null;
-    return str;
+    return normalizeAvatarUrl(str) || null;
 };
 
 const normalizeProfile = (profile: UserProfileDto): UserProfileDto => ({

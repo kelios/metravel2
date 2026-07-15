@@ -245,6 +245,16 @@ export function fixMediaUrl(url: string | null | undefined): string | undefined 
     return normalized || undefined;
 }
 
+const adaptFirstCompleter = (
+    firstCompleter: ApiQuestFirstCompleter | null | undefined,
+): ApiQuestFirstCompleter | null => {
+    if (!firstCompleter) return null;
+    return {
+        ...firstCompleter,
+        avatar: fixMediaUrl(firstCompleter.avatar) ?? null,
+    };
+};
+
 /** Конвертирует шаг из API формата во фронтенд формат */
 export function adaptStep(apiStep: ApiQuestStep): QuestStep {
     // answer_pattern (новый формат) или answer_type/answer_value (старый)
@@ -413,7 +423,7 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
         userRating: apiBundle.user_rating ?? null,
         completionsCount: apiBundle.completions_count ?? 0,
         isCompletedByMe: apiBundle.is_completed_by_me ?? false,
-        firstCompleter: apiBundle.first_completer ?? null,
+        firstCompleter: adaptFirstCompleter(apiBundle.first_completer),
     };
 }
 
@@ -444,6 +454,6 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
         ratingCount: apiMeta.rating_count ?? 0,
         completionsCount: apiMeta.completions_count ?? 0,
         isCompletedByMe: apiMeta.is_completed_by_me ?? false,
-        firstCompleter: apiMeta.first_completer ?? null,
+        firstCompleter: adaptFirstCompleter(apiMeta.first_completer),
     };
 }

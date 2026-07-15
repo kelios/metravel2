@@ -829,33 +829,6 @@ test.describe('Travel Comments', () => {
       await expect(page.getByText(commentText)).not.toBeVisible({ timeout: 15_000 });
     });
 
-    test('should not be able to edit or delete other users comments', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      const detailsLoaded = await waitForTravelDetailsReady(page)
-        .then(() => true)
-        .catch(() => false);
-      if (!detailsLoaded) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Travel details page did not finish loading; skipping ownership controls assertion.',
-        });
-        return;
-      }
-      
-      // Find a comment not created by us (if any exist)
-      const allComments = page.locator('[data-testid="comment-item"]');
-      const count = await allComments.count();
-      
-      if (count > 0) {
-        const firstComment = allComments.first();
-        
-        // Best-effort: in current UI actions control may be hidden or present depending on ownership.
-        // Ensure we don't crash if it's absent.
-        await firstComment.getByText(/действия с комментарием/i).isVisible().catch(() => false);
-        expect(true).toBe(true);
-      }
-    });
-
     test('should see comments in sidebar navigation', async ({ page }) => {
       await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
       const detailsLoaded = await waitForTravelDetailsReady(page)
@@ -1127,7 +1100,7 @@ test.describe('Travel Comments', () => {
       await scrollToCommentsSection(page);
       
       // Get initial comment count
-      const _initialCount = await page.locator('[data-testid="comment-item"]').count();
+      const initialCount = await page.locator('[data-testid="comment-item"]').count();
       
       // Simulate refresh (reload page)
       await page.reload();
@@ -1135,7 +1108,7 @@ test.describe('Travel Comments', () => {
       
       // Verify comments are still visible
       const newCount = await page.locator('[data-testid="comment-item"]').count();
-      expect(newCount).toBeGreaterThanOrEqual(0);
+      expect(newCount).toBe(initialCount);
     });
   });
 

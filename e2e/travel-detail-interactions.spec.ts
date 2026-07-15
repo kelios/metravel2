@@ -117,33 +117,6 @@ test.describe('Travel Details - Media Content', () => {
 });
 
 /**
- * TC-TRAVEL-DETAIL-013: Кнопка "Редактировать" для автора (P1)
- */
-test.describe('Travel Details - Author Actions', () => {
-  test('TC-013: кнопка редактирования видна для авторизованного пользователя', async ({
-    page,
-  }) => {
-    if (!(await goToDetails(page))) return;
-
-    // Ищем кнопку редактирования
-    const editButton = page.locator('button:has-text("Редактировать"), a:has-text("Редактировать")');
-    const editButtonAlt = page.locator('[aria-label*="Редактировать"], [title*="Редактировать"]');
-
-    const hasEditButton =
-      (await editButton.count()) > 0 || (await editButtonAlt.count()) > 0;
-
-    // Кнопка может быть не видна для неавторизованных пользователей
-    test.info().annotations.push({
-      type: 'note',
-      description: `Edit button visible: ${hasEditButton}`,
-    });
-
-    // Это не критичная проверка, так как зависит от авторизации
-    expect(true).toBe(true);
-  });
-});
-
-/**
  * TC-TRAVEL-DETAIL-028: Экспорт путешествия в PDF (P3)
  */
 test.describe('Travel Details - Export Features', () => {
@@ -275,44 +248,6 @@ test.describe('Travel Details - Moderation Status', () => {
 
     // Страница должна быть доступна в любом случае
     await expect(page.locator('body')).toBeVisible();
-  });
-});
-
-/**
- * Дополнительные проверки: Telegram и CTA кнопки
- */
-test.describe('Travel Details - Engagement Elements', () => {
-  test('элементы вовлечения (Telegram, CTA) отображаются', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
-
-    // Прокручиваем вниз для загрузки футера
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForLoadState('networkidle').catch(() => null);
-
-    // Проверяем наличие Telegram элемента
-    const telegramElement = page.locator('[testid="travel-details-telegram"]');
-    const hasTelegram = await telegramElement.isVisible().catch(() => false);
-
-    if (hasTelegram) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Telegram engagement element found',
-      });
-    }
-
-    // Проверяем наличие CTA элемента
-    const ctaElement = page.locator('[testid="travel-details-cta"]');
-    const hasCta = await ctaElement.isVisible().catch(() => false);
-
-    if (hasCta) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'CTA engagement element found',
-      });
-    }
-
-    // Это опциональные элементы
-    expect(true).toBe(true);
   });
 });
 

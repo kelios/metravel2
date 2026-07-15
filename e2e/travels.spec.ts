@@ -233,7 +233,7 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
       await pointsSection.scrollIntoViewIfNeeded().catch(() => null);
 
       const pointCards = await page.locator('[data-testid^="travel-point-card-"]').count();
-      expect(pointCards).toBeGreaterThanOrEqual(0);
+      expect(pointCards).toBeGreaterThan(0);
     });
   });
 

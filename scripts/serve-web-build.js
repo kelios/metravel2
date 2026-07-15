@@ -161,7 +161,7 @@ const resolveApiProxyTarget = () => {
 }
 const apiProxyTarget = resolveApiProxyTarget()
 const allowInsecureProxy = String(process.env.E2E_API_PROXY_INSECURE || '').toLowerCase() === 'true'
-const proxyPaths = ['/api/', '/api', '/travel-image/', '/address-image/', '/gallery/', '/uploads/', '/media/']
+const proxyPaths = ['/api/', '/api', '/travel-image/', '/address-image/', '/quest-cover/', '/avatar/', '/gallery/', '/uploads/', '/media/']
 // Default timeout is intentionally generous: in CI/local E2E the upstream can be slow,
 // and we prefer test stability over aggressively failing long requests.
 const proxyTimeoutMs = Number(process.env.E2E_API_PROXY_TIMEOUT_MS || '60000')

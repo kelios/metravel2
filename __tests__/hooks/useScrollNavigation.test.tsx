@@ -205,14 +205,12 @@ describe('useScrollNavigation', () => {
     jest.useFakeTimers();
     const { result } = renderHook(() => useScrollNavigation());
 
-    // Не устанавливаем scrollRef и anchor явно
-    act(() => {
-      result.current.scrollTo('non-existing');
-      jest.runOnlyPendingTimers();
-    });
-
-    // Отсутствие ошибок уже достаточно; поведение "ничего не делать"
-    expect(true).toBe(true);
+    expect(() => {
+      act(() => {
+        result.current.scrollTo('non-existing');
+        jest.runOnlyPendingTimers();
+      });
+    }).not.toThrow();
     jest.useRealTimers();
   });
 });

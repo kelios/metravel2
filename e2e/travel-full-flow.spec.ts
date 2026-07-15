@@ -155,7 +155,7 @@ test.describe('Travel full flow (API seed + UI verify)', () => {
       await expect(page.locator('text=Хочу поехать').first()).toBeVisible({ timeout: 30_000 });
       await expect(page.locator(`text=${initialName}`).first()).toBeVisible({ timeout: 30_000 });
 
-      await page.goto(`/travel/edit/${travelId}`, { waitUntil: 'domcontentloaded' });
+      await page.goto(`/travel/${travelId}`, { waitUntil: 'domcontentloaded' });
 
       const authGate = page.getByText('Войдите, чтобы создать путешествие', { exact: true });
       expect(await authGate.isVisible().catch(() => false), 'Edit page requires auth but storageState is anonymous').toBeFalsy();

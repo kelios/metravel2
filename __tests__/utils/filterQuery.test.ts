@@ -21,6 +21,15 @@ describe('buildTravelQueryParams', () => {
     expect(params.countries).toEqual([3, 20])
   })
 
+  it('drops empty numeric filter values instead of converting them to zero', () => {
+    const params = buildTravelQueryParams(
+      { countries: ['', '  ', null, undefined, '3'] },
+      {},
+    )
+
+    expect(params.countries).toEqual([3])
+  })
+
   it('includes drafts by default for personal /metravel area', () => {
     const params = buildTravelQueryParams(
       {},

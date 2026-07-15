@@ -128,16 +128,6 @@ describe('ImageProcessor', () => {
       expect(result).toBeTruthy();
     });
 
-    it('не кэширует когда cacheEnabled = false', async () => {
-      const noCacheConfig = { ...config, cacheEnabled: false };
-      const noCacheProcessor = new ImageProcessor(noCacheConfig);
-
-      const url = 'https://example.com/image.jpg';
-      await noCacheProcessor.processUrl(url);
-      await noCacheProcessor.processUrl(url);
-
-      expect(true).toBe(true);
-    });
   });
 
   describe('error handling', () => {
@@ -155,4 +145,3 @@ describe('ImageProcessor', () => {
     });
   });
 });
-

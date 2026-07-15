@@ -23,6 +23,18 @@ describe('normalizeMediaUrl', () => {
     expect(normalizeMediaUrl(url)).toBe(url);
   });
 
+  it('rewrites private absolute media URLs through the configured API origin', () => {
+    const original = process.env.EXPO_PUBLIC_API_URL;
+    process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api';
+    try {
+      expect(
+        normalizeMediaUrl('http://192.168.50.36/quest-cover/quests/8/main/cover.png?version=2'),
+      ).toBe('https://metravel.by/quest-cover/quests/8/main/cover.png?version=2');
+    } finally {
+      process.env.EXPO_PUBLIC_API_URL = original;
+    }
+  });
+
   it('fixes malformed double-host absolute URLs', () => {
     const url =
       'http://192.168.50.36https://metravellocal.s3.amazonaws.com/quests/5/poster/video.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=test';

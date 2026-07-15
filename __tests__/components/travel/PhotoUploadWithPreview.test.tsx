@@ -79,25 +79,25 @@ describe('PhotoUploadWithPreview', () => {
 
         it('should display placeholder text when provided', () => {
             const customPlaceholder = 'Перетащите фото точки маршрута';
-            render(
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+            const screen = render(
                 <PhotoUploadWithPreview
                     {...defaultProps}
                     placeholder={customPlaceholder}
                 />
             );
-            // Placeholder is used in dropzone on web
-            expect(true).toBeTruthy();
+            expect(screen.getByText(customPlaceholder)).toBeTruthy();
         });
 
         it('should show existing image when oldImage is provided', async () => {
             const oldImageUrl = 'https://example.com/image.jpg';
-            render(
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+            const screen = render(
                 <PhotoUploadWithPreview {...defaultProps} oldImage={oldImageUrl} />
             );
-            
+
             await waitFor(() => {
-                // Image should be displayed
-                expect(true).toBeTruthy();
+                expect(getWebPreviewImg(screen).props.src).toBe(oldImageUrl);
             });
         });
 

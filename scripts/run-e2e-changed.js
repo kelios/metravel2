@@ -1,4 +1,6 @@
 const { spawnSync } = require('child_process')
+const fs = require('fs')
+const path = require('path')
 const { readChangedFilesWithMeta } = require('./changed-files-utils')
 const { resolveChangedFilesInput } = require('./run-local-selective-checks')
 
@@ -49,7 +51,7 @@ const E2E_CATEGORY_DEFINITIONS = [
     ],
     specs: [
       'e2e/map-page.spec.ts',
-      'e2e/integration-core-flows.spec.ts',
+      'e2e/points-map-popup.spec.ts',
     ],
   },
   {
@@ -79,9 +81,129 @@ const E2E_CATEGORY_DEFINITIONS = [
       'e2e/messages.spec.ts',
     ],
   },
+  {
+    name: 'quests',
+    patterns: [
+      /^app\/\(tabs\)\/quests(?:\/|\.)/,
+      /^components\/quests\//,
+      /^hooks\/useQuest/,
+      /^api\/quests?\./,
+      /^utils\/quest/,
+    ],
+    specs: [
+      'e2e/quests-list-detail.spec.ts',
+      'e2e/quest-reviews-reader.spec.ts',
+    ],
+  },
+  {
+    name: 'places',
+    patterns: [
+      /^app\/\(tabs\)\/places(?:\/|\.)/,
+      /^components\/places\//,
+      /^api\/places?\./,
+      /^hooks\/usePlaces?/,
+    ],
+    specs: [
+      'e2e/places.spec.ts',
+    ],
+  },
+  {
+    name: 'articles',
+    patterns: [
+      /^app\/\(tabs\)\/articles?(?:\/|\.)/,
+      /^components\/Article/,
+      /^components\/article\//,
+      /^api\/articles?\./,
+    ],
+    specs: [
+      'e2e/article-anchor-scroll.spec.ts',
+      'e2e/article-editor-browser-actions.spec.ts',
+    ],
+  },
+  {
+    name: 'calendar',
+    patterns: [
+      /^app\/\(tabs\)\/calendar(?:\/|\.)/,
+      /^components\/calendar\//,
+      /^api\/calendar/,
+      /^stores\/calendar/,
+    ],
+    specs: [
+      'e2e/calendar.spec.ts',
+      'e2e/calendarVisitedPlacement.spec.ts',
+    ],
+  },
+  {
+    name: 'trips',
+    patterns: [
+      /^app\/\(tabs\)\/trips(?:\/|\.)/,
+      /^components\/trips\//,
+      /^api\/trips?\./,
+      /^stores\/trips?/,
+    ],
+    specs: [
+      'e2e/planned-trips.spec.ts',
+      'e2e/public-trips.spec.ts',
+    ],
+  },
+  {
+    name: 'roulette',
+    patterns: [
+      /^app\/\(tabs\)\/roulette\.tsx$/,
+      /^components\/roulette\//,
+      /^hooks\/useRoulette/,
+    ],
+    specs: [
+      'e2e/roulette.spec.ts',
+    ],
+  },
+  {
+    name: 'export',
+    patterns: [
+      /^app\/\(tabs\)\/export(?:\/|\.)/,
+      /^components\/export\//,
+      /^hooks\/usePdfExport/,
+      /^services\/pdf/,
+    ],
+    specs: [
+      'e2e/travel-share.spec.ts',
+    ],
+  },
+  {
+    name: 'i18n-security',
+    patterns: [
+      /^i18n\//,
+      /^components\/settings\//,
+      /^utils\/(?:externalLinks|sanitize|security)/,
+      /^app\/(?:privacy|terms|about)/,
+    ],
+    specs: [
+      'e2e/mobile-dark-theme.spec.ts',
+      'e2e/public-regressions.spec.ts',
+      'e2e/trust-safety.spec.ts',
+    ],
+  },
 ]
 
-const ALL_E2E_SPECS = [...new Set(E2E_CATEGORY_DEFINITIONS.flatMap((category) => category.specs))].sort()
+const E2E_INFRASTRUCTURE_PATTERNS = [
+  /^playwright\.config\.ts$/,
+  /^e2e\/global-setup\.ts$/,
+  /^e2e\/fixtures\.ts$/,
+  /^e2e\/helpers\//,
+  /^scripts\/(?:e2e-run|e2e-webserver|run-e2e-changed|serve-web-build)\.js$/,
+]
+
+const discoverRegressionSpecs = () => {
+  const e2eDir = path.resolve(__dirname, '..', 'e2e')
+  return fs.readdirSync(e2eDir)
+    .filter((fileName) => fileName.endsWith('.spec.ts'))
+    .filter((fileName) => !fileName.startsWith('_'))
+    .filter((fileName) => fileName !== 'prod-media-smoke.spec.ts')
+    .map((fileName) => `e2e/${fileName}`)
+    .sort()
+}
+
+const ALL_E2E_SPECS = discoverRegressionSpecs()
 
 const parseArgs = (argv) => {
   const out = {
@@ -129,13 +251,21 @@ const getMatchedCategories = (changedFiles, { forceAll = false } = {}) => {
 const getSpecsForChangedFiles = (changedFiles, { forceAll = false } = {}) => {
   if (forceAll) return ALL_E2E_SPECS
 
+  const files = Array.isArray(changedFiles) ? changedFiles : []
+  if (E2E_INFRASTRUCTURE_PATTERNS.some((pattern) => files.some((filePath) => pattern.test(filePath)))) {
+    return ALL_E2E_SPECS
+  }
+
   const matchedCategories = new Set(getMatchedCategories(changedFiles))
-  if (matchedCategories.size === 0) return []
+  const directlyChangedSpecs = files.filter((filePath) => /^e2e\/[^/]+\.spec\.ts$/.test(filePath))
 
   return [...new Set(
-    E2E_CATEGORY_DEFINITIONS
-      .filter((category) => matchedCategories.has(category.name))
-      .flatMap((category) => category.specs)
+    [
+      ...directlyChangedSpecs,
+      ...E2E_CATEGORY_DEFINITIONS
+        .filter((category) => matchedCategories.has(category.name))
+        .flatMap((category) => category.specs),
+    ]
   )].sort()
 }
 

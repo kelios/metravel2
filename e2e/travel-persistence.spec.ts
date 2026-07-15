@@ -300,7 +300,7 @@ test.describe('Travel persistence', () => {
     const routeFromRead = Array.isArray(readback?.coordsMeTravel) ? readback.coordsMeTravel : [];
     expect(routeFromRead.length).toBeGreaterThan(0);
 
-    const editUrl = `/travel/edit/${travelId}`;
+    const editUrl = `/travel/${travelId}`;
     await page.goto(editUrl, { waitUntil: 'domcontentloaded', timeout: 120_000 });
     const nameInput = page.getByPlaceholder('Например: Неделя в Грузии');
     const canOpenEditForm = await nameInput.isVisible({ timeout: 10_000 }).catch(() => false);

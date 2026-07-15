@@ -40,12 +40,21 @@ test.describe('Quests list -> detail', () => {
   test('guest can browse the quest catalog and open a quest detail', async ({ page }) => {
     const consoleErrors: string[] = []
     const pageErrors: string[] = []
+    const failedRequestPaths: string[] = []
 
     page.on('console', (msg) => {
       if (msg.type() === 'error') consoleErrors.push(msg.text())
     })
     page.on('pageerror', (err) => {
       pageErrors.push(String(err?.message ?? err))
+    })
+    page.on('requestfailed', (request) => {
+      try {
+        const url = new URL(request.url())
+        failedRequestPaths.push(`${url.origin}${url.pathname}`)
+      } catch {
+        // Keep diagnostics free of raw query strings or signed media URLs.
+      }
     })
 
     await preacceptCookies(page)
@@ -103,6 +112,9 @@ test.describe('Quests list -> detail', () => {
       return true
     })
     expect(unexpectedPageErrors, `page errors: ${pageErrors.join('\n')}`).toHaveLength(0)
-    expect(unexpectedConsoleErrors, `console errors: ${consoleErrors.join('\n')}`).toHaveLength(0)
+    expect(
+      unexpectedConsoleErrors,
+      `console errors: ${consoleErrors.join('\n')}\nfailed resources: ${[...new Set(failedRequestPaths)].join('\n')}`,
+    ).toHaveLength(0)
   })
 })

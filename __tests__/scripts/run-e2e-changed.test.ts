@@ -46,20 +46,10 @@ describe('run-e2e-changed', () => {
     expect(getSpecsForChangedFiles([], { forceAll: true })).toEqual(ALL_E2E_SPECS)
   })
 
-  it('keeps targeted e2e spec list stable', () => {
-    expect(ALL_E2E_SPECS).toEqual([
-      'e2e/auth-smoke.spec.ts',
-      'e2e/filters-sorting-ux.spec.ts',
-      'e2e/home-quick-filters-nightstay.spec.ts',
-      'e2e/integration-core-flows.spec.ts',
-      'e2e/map-page.spec.ts',
-      'e2e/messages.spec.ts',
-      'e2e/search.spec.ts',
-      'e2e/seo-travel-detail.spec.ts',
-      'e2e/subscriptions.spec.ts',
-      'e2e/travel-detail-page.spec.ts',
-      'e2e/travels.spec.ts',
-    ])
+  it('discovers the complete regression spec set without production-only probes', () => {
+    expect(ALL_E2E_SPECS.length).toBeGreaterThan(80)
+    expect(ALL_E2E_SPECS).toContain('e2e/quests-list-detail.spec.ts')
+    expect(ALL_E2E_SPECS).not.toContain('e2e/prod-media-smoke.spec.ts')
   })
 
   it('keeps targeted e2e spec list unique and resolvable', () => {
@@ -74,6 +64,32 @@ describe('run-e2e-changed', () => {
       'map',
       'account',
       'messages',
+      'quests',
+      'places',
+      'articles',
+      'calendar',
+      'trips',
+      'roulette',
+      'export',
+      'i18n-security',
+    ])
+  })
+
+  it('always selects a directly changed e2e spec', () => {
+    expect(getSpecsForChangedFiles(['e2e/quests-list-detail.spec.ts'])).toEqual([
+      'e2e/quests-list-detail.spec.ts',
+    ])
+  })
+
+  it('fans out infrastructure changes to the complete regression suite', () => {
+    expect(getSpecsForChangedFiles(['e2e/helpers/navigation.ts'])).toEqual(ALL_E2E_SPECS)
+    expect(getSpecsForChangedFiles(['playwright.config.ts'])).toEqual(ALL_E2E_SPECS)
+  })
+
+  it('maps quest source changes to quest list/detail and review contracts', () => {
+    expect(getSpecsForChangedFiles(['components/quests/QuestCard.tsx'])).toEqual([
+      'e2e/quest-reviews-reader.spec.ts',
+      'e2e/quests-list-detail.spec.ts',
     ])
   })
 

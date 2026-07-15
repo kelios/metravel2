@@ -241,8 +241,7 @@ describe('Android Dependencies Tests', () => {
 
   describe('Optional Dependencies', () => {
     it('should not require platform-specific optional dependencies', () => {
-      // Optional dependencies removed to avoid platform-specific issues
-      expect(true).toBe(true);
+      expect((packageJson as Record<string, unknown>).optionalDependencies).toBeUndefined();
     });
   });
 

@@ -260,24 +260,11 @@ export default async function globalSetup(config: FullConfig) {
   fs.mkdirSync(path.dirname(STORAGE_STATE_PATH), { recursive: true });
 
   if (!baseURL) {
-    // No baseURL — write empty state and bail.
-    const browser = await chromium.launch();
-    const context = await browser.newContext();
-    await context.storageState({ path: STORAGE_STATE_PATH });
-    await browser.close();
-    return;
+    throw new Error('Playwright baseURL is required for E2E global setup.');
   }
 
   // `webServer` can be started in parallel with `globalSetup`. Avoid flaky connection refused errors.
-  try {
-    await waitForBaseURL(baseURL, 600_000);
-  } catch {
-    const browser = await chromium.launch();
-    const context = await browser.newContext();
-    await context.storageState({ path: STORAGE_STATE_PATH });
-    await browser.close();
-    return;
-  }
+  await waitForBaseURL(baseURL, 600_000);
 
   // Account A (primary E2E account, owner).
   if (await storageStateHasValidSession(STORAGE_STATE_PATH, baseURL)) {
@@ -305,15 +292,11 @@ export default async function globalSetup(config: FullConfig) {
   if (await storageStateHasValidSession(STORAGE_STATE_B_PATH, baseURL)) {
     // Reuse existing applicant state across shards.
   } else if (emailB && passwordB) {
-    try {
-      await writeStorageStateForAccount({
-        email: emailB,
-        password: passwordB,
-        baseURL,
-        outputPath: STORAGE_STATE_B_PATH,
-      });
-    } catch {
-      // Non-fatal: B-state missing → two-account specs will skip themselves.
-    }
+    await writeStorageStateForAccount({
+      email: emailB,
+      password: passwordB,
+      baseURL,
+      outputPath: STORAGE_STATE_B_PATH,
+    });
   }
 }

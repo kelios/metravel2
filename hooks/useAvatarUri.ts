@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
+import { normalizeAvatarUrl } from '@/utils/mediaUrl';
 
 type UseAvatarUriOptions = {
   userAvatar: string | null | undefined;
@@ -96,15 +97,7 @@ export function useAvatarUri({
     const lower = raw.toLowerCase();
     if (lower === 'null' || lower === 'undefined') return null;
 
-    if (raw.startsWith('/')) {
-      const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/?api\/?$/, '');
-      if (base) return `${base}${raw}`;
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        return `${window.location.origin}${raw}`;
-      }
-    }
-
-    return raw;
+    return normalizeAvatarUrl(raw) || null;
   }, [userAvatar]);
 
   const normalizedBaseRef = useRef<string | null>(null);

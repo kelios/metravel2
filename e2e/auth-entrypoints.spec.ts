@@ -29,7 +29,7 @@ const gotoWithRetry = async (
   throw lastErr;
 };
 
-test.describe('@smoke Manual QA automation: auth entrypoints', () => {
+test.describe('@smoke Auth entrypoints', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   const getAccountAnchor = (page: any) =>

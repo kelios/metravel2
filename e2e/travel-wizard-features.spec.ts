@@ -858,10 +858,8 @@ test.describe('Группировка параметров (Шаг 5)', () => {
 
     // Проверяем начальный счетчик секции (может быть 0/10 или больше).
     const initialCounter = await sectionToggle.first().textContent();
-    const initialCount = parseInt(initialCounter?.match(/\d+/)?.[0] || '0');
 
     expect(initialCounter ?? '').toMatch(/\d+\/10/);
-    expect(initialCount).toBeGreaterThanOrEqual(0);
   });
 });
 

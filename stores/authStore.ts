@@ -10,6 +10,7 @@ import { getActiveQueryClient } from '@/api/activeQueryClient';
 import { queryKeys } from '@/api/queryKeys';
 import type { UserProfileDto } from '@/api/user';
 import { shouldUseStoredAuthToken } from '@/utils/authPlatform';
+import { normalizeAvatarUrl } from '@/utils/mediaUrl';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -51,7 +52,7 @@ const normalizeAvatar = (raw: unknown): string | null => {
     if (!str) return null;
     const lower = str.toLowerCase();
     if (lower === 'null' || lower === 'undefined') return null;
-    return str;
+    return normalizeAvatarUrl(str) || null;
 };
 
 // Roll back credentials persisted during an in-flight login that lost the

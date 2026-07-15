@@ -542,5 +542,32 @@ describe('questAdapters', () => {
       expect(result.difficulty).toBeUndefined();
       expect(result.tags).toBeUndefined();
     });
+
+    it('rewrites a private first-completer avatar through the public API origin', () => {
+      const originalApiUrl = process.env.EXPO_PUBLIC_API_URL;
+      process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api';
+
+      try {
+        const result = adaptMeta({
+          quest_id: 'q1',
+          title: 'Q',
+          points: 0,
+          city_id: 'c',
+          lat: 0,
+          lng: 0,
+          first_completer: {
+            id: 75,
+            name: 'Pioneer',
+            avatar: 'http://192.168.50.36/avatar/profile/75/avatar/example.webp',
+          },
+        } as any);
+
+        expect(result.firstCompleter?.avatar).toBe(
+          'https://metravel.by/avatar/profile/75/avatar/example.webp',
+        );
+      } finally {
+        process.env.EXPO_PUBLIC_API_URL = originalApiUrl;
+      }
+    });
   });
 });

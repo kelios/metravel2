@@ -396,9 +396,11 @@ describe('useRouting - Safety Tests', () => {
 
   describe('Cleanup and Memory Leaks', () => {
     it('cancels pending requests on unmount', async () => {
-      (global.fetch as jest.Mock).mockImplementation(
-        () => new Promise(() => {}) // Never resolves
-      );
+      let requestSignal: AbortSignal | undefined;
+      (global.fetch as jest.Mock).mockImplementation((_url, init) => {
+        requestSignal = init?.signal;
+        return new Promise(() => {}); // Never resolves
+      });
 
       const { unmount } = renderHook(() =>
         useRouting(
@@ -411,13 +413,12 @@ describe('useRouting - Safety Tests', () => {
         )
       );
 
-      // Размонтируем до завершения запроса
+      await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+      expect(requestSignal?.aborted).toBe(false);
+
       unmount();
 
-      // Проверяем, что нет ошибок
-      await waitFor(() => {
-        expect(true).toBe(true);
-      });
+      expect(requestSignal?.aborted).toBe(true);
     });
 
     it('handles rapid route changes', async () => {

@@ -1348,13 +1348,13 @@ test.describe('Создание путешествия - Полный flow', () 
     await page.goto('/metravel');
 
     // Находим первое путешествие и кликаем "Редактировать"
-    const editButton = page.locator('button:has-text("Редактировать"), a[href*="/travel/edit"]').first();
+    const editButton = page.locator('button:has-text("Редактировать"), a[href^="/travel/"]').first();
 
     if (await editButton.isVisible()) {
       await editButton.click();
 
       // Проверяем что открылся визард редактирования
-      await expect(page).toHaveURL(/\/travel\/(edit|new)/);
+      await expect(page).toHaveURL(/\/travel\/(?:new|\d+)/);
       await expect(page.getByPlaceholder('Например: Неделя в Грузии')).not.toBeEmpty();
     }
   });
@@ -1365,7 +1365,7 @@ test.describe('Создание путешествия - Полный flow', () 
       await expect(page.locator('body')).toBeVisible();
       return;
     }
-    await page.goto(`/travel/edit/${travelId}`);
+    await page.goto(`/travel/${travelId}`);
 
     // Изменяем название
     const nameInput = page.getByPlaceholder('Например: Неделя в Грузии');
@@ -1390,7 +1390,7 @@ test.describe('Создание путешествия - Полный flow', () 
       await expect(page.locator('body')).toBeVisible();
       return;
     }
-    await page.goto(`/travel/edit/${travelId}`);
+    await page.goto(`/travel/${travelId}`);
 
     // Переходим к шагу 2
     await page.click('[aria-label^="Перейти к шагу 2"]');

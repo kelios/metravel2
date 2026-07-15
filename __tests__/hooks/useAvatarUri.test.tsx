@@ -29,6 +29,26 @@ describe('useAvatarUri', () => {
     expect(result.current.avatarUri).toBe('https://lh3.googleusercontent.com/a/example=s96-c')
   })
 
+  it('routes a private backend avatar through the configured API origin', () => {
+    const originalApiUrl = process.env.EXPO_PUBLIC_API_URL
+    process.env.EXPO_PUBLIC_API_URL = 'http://127.0.0.1:8085'
+
+    try {
+      const { result } = renderHook(() =>
+        useAvatarUri({
+          userAvatar: 'http://192.168.50.36/avatar/profile/75/avatar/example.webp',
+          profileRefreshToken: 3,
+        })
+      )
+
+      expect(result.current.avatarUri).toBe(
+        'http://127.0.0.1:8085/avatar/profile/75/avatar/example.webp?v=3'
+      )
+    } finally {
+      process.env.EXPO_PUBLIC_API_URL = originalApiUrl
+    }
+  })
+
   it('stops requesting an avatar after it fails, even on profileRefreshToken bump', () => {
     const { result, rerender } = renderHook(
       ({ token }) =>

@@ -375,33 +375,6 @@ test.describe('@perf Travel Details - Image Optimization', () => {
     }
   });
 
-  test('изображения используют современные форматы', async ({ page }) => {
-    const imageFormats: { [key: string]: number } = {};
-
-    page.on('response', async (response) => {
-      if (response.request().resourceType() === 'image') {
-        const url = response.url();
-        const extension = url.split('.').pop()?.split('?')[0]?.toLowerCase();
-
-        if (extension) {
-          imageFormats[extension] = (imageFormats[extension] || 0) + 1;
-        }
-      }
-    });
-
-    if (!(await goToDetails(page))) return;
-
-    // Wait for images to load
-    await page.waitForLoadState('networkidle').catch(() => null);
-
-    test.info().annotations.push({
-      type: 'image-formats',
-      description: JSON.stringify(imageFormats),
-    });
-
-    // Это информационная проверка
-    expect(true).toBe(true);
-  });
 });
 
 /**

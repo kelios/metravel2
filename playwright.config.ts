@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
+const { PRODUCTION_SMOKE_SUITE, resolveE2ETargets } = require('./scripts/e2e-target-safety');
+
 function clearColorEnv() {
   if (Object.prototype.hasOwnProperty.call(process.env, 'NO_COLOR')) {
     delete process.env.NO_COLOR;
@@ -48,11 +50,10 @@ const baseURL = process.env.BASE_URL || `http://127.0.0.1:${E2E_WEB_PORT}`;
 const USE_EXISTING_SERVER = process.env.E2E_NO_WEBSERVER === '1' && !!process.env.BASE_URL;
 const webServerEnv = { ...process.env } as Record<string, string | undefined>;
 
-// For local E2E we hardcode dev API by default to avoid env drift.
-// Override with E2E_API_URL or switch to real API by setting E2E_USE_REAL_API=1.
-// If E2E_API_URL is explicitly provided, use it. Otherwise let the webserver proxy default
-// to production (see scripts/serve-web-build.js defaults to https://metravel.by).
-const E2E_API_URL = process.env.E2E_API_URL || '';
+// Regression E2E is fail-closed: an omitted target means the local backend, never production.
+// Production checks are a separate, read-only suite with an explicit opt-in.
+const resolvedTargets = resolveE2ETargets({ ...process.env, BASE_URL: baseURL });
+const E2E_API_URL = resolvedTargets.apiUrl;
 
 // ---------------------------------------------------------------------------
 // Test strategy (controlled via E2E_SUITE env var or --grep):
@@ -65,6 +66,7 @@ const grepForSuite: Record<string, RegExp | undefined> = {
   smoke: /@smoke/,
   perf: /@perf/,
 };
+const productionSmokeSpecs = ['prod-media-smoke.spec.ts', 'public-regressions.spec.ts'];
 
 const hasPlaywrightCore = (() => {
   try {
@@ -89,10 +91,12 @@ const reporter: Array<['list'] | ['html', { open: 'never' }] | ['json', { output
 export default defineConfig({
   globalTimeout: 3_600_000,
   testDir: './e2e',
+  forbidOnly: true,
   fullyParallel: true,
   timeout: 120_000,
   workers: process.env.CI ? 2 : '50%',
   ...(grepForSuite[E2E_SUITE] ? { grep: grepForSuite[E2E_SUITE] } : {}),
+  ...(E2E_SUITE === PRODUCTION_SMOKE_SUITE ? { testMatch: productionSmokeSpecs } : {}),
   globalSetup: './e2e/global-setup.ts',
   webServer: USE_EXISTING_SERVER
     ? undefined
@@ -107,15 +111,11 @@ export default defineConfig({
           ...webServerEnv,
           E2E_WEB_PORT: String(E2E_WEB_PORT),
           E2E_API_PROXY_INSECURE: process.env.E2E_API_PROXY_INSECURE || 'true',
-          ...(E2E_API_URL ? { E2E_API_PROXY_TARGET: E2E_API_URL } : null),
+          E2E_API_PROXY_TARGET: E2E_API_URL,
           EXPO_PUBLIC_E2E: 'true',
           EXPO_PUBLIC_IS_LOCAL_API: 'false',
-          ...(E2E_API_URL
-            ? {
-                EXPO_PUBLIC_API_URL: E2E_API_URL,
-                EXPO_PUBLIC_IS_LOCAL_API: 'false',
-              }
-            : null),
+          EXPO_PUBLIC_API_URL: E2E_API_URL,
+          EXPO_PUBLIC_IS_LOCAL_API: 'true',
           NODE_OPTIONS: process.env.NODE_OPTIONS || '--max-old-space-size=8192',
         },
       },

@@ -4,6 +4,9 @@ import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/api/misc';
 
+const mockWebViewPostMessage = jest.fn();
+let mockIsAuthenticated = true;
+
 // Mock WebView
 jest.mock('react-native-webview', () => {
   const React = require('react');
@@ -12,7 +15,7 @@ jest.mock('react-native-webview', () => {
   return {
     WebView: React.forwardRef((props: any, ref: any) => {
       React.useImperativeHandle(ref, () => ({
-        postMessage: jest.fn(),
+        postMessage: mockWebViewPostMessage,
       }));
       
       return React.createElement(View, {
@@ -49,7 +52,7 @@ jest.mock('@/api/misc', () => ({
 
 // Mock AuthContext
 jest.mock('@/context/AuthContext', () => ({
-  useAuth: () => ({ isAuthenticated: true }),
+  useAuth: () => ({ isAuthenticated: mockIsAuthenticated }),
 }));
 
 describe('ArticleEditor.ios Component', () => {
@@ -66,6 +69,7 @@ describe('ArticleEditor.ios Component', () => {
     jest.restoreAllMocks();
     jest.spyOn(Alert, 'alert');
     jest.clearAllMocks();
+    mockIsAuthenticated = true;
     jest.useRealTimers();
     jest.clearAllTimers();
   });
@@ -262,23 +266,7 @@ describe('ArticleEditor.ios Component', () => {
     jest.useRealTimers();
   });
 
-  it('should request permission before opening image picker', async () => {
-    const { unmount } = renderComponent();
-    
-    // Basic test - component renders without crashing
-    expect(true).toBe(true);
-    unmount();
-  });
-
-  it('should upload image when selected', async () => {
-    const { unmount } = renderComponent();
-    
-    // Basic test - component renders without crashing
-    expect(true).toBe(true);
-    unmount();
-  });
-
-  it('should upload image when WebView requests toolbar image upload', async () => {
+  it('should request permission and upload an image when WebView requests it', async () => {
     const { getByTestId } = renderComponent();
     const webView = getByTestId('editor-webview');
 
@@ -290,37 +278,77 @@ describe('ArticleEditor.ios Component', () => {
 
     await waitFor(() => {
       expect(ImagePicker.requestMediaLibraryPermissionsAsync as jest.Mock).toHaveBeenCalled();
+      expect(ImagePicker.launchImageLibraryAsync as jest.Mock).toHaveBeenCalledWith({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
       expect(uploadImage as jest.Mock).toHaveBeenCalled();
+      expect(mockWebViewPostMessage).toHaveBeenCalledWith(JSON.stringify({
+        type: 'insert-image',
+        url: 'https://example.com/uploaded.jpg',
+      }));
     });
   });
 
   it('should show alert when not authenticated', async () => {
-    // Mock unauthenticated state
-    jest.spyOn(require('@/context/AuthContext'), 'useAuth').mockReturnValue({
-      isAuthenticated: false,
+    mockIsAuthenticated = false;
+    const { getByTestId } = renderComponent();
+
+    fireEvent(getByTestId('editor-webview'), 'message', {
+      nativeEvent: {
+        data: JSON.stringify({ type: 'request-image-upload' }),
+      },
     });
 
-    const { unmount } = renderComponent();
-    
-    // Basic test - component renders without crashing
-    expect(true).toBe(true);
-    unmount();
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledTimes(1);
+      expect(ImagePicker.requestMediaLibraryPermissionsAsync as jest.Mock).not.toHaveBeenCalled();
+      expect(uploadImage as jest.Mock).not.toHaveBeenCalled();
+    });
   });
 
   it('should handle permission denial gracefully', async () => {
-    const { unmount } = renderComponent();
-    
-    // Basic test - component renders without crashing
-    expect(true).toBe(true);
-    unmount();
+    (ImagePicker.requestMediaLibraryPermissionsAsync as jest.Mock).mockResolvedValueOnce({
+      status: 'denied',
+      granted: false,
+      canAskAgain: true,
+      expires: 'never',
+    });
+    const { getByTestId } = renderComponent();
+
+    fireEvent(getByTestId('editor-webview'), 'message', {
+      nativeEvent: {
+        data: JSON.stringify({ type: 'request-image-upload' }),
+      },
+    });
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledTimes(1);
+      expect(ImagePicker.launchImageLibraryAsync as jest.Mock).not.toHaveBeenCalled();
+      expect(uploadImage as jest.Mock).not.toHaveBeenCalled();
+    });
   });
 
   it('should handle upload error gracefully', async () => {
-    const { unmount } = renderComponent();
-    
-    // Basic test - component renders without crashing
-    expect(true).toBe(true);
-    unmount();
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    (uploadImage as jest.Mock).mockRejectedValueOnce(new Error('upload failed'));
+    const { getByTestId } = renderComponent();
+
+    fireEvent(getByTestId('editor-webview'), 'message', {
+      nativeEvent: {
+        data: JSON.stringify({ type: 'request-image-upload' }),
+      },
+    });
+
+    await waitFor(() => {
+      expect(uploadImage as jest.Mock).toHaveBeenCalledTimes(1);
+      expect(Alert.alert).toHaveBeenCalledTimes(1);
+      expect(mockWebViewPostMessage).not.toHaveBeenCalledWith(
+        expect.stringContaining('insert-image'),
+      );
+    });
+    errorSpy.mockRestore();
   });
 
   // Regression test for text deletion issue
@@ -422,6 +450,7 @@ describe('ArticleEditor.ios Component', () => {
         data: JSON.stringify({ type: 'ready' }),
       },
     });
+    mockWebViewPostMessage.mockClear();
     
     // User starts typing
     fireEvent(webView, 'message', {
@@ -442,13 +471,12 @@ describe('ArticleEditor.ios Component', () => {
       />
     );
     
-    // User's content should be preserved
     jest.advanceTimersByTime(100);
-    
-    // Check that webView.postMessage was not called to overwrite user's content
-    // The user's typing should take precedence
-    expect(true).toBe(true); // Component doesn't crash
-    
+
+    expect(mockWebViewPostMessage).not.toHaveBeenCalledWith(
+      expect.stringContaining('set-content'),
+    );
+
     jest.useRealTimers();
   });
 

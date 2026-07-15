@@ -33,6 +33,7 @@ export const normalizeNumericArray = (values: any): number[] => {
   if (!Array.isArray(values)) return []
 
   const normalized = values
+    .filter((item) => !isEmptyValue(item))
     .map((item) => (typeof item === 'number' ? item : Number(String(item).trim())))
     .filter((item) => Number.isFinite(item))
 

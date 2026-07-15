@@ -91,16 +91,35 @@ export const normalizeMediaUrl = (url?: string | null): string => {
   // Data/blob stay as-is
   if (/^(data:|blob:)/i.test(safeUrl)) return safeUrl;
 
-  // Absolute URLs stay as-is.
-  if (/^https?:\/\//i.test(safeUrl)) return safeUrl;
-
-  // Relative URLs: prefix with backend host (without /api)
   const baseRaw =
     process.env.EXPO_PUBLIC_API_URL ||
     (typeof window !== 'undefined' ? window.location.origin : '');
 
   const hostWithoutApi = baseRaw.replace(/\/+$/, '').replace(/\/api$/i, '');
   const prefix = hostWithoutApi || baseRaw.replace(/\/+$/, '');
+
+  // Backend serializers can accidentally expose their private media origin.
+  // Route those paths through the configured public/API origin instead of
+  // asking the browser to reach a LAN address directly.
+  if (/^https?:\/\//i.test(safeUrl)) {
+    try {
+      const sourceUrl = new URL(safeUrl);
+      if (prefix && isPrivateOrLocalHost(sourceUrl.hostname)) {
+        const targetOrigin = new URL(prefix).origin;
+        if (targetOrigin && targetOrigin !== sourceUrl.origin) {
+          return new URL(
+            `${sourceUrl.pathname}${sourceUrl.search}${sourceUrl.hash}`,
+            `${targetOrigin}/`,
+          ).toString();
+        }
+      }
+    } catch {
+      return safeUrl;
+    }
+    return safeUrl;
+  }
+
+  // Relative URLs: prefix with backend host (without /api)
 
   if (prefix) {
     return `${prefix}${safeUrl.startsWith('/') ? '' : '/'}${safeUrl}`;

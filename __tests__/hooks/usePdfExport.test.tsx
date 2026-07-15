@@ -214,18 +214,19 @@ describe('usePdfExport', () => {
   });
 
   describe('Конфигурация', () => {
-    it('должен использовать переданную конфигурацию', () => {
-      const config = {
-        maxRetries: 5,
-        imageLoadTimeout: 20000,
-        batchSize: 10,
-      };
+    it('ограничивает повторы загрузки деталей через maxRetries', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      mockFetchTravel.mockRejectedValue(new Error('details unavailable'));
 
-      renderHook(() => usePdfExport(mockTravels, config));
+      const { result } = renderHook(() => usePdfExport(mockTravels, { maxRetries: 0 }));
 
-      // Конфигурация должна быть передана в сервис
-      // (проверка через мок)
-      expect(true).toBe(true); // Placeholder - реальная проверка требует доступа к внутренностям
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(mockFetchTravel).toHaveBeenCalledTimes(1);
+      expect(mockGenerateTravelsHtml).toHaveBeenCalledTimes(1);
+      warnSpy.mockRestore();
     });
   });
 
