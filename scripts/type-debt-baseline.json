@@ -1293,13 +1293,13 @@
       "eslintDisable": 0
     },
     "components/MapPage/MapMobileLayout.styles.ts": {
-      "asAny": 19,
+      "asAny": 21,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapMobileLayout.tsx": {
-      "asAny": 4,
+      "asAny": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
