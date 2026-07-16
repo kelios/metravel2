@@ -19,6 +19,10 @@ jest.mock('@/api/quests', () => ({
   fetchQuestByQuestId: jest.fn(),
 }));
 
+jest.mock('@/hooks/useQuestsApi', () => ({
+  useQuestsList: jest.fn(() => ({ quests: [], cityQuestsIndex: {}, loading: false, error: null })),
+}));
+
 jest.mock('@/api/plannedTrips', () => ({
   fetchPlannedTrip: jest.fn(),
 }));
@@ -224,6 +228,45 @@ describe('useBreadcrumbModel', () => {
       { label: 'Мои точки', path: '/userpoints' },
     ]);
     expect(result.current.currentTitle).toBe('Мои точки');
+  });
+
+  it('uses the localized city name, not the raw URL segment, for /quests city landing', async () => {
+    const { useQuestsList } = jest.requireMock('@/hooks/useQuestsApi') as { useQuestsList: jest.Mock };
+    useQuestsList.mockReturnValue({
+      // adaptMeta maps quest_id → id, so the alias («minsk») is derived from this slug.
+      quests: [{ id: 'minsk-center-dragon', cityId: '4', cityName: 'Минск', title: 'Квест по центру Минска' }],
+      cityQuestsIndex: {},
+      loading: false,
+      error: null,
+    });
+    usePathname.mockReturnValue('/quests/minsk');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.currentTitle).toBe('Минск');
+    });
+
+    expect(result.current.showBreadcrumbs).toBe(true);
+    expect(result.current.backToPath).toBe('/quests');
+    expect(result.current.items).toEqual([
+      { label: 'Квесты', path: '/quests' },
+      { label: 'Минск', path: '/quests/minsk' },
+    ]);
+  });
+
+  it('falls back to the segment for a city landing whose quests are not loaded yet', async () => {
+    const { useQuestsList } = jest.requireMock('@/hooks/useQuestsApi') as { useQuestsList: jest.Mock };
+    useQuestsList.mockReturnValue({ quests: [], cityQuestsIndex: {}, loading: true, error: null });
+    usePathname.mockReturnValue('/quests/minsk');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.currentTitle).toBe('Minsk');
+    });
   });
 
   it('uses planned trip title for /trips/plan detail breadcrumbs', async () => {

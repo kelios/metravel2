@@ -8,6 +8,8 @@ import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles';
 import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
 import { fetchQuestByQuestId, type ApiQuestBundle } from '@/api/quests';
+import { useQuestsList } from '@/hooks/useQuestsApi';
+import { resolveQuestCitySegment } from '@/utils/questCityAlias';
 import { fetchUserProfile, resolveProfileFullName, type UserProfileDto } from '@/api/user';
 import { fetchPlannedTrip, type PlannedTrip } from '@/api/plannedTrips';
 import { fetchPublicTrip, type PublicTrip } from '@/api/publicTrips';
@@ -281,6 +283,25 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   });
   const questApiTitle = questApiData?.title || '';
 
+  // City landing /quests/<cityId|alias>: the crumb must show the localized city
+  // name («Минск»), not the titleized URL segment («Minsk»). Shares the quests
+  // list query with the screen itself, so this costs no extra request.
+  const questCitySegment = useMemo(() => {
+    const p = resolvedPathname;
+    if (!p || !p.startsWith('/quests/')) return null;
+    const parts = p.split('/').filter(Boolean);
+    return parts.length === 2 ? parts[1] : null;
+  }, [resolvedPathname]);
+
+  const { quests: questsForCityCrumb } = useQuestsList({ enabled: !!questCitySegment });
+
+  const questCityName = useMemo(() => {
+    if (!questCitySegment) return '';
+    const resolved = resolveQuestCitySegment(questCitySegment, questsForCityCrumb);
+    if (!resolved) return '';
+    return questsForCityCrumb.find((q) => q.cityId === resolved.cityId)?.cityName || '';
+  }, [questCitySegment, questsForCityCrumb]);
+
   // Article title from API (for header/breadcrumbs on /article/[id] pages — F-19)
   const articleParamForBreadcrumb = useMemo(() => {
     const p = resolvedPathname;
@@ -552,6 +573,24 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       };
     }
 
+    const isQuestCityLanding = p.startsWith('/quests/') && parts.length === 2;
+    if (isQuestCityLanding) {
+      const cityLabel = truncateLabel(questCityName || toTitleFromSegment(parts[1]));
+      const items = [
+        { label: i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10'), path: '/quests' },
+        { label: cityLabel, path: p },
+      ];
+
+      return {
+        items,
+        depth: items.length + 1,
+        currentTitle: cityLabel,
+        pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10'),
+        backToPath: '/quests',
+        showBreadcrumbs: true,
+      };
+    }
+
     const isQuestDetails = p.startsWith('/quests/') && parts.length >= 3;
     if (isQuestDetails) {
       const questSlug = parts[2];
@@ -619,7 +658,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [resolvedPathname, normalizedReturnToParam, travelData, travelSlug, questApiTitle, userProfileName, articleTitle, plannedTripData, publicTripData]);
+  }, [resolvedPathname, normalizedReturnToParam, travelData, travelSlug, questApiTitle, questCityName, userProfileName, articleTitle, plannedTripData, publicTripData]);
 }
 
 export default useBreadcrumbModel;
