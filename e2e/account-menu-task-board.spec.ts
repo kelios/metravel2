@@ -53,6 +53,21 @@ const menuAction = (page: any, name: string) =>
 
 const taskBoardItem = (page: any) => menuAction(page, 'Борд задач')
 
+const expectCompactAccountMenu = async (menu: any) => {
+  const layout = await menu.evaluate((element: HTMLElement) => {
+    const rect = element.getBoundingClientRect()
+    return {
+      bottom: rect.bottom,
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      viewportHeight: window.innerHeight,
+    }
+  })
+
+  expect(layout.bottom).toBeLessThanOrEqual(layout.viewportHeight - 7)
+  expect(layout.scrollHeight).toBeLessThanOrEqual(layout.clientHeight + 1)
+}
+
 test.describe('@smoke AccountMenu: task-board item visibility', () => {
   test('superuser sees the task-board item', async ({ page }) => {
     await ensureAuthedStorageFallback(page, { isSuperuser: true })
@@ -62,11 +77,19 @@ test.describe('@smoke AccountMenu: task-board item visibility', () => {
     await preacceptCookies(page)
     await gotoWithRetry(page, '/', { waitUntil: 'domcontentloaded', timeout: 60_000, attempts: 4 })
 
-    await openAccountMenu(page)
+    const menu = await openAccountMenu(page)
 
     await expect(taskBoardItem(page)).toBeVisible({ timeout: 10_000 })
     // sanity: regular account items are present too
     await expect(menuAction(page, 'Выход')).toBeVisible()
+    await expectCompactAccountMenu(menu)
+
+    // Web sections behave as an accordion: opening travels keeps the panel
+    // compact and replaces the account links instead of stacking both groups.
+    await menuAction(page, 'Путешествия').click()
+    await expect(menu.getByRole('link', { name: 'Добавить путешествие', exact: true })).toBeVisible()
+    await expect(taskBoardItem(page)).toHaveCount(0)
+    await expectCompactAccountMenu(menu)
   })
 
   test('regular authenticated user does NOT see the task-board item', async ({ page }) => {

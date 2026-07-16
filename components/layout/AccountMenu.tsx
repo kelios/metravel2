@@ -37,6 +37,14 @@ type AccountMenuProps = {
   initialOpenKey?: number
 }
 
+type ExpandedSections = {
+  navigation: boolean
+  travels: boolean
+  account: boolean
+  theme: boolean
+  documents: boolean
+}
+
 type MenuLinkItem = {
   key: string
   title: string
@@ -86,6 +94,10 @@ const wrapperStyles = StyleSheet.create({
   menuLink: {
     flexDirection: 'row',
     alignItems: 'center',
+    // menuItem centers along the main axis for vertical alignment in its default
+    // column direction; in this row direction that would center icon+label
+    // horizontally, so pin the row to the left edge.
+    justifyContent: 'flex-start',
     gap: 12,
     paddingHorizontal: 12,
   },
@@ -185,9 +197,12 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
   const { count: unreadCount } = useDeferredUnreadCount(isAuthenticated && visible, visible)
   const lastHandledInitialOpenKeyRef = useRef(shouldOpenInitially ? initialOpenKey : 0)
 
-  const [expandedSections, setExpandedSections] = useState({
-    navigation: true,
-    travels: true,
+  const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
+    // The authenticated web menu now has enough destinations that opening all
+    // primary sections exceeds the panel's viewport limit. Keep one section open
+    // there; native retains its existing expanded state.
+    navigation: !IS_WEB,
+    travels: !IS_WEB,
     account: true,
     theme: false,
     documents: false,
@@ -208,8 +223,20 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
     setVisible(true)
   }, [initialOpenKey])
 
-  const toggleSection = useCallback((section: keyof typeof expandedSections) => {
-    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }))
+  const toggleSection = useCallback((section: keyof ExpandedSections) => {
+    setExpandedSections((prev) => {
+      if (!IS_WEB) return { ...prev, [section]: !prev[section] }
+
+      const nextExpanded = !prev[section]
+      return {
+        navigation: false,
+        travels: false,
+        account: false,
+        theme: false,
+        documents: false,
+        [section]: nextExpanded,
+      }
+    })
   }, [])
 
   const navigate = useCallback(
