@@ -146,8 +146,8 @@ for (const target of PAGES) {
         TBT_MAX_MS,
       )
       expect(
-        metrics.clsAfterReady,
-        `${target.name} post-ready CLS ${metrics.clsAfterReady.toFixed(4)} > ${CLS_MAX} (total=${metrics.cls.toFixed(
+        metrics.cls,
+        `${target.name} total CLS ${metrics.cls.toFixed(4)} > ${CLS_MAX} (post-ready=${metrics.clsAfterReady.toFixed(
           4,
         )})`,
       ).toBeLessThanOrEqual(CLS_MAX)

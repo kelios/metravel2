@@ -705,6 +705,13 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             fontWeight: '800',
         },
 
+        /* ---- SEO intro + FAQ content ---- */
+        seoContentBlock: {
+            width: '100%',
+            marginTop: spacing.md,
+            marginBottom: spacing.md,
+        },
+
         /* ---- Quests Grid (Modern responsive grid) ---- */
         questsGrid: {
             flexDirection: 'row',

@@ -201,7 +201,11 @@ export default function RegisterForm() {
             intent,
             redirect,
             method: 'facebook',
-            reason,
+            // The Facebook flow exposes detailed internal error codes (for
+            // example completion_start). Growth analytics intentionally keeps a
+            // small stable taxonomy, so only the provider category passes
+            // through and all handled backend-flow failures normalize to api.
+            reason: reason === 'provider' ? 'provider' : 'api',
         });
     };
 

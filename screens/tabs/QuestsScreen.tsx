@@ -21,6 +21,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestsList, useQuestCities } from '@/hooks/useQuestsApi';
 import QuestsContentPanel from './QuestsContentPanel';
 import QuestsSidebar from './QuestsSidebar';
+import { getQuestFaqItems } from './QuestsSeoIntroFaq';
 import type { City, NearbyCity, QuestMeta } from './questsShared';
 import { createQuestCatalogStructuredData } from '@/utils/discoverySeo';
 import { getStyles } from './QuestsScreen.styles';
@@ -578,15 +579,31 @@ export default function QuestsScreen() {
         description: descText,
         quests: ALL_QUESTS,
     });
+    const questsFaqStructuredData = useMemo(() => ({
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: getQuestFaqItems().map((item) => ({
+            '@type': 'Question',
+            name: item.q,
+            acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
+    }), []);
     const questsSeoTags = useMemo(
         () => (
-            <script
-                key="quests-structured-data"
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: stringifyJsonLd(questsStructuredData) }}
-            />
+            <>
+                <script
+                    key="quests-structured-data"
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: stringifyJsonLd(questsStructuredData) }}
+                />
+                <script
+                    key="quests-faq-structured-data"
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: stringifyJsonLd(questsFaqStructuredData) }}
+                />
+            </>
         ),
-        [questsStructuredData]
+        [questsStructuredData, questsFaqStructuredData]
     );
 
     // ── Render (Two-column layout) ──

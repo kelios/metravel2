@@ -36,8 +36,13 @@ export default function PlacesScreen() {
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const width = useResponsiveWidth()
-  const isCompact = width < 760
-  const isWide = width >= 1100
+  // `useResponsiveWidth` deliberately returns 0 for SSR and the first hydration
+  // render. Treat that unknown snapshot as the stable desktop export layout, just
+  // like the app shell/header does. Otherwise static HTML is rendered as mobile
+  // and the entire catalog jumps into the desktop layout after hydration.
+  const hasMeasuredWidth = width > 0
+  const isCompact = hasMeasuredWidth && width < 760
+  const isWide = !hasMeasuredWidth || width >= 1100
   const styles = useMemo(() => createStyles(colors, isCompact, isWide), [colors, isCompact, isWide])
   const {
     activeCategoryTitle,

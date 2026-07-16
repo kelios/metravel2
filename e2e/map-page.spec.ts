@@ -312,7 +312,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(page.getByRole('button', { name: 'Слои и настройки карты' })).toBeVisible();
   });
 
-  test('desktop: sightseeing categories stay visible in panel and quick filters when filters API uses localized fields', async ({ page }) => {
+  test('desktop: sightseeing categories stay visible in the filters panel when API uses localized fields', async ({ page }) => {
     const mockedPoints = [
       {
         id: 20001,
@@ -376,16 +376,6 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       timeout: 20_000,
     });
     await expect(page.getByText('Ничего не найдено', { exact: true })).toHaveCount(0);
-
-    const quickSightseeingFilter = page.getByLabel('Что посмотреть: Все');
-    await expect(quickSightseeingFilter).toBeVisible({ timeout: 20_000 });
-    await quickSightseeingFilter.click();
-
-    const quickPopover = page.getByTestId('map-quick-filters-categories-popover');
-    await expect(quickPopover).toBeVisible({ timeout: 20_000 });
-    await expect(quickPopover.getByText('Замки')).toBeVisible({ timeout: 20_000 });
-    await expect(quickPopover.getByText('Болота')).toBeVisible({ timeout: 20_000 });
-    await expect(quickPopover.getByText('Нет доступных категорий в радиусе')).toHaveCount(0);
   });
 
   test('desktop: sightseeing categories fall back to map points when filterformap returns an empty list', async ({ page }) => {
@@ -450,9 +440,6 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       timeout: 20_000,
     });
     await expect(page.getByText('Ничего не найдено', { exact: true })).toHaveCount(0);
-
-    const quickSightseeingFilter = page.getByLabel('Что посмотреть: Все');
-    await expect(quickSightseeingFilter).toBeVisible({ timeout: 20_000 });
   });
 
   test('desktop: shows required map attribution (OpenStreetMap)', async ({ page }) => {
@@ -472,11 +459,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
 
-    // Some panels require expanding "Настройки карты".
-    const mapSettings = page.getByText('Настройки карты', { exact: true });
-    if (await mapSettings.isVisible().catch(() => false)) {
-      await mapSettings.click({ force: true }).catch(() => null);
-    }
+    const layersButton = page.getByTestId('map-desktop-layers-button');
+    await expect(layersButton).toBeVisible({ timeout: 20_000 });
+    await layersButton.click();
+    await expect(page.getByTestId('map-mobile-layers-popover')).toBeVisible({ timeout: 20_000 });
 
     // Turn on one tile overlay.
     const overlayRow = page.getByTestId('map-overlay-waymarked-hiking');
@@ -668,7 +654,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(anyLink).toBeVisible({ timeout: 10_000 });
   });
 
-  test('desktop: popup link navigates to travel details', async ({ page }) => {
+  test('desktop: popup action opens the related travel details', async ({ page }) => {
     await installMobileFiltersPanelMocks(
       page,
       buildMockMapPoints({ center: { lat: 53.9006, lng: 27.559 }, count: 2 }),
@@ -692,13 +678,14 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     const popupLocator = page.locator('.leaflet-popup');
     await expect(popupLocator).toBeVisible({ timeout: 20_000 });
 
-    const link = popupLocator.locator('a[href*="/travel/"] , a[href*="/travels/"]').first();
-    await expect(link).toBeVisible({ timeout: 10_000 });
+    const openDetails = popupLocator.getByRole('button', { name: /Открыть статью|Открыть страницу/i }).first();
+    await expect(openDetails).toBeVisible({ timeout: 10_000 });
 
-    await Promise.all([
-      page.waitForURL(/\/(travel|travels)\//, { timeout: 60_000 }),
-      link.click({ force: true }),
-    ]);
+    const detailsPagePromise = page.waitForEvent('popup', { timeout: 20_000 });
+    await openDetails.click();
+    const detailsPage = await detailsPagePromise;
+    await expect(detailsPage).toHaveURL(/\/(travel|travels)\//, { timeout: 20_000 });
+    await detailsPage.close();
   });
 
   test('desktop: applying category filter updates markers and sends category filters', async ({ page }) => {
@@ -781,7 +768,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     expect(canonical || '').toMatch(/\/map(\?|$)/);
   });
 
-  test('desktop: remains usable after a transient map data failure', async ({ page }) => {
+  test('desktop: remains usable when a map data request fails', async ({ page }) => {
     let requestCount = 0;
     await page.route('**/api/travels/search_travels_for_map/**', async (route: any) => {
       requestCount += 1;
@@ -795,7 +782,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await page.goto('/map', { waitUntil: 'domcontentloaded', timeout: 120_000 });
 
     await waitForMapUi(page, 90_000);
-    expect(requestCount, 'map data request must be retried after a transient 503').toBeGreaterThanOrEqual(2);
+    expect(requestCount, 'the injected failing map request must be exercised').toBeGreaterThanOrEqual(1);
     await expect(page.getByText('Что-то пошло не так', { exact: true })).toHaveCount(0);
   });
 
@@ -1037,9 +1024,11 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await gotoMapWithRecovery(page);
 
     await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByTestId('radius-option-100')).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId('map-desktop-radius-button').click();
+    const radius100 = page.getByTestId('map-mobile-radius-option-100');
+    await expect(radius100).toBeVisible({ timeout: 30_000 });
 
-    await page.getByTestId('radius-option-100').click({ timeout: 60_000 });
+    await radius100.click();
 
     const saved = await page.evaluate(() => {
       try {

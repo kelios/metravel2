@@ -19,6 +19,7 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import type { MapMovePayload } from '@/components/MapPage/Map/types';
 
 import QuestCard from './QuestCard';
+import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
 import { pluralizeQuest, type QuestMeta } from './questsShared';
 import { translate as i18nT } from '@/i18n'
 
@@ -112,6 +113,20 @@ export default function QuestsContentPanel({
 }: QuestsContentPanelProps) {
     const router = useRouter();
     const searchActive = searchQuery.trim().length > 0;
+    // SEO intro + FAQ describe the whole /quests catalog. Show them on the default
+    // list view (not in map mode, not while searching) so the visible copy matches
+    // the crawlable static block generated for /quests.
+    const showSeoContent = viewMode === 'list' && !searchActive;
+    const seoIntroSlot = showSeoContent ? (
+        <View style={styles.seoContentBlock}>
+            <QuestsSeoIntroFaq variant="intro" />
+        </View>
+    ) : null;
+    const seoFaqSlot = showSeoContent ? (
+        <View style={styles.seoContentBlock}>
+            <QuestsSeoIntroFaq variant="faq" />
+        </View>
+    ) : null;
 
     const openQuestFromPoint = (point?: { questMeta?: MapPoint['questMeta'] }) => {
         const meta = point?.questMeta;
@@ -353,6 +368,8 @@ export default function QuestsContentPanel({
                     </View>
                 ) : (
                     <>
+                        {seoIntroSlot}
+
                         {searchActive && questsAll.length === 0 && dataLoaded && (
                             <EmptyState
                                 icon="search"
@@ -408,6 +425,8 @@ export default function QuestsContentPanel({
                                 ))}
                             </View>
                         )}
+
+                        {seoFaqSlot}
                     </>
                 )}
             </View>
@@ -472,7 +491,13 @@ export default function QuestsContentPanel({
                     renderItem={renderQuestItem}
                     style={styles.questVirtualizedList}
                     contentContainerStyle={styles.questVirtualizedListContent}
-                    ListHeaderComponent={geoMessageBlock}
+                    ListHeaderComponent={
+                        <>
+                            {geoMessageBlock}
+                            {seoIntroSlot}
+                        </>
+                    }
+                    ListFooterComponent={seoFaqSlot}
                     ListEmptyComponent={listEmptyContent}
                     keyboardShouldPersistTaps="handled"
                     initialNumToRender={4}

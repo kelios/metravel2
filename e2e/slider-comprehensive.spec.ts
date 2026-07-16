@@ -529,8 +529,9 @@ test.describe('Slider — accessibility', () => {
       throw new Error('Slider test precondition failed');
     }
 
-    // Prefer strict check for accessible naming, but avoid .first() ambiguity
-    // when a hidden node appears before visible ones.
+    // Check the rendered accessible name directly rather than merely accepting
+    // any media node inside the slider: a visible image without a useful name is
+    // an accessibility regression, not an alternative rendering contract.
     const hasNamed = await page.evaluate(() => {
       const candidates = Array.from(
         document.querySelectorAll('img[alt], [role="img"][aria-label]')
@@ -542,23 +543,7 @@ test.describe('Slider — accessibility', () => {
         return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || '1') > 0;
       });
     });
-
-    if (hasNamed) return;
-
-    // Fallback: expo-image on web can render without exposing alt/aria-label.
-    // In that case we still ensure slide content is rendered inside the slider.
-    const hasAnySlideContent = await page.evaluate(() => {
-      const slider = document.querySelector('[data-testid="slider-wrapper"]') || document.querySelector('[testID="slider-wrapper"]');
-      const hasMediaInsideSlider = !!slider?.querySelector('img, [role="img"]');
-      return (
-        hasMediaInsideSlider ||
-        document.querySelector('[data-testid^="slider-image-"]') !== null ||
-        document.querySelector('[testID^="slider-image-"]') !== null ||
-        document.querySelector('[data-testid^="slider-neutral-placeholder-"]') !== null ||
-        document.querySelector('[testID^="slider-neutral-placeholder-"]') !== null
-      );
-    });
-    expect(hasAnySlideContent).toBe(true);
+    expect(hasNamed, 'at least one visible slide image must expose its descriptive accessible name').toBe(true);
   });
 });
 

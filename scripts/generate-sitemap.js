@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
+const { buildQuestCityAliasMap } = require('../utils/questCityAlias');
 
 const args = process.argv.slice(2);
 
@@ -161,6 +162,27 @@ function buildQuestEntries(quests) {
   const listLoc = toAbsoluteUrl('/quests');
   seen.add(listLoc);
   entries.push({ loc: listLoc });
+
+  // City landing pages /quests/<city> — canonical is the alias variant when a
+  // city has one, otherwise the numeric city id.
+  const cityAliasMap = buildQuestCityAliasMap(quests);
+  const cityLastmod = new Map();
+  for (const quest of quests) {
+    if (!quest) continue;
+    const questId = String(quest.quest_id || quest.id || '').trim();
+    const cityId = String(quest.city_id || quest.cityId || '').trim();
+    if (!questId || !cityId) continue;
+    const mod = toIsoDate(quest.updated_at || quest.updatedAt || quest.created_at || quest.createdAt);
+    const prev = cityLastmod.get(cityId);
+    if (prev === undefined || (mod && mod > prev)) cityLastmod.set(cityId, mod);
+  }
+  for (const [cityId, lastmod] of cityLastmod) {
+    const segment = cityAliasMap.get(cityId) || cityId;
+    const loc = toAbsoluteUrl(`/quests/${segment}`);
+    if (seen.has(loc)) continue;
+    seen.add(loc);
+    entries.push(lastmod ? { loc, lastmod } : { loc });
+  }
 
   for (const quest of quests) {
     if (!quest) continue;

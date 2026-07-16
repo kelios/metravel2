@@ -589,18 +589,14 @@ test.describe('User points', () => {
 	    const api = await installUserPointsApiMock(page);
 	    let pointA: MockPoint | null = null;
 	    let pointB: MockPoint | null = null;
-      let userPointsAvailable = false;
 	
 	    try {
 	      await test.step('Open /userpoints', async () => {
 	        await preacceptCookies(page);
 	        await openUserPoints(page);
-        userPointsAvailable = true;
         await expect(page).not.toHaveURL(/\/login/);
         await expect(page.getByTestId('userpoints-screen')).toBeVisible({ timeout: 30_000 });
       });
-
-      if (!userPointsAvailable) return;
 
       await test.step('Switch to list view', async () => {
         await openListPanelTab(page);
@@ -641,7 +637,9 @@ test.describe('User points', () => {
       await test.step('Select 2 points and go to map view', async () => {
         expect(pointA, 'mock pointA must be created before selecting').not.toBeNull();
         expect(pointB, 'mock pointB must be created before selecting').not.toBeNull();
-        if (!pointA || !pointB) return;
+        if (!pointA || !pointB) {
+          throw new Error('Mock points must exist before the selection step');
+        }
 
         const backToList = page.getByRole('button', { name: 'Назад к списку', exact: true });
         await backToList.click({ force: true }).catch(() => undefined);

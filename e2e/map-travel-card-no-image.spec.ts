@@ -182,18 +182,19 @@ test.describe('Map Travel Card - UnifiedTravelCard', () => {
         lineClamp: computed.getPropertyValue('-webkit-line-clamp'),
       };
     });
-    expect(styles.overflow).toBe('hidden');
+    expect(['hidden', 'clip']).toContain(styles.overflow);
     expect(Number(styles.lineClamp)).toBeGreaterThan(0);
   });
 
-  test('keeps sibling cards at consistent dimensions', async ({ page }) => {
+  test('keeps sibling cards aligned while allowing one extra title line', async ({ page }) => {
     const cards = await openTravelCards(page);
     const firstCardBox = await cards.nth(0).boundingBox();
     const secondCardBox = await cards.nth(1).boundingBox();
 
     expect(firstCardBox, 'first map card must have a layout box').not.toBeNull();
     expect(secondCardBox, 'second map card must have a layout box').not.toBeNull();
-    expect(Math.abs((firstCardBox?.height ?? 0) - (secondCardBox?.height ?? 0))).toBeLessThan(5);
+    expect(Math.abs((firstCardBox?.width ?? 0) - (secondCardBox?.width ?? 0))).toBeLessThan(1);
+    expect(Math.abs((firstCardBox?.height ?? 0) - (secondCardBox?.height ?? 0))).toBeLessThanOrEqual(24);
     expect(firstCardBox?.height ?? 0).toBeGreaterThan(200);
     expect(firstCardBox?.height ?? 0).toBeLessThan(520);
   });
