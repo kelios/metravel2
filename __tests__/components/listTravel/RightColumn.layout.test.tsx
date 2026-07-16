@@ -61,19 +61,23 @@ jest.mock('@/components/mainPage/StickySearchBar', () => {
   };
 });
 
-jest.mock('@/components/listTravel/RecommendationsTabs', () => {
+jest.mock('@/components/listTravel/RightColumn.parts', () => {
   const React = require('react');
-  const { Text } = require('react-native');
-  return function MockRecommendationsTabs() {
-    return React.createElement(Text, { testID: 'recommendations-tabs-mock' }, 'recommendations');
-  };
-});
-
-jest.mock('@/components/ui/SkeletonLoader', () => {
-  const React = require('react');
-  const { Text } = require('react-native');
+  const { Text, View } = require('react-native');
   return {
-    TravelListSkeleton: () => React.createElement(Text, { testID: 'travel-list-skeleton-mock' }, 'skeleton'),
+    RecommendationsPlaceholder: () => React.createElement(
+      View,
+      { testID: 'recommendations-placeholder-mock' },
+    ),
+    RecommendationsTabs: () => React.createElement(
+      Text,
+      { testID: 'recommendations-tabs-mock' },
+      'recommendations',
+    ),
+    TravelCardSkeletonComponent: () => React.createElement(
+      View,
+      { testID: 'travel-card-skeleton-mock' },
+    ),
   };
 });
 

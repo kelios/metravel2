@@ -413,8 +413,9 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect((await findByTestId('facebook-photo-0')).props.accessibilityState).toEqual(
       expect.objectContaining({ checked: false }),
     );
+    const publishButton = await findByText('Опубликовать в Facebook');
     await act(async () => {
-      fireEvent.press(await findByText('Опубликовать в Facebook'));
+      fireEvent.press(publishButton);
     });
 
     expect(publishTravelToFacebook).toHaveBeenCalledWith(640, 'Текст без фото', []);
@@ -522,8 +523,9 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       />
     );
 
+    const publishButton = await findByText('Опубликовать в Facebook');
     await act(async () => {
-      fireEvent.press(await findByText('Опубликовать в Facebook'));
+      fireEvent.press(publishButton);
     });
 
     expect(await findByText('MeTravel: Страница Facebook не подключена')).toBeTruthy();
@@ -552,8 +554,9 @@ describe('TravelWizardStepPublish - moderation submit', () => {
         />
       );
 
+      const publishButton = await findByText('Опубликовать в Facebook');
       await act(async () => {
-        fireEvent.press(await findByText('Опубликовать в Facebook'));
+        fireEvent.press(publishButton);
       });
 
       expect(await findByText('MeTravel: Произошла ошибка. Повторите попытку.')).toBeTruthy();

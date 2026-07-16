@@ -1,5 +1,4 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { Pressable, Text, View } from 'react-native';
 
 import FacebookAuthFlow from '@/components/auth/FacebookAuthFlow.web';
 import { useAuth } from '@/context/AuthContext';
@@ -8,30 +7,34 @@ jest.mock('@/context/AuthContext');
 
 let mockEmailPermissionGranted = false;
 
-jest.mock('@/components/auth/FacebookSignInButton', () => ({
-  __esModule: true,
-  default: ({ onSuccess, onError, onCancel, mode = 'sign_in', disabled }: any) => (
-    <View>
-      <Pressable
-        testID={`mock-facebook-${mode}`}
-        disabled={disabled}
-        onPress={() => onSuccess({
-          accessToken: mode === 'rerequest_email' ? 'fresh-rerequest-token' : 'fresh-login-token',
-          grantedScopes: mockEmailPermissionGranted ? ['public_profile', 'email'] : ['public_profile'],
-          emailPermissionGranted: mockEmailPermissionGranted,
-        })}
-      >
-        <Text>{mode}</Text>
-      </Pressable>
-      <Pressable testID={`mock-facebook-error-${mode}`} onPress={() => onError?.('Provider failed')}>
-        <Text>provider error</Text>
-      </Pressable>
-      <Pressable testID={`mock-facebook-cancel-${mode}`} onPress={onCancel}>
-        <Text>provider cancel</Text>
-      </Pressable>
-    </View>
-  ),
-}));
+jest.mock('@/components/auth/FacebookSignInButton', () => {
+  const React = require('react');
+  const { Pressable, Text, View } = require('react-native');
+  return {
+    __esModule: true,
+    default: ({ onSuccess, onError, onCancel, mode = 'sign_in', disabled }: any) => (
+      <View>
+        <Pressable
+          testID={`mock-facebook-${mode}`}
+          disabled={disabled}
+          onPress={() => onSuccess({
+            accessToken: mode === 'rerequest_email' ? 'fresh-rerequest-token' : 'fresh-login-token',
+            grantedScopes: mockEmailPermissionGranted ? ['public_profile', 'email'] : ['public_profile'],
+            emailPermissionGranted: mockEmailPermissionGranted,
+          })}
+        >
+          <Text>{mode}</Text>
+        </Pressable>
+        <Pressable testID={`mock-facebook-error-${mode}`} onPress={() => onError?.('Provider failed')}>
+          <Text>provider error</Text>
+        </Pressable>
+        <Pressable testID={`mock-facebook-cancel-${mode}`} onPress={onCancel}>
+          <Text>provider cancel</Text>
+        </Pressable>
+      </View>
+    ),
+  };
+});
 
 const loginWithFacebook = jest.fn();
 const startFacebookEmailCompletion = jest.fn();

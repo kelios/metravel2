@@ -353,16 +353,6 @@
       ],
       "port": 4603,
       "autoPort": false
-    },
-    {
-      "name": "Prod Static QStaging",
-      "runtimeExecutable": "node",
-      "runtimeArgs": [
-        ".claude/prod-server.js",
-        "4603",
-        "/private/tmp/claude-501/-Users-juliasavran-Sites-metravel2-metravel2/f7cce19c-0414-4d60-b0d9-e098ab8afed0/scratchpad/qstaging"
-      ],
-      "port": 4603
     }
   ]
 }

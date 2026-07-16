@@ -87,7 +87,7 @@ describe('ListCatalogToolbar', () => {
   )
 
   it('shows inline sorting once the docked desktop sidebar is available', () => {
-    mockViewportWidth = 1440
+    mockViewportWidth = 1920
     const { getByTestId } = render(
       <ListCatalogToolbar
         sortOptions={[

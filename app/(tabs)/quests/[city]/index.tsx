@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react'
 import { ActivityIndicator, Dimensions, Platform, Pressable, ScrollView, Text, View } from 'react-native'
-import { Link, useLocalSearchParams, useRouter } from 'expo-router'
+import { Link, useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import { useIsFocused } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -31,6 +31,7 @@ export default function QuestsByCityScreen() {
   const params = useLocalSearchParams<{ city?: string | string[] }>()
   const cityParam = getRouteParam(params.city)
   const router = useRouter()
+  const navigation = useNavigation()
   const isFocused = useIsFocused()
   const colors = useThemedColors()
 
@@ -56,6 +57,13 @@ export default function QuestsByCityScreen() {
       router.replace(QUEST_LIST_ROUTE)
     }
   }, [loading, resolved, router])
+
+  // Navigation/stack header title = localized city name (from the resolved
+  // city_name), never the raw URL segment («4» / «minsk»). Matches the pattern
+  // used by the travel details screen.
+  useEffect(() => {
+    if (cityName) navigation.setOptions({ title: cityName })
+  }, [navigation, cityName])
 
   const { width: bpWidth } = useBreakpoints()
   const height = Platform.OS === 'web' ? 0 : Dimensions.get('window').height

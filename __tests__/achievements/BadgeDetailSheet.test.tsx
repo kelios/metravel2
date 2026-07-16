@@ -14,14 +14,6 @@ jest.mock('expo-linear-gradient', () => {
   }
 })
 
-jest.mock('@/constants/designSystem', () => ({
-  DESIGN_TOKENS: {
-    spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 },
-    radii: { md: 12, xl: 24 },
-    typography: { sizes: { xs: 12, sm: 14, md: 16, lg: 20 } },
-  },
-}))
-
 jest.mock('@/components/ui/ImageCardMedia', () => {
   const React = require('react')
   const { View } = require('react-native')
