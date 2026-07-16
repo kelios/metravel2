@@ -139,9 +139,20 @@ async function main() {
                 } else {
                     let existingCity = null;
                     try {
-                        const cities = await apiGet('/api/quest-cities/');
-                        const list = Array.isArray(cities) ? cities : (cities?.results || []);
-                        existingCity = list.find(c => cityKey(c?.name) === key);
+                        // Эндпоинт пагинирован и кладёт элементы в `data`
+                        // (не `results`) — обходим все страницы по next_page_url.
+                        let endpoint = '/api/quest-cities/';
+                        while (endpoint && !existingCity) {
+                            const page = await apiGet(endpoint);
+                            const list = Array.isArray(page)
+                                ? page
+                                : (page?.data || page?.results || []);
+                            existingCity = list.find(c => cityKey(c?.name) === key) || null;
+                            const next = Array.isArray(page)
+                                ? null
+                                : (page?.next_page_url || page?.next || null);
+                            endpoint = next ? next.replace(API_BASE, '') : null;
+                        }
                     } catch { /* список недоступен — упадём на создание */ }
 
                     if (existingCity?.id) {
