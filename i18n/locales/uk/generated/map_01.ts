@@ -235,6 +235,8 @@ export const mapGenerated1 = {
   "components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__ee671e92": "Місцезнаходження не визначено. Дозвольте доступ або вкажіть старт вручну.",
   "components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__f8c836df": "Місцезнаходження не визначено. Дозвольте доступ або вкажіть старт вручну.",
   "components.MapPage.MapCanvas.otkryt_nastroyki_ecb067f5": "Відкрити налаштування",
+  "components.MapPage.MapCanvas.geolokatsiya_nedostupna_7c41d5e8": "Геолокація недоступна",
+  "components.MapPage.MapCanvas.poslednee_izvestnoe_mesto_2b6f90c3": "Останнє відоме місце",
   "components.MapPage.MapCanvas.poslednee_izvestnoe_mestopolozhenie_ne_tekuschee_5c56a128": "Показано останнє відоме місцезнаходження. Це не «Ви тут».",
   "components.MapPage.MapCanvas.povtorit_66ddcbbc": "Повторити",
   "components.MapPage.MapCanvas.razreshit_dostup_28ec6443": "Дозволити доступ",

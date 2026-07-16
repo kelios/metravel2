@@ -29,8 +29,6 @@ const baseProps = {
     locationQualityText: {},
     geoBanner: {},
     geoBannerText: {},
-    geoBannerBody: {},
-    geoBannerActions: {},
     geoBannerActionPrimary: {},
     geoBannerActionPrimaryText: {},
     geoBannerActionSecondary: {},
@@ -98,23 +96,39 @@ describe('MapCanvas', () => {
     expect(mockMapLoadingBar).toHaveBeenLastCalledWith({ visible: true })
   })
 
-  it('offers a retry and a manual start when location permission can be requested again', () => {
+  it('offers a retry when location permission can be requested again', () => {
     const retryLocation = jest.fn()
-    const startManualRoute = jest.fn()
     const screen = render(
       <MapCanvas
         {...baseProps}
         showProgress={false}
         showGeoBanner
         retryLocation={retryLocation}
-        startManualRoute={startManualRoute}
       />,
     )
 
     fireEvent.press(screen.getByTestId('map-geo-retry'))
-    fireEvent.press(screen.getByTestId('map-geo-manual-start'))
 
     expect(retryLocation).toHaveBeenCalledTimes(1)
+    // Ручной старт — действие режима маршрута, а не общего гео-статуса: в
+    // radius-режиме баннер не предлагает уходить в построение маршрута.
+    expect(screen.queryByTestId('map-geo-manual-start')).toBeNull()
+  })
+
+  it('offers a manual route start from the geo banner only in route mode', () => {
+    const startManualRoute = jest.fn()
+    const screen = render(
+      <MapCanvas
+        {...baseProps}
+        mapPanelProps={{ mode: 'route' }}
+        showProgress={false}
+        showGeoBanner
+        startManualRoute={startManualRoute}
+      />,
+    )
+
+    fireEvent.press(screen.getByTestId('map-geo-manual-start'))
+
     expect(startManualRoute).toHaveBeenCalledTimes(1)
   })
 
@@ -135,7 +149,7 @@ describe('MapCanvas', () => {
       />,
     )
 
-    expect(screen.getByText(/последнее известное местоположение/i)).toBeTruthy()
+    expect(screen.getByText(/последнее известное место/i)).toBeTruthy()
   })
 
   it('opens native settings when permission cannot be requested again', () => {

@@ -643,7 +643,9 @@ export const getStyles = (
         // below the safe-area toolbar (design states 1/3) instead of letting a
         // bottom sheet or browser footer cover it. Desktop retains the compact
         // bottom-left placement.
-        top: isMobile ? Math.max(insetTop, 8) + 92 : undefined,
+        // Ряд иконок кончается на ~insetTop+54; пилюли маршрута под ним больше
+        // нет (она уехала в FAB), поэтому баннер подтянут к тулбару вплотную.
+        top: isMobile ? Math.max(insetTop, 8) + 54 : undefined,
         bottom: isMobile ? undefined : 20,
         left: isMobile ? 10 : 16,
         right: isMobile ? 10 : undefined,
@@ -668,20 +670,14 @@ export const getStyles = (
           : themedColors.shadows.medium),
       },
       geoBannerText: {
+        // flex:1 + minWidth:0 обязательны: Text без flex в row на native не
+        // усекается, а распирает строку и выдавливает кнопку за край.
+        flex: 1,
+        minWidth: 0,
         fontSize: isMobile ? 12 : 13,
         lineHeight: isMobile ? 15 : undefined,
         fontWeight: '500',
         color: themedColors.text,
-      },
-      geoBannerBody: {
-        flex: 1,
-        minWidth: 0,
-        gap: isMobile ? 6 : 8,
-      },
-      geoBannerActions: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: isMobile ? 6 : 8,
       },
       geoBannerActionPrimary: {
         minHeight: 44,

@@ -14,6 +14,7 @@ import { FiltersSkeleton } from '@/components/ui/SkeletonLoader'
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet'
 import {
   getMapMobileLayoutStyles,
+  getRouteFabBottom,
   getSearchAreaButtonBottom,
 } from './MapMobileLayout.styles'
 import { MapMobileSheetBody } from './MapMobile/MapMobileSheetBody'
@@ -589,6 +590,17 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     isNarrow,
     consentBannerVisible,
   )
+  const routeFabBottom = getRouteFabBottom(IS_WEB, isNarrow, consentBannerVisible)
+
+  // Вход в маршрут — основное действие карты, поэтому FAB виден в radius-режиме
+  // всегда, пока шторка закрыта и не открыта карточка места (те же условия, что
+  // у верхнего overlay: иначе кнопка ложится поверх списка/карточки).
+  const showRouteFab =
+    routeMode !== 'route' && sheetState === 'collapsed' && !hasSelectedPlace
+  // Подпись — короткое «Маршрут»: прежнее «Маршрут от меня» обещало старт от
+  // пользователя ещё до того, как старт вообще выбран (и висело даже без
+  // геолокации). Старт выбирается следующим шагом, в самом режиме маршрута.
+  const routeFabLabel = i18nT('map:components.MapPage.MapMobileLayout.marshrut_bf0aedf2')
 
   const filtersLoadingFallback = useMemo(
     () => (
@@ -742,7 +754,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             onResetOverlays={onResetOverlays}
             mode={routeMode}
             transportMode={routeTransportMode}
-            onEnterRouteMode={enterRouteMode}
             hasUserLocation={!!trustedUserLocation}
             routeManualStartActive={routeManualStartActive}
             onRequestLocation={requestLocationForRoute}
@@ -777,6 +788,29 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             <Feather name="refresh-cw" size={15} color={colors.textOnPrimary} />
             <RNText style={styles.searchAreaButtonText} numberOfLines={1}>
               {i18nT('map:components.MapPage.MapMobileLayout.iskat_v_etoy_oblasti_1828db63')}</RNText>
+          </Pressable>
+        )}
+
+        {/* Вход в режим маршрута — extended FAB справа снизу (Google Maps
+            «Проложить маршрут»). Раньше это была пилюля под шапкой: третий ярус
+            поверх карты и основное действие в самом неудобном для пальца углу. */}
+        {showRouteFab && (
+          <Pressable
+            testID="map-mobile-route-button"
+            onPress={enterRouteMode}
+            accessibilityRole="button"
+            accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_da7efcc5')}
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.routeFab,
+              IS_WEB ? ({ bottom: routeFabBottom } as any) : null,
+              pressed && styles.routeFabPressed,
+            ]}
+          >
+            <Feather name="navigation" size={18} color={colors.textOnPrimary} />
+            <RNText style={styles.routeFabText} numberOfLines={1}>
+              {routeFabLabel}
+            </RNText>
           </Pressable>
         )}
 

@@ -111,11 +111,14 @@ export function MapCanvas({
     Platform.OS !== 'web' &&
     locationState.status === 'denied' &&
     !locationState.canAskAgain
+  // Баннер свёрнут в одну строку: раньше он занимал ~четверть экрана поверх карты
+  // (две строки текста + два стека кнопок) и дублировал подсказку режима маршрута.
+  // Текст — короткий статус, действие — одна кнопка; «указать старт вручную»
+  // осмысленно только внутри режима маршрута и живёт теперь там.
   const geoBannerMessage = hasCachedViewport
-    ? i18nT('map:components.MapPage.MapCanvas.poslednee_izvestnoe_mestopolozhenie_ne_tekuschee_5c56a128')
-    : Platform.OS === 'web'
-      ? i18nT('map:components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__ee671e92')
-      : i18nT('map:components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__f8c836df')
+    ? i18nT('map:components.MapPage.MapCanvas.poslednee_izvestnoe_mesto_2b6f90c3')
+    : i18nT('map:components.MapPage.MapCanvas.geolokatsiya_nedostupna_7c41d5e8')
+  const isRouteMode = mapPanelProps?.mode === 'route'
   const locationQuality = locationState.status === 'current'
     ? locationState.isRefreshing
       ? 'refreshing'
@@ -200,58 +203,58 @@ export function MapCanvas({
       {showGeoBanner && (
         <View style={styles.geoBanner} testID="map-geo-banner">
           <Feather name="map-pin" size={13} color={themedColors.warning} />
-          <View style={styles.geoBannerBody}>
-            <Text style={styles.geoBannerText} numberOfLines={2}>
-              {geoBannerMessage}
-            </Text>
-            <View style={styles.geoBannerActions}>
-              {canRetryLocation && (
-                <Pressable
-                  testID="map-geo-retry"
-                  onPress={retryLocation}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.geoBannerActionPrimary,
-                    pressed && PRESSED_OPACITY_06,
-                  ]}
-                >
-                  <Text style={styles.geoBannerActionPrimaryText} numberOfLines={1}>
-                    {locationState.status === 'denied'
-                      ? i18nT('map:components.MapPage.MapCanvas.razreshit_dostup_28ec6443')
-                      : i18nT('map:components.MapPage.MapCanvas.povtorit_66ddcbbc')}
-                  </Text>
-                </Pressable>
-              )}
-              {canOpenSettings && (
-                <Pressable
-                  testID="map-geo-open-settings"
-                  onPress={openLocationSettings}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.geoBannerActionPrimary,
-                    pressed && PRESSED_OPACITY_06,
-                  ]}
-                >
-                  <Text style={styles.geoBannerActionPrimaryText} numberOfLines={1}>
-                    {i18nT('map:components.MapPage.MapCanvas.otkryt_nastroyki_ecb067f5')}
-                  </Text>
-                </Pressable>
-              )}
-              <Pressable
-                testID="map-geo-manual-start"
-                onPress={startManualRoute}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.geoBannerActionSecondary,
-                  pressed && PRESSED_OPACITY_06,
-                ]}
-              >
-                <Text style={styles.geoBannerActionSecondaryText} numberOfLines={1}>
-                  {i18nT('map:components.MapPage.MapCanvas.ukazat_start_vruchnuyu_84e450cb')}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
+          <Text style={styles.geoBannerText} numberOfLines={1}>
+            {geoBannerMessage}
+          </Text>
+          {canRetryLocation && (
+            <Pressable
+              testID="map-geo-retry"
+              onPress={retryLocation}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.geoBannerActionPrimary,
+                pressed && PRESSED_OPACITY_06,
+              ]}
+            >
+              <Text style={styles.geoBannerActionPrimaryText} numberOfLines={1}>
+                {locationState.status === 'denied'
+                  ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_b419aad0')
+                  : i18nT('map:components.MapPage.MapCanvas.povtorit_66ddcbbc')}
+              </Text>
+            </Pressable>
+          )}
+          {canOpenSettings && (
+            <Pressable
+              testID="map-geo-open-settings"
+              onPress={openLocationSettings}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.geoBannerActionPrimary,
+                pressed && PRESSED_OPACITY_06,
+              ]}
+            >
+              <Text style={styles.geoBannerActionPrimaryText} numberOfLines={1}>
+                {i18nT('map:components.MapPage.MapCanvas.otkryt_nastroyki_ecb067f5')}
+              </Text>
+            </Pressable>
+          )}
+          {/* Ручной старт — действие режима маршрута, а не общего гео-статуса.
+              В radius-режиме он вёл в маршрут из баннера про геолокацию. */}
+          {isRouteMode && (
+            <Pressable
+              testID="map-geo-manual-start"
+              onPress={startManualRoute}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.geoBannerActionSecondary,
+                pressed && PRESSED_OPACITY_06,
+              ]}
+            >
+              <Text style={styles.geoBannerActionSecondaryText} numberOfLines={1}>
+                {i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.ukazat_start_337c5937')}
+              </Text>
+            </Pressable>
+          )}
           <Pressable
             onPress={dismissGeoBanner}
             accessibilityRole="button"

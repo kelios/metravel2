@@ -168,14 +168,20 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
 
     await test.step('Radius mode: route entry visible, contextual icons hidden', async () => {
       await expect(routeBtn).toBeVisible({ timeout: 30_000 })
-      await expect(page.getByText('Маршрут от меня', { exact: true })).toBeVisible()
+      // toContainText, не toHaveText: рядом с подписью в кнопке живёт глиф
+      // Feather-иконки — невидимый символ, но частью текста он остаётся.
+      await expect(routeBtn).toContainText('Маршрут')
       await expect(radiusBtn).toBeVisible()
       await expect(transportBtn).toHaveCount(0)
       await expect(clearBtn).toHaveCount(0)
     })
 
     await test.step('Enter route mode → contextual icons + hint appear, radius hidden', async () => {
-      await routeBtn.click({ force: true })
+      // Без force: предыдущий шаг оставляет тост «Маршрут построен» (fixed,
+      // z-index 99999) ровно над нижней полосой, где живёт FAB. force-клик ушёл
+      // бы в тост; обычный клик ждёт, пока кнопка реально начнёт принимать
+      // события — то же, что сделал бы пользователь.
+      await routeBtn.click()
       await expect(transportBtn).toBeVisible({ timeout: 10_000 })
       await expect(clearBtn).toBeVisible()
       await expect(byTid(page, 'map-mobile-route-start-selector')).toBeVisible()
@@ -257,7 +263,7 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
     await installMapApiMocks(page)
     await gotoMobileMap(page)
 
-    await expect(page.getByText('Построить маршрут', { exact: true })).toBeVisible()
+    await expect(byTid(page, 'map-mobile-route-button')).toContainText('Маршрут')
     await byTid(page, 'map-mobile-route-button').click({ force: true })
     await expect(page.getByText('0/2', { exact: true })).toBeVisible()
     await expect(byTid(page, 'map-mobile-route-request-location')).toBeVisible()

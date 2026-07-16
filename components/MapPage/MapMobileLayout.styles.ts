@@ -7,6 +7,13 @@ const MOBILE_WEB_BOTTOM_CHROME_GAP = 28
 const MOBILE_WEB_SEARCH_AREA_BOTTOM = 16
 const MOBILE_WEB_CONSENT_SEARCH_AREA_BOTTOM = 176
 const CONTROL_RADIUS = 12
+/**
+ * «Искать в этой области» (по центру) и FAB «Маршрут» (справа) живут в одной
+ * нижней зоне и на узких экранах перекрываются: pill ~214px по центру заезжает
+ * под FAB ~130px у правого края. Поэтому pill поднимаем на высоту FAB + воздух,
+ * а не двигаем по горизонтали — центр для него канонический (Google/Organic).
+ */
+const ROUTE_FAB_LIFT = 56
 
 type MapMobileLayoutStyleOptions = {
   isNarrow: boolean
@@ -15,7 +22,8 @@ type MapMobileLayoutStyleOptions = {
   isSheetPreview: boolean
 }
 
-export function getSearchAreaButtonBottom(
+/** Нижняя зона карты: FAB «Маршрут» стоит на ней, pill поиска — на ROUTE_FAB_LIFT выше. */
+export function getRouteFabBottom(
   isWeb: boolean,
   isNarrow: boolean,
   consentBannerVisible = false,
@@ -27,6 +35,16 @@ export function getSearchAreaButtonBottom(
     return `calc(${MOBILE_WEB_SEARCH_AREA_BOTTOM}px + env(safe-area-inset-bottom))`
   }
   return isNarrow ? 96 : 104
+}
+
+export function getSearchAreaButtonBottom(
+  isWeb: boolean,
+  isNarrow: boolean,
+  consentBannerVisible = false,
+) {
+  const fabBottom = getRouteFabBottom(isWeb, isNarrow, consentBannerVisible)
+  if (typeof fabBottom === 'number') return fabBottom + ROUTE_FAB_LIFT
+  return `calc(${fabBottom} + ${ROUTE_FAB_LIFT}px)`
 }
 
 export const getMapMobileLayoutStyles = (
@@ -479,6 +497,46 @@ export const getMapMobileLayoutStyles = (
     },
     searchAreaButtonText: {
       fontSize: 13,
+      fontWeight: '700' as const,
+      color: colors.textOnPrimary,
+      letterSpacing: 0.1,
+    },
+    // Вход в режим маршрута — extended FAB у правого нижнего края (конвенция
+    // Google Maps «Проложить маршрут»): основное действие карты под большим
+    // пальцем, а шапка остаётся одним рядом иконок.
+    routeFab: {
+      position: 'absolute' as const,
+      right: 12,
+      bottom: getRouteFabBottom(Platform.OS === 'web', options.isNarrow) as any,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: 8,
+      height: 48,
+      maxWidth: 200,
+      paddingHorizontal: 16,
+      borderRadius: 24,
+      backgroundColor: colors.primary,
+      zIndex: 1450,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: '0 6px 18px rgba(15,23,42,0.24)',
+            cursor: 'pointer',
+          } as any)
+        : {
+            shadowColor: DESIGN_TOKENS.colors.text,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.22,
+            shadowRadius: 10,
+            elevation: 6,
+          }),
+    },
+    routeFabPressed: {
+      opacity: 0.9,
+    },
+    routeFabText: {
+      flexShrink: 1,
+      fontSize: 14,
       fontWeight: '700' as const,
       color: colors.textOnPrimary,
       letterSpacing: 0.1,

@@ -100,13 +100,29 @@ export function useMapScreenController() {
   const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number } | null>(
     null
   );
+  // settledCenter — where the map came to rest after OUR OWN motion (auto-fit,
+  // flyTo, recenter). It is deliberately NOT the query anchor: radius-mode
+  // fitBounds reserves room for the bottom sheet with asymmetric padding, so the
+  // resting center sits well below the circle center (~36px ≈ 26km at r=50km on
+  // mobile). Measuring drift against the anchor therefore reported a huge "move"
+  // on the very first frame and pinned the affordance on screen forever, and each
+  // tap dragged the search area south of what the user was actually looking at.
+  // The baseline is the resting view, so drift now means "the user panned away".
+  const [settledCenter, setSettledCenter] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [isFollowingUser, setIsFollowingUser] = useState(false);
   const handleMapMove = useCallback((center: MapMovePayload) => {
     if (!Number.isFinite(center.latitude) || !Number.isFinite(center.longitude)) return;
     setMapCenter({ latitude: center.latitude, longitude: center.longitude });
     if (center.userInitiated) {
       setIsFollowingUser(false);
+      return;
     }
+    // Programmatic settle (Map.web/native only flag gestures as userInitiated):
+    // this is the new reference view for the drift check.
+    setSettledCenter({ latitude: center.latitude, longitude: center.longitude });
   }, []);
 
   // URL params → initial filter values
@@ -336,33 +352,33 @@ export function useMapScreenController() {
     return searchAreaCenter ?? urlCoordinates ?? userLocation ?? coordinates;
   }, [searchAreaCenter, urlCoordinates, userLocation, coordinates]);
 
-  // The active anchor the nearby query currently revolves around (mirrors
-  // queryCoordinates' precedence minus the explicit pick), used as the reference
-  // point for the "moved far enough" check below.
-  const activeAnchor = useMemo(
-    () => urlCoordinates ?? userLocation ?? coordinates,
-    [urlCoordinates, userLocation, coordinates],
-  );
-
   // F-49 — threshold for "significant move": the map center must drift away from
-  // the *current* query anchor by more than ~30% of the active search radius
-  // (clamped to a 1.5–25 km sane band so tiny/huge radii still feel right). Below
-  // that the existing results already cover the viewport, so we hide the button.
+  // the resting view by more than ~30% of the active search radius (clamped to a
+  // 1.5–25 km sane band so tiny/huge radii still feel right). Below that the
+  // existing results already cover the viewport, so we hide the button.
+  //
+  // The reference is settledCenter (where our own auto-fit/flyTo left the map),
+  // NOT the query anchor: fitBounds intentionally offsets the resting center from
+  // the anchor to keep the radius circle clear of the bottom sheet, and that
+  // offset is not a user pan. Until the map reports its first settle we have no
+  // baseline, so there is nothing to have drifted from.
   const canSearchThisArea = useMemo(() => {
     if (mode !== 'radius') return false;
-    if (!mapCenter) return false;
-    const anchor = searchAreaCenter ?? activeAnchor;
-    if (!anchor || !Number.isFinite(anchor.latitude) || !Number.isFinite(anchor.longitude)) {
-      return false;
-    }
+    if (!mapCenter || !settledCenter) return false;
     const radiusKm = Number(filterValues.radius) || 30;
     const thresholdKm = Math.min(25, Math.max(1.5, radiusKm * 0.3));
-    return distanceKm(anchor, mapCenter) > thresholdKm;
-  }, [mode, mapCenter, searchAreaCenter, activeAnchor, filterValues.radius]);
+    return distanceKm(settledCenter, mapCenter) > thresholdKm;
+  }, [mode, mapCenter, settledCenter, filterValues.radius]);
 
   const handleSearchThisArea = useCallback(() => {
     setMapCenter((center) => {
-      if (center) setSearchAreaCenter({ latitude: center.latitude, longitude: center.longitude });
+      if (center) {
+        setSearchAreaCenter({ latitude: center.latitude, longitude: center.longitude });
+        // The panned-to view IS the view the user asked to search: adopt it as the
+        // baseline right away so the affordance retracts on tap even when the
+        // re-anchored fit lands on the same view and reports no fresh settle.
+        setSettledCenter({ latitude: center.latitude, longitude: center.longitude });
+      }
       return center;
     });
   }, []);

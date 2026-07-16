@@ -235,6 +235,8 @@ export const mapGenerated1 = {
   "components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__ee671e92": "Nie określono lokalizacji. Zezwól na dostęp lub wskaż punkt startowy ręcznie.",
   "components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__f8c836df": "Nie określono lokalizacji. Zezwól na dostęp lub wskaż punkt startowy ręcznie.",
   "components.MapPage.MapCanvas.otkryt_nastroyki_ecb067f5": "Otwórz ustawienia",
+  "components.MapPage.MapCanvas.geolokatsiya_nedostupna_7c41d5e8": "Geolokalizacja niedostępna",
+  "components.MapPage.MapCanvas.poslednee_izvestnoe_mesto_2b6f90c3": "Ostatnie znane miejsce",
   "components.MapPage.MapCanvas.poslednee_izvestnoe_mestopolozhenie_ne_tekuschee_5c56a128": "Pokazano ostatnią znaną lokalizację. To nie jest „Jesteś tutaj”.",
   "components.MapPage.MapCanvas.povtorit_66ddcbbc": "Spróbuj ponownie",
   "components.MapPage.MapCanvas.razreshit_dostup_28ec6443": "Zezwól na dostęp",

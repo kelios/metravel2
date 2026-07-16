@@ -101,8 +101,6 @@ interface MapMobileTopOverlayProps {
   /** Current map mode; 'route' reveals the contextual transport/clear icons. */
   mode?: 'radius' | 'route'
   transportMode?: TransportMode
-  /** Enter route mode (tap the map to drop start/end points). */
-  onEnterRouteMode?: () => void
   hasUserLocation?: boolean
   routeManualStartActive?: boolean
   onRequestLocation?: () => void
@@ -156,7 +154,6 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   onResetOverlays,
   mode = 'radius',
   transportMode = 'car',
-  onEnterRouteMode,
   hasUserLocation = false,
   routeManualStartActive = false,
   onRequestLocation,
@@ -181,9 +178,6 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
     isRouteMode && routePointCount === 0 && !hasUserLocation && !routeManualStartActive
   const routeAccessibilityLabel = isRouteMode
     ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_vybrano_value1_iz_2_tochek_926447de', { value1: Math.min(routePointCount, 2) })
-    : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_da7efcc5')
-  const routePrimaryLabel = hasUserLocation
-    ? i18nT('map:components.MapPage.Map.PlacePopupCard.index.marshrut_ot_menya_617360ad')
     : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_da7efcc5')
   const routeHintText = routeManualStartActive && routePointCount === 0
     ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.kosnites_karty_chtoby_vybrat_novyy_start_mar_1cc95c5d')
@@ -418,24 +412,9 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           )}
         </View>
 
-        {!isRouteMode && (
-          <Pressable
-            testID="map-mobile-route-button"
-            onPress={onEnterRouteMode}
-            accessibilityRole="button"
-            accessibilityLabel={routeAccessibilityLabel}
-            hitSlop={6}
-            style={({ pressed }) => [
-              styles.routePrimaryButton,
-              pressed && styles.iconButtonPressed,
-            ]}
-          >
-            <Feather name="navigation" size={ICON_SIZE} color={colors.textOnPrimary} />
-            <RNText style={styles.routePrimaryButtonText} numberOfLines={1}>
-              {routePrimaryLabel}
-            </RNText>
-          </Pressable>
-        )}
+        {/* Вход в режим маршрута — FAB справа снизу (MapMobileLayout), а не
+            пилюля в шапке: она была третьим ярусом поверх карты и уводила
+            основное действие под большой палец только на широких экранах. */}
 
         {isRouteMode && (
           <View

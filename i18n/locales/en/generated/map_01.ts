@@ -235,6 +235,8 @@ export const mapGenerated1 = {
   "components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__ee671e92": "Location not determined. Allow access or set the start manually.",
   "components.MapPage.MapCanvas.geolokatsiya_nedostupna_razreshite_dostup_v__f8c836df": "Location not determined. Allow access or set the start manually.",
   "components.MapPage.MapCanvas.otkryt_nastroyki_ecb067f5": "Open settings",
+  "components.MapPage.MapCanvas.geolokatsiya_nedostupna_7c41d5e8": "Location unavailable",
+  "components.MapPage.MapCanvas.poslednee_izvestnoe_mesto_2b6f90c3": "Last known place",
   "components.MapPage.MapCanvas.poslednee_izvestnoe_mestopolozhenie_ne_tekuschee_5c56a128": "Showing the last known location. This is not “You are here”.",
   "components.MapPage.MapCanvas.povtorit_66ddcbbc": "Retry",
   "components.MapPage.MapCanvas.razreshit_dostup_28ec6443": "Allow access",
