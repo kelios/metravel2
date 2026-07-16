@@ -5,7 +5,7 @@ export const travelGenerated3 = {
   "components.travel.FacebookPublishPanel.messagePlaceholder": "Коротко розкажіть про подорож",
   "components.travel.FacebookPublishPanel.messageAccessibilityLabel": "Текст допису для Facebook",
   "components.travel.FacebookPublishPanel.photoPickerLabel": "Фото для Facebook",
-  "components.travel.FacebookPublishPanel.photoPickerHint": "Виберіть фото з галереї маршруту. Перші 4 вибрано за замовчуванням.",
+  "components.travel.FacebookPublishPanel.photoPickerHint": "Виберіть фото з галереї маршруту. Номер на фото — порядок у пості, зніміть вибір і виберіть знову, щоб змінити його. Перші 4 вибрано за замовчуванням.",
   "components.travel.FacebookPublishPanel.photoSelectedCounter": "{{value1}} з {{value2}} вибрано",
   "components.travel.FacebookPublishPanel.noPhotos": "У галереї маршруту поки немає фото.",
   "components.travel.FacebookPublishPanel.photoAccessibilityLabel": "Фото {{value1}} для публікації у Facebook",

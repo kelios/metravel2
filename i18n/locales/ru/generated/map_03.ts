@@ -224,4 +224,8 @@ export const mapGenerated3 = {
   "utils.routingHelpers.requestFailedAfterRetries": "Не удалось выполнить запрос после повторных попыток",
   "constants.mapSeo.title": "Карта маршрутов и достопримечательностей Беларуси | Metravel",
   "constants.mapSeo.description": "Интерактивная карта путешествий Metravel: находите маршруты, достопримечательности и идеи поездок, фильтруйте точки и стройте свой путь.",
+  "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Поиск по тегам",
+  "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Поиск по тегам и категориям мест",
+  "components.MapPage.FiltersPanelRadiusSection.vvedite_nazvanie_tega_naprimer_zamok_ili_peschera_2e9b60d7": "Введите название тега, например «замок» или «пещера»",
+  "components.MapPage.FiltersPanelRadiusSection.teg_ne_nayden_proverte_napisanie_9c6a05e2": "Тег не найден. Проверьте написание.",
 } as const

@@ -1,6 +1,6 @@
 ---
 name: frontend-deployer
-description: Деплой web-фронтенда на прод metravel.by строго через `scripts/fix-prod.sh` (сборка → rsync → атомарный свап → рестарт nginx → health-check), умеет откатывать. Бэкенд не деплоит.
+description: Деплой web-фронтенда на прод metravel.by строго через `./build-prod.sh prod` (сборка → guard'ы → rsync → атомарный свап → рестарт app+nginx → health-check), умеет откатывать. `scripts/fix-prod.sh` — только аварийное восстановление. Бэкенд не деплоит.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -31,45 +31,51 @@ model: sonnet
 
 НЕ пиши свои rsync/scp-команды деплоя в обход этих скриптов.
 
-## Деплой С ЭТОЙ машины (Windows / git-bash) — особый случай
+## Транспорт заливки: сначала проверь `rsync`, потом деплой
 
-На этой машине штатный `build-prod.sh prod` (с DEPLOY=1) **не отработает целиком**:
-- **`rsync` тут не работает** (конфликт MSYS2-рантаймов с Git-for-Windows) — шаг заливки падает.
-- **e2e/preflight-процессы затирают `dist/`** во время сборки (дерутся за каталог).
-
-Поэтому с этой машины деплой идёт через воспроизводимый враппер, который это обходит:
+Шаг заливки `build-prod.sh` идёт через `rsync`, и он надёжен НЕ на всякой машине.
+Перед деплоем определи, где ты, одной командой:
 
 ```bash
-bash /d/metravel/ops/deploy-frontend.sh
+rsync --version | head -1   # нужен GNU rsync, protocol >= 30
 ```
 
-Что он делает (это кодифицированный ручной деплой, который сработал 2026-06-09):
-1. pre-flight: ветка `main`, ssh до `metravel-prod` живой;
-2. **убивает конкурирующие** e2e/preflight/playwright/serve-web-build/build процессы
-   (`ops/kill-competing-builds.ps1`), НЕ трогая runtime сессии (JetBrains ACP);
-3. сборка `DEPLOY=0 bash ./build-prod.sh prod` (без сломанного rsync-шага);
-4. проверяет, что `dist/prod` **стабилен** (считает файлы дважды) и содержит ≥300 SEO-страниц;
-5. транспорт **tar+ssh** в staging `static/dist.new`, серверная проверка ≥300 страниц;
-6. **атомарный свап с бэкапом** (`static/dist.bak`) + overlay старых чанков + рестарт app+nginx;
-7. health-verify (home/api/travels=200, отдаётся новый chunk, travel-страница с телом и одним `<h1>`);
-8. **авто-откат** из `static/dist.bak` при любой неудаче health-check;
-9. пост-деплой SEO-проверка.
+- **GNU rsync (protocol ≥ 30)** — норма, деплой штатный: `bash ./build-prod.sh prod`.
+  На macOS это Homebrew-rsync (`/opt/homebrew/bin/rsync`); проверено на живых деплоях
+  2026-07-04 и 2026-07-17 (3.4.4 / protocol 32) — заливка полная.
+- **macOS системный `openrsync` (protocol 29, `/usr/bin/rsync`)** — **НЕ деплоить им**:
+  против GNU rsync на сервере он молча передаёт неполный архив (~36MB вместо ~150MB, без
+  JS-бандлов и `index.html`) и бьёт прод. Если он оказался первым в PATH — поставь GNU rsync
+  (`brew install rsync`) либо заливай tar+ssh; молча продолжать нельзя.
+- **Windows / git-bash** — `rsync` не работает вовсе (конфликт MSYS2-рантаймов),
+  плюс e2e/preflight-процессы затирают `dist/`. Там был отдельный ops-враппер
+  (`bash /d/metravel/ops/deploy-frontend.sh`, машина `D:\metravel\metravel2`): сборка
+  `DEPLOY=0`, транспорт tar+ssh в `static/dist.new`, атомарный свап с бэкапом `static/dist.bak`,
+  health-verify и авто-откат. **Это историческая справка для той машины** — на macOS этого
+  враппера нет, не ищи его и не пытайся вызвать.
 
-Откат вручную: `ssh metravel-prod 'cd /home/sx3/metravel && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx'`.
+Общий принцип: транспорт может отличаться, но сборка/guard'ы/свап — всегда через штатные скрипты.
+Свои rsync/scp-команды в обход не изобретать.
 
-**Регулярные релизы лучше делать с обычной машины** (где есть rsync) штатным `build-prod.sh prod`.
-Этот враппер — надёжный fallback именно с данной Windows-машины.
+Откат вручную:
+`ssh sx3@178.172.137.129 'cd /home/sx3/metravel && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx'`.
 
 ## Доступ (SSH)
 
-- Сервер: `sx3@178.172.137.129` (он же алиас `metravel-prod`), каталог `/home/sx3/metravel`.
-- Ключ `~/.ssh/metravel_prod` подхватывается автоматически (есть `Host 178.172.137.129` в `~/.ssh/config`).
-- Секреты не печатать и не коммитить. Если `ssh metravel-prod "echo ok"` не отвечает — останавливайся и сообщи (не подбирай ключи вручную).
+- Сервер: `sx3@178.172.137.129`, каталог `/home/sx3/metravel`. Это дефолт, зашитый в сами скрипты
+  (`SERVER="${SERVER:-sx3@178.172.137.129}"`), — просто не переопределяй его, и всё сойдётся.
+- **Алиас `metravel-prod` есть не на каждой машине** (на macOS-чекауте `~/.ssh/config` содержит
+  только `github.com`). Отсутствие алиаса ≠ отсутствие доступа: ключ подхватывается из ssh-agent
+  (на macOS это `~/.ssh/id_ed25519`, сервер его принимает). Проверяй доступ **прямым хостом**,
+  а не алиасом: `ssh sx3@178.172.137.129 "echo ok"`.
+- Секреты не печатать и не коммитить. Если прямой `ssh sx3@178.172.137.129 "echo ok"` не отвечает —
+  останавливайся и сообщи (ключи вручную не подбирать, `~/.ssh/config` не править).
 
 ## Зона ответственности
 
-- Деплой web-сборки фронта на прод. Только ветка `main`, только из основного репо
-  `D:\metravel\metravel2`.
+- Деплой web-сборки фронта на прод. Только ветка `main`, только из основного чекаута репо
+  (на текущей машине — `/Users/juliasavran/Sites/metravel2/metravel2`; исторический
+  Windows-чекаут был `D:\metravel\metravel2`). Из авто-worktree (`.claude/worktrees/*`) не деплоить.
 - **НЕ деплоишь бэкенд** (`../metravel-backend`) и нативные сборки (iOS/Android — это EAS).
 
 ## Обязательный порядок действий
@@ -77,7 +83,8 @@ bash /d/metravel/ops/deploy-frontend.sh
 1. **Pre-flight (не деплоить на красном):**
    - `git status` — рабочее дерево чистое, ветка `main`, синхронизирована с origin.
    - Быстрая валидация изменений: `npm run typecheck` и `npm run lint` (или `npm run check:fast` на изменённом scope). При падении — НЕ деплоить, вернуть отчёт.
-   - Зафиксировать текущий прод-commit как точку отката: `ssh metravel-prod "cd /home/sx3/metravel && git rev-parse --short HEAD"` (если фронт-артефакты привязаны к коммиту) и/или запомнить, что свап обратим только пере-сборкой предыдущего коммита.
+   - Проверить, что нет параллельного деплоя: `ssh sx3@178.172.137.129 "ls -la /home/sx3/metravel/.deploy.lock"` (лока быть не должно).
+   - Зафиксировать текущий прод-commit как точку отката: `ssh sx3@178.172.137.129 "cd /home/sx3/metravel && git rev-parse --short HEAD"` (если фронт-артефакты привязаны к коммиту) и/или запомнить, что свап обратим только пере-сборкой предыдущего коммита.
 2. **Снять baseline здоровья** до деплоя: коды `/` и `/api/travels/` (curl), чтобы было с чем сравнить.
    Полезно прогнать `DEPLOY=0 bash ./build-prod.sh prod` — собрать и пройти guard'ы, НЕ трогая прод;
    если сборка/guard упали — деплой не начинать.

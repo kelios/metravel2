@@ -224,4 +224,8 @@ export const mapGenerated3 = {
   "utils.routingHelpers.requestFailedAfterRetries": "Request failed after repeated attempts",
   "constants.mapSeo.title": "Map of routes and attractions of Belarus | Metravel",
   "constants.mapSeo.description": "Metravel interactive travel map: find routes, attractions and trip ideas, filter points and build your path.",
+  "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Search by tags",
+  "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Search places by tag and category",
+  "components.MapPage.FiltersPanelRadiusSection.vvedite_nazvanie_tega_naprimer_zamok_ili_peschera_2e9b60d7": "Type a tag name, for example \"castle\" or \"cave\"",
+  "components.MapPage.FiltersPanelRadiusSection.teg_ne_nayden_proverte_napisanie_9c6a05e2": "No matching tag. Check the spelling.",
 } as const

@@ -11,6 +11,8 @@ import { getCategoryName, type CategoryOption } from '@/components/MapPage/categ
 import { createCollator, translate as i18nT } from '@/i18n'
 
 
+const COLLAPSED_UNSELECTED_LIMIT = 8
+
 interface FiltersPanelRadiusSectionProps {
   colors: ThemedColors
   styles: any
@@ -94,6 +96,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
   }, [categoryCollator, filters.categoryTravelAddress, travelCategoriesCount])
 
   const [categoriesExpanded, setCategoriesExpanded] = useState(false)
+  const [categoryQuery, setCategoryQuery] = useState('')
 
   const selectedCategoryValues = useMemo(
     () =>
@@ -119,17 +122,31 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
     return { selected, unselected }
   }, [categoryCollator, categoryOptions, selectedCategoryValues])
 
-  const COLLAPSED_UNSELECTED_LIMIT = 8
+  // The tag search only filters the *unselected* pool: selected chips stay pinned
+  // on top so they can be unset without clearing the query first.
+  const normalizedCategoryQuery = categoryQuery.trim().toLocaleLowerCase()
+  const isCategorySearchActive = normalizedCategoryQuery.length > 0
+  const matchedUnselected = useMemo(() => {
+    if (!normalizedCategoryQuery) return orderedCategories.unselected
+    return orderedCategories.unselected.filter((category) =>
+      category.value.toLocaleLowerCase().includes(normalizedCategoryQuery),
+    )
+  }, [normalizedCategoryQuery, orderedCategories.unselected])
+
   const hiddenUnselectedCount = Math.max(
     0,
-    orderedCategories.unselected.length - COLLAPSED_UNSELECTED_LIMIT,
+    matchedUnselected.length - COLLAPSED_UNSELECTED_LIMIT,
   )
-  const canCollapse = hiddenUnselectedCount > 0
+  // While searching we show every match and hide the toggle — otherwise the
+  // collapse would silently cut search results at 8.
+  const canCollapse = !isCategorySearchActive && hiddenUnselectedCount > 0
   const visibleUnselected =
     canCollapse && !categoriesExpanded
-      ? orderedCategories.unselected.slice(0, COLLAPSED_UNSELECTED_LIMIT)
-      : orderedCategories.unselected
+      ? matchedUnselected.slice(0, COLLAPSED_UNSELECTED_LIMIT)
+      : matchedUnselected
   const visibleCategories = [...orderedCategories.selected, ...visibleUnselected]
+  const showCategorySearch = categoryOptions.length > COLLAPSED_UNSELECTED_LIMIT
+  const showNoTagMatches = isCategorySearchActive && matchedUnselected.length === 0
 
   const searchQueryValue = String(filterValue.searchQuery || '')
 
@@ -177,6 +194,17 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
         </View>
         {!isMobile && <Text style={styles.sectionHint}>{i18nT('map:components.MapPage.FiltersPanelRadiusSection.utochnite_tip_mest_f710a5c5')}</Text>}
 
+        {showCategorySearch && (
+          <MapSearchInput
+            value={categoryQuery}
+            onChange={setCategoryQuery}
+            testID="category-search-input"
+            placeholder={i18nT('map:components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14')}
+            accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68')}
+            accessibilityHint={i18nT('map:components.MapPage.FiltersPanelRadiusSection.vvedite_nazvanie_tega_naprimer_zamok_ili_peschera_2e9b60d7')}
+          />
+        )}
+
         {categoryOptions.length > 0 ? (
           <>
             <View style={styles.filterSelectionChips} testID="category-options">
@@ -208,6 +236,11 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                 )
               })}
             </View>
+            {showNoTagMatches && (
+              <Text style={styles.sectionHint} testID="category-search-empty">
+                {i18nT('map:components.MapPage.FiltersPanelRadiusSection.teg_ne_nayden_proverte_napisanie_9c6a05e2')}
+              </Text>
+            )}
             {canCollapse && (
               <Pressable
                 onPress={() => setCategoriesExpanded((prev) => !prev)}

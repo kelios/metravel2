@@ -73,9 +73,12 @@ testers и countries защищены.
   DEPLOY=0 ./build-prod.sh prod
   ```
 
+- [ ] Транспорт заливки проверен под машину: `rsync --version | head -1` = GNU rsync, protocol >= 30
+      (на macOS — Homebrew `/opt/homebrew/bin/rsync`). Системный `openrsync` (protocol 29) молча
+      заливает неполный артефакт и бьёт прод — им НЕ деплоить. См. `docs/RELEASE.md`.
 - [ ] Deploy выполняется только project-owned release path:
-  - `./build-prod.sh <target>` на машине с рабочим `rsync`;
-  - documented Windows/Codex wrapper из `docs/RELEASE.md`;
+  - `./build-prod.sh <target>` на машине с рабочим GNU `rsync` (обычный путь на macOS);
+  - ops-wrapper из `docs/RELEASE.md` — только на историческом Windows/Codex-чекауте, на macOS его нет;
   - `scripts/fix-prod.sh` только для явно запрошенного emergency recovery.
 - [ ] Custom `rsync`/`scp`/SSH deploy sequence не используется.
 - [ ] Server writes ограничены документированными untracked frontend targets

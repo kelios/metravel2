@@ -192,6 +192,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const facebookActionRef = useRef(false);
     const facebookMessageEditedRef = useRef(false);
     const facebookCapabilityMountedRef = useRef(true);
+    const facebookCapabilityRefreshInFlightRef = useRef(false);
     const [facebookCapability, setFacebookCapability] = useState<FacebookPublishCapability | null>(null);
     const [facebookMessage, setFacebookMessage] = useState('');
     const [facebookState, setFacebookState] = useState<FacebookPublishUiState>('idle');
@@ -242,6 +243,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     }, [facebookPhotoOptions, facebookPhotoOptionsKey]);
 
     const refreshFacebookCapability = useCallback(async () => {
+        if (facebookCapabilityRefreshInFlightRef.current) return;
+        facebookCapabilityRefreshInFlightRef.current = true;
         try {
             const capability = await fetchFacebookPublishStatus();
             if (!facebookCapabilityMountedRef.current) return;
@@ -251,6 +254,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             // A missing/forbidden capability must not expose a dead action.
             devError('Facebook publish capability unavailable:', error);
             if (facebookCapabilityMountedRef.current) setFacebookCapability(null);
+        } finally {
+            facebookCapabilityRefreshInFlightRef.current = false;
         }
     }, []);
 
@@ -258,7 +263,21 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         if (!isSuperAdmin) return;
         facebookCapabilityMountedRef.current = true;
         void refreshFacebookCapability();
-        const subscription = Platform.OS === 'web'
+
+        const handleWebResume = () => {
+            if (!facebookCapabilityMountedRef.current) return;
+            if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+            void refreshFacebookCapability();
+        };
+        const isWeb = Platform.OS === 'web';
+        if (isWeb && typeof window !== 'undefined') {
+            window.addEventListener('focus', handleWebResume);
+        }
+        if (isWeb && typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', handleWebResume);
+        }
+
+        const subscription = isWeb
             ? null
             : AppState.addEventListener('change', (nextState) => {
                 if (facebookCapabilityMountedRef.current && nextState === 'active') {
@@ -267,6 +286,12 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             });
         return () => {
             facebookCapabilityMountedRef.current = false;
+            if (isWeb && typeof window !== 'undefined') {
+                window.removeEventListener('focus', handleWebResume);
+            }
+            if (isWeb && typeof document !== 'undefined') {
+                document.removeEventListener('visibilitychange', handleWebResume);
+            }
             subscription?.remove();
         };
     }, [isSuperAdmin, refreshFacebookCapability]);
@@ -837,9 +862,11 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         facebookActionRef.current = true;
         setFacebookState('publishing');
         try {
-            const selectedPhotoIdSet = new Set(facebookSelectedPhotoIds);
-            const selectedPhotos = facebookPhotoOptions
-                .filter((photo) => selectedPhotoIdSet.has(photo.id))
+            // Publication order follows the order the user picked the photos in, not gallery order.
+            const photoOptionById = new Map(facebookPhotoOptions.map((photo) => [photo.id, photo]));
+            const selectedPhotos = facebookSelectedPhotoIds
+                .map((photoId) => photoOptionById.get(photoId))
+                .filter((photo): photo is (typeof facebookPhotoOptions)[number] => Boolean(photo))
                 .map((photo) => ({
                     id: photo.apiId,
                     url: photo.source,

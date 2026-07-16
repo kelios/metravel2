@@ -47,6 +47,12 @@ interface MapSearchInputProps {
    * this; other inputs leave it off.
    */
   autoFocusOnSignal?: boolean;
+  /**
+   * A11y strings default to the place-name search wording; reusers (e.g. the
+   * category/tag search inside "Что посмотреть") pass their own.
+   */
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 const MapSearchInput: React.FC<MapSearchInputProps> = ({
@@ -57,6 +63,8 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
   resultsCount,
   testID = 'map-search-input',
   autoFocusOnSignal = false,
+  accessibilityLabel = i18nT('map:components.MapPage.MapSearchInput.poisk_mest_na_karte_4fd4bc4a'),
+  accessibilityHint = i18nT('map:components.MapPage.MapSearchInput.vvedite_nazvanie_mesta_dlya_poiska_baa10a27'),
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -164,8 +172,8 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
           autoCorrect={false}
           returnKeyType="search"
           inputMode="search"
-          accessibilityLabel={i18nT('map:components.MapPage.MapSearchInput.poisk_mest_na_karte_4fd4bc4a')}
-          accessibilityHint={i18nT('map:components.MapPage.MapSearchInput.vvedite_nazvanie_mesta_dlya_poiska_baa10a27')}
+          accessibilityLabel={accessibilityLabel}
+          accessibilityHint={accessibilityHint}
         />
         {showClear && (
           <Pressable

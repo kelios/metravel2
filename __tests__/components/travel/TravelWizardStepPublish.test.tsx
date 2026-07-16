@@ -1,4 +1,5 @@
 import { render, fireEvent, act } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
 import { TravelFormData } from '@/types/types';
@@ -305,6 +306,53 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(fetchFacebookPublishStatus).toHaveBeenCalledTimes(1);
   });
 
+  it('refreshes Facebook capability when the web tab regains focus after OAuth', async () => {
+    const originalPlatform = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+    ;(fetchFacebookPublishStatus as jest.Mock)
+      .mockResolvedValueOnce({
+        configured: true,
+        connected: false,
+        pageId: null,
+        pageName: null,
+        canPublish: false,
+      })
+      .mockResolvedValueOnce({
+        configured: true,
+        connected: true,
+        pageId: 'server-page-id',
+        pageName: 'MeTravel',
+        canPublish: true,
+      });
+
+    try {
+      const { findByText } = render(
+        <TravelWizardStepPublish
+          currentStep={6}
+          totalSteps={6}
+          formData={baseFormData}
+          setFormData={jest.fn()}
+          isSuperAdmin={true}
+          onManualSave={jest.fn()}
+          onGoBack={jest.fn()}
+          onFinish={jest.fn()}
+        />
+      );
+
+      expect(await findByText('Подключить Facebook')).toBeTruthy();
+      expect(fetchFacebookPublishStatus).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        window.dispatchEvent(new Event('focus'));
+      });
+
+      expect(await findByText('MeTravel: Готово к публикации')).toBeTruthy();
+      expect(fetchFacebookPublishStatus).toHaveBeenCalledTimes(2);
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+    }
+  });
+
   it('keeps Facebook action hidden when capability lookup fails', async () => {
     ;(fetchFacebookPublishStatus as jest.Mock).mockRejectedValueOnce(new Error('Not deployed'));
     const { queryByText } = render(
@@ -419,6 +467,51 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     });
 
     expect(publishTravelToFacebook).toHaveBeenCalledWith(640, 'Текст без фото', []);
+  });
+
+  it('publishes Facebook photos in the order they were picked, not in gallery order', async () => {
+    const multiPhotoFormData: TravelFormData = {
+      ...baseFormData,
+      gallery: [
+        { id: 1, url: 'https://example.com/gallery-1.jpg' },
+        { id: 2, url: 'https://example.com/gallery-2.jpg' },
+        { id: 3, url: 'https://example.com/gallery-3.jpg' },
+      ],
+    };
+    const { findByText, findByLabelText, findByTestId } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={multiPhotoFormData}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    fireEvent.changeText(await findByLabelText('Текст поста для Facebook'), 'Свой порядок фото');
+    // Clear the default selection, then pick the last photo first.
+    for (const index of [0, 1, 2]) {
+      await act(async () => {
+        fireEvent.press(await findByTestId(`facebook-photo-${index}`));
+      });
+    }
+    for (const index of [2, 0]) {
+      await act(async () => {
+        fireEvent.press(await findByTestId(`facebook-photo-${index}`));
+      });
+    }
+
+    await act(async () => {
+      fireEvent.press(await findByText('Опубликовать в Facebook'));
+    });
+
+    expect(publishTravelToFacebook).toHaveBeenCalledWith(640, 'Свой порядок фото', [
+      { id: 3, url: 'https://example.com/gallery-3.jpg', caption: undefined },
+      { id: 1, url: 'https://example.com/gallery-1.jpg', caption: undefined },
+    ]);
   });
 
   it('shows duplicate state and opens the backend-provided post URL', async () => {

@@ -345,16 +345,19 @@ Operation gate:
 ### Deploy commands for Codex
 
 - Production deploys require an explicit user request and `$metravel-devops-agent`.
-- On a normal machine with working `rsync`, use `./build-prod.sh prod`.
-- On this Windows/Codex machine, do not use `./build-prod.sh prod` as the final deploy command; its
-  local `rsync` step is known to fail. Use:
-
-```bash
-bash /d/metravel/ops/deploy-frontend.sh
-```
-
-This wrapper still uses the canonical build/guards through `DEPLOY=0 bash ./build-prod.sh prod`, then
-deploys with `tar+ssh`, performs an atomic server swap, verifies health, and rolls back on failure.
+- On a machine with working GNU `rsync` (protocol >= 30), use `./build-prod.sh prod`. This is the
+  normal path on the current macOS workstation, where Homebrew rsync is first in `PATH`. Check with
+  `rsync --version | head -1` before deploying.
+- Never deploy with the macOS system `openrsync` (protocol 29): it silently uploads an incomplete
+  archive and breaks production. Install GNU rsync or upload with `tar+ssh` instead.
+- The Windows/Codex machine (`D:\metravel\metravel2`) is a different, historical checkout, not this
+  one. Its local `rsync` step fails, so deploys there went through `bash /d/metravel/ops/deploy-frontend.sh`
+  — a wrapper that ran the canonical build/guards via `DEPLOY=0 bash ./build-prod.sh prod`, deployed
+  with `tar+ssh`, swapped atomically, verified health, and rolled back on failure. That wrapper does
+  not exist on macOS; do not invoke it here.
+- SSH access is `sx3@178.172.137.129` (the scripts' built-in default). The `metravel-prod` alias is
+  not defined on every machine — probe by direct host, and do not mistake a missing alias for missing
+  access. See `docs/RELEASE.md`.
 - `scripts/fix-prod.sh` is an emergency production frontend recovery path only. It has its own remote
   deploy lock, prod artifact config gate, in-container atomic swap, old Expo chunk overlap, nginx restart,
   and live chunk/config verification. Use it through `$metravel-devops-agent` only when normal deploy is

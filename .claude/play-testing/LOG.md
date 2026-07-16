@@ -15,7 +15,7 @@
 | 5    | 2026-07-13 |             |            |                      | |
 | 6    | 2026-07-14 |             |            |                      | |
 | 7    | 2026-07-15 |             |            |                      | |
-| 8    | 2026-07-16 | ✅          |            | TCT: uploads done; Pack Boneclaw IV: 13/13 done (100%); App Testers: 1 install/test, stopped before Play review | Evidence: `.claude/play-testing/evidence/2026-07-16/`; 110 moons; Putik/Jurisprudence retested |
+| 8    | 2026-07-16 | ✅          |            | TCT: uploads done; post-reset TCT: 12/12 uploads submitted; Pack Boneclaw IV: 13/13 done (100%); App Testers: 1 install/test, stopped before Play review | Evidence: `.claude/play-testing/evidence/2026-07-16/`; 110 moons; Putik/Jurisprudence retested |
 | 9    | 2026-07-17 |             |            |                      | |
 | 10   | 2026-07-18 |             |            |                      | |
 | 11   | 2026-07-19 |             |            |                      | |
@@ -37,3 +37,10 @@
   - `Jurisprudence (3Y LL.B)`: retested successfully after prior ad issue; opened study docs and read `Nature and Value of Jurisprudence`, then completed feedback.
 - Apps exercised successfully with in-app actions: Kolorino, PraEx, Priority dz, Ball Sort - Zen, Denkleşelim, First Time Daddy, Call Of Poker, Kitchen Match & Merge, Smart Bill POS, BareMacros, `運の社`.
 - App Testers: `Smart Spirit Bubble Level Tool` link returned Play Store `File not found`; `Food Feast - Tapri Rush` was installed, profile created with neutral test data, gameplay controls tested, then stopped at App Testers step `Leave a review on the Play Store` because incentivized Play reviews are not allowed.
+
+### 2026-07-16 — The Closed Test post-reset pack
+
+- After the TCT reset, `My Tasks` showed `12 pending • 0 completed today`; submitted all 12 `MY UPLOAD` proofs so visible items moved from `Required` to `Pending`.
+- Submitted TCT uploads: Earth radio Day 4, MVG Public School Day 5, 12 testers app closed testing Day 2, School Master App Day 5, Libera Day 5, My Healthmate Day 4, Insta saver Day 4, Damas Go Day 3, Loam - Moto Day 2, GridArt Day 9, Bigpic Day 9, Rocky Decodes Calories Day 9.
+- Installed and tested `Loam - Moto` (`app.loam.moto`); used demo garage and maintenance details for 30+ seconds, uploaded proof, and accepted partner proof that showed real MeTravel usage.
+- Strong in-app proof captured for Earth radio, App Testers, Loam, GridArt, Rocky Decodes Calories, Insta saver and My Healthmate. Weak-proof risk: Bigpic opened an ad activity before capture; MVG Public School, School Master App, Libera and Damas Go returned to TCT during launch attempts, so their TCT uploads may need partner tolerance or later replacement if rejected.

@@ -224,4 +224,8 @@ export const mapGenerated3 = {
   "utils.routingHelpers.requestFailedAfterRetries": "Не атрымалася выканаць запыт пасля паўторных спроб",
   "constants.mapSeo.title": "Карта маршрутаў і славутасцяў Беларусі | Metravel",
   "constants.mapSeo.description": "Інтэрактыўная карта падарожжаў Metravel: знаходзіце маршруты, славутасці і ідэі паездак, фільтруйце кропкі і будуйце свой шлях.",
+  "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Пошук па тэгах",
+  "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Пошук па тэгах і катэгорыях месцаў",
+  "components.MapPage.FiltersPanelRadiusSection.vvedite_nazvanie_tega_naprimer_zamok_ili_peschera_2e9b60d7": "Увядзіце назву тэга, напрыклад «замак» або «пячора»",
+  "components.MapPage.FiltersPanelRadiusSection.teg_ne_nayden_proverte_napisanie_9c6a05e2": "Тэг не знойдзены. Праверце напісанне.",
 } as const

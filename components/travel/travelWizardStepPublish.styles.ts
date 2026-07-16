@@ -489,6 +489,8 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
         marginTop: DESIGN_TOKENS.spacing.md,
     },
     facebookPhotoList: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
         gap: DESIGN_TOKENS.spacing.sm,
         paddingVertical: DESIGN_TOKENS.spacing.xs,
     },
@@ -523,6 +525,10 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: colors.primary,
+    },
+    facebookPhotoOrderText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '700',
     },
     facebookPhotoEmpty: {
         paddingVertical: DESIGN_TOKENS.spacing.sm,

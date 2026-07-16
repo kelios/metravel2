@@ -224,4 +224,8 @@ export const mapGenerated3 = {
   "utils.routingHelpers.requestFailedAfterRetries": "Żądanie nie powiodło się po wielokrotnych próbach",
   "constants.mapSeo.title": "Mapa tras i atrakcji Białorusi | Metravel",
   "constants.mapSeo.description": "Interaktywna mapa podróży Metravel: znajduj trasy, atrakcje i pomysły na wycieczki, filtruj punkty i buduj swoją ścieżkę.",
+  "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Szukaj po tagach",
+  "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Wyszukiwanie po tagach i kategoriach miejsc",
+  "components.MapPage.FiltersPanelRadiusSection.vvedite_nazvanie_tega_naprimer_zamok_ili_peschera_2e9b60d7": "Wpisz nazwę tagu, na przykład „zamek” lub „jaskinia”",
+  "components.MapPage.FiltersPanelRadiusSection.teg_ne_nayden_proverte_napisanie_9c6a05e2": "Nie znaleziono tagu. Sprawdź pisownię.",
 } as const

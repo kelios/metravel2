@@ -224,4 +224,8 @@ export const mapGenerated3 = {
   "utils.routingHelpers.requestFailedAfterRetries": "Не вдалося виконати запит після повторних спроб",
   "constants.mapSeo.title": "Карта маршрутів та визначних пам'яток Білорусі | Metravel",
   "constants.mapSeo.description": "Інтерактивна карта подорожей Metravel: знайдіть маршрути, пам'ятки та ідеї поїздок, фільтруйте точки та будуйте свій шлях.",
+  "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Пошук за тегами",
+  "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Пошук за тегами та категоріями місць",
+  "components.MapPage.FiltersPanelRadiusSection.vvedite_nazvanie_tega_naprimer_zamok_ili_peschera_2e9b60d7": "Введіть назву тега, наприклад «замок» або «печера»",
+  "components.MapPage.FiltersPanelRadiusSection.teg_ne_nayden_proverte_napisanie_9c6a05e2": "Тег не знайдено. Перевірте написання.",
 } as const

@@ -1,6 +1,6 @@
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import Feather from '@expo/vector-icons/Feather'
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native'
+import { Pressable, Text, TextInput, View } from 'react-native'
 
 import Button from '@/components/ui/Button'
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -81,7 +81,8 @@ export default function FacebookPublishPanel({
   const isConnecting = state === 'connecting'
   const isPublishing = state === 'publishing'
   const isBusy = isConnecting || isPublishing
-  const selectedPhotoIdSet = new Set(selectedPhotoIds)
+  // Position in `selectedPhotoIds` is the publication order, so the badge shows it.
+  const selectionOrderByPhotoId = new Map(selectedPhotoIds.map((photoId, index) => [photoId, index + 1]))
 
   return (
     <View style={[styles.card, styles.instagramCard]} testID="facebook-publish-panel">
@@ -138,13 +139,10 @@ export default function FacebookPublishPanel({
             <Text style={styles.instagramHintText}>
               {i18nT('travel:components.travel.FacebookPublishPanel.photoPickerHint')}
             </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.facebookPhotoList}
-            >
+            <View style={styles.facebookPhotoList}>
               {photoOptions.map((photo, index) => {
-                const isSelected = selectedPhotoIdSet.has(photo.id)
+                const selectionOrder = selectionOrderByPhotoId.get(photo.id)
+                const isSelected = selectionOrder !== undefined
                 return (
                   <Pressable
                     key={photo.id}
@@ -169,13 +167,15 @@ export default function FacebookPublishPanel({
                     />
                     {isSelected ? (
                       <View style={styles.facebookPhotoCheckBadge}>
-                        <Feather name="check" size={16} color={colors.textOnPrimary} />
+                        <Text style={[styles.facebookPhotoOrderText, { color: colors.textOnPrimary }]}>
+                          {selectionOrder}
+                        </Text>
                       </View>
                     ) : null}
                   </Pressable>
                 )
               })}
-            </ScrollView>
+            </View>
           </>
         ) : (
           <Text style={styles.facebookPhotoEmpty}>

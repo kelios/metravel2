@@ -70,34 +70,59 @@ npm run build:web:prod
 DEPLOY=0 ./build-prod.sh prod
 ```
 
-### Prod deploy from this Windows/Codex machine
+### Deploy transport depends on the machine: check `rsync` first
 
-On this workstation, the deploy step of `./build-prod.sh prod` is not reliable because the local
-Git-for-Windows/MSYS2 `rsync` transport fails. Do not keep retrying that command for production
-deploys from `D:\metravel\metravel2`.
+The deploy step of `./build-prod.sh prod` uploads over `rsync`, and that transport is not reliable
+everywhere. Before a production deploy, establish which machine you are on:
 
-Use the ops wrapper instead:
+```bash
+rsync --version | head -1   # need GNU rsync, protocol >= 30
+```
+
+**macOS (current workstation) — normal path.** Homebrew rsync (`/opt/homebrew/bin/rsync`, 3.4.4 /
+protocol 32) is first in `PATH` and uploads the full artifact; deploys on 2026-07-04 and 2026-07-17
+both transferred completely. Use `./build-prod.sh prod` as documented above.
+
+Do **not** deploy with the macOS system `openrsync` (`/usr/bin/rsync`, protocol 29). Against the
+server's GNU rsync it silently transfers an incomplete archive (~36MB instead of ~150MB, missing the
+JS bundles and `index.html`) and breaks production. If it is first in `PATH`, install GNU rsync
+(`brew install rsync`) or upload with `tar+ssh` — never continue silently.
+
+**Windows/Codex machine (`D:\metravel\metravel2`) — historical, not this checkout.** There the
+Git-for-Windows/MSYS2 `rsync` transport fails outright and e2e/preflight processes clobber `dist/`,
+so deploys went through an ops wrapper:
 
 ```bash
 bash /d/metravel/ops/deploy-frontend.sh
 ```
 
-The wrapper is the documented fallback for this machine. It verifies branch `main`, SSH access and
-operation safety, runs `DEPLOY=0 bash ./build-prod.sh prod`, checks `dist/prod`,
-uploads the build with `tar+ssh`, atomically swaps `static/dist` on `metravel-prod`, overlays old
-Expo chunks, restarts `app` and `nginx`, runs health checks, and rolls back automatically from
-`static/dist.bak` if health verification fails.
+It verified branch `main`, SSH access and operation safety, ran `DEPLOY=0 bash ./build-prod.sh prod`,
+checked `dist/prod`, uploaded with `tar+ssh`, atomically swapped `static/dist`, overlaid old Expo
+chunks, restarted `app` and `nginx`, ran health checks, and rolled back automatically from
+`static/dist.bak` on failure. This wrapper does not exist on the macOS checkout — do not look for it.
 
-Do not launch it while another build/deploy/e2e operation owns the corresponding
-lock or target, and do not kill another session's process to make room.
+Do not launch a deploy while another build/deploy/e2e operation owns the corresponding lock or
+target, and do not kill another session's process to make room.
 
-Manual rollback command if the wrapper reports a broken deploy:
+Manual rollback command if a deploy reports broken production:
 
 ```bash
-ssh metravel-prod 'cd /home/sx3/metravel && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx'
+ssh sx3@178.172.137.129 'cd /home/sx3/metravel && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx'
 ```
 
-Regular releases from a machine with working `rsync` may still use `./build-prod.sh prod`.
+### SSH access to prod
+
+The server is `sx3@178.172.137.129` (`/home/sx3/metravel`) — the default already baked into the
+deploy scripts (`SERVER="${SERVER:-sx3@178.172.137.129}"`), so leave it unset and it just works.
+
+The `metravel-prod` host alias exists only on machines whose `~/.ssh/config` defines it; the macOS
+checkout has an entry for `github.com` only. **A missing alias does not mean missing access** — the
+key is served from ssh-agent (`~/.ssh/id_ed25519` on macOS, accepted by the server). Probe access by
+direct host, not by alias:
+
+```bash
+ssh sx3@178.172.137.129 "echo ok"
+```
 
 ### Emergency frontend redeploy
 
