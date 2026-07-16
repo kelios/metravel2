@@ -42,6 +42,8 @@
 - `docs/PERF_014_EAGER_BUNDLE_AUDIT.md` — rationale и guard contract для web
   eager bundle;
 - `docs/ICON_ART_PROMPTS.md` — canonical raster icon/art prompt specification.
+- `docs/FACEBOOK_LOGIN_DESIGN.md` — normative web auth states for Facebook
+  registration/login rollout (implemented behind flag, blocked by backend contract).
 
 `docs/features/TEMPLATE.md` — шаблон новой feature map; не runtime document.
 
@@ -75,7 +77,9 @@ production-only Play API, а обычная QA — локальную USB-сбо
 
 - `docs/GROWTH_PLAN.md` — шестимесячный plan с baseline/review dates;
 - `docs/ARTICLE_ATTENTION_LOG.md` — журнал article attention cycles;
-- `docs/QUEST_DEMAND_LOG.md` — журнал quest demand cycles.
+- `docs/QUEST_DEMAND_LOG.md` — журнал quest demand cycles;
+- `docs/QUEST_CONTENT_PLAN.md` — план контента квестов: очереди доработки
+  (poi_info, утечки, финале), перелинковка квест↔статья, план новых квестов.
 
 Dated snapshots — использовать только с указанным окном данных и не называть
 «текущими» без нового замера:

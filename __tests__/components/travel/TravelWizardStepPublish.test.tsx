@@ -34,10 +34,30 @@ jest.mock('@/api/instagramPublish', () => ({
     .fn()
     .mockResolvedValue('https://www.facebook.com/v19.0/dialog/oauth?client_id=test-app'),
 }));
+jest.mock('@/api/facebookPublish', () => ({
+  fetchFacebookPublishStatus: jest.fn().mockResolvedValue({
+    configured: true,
+    connected: true,
+    pageId: 'server-page-id',
+    pageName: 'MeTravel',
+    canPublish: true,
+  }),
+  fetchFacebookOAuthStartUrl: jest
+    .fn()
+    .mockResolvedValue('https://www.facebook.com/v25.0/dialog/oauth?client_id=test-app'),
+  publishTravelToFacebook: jest
+    .fn()
+    .mockResolvedValue({ status: 'published', postUrl: 'https://www.facebook.com/test-post' }),
+}));
 
 import { showToast } from '@/utils/toast';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { publishTravelToInstagram, fetchInstagramOAuthStartUrl } from '@/api/instagramPublish';
+import {
+  fetchFacebookOAuthStartUrl,
+  fetchFacebookPublishStatus,
+  publishTravelToFacebook,
+} from '@/api/facebookPublish';
 
 const baseFormData: TravelFormData = {
   id: '640',
@@ -77,6 +97,23 @@ const baseFormData: TravelFormData = {
 describe('TravelWizardStepPublish - moderation submit', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    ;(fetchFacebookPublishStatus as jest.Mock).mockReset();
+    ;(fetchFacebookOAuthStartUrl as jest.Mock).mockReset();
+    ;(publishTravelToFacebook as jest.Mock).mockReset();
+    ;(fetchFacebookPublishStatus as jest.Mock).mockResolvedValue({
+      configured: true,
+      connected: true,
+      pageId: 'server-page-id',
+      pageName: 'MeTravel',
+      canPublish: true,
+    });
+    ;(fetchFacebookOAuthStartUrl as jest.Mock).mockResolvedValue(
+      'https://www.facebook.com/v25.0/dialog/oauth?client_id=test-app',
+    );
+    ;(publishTravelToFacebook as jest.Mock).mockResolvedValue({
+      status: 'published',
+      postUrl: 'https://www.facebook.com/test-post',
+    });
   });
 
   it('renders publish step basics (smoke)', () => {
@@ -245,6 +282,186 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(queryByText('Instagram публикация')).toBeNull();
     expect(queryByText('Скопировать текст')).toBeNull();
     expect(queryByText('Опубликовать в Instagram')).toBeNull();
+    expect(queryByText('Публикация в Facebook')).toBeNull();
+  });
+
+  it('shows Facebook publishing only after the backend confirms capability', async () => {
+    const { findByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    expect(await findByText('Публикация в Facebook')).toBeTruthy();
+    expect(await findByText('Опубликовать в Facebook')).toBeTruthy();
+    expect(fetchFacebookPublishStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Facebook action hidden when capability lookup fails', async () => {
+    ;(fetchFacebookPublishStatus as jest.Mock).mockRejectedValueOnce(new Error('Not deployed'));
+    const { queryByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    await act(async () => undefined);
+    expect(queryByText('Публикация в Facebook')).toBeNull();
+  });
+
+  it('opens backend Facebook OAuth when the Page is not connected', async () => {
+    ;(fetchFacebookPublishStatus as jest.Mock).mockResolvedValueOnce({
+      configured: true,
+      connected: false,
+      pageId: 'server-page-id',
+      pageName: 'MeTravel',
+      canPublish: false,
+    });
+    const { findByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    const connectButton = await findByText('Подключить Facebook');
+    await act(async () => {
+      fireEvent.press(connectButton);
+    });
+
+    expect(fetchFacebookOAuthStartUrl).toHaveBeenCalledTimes(1);
+    expect(openExternalUrl).toHaveBeenCalledWith(
+      'https://www.facebook.com/v25.0/dialog/oauth?client_id=test-app',
+    );
+  });
+
+  it('publishes an edited Facebook message without client-owned Page data', async () => {
+    const { findByText, findByLabelText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    fireEvent.changeText(await findByLabelText('Текст поста для Facebook'), 'Новый Facebook текст');
+    const publishButton = await findByText('Опубликовать в Facebook');
+    await act(async () => {
+      fireEvent.press(publishButton);
+    });
+
+    expect(publishTravelToFacebook).toHaveBeenCalledWith(640, 'Новый Facebook текст');
+    expect(await findByText('MeTravel: Пост опубликован')).toBeTruthy();
+  });
+
+  it('shows duplicate state and opens the backend-provided post URL', async () => {
+    ;(publishTravelToFacebook as jest.Mock).mockResolvedValueOnce({
+      status: 'already_published',
+      duplicate: true,
+      postUrl: 'https://www.facebook.com/existing-post',
+    });
+    const { findByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    const publishButton = await findByText('Опубликовать в Facebook');
+    await act(async () => {
+      fireEvent.press(publishButton);
+    });
+    expect(await findByText('MeTravel: Эта статья уже опубликована')).toBeTruthy();
+
+    const openPostButton = await findByText('Открыть пост в Facebook');
+    await act(async () => {
+      fireEvent.press(openPostButton);
+    });
+    expect(openExternalUrl).toHaveBeenCalledWith('https://www.facebook.com/existing-post');
+  });
+
+  it('guards Facebook publish until the travel has been saved', async () => {
+    const { findByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={{ ...baseFormData, id: undefined }}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    const publishButton = await findByText('Опубликовать в Facebook');
+    await act(async () => {
+      fireEvent.press(publishButton);
+    });
+
+    expect(publishTravelToFacebook).not.toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledWith(
+      expect.objectContaining({ text1: 'Сначала сохраните путешествие' }),
+    );
+  });
+
+  it('prevents a double Facebook publish submission', async () => {
+    let resolvePublish: ((value: { status: 'published' }) => void) | undefined;
+    ;(publishTravelToFacebook as jest.Mock).mockImplementationOnce(
+      () => new Promise((resolve) => { resolvePublish = resolve; }),
+    );
+    const { findByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    const publishButton = await findByText('Опубликовать в Facebook');
+    fireEvent.press(publishButton);
+    fireEvent.press(publishButton);
+    expect(publishTravelToFacebook).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolvePublish?.({ status: 'published' });
+    });
   });
 
   it('opens Meta OAuth from the backend when superadmin presses connect', async () => {

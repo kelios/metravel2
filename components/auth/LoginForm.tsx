@@ -28,6 +28,7 @@ import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
+import FacebookSignInButton from '@/components/auth/FacebookSignInButton';
 import { webTouchScrollStyle } from '@/utils';
 import { buildRegistrationHref, resolvePostAuthPath } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
@@ -53,6 +54,7 @@ export default function Login() {
     // чтобы окно до router.replace не позволяло повторную/конкурирующую авторизацию.
     const [submitted, setSubmitted] = useState(false);
     const [googleBusy, setGoogleBusy] = useState(false);
+    const [facebookBusy, setFacebookBusy] = useState(false);
     const passwordRef = useRef<TextInput>(null);
     const mountedRef = useRef(true);
 
@@ -64,7 +66,7 @@ export default function Login() {
 
     /* ---------- helpers ---------- */
     const router = useRouter();
-    const { login, loginWithGoogle, sendPassword, isAuthenticated } = useAuth();
+    const { login, loginWithGoogle, loginWithFacebook, sendPassword, isAuthenticated } = useAuth();
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
 
     const isFocused = useIsFocused();
@@ -78,6 +80,9 @@ export default function Login() {
     const showMsg = (text: string, error = false) => {
         if (!mountedRef.current) return;
         setMsg({ text, error });
+    };
+    const replaceAfterAuth = () => {
+        router.replace(resolvePostAuthPath({ redirect, intent }) as any);
     };
 
     React.useEffect(() => {
@@ -99,6 +104,7 @@ export default function Login() {
         if (isFocused && !isAuthenticated) {
             setSubmitted(false);
             setGoogleBusy(false);
+            setFacebookBusy(false);
         }
     }, [isFocused, isAuthenticated]);
 
@@ -142,7 +148,7 @@ export default function Login() {
                 // Держим форму заблокированной до фактической навигации (finally вызовет
                 // setSubmitting(false), но submitted оставляет кнопки disabled).
                 setSubmitted(true);
-                router.replace(resolvePostAuthPath({ redirect, intent }) as any);
+                replaceAfterAuth();
             } else {
                 showMsg(i18nT('auth:components.auth.LoginForm.nevernyy_email_ili_parol_18c8d999'), true);
             }
@@ -154,7 +160,7 @@ export default function Login() {
     };
 
     const handleGoogleSignIn = async (credential: string) => {
-        if (googleBusy || submitted) return;
+        if (googleBusy || facebookBusy || submitted) return;
         setGoogleBusy(true);
         let navigating = false;
         try {
@@ -167,7 +173,7 @@ export default function Login() {
                 }
                 navigating = true;
                 setSubmitted(true);
-                router.replace(resolvePostAuthPath({ redirect, intent }) as any);
+                replaceAfterAuth();
             } else {
                 showMsg(i18nT('auth:components.auth.LoginForm.ne_udalos_voyti_cherez_google_0930989b'), true);
             }
@@ -182,6 +188,31 @@ export default function Login() {
     const handleGoogleError = (error: string) => {
         showMsg(error, true);
     };
+
+    const handleFacebookSignIn = async (credential: string) => {
+        if (facebookBusy || googleBusy || submitted) return;
+        setFacebookBusy(true);
+        let navigating = false;
+        try {
+            showMsg('');
+            const ok = await loginWithFacebook(credential);
+            if (ok) {
+                sendAnalyticsEvent('login_success', { method: 'facebook', intent: String(intent || '') });
+                if (intent) sendAnalyticsEvent('AuthSuccess', { source: 'facebook', intent });
+                navigating = true;
+                setSubmitted(true);
+                replaceAfterAuth();
+            } else {
+                showMsg(i18nT('authStatic:facebook.signInFailed'), true);
+            }
+        } catch (error) {
+            showMsg(getErrorMessage(error, i18nT('authStatic:facebook.signInFailed')), true);
+        } finally {
+            if (!navigating && mountedRef.current) setFacebookBusy(false);
+        }
+    };
+
+    const handleFacebookError = (error: string) => showMsg(error, true);
 
     const {
         values,
@@ -336,7 +367,7 @@ export default function Login() {
                                                 <Button
                                                     label={isSubmitting || submitted ? i18nT('auth:components.auth.LoginForm.podozhdite_113cf4cf') : i18nT('auth:components.auth.LoginForm.voyti_608953ec')}
                                                     onPress={() => handleSubmit()}
-                                                    disabled={isSubmitting || submitted || googleBusy}
+                                                    disabled={isSubmitting || submitted || googleBusy || facebookBusy}
                                                     loading={isSubmitting || submitted}
                                                     variant="primary"
                                                     size="lg"
@@ -346,7 +377,7 @@ export default function Login() {
 
                                                 <Pressable
                                                     onPress={() => handleResetPassword(values.email)}
-                                                    disabled={isSubmitting || submitted || googleBusy}
+                                                    disabled={isSubmitting || submitted || googleBusy || facebookBusy}
                                                     style={({ pressed }) => [
                                                         styles.forgotButton,
                                                         pressed && { opacity: 0.7 },
@@ -364,11 +395,18 @@ export default function Login() {
                                                     <View style={styles.dividerLine} />
                                                 </View>
 
-                                                <GoogleSignInButton
-                                                    onSuccess={handleGoogleSignIn}
-                                                    onError={handleGoogleError}
-                                                    disabled={isSubmitting || submitted || googleBusy}
-                                                />
+                                                <View style={styles.socialActions}>
+                                                    <GoogleSignInButton
+                                                        onSuccess={handleGoogleSignIn}
+                                                        onError={handleGoogleError}
+                                                        disabled={isSubmitting || submitted || googleBusy || facebookBusy}
+                                                    />
+                                                    <FacebookSignInButton
+                                                        onSuccess={handleFacebookSignIn}
+                                                        onError={handleFacebookError}
+                                                        disabled={isSubmitting || submitted || googleBusy || facebookBusy}
+                                                    />
+                                                </View>
 
                                             <View style={styles.registerContainer}>
                                                 <Text style={styles.registerText}>{i18nT('auth:components.auth.LoginForm.net_akkaunta_6dd7f1de')}</Text>
@@ -379,7 +417,7 @@ export default function Login() {
                                                             : (`/registration${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
                                                     }
                                                     style={styles.registerLink}
-                                                    disabled={isSubmitting || submitted || googleBusy}
+                                                    disabled={isSubmitting || submitted || googleBusy || facebookBusy}
                                                     onPress={() => {
                                                         trackRegisterCtaClicked({
                                                             source: 'login_form',
@@ -512,6 +550,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         color: colors.primaryText,
         fontSize: 14,
         fontWeight: '500' as const,
+    },
+    socialActions: {
+        gap: 12,
     },
     registerContainer: {
         flexDirection: 'row',

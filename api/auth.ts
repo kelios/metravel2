@@ -48,6 +48,7 @@ const CONFIRM_REGISTER = `${URLAPI}/user/confirm-registration/`;
 const SETNEWPASSWORD = `${URLAPI}/user/set-password-after-reset/`;
 const SENDPASSWORD = `${URLAPI}/user/sendpassword/`;
 const GOOGLE_LOGIN = `${URLAPI}/user/google-login/`;
+const FACEBOOK_LOGIN = `${URLAPI}/user/facebook-login/`;
 const PUSH_TOKEN = `${URLAPI}/user/push-token/`;
 const WEB_SESSION_PROBE = `${URLAPI}/user/me/verifications/`;
 
@@ -92,6 +93,15 @@ type GoogleAuthResponse = {
     message?: string;
     non_field_errors?: string[];
     id_token?: string[];
+};
+
+type FacebookAuthResponse = GoogleAuthResponse & {
+    error_code?:
+        | 'access_token_required'
+        | 'facebook_token_invalid'
+        | 'facebook_email_required'
+        | 'facebook_account_conflict'
+        | string;
 };
 
 const getGoogleAuthErrorMessage = (payload: Partial<GoogleAuthResponse>, status: number): string => {
@@ -462,6 +472,79 @@ export const googleAuthApi = async (idToken: string): Promise<{
         devError('Google auth error:', error);
         const message = getUserFriendlyError(error);
         Alert.alert(i18nT('errorsStatic:api.auth.googleSignInErrorTitle'), message);
+        return null;
+    }
+};
+
+const getFacebookAuthErrorMessage = (payload: Partial<FacebookAuthResponse>, status: number): string => {
+    switch (payload.error_code) {
+        case 'access_token_required':
+            return i18nT('errorsStatic:api.auth.facebookAccessTokenMissing');
+        case 'facebook_token_invalid':
+            return i18nT('errorsStatic:api.auth.facebookTokenInvalid');
+        case 'facebook_email_required':
+            return i18nT('errorsStatic:api.auth.facebookEmailRequired');
+        case 'facebook_account_conflict':
+            return i18nT('errorsStatic:api.auth.facebookAccountConflict');
+        default:
+            if (status >= 500) return i18nT('errorsStatic:api.auth.facebookUnavailable');
+            return i18nT('errorsStatic:api.auth.facebookSignInFailed');
+    }
+};
+
+export const facebookAuthApi = async (accessToken: string): Promise<{
+    token: string;
+    refresh?: string;
+    name: string;
+    email: string;
+    id: string | number;
+    is_superuser: boolean;
+} | null> => {
+    try {
+        const trimmedToken = String(accessToken || '').trim();
+        if (!trimmedToken) {
+            throw new Error(i18nT('errorsStatic:api.auth.facebookAccessTokenMissing'));
+        }
+
+        const response = await retry(
+            async () => fetchWithTimeout(FACEBOOK_LOGIN, {
+                method: 'POST',
+                ...getApiRequestCredentials(),
+                headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
+                body: JSON.stringify({ access_token: trimmedToken }),
+            }, DEFAULT_TIMEOUT),
+            {
+                maxAttempts: 2,
+                delay: 500,
+                shouldRetry: (error) =>
+                    isRetryableError(error) &&
+                    !error.message.includes('400') &&
+                    !error.message.includes('401') &&
+                    !error.message.includes('409'),
+            },
+        );
+
+        const json = await safeJsonParse<FacebookAuthResponse>(response, {});
+        if (!response.ok) {
+            throw new Error(getFacebookAuthErrorMessage(json, response.status));
+        }
+        if (json.token) {
+            return json as {
+                token: string;
+                refresh?: string;
+                name: string;
+                email: string;
+                id: string | number;
+                is_superuser: boolean;
+            };
+        }
+        throw new Error(i18nT('errorsStatic:api.auth.facebookServerTokenMissing'));
+    } catch (error: unknown) {
+        devError('Facebook auth error:', error);
+        Alert.alert(
+            i18nT('errorsStatic:api.auth.facebookSignInErrorTitle'),
+            getUserFriendlyError(error),
+        );
         return null;
     }
 };

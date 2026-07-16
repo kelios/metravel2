@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react'
 import * as Clipboard from 'expo-clipboard';
 import {
     KeyboardAvoidingView,
+    AppState,
     Platform,
     ScrollView,
     Text,
@@ -33,6 +34,9 @@ import { hasToastBeenShown } from '@/utils/errorHelpers';
 import { useTravelPublishChecklist } from '@/components/travel/useTravelPublishChecklist';
 import PublishChecklistCard from '@/components/travel/PublishChecklistCard';
 import InstagramPublishPanel from '@/components/travel/InstagramPublishPanel';
+import FacebookPublishPanel, {
+    type FacebookPublishUiState,
+} from '@/components/travel/FacebookPublishPanel';
 import PublishModerationAdminPanel from '@/components/travel/PublishModerationAdminPanel';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import PublishStatusSummaryPanel from '@/components/travel/PublishStatusSummaryPanel';
@@ -45,6 +49,13 @@ import {
 } from '@/utils/instagramPublish';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { publishTravelToInstagram, fetchInstagramOAuthStartUrl } from '@/api/instagramPublish';
+import {
+    fetchFacebookOAuthStartUrl,
+    fetchFacebookPublishStatus,
+    publishTravelToFacebook,
+    type FacebookPublishCapability,
+} from '@/api/facebookPublish';
+import { ApiError } from '@/api/client';
 import { createStyles } from '@/components/travel/travelWizardStepPublish.styles';
 import type { TravelWizardStepPublishProps } from '@/components/travel/TravelWizardStepPublish.types';
 import { translate as i18nT } from '@/i18n'
@@ -129,6 +140,13 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const [isPublishingInstagram, setIsPublishingInstagram] = useState(false);
     const instagramConnectingRef = useRef(false);
     const [isConnectingInstagram, setIsConnectingInstagram] = useState(false);
+    const facebookActionRef = useRef(false);
+    const facebookMessageEditedRef = useRef(false);
+    const facebookCapabilityMountedRef = useRef(true);
+    const [facebookCapability, setFacebookCapability] = useState<FacebookPublishCapability | null>(null);
+    const [facebookMessage, setFacebookMessage] = useState('');
+    const [facebookState, setFacebookState] = useState<FacebookPublishUiState>('idle');
+    const [facebookPostUrl, setFacebookPostUrl] = useState<string | undefined>();
     const [primaryOverrideLabel, setPrimaryOverrideLabel] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const instagramAccountKey = useMemo(
@@ -157,6 +175,42 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         handleInstagramCaptionChange,
         handleInstagramHashtagsChange,
     } = useInstagramPublishDraft({ formData, countries });
+
+    useEffect(() => {
+        if (!facebookMessageEditedRef.current && editableInstagramCaption.trim()) {
+            setFacebookMessage(editableInstagramCaption.trim());
+        }
+    }, [editableInstagramCaption]);
+
+    const refreshFacebookCapability = useCallback(async () => {
+        try {
+            const capability = await fetchFacebookPublishStatus();
+            if (!facebookCapabilityMountedRef.current) return;
+            setFacebookCapability(capability);
+            setFacebookState(capability.connected ? 'idle' : 'not_connected');
+        } catch (error) {
+            // A missing/forbidden capability must not expose a dead action.
+            devError('Facebook publish capability unavailable:', error);
+            if (facebookCapabilityMountedRef.current) setFacebookCapability(null);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isSuperAdmin) return;
+        facebookCapabilityMountedRef.current = true;
+        void refreshFacebookCapability();
+        const subscription = Platform.OS === 'web'
+            ? null
+            : AppState.addEventListener('change', (nextState) => {
+                if (facebookCapabilityMountedRef.current && nextState === 'active') {
+                    void refreshFacebookCapability();
+                }
+            });
+        return () => {
+            facebookCapabilityMountedRef.current = false;
+            subscription?.remove();
+        };
+    }, [isSuperAdmin, refreshFacebookCapability]);
 
     useEffect(() => {
         return () => {
@@ -655,6 +709,105 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         instagramAccountKey,
     ]);
 
+    const handleFacebookMessageChange = useCallback((value: string) => {
+        facebookMessageEditedRef.current = true;
+        setFacebookMessage(value);
+    }, []);
+
+    const handleConnectFacebook = useCallback(async () => {
+        if (facebookActionRef.current || !facebookCapability?.configured) return;
+        facebookActionRef.current = true;
+        setFacebookState('connecting');
+        try {
+            const returnTo =
+                Platform.OS === 'web' && typeof window !== 'undefined'
+                    ? window.location?.href
+                    : undefined;
+            const authUrl = await fetchFacebookOAuthStartUrl(returnTo);
+            if (!authUrl || !(await openExternalUrl(authUrl))) {
+                throw new Error(i18nT('travel:components.travel.FacebookPublishPanel.oauthOpenError'));
+            }
+        } catch (error) {
+            setFacebookState('error');
+            void showToastMessage({
+                type: 'error',
+                text1: i18nT('travel:components.travel.FacebookPublishPanel.connectError'),
+                text2: error instanceof Error ? error.message : undefined,
+            });
+        } finally {
+            facebookActionRef.current = false;
+            setFacebookState(facebookCapability.connected ? 'idle' : 'not_connected');
+        }
+    }, [facebookCapability]);
+
+    const handlePublishToFacebook = useCallback(async () => {
+        if (facebookActionRef.current) return;
+        const travelId = Number(formData.id);
+        if (!Number.isFinite(travelId) || travelId <= 0) {
+            void showToastMessage({
+                type: 'error',
+                text1: i18nT('travel:components.travel.FacebookPublishPanel.saveFirst'),
+            });
+            return;
+        }
+        if (!facebookCapability?.connected || !facebookCapability.canPublish) {
+            setFacebookState('not_connected');
+            void showToastMessage({
+                type: 'error',
+                text1: i18nT('travel:components.travel.FacebookPublishPanel.notConnectedError'),
+            });
+            return;
+        }
+        const message = facebookMessage.trim();
+        if (!message) {
+            void showToastMessage({
+                type: 'error',
+                text1: i18nT('travel:components.travel.FacebookPublishPanel.messageRequired'),
+            });
+            return;
+        }
+
+        facebookActionRef.current = true;
+        setFacebookState('publishing');
+        try {
+            const result = await publishTravelToFacebook(travelId, message);
+            const nextState = result.status === 'already_published' || result.duplicate
+                ? 'already_published'
+                : 'published';
+            setFacebookState(nextState);
+            setFacebookPostUrl(result.postUrl || undefined);
+            void showToastMessage({
+                type: 'success',
+                text1: i18nT(
+                    nextState === 'already_published'
+                        ? 'travel:components.travel.FacebookPublishPanel.alreadyPublishedToast'
+                        : 'travel:components.travel.FacebookPublishPanel.publishedToast',
+                ),
+            });
+        } catch (error) {
+            const notConnected = error instanceof ApiError && error.status === 409;
+            setFacebookState(notConnected ? 'not_connected' : 'error');
+            if (notConnected) {
+                setFacebookCapability((current) => current ? { ...current, connected: false, canPublish: false } : current);
+            }
+            void showToastMessage({
+                type: 'error',
+                text1: i18nT(
+                    notConnected
+                        ? 'travel:components.travel.FacebookPublishPanel.notConnectedError'
+                        : 'travel:components.travel.FacebookPublishPanel.publishError',
+                ),
+                text2: error instanceof Error ? error.message : undefined,
+            });
+        } finally {
+            facebookActionRef.current = false;
+        }
+    }, [facebookCapability, facebookMessage, formData.id]);
+
+    const handleOpenFacebookPost = useCallback(async () => {
+        if (facebookPostUrl) await openExternalUrl(facebookPostUrl);
+    }, [facebookPostUrl]);
+
     return (
         <SafeAreaView style={styles.safeContainer}>
             <KeyboardAvoidingView
@@ -768,6 +921,23 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                             onPublish={() => void handlePublishToInstagram()}
                             isConnecting={isConnectingInstagram}
                             isPublishing={isPublishingInstagram}
+                        />
+                    )}
+
+                    {isSuperAdmin && facebookCapability?.configured && (
+                        <FacebookPublishPanel
+                            colors={colors}
+                            styles={styles}
+                            message={facebookMessage}
+                            pageName={facebookCapability.pageName}
+                            connected={facebookCapability.connected}
+                            canPublish={facebookCapability.canPublish}
+                            state={facebookState}
+                            postUrl={facebookPostUrl}
+                            onMessageChange={handleFacebookMessageChange}
+                            onConnect={() => void handleConnectFacebook()}
+                            onPublish={() => void handlePublishToFacebook()}
+                            onOpenPost={() => void handleOpenFacebookPost()}
                         />
                     )}
                     </View>

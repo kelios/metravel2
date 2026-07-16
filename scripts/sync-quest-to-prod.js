@@ -64,6 +64,10 @@ function stepPayload(s, order) {
         maps_url: s.mapsUrl || `https://maps.google.com/?q=${s.lat},${s.lng}`,
         input_type: inputType,
     };
+    // poi_info из data-файла синкается как есть (контракт: is_museum об. bool,
+    // opening_hours/ticket_price/website опц.); отсутствует в данных — поле не трогаем
+    const poiInfo = s.poi_info || s.poiInfo;
+    if (poiInfo !== undefined) payload.poi_info = poiInfo;
     if (order !== undefined) payload.order = order;
     return payload;
 }

@@ -297,6 +297,7 @@ describe('Login Component', () => {
         login: mockLogin,
         sendPassword: jest.fn().mockResolvedValue('ok'),
         loginWithGoogle: jest.fn().mockResolvedValue(true),
+        loginWithFacebook: jest.fn().mockResolvedValue(true),
         isAuthenticated: false,
         username: '',
         userId: null,

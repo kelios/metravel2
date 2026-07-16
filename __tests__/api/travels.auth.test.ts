@@ -1,5 +1,6 @@
 import {
   confirmAccount,
+  facebookAuthApi,
   googleAuthApi,
   loginApi,
   registration,
@@ -228,6 +229,47 @@ describe('src/api/auth.ts auth/password API', () => {
           message: 'Google не подтвердил аккаунт. Попробуйте выбрать аккаунт ещё раз.',
         }),
       );
+    });
+  });
+
+  describe('facebookAuthApi', () => {
+    it('sends only the trimmed user access token and returns the session payload', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        token: 'server-session-token',
+        name: 'Facebook User',
+        email: 'facebook@example.com',
+        id: 19,
+        is_superuser: false,
+      } as any);
+
+      await expect(facebookAuthApi('  short-lived-user-token  ')).resolves.toMatchObject({ id: 19 });
+      expect(mockedFetchWithTimeout).toHaveBeenCalledWith(
+        expect.stringContaining('/user/facebook-login/'),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ access_token: 'short-lived-user-token' }),
+        }),
+        expect.any(Number),
+      );
+    });
+
+    it('maps a stable backend conflict code to a localized error', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 409 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ error_code: 'facebook_account_conflict' } as any);
+
+      await expect(facebookAuthApi('facebook-token')).resolves.toBeNull();
+      expect(devError).toHaveBeenCalledWith(
+        'Facebook auth error:',
+        expect.objectContaining({
+          message: 'Этот Facebook-аккаунт уже связан с другим пользователем.',
+        }),
+      );
+    });
+
+    it('does not call the backend without a Facebook credential', async () => {
+      await expect(facebookAuthApi('   ')).resolves.toBeNull();
+      expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
     });
   });
 

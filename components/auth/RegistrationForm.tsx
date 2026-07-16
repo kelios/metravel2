@@ -35,6 +35,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/context/AuthContext';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
+import FacebookSignInButton from '@/components/auth/FacebookSignInButton';
 import { webTouchScrollStyle } from '@/utils';
 import { buildLoginHref, resolvePostAuthPath } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
@@ -47,6 +48,7 @@ export default function RegisterForm() {
     // чтобы за 1с окна до router.replace нельзя было повторно отправить форму.
     const [submitted, setSubmitted] = useState(false);
     const [googleBusy, setGoogleBusy] = useState(false);
+    const [facebookBusy, setFacebookBusy] = useState(false);
     const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
@@ -60,7 +62,7 @@ export default function RegisterForm() {
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
     const isFocused = useIsFocused();
     const router = useRouter();
-    const { loginWithGoogle } = useAuth();
+    const { loginWithGoogle, loginWithFacebook } = useAuth();
     const colors = useThemedColors();
     const { isMobile } = useResponsive();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -68,6 +70,9 @@ export default function RegisterForm() {
     const pathname = usePathname();
     const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo');
     const canonical = buildCanonicalUrl(pathname || '/registration');
+    const replaceAfterAuth = () => {
+        router.replace(resolvePostAuthPath({ redirect, intent }) as any);
+    };
 
     useEffect(() => {
         if (!isFocused) return;
@@ -110,7 +115,7 @@ export default function RegisterForm() {
             if (navTimerRef.current) clearTimeout(navTimerRef.current);
             navTimerRef.current = setTimeout(() => {
                 navTimerRef.current = null;
-                router.replace(resolvePostAuthPath({ redirect, intent }) as any);
+                replaceAfterAuth();
             }, 1000);
         } catch (e: any) {
             trackRegistrationFailed({
@@ -127,7 +132,7 @@ export default function RegisterForm() {
     };
 
     const handleGoogleSignIn = async (credential: string) => {
-        if (googleBusy || submitted) return;
+        if (googleBusy || facebookBusy || submitted) return;
         setGoogleBusy(true);
         let navigating = false;
         try {
@@ -141,7 +146,7 @@ export default function RegisterForm() {
                 }
                 navigating = true;
                 setSubmitted(true);
-                router.replace(resolvePostAuthPath({ redirect, intent }) as any);
+                replaceAfterAuth();
             } else {
                 trackRegistrationFailed({
                     source: 'registration',
@@ -173,6 +178,55 @@ export default function RegisterForm() {
             intent,
             redirect,
             method: 'google',
+            reason: 'provider',
+        });
+        setMsg({ text: error, error: true });
+    };
+
+    const handleFacebookSignIn = async (credential: string) => {
+        if (facebookBusy || googleBusy || submitted) return;
+        setFacebookBusy(true);
+        let navigating = false;
+        try {
+            setMsg({ text: '', error: false });
+            trackRegistrationSubmitted({ source: 'registration', intent, redirect, method: 'facebook' });
+            const ok = await loginWithFacebook(credential);
+            if (ok) {
+                trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'facebook' });
+                if (intent) sendAnalyticsEvent('AuthSuccess', { source: 'facebook', intent });
+                navigating = true;
+                setSubmitted(true);
+                replaceAfterAuth();
+            } else {
+                trackRegistrationFailed({
+                    source: 'registration',
+                    intent,
+                    redirect,
+                    method: 'facebook',
+                    reason: 'api',
+                });
+                setMsg({ text: i18nT('authStatic:facebook.signInFailed'), error: true });
+            }
+        } catch (e: unknown) {
+            trackRegistrationFailed({
+                source: 'registration',
+                intent,
+                redirect,
+                method: 'facebook',
+                reason: 'exception',
+            });
+            setMsg({ text: e instanceof Error ? e.message : i18nT('authStatic:facebook.signInFailed'), error: true });
+        } finally {
+            if (!navigating) setFacebookBusy(false);
+        }
+    };
+
+    const handleFacebookError = (error: string) => {
+        trackRegistrationFailed({
+            source: 'registration',
+            intent,
+            redirect,
+            method: 'facebook',
             reason: 'provider',
         });
         setMsg({ text: error, error: true });
@@ -457,7 +511,7 @@ export default function RegisterForm() {
                                             <Button
                                                 label={isSubmitting || submitted ? i18nT('auth:components.auth.RegistrationForm.podozhdite_c6f74920') : i18nT('auth:components.auth.RegistrationForm.zaregistrirovatsya_3ca6aeb7')}
                                                 onPress={() => handleSubmit()}
-                                                disabled={isSubmitting || submitted || googleBusy}
+                                                disabled={isSubmitting || submitted || googleBusy || facebookBusy}
                                                 loading={isSubmitting || submitted}
                                                 variant="primary"
                                                 size="lg"
@@ -471,11 +525,18 @@ export default function RegisterForm() {
                                                 <View style={styles.dividerLine} />
                                             </View>
 
-                                            <GoogleSignInButton
-                                                onSuccess={handleGoogleSignIn}
-                                                onError={handleGoogleError}
-                                                disabled={isSubmitting || submitted || googleBusy}
-                                            />
+                                            <View style={styles.socialActions}>
+                                                <GoogleSignInButton
+                                                    onSuccess={handleGoogleSignIn}
+                                                    onError={handleGoogleError}
+                                                    disabled={isSubmitting || submitted || googleBusy || facebookBusy}
+                                                />
+                                                <FacebookSignInButton
+                                                    onSuccess={handleFacebookSignIn}
+                                                    onError={handleFacebookError}
+                                                    disabled={isSubmitting || submitted || googleBusy || facebookBusy}
+                                                />
+                                            </View>
 
                                             <View style={styles.loginContainer}>
                                                 <Text style={styles.loginText}>{i18nT('auth:components.auth.RegistrationForm.uzhe_est_akkaunt_3eaf8790')}</Text>
@@ -487,7 +548,7 @@ export default function RegisterForm() {
                                                                 : (`/login${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
                                                         )
                                                     }
-                                                    disabled={isSubmitting || submitted || googleBusy}
+                                                    disabled={isSubmitting || submitted || googleBusy || facebookBusy}
                                                     accessibilityRole="button"
                                                     accessibilityLabel={i18nT('auth:components.auth.RegistrationForm.voyti_v_akkaunt_c9c50168')}
                                                 >
@@ -634,6 +695,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontWeight: '600',
         minWidth: 56,
         textAlign: 'right',
+    },
+    socialActions: {
+        gap: 12,
     },
     loginContainer: {
         flexDirection: 'row',

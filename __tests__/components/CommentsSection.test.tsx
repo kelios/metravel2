@@ -65,6 +65,7 @@ const createAuthState = (overrides: Partial<AuthStore> = {}): AuthStore => ({
   checkAuthentication: jest.fn(async () => undefined),
   login: jest.fn(async () => true),
   loginWithGoogle: jest.fn(async () => true),
+  loginWithFacebook: jest.fn(async () => true),
   logout: jest.fn(async () => undefined),
   sendPassword: jest.fn(async () => ''),
   setNewPassword: jest.fn(async () => true),

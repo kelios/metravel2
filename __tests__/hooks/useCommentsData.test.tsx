@@ -104,6 +104,7 @@ describe('useCommentsData', () => {
       logout: jest.fn(),
       login: jest.fn(),
       loginWithGoogle: jest.fn(async () => true),
+      loginWithFacebook: jest.fn(async () => true),
       sendPassword: jest.fn(),
       setNewPassword: jest.fn(),
     });

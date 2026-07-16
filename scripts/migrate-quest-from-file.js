@@ -90,6 +90,21 @@ function finaleText(finale) {
     return finale.text || finale.story || '';
 }
 
+// poi_info: бэкенд принимает строго {is_museum: bool(об.), opening_hours?, ticket_price?, website?}
+const POI_INFO_ALLOWED = ['is_museum', 'opening_hours', 'ticket_price', 'website'];
+function poiInfoPayload(step) {
+    const raw = step.poi_info || step.poiInfo;
+    if (!raw || typeof raw !== 'object') return undefined;
+    const unknown = Object.keys(raw).filter(k => !POI_INFO_ALLOWED.includes(k));
+    if (unknown.length) {
+        throw new Error(`poi_info шага ${step.step_id}: недопустимые поля ${unknown.join(', ')} (разрешены: ${POI_INFO_ALLOWED.join(', ')})`);
+    }
+    if (typeof raw.is_museum !== 'boolean') {
+        throw new Error(`poi_info шага ${step.step_id}: is_museum обязателен и должен быть boolean`);
+    }
+    return raw;
+}
+
 const QUESTS = require(SOURCE_FILE);
 
 async function main() {
@@ -206,7 +221,7 @@ async function main() {
                 continue;
             }
             try {
-                await apiPost('/api/quest-steps/', {
+                const stepPayload = {
                     quest: questDbId,
                     step_id: s.step_id,
                     title: s.title,
@@ -221,7 +236,11 @@ async function main() {
                     input_type: s.inputType || (s.answer_pattern && (s.answer_pattern.type === 'range' || s.answer_pattern.type === 'exact' || s.answer_pattern.type === 'any_number') ? 'number' : 'text'),
                     order: i + 1,
                     is_intro: false,
-                });
+                };
+                const poiInfo = poiInfoPayload(s);
+                if (poiInfo) stepPayload.poi_info = poiInfo;
+                if (s.geo_verify) stepPayload.geo_verify = s.geo_verify;
+                await apiPost('/api/quest-steps/', stepPayload);
                 console.log(`  ✅ Step ${i + 1}/${q.steps.length}: ${s.step_id} — ${s.title}`);
             } catch (e) {
                 console.error(`  ❌ Step ${s.step_id}: ${e.message}`);

@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 
 jest.mock('@/api/auth', () => ({
   loginApi: jest.fn(),
+  facebookAuthApi: jest.fn(),
   logoutApi: jest.fn(),
   resetPasswordLinkApi: jest.fn(),
   setNewPasswordApi: jest.fn(),
@@ -34,6 +35,7 @@ jest.mock('@/api/user', () => ({
 
 const {
   loginApi,
+  facebookAuthApi,
   logoutApi,
   resetPasswordLinkApi,
   setNewPasswordApi,
@@ -41,6 +43,7 @@ const {
 } =
   require('@/api/auth') as {
     loginApi: jest.Mock;
+    facebookAuthApi: jest.Mock;
     logoutApi: jest.Mock;
     resetPasswordLinkApi: jest.Mock;
     setNewPasswordApi: jest.Mock;
@@ -353,6 +356,37 @@ describe('authStore', () => {
 
       await act(() => useAuthStore.getState().login('test@test.com', 'p'));
       expect(useAuthStore.getState().username).toBe('test@test.com');
+    });
+  });
+
+  describe('loginWithFacebook', () => {
+    it('uses the server session payload and never persists a Facebook credential on web', async () => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      facebookAuthApi.mockResolvedValue({
+        token: 'server-cookie-mirror',
+        id: 91,
+        name: 'Facebook User',
+        email: 'facebook@example.com',
+        is_superuser: false,
+      });
+      fetchUserProfile.mockResolvedValue({ first_name: 'Facebook', last_name: 'User', avatar: null });
+
+      await expect(useAuthStore.getState().loginWithFacebook('short-lived-facebook-token')).resolves.toBe(true);
+
+      expect(facebookAuthApi).toHaveBeenCalledWith('short-lived-facebook-token');
+      expect(setSecureItem).not.toHaveBeenCalled();
+      expect(useAuthStore.getState()).toEqual(expect.objectContaining({
+        isAuthenticated: true,
+        userId: '91',
+        username: 'Facebook User',
+      }));
+    });
+
+    it('fails closed when the backend rejects the Facebook credential', async () => {
+      facebookAuthApi.mockResolvedValue(null);
+
+      await expect(useAuthStore.getState().loginWithFacebook('invalid')).resolves.toBe(false);
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
     });
   });
 

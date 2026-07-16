@@ -23,6 +23,7 @@ export const createAuthFallbackValue = (): AuthStore =>
     checkAuthentication: async () => {},
     login: async () => false,
     loginWithGoogle: async () => false,
+    loginWithFacebook: async () => false,
     logout: async () => {},
     sendPassword: async () => '',
     setNewPassword: async () => false,
