@@ -369,17 +369,13 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(panel).toBeVisible({ timeout: 60_000 });
 
     await panel.getByText('Что посмотреть', { exact: true }).click();
-    await panel.getByLabel('Открыть выбор').click();
-
-    await expect(page.getByText('Выбрано: 0', { exact: true })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText('Замки (2)', { exact: true })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText('Болота (1)', { exact: true })).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('[data-testid^="simple-multiselect.item."]').first()).toBeVisible({
+    await expect(panel.getByRole('button', { name: 'Замки', exact: true })).toContainText(/Замки\s*\(2\)/, {
+      timeout: 20_000,
+    });
+    await expect(panel.getByRole('button', { name: 'Болота', exact: true })).toContainText(/Болота\s*\(1\)/, {
       timeout: 20_000,
     });
     await expect(page.getByText('Ничего не найдено', { exact: true })).toHaveCount(0);
-
-    await page.getByText('Готово', { exact: true }).click();
 
     const quickSightseeingFilter = page.getByLabel('Что посмотреть: Все');
     await expect(quickSightseeingFilter).toBeVisible({ timeout: 20_000 });
@@ -446,12 +442,14 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(panel).toBeVisible({ timeout: 60_000 });
 
     await panel.getByText('Что посмотреть', { exact: true }).click();
-    await panel.getByLabel('Открыть выбор').click();
 
-    await expect(page.getByText('Замок (2)', { exact: true })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText('Болото (1)', { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(panel.getByRole('button', { name: 'Замок', exact: true })).toContainText(/Замок\s*\(2\)/, {
+      timeout: 20_000,
+    });
+    await expect(panel.getByRole('button', { name: 'Болото', exact: true })).toContainText(/Болото\s*\(1\)/, {
+      timeout: 20_000,
+    });
     await expect(page.getByText('Ничего не найдено', { exact: true })).toHaveCount(0);
-    await page.getByText('Готово', { exact: true }).click();
 
     const quickSightseeingFilter = page.getByLabel('Что посмотреть: Все');
     await expect(quickSightseeingFilter).toBeVisible({ timeout: 20_000 });
