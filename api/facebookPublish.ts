@@ -21,6 +21,12 @@ export type FacebookPublishResult = {
   duplicate?: boolean
 }
 
+export type FacebookPublishPhoto = {
+  id?: number | string
+  url: string
+  caption?: string
+}
+
 export async function fetchFacebookPublishStatus(): Promise<FacebookPublishCapability> {
   const response = await apiClient.get<FacebookPublishCapabilityResponse>(
     '/travels/facebook-publish/status/',
@@ -46,12 +52,27 @@ export async function fetchFacebookOAuthStartUrl(returnTo?: string): Promise<str
 export const publishTravelToFacebook = (
   travelId: number,
   message: string,
+  photos: FacebookPublishPhoto[] = [],
 ): Promise<FacebookPublishResult> =>
-  apiClient.request<FacebookPublishResult>(
-    '/travels/facebook-publish/',
-    {
-      method: 'POST',
-      body: JSON.stringify({ travelId, message }),
-    },
-    30000,
-  )
+  {
+    const selectedPhotos = photos
+      .map((photo) => ({
+        id: photo.id,
+        url: String(photo.url || '').trim(),
+        caption: photo.caption?.trim() || undefined,
+      }))
+      .filter((photo) => photo.url)
+
+    return apiClient.request<FacebookPublishResult>(
+      '/travels/facebook-publish/',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          travelId,
+          message,
+          ...(selectedPhotos.length > 0 ? { photos: selectedPhotos } : null),
+        }),
+      },
+      30000,
+    )
+  }

@@ -1,5 +1,6 @@
+import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import Feather from '@expo/vector-icons/Feather'
-import { Text, TextInput, View } from 'react-native'
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 
 import Button from '@/components/ui/Button'
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -14,6 +15,13 @@ export type FacebookPublishUiState =
   | 'not_connected'
   | 'error'
 
+export type FacebookPublishPhotoOption = {
+  id: string
+  source: string
+  apiId?: number | string
+  caption?: string
+}
+
 type FacebookPublishPanelProps = {
   colors: ThemedColors
   styles: any
@@ -23,7 +31,10 @@ type FacebookPublishPanelProps = {
   canPublish: boolean
   state: FacebookPublishUiState
   postUrl?: string
+  photoOptions?: FacebookPublishPhotoOption[]
+  selectedPhotoIds?: string[]
   onMessageChange: (value: string) => void
+  onTogglePhoto?: (photoId: string) => void
   onConnect: () => void
   onPublish: () => void
   onOpenPost: () => void
@@ -59,7 +70,10 @@ export default function FacebookPublishPanel({
   canPublish,
   state,
   postUrl,
+  photoOptions = [],
+  selectedPhotoIds = [],
   onMessageChange,
+  onTogglePhoto,
   onConnect,
   onPublish,
   onOpenPost,
@@ -67,6 +81,7 @@ export default function FacebookPublishPanel({
   const isConnecting = state === 'connecting'
   const isPublishing = state === 'publishing'
   const isBusy = isConnecting || isPublishing
+  const selectedPhotoIdSet = new Set(selectedPhotoIds)
 
   return (
     <View style={[styles.card, styles.instagramCard]} testID="facebook-publish-panel">
@@ -101,6 +116,72 @@ export default function FacebookPublishPanel({
             'travel:components.travel.FacebookPublishPanel.messageAccessibilityLabel',
           )}
         />
+      </View>
+
+      <View style={styles.facebookPhotoPicker}>
+        <View style={styles.instagramFieldHeader}>
+          <Text style={styles.rejectionCommentLabel}>
+            {i18nT('travel:components.travel.FacebookPublishPanel.photoPickerLabel')}
+          </Text>
+          {photoOptions.length > 0 ? (
+            <Text style={styles.instagramCounter}>
+              {i18nT('travel:components.travel.FacebookPublishPanel.photoSelectedCounter', {
+                value1: selectedPhotoIds.length,
+                value2: photoOptions.length,
+              })}
+            </Text>
+          ) : null}
+        </View>
+
+        {photoOptions.length > 0 ? (
+          <>
+            <Text style={styles.instagramHintText}>
+              {i18nT('travel:components.travel.FacebookPublishPanel.photoPickerHint')}
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.facebookPhotoList}
+            >
+              {photoOptions.map((photo, index) => {
+                const isSelected = selectedPhotoIdSet.has(photo.id)
+                return (
+                  <Pressable
+                    key={photo.id}
+                    onPress={() => onTogglePhoto?.(photo.id)}
+                    disabled={isBusy || !onTogglePhoto}
+                    style={[
+                      styles.facebookPhotoCard,
+                      isSelected && styles.facebookPhotoCardSelected,
+                    ]}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: isSelected, disabled: isBusy }}
+                    accessibilityLabel={i18nT(
+                      'travel:components.travel.FacebookPublishPanel.photoAccessibilityLabel',
+                      { value1: index + 1 },
+                    )}
+                    testID={`facebook-photo-${index}`}
+                  >
+                    <ImageCardMedia
+                      source={{ uri: photo.source }}
+                      style={styles.instagramGalleryImage}
+                      fit="cover"
+                    />
+                    {isSelected ? (
+                      <View style={styles.facebookPhotoCheckBadge}>
+                        <Feather name="check" size={16} color={colors.textOnPrimary} />
+                      </View>
+                    ) : null}
+                  </Pressable>
+                )
+              })}
+            </ScrollView>
+          </>
+        ) : (
+          <Text style={styles.facebookPhotoEmpty}>
+            {i18nT('travel:components.travel.FacebookPublishPanel.noPhotos')}
+          </Text>
+        )}
       </View>
 
       <Text style={styles.adminHint} accessibilityLiveRegion="polite">

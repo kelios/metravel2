@@ -485,6 +485,55 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
         borderColor: colors.primary,
         ...(Platform.OS === 'web' ? ({ cursor: 'grabbing' } as any) : {}),
     },
+    facebookPhotoPicker: {
+        marginTop: DESIGN_TOKENS.spacing.md,
+    },
+    facebookPhotoList: {
+        gap: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.xs,
+    },
+    facebookPhotoCard: {
+        width: 96,
+        aspectRatio: 1,
+        borderRadius: DESIGN_TOKENS.radii.lg,
+        overflow: 'hidden',
+        position: 'relative',
+        backgroundColor: colors.backgroundSecondary,
+        borderWidth: 2,
+        borderColor: colors.borderLight,
+        opacity: 0.72,
+        ...(Platform.OS === 'web'
+            ? ({
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+            } as unknown as object)
+            : {}),
+    },
+    facebookPhotoCardSelected: {
+        borderColor: colors.primary,
+        opacity: 1,
+    },
+    facebookPhotoCheckBadge: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.primary,
+    },
+    facebookPhotoEmpty: {
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        backgroundColor: colors.backgroundSecondary,
+        color: colors.textMuted,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    },
     instagramGalleryImage: {
         width: '100%',
         height: '100%',

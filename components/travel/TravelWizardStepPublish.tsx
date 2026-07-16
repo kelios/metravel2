@@ -59,6 +59,47 @@ import { ApiError } from '@/api/client';
 import { createStyles } from '@/components/travel/travelWizardStepPublish.styles';
 import type { TravelWizardStepPublishProps } from '@/components/travel/TravelWizardStepPublish.types';
 import { translate as i18nT } from '@/i18n'
+import type { FacebookPublishPhotoOption } from '@/components/travel/FacebookPublishPanel';
+
+const normalizeFacebookPhotoUrl = (value: unknown): string => {
+    if (typeof value !== 'string') return '';
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    if (trimmed.startsWith('/')) return trimmed;
+    return '';
+};
+
+const buildFacebookPhotoOptions = (galleryItems: unknown[]): FacebookPublishPhotoOption[] => {
+    const seen = new Set<string>();
+    return galleryItems
+        .map((item, index) => {
+            if (typeof item === 'string') {
+                const source = normalizeFacebookPhotoUrl(item);
+                return source ? { id: source, source } : null;
+            }
+            if (!item || typeof item !== 'object') return null;
+            const record = item as Record<string, unknown>;
+            const source = normalizeFacebookPhotoUrl(record.url);
+            if (!source) return null;
+            const rawId = record.id;
+            const id = rawId != null ? String(rawId) : `${source}:${index}`;
+            const caption = typeof record.caption === 'string' ? record.caption.trim() : '';
+            return {
+                id,
+                source,
+                apiId: typeof rawId === 'number' || typeof rawId === 'string' ? rawId : undefined,
+                caption: caption || undefined,
+            };
+        })
+        .filter((photo): photo is FacebookPublishPhotoOption => {
+            if (!photo) return false;
+            const dedupeKey = `${photo.id}|${photo.source}`;
+            if (seen.has(dedupeKey)) return false;
+            seen.add(dedupeKey);
+            return true;
+        });
+};
 
 const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     currentStep,
@@ -122,6 +163,14 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         moderationIssuesByKey,
         qualityScore,
     } = useTravelPublishChecklist(formData);
+    const facebookPhotoOptions = useMemo(
+        () => buildFacebookPhotoOptions(galleryItems),
+        [galleryItems],
+    );
+    const facebookPhotoOptionsKey = useMemo(
+        () => facebookPhotoOptions.map((photo) => photo.id).join('|'),
+        [facebookPhotoOptions],
+    );
     const missingRequiredCount = useMemo(
         () => requiredChecklist.filter((item) => !item.ok).length,
         [requiredChecklist],
@@ -147,6 +196,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const [facebookMessage, setFacebookMessage] = useState('');
     const [facebookState, setFacebookState] = useState<FacebookPublishUiState>('idle');
     const [facebookPostUrl, setFacebookPostUrl] = useState<string | undefined>();
+    const [facebookSelectedPhotoIds, setFacebookSelectedPhotoIds] = useState<string[]>([]);
     const [primaryOverrideLabel, setPrimaryOverrideLabel] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const instagramAccountKey = useMemo(
@@ -181,6 +231,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             setFacebookMessage(editableInstagramCaption.trim());
         }
     }, [editableInstagramCaption]);
+
+    useEffect(() => {
+        setFacebookSelectedPhotoIds((currentIds) => {
+            const availableIds = new Set(facebookPhotoOptions.map((photo) => photo.id));
+            const keptIds = currentIds.filter((photoId) => availableIds.has(photoId));
+            if (keptIds.length > 0 || facebookPhotoOptions.length === 0) return keptIds;
+            return facebookPhotoOptions.slice(0, 4).map((photo) => photo.id);
+        });
+    }, [facebookPhotoOptions, facebookPhotoOptionsKey]);
 
     const refreshFacebookCapability = useCallback(async () => {
         try {
@@ -714,6 +773,14 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         setFacebookMessage(value);
     }, []);
 
+    const handleToggleFacebookPhoto = useCallback((photoId: string) => {
+        setFacebookSelectedPhotoIds((currentIds) =>
+            currentIds.includes(photoId)
+                ? currentIds.filter((currentId) => currentId !== photoId)
+                : [...currentIds, photoId],
+        );
+    }, []);
+
     const handleConnectFacebook = useCallback(async () => {
         if (facebookActionRef.current || !facebookCapability?.configured) return;
         facebookActionRef.current = true;
@@ -770,7 +837,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         facebookActionRef.current = true;
         setFacebookState('publishing');
         try {
-            const result = await publishTravelToFacebook(travelId, message);
+            const selectedPhotoIdSet = new Set(facebookSelectedPhotoIds);
+            const selectedPhotos = facebookPhotoOptions
+                .filter((photo) => selectedPhotoIdSet.has(photo.id))
+                .map((photo) => ({
+                    id: photo.apiId,
+                    url: photo.source,
+                    caption: photo.caption,
+                }));
+            const result = await publishTravelToFacebook(travelId, message, selectedPhotos);
             const nextState = result.status === 'already_published' || result.duplicate
                 ? 'already_published'
                 : 'published';
@@ -802,7 +877,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         } finally {
             facebookActionRef.current = false;
         }
-    }, [facebookCapability, facebookMessage, formData.id]);
+    }, [facebookCapability, facebookMessage, facebookPhotoOptions, facebookSelectedPhotoIds, formData.id]);
 
     const handleOpenFacebookPost = useCallback(async () => {
         if (facebookPostUrl) await openExternalUrl(facebookPostUrl);
@@ -934,7 +1009,10 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                             canPublish={facebookCapability.canPublish}
                             state={facebookState}
                             postUrl={facebookPostUrl}
+                            photoOptions={facebookPhotoOptions}
+                            selectedPhotoIds={facebookSelectedPhotoIds}
                             onMessageChange={handleFacebookMessageChange}
+                            onTogglePhoto={handleToggleFacebookPhoto}
                             onConnect={() => void handleConnectFacebook()}
                             onPublish={() => void handlePublishToFacebook()}
                             onOpenPost={() => void handleOpenFacebookPost()}

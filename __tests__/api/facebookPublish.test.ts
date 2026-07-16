@@ -48,7 +48,7 @@ describe('facebookPublish API adapter', () => {
     )
   })
 
-  it('publishes only the travel id and editable message', async () => {
+  it('publishes the travel id and editable message when no photos are selected', async () => {
     ;(apiClient.request as jest.Mock).mockResolvedValueOnce({ status: 'published' })
 
     await publishTravelToFacebook(640, 'Facebook message')
@@ -58,6 +58,36 @@ describe('facebookPublish API adapter', () => {
       {
         method: 'POST',
         body: JSON.stringify({ travelId: 640, message: 'Facebook message' }),
+      },
+      30000,
+    )
+    const requestBody = JSON.parse((apiClient.request as jest.Mock).mock.calls[0][1].body)
+    expect(requestBody).not.toHaveProperty('pageId')
+    expect(requestBody).not.toHaveProperty('link')
+    expect(requestBody).not.toHaveProperty('token')
+  })
+
+  it('includes selected gallery photos without client-owned Facebook credentials', async () => {
+    ;(apiClient.request as jest.Mock).mockResolvedValueOnce({ status: 'published' })
+
+    await publishTravelToFacebook(640, 'Facebook message', [
+      { id: 12, url: '/media/gallery/12.jpg', caption: 'Viewpoint' },
+      { id: 'draft-photo', url: '  https://cdn.example.com/gallery/13.jpg  ' },
+      { id: 14, url: '' },
+    ])
+
+    expect(apiClient.request).toHaveBeenCalledWith(
+      '/travels/facebook-publish/',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          travelId: 640,
+          message: 'Facebook message',
+          photos: [
+            { id: 12, url: '/media/gallery/12.jpg', caption: 'Viewpoint' },
+            { id: 'draft-photo', url: 'https://cdn.example.com/gallery/13.jpg' },
+          ],
+        }),
       },
       30000,
     )
