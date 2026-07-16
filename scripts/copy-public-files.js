@@ -24,6 +24,9 @@ const publicDir = path.join(__dirname, '..', 'public');
 const filesToCopy = [
   'manifest.json',
   'robots.txt',
+  // Expo's public/ copy skips dot-directories, so this is the only path that
+  // puts assetlinks.json in the bundle. Without it Android App Links stay unverified.
+  '.well-known/assetlinks.json',
   'icon.svg',
   'travel-hero-preload-v2.js',
   'assets/icons/logo_yellow_512x512.png',
