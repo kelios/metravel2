@@ -147,6 +147,8 @@ const QUESTS = [
     { questId: 'vitebsk-teens-street-art-map', dir: 'vitebskTeensStreetArtMap', city: 'Витебск', mood: 'city', finaleId: 109 },
     { questId: 'mogilev-kids-lion-ball', dir: 'mogilevKidsLionBall', city: 'Могилёв', mood: 'city', finaleId: 110 },
     { questId: 'mogilev-teens-symbol-code', dir: 'mogilevTeensSymbolCode', city: 'Могилёв', mood: 'city', finaleId: 111 },
+    { questId: 'luninets-railway', dir: 'luninetsRailway', city: 'Лунинец', mood: 'city', finaleId: 112 },
+    { questId: 'luninets-bike-polesie', dir: 'luninetsBikePolesie', city: 'Кожан-Городок и Лахва', mood: 'epic', finaleId: 113 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
