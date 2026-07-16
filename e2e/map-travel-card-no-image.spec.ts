@@ -35,21 +35,6 @@ const maybeRecoverFromWorkletError = async (page: any) => {
   await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
 };
 
-const waitForMapUi = async (page: any, timeoutMs: number) => {
-  const mapReady = page.getByTestId('map-leaflet-wrapper');
-  const mobileMenu = page.locator(mobilePanelEntrySelector).first();
-
-  await Promise.race([
-    mapReady.waitFor({ state: 'visible', timeout: timeoutMs }).catch(() => null),
-    mobileMenu.waitFor({ state: 'visible', timeout: timeoutMs }).catch(() => null),
-  ]);
-
-  const hasUi =
-    (await mapReady.isVisible().catch(() => false)) ||
-    (await mobileMenu.isVisible().catch(() => false));
-  if (!hasUi) throw new Error('Map UI did not appear');
-};
-
 const mapTravelsTabSelector = '[data-testid="map-travels-tab"], [testID="map-travels-tab"]';
 const mapTravelCardSelector = '[data-testid="map-travel-card"], [testID="map-travel-card"]';
 const mockedPoints = [
@@ -77,13 +62,18 @@ const gotoMapWithRecovery = async (page: any) => {
   const mapReady = page.getByTestId('map-leaflet-wrapper');
   const mobileMenu = page.locator(mobilePanelEntrySelector).first();
   const workletError = page.getByText('_WORKLET is not defined', { exact: true });
+  const notFound = page.getByText('Not found', { exact: true });
 
-  const startedAt = Date.now();
-  const maxTotalMs = 120_000;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const path = attempt === 0 ? '/map' : `/map?e2eCardRetry=${attempt}`;
+    await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await Promise.race([
+      mapReady.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
+      mobileMenu.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
+      workletError.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
+      notFound.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
+    ]);
 
-  await page.goto('/map', { waitUntil: 'domcontentloaded', timeout: 120_000 });
-
-  while (Date.now() - startedAt < maxTotalMs) {
     const hasUi =
       (await mapReady.isVisible().catch(() => false)) ||
       (await mobileMenu.isVisible().catch(() => false));
@@ -95,11 +85,9 @@ const gotoMapWithRecovery = async (page: any) => {
       await page.waitForTimeout(800).catch(() => null);
       continue;
     }
-
-    await page.waitForTimeout(300).catch(() => null);
   }
 
-  await waitForMapUi(page, 60_000);
+  throw new Error(`Map UI did not appear after route retries (url=${page.url()})`);
 };
 
 test.describe('Map Travel Card - UnifiedTravelCard', () => {
