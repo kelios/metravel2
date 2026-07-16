@@ -152,6 +152,7 @@ const QUESTS = [
     { questId: 'luninets-bike-beloe', dir: 'luninetsBikeBeloe', city: 'Белое озеро', mood: 'epic', finaleId: 114 },
     { questId: 'minsk-kids-zvezdochka', dir: 'minskKidsZvezdochka', city: 'Минск', mood: 'city', finaleId: 115 },
     { questId: 'minsk-teens-oktyabrskaya', dir: 'minskTeensOktyabrskaya', city: 'Минск', mood: 'city', finaleId: 116 },
+    { questId: 'glubokoe-cherry-baron', dir: 'glubokoeCherryBaron', city: 'Глубокое', mood: 'city', finaleId: 117 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
