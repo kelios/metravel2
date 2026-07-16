@@ -1,0 +1,183 @@
+- generic [ref=f3e17]:
+  - generic:
+    - link "Перейти к основному содержимому"
+    - link "Перейти к навигации"
+  - generic [ref=f3e18]:
+    - generic [ref=f3e27]:
+      - generic [ref=f3e30]:
+        - generic [ref=f3e31]:
+          - link "MeTravel логотип MeTravel" [ref=f3e32] [cursor=pointer]:
+            - generic "MeTravel логотип" [ref=f3e33]:
+              - img "MeTravel логотип" [ref=f3e35]
+            - generic [ref=f3e36]: MeTravel
+          - generic [ref=f3e38]:
+            - link "Маршруты" [ref=f3e39] [cursor=pointer]
+            - link "Беларусь" [ref=f3e47] [cursor=pointer]
+            - link "Карта" [ref=f3e53] [cursor=pointer]
+            - link "Места" [ref=f3e60] [cursor=pointer]:
+              - generic [ref=f3e61]: 
+            - link "Случайный маршрут" [ref=f3e64] [cursor=pointer]
+            - link "Квесты" [ref=f3e74] [cursor=pointer]
+          - 'button "Изменить язык: Русский" [ref=f3e81] [cursor=pointer]':
+            - generic [ref=f3e82]: 
+            - generic [ref=f3e83]: RU
+            - generic [ref=f3e84]: 
+          - generic [ref=f3e86]:
+            - link "Войти в аккаунт" [ref=f3e87] [cursor=pointer]:
+              - generic [ref=f3e88]: 
+              - generic [ref=f3e90]: Войти
+            - button "Открыть меню аккаунта Гость" [ref=f3e91] [cursor=pointer]:
+              - generic [ref=f3e92]: 
+              - generic [ref=f3e94]: Гость
+              - generic [ref=f3e95]: 
+        - navigation "Breadcrumb" [ref=f3e97]:
+          - generic [ref=f3e98]:
+            - button "Перейти на Главную" [ref=f3e99] [cursor=pointer]:
+              - generic [ref=f3e100]: 
+              - generic [ref=f3e101]: Главная
+            - generic [ref=f3e102]: 
+            - button "Перейти на Квесты" [ref=f3e103] [cursor=pointer]:
+              - generic [ref=f3e104]: Квесты
+            - generic [ref=f3e105]: 
+            - 'button "Текущая страница: Квест по Лунинцу: город, который привезла железная..." [disabled]':
+              - generic [ref=f3e106] [cursor=pointer]: "Квест по Лунинцу: город, который привезла железная..."
+      - generic [ref=f3e108]:
+        - 'heading "Лунинец: что посмотреть — Квест по Лунинцу… | Metravel" [level=1] [ref=f3e109]'
+        - generic [ref=f3e113]:
+          - generic [ref=f3e114]:
+            - generic [ref=f3e115]:
+              - generic [ref=f3e116]: "Квест по Лунинцу: город, который привезла железная дорога"
+              - generic [ref=f3e117]:
+                - button "Уменьшить шрифт" [disabled]:
+                  - generic [ref=f3e118] [cursor=pointer]: 
+                - button "Увеличить шрифт" [ref=f3e119] [cursor=pointer]:
+                  - generic [ref=f3e120]: 
+                - button "Печать квеста" [ref=f3e121] [cursor=pointer]:
+                  - generic [ref=f3e122]: 
+                - button "Скачать GPX с 9 точками квеста" [ref=f3e123] [cursor=pointer]:
+                  - generic [ref=f3e124]: 
+                - button "Открыть точки квеста в приложении карт" [ref=f3e125] [cursor=pointer]:
+                  - generic [ref=f3e126]: 
+                - button "Скачать квест для офлайна" [ref=f3e127] [cursor=pointer]:
+                  - generic [ref=f3e128]: 
+                - button "Сбросить прогресс" [ref=f3e129] [cursor=pointer]:
+                  - generic [ref=f3e130]: 
+            - generic [ref=f3e131]: 0 / 8
+            - generic [ref=f3e135]:
+              - generic [ref=f3e136] [cursor=pointer]:
+                - generic [ref=f3e137]: 
+                - generic [ref=f3e138]: Старт
+              - generic:
+                - generic [ref=f3e139] [cursor=pointer]: "1"
+                - generic [ref=f3e140] [cursor=pointer]: Вокзал — сердце узла
+              - generic:
+                - generic [ref=f3e141] [cursor=pointer]: "2"
+                - generic [ref=f3e142] [cursor=pointer]: Костёл Святого Иосифа — храм с чужой биографией
+              - generic:
+                - generic [ref=f3e143] [cursor=pointer]: "3"
+                - generic [ref=f3e144] [cursor=pointer]: Учитель математики, который научит мир летать
+              - generic:
+                - generic [ref=f3e145] [cursor=pointer]: "4"
+                - generic [ref=f3e146] [cursor=pointer]: Церковь, которую строили девять лет
+              - generic:
+                - generic [ref=f3e147] [cursor=pointer]: "5"
+                - generic [ref=f3e148] [cursor=pointer]: Площадь Ленина — парадная гостиная
+              - generic:
+                - generic [ref=f3e149] [cursor=pointer]: "6"
+                - generic [ref=f3e150] [cursor=pointer]: Учитель, который начал здесь поэму
+              - generic:
+                - generic [ref=f3e151] [cursor=pointer]: "7"
+                - generic [ref=f3e152] [cursor=pointer]: Краеведческий музей — память узла
+              - generic:
+                - generic [ref=f3e153] [cursor=pointer]: "8"
+                - generic [ref=f3e154] [cursor=pointer]: Памятник машине, дарившей чудо
+              - generic:
+                - generic [ref=f3e155] [cursor=pointer]: "9"
+                - generic [ref=f3e156] [cursor=pointer]: Город помнит
+              - generic [ref=f3e157] [cursor=pointer]:
+                - generic [ref=f3e158]: Ф
+                - generic [ref=f3e159]: Финал
+          - generic [ref=f3e163]:
+            - generic [ref=f3e164]:
+              - generic [ref=f3e166]:
+                - generic [ref=f3e168]:
+                  - generic [ref=f3e169]: Город, которого не было на больших картах
+                  - 'button "Открыть в картах: Лунинец" [ref=f3e170] [cursor=pointer]':
+                    - generic [ref=f3e171]: 
+                    - generic [ref=f3e172]: Лунинец
+                    - generic [ref=f3e173]: 
+                - generic [ref=f3e174]: "Пять с половиной веков Лунинец был крошечной полесской деревней среди болот — в старых бумагах 1449 года его записали как Малый Лунин. Так бы и жил он тихой жизнью, если бы в 1880-х сюда не пришли инженеры с теодолитами: через Полесье решили тянуть железную дорогу. За пару лет — с 1884-го по 1886-й — из Лунинца поехали поезда сразу в четыре стороны: на Вильню, Пинск, Ровно и Гомель. Деревня в одночасье стала узлом: депо с поворотным кругом, ремонтные мастерские, водонапорные башни, станционный посёлок. Железная дорога привезла сюда всё, что есть в этом городе: людей и профессии, храмы двух конфессий, будущего классика белорусской литературы и будущего великого авиаконструктора. В этом квесте ты пройдёшь по центру Лунинца и соберёшь эти «посылки железной дороги» одну за другой. Что делать: 1) Читай историю и задание на каждой точке. 2) Находи место по карте. 3) Смотри по сторонам — ответы находятся на месте, а не в интернете. Маршрут начинается там же, где начался город, — у вокзала. Вперёд!"
+                - generic [ref=f3e176]: Нажми «Начать квест» и выходи на Привокзальную площадь Лунинца.
+                - button "Начать квест" [ref=f3e178] [cursor=pointer]
+                - generic: ✓ Правильно!
+              - generic [ref=f3e181]:
+                - generic [ref=f3e182]:
+                  - generic [ref=f3e183]: Карта квеста
+                  - generic [ref=f3e184]:
+                    - button "Открыть карту квеста на весь экран" [ref=f3e185] [cursor=pointer]:
+                      - generic [ref=f3e186]: 
+                    - button "Скачать маршрут (PNG, GPX, GeoJSON)" [ref=f3e187] [cursor=pointer]:
+                      - generic [ref=f3e188]: 
+                - 'generic "Пеший маршрут готов: 2.8 км" [ref=f3e189]': 
+                - generic [ref=f3e193]:
+                  - generic:
+                    - generic:
+                      - button "1" [ref=f3e196] [cursor=pointer]
+                      - button "2" [ref=f3e201] [cursor=pointer]
+                      - button "3" [ref=f3e206] [cursor=pointer]
+                      - button "4" [ref=f3e211] [cursor=pointer]
+                      - button "5" [ref=f3e216] [cursor=pointer]
+                      - button "6" [ref=f3e221] [cursor=pointer]
+                      - button "7" [ref=f3e226] [cursor=pointer]
+                      - button "8" [ref=f3e231] [cursor=pointer]
+                      - button "9" [ref=f3e236] [cursor=pointer]
+                  - generic:
+                    - generic [ref=f3e241]:
+                      - button "Zoom in" [ref=f3e242] [cursor=pointer]: +
+                      - button "Zoom out" [ref=f3e243] [cursor=pointer]: −
+                    - generic [ref=f3e244]:
+                      - link "Leaflet" [ref=f3e245] [cursor=pointer]:
+                        - /url: https://leafletjs.com
+                      - text: "| © OpenStreetMap"
+            - generic [ref=f3e253]:
+              - generic [ref=f3e254]: Экскурсии рядом
+              - generic [ref=f3e255]: Откройте больше с местными гидами
+            - region "Путешествия — Лунинец" [ref=f3e257]:
+              - heading "Путешествия — Лунинец" [level=2] [ref=f3e258]
+              - generic [ref=f3e259]: Истории и маршруты авторов по этим местам
+              - generic [ref=f3e260]:
+                - generic [ref=f3e263]:
+                  - link "Открыть маршрут «Аккаунты в instagram о путешествиях по Беларуси»"
+                  - img "Аккаунты в instagram о путешествиях по Беларуси" [ref=f3e266]
+                  - generic [ref=f3e267]:
+                    - generic [ref=f3e268]: Аккаунты в instagram о путешествиях по Беларуси
+                    - generic [ref=f3e269]:
+                      - generic [ref=f3e270]: 
+                      - generic [ref=f3e271]: Усадебно-парковый комплекс Солтанов, Н20458, Мурована, Олекшицкий сельский Совет, Берестовицкий район, Гродненская область, Беларусь
+                - generic [ref=f3e274]:
+                  - link "Открыть маршрут «Из Мозыря в Микашевичи через Минск»"
+                  - img "Из Мозыря в Микашевичи через Минск" [ref=f3e277]
+                  - generic [ref=f3e278]:
+                    - generic [ref=f3e279]: Из Мозыря в Микашевичи через Минск
+                    - generic [ref=f3e280]:
+                      - generic [ref=f3e281]: 
+                      - generic [ref=f3e282]: Новосёлковский сельский Совет, Пуховичский район, Минская область, 222810, Беларусь
+    - generic [ref=f3e288]:
+      - generic [ref=f3e289]:
+        - link "TikTok" [ref=f3e290] [cursor=pointer]:
+          - generic [ref=f3e291]: 
+        - link "Instagram" [ref=f3e294] [cursor=pointer]:
+          - generic [ref=f3e295]: 
+        - link "YouTube" [ref=f3e298] [cursor=pointer]:
+          - generic [ref=f3e299]: 
+      - generic [ref=f3e302]:
+        - link "Квесты" [ref=f3e303] [cursor=pointer]
+        - link "Приложение" [ref=f3e306] [cursor=pointer]
+        - link "О сайте" [ref=f3e309] [cursor=pointer]
+        - link "Политика" [ref=f3e312] [cursor=pointer]
+        - link "Cookies" [ref=f3e315] [cursor=pointer]
+        - link "Соглашение" [ref=f3e318] [cursor=pointer]
+        - link "Отказ от ответственности" [ref=f3e321] [cursor=pointer]
+        - link "Правила сообщества" [ref=f3e324] [cursor=pointer]
+        - link "Правила поездок" [ref=f3e327] [cursor=pointer]
+      - generic [ref=f3e330]: © MeTravel 2020–2026

@@ -1,0 +1,17 @@
+- generic [ref=f1e3]:
+  - generic:
+    - link "Перейти к основному содержимому"
+    - link "Перейти к навигации"
+  - generic [ref=f1e13]:
+    - generic [ref=f1e17]:
+      - link "MeTravel логотип MeTravel" [ref=f1e18] [cursor=pointer]:
+        - generic "MeTravel логотип" [ref=f1e19]:
+          - img "MeTravel логотип" [ref=f1e21]
+        - generic [ref=f1e22]: MeTravel
+      - 'button "Изменить язык: Русский" [ref=f1e26] [cursor=pointer]':
+        - generic [ref=f1e27]: 
+        - generic [ref=f1e28]: RU
+        - generic [ref=f1e29]: 
+    - generic [ref=f1e32]:
+      - progressbar [ref=f1e33]
+      - generic [ref=f1e38]: Загружаем квест…
