@@ -87,6 +87,8 @@ const QUEST_COVERS = [
   { quest_id: 'vyaloe-tyshkevich-curse', assetsDir: 'vyaloeTyshkevichCurse', cover: 'cover.png' },
   { quest_id: 'kamenets-white-tower', assetsDir: 'kamenetsWhiteTower', cover: 'cover.png' },
   { quest_id: 'myadel-obet-i-ozernicy', assetsDir: 'myadelObetIOzernicy', cover: 'cover.png' },
+  { quest_id: 'minsk-kids-zvezdochka', assetsDir: 'minskKidsZvezdochka', cover: 'cover.png' },
+  { quest_id: 'minsk-teens-oktyabrskaya', assetsDir: 'minskTeensOktyabrskaya', cover: 'cover.png' },
   { quest_id: 'swiety-krzyz-lysa-gora', assetsDir: 'swietyKrzyzLysaGora', cover: 'cover.png' },
   { quest_id: 'ojcow-lokietek', assetsDir: 'ojcowLokietek', cover: 'cover.png' },
   { quest_id: 'niedzica-skarb-inkow', assetsDir: 'niedzicaSkarbInkow', cover: 'cover.png' },

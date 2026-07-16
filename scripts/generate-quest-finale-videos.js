@@ -150,6 +150,8 @@ const QUESTS = [
     { questId: 'luninets-railway', dir: 'luninetsRailway', city: 'Лунинец', mood: 'city', finaleId: 112 },
     { questId: 'luninets-bike-polesie', dir: 'luninetsBikePolesie', city: 'Кожан-Городок и Лахва', mood: 'epic', finaleId: 113 },
     { questId: 'luninets-bike-beloe', dir: 'luninetsBikeBeloe', city: 'Белое озеро', mood: 'epic', finaleId: 114 },
+    { questId: 'minsk-kids-zvezdochka', dir: 'minskKidsZvezdochka', city: 'Минск', mood: 'city', finaleId: 115 },
+    { questId: 'minsk-teens-oktyabrskaya', dir: 'minskTeensOktyabrskaya', city: 'Минск', mood: 'city', finaleId: 116 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
