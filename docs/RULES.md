@@ -48,7 +48,12 @@
 - Work only on the `main` branch by default:
   - check the current branch before editing;
   - do not create or switch to another branch unless the user gives a new explicit instruction;
-  - if the current branch is not `main`, stop before making changes and ask how to proceed.
+  - if the current branch is not `main`, stop before making changes and ask how to proceed;
+  - exception — harness-created auto-worktrees (`.claude/worktrees/*`, branch
+    `claude/*` or detached HEAD): working there is allowed, but the work must
+    not stay there. When the task is done, port the changes to the primary
+    checkout, commit them on `main`, and leave no commits on the worktree
+    branch that are absent from `main`.
 - Protected project/release files (`eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml`, `entry.js`) require an explicit user request that puts the file or its behavior in scope. Do not change them as incidental cleanup.
 - Before deploying to production, validate the local code in production-like conditions:
   - build a production web export (`dist/prod`)
