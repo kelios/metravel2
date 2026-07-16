@@ -16,8 +16,9 @@ Use this skill when the task is to add or update tests for a bug fix, refactor, 
 - Keep tests deterministic: avoid timing hacks, broad sleeps, and assertions that depend on unstable incidental markup.
 - Do not add `.skip` or leave flaky coverage behind.
 - If the code path is browser-only or interaction-heavy, coordinate with `$metravel-e2e-runner` instead of forcing weak unit coverage.
-- For shared code, cover the platform boundary instead of assuming a web unit
-  test proves Android/iOS behavior. Keep technical platform differences explicit.
+- For shared code, cover the platform boundary instead of assuming a desktop or
+  mobile web unit test proves Android behavior. Keep technical platform
+  differences explicit and pair mobile-web coverage with Android evidence.
 - For localization, follow `$metravel-i18n-guardrails`: assert RU/BE/UK/PL/EN
   resource parity, locale persistence, formatting/plurals, SSR/hydration, and
   native lifecycle at the nearest reliable level without snapshotting whole catalogs.

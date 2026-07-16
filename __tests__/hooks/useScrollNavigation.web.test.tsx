@@ -196,12 +196,12 @@ describe('useScrollNavigation (web)', () => {
       getScrollableNode: () => container,
     };
 
-    // Create the element, but only expose it via anchors ref at first.
+    // Create the element, but keep the anchor unavailable for longer than the
+    // old 2-second retry window to cover a genuinely slow lazy mount.
     const el = document.createElement('div') as any;
     el.getBoundingClientRect = () => ({ top: 120, bottom: 160, left: 0, right: 200, width: 200, height: 40 } as any);
 
-    // Patch anchors for the key that will be scrolled to.
-    ;(result.current.anchors as any).description = { current: el };
+    ;(result.current.anchors as any).description = { current: null };
 
     expect(document.querySelector('[data-section-key="description"]')).toBeNull();
 
@@ -209,11 +209,15 @@ describe('useScrollNavigation (web)', () => {
       result.current.scrollTo('description');
     });
 
-    // First attempt won't find the element in DOM; later it may be mounted.
     act(() => {
-      // Mount element after some time.
+      jest.advanceTimersByTime(2300);
+    });
+    expect(container.scrollTo).not.toHaveBeenCalled();
+
+    act(() => {
+      ;(result.current.anchors as any).description.current = el;
       container.appendChild(el);
-      jest.advanceTimersByTime(300);
+      jest.advanceTimersByTime(400);
     });
 
     expect(el.getAttribute('data-section-key')).toBe('description');

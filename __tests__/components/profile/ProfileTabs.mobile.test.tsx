@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { ProfileTabs } from '@/components/profile/ProfileTabs';
 
 let mockResponsiveValue = {
@@ -66,6 +66,26 @@ describe('ProfileTabs mobile layout', () => {
     expect(firstTabStyle.minWidth).toBe(0);
 
     expect(UNSAFE_queryByType(ScrollView)).toBeNull();
+  });
+
+  it('centers the active tab when it starts outside the mobile viewport', () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(jest.fn());
+    const { getByLabelText, UNSAFE_getByType } = render(
+      <ProfileTabs activeTab="overview" onChangeTab={jest.fn()} />
+    );
+
+    const scrollView = UNSAFE_getByType(ScrollView);
+    const activeTab = getByLabelText('Уровень, значки и достижения');
+
+    fireEvent(scrollView, 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 44 } },
+    });
+    fireEvent(activeTab, 'layout', {
+      nativeEvent: { layout: { x: 600, y: 0, width: 120, height: 44 } },
+    });
+
+    expect(scrollTo).toHaveBeenLastCalledWith({ x: 465, animated: false });
+    scrollTo.mockRestore();
   });
 
   it('keeps the full desktop tab labels on one line without shortening labels', () => {

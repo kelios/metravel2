@@ -33,9 +33,10 @@ Keep release and performance validation aligned with repo policy:
 - Android EAS/cloud builds and submits are disabled. Android QA uses local
   build/install on USB; an active Android production release uses the local
   Gradle/production-only Play path from `$metravel-google-play-operator`.
-- Shared app changes need separate web, Android, and iOS validation decisions.
-  Do not mark a release platform-ready from another platform's evidence; report
-  unavailable simulator/device coverage as `verify pending`.
+- Shared app changes need desktop-web evidence plus paired mobile-web/Android
+  evidence. Do not mark Android-ready from a web viewport or mobile-web-ready
+  from Android alone; report unavailable active-platform coverage as
+  `verify pending`. iOS is not a current release-readiness target.
 - Route explicit Google Play build/submit/track work to `$metravel-google-play-operator`; release-checks may prepare gates but must not infer store mutation authority.
 - Treat deploy execution and rollback as `$metravel-devops-agent` work, not release-checks work.
 - For production deploy command selection, defer to `docs/RELEASE.md` and `$metravel-devops-agent`.
@@ -47,8 +48,9 @@ Keep release and performance validation aligned with repo policy:
 
 Account for UI-specific completion rules:
 
-- If a task changes visible web UI, do real-browser verification before calling it done.
-- Confirm the final state with a screenshot and no new console errors.
+- If a task changes visible UI, verify desktop web and mobile web in a real
+  browser, then run the same flow on the local USB Android build.
+- Confirm the desktop/mobile-web states with screenshots and no new console errors.
 
 Stay within repo workflow boundaries:
 

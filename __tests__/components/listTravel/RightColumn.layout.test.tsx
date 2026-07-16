@@ -217,6 +217,36 @@ describe('RightColumn layout invariants', () => {
     expect(screen.getByTestId('travel-row-0-item-1')).toBeTruthy();
   });
 
+  it('does not announce a misleading zero result count during initial loading', () => {
+    renderWithProviders(
+      <RightColumn
+        search=""
+        setSearch={jest.fn()}
+        isRecommendationsVisible={false}
+        handleRecommendationsVisibilityChange={jest.fn()}
+        activeFiltersCount={0}
+        total={0}
+        contentPadding={16}
+        showInitialLoading={true}
+        isError={false}
+        showEmptyState={false}
+        getEmptyStateMessage={null}
+        travels={[]}
+        gridColumns={1}
+        isMobile={true}
+        isMobileViewport={true}
+        showNextPageLoading={false}
+        refetch={jest.fn()}
+        renderItem={renderItem as any}
+        density="comfortable"
+        onDensityChange={jest.fn()}
+        showDensityToggle={true}
+      />
+    );
+
+    expect(screen.queryByTestId('toolbar-results-count')).toBeNull();
+  });
+
   it('scrolls to recommendations after toggling them on', async () => {
     const listRef = {
       current: {

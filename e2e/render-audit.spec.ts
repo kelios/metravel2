@@ -22,11 +22,16 @@ async function waitForAppShell(page: any) {
   await expect(page.locator('body')).toBeVisible();
 }
 
-async function scrollDownToTriggerDeferredSections(page: any) {
-  await page.mouse.wheel(0, 1200);
-  await page.waitForFunction(() => window.scrollY > 0, null, { timeout: 3_000 }).catch(() => null);
-  await page.mouse.wheel(0, 1600);
-  await page.waitForFunction(() => window.scrollY > 1000, null, { timeout: 3_000 }).catch(() => null);
+async function scrollDownToTriggerDeferredSections(page: any, targetSelector: string) {
+  const scrollContainer = page.locator(tid('travel-details-scroll')).first();
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    if ((await page.locator(targetSelector).count()) > 0) return;
+    await scrollContainer.evaluate((node: HTMLElement) => {
+      node.scrollTop = node.scrollHeight;
+      node.dispatchEvent(new Event('scroll', { bubbles: true }));
+    });
+    await page.waitForTimeout(250);
+  }
 }
 
 async function installClsAfterRenderMeter(page: any) {
@@ -191,16 +196,16 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
       // Ensure the page is scrollable and stable.
       await assertNoHorizontalScroll(page);
 
-      // Trigger deferred sections and assert engagement blocks render.
-      await scrollDownToTriggerDeferredSections(page);
-
-      // Share/CTA blocks are deferred and may take time to mount, especially under parallel load.
-      // Wait for at least one of them to appear, then verify both with a generous timeout.
-      const shareOrCta = page.locator(
-        `${tid('travel-details-share')}, ${tid('travel-details-cta')}`
-      );
+      // Trigger deferred sections and assert an actual engagement block renders.
+      // Mobile owns a separate share block; tablet/desktop load the footer variants.
+      const engagementSelector =
+        `${tid('travel-details-share-mobile')}, ${tid('travel-details-share')}, ${tid('travel-details-cta')}`;
+      const shareOrCta = page.locator(engagementSelector);
+      await scrollDownToTriggerDeferredSections(page, engagementSelector);
       await shareOrCta.first().waitFor({ state: 'attached', timeout: 30_000 }).catch(() => undefined);
-      const shareCount = await page.locator(tid('travel-details-share')).count();
+      const shareCount =
+        (await page.locator(tid('travel-details-share-mobile')).count()) +
+        (await page.locator(tid('travel-details-share')).count());
       const ctaCount = await page.locator(tid('travel-details-cta')).count();
       expect(
         shareCount + ctaCount,

@@ -64,6 +64,10 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
     const h1s = container.querySelectorAll('h1')
     expect(h1s.length).toBe(1)
     expect(h1s[0].textContent).toBe('Тропа ведьм')
+    expect(h1s[0].getAttribute('data-testid')).toBe('travel-details-title')
+    expect(h1s[0].style.position).not.toBe('absolute')
+    expect(h1s[0].style.width).not.toBe('1px')
+    expect(h1s[0].style.lineHeight).toBe('30px')
   })
 
   it('removes the SSG-injected sr-only <h1 data-ssg-travel-h1> on mount', () => {

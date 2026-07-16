@@ -87,6 +87,10 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
       <ErrorDisplay
         message={i18nT('map:hooks.map.useMapFilters.ne_udalos_zagruzit_filtry_4d480f39')}
         onRetry={onRetry}
+        // The mobile/web overlay replaces the whole catalog. Without an
+        // explicit dismiss action a failed filter-options request trapped the
+        // user in the error sheet with no route back to the results.
+        onDismiss={isMobile ? onClose : undefined}
         showContact={false}
       />
     ) : (

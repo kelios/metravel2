@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Task Contract"
   short_description: "Require FE/BE board task contracts before work or Done."
-  default_prompt: "Use $metravel-task-contract to require scope, data/API, web/Android/iOS impact, RU/BE/UK/PL/EN impact, dependencies, validation, and Done-gate evidence before a board task starts or closes."
+  default_prompt: "Use $metravel-task-contract to require complete FE/BE contracts, reserve blocked_by for hard dependencies, and require tracked-path ownership plus clean production Git evidence for server tasks."

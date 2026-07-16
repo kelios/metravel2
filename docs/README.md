@@ -15,10 +15,12 @@
 - `DESIGN_SYSTEM.md` — design tokens и visual roles;
 - `features/` — domain maps; `adr/` — принятые architecture decisions.
 
-Общий application contract: единый Expo/React Native codebase для
-production web, Android и iOS/iPadOS; production UI поддерживает
-RU/BE/UK/PL/EN. Перед задачей фиксируй platform/localization impact по
-`AGENTS.md` и `CODEX.md`; implementation-детали i18n — в
+Общий application contract: активные поверхности единого Expo/React Native
+codebase — desktop web, mobile web и Android; production UI поддерживает
+RU/BE/UK/PL/EN. iOS/iPadOS-приложения пока нет, поэтому iOS не входит в
+обязательную validation или Done gate. Перед задачей фиксируй
+platform/localization impact по `AGENTS.md` и `CODEX.md`; mobile web и Android
+всегда проверяются парно, implementation-детали i18n — в
 `DEVELOPMENT.md#localization`.
 
 Dated analytics/SEO/content files — snapshots, а не live source of truth.

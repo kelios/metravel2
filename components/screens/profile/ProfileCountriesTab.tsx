@@ -61,7 +61,8 @@ export function ProfileCountriesTab({
   const colors = useThemedColors()
   const { isMobile, width } = useResponsive()
   const isCompact = isMobile || width < 640
-  const styles = useMemo(() => createStyles(colors, isCompact), [colors, isCompact])
+  const isNarrow = width < 380
+  const styles = useMemo(() => createStyles(colors, isCompact, isNarrow), [colors, isCompact, isNarrow])
   const {
     applicationRows,
     isInitialLoading,
@@ -333,7 +334,11 @@ export function ProfileCountriesTab({
   }
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boolean) =>
+const createStyles = (
+  colors: ReturnType<typeof useThemedColors>,
+  isCompact: boolean,
+  isNarrow: boolean,
+) =>
   StyleSheet.create({
     wrap: {
       gap: DESIGN_TOKENS.spacing.sm,
@@ -622,8 +627,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
     regionHeader: {
       marginHorizontal: DESIGN_TOKENS.spacing.md,
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
+      flexWrap: isNarrow ? 'wrap' : 'nowrap',
       gap: DESIGN_TOKENS.spacing.sm,
     },
     regionTitleWrap: {
@@ -642,6 +648,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       lineHeight: 17,
     },
     regionBadge: {
+      alignSelf: 'flex-start',
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       paddingVertical: 6,
       borderRadius: DESIGN_TOKENS.radii.pill,
@@ -668,7 +675,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
     },
     countryTile: {
       flexGrow: 1,
-      flexBasis: isCompact ? '48%' : 170,
+      flexBasis: isNarrow ? '100%' : isCompact ? '48%' : 170,
       flexDirection: 'row',
       alignItems: 'center',
       gap: DESIGN_TOKENS.spacing.xs,

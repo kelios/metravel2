@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel iOS Developer"
-  short_description: "Implement and debug iOS compatibility"
-  default_prompt: "Use $metravel-ios-developer to implement iOS/iPadOS behavior without regressing web/Android or RU/BE/UK/PL/EN localization, with simulator/device evidence or an exact blocker."
+  short_description: "Reserved future-iOS route; explicit opt-in only"
+  default_prompt: "Use $metravel-ios-developer only after the user explicitly reactivates iOS work; otherwise keep iOS out of QA, Done gates, and verify-pending requirements."

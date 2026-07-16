@@ -24,7 +24,7 @@ Create a compact feature brief:
 Problem:
 Audience:
 User stories:
-Platforms: web | Android | iOS | shared | none
+Platforms: desktop web | mobile web | Android | shared | none
 Locales: RU/BE/UK/PL/EN | selected locales | none
 Acceptance criteria:
 Non-goals:
@@ -56,8 +56,9 @@ Done gate:
 - Do not write implementation code.
 - Prefer measurable acceptance criteria over broad intent.
 - Keep non-goals explicit so engineering does not overbuild.
-- Define the same product outcome across web, Android, and iOS/iPadOS; list only
-  technical platform differences that the product actually requires.
+- Define the same product outcome across desktop web, mobile web, and Android.
+  Mobile-web and Android acceptance criteria are paired; list only technical
+  platform differences that the product actually requires.
 - State whether acceptance criteria apply to RU/BE/UK/PL/EN. Separate app-owned
   UI localization from API/editorial content that needs a backend locale contract.
 - For FE/BE dependencies, name the required board ids or the concrete endpoint/field/event that must unblock the work.

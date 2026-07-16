@@ -34,6 +34,17 @@ Rules:
 - Work from repo root only.
 - Stay on `main`; if not on `main`, stop and ask.
 - Never print secrets from `.env.*`, `.env.e2e`, SSH configs, EAS, or server logs.
+- Before any authorized server write, inspect the backend checkout read-only with
+  `git status --short` and classify every intended path through
+  `git ls-files --error-unmatch -- <repo-relative-path>`.
+- Never mutate a Git-tracked server path: no patch/overwrite/copy/move/delete,
+  chmod, or backup file inside the checkout. Never run backend `commit`, `push`,
+  `pull`, `merge`, `rebase`, `checkout`, `reset`, `restore`, `stash`, or `clean`.
+- A dirty production checkout is a stop condition. Record exact paths and a
+  secret-safe diff summary, create/update an `area=back`/ops task, and leave the
+  cleanup plus canonical backend commit/deploy to the backend owner.
+- Project-owned frontend release scripts may write only their documented
+  untracked runtime/static targets such as `static/dist`.
 - Do not modify production server paths, SSL paths, Nginx roots, aliases, includes, or proxy targets unless the target host path existence has been verified.
 - Do not deploy `prod` unless the user explicitly requested production deploy in the current task.
 - Do not run Android EAS/cloud builds, Android production builds/submits, or mobile store submit commands unless the user explicitly requested that Android/iOS build or submit target in the current task. Web deploy/release validation must not consume Android EAS build credits.

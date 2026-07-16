@@ -55,13 +55,7 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
             ? 8
             : 10
           : 12,
-      minHeight: isMobile
-        ? 46
-        : showSideSlider
-          ? isCompactBookLayout
-            ? 38
-            : 42
-          : 44,
+      minHeight: isMobile ? 46 : 44,
       borderRadius: DESIGN_TOKENS.radii.md,
       width: stackHeroButtons ? '100%' : undefined,
       ...Platform.select({
@@ -102,13 +96,7 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
             ? 8
             : 10
           : 12,
-      minHeight: isMobile
-        ? 46
-        : showSideSlider
-          ? isCompactBookLayout
-            ? 38
-            : 42
-          : 44,
+      minHeight: isMobile ? 46 : 44,
       borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: 'transparent',
       borderWidth: 1.5,
@@ -169,6 +157,7 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
       maxWidth: 'none' as any,
       flexShrink: 0,
       minWidth: 0,
+      minHeight: 44,
       ...Platform.select({
         web: {
           cursor: 'pointer',

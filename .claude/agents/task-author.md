@@ -47,7 +47,8 @@ model: sonnet
      конкретикой, а не плейсхолдерами. `Data/API contract` для BE — endpoint, method, auth,
      точные request/response shape (поля + типы), миграции/seed; для FE — какие endpoints/
      fields/events потребляются и какие UI states появляются. `Dependencies` — реальные board id
-     связанных задач. `Platform impact` фиксирует web/Android/iOS/shared/none,
+     связанных задач. `Platform impact` фиксирует desktop web/mobile web/Android/shared/none,
+     а mobile web и Android validation всегда парная;
      `Localization impact` — RU/BE/UK/PL/EN/selected/none и i18n validation. Не хватает данных для такого уровня — задай ОДИН уточняющий вопрос или
      делегируй проработку `$metravel-system-architect`; не оставляй контракт декоративным.
    - **Assignment** — `Primary owner` и `Support agents` (маппинг ролей на реальных

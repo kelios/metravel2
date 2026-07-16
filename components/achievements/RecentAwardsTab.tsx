@@ -139,7 +139,13 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     wrap: { gap: DESIGN_TOKENS.spacing.xs },
     headerRow: { flexDirection: 'row', justifyContent: 'flex-end' },
-    howBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    howBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+    },
     howText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: '700',

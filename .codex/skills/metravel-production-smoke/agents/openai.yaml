@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Production Smoke"
   short_description: "Read-only production health checks."
-  default_prompt: "Use $metravel-production-smoke to check metravel.by production health with safe GET/browser probes and report concrete regressions."
+  default_prompt: "Use $metravel-production-smoke to check metravel.by with read-only GET/browser/Git-status probes, never clean or mutate tracked server files, and report concrete regressions."

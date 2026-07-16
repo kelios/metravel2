@@ -13,6 +13,7 @@ import { getStyles } from '@/screens/tabs/map.styles';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { mapCategoryNamesToIds, isCategoryFilterUnresolved } from '@/utils/filterQuery';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
+import { METRICS } from '@/constants/layout';
 import { createCollator } from '@/i18n';
 import { parseWebViewJsonObject, toFiniteCoordinate } from '@/utils/webViewBridge';
 
@@ -194,7 +195,11 @@ export function useMapScreenController() {
   const insets = useSafeAreaInsets();
   const themedColors = useThemedColors();
 
-  const { isMobile } = useMapResponsive();
+  const { isMobile, width: viewportWidth } = useMapResponsive();
+  const usesWebBottomDock =
+    Platform.OS === 'web' &&
+    viewportWidth >= METRICS.breakpoints.tablet &&
+    viewportWidth < METRICS.breakpoints.desktop;
 
   const {
     isFocused,
@@ -217,8 +222,8 @@ export function useMapScreenController() {
   const canonical = buildCanonicalUrl(pathname || '/map');
 
   const styles = useMemo(
-    () => getStyles(isMobile, insets.top, themedColors),
-    [isMobile, insets.top, themedColors]
+    () => getStyles(isMobile, insets.top, themedColors, usesWebBottomDock),
+    [isMobile, insets.top, themedColors, usesWebBottomDock]
   );
 
   useEffect(() => {

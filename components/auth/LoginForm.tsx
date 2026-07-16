@@ -28,7 +28,7 @@ import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
-import FacebookSignInButton from '@/components/auth/FacebookSignInButton';
+import FacebookAuthFlow from '@/components/auth/FacebookAuthFlow';
 import { webTouchScrollStyle } from '@/utils';
 import { buildRegistrationHref, resolvePostAuthPath } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
@@ -66,7 +66,7 @@ export default function Login() {
 
     /* ---------- helpers ---------- */
     const router = useRouter();
-    const { login, loginWithGoogle, loginWithFacebook, sendPassword, isAuthenticated } = useAuth();
+    const { login, loginWithGoogle, sendPassword, isAuthenticated } = useAuth();
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
 
     const isFocused = useIsFocused();
@@ -189,30 +189,12 @@ export default function Login() {
         showMsg(error, true);
     };
 
-    const handleFacebookSignIn = async (credential: string) => {
-        if (facebookBusy || googleBusy || submitted) return;
-        setFacebookBusy(true);
-        let navigating = false;
-        try {
-            showMsg('');
-            const ok = await loginWithFacebook(credential);
-            if (ok) {
-                sendAnalyticsEvent('login_success', { method: 'facebook', intent: String(intent || '') });
-                if (intent) sendAnalyticsEvent('AuthSuccess', { source: 'facebook', intent });
-                navigating = true;
-                setSubmitted(true);
-                replaceAfterAuth();
-            } else {
-                showMsg(i18nT('authStatic:facebook.signInFailed'), true);
-            }
-        } catch (error) {
-            showMsg(getErrorMessage(error, i18nT('authStatic:facebook.signInFailed')), true);
-        } finally {
-            if (!navigating && mountedRef.current) setFacebookBusy(false);
-        }
+    const handleFacebookAuthenticated = () => {
+        sendAnalyticsEvent('login_success', { method: 'facebook', intent: String(intent || '') });
+        if (intent) sendAnalyticsEvent('AuthSuccess', { source: 'facebook', intent });
+        setSubmitted(true);
+        replaceAfterAuth();
     };
-
-    const handleFacebookError = (error: string) => showMsg(error, true);
 
     const {
         values,
@@ -401,10 +383,10 @@ export default function Login() {
                                                         onError={handleGoogleError}
                                                         disabled={isSubmitting || submitted || googleBusy || facebookBusy}
                                                     />
-                                                    <FacebookSignInButton
-                                                        onSuccess={handleFacebookSignIn}
-                                                        onError={handleFacebookError}
-                                                        disabled={isSubmitting || submitted || googleBusy || facebookBusy}
+                                                    <FacebookAuthFlow
+                                                        onAuthenticated={handleFacebookAuthenticated}
+                                                        onBusyChange={setFacebookBusy}
+                                                        disabled={isSubmitting || submitted || googleBusy}
                                                     />
                                                 </View>
 

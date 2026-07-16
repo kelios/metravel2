@@ -36,9 +36,13 @@ Every maintained prompt must make these items discoverable:
 6. Reproducibility: canonical spec link plus the exact final prompt or stable assembly recipe.
 
 For implementation, architecture, review, QA, or test prompts, also require an
-explicit `Platform impact` for web/Android/iOS and `Localization impact` for
-RU/BE/UK/PL/EN, or an explicit `none`. Do not let a reusable prompt assume that
-shared Expo/React Native code is web-only or that app-owned UI copy is single-language.
+explicit `Platform impact` for desktop web/mobile web/Android and `Localization
+impact` for RU/BE/UK/PL/EN, or an explicit `none`. Mobile web and Android are a
+coupled validation pair: a prompt that includes one must require evidence for the
+same flow on both. iOS is inactive and must not appear in normal QA/Done gates or
+`verify pending` until the user explicitly reactivates it. Do not let a reusable
+prompt assume that shared Expo/React Native code is desktop-web-only or that
+app-owned UI copy is single-language.
 
 Prefer provider-neutral wording unless a provider-specific feature is essential. Remove references such as “Claude-proven” or `CLAUDE.md` when the rule is actually project-owned; point to `AGENTS.md` or the canonical file in `docs/` instead.
 

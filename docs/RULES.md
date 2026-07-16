@@ -5,21 +5,25 @@
 - Current project is `metravel2`.
 - The app codebase root is `metravel2/` (the folder that contains `package.json`).
 - Treat `docs/` (this folder) as the source of truth for development rules.
-- Implementation ownership in this workspace is frontend/app/docs only. Backend/Django/API/server work in `../metravel-backend` or `area=back` is analysis-only: read source, run safe read-only probes, and create/update board tasks with evidence, but do not edit backend files, migrations, tests, settings, or server code from this repository.
+- Implementation ownership in this workspace is frontend/app/docs only. Backend/Django/API/server work in `../metravel-backend` or `area=back` is analysis-only: read source, run safe read-only probes, and create/update board tasks with evidence, but do not edit backend files, migrations, tests, settings, or server code from this repository. Do not run Git-changing operations in a backend checkout locally or on a server, including `add`, `commit`, `push`, `pull`, `merge`, `rebase`, `tag`, `checkout`, `reset`, `restore`, `stash`, or `clean`.
 - If a frontend task depends on missing or broken backend behavior, leave a concrete blocker and link/create the `area=back` task instead of shipping a mock-only or silently failing frontend path.
 
 ## Application architecture and localization
 
-- Metravel is one Expo/React Native application with production web, Android,
-  and iOS/iPadOS surfaces. `package.json`, `app.json`, `android/`, `ios/`, and
-  platform files are implementation evidence; no platform is an optional copy
-  of another.
-- Before every task, record `Platform impact: web | Android | iOS | shared | none`
-  and `Localization impact: all current locales | selected locales | none`.
+- Metravel's active product surfaces are desktop web, mobile web, and Android.
+  The repository may retain `ios/` and `.ios.*` scaffolding, but there is no
+  current iOS/iPadOS application, so iOS is not a required QA, release-readiness,
+  Done-gate, or `verify pending` surface until the user explicitly reactivates it.
+- Before every task, record
+  `Platform impact: desktop web | mobile web | Android | shared | none` and
+  `Localization impact: all current locales | selected locales | none`.
   `none` must be a considered conclusion, not an omitted check.
 - Shared components, hooks, services, API adapters, and state must preserve all
-  affected platforms. Platform files may adapt engines, permissions, safe areas,
-  storage, or native APIs, but must not silently fork product behavior.
+  affected active platforms. Platform files may adapt engines, permissions,
+  safe areas, storage, or native APIs, but must not silently fork product behavior.
+- Mobile web and Android are a coupled validation pair. If a change affects one,
+  the task automatically includes the other and verifies the same scenario,
+  state, locale, hierarchy, action order, key geometry, and touch semantics on both.
 - The production locale registry is defined by `i18n/config.ts`; it currently
   contains RU/BE/UK/PL/EN with RU as default/fallback. `i18n/resources.ts` and the
   Russian resources define the typed namespace/key contract.
@@ -35,8 +39,8 @@
   lifecycle; do not add locale URL prefixes or `hreflang` without a separate SEO
   routing contract.
 - Any localization-impacting change must pass `npm run test:i18n` plus the normal
-  feature checks. Shared native changes require platform-appropriate evidence;
-  web, Android, and iOS evidence are not interchangeable.
+  feature checks. Shared native changes require separate mobile-web and Android
+  evidence; one does not replace the other.
 
 ## Development workflow
 
@@ -65,14 +69,18 @@ npm run test:run
   - the green baseline is `0` skipped tests unless a documented project-level exception is explicitly added to `docs/`.
 
 - If a task changes UI, layout, styling, visual states, or interaction behavior visible on web:
-  - open a local browser preview and visually verify the changed scenario in the browser before considering the task complete;
-  - take a screenshot of the result to confirm visual correctness;
+  - verify the changed scenario on desktop web and mobile web before considering the task complete;
+  - take screenshots of the desktop and mobile-web result to confirm visual correctness;
   - check the browser console for errors (no new errors should appear after the change).
+- If a task changes visible UI/layout/interaction on any active surface, also run
+  the same scenario on a locally built Android app installed on the USB-connected
+  phone. Visible UI completion therefore requires desktop web + mobile web +
+  Android evidence unless a concrete environment blocker is reported.
 - Always self-verify (mandatory):
   - the agent must verify its own changes end-to-end (browser and/or tests) before handoff — never defer verification to the user and never report a change as done/fixed while verification is still pending;
   - **never offload browser verification to the user.** Asking the user to scroll, hard-refresh, open devtools, run a console snippet, take a screenshot, or "tell me what you see" is NOT verification — it is offloading, and it is forbidden as a substitute for doing it yourself. The user reporting a bug is the input; confirming the fix in a browser is your job, not theirs;
   - if the preview/dev server is flaky (crashes, slow bundling, route redirects, transient API timeouts), restart it, wait, re-navigate, or retry until verification actually completes — instability is not an acceptable reason to skip verification;
-  - if the default preview cannot reach or lay out the target (headless viewport reports `0`, RN-Web scrolls an inner container so `window.scrollTo`/IntersectionObserver never fire, the route is production-only, dev-SSR crashes on the page), you must exhaust an alternate self-verification path BEFORE declaring a blocker — e.g. build a local prod web export and serve it statically with a prod-API proxy (`Prod Static` / `Dist Prod` launch), drive it with Playwright/e2e, or device-verify on a real Android/iOS build. "The preview couldn't show it" is only a real blocker once every available path has actually been tried and reported;
+  - if the default preview cannot reach or lay out the target (headless viewport reports `0`, RN-Web scrolls an inner container so `window.scrollTo`/IntersectionObserver never fire, the route is production-only, dev-SSR crashes on the page), you must exhaust an alternate self-verification path BEFORE declaring a blocker — e.g. build a local prod web export and serve it statically with a prod-API proxy (`Prod Static` / `Dist Prod` launch), drive it with Playwright/e2e, or device-verify on the real Android build. "The preview couldn't show it" is only a real blocker once every available path has actually been tried and reported;
   - when Android verification is relevant, assume a USB Android phone is connected to this workstation: run `adb devices -l` before marking Android unavailable; if a device is listed with status `device`, build Android locally, install that build to the phone, and test the needed scenario on it using `docs/MANUAL_TEST_CASES.md` `AND-USB-*` instead of asking the user to verify;
   - if a change genuinely cannot be verified after real effort (e.g. an environment blocker outside the code that no available path can bypass), say so explicitly, mark the item as `verify pending` with the concrete blocker AND the list of paths you already tried, and do not claim it is done.
 - Authenticated QA (allowed):
@@ -91,7 +99,8 @@ npm run test:run
   - Android device QA requires a locally built Android app installed over USB on the connected phone, for example `cd android && ./gradlew :app:installDebug` or `:app:assembleDebug` plus `adb install -r ...`;
   - do not substitute mobile web viewport evidence, Expo web export, EAS preview/development/production builds, or dev-client/export flows for Android device validation without explicit user approval;
   - if local build/install is blocked, report the exact command, result, and next safe step instead of claiming Android verification passed.
-- iOS EAS/cloud builds and submits also require an explicit request for that exact build/submit in the current task; do not start them as an implicit QA path or claim iOS verification from web/Android evidence.
+- Do not start iOS simulator/device/EAS QA as an implicit path. iOS is inactive
+  and excluded from current validation until a new explicit product decision.
 - Task-board token recovery (mandatory):
   - if `/api/tasks/`, `/api/tasks/board/`, `/api/sprints/`, or the MCP `ticket-board` tools return `HTTP 401`, first refresh the staff DRF token with a programmatic login using the credentials from `.env.e2e` and the procedure in `docs/TASK_BOARD_MCP.md`;
   - write the refreshed token only to `.secrets/metravel-task-board.env`, never to chat, screenshots, committed files, or shell logs, then retry the board endpoints;
@@ -129,7 +138,11 @@ npm run test:run
   - if a temporary debug file already appeared in the root or in git, remove it in the same task instead of leaving it behind.
 - Task board tracking (mandatory):
   - frontend, backend, and cross-functional work items must be created on the shared MCP task board through `ticket-board`; see `docs/TASK_BOARD_MCP.md`;
-  - task `area` is only `front` or `back` for active workflow: Android/iOS/native app bugs are `area=front` with `[AND-...]`/`[IOS-...]` context in the title/description; use `area=back` only for backend/API/server work;
+  - task `area` is only `front` or `back` for active workflow: Android/native app
+    bugs are `area=front` with `[AND-...]` context and paired mobile-web/Android
+    validation in the title/description; use `area=back` only for backend/API/server work;
+  - `blocked_by` is only for a task that cannot start or continue because a concrete hard dependency is unresolved. A completed implementation waiting for code review, QA, backend/deploy/production/API/browser/device evidence, or another Done-gate check stays in `review` or `testing`; a validation failure requiring code changes returns to `in_progress`;
+  - never use `blocked_by` merely because a Done gate is incomplete, a reviewer/tester has not run yet, or production verification is pending. Link the true blocker task/gate only when it prevents implementation work itself;
   - every `area=front` or `area=back` board task must include the required Task Contract, sprint, dependencies, blockers, validation, and Done gate;
   - every new board task, including Android/native QA bugs filed as `area=front`, must be assigned to the current active sprint unless `docs/TASK_BOARD_MCP.md` defines a more specific active sprint rule;
   - do not create new local `tasks/*.md` task files as the normal workflow; local task files are only a temporary fallback/migration draft when the board is unavailable, and must be imported/synced to the board before handoff;
@@ -171,15 +184,47 @@ npm run lighthouse:travel:desktop
   - avoid legacy or deprecated approaches when a modern project-approved alternative exists;
   - if compatibility constraints force an older pattern, keep it local and document the reason in code or the relevant doc.
 
+### Production Git-tracked file immutability (mandatory)
+
+- AI agents working from this frontend workspace must never mutate a Git-tracked
+  path in the production backend checkout. Explicit approval for a production
+  deploy, recovery, Nginx change, or server investigation does not waive this
+  rule.
+- Before any explicitly authorized server write, inspect the checkout read-only:
+
+```bash
+git status --short
+git ls-files --error-unmatch -- path/relative/to/checkout
+```
+
+  A successful `git ls-files` match means the path is tracked: stop before
+  patching, overwriting, copying, moving, deleting, or changing its mode. Do not
+  place backup copies inside the tracked checkout; use the documented external
+  runtime/backup location when that write is explicitly authorized.
+- If the production checkout is already dirty, do not clean, stash, reset,
+  restore, checkout, pull, or deploy over it. Capture the exact path and a
+  secret-safe diff summary, create/update an `area=back` or ops board task, and
+  hand the canonical source change and normal deploy to the backend owner.
+- Tracked backend source/config changes must originate in the backend owner's
+  canonical repository workflow and arrive through its normal reviewed deploy.
+  This frontend workspace does not commit, push, merge, or deploy backend source.
+- Project-owned frontend deploy scripts may mutate only their documented
+  untracked runtime/static targets such as `static/dist`. Secret stores, runtime
+  state, or external backup paths may be written only when explicitly authorized
+  and must remain outside Git-tracked paths.
+
 ### Server path safety (mandatory)
 
-- Never change server file paths in configs unless existence is verified on the target host.
+- For explicitly authorized untracked runtime config only, never change a server
+  file path unless existence is verified on the target host. Git-tracked server
+  configs remain immutable under the rule above.
 - This applies to all critical directives, including:
   - `ssl_certificate`, `ssl_certificate_key`, `ssl_trusted_certificate`
   - `root`, `alias`, `include`
   - `proxy_pass` targets and unix socket paths
 - If path existence cannot be verified, do not modify the path; keep current value and mark as `needs server verification`.
-- Before editing Nginx/Apache paths, run checks on the server first:
+- Before editing an allowed untracked Nginx/Apache runtime config, run checks on
+  the server first:
 
 ```bash
 # Example for SSL files:
@@ -191,7 +236,7 @@ sudo test -f /path/to/chain.pem && echo OK || echo MISSING
 sudo test -d /path/to/web/root && echo OK || echo MISSING
 ```
 
-- Any config change with path updates must be followed by:
+- Any allowed untracked runtime config change with path updates must be followed by:
 
 ```bash
 sudo nginx -t
@@ -283,7 +328,11 @@ npx serve dist/prod -l 3000 -s
 - Before creating new UI components or styles, check `components/ui` and existing feature components and reuse them.
 - Add new components only when no existing component can be reasonably extended or composed.
 - When adding buttons, icons, or small UI primitives, prefer existing `components/ui` primitives (`Button`, `IconButton`, `Chip`) over custom one-offs.
-- Mobile layout parity is mandatory: mobile web, Android, and iOS must use the same visual and interaction contract for the same user-facing flow. Platform files may adapt technical map engines, safe areas, or native APIs, but must not introduce different UX, block order, primary actions, hero proportions, or tap behavior.
+- Mobile layout parity is mandatory: mobile web and Android must use the same
+  visual and interaction contract for the same user-facing flow. A change on
+  either surface must be checked on both. Platform files may adapt technical map
+  engines, safe areas, or native APIs, but must not introduce different UX,
+  block order, primary actions, hero proportions, or tap behavior.
 - Map/place/travel-point surfaces must reuse one point/place template whenever possible. The mobile popup/card contract is fullscreen inside the app content area with app header/footer still visible; the hero image takes about 70% of the card; below it are title/meta, coordinates with copy, article/page action when available, expandable navigation system choices, and existing save/add/share/route actions.
 - The point/place navigation set must explicitly include Google Maps, Apple Maps, Organic Maps/offline, Waze, Яндекс Карты, Яндекс Навигатор, and OpenStreetMap where coordinates are available. Telegram/share is extra and must not replace map/navigation choices.
 - Related travel state actions must be visible as text, not only as an unlabeled icon: "Был здесь", "Хочу поехать", "Планирую" or a compact "Был / Хочу / Планирую" affordance that opens those choices.

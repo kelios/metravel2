@@ -72,7 +72,7 @@ describe('QuestWizard guest gate', () => {
     const onGuestLogin = jest.fn()
     const onGuestRegister = jest.fn()
 
-    const { getByLabelText, getByText, getByTestId, queryByTestId } = render(
+    const { getByLabelText, getByRole, getByText, getByTestId, queryByTestId } = render(
       <QuestWizard
         title="Тест-квест"
         steps={steps}
@@ -95,6 +95,8 @@ describe('QuestWizard guest gate', () => {
     await act(async () => {
       await Promise.resolve()
     })
+
+    expect(getByRole('button', { name: 'Начать квест' })).toBeTruthy()
 
     // intro → точка 1: на intro шаге кнопка «Начать квест» продвигает вперёд.
     await act(async () => {

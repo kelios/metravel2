@@ -11,6 +11,11 @@ const DESKTOP_SHELL_PADDING = METRICS.spacing.m;
 const TRANSITION_MS = 200;
 const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = LAYOUT?.tabBarHeight ?? 56;
 const WEB_HEADER_RESERVED_HEIGHT = 88;
+// Tablet web keeps the desktop map chrome/header but uses the fixed mobile
+// BottomDock. Reserve both pieces of chrome so Leaflet attribution and bottom
+// controls stay above the dock instead of being painted underneath it.
+const WEB_TABLET_HEADER_AND_DOCK_RESERVED_HEIGHT =
+  LAYOUT.headerHeight + LAYOUT.tabBarHeight + METRICS.spacing.s;
 const PANEL_RADIUS = 20;
 const CONTROL_RADIUS = 12;
 const CONTROL_SIZE = 40;
@@ -19,12 +24,15 @@ export const getStyles = (
   isMobile: boolean,
   insetTop: number,
   themedColors: ThemedColors,
+  usesWebBottomDock = false,
 ) => {
   const shadowMedium = themedColors.shadows.medium;
   const shadowHeavy = themedColors.shadows.heavy;
   const webViewportReservedHeight = isMobile
     ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT
-    : WEB_HEADER_RESERVED_HEIGHT;
+    : usesWebBottomDock
+      ? WEB_TABLET_HEADER_AND_DOCK_RESERVED_HEIGHT
+      : WEB_HEADER_RESERVED_HEIGHT;
   const webPointerCursor = Platform.OS === 'web' ? { cursor: 'pointer' as const } : {};
 
   return StyleSheet.create({
@@ -676,7 +684,7 @@ export const getStyles = (
         gap: isMobile ? 6 : 8,
       },
       geoBannerActionPrimary: {
-        minHeight: isMobile ? 32 : 44,
+        minHeight: 44,
         justifyContent: 'center',
         paddingHorizontal: isMobile ? 10 : 12,
         borderRadius: isMobile ? 999 : 10,
@@ -691,7 +699,7 @@ export const getStyles = (
         fontWeight: '700',
       },
       geoBannerActionSecondary: {
-        minHeight: isMobile ? 32 : 44,
+        minHeight: 44,
         justifyContent: 'center',
         paddingHorizontal: isMobile ? 10 : 12,
         borderRadius: isMobile ? 999 : 10,

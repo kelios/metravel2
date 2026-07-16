@@ -30,12 +30,12 @@ import TravelDetailsHeroDeferredColumn, {
 } from './TravelDetailsHeroDeferredColumn';
 import TravelHeroStickyNavNative from './TravelHeroStickyNavNative';
 
-// Semantic <h1> kept sr-only: it gives the page its single SEO heading
-// (the travel name) without rendering a visible title block at the top — the
-// gallery is the first visible element by design. The SSG step also injects its
-// own sr-only `<h1 data-ssg-travel-h1>` plus a visible `.ssg-travel-h1`
-// placeholder; both are torn down on mount (see effect below) so the page keeps
-// exactly one (hidden) heading and no lingering visible title.
+// The travel name is the page's single semantic <h1>. On wider web layouts it
+// is visible above the gallery so the first screen identifies the route; mobile
+// keeps it sr-only because the compact app header already shows that context.
+// The SSG step also injects its own sr-only `<h1 data-ssg-travel-h1>` plus a
+// visible `.ssg-travel-h1` placeholder; both are torn down on mount (see effect
+// below) so the hydrated page keeps exactly one heading.
 // Sub-nav sits at index 1 of the native sticky ScrollView children
 // (hero, sub-nav, content).
 const STICKY_NAV_INDICES = [1];
@@ -245,6 +245,24 @@ export default function TravelDetailsCriticalShell({
     />
   ) : null;
 
+  const pageTitle = Platform.OS === 'web' && travel ? (
+    <h1
+      data-testid="travel-details-title"
+      style={(
+        isMobile
+          ? WEB_SR_ONLY_HEADING_STYLE
+          : {
+              ...styles.pageTitle,
+              // React DOM treats numeric lineHeight as a unitless multiplier;
+              // RN tokens express it in pixels, so preserve that contract.
+              lineHeight: `${DESIGN_TOKENS.typography.scale.h1.lineHeight}px`,
+            }
+      ) as any}
+    >
+      {travel.name}
+    </h1>
+  ) : null;
+
   const nativeStickyChildren =
     useNativeStickyNav && travel
       ? [
@@ -322,9 +340,6 @@ export default function TravelDetailsCriticalShell({
                   collapsable={false}
                 >
                   {topNotice}
-                  {Platform.OS === 'web' && travel ? (
-                    <h1 style={WEB_SR_ONLY_HEADING_STYLE as any}>{travel.name}</h1>
-                  ) : null}
                   {travel && showDesktopSidebar ? (
                     <View style={desktopLayoutStyle} collapsable={false}>
                       <View style={desktopSidebarContainerStyle}>
@@ -346,11 +361,15 @@ export default function TravelDetailsCriticalShell({
                       </View>
 
                       <View style={desktopContentColumnStyle} collapsable={false}>
+                        {pageTitle}
                         {contentColumn}
                       </View>
                     </View>
                   ) : travel ? (
-                    contentColumn
+                    <>
+                      {pageTitle}
+                      {contentColumn}
+                    </>
                   ) : null}
                 </View>
               </View>

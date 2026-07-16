@@ -39,7 +39,13 @@ Read first:
    - `npm run test:i18n` and affected RU/BE/UK/PL/EN evidence when localization is impacted
    - when the required automated gate is already owned by another live session, apply the delegated-validation contract from `AGENTS.md`: accept only if it covers the task and no non-test Done-gate step remains; otherwise reject with `validation skipped`
 5. Append evidence to the task description without erasing prior history.
-6. Move passing tasks, and tasks whose sole remaining automated gate is validly delegated, to `done`. Move failing or incompletely covered tasks back to `review` or `blocked_by` with a concise blocker. The active gate owner must reopen a delegated task or record a blocker if it cannot fix a discovered failure.
+6. Move passing tasks, and tasks whose sole remaining automated gate is validly delegated, to
+   `done`. Keep tasks with missing validation evidence in `review` or `testing`. If validation
+   finds a defect that requires implementation changes, return the task to `in_progress` with the
+   evidence. Use `blocked_by` only when a newly discovered hard dependency makes it impossible to
+   start or continue the remaining work; waiting for review, tests, production/API/device checks,
+   or an incomplete Done gate is never such a blocker. The active gate owner must reopen a
+   delegated task or record a blocker if it cannot fix a discovered failure.
 
 ## Output
 

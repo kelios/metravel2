@@ -24,8 +24,9 @@ Read first:
 - Do not treat missing production-hosted media in local dev as a frontend bug by itself.
 - Do not infer production performance from Expo dev bundles.
 - Confirm that each reported bug is reproducible and user-visible or validation-relevant.
-- Record platform impact and localization impact before testing. For shared flows,
-  do not infer Android/iOS from web; use `$metravel-mobile-tester` for device evidence.
+- Record platform impact and localization impact before testing. For visible
+  shared flows, cover desktop web and hand paired mobile-web/Android evidence to
+  `$metravel-mobile-tester`; neither mobile surface is inferred from the other.
 - When UI copy or locale behavior is affected, exercise the changed flow in the
   relevant RU/BE/UK/PL/EN locales, including long-label layout, accessibility,
   formatting/plurals, persisted language, and web reload/native cold restart.

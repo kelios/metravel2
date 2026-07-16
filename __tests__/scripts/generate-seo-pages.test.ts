@@ -21,6 +21,7 @@ const {
   injectHiddenH1,
   disableExpoRouterHydration,
   injectQuestIntroSection,
+  injectQuestLinksIndex,
   buildQuestPromoCatalog,
   findTravelQuestPromoMatches,
   injectTravelQuestPromoSection,
@@ -815,6 +816,21 @@ describe('travel SSR SEO helpers', () => {
     expect(second).toContain('html.rnw-styles-ready [data-ssg-quest-intro="true"]')
     expect(second).toContain("'Segoe UI'")
     expect(second).not.toContain('system-ui,-apple-system,"Segoe UI"')
+  })
+})
+
+describe('injectQuestLinksIndex', () => {
+  it('keeps crawlable quest links out of the accessibility and keyboard trees', () => {
+    const html = injectQuestLinksIndex(MINIMAL_BASE, [
+      { quest_id: 'krakow-dragon', city_id: '1', title: 'Краковский дракон' },
+      { quest_id: 'minsk-old-town', city_id: '2', title: 'Старый Минск' },
+    ])
+
+    expect(html).toContain('data-ssg-quest-index="true"')
+    expect(html).toContain('aria-hidden="true" inert')
+    expect(html).toContain('href="/quests/1/krakow-dragon" tabindex="-1"')
+    expect(html).toContain('href="/quests/2/minsk-old-town" tabindex="-1"')
+    expect(html).not.toContain('aria-label="Все квесты"')
   })
 })
 

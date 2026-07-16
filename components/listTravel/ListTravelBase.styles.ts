@@ -15,7 +15,11 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
       maxWidth: '100%',
       ...Platform.select({
         web: {
-          minHeight: 900,
+          // The route already lives inside the root flex column between the
+          // global header and footer. A fixed 900px minimum made the catalog
+          // overflow that slot on laptop/tablet heights and put cards behind
+          // the footer instead of letting the internal FlashList own scrolling.
+          minHeight: 0,
         },
       }),
     },
@@ -66,7 +70,7 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
       height: '100%',
       ...Platform.select({
         web: {
-          minHeight: 900,
+          minHeight: 0,
         },
       }),
       ...(Platform.OS === 'web' ? ({ paddingTop: DESIGN_TOKENS.spacing.lg } as const) : null),
@@ -99,7 +103,7 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
       ...Platform.select({
         web: {
           scrollbarGutter: 'stable',
-          minHeight: 900,
+          minHeight: 0,
         },
       }),
     },

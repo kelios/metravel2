@@ -86,7 +86,7 @@ export const createCtaLoginStyles = (colors: ThemedColors) =>
       paddingHorizontal: 16,
       borderRadius: CONTROL_RADIUS,
       backgroundColor: colors.primary,
-      minHeight: 36,
+      minHeight: 44,
       ...(Platform.OS === 'web'
         ? ({
             cursor: 'pointer',

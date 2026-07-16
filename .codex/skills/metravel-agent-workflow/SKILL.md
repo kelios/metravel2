@@ -1,6 +1,6 @@
 ---
 name: metravel-agent-workflow
-description: Orchestrate a role-based metravel AI workflow across project analyst, business analyst, system architect, designer, Android/iOS developers, programmer, mobile tester, security/design reviewers, QA, reviewer, Google Play operator, and DevOps agents. Use when Codex needs to split a metravel task into agent roles, run a bug-finding/fixing/deploy loop, or coordinate project analysis, discovery, implementation, mobile validation, review, and release without losing project rules.
+description: Orchestrate a role-based metravel AI workflow across project analyst, business analyst, system architect, designer, Android developer, programmer, paired mobile-web/Android tester, security/design reviewers, QA, reviewer, Google Play operator, and DevOps agents. Use when Codex needs to split a metravel task into agent roles, run a bug-finding/fixing/deploy loop, or coordinate project analysis, discovery, implementation, mobile validation, review, and release without losing project rules.
 ---
 
 # Metravel Agent Workflow
@@ -30,13 +30,15 @@ Default feature flow:
    and web/mobile behavior; add `$metravel-i18n-guardrails` for UI copy, locale
    state/formatting, accessibility, SEO locale, and RU/BE/UK/PL/EN coverage; use
    `$metravel-design-auditor` for cross-screen evidence and `$metravel-visual-asset-designer` for requested raster assets.
-8. Native Developer: use `$metravel-android-developer` or `$metravel-ios-developer` for platform implementation, crashes, platform files, or Expo native modules.
+8. Native Developer: use `$metravel-android-developer` for platform
+   implementation, crashes, platform files, or Expo native modules; keep the
+   future-iOS route inactive unless the user explicitly reactivates it.
 9. Refactor Surgeon: use `$metravel-refactor-surgeon` for behavior-preserving large component splits.
 10. Programmer: use `$metravel-feature-builder` to implement the smallest sufficient diff.
 11. Backend Diagnostician: use `$metravel-backend-diagnostician` for read-only API/backend blockers and board follow-up.
 12. Ticket Board: use `$metravel-ticket-board` for MCP board task/sprint list/create/update/sync; use `$metravel-task-contract` for FE/BE contracts.
 13. Browser Reviewer: use `$metravel-browser-reviewer` for visible web diff review, fixes, and re-verification.
-14. Mobile Tester: use `$metravel-mobile-tester` for mobile web, Android, or iOS/native QA evidence and retest.
+14. Mobile Tester: use `$metravel-mobile-tester` for paired mobile-web/Android QA evidence and retest.
 15. QA Agent: use `$metravel-qa-agent` to test broader flows and create structured bug reports.
 16. Sprint Reviewer: use `$metravel-sprint-reviewer` to accept task-board tickets only with Done-gate evidence.
 17. Production Smoke: use `$metravel-production-smoke` for read-only production health checks.
@@ -47,8 +49,8 @@ Default feature flow:
 Default bug loop:
 
 1. QA Agent explores the app and writes bug reports only.
-2. Mobile Tester handles mobile-specific reproduction, device/emulator evidence, and retest when the bug is mobile web, Android, or iOS/native.
-3. Android or iOS Developer fixes confirmed platform-native bugs; Programmer fixes shared feature bugs.
+2. Mobile Tester handles paired mobile-web/Android reproduction, USB-device evidence, and retest when the bug is mobile web or Android/native.
+3. Android Developer fixes confirmed platform-native bugs; Programmer fixes shared feature bugs.
 4. QA Agent or Mobile Tester re-tests the fixed scenario.
 5. Reviewer checks the diff and validation.
 6. DevOps Agent deploys/builds/releases only if the fix is approved and the user explicitly requested a target environment or mobile build. Android production/EAS builds require an explicit Android build/submit request in the current task.
@@ -62,12 +64,18 @@ Default bug loop:
 - In this frontend workspace, no role edits backend/Django/API/server working trees; backend fixes are routed to `area=back` board tasks with evidence.
 - Keep Mobile Tester read-only unless the user explicitly asks to update tests.
 - Do not let Android Developer change mobile release/build configs without explicit user approval.
-- Apply the same configuration and EAS authority gates to iOS work; web/Android evidence alone is not iOS device verification.
 - Do not let Android Developer or Mobile Tester run Android EAS/cloud builds, Android production builds/submits, or dev-client/export Android QA routes without explicit user approval; Android QA defaults to local build/install on the USB-connected phone.
-- Do not let iOS Developer or Mobile Tester run iOS EAS/cloud builds or submits without an explicit request for that exact action.
+- Keep iOS Developer out of normal workflows, QA, Done gates, and `verify
+  pending` until the user explicitly reactivates iOS application work.
 - Do not let Google Play Operator build, submit, promote, or mutate a track beyond the exact target the user authorized in the current task.
 - Do not let Refactor Surgeon change business logic or visual design; it only extracts structure.
 - Do not let Sprint Reviewer move tickets to `done` without runtime evidence for the Task Contract Done gate.
+- Keep board ownership explicit: implementation moves `todo → in_progress → review`; reviewer
+  approval moves `review → testing`; QA/release evidence supports `testing → done` through
+  `$metravel-sprint-reviewer`.
+- Do not use `blocked_by` as a review or testing state. It is reserved for a concrete hard
+  dependency that prevents implementation from starting or continuing. Missing validation stays
+  in `review`/`testing`; a found defect returns to `in_progress`.
 - Do not let Production Smoke deploy, rollback, or mutate production; it only probes read-only health.
 - Do not let implementation start from vague requirements; require acceptance criteria or a bug report first.
 - Do not deploy production from vague wording; require an explicit `prod` deploy request and a clean environment gate.
@@ -75,8 +83,9 @@ Default bug loop:
 - Keep unrelated user changes separate; never revert files outside the task.
 - Preserve project rules for external links, design tokens, e2e secrets, server paths, and scope-based validation.
 - Require every role handoff to state platform impact and localization impact.
-  Implementation/review/QA must cover production web, Android, iOS/iPadOS, and
-  RU/BE/UK/PL/EN where affected; unavailable native evidence is `verify pending`.
+  Implementation/review/QA must cover desktop web, mobile web, Android, and
+  RU/BE/UK/PL/EN where affected; mobile-web and Android evidence is always
+  paired, and unavailable active-platform evidence is `verify pending`.
 - For visible web UI changes, require browser verification, screenshot, and console check before final handoff.
 - If a role finds a real issue in the touched scope, route it to implementation before handoff unless it is explicitly blocked.
 
@@ -94,7 +103,7 @@ Each role should return one compact artifact:
 - Quest Geo Verifier: `Quest Geo Report`
 - Designer: `UI Contract`
 - Android Developer: `Android Implementation Summary`
-- iOS Developer: `iOS Implementation Summary`
+- iOS Developer: reserved future route, omitted from normal handoff
 - Refactor Surgeon: `Refactor Summary`
 - Programmer: `Implementation Summary`
 - Backend Diagnostician: `Backend Diagnosis`

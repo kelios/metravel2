@@ -359,8 +359,8 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       color: colors.text,
     },
     closeBtn: {
-      width: 36,
-      height: 36,
+      width: DESIGN_TOKENS.touchTarget.minWidth,
+      height: DESIGN_TOKENS.touchTarget.minHeight,
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',

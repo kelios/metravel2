@@ -9,6 +9,11 @@ import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/st
 import { getActiveQueryClient } from '@/api/activeQueryClient';
 import { queryKeys } from '@/api/queryKeys';
 import type { UserProfileDto } from '@/api/user';
+import type {
+    FacebookAuthResult,
+    FacebookCompletionStartResult,
+    FacebookSessionPayload,
+} from '@/api/auth';
 import { shouldUseStoredAuthToken } from '@/utils/authPlatform';
 import { normalizeAvatarUrl } from '@/utils/mediaUrl';
 import { normalizeProfileName, resolveProfileFullName } from '@/utils/profileName';
@@ -99,7 +104,15 @@ interface AuthActions {
     checkAuthentication: () => Promise<void>;
     login: (email: string, password: string) => Promise<boolean>;
     loginWithGoogle: (credential: string) => Promise<boolean>;
-    loginWithFacebook: (credential: string) => Promise<boolean>;
+    loginWithFacebook: (credential: string) => Promise<FacebookAuthResult>;
+    startFacebookEmailCompletion: (
+        completionHandle: string,
+        email: string,
+    ) => Promise<FacebookCompletionStartResult>;
+    confirmFacebookEmailCompletion: (
+        completionHandle: string,
+        code: string,
+    ) => Promise<FacebookAuthResult>;
     logout: () => Promise<void>;
     sendPassword: (email: string) => Promise<string>;
     setNewPassword: (token: string, newPassword: string) => Promise<boolean>;
@@ -122,7 +135,77 @@ export const INITIAL_AUTH_STATE: AuthState = {
 // finishes after logout and re-applies stale authenticated state.
 let authEpoch = 0;
 
-export const useAuthStore = create<AuthStore>((set, get) => ({
+export const useAuthStore = create<AuthStore>((set, get) => {
+    const finishFacebookAuthentication = async (
+        userData: FacebookSessionPayload,
+        epochAtStart: number,
+    ): Promise<FacebookAuthResult> => {
+        if (epochAtStart !== authEpoch) {
+            return {
+                status: 'error',
+                message: i18nT('errorsStatic:api.auth.facebookSignInFailed'),
+            };
+        }
+
+        if (shouldUseStoredAuthToken()) {
+            await setSecureItem('userToken', userData.token);
+            if (userData.refresh) {
+                await setSecureItem('refreshToken', userData.refresh);
+            }
+        }
+
+        let profile: UserProfileDto | null = null;
+        try {
+            const { fetchUserProfile } = await getUserApi();
+            profile = await fetchUserProfile(String(userData.id));
+        } catch (e) {
+            if (__DEV__) {
+                console.warn('Не удалось загрузить профиль пользователя:', e);
+            }
+        }
+
+        if (epochAtStart !== authEpoch) {
+            await rollbackPersistedCredentials();
+            return {
+                status: 'error',
+                message: i18nT('errorsStatic:api.auth.facebookSignInFailed'),
+            };
+        }
+
+        const displayName = resolveAuthDisplayName(profile, userData.name, userData.email);
+        const avatar = normalizeAvatar(profile?.avatar);
+        const items: Array<[string, string]> = [
+            ['userId', String(userData.id)],
+            ['userName', displayName],
+            ['isSuperuser', userData.is_superuser ? 'true' : 'false'],
+        ];
+        if (avatar) items.push(['userAvatar', avatar]);
+
+        await setStorageBatch(items);
+        if (!avatar) await removeStorageBatch(['userAvatar']);
+
+        if (epochAtStart !== authEpoch) {
+            await rollbackPersistedCredentials();
+            return {
+                status: 'error',
+                message: i18nT('errorsStatic:api.auth.facebookSignInFailed'),
+            };
+        }
+
+        set((s) => ({
+            isAuthenticated: true,
+            userId: String(userData.id),
+            username: displayName,
+            isSuperuser: userData.is_superuser,
+            userAvatar: avatar,
+            authReady: true,
+            profileRefreshToken: s.profileRefreshToken + 1,
+            isPremium: profile?.is_premium ?? false,
+        }));
+        return { status: 'authenticated', user: userData };
+    };
+
+    return {
     // --- state ---
     ...INITIAL_AUTH_STATE,
 
@@ -424,65 +507,50 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         const epochAtStart = authEpoch;
         try {
             const { facebookAuthApi } = await getAuthApi();
-            const userData = await facebookAuthApi(credential);
-            if (!userData) return false;
-            if (epochAtStart !== authEpoch) return false;
-
-            if (shouldUseStoredAuthToken()) {
-                await setSecureItem('userToken', userData.token);
-                if (userData.refresh) {
-                    await setSecureItem('refreshToken', userData.refresh);
-                }
-            }
-
-            let profile: UserProfileDto | null = null;
-            try {
-                const { fetchUserProfile } = await getUserApi();
-                profile = await fetchUserProfile(String(userData.id));
-            } catch (e) {
-                if (__DEV__) {
-                    console.warn('Не удалось загрузить профиль пользователя:', e);
-                }
-            }
-
-            if (epochAtStart !== authEpoch) {
-                await rollbackPersistedCredentials();
-                return false;
-            }
-
-            const displayName = resolveAuthDisplayName(profile, userData.name, userData.email);
-            const avatar = normalizeAvatar(profile?.avatar);
-            const items: Array<[string, string]> = [
-                ['userId', String(userData.id)],
-                ['userName', displayName],
-                ['isSuperuser', userData.is_superuser ? 'true' : 'false'],
-            ];
-            if (avatar) items.push(['userAvatar', avatar]);
-
-            await setStorageBatch(items);
-            if (!avatar) await removeStorageBatch(['userAvatar']);
-
-            if (epochAtStart !== authEpoch) {
-                await rollbackPersistedCredentials();
-                return false;
-            }
-
-            set((s) => ({
-                isAuthenticated: true,
-                userId: String(userData.id),
-                username: displayName,
-                isSuperuser: userData.is_superuser,
-                userAvatar: avatar,
-                authReady: true,
-                profileRefreshToken: s.profileRefreshToken + 1,
-                isPremium: profile?.is_premium ?? false,
-            }));
-            return true;
+            const result = await facebookAuthApi(credential);
+            if (result.status !== 'authenticated') return result;
+            return await finishFacebookAuthentication(result.user, epochAtStart);
         } catch (error) {
             if (__DEV__) {
                 console.error('Ошибка входа через Facebook:', error);
             }
-            return false;
+            return {
+                status: 'error',
+                message: i18nT('errorsStatic:api.auth.facebookSignInFailed'),
+            };
+        }
+    },
+
+    startFacebookEmailCompletion: async (completionHandle, email) => {
+        try {
+            const { startFacebookEmailCompletionApi } = await getAuthApi();
+            return await startFacebookEmailCompletionApi(completionHandle, email);
+        } catch (error) {
+            if (__DEV__) {
+                console.error('Ошибка запуска подтверждения email Facebook:', error);
+            }
+            return {
+                status: 'error',
+                message: i18nT('errorsStatic:api.auth.facebookSignInFailed'),
+            };
+        }
+    },
+
+    confirmFacebookEmailCompletion: async (completionHandle, code) => {
+        const epochAtStart = authEpoch;
+        try {
+            const { confirmFacebookEmailCompletionApi } = await getAuthApi();
+            const result = await confirmFacebookEmailCompletionApi(completionHandle, code);
+            if (result.status !== 'authenticated') return result;
+            return await finishFacebookAuthentication(result.user, epochAtStart);
+        } catch (error) {
+            if (__DEV__) {
+                console.error('Ошибка подтверждения email Facebook:', error);
+            }
+            return {
+                status: 'error',
+                message: i18nT('errorsStatic:api.auth.facebookSignInFailed'),
+            };
         }
     },
 
@@ -526,7 +594,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         const { setNewPasswordApi } = await getAuthApi();
         return await setNewPasswordApi(token, newPassword);
     },
-}));
+    };
+});
 
 export const resetAuthStoreForTests = () => {
     authEpoch = 0;

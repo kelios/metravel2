@@ -26,7 +26,7 @@ Existing code to reuse:
 Affected files/modules:
 Data/API impact:
 UI impact:
-Platform impact: web | Android | iOS | shared | none
+Platform impact: desktop web | mobile web | Android | shared | none
 Localization impact: RU/BE/UK/PL/EN | selected locales | none
 External-link impact:
 Task Contract:
@@ -52,7 +52,8 @@ Residual risk:
 
 - Prefer reuse of existing components, hooks, services, and utilities.
 - Design against one Expo/React Native architecture. Separate technical platform
-  adapters from shared product behavior and name validation per affected platform.
+  adapters from shared product behavior and name validation per affected active
+  platform. Mobile-web and Android scopes always require the same-flow paired evidence.
 - For app-owned UI copy or locale-sensitive behavior, define translation
   namespaces/keys, formatting, accessibility/SEO impact, RU/BE/UK/PL/EN coverage,
   and `npm run test:i18n`. Require a separate API contract for localized server content.

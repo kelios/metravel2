@@ -19,6 +19,14 @@ Read first:
 
 - Backend repository is separate, typically `../metravel-backend`.
 - Inspect backend read-only with `git -C ../metravel-backend show origin/master` or targeted read commands. Do not modify its working tree.
+- Do not run backend Git mutations locally or on a server: no `add`, `commit`,
+  `push`, `pull`, `merge`, `rebase`, `tag`, `checkout`, `reset`, `restore`,
+  `stash`, or `clean`.
+- Production Git-tracked files are read-only. If diagnosing an authorized server
+  write, first use read-only `git status --short` and `git ls-files` to classify
+  the intended path. If it is tracked or the checkout is dirty, do not change or
+  clean it; capture a secret-safe diff summary and create/update the backend/ops
+  task for the owner.
 - If a fix is needed, create/update an `area=back` board task with evidence instead of changing backend files locally.
 - Production probes must be read-only GET/HEAD unless the user explicitly approved a safe test write.
 - Do not print tokens from `.env*` or `.secrets`.

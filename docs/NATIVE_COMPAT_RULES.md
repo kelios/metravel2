@@ -1,22 +1,24 @@
-# Правила native-совместимости (web-first проект → Android/iOS)
+# Правила active-platform совместимости (desktop/mobile web ↔ Android)
 
 Load-bearing правила для текущего Expo SDK 57 / React Native 0.86 приложения.
 Механические нарушения ловит
 `__tests__/config/native-compat-governance.test.ts`, а семантическую/device
-проверку ведут `$metravel-android-developer`, `$metravel-ios-developer` и
-`$metravel-mobile-tester`.
+проверку ведут `$metravel-android-developer` и `$metravel-mobile-tester`.
+iOS/iPadOS-приложения пока нет; существующие iOS-файлы — неактивный технический
+задел и не создают обязательную QA/Done-gate проверку.
 
 ## 0. ГЛАВНОЕ: web — прод, его не ломаем. Несовместимо → отдельные файлы
 
 - Web — работающий продукт с трафиком; native догоняет. **Запрещено** чинить
   native ценой изменения поведения web.
-- Mobile UX parity is mandatory: mobile web, Android and iOS should present the
-  same layout and interaction model. Use platform files for technical
+- Mobile UX parity is mandatory: mobile web and Android must present the same
+  layout and interaction model, and a change on either surface must be checked
+  on both. Use platform files for technical
   incompatibilities, not for alternate visual hierarchy, action order, or tap
   semantics. Держится это **общими компонентами**, а не совпадением реализаций:
   расхождение лечится общим компонентом/хуком, платформенный файл меняет только
   движок/инсеты/тени. Проверяется не автогвардом, а глазами при правке — web в
-  браузере (mobile) + native device-verify; сквозной аудит —
+  браузере (mobile) + Android USB device-verify; сквозной аудит —
   `$metravel-design-auditor`. Контракт карты/карточки места находится в
   `docs/features/map.md#pointplace-mobile-contract`; владелец домена —
   `$metravel-map-expert`.
@@ -158,6 +160,6 @@ Load-bearing правила для текущего Expo SDK 57 / React Native 0
 |---|---|
 | Автостраж (CI) | `__tests__/config/native-compat-governance.test.ts` |
 | Codex Android developer | `.codex/skills/metravel-android-developer/SKILL.md` |
-| Codex iOS developer | `.codex/skills/metravel-ios-developer/SKILL.md` |
 | Codex mobile tester | `.codex/skills/metravel-mobile-tester/SKILL.md` |
+| Future iOS route (inactive) | `.codex/skills/metravel-ios-developer/SKILL.md` |
 | Каноническая карта проекта | `AGENTS.md` + `docs/CODEX.md` |

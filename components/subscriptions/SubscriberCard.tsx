@@ -145,9 +145,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       gap: 8,
     },
     actionButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: DESIGN_TOKENS.touchTarget.minWidth,
+      height: DESIGN_TOKENS.touchTarget.minHeight,
+      borderRadius: DESIGN_TOKENS.touchTarget.minHeight / 2,
       backgroundColor: colors.primaryLight,
       alignItems: 'center',
       justifyContent: 'center',

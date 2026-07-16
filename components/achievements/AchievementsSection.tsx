@@ -146,7 +146,13 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontWeight: '800',
       color: colors.text,
     },
-    allBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+    allBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+    },
     allBtnText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: '700',

@@ -28,12 +28,14 @@ Residual risk:
 - FE/BE board tasks include and satisfy the mandatory `Task Contract` from `docs/TASK_BOARD_MCP.md`
 - Reuse of existing components, hooks, utils, and query/store boundaries
 - Project-rule compliance: external links, design tokens, images, no skipped tests, no new `any` in `api/`, `hooks/`, `stores/`
-- Explicit platform impact for production web, Android, and iOS/iPadOS; shared
-  code preserves behavior or has justified technical platform adapters
+- Explicit platform impact for desktop web, mobile web, and Android; shared code
+  preserves behavior or has justified technical platform adapters, and any
+  mobile-web/Android impact has paired evidence
 - Explicit localization impact: app-owned UI uses `@/i18n`, RU/BE/UK/PL/EN keys
   stay complete, formatting uses `i18n/format.ts`, and API/editorial content is not client-translated
 - Validation adequacy: the narrowest reliable checks were run and rerun after fixes
-- Visible web UI changes include browser verification and no new console errors
+- Visible UI changes include desktop-web and mobile-web browser verification,
+  no new console errors, and the same flow on a local USB Android build
 - Localization changes include `npm run test:i18n` and locale/platform evidence;
   native readiness is not inferred from web checks
 - No known real failures are left in the touched scope without an explicit blocker

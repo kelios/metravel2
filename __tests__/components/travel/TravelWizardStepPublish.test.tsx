@@ -58,6 +58,7 @@ import {
   fetchFacebookPublishStatus,
   publishTravelToFacebook,
 } from '@/api/facebookPublish';
+import { ApiError } from '@/api/client';
 
 const baseFormData: TravelFormData = {
   id: '640',
@@ -355,7 +356,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
   });
 
-  it('publishes an edited Facebook message without client-owned Page data', async () => {
+  it('publishes an edited Facebook message with the default selected gallery photo', async () => {
     const { findByText, findByLabelText } = render(
       <TravelWizardStepPublish
         currentStep={6}
@@ -375,8 +376,48 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       fireEvent.press(publishButton);
     });
 
-    expect(publishTravelToFacebook).toHaveBeenCalledWith(640, 'Новый Facebook текст');
+    expect(publishTravelToFacebook).toHaveBeenCalledWith(640, 'Новый Facebook текст', [
+      {
+        id: 1,
+        url: 'https://example.com/gallery-1.jpg',
+        caption: undefined,
+      },
+    ]);
     expect(await findByText('MeTravel: Пост опубликован')).toBeTruthy();
+  });
+
+  it('honors an explicit choice to publish without the default gallery photo', async () => {
+    const { findByText, findByLabelText, findByTestId } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    fireEvent.changeText(await findByLabelText('Текст поста для Facebook'), 'Текст без фото');
+    const selectedPhoto = await findByTestId('facebook-photo-0');
+    expect(selectedPhoto.props.accessibilityState).toEqual(
+      expect.objectContaining({ checked: true }),
+    );
+
+    await act(async () => {
+      fireEvent.press(selectedPhoto);
+    });
+
+    expect((await findByTestId('facebook-photo-0')).props.accessibilityState).toEqual(
+      expect.objectContaining({ checked: false }),
+    );
+    await act(async () => {
+      fireEvent.press(await findByText('Опубликовать в Facebook'));
+    });
+
+    expect(publishTravelToFacebook).toHaveBeenCalledWith(640, 'Текст без фото', []);
   });
 
   it('shows duplicate state and opens the backend-provided post URL', async () => {
@@ -463,6 +504,64 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       resolvePublish?.({ status: 'published' });
     });
   });
+
+  it('returns Facebook publishing to not-connected state after a 409 response', async () => {
+    ;(publishTravelToFacebook as jest.Mock).mockRejectedValueOnce(
+      new ApiError(409, 'Facebook Page is not connected'),
+    );
+    const { findByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(await findByText('Опубликовать в Facebook'));
+    });
+
+    expect(await findByText('MeTravel: Страница Facebook не подключена')).toBeTruthy();
+    expect(await findByText('Подключить Facebook')).toBeTruthy();
+    expect(showToast).toHaveBeenCalledWith(
+      expect.objectContaining({ text1: 'Сначала подключите страницу Facebook' }),
+    );
+  });
+
+  it.each([400, 403, 503])(
+    'shows the Facebook error state and toast after HTTP %s',
+    async (status) => {
+      ;(publishTravelToFacebook as jest.Mock).mockRejectedValueOnce(
+        new ApiError(status, `Facebook publish failed: ${status}`),
+      );
+      const { findByText } = render(
+        <TravelWizardStepPublish
+          currentStep={6}
+          totalSteps={6}
+          formData={baseFormData}
+          setFormData={jest.fn()}
+          isSuperAdmin={true}
+          onManualSave={jest.fn()}
+          onGoBack={jest.fn()}
+          onFinish={jest.fn()}
+        />
+      );
+
+      await act(async () => {
+        fireEvent.press(await findByText('Опубликовать в Facebook'));
+      });
+
+      expect(await findByText('MeTravel: Произошла ошибка. Повторите попытку.')).toBeTruthy();
+      expect(showToast).toHaveBeenCalledWith(
+        expect.objectContaining({ text1: 'Не удалось опубликовать в Facebook' }),
+      );
+    },
+  );
 
   it('opens Meta OAuth from the backend when superadmin presses connect', async () => {
     const { getByText } = render(

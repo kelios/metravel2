@@ -153,8 +153,8 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
           flexShrink: 0,
           paddingHorizontal: 6,
           paddingVertical: 4,
-          minWidth: 32,
-          minHeight: 32,
+          minWidth: DESIGN_TOKENS.touchTarget.minWidth,
+          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
           borderRadius: 6,
           ...Platform.select({
             web: {
@@ -274,7 +274,6 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
         onPress={href ? () => router.push(href as any) : onPress}
         accessibilityRole="link"
         accessibilityLabel={label}
-        hitSlop={6}
         testID={itemTestID}
         style={({ pressed }) => [
           styles.item,

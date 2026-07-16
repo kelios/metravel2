@@ -61,6 +61,16 @@ describe('actionConsent storage (web)', () => {
 })
 
 describe('ConsentCheckbox', () => {
+  it('exposes the checked state to web assistive technology', () => {
+    const { getByTestId } = render(
+      <ConsentCheckbox checked onToggle={jest.fn()} testID="cb">
+        Я согласен
+      </ConsentCheckbox>,
+    )
+
+    expect(getByTestId('cb').props['aria-checked']).toBe(true)
+  })
+
   it('toggles to the opposite state on press', () => {
     const onToggle = jest.fn()
     const { getByTestId } = render(

@@ -4,7 +4,7 @@ import { StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { ThemedColors } from '@/hooks/useTheme';
 
-const { spacing, radii, typography } = DESIGN_TOKENS;
+const { spacing, radii, typography, touchTarget } = DESIGN_TOKENS;
 const PANEL_RADIUS = radii.lg;
 const CONTROL_RADIUS = radii.sm;
 
@@ -1013,7 +1013,8 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             flexDirection: 'row',
             alignItems: 'center',
             gap: 4,
-            minHeight: 28,
+            minHeight: touchTarget.minHeight,
+            minWidth: touchTarget.minWidth,
             paddingHorizontal: spacing.sm,
             paddingVertical: 4,
             borderRadius: radii.full,
@@ -1035,6 +1036,9 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         },
         questCardReviewsInline: {
             zIndex: 30,
+            minHeight: touchTarget.minHeight,
+            minWidth: touchTarget.minWidth,
+            justifyContent: 'center',
         },
         questCardReviewsChipText: {
             color: colors.textOnDark,

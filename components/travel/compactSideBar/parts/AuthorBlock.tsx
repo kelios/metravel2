@@ -65,6 +65,7 @@ export const AuthorBlock = memo(function AuthorBlock({
 
   return (
     <View
+      testID="travel-details-author"
       style={[styles.card, { backgroundColor: colors.surface }]}
       {...webOnly({ 'data-sidebar-card': true } as any)}
     >

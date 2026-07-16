@@ -73,6 +73,18 @@ const SECTION_KEYS = [
 ] as const;
 
 const NATIVE_STICKY_SECTION_OFFSET = 156;
+const WEB_LAZY_SECTION_RETRY_DELAYS_MS = [
+  100,
+  250,
+  450,
+  750,
+  1200,
+  1800,
+  2600,
+  3600,
+  4800,
+  6000,
+] as const;
 
 export function useScrollNavigation(): UseScrollNavigationReturn {
   const scrollRef = useRef<ScrollView | null>(null);
@@ -301,21 +313,21 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
         clearPending(key);
         if (tryScrollWeb(key)) return;
 
-        // Не спамим бесконечными попытками: максимум ~6с ожидания.
-        const MAX_ATTEMPTS = 20;
-        const INTERVAL_MS = 100;
+        // Ленивые тяжёлые секции (в частности карта) могут появиться через
+        // несколько секунд на холодной загрузке. Редкий график ретраев ждёт до
+        // 6с, не создавая десятки одинаковых таймеров.
         pendingRetriesRef.current[key] = [];
 
-        for (let i = 1; i <= MAX_ATTEMPTS; i += 1) {
+        WEB_LAZY_SECTION_RETRY_DELAYS_MS.forEach((delay, index) => {
           const t = setTimeout(() => {
             if (tryScrollWeb(key)) {
               clearPending(key);
-            } else if (i === MAX_ATTEMPTS) {
+            } else if (index === WEB_LAZY_SECTION_RETRY_DELAYS_MS.length - 1) {
               clearPending(key);
             }
-          }, i * INTERVAL_MS);
+          }, delay);
           pendingRetriesRef.current[key]!.push(t);
-        }
+        });
         return;
       }
 

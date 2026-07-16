@@ -49,6 +49,8 @@ const SETNEWPASSWORD = `${URLAPI}/user/set-password-after-reset/`;
 const SENDPASSWORD = `${URLAPI}/user/sendpassword/`;
 const GOOGLE_LOGIN = `${URLAPI}/user/google-login/`;
 const FACEBOOK_LOGIN = `${URLAPI}/user/facebook-login/`;
+const FACEBOOK_COMPLETION_START = `${URLAPI}/user/facebook-login/complete/start/`;
+const FACEBOOK_COMPLETION_CONFIRM = `${URLAPI}/user/facebook-login/complete/confirm/`;
 const PUSH_TOKEN = `${URLAPI}/user/push-token/`;
 const WEB_SESSION_PROBE = `${URLAPI}/user/me/verifications/`;
 
@@ -99,10 +101,44 @@ type FacebookAuthResponse = GoogleAuthResponse & {
     error_code?:
         | 'access_token_required'
         | 'facebook_token_invalid'
-        | 'facebook_email_required'
+        | 'facebook_email_completion_required'
+        | 'facebook_completion_request_invalid'
+        | 'facebook_completion_code_invalid'
+        | 'facebook_completion_invalid'
         | 'facebook_account_conflict'
         | string;
+    reason_code?: FacebookEmailCompletionReason | string;
+    completion_handle?: string;
+    expires_in?: number;
+    verification_sent?: boolean;
 };
+
+export type FacebookEmailCompletionReason =
+    | 'facebook_email_permission_missing'
+    | 'facebook_primary_email_unavailable';
+
+export type FacebookSessionPayload = {
+    token: string;
+    refresh?: string;
+    name: string;
+    email: string;
+    id: string | number;
+    is_superuser: boolean;
+};
+
+export type FacebookAuthResult =
+    | { status: 'authenticated'; user: FacebookSessionPayload }
+    | {
+        status: 'email_completion_required';
+        completionHandle: string;
+        reasonCode: FacebookEmailCompletionReason;
+        expiresIn: number;
+    }
+    | { status: 'error'; message: string; errorCode?: string };
+
+export type FacebookCompletionStartResult =
+    | { status: 'verification_sent' }
+    | { status: 'error'; message: string; errorCode?: string };
 
 const getGoogleAuthErrorMessage = (payload: Partial<GoogleAuthResponse>, status: number): string => {
     const directMessage = payload.detail || payload.error || payload.message;
@@ -484,6 +520,12 @@ const getFacebookAuthErrorMessage = (payload: Partial<FacebookAuthResponse>, sta
             return i18nT('errorsStatic:api.auth.facebookTokenInvalid');
         case 'facebook_email_required':
             return i18nT('errorsStatic:api.auth.facebookEmailRequired');
+        case 'facebook_completion_request_invalid':
+            return i18nT('errorsStatic:api.auth.facebookCompletionRequestInvalid');
+        case 'facebook_completion_code_invalid':
+            return i18nT('errorsStatic:api.auth.facebookCompletionCodeInvalid');
+        case 'facebook_completion_invalid':
+            return i18nT('errorsStatic:api.auth.facebookCompletionInvalid');
         case 'facebook_account_conflict':
             return i18nT('errorsStatic:api.auth.facebookAccountConflict');
         default:
@@ -492,18 +534,60 @@ const getFacebookAuthErrorMessage = (payload: Partial<FacebookAuthResponse>, sta
     }
 };
 
-export const facebookAuthApi = async (accessToken: string): Promise<{
-    token: string;
-    refresh?: string;
-    name: string;
-    email: string;
-    id: string | number;
-    is_superuser: boolean;
-} | null> => {
+const facebookErrorResult = (
+    payload: Partial<FacebookAuthResponse>,
+    status: number,
+): FacebookAuthResult => ({
+    status: 'error',
+    errorCode: payload.error_code,
+    message: getFacebookAuthErrorMessage(payload, status),
+});
+
+const parseFacebookSession = (payload: FacebookAuthResponse): FacebookSessionPayload | null => {
+    if (!payload.token || payload.id === undefined || payload.id === null) return null;
+    return {
+        token: payload.token,
+        refresh: payload.refresh,
+        name: String(payload.name || ''),
+        email: String(payload.email || ''),
+        id: payload.id,
+        is_superuser: Boolean(payload.is_superuser),
+    };
+};
+
+const parseFacebookCompletion = (
+    payload: FacebookAuthResponse,
+): Extract<FacebookAuthResult, { status: 'email_completion_required' }> | null => {
+    if (payload.error_code !== 'facebook_email_completion_required') return null;
+    const completionHandle = String(payload.completion_handle || '').trim();
+    const expiresIn = Number(payload.expires_in);
+    const reasonCode = payload.reason_code;
+    if (
+        !completionHandle ||
+        !Number.isFinite(expiresIn) ||
+        expiresIn <= 0 ||
+        (reasonCode !== 'facebook_email_permission_missing' &&
+            reasonCode !== 'facebook_primary_email_unavailable')
+    ) {
+        return null;
+    }
+    return {
+        status: 'email_completion_required',
+        completionHandle,
+        reasonCode,
+        expiresIn,
+    };
+};
+
+export const facebookAuthApi = async (accessToken: string): Promise<FacebookAuthResult> => {
     try {
         const trimmedToken = String(accessToken || '').trim();
         if (!trimmedToken) {
-            throw new Error(i18nT('errorsStatic:api.auth.facebookAccessTokenMissing'));
+            return {
+                status: 'error',
+                errorCode: 'access_token_required',
+                message: i18nT('errorsStatic:api.auth.facebookAccessTokenMissing'),
+            };
         }
 
         const response = await retry(
@@ -526,26 +610,73 @@ export const facebookAuthApi = async (accessToken: string): Promise<{
 
         const json = await safeJsonParse<FacebookAuthResponse>(response, {});
         if (!response.ok) {
-            throw new Error(getFacebookAuthErrorMessage(json, response.status));
+            const completion = parseFacebookCompletion(json);
+            if (response.status === 409 && completion) return completion;
+            return facebookErrorResult(json, response.status);
         }
-        if (json.token) {
-            return json as {
-                token: string;
-                refresh?: string;
-                name: string;
-                email: string;
-                id: string | number;
-                is_superuser: boolean;
-            };
-        }
-        throw new Error(i18nT('errorsStatic:api.auth.facebookServerTokenMissing'));
+        const user = parseFacebookSession(json);
+        if (user) return { status: 'authenticated', user };
+        return {
+            status: 'error',
+            message: i18nT('errorsStatic:api.auth.facebookServerTokenMissing'),
+        };
     } catch (error: unknown) {
         devError('Facebook auth error:', error);
-        Alert.alert(
-            i18nT('errorsStatic:api.auth.facebookSignInErrorTitle'),
-            getUserFriendlyError(error),
-        );
-        return null;
+        return {
+            status: 'error',
+            message: getUserFriendlyError(error),
+        };
+    }
+};
+
+export const startFacebookEmailCompletionApi = async (
+    completionHandle: string,
+    email: string,
+): Promise<FacebookCompletionStartResult> => {
+    try {
+        const response = await fetchWithTimeout(FACEBOOK_COMPLETION_START, {
+            method: 'POST',
+            ...getApiRequestCredentials(),
+            headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
+            body: JSON.stringify({ completion_handle: completionHandle, email: email.trim() }),
+        }, DEFAULT_TIMEOUT);
+        const json = await safeJsonParse<FacebookAuthResponse>(response, {});
+        if (response.ok && json.verification_sent === true) {
+            return { status: 'verification_sent' };
+        }
+        return {
+            status: 'error',
+            errorCode: json.error_code,
+            message: getFacebookAuthErrorMessage(json, response.status),
+        };
+    } catch (error: unknown) {
+        devError('Facebook email completion start error:', error);
+        return { status: 'error', message: getUserFriendlyError(error) };
+    }
+};
+
+export const confirmFacebookEmailCompletionApi = async (
+    completionHandle: string,
+    code: string,
+): Promise<FacebookAuthResult> => {
+    try {
+        const response = await fetchWithTimeout(FACEBOOK_COMPLETION_CONFIRM, {
+            method: 'POST',
+            ...getApiRequestCredentials(),
+            headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
+            body: JSON.stringify({ completion_handle: completionHandle, code: code.trim() }),
+        }, DEFAULT_TIMEOUT);
+        const json = await safeJsonParse<FacebookAuthResponse>(response, {});
+        if (!response.ok) return facebookErrorResult(json, response.status);
+        const user = parseFacebookSession(json);
+        if (user) return { status: 'authenticated', user };
+        return {
+            status: 'error',
+            message: i18nT('errorsStatic:api.auth.facebookServerTokenMissing'),
+        };
+    } catch (error: unknown) {
+        devError('Facebook email completion confirm error:', error);
+        return { status: 'error', message: getUserFriendlyError(error) };
     }
 };
 

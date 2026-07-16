@@ -38,6 +38,7 @@ export default function ConsentCheckbox({
         testID={testID}
         accessibilityRole="checkbox"
         accessibilityState={{ checked }}
+        aria-checked={checked}
         accessibilityLabel={accessibilityLabel}
       >
         <View style={[styles.box, checked && styles.boxChecked]}>

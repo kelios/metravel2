@@ -83,6 +83,7 @@ export function CountryTravelsPanel({
           justifyContent: 'center',
           gap: 6,
           alignSelf: 'flex-start',
+          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
           marginTop: DESIGN_TOKENS.spacing.xs,
           paddingVertical: DESIGN_TOKENS.spacing.xs,
           paddingHorizontal: DESIGN_TOKENS.spacing.md,

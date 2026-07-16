@@ -228,6 +228,13 @@ test.describe('@smoke mobile map panel content', () => {
       await expect(page.getByRole('dialog', { name: 'Панель карты' })).toBeVisible()
       await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible()
       await expect(page.getByTestId('map-mobile-sheet-close')).toBeVisible()
+
+      const sheetBox = await page.getByRole('dialog', { name: 'Панель карты' }).boundingBox()
+      const dockBox = await page.getByTestId('footer-dock-wrapper').boundingBox()
+      expect(sheetBox && dockBox).toBeTruthy()
+      if (sheetBox && dockBox) {
+        expect(Math.abs(sheetBox.y + sheetBox.height - dockBox.y)).toBeLessThanOrEqual(2)
+      }
     })
 
     await test.step('List tab is not empty and shows cards', async () => {
@@ -301,7 +308,7 @@ test.describe('@smoke mobile map panel content', () => {
     })
 
     await test.step('Panel switches back to list from filters', async () => {
-      await page.getByTestId('filters-open-list-button').click({ force: true })
+      await page.getByRole('button', { name: 'Открыть список мест' }).click()
       await expect(page.getByTestId('travel-list-mobile-summary')).toBeVisible({
         timeout: 20_000,
       })

@@ -69,11 +69,11 @@ const IS_WEB = Platform.OS === 'web'
 const PHONE_COMPACT_LAYOUT_MAX_WIDTH = 430
 const PHONE_COMPACT_ACTIONS_MAX_WIDTH = 520
 const PHONE_STACKED_TOOLBAR_MAX_WIDTH = 360
-const WEB_MOBILE_BOTTOM_DOCK_INSET = 104
-// The mobile-web selected-place card must sit flush on top of the real web dock
-// (BottomDock MOBILE_DOCK_HEIGHT_WEB === LAYOUT.tabBarHeight === 56). Using the larger
-// WEB_MOBILE_BOTTOM_DOCK_INSET (104) here left a ~48px gap above the footer.
-const WEB_MOBILE_SELECTED_PLACE_INSET = LAYOUT?.tabBarHeight ?? 56
+// Every mobile-web map surface ends flush at the real web dock. The previous
+// 104px sheet inset left a visible strip of map between an open panel and the
+// 56px dock, while selected-place cards already used the correct boundary.
+const WEB_MOBILE_BOTTOM_DOCK_INSET = LAYOUT?.tabBarHeight ?? 56
+const WEB_MOBILE_SELECTED_PLACE_INSET = WEB_MOBILE_BOTTOM_DOCK_INSET
 const WEB_MOBILE_CONSENT_BANNER_INSET = 112
 const NATIVE_MOBILE_BOTTOM_DOCK_INSET = (LAYOUT?.tabBarHeight ?? 56) + 16
 
@@ -359,6 +359,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const addRoutePoint = useRouteStore((s) => s.addPoint)
   const clearRouteAndSetMode = useRouteStore((s) => s.clearRouteAndSetMode)
   const routePointCount = useRouteStore((s) => s.points.length)
+  const routeStartCoordinates = useRouteStore((s) => s.points[0]?.coordinates ?? null)
   const trustedUserLocation = useMemo(() => {
     const lat = Number(userLocation?.latitude)
     const lng = Number(userLocation?.longitude)
@@ -369,6 +370,13 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const [routeAutoStartPending, setRouteAutoStartPending] = useState(false)
   const [routeManualStartActive, setRouteManualStartActive] = useState(false)
   const previousRouteModeRef = useRef(storeMode)
+  const routeStartMatchesTrustedLocation = useMemo(() => {
+    if (!routeStartCoordinates || !trustedUserLocation) return false
+    return (
+      Math.abs(routeStartCoordinates.lat - trustedUserLocation.latitude) < 0.000001 &&
+      Math.abs(routeStartCoordinates.lng - trustedUserLocation.longitude) < 0.000001
+    )
+  }, [routeStartCoordinates, trustedUserLocation])
 
   useEffect(() => {
     const previousMode = previousRouteModeRef.current
@@ -406,14 +414,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     clearSelectedPlace?.()
     setActivePopover(null)
     const currentPoints = useRouteStore.getState().points
-    if (routeMode === 'route' && currentPoints.length > 0) {
-      clearRouteAndSetMode('route')
-      setFiltersMode?.('route')
-      setRouteAutoStartPending(false)
-      setRouteManualStartActive(true)
-      return
-    }
-
     if (currentPoints.length === 0 && seedRouteStartFromUser()) {
       return
     }
@@ -431,7 +431,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   }, [
     clearRouteAndSetMode,
     clearSelectedPlace,
-    routeMode,
     seedRouteStartFromUser,
     storeSetMode,
     setFiltersMode,
@@ -443,12 +442,41 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     onCenterOnUser()
   }, [onCenterOnUser])
 
+  const startRouteFromUser = useCallback(() => {
+    clearSelectedPlace?.()
+    setActivePopover(null)
+    clearRouteAndSetMode('route')
+    setFiltersMode?.('route')
+    setRouteManualStartActive(false)
+
+    if (trustedUserLocation) {
+      addRoutePoint(
+        { lat: trustedUserLocation.latitude, lng: trustedUserLocation.longitude },
+        i18nT('map:components.MapPage.MapMobileLayout.moe_mestopolozhenie_3ab044c9'),
+      )
+      setRouteAutoStartPending(false)
+      return
+    }
+
+    setRouteAutoStartPending(true)
+    onCenterOnUser()
+  }, [
+    addRoutePoint,
+    clearRouteAndSetMode,
+    clearSelectedPlace,
+    onCenterOnUser,
+    setFiltersMode,
+    trustedUserLocation,
+  ])
+
   const startManualRoute = useCallback(() => {
+    clearSelectedPlace?.()
+    setActivePopover(null)
     clearRouteAndSetMode('route')
     setFiltersMode?.('route')
     setRouteAutoStartPending(false)
     setRouteManualStartActive(true)
-  }, [clearRouteAndSetMode, setFiltersMode])
+  }, [clearRouteAndSetMode, clearSelectedPlace, setFiltersMode])
 
   useEffect(() => {
     if (!routeAutoStartPending) return
@@ -461,12 +489,13 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   useEffect(() => {
     if (routePointCount > 0) {
       setRouteAutoStartPending(false)
+      setRouteManualStartActive(!routeStartMatchesTrustedLocation)
     }
     if (storeMode !== 'route') {
       setRouteAutoStartPending(false)
       setRouteManualStartActive(false)
     }
-  }, [routePointCount, storeMode])
+  }, [routePointCount, routeStartMatchesTrustedLocation, storeMode])
 
   const toggleTransportPopover = useCallback(() => {
     setActivePopover((prev) => (prev === 'transport' ? null : 'transport'))
@@ -717,6 +746,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             hasUserLocation={!!trustedUserLocation}
             routeManualStartActive={routeManualStartActive}
             onRequestLocation={requestLocationForRoute}
+            onUseUserLocationStart={startRouteFromUser}
             onStartManualRoute={startManualRoute}
             onToggleTransport={toggleTransportPopover}
             onTransportSelect={handleTransportSelect}

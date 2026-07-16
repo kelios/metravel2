@@ -14,7 +14,6 @@ import { hapticImpact } from '@/utils/haptics'
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
 import { queryKeys } from '@/api/queryKeys'
 import { useHomeViewport } from './useHomeViewport'
-import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm'
 import {
   HomeAppPromoSection,
@@ -59,30 +58,19 @@ type DeferredSectionProps = {
   marginTop: number
   minHeight?: number
   container?: { maxWidth?: PageSectionProps['maxWidth']; padding?: boolean }
-  rootMargin?: string
-  fallbackDelay?: number
 }
 
-// Below-the-fold island: on web its lazy chunk only starts loading when the
-// section approaches the viewport (or after a short fallback timer), so heavy
-// sections don't compete with the hero LCP. On native useProgressiveLoad
-// returns shouldLoad=true immediately, preserving current behavior.
+// Lazy chunks start loading as soon as the home screen mounts. Suspense keeps
+// the section geometry stable while a chunk resolves, without making content
+// availability depend on scrolling, IntersectionObserver or a fallback timer.
 function DeferredSection({
   children,
   fallback,
   marginTop,
   minHeight,
   container,
-  rootMargin = '400px',
-  fallbackDelay = 1000,
 }: DeferredSectionProps) {
-  const { shouldLoad, setElementRef } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin,
-    fallbackDelay,
-  })
-
-  const content = shouldLoad ? <Suspense fallback={fallback}>{children}</Suspense> : fallback
+  const content = <Suspense fallback={fallback}>{children}</Suspense>
   const wrapped = container ? (
     <ResponsiveContainer maxWidth={container.maxWidth ?? 'xl'} padding={container.padding ?? true}>
       {content}
@@ -93,7 +81,6 @@ function DeferredSection({
 
   return (
     <View
-      ref={IS_WEB ? (setElementRef as any) : undefined}
       style={minHeight ? { marginTop, minHeight } : { marginTop }}
     >
       {wrapped}

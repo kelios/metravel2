@@ -15,7 +15,7 @@ import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
-import { translate as i18nT } from '@/i18n'
+import { selectPlural, translate as i18nT } from '@/i18n'
 
 
 const WEB_HORIZONTAL_SCROLL_STYLE = {
@@ -63,9 +63,12 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
 
   const travelCountText = useMemo(() => {
     const n = travelsTotal;
-    if (n === 1) return i18nT('shared:components.subscriptions.AuthorCard.1_puteshestvie_bf5a4d11');
-    if (n >= 2 && n < 5) return i18nT('shared:components.subscriptions.AuthorCard.value1_puteshestviya_17b149a5', { value1: n });
-    return i18nT('shared:components.subscriptions.AuthorCard.value1_puteshestviy_2e6c250d', { value1: n });
+    return selectPlural(n, {
+      one: i18nT('shared:components.subscriptions.AuthorCard.1_puteshestvie_bf5a4d11', { value1: n }),
+      few: i18nT('shared:components.subscriptions.AuthorCard.value1_puteshestviya_17b149a5', { value1: n }),
+      many: i18nT('shared:components.subscriptions.AuthorCard.value1_puteshestviy_2e6c250d', { value1: n }),
+      other: i18nT('shared:components.subscriptions.AuthorCard.value1_puteshestviy_2e6c250d', { value1: n }),
+    });
   }, [travelsTotal]);
 
   const hiddenTravelsCount = Math.max(travelsTotal - travels.length, 0);
@@ -218,17 +221,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
     authorSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
     authorActions: { flexDirection: 'row', gap: isCompact ? 6 : 8 },
     actionButton: {
-      width: isCompact ? 44 : 40,
-      height: isCompact ? 44 : 40,
-      borderRadius: isCompact ? 22 : 20,
+      width: DESIGN_TOKENS.touchTarget.minWidth,
+      height: DESIGN_TOKENS.touchTarget.minHeight,
+      borderRadius: DESIGN_TOKENS.touchTarget.minHeight / 2,
       backgroundColor: colors.primaryLight,
       alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.primaryAlpha30,
       ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
     },
     actionButtonDanger: {
-      width: isCompact ? 44 : 40,
-      height: isCompact ? 44 : 40,
-      borderRadius: isCompact ? 22 : 20,
+      width: DESIGN_TOKENS.touchTarget.minWidth,
+      height: DESIGN_TOKENS.touchTarget.minHeight,
+      borderRadius: DESIGN_TOKENS.touchTarget.minHeight / 2,
       backgroundColor: colors.dangerLight,
       alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.danger,
       ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),

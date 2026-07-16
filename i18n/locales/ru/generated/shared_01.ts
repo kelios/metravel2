@@ -261,7 +261,7 @@ export const sharedGenerated1 = {
   "components.onboarding.OnboardingScreen.nachat_f0b6b299": "Начать",
   "components.onboarding.OnboardingScreen.propustit_f77c246d": "Пропустить",
   "components.onboarding.OnboardingScreen.propustit_onbording_fe00491b": "Пропустить онбординг",
-  "components.subscriptions.AuthorCard.1_puteshestvie_bf5a4d11": "1 путешествие",
+  "components.subscriptions.AuthorCard.1_puteshestvie_bf5a4d11": "{{value1}} путешествие",
   "components.subscriptions.AuthorCard.esche_7e20b968": "Ещё ",
   "components.subscriptions.AuthorCard.napisat_value1_ec6efc1b": "Написать {{value1}}",
   "components.subscriptions.AuthorCard.net_opublikovannyh_puteshestviy_e2f9c564": "Нет опубликованных путешествий",

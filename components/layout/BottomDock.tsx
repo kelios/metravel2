@@ -142,9 +142,9 @@ const DockButton = memo(function DockButton({
 });
 
 function BottomDock({ onDockHeight }: BottomDockProps) {
-  const { isMobile: responsiveIsMobile } = useResponsive();
+  const { isDesktop } = useResponsive();
   const { width: viewportWidth } = useWindowDimensions();
-  const isMobile = Platform.OS !== "web" ? true : responsiveIsMobile;
+  const isMobile = Platform.OS !== "web" ? true : !isDesktop;
   const isCompactMobileWidth = viewportWidth > 0 && viewportWidth <= 390;
   const [showMore, setShowMore] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -547,8 +547,10 @@ const createStyles = (
   },
   dockWrapper: {
     width: "100%",
-    paddingTop: 4,
-    paddingBottom: Platform.select({ web: 6, default: Math.max(4, safeBottomPadding + 2) }),
+    // Web uses a fixed 56px dock. Keep its internal vertical rhythm within that
+    // box so the active marker is not clipped below the viewport.
+    paddingTop: Platform.select({ web: 2, default: 4 }),
+    paddingBottom: Platform.select({ web: 2, default: Math.max(4, safeBottomPadding + 2) }),
     paddingHorizontal: isCompactMobileWidth ? 2 : 4,
     backgroundColor: colors.surfaceElevated,
     borderTopLeftRadius: 18,
@@ -594,7 +596,7 @@ const createStyles = (
     justifyContent: "center",
     minWidth: 0,
     paddingHorizontal: isCompactMobileWidth ? 1 : 2,
-    paddingVertical: 4,
+    paddingVertical: Platform.select({ web: 0, default: 4 }),
     minHeight: 44,
     borderRadius: COMPACT_CONTROL_RADIUS,
   },

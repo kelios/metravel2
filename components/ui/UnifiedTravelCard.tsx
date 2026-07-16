@@ -429,7 +429,11 @@ function UnifiedTravelCard({
           paddingBottom: 10,
           backgroundColor: colors.surface,
           gap: 0,
-          ...(isWeb ? { flex: 0 } : {}),
+          // `flex: 0` expands to a zero flex-basis on web. Inside a card with a
+          // constrained height that collapses the title/meta block to 0px and
+          // lets its children overflow invisibly. Keep the block non-shrinking
+          // while preserving its natural content height.
+          ...(isWeb ? { flexShrink: 0 } : {}),
         },
         contentAboveMedia: {
           paddingBottom: 6,

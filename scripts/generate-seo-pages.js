@@ -1539,7 +1539,7 @@ function injectQuestLinksIndex(baseHtml, quests) {
       const route = questRouteKey(quest);
       if (!route) return '';
       const label = String(quest.title || 'Квест').trim();
-      return `<li><a href="${escapeAttr(route.path)}">${escapeAttr(label)}</a></li>`;
+      return `<li><a href="${escapeAttr(route.path)}" tabindex="-1">${escapeAttr(label)}</a></li>`;
     })
     .filter(Boolean)
     .join('');
@@ -1557,7 +1557,9 @@ function injectQuestLinksIndex(baseHtml, quests) {
     'white-space:nowrap',
     'border:0',
   ].join(';');
-  const nav = `<nav data-ssg-quest-index="true" aria-label="Все квесты" style="${navStyle}"><ul>${links}</ul></nav>`;
+  // Keep the crawlable links in static HTML without forcing keyboard and
+  // screen-reader users through a duplicate catalog before the real page.
+  const nav = `<nav data-ssg-quest-index="true" aria-hidden="true" inert style="${navStyle}"><ul>${links}</ul></nav>`;
 
   if (/<nav[^>]*data-ssg-quest-index="true"[^>]*>[\s\S]*?<\/nav>/i.test(baseHtml)) {
     return baseHtml.replace(/<nav[^>]*data-ssg-quest-index="true"[^>]*>[\s\S]*?<\/nav>/i, nav);

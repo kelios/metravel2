@@ -29,8 +29,8 @@ Read first:
 - Preserve `UnifiedTravelCard` for travel cards and `ImageCardMedia` for feature images.
 - Preserve save != moderate: autosave/content save must not be blocked by moderation completeness validation.
 - For route points, preserve the shared point/place template used by map popups
-  and `/places`; mobile web, Android, and iOS must keep the same visual layout,
-  action order, and tap behavior.
+  and `/places`; mobile web and Android must keep the same visual layout, action
+  order, and tap behavior, with paired validation whenever either changes.
 - Route-point navigation must include Google Maps, Apple Maps, Organic
   Maps/offline, Waze, Яндекс Карты, Яндекс Навигатор, and OpenStreetMap when
   coordinates exist.

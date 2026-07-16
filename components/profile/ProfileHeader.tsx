@@ -82,7 +82,8 @@ export function ProfileHeader({
   avatarUploading = false,
 }: ProfileHeaderProps) {
   const colors = useThemedColors();
-  const { isMobile } = useResponsive();
+  const { isMobile, width } = useResponsive();
+  const useNarrowActionsRow = isMobile && width < 360;
   const [defaultCoverFailed, setDefaultCoverFailed] = useState(false);
 
   const coverPhoto = useMemo(
@@ -182,6 +183,9 @@ export function ProfileHeader({
           paddingLeft: AVATAR_SIZE + AVATAR_BORDER * 2 + DESIGN_TOKENS.spacing.sm,
           zIndex: 3,
         },
+        narrowActions: {
+          paddingTop: DESIGN_TOKENS.spacing.xs,
+        },
         menuChip: {
           backgroundColor: colors.surfaceMuted,
           borderRadius: DESIGN_TOKENS.radii.pill,
@@ -275,6 +279,7 @@ export function ProfileHeader({
           gap: 4,
           paddingHorizontal: 7,
           paddingVertical: 4,
+          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
           borderRadius: DESIGN_TOKENS.radii.pill,
           backgroundColor: colors.accentSoft,
           ...Platform.select({
@@ -288,9 +293,9 @@ export function ProfileHeader({
           color: colors.text,
         },
         socialIcon: {
-          width: 28,
-          height: 28,
-          borderRadius: 14,
+          width: DESIGN_TOKENS.touchTarget.minWidth,
+          height: DESIGN_TOKENS.touchTarget.minHeight,
+          borderRadius: DESIGN_TOKENS.touchTarget.minHeight / 2,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: colors.surface,
@@ -359,14 +364,16 @@ export function ProfileHeader({
         {/* Быстрые действия встроены в нижнюю кромку баннера как оверлей поверх
             фото. На мобильном — компактные icon-only чипы, чтобы шапка не
             раздувалась (правило «Шапка ≤20% экрана»). */}
-        <View style={styles.overlayActions} testID="profile-header-quick-actions">
-          <ProfileHeaderQuickActions
-            onPress={onQuickAction}
-            unreadMessagesCount={unreadMessagesCount}
-            overlay
-            compact={isMobile}
-          />
-        </View>
+        {!useNarrowActionsRow ? (
+          <View style={styles.overlayActions} testID="profile-header-quick-actions">
+            <ProfileHeaderQuickActions
+              onPress={onQuickAction}
+              unreadMessagesCount={unreadMessagesCount}
+              overlay
+              compact={isMobile}
+            />
+          </View>
+        ) : null}
       </View>
 
       {/* Identity: avatar left, info right */}
@@ -447,6 +454,16 @@ export function ProfileHeader({
           ) : null}
         </View>
       </View>
+
+      {useNarrowActionsRow ? (
+        <View style={styles.narrowActions} testID="profile-header-quick-actions">
+          <ProfileHeaderQuickActions
+            onPress={onQuickAction}
+            unreadMessagesCount={unreadMessagesCount}
+            compact
+          />
+        </View>
+      ) : null}
     </View>
   );
 }

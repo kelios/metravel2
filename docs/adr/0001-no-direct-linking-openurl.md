@@ -6,9 +6,12 @@
 
 ## Контекст
 
-Приложение работает на iOS, Android и Web. Открытие внешних ссылок на каждой платформе имеет разные нюансы:
+Активные поверхности приложения — desktop/mobile Web и Android; iOS scaffolding
+пока не является доступным приложением или QA target. Открытие внешних ссылок на
+активных платформах имеет разные нюансы:
 
-- На iOS/Android нужно корректно обрабатывать deeplink-схемы, universal links, in-app browser (SFSafariViewController / Custom Tabs).
+- На Android нужно корректно обрабатывать deeplink-схемы, app links и in-app
+  browser (Custom Tabs); iOS/SFSafariViewController остаются future concern.
 - На web — `window.open` с `noopener,noreferrer`, плюс аналитика кликов и обработка blocked popups.
 - Нужна централизованная точка для логирования, телеметрии, white/blacklist доменов.
 

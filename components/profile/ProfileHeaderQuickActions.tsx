@@ -133,7 +133,7 @@ export function ProfileHeaderQuickActions({
           backgroundColor: colors.surface,
           borderWidth: overlay ? 0 : 1,
           borderColor: colors.borderLight,
-          minHeight: compact ? 40 : overlay ? 40 : DESIGN_TOKENS.touchTarget.minHeight,
+          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
           position: 'relative',
           ...Platform.select({
             web: { cursor: 'pointer' } as any,
@@ -192,10 +192,6 @@ export function ProfileHeaderQuickActions({
           <Pressable
             key={item.key}
             onPress={() => onPress(item.key)}
-            // Компактные icon-only чипы (~40px) в ряд с узкими зазорами: без hitSlop
-            // тап по краю/в зазор попадает в контейнер, а не в кнопку — отклика нет,
-            // навигация «залипает». Расширяем тач-зону, вертикаль больше (ряд низкий).
-            hitSlop={{ top: 10, bottom: 10, left: 4, right: 4 }}
             accessibilityRole="menuitem"
             accessibilityLabel={
               showBadge ? i18nT('profile:components.profile.ProfileHeaderQuickActions.value1_value2_neprochitannyh_be8896bb', { value1: item.label, value2: unreadMessagesCount }) : item.label

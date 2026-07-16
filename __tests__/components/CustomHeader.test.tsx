@@ -59,8 +59,8 @@ jest.mock('../../components/layout/HeaderContextBar', () => {
 });
 
 jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => (global as any).__mockResponsive ?? { width: 1024, height: 768, isPhone: false, isLargePhone: false, isTablet: false, isDesktop: true, isMobile: false, isHydrated: true },
-  useResponsiveWidth: () => (global as any).__mockResponsive?.width ?? 1024,
+  useResponsive: () => (global as any).__mockResponsive ?? { width: 1440, height: 900, isPhone: false, isLargePhone: false, isTablet: false, isDesktop: true, isMobile: false, isHydrated: true },
+  useResponsiveWidth: () => (global as any).__mockResponsive?.width ?? 1440,
 }));
 
 // Моки для expo-router
@@ -93,7 +93,7 @@ describe('CustomHeader', () => {
         mockFavoritesContext.isFavorite.mockClear();
         mockFiltersContext.updateFilters.mockClear();
         (useRouter as jest.Mock).mockReturnValue(mockRouter);
-        dimensionsSpy.mockReturnValue({ width: 1024, height: 768, scale: 1, fontScale: 1 } as ReactNative.ScaledSize);
+        dimensionsSpy.mockReturnValue({ width: 1440, height: 900, scale: 1, fontScale: 1 } as ReactNative.ScaledSize);
     });
 
     afterEach(() => {
@@ -196,6 +196,30 @@ describe('CustomHeader', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
             expect(utils.queryByTestId('mobile-menu-open')).toBeNull();
+        });
+
+        it('uses compact navigation on tablet-width web screens', () => {
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+            (global as any).__mockResponsive = {
+                width: 1024,
+                height: 768,
+                isPhone: false,
+                isLargePhone: false,
+                isTablet: false,
+                isLargeTablet: true,
+                isDesktop: false,
+                isMobile: false,
+                isHydrated: true,
+            };
+            (usePathname as jest.Mock).mockReturnValue('/');
+
+            try {
+                const utils = renderHeader();
+                expect(utils.getByTestId('mobile-menu-open')).toBeTruthy();
+                expect(utils.queryByLabelText('Случайный маршрут')).toBeNull();
+            } finally {
+                (global as any).__mockResponsive = undefined;
+            }
         });
 
         it('renders desktop account anchor and guest login CTA without eager account menu mount', () => {

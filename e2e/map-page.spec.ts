@@ -253,8 +253,9 @@ const gotoMapWithRecovery = async (page: any) => {
     await page.waitForTimeout(300).catch(() => null);
   }
 
-  // One last check with a longer wait — return false if map didn't load.
-  return waitForMapUi(page, 60_000, { throwOnFailure: false });
+  // One last check with a longer wait. A missing map is a failed precondition,
+  // never a reason for the calling test to pass without assertions.
+  await waitForMapUi(page, 60_000);
 };
 
 test.describe('@smoke Map Page (/map) - smoke e2e', () => {
@@ -362,8 +363,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       });
     });
 
-    const mapOk = await gotoMapWithRecovery(page);
-    if (!mapOk) return;
+    await gotoMapWithRecovery(page);
 
     const panel = page.getByTestId('filters-panel');
     await expect(panel).toBeVisible({ timeout: 60_000 });
@@ -440,8 +440,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       });
     });
 
-    const mapOk = await gotoMapWithRecovery(page);
-    if (!mapOk) return;
+    await gotoMapWithRecovery(page);
 
     const panel = page.getByTestId('filters-panel');
     await expect(panel).toBeVisible({ timeout: 60_000 });
@@ -484,10 +483,8 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     // Turn on one tile overlay.
     const overlayRow = page.getByTestId('map-overlay-waymarked-hiking');
     const overlayFallback = page.getByText('Маршруты (Waymarked Trails: hiking)', { exact: true });
-    const overlayVisible = await overlayRow.isVisible({ timeout: 10_000 }).catch(async () => {
-      return overlayFallback.isVisible({ timeout: 10_000 }).catch(() => false);
-    });
-    if (!overlayVisible) return;
+    const overlayControl = overlayRow.or(overlayFallback).first();
+    await expect(overlayControl).toBeVisible({ timeout: 20_000 });
 
     const overlayRequest = page
       .waitForRequest((req: any) => {
@@ -499,23 +496,14 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       }, { timeout: 30_000 })
       .catch(() => null);
 
-    if (await overlayRow.isVisible().catch(() => false)) {
-      await overlayRow.click({ force: true });
-    } else {
-      await overlayFallback.click({ force: true });
-    }
+    await overlayControl.click({ force: true });
 
     // Assert we attempted to fetch overlay tiles and attribution contains provider.
-    await overlayRequest;
+    expect(await overlayRequest, 'enabling the Waymarked Trails layer must request its tiles').not.toBeNull();
 
     const attribution = page.locator('.leaflet-control-attribution').first();
     await expect(attribution).toBeVisible({ timeout: 60_000 });
-    // Attribution text may vary; accept either the provider name or evidence the overlay was requested.
-    const hasAttribution = await expect(attribution).toContainText(/waymarkedtrails/i, { timeout: 10_000 }).then(() => true).catch(() => false);
-    if (!hasAttribution) {
-      // Overlay was requested (overlayRequest above) but attribution didn't update — acceptable.
-      test.info().annotations.push({ type: 'note', description: 'Waymarked Trails overlay requested but attribution text not found. Tile request was made.' });
-    }
+    await expect(attribution).toContainText(/waymarkedtrails/i, { timeout: 10_000 });
   });
 
   test('desktop: clicking cluster expands markers (zoom-to-area behavior)', async ({ page }) => {
@@ -560,8 +548,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     // Wait for clusters to render.
     const clusterIcons = page.locator('.metravel-cluster-icon');
-    const clusterCount = await clusterIcons.count().catch(() => 0);
-    if (!clusterCount) return;
+    await expect.poll(() => clusterIcons.count(), { timeout: 30_000 }).toBeGreaterThan(0);
 
     const clusterNumbers = await clusterIcons.evaluateAll((nodes) =>
       nodes.map((node) => Number.parseInt((node.textContent || '').trim(), 10) || 0)
@@ -570,8 +557,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       return value > values[bestIndex] ? index : bestIndex;
     }, 0);
     const clusterIcon = clusterIcons.nth(targetClusterIndex);
-    const hasCluster = await clusterIcon.isVisible({ timeout: 60_000 }).catch(() => false);
-    if (!hasCluster) return;
+    await expect(clusterIcon).toBeVisible({ timeout: 60_000 });
 
     const markerIcon = page.locator('.metravel-pin-marker');
     const markerCountBefore = await markerIcon.count().catch(() => 0);
@@ -635,8 +621,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await waitForMapUi(page, 90_000);
 
     const clusterIcons = page.locator('.metravel-cluster-icon');
-    const clusterCount = await clusterIcons.count().catch(() => 0);
-    if (!clusterCount) return;
+    await expect.poll(() => clusterIcons.count(), { timeout: 30_000 }).toBeGreaterThan(0);
 
     const clusterNumbers = await clusterIcons.evaluateAll((nodes) =>
       nodes.map((node) => Number.parseInt((node.textContent || '').trim(), 10) || 0)
@@ -645,8 +630,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       return value > values[bestIndex] ? index : bestIndex;
     }, 0);
     const clusterIcon = clusterIcons.nth(targetClusterIndex);
-    const hasCluster = await clusterIcon.isVisible({ timeout: 60_000 }).catch(() => false);
-    if (!hasCluster) return;
+    await expect(clusterIcon).toBeVisible({ timeout: 60_000 });
 
     await clusterIcon.click({ force: true });
     await page.waitForTimeout(300);
@@ -656,14 +640,17 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
   });
 
   test('desktop: renders markers and opens popup on marker click', async ({ page }) => {
+    await installMobileFiltersPanelMocks(
+      page,
+      buildMockMapPoints({ center: { lat: 53.9006, lng: 27.559 }, count: 2 }),
+    );
     await gotoMapWithRecovery(page);
 
     await expect(page.getByTestId('map-leaflet-wrapper')).toBeVisible({ timeout: 60_000 });
 
     // Markers may load async after API returns.
     const marker = page.locator('.metravel-pin-marker').first();
-    const markerVisible = await marker.isVisible({ timeout: 60_000 }).catch(() => false);
-    if (!markerVisible) return;
+    await expect(marker).toBeVisible({ timeout: 60_000 });
 
     const popupLocator = page.locator('.leaflet-popup');
     let popupVisible = false;
@@ -684,25 +671,22 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
   });
 
   test('desktop: popup link navigates to travel details', async ({ page }) => {
-    const mapOk = await gotoMapWithRecovery(page);
-    if (!mapOk) return;
+    await installMobileFiltersPanelMocks(
+      page,
+      buildMockMapPoints({ center: { lat: 53.9006, lng: 27.559 }, count: 2 }),
+    );
+    await gotoMapWithRecovery(page);
 
     // Wait for panel hydration before interacting with tabs.
-    const panelOk = await page.getByTestId('filters-panel').waitFor({ state: 'visible', timeout: 60_000 }).then(() => true).catch(() => false);
-    if (!panelOk) return;
+    await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
 
     // Prefer using list -> open popup to avoid marker overlap issues.
     const travelsTab = page.getByTestId('map-panel-tab-travels');
-    try {
-      await travelsTab.waitFor({ state: 'visible', timeout: 30_000 });
-    } catch {
-      return; // Tab not available
-    }
+    await expect(travelsTab).toBeVisible({ timeout: 30_000 });
     await travelsTab.click({ timeout: 60_000 });
 
     const cards = page.locator(mapTravelCardSelector);
-    const cardCount = await cards.count();
-    if (cardCount === 0) return;
+    await expect.poll(() => cards.count(), { timeout: 30_000 }).toBeGreaterThan(0);
 
     await page.locator('.leaflet-marker-icon').first().waitFor({ state: 'visible', timeout: 60_000 });
     await cards.first().click({ position: { x: 16, y: 16 } });
@@ -711,8 +695,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(popupLocator).toBeVisible({ timeout: 20_000 });
 
     const link = popupLocator.locator('a[href*="/travel/"] , a[href*="/travels/"]').first();
-    const hasLink = await link.isVisible({ timeout: 2_000 }).catch(() => false);
-    if (!hasLink) return;
+    await expect(link).toBeVisible({ timeout: 10_000 });
 
     await Promise.all([
       page.waitForURL(/\/(travel|travels)\//, { timeout: 60_000 }),
@@ -800,42 +783,31 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     expect(canonical || '').toMatch(/\/map(\?|$)/);
   });
 
-  test('desktop: shows error UI and retry recovers when API fails once', async ({ page }) => {
-    let failOnce = true;
+  test('desktop: remains usable after a transient map data failure', async ({ page }) => {
+    let requestCount = 0;
     await page.route('**/api/travels/search_travels_for_map/**', async (route: any) => {
-      if (!failOnce) return route.continue();
-      failOnce = false;
-      await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ detail: 'Injected 500' }) });
+      requestCount += 1;
+      if (requestCount === 1) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'Injected 503' }) });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     });
 
     await page.goto('/map', { waitUntil: 'domcontentloaded', timeout: 120_000 });
 
-    // Expect app-level error display.
-    const errorTitle = page.getByText('Не удалось загрузить карту', { exact: true });
-    const errorVisible = await errorTitle.isVisible({ timeout: 30_000 }).catch(() => false);
-    if (!errorVisible) return;
-
-    // Trigger retry.
-    const retryButton = page.getByText('Попробовать снова', { exact: true });
-    const hasRetry = await retryButton.isVisible().catch(() => false);
-    if (!hasRetry) return;
-
-    await retryButton.click({ force: true });
-
-    // After retry, map UI should appear.
     await waitForMapUi(page, 90_000);
+    expect(requestCount, 'map data request must be retried after a transient 503').toBeGreaterThanOrEqual(2);
+    await expect(page.getByText('Что-то пошло не так', { exact: true })).toHaveCount(0);
   });
 
   test('desktop: can switch to route mode and sees route builder', async ({ page }) => {
-    const mapOk = await gotoMapWithRecovery(page);
-    if (!mapOk) return; // Map page didn't load under parallel load
+    await gotoMapWithRecovery(page);
 
     // Wait for panel hydration before interacting with controls.
-    const panelOk = await page.getByTestId('filters-panel').waitFor({ state: 'visible', timeout: 60_000 }).then(() => true).catch(() => false);
-    if (!panelOk) return;
+    await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
     const routeTab = page.getByTestId('map-panel-tab-route');
-    const routeOk = await routeTab.waitFor({ state: 'visible', timeout: 30_000 }).then(() => true).catch(() => false);
-    if (!routeOk) return;
+    await expect(routeTab).toBeVisible({ timeout: 30_000 });
     await routeTab.click({ timeout: 60_000 });
 
     await expect(page.getByTestId('route-builder')).toBeVisible({ timeout: 20_000 });
@@ -852,14 +824,11 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
         // ignore
       }
     });
-    const mapOk = await gotoMapWithRecovery(page);
-    if (!mapOk) return;
+    await gotoMapWithRecovery(page);
 
-    const panelOk = await page.getByTestId('filters-panel').waitFor({ state: 'visible', timeout: 60_000 }).then(() => true).catch(() => false);
-    if (!panelOk) return;
+    await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
     await page.getByTestId('map-panel-tab-route').click({ timeout: 60_000 });
-    const builderOk = await page.getByTestId('route-builder').waitFor({ state: 'visible', timeout: 20_000 }).then(() => true).catch(() => false);
-    if (!builderOk) return;
+    await expect(page.getByTestId('route-builder')).toBeVisible({ timeout: 20_000 });
 
     const mapContainer = page.locator('.leaflet-container').first();
     await expect(mapContainer).toBeVisible({ timeout: 60_000 });
@@ -1067,13 +1036,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
   });
 
   test('desktop: changing radius persists to localStorage (map-filters)', async ({ page }) => {
-    const mapOk = await gotoMapWithRecovery(page);
-    if (!mapOk) return;
+    await gotoMapWithRecovery(page);
 
-    const panelOk = await page.getByTestId('filters-panel').waitFor({ state: 'visible', timeout: 60_000 }).then(() => true).catch(() => false);
-    if (!panelOk) return;
-    const radiusOk = await page.getByTestId('radius-option-100').waitFor({ state: 'visible', timeout: 30_000 }).then(() => true).catch(() => false);
-    if (!radiusOk) return;
+    await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('radius-option-100')).toBeVisible({ timeout: 30_000 });
 
     await page.getByTestId('radius-option-100').click({ timeout: 60_000 });
 
@@ -1091,28 +1057,16 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
   });
 
   test('desktop: can open travels tab in right panel', async ({ page }) => {
-    const mapOk = await gotoMapWithRecovery(page);
-    if (!mapOk) return;
+    await gotoMapWithRecovery(page);
 
     // Wait for panel hydration before interacting with tabs.
-    const panelOk = await page.getByTestId('filters-panel').waitFor({ state: 'visible', timeout: 60_000 }).then(() => true).catch(() => false);
-    if (!panelOk) return;
+    await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
 
     const travelsTab = page.getByTestId('map-panel-tab-travels');
     const listTab = page.getByRole('tab', { name: /Список/i }).first();
-    let tab: any = null;
-    try {
-      await travelsTab.waitFor({ state: 'visible', timeout: 30_000 });
-      tab = travelsTab;
-    } catch {
-      try {
-        await listTab.waitFor({ state: 'visible', timeout: 10_000 });
-        tab = listTab;
-      } catch {
-        // Neither tab found
-      }
-    }
-    if (!tab) return;
+    const hasTravelsTab = await travelsTab.isVisible({ timeout: 30_000 }).catch(() => false);
+    const tab = hasTravelsTab ? travelsTab : listTab;
+    await expect(tab).toBeVisible({ timeout: 10_000 });
 
     // Retry click — first click may fire before React handlers are wired.
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -1124,33 +1078,24 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
   });
 
   test('desktop: clicking a travel card opens popup and focuses map', async ({ page }) => {
-    const mapOk = await gotoMapWithRecovery(page);
-    if (!mapOk) return;
+    await installMobileFiltersPanelMocks(
+      page,
+      buildMockMapPoints({ center: { lat: 53.9006, lng: 27.559 }, count: 2 }),
+    );
+    await gotoMapWithRecovery(page);
 
-    const panelOk = await page.getByTestId('filters-panel').waitFor({ state: 'visible', timeout: 60_000 }).then(() => true).catch(() => false);
-    if (!panelOk) return;
+    await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
 
     const travelsTab = page.getByTestId('map-panel-tab-travels');
     const listTab = page.getByRole('tab', { name: /Список/i }).first();
-    let tab: any = null;
-    try {
-      await travelsTab.waitFor({ state: 'visible', timeout: 30_000 });
-      tab = travelsTab;
-    } catch {
-      try {
-        await listTab.waitFor({ state: 'visible', timeout: 10_000 });
-        tab = listTab;
-      } catch {
-        // Neither tab found
-      }
-    }
-    if (!tab) return;
+    const hasTravelsTab = await travelsTab.isVisible({ timeout: 30_000 }).catch(() => false);
+    const tab = hasTravelsTab ? travelsTab : listTab;
+    await expect(tab).toBeVisible({ timeout: 10_000 });
     await tab.click({ force: true, timeout: 60_000 });
     await expect(page.locator(mapTravelsTabSelector)).toBeVisible({ timeout: 60_000 });
 
     const cards = page.locator(mapTravelCardSelector);
-    const cardCount = await cards.count();
-    if (cardCount === 0) return;
+    await expect.poll(() => cards.count(), { timeout: 30_000 }).toBeGreaterThan(0);
 
     // Ensure map markers are mounted so openPopupForCoord has something to target.
     await page.locator('.leaflet-marker-icon').first().waitFor({ state: 'visible', timeout: 30_000 });

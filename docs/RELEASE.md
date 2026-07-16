@@ -5,6 +5,23 @@
 - Current project: `metravel2`
 - Run all commands from the `metravel2/` app root (this folder contains `package.json`).
 
+## Production checkout immutability
+
+- Frontend release automation may mutate only its documented untracked
+  runtime/static targets, such as `static/dist`, `static/dist.new`, and
+  `static/dist.bak`.
+- Before an authorized server write, inspect the backend checkout with
+  `git status --short` and classify every intended path using
+  `git ls-files --error-unmatch -- <repo-relative-path>`. Never patch, overwrite, copy, move,
+  delete, chmod, or create an in-checkout backup for a tracked path.
+- This frontend workspace never runs backend `commit`, `push`, `pull`, `merge`,
+  `rebase`, `checkout`, `reset`, `restore`, `stash`, or `clean` locally or in
+  production. Backend source/config changes belong to the backend owner's
+  canonical commit/review/deploy flow.
+- A dirty production checkout is a stop condition for a mutating deploy: collect
+  a secret-safe path/diff summary, create or update an `area=back`/ops task, and
+  leave the checkout untouched for its owner.
+
 ## One-command pre-release check
 
 ```bash
@@ -45,6 +62,8 @@ npm run build:web:prod
 - Accepts env argument: `dev`, `preprod`, `prod` (default: `prod`).
 - Pipeline: applies `.env.<env>` -> builds `dist/<env>` -> runs SEO/public post-processing -> deploys to server.
 - The script is the normal production deploy path on machines with working `rsync`. It runs the canonical build and static SEO guards, uploads `dist/`, atomically swaps `static/dist`, overlays missing old Expo chunks for open tabs, restarts `app` + `nginx`, and runs post-deploy SEO checks.
+- Its server writes are limited to the documented untracked static targets. It
+  must stop rather than modify or clean a Git-tracked backend path.
 - Build without deploy:
 
 ```bash
@@ -160,7 +179,11 @@ Android release contract:
 - `alpha`, `internal`, `beta`, tester/country settings and the active closed test
   are protected from this production release path.
 
-### iOS
+### iOS (inactive)
+
+iOS/iPadOS-приложения пока нет. Эти команды сохранены только как future
+scaffolding reference и не входят в обычные release checks, QA или Done gate.
+Запуск возможен только после нового явного решения пользователя вернуть iOS в scope.
 
 ```bash
 npm run ios:prebuild
@@ -183,7 +206,8 @@ npm run android:play:status         # temporary read-only edit, then delete
 See `PRODUCTION_CHECKLIST.md`.
 
 - Do not commit production secrets into `.env.*`.
-- Configure iOS cloud secrets in EAS.
+- iOS cloud secrets относятся только к неактивному future path и не нужны для
+  текущих web/Android release checks.
 - Keep Android upload-keystore credentials in the local secret store as the four
   `METRAVEL_ANDROID_KEYSTORE_*` variables. Keep the Google Play service-account
   key gitignored; never print either credential set.

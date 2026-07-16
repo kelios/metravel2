@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel UI Guardrails"
   short_description: "Protect new pages, redesigns, media, and UI rules"
-  default_prompt: "Use $metravel-ui-guardrails to implement the UI change with existing primitives, tokens, media/link rules, web/Android/iOS parity, and RU/BE/UK/PL/EN-safe layouts and copy."
+  default_prompt: "Use $metravel-ui-guardrails to implement the UI change with existing primitives, tokens, media/link rules, RU/BE/UK/PL/EN-safe copy, and desktop-web plus paired mobile-web/Android evidence."

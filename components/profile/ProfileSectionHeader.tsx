@@ -66,7 +66,9 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       gap: 2,
       alignSelf: 'flex-start',
       marginBottom: 4,
-      paddingVertical: 2,
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      paddingVertical: DESIGN_TOKENS.spacing.xs,
+      paddingRight: DESIGN_TOKENS.spacing.sm,
     },
     crumbText: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,

@@ -1,5 +1,6 @@
 import {
   confirmAccount,
+  confirmFacebookEmailCompletionApi,
   facebookAuthApi,
   googleAuthApi,
   loginApi,
@@ -7,6 +8,7 @@ import {
   resetPasswordLinkApi,
   setNewPasswordApi,
   sendPasswordApi,
+  startFacebookEmailCompletionApi,
   validateWebCookieSessionApi,
 } from '@/api/auth';
 import { Platform } from 'react-native';
@@ -243,7 +245,10 @@ describe('src/api/auth.ts auth/password API', () => {
         is_superuser: false,
       } as any);
 
-      await expect(facebookAuthApi('  short-lived-user-token  ')).resolves.toMatchObject({ id: 19 });
+      await expect(facebookAuthApi('  short-lived-user-token  ')).resolves.toEqual({
+        status: 'authenticated',
+        user: expect.objectContaining({ id: 19 }),
+      });
       expect(mockedFetchWithTimeout).toHaveBeenCalledWith(
         expect.stringContaining('/user/facebook-login/'),
         expect.objectContaining({
@@ -258,18 +263,82 @@ describe('src/api/auth.ts auth/password API', () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 409 } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ error_code: 'facebook_account_conflict' } as any);
 
-      await expect(facebookAuthApi('facebook-token')).resolves.toBeNull();
-      expect(devError).toHaveBeenCalledWith(
-        'Facebook auth error:',
-        expect.objectContaining({
-          message: 'Этот Facebook-аккаунт уже связан с другим пользователем.',
-        }),
-      );
+      await expect(facebookAuthApi('facebook-token')).resolves.toEqual({
+        status: 'error',
+        errorCode: 'facebook_account_conflict',
+        message: 'Этот Facebook-аккаунт уже связан с другим пользователем.',
+      });
     });
 
     it('does not call the backend without a Facebook credential', async () => {
-      await expect(facebookAuthApi('   ')).resolves.toBeNull();
+      await expect(facebookAuthApi('   ')).resolves.toMatchObject({
+        status: 'error',
+        errorCode: 'access_token_required',
+      });
       expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
+    });
+
+    it('returns the opaque email-completion contract without exposing the user token', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 409 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        error_code: 'facebook_email_completion_required',
+        reason_code: 'facebook_primary_email_unavailable',
+        completion_handle: 'opaque-completion-handle',
+        expires_in: 900,
+      } as any);
+
+      await expect(facebookAuthApi('sensitive-facebook-token')).resolves.toEqual({
+        status: 'email_completion_required',
+        reasonCode: 'facebook_primary_email_unavailable',
+        completionHandle: 'opaque-completion-handle',
+        expiresIn: 900,
+      });
+    });
+
+    it('starts email verification with only the opaque handle and email', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ verification_sent: true } as any);
+
+      await expect(
+        startFacebookEmailCompletionApi('opaque-handle', '  user@example.com  '),
+      ).resolves.toEqual({ status: 'verification_sent' });
+      expect(mockedFetchWithTimeout).toHaveBeenCalledWith(
+        expect.stringContaining('/user/facebook-login/complete/start/'),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            completion_handle: 'opaque-handle',
+            email: 'user@example.com',
+          }),
+        }),
+        expect.any(Number),
+      );
+    });
+
+    it('confirms the email code and returns the normal session payload', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        token: 'server-session-token',
+        name: 'Facebook User',
+        email: 'facebook@example.com',
+        id: 19,
+        is_superuser: false,
+      } as any);
+
+      await expect(
+        confirmFacebookEmailCompletionApi('opaque-handle', ' 123456 '),
+      ).resolves.toEqual({
+        status: 'authenticated',
+        user: expect.objectContaining({ id: 19 }),
+      });
+      expect(mockedFetchWithTimeout).toHaveBeenCalledWith(
+        expect.stringContaining('/user/facebook-login/complete/confirm/'),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ completion_handle: 'opaque-handle', code: '123456' }),
+        }),
+        expect.any(Number),
+      );
     });
   });
 

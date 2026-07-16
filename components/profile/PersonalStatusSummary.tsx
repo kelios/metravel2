@@ -130,6 +130,7 @@ export function PersonalStatusSummary({
           flexDirection: 'row',
           alignItems: 'center',
           gap: 6,
+          minHeight: DESIGN_TOKENS.touchTarget.minHeight,
           paddingHorizontal: DESIGN_TOKENS.spacing.md,
           paddingVertical: 8,
           borderRadius: DESIGN_TOKENS.radii.pill,

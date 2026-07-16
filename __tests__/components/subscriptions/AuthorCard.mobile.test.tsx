@@ -76,4 +76,18 @@ describe('AuthorCard mobile layout', () => {
       }),
     );
   });
+
+  it('uses locale plural rules for counts ending in one', () => {
+    const { getByText } = render(
+      <AuthorCard
+        author={{ ...author, travelsTotal: 21, travels: [] }}
+        onUnsubscribe={jest.fn()}
+        onMessage={jest.fn()}
+        onOpenTravel={jest.fn()}
+        onOpenProfile={jest.fn()}
+      />,
+    );
+
+    expect(getByText('21 путешествие')).toBeTruthy();
+  });
 });

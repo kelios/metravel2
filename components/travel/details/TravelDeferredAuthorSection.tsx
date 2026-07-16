@@ -1,5 +1,5 @@
 import React, { memo } from 'react'
-import { Text, View } from 'react-native'
+import { Text, View, useWindowDimensions } from 'react-native'
 
 import AuthorCard, { hasResolvableAuthor } from '@/components/travel/AuthorCard'
 import ShareButtons from '@/components/travel/ShareButtons'
@@ -7,6 +7,7 @@ import type { Travel } from '@/types/types'
 
 import TravelPeerBadgesSection from './TravelPeerBadgesSection'
 import { useTravelDetailsStyles } from './TravelDetailsStyles'
+import { shouldShowTravelDetailsDesktopSidebar } from './travelDetailsCriticalShellModel'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -19,14 +20,18 @@ const DesktopAuthorSection: React.FC<{ travel: Travel }> = memo(function Desktop
   return <TravelPeerBadgesSection travel={travel} />
 })
 
-const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function MobileAuthorShareSection({ travel }) {
+const InlineAuthorSection: React.FC<{
+  authorTestID: string
+  showShare: boolean
+  travel: Travel
+}> = memo(function InlineAuthorSection({ authorTestID, showShare, travel }) {
   const styles = useTravelDetailsStyles()
   const showAuthor = hasResolvableAuthor(travel)
   return (
     <>
       {showAuthor && (
         <View
-          testID="travel-details-author-mobile"
+          testID={authorTestID}
           role="region"
           accessibilityLabel={i18nT('travel:components.travel.details.TravelDeferredAuthorSection.avtor_marshruta_6986236c')}
           style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
@@ -38,14 +43,16 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function Mob
         </View>
       )}
 
-      <View
-        testID="travel-details-share-mobile"
-        role="region"
-        accessibilityLabel={i18nT('travel:components.travel.details.TravelDeferredAuthorSection.podelitsya_marshrutom_0d380df3')}
-        style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
-      >
-        <ShareButtons travel={travel} />
-      </View>
+      {showShare && (
+        <View
+          testID="travel-details-share-mobile"
+          role="region"
+          accessibilityLabel={i18nT('travel:components.travel.details.TravelDeferredAuthorSection.podelitsya_marshrutom_0d380df3')}
+          style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
+        >
+          <ShareButtons travel={travel} />
+        </View>
+      )}
 
       <TravelPeerBadgesSection travel={travel} />
     </>
@@ -54,8 +61,26 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function Mob
 
 const TravelDeferredAuthorSection: React.FC<{ travel: Travel; isMobile: boolean }> = memo(
   function TravelDeferredAuthorSection({ travel, isMobile }) {
+    const { width } = useWindowDimensions()
+
     if (isMobile) {
-      return <MobileAuthorShareSection travel={travel} />
+      return (
+        <InlineAuthorSection
+          authorTestID="travel-details-author-mobile"
+          showShare
+          travel={travel}
+        />
+      )
+    }
+
+    if (!shouldShowTravelDetailsDesktopSidebar(isMobile, width)) {
+      return (
+        <InlineAuthorSection
+          authorTestID="travel-details-author"
+          showShare={false}
+          travel={travel}
+        />
+      )
     }
 
     return <DesktopAuthorSection travel={travel} />

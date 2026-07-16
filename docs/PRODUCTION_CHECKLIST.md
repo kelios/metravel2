@@ -1,16 +1,22 @@
 # Production release checklist
 
-Актуализировано: 2026-07-15.
+Актуализировано: 2026-07-16.
 
 Checklist описывает действия, но не подтверждает, что конкретный релиз уже
 прошёл. Evidence прикладывается к release/task на MCP board.
 
 ## Authorization and target
 
-- [ ] Явно указан target: web `dev` / `preprod` / `prod`, iOS или Android.
+- [ ] Явно указан активный target: web `dev` / `preprod` / `prod` или Android.
 - [ ] Для production rollout/submit есть отдельное явное разрешение пользователя.
 - [ ] Текущая ветка — `main`; working tree и scope проверены.
 - [ ] Нет чужого build/deploy/test процесса или активного lock для того же target.
+- [ ] Для каждой разрешённой server-write операции выполнены read-only
+      `git status --short` и `git ls-files --error-unmatch -- <repo-relative-path>`; ни один
+      intended path не является Git-tracked.
+- [ ] Production backend checkout чистый. Если он dirty, deploy/pull/cleanup не
+      выполняются: paths и secret-safe diff summary приложены к `area=back`/ops
+      задаче для backend owner.
 - [ ] Секреты читаются только из разрешённых env/secret stores и не попадают в
       вывод, screenshots или commit.
 
@@ -72,14 +78,17 @@ testers и countries защищены.
   - documented Windows/Codex wrapper из `docs/RELEASE.md`;
   - `scripts/fix-prod.sh` только для явно запрошенного emergency recovery.
 - [ ] Custom `rsync`/`scp`/SSH deploy sequence не используется.
+- [ ] Server writes ограничены документированными untracked frontend targets
+      (`static/dist*`); tracked backend source/config не изменяется, не
+      backup'ится внутри checkout и не очищается.
 - [ ] Production `sitemap.xml` не генерируется и не перезаписывается frontend.
 
-## Native release
+## Android release
 
 Для store-операций используй `docs/ANDROID_OWNER_GUIDE.md` и project scripts в
 `package.json`.
 
-- [ ] iOS/Android target, version/build number и store track подтверждены.
+- [ ] Android target, version/build number и store track подтверждены.
 - [ ] Android target — `production`; `alpha`, `internal`, `beta`, testers,
       countries и текущий closed test не меняются.
 - [ ] Перед Android store build пройден локальный USB device flow, если он входит

@@ -555,9 +555,10 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     }
 
     if (!isLoading && travelsNear.length === 0) {
-      // Embedded on the detail page: collapse the section when there is simply
-      // nothing nearby, instead of reserving a tall empty placeholder.
-      if (embedded) {
+      // Keep native behavior unchanged in this browser-focused fix. On web the
+      // details page owns the section heading/anchor, so collapsing only this
+      // child otherwise leaves a blank-looking navigation destination.
+      if (embedded && Platform.OS !== 'web') {
         return null;
       }
       return (

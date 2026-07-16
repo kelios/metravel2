@@ -113,12 +113,23 @@ test.describe('Trip planner — happy path', () => {
     await page.getByTestId('trip-create-seats').fill('4')
 
     // Toggle consent checkbox.
-    await page.getByTestId('trip-create-consent').click()
+    const consent = page.getByTestId('trip-create-consent')
+    await consent.click()
+    await expect(consent).toHaveAttribute('aria-checked', 'true')
 
     // Submit must now be enabled.
     const submitBtn = page.getByTestId('trip-create-submit')
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 })
+    const createResponse = page.waitForResponse((response) => {
+      const request = response.request()
+      return (
+        request.method() === 'POST' &&
+        new URL(response.url()).pathname === '/api/trips/planned/' &&
+        response.status() === 201
+      )
+    })
     await submitBtn.click()
+    await createResponse
 
     await expect(page).toHaveURL(/\/trips\/plan\/99001$/, { timeout: 15_000 })
   })

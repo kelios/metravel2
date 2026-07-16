@@ -457,7 +457,12 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       )}
 
       {step.id === 'intro' && (
-        <Pressable style={styles.startButton} onPress={handleCheck} hitSlop={6}>
+        <Pressable
+          style={styles.startButton}
+          onPress={handleCheck}
+          hitSlop={6}
+          accessibilityRole="button"
+        >
           <Text style={styles.startButtonText}>{i18nT('quests:components.quests.questWizardStepCard.nachat_kvest_2847e749')}</Text>
         </Pressable>
       )}

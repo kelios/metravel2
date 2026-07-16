@@ -127,8 +127,8 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontWeight: '600',
     },
     shareBtn: {
-      width: 36,
-      height: 36,
+      width: DESIGN_TOKENS.touchTarget.minWidth,
+      height: DESIGN_TOKENS.touchTarget.minHeight,
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',

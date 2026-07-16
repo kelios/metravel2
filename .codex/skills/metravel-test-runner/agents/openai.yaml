@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Test Runner"
   short_description: "Run the right Jest and governance checks for the touched scope."
-  default_prompt: "Use $metravel-test-runner to map web/Android/iOS and RU/BE/UK/PL/EN impact, choose the narrowest reliable checks, choose validation delegated or validation skipped when another quality gate is active without waiting or retrying, and fix only this task's failures."
+  default_prompt: "Use $metravel-test-runner to map desktop-web/mobile-web/Android and RU/BE/UK/PL/EN impact, require paired mobile-web/Android evidence, choose the narrowest reliable checks, and respect active quality-gate ownership."

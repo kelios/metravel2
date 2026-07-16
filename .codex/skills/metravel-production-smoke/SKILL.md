@@ -29,7 +29,10 @@ Check only what is safe to read:
 
 1. State target URL and reason for the smoke.
 2. Check operation gate before launching long browser/e2e/Lighthouse work. Simple `curl` GET probes are read-only and do not need a lock.
-3. Use `curl -I`/`curl -s` or browser probes; never send mutating requests.
+3. Use `curl -I`/`curl -s` or browser probes; never send mutating requests. A
+   server-side `git status --short`, `git diff`, or `git ls-files` check may be
+   used as read-only evidence, but never clean, stash, reset, checkout, pull, or
+   modify a Git-tracked server path.
 4. For white-screen or UI suspicion, run a real browser snapshot and console check.
 5. If a new production regression is found, compare with open board tasks when available to avoid duplicate reports.
 6. Route confirmed frontend regressions to `$metravel-feature-builder` or `$metravel-browser-reviewer`; backend/API regressions to `$metravel-backend-diagnostician` or a board task.

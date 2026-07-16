@@ -7,6 +7,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { getTravelLabel } from '@/utils/pluralize'
 import type { ListDensity } from '@/stores/listViewStore'
 import { translate as i18nT } from '@/i18n'
+import { BREAKPOINTS } from './utils/listTravelConstants'
 
 
 export type ListSortOption = { id: string; name: string }
@@ -70,7 +71,12 @@ function ListCatalogToolbar({
   const activeSort = (sortValue || '').trim() || DEFAULT_SORT_ID
   const countVisible = showResultsCount && typeof resultsCount === 'number'
   const isNative = Platform.OS !== 'web'
-  const isCompactWeb = Platform.OS === 'web' && viewportWidth > 0 && viewportWidth < 600
+  // Match the overlay-filter breakpoint used by ListTravelBase. At these
+  // widths sorting already lives in the filters sheet; keeping the full chip
+  // strip here duplicated the control and clipped its trailing options on
+  // tablets and compact laptops.
+  const isCompactWeb =
+    Platform.OS === 'web' && viewportWidth > 0 && viewportWidth < BREAKPOINTS.DESKTOP
   const compactLayout = isNative || isCompactWeb
   // Sort chips are dropped in the compact layout (all phones + narrow web) — they'd wrap onto their
   // own full-width row and blow the 20% header budget. Sorting stays reachable in the filters sheet.

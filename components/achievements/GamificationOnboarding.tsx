@@ -70,9 +70,9 @@ function GamificationOnboarding({ testID, style }: Props) {
         <Text style={styles.title}>{i18nT('achievements:components.achievements.GamificationOnboarding.zarabatyvayte_znachki_i_prokachivayte_tropy_a7e67b84')}</Text>
         <Pressable
           onPress={dismiss}
-          hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={i18nT('achievements:components.achievements.GamificationOnboarding.zakryt_podskazku_e28ce368')}
+          style={styles.closeButton}
         >
           <Feather name="x" size={18} color={colors.textMuted} />
         </Pressable>
@@ -133,6 +133,13 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.primary,
+    },
+    closeButton: {
+      width: DESIGN_TOKENS.touchTarget.minWidth,
+      height: DESIGN_TOKENS.touchTarget.minHeight,
+      borderRadius: DESIGN_TOKENS.touchTarget.minHeight / 2,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     title: {
       flex: 1,

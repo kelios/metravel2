@@ -17,7 +17,8 @@ Read `AGENTS.md`, `docs/RULES.md`, `docs/README.md`, and the task triage section
 
 Implement the smallest change that solves the task.
 
-Before editing, record `Platform impact: web | Android | iOS | shared | none`
+Before editing, record
+`Platform impact: desktop web | mobile web | Android | shared | none`
 and `Localization impact: RU/BE/UK/PL/EN | selected locales | none`. Treat
 shared Expo/React Native code as cross-platform until the platform boundary proves otherwise.
 
@@ -53,8 +54,11 @@ Choose validation by scope after each finished logical block and before wrapping
 - Medium change: run the relevant targeted tests plus lint/selective checks for the affected module set.
 - Large or cross-cutting change: run `npm run lint` and `npm run test:run`.
 - If the change affects visible web UI, verify it in a real browser flow, capture a screenshot, and confirm the browser console has no new errors.
+- If the change affects visible UI, verify desktop web, mobile web, and the same
+  flow on a locally built Android app. Mobile web and Android evidence is always paired.
 - If localization is affected, run `npm run test:i18n` and verify the changed
-  locales on every affected platform; native evidence cannot be replaced by web.
+  locales on every affected active platform; mobile-web and Android evidence do
+  not replace each other.
 
 Avoid dev-environment false positives:
 

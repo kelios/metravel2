@@ -1,5 +1,6 @@
 import {
   getFacebookCredential,
+  getFacebookLoginOptions,
   getFacebookSdkLocale,
   isFacebookLoginEnabled,
 } from '@/components/auth/FacebookSignInButton.web';
@@ -22,10 +23,43 @@ describe('FacebookSignInButton web contract', () => {
   it('returns a credential only for a connected Facebook response', () => {
     expect(getFacebookCredential({
       status: 'connected',
-      authResponse: { accessToken: '  short-lived-token  ' },
-    })).toBe('short-lived-token');
+      authResponse: {
+        accessToken: '  short-lived-token  ',
+        grantedScopes: 'public_profile,email',
+      },
+    })).toEqual({
+      accessToken: 'short-lived-token',
+      grantedScopes: ['public_profile', 'email'],
+      emailPermissionGranted: true,
+    });
     expect(getFacebookCredential({ status: 'not_authorized' })).toBeNull();
     expect(getFacebookCredential({ status: 'connected', authResponse: {} })).toBeNull();
+  });
+
+  it('detects a missing email scope without discarding the fresh credential', () => {
+    expect(getFacebookCredential({
+      status: 'connected',
+      authResponse: {
+        accessToken: 'short-lived-token',
+        grantedScopes: ['public_profile'],
+      },
+    })).toEqual({
+      accessToken: 'short-lived-token',
+      grantedScopes: ['public_profile'],
+      emailPermissionGranted: false,
+    });
+  });
+
+  it('adds auth_type=rerequest only for an explicit email-permission retry', () => {
+    expect(getFacebookLoginOptions('sign_in')).toEqual({
+      scope: 'public_profile,email',
+      return_scopes: true,
+    });
+    expect(getFacebookLoginOptions('rerequest_email')).toEqual({
+      scope: 'public_profile,email',
+      return_scopes: true,
+      auth_type: 'rerequest',
+    });
   });
 
   it.each([

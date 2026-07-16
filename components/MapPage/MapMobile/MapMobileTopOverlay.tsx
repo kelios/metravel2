@@ -47,6 +47,7 @@ const TRANSPORT_POPOVER_WIDTH = 204
 /** How long the «tap to build» hint stays visible after entering route mode. */
 const ROUTE_HINT_TIMEOUT_MS = 6000
 const ROUTE_SUMMARY_POPOVER_OFFSET = 88
+const ROUTE_START_SELECTOR_OFFSET = 50
 
 function formatRouteDistance(meters: number): string {
   if (!Number.isFinite(meters) || meters <= 0) return ''
@@ -105,6 +106,7 @@ interface MapMobileTopOverlayProps {
   hasUserLocation?: boolean
   routeManualStartActive?: boolean
   onRequestLocation?: () => void
+  onUseUserLocationStart?: () => void
   onStartManualRoute?: () => void
   onToggleTransport?: () => void
   onTransportSelect?: (mode: TransportMode) => void
@@ -158,6 +160,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   hasUserLocation = false,
   routeManualStartActive = false,
   onRequestLocation,
+  onUseUserLocationStart,
   onStartManualRoute,
   onToggleTransport,
   onTransportSelect,
@@ -171,13 +174,13 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   const styles = getMapMobileTopOverlayStyles(colors)
   const { width: viewportWidth } = useWindowDimensions()
   const isRouteMode = mode === 'route'
+  const showRouteStartLabel = viewportWidth > 340
+  const routeStartSelectorWidth = Math.min(292, Math.max(210, viewportWidth - 68))
   const routeProgressLabel = isRouteMode ? `${Math.min(routePointCount, 2)}/2` : ''
   const needsRouteStartChoice =
     isRouteMode && routePointCount === 0 && !hasUserLocation && !routeManualStartActive
   const routeAccessibilityLabel = isRouteMode
-    ? routePointCount > 0
-      ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.izmenit_tochku_starta_marshruta_6dc69e91')
-      : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_vybrano_value1_iz_2_tochek_926447de', { value1: Math.min(routePointCount, 2) })
+    ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_vybrano_value1_iz_2_tochek_926447de', { value1: Math.min(routePointCount, 2) })
     : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_da7efcc5')
   const routePrimaryLabel = hasUserLocation
     ? i18nT('map:components.MapPage.Map.PlacePopupCard.index.marshrut_ot_menya_617360ad')
@@ -185,7 +188,9 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   const routeHintText = routeManualStartActive && routePointCount === 0
     ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.kosnites_karty_chtoby_vybrat_novyy_start_mar_1cc95c5d')
     : routePointCount === 1
-    ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.start_zadan_vyberite_mesto_naznacheniya_na__592e64c1')
+    ? routeManualStartActive
+      ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.start_zadan_vyberite_mesto_naznacheniya_na__592e64c1')
+      : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.start_zadan_moe_mestopolozhenie_vyberite_mes_0022783b')
     : needsRouteStartChoice
       ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.tekuschee_polozhenie_ne_opredeleno_razreshit_7df55703')
       : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.kosnites_karty_1_ya_tochka_start_2_ya_finish_462b6762')
@@ -202,7 +207,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
     if (needsRouteStartChoice) return
     const timer = setTimeout(() => setHintVisible(false), ROUTE_HINT_TIMEOUT_MS)
     return () => clearTimeout(timer)
-  }, [isRouteMode, needsRouteStartChoice])
+  }, [isRouteMode, needsRouteStartChoice, routeManualStartActive, routePointCount])
   useEffect(() => {
     if (routePointCount >= 2) setHintVisible(false)
   }, [routePointCount])
@@ -237,7 +242,8 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   const resolvedTopPadding = Math.max(topInset, 8) + 8
   // Поповеры открываются прямо под своим рядом иконок.
   const basePopoverTop = resolvedTopPadding + BUTTON_SIZE + 6
-  const popoverTop = basePopoverTop + (showRouteSummary ? ROUTE_SUMMARY_POPOVER_OFFSET : 0)
+  const routeStartSelectorOffset = isRouteMode ? ROUTE_START_SELECTOR_OFFSET : 0
+  const popoverTop = basePopoverTop + routeStartSelectorOffset + (showRouteSummary ? ROUTE_SUMMARY_POPOVER_OFFSET : 0)
   const routePopoverTop = popoverTop
   const layersPopoverRight = isRouteMode
     ? TOOLBAR_EDGE_OFFSET + BUTTON_STEP * 4
@@ -366,18 +372,11 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               pointerEvents="auto"
               testID="map-mobile-route-toolbar"
             >
-              <Pressable
+              <View
                 testID="map-mobile-route-button"
-                onPress={onEnterRouteMode}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isRouteMode }}
+                accessibilityRole="text"
                 accessibilityLabel={routeAccessibilityLabel}
-                hitSlop={6}
-                style={({ pressed }) => [
-                  styles.iconButton,
-                  styles.iconButtonActive,
-                  pressed && styles.iconButtonPressed,
-                ]}
+                style={[styles.iconButton, styles.iconButtonActive]}
               >
                 <Feather name="navigation" size={ICON_SIZE} color={colors.primary} />
                 {!!routeProgressLabel && (
@@ -387,7 +386,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                     </RNText>
                   </View>
                 )}
-              </Pressable>
+              </View>
 
               <Pressable
                 testID="map-mobile-transport-button"
@@ -436,6 +435,79 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               {routePrimaryLabel}
             </RNText>
           </Pressable>
+        )}
+
+        {isRouteMode && (
+          <View
+            style={[styles.routeStartSelector, { width: routeStartSelectorWidth }]}
+            testID="map-mobile-route-start-selector"
+          >
+            {showRouteStartLabel && (
+              <RNText style={styles.routeStartSelectorLabel} numberOfLines={1}>
+                {i18nT('map:components.MapPage.RouteBuilder.start_73c944ad')}
+              </RNText>
+            )}
+            <Pressable
+              testID="map-mobile-route-start-user"
+              onPress={onUseUserLocationStart}
+              disabled={!onUseUserLocationStart}
+              hitSlop={4}
+              accessibilityRole="button"
+              accessibilityState={{ selected: !routeManualStartActive }}
+              aria-pressed={!routeManualStartActive}
+              accessibilityLabel={i18nT('map:components.MapPage.MapMobileLayout.moe_mestopolozhenie_3ab044c9')}
+              style={({ pressed }) => [
+                styles.routeStartOption,
+                !routeManualStartActive && styles.routeStartOptionActive,
+                pressed && styles.iconButtonPressed,
+              ]}
+            >
+              <Feather
+                name="crosshair"
+                size={14}
+                color={!routeManualStartActive ? colors.primaryDark : colors.textMuted}
+              />
+              <RNText
+                style={[
+                  styles.routeStartOptionText,
+                  !routeManualStartActive && styles.routeStartOptionTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {i18nT('map:components.MapPage.MapMobileLayout.moe_mestopolozhenie_3ab044c9')}
+              </RNText>
+            </Pressable>
+            <Pressable
+              testID="map-mobile-route-start-map"
+              onPress={onStartManualRoute}
+              disabled={!onStartManualRoute}
+              hitSlop={4}
+              accessibilityRole="button"
+              accessibilityState={{ selected: routeManualStartActive }}
+              aria-pressed={routeManualStartActive}
+              accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.ukazat_start_marshruta_vruchnuyu_d0723436')}
+              style={({ pressed }) => [
+                styles.routeStartOption,
+                routeManualStartActive && styles.routeStartOptionActive,
+                pressed && styles.iconButtonPressed,
+              ]}
+            >
+              <Feather
+                name="map-pin"
+                size={14}
+                color={routeManualStartActive ? colors.primaryDark : colors.textMuted}
+              />
+              <RNText
+                style={[
+                  styles.routeStartOptionText,
+                  routeManualStartActive && styles.routeStartOptionTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {i18nT('map:screens.tabs.PlacesScreen_parts.na_karte_d98b1d80')}
+              </RNText>
+            </Pressable>
+          </View>
         )}
 
         {showRouteSummary && (

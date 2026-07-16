@@ -40,12 +40,15 @@ Dev note:
 - Do not patch app code only to silence this environment-specific limitation.
 - Treat it as a bug only when frontend code generated an invalid URL or regressed existing media normalization.
 
-### iOS / Android
+### Android (active) / iOS scaffolding (inactive)
 
 ```bash
 npm run ios
 npm run android
 ```
+
+`npm run ios` сохранён как future scaffolding path, но iOS-приложения пока нет:
+обычные development/QA задачи его не запускают и не создают iOS `verify pending`.
 
 Android QA rule:
 
@@ -54,6 +57,8 @@ Android QA rule:
 - Do not run Android EAS/cloud build, submit, or an EAS `--platform all`
   command. Android production uses the local Gradle/Play API release path; QA
   does not use Expo export/dev-client as a device substitute.
+- Любая Android UI-проверка включает тот же сценарий на mobile web; любое
+  изменение mobile web включает парную Android USB-проверку.
 
 ## Useful scripts
 

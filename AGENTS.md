@@ -13,18 +13,22 @@
 - Рабочая директория приложения: корень репозитория, папка с `package.json`.
 - Источник правил проекта: `docs/RULES.md` и `docs/README.md`.
 - Карта работы Codex и skills: `docs/CODEX.md`.
-- Приложение — единая Expo/React Native архитектура для production web,
-  Android и iOS/iPadOS. Перед любой задачей явно определи platform impact:
-  `web | Android | iOS | shared | none`; правка shared-кода не должна ломать
-  непроверенные платформы.
+- Активные продуктовые поверхности — desktop web, mobile web и Android.
+  iOS/iPadOS-приложения пока нет: iOS не входит в обязательную validation,
+  Done gate или `verify pending`, даже если в репозитории остаются `.ios.*` и
+  `ios/` как технический задел. Перед любой задачей явно определи platform
+  impact: `desktop web | mobile web | Android | shared | none`; правка
+  shared-кода не должна ломать непроверенные активные поверхности.
 - Production UI многоязычен: RU/BE/UK/PL/EN, default/fallback — RU.
   Источник locale contract — `i18n/config.ts`, resource contract —
   `i18n/resources.ts`. Перед любой задачей явно определи localization
   impact: `all current locales | selected locales | none`.
 - Работай только с веткой `main`: перед изменениями проверь текущую ветку, не создавай и не переключайся на другие ветки без явной новой инструкции пользователя.
-- В этом workspace AI-агент делает только frontend/app/docs изменения. Backend/Django/API/server (`../metravel-backend`, `area=back`) можно только анализировать read-only, проверять безопасными probes и оформлять/обновлять задачи на борде; backend working tree, миграции, тесты, настройки и server code не редактировать.
-- Если frontend-задача требует backend-контракта или исправления на сервере, не маскируй это mock-фолбэком: зафиксируй blocker, создай/обнови `area=back` задачу и оставь frontend-часть `blocked_by`/`depends_on` до runtime evidence.
-- Не меняй продовые серверные пути и SSL-пути без явной проверки существования на сервере.
+- В этом workspace AI-агент делает только frontend/app/docs изменения. Backend/Django/API/server (`../metravel-backend`, `area=back`) можно только анализировать read-only, проверять безопасными probes и оформлять/обновлять задачи на борде; backend working tree, миграции, тесты, настройки и server code не редактировать. Запрещены любые изменяющие backend Git-операции локально и на сервере: `add`, `commit`, `push`, `pull`, `merge`, `rebase`, `tag`, `checkout`, `reset`, `restore`, `stash`, `clean`.
+- На production-сервере Git-tracked файлы backend checkout неизменяемы для AI-агента. Перед любой явно разрешённой server-write операцией сначала read-only проверь `git status --short` и каждый repo-relative путь через `git ls-files --error-unmatch -- <repo-relative-path>`; tracked path нельзя патчить, перезаписывать, копировать, удалять, переименовывать или менять ему права. Если checkout уже dirty, ничего не исправляй и не продолжай deploy/pull: зафиксируй paths/diff summary без секретов, создай/обнови `area=back`/ops задачу и передай backend-владельцу. Разрешённые project-owned frontend deploy scripts могут менять только документированные untracked runtime/static targets вроде `static/dist`.
+- Если frontend-задача требует ещё не существующего backend-контракта или исправления на сервере и поэтому реализацию нельзя начать/продолжить, не маскируй это mock-фолбэком: создай/обнови `area=back` задачу и используй `blocked_by` с реальной hard dependency. Если frontend уже реализован и ждёт backend/deploy/production/API/browser/device validation, держи его в `review` или `testing`, а не в `blocked_by`.
+- Колонка `blocked_by` означает только невозможность начать или продолжить работу из-за конкретной незакрытой внешней зависимости. Незавершённый Done gate, ожидание review/QA/production-проверки или неуспешная проверка сами по себе не являются блокировкой: готовый код идёт в `review`/`testing`, а найденный дефект возвращает задачу в `in_progress`.
+- Не меняй разрешённые untracked production runtime/SSL-пути без явной проверки существования на сервере; Git-tracked конфиги на сервере не меняй вообще.
 - Не меняй без явного запроса `eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml` и `entry.js`; если пользователь прямо просит изменить один из этих путей, это и есть необходимое разрешение в scope задачи.
 - Не добавляй сложность без необходимости: сначала используй существующие компоненты, хуки и утилиты.
 
@@ -44,8 +48,8 @@
 - `$metravel-quest-geo-verifier` - read-only субагент гео-сверки точек квестов через OSM/Nominatim и локальные geocheck scripts.
 - `$metravel-hook-builder` - проектирование, вынос и рефакторинг focused React hooks в `hooks/` и рядом с фичами без нарушения public contracts.
 - `$metravel-ui-guardrails` - видимый UI, layout, media, placeholders, icons, design tokens, external links.
-- `$metravel-i18n-guardrails` - многоязычный UI и locale-sensitive логика на web,
-  Android и iOS: translation keys/resources, language persistence, Intl/plurals,
+- `$metravel-i18n-guardrails` - многоязычный UI и locale-sensitive логика на web
+  и Android: translation keys/resources, language persistence, Intl/plurals,
   accessibility, SEO locale и i18n validation.
 - `$metravel-design-auditor` - read-only сквозной аудит нескольких экранов: design-system consistency, responsive/mobile parity, состояния, accessibility и evidence matrix.
 - `$metravel-visual-asset-designer` - генерация и интеграция брендовых raster icons/badges/app/marketing assets через imagegen по `docs/ICON_ART_PROMPTS.md`; не подменяет Feather icons или фотореалистичные travel/article media.
@@ -78,8 +82,10 @@
 - `$metravel-agent-workflow` - координация ролей business analyst, system architect, designer, programmer, QA, reviewer и DevOps.
 - `$metravel-project-analyst` - read-only анализ структуры проекта, активных фич, рисков, проверок и handoff к профильным агентам.
 - `$metravel-android-developer` - Android/native разработка и отладка Expo/React Native без регресса production web.
-- `$metravel-ios-developer` - iOS/iPadOS разработка и диагностика: `.ios.tsx`, WebKit/WKWebView, safe-area, APNs, Face ID, ATS и Universal Links без регресса web/Android.
-- `$metravel-mobile-tester` - read-only проверка mobile web, Android и доступного iOS simulator/device, touch/layout/runtime баги и retest.
+- `$metravel-ios-developer` - неактивный future-iOS маршрут; используй только
+  после нового явного решения пользователя вернуть iOS в scope, не для обычной QA.
+- `$metravel-mobile-tester` - read-only парная проверка mobile web и Android,
+  touch/layout/runtime баги и retest одного сценария на обеих поверхностях.
 - `$metravel-play-campaign-tester` - ежедневный проход общей Google Play closed-testing кампании на настроенном USB Android, проверка заданий/обновлений/крашей и ведение общего campaign log без покупок, отзывов, удаления приложений или смены аккаунтов.
 - `$metravel-business-analyst` - продуктовые требования, user stories, acceptance criteria, non-goals, metrics и risks.
 - `$metravel-system-architect` - technical design, разбиение работ, validation plan и review diff на соответствие правилам.
@@ -139,15 +145,21 @@
 - Не заменяй Android device validation mobile-web viewport, Expo web export, EAS preview/development/production build или dev-client/export flow без явного разрешения пользователя.
 - `unauthorized`, отсутствие устройства или поломка локальной сборки/установки фиксируй конкретно: команда, результат и следующий безопасный шаг.
 
-### 3.3 iOS/iPadOS testing and builds
+### 3.3 Active platform validation and mobile parity
 
-- iOS — реальная app-платформа, а не производная от web/Android. Если shared
-  или native-правка затрагивает iOS, проверь тот же сценарий на доступном
-  simulator/device; web или Android evidence не заменяют iOS validation.
-- Без simulator/device укажи `verify pending` с точным непроверенным сценарием;
-  не заявляй iOS-ready по одному typecheck или web smoke.
-- iOS EAS/cloud builds и submit запускай только по явному запросу на точное
-  build/submit действие.
+- iOS/iPadOS-приложения пока нет. Не запускай iOS simulator/device/EAS QA, не
+  добавляй iOS в обязательные проверки и не ставь `verify pending` из-за
+  отсутствия iOS evidence. Вернуть iOS в validation можно только новым явным
+  решением пользователя.
+- Любое видимое UI/layout/interaction изменение проверяй на desktop web, mobile
+  web и локально собранном Android-приложении на USB-устройстве.
+- Mobile web и Android — связанная пара. Если задача затрагивает одну из этих
+  поверхностей, автоматически включи вторую в scope и проверь один и тот же
+  сценарий, состояние и locale на обеих.
+- Mobile web и Android должны быть визуально и поведенчески идентичны по
+  иерархии, порядку блоков, ключевым размерам, действиям и touch semantics.
+  Допустимы только технические отличия движка, системных permissions/insets и
+  OS API; они не должны создавать другой UX.
 
 ### 3.4 Координация долгих операций
 
@@ -182,8 +194,8 @@
 
 - Сначала переиспользуй `components/ui` и существующие фиче-компоненты.
 - Для кнопок/иконок/чипов предпочитай существующие примитивы: `Button`, `IconButton`, `Chip`.
-- Мобильная верстка должна быть визуально и поведенчески одинаковой на mobile web,
-  Android и iOS. Платформенные файлы допустимы для технических зависимостей, но не
+- Мобильная верстка должна быть визуально и поведенчески одинаковой на mobile web
+  и Android. Платформенные файлы допустимы для технических зависимостей, но не
   для другого UX, порядка блоков, размеров ключевых зон или набора действий.
 - Для map/place/travel-point карточек используй единый point/place template:
   fullscreen в доступной app content-area с видимыми header/footer, hero-фото около
@@ -258,7 +270,9 @@
 - Не создавай новые отчеты без необходимости: обновляй существующую документацию в `docs/`.
 - Новые FE/BE/backend задачи создавай на общем MCP task board через `ticket-board` по правилам `docs/TASK_BOARD_MCP.md`.
 - Каждая задача на борде должна содержать Task Contract, sprint, область (`front`/`back`), platform/localization impact и явные зависимости/блокеры; для этого используй `$metravel-task-contract`.
-- На борде используются только рабочие области `front` и `back`: Android/iOS/native баги приложения заводи как `area=front` с префиксом `[AND-...]`/`[IOS-...]` и device-validation в описании; backend/API/server задачи заводи как `area=back`.
+- На борде используются только рабочие области `front` и `back`: Android/native
+  баги приложения заводи как `area=front` с префиксом `[AND-...]` и парной
+  mobile-web/Android validation в описании; backend/API/server задачи заводи как `area=back`.
 - Не создавай новые локальные `tasks/*.md` как обычный workflow. Локальные task-файлы допустимы только как временный fallback/migration draft при недоступном борде, после чего задачу нужно перенести на борд и убрать локальный черновик.
 - Все новые задачи, включая Android QA баги, должны быть созданы или обновлены на борде в текущем активном спринте до handoff; локальный fallback не считается завершением задачи, если board token можно обновить через `.env.e2e`.
 
@@ -267,8 +281,9 @@
 - Изменения ограничены scope задачи.
 - Запущены проверки по масштабу задачи.
 - Не нарушены правила external links и governance.
-- UI-поведение не сломано на web/mobile.
-- Platform impact проверен для web/Android/iOS; непроверенный device scope
+- UI-поведение не сломано на desktop web/mobile web/Android.
+- Platform impact проверен для desktop web/mobile web/Android; mobile web и
+  Android подтверждены парным evidence, а непроверенный Android device scope
   явно помечен `verify pending`.
 - Localization impact явно указан; для затронутого UI нет новых
   hardcoded strings, а `npm run test:i18n` прошёл.

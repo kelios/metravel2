@@ -83,12 +83,12 @@ export function useRightColumnStyles({
     // Keep a small gap below the search chrome on web so the first card
     // doesn't visually tuck under the header shadow or clip its top actions.
     paddingTop: 8,
-    // Reserve whichever bottom overlay is taller: the bottom dock or the consent banner
-    // (set by ConsentBanner via --mt-consent-h). max() avoids cards hiding under the banner.
-    paddingBottom: isMobileViewport
-      ? (`calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + 8px)` as any)
-      : (`calc(max(var(--mt-consent-h, 0px), 28px) + 8px)` as any),
-  }), [isMobileViewport, contentPadding])
+    // Reserve whichever bottom overlay is taller: the responsive bottom dock or
+    // the consent banner. The dock is also used at tablet widths, where the card
+    // grid may still be multi-column, so this cannot depend on the single-column
+    // mobile breakpoint.
+    paddingBottom: `calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px), 28px) + 8px)` as any,
+  }), [contentPadding])
 
   const nativeContentContainerStyle = useMemo(() => ({
     paddingHorizontal: contentPadding,

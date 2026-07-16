@@ -78,6 +78,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
       paddingVertical: DESIGN_TOKENS.spacing.xs,
       paddingHorizontal: DESIGN_TOKENS.spacing.xs,
       borderBottomWidth: 2,

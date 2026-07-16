@@ -4,6 +4,8 @@ import { Platform } from 'react-native';
 jest.mock('@/api/auth', () => ({
   loginApi: jest.fn(),
   facebookAuthApi: jest.fn(),
+  startFacebookEmailCompletionApi: jest.fn(),
+  confirmFacebookEmailCompletionApi: jest.fn(),
   logoutApi: jest.fn(),
   resetPasswordLinkApi: jest.fn(),
   setNewPasswordApi: jest.fn(),
@@ -36,6 +38,8 @@ jest.mock('@/api/user', () => ({
 const {
   loginApi,
   facebookAuthApi,
+  startFacebookEmailCompletionApi,
+  confirmFacebookEmailCompletionApi,
   logoutApi,
   resetPasswordLinkApi,
   setNewPasswordApi,
@@ -44,6 +48,8 @@ const {
   require('@/api/auth') as {
     loginApi: jest.Mock;
     facebookAuthApi: jest.Mock;
+    startFacebookEmailCompletionApi: jest.Mock;
+    confirmFacebookEmailCompletionApi: jest.Mock;
     logoutApi: jest.Mock;
     resetPasswordLinkApi: jest.Mock;
     setNewPasswordApi: jest.Mock;
@@ -363,15 +369,20 @@ describe('authStore', () => {
     it('uses the server session payload and never persists a Facebook credential on web', async () => {
       Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
       facebookAuthApi.mockResolvedValue({
-        token: 'server-cookie-mirror',
-        id: 91,
-        name: 'Facebook User',
-        email: 'facebook@example.com',
-        is_superuser: false,
+        status: 'authenticated',
+        user: {
+          token: 'server-cookie-mirror',
+          id: 91,
+          name: 'Facebook User',
+          email: 'facebook@example.com',
+          is_superuser: false,
+        },
       });
       fetchUserProfile.mockResolvedValue({ first_name: 'Facebook', last_name: 'User', avatar: null });
 
-      await expect(useAuthStore.getState().loginWithFacebook('short-lived-facebook-token')).resolves.toBe(true);
+      await expect(useAuthStore.getState().loginWithFacebook('short-lived-facebook-token')).resolves.toMatchObject({
+        status: 'authenticated',
+      });
 
       expect(facebookAuthApi).toHaveBeenCalledWith('short-lived-facebook-token');
       expect(setSecureItem).not.toHaveBeenCalled();
@@ -382,11 +393,52 @@ describe('authStore', () => {
       }));
     });
 
-    it('fails closed when the backend rejects the Facebook credential', async () => {
-      facebookAuthApi.mockResolvedValue(null);
+    it('keeps completion state unauthenticated and does not persist it', async () => {
+      facebookAuthApi.mockResolvedValue({
+        status: 'email_completion_required',
+        completionHandle: 'opaque-handle',
+        reasonCode: 'facebook_primary_email_unavailable',
+        expiresIn: 900,
+      });
 
-      await expect(useAuthStore.getState().loginWithFacebook('invalid')).resolves.toBe(false);
+      await expect(useAuthStore.getState().loginWithFacebook('valid-no-email')).resolves.toMatchObject({
+        status: 'email_completion_required',
+        completionHandle: 'opaque-handle',
+      });
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
+      expect(setStorageBatch).not.toHaveBeenCalled();
+    });
+
+    it('starts completion and finalizes the confirmed session through the shared path', async () => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      startFacebookEmailCompletionApi.mockResolvedValue({ status: 'verification_sent' });
+      confirmFacebookEmailCompletionApi.mockResolvedValue({
+        status: 'authenticated',
+        user: {
+          token: 'server-cookie-mirror',
+          id: 92,
+          name: 'Completed Facebook User',
+          email: 'completed@example.com',
+          is_superuser: false,
+        },
+      });
+      // resolveAuthDisplayName предпочитает имя профиля серверному user.name —
+      // мок профиля должен складываться в ожидаемый username
+      fetchUserProfile.mockResolvedValue({ first_name: 'Completed', last_name: 'Facebook User', avatar: null });
+
+      await expect(
+        useAuthStore.getState().startFacebookEmailCompletion('opaque-handle', 'completed@example.com'),
+      ).resolves.toEqual({ status: 'verification_sent' });
+      await expect(
+        useAuthStore.getState().confirmFacebookEmailCompletion('opaque-handle', '123456'),
+      ).resolves.toMatchObject({ status: 'authenticated' });
+
+      expect(useAuthStore.getState()).toEqual(expect.objectContaining({
+        isAuthenticated: true,
+        userId: '92',
+        username: 'Completed Facebook User',
+      }));
+      expect(setSecureItem).not.toHaveBeenCalled();
     });
   });
 

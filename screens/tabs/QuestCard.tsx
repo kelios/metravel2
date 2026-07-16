@@ -10,6 +10,7 @@ import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 import { pluralizeRu } from '@/utils/pluralize';
 import { getQuestAgeBadgeLabel, getQuestAgeCategory } from '@/utils/questAudience';
@@ -347,7 +348,12 @@ export default function QuestCard({
                     style={[
                         styles.questCardReviewsChip,
                         Platform.OS !== 'web' && styles.questCardReviewsChipNative,
-                        { top: cardHeight - 36 },
+                        {
+                            top:
+                                cardHeight -
+                                DESIGN_TOKENS.touchTarget.minHeight -
+                                DESIGN_TOKENS.spacing.sm,
+                        },
                     ]}
                     accessibilityRole="button"
                     accessibilityLabel={i18nT('quests:screens.tabs.QuestCard.posmotret_otzyvy_value1_0859ae2d', { value1: reviewsLabel })}

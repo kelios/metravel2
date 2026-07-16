@@ -7,17 +7,17 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { translate as i18nT } from '@/i18n';
 import type { SupportedLocale } from '@/i18n';
-
-type FacebookSignInButtonProps = {
-    onSuccess: (credential: string) => void;
-    onError?: (error: string) => void;
-    onCancel?: () => void;
-    disabled?: boolean;
-};
+import type {
+    FacebookCredential,
+    FacebookSignInButtonProps,
+} from '@/components/auth/facebookLoginTypes';
 
 type FacebookLoginResponse = {
     status?: string;
-    authResponse?: { accessToken?: string };
+    authResponse?: {
+        accessToken?: string;
+        grantedScopes?: string | string[];
+    };
 };
 
 declare global {
@@ -26,7 +26,11 @@ declare global {
             init: (config: { appId: string; cookie: boolean; xfbml: boolean; version: string }) => void;
             login: (
                 callback: (response: FacebookLoginResponse) => void,
-                options: { scope: string; return_scopes: boolean },
+                options: {
+                    scope: string;
+                    return_scopes: boolean;
+                    auth_type?: 'rerequest';
+                },
             ) => void;
         };
         fbAsyncInit?: () => void;
@@ -47,9 +51,26 @@ export const isFacebookLoginEnabled = () =>
 
 export const getFacebookSdkLocale = (locale: SupportedLocale) => SDK_LOCALES[locale];
 
-export const getFacebookCredential = (response: FacebookLoginResponse): string | null => {
+export const getFacebookLoginOptions = (mode: FacebookSignInButtonProps['mode']) => ({
+    scope: 'public_profile,email',
+    return_scopes: true,
+    ...(mode === 'rerequest_email' ? { auth_type: 'rerequest' as const } : {}),
+});
+
+const normalizeGrantedScopes = (raw: string | string[] | undefined): string[] => {
+    const scopes = Array.isArray(raw) ? raw : String(raw || '').split(',');
+    return Array.from(new Set(scopes.map((scope) => scope.trim()).filter(Boolean)));
+};
+
+export const getFacebookCredential = (response: FacebookLoginResponse): FacebookCredential | null => {
     const accessToken = response.authResponse?.accessToken?.trim();
-    return response.status === 'connected' && accessToken ? accessToken : null;
+    if (response.status !== 'connected' || !accessToken) return null;
+    const grantedScopes = normalizeGrantedScopes(response.authResponse?.grantedScopes);
+    return {
+        accessToken,
+        grantedScopes,
+        emailPermissionGranted: grantedScopes.includes('email'),
+    };
 };
 
 export default function FacebookSignInButton({
@@ -57,6 +78,7 @@ export default function FacebookSignInButton({
     onError,
     onCancel,
     disabled,
+    mode = 'sign_in',
 }: FacebookSignInButtonProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -143,7 +165,7 @@ export default function FacebookSignInButton({
                     return;
                 }
                 onCancelRef.current?.();
-            }, { scope: 'public_profile,email', return_scopes: true });
+            }, getFacebookLoginOptions(mode));
         } catch (error) {
             setLoading(false);
             if (__DEV__) console.error('Facebook Login initialization error:', error);
@@ -152,6 +174,9 @@ export default function FacebookSignInButton({
     };
 
     const isDisabled = Boolean(disabled || loading || unavailable || !ready);
+    const idleLabel = mode === 'rerequest_email'
+        ? i18nT('authStatic:facebook.rerequestEmail')
+        : i18nT('authStatic:facebook.signIn');
     return (
         <Pressable
             onPress={handlePress}
@@ -159,7 +184,7 @@ export default function FacebookSignInButton({
             accessibilityRole="button"
             accessibilityLabel={unavailable
                 ? i18nT('authStatic:facebook.unavailableA11y')
-                : i18nT('authStatic:facebook.signIn')}
+                : idleLabel}
             accessibilityState={{ disabled: isDisabled, busy: loading }}
             testID="facebook-sign-in-button"
             style={({ pressed }) => [
@@ -179,7 +204,7 @@ export default function FacebookSignInButton({
                         ? i18nT('authStatic:facebook.unavailable')
                         : loading
                             ? i18nT('authStatic:facebook.loading')
-                            : i18nT('authStatic:facebook.signIn')}
+                            : idleLabel}
                 </Text>
             </View>
         </Pressable>

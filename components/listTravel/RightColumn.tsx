@@ -579,7 +579,9 @@ const RightColumn: React.FC<RightColumnProps> = (
             showStatusModeToggle={showStatusModeToggle && !!onStatusModeChange}
             contentPadding={contentPadding}
             resultsCount={isError ? undefined : total}
-            showResultsCount={isMobileViewport && !isSearchPending}
+            showResultsCount={
+              isMobileViewport && !isSearchPending && !showInitialLoading && !isError
+            }
           />
         ) : null}
 

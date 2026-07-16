@@ -16,8 +16,9 @@
 - секреты не выводить и не просить вставлять в чат;
 - EAS build/submit и production deploy выполнять только по явному точному запросу;
 - проверять собственные изменения, не перекладывая QA на пользователя;
-- перед любой задачей фиксировать platform impact для production web,
-  Android и iOS/iPadOS; shared-код не считать web-only по умолчанию;
+- перед любой задачей фиксировать platform impact для desktop web, mobile web и
+  Android; mobile web и Android всегда проверять парно. iOS/iPadOS-приложения
+  пока нет, поэтому iOS не входит в QA/Done gate/`verify pending`;
 - фиксировать localization impact для RU/BE/UK/PL/EN; app-owned UI text
   проводить через `@/i18n`, а locale-sensitive formatting — через
   `i18n/format.ts`;

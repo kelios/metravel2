@@ -256,7 +256,7 @@ export function MapCanvas({
             onPress={dismissGeoBanner}
             accessibilityRole="button"
             accessibilityLabel={i18nT('map:components.MapPage.MapCanvas.zakryt_uvedomlenie_ae069cb3')}
-            hitSlop={10}
+            hitSlop={11}
             style={({ pressed }) => [styles.geoBannerClose, pressed && PRESSED_OPACITY_06]}
           >
             <Feather name="x" size={12} color={themedColors.textMuted} />

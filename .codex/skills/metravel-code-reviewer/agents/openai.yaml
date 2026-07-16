@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Code Reviewer"
   short_description: "Review diffs for project-rule compliance, validation, and risk."
-  default_prompt: "Use $metravel-code-reviewer to review the diff for correctness, architecture reuse, web/Android/iOS and RU/BE/UK/PL/EN impact, missing validation, and residual risk."
+  default_prompt: "Use $metravel-code-reviewer to review the diff for correctness, architecture reuse, desktop-web/mobile-web/Android and RU/BE/UK/PL/EN impact, paired mobile-web/Android evidence, missing validation, and residual risk."

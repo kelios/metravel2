@@ -82,7 +82,7 @@ export function ProfileWorldMapTab({
   const infoCardRef = useRef<View>(null)
   const fullscreenTopOffset = (Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0) + 56
   const fullscreenMapHeight = isMobile
-    ? Math.max(420, height - fullscreenTopOffset - DESIGN_TOKENS.spacing.md)
+    ? Math.max(240, height - fullscreenTopOffset)
     : undefined
 
   const { visitedCodes, byCode, visitedCount, remainingCount, totalCount, isLoading } =
@@ -287,6 +287,7 @@ export function ProfileWorldMapTab({
         },
         fullscreenBody: {
           flex: 1,
+          position: 'relative',
           padding: isMobile ? 0 : DESIGN_TOKENS.spacing.md,
           gap: isMobile ? 0 : DESIGN_TOKENS.spacing.md,
         },
@@ -311,12 +312,20 @@ export function ProfileWorldMapTab({
               }),
         },
         fullscreenInfo: {
-          maxWidth: 1180,
-          alignSelf: isMobile ? 'stretch' : 'center',
-          width: isMobile ? undefined : '100%',
-          marginHorizontal: isMobile ? DESIGN_TOKENS.spacing.md : 0,
-          marginTop: isMobile ? DESIGN_TOKENS.spacing.sm : 0,
-          marginBottom: isMobile ? DESIGN_TOKENS.spacing.md : 0,
+          ...(isMobile
+            ? {
+                position: 'absolute' as const,
+                left: DESIGN_TOKENS.spacing.md,
+                right: DESIGN_TOKENS.spacing.md,
+                bottom: DESIGN_TOKENS.spacing.md,
+                maxHeight: '85%' as const,
+                zIndex: 3,
+              }
+            : {
+                maxWidth: 1180,
+                alignSelf: 'center' as const,
+                width: '100%' as const,
+              }),
         },
         zoomControls: {
           position: 'absolute',
@@ -325,9 +334,14 @@ export function ProfileWorldMapTab({
           flexDirection: 'column',
           gap: 6,
         },
+        zoomControlsWithInfo: {
+          top: DESIGN_TOKENS.spacing.sm,
+          bottom: undefined,
+          zIndex: 4,
+        },
         zoomButton: {
-          width: isMobile ? 44 : 38,
-          height: isMobile ? 44 : 38,
+          width: DESIGN_TOKENS.touchTarget.minWidth,
+          height: DESIGN_TOKENS.touchTarget.minHeight,
           borderRadius: DESIGN_TOKENS.radii.md,
           // frost: статичный surfaceMuted на мобильном (без живого blur — правило перфа).
           backgroundColor: colors.surfaceMuted,
@@ -388,7 +402,10 @@ export function ProfileWorldMapTab({
           color: colors.text,
         },
         infoClose: {
-          padding: 2,
+          width: DESIGN_TOKENS.touchTarget.minWidth,
+          height: DESIGN_TOKENS.touchTarget.minHeight,
+          alignItems: 'center',
+          justifyContent: 'center',
           ...Platform.select({ web: { cursor: 'pointer' } as object, default: {} }),
         },
         infoMeta: {
@@ -425,7 +442,14 @@ export function ProfileWorldMapTab({
           <WorldMapFlags visitedCodes={visitedCodes} size={mode === 'fullscreen' ? 16 : isMobile ? 13 : 16} zoom={zoom} cover={mode === 'fullscreen'} />
         </WorldChoroplethMap>
 
-        <View style={styles.zoomControls}>
+        <View
+          style={[
+            styles.zoomControls,
+            mode === 'fullscreen' && isMobile && selectedCode
+              ? styles.zoomControlsWithInfo
+              : null,
+          ]}
+        >
           <Pressable
             onPress={() => zoom.zoomByCentered(1.5)}
             accessibilityRole="button"

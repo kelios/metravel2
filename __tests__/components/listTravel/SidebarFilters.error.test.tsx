@@ -15,10 +15,17 @@ jest.mock('@/components/ui/ErrorDisplay', () => {
   const { Pressable, Text } = require('react-native');
   return {
     __esModule: true,
-    default: ({ message, onRetry }: { message: string; onRetry?: () => void }) => (
-      <Pressable testID="filters-error-retry" onPress={onRetry}>
-        <Text>{message}</Text>
-      </Pressable>
+    default: ({ message, onRetry, onDismiss }: { message: string; onRetry?: () => void; onDismiss?: () => void }) => (
+      <>
+        <Pressable testID="filters-error-retry" onPress={onRetry}>
+          <Text>{message}</Text>
+        </Pressable>
+        {onDismiss ? (
+          <Pressable testID="filters-error-dismiss" onPress={onDismiss}>
+            <Text>close</Text>
+          </Pressable>
+        ) : null}
+      </>
     ),
   };
 });
@@ -51,5 +58,21 @@ describe('SidebarFilters error state', () => {
 
     expect(screen.getByTestId('modern-filters')).toBeTruthy();
     expect(screen.queryByTestId('filters-error-retry')).toBeNull();
+  });
+
+  it('lets mobile users close the full-screen error sheet', () => {
+    const onClose = jest.fn();
+    const screen = render(
+      <SidebarFilters
+        {...baseProps}
+        isMobile
+        isVisible
+        isError
+        onClose={onClose}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId('filters-error-dismiss'));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

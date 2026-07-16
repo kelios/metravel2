@@ -35,7 +35,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/context/AuthContext';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
-import FacebookSignInButton from '@/components/auth/FacebookSignInButton';
+import FacebookAuthFlow from '@/components/auth/FacebookAuthFlow';
 import { webTouchScrollStyle } from '@/utils';
 import { buildLoginHref, resolvePostAuthPath } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
@@ -62,7 +62,7 @@ export default function RegisterForm() {
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
     const isFocused = useIsFocused();
     const router = useRouter();
-    const { loginWithGoogle, loginWithFacebook } = useAuth();
+    const { loginWithGoogle } = useAuth();
     const colors = useThemedColors();
     const { isMobile } = useResponsive();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -183,53 +183,26 @@ export default function RegisterForm() {
         setMsg({ text: error, error: true });
     };
 
-    const handleFacebookSignIn = async (credential: string) => {
-        if (facebookBusy || googleBusy || submitted) return;
-        setFacebookBusy(true);
-        let navigating = false;
-        try {
-            setMsg({ text: '', error: false });
-            trackRegistrationSubmitted({ source: 'registration', intent, redirect, method: 'facebook' });
-            const ok = await loginWithFacebook(credential);
-            if (ok) {
-                trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'facebook' });
-                if (intent) sendAnalyticsEvent('AuthSuccess', { source: 'facebook', intent });
-                navigating = true;
-                setSubmitted(true);
-                replaceAfterAuth();
-            } else {
-                trackRegistrationFailed({
-                    source: 'registration',
-                    intent,
-                    redirect,
-                    method: 'facebook',
-                    reason: 'api',
-                });
-                setMsg({ text: i18nT('authStatic:facebook.signInFailed'), error: true });
-            }
-        } catch (e: unknown) {
-            trackRegistrationFailed({
-                source: 'registration',
-                intent,
-                redirect,
-                method: 'facebook',
-                reason: 'exception',
-            });
-            setMsg({ text: e instanceof Error ? e.message : i18nT('authStatic:facebook.signInFailed'), error: true });
-        } finally {
-            if (!navigating) setFacebookBusy(false);
-        }
+    const handleFacebookAttempt = () => {
+        setMsg({ text: '', error: false });
+        trackRegistrationSubmitted({ source: 'registration', intent, redirect, method: 'facebook' });
     };
 
-    const handleFacebookError = (error: string) => {
+    const handleFacebookAuthenticated = () => {
+        trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'facebook' });
+        if (intent) sendAnalyticsEvent('AuthSuccess', { source: 'facebook', intent });
+        setSubmitted(true);
+        replaceAfterAuth();
+    };
+
+    const handleFacebookFailure = (reason: string) => {
         trackRegistrationFailed({
             source: 'registration',
             intent,
             redirect,
             method: 'facebook',
-            reason: 'provider',
+            reason,
         });
-        setMsg({ text: error, error: true });
     };
 
     const {
@@ -531,10 +504,12 @@ export default function RegisterForm() {
                                                     onError={handleGoogleError}
                                                     disabled={isSubmitting || submitted || googleBusy || facebookBusy}
                                                 />
-                                                <FacebookSignInButton
-                                                    onSuccess={handleFacebookSignIn}
-                                                    onError={handleFacebookError}
-                                                    disabled={isSubmitting || submitted || googleBusy || facebookBusy}
+                                                <FacebookAuthFlow
+                                                    onAttempt={handleFacebookAttempt}
+                                                    onAuthenticated={handleFacebookAuthenticated}
+                                                    onFailure={handleFacebookFailure}
+                                                    onBusyChange={setFacebookBusy}
+                                                    disabled={isSubmitting || submitted || googleBusy}
                                                 />
                                             </View>
 

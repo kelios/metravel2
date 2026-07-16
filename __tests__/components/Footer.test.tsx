@@ -105,6 +105,46 @@ describe('Footer', () => {
     expect(onDockHeight).toHaveBeenCalledWith(56)
   })
 
+  it('renders the compact dock on tablet-width web screens', () => {
+    const { Platform } = require('react-native')
+    const prevOS = Platform.OS
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      value: 'web',
+    })
+
+    try {
+      ;(global as any).__mockResponsive = {
+        width: 1024,
+        height: 768,
+        isSmallPhone: false,
+        isPhone: false,
+        isLargePhone: false,
+        isTablet: false,
+        isLargeTablet: true,
+        isDesktop: false,
+        isLargeDesktop: false,
+        isMobile: false,
+        isPortrait: false,
+        isLandscape: true,
+        orientation: 'landscape',
+        breakpoints: {},
+        isAtLeast: () => false,
+        isAtMost: () => true,
+        isBetween: () => false,
+      }
+
+      const { getByTestId, queryByTestId } = render(<Footer />)
+      expect(getByTestId('footer-dock-wrapper')).toBeTruthy()
+      expect(queryByTestId('footer-desktop')).toBeNull()
+    } finally {
+      Object.defineProperty(Platform, 'OS', {
+        configurable: true,
+        value: prevOS,
+      })
+    }
+  })
+
   it('renders desktop footer groups', () => {
     const { Platform } = require('react-native')
     const prevOS = Platform.OS

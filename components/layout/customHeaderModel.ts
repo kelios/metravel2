@@ -12,7 +12,9 @@ export const getEffectiveHeaderWidth = (width: number) => width
 
 export const getIsHeaderMobile = (width: number, effectiveWebWidth: number) => {
   if (Platform.OS === 'web') {
-    return effectiveWebWidth < METRICS.breakpoints.tablet
+    // The full navigation needs the desktop content width. At tablet and
+    // large-tablet sizes it otherwise clips links while hiding the overflow.
+    return effectiveWebWidth < METRICS.breakpoints.desktop
   }
   return width < METRICS.breakpoints.largeTablet
 }

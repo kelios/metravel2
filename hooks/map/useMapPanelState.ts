@@ -7,7 +7,10 @@ import { METRICS } from '@/constants/layout';
 const PANEL_COLLAPSED_KEY = 'metravel_map_panel_collapsed';
 const PANEL_WIDTH_KEY = 'metravel_map_panel_width';
 const PANEL_MIN_WIDTH = 300;
-const PANEL_MAX_WIDTH_RATIO = 0.5; // 50vw
+// Keep a useful map canvas on narrow tablet-width web layouts. The previous
+// 50vw cap let the persisted 384px panel consume exactly half of a 768px
+// viewport, leaving only ~334px for the map after shell padding and gap.
+const PANEL_MAX_WIDTH_RATIO = 0.42;
 const PANEL_DEFAULT_WIDTH = 384;
 const MAP_LAYOUT_INVALIDATE_EVENT = 'metravel:map-layout-invalidate';
 

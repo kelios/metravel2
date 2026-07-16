@@ -178,8 +178,32 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
       await routeBtn.click({ force: true })
       await expect(transportBtn).toBeVisible({ timeout: 10_000 })
       await expect(clearBtn).toBeVisible()
+      await expect(byTid(page, 'map-mobile-route-start-selector')).toBeVisible()
+      await expect(byTid(page, 'map-mobile-route-start-user')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
       await expect(hint).toBeVisible()
       await expect(radiusBtn).toHaveCount(0)
+    })
+
+    await test.step('Start source switches directly between the map and current location', async () => {
+      await byTid(page, 'map-mobile-route-start-map').click({ force: true })
+      await expect(byTid(page, 'map-mobile-route-start-map')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      await expect(page.getByText('0/2', { exact: true })).toBeVisible()
+      await expect(
+        page.getByText('Коснитесь карты, чтобы выбрать новый старт маршрута.', { exact: true }),
+      ).toBeVisible()
+
+      await byTid(page, 'map-mobile-route-start-user').click({ force: true })
+      await expect(byTid(page, 'map-mobile-route-start-user')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      await expect(page.getByText('1/2', { exact: true })).toBeVisible()
     })
 
     await test.step('Transport popover switches profile to bike', async () => {

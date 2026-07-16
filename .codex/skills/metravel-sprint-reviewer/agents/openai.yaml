@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Sprint Reviewer"
   short_description: "Accept sprint tickets with evidence."
-  default_prompt: "Use $metravel-sprint-reviewer to verify metravel task-board Done gates and move only evidence-backed tickets to done."
+  default_prompt: "Use $metravel-sprint-reviewer to verify Done gates, keep incomplete validation in review/testing, return code defects to in_progress, and reserve blocked_by for true hard dependencies."

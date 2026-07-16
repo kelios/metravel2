@@ -446,7 +446,10 @@ board task.
 
 ## Прогон по платформам
 
-После написания/ревью всех сценариев выше — выполнить прогон в двух средах. Один и тот же ID проверяется на обеих платформах; различия из колонки «Платформенные отличия» учитывать.
+После написания/ревью всех сценариев выше видимый UI проверяется на трёх активных
+поверхностях: desktop web, mobile web и Android. Mobile web и Android всегда
+проверяются парно: один и тот же flow, состояние и locale должны выглядеть и
+работать одинаково. iOS-native в текущий прогон не входит.
 
 ### Android USB / local-build smoke
 
@@ -586,8 +589,10 @@ Owners/follow-up:
 |-----------|-------|----------------------|
 | **Web Desktop** | Браузер ≥1440px | 2–3 колонки списка, sidebar фильтров, Leaflet-карта, hover/focus, Web Share API, экспорт PDF/GPX/KML |
 | **Web Mobile** | Браузер ≤600px | 1 колонка, фильтры в fullscreen modal, bottom sheet на карте, fullscreen popup места |
-| **iOS** | Симулятор/устройство | WebView + Leaflet native map, нативный share/picker, haptic feedback, KeyboardAvoidingView |
-| **Android** | Эмулятор/устройство | WebView + Leaflet native map, нативный share/picker, кнопка «назад» системы |
+| **Android** | Локальная сборка на USB-устройстве | Тот же mobile UX, что на Web Mobile; WebView + Leaflet native map, нативный share/picker, кнопка «назад» системы |
+
+iOS/iPadOS-приложения пока нет. Не добавляйте iOS simulator/device evidence или
+`verify pending` в обычные прогоны до отдельного решения вернуть iOS в scope.
 
 
 ## Политика evidence

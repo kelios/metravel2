@@ -33,6 +33,7 @@ Use this skill when the main job is to run tests rather than write product code.
 
 - Run commands from the repo root.
 - Use feature docs from `docs/features/` when you need scope-specific test context.
-- Map platform and localization impact before choosing commands. Web, Android,
-  and iOS runtime evidence are separate; RU/BE/UK/PL/EN parity is part of i18n scope.
+- Map platform and localization impact before choosing commands. Desktop web,
+  mobile web, and Android runtime evidence are distinct, while mobile web and
+  Android are a mandatory paired scope; RU/BE/UK/PL/EN parity is part of i18n scope.
 - For performance or browser behavior, hand off to `$metravel-performance-analyst` or `$metravel-e2e-runner` instead of inferring from unit-test output.

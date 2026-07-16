@@ -18,8 +18,9 @@ Build UI by extending existing primitives first:
 - Reuse `components/ui` and existing feature components before inventing new one-off building blocks.
 - Prefer the existing `Button`, `IconButton`, and `Chip` primitives for small controls.
 - Keep layout stable across loading, success, and error states.
-- Keep mobile web, Android, and iOS visually and behaviorally aligned for the
-  same mobile flow. Do not introduce platform-specific alternate UX unless the
+- Keep mobile web and Android visually and behaviorally identical for the same
+  mobile flow. Any change on one surface automatically requires the same-flow
+  check on the other. Do not introduce platform-specific alternate UX unless the
   platform API makes it technically unavoidable.
 - Design translated layouts for RU/BE/UK/PL/EN: labels may expand, wrap, or use
   different plural forms. Do not solve overflow by hiding meaning or shortening
@@ -40,7 +41,9 @@ Build UI by extending existing primitives first:
 For a new page or redesign:
 
 - Define the route goal and section hierarchy before implementation; reuse `ResponsiveContainer`, `ResponsiveStack`, typography, SEO helpers, and feature components.
-- Verify mobile, tablet, and desktop layouts, light/dark theme, loading/empty/error states, keyboard/focus, and native parity when the screen is shared.
+- Verify desktop web, mobile web, and the same flow on a local USB Android build,
+  plus light/dark theme, loading/empty/error states, keyboard/focus, and paired
+  mobile parity when the screen is shared.
 - Use `$metravel-design-auditor` for a cross-screen consistency matrix; use this skill for the implementation contract and `$metravel-browser-reviewer` for the final browser fix/reverify loop.
 - Use `$metravel-visual-asset-designer` only when an existing primitive, Feather icon, local asset, or real/photorealistic media cannot satisfy the requested slot.
 
@@ -79,8 +82,11 @@ Respect web interaction constraints:
 Verify visual changes before finishing:
 
 - Open the changed scenario in a real browser if the task affects visible web UI.
-- Capture a screenshot to confirm final rendering, storing it only in ignored local debug folders such as `.codex-temp/` or `.codex-debug/`.
+- Capture desktop-web and mobile-web screenshots, storing them only in ignored
+  local debug folders such as `.codex-temp/` or `.codex-debug/`.
 - Check the browser console for new errors.
+- Run the same visible scenario on the locally built Android app installed on the
+  USB-connected phone; compare it directly with mobile web.
 - Run `npm run guard:external-links` or `npm run governance:verify` whenever link handling or policy-sensitive UI changed.
 - Run `npm run test:i18n` and verify affected locales whenever UI copy or
   locale-sensitive behavior changed.

@@ -19,7 +19,8 @@ Read first:
 
 ## Scope
 
-- Platform files: `.android.tsx`, `.native.tsx`, `.ios.tsx`, `.web.tsx`, and narrow `Platform.OS` gates.
+- Platform files: `.android.tsx`, `.native.tsx`, `.web.tsx`, inactive `.ios.tsx`
+  scaffolding when adjacent context requires it, and narrow `Platform.OS` gates.
 - Android/native runtime: Expo modules, permissions, notifications, SecureStore, image picker/media, sharing, WebBrowser, navigation, and native-only app startup.
 - Native map behavior: keep web Leaflet code out of native bundles and native map/WebView code out of web bundles.
 - Native crash triage from a local Android build and `adb logcat`.
@@ -29,8 +30,10 @@ Read first:
 ## Rules
 
 - Do not fix native by changing shared web behavior. If structure, behavior, or dependencies diverge, split platform files and move shared logic into hooks/utils.
-- Keep Android mobile UX visually and behaviorally aligned with mobile web and
-  iOS. Platform files may solve native API differences, but must preserve the
+- Keep Android mobile UX visually and behaviorally identical to mobile web.
+  Every Android change requires the same-flow mobile-web check, and every
+  mobile-web change in shared code requires Android device verification.
+  Platform files may solve native API differences, but must preserve the
   same layout, action order, hero proportions, and tap semantics.
 - For map/place/travel-point surfaces, match the shared fullscreen point/place
   template and the marker-vs-card tap contract documented in `docs/features/map.md`.
@@ -114,7 +117,8 @@ npx jest __tests__/config/native-compat-governance.test.ts --runInBand
 - For code changes, run the relevant targeted tests plus `npm run check:fast` when the logical block is finished.
 - For locale or UI-copy changes, run `npm run test:i18n` and verify language
   persistence plus the changed flow after a real app restart on the USB device.
-- If a shared file changed for native reasons, also verify web scope with a production web build or clearly mark `verify pending` if environment blocks it.
+- If a shared file changed for native reasons, also verify desktop web and mobile
+  web with the same flow; clearly mark `verify pending` if an active surface is blocked.
 - Do not claim "works on Android" until a local build was installed on the USB phone and the relevant `AND-USB-*` cases passed. Without local-build device evidence, report `verify pending` with the exact build/install blocker.
 
 ## Output Contract

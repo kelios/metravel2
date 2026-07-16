@@ -63,4 +63,44 @@ describe('ListCatalogToolbar', () => {
     expect(queryByLabelText('Сортировка списка')).toBeNull()
     expect(queryByTestId('sort-chip-newest')).toBeNull()
   })
+
+  it.each([768, 1024, 1280])(
+    'keeps inline sorting in the filters sheet at compact width %ipx',
+    (width) => {
+      mockViewportWidth = width
+      const { queryByLabelText, queryByTestId } = render(
+        <ListCatalogToolbar
+          sortOptions={[
+            { id: 'newest', name: 'Новые' },
+            { id: 'oldest', name: 'Старые' },
+          ]}
+          sortValue="newest"
+          onSortChange={jest.fn()}
+          density="comfortable"
+          onDensityChange={jest.fn()}
+        />,
+      )
+
+      expect(queryByLabelText('Сортировка списка')).toBeNull()
+      expect(queryByTestId('sort-chip-newest')).toBeNull()
+    },
+  )
+
+  it('shows inline sorting once the docked desktop sidebar is available', () => {
+    mockViewportWidth = 1440
+    const { getByTestId } = render(
+      <ListCatalogToolbar
+        sortOptions={[
+          { id: 'newest', name: 'Новые' },
+          { id: 'oldest', name: 'Старые' },
+        ]}
+        sortValue="newest"
+        onSortChange={jest.fn()}
+        density="comfortable"
+        onDensityChange={jest.fn()}
+      />,
+    )
+
+    expect(getByTestId('sort-chip-newest')).toBeTruthy()
+  })
 })

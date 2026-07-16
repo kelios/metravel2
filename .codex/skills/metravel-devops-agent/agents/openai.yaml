@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel DevOps Agent"
   short_description: "Deploy through approved project release paths"
-  default_prompt: "Use $metravel-devops-agent to prepare, run, and verify a metravel deploy through approved project scripts with explicit target and operation gates, secret hygiene, baseline and post-deploy checks, rollback readiness, the documented Windows wrapper when applicable, and no Android EAS/cloud/production build or submit unless explicitly requested."
+  default_prompt: "Use $metravel-devops-agent to prepare, run, and verify a metravel deploy through approved project scripts with explicit target and operation gates, secret hygiene, baseline and post-deploy checks, and strict protection of all Git-tracked server paths and backend checkouts."

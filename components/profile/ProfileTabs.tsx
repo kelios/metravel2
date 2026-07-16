@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -189,6 +189,28 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
         .filter((tab): tab is (typeof allTabs)[number] => tab != null)
     : allTabs;
   const useCompactMobileRow = isMobile && tabs.length <= 3;
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollViewportWidthRef = useRef(0);
+  const tabLayoutsRef = useRef(new Map<ProfileTabKey, { x: number; width: number }>());
+
+  const scrollActiveTabIntoView = useCallback(
+    (animated: boolean) => {
+      if (!isMobile || useCompactMobileRow) return;
+      const layout = tabLayoutsRef.current.get(activeTab);
+      const viewportWidth = scrollViewportWidthRef.current;
+      if (!layout || viewportWidth <= 0) return;
+
+      scrollRef.current?.scrollTo({
+        x: Math.max(0, layout.x + layout.width / 2 - viewportWidth / 2),
+        animated,
+      });
+    },
+    [activeTab, isMobile, useCompactMobileRow]
+  );
+
+  useEffect(() => {
+    scrollActiveTabIntoView(true);
+  }, [scrollActiveTabIntoView]);
 
   const renderTab = (tab: (typeof allTabs)[number]) => {
     const isActive = activeTab === tab.key;
@@ -210,6 +232,10 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
         accessibilityState={{ selected: isActive }}
         accessibilityLabel={count > 0 ? `${tab.a11yLabel}: ${count}` : tab.a11yLabel}
         accessibilityHint={tab.hint}
+        onLayout={(event) => {
+          tabLayoutsRef.current.set(tab.key, event.nativeEvent.layout);
+          if (isActive) scrollActiveTabIntoView(false);
+        }}
       >
         <Feather
           name={TAB_ICONS[tab.key]}
@@ -241,9 +267,14 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           <View style={styles.compactMobileTabRow}>{tabs.map(renderTab)}</View>
         ) : (
           <ScrollView
+            ref={scrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={[styles.tabRow, styles.mobileTabRow]}
+            onLayout={(event) => {
+              scrollViewportWidthRef.current = event.nativeEvent.layout.width;
+              scrollActiveTabIntoView(false);
+            }}
           >
             {tabs.map(renderTab)}
           </ScrollView>

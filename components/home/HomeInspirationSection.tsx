@@ -15,6 +15,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { queryConfigs } from '@/utils/reactQueryConfig'
 import { createSectionStyles } from './homeInspirationStyles'
 import { translate as i18nT } from '@/i18n'
+import { getUserFriendlyError } from '@/utils/userFriendlyErrors'
 
 
 type Styles = ReturnType<typeof createSectionStyles>
@@ -239,11 +240,7 @@ export function HomeInspirationSection({
         <View style={[styles.sectionFrame, isWeekendShowcase && styles.showcaseSectionFrame]}>
           <ErrorDisplay
             title={i18nT('home:components.home.HomeInspirationSection.ne_udalos_zagruzit_podborku_520d6c7c')}
-            message={
-              error instanceof Error
-                ? error.message
-                : i18nT('home:components.home.HomeInspirationSection.poprobuyte_obnovit_podborku_esche_raz_8c32ec8b')
-            }
+            message={getUserFriendlyError(error)}
             onRetry={() => {
               void refetch()
             }}

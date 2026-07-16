@@ -73,9 +73,9 @@ export const getTravelDetailsShellStyles = (colors: ThemedColors) =>
     },
     scrollContent: {
       paddingBottom: Platform.select({
-        // Web: reserve space for the bottom dock + sticky action bar so the
-        // last rows of content stay visible above the fixed chrome on mobile.
-        web: `calc(var(--mt-dock-h, 0px) + ${DESIGN_TOKENS.spacing.lg}px)` as any,
+        // Web: reserve whichever fixed chrome is taller so the final actions
+        // remain reachable above both the mobile dock and the consent banner.
+        web: `calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + ${DESIGN_TOKENS.spacing.lg}px)` as any,
         default: DESIGN_TOKENS.spacing.xxl,
       }),
     },
@@ -89,6 +89,13 @@ export const getTravelDetailsShellStyles = (colors: ThemedColors) =>
             fontFamily: JOURNAL_FONT_FAMILY,
           } as any)
         : {}),
+    },
+    pageTitle: {
+      ...DESIGN_TOKENS.typography.scale.h1,
+      color: colors.text,
+      maxWidth: '100%',
+      marginTop: 0,
+      marginBottom: DESIGN_TOKENS.spacing.md,
     },
     sectionTabsContainer: {
       marginBottom: DESIGN_TOKENS.spacing.md,

@@ -80,7 +80,7 @@ recoverable state; fake-success запрещён.
 - Empty/loading/error/auth states видимы.
 - Personal route имеет `noindex,nofollow`.
 - Status action требует auth и не сообщает success до завершения mutation.
-- Mobile web, Android и iOS сохраняют один UX; platform date input может
+- Mobile web и Android сохраняют один UX и проверяются парно; platform date input может
   отличаться технической реализацией.
 
 ## Validation

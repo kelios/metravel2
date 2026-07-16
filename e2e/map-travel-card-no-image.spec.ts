@@ -52,6 +52,26 @@ const waitForMapUi = async (page: any, timeoutMs: number) => {
 
 const mapTravelsTabSelector = '[data-testid="map-travels-tab"], [testID="map-travels-tab"]';
 const mapTravelCardSelector = '[data-testid="map-travel-card"], [testID="map-travel-card"]';
+const mockedPoints = [
+  {
+    id: 30_001,
+    coord: '53.900600,27.559000',
+    address: 'Очень длинное название места без изображения для проверки ограничения строк',
+    travelImageThumbUrl: '',
+    categoryName: 'Город',
+    articleUrl: '',
+    urlTravel: '/travels/e2e-no-image-one',
+  },
+  {
+    id: 30_002,
+    coord: '53.910600,27.569000',
+    address: 'Второе место без изображения',
+    travelImageThumbUrl: '',
+    categoryName: 'Город',
+    articleUrl: '',
+    urlTravel: '/travels/e2e-no-image-two',
+  },
+];
 
 const gotoMapWithRecovery = async (page: any) => {
   const mapReady = page.getByTestId('map-leaflet-wrapper');
@@ -86,61 +106,50 @@ test.describe('Map Travel Card - UnifiedTravelCard', () => {
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
 
+    await page.route('**/api/filterformap/**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          countries: [],
+          categories: [],
+          categoryTravelAddress: [],
+          companions: [],
+          complexity: [],
+          month: [],
+          over_nights_stay: [],
+          transports: [],
+          year: '',
+        }),
+      }),
+    );
+    await page.route('**/api/travels/search_travels_for_map/**', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockedPoints) }),
+    );
+
     await gotoMapWithRecovery(page);
   });
 
-  const waitForCardsOrEmpty = async (page: any) => {
+  const openTravelCards = async (page: any) => {
     const mobileMenu = page.locator(mobilePanelEntrySelector).first();
     if (await mobileMenu.isVisible().catch(() => false)) {
       await mobileMenu.click();
     }
 
-    // Wait for panel hydration — filters panel proves the React tree is interactive.
-    await page.getByTestId('filters-panel').waitFor({ state: 'visible', timeout: 60_000 }).catch(() => null);
+    await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
 
     const travelsTab = page.getByTestId('map-panel-tab-travels');
-    const listTab = page.getByRole('tab', { name: /Список/i }).first();
-    let tabLocator: any = null;
-    try {
-      await travelsTab.waitFor({ state: 'visible', timeout: 15_000 });
-      tabLocator = travelsTab;
-    } catch {
-      try {
-        await listTab.waitFor({ state: 'visible', timeout: 10_000 });
-        tabLocator = listTab;
-      } catch {
-        // Neither tab found
-      }
-    }
-    if (!tabLocator) return { cards: page.locator('[data-testid="map-travel-card"]'), cardCount: 0 };
+    await expect(travelsTab).toBeVisible({ timeout: 30_000 });
+    await travelsTab.click();
+    await expect(page.locator(mapTravelsTabSelector)).toBeVisible({ timeout: 30_000 });
 
-    // Click and retry — first click may fire before handlers are fully wired.
-    for (let attempt = 0; attempt < 4; attempt++) {
-      await tabLocator.click({ force: attempt > 0, timeout: 30_000 }).catch(() => null);
-      const tabSelected = await tabLocator
-        .getAttribute('aria-selected')
-        .then((value: string | null) => value === 'true')
-        .catch(() => false);
-      const listVisible = await page.locator(mapTravelsTabSelector).isVisible().catch(() => false);
-      const cardsVisible = await page.locator(mapTravelCardSelector).first().isVisible().catch(() => false);
-      if (tabSelected || listVisible || cardsVisible) break;
-      await page.waitForTimeout(1_000);
-    }
-    await page
-      .locator(`${mapTravelsTabSelector}, ${mapTravelCardSelector}`)
-      .first()
-      .waitFor({ state: 'visible', timeout: 30_000 })
-      .catch(() => null);
     const cards = page.locator(mapTravelCardSelector);
-    const cardCount = await cards.count();
-    return { cards, cardCount };
+    await expect(cards).toHaveCount(mockedPoints.length, { timeout: 30_000 });
+    return cards;
   };
 
-  test('should display travel cards using UnifiedTravelCard component', async ({ page }) => {
-    const { cards, cardCount } = await waitForCardsOrEmpty(page);
-    if (cardCount === 0) return;
-
-    // Check first card structure
+  test('renders map travel cards as visible, bounded surfaces', async ({ page }) => {
+    const cards = await openTravelCards(page);
     const firstCard = cards.first();
     await expect(firstCard).toBeVisible();
 
@@ -154,94 +163,50 @@ test.describe('Map Travel Card - UnifiedTravelCard', () => {
       };
     });
 
-    // Should have background color (not transparent)
     expect(cardStyles.backgroundColor).not.toBe('transparent');
     expect(cardStyles.backgroundColor).not.toContain('rgba(0, 0, 0, 0)');
-    
-    // Should have border radius
     expect(parseInt(cardStyles.borderRadius)).toBeGreaterThan(0);
-    
-    // Should have overflow hidden
     expect(cardStyles.overflow).toBe('hidden');
   });
 
-  test('should display placeholder when no image is available', async ({ page }) => {
-    const { cards, cardCount } = await waitForCardsOrEmpty(page);
-    
-    if (cardCount > 0) {
-      // Check for cards with placeholder (no image)
-      const cardsWithPlaceholder = cards.filter({ has: page.locator('[data-testid="image-stub"]') });
-      const placeholderCount = await cardsWithPlaceholder.count();
-      
-      if (placeholderCount > 0) {
-        const cardWithPlaceholder = cardsWithPlaceholder.first();
-        await expect(cardWithPlaceholder).toBeVisible();
-        
-        // Placeholder should be visible
-        const placeholder = cardWithPlaceholder.locator('[data-testid="image-stub"]');
-        await expect(placeholder).toBeVisible();
-        
-        // Check placeholder has proper background
-        const placeholderBg = await placeholder.evaluate((el: HTMLElement) => {
-          return window.getComputedStyle(el).backgroundColor;
-        });
-        expect(placeholderBg).not.toBe('transparent');
-      }
-    }
+  test('shows a neutral placeholder surface for every missing image', async ({ page }) => {
+    const cards = await openTravelCards(page);
+    const placeholders = cards.locator('[data-testid="image-stub"]');
+
+    await expect(placeholders).toHaveCount(mockedPoints.length);
+    await expect(placeholders.first()).toBeVisible();
+    await expect(placeholders.first()).toHaveAttribute('aria-hidden', 'true');
+    const placeholderBg = await placeholders.first().evaluate((element: HTMLElement) =>
+      window.getComputedStyle(element).backgroundColor,
+    );
+    expect(placeholderBg).not.toBe('transparent');
   });
 
-  test('should truncate text to single line', async ({ page }) => {
-    const { cards, cardCount } = await waitForCardsOrEmpty(page);
-    
-    if (cardCount > 0) {
-      const firstCard = cards.first();
-      
-      // Find text elements in the card
-      const textElements = firstCard.locator('text');
-      const textCount = await textElements.count();
-      
-      if (textCount > 0) {
-        // Check that text elements have proper line clamping
-        for (let i = 0; i < Math.min(textCount, 3); i++) {
-          const textEl = textElements.nth(i);
-          const textContent = await textEl.textContent();
-          
-          if (textContent && textContent.trim().length > 0) {
-            const styles = await textEl.evaluate((el: HTMLElement) => {
-              const computed = window.getComputedStyle(el);
-              return {
-                overflow: computed.overflow,
-                textOverflow: computed.textOverflow,
-                whiteSpace: computed.whiteSpace,
-              };
-            });
-            
-            // Text should have ellipsis or proper overflow handling
-            const hasEllipsis = styles.textOverflow === 'ellipsis' || 
-                               styles.overflow === 'hidden';
-            expect(hasEllipsis).toBe(true);
-          }
-        }
-      }
-    }
+  test('constrains a long title instead of overflowing the card', async ({ page }) => {
+    const cards = await openTravelCards(page);
+    const title = cards.first().getByText(mockedPoints[0].address, { exact: true });
+    await expect(title).toBeVisible();
+
+    const styles = await title.evaluate((element: HTMLElement) => {
+      const computed = window.getComputedStyle(element);
+      return {
+        overflow: computed.overflow,
+        lineClamp: computed.getPropertyValue('-webkit-line-clamp'),
+      };
+    });
+    expect(styles.overflow).toBe('hidden');
+    expect(Number(styles.lineClamp)).toBeGreaterThan(0);
   });
 
-  test('should have consistent card dimensions', async ({ page }) => {
-    const { cards, cardCount } = await waitForCardsOrEmpty(page);
-    
-    if (cardCount >= 2) {
-      // Get dimensions of first two cards
-      const firstCardBox = await cards.nth(0).boundingBox();
-      const secondCardBox = await cards.nth(1).boundingBox();
-      
-      if (firstCardBox && secondCardBox) {
-        // Cards should have same height (stable layout)
-        expect(Math.abs(firstCardBox.height - secondCardBox.height)).toBeLessThan(5);
-        
-        // Cards should have reasonable dimensions
-        expect(firstCardBox.height).toBeGreaterThan(200);
-        expect(firstCardBox.height).toBeLessThan(520);
-      }
-    }
+  test('keeps sibling cards at consistent dimensions', async ({ page }) => {
+    const cards = await openTravelCards(page);
+    const firstCardBox = await cards.nth(0).boundingBox();
+    const secondCardBox = await cards.nth(1).boundingBox();
+
+    expect(firstCardBox, 'first map card must have a layout box').not.toBeNull();
+    expect(secondCardBox, 'second map card must have a layout box').not.toBeNull();
+    expect(Math.abs((firstCardBox?.height ?? 0) - (secondCardBox?.height ?? 0))).toBeLessThan(5);
+    expect(firstCardBox?.height ?? 0).toBeGreaterThan(200);
+    expect(firstCardBox?.height ?? 0).toBeLessThan(520);
   });
 });

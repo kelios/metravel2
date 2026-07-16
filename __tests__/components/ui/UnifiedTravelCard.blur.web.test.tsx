@@ -4,7 +4,7 @@
 
 import React from 'react'
 import renderer from 'react-test-renderer'
-import { Platform } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
 
 const mockImageCardMedia: jest.Mock<any, any> = jest.fn((props: any) =>
@@ -240,5 +240,29 @@ describe('UnifiedTravelCard blur background (web)', () => {
       (node: any) => node.props?.role === 'link' && node.props?.['aria-label']?.includes('Actionable travel')
     )
     expect(primaryAction.findAll((node: any) => node.type === 'button')).toHaveLength(0)
+  })
+
+  it('keeps default title and metadata at their natural height on web', () => {
+    let tree: renderer.ReactTestRenderer
+
+    renderer.act(() => {
+      tree = renderer.create(
+        <UnifiedTravelCard
+          title="Visible travel title"
+          metaText="Kraków"
+          imageUrl="https://example.com/photo.jpg"
+          onPress={() => {}}
+          style={{ height: 220 }}
+        />
+      )
+    })
+
+    const titleNode = tree!.root.find(
+      (node: any) => node.props?.children === 'Visible travel title'
+    )
+    const contentStyle = StyleSheet.flatten(titleNode.parent!.props.style)
+
+    expect(contentStyle.flexBasis).not.toBe(0)
+    expect(contentStyle.flexShrink).toBe(0)
   })
 })

@@ -1,11 +1,13 @@
 ---
 name: metravel-ios-developer
-description: Implement and debug iOS/iPadOS compatibility in the metravel Expo React Native app. Use for `.ios.tsx` or shared native code, iPhone/iPad crashes, WebKit/WKWebView behavior, safe areas, APNs, Face ID, iOS permissions, ATS, Universal Links, native maps, or behavior that differs between iOS, Android, and mobile web. Do not run EAS/cloud builds or submits without an explicit user request.
+description: Reserved future-iOS route for metravel. Use only after the user explicitly reactivates iOS application work; never select it for normal QA, Done gates, or shared-change validation while iOS is inactive.
 ---
 
 # Metravel iOS Developer
 
-Use this skill for iOS-specific frontend implementation and diagnosis while preserving production web and Android behavior.
+The iOS application is currently inactive. Do not use this skill for normal
+implementation, QA, release readiness, or `verify pending`. It becomes active
+only after a new explicit user decision that puts future iOS work in scope.
 
 Read first:
 
@@ -25,7 +27,12 @@ Read first:
 
 ## Rules
 
-- Keep mobile web, Android, and iOS visually and behaviorally aligned. Platform files may change engines, APIs, insets, and shadows, not hierarchy, action order, card proportions, or tap semantics.
+- Stop if iOS was not explicitly reactivated in the current user request. Route
+  current product work to desktop web, mobile web, and Android skills instead.
+
+- If explicitly reactivated, keep any future iOS work from regressing the active
+  mobile-web/Android contract. Platform files may change engines, APIs, insets,
+  and shadows, not hierarchy, action order, card proportions, or tap semantics.
 - Prefer a platform file for structural differences; use a local `Platform.OS` gate only for a small property or API difference.
 - Guard `window`, `document`, storage, DOM events/observers, and web-only imports in shared files.
 - Use `useSafeAreaInsets`; do not hardcode notch, Dynamic Island, or home-indicator offsets.
@@ -35,7 +42,7 @@ Read first:
 - Follow `$metravel-i18n-guardrails`; do not add iOS-only hardcoded app copy or
   locale formatting outside `i18n/format.ts`.
 - Route backend/API gaps to an `area=back` board task; never edit backend code from this workspace.
-- Never claim iOS readiness from web or Android evidence alone.
+- Never turn inactive iOS scaffolding into a QA/Done-gate requirement by inference.
 
 ## Workflow
 
@@ -43,11 +50,11 @@ Read first:
 2. Check adjacent Android/web implementations and preserve the common mobile contract.
 3. Implement the smallest platform split or guard.
 4. Run targeted tests, native compatibility governance, and `npm run check:fast` for a finished code block; add `npm run test:i18n` when locale behavior or UI copy changed.
-5. Verify shared-file changes on web. Verify iOS on an available simulator/device,
-   including cold restart and persisted language when localization is affected;
-   if none is available, report `verify pending` with the exact missing path.
+5. Only after explicit reactivation, define the requested iOS validation path;
+   otherwise stop without adding simulator/device work or `verify pending`.
 6. Do not start any EAS iOS build or submit unless the user explicitly requested that exact build/submit in the current task.
 
 ## Handoff
 
-Report the iOS issue, files changed, platform strategy, web/Android impact, checks run, simulator/device evidence, and any exact `verify pending` blocker.
+If explicitly reactivated, report the future-iOS scope, files changed, active
+mobile-web/Android impact, checks run, and separately authorized evidence.

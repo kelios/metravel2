@@ -93,16 +93,19 @@ test.describe('Accessibility — keyboard', () => {
     });
     await page.keyboard.press('Tab');
 
-    const skipMain = page.getByRole('link', { name: 'Перейти к основному содержимому' });
     const focusedElement = await page.evaluate(() => {
       const element = document.activeElement as HTMLElement | null;
-      return element?.outerHTML.slice(0, 500) || '<none>';
+      return {
+        label: element?.getAttribute('aria-label') || '',
+        role: element?.getAttribute('role') || '',
+        html: element?.outerHTML.slice(0, 500) || '<none>',
+      };
     });
-    expect(
-      await skipMain.evaluate((element) => element === document.activeElement),
-      `first Tab focused ${focusedElement}`,
-    ).toBe(true);
-    await skipMain.press('Enter');
+    expect(focusedElement, `first Tab focused ${focusedElement.html}`).toMatchObject({
+      label: 'Перейти к основному содержимому',
+      role: 'link',
+    });
+    await page.keyboard.press('Enter');
 
     const activeAfterSkip = await page.evaluate(() => {
       const element = document.activeElement as HTMLElement | null;
