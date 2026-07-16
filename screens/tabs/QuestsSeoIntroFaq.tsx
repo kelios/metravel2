@@ -178,8 +178,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
   StyleSheet.create({
     wrap: {
       width: '100%',
+      // Читаемая ширина колонки текста, но по ЛЕВОМУ краю: блок живёт в одной
+      // колонке с шапкой и сеткой квестов, которые прижаты влево. При
+      // alignSelf:'center' интро и FAQ уезжали вправо от карточек и заголовка.
       maxWidth: 760,
-      alignSelf: 'center',
+      alignSelf: 'flex-start',
       gap: isMobile ? 20 : 28,
     },
     intro: {
