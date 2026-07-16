@@ -107,6 +107,12 @@ function poiInfoPayload(step) {
 
 const QUESTS = require(SOURCE_FILE);
 
+// Кэш «имя города → id» на весь прогон: GET /api/quest-cities/ может не отдать
+// только что созданный город (пагинация), из-за чего второй квест того же
+// source-файла создавал дубль city.
+const cityIdByName = new Map();
+const cityKey = (name) => (name || '').trim().toLowerCase();
+
 async function main() {
     console.log(`🚀 Миграция из ${path.basename(SOURCE_FILE)} → ${API_BASE} (${isDryRun ? 'DRY RUN' : 'LIVE'})\n`);
 
@@ -122,30 +128,37 @@ async function main() {
             if (questDbId) console.log(`  ℹ️ Quest already exists: id=${questDbId}`);
         } catch { /* not found — create below */ }
 
-        // 1. City: reuse by name, create only if missing
+        // 1. City: reuse by name (кэш прогона → API), create only if missing
         let cityId;
         if (!questDbId) {
             try {
-                let existingCity = null;
-                try {
-                    const cities = await apiGet('/api/quest-cities/');
-                    const list = Array.isArray(cities) ? cities : (cities?.results || []);
-                    existingCity = list.find(c => (c?.name || '').trim().toLowerCase() === q.city.name.trim().toLowerCase());
-                } catch { /* список недоступен — упадём на создание */ }
-
-                if (existingCity?.id) {
-                    cityId = existingCity.id;
-                    console.log(`  ♻️ City reused: id=${cityId} (${q.city.name})`);
+                const key = cityKey(q.city.name);
+                if (cityIdByName.has(key)) {
+                    cityId = cityIdByName.get(key);
+                    console.log(`  ♻️ City reused (run cache): id=${cityId} (${q.city.name})`);
                 } else {
-                    const city = await apiPost('/api/quest-cities/', {
-                        name: q.city.name,
-                        country: q.city.country,
-                        lat: String(q.city.lat),
-                        lng: String(q.city.lng),
-                        status: 1,
-                    });
-                    cityId = city.id;
-                    console.log(`  ✅ City: id=${cityId} (${q.city.name})`);
+                    let existingCity = null;
+                    try {
+                        const cities = await apiGet('/api/quest-cities/');
+                        const list = Array.isArray(cities) ? cities : (cities?.results || []);
+                        existingCity = list.find(c => cityKey(c?.name) === key);
+                    } catch { /* список недоступен — упадём на создание */ }
+
+                    if (existingCity?.id) {
+                        cityId = existingCity.id;
+                        console.log(`  ♻️ City reused: id=${cityId} (${q.city.name})`);
+                    } else {
+                        const city = await apiPost('/api/quest-cities/', {
+                            name: q.city.name,
+                            country: q.city.country,
+                            lat: String(q.city.lat),
+                            lng: String(q.city.lng),
+                            status: 1,
+                        });
+                        cityId = city.id;
+                        console.log(`  ✅ City: id=${cityId} (${q.city.name})`);
+                    }
+                    cityIdByName.set(key, cityId);
                 }
             } catch (e) {
                 console.error(`  ❌ City: ${e.message}`);
