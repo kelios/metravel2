@@ -10,6 +10,7 @@ import type { RoutePoint } from '@/types/route'
 import type { LatLng } from '@/types/coordinates'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
+import { getNextRadiusOption, shouldShowMapEmptyState } from '@/components/MapPage/mapEmptyState'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -113,19 +114,15 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
     [filterValue.categoryTravelAddress],
   )
 
-  const nextRadiusOption = useMemo(() => {
-    const radiusOptions = Array.isArray(filters.radius) ? filters.radius : []
-    const idx = radiusOptions.findIndex(
-      (option) => String(option.id) === String(filterValue.radius),
-    )
-    if (idx < 0) return radiusOptions[0] ?? null
-    return radiusOptions[idx + 1] ?? null
-  }, [filterValue.radius, filters.radius])
+  // Расчёт вынесен в общий mapEmptyState: ту же логику переиспользует плашка
+  // empty-state на самой карте (MapEmptyStateToast) при закрытой панели.
+  const nextRadiusOption = useMemo(
+    () => getNextRadiusOption(filters.radius, filterValue.radius),
+    [filterValue.radius, filters.radius],
+  )
 
   const noPointsInRadius = mode === 'radius' && totalPoints === 0
-  // #211 — empty-state показываем только когда запрос завершён: иначе «Ничего не
-  // нашлось» мигает во время рефетча/дебаунса (смена вкладок, режимов, первый фетч).
-  const showEmptyState = noPointsInRadius && !isBusy
+  const showEmptyState = shouldShowMapEmptyState({ mode, totalPoints, isBusy })
 
   const mobileQuickChips = useMemo(() => {
     if (!isMobile || mode !== 'radius') return []

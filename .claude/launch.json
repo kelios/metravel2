@@ -2,6 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Map QA Clear 8102",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_API_URL=http://localhost:4620 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --clear --port 8102"
+      ],
+      "port": 8102,
+      "autoPort": false
+    },
+    {
       "name": "Expo Web GSI 8092",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

@@ -16,7 +16,7 @@
 | 6    | 2026-07-14 |             |            |                      | |
 | 7    | 2026-07-15 |             |            |                      | |
 | 8    | 2026-07-16 | ✅          |            | TCT: uploads done; post-reset TCT: 12/12 uploads submitted; Pack Boneclaw IV: 13/13 done (100%); App Testers: 1 install/test, stopped before Play review | Evidence: `.claude/play-testing/evidence/2026-07-16/`; 110 moons; Putik/Jurisprudence retested |
-| 9    | 2026-07-17 |             |            |                      | |
+| 9    | 2026-07-17 | ✅          | `com.nadeemgs.testerscommunity` 37 → 38 | Pack Boneclaw IV: 13/13 done (100%); TCT: MVG/HealthMate/Damas reuploads submitted, partner proofs accepted; GridArt/Bigpic partner proofs accepted; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-17/`; TCT home: `You're all caught up!`; no crash-buffer hits |
 | 10   | 2026-07-18 |             |            |                      | |
 | 11   | 2026-07-19 |             |            |                      | |
 | 12   | 2026-07-20 |             |            |                      | |
@@ -44,3 +44,17 @@
 - Submitted TCT uploads: Earth radio Day 4, MVG Public School Day 5, 12 testers app closed testing Day 2, School Master App Day 5, Libera Day 5, My Healthmate Day 4, Insta saver Day 4, Damas Go Day 3, Loam - Moto Day 2, GridArt Day 9, Bigpic Day 9, Rocky Decodes Calories Day 9.
 - Installed and tested `Loam - Moto` (`app.loam.moto`); used demo garage and maintenance details for 30+ seconds, uploaded proof, and accepted partner proof that showed real MeTravel usage.
 - Strong in-app proof captured for Earth radio, App Testers, Loam, GridArt, Rocky Decodes Calories, Insta saver and My Healthmate. Weak-proof risk: Bigpic opened an ad activity before capture; MVG Public School, School Master App, Libera and Damas Go returned to TCT during launch attempts, so their TCT uploads may need partner tolerance or later replacement if rejected.
+
+### 2026-07-17 — Daily pass / TCT cleanup
+
+- Device: Pixel 10 Pro `61020DLCH0086L`, USB/adb authorized.
+- TestersCommunity Pack Boneclaw IV: completed all daily app-open tasks through task-row flow; final screen showed `Open & test apps today (13/13 done)`, `Daily Progress Complete!`, `All tasks complete!`.
+- The Closed Test cleanup:
+  - MVG Public School Day 5 was rejected as `Not enough proof of usage`; retested dashboard after login, uploaded fresh proof, accepted partner MeTravel proof.
+  - My Healthmate Day 4 was rejected as `Please open my app`; retested app screen after scrolling, uploaded fresh proof, accepted partner MeTravel proof.
+  - Damas Go Day 3 was rejected; retested game board against computer, uploaded fresh proof, accepted partner MeTravel proof.
+  - GridArt Day 9 and Bigpic Day 9: our proofs were already approved; accepted partner proofs after visual MeTravel verification.
+  - Final TCT home showed `You're all caught up!`.
+- App Testers `com.nadeemgs.apptesters`: opened home/profile; no daily tasks, wallet `0/0`, no pending proof/review action.
+- NadeemGS TestersCommunity `com.nadeemgs.testerscommunity`: app required Play Store update; updated 1.2.x/37 to 1.3.0/38, then opened home/profile/My Apps. Wallet `20/0`; `My Apps` showed `No apps uploaded yet`; no required action found.
+- Crash check: `adb logcat -d -b crash` filtered for campaign/community packages returned no relevant crash entries.

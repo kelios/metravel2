@@ -228,4 +228,6 @@ export const mapGenerated3 = {
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Wyszukiwanie po tagach i kategoriach miejsc",
   "components.MapPage.FiltersPanelRadiusSection.vvedite_nazvanie_tega_naprimer_zamok_ili_peschera_2e9b60d7": "Wpisz nazwę tagu, na przykład „zamek” lub „jaskinia”",
   "components.MapPage.FiltersPanelRadiusSection.teg_ne_nayden_proverte_napisanie_9c6a05e2": "Nie znaleziono tagu. Sprawdź pisownię.",
+  "components.MapPage.MapEmptyStateToast.v_etoy_oblasti_nichego_ne_nashlos_5b1c0a74": "W tym obszarze nic nie znaleziono",
+  "components.MapPage.MapMobile.MapMobileTopOverlay.start_ne_opredelen_vyberite_ego_vyshe_a1f4c2d7": "Brak punktu startu — wybierz „Na mapie” powyżej.",
 } as const

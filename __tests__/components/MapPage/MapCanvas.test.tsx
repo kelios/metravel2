@@ -1,5 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native'
-import { Platform, View } from 'react-native'
+import { Platform, StyleSheet, View } from 'react-native'
 
 import { MapCanvas } from '@/components/MapPage/MapCanvas'
 
@@ -113,6 +113,33 @@ describe('MapCanvas', () => {
     // Ручной старт — действие режима маршрута, а не общего гео-статуса: в
     // radius-режиме баннер не предлагает уходить в построение маршрута.
     expect(screen.queryByTestId('map-geo-manual-start')).toBeNull()
+  })
+
+  // Ряд чипов активных фильтров (overlay-слой) и баннер (слой карты) — разные
+  // поддеревья, поэтому баннер опускается под ряд явным сдвигом, иначе они
+  // рисуются друг поверх друга.
+  it('drops the geo banner below the active filter chips row when it is shown', () => {
+    const screen = render(
+      <MapCanvas
+        {...baseProps}
+        isMobile
+        showProgress={false}
+        showGeoBanner
+        geoBannerStackOffset={34}
+      />,
+    )
+
+    const banner = screen.getByTestId('map-geo-banner')
+    expect(StyleSheet.flatten(banner.props.style)).toMatchObject({ marginTop: 34 })
+  })
+
+  it('keeps the geo banner tight under the toolbar when there are no chips', () => {
+    const screen = render(
+      <MapCanvas {...baseProps} isMobile showProgress={false} showGeoBanner />,
+    )
+
+    const banner = screen.getByTestId('map-geo-banner')
+    expect(StyleSheet.flatten(banner.props.style)?.marginTop).toBeUndefined()
   })
 
   it('offers a manual route start from the geo banner only in route mode', () => {

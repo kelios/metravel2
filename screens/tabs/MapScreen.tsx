@@ -26,6 +26,10 @@ import {
   MapScreenDesktopOverlays,
 } from '@/components/MapPage/MapScreenParts/MapScreenDesktop'
 import { MapScreenShell } from '@/components/MapPage/MapScreenParts/MapScreenShell'
+import {
+  isMapFilterChipsRowVisible,
+  MAP_FILTER_CHIPS_STACK_OFFSET,
+} from '@/components/MapPage/mapFilterChips'
 
 const IS_WEB = Platform.OS === 'web'
 const CAN_PRELOAD_LEAFLET = IS_WEB && typeof window !== 'undefined'
@@ -301,6 +305,23 @@ export default function MapScreen() {
     [quickFilters.selected, currentRadius, currentMode, currentTransport],
   )
 
+  // Ряд чипов активных фильтров (overlay-слой, zIndex 1500) и плашка
+  // «Геолокация недоступна» (слой карты, zIndex 1010) живут в РАЗНЫХ поддеревьях
+  // и не складываются в один вертикальный поток — оба целятся под тулбар и
+  // накладывались друг на друга. Считаем видимость ряда тем же общим предикатом,
+  // что и сам ряд, и опускаем баннер ровно на его высоту.
+  const mobileFilterChipsVisible = useMemo(
+    () =>
+      isMobile &&
+      isMapFilterChipsRowVisible({
+        mode: currentMode,
+        items: activeFilterItems,
+        canRemove: true,
+      }),
+    [isMobile, currentMode, activeFilterItems],
+  )
+  const geoBannerStackOffset = mobileFilterChipsVisible ? MAP_FILTER_CHIPS_STACK_OFFSET : 0
+
   // Radius всегда имеет непустое дефолтное значение, поэтому активность считаем
   // ТОЛЬКО по категориям + текстовому поиску (как ActiveFiltersBar исключает
   // radius-чип). Иначе быстрая кнопка сброса висела бы постоянно.
@@ -401,6 +422,7 @@ export default function MapScreen() {
         currentRadius={currentRadius}
         shouldShowFloatingRadiusPill={shouldShowFloatingRadiusPill}
         showGeoBanner={showGeoBanner}
+        geoBannerStackOffset={geoBannerStackOffset}
         locationState={locationState}
         coordinatesSource={coordinatesSource}
         dismissGeoBanner={dismissGeoBanner}
@@ -428,6 +450,7 @@ export default function MapScreen() {
       shouldShowFloatingRadiusPill,
       styles,
       showGeoBanner,
+      geoBannerStackOffset,
       locationState,
       coordinatesSource,
       dismissGeoBanner,
@@ -482,6 +505,8 @@ export default function MapScreen() {
       filtersPanelProps={filtersPanelProps}
       handleClearAllFilters={handleClearAllFilters}
       hasActiveFilters={hasActiveMapFilters}
+      activeFilterItems={activeFilterItems}
+      handleRemoveActiveFilter={handleRemoveActiveFilter}
       handleExpandRadius={handleExpandRadius}
       isConnected={isConnected}
       shouldLoadOnboarding={shouldLoadOnboarding}

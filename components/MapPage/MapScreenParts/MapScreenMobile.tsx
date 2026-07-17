@@ -27,6 +27,8 @@ type MapScreenMobileProps = {
   filtersPanelProps: any
   handleClearAllFilters: () => void
   hasActiveFilters?: boolean
+  activeFilterItems?: ReadonlyArray<{ key: string; label: string }>
+  handleRemoveActiveFilter?: (key: string) => void
   handleExpandRadius: () => void
   isConnected: boolean
   shouldLoadOnboarding: boolean
@@ -64,6 +66,8 @@ export function MapScreenMobile({
   filtersPanelProps,
   handleClearAllFilters,
   hasActiveFilters,
+  activeFilterItems,
+  handleRemoveActiveFilter,
   handleExpandRadius,
   isConnected,
   shouldLoadOnboarding,
@@ -119,6 +123,8 @@ export function MapScreenMobile({
           filtersPanelProps={filtersPanelProps}
           onResetFilters={handleClearAllFilters}
           hasActiveFilters={hasActiveFilters}
+          activeFilterItems={activeFilterItems}
+          onRemoveActiveFilter={handleRemoveActiveFilter}
           onExpandRadius={handleExpandRadius}
           selectedPlace={selectedPlace}
           clearSelectedPlace={clearSelectedPlace}

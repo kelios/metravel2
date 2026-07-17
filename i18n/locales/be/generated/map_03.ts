@@ -228,4 +228,6 @@ export const mapGenerated3 = {
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Пошук па тэгах і катэгорыях месцаў",
   "components.MapPage.FiltersPanelRadiusSection.vvedite_nazvanie_tega_naprimer_zamok_ili_peschera_2e9b60d7": "Увядзіце назву тэга, напрыклад «замак» або «пячора»",
   "components.MapPage.FiltersPanelRadiusSection.teg_ne_nayden_proverte_napisanie_9c6a05e2": "Тэг не знойдзены. Праверце напісанне.",
+  "components.MapPage.MapEmptyStateToast.v_etoy_oblasti_nichego_ne_nashlos_5b1c0a74": "У гэтай вобласці нічога не знайшлося",
+  "components.MapPage.MapMobile.MapMobileTopOverlay.start_ne_opredelen_vyberite_ego_vyshe_a1f4c2d7": "Старт не вызначаны — выберыце «На карце» вышэй.",
 } as const

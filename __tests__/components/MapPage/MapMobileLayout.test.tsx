@@ -397,6 +397,82 @@ describe('MapMobileLayout', () => {
     expect(getSearchAreaButtonBottom(false, false)).toBe(104 + 56)
   })
 
+  // Ровно ОДИН явный способ сброса на экране: пока виден ряд чипов активных
+  // фильтров, безымянный круглый FAB «Показать всё» скрыт — и наоборот.
+  describe('active filter chips over the map vs the reset FAB', () => {
+    const filtersPanelProps = {
+      props: {
+        mode: 'radius',
+        transportMode: 'car',
+        setMode: jest.fn(),
+        filterValue: { radius: '50' },
+        onFilterChange: jest.fn(),
+      },
+    }
+
+    const renderWith = (extra: any) =>
+      render(
+        <MapMobileLayout
+          mapComponent={<View testID="mock-map" />}
+          travelsData={[]}
+          coordinates={{ latitude: 53.9, longitude: 27.56 }}
+          transportMode="car"
+          buildRouteTo={jest.fn()}
+          onCenterOnUser={jest.fn()}
+          onOpenFilters={jest.fn()}
+          onShowAllPlaces={jest.fn()}
+          onRemoveActiveFilter={jest.fn()}
+          filtersPanelProps={filtersPanelProps}
+          {...extra}
+        />,
+      )
+
+    beforeEach(() => {
+      cleanup()
+      useRouteStore.getState().clearRouteAndSetMode('radius')
+    })
+    afterEach(cleanup)
+
+    it('shows the chips row and hides the reset FAB when a category is active', () => {
+      const screen = renderWith({
+        hasActiveFilters: true,
+        activeFilterItems: [{ key: 'cat:Церковь', label: 'Церковь' }],
+      })
+
+      expect(screen.getByTestId('map-mobile-active-filters')).toBeTruthy()
+      expect(screen.getByText('Церковь')).toBeTruthy()
+      expect(screen.getByTestId('map-active-filters-clear-all')).toBeTruthy()
+      expect(screen.queryByTestId('map-mobile-show-all')).toBeNull()
+    })
+
+    it('keeps the reset FAB when no filters are active', () => {
+      const screen = renderWith({ hasActiveFilters: false, activeFilterItems: [] })
+
+      expect(screen.queryByTestId('map-mobile-active-filters')).toBeNull()
+      expect(screen.getByTestId('map-mobile-show-all')).toBeTruthy()
+    })
+
+    // Радиус всегда имеет значение и чипа не даёт — он не должен прятать FAB.
+    it('ignores the radius pseudo-filter for both the row and the FAB', () => {
+      const screen = renderWith({
+        hasActiveFilters: false,
+        activeFilterItems: [{ key: 'radius', label: '50 км' }],
+      })
+
+      expect(screen.queryByTestId('map-mobile-active-filters')).toBeNull()
+      expect(screen.getByTestId('map-mobile-show-all')).toBeTruthy()
+    })
+
+    // Текстовый поиск делает hasActiveFilters=true, но чипа не даёт: спрятать FAB
+    // здесь означало бы оставить экран вообще без способа сброса.
+    it('keeps the reset FAB when only a text query is active (no chips rendered)', () => {
+      const screen = renderWith({ hasActiveFilters: true, activeFilterItems: [] })
+
+      expect(screen.queryByTestId('map-mobile-active-filters')).toBeNull()
+      expect(screen.getByTestId('map-mobile-show-all')).toBeTruthy()
+    })
+  })
+
   describe('route building toolbar (#597)', () => {
     const buildFiltersProps = (overrides: any = {}) => {
       const setMode = jest.fn()
@@ -459,11 +535,14 @@ describe('MapMobileLayout', () => {
       expect(screen.getByText('На карте')).toBeTruthy()
       expect(screen.getByTestId('map-mobile-route-hint')).toBeTruthy()
       expect(screen.getByText('0/2')).toBeTruthy()
-      expect(screen.getByText('Текущее положение не определено. Разрешите геолокацию или укажите старт вручную.')).toBeTruthy()
+      expect(screen.getByText('Старт не определён — выберите «На карте» выше.')).toBeTruthy()
       expect(useRouteStore.getState().points).toHaveLength(0)
       fireEvent.press(screen.getByTestId('map-mobile-route-request-location'))
       expect(centerOnUser).toHaveBeenCalledTimes(1)
-      fireEvent.press(screen.getByTestId('map-mobile-route-manual-start'))
+      // Ручной старт живёт ТОЛЬКО в ряду «Старт» (опция «На карте»); дубля
+      // «Указать старт вручную» внутри подсказки больше нет.
+      expect(screen.queryByTestId('map-mobile-route-manual-start')).toBeNull()
+      fireEvent.press(screen.getByTestId('map-mobile-route-start-map'))
       expect(screen.getByText('Коснитесь карты, чтобы выбрать новый старт маршрута.')).toBeTruthy()
       expect(mockSnapToHalf).not.toHaveBeenCalled()
     })

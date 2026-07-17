@@ -57,6 +57,13 @@ type MapCanvasProps = {
   currentRadius: any
   shouldShowFloatingRadiusPill: boolean
   showGeoBanner: boolean
+  /**
+   * На сколько опустить гео-баннер, чтобы он встал ПОД ряд чипов активных
+   * фильтров. Ряд живёт в overlay-слое (MapMobileTopOverlay), баннер — в слое
+   * карты: разные поддеревья, общий вертикальный поток невозможен, поэтому
+   * сдвиг передаётся явно. 0 на десктопе и когда чипов нет.
+   */
+  geoBannerStackOffset?: number
   locationState: MapLocationState
   coordinatesSource: CoordinatesSource
   dismissGeoBanner: () => void
@@ -81,6 +88,7 @@ export function MapCanvas({
   currentRadius,
   shouldShowFloatingRadiusPill,
   showGeoBanner,
+  geoBannerStackOffset = 0,
   locationState,
   coordinatesSource,
   dismissGeoBanner,
@@ -201,7 +209,15 @@ export function MapCanvas({
         </View>
       )}
       {showGeoBanner && (
-        <View style={styles.geoBanner} testID="map-geo-banner">
+        // marginTop сдвигает absolute-баннер вниз, не дублируя расчёт его `top`
+        // (он собран в map.styles.ts из safe-area + высоты тулбара).
+        <View
+          style={[
+            styles.geoBanner,
+            geoBannerStackOffset > 0 ? { marginTop: geoBannerStackOffset } : null,
+          ]}
+          testID="map-geo-banner"
+        >
           <Feather name="map-pin" size={13} color={themedColors.warning} />
           <Text style={styles.geoBannerText} numberOfLines={1}>
             {geoBannerMessage}

@@ -18,12 +18,30 @@ interface ActiveFiltersBarProps {
   filters: ActiveFilter[];
   onRemoveFilter: (key: string) => void;
   onClearAll?: () => void;
+  /**
+   * `panel` — полоса внутри панели фильтров (фон surface + нижняя граница).
+   * `floating` — та же полоса, но поверх карты при ЗАКРЫТОЙ панели: контейнер
+   * прозрачный (чипы читаются за счёт собственного фона/границы), полоса не
+   * рисует фальшивую «шапку» над картой. Это ЕДИНСТВЕННОЕ отличие — разметка,
+   * порядок и поведение чипов общие для обеих поверхностей.
+   */
+  variant?: 'panel' | 'floating';
+  /**
+   * `floating`-режим: показывать «Сбросить всё» даже для одного чипа. На карте
+   * это единственный явный способ сброса (круглый FAB прячется, пока полоса
+   * видна), поэтому он не должен зависеть от количества фильтров.
+   */
+  alwaysShowClearAll?: boolean;
+  testID?: string;
 }
 
 export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
   filters,
   onRemoveFilter,
   onClearAll,
+  variant = 'panel',
+  alwaysShowClearAll = false,
+  testID,
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -38,7 +56,10 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
   if (!visibleFilters.length) return null;
 
   return (
-    <View style={styles.container}>
+    <View
+      style={variant === 'floating' ? styles.containerFloating : styles.container}
+      testID={testID}
+    >
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -57,8 +78,9 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
             <Feather name="x" size={12} color={colors.brandText} />
           </CardActionPressable>
         ))}
-        {onClearAll && visibleFilters.length > 1 && (
+        {onClearAll && (alwaysShowClearAll || visibleFilters.length > 1) && (
           <CardActionPressable
+            testID="map-active-filters-clear-all"
             accessibilityLabel={i18nT('map:components.MapPage.ActiveFiltersBar.sbrosit_vse_filtry_8755de36')}
             onPress={onClearAll}
             title={i18nT('map:components.MapPage.ActiveFiltersBar.sbrosit_vse_f8a0db43')}
@@ -80,6 +102,12 @@ const getStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surface,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
+    },
+    // Поверх карты: без фона/границы контейнера — иначе полоса читается как
+    // вторая шапка. Чипы уже несут собственный фон + границу.
+    containerFloating: {
+      paddingVertical: 0,
+      backgroundColor: 'transparent',
     },
     scrollContent: {
       paddingHorizontal: 10,

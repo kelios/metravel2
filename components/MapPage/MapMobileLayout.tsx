@@ -17,9 +17,12 @@ import {
   getRouteFabBottom,
   getSearchAreaButtonBottom,
 } from './MapMobileLayout.styles'
+import { MapEmptyStateToast } from './MapMobile/MapEmptyStateToast'
 import { MapMobileSheetBody } from './MapMobile/MapMobileSheetBody'
 import { MapMobileTopOverlay } from './MapMobile/MapMobileTopOverlay'
 import MapPlaceBottomCard from './MapPlaceBottomCard'
+import { getNextRadiusOption, shouldShowMapEmptyState } from './mapEmptyState'
+import { isMapFilterChipsRowVisible } from './mapFilterChips'
 import { getPlacesLabel, PLACE_COUNT_BADGE_CAP } from './TravelListPanel/helpers'
 import type { TransportMode } from './transportModes'
 import { translate as i18nT } from '@/i18n'
@@ -59,6 +62,9 @@ interface MapMobileLayoutProps {
   // quick reset button in the top overlay (radius excluded, it always has a value).
   hasActiveFilters?: boolean
   onExpandRadius?: () => void
+  // Чипы активных фильтров поверх карты при закрытой панели (общий ActiveFiltersBar).
+  activeFilterItems?: ReadonlyArray<{ key: string; label: string }>
+  onRemoveActiveFilter?: (key: string) => void
   // #207 — selected single marker → maps.me-style bottom card.
   selectedPlace?: any | null
   clearSelectedPlace?: () => void
@@ -101,6 +107,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   onResetFilters,
   hasActiveFilters,
   onExpandRadius,
+  activeFilterItems,
+  onRemoveActiveFilter,
   selectedPlace,
   clearSelectedPlace,
   selectedPlaceUserLocation,
@@ -591,12 +599,62 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     consentBannerVisible,
   )
   const routeFabBottom = getRouteFabBottom(IS_WEB, isNarrow, consentBannerVisible)
+  // Плашка empty-state встаёт НАД самой верхней занятой нижней кнопкой:
+  // «Искать в этой области» (h 40) когда она видна, иначе FAB «Маршрут» (h 48).
+  const emptyStateToastBottom = useMemo(() => {
+    const base = showSearchAreaButton ? searchAreaButtonBottom : routeFabBottom
+    const lift = showSearchAreaButton ? 48 : 56
+    return typeof base === 'number' ? base + lift : `calc(${base} + ${lift}px)`
+  }, [showSearchAreaButton, searchAreaButtonBottom, routeFabBottom])
 
   // Вход в маршрут — основное действие карты, поэтому FAB виден в radius-режиме
   // всегда, пока шторка закрыта и не открыта карточка места (те же условия, что
   // у верхнего overlay: иначе кнопка ложится поверх списка/карточки).
   const showRouteFab =
     routeMode !== 'route' && sheetState === 'collapsed' && !hasSelectedPlace
+
+  // Empty-state ПОВЕРХ КАРТЫ: при закрытой панели пользователь не видит
+  // `filters-empty-state` (он живёт внутри FiltersPanelBody), поэтому «Искать в
+  // этой области» с total=0 выглядел как молчание. Гейт — общий с панелью
+  // (#211: не мигать во время рефетча/дебаунса).
+  const emptyStateBusy = Boolean(filtersContextProps?.isBusy)
+  const radiusOptions = filtersContextProps?.filters?.radius
+  const nextRadiusOption = useMemo(
+    () => getNextRadiusOption(radiusOptions, currentRadiusKm),
+    [radiusOptions, currentRadiusKm],
+  )
+  const showEmptyStateToast =
+    shouldShowMapEmptyState({
+      mode: routeMode === 'route' ? 'route' : 'radius',
+      totalPoints: displayCount,
+      isBusy: emptyStateBusy,
+    }) &&
+    sheetState === 'collapsed' &&
+    !hasSelectedPlace &&
+    !activePopover
+  const handleExpandRadiusFromToast = useCallback(
+    (radiusId: string) => {
+      onFilterChange?.('radius', radiusId)
+    },
+    [onFilterChange],
+  )
+
+  // Дубль сброса не оставляем: РОВНО один явный способ сброса на экране.
+  // Пока виден ряд чипов — сброс живёт в нём («Сбросить всё» → showAllPlaces =
+  // сброс + fit ко всем точкам, строгое надмножество прежнего FAB). Когда ряда
+  // нет — остаётся безымянный круглый FAB, где он уже не «второй сброс», а
+  // escape-hatch «показать все места» (карта застряла на Минск-fallback при
+  // отклонённой геолокации).
+  //
+  // Гейт считаем по РЕАЛЬНО видимым чипам, а не по hasActiveFilters: последний
+  // true и для поиска по тексту, который чипа не даёт — иначе спрятали бы FAB,
+  // не показав ряд, и сбросить было бы нечем.
+  const activeFiltersRowVisible = isMapFilterChipsRowVisible({
+    mode: routeMode,
+    items: activeFilterItems,
+    canRemove: !!onRemoveActiveFilter,
+  })
+  const showAllPlacesButton = activeFiltersRowVisible ? undefined : onShowAllPlaces
   // Подпись — короткое «Маршрут»: прежнее «Маршрут от меня» обещало старт от
   // пользователя ещё до того, как старт вообще выбран (и висело даже без
   // геолокации). Старт выбирается следующим шагом, в самом режиме маршрута.
@@ -740,7 +798,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             onClosePopover={closePopover}
             onOpenFilters={openFiltersSheet}
             hasActiveFilters={hasActiveFilters}
-            onShowAllPlaces={onShowAllPlaces}
+            onShowAllPlaces={showAllPlacesButton}
+            activeFilters={activeFilterItems}
+            onRemoveActiveFilter={onRemoveActiveFilter}
+            onClearActiveFilters={onShowAllPlaces ?? onResetFilters}
             onCenterOnUser={onCenterOnUser}
             onOpenList={openList}
             listBadge={listBadge}
@@ -812,6 +873,19 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               {routeFabLabel}
             </RNText>
           </Pressable>
+        )}
+
+        {/* Плашка «В этой области ничего не нашлось» — над «Искать в этой
+            области» / FAB «Маршрут», чтобы не перекрывать ни их, ни нижний док. */}
+        {showEmptyStateToast && (
+          <MapEmptyStateToast
+            colors={colors}
+            nextRadiusOption={nextRadiusOption}
+            onExpandRadius={handleExpandRadiusFromToast}
+            hasActiveFilters={hasActiveFilters}
+            onResetFilters={onResetFilters}
+            bottom={emptyStateToastBottom}
+          />
         )}
 
         {/* Локация и «Список · N» перенесены в верхний icon-toolbar

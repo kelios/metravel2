@@ -12,12 +12,18 @@
  *
  * No persistent panel — this overlay floats above a full-screen map.
  */
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Platform, Pressable, Text as RNText, useWindowDimensions, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
+import { ActiveFiltersBar } from '../ActiveFiltersBar'
+import {
+  getVisibleMapFilterChips,
+  isMapFilterChipsRowVisible,
+  MAP_FILTER_CHIPS_STACK_OFFSET,
+} from '../mapFilterChips'
 import MapIcon from '../MapIcon'
 import {
   TRANSPORT_ICON,
@@ -48,6 +54,16 @@ const TRANSPORT_POPOVER_WIDTH = 204
 const ROUTE_HINT_TIMEOUT_MS = 6000
 const ROUTE_SUMMARY_POPOVER_OFFSET = 88
 const ROUTE_START_SELECTOR_OFFSET = 50
+/**
+ * Ряд «Старт · Моё местоположение · На карте» стоит справа, слева от него —
+ * круглая кнопка локации (38px) + отступы root (10+10). Прежний хардкод 292px
+ * был УЖЕ содержимого ряда (~302px при 390px вьюпорта), поэтому «На карте»
+ * уезжало за правый край. Считаем реально доступную ширину; на совсем узких
+ * экранах опции ужимаются (flexShrink) вместо обрезки.
+ */
+const ROUTE_START_SELECTOR_RESERVED = 62
+const ROUTE_START_SELECTOR_MAX_WIDTH = 340
+const ROUTE_START_SELECTOR_MIN_WIDTH = 200
 
 function formatRouteDistance(meters: number): string {
   if (!Number.isFinite(meters) || meters <= 0) return ''
@@ -128,6 +144,14 @@ interface MapMobileTopOverlayProps {
   enabledOverlays?: Record<string, boolean>
   onOverlayToggle?: (id: string, enabled: boolean) => void
   onResetOverlays?: () => void
+  /**
+   * Чипы активных фильтров (категории) поверх карты при ЗАКРЫТОЙ панели: до
+   * этого единственным следом фильтра был безымянный круглый FAB, который
+   * пользователь не находил. Тот же общий компонент, что и в панели.
+   */
+  activeFilters?: ReadonlyArray<{ key: string; label: string }>
+  onRemoveActiveFilter?: (key: string) => void
+  onClearActiveFilters?: () => void
 }
 
 const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
@@ -167,12 +191,27 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   routeDuration,
   routingLoading,
   routingError,
+  activeFilters,
+  onRemoveActiveFilter,
+  onClearActiveFilters,
 }) => {
   const styles = getMapMobileTopOverlayStyles(colors)
   const { width: viewportWidth } = useWindowDimensions()
   const isRouteMode = mode === 'route'
   const showRouteStartLabel = viewportWidth > 340
-  const routeStartSelectorWidth = Math.min(292, Math.max(210, viewportWidth - 68))
+  const routeStartSelectorWidth = Math.max(
+    ROUTE_START_SELECTOR_MIN_WIDTH,
+    Math.min(ROUTE_START_SELECTOR_MAX_WIDTH, viewportWidth - ROUTE_START_SELECTOR_RESERVED),
+  )
+  const visibleActiveFilters = useMemo(
+    () => getVisibleMapFilterChips(activeFilters),
+    [activeFilters],
+  )
+  const showActiveFiltersRow = isMapFilterChipsRowVisible({
+    mode,
+    items: activeFilters,
+    canRemove: !!onRemoveActiveFilter,
+  })
   const routeProgressLabel = isRouteMode ? `${Math.min(routePointCount, 2)}/2` : ''
   const needsRouteStartChoice =
     isRouteMode && routePointCount === 0 && !hasUserLocation && !routeManualStartActive
@@ -186,7 +225,10 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
       ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.start_zadan_vyberite_mesto_naznacheniya_na__592e64c1')
       : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.start_zadan_moe_mestopolozhenie_vyberite_mes_0022783b')
     : needsRouteStartChoice
-      ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.tekuschee_polozhenie_ne_opredeleno_razreshit_7df55703')
+      // Короткая версия: ряд «Старт · Моё местоположение · На карте» уже стоит
+      // прямо над подсказкой, поэтому дублировать в ней кнопку «Указать старт
+      // вручную» и объяснять оба варианта текстом не нужно.
+      ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.start_ne_opredelen_vyberite_ego_vyshe_a1f4c2d7')
       : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.kosnites_karty_1_ya_tochka_start_2_ya_finish_462b6762')
 
   // Inline hint shown when entering route mode; auto-hides after a couple of
@@ -235,9 +277,13 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   // чтобы кнопки не прилипали к самому краю там, где safe-area == 0.
   const resolvedTopPadding = Math.max(topInset, 8) + 8
   // Поповеры открываются прямо под своим рядом иконок.
-  const basePopoverTop = resolvedTopPadding + BUTTON_SIZE + 6
+  // Ряд чипов стоит сразу под тулбаром, поэтому ВСЕ поповеры (включая радиус)
+  // открываются ниже него — иначе поповер лёг бы прямо на чипы.
+  const activeFiltersOffset = showActiveFiltersRow ? MAP_FILTER_CHIPS_STACK_OFFSET : 0
+  const basePopoverTop = resolvedTopPadding + BUTTON_SIZE + 6 + activeFiltersOffset
   const routeStartSelectorOffset = isRouteMode ? ROUTE_START_SELECTOR_OFFSET : 0
-  const popoverTop = basePopoverTop + routeStartSelectorOffset + (showRouteSummary ? ROUTE_SUMMARY_POPOVER_OFFSET : 0)
+  const popoverTop =
+    basePopoverTop + routeStartSelectorOffset + (showRouteSummary ? ROUTE_SUMMARY_POPOVER_OFFSET : 0)
   const routePopoverTop = popoverTop
   const layersPopoverRight = isRouteMode
     ? TOOLBAR_EDGE_OFFSET + BUTTON_STEP * 4
@@ -416,6 +462,24 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             пилюля в шапке: она была третьим ярусом поверх карты и уводила
             основное действие под большой палец только на широких экранах. */}
 
+        {/* Чипы активных фильтров: снять поштучно (✕) или «Сбросить всё».
+            Один ряд, горизонтальный скролл при большом количестве фильтров. */}
+        {showActiveFiltersRow && (
+          <View
+            style={[styles.activeFiltersRow, { maxWidth: routeStartSelectorWidth }]}
+            pointerEvents="auto"
+          >
+            <ActiveFiltersBar
+              testID="map-mobile-active-filters"
+              variant="floating"
+              alwaysShowClearAll
+              filters={visibleActiveFilters as { key: string; label: string }[]}
+              onRemoveFilter={onRemoveActiveFilter!}
+              onClearAll={onClearActiveFilters}
+            />
+          </View>
+        )}
+
         {isRouteMode && (
           <View
             style={[styles.routeStartSelector, { width: routeStartSelectorWidth }]}
@@ -592,41 +656,24 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           <RNText style={styles.routeHintText} numberOfLines={2}>
             {routeHintText}
           </RNText>
-          {needsRouteStartChoice && (
-            <View style={styles.routeHintActions} pointerEvents="auto">
-              {!!onRequestLocation && (
-                <Pressable
-                  testID="map-mobile-route-request-location"
-                  onPress={onRequestLocation}
-                  accessibilityRole="button"
-                  accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_geolokatsiyu_dlya_marshruta_027a0102')}
-                  hitSlop={6}
-                  style={({ pressed }) => [
-                    styles.routeHintActionPrimary,
-                    pressed && styles.routeHintActionPressed,
-                  ]}
-                >
-                  <RNText style={styles.routeHintActionPrimaryText} numberOfLines={1}>
-                    {i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_b419aad0')}</RNText>
-                </Pressable>
-              )}
-              {!!onStartManualRoute && (
-                <Pressable
-                  testID="map-mobile-route-manual-start"
-                  onPress={onStartManualRoute}
-                  accessibilityRole="button"
-                  accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.ukazat_start_marshruta_vruchnuyu_d0723436')}
-                  hitSlop={6}
-                  style={({ pressed }) => [
-                    styles.routeHintActionSecondary,
-                    pressed && styles.routeHintActionPressed,
-                  ]}
-                >
-                  <RNText style={styles.routeHintActionSecondaryText} numberOfLines={1}>
-                    {i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.ukazat_start_337c5937')}</RNText>
-                </Pressable>
-              )}
-            </View>
+          {/* Только «Разрешить»: кнопка «Указать старт вручную» удалена как дубль
+              опции «На карте» в ряду «Старт» прямо над подсказкой. Действие
+              инлайн в той же строке — плашка больше не занимает два яруса. */}
+          {needsRouteStartChoice && !!onRequestLocation && (
+            <Pressable
+              testID="map-mobile-route-request-location"
+              onPress={onRequestLocation}
+              accessibilityRole="button"
+              accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_geolokatsiyu_dlya_marshruta_027a0102')}
+              hitSlop={6}
+              style={({ pressed }) => [
+                styles.routeHintActionPrimary,
+                pressed && styles.routeHintActionPressed,
+              ]}
+            >
+              <RNText style={styles.routeHintActionPrimaryText} numberOfLines={1}>
+                {i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_b419aad0')}</RNText>
+            </Pressable>
           )}
         </View>
       )}

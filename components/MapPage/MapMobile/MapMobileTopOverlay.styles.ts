@@ -48,9 +48,16 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       alignItems: 'center' as const,
       gap: 8,
     },
+    // Ряд чипов активных фильтров под тулбаром (radius-режим).
+    activeFiltersRow: {
+      alignSelf: 'flex-end' as const,
+      minWidth: 0,
+    },
     routeStartSelector: {
       minHeight: 44,
-      maxWidth: 292,
+      // Ширину задаёт компонент по реальной свободной ширине вьюпорта; прежний
+      // жёсткий maxWidth 292 был уже содержимого и обрезал «На карте».
+      maxWidth: 340,
       flexDirection: 'row',
       alignItems: 'center' as const,
       gap: 4,
@@ -72,6 +79,10 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     },
     routeStartOption: {
       minHeight: 36,
+      // На узких экранах опции ужимаются и текст усекается многоточием, вместо
+      // того чтобы уезжать за правый край вьюпорта.
+      flexShrink: 1,
+      minWidth: 0,
       flexDirection: 'row',
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
@@ -85,6 +96,7 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     },
     routeStartOptionText: {
       flexShrink: 1,
+      minWidth: 0,
       fontSize: 11,
       lineHeight: 14,
       fontWeight: '600' as const,
@@ -152,7 +164,8 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       right: 10,
       flexDirection: 'row',
       alignItems: 'center' as const,
-      flexWrap: 'wrap' as const,
+      // Без flexWrap: действие живёт в той же строке, что и текст, поэтому
+      // плашка занимает один ярус, а не два (раньше ~82px и наезжала на «Старт»).
       gap: 6,
       paddingVertical: 6,
       paddingHorizontal: 10,
@@ -163,40 +176,20 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     },
     routeHintText: {
       flex: 1,
+      minWidth: 0,
       fontSize: 12,
       lineHeight: 15,
       fontWeight: '600' as const,
       color: colors.text,
     },
-    routeHintActions: {
-      width: '100%',
-      flexDirection: 'row',
-      alignItems: 'center' as const,
-      gap: 6,
-      marginTop: 2,
-    },
     routeHintActionPrimary: {
       minHeight: 32,
-      flexGrow: 1,
-      flexBasis: 0,
+      flexShrink: 0,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
-      paddingHorizontal: 10,
+      paddingHorizontal: 12,
       borderRadius: 9,
       backgroundColor: colors.primary,
-      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-    },
-    routeHintActionSecondary: {
-      minHeight: 32,
-      flexGrow: 1,
-      flexBasis: 0,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      paddingHorizontal: 10,
-      borderRadius: 9,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     routeHintActionPressed: {
@@ -207,12 +200,6 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       lineHeight: 14,
       fontWeight: '700' as const,
       color: colors.textOnPrimary,
-    },
-    routeHintActionSecondaryText: {
-      fontSize: 12,
-      lineHeight: 14,
-      fontWeight: '700' as const,
-      color: colors.text,
     },
     routeSummaryCard: {
       width: 244,

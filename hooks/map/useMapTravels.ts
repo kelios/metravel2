@@ -218,6 +218,23 @@ export function useMapTravels({
   fullRouteCoords,
   isFocused,
 }: UseMapTravelsParams) {
+  /**
+   * Пока маршрут НЕ построен (меньше 2 точек), корридорный запрос
+   * `travels/near-route` физически невозможен — раньше это означало пустой
+   * датасет: в режиме маршрута с карты пропадали ВСЕ маркеры мест и счётчик
+   * «Показать список рядом», то есть добавлять в маршрут было визуально нечего.
+   *
+   * Поэтому на время СБОРКИ маршрута работаем радиус-запросом вокруг текущего
+   * якоря: места видны, тап по маркеру кормит маршрут (см. `handleMarkerSelect`
+   * / `focusPlaceStable`, #FIX-2). Как только маршрут собран (>=2 точки) —
+   * переключаемся на корридорный запрос вдоль маршрута, как и раньше.
+   *
+   * Это ТОЛЬКО про источник данных: `mode` наверху (линия маршрута, маркеры
+   * старт/финиш, тап-семантика) остаётся нетронутым.
+   */
+  const isRouteBuilt = fullRouteCoords.length >= 2;
+  const dataMode: 'radius' | 'route' = mode === 'route' && !isRouteBuilt ? 'radius' : mode;
+
   // Условие активации запроса
   const isEnabled = useMemo(() => {
     if (!isFocused) return false;
@@ -230,11 +247,11 @@ export function useMapTravels({
 
     if (!hasValidCoordinates) return false;
 
-    if (mode === 'radius') return true;
-    if (mode === 'route' && fullRouteCoords.length >= 2) return true;
+    if (dataMode === 'radius') return true;
+    if (dataMode === 'route' && fullRouteCoords.length >= 2) return true;
 
     return false;
-  }, [isFocused, coordinates, mode, fullRouteCoords.length]);
+  }, [isFocused, coordinates, dataMode, fullRouteCoords.length]);
 
   // Вычисляем нормализованные ID категорий
   const normalizedCategoryIds = useMemo(
@@ -287,7 +304,7 @@ export function useMapTravels({
         radius: Number.isFinite(radiusNum) && radiusNum > 0
           ? String(radiusNum)
           : String(DEFAULT_RADIUS_KM),
-        mode,
+        mode: dataMode,
         routeKey: routeSignature,
         filtersKey: JSON.stringify(backendFilters),
         query: searchQuery,
@@ -299,7 +316,7 @@ export function useMapTravels({
       coordinates?.latitude,
       coordinates?.longitude,
       filterValues.radius,
-      mode,
+      dataMode,
       routeSignature,
       backendFilters,
       searchQuery,
