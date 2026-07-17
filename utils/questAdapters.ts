@@ -255,6 +255,37 @@ const adaptFirstCompleter = (
     };
 };
 
+/**
+ * Человекочитаемый ожидаемый ответ шага — для «страницы ведущего» в печатной
+ * версии (QuestPrintable). Свободные типы (any/any_text/any_number) отдают
+ * undefined: там любой осмысленный ответ засчитывается.
+ */
+export function buildAnswerDisplay(answerType: string, answerValue: string): string | undefined {
+    try {
+        switch (answerType) {
+            case 'exact':
+                return answerValue || undefined;
+            case 'exact_any': {
+                const variants = JSON.parse(answerValue);
+                if (!Array.isArray(variants) || !variants.length) return undefined;
+                return variants.slice(0, 3).join(' / ');
+            }
+            case 'range': {
+                const { min, max } = JSON.parse(answerValue);
+                return min === max ? String(min) : `${min}–${max}`;
+            }
+            case 'approx': {
+                const { target, tolerance } = JSON.parse(answerValue);
+                return tolerance ? `≈ ${target} (±${tolerance})` : `≈ ${target}`;
+            }
+            default:
+                return undefined;
+        }
+    } catch {
+        return undefined;
+    }
+}
+
 /** Конвертирует шаг из API формата во фронтенд формат */
 export function adaptStep(apiStep: ApiQuestStep): QuestStep {
     // answer_pattern (новый формат) или answer_type/answer_value (старый)
@@ -279,6 +310,7 @@ export function adaptStep(apiStep: ApiQuestStep): QuestStep {
         task: apiStep.task,
         hint: apiStep.hint || undefined,
         answer: buildAnswerChecker(answerType, answerValue),
+        answerDisplay: buildAnswerDisplay(answerType, answerValue),
         lat: coordNum(apiStep.lat),
         lng: coordNum(apiStep.lng),
         mapsUrl: apiStep.maps_url || '',

@@ -35,6 +35,7 @@ type PrintableProps = {
     intro?: QuestStep;
     coverUrl?: string;
     questUrl?: string; // полный URL квеста на сайте
+    finaleText?: string; // текст финала — печатается на странице с дипломом
 };
 
 type BookPreviewWindowModule = typeof import('@/utils/openBookPreviewWindow');
@@ -53,7 +54,7 @@ function loadBookPreviewWindowModule(): Promise<BookPreviewWindowModule> {
  * Генерирует подарочную HTML-версию квеста для печати.
  * Включает: обложку, карту, шаги с QR-кодами навигации, QR на сайт.
  */
-export async function generatePrintableQuest({ title, steps, intro, coverUrl, questUrl }: PrintableProps): Promise<void> {
+export async function generatePrintableQuest({ title, steps, intro, coverUrl, questUrl, finaleText }: PrintableProps): Promise<void> {
     if (Platform.OS !== 'web') return;
 
     const validSteps = steps.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng) && (s.lat !== 0 || s.lng !== 0));
@@ -265,6 +266,72 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
         <span class="section-label-line"></span>
     </div>
     ${stepsHtml}
+
+    <!-- ══════════ FINALE + DIPLOMA ══════════ -->
+    <div class="diploma-page">
+        ${finaleText ? `
+        <div class="finale-block">
+            <div class="section-label">
+                <span class="section-label-text">${escHtml(i18nT('quests:components.quests.QuestPrintable.finaleTitle'))}</span>
+                <span class="section-label-line"></span>
+            </div>
+            <p class="finale-text">${escHtml(finaleText)}</p>
+            <p class="finale-spoiler-note">${escHtml(i18nT('quests:components.quests.QuestPrintable.finaleSpoilerNote'))}</p>
+        </div>
+        ` : ''}
+        <div class="diploma">
+            <div class="diploma-frame">
+                <span class="diploma-badge">&#10022;</span>
+                <div class="diploma-brand">metravel.by</div>
+                <h2 class="diploma-title">${escHtml(i18nT('quests:components.quests.QuestPrintable.diplomaTitle'))}</h2>
+                <p class="diploma-subtitle">${escHtml(i18nT('quests:components.quests.QuestPrintable.diplomaSubtitle'))}</p>
+                <p class="diploma-quest-name">&#171;${escHtml(title)}&#187;</p>
+                <div class="diploma-field">
+                    <span class="diploma-field-label">${escHtml(i18nT('quests:components.quests.QuestPrintable.diplomaName'))}</span>
+                    <span class="diploma-field-line"></span>
+                </div>
+                <div class="diploma-field-row">
+                    <div class="diploma-field">
+                        <span class="diploma-field-label">${escHtml(i18nT('quests:components.quests.QuestPrintable.diplomaDate'))}</span>
+                        <span class="diploma-field-line"></span>
+                    </div>
+                    <div class="diploma-field">
+                        <span class="diploma-field-label">${escHtml(i18nT('quests:components.quests.QuestPrintable.diplomaLeader'))}</span>
+                        <span class="diploma-field-line"></span>
+                    </div>
+                </div>
+                <p class="diploma-footer">${escHtml(i18nT('quests:components.quests.QuestPrintable.diplomaFooter'))}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════ LEADER ANSWERS ══════════ -->
+    <div class="leader-page">
+        <div class="leader-frame">
+            <div class="leader-header">
+                <span class="leader-scissors">&#9986;</span>
+                <h2 class="leader-title">${escHtml(i18nT('quests:components.quests.QuestPrintable.leaderTitle'))}</h2>
+            </div>
+            <p class="leader-note">${escHtml(i18nT('quests:components.quests.QuestPrintable.leaderNote'))}</p>
+            <table class="leader-table">
+                <thead>
+                    <tr>
+                        <th class="num-cell">#</th>
+                        <th>${escHtml(i18nT('quests:components.quests.QuestPrintable.leaderStepCol'))}</th>
+                        <th>${escHtml(i18nT('quests:components.quests.QuestPrintable.leaderAnswerCol'))}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${steps.map((s, i) => `
+                    <tr>
+                        <td class="num-cell">${i + 1}</td>
+                        <td>${escHtml(s.title)}</td>
+                        <td class="leader-answer">${s.answerDisplay ? escHtml(s.answerDisplay) : `<span class="leader-free">${escHtml(i18nT('quests:components.quests.QuestPrintable.leaderAnswerFree'))}</span>`}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
     <!-- ══════════ FOOTER ══════════ -->
     <div class="doc-footer">

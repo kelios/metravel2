@@ -114,7 +114,7 @@ export const questsGenerated2 = {
   "app.tabs.quests.city.index.back": "Wszystkie miejskie questy",
   "app.tabs.quests.city.index.notFound": "Nie znaleziono questów dla tego miasta.",
   "screens.tabs.QuestsSeoIntroFaq.eyebrow": "Miejskie questy",
-  "screens.tabs.QuestsSeoIntroFaq.lead": "Miejskie questy Metravel to bezpłatne piesze trasy-spacery z zadaniami w prawdziwych miejscach miasta. Przechodź je ze smartfona jak samodzielne zwiedzanie bez przewodnika: czytaj legendy, znajduj odpowiedzi na miejscu i odkrywaj miasto na nowo. Są trasy dla dorosłych, questy dla dzieci według wieku oraz trasy dla nastolatków.",
+  "screens.tabs.QuestsSeoIntroFaq.lead": "Miejskie questy Metravel to bezpłatne piesze trasy-spacery z zadaniami w prawdziwych miejscach miasta. Przechodź je ze smartfona jak samodzielne zwiedzanie bez przewodnika: czytaj legendy, znajduj odpowiedzi na miejscu i odkrywaj miasto na nowo. Są trasy dla dorosłych, questy dla dzieci według wieku oraz trasy dla nastolatków. Każdą trasę można bezpłatnie wydrukować — powstanie prezentowa gra-książeczka z mapą, dyplomem i stroną prowadzącego: gotowy scenariusz gry miejskiej na spacer rodzinny lub urodziny.",
   "screens.tabs.QuestsSeoIntroFaq.faqTitle": "Częste pytania o miejskie questy",
   "screens.tabs.QuestsSeoIntroFaq.expand": "Rozwiń odpowiedź",
   "screens.tabs.QuestsSeoIntroFaq.collapse": "Zwiń odpowiedź",

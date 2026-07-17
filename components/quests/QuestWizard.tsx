@@ -323,8 +323,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         const questUrl = typeof window !== 'undefined'
             ? window.location.href.replace(/^http:\/\/localhost:\d+/, 'https://metravel.by')
             : undefined;
-        void generatePrintableQuest({ title, steps, intro, coverUrl, questUrl });
-    }, [coverUrl, intro, steps, title]);
+        void generatePrintableQuest({ title, steps, intro, coverUrl, questUrl, finaleText: finale?.text });
+    }, [coverUrl, intro, steps, title, finale?.text]);
 
     const offlineMapPointsCount = useMemo(() => getQuestOfflineMapPoints(steps).length, [steps]);
 

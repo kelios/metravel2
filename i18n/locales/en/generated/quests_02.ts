@@ -114,7 +114,7 @@ export const questsGenerated2 = {
   "app.tabs.quests.city.index.back": "All city quests",
   "app.tabs.quests.city.index.notFound": "No quests found for this city.",
   "screens.tabs.QuestsSeoIntroFaq.eyebrow": "City quests",
-  "screens.tabs.QuestsSeoIntroFaq.lead": "Metravel city quests are free self-guided walking routes with tasks set at real city landmarks. Play them from your phone like a tour without a guide: read the legends, find the answers on the spot and rediscover the city. There are routes for adults, age-based kids quests and teen routes.",
+  "screens.tabs.QuestsSeoIntroFaq.lead": "Metravel city quests are free self-guided walking routes with tasks set at real city landmarks. Play them from your phone like a tour without a guide: read the legends, find the answers on the spot and rediscover the city. There are routes for adults, age-based kids quests and teen routes. Any route can be printed for free — you get a gift quest book with a map, a diploma and a leader page: a ready-made scenario for a family walk or a birthday quest.",
   "screens.tabs.QuestsSeoIntroFaq.faqTitle": "Frequently asked questions about city quests",
   "screens.tabs.QuestsSeoIntroFaq.expand": "Expand answer",
   "screens.tabs.QuestsSeoIntroFaq.collapse": "Collapse answer",

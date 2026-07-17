@@ -13,6 +13,8 @@ export type QuestStep = {
   task: string;
   hint?: string;
   answer: (input: string) => boolean;
+  /** Человекочитаемый ожидаемый ответ — для «страницы ведущего» в печатной версии. */
+  answerDisplay?: string;
   lat: number;
   lng: number;
   mapsUrl: string;

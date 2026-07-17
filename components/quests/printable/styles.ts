@@ -675,6 +675,169 @@ export function buildPrintableStyles(): string {
     .answer-lines { display: flex; flex-direction: column; gap: 6px; }
     .answer-line { border-bottom: 1px solid ${PRINT_COLORS.answerLine}; height: 28px; }
 
+    /* ─── FINALE + DIPLOMA ───────────────────────────── */
+    .diploma-page {
+        break-before: page;
+        page-break-before: always;
+        padding-top: 8px;
+    }
+    .finale-block { margin-bottom: 28px; }
+    .finale-text {
+        font-size: 10.5pt;
+        line-height: 1.7;
+        color: ${PRINT_COLORS.inkSoft};
+        white-space: pre-line;
+        margin-top: 12px;
+    }
+    .finale-spoiler-note {
+        margin-top: 10px;
+        font-size: 7.5pt;
+        color: ${PRINT_COLORS.lineMuted};
+        font-style: italic;
+        font-family: Inter, sans-serif;
+    }
+    .diploma { margin-top: 12px; }
+    .diploma-frame {
+        border: 3px double ${PRINT_COLORS.accent};
+        border-radius: 16px;
+        padding: 28px 32px 22px;
+        text-align: center;
+        background: ${PRINT_COLORS.accentSoft};
+        position: relative;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .diploma-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 2px solid ${PRINT_COLORS.accent};
+        color: ${PRINT_COLORS.accentDark};
+        font-size: 20px;
+        background: ${PRINT_COLORS.white};
+        margin-bottom: 8px;
+    }
+    .diploma-brand {
+        font-size: 7.5pt;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: ${PRINT_COLORS.brand};
+        font-weight: 700;
+        font-family: Inter, sans-serif;
+        margin-bottom: 6px;
+    }
+    .diploma-title {
+        font-size: 22pt;
+        color: ${PRINT_COLORS.titleDark};
+        margin-bottom: 4px;
+    }
+    .diploma-subtitle {
+        font-size: 9pt;
+        color: ${PRINT_COLORS.muted};
+        font-family: Inter, sans-serif;
+        margin-bottom: 10px;
+    }
+    .diploma-quest-name {
+        font-family: 'Playfair Display', Georgia, serif;
+        font-style: italic;
+        font-size: 13pt;
+        color: ${PRINT_COLORS.title};
+        margin-bottom: 22px;
+    }
+    .diploma-field {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        margin: 0 auto 16px;
+        max-width: 420px;
+        flex: 1;
+    }
+    .diploma-field-row {
+        display: flex;
+        gap: 28px;
+        max-width: 420px;
+        margin: 0 auto 16px;
+    }
+    .diploma-field-row .diploma-field { margin: 0; }
+    .diploma-field-label {
+        font-size: 7.5pt;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: ${PRINT_COLORS.muted};
+        font-weight: 700;
+        font-family: Inter, sans-serif;
+        white-space: nowrap;
+    }
+    .diploma-field-line {
+        flex: 1;
+        border-bottom: 1.5px solid ${PRINT_COLORS.accentDark};
+        height: 18px;
+        min-width: 90px;
+    }
+    .diploma-footer {
+        font-size: 7.5pt;
+        color: ${PRINT_COLORS.muted};
+        font-style: italic;
+        font-family: Inter, sans-serif;
+        margin-top: 6px;
+    }
+
+    /* ─── LEADER ANSWERS PAGE ────────────────────────── */
+    .leader-page {
+        break-before: page;
+        page-break-before: always;
+        padding-top: 8px;
+    }
+    .leader-frame {
+        border: 2px dashed ${PRINT_COLORS.lineMuted};
+        border-radius: 14px;
+        padding: 20px 24px;
+        background: ${PRINT_COLORS.soft};
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .leader-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 6px;
+    }
+    .leader-scissors { font-size: 14pt; color: ${PRINT_COLORS.lineMuted}; }
+    .leader-title { font-size: 14pt; color: ${PRINT_COLORS.titleDark}; }
+    .leader-note {
+        font-size: 8pt;
+        color: ${PRINT_COLORS.muted};
+        font-family: Inter, sans-serif;
+        margin-bottom: 14px;
+    }
+    .leader-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 8.5pt;
+        background: ${PRINT_COLORS.white};
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .leader-table th, .leader-table td {
+        border: 1px solid ${PRINT_COLORS.line};
+        padding: 6px 10px;
+        text-align: left;
+        vertical-align: top;
+    }
+    .leader-table th {
+        font-family: Inter, sans-serif;
+        font-size: 7pt;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: ${PRINT_COLORS.muted};
+        background: ${PRINT_COLORS.brandSoft};
+    }
+    .leader-answer { font-weight: 600; color: ${PRINT_COLORS.ink}; }
+    .leader-free { font-weight: 400; font-style: italic; color: ${PRINT_COLORS.muted}; }
+
     /* ─── FOOTER ─────────────────────────────────────── */
     .doc-footer {
         text-align: center;
