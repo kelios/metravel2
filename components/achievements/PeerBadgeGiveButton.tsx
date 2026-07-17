@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
 import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';

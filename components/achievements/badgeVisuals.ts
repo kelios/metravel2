@@ -4,7 +4,7 @@
 // `badgeIcon` оставлен для legacy-потребителей (a11y/иконки), мотив рисует `badgeMotif`.
 // Контракт визуального направления: docs/ACHIEVEMENTS_DESIGN.md.
 
-import type { Feather } from '@expo/vector-icons';
+import type Feather from '@expo/vector-icons/Feather';
 import type { BadgeTier } from '@/api/achievements';
 import { translate as i18nT } from '@/i18n';
 

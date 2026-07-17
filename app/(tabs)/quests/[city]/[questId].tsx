@@ -2,7 +2,7 @@ import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'reac
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useIsFocused } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 
 import { QuestWizard as QuestWizardDirect } from '@/components/quests/QuestWizard';
 import QuestConsentGate from '@/components/quests/QuestConsentGate';

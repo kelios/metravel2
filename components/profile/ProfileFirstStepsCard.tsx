@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import { Feather } from '@expo/vector-icons'
+import Feather from '@expo/vector-icons/Feather'
 
 import type { UserRank } from '@/api/achievements'
 import { DESIGN_TOKENS } from '@/constants/designSystem'

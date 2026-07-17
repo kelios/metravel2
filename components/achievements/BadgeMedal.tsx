@@ -7,7 +7,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import BadgeEmblem from '@/components/achievements/BadgeEmblem';

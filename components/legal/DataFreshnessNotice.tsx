@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native'
-import { Feather } from '@expo/vector-icons'
+import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
