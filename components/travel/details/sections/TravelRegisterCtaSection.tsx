@@ -6,7 +6,9 @@ import { useAuth } from '@/context/AuthContext'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useTrackedImpression } from '@/hooks/useTrackedImpression'
 import { buildRegistrationHref } from '@/utils/authNavigation'
+import { saveGuestFavoriteIntent } from '@/utils/guestFavoriteIntent'
 import {
+  trackFavoriteIntentGuest,
   trackRegisterCtaClicked,
   trackRegisterCtaImpression,
 } from '@/utils/growthFunnelAnalytics'
@@ -14,9 +16,17 @@ import { translate as i18nT } from '@/i18n'
 
 type TravelRegisterCtaSectionProps = {
   redirect?: string
+  travelId?: string | number
+  title?: string
+  imageUrl?: string
 }
 
-export const TravelRegisterCtaSection: React.FC<TravelRegisterCtaSectionProps> = ({ redirect }) => {
+export const TravelRegisterCtaSection: React.FC<TravelRegisterCtaSectionProps> = ({
+  redirect,
+  travelId,
+  title,
+  imageUrl,
+}) => {
   const { isAuthenticated } = useAuth()
   const colors = useThemedColors()
   const router = useRouter()
@@ -37,9 +47,25 @@ export const TravelRegisterCtaSection: React.FC<TravelRegisterCtaSectionProps> =
   )
 
   const handlePress = useCallback(() => {
+    if (travelId != null && title && redirect) {
+      trackFavoriteIntentGuest({
+        itemType: 'travel',
+        itemId: travelId,
+        source: 'travel_article',
+        url: redirect,
+      })
+      void saveGuestFavoriteIntent({
+        id: String(travelId),
+        type: 'travel',
+        title,
+        imageUrl,
+        url: redirect,
+        source: 'travel_article',
+      })
+    }
     trackRegisterCtaClicked({ source: 'travel_article', intent: 'favorite', authState: 'guest' })
     router.push(buildRegistrationHref({ redirect, intent: 'favorite' }) as never)
-  }, [redirect, router])
+  }, [imageUrl, redirect, router, title, travelId])
 
   if (isAuthenticated) return null
 

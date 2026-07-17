@@ -61,6 +61,7 @@ function ArticleNextStepSection({ articleId }: ArticleNextStepSectionProps) {
           <Text
             style={styles.heading}
             accessibilityRole="header"
+            aria-level={2}
           >
             {i18nT('shared:components.article.ArticleNextStepSection.heading')}
           </Text>

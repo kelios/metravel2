@@ -31,6 +31,25 @@ describe('formatRelativeTime', () => {
     expect(formatRelativeTime(0, now)).toBe('')
     expect(formatRelativeTime(Number.NaN, now)).toBe('')
   })
+
+  it('keeps Android functional when Intl.RelativeTimeFormat is unavailable', () => {
+    const originalRelativeTimeFormat = Intl.RelativeTimeFormat
+    Object.defineProperty(Intl, 'RelativeTimeFormat', {
+      configurable: true,
+      value: undefined,
+    })
+
+    try {
+      expect(formatRelativeTime(now - 5 * 60 * 1000, now)).toBe('5 минут назад')
+      expect(formatRelativeTime(now - 3 * 60 * 60 * 1000, now)).toBe('3 часа назад')
+      expect(formatRelativeTime(new Date('2026-06-02T20:00:00').getTime(), now)).toBe('вчера')
+    } finally {
+      Object.defineProperty(Intl, 'RelativeTimeFormat', {
+        configurable: true,
+        value: originalRelativeTimeFormat,
+      })
+    }
+  })
 })
 
 describe('pluralizeRu', () => {

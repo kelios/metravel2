@@ -121,6 +121,9 @@ export const TravelDetailsContentSection: React.FC<{
               </View>
               <TravelRegisterCtaSection
                 redirect={travel.slug ? `/travels/${travel.slug}` : undefined}
+                travelId={travel.id}
+                title={travel.name}
+                imageUrl={travel.travel_image_thumb_url || travel.travel_image_thumb_small_url}
               />
               {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>{i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.soderzhanie_marshruta_4fdeae71')}</h2>}
 
