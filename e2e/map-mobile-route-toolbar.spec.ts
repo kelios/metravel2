@@ -256,7 +256,7 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
     })
   })
 
-  test('denied location keeps fallback out of the route and offers a manual start', async ({ page }) => {
+  test('denied location keeps fallback out of the route and offers a map start', async ({ page }) => {
     await preacceptCookies(page)
     await seedDeniedLocation(page)
     await installTileMock(page)
@@ -267,8 +267,8 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
     await byTid(page, 'map-mobile-route-button').click({ force: true })
     await expect(page.getByText('0/2', { exact: true })).toBeVisible()
     await expect(byTid(page, 'map-mobile-route-request-location')).toBeVisible()
-    await expect(byTid(page, 'map-mobile-route-manual-start')).toBeVisible()
-    await byTid(page, 'map-mobile-route-manual-start').click({ force: true })
+    await expect(byTid(page, 'map-mobile-route-start-map')).toBeVisible()
+    await byTid(page, 'map-mobile-route-start-map').click({ force: true })
     await expect(
       page.getByText('Коснитесь карты, чтобы выбрать новый старт маршрута.', { exact: true }),
     ).toBeVisible()
