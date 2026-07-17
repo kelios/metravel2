@@ -75,4 +75,39 @@ describe('bundle budget release contract', () => {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }
   })
+
+  it('budgets deferred locale chunks separately from the release total', () => {
+    const tmpDir = makeTempDir('metravel-bundle-budget-deferred-')
+    try {
+      const jsDir = path.join(tmpDir, 'js')
+      const testBudgetPath = path.join(tmpDir, 'budget.json')
+      fs.mkdirSync(jsDir, { recursive: true })
+      fs.writeFileSync(path.join(jsDir, '__common-abcdef.js'), 'const boot = true;\n')
+      fs.writeFileSync(path.join(jsDir, 'locale-be-abcdef.js'), `const locale = "${'x'.repeat(4096)}";\n`)
+      fs.writeFileSync(
+        testBudgetPath,
+        JSON.stringify({
+          tolerancePct: 0,
+          deferredChunks: ['locale-be'],
+          total: { maxRawKB: 0.1, maxGzipKB: 0.1 },
+          chunks: {
+            'locale-be': { maxRawKB: 5, maxGzipKB: 1 },
+          },
+        }),
+      )
+
+      const result = runNodeCli([guardScriptPath, '--fail', '--json'], {
+        BUNDLE_BUDGET_JS_DIR: jsDir,
+        BUNDLE_BUDGET_CONFIG: testBudgetPath,
+      })
+
+      expect(result.status).toBe(0)
+      const parsed = JSON.parse(result.stdout)
+      expect(parsed.breaches).toEqual([])
+      expect(parsed.totalRawKB).toBeLessThan(parsed.allRawKB)
+      expect(parsed.deferredRawKB).toBeGreaterThanOrEqual(4)
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
 })

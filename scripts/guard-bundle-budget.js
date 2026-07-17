@@ -74,14 +74,14 @@ const files = fs.readdirSync(jsDir).filter((f) => f.endsWith('.js'))
 // Aggregate per logical chunk (a logical name can map to >1 hashed file
 // across incremental builds; sum them so the budget stays meaningful).
 const chunks = new Map()
-let totalRaw = 0
-let totalGzip = 0
+let allRaw = 0
+let allGzip = 0
 for (const file of files) {
   const buf = fs.readFileSync(path.join(jsDir, file))
   const raw = buf.length
   const gzip = zlib.gzipSync(buf).length
-  totalRaw += raw
-  totalGzip += gzip
+  allRaw += raw
+  allGzip += gzip
   const name = logicalName(file)
   const prev = chunks.get(name) || { raw: 0, gzip: 0, files: 0 }
   chunks.set(name, { raw: prev.raw + raw, gzip: prev.gzip + gzip, files: prev.files + 1 })
@@ -96,10 +96,21 @@ if (UPDATE) {
       existingBudget = {}
     }
   }
+  const deferredChunks = existingBudget.deferredChunks || []
+  const deferredSet = new Set(deferredChunks)
+  const deferredRaw = [...chunks.entries()].reduce(
+    (total, [name, chunk]) => total + (deferredSet.has(name) ? chunk.raw : 0),
+    0,
+  )
+  const deferredGzip = [...chunks.entries()].reduce(
+    (total, [name, chunk]) => total + (deferredSet.has(name) ? chunk.gzip : 0),
+    0,
+  )
   const budget = {
     description: existingBudget.description || DEFAULT_BUDGET_DESCRIPTION,
     tolerancePct: DEFAULT_TOLERANCE_PCT,
-    total: { maxRawKB: toKB(totalRaw), maxGzipKB: toKB(totalGzip) },
+    deferredChunks,
+    total: { maxRawKB: toKB(allRaw - deferredRaw), maxGzipKB: toKB(allGzip - deferredGzip) },
     chunks: {},
   }
   for (const [name, c] of [...chunks.entries()].sort((a, b) => b[1].raw - a[1].raw)) {
@@ -119,6 +130,17 @@ if (!fs.existsSync(budgetPath)) {
 
 const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf-8'))
 const tol = 1 + (Number(budget.tolerancePct) || 0) / 100
+const deferredSet = new Set(Array.isArray(budget.deferredChunks) ? budget.deferredChunks : [])
+const deferredRaw = [...chunks.entries()].reduce(
+  (total, [name, chunk]) => total + (deferredSet.has(name) ? chunk.raw : 0),
+  0,
+)
+const deferredGzip = [...chunks.entries()].reduce(
+  (total, [name, chunk]) => total + (deferredSet.has(name) ? chunk.gzip : 0),
+  0,
+)
+const totalRaw = allRaw - deferredRaw
+const totalGzip = allGzip - deferredGzip
 
 const breaches = []
 function check(label, actualKB, maxKB) {
@@ -146,6 +168,10 @@ if (JSON_OUT) {
       {
         totalRawKB: toKB(totalRaw),
         totalGzipKB: toKB(totalGzip),
+        allRawKB: toKB(allRaw),
+        allGzipKB: toKB(allGzip),
+        deferredRawKB: toKB(deferredRaw),
+        deferredGzipKB: toKB(deferredGzip),
         chunkCount: chunks.size,
         breaches,
       },
@@ -155,7 +181,10 @@ if (JSON_OUT) {
   )
 } else {
   console.log(`Bundle budget check — tolerance ±${budget.tolerancePct || 0}%`)
-  console.log(`  total: ${toKB(totalRaw)} KB raw / ${toKB(totalGzip)} KB gzip (${chunks.size} chunks)`)
+  console.log(
+    `  release total: ${toKB(totalRaw)} KB raw / ${toKB(totalGzip)} KB gzip ` +
+      `(${chunks.size} chunks; deferred: ${toKB(deferredRaw)} KB raw / ${toKB(deferredGzip)} KB gzip)`,
+  )
   if (breaches.length === 0) {
     console.log('✓ all budgeted chunks within limits')
   } else {

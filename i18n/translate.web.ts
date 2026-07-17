@@ -81,16 +81,16 @@ export const loadWebLocale = async (locale: SupportedLocale): Promise<void> => {
     let resources: LocaleResources
     switch (locale) {
       case 'be':
-        resources = (await import('./locales/be')).beResources
+        resources = (await import('./deferred/locale-be')).beResources
         break
       case 'uk':
-        resources = (await import('./locales/uk')).ukResources
+        resources = (await import('./deferred/locale-uk')).ukResources
         break
       case 'en':
-        resources = (await import('./locales/en')).enResources
+        resources = (await import('./deferred/locale-en')).enResources
         break
       default:
-        resources = (await import('./locales/pl')).plResources
+        resources = (await import('./deferred/locale-pl')).plResources
     }
     loadedCatalogs.set(locale, compileLocaleCatalog(resources))
   })()

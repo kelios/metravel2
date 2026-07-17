@@ -1,6 +1,12 @@
 {
-  "description": "Web bundle size budget (KB). Regression guard: критический путь + eager-чанки (__common/entry — тикеты #764 reanimated-стаб, #765 leafletVendor вынесен из __common), HEIC-конвертер и total JS. __common re-baseline 2026-07-15 после app-wide i18n и удаления eager locale-каталога через compile-time web localization; total budget сохранён от 2026-07-12. Допуск на дрейф — tolerancePct. Regenerate: node scripts/guard-bundle-budget.js --update (затем заново курировать ключи). Гоняется в release:check (guard:bundle-budget:fail) после build:web:prod.",
+  "description": "Web bundle size budget (KB). Regression guard: критический путь + eager/feature-чанки и release total без language-on-demand каталогов. BE/UK/PL/EN загружаются только после смены языка и контролируются отдельными chunk budgets; они не маскируют рост основного графа. Допуск на дрейф — tolerancePct. Regenerate: node scripts/guard-bundle-budget.js --update (затем заново курировать ключи). Гоняется в release:check после build:web:prod.",
   "tolerancePct": 5,
+  "deferredChunks": [
+    "locale-be",
+    "locale-uk",
+    "locale-pl",
+    "locale-en"
+  ],
   "total": {
     "maxRawKB": 11886.5,
     "maxGzipKB": 3040.2
@@ -49,6 +55,22 @@
     "CommentsSection": {
       "maxRawKB": 47.7,
       "maxGzipKB": 10.4
+    },
+    "locale-be": {
+      "maxRawKB": 1346,
+      "maxGzipKB": 218
+    },
+    "locale-uk": {
+      "maxRawKB": 1345,
+      "maxGzipKB": 217
+    },
+    "locale-pl": {
+      "maxRawKB": 697,
+      "maxGzipKB": 182
+    },
+    "locale-en": {
+      "maxRawKB": 631,
+      "maxGzipKB": 168
     }
   }
 }
