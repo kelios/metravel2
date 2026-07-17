@@ -163,6 +163,12 @@ function buildQuestEntries(quests) {
   seen.add(listLoc);
   entries.push({ loc: listLoc });
 
+  // DIY landing /quests/scenario. Claimed before the city loop so a city alias
+  // could never take the slug (the static route wins in the app router too).
+  const scenarioLoc = toAbsoluteUrl('/quests/scenario');
+  seen.add(scenarioLoc);
+  entries.push({ loc: scenarioLoc });
+
   // City landing pages /quests/<city> — canonical is the alias variant when a
   // city has one, otherwise the numeric city id.
   const cityAliasMap = buildQuestCityAliasMap(quests);

@@ -9,6 +9,7 @@ import {
   View,
   type ViewStyle,
 } from 'react-native'
+import { Link } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -25,7 +26,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export type QuestFaqItem = { q: string; a: string }
 type QuestSeoStyles = ReturnType<typeof createStyles>
 type WebPressableState = { pressed: boolean; hovered?: boolean }
-type WebViewStyle = ViewStyle & { transition?: string }
+type WebViewStyle = ViewStyle & { transition?: string; cursor?: string }
 
 const webViewStyle = (style: WebViewStyle): ViewStyle => (IS_WEB ? style : {})
 
@@ -161,6 +162,20 @@ function QuestsSeoIntroFaq({
             </Text>
           </View>
           <Text style={styles.lead}>{lead ?? i18nT('quests:screens.tabs.QuestsSeoIntroFaq.lead')}</Text>
+          {/* Entry point into the DIY landing — also keeps it off the orphan list. */}
+          <Link href="/quests/scenario" asChild>
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel={i18nT('quests:screens.tabs.QuestsSeoIntroFaq.scenarioLink')}
+              style={styles.scenarioLink}
+            >
+              <Feather name="printer" size={14} color={colors.primary} aria-hidden />
+              <Text style={styles.scenarioLinkText}>
+                {i18nT('quests:screens.tabs.QuestsSeoIntroFaq.scenarioLink')}
+              </Text>
+              <Feather name="arrow-right" size={14} color={colors.primary} aria-hidden />
+            </Pressable>
+          </Link>
         </View>
       )}
 
@@ -231,6 +246,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
       lineHeight: isMobile ? 22 : 26,
       color: colors.textMuted,
       letterSpacing: 0.1,
+    },
+    scenarioLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      alignSelf: 'flex-start',
+      paddingVertical: 4,
+      ...webViewStyle({ cursor: 'pointer' }),
+    },
+    scenarioLinkText: {
+      fontSize: isMobile ? 14 : 15,
+      fontWeight: '700',
+      color: colors.primary,
     },
     faq: {
       gap: isMobile ? 12 : 16,

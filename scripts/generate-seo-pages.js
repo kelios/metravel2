@@ -26,7 +26,17 @@ const {
   buildQuestCityAliasMap,
   questRouteVariants,
 } = require('../utils/questCityAlias');
-const { QUESTS_INTRO_TITLE_RU, QUESTS_INTRO_LEAD_RU, QUESTS_FAQ_RU } = require('../utils/questContent');
+const {
+  QUESTS_INTRO_TITLE_RU,
+  QUESTS_INTRO_LEAD_RU,
+  QUESTS_FAQ_RU,
+  QUEST_SCENARIO_TITLE_RU,
+  QUEST_SCENARIO_LEAD_RU,
+  QUEST_SCENARIO_INCLUDES_RU,
+  QUEST_SCENARIO_STEPS_RU,
+  QUEST_SCENARIO_OCCASIONS_RU,
+  QUEST_SCENARIO_FAQ_RU,
+} = require('../utils/questContent');
 
 // ---------------------------------------------------------------------------
 // CLI args
@@ -1647,6 +1657,7 @@ function injectQuestsListingContent(baseHtml, quests, cityAliasMap) {
     `<section data-ssg-quests-listing="true" aria-label="О городских квестах Metravel" style="${sectionStyle}">`,
     `<h1 style="${h1Style}">${escapeAttr(QUESTS_INTRO_TITLE_RU)}</h1>`,
     `<p style="${leadStyle}">${escapeAttr(QUESTS_INTRO_LEAD_RU)}</p>`,
+    `<p style="${landingLinkStyle}"><a href="/quests/scenario">Готовый сценарий квеста — распечатать бесплатно</a></p>`,
     cityGroupsHtml,
     `<h2 style="${h2Style}">Частые вопросы о городских квестах</h2>`,
     faqHtml,
@@ -1753,6 +1764,151 @@ function buildQuestCityLandingHtml(cityBaseHtml, city) {
   );
   html = injectQuestCityLandingSection(html, city, cityLabel, lead);
   return html;
+}
+
+// Keep in sync with CITY_LINKS_LIMIT in screens/tabs/QuestScenarioScreen.tsx.
+const QUEST_SCENARIO_CITY_LIMIT = 12;
+
+function buildQuestScenarioFaqJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: QUEST_SCENARIO_FAQ_RU.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  };
+}
+
+function buildQuestScenarioHowToJsonLd() {
+  const url = `${SITE_URL}/quests/scenario`;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: QUEST_SCENARIO_TITLE_RU,
+    description: clampMetaDescription(QUEST_SCENARIO_LEAD_RU),
+    url,
+    totalTime: 'PT10M',
+    supply: [{ '@type': 'HowToSupply', name: 'Принтер и лист A4' }],
+    step: QUEST_SCENARIO_STEPS_RU.map((step, index) => ({
+      '@type': 'HowToStep',
+      position: index + 1,
+      name: step.q,
+      text: step.a,
+      url: `${url}#step-${index + 1}`,
+    })),
+  };
+}
+
+/**
+ * Visible crawlable body for the /quests/scenario DIY landing. Mirrors the RU
+ * copy the user reads after hydration (utils/questContent + i18n
+ * QuestScenarioScreen), and links into the city landings so the DIY entry point
+ * feeds the quest cluster instead of dead-ending.
+ */
+function injectQuestScenarioContent(baseHtml, cities) {
+  const sectionStyle = [
+    'box-sizing:border-box',
+    'max-width:840px',
+    'margin:24px auto',
+    'padding:20px 18px',
+    `font:16px/1.55 ${QUESTS_SSG_FONT}`,
+    'color:var(--color-text,#22332c)',
+    'background:var(--color-surface,#ffffff)',
+    'border:1px solid var(--color-border,#dbe7df)',
+    'border-radius:8px',
+  ].join(';');
+  const h1Style = `margin:0 0 10px;font:800 28px/1.2 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`;
+  const h2Style = `margin:22px 0 8px;font:800 20px/1.25 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`;
+  const h3Style = `margin:14px 0 4px;font:700 16px/1.35 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`;
+  const pStyle = 'margin:0 0 10px;color:var(--color-text,#22332c)';
+  const leadStyle = 'margin:0 0 12px;color:var(--color-text-muted,#5f756c)';
+  const ulStyle = 'margin:0 0 6px;padding:0 0 0 18px;color:var(--color-text,#22332c)';
+  const ctaStyle = 'margin:14px 0 0;font-weight:700';
+
+  const includesHtml = QUEST_SCENARIO_INCLUDES_RU
+    .map((item) => `<h3 style="${h3Style}">${escapeAttr(item.q)}</h3><p style="${pStyle}">${escapeAttr(item.a)}</p>`)
+    .join('');
+
+  const stepsHtml = QUEST_SCENARIO_STEPS_RU
+    .map(
+      (step, index) =>
+        `<h3 style="${h3Style}" id="step-${index + 1}">${index + 1}. ${escapeAttr(step.q)}</h3>` +
+        `<p style="${pStyle}">${escapeAttr(step.a)}</p>`,
+    )
+    .join('');
+
+  const occasionsHtml = QUEST_SCENARIO_OCCASIONS_RU
+    .map((item) => `<li style="margin:0 0 3px">${escapeAttr(item)}</li>`)
+    .join('');
+
+  // Mirror the hydrated screen: dedupe by city NAME (the catalog has several
+  // city_ids sharing one name) and cap the list — the full one lives on /quests.
+  const seenCityNames = new Set();
+  const topCities = [...cities]
+    .filter((city) => {
+      const key = String(city.name || city.cityId).trim().toLowerCase();
+      if (seenCityNames.has(key)) return false;
+      seenCityNames.add(key);
+      return true;
+    })
+    .sort((a, b) => b.quests.length - a.quests.length || String(a.name).localeCompare(String(b.name)))
+    .slice(0, QUEST_SCENARIO_CITY_LIMIT);
+
+  const citiesHtml = topCities.length
+    ? [
+        `<h2 style="${h2Style}">Города с готовыми сценариями</h2>`,
+        `<ul style="${ulStyle}">${topCities
+          .map(
+            (city) =>
+              `<li style="margin:0 0 3px"><a href="${escapeAttr(city.landingPath)}">${escapeAttr(
+                city.name || `Город ${city.cityId}`,
+              )}</a></li>`,
+          )
+          .join('')}</ul>`,
+      ].join('')
+    : '';
+
+  const faqHtml = QUEST_SCENARIO_FAQ_RU
+    .map((item) => `<h3 style="${h3Style}">${escapeAttr(item.q)}</h3><p style="${pStyle}">${escapeAttr(item.a)}</p>`)
+    .join('');
+
+  const section = [
+    `<section data-ssg-quest-scenario="true" aria-label="${escapeAttr(QUEST_SCENARIO_TITLE_RU)}" style="${sectionStyle}">`,
+    `<h1 style="${h1Style}">${escapeAttr(QUEST_SCENARIO_TITLE_RU)}</h1>`,
+    `<p style="${leadStyle}">${escapeAttr(QUEST_SCENARIO_LEAD_RU)}</p>`,
+    `<p style="${ctaStyle}"><a href="/quests">Выбрать маршрут в каталоге квестов</a></p>`,
+    `<h2 style="${h2Style}">Что входит в квест-бук</h2>`,
+    includesHtml,
+    `<h2 style="${h2Style}">Как распечатать сценарий</h2>`,
+    stepsHtml,
+    `<h2 style="${h2Style}">Для каких поводов подходит</h2>`,
+    `<ul style="${ulStyle}">${occasionsHtml}</ul>`,
+    citiesHtml,
+    `<h2 style="${h2Style}">Частые вопросы о печатном квесте</h2>`,
+    faqHtml,
+    `<p style="${ctaStyle}"><a href="/quests">Все городские квесты</a></p>`,
+    '</section>',
+  ].join('');
+
+  const styleTag = [
+    '<style data-ssg-quest-scenario-style="true">',
+    'html.rnw-styles-ready [data-ssg-quest-scenario="true"]{display:none!important}',
+    '@media(max-width:640px){[data-ssg-quest-scenario="true"]{margin:12px;padding:16px 14px}[data-ssg-quest-scenario="true"] h1{font-size:23px!important}}',
+    '</style>',
+  ].join('');
+
+  let html = baseHtml.replace(/<style[^>]*data-ssg-quest-scenario-style="true"[^>]*>[\s\S]*?<\/style>\n?/i, '');
+  html = html.replace(/<section[^>]*data-ssg-quest-scenario="true"[^>]*>[\s\S]*?<\/section>\n?/i, '');
+  html = html.replace('</head>', `${styleTag}\n</head>`);
+  html = injectJsonLd(html, buildQuestScenarioFaqJsonLd(), 'quest-scenario-faq');
+  html = injectJsonLd(html, buildQuestScenarioHowToJsonLd(), 'quest-scenario-howto');
+
+  if (/<body([^>]*)>/i.test(html)) {
+    return html.replace(/<body([^>]*)>/i, `<body$1>${section}`);
+  }
+  return `${section}${html}`;
 }
 
 /** Write file, creating directories as needed. */
@@ -1957,6 +2113,13 @@ const STATIC_PAGES = [
     description:
       'Проходите городские квесты Metravel: маршруты с заданиями, точками на карте и идеями для прогулок и поездок.',
     breadcrumb: 'Квесты',
+  },
+  {
+    route: '/quests/scenario',
+    title: 'Готовый сценарий квеста по городу — распечатать бесплатно | Metravel',
+    description:
+      'Готовый сценарий квеста по городу: распечатайте бесплатный квест-бук с картой, заданиями, дипломом и страницей ведущего с ответами. Для дня рождения, семьи и класса.',
+    breadcrumb: 'Сценарий квеста',
   },
   {
     route: '/history',
@@ -2391,6 +2554,18 @@ async function main() {
       writeFileSafe(variant, listHtml);
     }
 
+    // DIY landing /quests/scenario — crawlable body + FAQPage/HowTo JSON-LD on
+    // top of the meta the STATIC_PAGES pass already wrote.
+    const scenarioVariants = [
+      path.join(DIST_DIR, 'quests', 'scenario.html'),
+      path.join(DIST_DIR, 'quests', 'scenario', 'index.html'),
+    ];
+    const scenarioCities = buildQuestsListingModel(quests, questCityAliasMap);
+    for (const variant of scenarioVariants) {
+      if (!fs.existsSync(variant)) continue;
+      writeFileSafe(variant, injectQuestScenarioContent(fs.readFileSync(variant, 'utf8'), scenarioCities));
+    }
+
     const homeVariant = path.join(DIST_DIR, 'index.html');
     if (fs.existsSync(homeVariant)) {
       writeFileSafe(homeVariant, injectQuestLinksIndex(fs.readFileSync(homeVariant, 'utf8'), quests));
@@ -2606,6 +2781,9 @@ if (typeof module !== 'undefined' && module.exports) {
     buildQuestsFaqJsonLd,
     buildQuestsListItemListJsonLd,
     injectQuestsListingContent,
+    buildQuestScenarioFaqJsonLd,
+    buildQuestScenarioHowToJsonLd,
+    injectQuestScenarioContent,
     injectQuestCityLandingSection,
     buildQuestCityLandingHtml,
     patchNoindexFallbackTemplate,

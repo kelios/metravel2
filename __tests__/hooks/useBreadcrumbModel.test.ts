@@ -256,6 +256,24 @@ describe('useBreadcrumbModel', () => {
     ]);
   });
 
+  it('labels the /quests/scenario DIY landing instead of titleizing the segment', async () => {
+    usePathname.mockReturnValue('/quests/scenario');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.currentTitle).toBe('Сценарий квеста');
+    });
+
+    expect(result.current.showBreadcrumbs).toBe(true);
+    expect(result.current.backToPath).toBe('/quests');
+    expect(result.current.items).toEqual([
+      { label: 'Квесты', path: '/quests' },
+      { label: 'Сценарий квеста', path: '/quests/scenario' },
+    ]);
+  });
+
   it('falls back to the segment for a city landing whose quests are not loaded yet', async () => {
     const { useQuestsList } = jest.requireMock('@/hooks/useQuestsApi') as { useQuestsList: jest.Mock };
     useQuestsList.mockReturnValue({ quests: [], cityQuestsIndex: {}, loading: true, error: null });

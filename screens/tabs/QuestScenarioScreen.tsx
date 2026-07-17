@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { Dimensions, Platform, Pressable, ScrollView, Text, View } from 'react-native'
-import { Link, useIsFocused } from 'expo-router'
+import { Link, useIsFocused, useNavigation, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
@@ -22,6 +22,7 @@ const QUEST_LIST_ROUTE = '/quests'
 const SCENARIO_ROUTE = '/quests/scenario'
 const IS_WEB = Platform.OS === 'web'
 const COLUMN_MAX_WIDTH = 760
+const CITY_LINKS_LIMIT = 12
 
 // Explicit string-literal keys (not template literals) so the web babel plugin
 // inlines the copy into the eager bundle — a key must never leak to the user
@@ -72,7 +73,7 @@ export function getQuestScenarioFaqItems(): QuestFaqItem[] {
   ]
 }
 
-type CityLink = { cityId: string; name: string; path: string; count: number }
+type CityLink = { cityId: string; name: string; path: Href; count: number }
 
 function CtaLink({
   colors,
@@ -81,7 +82,7 @@ function CtaLink({
 }: {
   colors: ReturnType<typeof useThemedColors>
   label: string
-  href: string
+  href: Href
 }) {
   return (
     <Link href={href} asChild>
@@ -121,8 +122,14 @@ function SectionHeading({ colors, text }: { colors: ReturnType<typeof useThemedC
 
 export default function QuestScenarioScreen() {
   const isFocused = useIsFocused()
+  const navigation = useNavigation()
   const colors = useThemedColors()
   const { quests } = useQuestsList()
+
+  // Stack/nav header title — otherwise the raw «scenario» URL segment shows up.
+  useEffect(() => {
+    navigation.setOptions({ title: i18nT('quests:screens.tabs.QuestScenarioScreen.breadcrumb') })
+  }, [navigation])
 
   const { width: bpWidth, isMobile } = useBreakpoints()
   const height = IS_WEB ? 0 : Dimensions.get('window').height
@@ -136,26 +143,32 @@ export default function QuestScenarioScreen() {
   const canonical = buildCanonicalUrl(SCENARIO_ROUTE)
 
   // City links keep the landing wired into the /quests/<city> cluster instead of
-  // dead-ending at the catalog root.
+  // dead-ending at the catalog root. Deduped by city NAME, not id: the catalog
+  // carries several city_ids sharing one name, which would otherwise render as
+  // «Гомель, Гомель». Capped — the full list lives on /quests.
   const cityLinks = useMemo<CityLink[]>(() => {
     const aliasMap = buildQuestCityAliasMap(quests)
     const byCity = new Map<string, CityLink>()
     for (const quest of quests) {
       if (!quest?.cityId) continue
-      const existing = byCity.get(quest.cityId)
+      const name = quest.cityName || quest.cityId
+      const key = name.trim().toLowerCase()
+      const existing = byCity.get(key)
       if (existing) {
         existing.count += 1
         continue
       }
       const alias = aliasMap.get(quest.cityId)
-      byCity.set(quest.cityId, {
+      byCity.set(key, {
         cityId: quest.cityId,
-        name: quest.cityName || quest.cityId,
-        path: `/quests/${alias || quest.cityId}`,
+        name,
+        path: `/quests/${alias || quest.cityId}` as Href,
         count: 1,
       })
     }
-    return [...byCity.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    return [...byCity.values()]
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+      .slice(0, CITY_LINKS_LIMIT)
   }, [quests])
 
   const seoTitle = useMemo(() => buildBrandedSeoTitle(i18nT('quests:screens.tabs.QuestScenarioScreen.title')), [])
@@ -386,6 +399,25 @@ export default function QuestScenarioScreen() {
                 </Pressable>
               </Link>
             ))}
+            {/* The list is capped — send the rest of the cities to the catalog. */}
+            <Link href={QUEST_LIST_ROUTE} asChild>
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel={i18nT('quests:app.tabs.quests.city.index.back')}
+                style={{
+                  borderRadius: DESIGN_TOKENS.radii.full,
+                  borderWidth: 1,
+                  borderColor: colors.borderLight,
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  ...(IS_WEB ? ({ cursor: 'pointer' } as Record<string, unknown>) : {}),
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted }}>
+                  {i18nT('quests:app.tabs.quests.city.index.back')}
+                </Text>
+              </Pressable>
+            </Link>
           </View>
         </View>
       ) : null}

@@ -22,6 +22,9 @@ const {
   disableExpoRouterHydration,
   injectQuestIntroSection,
   injectQuestLinksIndex,
+  injectQuestScenarioContent,
+  buildQuestScenarioFaqJsonLd,
+  buildQuestScenarioHowToJsonLd,
   buildQuestPromoCatalog,
   findTravelQuestPromoMatches,
   injectTravelQuestPromoSection,
@@ -831,6 +834,85 @@ describe('injectQuestLinksIndex', () => {
     expect(html).toContain('href="/quests/1/krakow-dragon" tabindex="-1"')
     expect(html).toContain('href="/quests/2/minsk-old-town" tabindex="-1"')
     expect(html).not.toContain('aria-label="Все квесты"')
+  })
+})
+
+describe('injectQuestScenarioContent', () => {
+  const CITIES = [
+    { cityId: '1', name: 'Минск', landingPath: '/quests/minsk', quests: [] },
+    { cityId: '2', name: 'Краков', landingPath: '/quests/krakow', quests: [] },
+  ]
+
+  it('renders the crawlable DIY body with a single h1 and links into the catalog', () => {
+    const html = injectQuestScenarioContent(MINIMAL_BASE, CITIES)
+
+    expect(html).toContain('data-ssg-quest-scenario="true"')
+    expect((html.match(/<h1/g) || []).length).toBe(1)
+    expect(html).toContain('Готовый сценарий квеста по городу')
+    expect(html).toContain('href="/quests"')
+    expect(html).toContain('href="/quests/minsk"')
+    expect(html).toContain('href="/quests/krakow"')
+    // HowTo anchors must resolve against the step ids in the body.
+    expect(html).toContain('id="step-1"')
+  })
+
+  it('is idempotent — a rerun does not stack sections or styles', () => {
+    const once = injectQuestScenarioContent(MINIMAL_BASE, CITIES)
+    const twice = injectQuestScenarioContent(once, CITIES)
+
+    expect((twice.match(/data-ssg-quest-scenario="true"/g) || []).length).toBe(
+      (once.match(/data-ssg-quest-scenario="true"/g) || []).length,
+    )
+    expect((twice.match(/<h1/g) || []).length).toBe(1)
+  })
+
+  it('still renders without cities (empty API payload)', () => {
+    const html = injectQuestScenarioContent(MINIMAL_BASE, [])
+
+    expect(html).toContain('data-ssg-quest-scenario="true"')
+    expect(html).not.toContain('Города с готовыми сценариями')
+    expect(html).toContain('href="/quests"')
+  })
+
+  it('dedupes cities sharing a name and caps the list', () => {
+    const dupes = [
+      { cityId: '1', name: 'Гомель', landingPath: '/quests/gomel', quests: [{}, {}] },
+      { cityId: '9', name: 'Гомель', landingPath: '/quests/9', quests: [{}] },
+    ]
+    const html = injectQuestScenarioContent(MINIMAL_BASE, dupes)
+
+    expect((html.match(/>Гомель</g) || []).length).toBe(1)
+    expect(html).toContain('href="/quests/gomel"')
+    expect(html).not.toContain('href="/quests/9"')
+  })
+
+  it('caps the city list so the landing does not mirror the whole catalog', () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({
+      cityId: String(i),
+      name: `Город${i}`,
+      landingPath: `/quests/city-${i}`,
+      quests: [{}],
+    }))
+    const html = injectQuestScenarioContent(MINIMAL_BASE, many)
+
+    expect((html.match(/href="\/quests\/city-/g) || []).length).toBe(12)
+  })
+
+  it('builds FAQPage and HowTo JSON-LD that match the visible copy', () => {
+    const faq = buildQuestScenarioFaqJsonLd()
+    const howTo = buildQuestScenarioHowToJsonLd()
+    const html = injectQuestScenarioContent(MINIMAL_BASE, CITIES)
+
+    expect(faq['@type']).toBe('FAQPage')
+    expect(faq.mainEntity.length).toBeGreaterThan(0)
+    for (const entry of faq.mainEntity) {
+      expect(html).toContain(escapeAttr(entry.name))
+    }
+
+    expect(howTo['@type']).toBe('HowTo')
+    expect(howTo.url).toBe('https://metravel.by/quests/scenario')
+    expect(howTo.step.map((s: { position: number }) => s.position)).toEqual([1, 2, 3, 4])
+    expect(howTo.step[0].url).toBe('https://metravel.by/quests/scenario#step-1')
   })
 })
 

@@ -573,6 +573,25 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       };
     }
 
+    // Static /quests/<segment> landings that are not cities — without this the
+    // city branch below titleizes the raw segment into «Scenario».
+    if (p === '/quests/scenario') {
+      const label = truncateLabel(i18nT('quests:screens.tabs.QuestScenarioScreen.breadcrumb'));
+      const items = [
+        { label: i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10'), path: '/quests' },
+        { label, path: p },
+      ];
+
+      return {
+        items,
+        depth: items.length + 1,
+        currentTitle: label,
+        pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10'),
+        backToPath: '/quests',
+        showBreadcrumbs: true,
+      };
+    }
+
     const isQuestCityLanding = p.startsWith('/quests/') && parts.length === 2;
     if (isQuestCityLanding) {
       const cityLabel = truncateLabel(questCityName || toTitleFromSegment(parts[1]));
