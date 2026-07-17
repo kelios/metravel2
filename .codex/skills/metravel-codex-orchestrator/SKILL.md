@@ -98,7 +98,7 @@ Do not leak desired conclusions into QA/reviewer prompts; pass raw scope, diff, 
 - Require RU/BE/UK/PL/EN resource parity for new app-owned UI copy and
   `npm run test:i18n` for localization changes.
 - Keep edits small and local.
-- Treat backend/Django/API/server work as analysis-only in this frontend workspace. Do not route any role to edit backend working trees or run backend Git mutations locally/on production. Before an authorized server write, require read-only `git status`/`git ls-files` classification; a tracked path or dirty production checkout means stop, evidence, and an `area=back`/ops task without cleanup or deploy.
+- Treat backend/Django/API/server work as analysis-only in this frontend workspace. Do not route any role to edit backend working trees or run backend Git mutations locally/on production. Before an authorized server write, require read-only `git status`/`git ls-files` classification; a tracked path or dirty production checkout means stop, evidence, and an `area=back`/ops task without cleanup or deploy. For the frontend deploy gate, apply only the exact non-mutating exceptions documented in `docs/RULES.md` for `deploy/prod/nginx/ssl/`, `dump.sql`, and the permission warning for `deploy/prod/postgis_1/data/`.
 - When a board task is in scope, enforce `todo → in_progress → review → testing → done`.
   Reserve `blocked_by` for a concrete hard dependency that prevents implementation work; waiting
   for review or validation remains `review`/`testing`.

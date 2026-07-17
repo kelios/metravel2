@@ -210,6 +210,15 @@ git ls-files --error-unmatch -- path/relative/to/checkout
   restore, checkout, pull, or deploy over it. Capture the exact path and a
   secret-safe diff summary, create/update an `area=back` or ops board task, and
   hand the canonical source change and normal deploy to the backend owner.
+- The frontend deploy cleanliness gate has one exact, non-expanding exception
+  for known production-owned runtime/ops artifacts: untracked
+  `deploy/prod/nginx/ssl/`, untracked `dump.sql`, and the permission warning for
+  `deploy/prod/postgis_1/data/`. Their presence or unreadability alone does not
+  block the project-owned frontend deploy. Agents must not inspect their
+  contents or read, copy, patch, overwrite, move, delete, chmod, back up, or
+  otherwise mutate them. Any other status entry, tracked change, or warning is
+  still a dirty-checkout stop condition. Intended frontend deploy targets must
+  still be classified independently with `git ls-files` before the write.
 - Tracked backend source/config changes must originate in the backend owner's
   canonical repository workflow and arrive through its normal reviewed deploy.
   This frontend workspace does not commit, push, merge, or deploy backend source.

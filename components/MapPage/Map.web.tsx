@@ -569,8 +569,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const safeCenter = useMemo<[number, number]>(() => getSafeCenter(coordinates), [coordinates])
 
   const circleCenter = useMemo<[number, number] | null>(
-    () => getCircleCenter(mode, userLocationLatLng, safeCenter),
-    [mode, safeCenter, userLocationLatLng],
+    () => getCircleCenter(safeCenter),
+    [safeCenter],
   )
 
   const circleCenterLatLng = useMemo(

@@ -21,16 +21,8 @@ export function getSafeCenter(coordinates?: { latitude?: number; longitude?: num
 }
 
 export function getCircleCenter(
-  mode: string,
-  userLocationLatLng: { lat: number; lng: number } | null,
   safeCenter: [number, number]
 ): [number, number] | null {
-  if (mode === 'radius' && userLocationLatLng) {
-    const lat = Number(userLocationLatLng.lat)
-    const lng = Number(userLocationLatLng.lng)
-    if (isValidCoordinate(lat, lng)) return [lat, lng]
-  }
-
   const lat = Number(safeCenter?.[0])
   const lng = Number(safeCenter?.[1])
   if (!isValidCoordinate(lat, lng)) return null

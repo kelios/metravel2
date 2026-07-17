@@ -77,13 +77,18 @@ export function useMapRenderData({
   });
 
   const filterCenter = useMemo(() => {
-    const center = userLocationLatLng ?? coordinatesLatLng;
+    // `coordinates` is the active radius-search anchor. It initially matches
+    // the user's position, but after "Search this area" it is the map center the
+    // user explicitly chose. Keep the real user location separate: it owns only
+    // the blue marker and the explicit locate action, and must not pull radius
+    // filtering back to GPS.
+    const center = coordinatesLatLng;
     if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lng)) return null;
     return {
       lat: Math.round(center.lat * 1000) / 1000,
       lng: Math.round(center.lng * 1000) / 1000,
     };
-  }, [userLocationLatLng, coordinatesLatLng]);
+  }, [coordinatesLatLng]);
 
   const filteredTravelData = useMemo(() => {
     if (mode !== 'radius' || pointsOnly || travelData.length === 0) return travelData;

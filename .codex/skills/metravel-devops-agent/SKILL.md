@@ -42,7 +42,11 @@ Rules:
   `pull`, `merge`, `rebase`, `checkout`, `reset`, `restore`, `stash`, or `clean`.
 - A dirty production checkout is a stop condition. Record exact paths and a
   secret-safe diff summary, create/update an `area=back`/ops task, and leave the
-  cleanup plus canonical backend commit/deploy to the backend owner.
+  cleanup plus canonical backend commit/deploy to the backend owner. For the
+  frontend deploy gate only, tolerate exactly the known untracked
+  `deploy/prod/nginx/ssl/`, untracked `dump.sql`, and permission warning for
+  `deploy/prod/postgis_1/data/`; never inspect or mutate them. Any other entry or
+  warning still stops the deploy, as defined in `docs/RULES.md`.
 - Project-owned frontend release scripts may write only their documented
   untracked runtime/static targets such as `static/dist`.
 - Do not modify production server paths, SSL paths, Nginx roots, aliases, includes, or proxy targets unless the target host path existence has been verified.

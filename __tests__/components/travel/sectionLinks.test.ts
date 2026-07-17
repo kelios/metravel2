@@ -13,12 +13,12 @@ describe('buildTravelSectionLinks', () => {
     expect(links.map((link) => link.key)).toContain('excursions')
   })
 
-  it('omits excursions on native where the section is not rendered', () => {
+  it('keeps excursions on Android where the native section is rendered', () => {
     const links = buildTravelSectionLinks(travelWithPoints, { platform: 'android' })
 
-    expect(links.map((link) => link.key)).not.toContain('excursions')
+    expect(links.map((link) => link.key)).toContain('excursions')
     expect(links.map((link) => link.key)).toEqual(
-      expect.arrayContaining(['description', 'map', 'points']),
+      expect.arrayContaining(['description', 'excursions', 'map', 'points']),
     )
   })
 })

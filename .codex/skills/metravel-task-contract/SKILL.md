@@ -62,8 +62,9 @@ Done gate:
 - For backend/ops/server tasks, require a tracked-vs-untracked path
   classification. The contract must state that this frontend workspace will not
   edit or run Git mutations in the backend checkout; canonical tracked changes
-  belong to the backend owner, and the Done gate must include a clean production
-  `git status --short` plus runtime validation after the normal deploy.
+  belong to the backend owner, and the Done gate must include a production
+  `git status --short` with no entries outside the exact frontend-deploy
+  exceptions in `docs/RULES.md`, plus runtime validation after the normal deploy.
 - For FE tasks depending on BE, require browser/API evidence against the same target; unit tests and mock fallback alone are not enough.
 - If board status says BE is done but runtime contract probes fail after FE implementation is
   complete, keep FE in `testing`, add evidence, and create or reopen a separate BE/deploy task.

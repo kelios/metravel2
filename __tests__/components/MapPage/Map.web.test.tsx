@@ -937,6 +937,44 @@ describe('MapPageComponent (Map.web.tsx)', () => {
   })
 
   describe('Radius mode and markers rendering', () => {
+    it('keeps the selected search area separate from the user location', async () => {
+      const searchCenter = { latitude: 52.2297, longitude: 21.0122 }
+      const userLocation = { latitude: 53.9, longitude: 27.5667 }
+      const travel = {
+        data: [
+          {
+            id: 1,
+            coord: '52.2297,21.0122',
+            address: 'Inside selected search area',
+          },
+          {
+            id: 2,
+            coord: '53.9,27.5667',
+            address: 'Near user but outside selected search area',
+          },
+        ],
+      }
+
+      renderWithProviders(
+        <MapPageComponent
+          {...defaultProps}
+          coordinates={searchCenter}
+          coordinatesAreFallback
+          userLocation={userLocation}
+          mode="radius"
+          radius="10"
+          travel={travel as any}
+        />
+      )
+      await act(async () => {})
+
+      const circleProps = (globalThis as any).lastCircleProps
+      expect(circleProps.center).toEqual([searchCenter.latitude, searchCenter.longitude])
+
+      const renderedPoints = mockMarkerClusterGroupProps.mock.calls.at(-1)?.[0]?.points ?? []
+      expect(renderedPoints.map((point: any) => point.id)).toEqual([1])
+    })
+
     it('renders search radius circle with default radius when radius prop is not provided', async () => {
       const { Platform } = require('react-native')
       ;(Platform as any).OS = 'web'

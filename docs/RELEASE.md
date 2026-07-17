@@ -20,7 +20,11 @@
   canonical commit/review/deploy flow.
 - A dirty production checkout is a stop condition for a mutating deploy: collect
   a secret-safe path/diff summary, create or update an `area=back`/ops task, and
-  leave the checkout untouched for its owner.
+  leave the checkout untouched for its owner. The only frontend-deploy gate
+  exceptions are the known untracked `deploy/prod/nginx/ssl/`, untracked
+  `dump.sql`, and the permission warning for `deploy/prod/postgis_1/data/`.
+  Do not inspect or mutate those paths; any other status entry or warning still
+  stops the deploy. See the canonical rule in `docs/RULES.md`.
 
 ## One-command pre-release check
 
