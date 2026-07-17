@@ -90,13 +90,6 @@ export const getTravelDetailsShellStyles = (colors: ThemedColors) =>
           } as any)
         : {}),
     },
-    pageTitle: {
-      ...DESIGN_TOKENS.typography.scale.h1,
-      color: colors.text,
-      maxWidth: '100%',
-      marginTop: 0,
-      marginBottom: DESIGN_TOKENS.spacing.md,
-    },
     sectionTabsContainer: {
       marginBottom: DESIGN_TOKENS.spacing.md,
     },

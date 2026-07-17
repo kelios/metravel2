@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import NavigationIcon from '@/components/layout/NavigationIcon';
 import UserAvatar from '@/components/layout/UserAvatar';
 import QuestReviewsModal from '@/components/quests/QuestReviewsModal';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
@@ -14,6 +15,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 import { pluralizeRu } from '@/utils/pluralize';
 import { getQuestAgeBadgeLabel, getQuestAgeCategory } from '@/utils/questAudience';
+import { isBikeQuest } from './QuestsScreen.helpers';
 
 import { pluralizePoints, type QuestMeta } from './questsShared';
 import { translate as i18nT } from '@/i18n'
@@ -58,6 +60,7 @@ export default function QuestCard({
     const difficultyInfo = getDifficultyInfo(quest.difficulty);
     const ageCategory = quest.ageCategory ?? getQuestAgeCategory(quest.tags);
     const ageBadgeLabel = getQuestAgeBadgeLabel(ageCategory);
+    const isBike = isBikeQuest(quest.tags);
     const categoryLabel = quest.cityName || quest.countryName || null;
     const distanceText = nearby && typeof quest._distanceKm === 'number'
         ? quest._distanceKm < 1
@@ -223,6 +226,22 @@ export default function QuestCard({
                         <Feather name="smile" size={12} color={colors.textOnDark} />
                         <Text style={styles.questCardKidsText} numberOfLines={1}>
                             {ageBadgeLabel}
+                        </Text>
+                    </View>
+                )}
+
+                {isBike && (
+                    <View
+                        style={[
+                            styles.questCardBikeBadge,
+                            // Стек правых бейджей: сложность и/или возраст выше — сдвигаемся вниз.
+                            { top: 8 + (difficultyInfo ? 36 : 0) + (ageBadgeLabel ? 36 : 0) },
+                        ]}
+                        testID={`quest-card-bike-${quest.id}`}
+                    >
+                        <NavigationIcon name="bike" size={12} color={colors.textOnDark} />
+                        <Text style={styles.questCardBikeText} numberOfLines={1}>
+                            {i18nT('quests:screens.tabs.QuestCard.veloBadge')}
                         </Text>
                     </View>
                 )}

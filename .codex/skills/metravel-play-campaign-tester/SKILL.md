@@ -50,6 +50,18 @@ For every assigned app:
 7. Check for crashes or obvious blocking failures after the interaction. If the app crashes, capture/log it and upload proof only if the assignment accepts crash/blocker evidence.
 8. Submit proof only after the real test is complete. If a proof is rejected, read the rejection reason, perform a deeper valid action, and re-upload a better proof instead of resubmitting the same screenshot.
 
+## Proof Upload Gate
+
+Before uploading any screenshot to a community app, perform this gate. Do not submit when any step fails.
+
+1. Launch the exact target activity from `adb shell cmd package resolve-activity --brief <package>` or from a verified `Open` control. Do not rely on `monkey -p` alone when it does not prove the foreground package.
+2. Verify foreground ownership with `adb shell dumpsys activity activities | rg -i 'topResumedActivity|mCurrentFocus'`; it must show the intended package, not the community app, Play Store, another app, a permission prompt, or the launcher.
+3. Capture a candidate screenshot only after a meaningful in-app screen is visible. Save it with an app-specific filename under the evidence directory and, if it will be uploaded, push that exact file to `/sdcard/Pictures/MetravelPlayEvidence/`.
+4. Visually inspect the candidate screenshot before upload. The candidate must show the target app's own UI or a documented blocker inside that app. Reject candidates that show TCT/TestersCommunity/App Testers, Play Store, system picker, ads, permission prompts, splash/loading screens, another app, or a generic home screen that does not prove use.
+5. In the media picker, select the exact inspected file. After returning to the community app, capture the upload form and verify `Selected Images` plus the visible thumbnail still match the inspected target-app screenshot before tapping `Submit`.
+6. If an existing pending proof is wrong and the app does not expose `Remove`, `Replace`, `Upload`, or `Submit` controls, do not claim it is fixed. Prepare the correct replacement proof, log the bad pending proof, and re-upload only after the community app allows replacement or the proof is rejected.
+7. Keep the proof note specific and consistent with the screenshot, for example `Retested_<app>_<feature>`. Do not use a generic note to compensate for weak visual evidence.
+
 Safety limits still apply: never click ads, buy, rate/review, use personal social accounts, expose private data, switch Google accounts, leave test programs, message people, or uninstall/reinstall unless explicitly authorized by the user.
 
 Partner review rule: accept partner proof only when it shows genuine use of our app or the instructed flow. Reject proof that is only Play Store, an error page, a generic home screen with no use, a fake/irrelevant screenshot, or insufficient evidence, and give a concise actionable reason.

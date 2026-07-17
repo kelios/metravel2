@@ -245,20 +245,11 @@ export default function TravelDetailsCriticalShell({
     />
   ) : null;
 
+  // SEO/a11y only: the crawlable <h1> must stay in the DOM (single-H1 invariant,
+  // post-deploy-seo-check) but is never painted — nothing renders above the
+  // gallery on any web width.
   const pageTitle = Platform.OS === 'web' && travel ? (
-    <h1
-      data-testid="travel-details-title"
-      style={(
-        isMobile
-          ? WEB_SR_ONLY_HEADING_STYLE
-          : {
-              ...styles.pageTitle,
-              // React DOM treats numeric lineHeight as a unitless multiplier;
-              // RN tokens express it in pixels, so preserve that contract.
-              lineHeight: `${DESIGN_TOKENS.typography.scale.h1.lineHeight}px`,
-            }
-      ) as any}
-    >
+    <h1 data-testid="travel-details-title" style={WEB_SR_ONLY_HEADING_STYLE as any}>
       {travel.name}
     </h1>
   ) : null;

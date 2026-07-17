@@ -1,8 +1,9 @@
-import type { ComponentProps } from 'react';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
+import NavigationIcon from '@/components/layout/NavigationIcon';
+import type { NavigationIconName } from '@/constants/navigationIcons';
 import { useResponsive } from '@/hooks/useResponsive';
 import type { ThemedColors } from '@/hooks/useTheme';
 
@@ -11,13 +12,11 @@ import { pluralizeQuest } from './questsShared';
 import { translate as i18nT } from '@/i18n'
 
 
-type FeatherName = ComponentProps<typeof Feather>['name'];
-
 type SidebarActionButtonProps = {
     styles: any;
     colors: ThemedColors;
     isMobile: boolean;
-    icon: FeatherName;
+    icon: NavigationIconName;
     label: string;
     active?: boolean;
     disabled?: boolean;
@@ -62,7 +61,7 @@ function SidebarActionButton({
                 testID={testID}
                 {...({ title: label } as any)}
             >
-                <Feather name={icon} size={18} color={iconColor} />
+                <NavigationIcon name={icon} size={18} color={iconColor} />
             </Pressable>
         );
     }
@@ -84,7 +83,7 @@ function SidebarActionButton({
             accessibilityState={accessibilityState}
             testID={testID}
         >
-            <Feather name={icon} size={18} color={iconColor} />
+            <NavigationIcon name={icon} size={18} color={iconColor} />
             <View style={[styles.sidebarActionPillLabelWrap, isOpen && styles.sidebarActionPillLabelWrapOpen]}>
                 <Text
                     numberOfLines={1}
@@ -110,6 +109,7 @@ type QuestsSidebarProps = {
     selectedCityId: string | null;
     nearbyId: string;
     kidsFilterId: string;
+    bikeFilterId: string;
     areAllCountryGroupsCollapsed: boolean;
     collapsedCountryCodes: Record<string, boolean>;
     citiesByCountry: CountryGroup[];
@@ -129,6 +129,7 @@ export default function QuestsSidebar({
     selectedCityId,
     nearbyId,
     kidsFilterId,
+    bikeFilterId,
     areAllCountryGroupsCollapsed,
     collapsedCountryCodes,
     citiesByCountry,
@@ -145,6 +146,7 @@ export default function QuestsSidebar({
     const hasCountryGroups = citiesByCountry.length > 0;
     const isNearbySelected = selectedCityId === nearbyId;
     const isKidsSelected = selectedCityId === kidsFilterId;
+    const isBikeSelected = selectedCityId === bikeFilterId;
     const mapActionActive = viewMode === 'map';
     const mapActionLabel = viewMode === 'map' ? i18nT('quests:screens.tabs.QuestsSidebar.pokazat_kvesty_spiskom_0029a3b3') : i18nT('quests:screens.tabs.QuestsSidebar.pokazat_kvesty_na_karte_d06a6df4');
     const toggleAllLabel = areAllCountryGroupsCollapsed ? i18nT('quests:screens.tabs.QuestsSidebar.razvernut_vse_strany_58a7fc2c') : i18nT('quests:screens.tabs.QuestsSidebar.svernut_vse_strany_ee35b08d');
@@ -204,6 +206,18 @@ export default function QuestsSidebar({
                         accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.kvesty_dlya_detey_value1_29205187', { value1: pluralizeQuest(cityQuestCountById[kidsFilterId] || 0) })}
                         accessibilityState={{ selected: isKidsSelected }}
                         testID="quests-sidebar-kids-button"
+                    />
+                    <SidebarActionButton
+                        styles={styles}
+                        colors={colors}
+                        isMobile={isMobile}
+                        icon="bike"
+                        label={i18nT('quests:screens.tabs.QuestsSidebar.veloLabel')}
+                        active={isBikeSelected}
+                        onPress={() => onSelectCity(bikeFilterId)}
+                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.veloA11y', { value1: pluralizeQuest(cityQuestCountById[bikeFilterId] || 0) })}
+                        accessibilityState={{ selected: isBikeSelected }}
+                        testID="quests-sidebar-bike-button"
                     />
                     <SidebarActionButton
                         styles={styles}

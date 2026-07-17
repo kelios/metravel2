@@ -86,6 +86,17 @@ export default function NavigationIcon({
     )
   }
 
+  if (name === 'bike') {
+    return (
+      <BikeIcon
+        color={color}
+        size={size}
+        strokeWidth={strokeWidth}
+        style={style}
+      />
+    )
+  }
+
   return <Feather name={name} size={size} color={color} style={style as any} />
 }
 
@@ -274,6 +285,47 @@ function DiceIcon({
       <Circle cx="12" cy="12" r="1.15" fill={color} />
       <Circle cx="8.4" cy="15.6" r="1.15" fill={color} />
       <Circle cx="15.6" cy="15.6" r="1.15" fill={color} />
+    </Svg>
+  )
+}
+
+// «Вело» = велосипед: два колеса + рама. Знак категории велоквестов;
+// в Feather велосипеда нет, поэтому свой глиф в стилистике Feather-stroke.
+function BikeIcon({
+  color,
+  size,
+  strokeWidth,
+  style,
+}: Required<Pick<NavigationIconProps, 'color' | 'size' | 'strokeWidth'>> & {
+  style?: StyleProp<ViewStyle>
+}) {
+  return (
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      style={style as any}
+      {...getIconAccessibilityProps()}
+    >
+      {/* колёса */}
+      <Circle cx="6" cy="16.2" r="3.6" stroke={color} strokeWidth={strokeWidth} />
+      <Circle cx="18" cy="16.2" r="3.6" stroke={color} strokeWidth={strokeWidth} />
+      {/* рама: заднее колесо → каретка → руль, седло */}
+      <Path
+        d="M6 16.2 9.4 9.6h5.2M12 16.2 9.4 9.6M12 16.2l3.4-6.1L18 16.2"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* руль и седло */}
+      <Path
+        d="M14.1 7.6h2.4M8 7.4h2.8"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
     </Svg>
   )
 }

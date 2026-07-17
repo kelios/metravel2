@@ -47,6 +47,17 @@ export function normalizeQuestTag(tag: unknown): string {
   return typeof tag === 'string' ? tag.trim().toLowerCase() : '';
 }
 
+// Тег велоквестов в meta.tags. Канонический тег — `bike`; `velo` принимаем
+// как синоним на случай ручной разметки. Тег включает бейдж «Вело» на
+// карточках и фильтр велоквестов в каталоге.
+export const BIKE_QUEST_TAG = 'bike';
+const BIKE_QUEST_TAGS = new Set<string>([BIKE_QUEST_TAG, 'velo']);
+
+export function isBikeQuest(tags?: string[] | null): boolean {
+  if (!tags?.length) return false;
+  return tags.some((tag) => BIKE_QUEST_TAGS.has(normalizeQuestTag(tag)));
+}
+
 export function getQuestAgeCategory(tags?: string[] | null): QuestAgeCategory | null {
   if (!tags?.length) return null;
   const normalizedTags = new Set(tags.map(normalizeQuestTag).filter(Boolean));

@@ -58,3 +58,10 @@
 - App Testers `com.nadeemgs.apptesters`: opened home/profile; no daily tasks, wallet `0/0`, no pending proof/review action.
 - NadeemGS TestersCommunity `com.nadeemgs.testerscommunity`: app required Play Store update; updated 1.2.x/37 to 1.3.0/38, then opened home/profile/My Apps. Wallet `20/0`; `My Apps` showed `No apps uploaded yet`; no required action found.
 - Crash check: `adb logcat -d -b crash` filtered for campaign/community packages returned no relevant crash entries.
+
+### 2026-07-17 — Proof correction audit
+
+- Added a mandatory `Proof Upload Gate` to `.codex/skills/metravel-play-campaign-tester/SKILL.md`: exact foreground package check, local visual preview, exact media-picker selection, post-selection thumbnail verification, and no claim of replacement when TCT does not expose replacement controls.
+- TCT Libera Day 5 partner proof was wrong: screenshots showed non-MeTravel content/TCT-style evidence. Rejected it with reason `Wrong app shown`; final status: `You rejected 's proof. Waiting for them to upload again.`
+- TCT Insta saver Day 4 audit found our pending proof thumbnail is wrong: it shows TCT instead of the target app. TCT exposes no `Remove`, `Replace`, `Upload`, or `Submit` controls while proof is `Waiting for Review`, so it cannot be corrected until the partner/app rejects or unlocks replacement. Correct replacement proof prepared and visually verified: `instasaver_retest_correct_activity.png` / `/sdcard/Pictures/MetravelPlayEvidence/instasaver_retest_correct_home.png`.
+- TCT Rocky Decodes Calories Day 9 audit: pending proof thumbnail shows the Rocky app calorie dashboard, not TCT. A stronger replacement candidate was also prepared and visually verified: `rocky_retest_correct_after_permission.png` / `/sdcard/Pictures/MetravelPlayEvidence/rocky_retest_correct_after_permission.png`.

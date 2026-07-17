@@ -1,7 +1,7 @@
 // src/screens/tabs/QuestsScreen.helpers.ts
 
 import { haversineKm } from '@/utils/geo';
-import { isQuestForChildrenOrTeens } from '@/utils/questAudience';
+import { isBikeQuest, isQuestForChildrenOrTeens } from '@/utils/questAudience';
 import { translate as i18nT, type TranslationKey } from '@/i18n';
 
 // Русские названия стран для заголовков групп в каталоге квестов. Ключи —
@@ -95,6 +95,17 @@ export function isKidsQuest(tags?: string[] | null): boolean {
 
 export function filterKidsQuests<T extends { tags?: string[] | null }>(quests: T[]): T[] {
     return quests.filter((quest) => isKidsQuest(quest.tags));
+}
+
+export const BIKE_FILTER_ID = '__bike__';
+
+// Канонический тег велоквестов и предикат живут в utils/questAudience.ts —
+// их используют и карточки каталога, и городские лендинги.
+export { BIKE_QUEST_TAG } from '@/utils/questAudience';
+export { isBikeQuest };
+
+export function filterBikeQuests<T extends { tags?: string[] | null }>(quests: T[]): T[] {
+    return quests.filter((quest) => isBikeQuest(quest.tags));
 }
 
 export function buildQuestCityCatalog<

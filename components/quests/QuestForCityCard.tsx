@@ -4,9 +4,11 @@ import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import NavigationIcon from '@/components/layout/NavigationIcon'
+import type { NavigationIconName } from '@/constants/navigationIcons'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useTrackedImpression } from '@/hooks/useTrackedImpression'
-import { getQuestAgeBadgeLabel, getQuestAgeCategory } from '@/utils/questAudience'
+import { getQuestAgeBadgeLabel, getQuestAgeCategory, isBikeQuest } from '@/utils/questAudience'
 import type { QuestMeta } from '@/utils/questAdapters'
 import {
   trackQuestCardClicked,
@@ -81,13 +83,15 @@ export function QuestForCityCard({
     trackQuestCardClicked(analyticsParams)
     router.push(href as any)
   }, [analyticsParams, href, router])
-  const chips: { key: string; icon: keyof typeof Feather.glyphMap; label: string }[] = []
+  const chips: { key: string; icon: NavigationIconName; label: string }[] = []
   if (quest.points) chips.push({ key: 'points', icon: 'map-pin', label: formatPoints(quest.points) })
   if (quest.durationMin)
     chips.push({ key: 'duration', icon: 'clock', label: formatDuration(quest.durationMin) })
   const ageCategory = quest.ageCategory ?? getQuestAgeCategory(quest.tags)
   const ageBadgeLabel = getQuestAgeBadgeLabel(ageCategory)
   if (ageBadgeLabel) chips.push({ key: 'age', icon: 'users', label: ageBadgeLabel })
+  if (isBikeQuest(quest.tags))
+    chips.push({ key: 'bike', icon: 'bike', label: i18nT('quests:components.quests.QuestForCityCard.veloChip') })
   if (quest.difficulty && difficultyLabels[quest.difficulty])
     chips.push({
       key: 'difficulty',
@@ -146,7 +150,7 @@ export function QuestForCityCard({
               <React.Fragment key={chip.key}>
                 {i > 0 && <View style={styles.dot} />}
                 <View style={styles.chip}>
-                  <Feather name={chip.icon} size={13} color={colors.textMuted} />
+                  <NavigationIcon name={chip.icon} size={13} color={colors.textMuted} />
                   <Text style={styles.chipText} numberOfLines={1}>
                     {chip.label}
                   </Text>

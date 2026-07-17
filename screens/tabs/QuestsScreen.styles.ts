@@ -1171,6 +1171,30 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             fontSize: badgeFontSize,
             fontWeight: '600',
         },
+        questCardBikeBadge: {
+            position: 'absolute',
+            top: spacing.sm,
+            right: spacing.sm,
+            backgroundColor: 'rgba(0, 121, 107, 0.95)',
+            paddingHorizontal: spacing.sm,
+            paddingVertical: 4,
+            borderRadius: radii.full,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            zIndex: 6,
+            ...Platform.select({
+                web: {
+                    backdropFilter: 'blur(6px)',
+                    boxShadow: '0 2px 8px rgba(0, 121, 107, 0.35)',
+                } as any,
+            }),
+        },
+        questCardBikeText: {
+            color: colors.textOnDark,
+            fontSize: badgeFontSize,
+            fontWeight: '600',
+        },
         questCardPlayIcon: {
             position: 'absolute',
             top: '42%',

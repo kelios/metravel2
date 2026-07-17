@@ -14,6 +14,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
 import Map from '@/components/MapPage/Map';
+import NavigationIcon from '@/components/layout/NavigationIcon';
 import EmptyState from '@/components/ui/EmptyState';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import type { MapMovePayload } from '@/components/MapPage/Map/types';
@@ -47,6 +48,7 @@ type QuestsContentPanelProps = {
     selectedCityName: string | null;
     nearbyId: string;
     kidsFilterId?: string;
+    bikeFilterId?: string;
     searchQuery: string;
     onSearchChange: (text: string) => void;
     /** @deprecated Radius selection is no longer shown in the quest catalog. */
@@ -66,6 +68,7 @@ type QuestsContentPanelProps = {
     filtersActive: boolean;
     onResetFilters: () => void;
     onShowKids?: () => void;
+    onShowBike?: () => void;
     onShowNearby: () => void;
     onOpenFilterDrawer: () => void;
     onToggleViewMode: () => void;
@@ -87,6 +90,7 @@ export default function QuestsContentPanel({
     selectedCityName,
     nearbyId,
     kidsFilterId = '__kids__',
+    bikeFilterId = '__bike__',
     searchQuery = '',
     onSearchChange = () => {},
     questsAll,
@@ -104,6 +108,7 @@ export default function QuestsContentPanel({
     filtersActive,
     onResetFilters,
     onShowKids = () => {},
+    onShowBike = () => {},
     onShowNearby,
     onOpenFilterDrawer,
     onToggleViewMode,
@@ -165,7 +170,9 @@ export default function QuestsContentPanel({
                                 ? (isMapAreaActive ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_v_etoy_oblasti_f59f59da') : userLoc ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_poblizosti_02dcd1cf') : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd'))
                                 : selectedCityId === kidsFilterId
                                     ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_dlya_detey_fbda5ab0')
-                                    : selectedCityName || i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
+                                    : selectedCityId === bikeFilterId
+                                        ? i18nT('quests:screens.tabs.QuestsContentPanel.veloTitle')
+                                        : selectedCityName || i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
                     </Text>
                     <View style={styles.contentCountRow}>
                         {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
@@ -219,6 +226,20 @@ export default function QuestsContentPanel({
                                 name="smile"
                                 size={17}
                                 color={selectedCityId === kidsFilterId ? colors.textOnPrimary : colors.text}
+                            />
+                        </Pressable>
+                        <Pressable
+                            style={[styles.headerIconBtn, selectedCityId === bikeFilterId && styles.headerIconBtnActive]}
+                            onPress={onShowBike}
+                            accessibilityRole="button"
+                            accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.veloShowA11y')}
+                            accessibilityState={{ selected: selectedCityId === bikeFilterId }}
+                            testID="quests-show-bike"
+                        >
+                            <NavigationIcon
+                                name="bike"
+                                size={17}
+                                color={selectedCityId === bikeFilterId ? colors.textOnPrimary : colors.text}
                             />
                         </Pressable>
                         <Pressable

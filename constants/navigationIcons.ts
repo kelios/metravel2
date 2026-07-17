@@ -9,4 +9,5 @@ export type CustomNavigationIconName =
   | 'quest-map-person'
   | 'quest-route'
   | 'dice'
+  | 'bike'
 export type NavigationIconName = FeatherIconName | CustomNavigationIconName

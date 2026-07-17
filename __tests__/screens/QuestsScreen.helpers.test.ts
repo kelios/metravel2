@@ -10,6 +10,7 @@ import {
   getQuestCountryName,
   isCoordinateInMapViewport,
   isKidsQuest,
+  isBikeQuest,
   resolveQuestMapCenter,
 } from '@/screens/tabs/QuestsScreen.helpers';
 
@@ -111,6 +112,26 @@ describe('QuestsScreen helpers', () => {
       expect(isKidsQuest([])).toBe(false);
       expect(isKidsQuest(undefined)).toBe(false);
       expect(isKidsQuest(null)).toBe(false);
+    });
+  });
+
+  describe('isBikeQuest', () => {
+    it('detects the bike tag and the velo synonym among other tags', () => {
+      expect(isBikeQuest(['roadtrip', 'bike', 'nature'])).toBe(true);
+      expect(isBikeQuest(['bike'])).toBe(true);
+      expect(isBikeQuest(['velo'])).toBe(true);
+    });
+
+    it('is case- and whitespace-insensitive', () => {
+      expect(isBikeQuest([' Bike '])).toBe(true);
+      expect(isBikeQuest(['VELO'])).toBe(true);
+    });
+
+    it('returns false without the bike tag or without tags', () => {
+      expect(isBikeQuest(['roadtrip', 'nature'])).toBe(false);
+      expect(isBikeQuest([])).toBe(false);
+      expect(isBikeQuest(undefined)).toBe(false);
+      expect(isBikeQuest(null)).toBe(false);
     });
   });
 

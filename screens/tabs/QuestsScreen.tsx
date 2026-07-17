@@ -31,7 +31,9 @@ import {
     DEFAULT_NEARBY_RADIUS_KM,
     NEARBY_ID,
     KIDS_FILTER_ID,
+    BIKE_FILTER_ID,
     buildQuestCityCatalog,
+    filterBikeQuests,
     filterKidsQuests,
     filterQuestsByMapSearchArea,
     getAverageQuestMapPointCenter,
@@ -147,6 +149,10 @@ export default function QuestsScreen() {
         void handleSelectCity(KIDS_FILTER_ID);
     }, [handleSelectCity]);
 
+    const handleShowBikeQuests = useCallback(() => {
+        void handleSelectCity(BIKE_FILTER_ID);
+    }, [handleSelectCity]);
+
     const requestNearbyQuests = useCallback(async () => {
         if (geoRequesting) return;
         setGeoRequesting(true);
@@ -225,6 +231,7 @@ export default function QuestsScreen() {
         const validIds = new Set(CITIES.map((c) => c.id));
         const isValid = selectedCityId === NEARBY_ID
             || selectedCityId === KIDS_FILTER_ID
+            || selectedCityId === BIKE_FILTER_ID
             || (selectedCityId ? validIds.has(selectedCityId) : false);
         if (isValid) return;
         setSelectedCityId(NEARBY_ID);
@@ -284,6 +291,8 @@ export default function QuestsScreen() {
     const kidsQuests = useMemo(() => filterKidsQuests(ALL_QUESTS), [ALL_QUESTS]);
     // Детские квесты — часть каталога своего города. Фильтр «Для детей»
     // даёт дополнительный срез, но не заменяет городскую группировку.
+    // Велоквесты (тег `bike`) — такой же дополнительный срез каталога.
+    const bikeQuests = useMemo(() => filterBikeQuests(ALL_QUESTS), [ALL_QUESTS]);
 
     const citiesWithNearby: (City | NearbyCity)[] = useMemo(
         () => [{ id: NEARBY_ID, name: i18nT('quests:screens.tabs.QuestsScreen.ryadom_a27f6fda'), country: 'BY', isNearby: true } as NearbyCity, ...CITIES],
@@ -308,8 +317,9 @@ export default function QuestsScreen() {
             counts[city.id] = city.id === NEARBY_ID ? nearbyCount : (cityQuests[city.id]?.length || 0);
         }
         counts[KIDS_FILTER_ID] = kidsQuests.length;
+        counts[BIKE_FILTER_ID] = bikeQuests.length;
         return counts;
-    }, [citiesWithNearby, nearbyCount, cityQuests, kidsQuests.length]);
+    }, [citiesWithNearby, nearbyCount, cityQuests, kidsQuests.length, bikeQuests.length]);
 
     // Filter to show only cities with quests (plus Nearby always visible)
     const visibleCities = useMemo(() => {
@@ -399,6 +409,9 @@ export default function QuestsScreen() {
         if (selectedCityId === KIDS_FILTER_ID) {
             return kidsQuests.map((q) => ({ ...q }));
         }
+        if (selectedCityId === BIKE_FILTER_ID) {
+            return bikeQuests.map((q) => ({ ...q }));
+        }
         if (selectedCityId === NEARBY_ID) {
             if (activeMapAreaCenter) {
                 // «Искать в этой области» должен фиксировать именно видимый viewport,
@@ -427,6 +440,7 @@ export default function QuestsScreen() {
         searchTerm,
         cityQuests,
         kidsQuests,
+        bikeQuests,
     ]);
 
     const catalogModel = useQuestCatalogResponsiveModel(questsAll.length);
@@ -476,9 +490,11 @@ export default function QuestsScreen() {
     }, [dataLoaded, selectedCityId, userLoc, activeMapAreaCenter, questsAll, ALL_QUESTS, searchTerm]);
 
     const mapCenter = useMemo(() => {
-        const kidsCenter = selectedCityId === KIDS_FILTER_ID ? getAverageQuestMapPointCenter(mapPoints) : null;
-        const selectedCity = kidsCenter
-            ? { lat: kidsCenter.latitude, lng: kidsCenter.longitude }
+        const virtualFilterCenter = selectedCityId === KIDS_FILTER_ID || selectedCityId === BIKE_FILTER_ID
+            ? getAverageQuestMapPointCenter(mapPoints)
+            : null;
+        const selectedCity = virtualFilterCenter
+            ? { lat: virtualFilterCenter.latitude, lng: virtualFilterCenter.longitude }
             : CITIES.find((c) => c.id === selectedCityId);
         return resolveQuestMapCenter({
             searchTerm,
@@ -533,7 +549,9 @@ export default function QuestsScreen() {
             ? i18nT('quests:screens.tabs.QuestsScreen.ryadom_a27f6fda')
             : selectedCityId === KIDS_FILTER_ID
                 ? i18nT('quests:screens.tabs.QuestsScreen.dlya_detey_709e9049')
-                : CITIES.find((c) => c.id === selectedCityId)?.name ?? null;
+                : selectedCityId === BIKE_FILTER_ID
+                    ? i18nT('quests:screens.tabs.QuestsScreen.veloFilterName')
+                    : CITIES.find((c) => c.id === selectedCityId)?.name ?? null;
 
     const titleText = useMemo(() => {
         if (!selectedCityId) return i18nT('quests:screens.tabs.QuestsScreen.kvesty_metravel_1ee1a636');
@@ -552,10 +570,13 @@ export default function QuestsScreen() {
         if (selectedCityId === KIDS_FILTER_ID) {
             return i18nT('quests:screens.tabs.QuestsScreen.kvesty_dlya_detey_value1_value2_metravel_3ce19948', { value1: kidsQuests.length, value2: i18nT('quests:screens.tabs.QuestsScreen.questNoun', { count: kidsQuests.length }) });
         }
+        if (selectedCityId === BIKE_FILTER_ID) {
+            return i18nT('quests:screens.tabs.QuestsScreen.veloTitle', { value1: bikeQuests.length, value2: i18nT('quests:screens.tabs.QuestsScreen.questNoun', { count: bikeQuests.length }) });
+        }
         return selectedCityName
             ? i18nT('quests:screens.tabs.QuestsScreen.kvesty_value1_metravel_f8aef4dd', { value1: selectedCityName })
             : i18nT('quests:screens.tabs.QuestsScreen.vse_kvesty_metravel_32e5b095');
-    }, [selectedCityId, selectedCityName, nearbyCount, userLoc, activeMapAreaCenter, questsAll.length, kidsQuests.length]);
+    }, [selectedCityId, selectedCityName, nearbyCount, userLoc, activeMapAreaCenter, questsAll.length, kidsQuests.length, bikeQuests.length]);
 
     const descText = useMemo(() => {
         if (selectedCityId === NEARBY_ID) {
@@ -569,6 +590,9 @@ export default function QuestsScreen() {
         }
         if (selectedCityId === KIDS_FILTER_ID) {
             return i18nT('quests:screens.tabs.QuestsScreen.gorodskie_kvesty_dlya_detey_progulki_s_zadan_e9f23cbe');
+        }
+        if (selectedCityId === BIKE_FILTER_ID) {
+            return i18nT('quests:screens.tabs.QuestsScreen.veloDescription');
         }
         if (selectedCityName) return i18nT('quests:screens.tabs.QuestsScreen.oflayn_kvesty_v_gorode_value1_progulki_po_to_c1bef6e1', { value1: selectedCityName });
         return i18nT('quests:screens.tabs.QuestsScreen.issleduyte_goroda_i_parki_s_oflayn_kvestami__76e12a53');
@@ -646,6 +670,7 @@ export default function QuestsScreen() {
                             selectedCityId={selectedCityId}
                             nearbyId={NEARBY_ID}
                             kidsFilterId={KIDS_FILTER_ID}
+                            bikeFilterId={BIKE_FILTER_ID}
                             areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
                             collapsedCountryCodes={collapsedCountryCodes}
                             citiesByCountry={citiesByCountry}
@@ -670,6 +695,7 @@ export default function QuestsScreen() {
                     selectedCityId={selectedCityId}
                     nearbyId={NEARBY_ID}
                     kidsFilterId={KIDS_FILTER_ID}
+                    bikeFilterId={BIKE_FILTER_ID}
                     areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
                     collapsedCountryCodes={collapsedCountryCodes}
                     citiesByCountry={citiesByCountry}
@@ -691,6 +717,7 @@ export default function QuestsScreen() {
                 selectedCityName={selectedCityName}
                 nearbyId={NEARBY_ID}
                 kidsFilterId={KIDS_FILTER_ID}
+                bikeFilterId={BIKE_FILTER_ID}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 questsAll={questsAll}
@@ -708,6 +735,7 @@ export default function QuestsScreen() {
                 filtersActive={filtersActive}
                 onResetFilters={handleResetFilters}
                 onShowKids={handleShowKidsQuests}
+                onShowBike={handleShowBikeQuests}
                 onShowNearby={requestNearbyQuests}
                 onOpenFilterDrawer={() => setFilterDrawerOpen(true)}
                 onToggleViewMode={handleToggleViewMode}
