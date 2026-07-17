@@ -90,6 +90,8 @@ const QUEST_COVERS = [
   { quest_id: 'minsk-kids-zvezdochka', assetsDir: 'minskKidsZvezdochka', cover: 'cover.png' },
   { quest_id: 'minsk-teens-oktyabrskaya', assetsDir: 'minskTeensOktyabrskaya', cover: 'cover.png' },
   { quest_id: 'glubokoe-cherry-baron', assetsDir: 'glubokoeCherryBaron', cover: 'cover.png' },
+  { quest_id: 'mozyr-polesie-capital', assetsDir: 'mozyrPolesieCapital', cover: 'cover.png' },
+  { quest_id: 'minsk-cinema', assetsDir: 'minskCinema', cover: 'cover.png' },
   { quest_id: 'swiety-krzyz-lysa-gora', assetsDir: 'swietyKrzyzLysaGora', cover: 'cover.png' },
   { quest_id: 'ojcow-lokietek', assetsDir: 'ojcowLokietek', cover: 'cover.png' },
   { quest_id: 'niedzica-skarb-inkow', assetsDir: 'niedzicaSkarbInkow', cover: 'cover.png' },

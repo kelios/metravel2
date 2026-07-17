@@ -153,6 +153,8 @@ const QUESTS = [
     { questId: 'minsk-kids-zvezdochka', dir: 'minskKidsZvezdochka', city: 'Минск', mood: 'city', finaleId: 115 },
     { questId: 'minsk-teens-oktyabrskaya', dir: 'minskTeensOktyabrskaya', city: 'Минск', mood: 'city', finaleId: 116 },
     { questId: 'glubokoe-cherry-baron', dir: 'glubokoeCherryBaron', city: 'Глубокое', mood: 'city', finaleId: 117 },
+    { questId: 'mozyr-polesie-capital', dir: 'mozyrPolesieCapital', city: 'Мозырь', mood: 'epic', finaleId: 118 },
+    { questId: 'minsk-cinema', dir: 'minskCinema', city: 'Минск', mood: 'city', finaleId: 119 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
