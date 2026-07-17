@@ -1,5 +1,5 @@
 {
-  "description": "Web bundle size budget (KB). Regression guard: критический путь + eager/feature-чанки и release total без language-on-demand каталогов. BE/UK/PL/EN загружаются только после смены языка и контролируются отдельными chunk budgets; они не маскируют рост основного графа. Допуск на дрейф — tolerancePct. Regenerate: node scripts/guard-bundle-budget.js --update (затем заново курировать ключи). Гоняется в release:check после build:web:prod.",
+  "description": "Web bundle size budget (KB). Regression guard: критический путь + eager/feature-чанки и release total без language-on-demand каталогов. BE/UK/PL/EN загружаются только после смены языка и контролируются отдельными chunk budgets; они не маскируют рост основного графа. Feature-chunk baseline уточнён по production export 2026-07-17 после актуальных map/sidebar/comments изменений; допуск остаётся 5%. Regenerate: node scripts/guard-bundle-budget.js --update (затем заново курировать ключи). Гоняется в release:check после build:web:prod.",
   "tolerancePct": 5,
   "deferredChunks": [
     "locale-be",
@@ -38,7 +38,7 @@
     },
     "TravelDetailsMapSection": {
       "maxRawKB": 85.3,
-      "maxGzipKB": 21
+      "maxGzipKB": 22.2
     },
     "TravelDetailsPostLcpRuntime": {
       "maxRawKB": 1.3,
@@ -49,12 +49,12 @@
       "maxGzipKB": 3.4
     },
     "TravelDetailsSidebarSection": {
-      "maxRawKB": 10.9,
+      "maxRawKB": 11.6,
       "maxGzipKB": 3.3
     },
     "CommentsSection": {
       "maxRawKB": 47.7,
-      "maxGzipKB": 10.4
+      "maxGzipKB": 11
     },
     "locale-be": {
       "maxRawKB": 1346,
