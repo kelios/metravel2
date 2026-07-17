@@ -157,6 +157,8 @@ const QUESTS = [
     { questId: 'minsk-cinema', dir: 'minskCinema', city: 'Минск', mood: 'city', finaleId: 119 },
     { questId: 'vienna-imperial-secrets', dir: 'viennaSecrets', city: 'Вена', mood: 'epic', finaleId: 120 },
     { questId: 'bielsko-biala-cartoon-vienna', dir: 'bielskoBialaCartoonVienna', city: 'Бельско-Бяла', mood: 'city', finaleId: 121 },
+    { questId: 'szklarska-poreba-glass-town', dir: 'szklarskaPorebaGlassTown', city: 'Шклярска-Поремба', mood: 'castle', finaleId: 122 },
+    { questId: 'banska-stiavnica-silver-love', dir: 'banskaStiavnicaSilverLove', city: 'Банска-Штявница', mood: 'castle', finaleId: 123 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
