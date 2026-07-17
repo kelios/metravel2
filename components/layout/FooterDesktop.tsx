@@ -5,6 +5,7 @@ import { useRouter, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { METRAVEL_SOCIAL_LINKS } from '@/constants/socialLinks'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { translate as i18nT } from '@/i18n'
@@ -300,21 +301,27 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
 
   const social: LinkItem[] = [
     {
+      key: 'fb',
+      label: i18nT('navigation:components.layout.FooterDesktop.facebook_713f1553'),
+      externalUrl: METRAVEL_SOCIAL_LINKS.facebook,
+      icon: <Feather name="facebook" size={18} color={iconColor} />,
+    },
+    {
       key: 'tt',
       label: i18nT('navigation:components.layout.FooterDesktop.tiktok_87c3a282'),
-      externalUrl: 'https://www.tiktok.com/@metravel.by',
+      externalUrl: METRAVEL_SOCIAL_LINKS.tiktok,
       icon: <Feather name="music" size={18} color={iconColor} />,
     },
     {
       key: 'ig',
       label: i18nT('navigation:components.layout.FooterDesktop.instagram_8c5228c3'),
-      externalUrl: 'https://www.instagram.com/metravelby/',
+      externalUrl: METRAVEL_SOCIAL_LINKS.instagram,
       icon: <Feather name="instagram" size={18} color={iconColor} />,
     },
     {
       key: 'yt',
       label: i18nT('navigation:components.layout.FooterDesktop.youtube_11ee4fb1'),
-      externalUrl: 'https://www.youtube.com/@metravelby',
+      externalUrl: METRAVEL_SOCIAL_LINKS.youtube,
       icon: <Feather name="youtube" size={18} color={iconColor} />,
     },
   ]

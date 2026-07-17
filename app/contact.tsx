@@ -1,6 +1,9 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, StatusBar, TextInput, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import { LAYOUT } from '@/constants/layout'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { AboutHeader } from '@/components/about/AboutHeader'
 import { AboutIntroCard } from '@/components/about/AboutIntroCard'
@@ -16,22 +19,26 @@ import { showToast } from '@/utils/toast'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { getAppVersionInfo, webTouchScrollStyle } from '@/utils'
 import { translate as i18nT } from '@/i18n'
+import { METRAVEL_SOCIAL_LINKS } from '@/constants/socialLinks'
 
 
 const EMAIL = 'metraveldev@gmail.com'
 const MAIL_SUBJECT = 'Info metravel.by'
-const SOCIAL_LINKS = {
-  instagram: 'https://www.instagram.com/metravelby/',
-  tiktok: 'https://www.tiktok.com/@metravel.by',
-  youtube: 'https://www.youtube.com/@metravelby',
-}
-
 function ContactScreen() {
   const styles = useAboutStyles()
-  const { width } = useResponsive()
+  const { width, isDesktop } = useResponsive()
   const isWide = width >= 900
+  const insets = useSafeAreaInsets()
   const router = useRouter()
   const isFocused = useIsFocused()
+
+  // На мобайле (native всегда, web при !isDesktop) внизу висит абсолютный
+  // BottomDock (tabBarHeight + safe-area). Без запаса блок соцсетей уезжает
+  // под этот док. Оставляем место, чтобы он был виден. См. Footer.tsx.
+  const showsMobileDock = Platform.OS !== 'web' || !isDesktop
+  const scrollBottomPadding = showsMobileDock
+    ? LAYOUT.tabBarHeight + insets.bottom + DESIGN_TOKENS.spacing.xl
+    : DESIGN_TOKENS.spacing.xl
 
   const appVersionInfo = useMemo(() => getAppVersionInfo(), [])
 
@@ -189,7 +196,12 @@ function ContactScreen() {
       )}
       <CustomHeader />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView style={webTouchScrollStyle} contentContainerStyle={{ flexGrow: 1 }}>
+        <ScrollView
+          style={webTouchScrollStyle}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: scrollBottomPadding }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="none"
+        >
           <View style={styles.backgroundImage}>
             <View style={styles.container}>
               {Platform.OS === 'web' && (
@@ -220,7 +232,7 @@ function ContactScreen() {
                     onOpenUrl={openUrl}
                     onOpenPrivacy={() => router.push('/privacy' as any)}
                     onOpenCookies={() => router.push('/cookies' as any)}
-                    socialLinks={SOCIAL_LINKS}
+                    socialLinks={METRAVEL_SOCIAL_LINKS}
                     versionInfo={{
                       ...appVersionInfo,
                       ...(Platform.OS === 'web' ? { webBuildVersion } : {}),
@@ -274,7 +286,10 @@ function ContactScreen() {
                   </View>
                 </View>
 
-                <SocialSection onOpenInstagram={() => openUrl(SOCIAL_LINKS.instagram)} />
+                <SocialSection
+                  onOpenFacebook={() => openUrl(METRAVEL_SOCIAL_LINKS.facebook)}
+                  onOpenInstagram={() => openUrl(METRAVEL_SOCIAL_LINKS.instagram)}
+                />
               </View>
             </View>
           </View>

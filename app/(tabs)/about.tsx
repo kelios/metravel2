@@ -21,18 +21,13 @@ import { openExternalUrl } from '@/utils/externalLinks';
 import { getAppVersionInfo, webTouchScrollStyle } from '@/utils';
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { translate as i18nT } from '@/i18n'
+import { METRAVEL_SOCIAL_LINKS } from '@/constants/socialLinks';
 
 
 const EMAIL = 'metraveldev@gmail.com';
 const MAIL_SUBJECT = 'Info metravel.by';
 const YT_URL = 'https://www.youtube.com/watch?v=K0oV4Y-i8hY';
 const YT_THUMB = 'https://img.youtube.com/vi/K0oV4Y-i8hY/hqdefault.jpg';
-const SOCIAL_LINKS = {
-  instagram: 'https://www.instagram.com/metravelby/',
-  tiktok: 'https://www.tiktok.com/@metravel.by',
-  youtube: 'https://www.youtube.com/@metravelby',
-};
-
 function AboutAndContactScreen() {
   const styles = useAboutStyles();
   const { width } = useResponsive();
@@ -208,7 +203,7 @@ function AboutAndContactScreen() {
                         onOpenUrl={openUrl}
                         onOpenPrivacy={() => router.push('/privacy' as any)}
                         onOpenCookies={() => router.push('/cookies' as any)}
-                        socialLinks={SOCIAL_LINKS}
+                        socialLinks={METRAVEL_SOCIAL_LINKS}
                         versionInfo={{
                           ...appVersionInfo,
                           ...(Platform.OS === 'web' ? { webBuildVersion } : {}),
@@ -265,7 +260,10 @@ function AboutAndContactScreen() {
                     onSubmitEditingEmail={() => emailRef.current?.focus()}
                     onSubmitEditingMessage={() => messageRef.current?.focus()}
                   />
-                  <SocialSection onOpenInstagram={() => openUrl('https://instagram.com/metravelby')} />
+                  <SocialSection
+                    onOpenFacebook={() => openUrl(METRAVEL_SOCIAL_LINKS.facebook)}
+                    onOpenInstagram={() => openUrl(METRAVEL_SOCIAL_LINKS.instagram)}
+                  />
                   <ContributionBanner variant="about" density="compact" />
                 </View>
               </View>

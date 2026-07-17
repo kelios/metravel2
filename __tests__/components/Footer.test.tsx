@@ -178,6 +178,7 @@ describe('Footer', () => {
       expect(getByTestId('footer-item-about')).toBeTruthy()
       expect(getByTestId('footer-item-privacy')).toBeTruthy()
       expect(getByTestId('footer-item-cookies')).toBeTruthy()
+      expect(getByTestId('footer-item-fb')).toBeTruthy()
       expect(getByTestId('footer-item-tt')).toBeTruthy()
       expect(getByTestId('footer-item-ig')).toBeTruthy()
       expect(getByTestId('footer-item-yt')).toBeTruthy()

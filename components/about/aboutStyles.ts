@@ -465,6 +465,12 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
     color: colors.text,
     marginBottom: DESIGN_TOKENS.spacing.md,
   },
+  socialButtonsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
   socialButton: {
     flexDirection: 'row',
     alignItems: 'center',

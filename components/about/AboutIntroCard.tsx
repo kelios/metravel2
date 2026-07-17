@@ -14,7 +14,7 @@ type Props = {
   onOpenUrl: (url: string) => void;
   onOpenPrivacy: () => void;
   onOpenCookies: () => void;
-  socialLinks: { instagram: string; tiktok: string; youtube: string };
+  socialLinks: { facebook: string; instagram: string; tiktok: string; youtube: string };
   versionInfo?: {
     appVersion: string;
     displayVersion?: string;
@@ -88,6 +88,19 @@ export const AboutIntroCard: React.FC<Props> = ({
 
       <View style={styles.linksBlock}>
         <View style={styles.socialRow}>
+          <Pressable
+            onPress={() => onOpenUrl(socialLinks.facebook)}
+            accessibilityRole="link"
+            accessibilityLabel={i18nT('home:components.about.AboutIntroCard.metravel_v_facebook_86f418cf')}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.iconLink,
+              pressed && styles.iconLinkPressed,
+              globalFocusStyles.focusable,
+            ]}
+          >
+            <Feather name="facebook" size={18} color={colors.primaryDark} />
+          </Pressable>
           <Pressable
             onPress={() => onOpenUrl(socialLinks.tiktok)}
             accessibilityRole="link"

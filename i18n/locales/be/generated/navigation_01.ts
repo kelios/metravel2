@@ -63,6 +63,7 @@ export const navigationGenerated1 = {
   "components.layout.CustomHeaderMobileMenu.zakryt_menyu_fd90a4da": "Зачыніць меню",
   "components.layout.CustomHeaderMobileMenu.zaregistrirovatsya_42755889": "Зарэгістравацца",
   "components.layout.FooterDesktop.cookies_52e35ac6": "Cookies",
+  "components.layout.FooterDesktop.facebook_713f1553": "Facebook",
   "components.layout.FooterDesktop.instagram_8c5228c3": "Instagram",
   "components.layout.FooterDesktop.kvesty_a13429c0": "Квэсты",
   "components.layout.FooterDesktop.metravel_2020_1c77d748": "© MeTravel 2020–",
