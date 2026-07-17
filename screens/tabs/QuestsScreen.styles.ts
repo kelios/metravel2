@@ -2,11 +2,16 @@
 import { StyleSheet, Platform } from 'react-native';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { LAYOUT } from '@/constants/layout';
 import type { ThemedColors } from '@/hooks/useTheme';
 
 const { spacing, radii, typography, touchTarget } = DESIGN_TOKENS;
 const PANEL_RADIUS = radii.lg;
 const CONTROL_RADIUS = radii.sm;
+// Нижний док (BottomDock) — абсолютный/фиксированный оверлей на обеих мобильных
+// платформах, поэтому каждый скролл-контейнер сам резервирует место под ним,
+// иначе последняя карточка уходит под док. Формула та же, что в списке travel.
+const MOBILE_DOCK_RESERVE = (LAYOUT?.tabBarHeight ?? 56) + spacing.xl;
 
 // ───────────── Styles (Two-column layout) ─────────────
 
@@ -573,11 +578,9 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         contentBody: {
             padding: isMobileW ? spacing.md : spacing.lg,
             paddingTop: isMobileW ? spacing.sm : spacing.md,
-            // Нижний инсет под фиксированный BottomDock (mobile web, ~64px),
-            // чтобы последний квест был полностью виден над доком.
-            paddingBottom: isMobileW
-                ? (Platform.OS === 'web' ? 64 + spacing.xl : spacing.xl)
-                : spacing.lg,
+            // Нижний инсет под BottomDock, чтобы последний квест был полностью
+            // виден над доком — и на mobile web, и на native.
+            paddingBottom: isMobileW ? MOBILE_DOCK_RESERVE : spacing.lg,
         },
         contentBodyMap: {
             ...(isMobileW
@@ -736,7 +739,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             flexGrow: 1,
             padding: isMobileW ? spacing.md : spacing.lg,
             paddingTop: isMobileW ? spacing.sm : spacing.md,
-            paddingBottom: isMobileW ? spacing.xl : spacing.lg,
+            paddingBottom: isMobileW ? MOBILE_DOCK_RESERVE : spacing.lg,
         },
         questVirtualizedItem: {
             marginBottom: spacing.lg,

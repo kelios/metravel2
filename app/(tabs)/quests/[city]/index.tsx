@@ -17,6 +17,7 @@ import { buildBrandedSeoTitle } from '@/utils/questSeo'
 import { resolveQuestCitySegment } from '@/utils/questCityAlias'
 import { stringifyJsonLd } from '@/utils/jsonLd'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { LAYOUT } from '@/constants/layout'
 import { translate as i18nT } from '@/i18n'
 
 const { spacing } = DESIGN_TOKENS
@@ -65,7 +66,7 @@ export default function QuestsByCityScreen() {
     if (cityName) navigation.setOptions({ title: cityName })
   }, [navigation, cityName])
 
-  const { width: bpWidth } = useBreakpoints()
+  const { width: bpWidth, isMobile } = useBreakpoints()
   const height = Platform.OS === 'web' ? 0 : Dimensions.get('window').height
   const s = useMemo(() => getStyles(colors, bpWidth, height), [colors, bpWidth, height])
   const catalogModel = useQuestCatalogResponsiveModel(cityQuests.length)
@@ -135,7 +136,13 @@ export default function QuestsByCityScreen() {
   return (
     <ScrollView
       style={s.root}
-      contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
+      contentContainerStyle={{
+        padding: spacing.lg,
+        gap: spacing.md,
+        // Резерв под мобильный BottomDock (абсолютный оверлей): без него
+        // последняя карточка города обрезается доком.
+        paddingBottom: isMobile ? (LAYOUT?.tabBarHeight ?? 56) + spacing.xl : spacing.lg,
+      }}
       showsVerticalScrollIndicator={false}
     >
       {isFocused ? (
