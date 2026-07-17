@@ -5,6 +5,7 @@ import {
   buildDirectQuestRouteResult,
   buildQuestWalkingRouteGeometry,
   calculateQuestTrackDistanceM,
+  closeQuestRouteLoop,
   getQuestDirectRouteTrack,
   getQuestRoutePoints,
   type QuestRouteGeometryResult,
@@ -28,8 +29,17 @@ const emptyState: QuestRouteGeometryState = {
 export const hasRoutedQuestTrack = (track?: LngLat[], source?: string) =>
   source === 'routed' && Array.isArray(track) && track.length >= 2;
 
-export function useQuestRouteGeometry(steps: QuestRoutePoint[]): QuestRouteGeometryState {
-  const points = useMemo(() => getQuestRoutePoints(steps), [steps]);
+export function useQuestRouteGeometry(
+  steps: QuestRoutePoint[],
+  options: { closeLoop?: boolean } = {},
+): QuestRouteGeometryState {
+  const { closeLoop = false } = options;
+  // Кольцевой квест (тег `loop`): к точкам добавляется стартовая, чтобы роутер
+  // проложил обратный сегмент «финиш → старт» и трек замкнулся.
+  const points = useMemo(() => {
+    const base = getQuestRoutePoints(steps);
+    return closeLoop ? closeQuestRouteLoop(base) : base;
+  }, [steps, closeLoop]);
   const pointsKey = useMemo(
     () => points.map((point) => `${point.lat.toFixed(6)},${point.lng.toFixed(6)}`).join('|'),
     [points],

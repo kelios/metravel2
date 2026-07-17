@@ -468,6 +468,7 @@ export default function QuestByIdScreen() {
             <QuestWizardComponent
               title={bundle.title}
               steps={bundle.steps}
+              tags={bundle.tags}
               finale={bundle.finale}
               intro={bundle.intro}
               storageKey={guestStorageKey}
@@ -491,6 +492,7 @@ export default function QuestByIdScreen() {
           <QuestWizardComponent
             title={bundle.title}
             steps={bundle.steps}
+            tags={bundle.tags}
             finale={bundle.finale}
             intro={bundle.intro}
             storageKey={guestStorageKey}
@@ -561,6 +563,7 @@ export default function QuestByIdScreen() {
           <QuestWizardComponent
             title={bundle.title}
             steps={bundle.steps}
+            tags={bundle.tags}
             finale={bundle.finale}
             intro={bundle.intro}
             storageKey={bundle.storageKey}
@@ -582,6 +585,7 @@ export default function QuestByIdScreen() {
         <QuestWizardComponent
           title={bundle.title}
           steps={bundle.steps}
+          tags={bundle.tags}
           finale={bundle.finale}
           intro={bundle.intro}
           storageKey={bundle.storageKey}

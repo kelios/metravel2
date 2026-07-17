@@ -345,6 +345,53 @@ describe('useMapCoordinates live location updates', () => {
     expect(result.current.coordinatesAreFallback).toBe(false)
   })
 
+  it('recovers a slow native fix through last-known viewport and the live watch', async () => {
+    ;(Platform as any).OS = 'android'
+    let watchSuccess: ((location: any) => void) | null = null
+    const removeWatch = jest.fn()
+    const watchPositionAsync = jest.fn(async (_options, success) => {
+      watchSuccess = success
+      return { remove: removeWatch }
+    })
+    ;(loadExpoLocation as jest.Mock).mockResolvedValue({
+      requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({
+        status: 'granted',
+        granted: true,
+        canAskAgain: true,
+      }),
+      getLastKnownPositionAsync: jest.fn().mockResolvedValue({
+        coords: { latitude: 52.2297, longitude: 21.0122, accuracy: 80 },
+        timestamp: 1000,
+      }),
+      getCurrentPositionAsync: jest.fn().mockRejectedValue(new Error('cold fix unavailable')),
+      watchPositionAsync,
+      Accuracy: { Balanced: 3 },
+    })
+
+    const { result, unmount } = renderHook(() => useMapCoordinates())
+
+    await waitFor(() => {
+      expect(watchPositionAsync).toHaveBeenCalledTimes(1)
+      expect(result.current.coordinates).toEqual({ latitude: 52.2297, longitude: 21.0122 })
+      expect(result.current.coordinatesSource).toBe('cache')
+      expect(result.current.currentLocation).toBeNull()
+    })
+
+    act(() => {
+      watchSuccess?.({
+        coords: { latitude: 52.2301, longitude: 21.0128, accuracy: 12 },
+        timestamp: 5000,
+      })
+    })
+
+    expect(result.current.coordinates).toEqual({ latitude: 52.2301, longitude: 21.0128 })
+    expect(result.current.currentLocation).toEqual({ latitude: 52.2301, longitude: 21.0128 })
+    expect(result.current.coordinatesAreFallback).toBe(false)
+
+    unmount()
+    expect(removeWatch).toHaveBeenCalledTimes(1)
+  })
+
   it('rechecks native permission after returning from device settings', async () => {
     ;(Platform as any).OS = 'android'
     let handleAppStateChange: ((state: string) => void) | null = null

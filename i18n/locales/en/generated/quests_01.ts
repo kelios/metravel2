@@ -169,6 +169,7 @@ export const questsGenerated1 = {
   "components.quests.questRouteGeometry.pustoy_peshiy_marshrut_ot_servera_cbf4445a": "Empty walking route from the server",
   "components.quests.questRouteGeometry.pustoy_peshiy_marshrut_ot_valhalla_9e4a0a35": "Empty walking route from Valhalla",
   "components.quests.questRouteGeometry.servera_marshrutizatsii_9da8dfea": "routing server",
+  "components.quests.QuestWizard.aiDisclosure": "MeTravel quests are prepared with the help of artificial intelligence. Locations, tasks, and other information may be inaccurate or become outdated. Assess the route and conditions yourself before starting; if you find an error or an inconvenient location, leave a review—it helps us improve the quest.",
   "components.quests.QuestWizard.gpx_s_peshim_marshrutom_kvesta_gotov_dd0919a1": "GPX with the quest walking route is ready",
   "components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_da201f00": "Quest saved for offline",
   "components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_foto_value1_valu_b0544e7a": "Quest saved for offline - photo {{value1}}/{{value2}}",

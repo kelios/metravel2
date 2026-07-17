@@ -74,4 +74,43 @@ describe('questOfflineMapExport', () => {
 
     expect(file.filename).toBe('quest-offline-map.gpx');
   });
+
+  describe('loop closure (кольцевые велоквесты)', () => {
+    // Три точки кольца: финиш далеко от старта — прямой fallback-трек должен
+    // замыкаться сегментом «финиш → старт», а waypoint-маркеры не дублироваться.
+    const loopSteps = [
+      { lat: 50.0533, lng: 19.9333, title: 'Старт' },
+      { lat: 50.0184, lng: 19.8029, title: 'Середина' },
+      { lat: 50.0520, lng: 19.9145, title: 'Финиш' },
+    ];
+
+    it('closes the direct GPX track back to the start when closeLoop is set', () => {
+      const file = buildQuestOfflineMapGpx({ title: 'Велокольцо', steps: loopSteps, closeLoop: true });
+
+      const trackPoints = file.content.match(/<trkpt /g) ?? [];
+      expect(trackPoints).toHaveLength(4);
+      // Замыкающая точка = координаты старта, но waypoint старта один.
+      expect(file.content.match(/<trkpt lat="50.0533" lon="19.9333">/g)).toHaveLength(2);
+      expect(file.content.match(/<wpt lat="50.0533" lon="19.9333">/g)).toHaveLength(1);
+    });
+
+    it('closes the GeoJSON fallback LineString when closeLoop is set', () => {
+      const geojson = JSON.parse(buildQuestOfflineMapGeoJSON({
+        title: 'Велокольцо',
+        steps: loopSteps,
+        closeLoop: true,
+      }));
+
+      const line = geojson.features.find((feature: any) => feature.geometry.type === 'LineString');
+      expect(line.geometry.coordinates).toHaveLength(4);
+      expect(line.geometry.coordinates[0]).toEqual(line.geometry.coordinates[3]);
+      const pointFeatures = geojson.features.filter((feature: any) => feature.geometry.type === 'Point');
+      expect(pointFeatures).toHaveLength(3);
+    });
+
+    it('does not close the track without closeLoop', () => {
+      const file = buildQuestOfflineMapGpx({ title: 'Линейный', steps: loopSteps });
+      expect(file.content.match(/<trkpt /g)).toHaveLength(3);
+    });
+  });
 });

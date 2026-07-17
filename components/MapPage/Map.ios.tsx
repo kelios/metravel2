@@ -150,6 +150,7 @@ const Map: React.FC<TravelProps> = ({
   const router = useRouter();
   const webViewRef = useRef<WebView>(null);
   const isReadyRef = useRef(false);
+  const didAutoCenterOnTrustedUserRef = useRef(false);
   // MapPanel передаёт { travelAddress: { data } }, quests-экраны — { data } напрямую (F-21).
   const travelAddress = useMemo(
     () => travel?.travelAddress?.data ?? travel?.data ?? [],
@@ -469,6 +470,16 @@ const Map: React.FC<TravelProps> = ({
     return { lat: userLat, lng: userLng };
   }, [userLat, userLng]);
 
+  const shouldAutoCenterOnTrustedUser = useMemo(() => {
+    if (!userLocationLatLng || mode !== 'radius' || pointsOnly) return false;
+    return (
+      Math.abs(centerLat - userLocationLatLng.lat) <= 0.000001 &&
+      Math.abs(centerLng - userLocationLatLng.lng) <= 0.000001
+    );
+  }, [centerLat, centerLng, mode, pointsOnly, userLocationLatLng]);
+  const shouldAutoCenterOnTrustedUserRef = useRef(shouldAutoCenterOnTrustedUser);
+  shouldAutoCenterOnTrustedUserRef.current = shouldAutoCenterOnTrustedUser;
+
   const pushUserLocation = useCallback(() => {
     if (!isReadyRef.current) return;
     if (userLocationLatLng) {
@@ -479,6 +490,16 @@ const Map: React.FC<TravelProps> = ({
       injectMapCommand('window.__metravelClearUserLocation && window.__metravelClearUserLocation()');
     }
   }, [injectMapCommand, userLocationLatLng]);
+
+  const autoCenterOnTrustedUserIfNeeded = useCallback(() => {
+    if (!isReadyRef.current) return;
+    if (didAutoCenterOnTrustedUserRef.current) return;
+    if (!shouldAutoCenterOnTrustedUserRef.current) return;
+    didAutoCenterOnTrustedUserRef.current = true;
+    injectMapCommand(
+      'window.__metravelMapCenterOnUser && window.__metravelMapCenterOnUser()',
+    );
+  }, [injectMapCommand]);
 
   // Ref на последние push-функции — чтобы обработчики onLoadEnd/onMessage слали
   // актуальные данные без устаревшего замыкания.
@@ -500,6 +521,14 @@ const Map: React.FC<TravelProps> = ({
     pushUserLocation();
   }, [pushUserLocation]);
 
+  // The WebView can finish its first layout on the Minsk fallback before the
+  // Android location promise resolves. Recenter exactly once when the trusted
+  // user fix becomes the active radius anchor; later watch ticks and unrelated
+  // URL/search/route anchors must not keep yanking the user's viewport.
+  useEffect(() => {
+    autoCenterOnTrustedUserIfNeeded();
+  }, [autoCenterOnTrustedUserIfNeeded, shouldAutoCenterOnTrustedUser]);
+
   const handleReady = useCallback(() => {
     isReadyRef.current = true;
     // F-17 — если контейнер уже разложился до готовности WebView, DOM-resize не
@@ -516,6 +545,7 @@ const Map: React.FC<TravelProps> = ({
     }
     pushPayloadRef.current();
     pushUserLocationRef.current();
+    autoCenterOnTrustedUserIfNeeded();
     // Переприменяем включённые оверлеи после (ре)загрузки WebView.
     const enabled = enabledOverlaysRef.current;
     Object.keys(enabled).forEach((id) => {
@@ -524,7 +554,7 @@ const Map: React.FC<TravelProps> = ({
         `window.__metravelSetOverlay && window.__metravelSetOverlay(${serializeForInlineScript(id)}, true)`,
       );
     });
-  }, [injectMapCommand]);
+  }, [autoCenterOnTrustedUserIfNeeded, injectMapCommand]);
 
   // Статичный HTML-каркас: карта + функция window.__metravelRenderPoints.
   // Мемоизирован по теме — стабилен между обновлениями данных, поэтому WebView

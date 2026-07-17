@@ -90,6 +90,8 @@ export type FrontendQuestBundle = {
     storageKey?: string;
     city?: QuestCity;
     coverUrl?: string;
+    /** Теги квеста (meta.tags). В detail-API их нет — хук дообогащает из списка. */
+    tags?: string[];
     ratingAvg: number | null;
     ratingCount: number;
     userRating: number | null;

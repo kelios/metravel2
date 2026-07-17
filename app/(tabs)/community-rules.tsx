@@ -10,7 +10,6 @@ export default function CommunityRulesScreen() {
       seoDescription={i18nT('legal:app.tabs.community_rules.pravila_soobschestva_metravel_kak_my_obschae_f024d655')}
       pageTitle={i18nT('legal:app.tabs.community_rules.pravila_soobschestva_24954009')}
       effectiveDate="20.06.2026"
-      draftNotice
       intro={[
         i18nT('legal:app.tabs.community_rules.metravel_soobschestvo_puteshestvennikov_eti__5869b99f'),
       ]}

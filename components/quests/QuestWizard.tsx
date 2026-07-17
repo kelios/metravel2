@@ -15,6 +15,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { generatePrintableQuest } from './QuestPrintable';
+import DataFreshnessNotice from '@/components/legal/DataFreshnessNotice';
+import { isLoopQuest } from '@/utils/questAudience';
 import { useQuestFinaleMedia } from './useQuestFinaleMedia';
 import { QuestCompactSidebar, QuestHeaderPanel } from './questWizardShell';
 import {
@@ -45,6 +47,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestFontScaleStore } from '@/stores/questFontScaleStore';
 import { useQuestWizardResponsiveModel } from './hooks/useQuestWizardResponsiveModel';
 import { createQuestWizardStyles } from './questWizardStyles';
+import { useTranslation } from '@/i18n/LocaleProvider';
 
 // ===================== ТИПЫ =====================
 export type { QuestStep, QuestCity, QuestFinale } from './types';
@@ -55,6 +58,8 @@ export type QuestWizardProps = {
     title: string; steps: QuestStep[]; finale: QuestFinale; intro?: QuestStep;
     storageKey?: string; city?: QuestCity;
     coverUrl?: string;
+    /** Теги квеста (meta.tags): `loop` включает замыкание маршрута «финиш → старт». */
+    tags?: string[];
     /** Callback для синхронизации прогресса с бэкендом */
     onProgressChange?: (data: {
         currentIndex: number; unlockedIndex: number;
@@ -104,8 +109,11 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, ratingSlot, completionSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, ratingSlot, completionSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
+    const { t } = useTranslation();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
+    // Кольцевой квест (тег `loop`): карта и все экспорты замыкают маршрут к старту.
+    const closeLoopRoute = isLoopQuest(tags);
 
     const wizardModel = useQuestWizardResponsiveModel();
     const {
@@ -323,15 +331,15 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         const questUrl = typeof window !== 'undefined'
             ? window.location.href.replace(/^http:\/\/localhost:\d+/, 'https://metravel.by')
             : undefined;
-        void generatePrintableQuest({ title, steps, intro, coverUrl, questUrl, finaleText: finale?.text });
-    }, [coverUrl, intro, steps, title, finale?.text]);
+        void generatePrintableQuest({ title, steps, intro, coverUrl, questUrl, finaleText: finale?.text, closeLoop: closeLoopRoute });
+    }, [coverUrl, intro, steps, title, finale?.text, closeLoopRoute]);
 
     const offlineMapPointsCount = useMemo(() => getQuestOfflineMapPoints(steps).length, [steps]);
 
     const handleOfflineMapDownload = useCallback(() => {
         void (async () => {
             try {
-                const exported = await exportQuestOfflineMap({ title, steps });
+                const exported = await exportQuestOfflineMap({ title, steps, closeLoop: closeLoopRoute });
                 notifyQuest(
                     exported
                         ? i18nT('quests:components.quests.QuestWizard.gpx_s_peshim_marshrutom_kvesta_gotov_dd0919a1')
@@ -343,12 +351,12 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                 notifyQuest(i18nT('quests:components.quests.QuestWizard.ne_udalos_podgotovit_realnyy_marshrut_dlya_o_76e048c3'));
             }
         })();
-    }, [offlineMapPointsCount, steps, title]);
+    }, [offlineMapPointsCount, steps, title, closeLoopRoute]);
 
     const handleOfflineMapOpenInApp = useCallback(() => {
         void (async () => {
             try {
-                const opened = await openQuestOfflineMapInApp({ title, steps });
+                const opened = await openQuestOfflineMapInApp({ title, steps, closeLoop: closeLoopRoute });
                 if (!opened) {
                     notifyQuest(
                         offlineMapPointsCount >= 2
@@ -360,7 +368,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                 notifyQuest(i18nT('quests:components.quests.QuestWizard.ne_udalos_otkryt_realnyy_marshrut_v_prilozhe_20204379'));
             }
         })();
-    }, [offlineMapPointsCount, steps, title]);
+    }, [offlineMapPointsCount, steps, title, closeLoopRoute]);
 
     // Скачать весь квест для офлайна: персистим сырой бандл в кэш и прогреваем
     // дисковый кэш фото (шаги + обложка + постер финала), чтобы квест открывался
@@ -398,6 +406,14 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
             {/* Левая колонка: шаги + карта + финал */}
             <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageMain : undefined}>
+                {currentIndex === 0 && !showFinaleOnly && !guestGateActive ? (
+                    <DataFreshnessNotice
+                        text={t('quests:components.quests.QuestWizard.aiDisclosure')}
+                        style={styles.aiDisclosure}
+                        testID="quest-ai-disclosure"
+                    />
+                ) : null}
+
                 {/* Гостевой мягкий гейт после лимита бесплатных точек */}
                 {guestGateActive && (
                     <QuestGuestGate
@@ -446,6 +462,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 openCurrentStepInMap={openCurrentStepInMap}
                                 copyCurrentStepCoords={copyCurrentStepCoords}
                                 activeStepIndex={currentIndex > 0 ? currentIndex - 1 : undefined}
+                                closeLoopRoute={closeLoopRoute}
                             />
                         )}
                     </View>

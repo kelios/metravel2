@@ -169,6 +169,7 @@ export const questsGenerated1 = {
   "components.quests.questRouteGeometry.pustoy_peshiy_marshrut_ot_servera_cbf4445a": "Порожній піший маршрут від сервера",
   "components.quests.questRouteGeometry.pustoy_peshiy_marshrut_ot_valhalla_9e4a0a35": "Порожній піший маршрут від Valhalla",
   "components.quests.questRouteGeometry.servera_marshrutizatsii_9da8dfea": "сервера маршрутизації",
+  "components.quests.QuestWizard.aiDisclosure": "Квести MeTravel підготовлені з використанням штучного інтелекту. Точки, завдання й відомості можуть містити неточності або застаріти. Перед проходженням самостійно оцініть маршрут і умови; якщо помітили помилку або незручну точку, залиште відгук — це допоможе нам покращити квест.",
   "components.quests.QuestWizard.gpx_s_peshim_marshrutom_kvesta_gotov_dd0919a1": "GPX з пішим маршрутом квесту готовий",
   "components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_da201f00": "Квест збережений для офлайну",
   "components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_foto_value1_valu_b0544e7a": "Квест збережений для офлайну - фото {{value1}}/{{value2}}",

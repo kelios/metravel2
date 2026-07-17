@@ -61,6 +61,7 @@ export function QuestDesktopMapPanel({
   openCurrentStepInMap,
   copyCurrentStepCoords,
   activeStepIndex,
+  closeLoopRoute = false,
 }: SharedProps & {
   currentStep: PointLike
   steps: PointLike[]
@@ -73,6 +74,8 @@ export function QuestDesktopMapPanel({
   openCurrentStepInMap: (app: QuestMapApp) => void
   copyCurrentStepCoords: () => void
   activeStepIndex?: number
+  /** Кольцевой квест: карта и экспорт замыкают маршрут «финиш → старт». */
+  closeLoopRoute?: boolean
 }) {
   return (
     <View
@@ -140,6 +143,7 @@ export function QuestDesktopMapPanel({
       <Suspense fallback={<QuestMapSkeleton />}>
         <QuestFullMapLazy
           steps={steps}
+          closeLoop={closeLoopRoute}
           height={useWideInlineLayout ? (compactDesktopLayout ? 460 : 520) : 360}
           title={i18nT('quests:components.quests.questWizardSections.karta_kvesta_159fe057')}
           activeStepIndex={activeStepIndex}

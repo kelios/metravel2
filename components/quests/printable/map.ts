@@ -23,7 +23,15 @@ function loadMapImageGenerator(): Promise<MapImageGeneratorModule> {
   return mapImageGeneratorModulePromise;
 }
 
-export async function buildPrintableCanvasMapDataUrl(points: PrintableMapPoint[]): Promise<string> {
+// closeLoop: кольцевой квест — линия маршрута замыкается к первой точке
+// (numbered-маркеры не дублируются).
+const buildRouteLine = (points: PrintableMapPoint[], closeLoop?: boolean) => {
+  const line = points.map((point) => [point.lat, point.lng] as [number, number]);
+  if (closeLoop && line.length >= 3) line.push(line[0]);
+  return line;
+};
+
+export async function buildPrintableCanvasMapDataUrl(points: PrintableMapPoint[], closeLoop?: boolean): Promise<string> {
   if (!points.length) return '';
 
   try {
@@ -39,7 +47,7 @@ export async function buildPrintableCanvasMapDataUrl(points: PrintableMapPoint[]
         height: MAP_IMAGE_HEIGHT,
         maxZoom: MAP_IMAGE_MAX_ZOOM,
         fitPaddingFactor: MAP_IMAGE_FIT_PADDING_FACTOR,
-        routeLine: points.map((point) => [point.lat, point.lng] as [number, number]),
+        routeLine: buildRouteLine(points, closeLoop),
       },
     );
     return snapshot || '';
@@ -48,7 +56,7 @@ export async function buildPrintableCanvasMapDataUrl(points: PrintableMapPoint[]
   }
 }
 
-export async function buildPrintableLeafletMapDataUrl(points: PrintableMapPoint[]): Promise<string> {
+export async function buildPrintableLeafletMapDataUrl(points: PrintableMapPoint[], closeLoop?: boolean): Promise<string> {
   if (!points.length) return '';
 
   try {
@@ -64,7 +72,7 @@ export async function buildPrintableLeafletMapDataUrl(points: PrintableMapPoint[
         height: MAP_IMAGE_HEIGHT,
         zoom: MAP_IMAGE_ZOOM,
         maxFitZoom: MAP_IMAGE_MAX_ZOOM,
-        routeLine: points.map((point) => [point.lat, point.lng] as [number, number]),
+        routeLine: buildRouteLine(points, closeLoop),
       },
     );
     return snapshot || '';
@@ -73,7 +81,7 @@ export async function buildPrintableLeafletMapDataUrl(points: PrintableMapPoint[
   }
 }
 
-export function buildPrintableMapSvg(points: PrintableMapPoint[]): string {
+export function buildPrintableMapSvg(points: PrintableMapPoint[], closeLoop?: boolean): string {
   if (!points.length) return '';
 
   const allLats = points.map((point) => point.lat);
@@ -105,7 +113,10 @@ export function buildPrintableMapSvg(points: PrintableMapPoint[]): string {
   };
 
   const projectedPoints = points.map((point) => ({ ...point, ...project(point.lat, point.lng) }));
-  const routePath = projectedPoints.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ');
+  const routePathPoints = closeLoop && projectedPoints.length >= 3
+    ? [...projectedPoints, projectedPoints[0]]
+    : projectedPoints;
+  const routePath = routePathPoints.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ');
 
   const markers = projectedPoints
     .map((point, index) => {

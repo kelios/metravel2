@@ -120,6 +120,7 @@
           "defaultChannel": "updates"
         }
       ],
+      "react-native-fbsdk-next",
       "expo-video"
     ],
     "experiments": {

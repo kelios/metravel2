@@ -90,7 +90,6 @@ function TravelAuthorQuickLink({ travel }: TravelAuthorQuickLinkProps) {
     [travel],
   )
   const authorUserId = useMemo(() => resolveOwnerId(travel), [travel])
-  const avatarUri = useMemo(() => resolveAvatar(null, travel), [travel])
 
   const displayName =
     authorName ||
@@ -101,6 +100,10 @@ function TravelAuthorQuickLink({ travel }: TravelAuthorQuickLinkProps) {
       : '')
   const canOpenAuthor = authorUserId != null
   const { profile: authorProfile } = useUserProfileCached(authorUserId, { enabled: canOpenAuthor })
+  const avatarUri = useMemo(
+    () => resolveAvatar(authorProfile, travel),
+    [authorProfile, travel],
+  )
   const socialLinks = useMemo(() => resolveAuthorSocials(authorProfile), [authorProfile])
 
   const openProfile = useCallback(() => {

@@ -96,6 +96,7 @@ describe('QuestWizard guest gate', () => {
       await Promise.resolve()
     })
 
+    expect(getByTestId('quest-ai-disclosure')).toBeTruthy()
     expect(getByRole('button', { name: 'Начать квест' })).toBeTruthy()
 
     // intro → точка 1: на intro шаге кнопка «Начать квест» продвигает вперёд.
@@ -105,6 +106,7 @@ describe('QuestWizard guest gate', () => {
     })
     // quest_start уходит для гостя, как только видна первая настоящая точка.
     expect(firedEvents()).toContain('quest_start')
+    expect(queryByTestId('quest-ai-disclosure')).toBeNull()
     expect(
       mockQueueAnalyticsEvent.mock.calls.find((call) => call[0] === 'quest_start')?.[1],
     ).toEqual(expect.objectContaining({ quest_id: 'test-quest', city: 'minsk' }))

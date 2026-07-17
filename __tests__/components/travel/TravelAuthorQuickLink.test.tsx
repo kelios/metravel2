@@ -7,6 +7,7 @@ const mockPush = jest.fn()
 const mockSubscribePress = jest.fn()
 const mockUseUserProfileCached = jest.fn()
 const mockOpenExternalUrl = jest.fn()
+const mockImageCardMedia = jest.fn()
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -14,9 +15,10 @@ jest.mock('expo-router', () => ({
 
 jest.mock('@/components/ui/ImageCardMedia', () => ({
   __esModule: true,
-  default: () => {
+  default: (props: unknown) => {
     const React = require('react')
     const { View } = require('react-native')
+    mockImageCardMedia(props)
     return React.createElement(View, { testID: 'author-avatar' })
   },
 }))
@@ -62,6 +64,7 @@ describe('TravelAuthorQuickLink', () => {
     mockPush.mockClear()
     mockSubscribePress.mockClear()
     mockOpenExternalUrl.mockClear()
+    mockImageCardMedia.mockClear()
     mockUseUserProfileCached.mockReset()
     mockUseUserProfileCached.mockReturnValue({
       profile: {
@@ -124,5 +127,28 @@ describe('TravelAuthorQuickLink', () => {
     const { queryByTestId } = render(<TravelAuthorQuickLink travel={{ id: 1 } as any} />)
 
     expect(queryByTestId('travel-author-quick-link')).toBeNull()
+  })
+
+  it('renders the avatar returned by the cached author profile', () => {
+    mockUseUserProfileCached.mockReturnValue({
+      profile: {
+        avatar: 'https://metravel.by/media/avatars/author.jpg',
+      },
+    })
+
+    const travel: any = {
+      id: 1,
+      userName: 'Мария Иванова',
+      userIds: '42',
+    }
+
+    const { getByTestId } = render(<TravelAuthorQuickLink travel={travel} />)
+
+    expect(getByTestId('author-avatar')).toBeTruthy()
+    expect(mockImageCardMedia).toHaveBeenCalledWith(
+      expect.objectContaining({
+        src: 'https://metravel.by/media/avatars/author.jpg',
+      }),
+    )
   })
 })

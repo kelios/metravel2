@@ -58,6 +58,18 @@ export function isBikeQuest(tags?: string[] | null): boolean {
   return tags.some((tag) => BIKE_QUEST_TAGS.has(normalizeQuestTag(tag)));
 }
 
+// Тег кольцевых маршрутов: последняя точка возвращается к старту, и маршрут на
+// карте/в GPX должен замыкаться сегментом «финиш → старт». Ставится вручную в
+// данных квеста (кольцевая геометрия — авторское намерение, не выводится из
+// координат: линейный маршрут «туда» замыкать нельзя).
+export const QUEST_LOOP_TAG = 'loop';
+const QUEST_LOOP_TAGS = new Set<string>([QUEST_LOOP_TAG, 'circular']);
+
+export function isLoopQuest(tags?: string[] | null): boolean {
+  if (!tags?.length) return false;
+  return tags.some((tag) => QUEST_LOOP_TAGS.has(normalizeQuestTag(tag)));
+}
+
 export function getQuestAgeCategory(tags?: string[] | null): QuestAgeCategory | null {
   if (!tags?.length) return null;
   const normalizedTags = new Set(tags.map(normalizeQuestTag).filter(Boolean));

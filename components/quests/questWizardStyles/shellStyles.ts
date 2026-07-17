@@ -81,6 +81,7 @@ export const createShellStyles = (colors: QuestColors, isMobile: boolean, _scree
     },
 
     content: { flex: 1, padding: isMobile ? SPACING.md : SPACING.lg },
+    aiDisclosure: { marginBottom: SPACING.md },
     compactMainContent: {
         paddingTop: SPACING.md,
     },

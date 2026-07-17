@@ -126,6 +126,19 @@ export function useQuestCities() {
     return { cities, loading };
 }
 
+// Сессионный памятник списка квестов для фонового дообогащения бандла тегами:
+// без него каждое открытие детали дёргало бы полный пагинированный список.
+let questsListForTagsPromise: ReturnType<typeof fetchQuestsList> | null = null;
+const fetchQuestsListMemoized = () => {
+    if (!questsListForTagsPromise) {
+        questsListForTagsPromise = fetchQuestsList().catch((err) => {
+            questsListForTagsPromise = null;
+            throw err;
+        });
+    }
+    return questsListForTagsPromise;
+};
+
 /** Хук для загрузки полного бандла квеста по quest_id */
 export function useQuestBundle(questId: string | undefined) {
     const [bundle, setBundle] = useState<FrontendQuestBundle | null>(null);
@@ -172,6 +185,20 @@ export function useQuestBundle(questId: string | undefined) {
 
                 setBundle(adaptedBundle);
                 setLoading(false);
+
+                // Теги в detail-API отсутствуют, а от них зависит поведение карты
+                // (кольцевые `loop`-квесты замыкают маршрут к старту). Дотягиваем
+                // их фоном из списка (с AsyncStorage-кэшем для офлайна), не
+                // блокируя первый рендер бандла.
+                void fetchQuestsListMemoized()
+                    .then((list) => {
+                        if (cancelled || !Array.isArray(list)) return;
+                        const matchedMeta = list.find((quest) => String(quest?.quest_id) === questId);
+                        const tags = matchedMeta ? adaptMeta(matchedMeta).tags : undefined;
+                        if (!tags?.length) return;
+                        setBundle((prev) => (prev && prev.questId === String(questId) ? { ...prev, tags } : prev));
+                    })
+                    .catch(() => {});
             })
             .catch((err) => {
                 if (cancelled) return;

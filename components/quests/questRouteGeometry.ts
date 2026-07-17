@@ -45,6 +45,26 @@ export const getQuestRoutePoints = (steps: QuestRoutePoint[]) =>
 export const getQuestDirectRouteTrack = (steps: QuestRoutePoint[]): LngLat[] =>
   getQuestRoutePoints(steps).map((step) => [step.lng, step.lat]);
 
+// Финиш и старт кольца считаем «уже сомкнутыми», если они ближе этого порога —
+// добавлять петлю-сегмент бессмысленно (маркеры и так рядом).
+const LOOP_ALREADY_CLOSED_M = 50;
+
+/**
+ * Замыкает кольцевой маршрут: добавляет стартовую точку в конец списка, чтобы
+ * роутер проложил обратный сегмент «последняя точка → старт». Точка-дубль
+ * участвует только в построении трека — маркеры шагов рисуются из исходного
+ * списка у вызывающих.
+ */
+export const closeQuestRouteLoop = (steps: QuestRoutePoint[]): QuestRoutePoint[] => {
+  const points = getQuestRoutePoints(steps);
+  if (points.length < 3) return points;
+  const first = points[0];
+  const last = points[points.length - 1];
+  const gapM = haversineMeters([first.lng, first.lat], [last.lng, last.lat]);
+  if (gapM <= LOOP_ALREADY_CLOSED_M) return points;
+  return [...points, { lat: first.lat, lng: first.lng }];
+};
+
 export const calculateQuestTrackDistanceM = (track: LngLat[]): number => {
   const valid = filterValidCoords(track);
   if (valid.length < 2) return 0;

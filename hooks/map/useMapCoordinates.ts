@@ -26,6 +26,9 @@ export const DEFAULT_COORDINATES: Coordinates = {
 };
 const WEB_LAST_COORDS_KEY = 'metravel:lastKnownCoords';
 const NATIVE_LOCATION_TIMEOUT_MS = 12000;
+const NATIVE_LAST_KNOWN_TIMEOUT_MS = 1500;
+const NATIVE_LAST_KNOWN_MAX_AGE_MS = 10 * 60 * 1000;
+const NATIVE_LAST_KNOWN_REQUIRED_ACCURACY_M = 5000;
 const LIVE_LOCATION_MIN_DISTANCE_M = 12;
 const LIVE_LOCATION_MAXIMUM_AGE_MS = 15000;
 
@@ -166,6 +169,24 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
     } catch {
       // noop
     }
+  }, []);
+
+  const applyCachedViewportLocation = useCallback((location: LocationSnapshot) => {
+    const latitude = Number(location.latitude);
+    const longitude = Number(location.longitude);
+    if (!isValidCoordinate(latitude, longitude)) return false;
+
+    const coordinates = { latitude, longitude };
+    setCoordinates(coordinates);
+    setCoordinatesSource('cache');
+    setLocationState({
+      status: 'cached',
+      coordinates,
+      accuracy: typeof location.accuracy === 'number' ? location.accuracy : null,
+      timestamp: typeof location.timestamp === 'number' ? location.timestamp : null,
+      canAskAgain: true,
+    });
+    return true;
   }, []);
 
   const applyTrustedLocation = useCallback((
@@ -432,6 +453,9 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
   }, [applyTrustedLocation, clearLocationWatch, readWebCachedCoordinates, startLocationWatch]);
 
   const requestLocation = useCallback(async (signal?: AbortSignal) => {
+    let nativePermissionGranted = false;
+    let nativeFallbackLocation: LocationSnapshot | null = null;
+
     setIsLoading(true);
     setError(null);
     setLocationState((current) =>
@@ -480,6 +504,45 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
         return;
       }
 
+      nativePermissionGranted = true;
+
+      // Android can need longer than the foreground request timeout for a cold
+      // GNSS fix (especially indoors). Use a recent OS last-known fix only as a
+      // viewport cache while the current request/live watch keep running. It is
+      // deliberately not a trusted user marker or route origin.
+      if (typeof Location.getLastKnownPositionAsync === 'function') {
+        try {
+          const lastKnown = await withTimeout(
+            Location.getLastKnownPositionAsync({
+              maxAge: NATIVE_LAST_KNOWN_MAX_AGE_MS,
+              requiredAccuracy: NATIVE_LAST_KNOWN_REQUIRED_ACCURACY_M,
+            }),
+            NATIVE_LAST_KNOWN_TIMEOUT_MS,
+          );
+          if (signal?.aborted) return;
+          if (
+            lastKnown &&
+            isValidCoordinate(lastKnown.coords.latitude, lastKnown.coords.longitude)
+          ) {
+            nativeFallbackLocation = {
+              latitude: lastKnown.coords.latitude,
+              longitude: lastKnown.coords.longitude,
+              accuracy: lastKnown.coords.accuracy,
+              timestamp: lastKnown.timestamp,
+            };
+            applyCachedViewportLocation(nativeFallbackLocation);
+          }
+        } catch {
+          // Last-known is an optional fast path. A miss/timeout must not prevent
+          // the current fix or the foreground watch from starting.
+        }
+      }
+
+      // Start recovery before awaiting the one-shot fix. If the one-shot call
+      // times out, the first later watch tick can still replace the viewport and
+      // trusted user marker instead of leaving the map pinned to Minsk.
+      startLocationWatch();
+
       const location = await withTimeout(
         Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
@@ -498,22 +561,28 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
           accuracy,
           timestamp: location.timestamp,
         }, { force: true });
-        startLocationWatch();
       } else {
         logMessage('[map] Invalid coordinates from location service', 'warning', {
           scope: 'map',
           step: 'getLocation',
           coords: location.coords,
         });
-        setCoordinates(DEFAULT_COORDINATES);
-        setCoordinatesSource('default');
-        setLocationState({
-          status: 'error',
-          coordinates: null,
-          accuracy: null,
-          timestamp: null,
-          canAskAgain: true,
-        });
+        const trusted = lastTrustedLocationRef.current;
+        if (trusted) {
+          applyTrustedLocation(trusted, { force: true });
+        } else if (nativeFallbackLocation) {
+          applyCachedViewportLocation(nativeFallbackLocation);
+        } else {
+          setCoordinates(DEFAULT_COORDINATES);
+          setCoordinatesSource('default');
+          setLocationState({
+            status: 'error',
+            coordinates: null,
+            accuracy: null,
+            timestamp: null,
+            canAskAgain: true,
+          });
+        }
       }
     } catch (err) {
       if (signal?.aborted) return;
@@ -526,23 +595,41 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
       } else {
         logError(err, { scope: 'map', step: 'getLocation' });
       }
-      setError(i18nT('map:hooks.map.useMapCoordinates.ne_udalos_opredelit_mestopolozhenie_ad63da94'));
-      setCoordinates(DEFAULT_COORDINATES);
-      setCoordinatesSource('default');
-      setLocationState({
-        status: 'error',
-        coordinates: null,
-        accuracy: null,
-        timestamp: null,
-        canAskAgain: true,
-      });
-      clearLocationWatch();
+      const trusted = lastTrustedLocationRef.current;
+      if (trusted) {
+        applyTrustedLocation(trusted, { force: true });
+      } else {
+        setError(i18nT('map:hooks.map.useMapCoordinates.ne_udalos_opredelit_mestopolozhenie_ad63da94'));
+        if (nativeFallbackLocation) {
+          applyCachedViewportLocation(nativeFallbackLocation);
+        } else {
+          setCoordinates(DEFAULT_COORDINATES);
+          setCoordinatesSource('default');
+          setLocationState({
+            status: 'error',
+            coordinates: null,
+            accuracy: null,
+            timestamp: null,
+            canAskAgain: true,
+          });
+        }
+      }
+      // Once permission is granted, keep the foreground watch alive so a slow
+      // Android fix can recover after the one-shot timeout. Permission/request
+      // failures before that point still clean up normally.
+      if (!nativePermissionGranted) clearLocationWatch();
     } finally {
       if (!signal?.aborted) {
         setIsLoading(false);
       }
     }
-  }, [applyTrustedLocation, clearLocationWatch, requestWebLocation, startLocationWatch]);
+  }, [
+    applyCachedViewportLocation,
+    applyTrustedLocation,
+    clearLocationWatch,
+    requestWebLocation,
+    startLocationWatch,
+  ]);
 
   useEffect(() => {
     if (!isFocused) {

@@ -9,6 +9,7 @@ import type { LngLat } from '@/utils/routeExport';
 import type { QuestStep } from './types';
 import {
   buildQuestWalkingRouteGeometry,
+  closeQuestRouteLoop,
   getQuestRoutePoints,
   type QuestRouteGeometrySource,
 } from './questRouteGeometry';
@@ -26,6 +27,18 @@ export type QuestOfflineMapExportOptions = {
   routeTrack?: LngLat[];
   routeSource?: QuestRouteGeometrySource;
   requireRoutedTrack?: boolean;
+  /** Кольцевой квест (тег `loop`): трек замыкается сегментом «финиш → старт». */
+  closeLoop?: boolean;
+};
+
+// Точки для построения ТРЕКА (с замыканием кольца); waypoint-маркеры в файлах
+// всегда строятся из исходных шагов без точки-дубля старта.
+const getRouteTrackPoints = (
+  steps: QuestOfflineMapPoint[],
+  closeLoop?: boolean,
+) => {
+  const points = getQuestRoutePoints(steps);
+  return closeLoop ? closeQuestRouteLoop(points) : points;
 };
 
 export const getQuestOfflineMapPoints = (steps: QuestOfflineMapPoint[]) =>
@@ -36,9 +49,11 @@ export const buildQuestOfflineMapGpx = ({
   steps,
   routeTrack,
   routeSource,
+  closeLoop,
 }: QuestOfflineMapExportOptions) => {
   const points = getQuestOfflineMapPoints(steps);
-  const waypointTrack = points.map((point) => [point.lng, point.lat] as LngLat);
+  const waypointTrack = getRouteTrackPoints(steps, closeLoop)
+    .map((point) => [point.lng, point.lat] as LngLat);
   const routedTrack = Array.isArray(routeTrack) && routeTrack.length >= 2
     ? routeTrack
     : null;
@@ -73,9 +88,11 @@ export const buildQuestOfflineMapGeoJSON = ({
   steps,
   routeTrack,
   routeSource,
+  closeLoop,
 }: QuestOfflineMapExportOptions) => {
   const points = getQuestOfflineMapPoints(steps);
-  const waypointTrack = points.map((point) => [point.lng, point.lat] as LngLat);
+  const waypointTrack = getRouteTrackPoints(steps, closeLoop)
+    .map((point) => [point.lng, point.lat] as LngLat);
   const track = Array.isArray(routeTrack) && routeTrack.length >= 2 ? routeTrack : waypointTrack;
   const source = routeTrack && routeSource ? routeSource : 'direct';
 
@@ -117,7 +134,7 @@ const resolveRoutedTrackForExport = async (
     };
   }
 
-  const points = getQuestOfflineMapPoints(options.steps);
+  const points = getRouteTrackPoints(options.steps, options.closeLoop);
   if (points.length < 2) return {};
 
   const result = await buildQuestWalkingRouteGeometry(points);

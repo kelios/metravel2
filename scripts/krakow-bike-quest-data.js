@@ -17,7 +17,7 @@ module.exports = [
             lng: 19.93273,
             duration_min: 240,
             difficulty: 'medium',
-            tags: ['bike', 'roadtrip', 'legend', 'history', 'monastery', 'river', 'nature'],
+            tags: ['bike', 'loop', 'roadtrip', 'legend', 'history', 'monastery', 'river', 'nature'],
         },
         storage_key: 'quest_krakow_bike_tyniec_v1',
         intro: {
@@ -189,7 +189,7 @@ module.exports = [
             lng: 19.94092,
             duration_min: 270,
             difficulty: 'medium',
-            tags: ['bike', 'roadtrip', 'legend', 'history', 'castle', 'spring', 'nature', 'forest'],
+            tags: ['bike', 'loop', 'roadtrip', 'legend', 'history', 'castle', 'spring', 'nature', 'forest'],
         },
         storage_key: 'quest_krakow_bike_pradnik_v1',
         intro: {
@@ -331,7 +331,7 @@ module.exports = [
             lng: 20.05300,
             duration_min: 300,
             difficulty: 'medium',
-            tags: ['bike', 'roadtrip', 'legend', 'history', 'memorial', 'river', 'lake', 'nature'],
+            tags: ['bike', 'loop', 'roadtrip', 'legend', 'history', 'memorial', 'river', 'lake', 'nature'],
         },
         storage_key: 'quest_krakow_bike_wanda_v1',
         intro: {

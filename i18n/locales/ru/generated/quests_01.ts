@@ -169,6 +169,7 @@ export const questsGenerated1 = {
   "components.quests.questRouteGeometry.pustoy_peshiy_marshrut_ot_servera_cbf4445a": "Пустой пеший маршрут от сервера",
   "components.quests.questRouteGeometry.pustoy_peshiy_marshrut_ot_valhalla_9e4a0a35": "Пустой пеший маршрут от Valhalla",
   "components.quests.questRouteGeometry.servera_marshrutizatsii_9da8dfea": "сервера маршрутизации",
+  "components.quests.QuestWizard.aiDisclosure": "Квесты MeTravel подготовлены с использованием искусственного интеллекта. Точки, задания и сведения могут содержать неточности или устареть. Перед прохождением оцените маршрут и условия самостоятельно; если заметили ошибку или неудобную точку, оставьте отзыв — это поможет нам улучшить квест.",
   "components.quests.QuestWizard.gpx_s_peshim_marshrutom_kvesta_gotov_dd0919a1": "GPX с пешим маршрутом квеста готов",
   "components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_da201f00": "Квест сохранён для офлайна",
   "components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_foto_value1_valu_b0544e7a": "Квест сохранён для офлайна — фото {{value1}}/{{value2}}",

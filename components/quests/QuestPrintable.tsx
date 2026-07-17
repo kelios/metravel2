@@ -36,6 +36,7 @@ type PrintableProps = {
     coverUrl?: string;
     questUrl?: string; // полный URL квеста на сайте
     finaleText?: string; // текст финала — печатается на странице с дипломом
+    closeLoop?: boolean; // кольцевой квест: линия маршрута на карте замыкается к старту
 };
 
 type BookPreviewWindowModule = typeof import('@/utils/openBookPreviewWindow');
@@ -54,7 +55,7 @@ function loadBookPreviewWindowModule(): Promise<BookPreviewWindowModule> {
  * Генерирует подарочную HTML-версию квеста для печати.
  * Включает: обложку, карту, шаги с QR-кодами навигации, QR на сайт.
  */
-export async function generatePrintableQuest({ title, steps, intro, coverUrl, questUrl, finaleText }: PrintableProps): Promise<void> {
+export async function generatePrintableQuest({ title, steps, intro, coverUrl, questUrl, finaleText, closeLoop }: PrintableProps): Promise<void> {
     if (Platform.OS !== 'web') return;
 
     const validSteps = steps.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng) && (s.lat !== 0 || s.lng !== 0));
@@ -64,9 +65,9 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     const siteQr = questUrl ? qrUrl(questUrl, QR_SITE) : '';
     const bookPreviewWindow = await loadBookPreviewWindowModule();
     const previewWindow = bookPreviewWindow.openPendingBookPreviewWindow();
-    const mapCanvasDataUrl = await buildPrintableCanvasMapDataUrl(mapPoints);
-    const mapStaticUrl = mapCanvasDataUrl || await buildPrintableLeafletMapDataUrl(mapPoints);
-    const mapSvg = buildPrintableMapSvg(mapPoints);
+    const mapCanvasDataUrl = await buildPrintableCanvasMapDataUrl(mapPoints, closeLoop);
+    const mapStaticUrl = mapCanvasDataUrl || await buildPrintableLeafletMapDataUrl(mapPoints, closeLoop);
+    const mapSvg = buildPrintableMapSvg(mapPoints, closeLoop);
     const locale = getActiveLocaleDefinition();
 
     const mapHtml = mapStaticUrl ? `

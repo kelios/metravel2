@@ -22,7 +22,7 @@ import * as Sharing from 'expo-sharing';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import { buildQuestOfflineMapGeoJSON, buildQuestOfflineMapGpx } from './questOfflineMapExport';
-import { buildQuestWalkingRouteGeometry } from './questRouteGeometry';
+import { buildQuestWalkingRouteGeometry, closeQuestRouteLoop } from './questRouteGeometry';
 import { hasRoutedQuestTrack, useQuestRouteGeometry, type QuestRouteGeometryState } from './useQuestRouteGeometry';
 import { saveAndShareQuestMapPng } from './questNativeMapPng';
 import {
@@ -75,6 +75,7 @@ function QuestFullMap({
     onClose,
     interactive = true,
     pointerFrozen = false,
+    closeLoop = false,
 }: {
     steps: QuestStepPoint[];
     height?: number;
@@ -84,6 +85,8 @@ function QuestFullMap({
     onClose?: () => void;
     interactive?: boolean;
     pointerFrozen?: boolean;
+    /** Кольцевой квест (тег `loop`): маршрут замыкается сегментом «финиш → старт». */
+    closeLoop?: boolean;
 }) {
     const [isLoading, setIsLoading] = useState(true);
     const [exportMenuVisible, setExportMenuVisible] = useState(false);
@@ -150,7 +153,7 @@ function QuestFullMap({
         [points],
     );
 
-    const routeGeometry = useQuestRouteGeometry(points);
+    const routeGeometry = useQuestRouteGeometry(points, { closeLoop });
     const routeIsRouted = hasRoutedQuestTrack(routeGeometry.track, routeGeometry.source);
     const routeStatusText = getRouteStatusText(routeGeometry);
     const routeLineTrack = routeGeometry.track.length >= 2
@@ -274,7 +277,8 @@ function QuestFullMap({
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 15000);
         try {
-            const result = await buildQuestWalkingRouteGeometry(points, { signal: controller.signal });
+            const routePoints = closeLoop ? closeQuestRouteLoop(points) : points;
+            const result = await buildQuestWalkingRouteGeometry(routePoints, { signal: controller.signal });
             return result.source === 'routed' && result.track.length >= 2 ? result.track : null;
         } finally {
             clearTimeout(timeout);
@@ -390,6 +394,7 @@ function QuestFullMap({
                     <View style={[styles.fullscreenModal, { paddingTop: insets.top }]}>
                         <QuestFullMap
                             steps={steps}
+                            closeLoop={closeLoop}
                             height={fullscreenMapHeight}
                             title={title}
                             activeStepIndex={activeStepIndex}

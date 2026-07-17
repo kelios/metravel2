@@ -221,6 +221,59 @@ describe('Map.ios Component', () => {
     expect(html).not.toContain('map.__realUserLocation || map.__userCenter');
   });
 
+  it('auto-centers once when a trusted user fix replaces the fallback anchor', () => {
+    const rendered = render(
+      <Map travel={mockTravel} coordinates={mockCoordinates} userLocation={null} />
+    );
+    const webView = getWebView(rendered);
+    act(() => {
+      webView.props.onLoadEnd();
+    });
+    mockInjectJavaScript.mockClear();
+
+    const current = { latitude: 52.2297, longitude: 21.0122 };
+    rendered.rerender(
+      <Map travel={mockTravel} coordinates={current} userLocation={current} />
+    );
+
+    const centerCalls = mockInjectJavaScript.mock.calls.filter(([script]) =>
+      String(script).includes('window.__metravelMapCenterOnUser && window.__metravelMapCenterOnUser()')
+    );
+    expect(centerCalls).toHaveLength(1);
+
+    rendered.rerender(
+      <Map
+        travel={mockTravel}
+        coordinates={{ latitude: 52.2301, longitude: 21.0128 }}
+        userLocation={{ latitude: 52.2301, longitude: 21.0128 }}
+      />
+    );
+    const laterCenterCalls = mockInjectJavaScript.mock.calls.filter(([script]) =>
+      String(script).includes('window.__metravelMapCenterOnUser && window.__metravelMapCenterOnUser()')
+    );
+    expect(laterCenterCalls).toHaveLength(1);
+  });
+
+  it('does not auto-center when the current viewport is an explicit different anchor', () => {
+    const rendered = render(
+      <Map
+        travel={mockTravel}
+        coordinates={mockCoordinates}
+        userLocation={{ latitude: 52.2297, longitude: 21.0122 }}
+      />
+    );
+    const webView = getWebView(rendered);
+    act(() => {
+      webView.props.onLoadEnd();
+    });
+
+    expect(
+      mockInjectJavaScript.mock.calls.some(([script]) =>
+        String(script).includes('window.__metravelMapCenterOnUser && window.__metravelMapCenterOnUser()')
+      )
+    ).toBe(false);
+  });
+
   it('should render route polyline payload in route mode', () => {
     const rendered = render(
       <Map

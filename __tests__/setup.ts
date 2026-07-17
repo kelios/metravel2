@@ -920,6 +920,21 @@ jest.mock('@react-native-google-signin/google-signin', () => {
   }
 })
 
+jest.mock('react-native-fbsdk-next', () => ({
+  __esModule: true,
+  AccessToken: {
+    getCurrentAccessToken: jest.fn(async () => null),
+  },
+  LoginManager: {
+    logInWithPermissions: jest.fn(async () => ({ isCancelled: true })),
+    setLoginBehavior: jest.fn(),
+    logOut: jest.fn(),
+  },
+  Settings: {
+    initializeSDK: jest.fn(),
+  },
+}))
+
 // Mock expo font loader used by vector icons
 jest.mock('expo-font', () => ({
   loadAsync: jest.fn(() => Promise.resolve()),

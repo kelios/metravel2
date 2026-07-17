@@ -160,6 +160,14 @@ const QUESTS = [
     { questId: 'szklarska-poreba-glass-town', dir: 'szklarskaPorebaGlassTown', city: 'Шклярска-Поремба', mood: 'castle', finaleId: 122 },
     { questId: 'banska-stiavnica-silver-love', dir: 'banskaStiavnicaSilverLove', city: 'Банска-Штявница', mood: 'castle', finaleId: 123 },
     { questId: 'vlora-independence', dir: 'vloraIndependence', city: 'Влёра', mood: 'epic', finaleId: 124 },
+    { questId: 'krakow-bike-tyniec', dir: 'krakowBikeTyniec', city: 'Краков', mood: 'castle', finaleId: 125 },
+    { questId: 'krakow-bike-pradnik', dir: 'krakowBikePradnik', city: 'Краков', mood: 'castle', finaleId: 126 },
+    { questId: 'krakow-bike-wanda', dir: 'krakowBikeWanda', city: 'Краков', mood: 'epic', finaleId: 127 },
+    // Волна C: детские 8-10 Польша/Литва (2026-07-17)
+    { questId: 'krakow-kids-dragon-keeper', dir: 'krakowKidsDragonKeeper', city: 'Краков', mood: 'city', finaleId: 128 },
+    { questId: 'warsaw-kids-bazyliszek', dir: 'warsawKidsBazyliszek', city: 'Варшава', mood: 'city', finaleId: 129 },
+    { questId: 'wroclaw-kids-gnome-service', dir: 'wroclawKidsGnomeService', city: 'Вроцлав', mood: 'city', finaleId: 130 },
+    { questId: 'vilnius-kids-iron-wolf', dir: 'vilniusKidsIronWolf', city: 'Вильнюс', mood: 'city', finaleId: 131 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

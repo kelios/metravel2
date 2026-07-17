@@ -169,6 +169,7 @@ export const questsGenerated1 = {
   "components.quests.questRouteGeometry.pustoy_peshiy_marshrut_ot_servera_cbf4445a": "Pusta trasa spacerowa z serwera",
   "components.quests.questRouteGeometry.pustoy_peshiy_marshrut_ot_valhalla_9e4a0a35": "Pusta trasa spacerowa z Walhalli",
   "components.quests.questRouteGeometry.servera_marshrutizatsii_9da8dfea": "serwer routingu",
+  "components.quests.QuestWizard.aiDisclosure": "Questy MeTravel są przygotowywane z wykorzystaniem sztucznej inteligencji. Punkty, zadania i informacje mogą zawierać błędy lub się zdezaktualizować. Przed rozpoczęciem samodzielnie oceń trasę i warunki; jeśli zauważysz błąd lub niedogodny punkt, zostaw opinię — pomoże nam to ulepszyć quest.",
   "components.quests.QuestWizard.gpx_s_peshim_marshrutom_kvesta_gotov_dd0919a1": "GPX z trasą pieszą z zadaniami jest gotowy",
   "components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_da201f00": "Zadanie zapisane do trybu offline",
   "components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_foto_value1_valu_b0544e7a": "Zadanie zapisane w trybie offline - zdjęcie {{value1}}/{{value2}}",
