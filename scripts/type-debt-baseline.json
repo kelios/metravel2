@@ -12,23 +12,23 @@
     "utils"
   ],
   "totals": {
-    "asAny": 2723,
+    "asAny": 2680,
     "tsIgnore": 53,
     "tsExpectError": 3,
-    "eslintDisable": 31
+    "eslintDisable": 29
   },
   "domains": {
     "app": {
-      "asAny": 118,
+      "asAny": 108,
       "tsIgnore": 0,
       "tsExpectError": 1,
       "eslintDisable": 1
     },
     "components": {
-      "asAny": 2378,
+      "asAny": 2346,
       "tsIgnore": 53,
       "tsExpectError": 2,
-      "eslintDisable": 19
+      "eslintDisable": 17
     },
     "context": {
       "asAny": 6,
@@ -43,7 +43,7 @@
       "eslintDisable": 6
     },
     "screens": {
-      "asAny": 112,
+      "asAny": 111,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
@@ -159,7 +159,7 @@
       "eslintDisable": 0
     },
     "app/(tabs)/profile.tsx": {
-      "asAny": 18,
+      "asAny": 12,
       "tsIgnore": 0,
       "tsExpectError": 1,
       "eslintDisable": 0
@@ -195,13 +195,7 @@
       "eslintDisable": 0
     },
     "app/(tabs)/travelsby.tsx": {
-      "asAny": 2,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "app/(tabs)/trips/plan/[id].tsx": {
-      "asAny": 3,
+      "asAny": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -308,12 +302,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/article/ArticleEditor.web.runtime.ts": {
-      "asAny": 3,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/article/ArticleEditor.web.styles.ts": {
       "asAny": 6,
       "tsIgnore": 0,
@@ -327,7 +315,7 @@
       "eslintDisable": 0
     },
     "components/article/ArticleEditor.web.tsx": {
-      "asAny": 2,
+      "asAny": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -387,13 +375,13 @@
       "eslintDisable": 0
     },
     "components/auth/LoginForm.tsx": {
-      "asAny": 9,
+      "asAny": 8,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/auth/RegistrationForm.tsx": {
-      "asAny": 5,
+      "asAny": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -477,7 +465,7 @@
       "eslintDisable": 0
     },
     "components/home/Home.tsx": {
-      "asAny": 3,
+      "asAny": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -879,7 +867,7 @@
       "eslintDisable": 0
     },
     "components/listTravel/ListTravelBase.tsx": {
-      "asAny": 5,
+      "asAny": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 3
@@ -915,7 +903,7 @@
       "eslintDisable": 0
     },
     "components/listTravel/RecommendationsTabs.tsx": {
-      "asAny": 22,
+      "asAny": 21,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -993,7 +981,7 @@
       "eslintDisable": 0
     },
     "components/listTravel/useRightColumnStyles.ts": {
-      "asAny": 12,
+      "asAny": 11,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -1011,7 +999,7 @@
       "eslintDisable": 0
     },
     "components/mainPage/StickySearchBar.tsx": {
-      "asAny": 24,
+      "asAny": 11,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -1125,10 +1113,10 @@
       "eslintDisable": 0
     },
     "components/MapPage/Map.web.tsx": {
-      "asAny": 20,
+      "asAny": 18,
       "tsIgnore": 0,
       "tsExpectError": 0,
-      "eslintDisable": 2
+      "eslintDisable": 0
     },
     "components/MapPage/Map/ClusterLayer.tsx": {
       "asAny": 3,
@@ -1286,8 +1274,14 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
+    "components/MapPage/MapMobile/MapEmptyStateToast.tsx": {
+      "asAny": 4,
+      "tsIgnore": 0,
+      "tsExpectError": 0,
+      "eslintDisable": 0
+    },
     "components/MapPage/MapMobile/MapMobileTopOverlay.styles.ts": {
-      "asAny": 5,
+      "asAny": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -1473,7 +1467,7 @@
       "eslintDisable": 0
     },
     "components/places/PlaceListCard.tsx": {
-      "asAny": 8,
+      "asAny": 7,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -1551,7 +1545,7 @@
       "eslintDisable": 0
     },
     "components/quests/QuestFullMap.tsx": {
-      "asAny": 13,
+      "asAny": 11,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
@@ -2090,12 +2084,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/travel/hooks/usePointListCategoryDictionaryModel.ts": {
-      "asAny": 4,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/travel/hooks/usePointListExternalActionsModel.ts": {
       "asAny": 2,
       "tsIgnore": 0,
@@ -2415,7 +2403,7 @@
       "eslintDisable": 0
     },
     "components/travel/UnifiedSlider.tsx": {
-      "asAny": 6,
+      "asAny": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2463,12 +2451,6 @@
       "eslintDisable": 0
     },
     "components/trips/planning/CommunityRoutesCatalog.tsx": {
-      "asAny": 1,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/trips/planning/RouteBuilder.tsx": {
       "asAny": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
@@ -2733,7 +2715,7 @@
       "eslintDisable": 0
     },
     "components/UserPoints/PointsListGrid.tsx": {
-      "asAny": 12,
+      "asAny": 8,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2877,7 +2859,7 @@
       "eslintDisable": 0
     },
     "screens/tabs/PlacesScreen.tsx": {
-      "asAny": 3,
+      "asAny": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
