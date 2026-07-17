@@ -159,6 +159,7 @@ const QUESTS = [
     { questId: 'bielsko-biala-cartoon-vienna', dir: 'bielskoBialaCartoonVienna', city: 'Бельско-Бяла', mood: 'city', finaleId: 121 },
     { questId: 'szklarska-poreba-glass-town', dir: 'szklarskaPorebaGlassTown', city: 'Шклярска-Поремба', mood: 'castle', finaleId: 122 },
     { questId: 'banska-stiavnica-silver-love', dir: 'banskaStiavnicaSilverLove', city: 'Банска-Штявница', mood: 'castle', finaleId: 123 },
+    { questId: 'vlora-independence', dir: 'vloraIndependence', city: 'Влёра', mood: 'epic', finaleId: 124 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

@@ -95,6 +95,7 @@ const QUEST_COVERS = [
   { quest_id: 'bielsko-biala-cartoon-vienna', assetsDir: 'bielskoBialaCartoonVienna', cover: 'cover.png' },
   { quest_id: 'szklarska-poreba-glass-town', assetsDir: 'szklarskaPorebaGlassTown', cover: 'cover.png' },
   { quest_id: 'banska-stiavnica-silver-love', assetsDir: 'banskaStiavnicaSilverLove', cover: 'cover.png' },
+  { quest_id: 'vlora-independence', assetsDir: 'vloraIndependence', cover: 'cover.png' },
   { quest_id: 'swiety-krzyz-lysa-gora', assetsDir: 'swietyKrzyzLysaGora', cover: 'cover.png' },
   { quest_id: 'ojcow-lokietek', assetsDir: 'ojcowLokietek', cover: 'cover.png' },
   { quest_id: 'niedzica-skarb-inkow', assetsDir: 'niedzicaSkarbInkow', cover: 'cover.png' },
