@@ -114,13 +114,28 @@ function FaqCard({
   )
 }
 
-function QuestsSeoIntroFaq({ variant = 'both' }: { variant?: 'intro' | 'faq' | 'both' }) {
+function QuestsSeoIntroFaq({
+  variant = 'both',
+  items: itemsProp,
+  eyebrow,
+  lead,
+  faqTitle,
+  testID = 'quests-seo-intro-faq',
+}: {
+  variant?: 'intro' | 'faq' | 'both'
+  /** Defaults to the /quests FAQ; pass a set to reuse the accordion elsewhere. */
+  items?: QuestFaqItem[]
+  eyebrow?: string
+  lead?: string
+  faqTitle?: string
+  testID?: string
+}) {
   const colors = useThemedColors()
   const { isSmallPhone, isPhone } = useResponsive()
   const isMobile = isSmallPhone || isPhone
   const [openIndex, setOpenIndex] = useState<number | null>(null)
 
-  const items = useMemo(() => getQuestFaqItems(), [])
+  const items = useMemo(() => itemsProp ?? getQuestFaqItems(), [itemsProp])
   const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile])
 
   const toggleItem = useCallback((idx: number) => {
@@ -131,7 +146,7 @@ function QuestsSeoIntroFaq({ variant = 'both' }: { variant?: 'intro' | 'faq' | '
   }, [])
 
   return (
-    <View style={styles.wrap} testID="quests-seo-intro-faq">
+    <View style={styles.wrap} testID={testID}>
       {variant !== 'faq' && (
         <View style={styles.intro}>
           <View style={styles.eyebrow}>
@@ -141,9 +156,11 @@ function QuestsSeoIntroFaq({ variant = 'both' }: { variant?: 'intro' | 'faq' | '
               color={colors.primaryDark}
               aria-hidden
             />
-            <Text style={styles.eyebrowText}>{i18nT('quests:screens.tabs.QuestsSeoIntroFaq.eyebrow')}</Text>
+            <Text style={styles.eyebrowText}>
+              {eyebrow ?? i18nT('quests:screens.tabs.QuestsSeoIntroFaq.eyebrow')}
+            </Text>
           </View>
-          <Text style={styles.lead}>{i18nT('quests:screens.tabs.QuestsSeoIntroFaq.lead')}</Text>
+          <Text style={styles.lead}>{lead ?? i18nT('quests:screens.tabs.QuestsSeoIntroFaq.lead')}</Text>
         </View>
       )}
 
@@ -154,7 +171,7 @@ function QuestsSeoIntroFaq({ variant = 'both' }: { variant?: 'intro' | 'faq' | '
             accessibilityRole="header"
             {...({ 'aria-level': 2 } as Record<string, unknown>)}
           >
-            {i18nT('quests:screens.tabs.QuestsSeoIntroFaq.faqTitle')}
+            {faqTitle ?? i18nT('quests:screens.tabs.QuestsSeoIntroFaq.faqTitle')}
           </Text>
           <View style={styles.list}>
             {items.map((item, idx) => (

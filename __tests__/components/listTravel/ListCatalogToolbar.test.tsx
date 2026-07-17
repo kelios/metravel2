@@ -1,21 +1,5 @@
 import React from 'react'
 import { render } from '@testing-library/react-native'
-import ListCatalogToolbar from '@/components/listTravel/ListCatalogToolbar'
-
-let mockViewportWidth = 390
-
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native')
-  return {
-    ...RN,
-    Platform: {
-      ...RN.Platform,
-      OS: 'web',
-      select: (obj: any) => obj.web ?? obj.default,
-    },
-    useWindowDimensions: () => ({ width: mockViewportWidth, height: 844, scale: 1, fontScale: 1 }),
-  }
-})
 
 jest.mock('@expo/vector-icons/Feather', () => {
   const React = require('react')
@@ -36,9 +20,33 @@ jest.mock('@/hooks/useTheme', () => ({
   }),
 }))
 
+const ReactNative = require('react-native')
+const originalPlatformOS = ReactNative.Platform.OS
+const mockUseWindowDimensions = ReactNative.useWindowDimensions as jest.Mock
+const ListCatalogToolbar = require('@/components/listTravel/ListCatalogToolbar').default
+
 describe('ListCatalogToolbar', () => {
+  beforeAll(() => {
+    Object.defineProperty(ReactNative.Platform, 'OS', {
+      value: 'web',
+      configurable: true,
+    })
+  })
+
+  afterAll(() => {
+    Object.defineProperty(ReactNative.Platform, 'OS', {
+      value: originalPlatformOS,
+      configurable: true,
+    })
+  })
+
   beforeEach(() => {
-    mockViewportWidth = 390
+    mockUseWindowDimensions.mockReturnValue({
+      width: 390,
+      height: 844,
+      scale: 1,
+      fontScale: 1,
+    })
   })
 
   it('keeps compact mobile web toolbar lean by dropping inline sort chips', () => {
@@ -67,7 +75,12 @@ describe('ListCatalogToolbar', () => {
   it.each([768, 1024, 1280])(
     'keeps inline sorting in the filters sheet at compact width %ipx',
     (width) => {
-      mockViewportWidth = width
+      mockUseWindowDimensions.mockReturnValue({
+        width,
+        height: 844,
+        scale: 1,
+        fontScale: 1,
+      })
       const { queryByLabelText, queryByTestId } = render(
         <ListCatalogToolbar
           sortOptions={[
@@ -87,7 +100,12 @@ describe('ListCatalogToolbar', () => {
   )
 
   it('shows inline sorting once the docked desktop sidebar is available', () => {
-    mockViewportWidth = 1920
+    mockUseWindowDimensions.mockReturnValue({
+      width: 1920,
+      height: 1080,
+      scale: 1,
+      fontScale: 1,
+    })
     const { getByTestId } = render(
       <ListCatalogToolbar
         sortOptions={[
