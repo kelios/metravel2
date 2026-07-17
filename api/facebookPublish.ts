@@ -1,5 +1,7 @@
 import { apiClient } from '@/api/client'
 
+export const FACEBOOK_PUBLISH_PHOTO_MAX_COUNT = 10
+
 export type FacebookPublishCapability = {
   configured: boolean
   connected: boolean
@@ -49,30 +51,35 @@ export async function fetchFacebookOAuthStartUrl(returnTo?: string): Promise<str
   return String(response?.authUrl || '')
 }
 
-export const publishTravelToFacebook = (
+export const publishTravelToFacebook = async (
   travelId: number,
   message: string,
   photos: FacebookPublishPhoto[] = [],
-): Promise<FacebookPublishResult> =>
-  {
-    const selectedPhotos = photos
-      .map((photo) => ({
-        id: photo.id,
-        url: String(photo.url || '').trim(),
-        caption: photo.caption?.trim() || undefined,
-      }))
-      .filter((photo) => photo.url)
+): Promise<FacebookPublishResult> => {
+  const selectedPhotos = photos
+    .map((photo) => ({
+      id: photo.id,
+      url: String(photo.url || '').trim(),
+      caption: photo.caption?.trim() || undefined,
+    }))
+    .filter((photo) => photo.url)
 
-    return apiClient.request<FacebookPublishResult>(
-      '/travels/facebook-publish/',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          travelId,
-          message,
-          ...(selectedPhotos.length > 0 ? { photos: selectedPhotos } : null),
-        }),
-      },
-      30000,
+  if (selectedPhotos.length > FACEBOOK_PUBLISH_PHOTO_MAX_COUNT) {
+    throw new RangeError(
+      `Facebook publication accepts at most ${FACEBOOK_PUBLISH_PHOTO_MAX_COUNT} photos`,
     )
   }
+
+  return apiClient.request<FacebookPublishResult>(
+    '/travels/facebook-publish/',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        travelId,
+        message,
+        ...(selectedPhotos.length > 0 ? { photos: selectedPhotos } : null),
+      }),
+    },
+    30000,
+  )
+}

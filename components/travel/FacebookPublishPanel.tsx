@@ -33,6 +33,7 @@ type FacebookPublishPanelProps = {
   postUrl?: string
   photoOptions?: FacebookPublishPhotoOption[]
   selectedPhotoIds?: string[]
+  maxPhotoCount: number
   onMessageChange: (value: string) => void
   onTogglePhoto?: (photoId: string) => void
   onConnect: () => void
@@ -72,6 +73,7 @@ export default function FacebookPublishPanel({
   postUrl,
   photoOptions = [],
   selectedPhotoIds = [],
+  maxPhotoCount,
   onMessageChange,
   onTogglePhoto,
   onConnect,
@@ -81,6 +83,7 @@ export default function FacebookPublishPanel({
   const isConnecting = state === 'connecting'
   const isPublishing = state === 'publishing'
   const isBusy = isConnecting || isPublishing
+  const isPhotoLimitReached = selectedPhotoIds.length >= maxPhotoCount
   // Position in `selectedPhotoIds` is the publication order, so the badge shows it.
   const selectionOrderByPhotoId = new Map(selectedPhotoIds.map((photoId, index) => [photoId, index + 1]))
 
@@ -129,6 +132,7 @@ export default function FacebookPublishPanel({
               {i18nT('travel:components.travel.FacebookPublishPanel.photoSelectedCounter', {
                 value1: selectedPhotoIds.length,
                 value2: photoOptions.length,
+                value3: maxPhotoCount,
               })}
             </Text>
           ) : null}
@@ -137,23 +141,38 @@ export default function FacebookPublishPanel({
         {photoOptions.length > 0 ? (
           <>
             <Text style={styles.instagramHintText}>
-              {i18nT('travel:components.travel.FacebookPublishPanel.photoPickerHint')}
+              {i18nT('travel:components.travel.FacebookPublishPanel.photoPickerHint', {
+                value1: maxPhotoCount,
+              })}
             </Text>
+            {isPhotoLimitReached && photoOptions.length > maxPhotoCount ? (
+              <Text
+                style={[styles.instagramHintText, styles.instagramHintDanger]}
+                accessibilityLiveRegion="polite"
+                testID="facebook-photo-limit-feedback"
+              >
+                {i18nT('travel:components.travel.FacebookPublishPanel.photoLimitReached', {
+                  value1: maxPhotoCount,
+                })}
+              </Text>
+            ) : null}
             <View style={styles.facebookPhotoList}>
               {photoOptions.map((photo, index) => {
                 const selectionOrder = selectionOrderByPhotoId.get(photo.id)
                 const isSelected = selectionOrder !== undefined
+                const isSelectionDisabled = isBusy || !onTogglePhoto || (!isSelected && isPhotoLimitReached)
                 return (
                   <Pressable
                     key={photo.id}
                     onPress={() => onTogglePhoto?.(photo.id)}
-                    disabled={isBusy || !onTogglePhoto}
+                    disabled={isSelectionDisabled}
                     style={[
                       styles.facebookPhotoCard,
                       isSelected && styles.facebookPhotoCardSelected,
+                      isSelectionDisabled && styles.facebookPhotoCardDisabled,
                     ]}
                     accessibilityRole="checkbox"
-                    accessibilityState={{ checked: isSelected, disabled: isBusy }}
+                    accessibilityState={{ checked: isSelected, disabled: isSelectionDisabled }}
                     accessibilityLabel={i18nT(
                       'travel:components.travel.FacebookPublishPanel.photoAccessibilityLabel',
                       { value1: index + 1 },

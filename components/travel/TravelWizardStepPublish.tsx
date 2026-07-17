@@ -53,6 +53,7 @@ import {
     fetchFacebookOAuthStartUrl,
     fetchFacebookPublishStatus,
     publishTravelToFacebook,
+    FACEBOOK_PUBLISH_PHOTO_MAX_COUNT,
     type FacebookPublishCapability,
 } from '@/api/facebookPublish';
 import { ApiError } from '@/api/client';
@@ -802,7 +803,9 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         setFacebookSelectedPhotoIds((currentIds) =>
             currentIds.includes(photoId)
                 ? currentIds.filter((currentId) => currentId !== photoId)
-                : [...currentIds, photoId],
+                : currentIds.length < FACEBOOK_PUBLISH_PHOTO_MAX_COUNT
+                    ? [...currentIds, photoId]
+                    : currentIds,
         );
     }, []);
 
@@ -855,6 +858,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             void showToastMessage({
                 type: 'error',
                 text1: i18nT('travel:components.travel.FacebookPublishPanel.messageRequired'),
+            });
+            return;
+        }
+        if (facebookSelectedPhotoIds.length > FACEBOOK_PUBLISH_PHOTO_MAX_COUNT) {
+            void showToastMessage({
+                type: 'error',
+                text1: i18nT('travel:components.travel.FacebookPublishPanel.photoLimitReached', {
+                    value1: FACEBOOK_PUBLISH_PHOTO_MAX_COUNT,
+                }),
             });
             return;
         }
@@ -1038,6 +1050,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                             postUrl={facebookPostUrl}
                             photoOptions={facebookPhotoOptions}
                             selectedPhotoIds={facebookSelectedPhotoIds}
+                            maxPhotoCount={FACEBOOK_PUBLISH_PHOTO_MAX_COUNT}
                             onMessageChange={handleFacebookMessageChange}
                             onTogglePhoto={handleToggleFacebookPhoto}
                             onConnect={() => void handleConnectFacebook()}

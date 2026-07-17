@@ -36,6 +36,7 @@ jest.mock('@/api/instagramPublish', () => ({
     .mockResolvedValue('https://www.facebook.com/v19.0/dialog/oauth?client_id=test-app'),
 }));
 jest.mock('@/api/facebookPublish', () => ({
+  FACEBOOK_PUBLISH_PHOTO_MAX_COUNT: 10,
   fetchFacebookPublishStatus: jest.fn().mockResolvedValue({
     configured: true,
     connected: true,
@@ -512,6 +513,61 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       { id: 3, url: 'https://example.com/gallery-3.jpg', caption: undefined },
       { id: 1, url: 'https://example.com/gallery-1.jpg', caption: undefined },
     ]);
+  });
+
+  it('accepts ten Facebook photos, disables an eleventh, and keeps deselection available', async () => {
+    const gallery = Array.from({ length: 12 }, (_, index) => ({
+      id: index + 1,
+      url: `https://example.com/gallery-${index + 1}.jpg`,
+    }));
+    const { findByText, findByLabelText, findByTestId } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={{ ...baseFormData, gallery }}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    fireEvent.changeText(await findByLabelText('Текст поста для Facebook'), 'Десять фото');
+    for (let index = 4; index < 10; index += 1) {
+      await act(async () => {
+        fireEvent.press(await findByTestId(`facebook-photo-${index}`));
+      });
+    }
+
+    expect(await findByText('10 из 12 выбрано · лимит 10')).toBeTruthy();
+    expect(await findByTestId('facebook-photo-limit-feedback')).toBeTruthy();
+    expect((await findByTestId('facebook-photo-10')).props.accessibilityState).toEqual(
+      expect.objectContaining({ checked: false, disabled: true }),
+    );
+    expect((await findByTestId('facebook-photo-0')).props.accessibilityState).toEqual(
+      expect.objectContaining({ checked: true, disabled: false }),
+    );
+
+    await act(async () => {
+      fireEvent.press(await findByText('Опубликовать в Facebook'));
+    });
+    expect(publishTravelToFacebook).toHaveBeenCalledWith(
+      640,
+      'Десять фото',
+      gallery.slice(0, 10).map((photo) => ({
+        id: photo.id,
+        url: photo.url,
+        caption: undefined,
+      })),
+    );
+
+    await act(async () => {
+      fireEvent.press(await findByTestId('facebook-photo-0'));
+    });
+    expect((await findByTestId('facebook-photo-10')).props.accessibilityState).toEqual(
+      expect.objectContaining({ disabled: false }),
+    );
   });
 
   it('shows duplicate state and opens the backend-provided post URL', async () => {

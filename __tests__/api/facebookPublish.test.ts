@@ -1,5 +1,6 @@
 import { apiClient } from '@/api/client'
 import {
+  FACEBOOK_PUBLISH_PHOTO_MAX_COUNT,
   fetchFacebookOAuthStartUrl,
   fetchFacebookPublishStatus,
   publishTravelToFacebook,
@@ -95,5 +96,17 @@ describe('facebookPublish API adapter', () => {
     expect(requestBody).not.toHaveProperty('pageId')
     expect(requestBody).not.toHaveProperty('link')
     expect(requestBody).not.toHaveProperty('token')
+  })
+
+  it('refuses to build a Facebook request with more than ten photos', async () => {
+    const photos = Array.from({ length: FACEBOOK_PUBLISH_PHOTO_MAX_COUNT + 1 }, (_, index) => ({
+      id: index + 1,
+      url: `https://cdn.example.com/gallery/${index + 1}.jpg`,
+    }))
+
+    await expect(publishTravelToFacebook(640, 'Facebook message', photos)).rejects.toThrow(
+      `at most ${FACEBOOK_PUBLISH_PHOTO_MAX_COUNT} photos`,
+    )
+    expect(apiClient.request).not.toHaveBeenCalled()
   })
 })

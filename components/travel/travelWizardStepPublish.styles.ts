@@ -515,6 +515,10 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
         borderColor: colors.primary,
         opacity: 1,
     },
+    facebookPhotoCardDisabled: {
+        opacity: 0.45,
+        ...(Platform.OS === 'web' ? ({ cursor: 'not-allowed' } as unknown as object) : {}),
+    },
     facebookPhotoCheckBadge: {
         position: 'absolute',
         top: 8,
