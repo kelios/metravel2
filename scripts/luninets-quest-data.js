@@ -161,7 +161,7 @@ module.exports = [
             lng: 26.96,
             duration_min: 330,
             difficulty: 'medium',
-            tags: ['roadtrip', 'history', 'nature', 'river', 'memory', 'architecture'],
+            tags: ['bike', 'roadtrip', 'history', 'nature', 'river', 'memory', 'architecture'],
         },
         storage_key: 'quest_luninets_bike_polesie_v1',
         intro: {
@@ -292,7 +292,7 @@ module.exports = [
             lng: 26.7,
             duration_min: 360,
             difficulty: 'hard',
-            tags: ['roadtrip', 'nature', 'lake', 'legend', 'history', 'monastery'],
+            tags: ['bike', 'roadtrip', 'nature', 'lake', 'legend', 'history', 'monastery'],
         },
         storage_key: 'quest_luninets_bike_beloe_v1',
         intro: {
