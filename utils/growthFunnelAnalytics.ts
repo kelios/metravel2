@@ -20,6 +20,12 @@ export const GROWTH_FUNNEL_EVENTS = {
   articleEditorAutosaveSuccess: 'article_editor_autosave_success',
   articleEditorAutosaveError: 'article_editor_autosave_error',
   articleEditorPreviewClick: 'article_editor_preview_click',
+  registerCtaImpression: 'register_cta_impression',
+  contextualNextStepImpression: 'contextual_next_step_impression',
+  contextualNextStepClick: 'contextual_next_step_click',
+  contentScrollDepth: 'content_scroll_depth',
+  questCardImpression: 'quest_card_impression',
+  questCardClick: 'quest_card_click',
 } as const;
 
 export type GrowthContentType = 'route' | 'article';
@@ -128,6 +134,21 @@ type FavoriteIntentParams = {
   url?: unknown;
 };
 
+type ContentActivationParams = {
+  source?: unknown;
+  contentType: 'article' | 'travel';
+  contentId?: unknown;
+  action?: 'map' | 'quests' | 'save';
+  depth?: 25 | 50 | 75;
+};
+
+type QuestCardParams = {
+  source?: unknown;
+  questId?: unknown;
+  cityId?: unknown;
+  contextId?: unknown;
+};
+
 /**
  * Единая активационная цель `cta_register_click` (тикет #768): любой клик по
  * CTA «Зарегистрироваться» в любом месте UI. Точечные события конкретных
@@ -139,6 +160,56 @@ export const trackRegisterCtaClicked = ({ source, intent, authState }: RegisterC
     intent: safeString(intent),
     auth_state: authState,
   });
+};
+
+export const trackRegisterCtaImpression = ({ source, intent, authState }: RegisterCtaParams = {}) => {
+  emitGrowthFunnelEvent(GROWTH_FUNNEL_EVENTS.registerCtaImpression, {
+    source: safeString(source) ?? 'unknown',
+    intent: safeString(intent),
+    auth_state: authState,
+  });
+};
+
+const contentActivationParams = ({ source, contentType, contentId }: ContentActivationParams) => ({
+  source: safeString(source) ?? 'unknown',
+  content_type: contentType,
+  content_id: safeString(contentId),
+});
+
+export const trackContextualNextStepImpression = (params: ContentActivationParams) => {
+  emitGrowthFunnelEvent(
+    GROWTH_FUNNEL_EVENTS.contextualNextStepImpression,
+    contentActivationParams(params),
+  );
+};
+
+export const trackContextualNextStepClicked = (params: ContentActivationParams) => {
+  emitGrowthFunnelEvent(GROWTH_FUNNEL_EVENTS.contextualNextStepClick, {
+    ...contentActivationParams(params),
+    action: safeString(params.action),
+  });
+};
+
+export const trackContentScrollDepth = (params: ContentActivationParams) => {
+  emitGrowthFunnelEvent(GROWTH_FUNNEL_EVENTS.contentScrollDepth, {
+    ...contentActivationParams(params),
+    depth_pct: safeNumber(params.depth),
+  });
+};
+
+const questCardParams = ({ source, questId, cityId, contextId }: QuestCardParams) => ({
+  source: safeString(source) ?? 'quest_card',
+  quest_id: safeString(questId),
+  city_id: safeString(cityId),
+  context_id: safeString(contextId),
+});
+
+export const trackQuestCardImpression = (params: QuestCardParams) => {
+  emitGrowthFunnelEvent(GROWTH_FUNNEL_EVENTS.questCardImpression, questCardParams(params));
+};
+
+export const trackQuestCardClicked = (params: QuestCardParams) => {
+  emitGrowthFunnelEvent(GROWTH_FUNNEL_EVENTS.questCardClick, questCardParams(params));
 };
 
 export const trackFavoriteIntentGuest = ({ itemType, itemId, source, url }: FavoriteIntentParams) => {

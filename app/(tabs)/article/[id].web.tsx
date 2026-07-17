@@ -9,11 +9,13 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
 import { Card, Title } from '@/ui/paper'
 import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
+import ArticleNextStepSection from '@/components/article/ArticleNextStepSection'
 import ArticleAuthorBanner from '@/components/article/ArticleAuthorBanner'
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles'
 import { SafeHtml } from '@/components/article/SafeHtml'
 import { useFavorites } from '@/context/FavoritesContext'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useContentScrollAnalytics } from '@/hooks/useContentScrollAnalytics'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { buildCanonicalUrl } from '@/utils/seo'
 import { stripToDescription } from '@/components/travel/utils/travelHelpers'
@@ -53,6 +55,11 @@ export default function ArticleDetails() {
     if (article?.id) return `/article/${article.id}`
     return undefined
   }, [article?.id, article?.slug, routeKey])
+  const handleContentScroll = useContentScrollAnalytics({
+    source: 'article_detail',
+    contentType: 'article',
+    contentId: article?.id ?? routeKey,
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -193,13 +200,19 @@ export default function ArticleDetails() {
     <>
       {seoBlock}
       <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView style={[styles.container, webTouchScrollStyle]} contentContainerStyle={styles.contentContainer}>
+        <ScrollView
+          style={[styles.container, webTouchScrollStyle]}
+          contentContainerStyle={styles.contentContainer}
+          onScroll={handleContentScroll}
+          scrollEventThrottle={64}
+        >
           <Stack.Screen options={{ headerTitle: article.name }} />
           {articleContent.html && (
             <Card style={styles.card}>
               <Card.Content>
                 <h1 style={{ fontSize: 18, fontWeight: '700', margin: 0 } as any}>{article.name}</h1>
                 <ArticleAuthorBanner article={article} />
+                <ArticleNextStepSection articleId={article.id ?? article.slug} />
                 <SafeHtml
                   html={articleContent.html}
                   serverSanitized={articleContent.serverSanitized}

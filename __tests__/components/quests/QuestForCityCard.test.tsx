@@ -1,7 +1,18 @@
 import React from 'react'
-import { render } from '@testing-library/react-native'
+import { fireEvent, render } from '@testing-library/react-native'
 
 import { QuestForCityCard } from '@/components/quests/QuestForCityCard'
+import { queueAnalyticsEvent } from '@/utils/analytics'
+
+const mockPush = jest.fn()
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockPush }),
+}))
+
+jest.mock('@/utils/analytics', () => ({
+  queueAnalyticsEvent: jest.fn(),
+}))
 
 const mockImageCardMedia = jest.fn((props: any) => {
   const React = require('react')
@@ -16,7 +27,36 @@ jest.mock('@/components/ui/ImageCardMedia', () => ({
 
 describe('QuestForCityCard', () => {
   beforeEach(() => {
+    jest.clearAllMocks()
     mockImageCardMedia.mockClear()
+  })
+
+  it('tracks the contextual card click before opening the quest', () => {
+    const { getByLabelText } = render(
+      <QuestForCityCard
+        analyticsSource="travel_detail"
+        analyticsContextId={42}
+        quest={{
+          id: 'gomel-palace',
+          title: 'Тайны дворца',
+          points: 8,
+          cityId: '3',
+          cityName: 'Гомель',
+          lat: 52.43,
+          lng: 30.99,
+        }}
+      />,
+    )
+
+    fireEvent.press(getByLabelText('Пройти квест по городу Гомель: Тайны дворца'))
+
+    expect(queueAnalyticsEvent).toHaveBeenCalledWith('quest_card_click', {
+      source: 'travel_detail',
+      quest_id: 'gomel-palace',
+      city_id: '3',
+      context_id: '42',
+    })
+    expect(mockPush).toHaveBeenCalledWith('/quests/3/gomel-palace')
   })
 
   it('passes quest cover with stable web media geometry', () => {

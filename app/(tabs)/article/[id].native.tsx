@@ -12,6 +12,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
 import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
+import ArticleNextStepSection from '@/components/article/ArticleNextStepSection'
 import ArticleAuthorBanner from '@/components/article/ArticleAuthorBanner'
 import StableContent from '@/components/travel/StableContent'
 import { Card, Title } from '@/ui/paper'
@@ -20,6 +21,7 @@ import { SafeHtml } from '@/components/article/SafeHtml'
 import { useFavorites } from '@/context/FavoritesContext'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useContentScrollAnalytics } from '@/hooks/useContentScrollAnalytics'
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler'
 import { normalizeArticleReturnHref } from '@/utils/articleNavigation'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
@@ -57,6 +59,11 @@ export default function ArticleDetails() {
     if (article?.id) return `/article/${article.id}`
     return undefined
   }, [article?.id, article?.slug, normalizedSlug, numericId])
+  const handleContentScroll = useContentScrollAnalytics({
+    source: 'article_detail',
+    contentType: 'article',
+    contentId: article?.id ?? normalizedSlug,
+  })
 
   const handleBack = useCallback(() => {
     if (returnHref) {
@@ -179,12 +186,18 @@ export default function ArticleDetails() {
           логика возврата, #573/#616) + один in-body <Title>. Иначе тройной заголовок. */}
       <Stack.Screen options={{ headerShown: false }} />
       <ArticleBackButton colors={colors} onPress={handleBack} styles={styles} />
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        onScroll={handleContentScroll}
+        scrollEventThrottle={48}
+      >
         {articleContent.html && (
           <Card style={styles.card}>
             <Card.Content>
               <Title>{article.name}</Title>
               <ArticleAuthorBanner article={article} />
+              <ArticleNextStepSection articleId={article.id ?? article.slug} />
               <View style={styles.richTextWrap}>
                 <StableContent
                   html={articleContent.html}

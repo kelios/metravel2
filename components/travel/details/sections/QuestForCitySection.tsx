@@ -89,6 +89,8 @@ export const QuestForCitySection: React.FC<{
             key={quest.id}
             quest={quest}
             eyebrow={buildEyebrow(distanceKm, quest.cityName)}
+            analyticsSource="travel_detail"
+            analyticsContextId={travel.id ?? travel.slug}
           />
         ))}
       </View>

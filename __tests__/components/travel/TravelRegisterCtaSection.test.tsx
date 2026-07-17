@@ -40,7 +40,7 @@ describe('TravelRegisterCtaSection', () => {
 
     const { getByLabelText } = render(<TravelRegisterCtaSection redirect="/travels/test-route" />)
 
-    const button = getByLabelText('Создать бесплатный аккаунт')
+    const button = getByLabelText('Сохранить маршрут')
     expect(button).toBeTruthy()
 
     fireEvent.press(button)
@@ -58,6 +58,6 @@ describe('TravelRegisterCtaSection', () => {
 
     const { queryByLabelText } = render(<TravelRegisterCtaSection />)
 
-    expect(queryByLabelText('Создать бесплатный аккаунт')).toBeNull()
+    expect(queryByLabelText('Сохранить маршрут')).toBeNull()
   })
 })

@@ -4,8 +4,12 @@ import { useRouter } from 'expo-router'
 
 import { useAuth } from '@/context/AuthContext'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useTrackedImpression } from '@/hooks/useTrackedImpression'
 import { buildRegistrationHref } from '@/utils/authNavigation'
-import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
+import {
+  trackRegisterCtaClicked,
+  trackRegisterCtaImpression,
+} from '@/utils/growthFunnelAnalytics'
 import { translate as i18nT } from '@/i18n'
 
 type TravelRegisterCtaSectionProps = {
@@ -19,6 +23,18 @@ export const TravelRegisterCtaSection: React.FC<TravelRegisterCtaSectionProps> =
   const heading = i18nT('travel:components.travel.details.sections.TravelRegisterCtaSection.heading')
   const subtitle = i18nT('travel:components.travel.details.sections.TravelRegisterCtaSection.subtitle')
   const ctaLabel = i18nT('travel:components.travel.details.sections.TravelRegisterCtaSection.cta')
+  const impression = useTrackedImpression(
+    `travel_article:${redirect ?? 'unknown'}`,
+    useCallback(() => {
+      if (!isAuthenticated) {
+        trackRegisterCtaImpression({
+          source: 'travel_article',
+          intent: 'favorite',
+          authState: 'guest',
+        })
+      }
+    }, [isAuthenticated]),
+  )
 
   const handlePress = useCallback(() => {
     trackRegisterCtaClicked({ source: 'travel_article', intent: 'favorite', authState: 'guest' })
@@ -29,6 +45,8 @@ export const TravelRegisterCtaSection: React.FC<TravelRegisterCtaSectionProps> =
 
   return (
     <View
+      ref={impression.ref}
+      onLayout={impression.onLayout}
       style={[
         styles.container,
         { backgroundColor: colors.surface, borderColor: colors.border },

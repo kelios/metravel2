@@ -8,12 +8,14 @@ import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { useTrackedImpression } from '@/hooks/useTrackedImpression'
 import type { Article } from '@/types/types'
 import { buildRegistrationHref } from '@/utils/authNavigation'
 import { saveGuestFavoriteIntent } from '@/utils/guestFavoriteIntent'
 import {
-  trackContentCreateCtaClicked,
+  trackContextualNextStepClicked,
   trackFavoriteIntentGuest,
+  trackRegisterCtaImpression,
   trackRegisterCtaClicked,
 } from '@/utils/growthFunnelAnalytics'
 import { translate as i18nT } from '@/i18n'
@@ -25,7 +27,6 @@ type ArticleActivationCtaSectionProps = {
 }
 
 const ARTICLE_SOURCE = 'article_detail'
-const ADD_PLACE_PATH = '/travel/new'
 
 const getArticleUrl = (article: Article, redirectPath?: string) => {
   if (redirectPath) return redirectPath
@@ -45,7 +46,18 @@ function ArticleActivationCtaSection({ article, redirectPath }: ArticleActivatio
   const articleId = article.id ?? article.slug ?? article.name
   const articleUrl = getArticleUrl(article, redirectPath)
   const favoriteSaved = isFavorite(articleId, 'article')
-  const authState = isAuthenticated ? 'authenticated' : 'guest'
+  const impression = useTrackedImpression(
+    `${ARTICLE_SOURCE}:${String(articleId)}`,
+    useCallback(() => {
+      if (!isAuthenticated) {
+        trackRegisterCtaImpression({
+          source: ARTICLE_SOURCE,
+          intent: 'favorite_article',
+          authState: 'guest',
+        })
+      }
+    }, [isAuthenticated]),
+  )
 
   const handleSaveArticle = useCallback(async () => {
     if (favoriteSaved || isSaving) return
@@ -94,26 +106,20 @@ function ArticleActivationCtaSection({ article, redirectPath }: ArticleActivatio
     router,
   ])
 
-  const handleAddPlace = useCallback(() => {
-    trackContentCreateCtaClicked({
-      contentType: 'route',
+  const handleOpenMap = useCallback(() => {
+    trackContextualNextStepClicked({
       source: ARTICLE_SOURCE,
-      authState,
-      intent: 'add-place',
-      action: isAuthenticated ? 'create' : 'register',
+      contentType: 'article',
+      contentId: articleId,
+      action: 'map',
     })
-
-    if (!isAuthenticated) {
-      trackRegisterCtaClicked({ source: ARTICLE_SOURCE, intent: 'add-place', authState: 'guest' })
-      router.push(buildRegistrationHref({ redirect: ADD_PLACE_PATH, intent: 'add-place' }) as never)
-      return
-    }
-
-    router.push(ADD_PLACE_PATH as never)
-  }, [authState, isAuthenticated, router])
+    router.push('/map' as never)
+  }, [articleId, router])
 
   return (
     <View
+      ref={impression.ref}
+      onLayout={impression.onLayout}
       style={styles.container}
       accessibilityLabel={i18nT('shared:components.article.ArticleActivationCtaSection.sohranite_ideyu_poezdki_e9d79ed7')}
       accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
@@ -144,13 +150,13 @@ function ArticleActivationCtaSection({ article, redirectPath }: ArticleActivatio
           accessibilityLabel={favoriteSaved ? i18nT('shared:components.article.ArticleActivationCtaSection.statya_uzhe_sohranena_bda1afd8') : i18nT('shared:components.article.ArticleActivationCtaSection.sohranit_statyu_v_izbrannoe_0655dcc5')}
         />
         <Button
-          label={i18nT('shared:components.article.ArticleActivationCtaSection.dobavit_mesto_2bb06bfd')}
-          onPress={handleAddPlace}
+          label={i18nT('shared:components.article.ArticleActivationCtaSection.openMap')}
+          onPress={handleOpenMap}
           variant="outline"
           size="md"
           fullWidth
-          icon={<Feather name="plus" size={16} color={colors.primary} />}
-          accessibilityLabel={i18nT('shared:components.article.ArticleActivationCtaSection.dobavit_mesto_na_kartu_4baaf781')}
+          icon={<Feather name="map" size={16} color={colors.primary} />}
+          accessibilityLabel={i18nT('shared:components.article.ArticleActivationCtaSection.openMapAccessibility')}
         />
       </View>
     </View>

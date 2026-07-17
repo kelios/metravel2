@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { Animated, DeviceEventEmitter, Platform } from 'react-native'
 
 import { buildTravelSectionLinks } from '@/components/travel/sectionLinks'
+import { useContentScrollAnalytics } from '@/hooks/useContentScrollAnalytics'
 import {
   getTravelDetailsChromeReadyState,
   getTravelDetailsHeadKey,
@@ -56,6 +57,11 @@ export function useTravelDetailsContainerViewModel({
   travel,
 }: UseTravelDetailsContainerViewModelArgs) {
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel])
+  const trackScrollDepth = useContentScrollAnalytics({
+    source: 'travel_detail',
+    contentType: 'travel',
+    contentId: travel?.id ?? slug,
+  })
 
   const headKey = useMemo(
     () => getTravelDetailsHeadKey(slug, travel?.id),
@@ -119,9 +125,9 @@ export function useTravelDetailsContainerViewModel({
     () =>
       Animated.event(
         [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-        { useNativeDriver: false }
+        { useNativeDriver: false, listener: trackScrollDepth }
       ),
-    [scrollY]
+    [scrollY, trackScrollDepth]
   )
 
   const wrapperStyle = useMemo(

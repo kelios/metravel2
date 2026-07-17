@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
 import ArticleRatingSection from '@/components/article/ArticleRatingSection'
 import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
+import ArticleNextStepSection from '@/components/article/ArticleNextStepSection'
 import ArticleAuthorBanner from '@/components/article/ArticleAuthorBanner'
 import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
 import RenderHTML from 'react-native-render-html'
@@ -19,6 +20,7 @@ import { SafeHtml } from '@/components/article/SafeHtml'
 import { useFavorites } from '@/context/FavoritesContext'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useContentScrollAnalytics } from '@/hooks/useContentScrollAnalytics'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { translate as i18nT } from '@/i18n'
 
@@ -57,6 +59,11 @@ export default function ArticleDetails() {
     if (article?.id) return `/article/${article.id}`
     return undefined
   }, [article?.id, article?.slug, normalizedSlug, numericId])
+  const handleContentScroll = useContentScrollAnalytics({
+    source: 'article_detail',
+    contentType: 'article',
+    contentId: article?.id ?? normalizedSlug,
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -142,6 +149,8 @@ export default function ArticleDetails() {
         <ScrollView
             style={styles.container}
             contentContainerStyle={styles.contentContainer}
+            onScroll={handleContentScroll}
+            scrollEventThrottle={64}
         >
           <Stack.Screen options={{ headerTitle: article.name }} />
           {articleContent.html && (
@@ -149,6 +158,7 @@ export default function ArticleDetails() {
                 <Card.Content>
                   {/* Заголовок даёт навигационный header (headerTitle) — в теле не дублируем (F-4). */}
                   <ArticleAuthorBanner article={article} />
+                  <ArticleNextStepSection articleId={article.id ?? article.slug} />
                   {Platform.select({
                     web: (
                       <SafeHtml

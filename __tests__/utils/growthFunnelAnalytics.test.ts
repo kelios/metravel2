@@ -4,6 +4,10 @@ import {
   trackFavoriteIntentGuest,
   trackArticleEditorAutosaveSucceeded,
   trackContentCreateCtaClicked,
+  trackContentScrollDepth,
+  trackContextualNextStepClicked,
+  trackQuestCardClicked,
+  trackRegisterCtaImpression,
   trackRegisterCtaClicked,
   trackRegistrationFailed,
   trackRegistrationSucceeded,
@@ -88,6 +92,51 @@ describe('growthFunnelAnalytics', () => {
       GROWTH_FUNNEL_EVENTS.registerCtaClick,
       { source: 'unknown' },
     );
+  });
+
+  it('tracks CTA visibility separately from clicks', () => {
+    trackRegisterCtaImpression({ source: 'travel_article', intent: 'favorite', authState: 'guest' });
+
+    expect(mockedQueueAnalyticsEvent).toHaveBeenCalledWith('register_cta_impression', {
+      source: 'travel_article',
+      intent: 'favorite',
+      auth_state: 'guest',
+    });
+  });
+
+  it('tracks contextual continuation, quest discovery, and scroll depth', () => {
+    trackContextualNextStepClicked({
+      source: 'article_detail_intro',
+      contentType: 'article',
+      contentId: 42,
+      action: 'quests',
+    });
+    trackQuestCardClicked({ source: 'travel_detail', questId: 19, cityId: 3, contextId: 42 });
+    trackContentScrollDepth({
+      source: 'travel_detail',
+      contentType: 'travel',
+      contentId: 42,
+      depth: 50,
+    });
+
+    expect(mockedQueueAnalyticsEvent).toHaveBeenNthCalledWith(1, 'contextual_next_step_click', {
+      source: 'article_detail_intro',
+      content_type: 'article',
+      content_id: '42',
+      action: 'quests',
+    });
+    expect(mockedQueueAnalyticsEvent).toHaveBeenNthCalledWith(2, 'quest_card_click', {
+      source: 'travel_detail',
+      quest_id: '19',
+      city_id: '3',
+      context_id: '42',
+    });
+    expect(mockedQueueAnalyticsEvent).toHaveBeenNthCalledWith(3, 'content_scroll_depth', {
+      source: 'travel_detail',
+      content_type: 'travel',
+      content_id: '42',
+      depth_pct: 50,
+    });
   });
 
   it('emits contract registration and publish goal ids', () => {

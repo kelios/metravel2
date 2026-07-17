@@ -1,12 +1,17 @@
-import React, { useMemo } from 'react'
+import React, { useCallback, useMemo } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { useTrackedImpression } from '@/hooks/useTrackedImpression'
 import { getQuestAgeBadgeLabel, getQuestAgeCategory } from '@/utils/questAudience'
 import type { QuestMeta } from '@/utils/questAdapters'
+import {
+  trackQuestCardClicked,
+  trackQuestCardImpression,
+} from '@/utils/growthFunnelAnalytics'
 import { selectPlural, translate as i18nT } from '@/i18n'
 
 
@@ -40,6 +45,8 @@ type Props = {
   eyebrow?: string
   imageLoading?: 'lazy' | 'eager'
   style?: any
+  analyticsSource?: string
+  analyticsContextId?: string | number | null
 }
 
 /**
@@ -51,6 +58,8 @@ export function QuestForCityCard({
   eyebrow = i18nT('quests:components.quests.QuestForCityCard.gorodskoy_kvest_marshrut_90737ec7'),
   imageLoading = 'eager',
   style,
+  analyticsSource = 'quest_card',
+  analyticsContextId,
 }: Props) {
   const router = useRouter()
   const colors = useThemedColors()
@@ -58,6 +67,20 @@ export function QuestForCityCard({
   const difficultyLabels = createDifficultyLabels()
 
   const href = `/quests/${quest.cityId}/${quest.id}`
+  const analyticsParams = useMemo(() => ({
+    source: analyticsSource,
+    questId: quest.id,
+    cityId: quest.cityId,
+    contextId: analyticsContextId,
+  }), [analyticsContextId, analyticsSource, quest.cityId, quest.id])
+  const impression = useTrackedImpression(
+    `${analyticsSource}:${String(analyticsContextId ?? '')}:${String(quest.id)}`,
+    useCallback(() => trackQuestCardImpression(analyticsParams), [analyticsParams]),
+  )
+  const handlePress = useCallback(() => {
+    trackQuestCardClicked(analyticsParams)
+    router.push(href as any)
+  }, [analyticsParams, href, router])
   const chips: { key: string; icon: keyof typeof Feather.glyphMap; label: string }[] = []
   if (quest.points) chips.push({ key: 'points', icon: 'map-pin', label: formatPoints(quest.points) })
   if (quest.durationMin)
@@ -77,7 +100,9 @@ export function QuestForCityCard({
 
   return (
     <Pressable
-      onPress={() => router.push(href as any)}
+      ref={impression.ref}
+      onLayout={impression.onLayout}
+      onPress={handlePress}
       style={({ pressed, hovered }: any) => [
         styles.card,
         style,

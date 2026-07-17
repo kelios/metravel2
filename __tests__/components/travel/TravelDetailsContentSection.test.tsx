@@ -43,6 +43,13 @@ jest.mock('@/components/travel/TravelDescription', () => {
   }
 })
 
+jest.mock('@/components/travel/details/sections/TravelRegisterCtaSection', () => {
+  const { Text } = require('react-native')
+  return function MockTravelRegisterCtaSection() {
+    return <Text testID="travel-register-cta">Сохранить маршрут</Text>
+  }
+})
+
 jest.mock('@/components/travel/details/sections/LazyYouTubeSection', () => ({
   LazyYouTube: ({ url }: { url: string }) => {
     const { Text } = require('react-native')

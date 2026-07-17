@@ -52,7 +52,12 @@ function HomeQuestsPromoSection() {
         <View style={styles.grid}>
           {visibleQuests.map((quest) => (
             <View key={quest.id} style={[styles.cardSlot, isMobile && styles.cardSlotMobile]}>
-              <QuestForCityCard quest={quest} imageLoading="lazy" />
+              <QuestForCityCard
+                quest={quest}
+                imageLoading="lazy"
+                analyticsSource="home_quests"
+                analyticsContextId="home"
+              />
             </View>
           ))}
         </View>

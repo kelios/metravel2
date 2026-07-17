@@ -13,6 +13,7 @@ import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
 import { LazyYouTube } from './LazyYouTubeSection'
 import QuestForCitySection from './QuestForCitySection'
+import TravelRegisterCtaSection from './TravelRegisterCtaSection'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -92,6 +93,8 @@ export const TravelDetailsContentSection: React.FC<{
 
   return (
     <>
+      <QuestForCitySection travel={travel} styles={styles} />
+
       {shouldRenderDescriptionSection && (
         <View
           ref={anchors.description}
@@ -116,6 +119,9 @@ export const TravelDetailsContentSection: React.FC<{
                     : readingTimeLabel.replace(/^ · /, '')}
                 </Text>
               </View>
+              <TravelRegisterCtaSection
+                redirect={travel.slug ? `/travels/${travel.slug}` : undefined}
+              />
               {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>{i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.soderzhanie_marshruta_4fdeae71')}</h2>}
 
               <TravelDescription title={travel.name} htmlContent={descriptionContent.html} serverSanitized={descriptionContent.serverSanitized} noBox />
@@ -125,8 +131,6 @@ export const TravelDetailsContentSection: React.FC<{
           </CollapsibleSection>
         </View>
       )}
-
-      <QuestForCitySection travel={travel} styles={styles} />
 
       {travel.youtube_link && safeGetYoutubeId(travel.youtube_link) && (
         <View

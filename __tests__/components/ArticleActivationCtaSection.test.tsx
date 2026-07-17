@@ -113,4 +113,24 @@ describe('ArticleActivationCtaSection', () => {
     })
     expect(mockPush).not.toHaveBeenCalled()
   })
+
+  it('opens the map without forcing registration', () => {
+    const { getByLabelText } = render(
+      <ArticleActivationCtaSection article={article} redirectPath="/article/test-article" />,
+    )
+
+    fireEvent.press(getByLabelText('Открыть карту с местами'))
+
+    expect(queueAnalyticsEvent).toHaveBeenCalledWith('contextual_next_step_click', {
+      source: 'article_detail',
+      content_type: 'article',
+      content_id: '7',
+      action: 'map',
+    })
+    expect(mockPush).toHaveBeenCalledWith('/map')
+    expect(queueAnalyticsEvent).not.toHaveBeenCalledWith(
+      'cta_register_click',
+      expect.anything(),
+    )
+  })
 })

@@ -112,6 +112,11 @@ jest.mock('@/components/travel/TravelSectionsSheet', () => ({
   default: () => null,
 }))
 
+jest.mock('@/components/travel/details/sections/TravelRegisterCtaSection', () => ({
+  __esModule: true,
+  default: () => null,
+}))
+
 jest.mock('@/components/ui/ReadingProgressBar', () => ({
   __esModule: true,
   default: () => null,

@@ -11,7 +11,6 @@ import { useTravelDetailsMapSectionContentModel } from '../hooks/useTravelDetail
 import { useTravelDetailsMapSectionModel } from '../hooks/useTravelDetailsMapSectionModel'
 import AffiliateSection from './AffiliateSection'
 import ExcursionsSection from './ExcursionsSection'
-import TravelRegisterCtaSection from './TravelRegisterCtaSection'
 import TravelRouteMapBlock from './TravelRouteMapBlock'
 import TravelWeatherBlock from './TravelWeatherBlock'
 import TravelPointsBlock from './TravelPointsBlock'
@@ -126,8 +125,6 @@ export const TravelDetailsMapSection: React.FC<{
         styles={styles}
         travel={travel}
       />
-
-      <TravelRegisterCtaSection redirect={travel?.slug ? `/travels/${travel.slug}` : undefined} />
 
     </>
   )
