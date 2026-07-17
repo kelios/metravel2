@@ -42,6 +42,7 @@ export function getQuestFaqItems(): QuestFaqItem[] {
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q5'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a5') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q6'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a6') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q7'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a7') },
+    { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q8'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a8') },
   ]
 }
 

@@ -1726,10 +1726,10 @@ function buildQuestCityLandingHtml(cityBaseHtml, city) {
   const count = city.quests.length;
   const canonicalSegment = city.alias || city.cityId;
   const canonical = `${SITE_URL}/quests/${canonicalSegment}`;
-  const title = buildBrandedSeoTitle(`Городские квесты: ${cityLabel} — маршруты с заданиями`);
-  const lead = `Бесплатные пешие квесты-маршруты в городе ${cityLabel}: задания и легенды по реальным местам, прямо со смартфона. Выберите маршрут и отправляйтесь гулять.`;
+  const title = buildBrandedSeoTitle(`Квест по городу ${cityLabel} — пешеходные маршруты с заданиями`);
+  const lead = `Бесплатные пешеходные квесты-прогулки по городу ${cityLabel}: задания и легенды по реальным местам, прямо со смартфона — как самостоятельная экскурсия без гида. Выберите маршрут и отправляйтесь гулять пешком.`;
   const description = clampMetaDescription(
-    `Городские квесты в городе ${cityLabel}: ${count} ${pluralizeRu(count, 'маршрут', 'маршрута', 'маршрутов')}. Бесплатно, с заданиями и легендами по реальным местам — прямо со смартфона.`,
+    `Квест по городу ${cityLabel}: ${count} ${pluralizeRu(count, 'пешеходный маршрут', 'пешеходных маршрута', 'пешеходных маршрутов')} с заданиями и легендами. Бесплатно, пешком, со смартфона — гид не нужен.`,
   );
   const image = city.cover ? toAbsoluteUrl(city.cover) : OG_IMAGE;
 
