@@ -106,6 +106,9 @@ const QUEST_COVERS = [
   { quest_id: 'malbork-marienburg', assetsDir: 'malborkMarienburg', cover: 'cover.png' },
   { quest_id: 'kazimierz-dolny-kogut', assetsDir: 'kazimierzDolnyKogut', cover: 'cover.png' },
   { quest_id: 'sleza-swieta-gora', assetsDir: 'slezaSwietaGora', cover: 'cover.png' },
+  { quest_id: 'krakow-bike-tyniec', assetsDir: 'krakowBikeTyniec', cover: 'cover.png' },
+  { quest_id: 'krakow-bike-pradnik', assetsDir: 'krakowBikePradnik', cover: 'cover.png' },
+  { quest_id: 'krakow-bike-wanda', assetsDir: 'krakowBikeWanda', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {

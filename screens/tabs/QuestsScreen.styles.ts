@@ -1,5 +1,5 @@
 // src/screens/tabs/QuestsScreen.styles.ts
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet, Platform, type ViewStyle } from 'react-native';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { LAYOUT } from '@/constants/layout';
@@ -12,6 +12,10 @@ const CONTROL_RADIUS = radii.sm;
 // платформах, поэтому каждый скролл-контейнер сам резервирует место под ним,
 // иначе последняя карточка уходит под док. Формула та же, что в списке travel.
 const MOBILE_DOCK_RESERVE = (LAYOUT?.tabBarHeight ?? 56) + spacing.xl;
+type WebDecorativeViewStyle = ViewStyle & {
+    backdropFilter?: string;
+    boxShadow?: string;
+};
 
 // ───────────── Styles (Two-column layout) ─────────────
 
@@ -29,6 +33,12 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
     const cityIconSize = isMobileW ? 28 : 32;
     const badgeFontSize = isSmallPhone ? 12 : 11;
     const categoryFontSize = isSmallPhone ? 12 : 10;
+    const questCardBikeBadgeWebStyle: WebDecorativeViewStyle = Platform.OS === 'web'
+        ? {
+            backdropFilter: 'blur(6px)',
+            boxShadow: '0 2px 8px rgba(0, 121, 107, 0.35)',
+        }
+        : {};
 
     return StyleSheet.create({
         /* ---- Root Layout (Two-column, Premium) ---- */
@@ -1183,12 +1193,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             alignItems: 'center',
             gap: 4,
             zIndex: 6,
-            ...Platform.select({
-                web: {
-                    backdropFilter: 'blur(6px)',
-                    boxShadow: '0 2px 8px rgba(0, 121, 107, 0.35)',
-                } as any,
-            }),
+            ...questCardBikeBadgeWebStyle,
         },
         questCardBikeText: {
             color: colors.textOnDark,

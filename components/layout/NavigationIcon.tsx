@@ -123,7 +123,7 @@ function RouteWalkIcon({
       height={size}
       viewBox="0 0 24 24"
       fill="none"
-      style={style as any}
+      style={style}
       {...getIconAccessibilityProps()}
     >
       {/* голова — залита, чтобы читалась на 22px */}
