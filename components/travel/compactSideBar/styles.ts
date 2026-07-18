@@ -95,6 +95,15 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: colors.backgroundSecondary,
       borderColor: colors.borderLight,
     },
+    avatarPlaceholderCenter: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarInitial: {
+      fontSize: (Platform.OS === 'web') ? 17 : 20,
+      fontWeight: '800',
+      lineHeight: (Platform.OS === 'web') ? 20 : 24,
+    },
     userRow: {
       flexDirection: 'row',
       alignItems: 'center',

@@ -59,6 +59,8 @@ export const queryKeys = {
   travelsNearLocation: (loc: string) => ['travels-near-location', loc] as const,
   articleRating: (articleId: number | undefined, isAuthenticated: boolean) =>
     ['articleRating', articleId, isAuthenticated] as const,
+  placeRating: (placeId: string | number | undefined, isAuthenticated: boolean) =>
+    ['placeRating', placeId, isAuthenticated] as const,
   article: (articleIdOrSlug: number | string | undefined) => ['article', articleIdOrSlug] as const,
   stravaStatus: () => ['strava', 'status'] as const,
   stravaActivitiesRoot: () => ['strava', 'activities'] as const,

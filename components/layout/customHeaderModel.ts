@@ -64,10 +64,12 @@ export const shouldShowHeaderContextBar = (pathname: string, isMobile: boolean) 
   const isUserPointsRoute = pathname === '/userpoints'
   // /travel/new и /travel/{id} — визард с собственной шапкой (TravelWizardHeader).
   // Глобальный контекст-бар дублирует её навигацию и оставляет пустую полосу.
+  // Прячем на ВСЕХ платформах (web mobile/desktop + native), иначе на мобильном
+  // вебе над шапкой мастера висит лишний ряд «Новое путешествие», съедая ~85px.
   const isTravelUpsertRoute = pathname.startsWith('/travel/')
+  if (isTravelUpsertRoute) return false
 
   if (Platform.OS !== 'web') {
-    if (isTravelUpsertRoute) return false
     return true
   }
 

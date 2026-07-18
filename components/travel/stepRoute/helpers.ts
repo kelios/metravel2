@@ -35,6 +35,15 @@ export const parseCoordinate = (raw: string): number => {
   return trimmed === '' ? NaN : Number(trimmed)
 }
 
+// Переключение знака значения поля координаты. Нужно как страховка для Android-клавиатур
+// без минуса на цифровом кейпаде: "" -> "-", "-53.9" -> "53.9", "53,9" -> "-53,9"
+// (десятичный разделитель сохраняется как есть — нормализация происходит при парсинге).
+export const toggleNumericSign = (value: string): string => {
+  const trimmed = String(value ?? '').trim()
+  if (trimmed === '') return '-'
+  return trimmed.startsWith('-') ? trimmed.slice(1) : `-${trimmed}`
+}
+
 export const parseCoordsPair = (raw: string): { lat: number; lng: number } | null => {
   // Extract signed decimal tokens directly so we accept both dot and comma
   // decimals and any separator ("53.9, 27.5", "53,9 27,5", "-53.9;-27.5").

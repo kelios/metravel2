@@ -446,6 +446,7 @@ export const travelGenerated4 = {
   "components.travel.ShareButtons.stageRendering": "Przygotowanie do druku...",
   "components.travel.ShareButtons.stageComplete": "Gotowe! Otwieram książkę...",
   "components.travel.ContentUpsertSection.defaultDescriptionHint": "Krótko opisz trasę: dla kogo jest przeznaczona, co jest ważne i czego się spodziewać.",
+  "components.travel.ContentUpsertSection.formattedDescriptionHint": "Opis zawiera formatowanie lub zdjęcia. Aby niczego nie utracić, edytuj go w edytorze zaawansowanym.",
   "components.travel.TravelSectionsSheet.sectionsFallback": "Sekcje",
   "components.travel.upsert.UpsertTravelView.networkFallback": "Sprawdź swoje połączenie internetowe i spróbuj ponownie.",
   "components.travel.FullscreenGallery.routePhotoAlt": "Zdjęcie trasy",

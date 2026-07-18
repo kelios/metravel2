@@ -98,6 +98,10 @@ function TravelAuthorQuickLink({ travel }: TravelAuthorQuickLinkProps) {
           'travel:components.travel.details.TravelAuthorQuickLink.avtor_puteshestviya_15c44810',
         )
       : '')
+  const avatarInitial = useMemo(() => {
+    const ch = displayName?.trim().charAt(0)
+    return ch ? ch.toUpperCase() : ''
+  }, [displayName])
   const canOpenAuthor = authorUserId != null
   const { profile: authorProfile } = useUserProfileCached(authorUserId, { enabled: canOpenAuthor })
   const avatarUri = useMemo(
@@ -190,7 +194,11 @@ function TravelAuthorQuickLink({ travel }: TravelAuthorQuickLinkProps) {
             style={styles.avatar}
           />
         ) : (
-          <View style={styles.avatarPlaceholder} />
+          <View style={styles.avatarPlaceholder}>
+            {avatarInitial ? (
+              <Text style={styles.avatarInitial}>{avatarInitial}</Text>
+            ) : null}
+          </View>
         )}
 
         <View style={styles.textColumn}>
@@ -327,6 +335,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: colors.backgroundSecondary,
       borderWidth: 1,
       borderColor: colors.borderLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarInitial: {
+      color: colors.textMuted,
+      fontSize: 18,
+      fontWeight: '800',
+      lineHeight: 22,
     },
     textColumn: {
       flex: 1,

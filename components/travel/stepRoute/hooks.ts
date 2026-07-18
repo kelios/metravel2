@@ -7,6 +7,7 @@ import {
   revokeManualPreview,
   ROUTE_COUNTRIES_ANCHOR_ID,
   ROUTE_MARKERS_ANCHOR_ID,
+  toggleNumericSign,
 } from './helpers'
 import {
   isRouteCoachmarkDismissed,
@@ -165,6 +166,14 @@ export function useManualPointForm() {
     setState((current) => ({ ...current, lng }))
   }, [])
 
+  const toggleLatSign = useCallback(() => {
+    setState((current) => ({ ...current, lat: toggleNumericSign(current.lat) }))
+  }, [])
+
+  const toggleLngSign = useCallback(() => {
+    setState((current) => ({ ...current, lng: toggleNumericSign(current.lng) }))
+  }, [])
+
   const setPhotoPreview = useCallback((photoPreviewUrl: string | null) => {
     setState((current) => {
       revokeManualPreview(current.photoPreviewUrl)
@@ -195,6 +204,8 @@ export function useManualPointForm() {
     setCoords,
     setLat,
     setLng,
+    toggleLatSign,
+    toggleLngSign,
     setPanelVisible,
     setPhotoCoordinates,
     setPhotoPreview,

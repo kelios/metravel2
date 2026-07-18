@@ -7,6 +7,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import NavigationIcon from '@/components/layout/NavigationIcon'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { useResponsive } from '@/hooks/useResponsive'
 import { useTrackedImpression } from '@/hooks/useTrackedImpression'
 import { getQuestAgeBadgeLabel, getQuestAgeCategory, isBikeQuest } from '@/utils/questAudience'
 import type { QuestMeta } from '@/utils/questAdapters'
@@ -18,6 +19,7 @@ import { selectPlural, translate as i18nT } from '@/i18n'
 
 
 const CARD_MEDIA_SIZE = 132
+const MOBILE_MEDIA_SIZE = 104
 
 const createDifficultyLabels = (): Record<string, string> => ({
   easy: i18nT('quests:components.quests.QuestForCityCard.difficulty.easy'),
@@ -65,7 +67,14 @@ export function QuestForCityCard({
 }: Props) {
   const router = useRouter()
   const colors = useThemedColors()
+  const { isMobile } = useResponsive()
   const styles = useMemo(() => createStyles(colors), [colors])
+  // На узком мобиле крупный квадрат съедает ширину и рвёт заголовок — уменьшаем.
+  const mediaSize = isMobile ? MOBILE_MEDIA_SIZE : CARD_MEDIA_SIZE
+  const mediaSizeStyle = useMemo(
+    () => ({ width: mediaSize, height: mediaSize }),
+    [mediaSize],
+  )
   const difficultyLabels = createDifficultyLabels()
 
   const href = `/quests/${quest.cityId}/${quest.id}`
@@ -115,11 +124,11 @@ export function QuestForCityCard({
       accessibilityRole="link"
       accessibilityLabel={i18nT('quests:components.quests.QuestForCityCard.proyti_kvest_value1_value2_54986608', { value1: cityLabel, value2: quest.title })}
     >
-      <View style={styles.media}>
+      <View style={[styles.media, mediaSizeStyle]}>
         <ImageCardMedia
           source={coverUri ? { uri: coverUri } : null}
-          width={CARD_MEDIA_SIZE}
-          height={CARD_MEDIA_SIZE}
+          width={mediaSize}
+          height={mediaSize}
           fit="contain"
           blurBackground
           allowCriticalWebBlur
@@ -147,7 +156,9 @@ export function QuestForCityCard({
         {chips.length > 0 && (
           <View style={styles.chipRow}>
             {chips.map((chip, i) => (
-              <React.Fragment key={chip.key}>
+              // Точка-разделитель живёт внутри группы с чипом, поэтому мета не
+              // переносится «осиротевшим» «• Средне» на отдельную строку.
+              <View key={chip.key} style={styles.chipGroup}>
                 {i > 0 && <View style={styles.dot} />}
                 <View style={styles.chip}>
                   <NavigationIcon name={chip.icon} size={13} color={colors.textMuted} />
@@ -155,7 +166,7 @@ export function QuestForCityCard({
                     {chip.label}
                   </Text>
                 </View>
-              </React.Fragment>
+              </View>
             ))}
           </View>
         )}
@@ -230,6 +241,11 @@ function createStyles(colors: ThemedColors) {
       alignItems: 'center',
       gap: 8,
       marginTop: 2,
+    },
+    chipGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
     },
     chip: {
       flexDirection: 'row',

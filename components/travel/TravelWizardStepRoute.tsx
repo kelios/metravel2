@@ -122,6 +122,8 @@ function TravelWizardStepRoute({
     setCoords: setManualCoords,
     setLat: setManualLat,
     setLng: setManualLng,
+    toggleLatSign: toggleManualLatSign,
+    toggleLngSign: toggleManualLngSign,
     setPanelVisible: setManualPointVisible,
     setPhotoCoordinates: setManualPhotoCoordinates,
     setPhotoPreview: setManualPhotoPreview,
@@ -578,6 +580,8 @@ function TravelWizardStepRoute({
                 onCoordsChange={setManualCoords}
                 onLatChange={setManualLat}
                 onLngChange={setManualLng}
+                onLatSignToggle={toggleManualLatSign}
+                onLngSignToggle={toggleManualLngSign}
                 onAdd={handleAddManualPoint}
                 onCancel={hideManualPointPanel}
               />

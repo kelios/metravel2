@@ -1,4 +1,4 @@
-import { parseCoordinate, parseCoordsPair } from '@/components/travel/stepRoute/helpers'
+import { parseCoordinate, parseCoordsPair, toggleNumericSign } from '@/components/travel/stepRoute/helpers'
 
 describe('stepRoute coordinate parsing (Android manual point entry)', () => {
   describe('parseCoordinate', () => {
@@ -22,6 +22,30 @@ describe('stepRoute coordinate parsing (Android manual point entry)', () => {
     it('returns NaN for empty/garbage', () => {
       expect(Number.isNaN(parseCoordinate(''))).toBe(true)
       expect(Number.isNaN(parseCoordinate('abc'))).toBe(true)
+    })
+  })
+
+  describe('toggleNumericSign (± button fallback for keyboards without a minus)', () => {
+    it('prefixes a minus to an empty field', () => {
+      expect(toggleNumericSign('')).toBe('-')
+      expect(toggleNumericSign('   ')).toBe('-')
+    })
+
+    it('adds a minus to a positive value', () => {
+      expect(toggleNumericSign('53.9')).toBe('-53.9')
+    })
+
+    it('removes the minus from a negative value', () => {
+      expect(toggleNumericSign('-53.9')).toBe('53.9')
+    })
+
+    it('preserves the comma decimal separator', () => {
+      expect(toggleNumericSign('53,9')).toBe('-53,9')
+      expect(toggleNumericSign('-53,9')).toBe('53,9')
+    })
+
+    it('trims surrounding whitespace before toggling', () => {
+      expect(toggleNumericSign('  53.9  ')).toBe('-53.9')
     })
   })
 

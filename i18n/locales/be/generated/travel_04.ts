@@ -446,6 +446,7 @@ export const travelGenerated4 = {
   "components.travel.ShareButtons.stageRendering": "Падрыхтоўка да друку...",
   "components.travel.ShareButtons.stageComplete": "Гатова! Адкрываем кнігу...",
   "components.travel.ContentUpsertSection.defaultDescriptionHint": "Каротка апішыце маршрут: для каго ён, што галоўнае і чаго чакаць.",
+  "components.travel.ContentUpsertSection.formattedDescriptionHint": "Апісанне змяшчае фарматаванне або фота. Каб нічога не страціць, рэдагуйце яго ў пашыраным рэдактары.",
   "components.travel.TravelSectionsSheet.sectionsFallback": "Секцыі",
   "components.travel.upsert.UpsertTravelView.networkFallback": "Праверце інтэрнэт-злучэнне і паспрабуйце яшчэ раз.",
   "components.travel.FullscreenGallery.routePhotoAlt": "Фота маршруту",

@@ -62,6 +62,8 @@ export interface ManualPointPanelProps {
   onCoordsChange: (value: string) => void;
   onLatChange: (value: string) => void;
   onLngChange: (value: string) => void;
+  onLatSignToggle: () => void;
+  onLngSignToggle: () => void;
   onAdd: () => void;
   onCancel: () => void;
 }

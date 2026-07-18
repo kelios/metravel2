@@ -3,6 +3,7 @@ import { Platform, Text, View } from 'react-native'
 
 import { ROUTE_MARKERS_ANCHOR_ID } from './helpers'
 import { NativeMapPlaceholder } from './NativeMapPlaceholder'
+import { NativePointList } from './NativePointList'
 import type { RouteMapCardProps } from './types'
 import { translate as i18nT } from '@/i18n'
 
@@ -53,6 +54,9 @@ export const RouteMapCard = React.memo(function RouteMapCard({
           <NativeMapPlaceholder styles={styles} />
         )}
       </View>
+      {Platform.OS !== 'web' ? (
+        <NativePointList markers={markers} onChange={onMarkerEditSave} />
+      ) : null}
     </View>
   )
 })

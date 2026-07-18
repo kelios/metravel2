@@ -114,7 +114,10 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   const handleUploadImages = useCallback(
     async (assets: ImagePicker.ImagePickerAsset[]) => {
       if (images.length + assets.length > maxImages) {
-        Alert.alert('Limit', `Maximum ${maxImages} images`);
+        Alert.alert(
+          i18nT('travel:components.travel.ImageGalleryComponent.limitTitle'),
+          i18nT('travel:components.travel.ImageGalleryComponent.maxImagesMessage', { max: maxImages }),
+        );
         return;
       }
 
@@ -185,7 +188,10 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
           }
         } catch (error) {
           console.error('Upload error:', error);
-          Alert.alert('Error', 'Failed to upload image');
+          Alert.alert(
+            i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
+            i18nT('travel:components.travel.ImageGalleryComponent.uploadFailed'),
+          );
         } finally {
           newLoading[currentIndex] = false;
           setLoading([...newLoading]);
@@ -202,14 +208,20 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
 
   const handlePickImages = useCallback(async () => {
     if (images.length >= maxImages) {
-      Alert.alert('Limit', `Maximum ${maxImages} images`);
+      Alert.alert(
+        i18nT('travel:components.travel.ImageGalleryComponent.limitTitle'),
+        i18nT('travel:components.travel.ImageGalleryComponent.maxImagesMessage', { max: maxImages }),
+      );
       return;
     }
 
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission', 'Access to gallery is required');
+        Alert.alert(
+          i18nT('travel:components.travel.ImageGalleryComponent.permissionTitle'),
+          i18nT('travel:components.travel.ImageGalleryComponent.galleryPermissionMessage'),
+        );
         return;
       }
 
@@ -226,20 +238,29 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       }
     } catch (error) {
       console.error('Error picking images:', error);
-      Alert.alert('Error', 'Failed to select images');
+      Alert.alert(
+        i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
+        i18nT('travel:components.travel.ImageGalleryComponent.selectImagesFailed'),
+      );
     }
   }, [handleUploadImages, images.length, maxImages]);
 
   const handleTakePhoto = useCallback(async () => {
     if (images.length >= maxImages) {
-      Alert.alert('Limit', `Maximum ${maxImages} images`);
+      Alert.alert(
+        i18nT('travel:components.travel.ImageGalleryComponent.limitTitle'),
+        i18nT('travel:components.travel.ImageGalleryComponent.maxImagesMessage', { max: maxImages }),
+      );
       return;
     }
 
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission', 'Access to camera is required');
+        Alert.alert(
+          i18nT('travel:components.travel.ImageGalleryComponent.permissionTitle'),
+          i18nT('travel:components.travel.ImageGalleryComponent.cameraPermissionMessage'),
+        );
         return;
       }
 
@@ -253,7 +274,10 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo');
+      Alert.alert(
+        i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
+        i18nT('travel:components.travel.ImageGalleryComponent.takePhotoFailed'),
+      );
     }
   }, [handleUploadImages, images.length, maxImages]);
 
@@ -292,7 +316,10 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       }
       setImages((prev) => prev.filter((img) => img.id !== selectedImageId));
     } catch (error) {
-      Alert.alert('Error', 'Failed to delete image');
+      Alert.alert(
+        i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
+        i18nT('travel:components.travel.ImageGalleryComponent.deleteFailed'),
+      );
       console.error('Error deleting image:', error);
     } finally {
       setDialogVisible(false);
@@ -508,9 +535,9 @@ const styles = StyleSheet.create({
     top: 5,
     right: 5,
     backgroundColor: 'rgba(255, 0, 0, 0.8)',
-    borderRadius: 15,
-    width: 30,
-    height: 30,
+    borderRadius: 22,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -522,9 +549,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   moveButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },

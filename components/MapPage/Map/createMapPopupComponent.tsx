@@ -30,6 +30,20 @@ import { buildPlaceTitleParts, stripCountryFromCategoryString } from './placeTit
 import { useHasUserLocation, type UserLocationSignal } from './userLocationSignal';
 import { translate as i18nT } from '@/i18n'
 
+/**
+ * MeTravel own place rating (backend #986) is feature-flagged OFF by default.
+ * Two reasons it must stay gated until an owner flips the flag:
+ *  1. The backend endpoint `/places/{id}/rating/` is not deployed yet, so the
+ *     section cannot be verified end-to-end.
+ *  2. The map cluster point id (`point_id`/`id` from `/api/map/clusters/`) has
+ *     NOT been proven to share the same id-space as the `/places/catalog/` place
+ *     id the rating endpoint keys on. Rating the wrong entity is worse than not
+ *     rating, so we only thread the id when the owner explicitly opts in.
+ * Flip `EXPO_PUBLIC_PLACE_RATING_ENABLED=true` once BE #986 is live AND the id
+ * alignment is confirmed against the deployed contract.
+ */
+const PLACE_RATING_ENABLED =
+  String(process.env.EXPO_PUBLIC_PLACE_RATING_ENABLED || '').trim().toLowerCase() === 'true';
 
 interface CreatePopupComponentArgs {
   userLocation?: { lat: number; lng: number } | null;
@@ -571,6 +585,12 @@ export const createMapPopupComponent = ({
           suppressInlineClose={suppressInlineClose}
           fullscreenTopInset={fullscreenTopInset}
           fullscreenBottomInset={fullscreenBottomInset}
+          // MeTravel own place rating (backend #986). Gated OFF by default: only
+          // threaded for non-quest points AND when the owner opts in via
+          // EXPO_PUBLIC_PLACE_RATING_ENABLED. `point.id` is the map cluster
+          // `point_id`; its equality with the `/places/{id}/rating/` id-space is
+          // unverified until BE #986 ships, hence the flag. `null` → section hidden.
+          placeId={!isQuest && PLACE_RATING_ENABLED ? (point.id ?? null) : null}
           onClose={handlePress}
         />
       </ThemeContext.Provider>

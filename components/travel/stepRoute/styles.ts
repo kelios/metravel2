@@ -136,6 +136,34 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
   },
   manualPointInputWrapper: {
     flex: 1,
+    // react-native-web: без minWidth:0 flex-колонка не сжимается ниже контентной
+    // ширины (min-width:auto), из-за чего ряд Широта/Долгота с ± переполняет панель
+    // на узком экране (390px). Native (Yoga) сжимает и без этого — правка web-safe.
+    minWidth: 0,
+  },
+  manualPointInputWithSignRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  manualPointInputFlex: {
+    flex: 1,
+    minWidth: 0,
+  },
+  manualSignButton: {
+    minWidth: 44,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  manualSignButtonLabel: {
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: '700',
+    color: colors.text,
   },
   manualPointLabel: {
     fontSize: DESIGN_TOKENS.typography.sizes.xs,

@@ -2,6 +2,28 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Api Proxy Dev 4630",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        ".claude/prod-server.js",
+        "4630",
+        "dist",
+        "http://192.168.50.36"
+      ],
+      "port": 4630,
+      "autoPort": false
+    },
+    {
+      "name": "Expo Web DevApi 8100",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=8192 EXPO_PUBLIC_API_URL=http://localhost:4630 EXPO_PUBLIC_IS_LOCAL_API=true npx expo start --web --port 8100"
+      ],
+      "port": 8100,
+      "autoPort": false
+    },
+    {
       "name": "Map QA Clear 8102",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

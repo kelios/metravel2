@@ -6,6 +6,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet';
 import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
+import PlaceRatingSection from '@/components/places/PlaceRatingSection';
 import { SEMANTIC_ACTION_ICON } from '@/components/navigation/navigationActionMeta';
 import { getPopupTooltips } from './constants';
 import FullscreenImageViewer from './FullscreenImageViewer';
@@ -94,6 +95,19 @@ type Props = {
   popupSplit?: boolean;
   onClose?: () => void;
   /**
+   * MeTravel own place rating (backend #986). When a stable catalog place id is
+   * threaded here, the scrollable body renders a compact star-rating row so an
+   * authenticated user can rate the place inline (guest sees the aggregate + a
+   * «войдите чтобы оценить» hint). Left `null`/`undefined` — nothing renders, so
+   * the section is fully feature-flagged by the caller (see `createMapPopupComponent`).
+   * The map cluster point id and the `/places/{id}/rating/` id-space are not yet
+   * proven identical (backend not deployed), which is why the caller gates this.
+   */
+  placeId?: string | number | null;
+  initialRating?: number | null;
+  initialCount?: number;
+  initialUserRating?: number | null;
+  /**
    * Suppress the card's own top-right ✕. Set by wrappers that already draw their
    * own close affordance (e.g. `MapPlaceBottomCard`'s sheet header ✕) so the same
    * corner doesn't show two stacked crosses. `onClose` still fires from the wrapper.
@@ -159,6 +173,10 @@ const PlacePopupCard: React.FC<Props> = ({
   suppressInlineClose = false,
   colors,
   primaryActionOverride,
+  placeId,
+  initialRating,
+  initialCount,
+  initialUserRating,
 }) => {
   const popupTooltips = useMemo(getPopupTooltips, []);
   const setCardRootNode = usePopupDomGuard();
@@ -690,8 +708,25 @@ const PlacePopupCard: React.FC<Props> = ({
           </>
         )}
       </View>
+
+      {placeId != null ? (
+        <>
+          <View style={styles.blockDivider} />
+          <PlaceRatingSection
+            compact
+            placeId={placeId}
+            initialRating={initialRating}
+            initialCount={initialCount}
+            initialUserRating={initialUserRating}
+          />
+        </>
+      ) : null}
     </View>
   ), [
+    placeId,
+    initialRating,
+    initialCount,
+    initialUserRating,
     navActions,
     addDisabled,
     addTooltip,

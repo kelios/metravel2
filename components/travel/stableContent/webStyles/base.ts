@@ -28,6 +28,18 @@ export const baseStyles = (
   margin: 0;
 }
 
+/* Full-width variant lets media run edge-to-edge, but text blocks keep a
+   readable line length on desktop (~76ch) instead of spanning the whole
+   column. Paragraphs holding an image are excluded so photos stay wide. */
+.${cls}.${fullCls} p:not(:has(img)),
+.${cls}.${fullCls} ul,
+.${cls}.${fullCls} ol,
+.${cls}.${fullCls} blockquote,
+.${cls}.${fullCls} h2,
+.${cls}.${fullCls} h3 {
+  max-width: 720px;
+}
+
 /* ===== APPLE-STYLE PARAGRAPHS ===== */
 .${cls} p {
   margin: 0 0 1.4em;

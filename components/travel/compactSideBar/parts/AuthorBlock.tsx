@@ -58,6 +58,10 @@ export const AuthorBlock = memo(function AuthorBlock({
 }: AuthorBlockProps) {
   const showSubscribeAndWrite = !isOwn && !!authorUserId
   const displayName = userName || i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.userFallback')
+  const avatarInitial = useMemo(() => {
+    const ch = displayName?.trim().charAt(0)
+    return ch ? ch.toUpperCase() : ''
+  }, [displayName])
   const editTitle = i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.redaktirovat_609c8bab')
   const writeTitle = i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.napisat_avtoru_e9dfca99')
   const editTitleRef = useMemo(() => attachWebTitle(editTitle), [editTitle])
@@ -86,7 +90,11 @@ export const AuthorBlock = memo(function AuthorBlock({
               style={styles.avatar}
             />
           ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]} />
+            <View style={[styles.avatar, styles.avatarPlaceholder, styles.avatarPlaceholderCenter]}>
+              {avatarInitial ? (
+                <Text style={[styles.avatarInitial, { color: mutedText }]}>{avatarInitial}</Text>
+              ) : null}
+            </View>
           )}
         </View>
 

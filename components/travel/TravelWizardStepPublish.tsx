@@ -29,6 +29,7 @@ import {
 } from '@/utils/growthFunnelAnalytics';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { showToastMessage } from '@/utils/toast';
 import { hasToastBeenShown } from '@/utils/errorHelpers';
 import { useTravelPublishChecklist } from '@/components/travel/useTravelPublishChecklist';
@@ -120,6 +121,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     onOpenPublic,
 }) => {
     const colors = useThemedColors();
+    const { isMobile } = useResponsive();
     const router = useRouter();
     const actionPendingRef = useRef(false);
 
@@ -922,6 +924,14 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         if (facebookPostUrl) await openExternalUrl(facebookPostUrl);
     }, [facebookPostUrl]);
 
+    const readinessNote = (
+        <View style={styles.readinessNote}>
+            <Text style={styles.readinessNoteText}>
+                {i18nT('travel:components.travel.TravelWizardStepPublish.vy_na_poslednem_shage_mastera_indikator_poka_df37fcf6')}{qualityScore.score}%.
+            </Text>
+        </View>
+    );
+
     return (
         <SafeAreaView style={styles.safeContainer}>
             <KeyboardAvoidingView
@@ -957,13 +967,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     onStepSelect={onStepSelect}
                     onPreview={onPreview}
                     onOpenPublic={onOpenPublic}
-                    extraBelowProgress={
-                        <View style={styles.readinessNote}>
-                            <Text style={styles.readinessNoteText}>
-                                {i18nT('travel:components.travel.TravelWizardStepPublish.vy_na_poslednem_shage_mastera_indikator_poka_df37fcf6')}{qualityScore.score}%.
-                            </Text>
-                        </View>
-                    }
+                    extraBelowProgress={isMobile ? undefined : readinessNote}
                 />
                 <ScrollView
                     ref={scrollRef}
@@ -972,6 +976,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.contentInner}>
+                    {isMobile ? readinessNote : null}
                     <PublishStatusSummaryPanel
                         colors={colors}
                         styles={styles}

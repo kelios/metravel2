@@ -1,5 +1,5 @@
 import React from 'react'
-import { Platform, Text, TextInput, View } from 'react-native'
+import { Platform, Pressable, Text, TextInput, View } from 'react-native'
 
 import { Button } from '@/ui/paper'
 import { EXIF_IMAGE_INPUT_ACCEPT } from '@/utils/exifGps'
@@ -22,6 +22,8 @@ export const ManualPointPanel = React.memo(function ManualPointPanel({
   onCoordsChange,
   onLatChange,
   onLngChange,
+  onLatSignToggle,
+  onLngSignToggle,
   onAdd,
   onCancel,
 }: ManualPointPanelProps) {
@@ -95,27 +97,49 @@ export const ManualPointPanel = React.memo(function ManualPointPanel({
           <View style={styles.manualPointInputsRow}>
             <View style={styles.manualPointInputWrapper}>
               <Text style={styles.manualPointLabel}>{i18nT('travel:components.travel.stepRoute.ManualPointPanel.shirota_8b33238d')}</Text>
-              <TextInput
-                value={state.lat}
-                onChangeText={onLatChange}
-                placeholder={i18nT('travel:components.travel.stepRoute.ManualPointPanel.naprimer_53_90_0a8513b6')}
-                style={styles.manualPointInput}
-                inputMode="decimal"
-                testID="travel-wizard.step-route.manual.lat"
-                accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.shirota_8b33238d')}
-              />
+              <View style={styles.manualPointInputWithSignRow}>
+                <TextInput
+                  value={state.lat}
+                  onChangeText={onLatChange}
+                  placeholder={i18nT('travel:components.travel.stepRoute.ManualPointPanel.naprimer_53_90_0a8513b6')}
+                  style={[styles.manualPointInput, styles.manualPointInputFlex]}
+                  inputMode="decimal"
+                  testID="travel-wizard.step-route.manual.lat"
+                  accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.shirota_8b33238d')}
+                />
+                <Pressable
+                  onPress={onLatSignToggle}
+                  style={styles.manualSignButton}
+                  testID="travel-wizard.step-route.manual.lat.sign"
+                  accessibilityRole="button"
+                  accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.smenit_znak_shiroty_c1a1e2f0')}
+                >
+                  <Text style={styles.manualSignButtonLabel}>±</Text>
+                </Pressable>
+              </View>
             </View>
             <View style={styles.manualPointInputWrapper}>
               <Text style={styles.manualPointLabel}>{i18nT('travel:components.travel.stepRoute.ManualPointPanel.dolgota_910791d5')}</Text>
-              <TextInput
-                value={state.lng}
-                onChangeText={onLngChange}
-                placeholder={i18nT('travel:components.travel.stepRoute.ManualPointPanel.naprimer_27_56_ad119976')}
-                style={styles.manualPointInput}
-                inputMode="decimal"
-                testID="travel-wizard.step-route.manual.lng"
-                accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.dolgota_910791d5')}
-              />
+              <View style={styles.manualPointInputWithSignRow}>
+                <TextInput
+                  value={state.lng}
+                  onChangeText={onLngChange}
+                  placeholder={i18nT('travel:components.travel.stepRoute.ManualPointPanel.naprimer_27_56_ad119976')}
+                  style={[styles.manualPointInput, styles.manualPointInputFlex]}
+                  inputMode="decimal"
+                  testID="travel-wizard.step-route.manual.lng"
+                  accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.dolgota_910791d5')}
+                />
+                <Pressable
+                  onPress={onLngSignToggle}
+                  style={styles.manualSignButton}
+                  testID="travel-wizard.step-route.manual.lng.sign"
+                  accessibilityRole="button"
+                  accessibilityLabel={i18nT('travel:components.travel.stepRoute.ManualPointPanel.smenit_znak_dolgoty_d2b2f3a1')}
+                >
+                  <Text style={styles.manualSignButtonLabel}>±</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
 

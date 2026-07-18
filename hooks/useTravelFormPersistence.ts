@@ -45,6 +45,12 @@ import { translate as i18nT } from '@/i18n'
 type ToastAwareError = Error & { toastShown?: boolean };
 const DEFAULT_MARKER_SERIALIZER_FALLBACK_IMAGE = '/og-default.png';
 
+// При затяжном отказе автосейва (протухшая сессия, флаки-сеть) onError зовётся
+// каждый цикл дебаунса. Показываем тост «Ошибка автосохранения» не чаще раза в
+// этот интервал, чтобы он не мигал/не залипал. Троттл сбрасывается после успешного
+// сохранения, поэтому первая ошибка после успеха всплывает сразу.
+const AUTOSAVE_ERROR_TOAST_THROTTLE_MS = 30000;
+
 type MonitoringWindow = Window & {
   Sentry?: {
     captureException: (error: unknown, context?: Record<string, unknown>) => void;
@@ -241,6 +247,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   // Стабильная ссылка на autosave.cancelPending, чтобы handleManualSave не
   // пересоздавался на каждый тик статуса автосейва.
   const autosaveCancelPendingRef = useRef<(() => void) | null>(null);
+
+  // Время последнего показанного тоста ошибки автосейва (троттлинг UI, см. константу).
+  const lastAutosaveErrorToastAtRef = useRef(0);
 
   // Хвостовой сейв: если во время in-flight ручного сохранения приходит ещё один
   // вызов с dataOverride, мы дедуплицируем (возвращаем текущий промис), но НЕ теряем
@@ -544,6 +553,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       // ✅ FIX: Проверяем монтирование перед обновлением состояния
       if (!mountedRef.current) return;
 
+      // Успешный сейв снимает троттл: следующая ошибка (уже нового «эпизода») покажется сразу.
+      lastAutosaveErrorToastAtRef.current = 0;
+
       // После первого автосейва создаётся id — остаёмся в мастере и просто подставляем новые данные.
       applySavedData(savedData, formDataRef.current, { preserveEditingState: true });
     },
@@ -593,7 +605,13 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         });
       }
 
-      showToast(i18nT('shared:hooks.useTravelFormPersistence.oshibka_avtosohraneniya_0fb98f16'), 'error');
+      // Троттлим только пользовательский тост (логирование/Sentry выше — на каждый отказ,
+      // чтобы мониторинг не терял события). При затяжном отказе тост не мигает.
+      const now = Date.now();
+      if (now - lastAutosaveErrorToastAtRef.current >= AUTOSAVE_ERROR_TOAST_THROTTLE_MS) {
+        lastAutosaveErrorToastAtRef.current = now;
+        showToast(i18nT('shared:hooks.useTravelFormPersistence.oshibka_avtosohraneniya_0fb98f16'), 'error');
+      }
     },
     [showToast, stableTravelId, formDataRef, mountedRef, suppressAutosaveErrorToastRef]
   );

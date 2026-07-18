@@ -78,7 +78,7 @@ export const createTravelDetailsLayoutStyles = (colors: ThemedColors) => ({
   sectionContainer: {
     marginBottom: Platform.select({
       default: COMPACT_SPACING.section.desktop + 8, // 32px — больше воздуха между секциями
-      web: COMPACT_SPACING.section.desktop + 16, // 40px — заметное разделение секций
+      web: COMPACT_SPACING.section.desktop + 8, // 32px — плотнее на desktop (UI-review #7)
     }),
     width: '100%',
   },

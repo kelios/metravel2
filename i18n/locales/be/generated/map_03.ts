@@ -235,4 +235,11 @@ export const mapGenerated3 = {
   "screens.tabs.PlacesScreen.po_umolchaniyu_bc186f34": "Па змаўчанні",
   "screens.tabs.PlacesScreen.po_reytingu_d0b00645": "Па рэйтынгу",
   "screens.tabs.PlacesScreen.vybrat_sortirovku_c333ebd7": "Выбраць сартаванне",
+  "components.places.PlaceRatingSection.reyting_mesta_8eec0b7b": "Рэйтынг месца",
+  "components.places.PlaceRatingSection.ocenite_mesto_bcf0c96e": "Ацаніце месца",
+  "components.places.PlaceRatingSection.vasha_otsenka_7fdfa27d": "Ваша адзнака",
+  "components.places.PlaceRatingSection.voydite_chtoby_ocenit_10f3aa6a": "Увайдзіце, каб ацаніць",
+  "components.places.PlaceRatingSection.otsenka_89103505": "адзнака",
+  "components.places.PlaceRatingSection.otsenki_9110419d": "адзнакі",
+  "components.places.PlaceRatingSection.otsenok_07066e03": "адзнак",
 } as const

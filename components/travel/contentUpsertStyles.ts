@@ -75,7 +75,7 @@ export const createContentUpsertStyles = (colors: Colors) => StyleSheet.create({
     },
     descriptionToolsToggle: {
         marginTop: DESIGN_TOKENS.spacing.sm,
-        minHeight: 40,
+        minHeight: 44,
         borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
         borderColor: colors.border,
@@ -84,6 +84,7 @@ export const createContentUpsertStyles = (colors: Colors) => StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: DESIGN_TOKENS.spacing.xs,
         gap: DESIGN_TOKENS.spacing.sm,
     },
     descriptionToolsToggleText: {
@@ -94,7 +95,7 @@ export const createContentUpsertStyles = (colors: Colors) => StyleSheet.create({
         color: colors.primaryText,
     },
     descriptionActionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.xs, marginTop: DESIGN_TOKENS.spacing.sm, marginBottom: DESIGN_TOKENS.spacing.xs },
-    descriptionActionButton: { minHeight: 36 },
+    descriptionActionButton: { minHeight: 44, justifyContent: 'center', paddingVertical: DESIGN_TOKENS.spacing.xs },
     dictationInterimText: { marginTop: DESIGN_TOKENS.spacing.xs, fontSize: DESIGN_TOKENS.typography.sizes.sm, color: colors.textMuted },
     dictationHint: { marginTop: DESIGN_TOKENS.spacing.xs, fontSize: DESIGN_TOKENS.typography.sizes.xs, color: colors.textMuted, lineHeight: 16 },
     progressSection: {

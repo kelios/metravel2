@@ -307,4 +307,6 @@ export const sharedGenerated2 = {
   "utils.mapWebOverlays.osmPoiOverlay.a_href_value1_target_blank_rel_noopener_nore_e07d2e8c.text01": "Сайт",
   "utils.mapWebOverlays.osmPoiOverlay.div_style_max_width_320px_div_style_backgrou_536bbcc4.text01": "Джерело: OpenStreetMap",
   "utils.mapWebOverlays.osmRoutesOverlay.div_style_margin_top_6px_a_href_value1_targe_6d82870c.text01": "Відкрити в OpenStreetMap",
+  "hooks.usePlaceRating.otsenka_sohranena_67bda0e0": "Оцінку збережено",
+  "hooks.usePlaceRating.ne_udalos_sohranit_otsenku_04aaa4f0": "Не вдалося зберегти оцінку",
 } as const

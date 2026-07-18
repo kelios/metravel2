@@ -235,4 +235,11 @@ export const mapGenerated3 = {
   "screens.tabs.PlacesScreen.po_umolchaniyu_bc186f34": "По умолчанию",
   "screens.tabs.PlacesScreen.po_reytingu_d0b00645": "По рейтингу",
   "screens.tabs.PlacesScreen.vybrat_sortirovku_c333ebd7": "Выбрать сортировку",
+  "components.places.PlaceRatingSection.reyting_mesta_8eec0b7b": "Рейтинг места",
+  "components.places.PlaceRatingSection.ocenite_mesto_bcf0c96e": "Оцените место",
+  "components.places.PlaceRatingSection.vasha_otsenka_7fdfa27d": "Ваша оценка",
+  "components.places.PlaceRatingSection.voydite_chtoby_ocenit_10f3aa6a": "Войдите, чтобы оценить",
+  "components.places.PlaceRatingSection.otsenka_89103505": "оценка",
+  "components.places.PlaceRatingSection.otsenki_9110419d": "оценки",
+  "components.places.PlaceRatingSection.otsenok_07066e03": "оценок",
 } as const

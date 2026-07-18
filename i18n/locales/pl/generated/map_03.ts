@@ -235,4 +235,11 @@ export const mapGenerated3 = {
   "screens.tabs.PlacesScreen.po_umolchaniyu_bc186f34": "Domyślnie",
   "screens.tabs.PlacesScreen.po_reytingu_d0b00645": "Według oceny",
   "screens.tabs.PlacesScreen.vybrat_sortirovku_c333ebd7": "Wybierz sortowanie",
+  "components.places.PlaceRatingSection.reyting_mesta_8eec0b7b": "Ocena miejsca",
+  "components.places.PlaceRatingSection.ocenite_mesto_bcf0c96e": "Oceń miejsce",
+  "components.places.PlaceRatingSection.vasha_otsenka_7fdfa27d": "Twoja ocena",
+  "components.places.PlaceRatingSection.voydite_chtoby_ocenit_10f3aa6a": "Zaloguj się, aby ocenić",
+  "components.places.PlaceRatingSection.otsenka_89103505": "ocena",
+  "components.places.PlaceRatingSection.otsenki_9110419d": "oceny",
+  "components.places.PlaceRatingSection.otsenok_07066e03": "ocen",
 } as const

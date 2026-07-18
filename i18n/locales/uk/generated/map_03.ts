@@ -235,4 +235,11 @@ export const mapGenerated3 = {
   "screens.tabs.PlacesScreen.po_umolchaniyu_bc186f34": "За замовчуванням",
   "screens.tabs.PlacesScreen.po_reytingu_d0b00645": "За рейтингом",
   "screens.tabs.PlacesScreen.vybrat_sortirovku_c333ebd7": "Вибрати сортування",
+  "components.places.PlaceRatingSection.reyting_mesta_8eec0b7b": "Рейтинг місця",
+  "components.places.PlaceRatingSection.ocenite_mesto_bcf0c96e": "Оцініть місце",
+  "components.places.PlaceRatingSection.vasha_otsenka_7fdfa27d": "Ваша оцінка",
+  "components.places.PlaceRatingSection.voydite_chtoby_ocenit_10f3aa6a": "Увійдіть, щоб оцінити",
+  "components.places.PlaceRatingSection.otsenka_89103505": "оцінка",
+  "components.places.PlaceRatingSection.otsenki_9110419d": "оцінки",
+  "components.places.PlaceRatingSection.otsenok_07066e03": "оцінок",
 } as const

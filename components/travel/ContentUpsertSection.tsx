@@ -99,6 +99,15 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     }, [formData.description]);
 
     const descriptionPlainLength = descriptionPlainText.length;
+    // «Богатое» описание — содержит форматирование, картинки или iframe. Инлайн-поле на
+    // мобиле показывает только плоский текст; если пользователь начнёт в нём печатать,
+    // plainTextToHtml перезапишет весь HTML и уничтожит форматирование/фото. Поэтому
+    // при богатом описании инлайн-поле переводим в режим просмотра, а правку отдаём
+    // только расширенному редактору (он сохраняет HTML целиком).
+    const isRichDescription = useMemo(() => {
+        const raw = String(formData.description ?? '');
+        return /<(img|iframe|video|source|figure|table|blockquote|strong|b|em|i|u|s|ul|ol|li|a|h[1-6])[\s/>]/i.test(raw);
+    }, [formData.description]);
     const [mobileDescriptionDraft, setMobileDescriptionDraft] = useState(descriptionPlainText);
     const isMobileDescriptionFocusedRef = useRef(false);
 
@@ -423,6 +432,29 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                     </View>
                     {isDescription && isMobile ? (
                         <>
+                            {isRichDescription ? (
+                                <TouchableOpacity
+                                    style={styles.descriptionMobileInput}
+                                    activeOpacity={0.8}
+                                    onPress={() => setIsDescriptionFullscreen(true)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={i18nT('travel:components.travel.ContentUpsertSection.otkryt_rasshirennyy_redaktor_opisaniya_c0770e8e')}
+                                    testID="travel-wizard.basic.description.mobile-rich-preview"
+                                >
+                                    <Text
+                                        style={{ color: descriptionPlainLength ? colors.text : colors.textMuted, fontSize: 15, lineHeight: 22 }}
+                                        numberOfLines={6}
+                                    >
+                                        {descriptionPlainText || (hint ?? i18nT('travel:components.travel.ContentUpsertSection.defaultDescriptionHint'))}
+                                    </Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 }}>
+                                        <Feather name="lock" size={13} color={colors.textMuted} />
+                                        <Text style={{ color: colors.textMuted, fontSize: 12, flex: 1 }}>
+                                            {i18nT('travel:components.travel.ContentUpsertSection.formattedDescriptionHint')}
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ) : (
                             <TextInput
                                 style={styles.descriptionMobileInput}
                                 multiline
@@ -449,6 +481,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                 accessibilityLabel={i18nT('travel:components.travel.ContentUpsertSection.opisanie_puteshestviya_75a5cc4c')}
                                 testID="travel-wizard.basic.description.mobile-input"
                             />
+                            )}
                             <TouchableOpacity
                                 style={styles.descriptionAdvancedButton}
                                 onPress={() => setIsDescriptionFullscreen(true)}
@@ -630,6 +663,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             isDescriptionFullscreen,
             isImportingDescriptionText,
             isMobile,
+            isRichDescription,
             mobileDescriptionDraft,
             isPastingDescriptionText,
             isCompactFullscreenHeader,
