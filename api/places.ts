@@ -28,15 +28,22 @@ if (!rawApiUrl) {
 const PLACES_CATALOG_URL = `${rawApiUrl}/places/catalog/`
 const PLACES_CATALOG_TIMEOUT_MS = 15000
 
+/** Server-side sort modes for the places catalog. `default` keeps the backend's
+ * natural order; `rating` orders by aggregate external rating (2GIS/TripAdvisor)
+ * descending, placing unrated places last. Unknown/omitted values are ignored by
+ * the backend, so the FE control degrades gracefully until the backend ships. */
+export type PlacesCatalogSort = 'default' | 'rating'
+
 export type PlacesCatalogParams = {
   page: number
   perPage: number
   q?: string
   categories?: string[]
   country?: string | null
+  sort?: PlacesCatalogSort
 }
 
-const buildQuery = ({ page, perPage, q, categories, country }: PlacesCatalogParams): string => {
+const buildQuery = ({ page, perPage, q, categories, country, sort }: PlacesCatalogParams): string => {
   const params = new URLSearchParams()
   params.set('page', String(Math.max(1, Math.floor(page))))
   params.set('perPage', String(Math.max(1, Math.floor(perPage))))
@@ -51,6 +58,10 @@ const buildQuery = ({ page, perPage, q, categories, country }: PlacesCatalogPara
 
   const trimmedCountry = country?.trim()
   if (trimmedCountry) params.set('country', trimmedCountry)
+
+  // Only send an explicit sort when it deviates from the backend default, so
+  // existing cached responses and the default order stay untouched.
+  if (sort && sort !== 'default') params.set('sort', sort)
 
   return params.toString()
 }

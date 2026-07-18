@@ -1,0 +1,103 @@
+diff --git a/node_modules/expo-image/android/src/main/java/expo/modules/image/ExpoImageViewWrapper.kt b/node_modules/expo-image/android/src/main/java/expo/modules/image/ExpoImageViewWrapper.kt
+index 7abe582..d7cb526 100644
+--- a/node_modules/expo-image/android/src/main/java/expo/modules/image/ExpoImageViewWrapper.kt
++++ b/node_modules/expo-image/android/src/main/java/expo/modules/image/ExpoImageViewWrapper.kt
+@@ -38,7 +38,6 @@ import expo.modules.kotlin.tracing.beginAsyncTraceBlock
+ import expo.modules.kotlin.tracing.trace
+ import expo.modules.kotlin.viewevent.EventDispatcher
+ import expo.modules.kotlin.views.ExpoView
+-import jp.wasabeef.glide.transformations.BlurTransformation
+ import java.lang.ref.WeakReference
+ import kotlin.math.abs
+ import kotlin.math.min
+@@ -444,7 +443,11 @@ class ExpoImageViewWrapper(context: Context, appContext: AppContext) : ExpoView(
+         diskCacheStrategy(DiskCacheStrategy.NONE)
+       }
+       .customize(blurRadius) {
+-        transform(BlurTransformation(min(it, 25), 4))
++        // #985: use RenderScript-free blur. wasabeef's BlurTransformation tries
++        // RSBlur (ScriptIntrinsicBlur) first, which SIGSEGVs natively on Android 16
++        // under concurrent Glide loads — not catchable via its RSRuntimeException
++        // fallback. SafeBlurTransformation uses only the pure-Java FastBlur.
++        transform(SafeBlurTransformation(min(it, 25), 4))
+       }
+   }
+ 
+diff --git a/node_modules/expo-image/android/src/main/java/expo/modules/image/SafeBlurTransformation.kt b/node_modules/expo-image/android/src/main/java/expo/modules/image/SafeBlurTransformation.kt
+new file mode 100644
+index 0000000..17addb3
+--- /dev/null
++++ b/node_modules/expo-image/android/src/main/java/expo/modules/image/SafeBlurTransformation.kt
+@@ -0,0 +1,72 @@
++package expo.modules.image
++
++import android.graphics.Bitmap
++import android.graphics.Canvas
++import android.graphics.Paint
++import com.bumptech.glide.load.Key
++import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
++import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
++import jp.wasabeef.glide.transformations.internal.FastBlur
++import java.security.MessageDigest
++
++/**
++ * RenderScript-free Gaussian-style blur for Glide.
++ *
++ * Drop-in replacement for `jp.wasabeef.glide.transformations.BlurTransformation`,
++ * which tries `android.renderscript` `ScriptIntrinsicBlur` (RSBlur) first and only
++ * falls back to [FastBlur] on a *catchable* `RSRuntimeException`. On Android 16 /
++ * Pixel-class devices the RenderScript driver (`libRSDriver.so`,
++ * `rsdScriptSetGlobalObj`) crashes NATIVELY with SIGSEGV under concurrent Glide
++ * loads: RSBlur.blur() calls the process-wide `RenderScript.releaseAllContexts()`,
++ * which races other `glide-source-th` threads and null-dereferences. A native crash
++ * is not a Java exception, so wasabeef's `RSRuntimeException` fallback never runs and
++ * the app dies during the home-feed image burst / OAuth re-entry.
++ *
++ * This transform uses ONLY [FastBlur] (pure-Java stack blur — the exact same routine
++ * wasabeef ships as its fallback), so the blur visual matches while no RenderScript
++ * context is ever created. Applied by patch-package for metravel task #985.
++ */
++class SafeBlurTransformation(
++  private val radius: Int = DEFAULT_RADIUS,
++  private val sampling: Int = DEFAULT_SAMPLING
++) : BitmapTransformation() {
++
++  override fun transform(
++    pool: BitmapPool,
++    toTransform: Bitmap,
++    outWidth: Int,
++    outHeight: Int
++  ): Bitmap {
++    val width = toTransform.width
++    val height = toTransform.height
++    val scaledWidth = (width / sampling).coerceAtLeast(1)
++    val scaledHeight = (height / sampling).coerceAtLeast(1)
++
++    val bitmap = pool.get(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
++    bitmap.density = toTransform.density
++
++    val canvas = Canvas(bitmap)
++    canvas.scale(1f / sampling, 1f / sampling)
++    val paint = Paint()
++    paint.flags = Paint.FILTER_BITMAP_FLAG
++    canvas.drawBitmap(toTransform, 0f, 0f, paint)
++
++    // Pure-Java stack blur, in place. Never touches RenderScript.
++    return FastBlur.blur(bitmap, radius, true)
++  }
++
++  override fun equals(other: Any?): Boolean =
++    other is SafeBlurTransformation && other.radius == radius && other.sampling == sampling
++
++  override fun hashCode(): Int = ID.hashCode() + radius * 1000 + sampling * 10
++
++  override fun updateDiskCacheKey(messageDigest: MessageDigest) {
++    messageDigest.update("$ID$radius$sampling".toByteArray(Key.CHARSET))
++  }
++
++  companion object {
++    private const val DEFAULT_RADIUS = 25
++    private const val DEFAULT_SAMPLING = 4
++    private const val ID = "expo.modules.image.SafeBlurTransformation"
++  }
++}

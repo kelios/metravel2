@@ -4,7 +4,7 @@ import { Platform } from 'react-native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { keepPreviousData, useInfiniteQuery, useQueries, useQuery } from '@tanstack/react-query'
 
-import { fetchPlacesCatalog } from '@/api/places'
+import { fetchPlacesCatalog, type PlacesCatalogSort } from '@/api/places'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import type { CatalogPlace } from '@/utils/placesCatalog'
 import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
@@ -40,6 +40,8 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
   )
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [countryMenuVisible, setCountryMenuVisible] = useState(false)
+  const [sortMenuVisible, setSortMenuVisible] = useState(false)
+  const [sortMode, setSortMode] = useState<PlacesCatalogSort>('default')
   const [topBarHeight, setTopBarHeight] = useState(0)
 
   const handleTopBarLayout = useCallback((event: LayoutChangeEvent) => {
@@ -52,7 +54,8 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     q: deferredQuery.trim() || undefined,
     categories: selectedCategories.length > 0 ? selectedCategories : undefined,
     country: selectedCountry ?? undefined,
-  }), [deferredQuery, selectedCategories, selectedCountry])
+    sort: sortMode,
+  }), [deferredQuery, selectedCategories, selectedCountry, sortMode])
 
   const placesQuery = useInfiniteQuery({
     queryKey: ['places-catalog', 'list', listParams],
@@ -203,6 +206,10 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     setCountryMenuVisible(false)
     router.setParams(country ? { country } : { country: '' })
   }, [router])
+  const handleSelectSort = useCallback((next: PlacesCatalogSort) => {
+    setSortMode(next)
+    setSortMenuVisible(false)
+  }, [])
   const openOnMap = useCallback((place: CatalogPlace) => {
     if (!Number.isFinite(place.latNumber) || !Number.isFinite(place.lngNumber)) return
     router.push({
@@ -260,6 +267,7 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     handleQueryChange,
     handleScroll,
     handleSelectCountry,
+    handleSelectSort,
     handleToggleCategory,
     handleTopBarLayout,
     hasActiveFilters,
@@ -279,7 +287,10 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     setCategoryQuery,
     setCountryMenuVisible,
     setFiltersOpen,
+    setSortMenuVisible,
     showCollections,
+    sortMenuVisible,
+    sortMode,
     showLoadedCounts: !facetsQuery.isLoading && !facetsQuery.isError,
     topBarHeight,
     totalCount,

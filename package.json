@@ -323,6 +323,11 @@
     "singleQuote": true
   },
   "expo": {
+    "autolinking": {
+      "buildFromSource": [
+        "expo-image"
+      ]
+    },
     "install": {
       "exclude": [
         "react",
