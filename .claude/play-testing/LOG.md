@@ -17,7 +17,7 @@
 | 7    | 2026-07-15 |             |            |                      | |
 | 8    | 2026-07-16 | ✅          |            | TCT: uploads done; post-reset TCT: 12/12 uploads submitted; Pack Boneclaw IV: 13/13 done (100%); App Testers: 1 install/test, stopped before Play review | Evidence: `.claude/play-testing/evidence/2026-07-16/`; 110 moons; Putik/Jurisprudence retested |
 | 9    | 2026-07-17 | ✅          | `com.nadeemgs.testerscommunity` 37 → 38 | Pack Boneclaw IV: 13/13 done (100%); TCT: MVG/HealthMate/Damas reuploads submitted, partner proofs accepted; GridArt/Bigpic partner proofs accepted; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-17/`; TCT home: `You're all caught up!`; no crash-buffer hits |
-| 10   | 2026-07-18 | ✅          | none | Pack Boneclaw IV: 12/12 done (100%); TCT: 9 completed today, 3 pending proofs audited; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-18/`; bugs/risks logged: GridArt 404 thumbnail, Rocky old partner approval, own app opens dev launcher |
+| 10   | 2026-07-18 | ✅          | none | Pack Boneclaw IV: 12/12 done (100%); TCT: 10 completed today, 2 pending states audited; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-18/`; bugs/risks logged: GridArt 404/waiting partner, Rocky list/detail status mismatch, own app opens dev launcher |
 | 11   | 2026-07-19 |             |            |                      | |
 | 12   | 2026-07-20 |             |            |                      | |
 | 13   | 2026-07-21 |             |            |                      | |
@@ -71,10 +71,14 @@
 - Device: Pixel 10 Pro `61020DLCH0086L`, USB/adb authorized.
 - TestersCommunity Pack Boneclaw IV: completed all 12 daily tasks through the task-row flow. Each task was opened via `Start Testing`, foreground package was checked, app was kept open for a real session, then feedback/completion was submitted. Final screen showed `Open & test apps today (12/12 done)`, `Daily Progress Complete!`, `All tasks complete!`.
 - TestersCommunity tasks completed: PraEx, BareMacros, Priority dz, Putik, `運の社`, Denkleşelim, Kitchen Match & Merge, Kolorino, Call Of Poker, First Time Daddy, Ball Sort - Zen, Smart Bill POS.
-- TCT: home showed `You're all caught up!`; Tests tab showed `3 pending • 9 completed today`. Audited the visible pending uploads:
+- TCT: home initially showed `You're all caught up!`; Tests tab later showed `2 pending • 10 completed today`. Audited the visible pending uploads:
   - Damas Go Day 4: proof thumbnails show real Damas Go flow/screens; no replacement needed.
   - GridArt Day 10: proof thumbnails mostly show real GridArt UI/settings/about, but one thumbnail shows an in-app `404_NOT_FOUND` screen. Bug/risk: GridArt produced a 404 during the test flow.
   - Rocky Decodes Calories Day 10: proof thumbnails show real Rocky dashboard/privacy/goals/food flow. TCT also warns `Partner hasn't approved 1 old screenshot`; this is a partner-review risk, not a new upload issue.
+- Final TCT recheck after user report:
+  - GridArt Day 10: `YOUR PROOF Waiting for Review`; `PARTNER'S PROOF Waiting for Partner`. No upload/replace controls were available; waiting is on partner/review.
+  - Rocky Decodes Calories Day 9: both our proof and partner proof are approved.
+  - Rocky Decodes Calories Day 10: detail view shows `YOUR PROOF Waiting for Review` with correct Rocky thumbnails and partner proof approved, but the Tests list still labels it `MY UPLOAD Required`. Bug/risk: TCT list/detail status mismatch; no upload/replace/submit controls are available in detail, so re-upload is not possible or appropriate now.
 - App Testers `com.nadeemgs.apptesters`: opened home/profile; no daily tasks or pending actions, wallet `0/0`.
 - NadeemGS TestersCommunity `com.nadeemgs.testerscommunity`: opened home/profile/My Apps; wallet `20/0`; `My Apps` showed `No apps uploaded yet`; no required action found.
 - Own app check: `by.metravel.app/.MainActivity` opens Expo `Development Build` launcher instead of the production MeTravel UI. Treat this as an Android installation/state risk before using this installed package as proof.
