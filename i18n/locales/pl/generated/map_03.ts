@@ -230,4 +230,9 @@ export const mapGenerated3 = {
   "components.MapPage.FiltersPanelRadiusSection.teg_ne_nayden_proverte_napisanie_9c6a05e2": "Nie znaleziono tagu. Sprawdź pisownię.",
   "components.MapPage.MapEmptyStateToast.v_etoy_oblasti_nichego_ne_nashlos_5b1c0a74": "W tym obszarze nic nie znaleziono",
   "components.MapPage.MapMobile.MapMobileTopOverlay.start_ne_opredelen_vyberite_ego_vyshe_a1f4c2d7": "Brak punktu startu — wybierz „Na mapie” powyżej.",
+  "components.places.PlaceRatingBadge.reyting_value1_iz_5_istochnik_value2_dd3a3e3d": "Ocena {{value1}} z 5, źródło {{value2}}",
+  "screens.tabs.PlacesScreen.sortirovka_631ce03a": "Sortowanie",
+  "screens.tabs.PlacesScreen.po_umolchaniyu_bc186f34": "Domyślnie",
+  "screens.tabs.PlacesScreen.po_reytingu_d0b00645": "Według oceny",
+  "screens.tabs.PlacesScreen.vybrat_sortirovku_c333ebd7": "Wybierz sortowanie",
 } as const

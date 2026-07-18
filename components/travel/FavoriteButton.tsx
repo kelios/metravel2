@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
         minHeight: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 48dp Android; WCAG 2.5.5 ≥44 elsewhere
         justifyContent: 'center',
         alignItems: 'center',
-        borderRadius: DESIGN_TOKENS.radii.sm, // ✅ ИСПРАВЛЕНИЕ: Добавлен радиус
+        borderRadius: DESIGN_TOKENS.radii.pill, // круглая капсула ♥ (48×48/44×44 → идеальный круг)
         ...Platform.select({
             web: {
                 cursor: 'pointer',

@@ -14,6 +14,7 @@ import {
   LabeledActionChip,
   MapActionChip,
 } from './PlaceListCard.parts';
+import PlaceRatingBadge from './PlaceRatingBadge';
 import type { PlaceListCardProps } from './PlaceListCard.types';
 import { buildPlaceListCardActionModel } from './placeListCardActionModel';
 import { translate as i18nT } from '@/i18n'
@@ -57,6 +58,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   relatedTravelCity,
   isFavorite = false,
   onToggleFavorite,
+  rating = null,
 }) => {
   const colors = useThemedColors();
   const showTitleInContent = titleLayout === 'content';
@@ -200,6 +202,13 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
       </View>
     ) : null
 
+  // Rating pill always sits in the photo corner OPPOSITE the ♥/＋ action stack so
+  // the two never collide: the action stack is left-aligned in popup layout and
+  // right-aligned otherwise, so the badge takes the other corner accordingly.
+  const ratingBadge = rating && rating.value != null ? (
+    <PlaceRatingBadge rating={rating} />
+  ) : null
+
   return (
     <UnifiedTravelCard
       title={title}
@@ -215,8 +224,8 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
       heroTitleOverlay={!showTitleInContent}
       webHoverScale={false}
       webTouchAction={webTouchAction}
-      leftTopSlot={popupAligned ? relatedTravelActions : undefined}
-      rightTopSlot={popupAligned ? undefined : relatedTravelActions}
+      leftTopSlot={popupAligned ? relatedTravelActions : (ratingBadge ?? undefined)}
+      rightTopSlot={popupAligned ? (ratingBadge ?? undefined) : relatedTravelActions}
       rightTopSlotScrim={!popupAligned}
       mediaPlaceholderSlot={<View style={styles.mediaPlaceholder} />}
       contentSlot={

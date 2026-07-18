@@ -61,6 +61,7 @@ export default function PlacesScreen() {
     handleQueryChange,
     handleScroll,
     handleSelectCountry,
+    handleSelectSort,
     handleToggleCategory,
     handleTopBarLayout,
     hasActiveFilters,
@@ -80,12 +81,75 @@ export default function PlacesScreen() {
     setCategoryQuery,
     setCountryMenuVisible,
     setFiltersOpen,
+    setSortMenuVisible,
     showCollections,
     showLoadedCounts,
+    sortMenuVisible,
+    sortMode,
     topBarHeight,
     totalCount,
     visiblePlaces,
   } = usePlacesCatalogController({ isCompact, isWide })
+
+  // Sort control shared by the desktop results header and the compact sticky bar.
+  const sortOptions = useMemo(
+    () => [
+      { value: 'default' as const, label: i18nT('map:screens.tabs.PlacesScreen.po_umolchaniyu_bc186f34') },
+      { value: 'rating' as const, label: i18nT('map:screens.tabs.PlacesScreen.po_reytingu_d0b00645') },
+    ],
+    [],
+  )
+  const activeSortLabel =
+    sortOptions.find((option) => option.value === sortMode)?.label ?? sortOptions[0].label
+  const renderSortMenu = (anchorStyleActive: boolean) => (
+    <Menu
+      visible={sortMenuVisible}
+      onDismiss={() => setSortMenuVisible(false)}
+      contentStyle={styles.countryMenuContent}
+      anchor={
+        <Pressable
+          onPress={() => setSortMenuVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.vybrat_sortirovku_c333ebd7')}
+          accessibilityState={{ expanded: sortMenuVisible }}
+          style={({ pressed }) => [
+            styles.sortSelect,
+            anchorStyleActive && styles.sortSelectActive,
+            pressed && PRESSED_OPACITY,
+          ]}
+        >
+          <Feather
+            name="bar-chart-2"
+            size={16}
+            color={anchorStyleActive ? colors.primary : colors.textMuted}
+          />
+          <Text
+            style={[styles.sortSelectValue, anchorStyleActive && styles.sortSelectValueActive]}
+            numberOfLines={1}
+          >
+            {activeSortLabel}
+          </Text>
+          <Feather name="chevron-down" size={16} color={colors.textMuted} />
+        </Pressable>
+      }
+    >
+      {sortOptions.map((option) => (
+        <Menu.Item
+          key={option.value}
+          title={option.label}
+          onPress={() => handleSelectSort(option.value)}
+          leadingIcon={({ size }) => (
+            <Feather
+              name={sortMode === option.value ? 'check-circle' : 'circle'}
+              size={size}
+              color={sortMode === option.value ? colors.primary : colors.textMuted}
+            />
+          )}
+          titleStyle={sortMode === option.value ? styles.countryMenuItemTextActive : styles.countryMenuItemText}
+        />
+      ))}
+    </Menu>
+  )
 
   const pageDescription = selectedCategories.length > 0
     ? i18nT('map:screens.tabs.PlacesScreen.mesta_vybrannyh_kategoriy_value1_kartochki_t_005ce7dc', { value1: selectedCategories.join(', ') })
@@ -491,13 +555,16 @@ export default function PlacesScreen() {
                     : `${totalCount} ${getPlacesCountLabel(totalCount)}`}
                 </Text>
               </View>
-              {selectedCategories.length > 0 ? (
-                <Button
-                  label={i18nT('map:screens.tabs.PlacesScreen.vse_mesta_e8f3c355')}
-                  variant="outline"
-                  onPress={handleClearCategories}
-                />
-              ) : null}
+              <View style={styles.resultsHeaderControls}>
+                {mobileCompact ? null : renderSortMenu(sortMode !== 'default')}
+                {selectedCategories.length > 0 ? (
+                  <Button
+                    label={i18nT('map:screens.tabs.PlacesScreen.vse_mesta_e8f3c355')}
+                    variant="outline"
+                    onPress={handleClearCategories}
+                  />
+                ) : null}
+              </View>
             </View>
 
             {resultsContent}
@@ -624,6 +691,8 @@ export default function PlacesScreen() {
             color={colors.textMuted}
           />
         </Pressable>
+
+        {renderSortMenu(sortMode !== 'default')}
 
         {hasActiveFilters ? (
           <Pressable

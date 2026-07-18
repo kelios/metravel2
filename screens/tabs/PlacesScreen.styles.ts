@@ -569,6 +569,42 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     ...DESIGN_TOKENS.typography.scale.bodySmall,
     fontWeight: '500',
   },
+  resultsHeaderControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    flexShrink: 0,
+  },
+
+  // ─── Sort control (shared desktop header + compact bar) ───
+  sortSelect: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    // Web cursor/transition polish is inherited from the shared Pressable role;
+    // no web-only style cast here keeps this file free of extra `as any` debt.
+  },
+  sortSelectActive: {
+    borderColor: colors.primaryAlpha30,
+    backgroundColor: colors.primarySoft,
+  },
+  sortSelectValue: {
+    color: colors.text,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    lineHeight: 18,
+    fontWeight: '600',
+    maxWidth: 150,
+  },
+  sortSelectValueActive: {
+    color: colors.primary,
+  },
 
   // ─── Cards grid ───
   // Mobile (compact) is a single column: a plain vertical stack. The row+wrap grid

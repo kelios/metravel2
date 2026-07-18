@@ -297,6 +297,7 @@ const mapCatalogItem = (raw: unknown): CatalogPlace | null => {
     imageUrl: thumbUrl || undefined,
     urlTravel,
     rating: parseRating(item),
+
     searchText:
       searchText ||
       [title, address, category, country].filter(Boolean).join(' ').toLowerCase(),

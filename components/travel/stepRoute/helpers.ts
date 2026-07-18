@@ -27,21 +27,24 @@ export const getProgressPercent = (progress: number) => {
   return Math.round(clampedProgress * 100)
 }
 
+// Normalizes a single numeric token, tolerating the comma decimal separator
+// that Android decimal-pad keyboards emit on RU/BE/PL locales ("53,9" -> 53.9).
+export const parseCoordinate = (raw: string): number => {
+  const trimmed = String(raw ?? '').trim().replace(',', '.')
+  // Number('') === 0, which would silently place a point on the equator; treat blank as invalid.
+  return trimmed === '' ? NaN : Number(trimmed)
+}
+
 export const parseCoordsPair = (raw: string): { lat: number; lng: number } | null => {
-  const parts = String(raw || '')
-    .trim()
-    .split(/[\s,;]+/)
-    .map((part) => part.trim())
-    .filter(Boolean)
+  // Extract signed decimal tokens directly so we accept both dot and comma
+  // decimals and any separator ("53.9, 27.5", "53,9 27,5", "-53.9;-27.5").
+  const tokens = String(raw || '').match(/-?\d+(?:[.,]\d+)?/g)
+  if (!tokens || tokens.length < 2) return null
 
-  if (parts.length < 2) return null
+  const lat = parseCoordinate(tokens[0])
+  const lng = parseCoordinate(tokens[1])
 
-  const lat = Number(parts[0])
-  const lng = Number(parts[1])
-  const latOk = Number.isFinite(lat) && lat >= -90 && lat <= 90
-  const lngOk = Number.isFinite(lng) && lng >= -180 && lng <= 180
-
-  return latOk && lngOk ? { lat, lng } : null
+  return isValidCoordinate(lat, lng) ? { lat, lng } : null
 }
 
 export const isValidCoordinate = (lat: number, lng: number) => (

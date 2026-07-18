@@ -85,6 +85,17 @@ describe('fetchPlacesCatalog', () => {
     expect(url).not.toContain('q=')
     expect(url).not.toContain('category=')
     expect(url).not.toContain('country=')
+    expect(url).not.toContain('sort=')
+  })
+
+  it('sends sort=rating and omits the default sort', async () => {
+    mockedFetch.mockResolvedValueOnce(okResponse(catalogPayload))
+    await fetchPlacesCatalog({ page: 1, perPage: 20, sort: 'rating' })
+    expect(String(mockedFetch.mock.calls[0][0])).toContain('sort=rating')
+
+    mockedFetch.mockResolvedValueOnce(okResponse(catalogPayload))
+    await fetchPlacesCatalog({ page: 1, perPage: 20, sort: 'default' })
+    expect(String(mockedFetch.mock.calls[1][0])).not.toContain('sort=')
   })
 
   it('throws on non-ok responses so React Query can surface the error state', async () => {

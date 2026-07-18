@@ -230,4 +230,9 @@ export const mapGenerated3 = {
   "components.MapPage.FiltersPanelRadiusSection.teg_ne_nayden_proverte_napisanie_9c6a05e2": "Тег не найден. Проверьте написание.",
   "components.MapPage.MapEmptyStateToast.v_etoy_oblasti_nichego_ne_nashlos_5b1c0a74": "В этой области ничего не нашлось",
   "components.MapPage.MapMobile.MapMobileTopOverlay.start_ne_opredelen_vyberite_ego_vyshe_a1f4c2d7": "Старт не определён — выберите «На карте» выше.",
+  "components.places.PlaceRatingBadge.reyting_value1_iz_5_istochnik_value2_dd3a3e3d": "Рейтинг {{value1}} из 5, источник {{value2}}",
+  "screens.tabs.PlacesScreen.sortirovka_631ce03a": "Сортировка",
+  "screens.tabs.PlacesScreen.po_umolchaniyu_bc186f34": "По умолчанию",
+  "screens.tabs.PlacesScreen.po_reytingu_d0b00645": "По рейтингу",
+  "screens.tabs.PlacesScreen.vybrat_sortirovku_c333ebd7": "Выбрать сортировку",
 } as const

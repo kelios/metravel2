@@ -230,4 +230,9 @@ export const mapGenerated3 = {
   "components.MapPage.FiltersPanelRadiusSection.teg_ne_nayden_proverte_napisanie_9c6a05e2": "Тэг не знойдзены. Праверце напісанне.",
   "components.MapPage.MapEmptyStateToast.v_etoy_oblasti_nichego_ne_nashlos_5b1c0a74": "У гэтай вобласці нічога не знайшлося",
   "components.MapPage.MapMobile.MapMobileTopOverlay.start_ne_opredelen_vyberite_ego_vyshe_a1f4c2d7": "Старт не вызначаны — выберыце «На карце» вышэй.",
+  "components.places.PlaceRatingBadge.reyting_value1_iz_5_istochnik_value2_dd3a3e3d": "Рэйтынг {{value1}} з 5, крыніца {{value2}}",
+  "screens.tabs.PlacesScreen.sortirovka_631ce03a": "Сартаванне",
+  "screens.tabs.PlacesScreen.po_umolchaniyu_bc186f34": "Па змаўчанні",
+  "screens.tabs.PlacesScreen.po_reytingu_d0b00645": "Па рэйтынгу",
+  "screens.tabs.PlacesScreen.vybrat_sortirovku_c333ebd7": "Выбраць сартаванне",
 } as const

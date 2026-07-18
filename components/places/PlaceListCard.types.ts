@@ -1,5 +1,6 @@
 import type { StyleProp, ViewStyle } from 'react-native'
 import type Feather from '@expo/vector-icons/Feather'
+import type { PlaceRating } from '@/utils/placesCatalog'
 
 type WebCardStyle = Omit<ViewStyle, 'width' | 'maxWidth'> & {
   width?: ViewStyle['width'] | string
@@ -51,4 +52,7 @@ export type PlaceListCardProps = {
   relatedTravelCity?: string | null
   isFavorite?: boolean
   onToggleFavorite?: () => void
+  /** External rating (2GIS/TripAdvisor/…). When present, a gold rating pill is
+   *  shown over the top-left of the photo. Ignored in popup-aligned layout. */
+  rating?: PlaceRating | null
 }

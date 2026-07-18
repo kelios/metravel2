@@ -243,6 +243,7 @@ export const PlaceCard = React.memo(function PlaceCard({
         imageUrl={imageUrl}
         categoryLabel={place.category}
         coord={place.coord}
+        rating={place.rating}
         badges={[
           ...(addressBadge ? [addressBadge] : []),
           ...(place.country ? [place.country] : []),

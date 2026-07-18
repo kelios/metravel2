@@ -39,6 +39,7 @@ import {
   getSearchResultAddress,
   isValidCoordinate,
   KEYBOARD_BEHAVIOR,
+  parseCoordinate,
   parseCoordsPair,
   reverseGeocode,
   ROUTE_COUNTRIES_ANCHOR_ID,
@@ -346,8 +347,8 @@ function TravelWizardStepRoute({
 
   const handleAddManualPoint = useCallback(async () => {
     const parsedFromPair = parseCoordsPair(manualPointState.coords)
-    const lat = parsedFromPair?.lat ?? Number(manualPointState.lat)
-    const lng = parsedFromPair?.lng ?? Number(manualPointState.lng)
+    const lat = parsedFromPair?.lat ?? parseCoordinate(manualPointState.lat)
+    const lng = parsedFromPair?.lng ?? parseCoordinate(manualPointState.lng)
 
     if (!isValidCoordinate(lat, lng)) {
       void showToastMessage({

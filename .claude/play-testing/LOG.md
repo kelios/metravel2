@@ -17,7 +17,7 @@
 | 7    | 2026-07-15 |             |            |                      | |
 | 8    | 2026-07-16 | ✅          |            | TCT: uploads done; post-reset TCT: 12/12 uploads submitted; Pack Boneclaw IV: 13/13 done (100%); App Testers: 1 install/test, stopped before Play review | Evidence: `.claude/play-testing/evidence/2026-07-16/`; 110 moons; Putik/Jurisprudence retested |
 | 9    | 2026-07-17 | ✅          | `com.nadeemgs.testerscommunity` 37 → 38 | Pack Boneclaw IV: 13/13 done (100%); TCT: MVG/HealthMate/Damas reuploads submitted, partner proofs accepted; GridArt/Bigpic partner proofs accepted; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-17/`; TCT home: `You're all caught up!`; no crash-buffer hits |
-| 10   | 2026-07-18 |             |            |                      | |
+| 10   | 2026-07-18 | ✅          | none | Pack Boneclaw IV: 12/12 done (100%); TCT: 9 completed today, 3 pending proofs audited; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-18/`; bugs/risks logged: GridArt 404 thumbnail, Rocky old partner approval, own app opens dev launcher |
 | 11   | 2026-07-19 |             |            |                      | |
 | 12   | 2026-07-20 |             |            |                      | |
 | 13   | 2026-07-21 |             |            |                      | |
@@ -65,3 +65,17 @@
 - TCT Libera Day 5 partner proof was wrong: screenshots showed non-MeTravel content/TCT-style evidence. Rejected it with reason `Wrong app shown`; final status: `You rejected 's proof. Waiting for them to upload again.`
 - TCT Insta saver Day 4 audit found our pending proof thumbnail is wrong: it shows TCT instead of the target app. TCT exposes no `Remove`, `Replace`, `Upload`, or `Submit` controls while proof is `Waiting for Review`, so it cannot be corrected until the partner/app rejects or unlocks replacement. Correct replacement proof prepared and visually verified: `instasaver_retest_correct_activity.png` / `/sdcard/Pictures/MetravelPlayEvidence/instasaver_retest_correct_home.png`.
 - TCT Rocky Decodes Calories Day 9 audit: pending proof thumbnail shows the Rocky app calorie dashboard, not TCT. A stronger replacement candidate was also prepared and visually verified: `rocky_retest_correct_after_permission.png` / `/sdcard/Pictures/MetravelPlayEvidence/rocky_retest_correct_after_permission.png`.
+
+### 2026-07-18 — Daily pass
+
+- Device: Pixel 10 Pro `61020DLCH0086L`, USB/adb authorized.
+- TestersCommunity Pack Boneclaw IV: completed all 12 daily tasks through the task-row flow. Each task was opened via `Start Testing`, foreground package was checked, app was kept open for a real session, then feedback/completion was submitted. Final screen showed `Open & test apps today (12/12 done)`, `Daily Progress Complete!`, `All tasks complete!`.
+- TestersCommunity tasks completed: PraEx, BareMacros, Priority dz, Putik, `運の社`, Denkleşelim, Kitchen Match & Merge, Kolorino, Call Of Poker, First Time Daddy, Ball Sort - Zen, Smart Bill POS.
+- TCT: home showed `You're all caught up!`; Tests tab showed `3 pending • 9 completed today`. Audited the visible pending uploads:
+  - Damas Go Day 4: proof thumbnails show real Damas Go flow/screens; no replacement needed.
+  - GridArt Day 10: proof thumbnails mostly show real GridArt UI/settings/about, but one thumbnail shows an in-app `404_NOT_FOUND` screen. Bug/risk: GridArt produced a 404 during the test flow.
+  - Rocky Decodes Calories Day 10: proof thumbnails show real Rocky dashboard/privacy/goals/food flow. TCT also warns `Partner hasn't approved 1 old screenshot`; this is a partner-review risk, not a new upload issue.
+- App Testers `com.nadeemgs.apptesters`: opened home/profile; no daily tasks or pending actions, wallet `0/0`.
+- NadeemGS TestersCommunity `com.nadeemgs.testerscommunity`: opened home/profile/My Apps; wallet `20/0`; `My Apps` showed `No apps uploaded yet`; no required action found.
+- Own app check: `by.metravel.app/.MainActivity` opens Expo `Development Build` launcher instead of the production MeTravel UI. Treat this as an Android installation/state risk before using this installed package as proof.
+- Crash check: `adb logcat -d -b crash` filtered for all tested/community packages returned no relevant crash entries.

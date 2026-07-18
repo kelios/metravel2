@@ -1,5 +1,6 @@
 import React, { useRef } from 'react'
 import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Feather from '@expo/vector-icons/Feather'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS, SECONDARY_HEADER_NAV_ITEMS, type HeaderNavItem } from '@/constants/headerNavigation'
@@ -10,6 +11,8 @@ import { useFocusTrap } from '@/hooks/useFocusTrap'
 import UnreadBadge from './UnreadBadge'
 import NavigationIcon from './NavigationIcon'
 import { translate as i18nT } from '@/i18n'
+import { useLocale } from '@/i18n/LocaleProvider'
+import { getLocaleDisplayName } from '@/i18n/localeLabels'
 
 
 type Props = {
@@ -94,6 +97,23 @@ export default function CustomHeaderMobileMenu({
   // A11Y-05: focus trap для web — при открытии меню фокус остаётся внутри панели
   const panelRef = useRef<any>(null);
   useFocusTrap(panelRef as any, { enabled: visible && Platform.OS === 'web' });
+
+  // Нижний system inset (жестовая полоса/навбар Android), чтобы последний пункт
+  // списка («Настройки cookies») не уходил под системную панель телефона.
+  const insets = useSafeAreaInsets();
+
+  // Выбор языка: в шапке он спрятан в маленький чип-глобус без подписи, поэтому
+  // дублируем его явной секцией в меню (feedback тестеров: «не найти выбор языка»).
+  const { locale, setLocale, supportedLocales } = useLocale();
+  const languageItems: MenuActionItem[] = supportedLocales.map((supportedLocale) => ({
+    key: `lang-${supportedLocale}`,
+    label: getLocaleDisplayName(supportedLocale),
+    icon: 'globe',
+    active: locale === supportedLocale,
+    onPress: () => {
+      if (supportedLocale !== locale) void setLocale(supportedLocale);
+    },
+  }));
 
   const accountItems: MenuActionItem[] = !isAuthenticated
     ? [
@@ -227,7 +247,11 @@ export default function CustomHeaderMobileMenu({
             </Pressable>
           </View>
 
-          <ScrollView style={styles.modalNavContainer} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            style={styles.modalNavContainer}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+            keyboardShouldPersistTaps="handled"
+          >
             <Text style={styles.modalSectionTitle}>{i18nT('navigation:components.layout.CustomHeaderMobileMenu.akkaunt_39bf2f02')}</Text>
             {accountItems.map((item) => renderMenuItem(item, styles, colors))}
 
@@ -242,6 +266,10 @@ export default function CustomHeaderMobileMenu({
                 <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>{themeToggleNode}</View>
               </>
             ) : null}
+
+            <View style={styles.modalDivider} />
+            <Text style={styles.modalSectionTitle}>{i18nT('common:language.settingTitle')}</Text>
+            {languageItems.map((item) => renderMenuItem(item, styles, colors))}
 
             <View style={styles.modalDivider} />
             <Text style={styles.modalSectionTitle}>{i18nT('navigation:components.layout.CustomHeaderMobileMenu.dokumenty_48a6fa0f')}</Text>

@@ -168,6 +168,10 @@ const QUESTS = [
     { questId: 'warsaw-kids-bazyliszek', dir: 'warsawKidsBazyliszek', city: 'Варшава', mood: 'city', finaleId: 129 },
     { questId: 'wroclaw-kids-gnome-service', dir: 'wroclawKidsGnomeService', city: 'Вроцлав', mood: 'city', finaleId: 130 },
     { questId: 'vilnius-kids-iron-wolf', dir: 'vilniusKidsIronWolf', city: 'Вильнюс', mood: 'city', finaleId: 131 },
+    // Кино-квесты Балтии (2026-07-18)
+    { questId: 'vilnius-cinema', dir: 'vilniusCinema', city: 'Вильнюс', mood: 'city', finaleId: 132 },
+    { questId: 'riga-cinema', dir: 'rigaCinema', city: 'Рига', mood: 'city', finaleId: 133 },
+    { questId: 'tallinn-cinema', dir: 'tallinnCinema', city: 'Таллин', mood: 'city', finaleId: 134 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
