@@ -10,4 +10,6 @@ export const common = {
   'language.system': "Jak w systemie",
   'language.systemDescription': "Użyj języka urządzenia, jeśli jest obsługiwany",
   'language.headerLabel': "Zmień język",
+  'rail.scrollPrev': "Przewiń w tył",
+  'rail.scrollNext': "Przewiń w przód",
 } as const

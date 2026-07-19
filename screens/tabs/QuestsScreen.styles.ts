@@ -72,6 +72,10 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             ...Platform.select({
                 web: {
                     overflowY: 'auto',
+                    // Без явного hidden ось X тоже становится скроллируемой, и
+                    // focus-scroll на кнопке действий уводит весь сайдбар вбок,
+                    // пряча «Показать списком» за левым краем.
+                    overflowX: 'hidden',
                     maxHeight: isMobileW ? '100%' : '100vh',
                     position: isMobileW ? 'relative' : 'sticky',
                     top: 0,
@@ -146,6 +150,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         },
         sidebarActions: {
             flexDirection: 'row',
+            flexWrap: 'wrap',
             gap: spacing.sm,
             marginTop: isMobileW ? spacing.sm : spacing.md,
         },

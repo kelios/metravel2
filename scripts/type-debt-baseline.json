@@ -12,8 +12,8 @@
     "utils"
   ],
   "totals": {
-    "styleCast": 1401,
-    "logicCast": 1213,
+    "styleCast": 1404,
+    "logicCast": 1208,
     "tsIgnore": 49,
     "tsExpectError": 3,
     "eslintDisable": 29
@@ -27,15 +27,15 @@
       "eslintDisable": 1
     },
     "components": {
-      "styleCast": 1271,
-      "logicCast": 1042,
+      "styleCast": 1274,
+      "logicCast": 1039,
       "tsIgnore": 49,
       "tsExpectError": 3,
       "eslintDisable": 17
     },
     "context": {
       "styleCast": 0,
-      "logicCast": 6,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 2
@@ -688,7 +688,7 @@
     },
     "components/layout/AppProvidersDeferredRuntime.tsx": {
       "styleCast": 0,
-      "logicCast": 8,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2821,13 +2821,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/travel/WebMapMarkerPopup.tsx": {
-      "styleCast": 1,
-      "logicCast": 0,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/travel/WeeklyHighlights.tsx": {
       "styleCast": 0,
       "logicCast": 3,
@@ -2858,7 +2851,7 @@
     },
     "components/trips/planning/TripPlanRouteMap.web.tsx": {
       "styleCast": 0,
-      "logicCast": 5,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2915,6 +2908,13 @@
     "components/ui/CardActionPressable.tsx": {
       "styleCast": 0,
       "logicCast": 3,
+      "tsIgnore": 0,
+      "tsExpectError": 0,
+      "eslintDisable": 0
+    },
+    "components/ui/CardRail.tsx": {
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -3255,13 +3255,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "context/FavoritesProvider.tsx": {
-      "styleCast": 0,
-      "logicCast": 2,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "context/MapFiltersContext.tsx": {
       "styleCast": 0,
       "logicCast": 0,
@@ -3275,13 +3268,6 @@
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 2
-    },
-    "hooks/useMapScreenController.ts": {
-      "styleCast": 0,
-      "logicCast": 0,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
     },
     "hooks/usePushNotifications.native.ts": {
       "styleCast": 0,

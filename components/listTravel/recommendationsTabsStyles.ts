@@ -19,7 +19,9 @@ export const createRecommendationsTabsStyles = (
     backgroundColor: colors.surface, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.borderLight,
     ...Platform.select({ web: { boxShadow: colors.boxShadows.card } as any, default: colors.shadows.light }),
   },
-  containerFixedHeight: { height: TAB_TOTAL_HEIGHT },
+  // minHeight, а не height: место под блок резервируется (без CLS), но если
+  // контент выше — блок растёт, а не срезается overflow:hidden контейнера.
+  containerFixedHeight: { minHeight: TAB_TOTAL_HEIGHT },
   containerMobileWebExpanded: Platform.select({
     // Bug #492: on native the mobile shelves live in this block; without lifting the
     // base fixed height + overflow:hidden they are clipped (mounted but invisible).
@@ -49,16 +51,16 @@ export const createRecommendationsTabsStyles = (
     }),
   },
   tab: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 7,
-    borderRadius: 999, marginRight: 8, minHeight: 34, borderWidth: 1, borderColor: 'transparent',
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 999, marginRight: 8, minHeight: 36, borderWidth: 1, borderColor: 'transparent',
   },
   // Compact paddings/label so all 4 tabs fit on narrow phones (≤420px) instead of overflowing
   // into a hidden horizontal scroll where the user only sees the first two.
   tabCompact: { paddingHorizontal: 8, paddingVertical: 6, marginRight: 4, minHeight: 32 },
-  activeTab: { backgroundColor: colors.primarySoft, borderColor: colors.border },
-  tabLabel: { marginLeft: 6, fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  activeTab: { backgroundColor: colors.primarySoft, borderColor: colors.primaryAlpha30 },
+  tabLabel: { marginLeft: 7, fontSize: 13, color: colors.textMuted, fontWeight: '600', letterSpacing: -0.1 },
   tabLabelCompact: { marginLeft: 4, fontSize: 12 },
-  activeTabLabel: { color: colors.primaryText, fontWeight: '600' },
+  activeTabLabel: { color: colors.primaryText, fontWeight: '700' },
   badge: {
     backgroundColor: colors.backgroundSecondary, borderRadius: 999, minWidth: 20, height: 20,
     justifyContent: 'center', alignItems: 'center', marginLeft: 6, paddingHorizontal: 6,
@@ -68,7 +70,7 @@ export const createRecommendationsTabsStyles = (
   // Larger left padding gives the chevron breathing room from the rightmost tab when
   // tabs occupy the full width on narrow phones.
   collapseButton: { paddingLeft: 12, paddingRight: 4, paddingVertical: 12, marginLeft: 4 },
-  content: { height: TAB_CONTENT_HEIGHT, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: colors.surface },
+  content: { minHeight: TAB_CONTENT_HEIGHT, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: colors.surface },
   contentMobileWebExpanded: Platform.select({
     // Bug #492: lift the base fixed `content` height on native too, otherwise the
     // PersonalizedRecommendations + favorites/history shelves below WeeklyHighlights
@@ -81,7 +83,7 @@ export const createRecommendationsTabsStyles = (
     borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
   },
   collapsedSpacer: { height: TAB_CONTENT_HEIGHT },
-  tabPane: { height: TAB_CONTENT_HEIGHT, flex: 1 },
+  tabPane: { minHeight: TAB_CONTENT_HEIGHT, flex: 1 },
   tabPaneMobileWebExpanded: Platform.select({
     web: { height: 'auto', flex: 0, overflow: 'visible' } as any,
     default: {},

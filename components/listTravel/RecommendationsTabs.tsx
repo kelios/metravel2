@@ -22,9 +22,9 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useVisibleCardCount } from '@/hooks/useVisibleCardCount';
 import { createTabCardTemplate } from './recommendationsCardTemplate';
 import TabTravelCard from './TabTravelCard';
+import CardRail from '@/components/ui/CardRail';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import {
@@ -53,8 +53,6 @@ interface RecommendationsTabsProps {
   onVisibilityChange?: (visible: boolean) => void;
 }
 
-const PREVIEW_CARD_WIDTH = 208;
-const PREVIEW_CARD_GAP = 16;
 const SHELF_CARD_WIDTH = 220;
 
 type TabStyles = ReturnType<typeof createRecommendationsTabsStyles>;
@@ -366,18 +364,6 @@ const RecommendationsTabs = memo(
       () => (activeTab === 'favorites' || activeTab === 'history' ? `recommendations-${activeTab}-rail` : undefined),
       [activeTab]
     );
-    const activeCollectionCount = activeTab === 'favorites'
-      ? favorites.length
-      : activeTab === 'history'
-        ? viewHistory.length
-        : 0;
-    const collectionPreview = useVisibleCardCount({
-      itemCount: activeCollectionCount,
-      itemWidth: PREVIEW_CARD_WIDTH,
-      gap: PREVIEW_CARD_GAP,
-      max: 8,
-    });
-
     const renderCardCollection = (
       items: CollectionItem[],
       keyFactory: (item: CollectionItem) => string,
@@ -407,30 +393,19 @@ const RecommendationsTabs = memo(
         );
       }
 
-      if (Platform.OS === 'web') {
-        const previewItems = items.slice(0, collectionPreview.visibleCount);
-        return (
-          <View
-            testID={activeRailTestID}
-            style={styles.previewRow}
-            onLayout={collectionPreview.onLayout}
-          >
-            {previewItems.map(cardFactory)}
-          </View>
-        );
-      }
-
+      // Раньше на вебе рендерился только «превью» из влезших карточек — остальные
+      // не существовали в DOM и были недостижимы (ни скролла, ни стрелок).
+      // CardRail отдаёт всю коллекцию и сам показывает стрелки на десктопе.
+      // gap=0: горизонтальные отступы уже заданы marginRight у TabTravelCard.
       return (
-        <ScrollView
+        <CardRail
           testID={activeRailTestID}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.horizontalList}
-          contentContainerStyle={styles.horizontalListContent}
-          bounces={false}
+          gap={0}
+          contentPaddingHorizontal={4}
+          contentPaddingVertical={6}
         >
           {items.map(cardFactory)}
-        </ScrollView>
+        </CardRail>
       );
     };
 

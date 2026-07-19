@@ -1,8 +1,8 @@
-import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
+
+import { makeTempDir, removeDir, runNodeCli } from './cli-test-utils';
 
 describe('copy-public-files', () => {
   it('keeps travel hero preload script in the production copy allowlist', () => {
@@ -18,13 +18,11 @@ describe('copy-public-files', () => {
       process.cwd(),
       'public/static/quests/quest-default-cover.svg',
     );
-    const buildDir = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-public-copy-'));
+    const buildDir = makeTempDir('metravel-public-copy-');
 
     try {
-      execFileSync(process.execPath, [scriptPath, buildDir], {
-        cwd: process.cwd(),
-        stdio: 'pipe',
-      });
+      const result = runNodeCli([scriptPath, buildDir]);
+      expect(result.status).toBe(0);
 
       const source = fs.readFileSync(sourcePath);
       const deployed = fs.readFileSync(
@@ -36,7 +34,7 @@ describe('copy-public-files', () => {
         '41d0a0bdf5bed99aac43637f2e6ca20de65c565d00d846ce8f02af4abafc309d',
       );
     } finally {
-      fs.rmSync(buildDir, { recursive: true, force: true });
+      removeDir(buildDir);
     }
   });
 });

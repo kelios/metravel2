@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Platform, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import Feather from '@expo/vector-icons/Feather'
@@ -8,6 +8,7 @@ import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem'
+import CardRail from '@/components/ui/CardRail'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import Button from '@/components/ui/Button'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
@@ -521,12 +522,7 @@ function Rail({
   cardWidth,
 }: GridListProps & { cardWidth: number }) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.railScroll}
-      contentContainerStyle={styles.railContent}
-    >
+    <CardRail gap={isMobile ? 12 : 16} contentPaddingHorizontal={isMobile ? 0 : 2}>
       {items.map((item: any, index: number) => (
         <View key={getItemKey(item, queryKey, index)} style={[styles.railCard, { width: cardWidth }]}>
           <RenderTravelItem
@@ -540,7 +536,7 @@ function Rail({
           />
         </View>
       ))}
-    </ScrollView>
+    </CardRail>
   )
 }
 
