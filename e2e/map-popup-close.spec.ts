@@ -106,8 +106,9 @@ test.describe('Map page — popup open / close', () => {
       // After close, the fullscreen overlay should disappear
       await expect(overlay).not.toBeVisible({ timeout: 5_000 })
     } else {
-      // On desktop, use the Leaflet close button
-      const closeBtn = page.locator('.leaflet-popup-close-button')
+      // Desktop popups use the shared card's accessible close control; Leaflet's
+      // built-in close button is intentionally disabled to avoid duplicate controls.
+      const closeBtn = popup.getByRole('button', { name: 'Закрыть попап', exact: true })
       await expect(closeBtn).toBeVisible({ timeout: 5_000 })
       await closeBtn.click()
 
