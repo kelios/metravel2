@@ -54,3 +54,7 @@ export type { MarkerLayerProps, FitBoundsProps } from './MapMarkerLayer';
 export { useMapRouting } from './useMapRouting';
 export type { UseMapRoutingOptions, UseMapRoutingResult, RouteChangeCallback } from './useMapRouting';
 
+// #991: Platform-agnostic поведенческий контроллер карты (единый контракт web/native)
+export { useMapController } from './useMapController';
+export type { UseMapControllerParams } from './useMapController';
+
