@@ -37,6 +37,17 @@ import {
 export { ApiError, isTimeoutError } from '@/api/clientErrors';
 
 /**
+ * Бэк пока не поднял /user/refresh/ и не выдаёт refresh-токен. Эти 401-ветки с
+ * живым токеном исполняются только на native (на web getAccessToken() → null,
+ * см. shouldUseStoredAuthToken), поэтому refreshAccessToken() здесь заведомо
+ * доомлен: лишний roundtrip перед подтверждающей пробой, а на плохой сети — ещё
+ * и висящий таймаут. Держим попытку refresh за флагом и сразу идём на пробу;
+ * когда бэк поднимет эндпоинт — переключаем в true, весь путь возврата готов.
+ * (#810, FE-ARCH P3)
+ */
+const BACKEND_HAS_REFRESH_ENDPOINT = false;
+
+/**
  * Единый API клиент
  */
 class ApiClient {
@@ -307,57 +318,61 @@ class ApiClient {
                 if (isE2E) {
                     throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
                 }
-                try {
-                    const newToken = await this.refreshAccessToken();
-                    // Повторяем запрос с новым токеном
-                    const retryHeaders: HeadersInit = {
-                        ...this.defaultHeaders,
-                        Authorization: `Token ${newToken}`,
-                        ...options.headers,
-                    };
+                if (BACKEND_HAS_REFRESH_ENDPOINT) {
+                    try {
+                        const newToken = await this.refreshAccessToken();
+                        // Повторяем запрос с новым токеном
+                        const retryHeaders: HeadersInit = {
+                            ...this.defaultHeaders,
+                            Authorization: `Token ${newToken}`,
+                            ...options.headers,
+                        };
 
-                    const retryResponse = await fetchWithTimeout(
-                        `${this.baseURL}${endpoint}`,
-                        { ...options, ...getApiRequestCredentials(), headers: retryHeaders },
-                        timeout
-                    );
-
-                    if (!retryResponse.ok) {
-                        throw new ApiError(
-                            retryResponse.status,
-                            i18nT('errorsStatic:api.common.requestFailed', { details: retryResponse.statusText || `HTTP ${retryResponse.status}` }),
-                            await retryResponse.text().catch(() => null)
+                        const retryResponse = await fetchWithTimeout(
+                            `${this.baseURL}${endpoint}`,
+                            { ...options, ...getApiRequestCredentials(), headers: retryHeaders },
+                            timeout
                         );
+
+                        if (!retryResponse.ok) {
+                            throw new ApiError(
+                                retryResponse.status,
+                                i18nT('errorsStatic:api.common.requestFailed', { details: retryResponse.statusText || `HTTP ${retryResponse.status}` }),
+                                await retryResponse.text().catch(() => null)
+                            );
+                        }
+
+                        return await parseSuccessResponse<T>(retryResponse);
+                    } catch {
+                        // Refresh не сработал — падаем в общий путь пробы+fallback ниже.
                     }
-
-                    return await parseSuccessResponse<T>(retryResponse);
-                } catch {
-                    // Refresh недоступен (у бэка нет /user/refresh/, refresh-токен не выдаётся),
-                    // поэтому сюда попадает ЛЮБОЙ 401 при живом access-токене. Токены стираем
-                    // только по подтверждённому 401 контрольной пробы — единичный транзиентный
-                    // 401 не должен необратимо разлогинивать устройство (#810).
-                    if (await this.isTokenRejectedByServer(token)) {
-                        await this.clearTokens();
-                    }
-
-                    // Пробуем повторить запрос без авторизации: публичные эндпоинты могут
-                    // работать без токена, но падать из‑за некорректного токена в хранилище.
-                    const fallbackHeaders = this.authHeaders(null, {
-                        includeDefaults: true,
-                        extra: options.headers,
-                    });
-                    const fallbackResponse = await fetchWithTimeout(
-                        `${this.baseURL}${endpoint}`,
-                        { ...options, ...getApiRequestCredentials(true), headers: fallbackHeaders },
-                        timeout
-                    );
-
-                    if (!fallbackResponse.ok) {
-                        await throwDetailedError(fallbackResponse);
-                    }
-
-                    return await parseSuccessResponse<T>(fallbackResponse);
                 }
+
+                // Refresh пропущен (бэк без /user/refresh/) или не сработал, поэтому сюда
+                // попадает ЛЮБОЙ 401 при живом access-токене. Токены стираем только по
+                // подтверждённому 401 контрольной пробы — единичный транзиентный 401 не
+                // должен необратимо разлогинивать устройство (#810).
+                if (await this.isTokenRejectedByServer(token)) {
+                    await this.clearTokens();
+                }
+
+                // Пробуем повторить запрос без авторизации: публичные эндпоинты могут
+                // работать без токена, но падать из‑за некорректного токена в хранилище.
+                const fallbackHeaders = this.authHeaders(null, {
+                    includeDefaults: true,
+                    extra: options.headers,
+                });
+                const fallbackResponse = await fetchWithTimeout(
+                    `${this.baseURL}${endpoint}`,
+                    { ...options, ...getApiRequestCredentials(true), headers: fallbackHeaders },
+                    timeout
+                );
+
+                if (!fallbackResponse.ok) {
+                    await throwDetailedError(fallbackResponse);
+                }
+
+                return await parseSuccessResponse<T>(fallbackResponse);
             }
 
             if (!response.ok) {
@@ -458,41 +473,45 @@ class ApiClient {
                 if (isE2E) {
                     throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
                 }
-                try {
-                    const newToken = await this.refreshAccessToken();
-                    const retryHeaders: HeadersInit = {
-                        Authorization: `Token ${newToken}`,
-                        ...options.headers,
-                    };
-                    const retryResp = await fetchWithTimeout(
-                        `${this.baseURL}${endpoint}`,
-                        {
-                            ...options,
-                            ...getApiRequestCredentials(),
-                            method: options.method || 'GET',
-                            headers: retryHeaders,
-                        },
-                        timeout
-                    );
-                    return await parseDownloadResponse(retryResp);
-                } catch {
-                    // См. request(): токены стираем только по подтверждённому 401 пробы (#810).
-                    if (await this.isTokenRejectedByServer(token)) {
-                        await this.clearTokens();
+                if (BACKEND_HAS_REFRESH_ENDPOINT) {
+                    try {
+                        const newToken = await this.refreshAccessToken();
+                        const retryHeaders: HeadersInit = {
+                            Authorization: `Token ${newToken}`,
+                            ...options.headers,
+                        };
+                        const retryResp = await fetchWithTimeout(
+                            `${this.baseURL}${endpoint}`,
+                            {
+                                ...options,
+                                ...getApiRequestCredentials(),
+                                method: options.method || 'GET',
+                                headers: retryHeaders,
+                            },
+                            timeout
+                        );
+                        return await parseDownloadResponse(retryResp);
+                    } catch {
+                        // Refresh не сработал — падаем в путь пробы+fallback ниже.
                     }
-                    const fallbackHeaders = this.authHeaders(null, { extra: options.headers });
-                    const fallbackResp = await fetchWithTimeout(
-                        `${this.baseURL}${endpoint}`,
-                        {
-                            ...options,
-                            ...getApiRequestCredentials(true),
-                            method: options.method || 'GET',
-                            headers: fallbackHeaders,
-                        },
-                        timeout
-                    );
-                    return await parseDownloadResponse(fallbackResp);
                 }
+
+                // См. request(): токены стираем только по подтверждённому 401 пробы (#810).
+                if (await this.isTokenRejectedByServer(token)) {
+                    await this.clearTokens();
+                }
+                const fallbackHeaders = this.authHeaders(null, { extra: options.headers });
+                const fallbackResp = await fetchWithTimeout(
+                    `${this.baseURL}${endpoint}`,
+                    {
+                        ...options,
+                        ...getApiRequestCredentials(true),
+                        method: options.method || 'GET',
+                        headers: fallbackHeaders,
+                    },
+                    timeout
+                );
+                return await parseDownloadResponse(fallbackResp);
             }
 
             return await parseDownloadResponse(resp);
@@ -595,7 +614,9 @@ class ApiClient {
             );
 
             if (response.status === 401 && token) {
-                if (isE2E) {
+                if (isE2E || !BACKEND_HAS_REFRESH_ENDPOINT) {
+                    // Бэк без /user/refresh/: refresh на native доомлен — не тратим лишний
+                    // roundtrip. Токен не стираем (единичный 401 не доказывает невалидность, #810).
                     throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
                 }
                 const newToken = await this.refreshAccessToken();
@@ -719,8 +740,9 @@ class ApiClient {
                     } catch {
                         resolve(xhr.responseText as unknown as T);
                     }
-                } else if (xhr.status === 401 && token && !isE2E) {
-                    // Retry with refreshed token via XHR (no progress on retry)
+                } else if (xhr.status === 401 && token && !isE2E && BACKEND_HAS_REFRESH_ENDPOINT) {
+                    // Retry with refreshed token via XHR (no progress on retry).
+                    // Пропускается, пока бэк без /user/refresh/ — 401 падает в общий else.
                     this.refreshAccessToken()
                         .then((newToken) =>
                             this._uploadViaXhr<T>(endpoint, formData, newToken, method, timeout)
@@ -761,7 +783,9 @@ class ApiClient {
             );
 
             if (response.status === 401 && token) {
-                if (isE2E) {
+                if (isE2E || !BACKEND_HAS_REFRESH_ENDPOINT) {
+                    // Бэк без /user/refresh/: refresh на native доомлен — не тратим лишний
+                    // roundtrip. Токен не стираем (единичный 401 не доказывает невалидность, #810).
                     throw new ApiError(401, i18nT('errorsStatic:api.client.authRequired'));
                 }
                 const newToken = await this.refreshAccessToken();

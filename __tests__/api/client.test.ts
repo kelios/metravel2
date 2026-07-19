@@ -135,24 +135,25 @@ describe('src/api/client.ts apiClient', () => {
     expect(devError).not.toHaveBeenCalled();
   });
 
-  it('пытается сделать refresh при 401 и повторяет запрос', async () => {
+  it('на native 401 НЕ дёргает /user/refresh/ (refresh за флагом) — сразу проба + fallback', async () => {
+    // Бэк не поднял /user/refresh/, поэтому refresh на native пропускается
+    // (BACKEND_HAS_REFRESH_ENDPOINT=false). Один 401 → проба + unauth-fallback,
+    // без заведомо лишнего roundtrip на refresh-эндпоинт. (#810, FE-ARCH P3)
     mockedGetSecureItem
-      .mockResolvedValueOnce('oldToken') // первый вызов в request
-      .mockResolvedValueOnce('oldToken') // повторный вызов перед retry после refresh
-      .mockResolvedValueOnce('oldToken');
+      .mockResolvedValueOnce('oldToken') // чтение access-токена в request()
+      .mockResolvedValueOnce('oldToken'); // повторное чтение в isTokenRejectedByServer
 
     mockedFetchWithTimeout
-      .mockResolvedValueOnce({ // первый запрос → 401
+      .mockResolvedValueOnce({ // основной запрос → 401
         ok: false,
         status: 401,
         text: async () => 'unauthorized',
       } as any)
-      .mockResolvedValueOnce({ // refresh токена
+      .mockResolvedValueOnce({ // контрольная проба /user/me/verifications/ → токен жив
         ok: true,
         status: 200,
-        json: async () => ({ access: 'newToken' }),
       } as any)
-      .mockResolvedValueOnce({ // повторный запрос с новым токеном
+      .mockResolvedValueOnce({ // fallback без авторизации
         ok: true,
         status: 200,
         json: async () => ({ ok: true }),
@@ -161,7 +162,11 @@ describe('src/api/client.ts apiClient', () => {
     const result = await apiClient.get('/needs-refresh');
 
     expect(result).toEqual({ ok: true });
-    expect(setSecureItem).toHaveBeenCalledWith('userToken', 'newToken');
+    // refresh пропущен: /user/refresh/ не запрашивался, новый токен не сохранялся
+    const fetchedUrls = mockedFetchWithTimeout.mock.calls.map((call) => String(call[0]));
+    expect(fetchedUrls.some((url) => url.includes('/user/refresh/'))).toBe(false);
+    expect(setSecureItem).not.toHaveBeenCalledWith('userToken', 'newToken');
+    expect(fetchedUrls[1]).toContain('/user/me/verifications/');
     expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(3);
   });
 

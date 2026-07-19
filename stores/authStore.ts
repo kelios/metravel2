@@ -11,7 +11,6 @@ import { queryKeys } from '@/api/queryKeys';
 import type { UserProfileDto } from '@/api/user';
 import type {
     FacebookAuthResult,
-    FacebookCompletionStartResult,
     FacebookSessionPayload,
 } from '@/api/auth';
 import { shouldUseStoredAuthToken } from '@/utils/authPlatform';
@@ -81,55 +80,14 @@ const rollbackPersistedCredentials = async (): Promise<void> => {
     ]).catch(() => undefined);
 };
 
-export interface AuthState {
-    isAuthenticated: boolean;
-    username: string;
-    isSuperuser: boolean;
-    userId: string | null;
-    userAvatar: string | null;
-    authReady: boolean;
-    profileRefreshToken: number;
-    // Серверный premium-флаг для PDF-paywall (BE #293). Не персистится — берём свежим из профиля.
-    isPremium: boolean;
-}
+// Формы состояния/экшенов и INITIAL_AUTH_STATE вынесены в лист-модуль
+// `@/stores/authState` (без рантайм-зависимостей), чтобы потребители типов и
+// начального состояния не тянули тяжёлый store и не создавали цикл импорта.
+// Ре-экспортируем для обратной совместимости существующих импортов из этого файла.
+import { INITIAL_AUTH_STATE, type AuthStore } from '@/stores/authState';
 
-interface AuthActions {
-    setIsAuthenticated: (v: boolean) => void;
-    setUsername: (v: string) => void;
-    setIsSuperuser: (v: boolean) => void;
-    setUserId: (v: string | null) => void;
-    setUserAvatar: (v: string | null) => void;
-    triggerProfileRefresh: () => void;
-    invalidateAuthState: () => void;
-    checkAuthentication: () => Promise<void>;
-    login: (email: string, password: string) => Promise<boolean>;
-    loginWithGoogle: (credential: string) => Promise<boolean>;
-    loginWithFacebook: (credential: string) => Promise<FacebookAuthResult>;
-    startFacebookEmailCompletion: (
-        completionHandle: string,
-        email: string,
-    ) => Promise<FacebookCompletionStartResult>;
-    confirmFacebookEmailCompletion: (
-        completionHandle: string,
-        code: string,
-    ) => Promise<FacebookAuthResult>;
-    logout: () => Promise<void>;
-    sendPassword: (email: string) => Promise<string>;
-    setNewPassword: (token: string, newPassword: string) => Promise<boolean>;
-}
-
-export type AuthStore = AuthState & AuthActions;
-
-export const INITIAL_AUTH_STATE: AuthState = {
-    isAuthenticated: false,
-    username: '',
-    isSuperuser: false,
-    userId: null,
-    userAvatar: null,
-    authReady: false,
-    profileRefreshToken: 0,
-    isPremium: false,
-};
+export { INITIAL_AUTH_STATE } from '@/stores/authState';
+export type { AuthState, AuthStore } from '@/stores/authState';
 
 // Epoch counter to guard against races where an in-flight auth check
 // finishes after logout and re-applies stale authenticated state.

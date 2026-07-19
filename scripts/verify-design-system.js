@@ -47,6 +47,29 @@ const DEPRECATED_PATTERNS = [
   }
 ];
 
+// --- Hardcoded hex check (FE-ARCH P3) ---------------------------------------
+// НЕ глобальный запрет hex. Часть остатка оправдана: зоны вне DOM-каскада
+// (print/canvas/Leaflet-injected-HTML), где CSS-переменные дизайн-системы
+// недоступны. Их исключаем. Ловим ТОЛЬКО hex в кавычках — реальные цветовые
+// литералы (`color: '#fff'`); номера тикетов в комментах (`// #207`) не в
+// кавычках и не считаются (это и была ~43% ложной метрики). Находки идут как
+// warning → гард остаётся зелёным, но подсвечивает реальный остаток.
+const HEX_EXCLUDE_MATCHERS = [
+  (rel) => rel.includes('quests/printable/'),
+  (rel) => /nativeMapHtml\.ts$/.test(rel),
+  (rel) => /badgeVisuals\.ts$/.test(rel),
+  (rel) => /canvas/i.test(rel),
+  (rel) => /WeatherLegend\.web\.tsx$/.test(rel),
+];
+
+const HEX_LITERAL_PATTERN =
+  /['"`]#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})['"`]/;
+
+function isHexExcluded(relPath) {
+  const normalized = relPath.split(path.sep).join('/');
+  return HEX_EXCLUDE_MATCHERS.some((match) => match(normalized));
+}
+
 // Паттерны для правильного использования
 const issues = [];
 const stats = {
@@ -56,6 +79,7 @@ const stats = {
   warnings: 0,
   errors: 0,
   info: 0,
+  hex: 0,
 };
 
 function checkFile(filePath) {
@@ -83,6 +107,26 @@ function checkFile(filePath) {
         });
       }
     });
+
+    // Хардкод hex-цветов (в кавычках) вне оправданных зон.
+    const relPath = path.relative(process.cwd(), filePath);
+    if (!isHexExcluded(relPath)) {
+      const lines = content.split('\n');
+      lines.forEach((line, index) => {
+        if (HEX_LITERAL_PATTERN.test(line)) {
+          fileIssues.push({
+            file: filePath,
+            line: index + 1,
+            severity: 'warning',
+            pattern: 'hardcoded-hex',
+            message: 'Замените hex-литерал на токен designSystem (CSS var). Хардкод допустим только в print/canvas/Leaflet-HTML.',
+            code: line.trim(),
+          });
+          stats.warnings++;
+          stats.hex++;
+        }
+      });
+    }
 
     if (fileIssues.length > 0) {
       issues.push(...fileIssues);
@@ -149,6 +193,7 @@ function generateReport() {
     console.log(`   - Errors:           ${stats.errors}`);
     console.log(`   - Warnings:         ${stats.warnings}`);
     console.log(`   - Info:             ${stats.info}`);
+    console.log(`   - Hardcoded hex:    ${stats.hex} (в кавычках, вне print/canvas/Leaflet)`);
 
     // Группировать по файлам
     const issuesByFile = {};
