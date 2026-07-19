@@ -22,6 +22,12 @@ type Props = {
   expandedHeight?: number
   allowScroll?: boolean
   cardsCount?: number
+  /**
+   * Паритет контракта с web-вариантом (BelkrajWidget.tsx): tsconfig
+   * moduleSuffixes резолвит типы в .native, поэтому web-вызовы с className
+   * (questWizardSections) должны типизироваться. На native не используется.
+   */
+  className?: string
 }
 
 const BELKRAJ_ORIGIN = 'https://belkraj.by'

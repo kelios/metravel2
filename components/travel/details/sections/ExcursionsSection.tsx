@@ -5,6 +5,7 @@ import type { Travel } from '@/types/types'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { translate as i18nT } from '@/i18n'
+import { getAccessibilityRole } from '@/utils/a11y'
 
 
 const EXCURSION_CONTAINER_STYLE = { marginTop: 12 } as const
@@ -24,17 +25,21 @@ const ExcursionsLazySection: React.FC<{ children: React.ReactNode; forceVisible?
   return <>{children}</>
 }
 
+// Web-a11y роли на RN-примитивах через канонический хелпер utils/a11y
+// (getAccessibilityRole: web-роли 'region'/'heading' → типобезопасный
+// AccessibilityRole, any локализован в хелпере). dataSet — RN-way: RN-web
+// рендерит его тем же DOM-атрибутом data-section-key (селектор e2e сохранён).
 const webRegionProps = Platform.OS === 'web'
   ? {
-      accessibilityRole: 'region' as const,
-      'data-section-key': 'excursions',
+      accessibilityRole: getAccessibilityRole('region'),
+      dataSet: { sectionKey: 'excursions' },
     }
   : null
 
 const webHeadingProps = Platform.OS === 'web'
   ? {
-      accessibilityRole: 'heading' as const,
-      'aria-level': 2 as const,
+      accessibilityRole: getAccessibilityRole('heading'),
+      'aria-level': 2,
     }
   : null
 
