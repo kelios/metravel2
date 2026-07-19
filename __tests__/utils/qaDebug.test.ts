@@ -10,12 +10,6 @@ jest.mock('@/api/apiConfig', () => ({
   API_BASE_URL: 'https://metravel.by/api',
 }))
 
-jest.mock('@/stores/favoritesStore', () => ({
-  useFavoritesStore: {
-    getState: () => ({ favorites: ['travel-1'] }),
-  },
-}))
-
 describe('qaDebug', () => {
   let infoSpy: jest.SpyInstance
 
@@ -24,8 +18,9 @@ describe('qaDebug', () => {
     delete (globalThis as { __QA__?: () => void }).__QA__
     infoSpy = jest.spyOn(console, 'info').mockImplementation(() => undefined)
 
-    // history теперь читается из RQ-кэша (#994): сидируем 2 записи для user 104.
+    // favorites/history теперь читаются из RQ-кэша (#994): сидируем для user 104.
     const qc = new QueryClient()
+    qc.setQueryData(queryKeys.favorites('104'), ['travel-1'])
     qc.setQueryData(queryKeys.viewHistory('104'), ['travel-1', 'travel-2'])
     setActiveQueryClient(qc)
   })

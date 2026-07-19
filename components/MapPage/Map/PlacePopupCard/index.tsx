@@ -942,6 +942,14 @@ const PlacePopupCard: React.FC<Props> = ({
             <View style={styles.splitContentPadding}>
               {topInfoSlot}
             </View>
+          </View>
+          {/* Action bar pinned below the scroll: on content-rich points the info
+              above overflows and scrolls, but ♥ / «Был/Хочу/Планирую» / навигация
+              stay anchored here so they never slide under the bottom dock. */}
+          <View
+            style={styles.splitFooterPinned}
+            {...({ 'data-card-action': 'true' } as any)}
+          >
             <View style={styles.footerContainer}>
               {footerSlot}
             </View>

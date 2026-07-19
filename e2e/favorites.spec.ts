@@ -11,10 +11,10 @@ import { mockFakeAuthApis } from './helpers/auth';
  *   2. Authed + empty -> empty state ("Сохраняй маршруты…").
  *   3. Authed + has favorites -> saved card renders and can be removed.
  *
- * Favorites are client state (Zustand store persisted to AsyncStorage, which on
- * web maps directly to localStorage). We seed both the auth token and the
- * favorites cache through addInitScript so the flow is fully deterministic and
- * does not depend on a live backend.
+ * Favorites are server state on React Query (#994), persisted via
+ * persistQueryClient. We seed the auth token through addInitScript and drive the
+ * favorites list through a mocked GET favorite-travels response, so the flow is
+ * fully deterministic and does not depend on a live backend.
  */
 
 const ANON_STATE = { cookies: [], origins: [] };
@@ -43,8 +43,10 @@ function seedConsent(page: import('@playwright/test').Page) {
 }
 
 /**
- * Seeds a fake authenticated session plus an optional list of favorites into the
- * server-cache key the FavoritesProvider reads on mount (loadServerCached).
+ * Seeds a fake authenticated session. Favorites are server state on React Query
+ * (#994): the /favorites screen lazily fetches them (ensureFavoritesServerData),
+ * so we drive the list purely through the mocked GET favorite-travels below —
+ * no localStorage favorites-cache seeding is needed anymore.
  */
 async function seedAuthAndFavorites(
   page: import('@playwright/test').Page,
@@ -54,39 +56,20 @@ async function seedAuthAndFavorites(
   const token = xorEncrypt('e2e-fake-token', ENCRYPTION_KEY);
   const refresh = xorEncrypt('e2e-fake-refresh-token', ENCRYPTION_KEY);
   const userId = '1';
-  const cacheKey = `metravel_favorites_server_${userId}`;
-  const localKey = `metravel_favorites_${userId}`;
-  const items = favorites.map((f) => ({
-    id: f.id,
-    type: 'travel',
-    title: f.title,
-    url: f.url,
-    addedAt: 1735689600000,
-  }));
 
   await page.addInitScript(
-    (payload: {
-      token: string;
-      refresh: string;
-      userId: string;
-      cacheKey: string;
-      localKey: string;
-      items: unknown[];
-    }) => {
+    (payload: { token: string; refresh: string; userId: string }) => {
       try {
         window.localStorage.setItem('secure_userToken', payload.token);
         window.localStorage.setItem('secure_refreshToken', payload.refresh);
         window.localStorage.setItem('userId', payload.userId);
         window.localStorage.setItem('userName', 'E2E User');
         window.localStorage.setItem('isSuperuser', 'false');
-        const serialized = JSON.stringify(payload.items);
-        window.localStorage.setItem(payload.cacheKey, serialized);
-        window.localStorage.setItem(payload.localKey, serialized);
       } catch {
         // ignore
       }
     },
-    { token, refresh, userId, cacheKey, localKey, items }
+    { token, refresh, userId }
   );
 
   // Keep auth hydration from invalidating the fake token, and make any lazy

@@ -69,9 +69,9 @@ const TestComponent: React.FC<{ onContext?: (context: any) => void }> = ({ onCon
   return null;
 };
 
+// favorites живут в RQ-кэше (#994), а не в AsyncStorage: сидируем прямо в кэш.
 const seedFavorites = async (items: FavoriteItem[], userId: string | null = null) => {
-  const key = userId ? `metravel_favorites_${userId}` : 'metravel_favorites';
-  await AsyncStorage.setItem(key, JSON.stringify(items));
+  mockQueryClient.setQueryData(queryKeys.favorites(userId), items);
 };
 
 // viewHistory теперь живёт в RQ-кэше, а не в AsyncStorage: сидируем прямо в кэш.
@@ -86,9 +86,8 @@ describe('FavoritesContext', () => {
     mockAuthContext.isAuthenticated = false;
     mockAuthContext.userId = null;
 
-    // Reset Zustand favorites store + RQ cache (viewHistory) between tests
-    const { useFavoritesStore } = require('@/stores/favoritesStore');
-    useFavoritesStore.setState({ favorites: [], _inFlight: new Set(), _fetched: false, _userId: null });
+    // favorites + viewHistory живут в RQ-кэше (#994): чистим кэш и делаем его
+    // активным, чтобы мутации (getActiveQueryClient) и чтение совпадали.
     mockQueryClient.clear();
     setActiveQueryClient(mockQueryClient);
   });
@@ -136,10 +135,6 @@ describe('FavoritesContext', () => {
     mockAuthContext.isAuthenticated = true;
     mockAuthContext.userId = 'user123' as any;
 
-    const serverFavoritesKey = 'metravel_favorites_server_user123';
-    const serverHistoryKey = 'metravel_view_history_server_user123';
-    const serverRecommendationsKey = 'metravel_recommendations_server_user123';
-
     const cachedFavorites: FavoriteItem[] = [
       {
         id: 10,
@@ -150,9 +145,8 @@ describe('FavoritesContext', () => {
       },
     ];
 
-    await AsyncStorage.setItem(serverFavoritesKey, JSON.stringify(cachedFavorites));
-    await AsyncStorage.setItem(serverHistoryKey, JSON.stringify([]));
-    await AsyncStorage.setItem(serverRecommendationsKey, JSON.stringify([]));
+    // Восстановленное из persist серверное избранное = сид RQ-кэша (#994).
+    await seedFavorites(cachedFavorites, 'user123');
 
     let contextValue: any;
 
@@ -178,7 +172,6 @@ describe('FavoritesContext', () => {
     await waitFor(() => {
       expect(clearUserFavorites).toHaveBeenCalledWith('user123');
       expect(contextValue.favorites).toHaveLength(0);
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(serverFavoritesKey, JSON.stringify([]));
     });
 
     mockAuthContext.isAuthenticated = false;
@@ -464,30 +457,25 @@ describe('FavoritesContext', () => {
   // recommendationsStore (#994). Рекомендации теперь только для авторизованных
   // (hooks/useRecommendedTravels, React Query); гостю UI показывает [].
 
-  it('uses user-specific storage key when authenticated', async () => {
-    mockAuthContext.isAuthenticated = true;
-    mockAuthContext.userId = 'user123' as any;
+  it('scopes favorites by userId (identity-isolation, #994)', async () => {
+    // Кэш userA не виден гостю: сид для user123, монтируем как гость → пусто.
+    await seedFavorites(
+      [{ id: 10, type: 'travel', title: 'A', url: '/travels/10', addedAt: 1 }],
+      'user123',
+    );
 
+    let contextValue: any;
     render(
       <AuthProvider>
         <FavoritesProvider>
-          <TestComponent />
+          <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
         </FavoritesProvider>
       </AuthProvider>
     );
 
-    await waitFor(() => {
-      const getItemCalls = (AsyncStorage.getItem as jest.Mock).mock.calls.map((c: any[]) => c[0]);
-      // viewHistory и recommendations больше не читают серверный AsyncStorage-мирор:
-      // мигрированы на React Query + persistQueryClient (#994). Остаётся favorites.
-      expect(getItemCalls).toEqual(
-        expect.arrayContaining([
-          'metravel_favorites_server_user123',
-        ])
-      );
-    });
-
-    mockAuthContext.isAuthenticated = false;
-    mockAuthContext.userId = null;
+    await waitFor(() => expect(contextValue).toBeDefined());
+    // Гость (userId=null) читает свой ключ, не user123.
+    expect(contextValue.favorites).toHaveLength(0);
+    expect(contextValue.isFavorite(10, 'travel')).toBe(false);
   });
 });

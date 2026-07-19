@@ -1,12 +1,16 @@
-import { create } from 'zustand'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+// FE-ARCH D1 #994 — travelStatus мигрирован с Zustand на React Query.
+// Этот модуль остаётся домашним для чистых хелперов/нормализации/типов (их
+// импортируют ~14 файлов), но состояние entries живёт в RQ-кэше
+// queryKeys.travelStatus(userId) + persistQueryClient (whitelist 'travel-status',
+// #1015) вместо Zustand-стора и ручного AsyncStorage-ключа.
+import { useQuery } from '@tanstack/react-query'
 import { devError, devWarn } from '@/utils/logger'
-import { safeJsonParseString } from '@/utils/safeJsonParse'
 import { buildTravelMonthFallbackDate } from '@/utils/travelCalendarDate'
+import { useAuth } from '@/context/AuthContext'
+import { queryKeys } from '@/api/queryKeys'
+import { getActiveQueryClient } from '@/api/activeQueryClient'
 import { translate as i18nT } from '@/i18n'
 
-
-const TRAVEL_STATUS_KEY = 'metravel_travel_status'
 
 const getUserApi = async () => import('@/api/user')
 const getTravelUserApi = async () => import('@/api/travelUserQueries')
@@ -121,8 +125,6 @@ const resolveModerationState = (item: Record<string, unknown>): TravelModeration
   return undefined
 }
 
-const normalizeModerationState = (value: unknown): TravelModerationState | undefined =>
-  value === 'draft' || value === 'pending' ? value : undefined
 
 const normalizeAuthoredTravelEntry = (item: unknown): TravelStatusEntry | null => {
   if (!isRecord(item)) return null
@@ -233,37 +235,6 @@ const normalizeStatusDates = <T extends { status: TravelStatus; plannedDate?: st
   }
 }
 
-const normalizeEntry = (item: unknown): TravelStatusEntry | null => {
-  if (!isRecord(item)) return null
-  const { id, type, title, url, status, addedAt } = item
-  if (
-    (typeof id !== 'string' && typeof id !== 'number') ||
-    type !== 'travel' ||
-    typeof title !== 'string' ||
-    typeof url !== 'string' ||
-    (status !== 'visited' && status !== 'planned' && status !== 'wishlist') ||
-    !Number.isFinite(Number(addedAt))
-  ) return null
-  return normalizeStatusDates({
-    id,
-    type: 'travel' as const,
-    title,
-    url,
-    status: status as TravelStatus,
-    addedAt: Number(addedAt),
-    imageUrl: typeof item.imageUrl === 'string' ? item.imageUrl : undefined,
-    country: typeof item.country === 'string' ? item.country : undefined,
-    city: typeof item.city === 'string' ? item.city : undefined,
-    plannedDate: typeof item.plannedDate === 'string' ? item.plannedDate : undefined,
-    visitedDate: typeof item.visitedDate === 'string' ? item.visitedDate : undefined,
-    wishlistDate: typeof item.wishlistDate === 'string' ? item.wishlistDate : undefined,
-    travelYear: normalizeOptionalString(item.travelYear),
-    travelMonth: normalizeTravelMonth(item.travelMonth),
-    travelMonthName: normalizeOptionalString(item.travelMonthName),
-    moderationState: normalizeModerationState(item.moderationState),
-  })
-}
-
 const parseServerTimestamp = (value: unknown): number => {
   if (typeof value !== 'string') return Date.now()
   const time = new Date(value).getTime()
@@ -364,13 +335,6 @@ const fetchAuthoredTravelStatusEntries = async (userId: string | number): Promis
     .filter((item): item is TravelStatusEntry => item !== null)
 }
 
-const getStorageKey = (userId: string | null): string =>
-  userId ? `${TRAVEL_STATUS_KEY}_${userId}` : TRAVEL_STATUS_KEY
-
-const persistEntries = async (entries: TravelStatusEntry[], userId: string | null): Promise<void> => {
-  await AsyncStorage.setItem(getStorageKey(userId), JSON.stringify(entries))
-}
-
 const getNumericTravelId = (id: string | number): number => {
   const travelId = Number(id)
   if (!Number.isInteger(travelId) || travelId <= 0) {
@@ -398,122 +362,108 @@ const syncRemoveStatusFromServer = async (id: string | number, userId: string | 
   await deleteUserTravelStatus(userId, getNumericTravelId(id))
 }
 
-interface TravelStatusState {
-  entries: TravelStatusEntry[]
-  _userId: string | null
+// ===== React Query state (#994) =====
+// Единый источник — RQ-кэш queryKeys.travelStatus(userId). Ключ scoped по userId
+// даёт identity-isolation бесплатно (смена пользователя = другой ключ, старый
+// серверный ответ не затирает актуальные записи). persistQueryClient (#1015)
+// держит офлайн вместо ручного AsyncStorage-ключа.
 
-  getStatus: (id: string | number) => TravelStatusEntry | undefined
-  setStatus: (entry: Omit<TravelStatusEntry, 'addedAt'>, userId: string | null) => Promise<void>
-  removeStatus: (id: string | number, userId: string | null) => Promise<void>
-  getByStatus: (status: TravelStatus) => TravelStatusEntry[]
-  getByMonth: (year: number, month: number) => TravelStatusEntry[]
-  loadLocal: (userId: string | null) => Promise<void>
+const EMPTY_ENTRIES: TravelStatusEntry[] = []
+
+const readEntries = (userId: string | null): TravelStatusEntry[] =>
+  getActiveQueryClient()?.getQueryData<TravelStatusEntry[]>(queryKeys.travelStatus(userId)) ?? []
+
+const writeEntries = (userId: string | null, entries: TravelStatusEntry[]): void => {
+  getActiveQueryClient()?.setQueryData(queryKeys.travelStatus(userId), entries)
 }
 
-export const useTravelStatusStore = create<TravelStatusState>((set, get) => ({
-  entries: [],
-  _userId: null,
+/** Реактивное чтение статусов текущего пользователя (гость = null отдельный ключ). */
+export function useTravelStatus(): TravelStatusEntry[] {
+  const { userId } = useAuth()
+  const scopedUserId = userId ?? null
+  const { data } = useQuery({
+    queryKey: queryKeys.travelStatus(scopedUserId),
+    queryFn: () => readEntries(scopedUserId),
+    enabled: false,
+  })
+  return data ?? EMPTY_ENTRIES
+}
 
-  getStatus: (id) =>
-    get().entries.find((e) => String(e.id) === String(id)),
+/** Синхронное чтение статуса по id (для рендера кнопок/форм). */
+export const getTravelStatus = (
+  userId: string | null,
+  id: string | number,
+): TravelStatusEntry | undefined =>
+  readEntries(userId).find((e) => String(e.id) === String(id))
 
-  setStatus: async (entry, userId) => {
-    const previousEntries = get().entries
-    const existing = get().entries.find((e) => String(e.id) === String(entry.id))
-    const newEntry: TravelStatusEntry = normalizeStatusDates({
-      ...entry,
-      addedAt: existing?.addedAt ?? Date.now(),
-    })
-    const newEntries = [
-      ...get().entries.filter((e) => String(e.id) !== String(entry.id)),
-      newEntry,
-    ]
-    set({ entries: newEntries })
-    try {
-      await persistEntries(newEntries, userId)
-      await syncStatusToServer(newEntry, userId)
-    } catch (error) {
-      set({ entries: previousEntries })
-      try {
-        await persistEntries(previousEntries, userId)
-      } catch (persistError) {
-        devError('Ошибка отката статуса путешествия:', persistError)
-      }
-      devError('Ошибка сохранения статуса путешествия:', error)
-      throw error
-    }
-  },
+/** Оптимистичная запись статуса с серверным upsert и откатом при ошибке. */
+export async function setTravelStatus(
+  entry: Omit<TravelStatusEntry, 'addedAt'>,
+  userId: string | null,
+): Promise<void> {
+  const previous = readEntries(userId)
+  const existing = previous.find((e) => String(e.id) === String(entry.id))
+  const newEntry: TravelStatusEntry = normalizeStatusDates({
+    ...entry,
+    addedAt: existing?.addedAt ?? Date.now(),
+  })
+  writeEntries(userId, [
+    ...previous.filter((e) => String(e.id) !== String(entry.id)),
+    newEntry,
+  ])
+  try {
+    await syncStatusToServer(newEntry, userId)
+  } catch (error) {
+    writeEntries(userId, previous)
+    devError('Ошибка сохранения статуса путешествия:', error)
+    throw error
+  }
+}
 
-  removeStatus: async (id, userId) => {
-    const previousEntries = get().entries
-    const newEntries = get().entries.filter((e) => String(e.id) !== String(id))
-    set({ entries: newEntries })
-    try {
-      await persistEntries(newEntries, userId)
-      await syncRemoveStatusFromServer(id, userId)
-    } catch (error) {
-      set({ entries: previousEntries })
-      try {
-        await persistEntries(previousEntries, userId)
-      } catch (persistError) {
-        devError('Ошибка отката удаления статуса путешествия:', persistError)
-      }
-      devError('Ошибка удаления статуса путешествия:', error)
-      throw error
-    }
-  },
+/** Оптимистичное удаление статуса с серверным delete и откатом при ошибке. */
+export async function removeTravelStatus(
+  id: string | number,
+  userId: string | null,
+): Promise<void> {
+  const previous = readEntries(userId)
+  writeEntries(userId, previous.filter((e) => String(e.id) !== String(id)))
+  try {
+    await syncRemoveStatusFromServer(id, userId)
+  } catch (error) {
+    writeEntries(userId, previous)
+    devError('Ошибка удаления статуса путешествия:', error)
+    throw error
+  }
+}
 
-  getByStatus: (status) =>
-    get().entries.filter((e) => e.status === status),
+/**
+ * Догрузка серверных статусов (замена серверной части старого loadLocal).
+ * Гостю — no-op (persist держит локальные записи). Авторизованному — явные
+ * серверные статусы + авторские путешествия, смерженные и записанные в кэш.
+ * Идентичность изолирована ключом: смена пользователя во время фетча пишет в
+ * старый ключ и не затирает актуальные записи нового.
+ */
+export async function loadTravelStatus(userId: string | null): Promise<void> {
+  if (!userId) return
+  if (!getActiveQueryClient()) return
 
-  getByMonth: (year, month) =>
-    get().entries.filter((e) => {
-      const dateParts = parseTravelStatusDateParts(getTravelStatusCalendarDate(e))
-      return dateParts?.year === year && dateParts.month === month
-    }),
+  // Фолбэк явных статусов — текущий кэш (как локальные в старом loadLocal).
+  let explicitEntries: TravelStatusEntry[] = readEntries(userId)
+  try {
+    const { fetchUserTravelStatuses } = await getUserApi()
+    explicitEntries = (await fetchUserTravelStatuses(userId, { perPage: 9999 }))
+      .map(normalizeServerStatusEntry)
+      .filter((item): item is TravelStatusEntry => item !== null)
+  } catch (error) {
+    devWarn('Не удалось синхронизировать явные статусы путешествий с сервером:', error)
+  }
 
-  loadLocal: async (userId) => {
-    try {
-      const data = await AsyncStorage.getItem(getStorageKey(userId))
-      const parsed = data ? safeJsonParseString(data, []) : []
-      const localEntries = Array.isArray(parsed)
-        ? parsed
-          .map(normalizeEntry)
-          .filter((item): item is TravelStatusEntry => item !== null)
-        : []
+  let authoredEntries: TravelStatusEntry[] = []
+  try {
+    authoredEntries = await fetchAuthoredTravelStatusEntries(userId)
+  } catch (error) {
+    devWarn('Не удалось загрузить авторские путешествия для календаря:', error)
+  }
 
-      set({ entries: localEntries, _userId: userId })
-
-      if (!userId) return
-
-      let explicitEntries = localEntries
-      try {
-        const { fetchUserTravelStatuses } = await getUserApi()
-        explicitEntries = (await fetchUserTravelStatuses(userId, { perPage: 9999 }))
-          .map(normalizeServerStatusEntry)
-          .filter((item): item is TravelStatusEntry => item !== null)
-      } catch (error) {
-        devWarn('Не удалось синхронизировать явные статусы путешествий с сервером:', error)
-      }
-
-      let authoredEntries: TravelStatusEntry[] = []
-      try {
-        authoredEntries = await fetchAuthoredTravelStatusEntries(userId)
-      } catch (error) {
-        devWarn('Не удалось загрузить авторские путешествия для календаря:', error)
-      }
-
-      // Пользователь сменился (logout/смена аккаунта) пока шёл серверный фетч —
-      // не затираем актуальные записи устаревшим ответом.
-      if (get()._userId !== userId) return
-
-      const mergedEntries = mergeStatusAndAuthoredEntries(explicitEntries, authoredEntries)
-      set({ entries: mergedEntries, _userId: userId })
-      await persistEntries(mergedEntries, userId)
-    } catch (error) {
-      // Best-effort серверная синхронизация: локальные статусы уже загружены
-      // выше, поэтому сбой фетча не фатален — предупреждение, не ошибка.
-      devWarn('Не удалось синхронизировать статусы путешествий с сервером:', error)
-    }
-  },
-}))
+  writeEntries(userId, mergeStatusAndAuthoredEntries(explicitEntries, authoredEntries))
+}

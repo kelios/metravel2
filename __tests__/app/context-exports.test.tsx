@@ -55,39 +55,6 @@ jest.mock('@/stores/authStore', () => {
   };
 });
 
-jest.mock('@/stores/favoritesStore', () => ({
-  useFavoritesStore: Object.assign(
-    (selector?: any) => {
-      const s = {
-        favorites: [],
-        setFavorites: jest.fn(),
-        addFavorite: jest.fn(),
-        removeFavorite: jest.fn(),
-        resetFetchState: jest.fn(),
-        loadServerCached: jest.fn(),
-        loadLocal: jest.fn(),
-        ensureServerData: jest.fn(async () => {}),
-        clearFavorites: jest.fn(async () => {}),
-        isFavorite: jest.fn(() => false),
-      };
-      return selector ? selector(s) : s;
-    },
-    {
-      getState: () => ({
-        favorites: [],
-        resetFetchState: jest.fn(),
-        loadServerCached: jest.fn(),
-        loadLocal: jest.fn(),
-        ensureServerData: jest.fn(async () => {}),
-        clearFavorites: jest.fn(async () => {}),
-        isFavorite: jest.fn(() => false),
-        addFavorite: jest.fn(async () => {}),
-        removeFavorite: jest.fn(async () => {}),
-      }),
-    }
-  ),
-}));
-
 // ────────────────────────────────────────────────────────────────────
 
 describe('Context module exports (prod-build regression)', () => {

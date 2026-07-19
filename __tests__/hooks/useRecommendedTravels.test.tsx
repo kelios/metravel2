@@ -20,7 +20,7 @@ import { useRecommendedTravels } from '@/hooks/useRecommendedTravels';
 import { fetchUserRecommendedTravels } from '@/api/user';
 import { queryKeys } from '@/api/queryKeys';
 import { setActiveQueryClient } from '@/api/activeQueryClient';
-import type { FavoriteItem } from '@/stores/favoritesStore';
+import type { FavoriteItem } from '@/hooks/useFavoritesData';
 
 const mockFetch = fetchUserRecommendedTravels as jest.MockedFunction<
   typeof fetchUserRecommendedTravels

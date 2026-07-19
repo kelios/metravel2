@@ -12,7 +12,10 @@ jest.mock('@/hooks/useRequireAuth', () => ({
 }))
 
 jest.mock('@/stores/travelStatusStore', () => ({
-  useTravelStatusStore: jest.fn(),
+  // #994: travelStatus на React Query — реактивный список + модульные функции.
+  useTravelStatus: jest.fn(() => []),
+  setTravelStatus: jest.fn(() => Promise.resolve()),
+  removeTravelStatus: jest.fn(() => Promise.resolve()),
   parseTravelStatusDateParts: jest.fn((value: unknown) => {
     if (typeof value !== 'string') return null
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
@@ -55,7 +58,11 @@ jest.mock('@/styles/globalFocus', () => ({
 
 const { useAuth } = require('@/context/AuthContext') as { useAuth: jest.Mock }
 const { useRequireAuth } = require('@/hooks/useRequireAuth') as { useRequireAuth: jest.Mock }
-const { useTravelStatusStore } = require('@/stores/travelStatusStore') as { useTravelStatusStore: jest.Mock }
+const { useTravelStatus, setTravelStatus, removeTravelStatus } = require('@/stores/travelStatusStore') as {
+  useTravelStatus: jest.Mock
+  setTravelStatus: jest.Mock
+  removeTravelStatus: jest.Mock
+}
 const { showToast } = require('@/utils/toast') as { showToast: jest.Mock }
 
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
@@ -68,10 +75,13 @@ const baseProps = {
   travelCountry: 'Switzerland',
 }
 
-const makeStoreMock = (overrides: Record<string, any> = {}) => ({
-  getStatus: jest.fn(() => undefined),
-  setStatus: jest.fn(() => Promise.resolve()),
-  removeStatus: jest.fn(() => Promise.resolve()),
+// Текущий статус id=42 — компонент находит его в списке useTravelStatus().
+const currentEntry = (overrides: Record<string, any>) => ({
+  id: 42,
+  type: 'travel',
+  title: 'Alps Trek',
+  url: '/travels/alps-trek',
+  addedAt: 100,
   ...overrides,
 })
 
@@ -89,7 +99,7 @@ beforeEach(() => {
   Platform.OS = 'ios'
   useAuth.mockReturnValue(makeAuthMock())
   useRequireAuth.mockReturnValue(makeRequireAuthMock())
-  useTravelStatusStore.mockReturnValue(makeStoreMock())
+  useTravelStatus.mockReturnValue([])
 })
 
 describe('TravelStatusButton — полный режим (default)', () => {
@@ -99,24 +109,13 @@ describe('TravelStatusButton — полный режим (default)', () => {
   })
 
   it('отображает текущий статус, если он задан', () => {
-    useTravelStatusStore.mockReturnValue(
-      makeStoreMock({ getStatus: jest.fn(() => ({ status: 'visited', id: 42, addedAt: 100 })) })
-    )
+    useTravelStatus.mockReturnValue([currentEntry({ status: 'visited' })])
     render(<TravelStatusButton {...baseProps} />)
     expect(screen.getByRole('button', { name: 'Был здесь' })).toBeTruthy()
   })
 
   it('отображает plannedDate рядом с меткой', () => {
-    useTravelStatusStore.mockReturnValue(
-      makeStoreMock({
-        getStatus: jest.fn(() => ({
-          status: 'planned',
-          plannedDate: '2026-08-15',
-          id: 42,
-          addedAt: 100,
-        })),
-      })
-    )
+    useTravelStatus.mockReturnValue([currentEntry({ status: 'planned', plannedDate: '2026-08-15' })])
     render(<TravelStatusButton {...baseProps} />)
     expect(screen.getByText('· 2026-08-15')).toBeTruthy()
   })
@@ -146,8 +145,6 @@ describe('TravelStatusButton — полный режим (default)', () => {
   })
 
   it('вызывает setStatus при выборе статуса «Был здесь»', async () => {
-    const setStatus = jest.fn(() => Promise.resolve())
-    useTravelStatusStore.mockReturnValue(makeStoreMock({ setStatus }))
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
 
     render(<TravelStatusButton {...baseProps} />)
@@ -156,7 +153,7 @@ describe('TravelStatusButton — полный режим (default)', () => {
       fireEvent.press(screen.getByRole('button', { name: 'Был здесь' }))
     })
 
-    expect(setStatus).toHaveBeenCalledWith(
+    expect(setTravelStatus).toHaveBeenCalledWith(
       expect.objectContaining({ id: 42, status: 'visited', title: 'Alps Trek' }),
       '1'
     )
@@ -193,8 +190,6 @@ describe('TravelStatusButton — полный режим (default)', () => {
   })
 
   it('сохраняет planned статус с датой, выбранной в календаре', async () => {
-    const setStatus = jest.fn(() => Promise.resolve())
-    useTravelStatusStore.mockReturnValue(makeStoreMock({ setStatus }))
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
     render(<TravelStatusButton {...baseProps} />)
 
@@ -207,7 +202,7 @@ describe('TravelStatusButton — полный режим (default)', () => {
       fireEvent.press(screen.getByRole('button', { name: 'Сохранить дату' }))
     })
 
-    expect(setStatus).toHaveBeenCalledWith(
+    expect(setTravelStatus).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 42,
         status: 'planned',
@@ -234,9 +229,7 @@ describe('TravelStatusButton — полный режим (default)', () => {
   })
 
   it('показывает кнопку «Убрать из плана», если статус уже задан', () => {
-    useTravelStatusStore.mockReturnValue(
-      makeStoreMock({ getStatus: jest.fn(() => ({ status: 'wishlist', id: 42, addedAt: 100 })) })
-    )
+    useTravelStatus.mockReturnValue([currentEntry({ status: 'wishlist' })])
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
 
     render(<TravelStatusButton {...baseProps} />)
@@ -245,13 +238,7 @@ describe('TravelStatusButton — полный режим (default)', () => {
   })
 
   it('вызывает removeStatus при нажатии «Убрать из плана»', async () => {
-    const removeStatus = jest.fn(() => Promise.resolve())
-    useTravelStatusStore.mockReturnValue(
-      makeStoreMock({
-        getStatus: jest.fn(() => ({ status: 'wishlist', id: 42, addedAt: 100 })),
-        removeStatus,
-      })
-    )
+    useTravelStatus.mockReturnValue([currentEntry({ status: 'wishlist' })])
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
 
     render(<TravelStatusButton {...baseProps} />)
@@ -260,7 +247,7 @@ describe('TravelStatusButton — полный режим (default)', () => {
       fireEvent.press(screen.getByRole('button', { name: 'Убрать из плана' }))
     })
 
-    expect(removeStatus).toHaveBeenCalledWith(42, '1')
+    expect(removeTravelStatus).toHaveBeenCalledWith(42, '1')
   })
 })
 
@@ -272,9 +259,7 @@ describe('TravelStatusButton — compact режим', () => {
   })
 
   it('отображает accessibilityLabel текущего статуса', () => {
-    useTravelStatusStore.mockReturnValue(
-      makeStoreMock({ getStatus: jest.fn(() => ({ status: 'planned', id: 42, addedAt: 100 })) })
-    )
+    useTravelStatus.mockReturnValue([currentEntry({ status: 'planned' })])
     render(<TravelStatusButton {...baseProps} compact />)
     expect(screen.getByRole('button', { name: 'Планирую' })).toBeTruthy()
   })
@@ -342,8 +327,6 @@ describe('TravelStatusButton — compact режим', () => {
   })
 
   it('выбор статуса в compact-режиме так же вызывает setStatus', async () => {
-    const setStatus = jest.fn(() => Promise.resolve())
-    useTravelStatusStore.mockReturnValue(makeStoreMock({ setStatus }))
     useAuth.mockReturnValue(makeAuthMock(true, '5'))
 
     render(<TravelStatusButton {...baseProps} compact />)
@@ -352,7 +335,7 @@ describe('TravelStatusButton — compact режим', () => {
       fireEvent.press(screen.getByRole('button', { name: 'Хочу поехать' }))
     })
 
-    expect(setStatus).toHaveBeenCalledWith(
+    expect(setTravelStatus).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'wishlist' }),
       '5'
     )

@@ -4,7 +4,10 @@ jest.unmock('@/context/FavoritesProvider');
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QueryClient } from '@tanstack/react-query';
 import { FavoritesProvider } from '@/context/FavoritesProvider';
+import { isFavoriteInCache } from '@/hooks/useFavoritesData';
+import { setActiveQueryClient } from '@/api/activeQueryClient';
 import { GUEST_FAVORITE_INTENT_KEY } from '@/utils/guestFavoriteIntent';
 
 const mockQueueAnalyticsEvent = jest.fn();
@@ -57,9 +60,11 @@ describe('FavoritesProvider guest intent restore', () => {
     mockAuthContext.isAuthenticated = false;
     mockAuthContext.userId = null;
 
-    const { useFavoritesStore } = require('@/stores/favoritesStore');
-    useFavoritesStore.setState({ favorites: [], _inFlight: new Set(), _fetched: false, _userId: null });
+    // favorites живут в RQ-кэше (#994) — мутации ходят через активный клиент.
+    setActiveQueryClient(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
   });
+
+  afterEach(() => setActiveQueryClient(null));
 
   it('completes the pending guest favorite after auth and fires favorite_add once', async () => {
     await seedPendingIntent();
@@ -72,9 +77,8 @@ describe('FavoritesProvider guest intent restore', () => {
       </FavoritesProvider>
     );
 
-    const { useFavoritesStore } = require('@/stores/favoritesStore');
     await waitFor(() => {
-      expect(useFavoritesStore.getState().isFavorite('42', 'article')).toBe(true);
+      expect(isFavoriteInCache('104', '42', 'article')).toBe(true);
     });
 
     expect(await AsyncStorage.getItem(GUEST_FAVORITE_INTENT_KEY)).toBeNull();

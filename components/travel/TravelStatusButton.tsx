@@ -13,7 +13,7 @@ import {
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useAuth } from '@/context/AuthContext'
-import { parseTravelStatusDateParts, useTravelStatusStore, type TravelStatus } from '@/stores/travelStatusStore'
+import { parseTravelStatusDateParts, useTravelStatus, setTravelStatus, removeTravelStatus, type TravelStatus } from '@/stores/travelStatusStore'
 import MiniCalendar from '@/components/calendar/MiniCalendar'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -105,8 +105,8 @@ export default function TravelStatusButton({
   const { isAuthenticated, userId } = useAuth()
   const { requireAuth } = useRequireAuth({ intent: 'calendar' })
 
-  const { getStatus, setStatus, removeStatus } = useTravelStatusStore()
-  const current = getStatus(travelId)
+  const travelStatusEntries = useTravelStatus()
+  const current = travelStatusEntries.find((e) => String(e.id) === String(travelId))
 
   const [modalOpen, setModalOpen] = useState(false)
   const [hovered, setHovered] = useState(false)
@@ -139,7 +139,7 @@ export default function TravelStatusButton({
     if (inFlightRef.current) return
     inFlightRef.current = true
     try {
-      await setStatus(
+      await setTravelStatus(
         {
           id: travelId,
           type: 'travel',
@@ -162,7 +162,7 @@ export default function TravelStatusButton({
     } finally {
       inFlightRef.current = false
     }
-  }, [travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName, userId, setStatus, current?.plannedDate])
+  }, [travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName, userId, current?.plannedDate])
 
   const handleCalendarDateSelect = useCallback((value: string) => {
     setDateInput(value)
@@ -183,7 +183,7 @@ export default function TravelStatusButton({
     if (inFlightRef.current) return
     inFlightRef.current = true
     try {
-      await setStatus(
+      await setTravelStatus(
         {
           id: travelId,
           type: 'travel',
@@ -206,21 +206,21 @@ export default function TravelStatusButton({
     } finally {
       inFlightRef.current = false
     }
-  }, [travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName, userId, setStatus, dateInput])
+  }, [travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName, userId, dateInput])
 
   const handleRemove = useCallback(async () => {
     setModalOpen(false)
     if (inFlightRef.current) return
     inFlightRef.current = true
     try {
-      await removeStatus(travelId, userId)
+      await removeTravelStatus(travelId, userId)
       await showToast({ type: 'info', text1: i18nT('travel:components.travel.TravelStatusButton.udaleno_iz_plana_91e9ba44'), position: 'bottom', visibilityTime: 2000 })
     } catch {
       /* noop */
     } finally {
       inFlightRef.current = false
     }
-  }, [travelId, userId, removeStatus])
+  }, [travelId, userId])
 
   const currentOption = current ? STATUS_OPTIONS.find((o) => o.key === current.status) : null
 

@@ -136,6 +136,18 @@ export const getStyles = (
       paddingHorizontal: horizontalPadding,
       paddingTop: 12,
     },
+    // Pinned action bar for the mobile bottom-sheet split: sits below the scroll
+    // region as a non-shrinking flex row so the actions stay visible above the
+    // bottom dock even when the info block overflows and scrolls.
+    splitFooterPinned: {
+      width: '100%',
+      backgroundColor: colors.surface,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.borderLight ?? colors.border,
+      ...(Platform.OS === 'web'
+        ? { flexGrow: 0, flexShrink: 0, flexBasis: 'auto' as const }
+        : null),
+    },
     popupCard: {
       width: '100%',
       backgroundColor: colors.surface,

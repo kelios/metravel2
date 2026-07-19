@@ -49,7 +49,7 @@ import { mapProfileRank, normalizeProfileName } from '@/api/user';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { getStorageBatch } from '@/utils/storageBatch';
 import { hapticImpact } from '@/utils/haptics';
-import { useTravelStatusStore } from '@/stores/travelStatusStore'
+import { useTravelStatus, loadTravelStatus } from '@/stores/travelStatusStore'
 import { showToastMessage } from '@/utils/toast'
 import { createProfileScreenStyles } from '@/components/screens/profile/profileScreen.styles';
 import { useProfileTravelSections } from '@/components/screens/profile/useProfileTravelSections';
@@ -156,8 +156,7 @@ export default function ProfileScreen() {
     includeDrafts: true,
     onTotalChange: handleTotalChange,
   });
-  const personalTravelStatusEntries = useTravelStatusStore((state) => state.entries)
-  const loadPersonalTravelStatuses = useTravelStatusStore((state) => state.loadLocal)
+  const personalTravelStatusEntries = useTravelStatus()
 
   const ensureTravelsLoaded = useCallback(() => {
     if (travelsRequestedRef.current) return;
@@ -269,8 +268,8 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     if (!isAuthenticated) return
-    void loadPersonalTravelStatuses(userId ?? null)
-  }, [isAuthenticated, loadPersonalTravelStatuses, userId])
+    void loadTravelStatus(userId ?? null)
+  }, [isAuthenticated, userId])
 
   const handleLogout = useCallback(async () => {
     try {

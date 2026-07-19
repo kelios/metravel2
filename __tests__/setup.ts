@@ -625,6 +625,19 @@ jest.mock('@/context/FavoritesContext', () => {
   }
 })
 
+// #994: travelStatus мигрирован на React Query — useTravelStatus() зовёт useQuery,
+// поэтому компоненты (TravelStatusButton/FiltersUpsert/Calendar) без реального
+// QueryClientProvider падали бы в unit-тестах. Даём лёгкий стаб, сохраняя чистые
+// хелперы/типы (requireActual). Тесты, которым нужно реальное поведение, делают
+// свой jest.mock (перекрывает) или jest.unmock('@/stores/travelStatusStore').
+jest.mock('@/stores/travelStatusStore', () => ({
+  ...jest.requireActual('@/stores/travelStatusStore'),
+  useTravelStatus: jest.fn(() => []),
+  setTravelStatus: jest.fn(() => Promise.resolve()),
+  removeTravelStatus: jest.fn(() => Promise.resolve()),
+  loadTravelStatus: jest.fn(() => Promise.resolve()),
+}))
+
 // Mock react-native-webview to avoid TurboModuleRegistry errors in Jest
 jest.mock('react-native-webview', () => {
   const React = require('react')

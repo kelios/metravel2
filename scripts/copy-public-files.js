@@ -29,6 +29,7 @@ const filesToCopy = [
   '.well-known/assetlinks.json',
   'icon.svg',
   'travel-hero-preload-v2.js',
+  'static/quests/quest-default-cover.svg',
   'assets/icons/logo_yellow_512x512.png',
   'assets/icons/logo_yellow_192x192.png',
   'assets/icons/apple-touch-icon-180x180.png',

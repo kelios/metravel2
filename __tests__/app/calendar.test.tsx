@@ -30,12 +30,12 @@ jest.mock('@/stores/travelStatusStore', () => {
   const actual = jest.requireActual('@/stores/travelStatusStore')
   return {
     ...actual,
-    useTravelStatusStore: jest.fn((selector) => selector({
-      entries: mockEntries,
-      loadLocal: mockLoadLocal,
-      setStatus: mockSetStatus,
-      removeStatus: mockRemoveStatus,
-    })),
+    // #994: travelStatus на React Query — реактивный список + модульные функции.
+    // Обёртки лениво читают mock-и (const'ы инициализируются после hoisted-import).
+    useTravelStatus: () => mockEntries,
+    loadTravelStatus: (...args: any[]) => mockLoadLocal(...args),
+    setTravelStatus: (...args: any[]) => mockSetStatus(...args),
+    removeTravelStatus: (...args: any[]) => mockRemoveStatus(...args),
   }
 })
 

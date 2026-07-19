@@ -94,18 +94,12 @@ let mockTravelStatusEntries: Array<{
 }> = [];
 
 jest.mock('@/stores/travelStatusStore', () => ({
-  useTravelStatusStore: jest.fn((selector?: (state: any) => unknown) => {
-    const state = {
-      entries: mockTravelStatusEntries,
-      loadLocal: mockLoadTravelStatuses,
-      getStatus: jest.fn(),
-      setStatus: jest.fn(() => Promise.resolve()),
-      removeStatus: jest.fn(() => Promise.resolve()),
-      getByStatus: jest.fn(() => []),
-      getByMonth: jest.fn(() => []),
-    };
-    return typeof selector === 'function' ? selector(state) : state;
-  }),
+  // #994: travelStatus на React Query — сохраняем чистые хелперы, подменяем данные.
+  ...jest.requireActual('@/stores/travelStatusStore'),
+  useTravelStatus: jest.fn(() => mockTravelStatusEntries),
+  loadTravelStatus: mockLoadTravelStatuses,
+  setTravelStatus: jest.fn(() => Promise.resolve()),
+  removeTravelStatus: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('@/api/misc', () => ({

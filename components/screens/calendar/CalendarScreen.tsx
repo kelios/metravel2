@@ -15,7 +15,10 @@ import Feather from '@expo/vector-icons/Feather'
 import { useAuth } from '@/context/AuthContext'
 import {
   parseTravelStatusDateParts,
-  useTravelStatusStore,
+  useTravelStatus,
+  setTravelStatus,
+  removeTravelStatus,
+  loadTravelStatus,
   type TravelStatus,
 } from '@/stores/travelStatusStore'
 import EmptyState from '@/components/ui/EmptyState'
@@ -89,10 +92,7 @@ export default function CalendarScreen() {
   const colors = useThemedColors()
   const { width } = useWindowDimensions()
   const { isAuthenticated, authReady, userId } = useAuth()
-  const entries = useTravelStatusStore((state) => state.entries)
-  const loadLocal = useTravelStatusStore((state) => state.loadLocal)
-  const setStatus = useTravelStatusStore((state) => state.setStatus)
-  const removeStatus = useTravelStatusStore((state) => state.removeStatus)
+  const entries = useTravelStatus()
 
   const [activeTab, setActiveTab] = useState<TravelStatus>(() => parseStatusParam(params.status) ?? 'planned')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -128,14 +128,14 @@ export default function CalendarScreen() {
 
     let isMounted = true
     setHasLoadedLocalStatus(false)
-    loadLocal(userId).finally(() => {
+    loadTravelStatus(userId).finally(() => {
       if (isMounted) setHasLoadedLocalStatus(true)
     })
 
     return () => {
       isMounted = false
     }
-  }, [authReady, isAuthenticated, loadLocal, userId])
+  }, [authReady, isAuthenticated, userId])
 
   const statusEntries = useMemo(() => groupEntriesByStatus(entries), [entries])
 
@@ -226,7 +226,7 @@ export default function CalendarScreen() {
   const saveItemStatus = useCallback(async (item: CalendarEntry, status: TravelStatus, value: string | null) => {
     const dateField = getDateFieldForTravelStatus(status)
 
-    await setStatus(
+    await setTravelStatus(
       {
         id: item.id,
         type: 'travel',
@@ -243,7 +243,7 @@ export default function CalendarScreen() {
       },
       userId
     )
-  }, [setStatus, userId])
+  }, [userId])
 
   const handleSaveDate = useCallback(async () => {
     if (!dateEditor) return
@@ -278,10 +278,10 @@ export default function CalendarScreen() {
     if (!dateEditor) return
     const item = dateEditor.item
     confirmRemoveFromCalendar(item.title, () => {
-      void removeStatus(item.id, userId)
+      void removeTravelStatus(item.id, userId)
       handleCloseDateEditor()
     })
-  }, [dateEditor, handleCloseDateEditor, removeStatus, userId])
+  }, [dateEditor, handleCloseDateEditor, userId])
 
   const handleRemoveEntry = useCallback((item: CalendarEntry, event?: GestureResponderEvent) => {
     if (Platform.OS === 'web') {
@@ -291,9 +291,9 @@ export default function CalendarScreen() {
       nativeEvent?.stopPropagation?.()
     }
     confirmRemoveFromCalendar(item.title, () => {
-      void removeStatus(item.id, userId)
+      void removeTravelStatus(item.id, userId)
     })
-  }, [removeStatus, userId])
+  }, [userId])
 
   // Android: при открытом редакторе даты Back сначала закрывает его; иначе
   // возвращает на предыдущий экран (Профиль), а не сбрасывает Tab-навигатор.

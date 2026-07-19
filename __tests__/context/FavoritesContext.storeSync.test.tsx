@@ -50,18 +50,13 @@ describe('useFavorites store sync (native cold-start regression)', () => {
     mockAuthContext.isAuthenticated = true;
     mockAuthContext.userId = 'user-1';
 
-    const { useFavoritesStore } = require('@/stores/favoritesStore');
-    useFavoritesStore.setState({ favorites: [], _inFlight: new Set(), _fetched: false, _userId: null });
-
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     setActiveQueryClient(queryClient);
   });
 
   afterEach(() => setActiveQueryClient(null));
 
-  it('reflects favorites (store) and viewHistory (RQ cache) populated after mount', async () => {
-    const { useFavoritesStore } = require('@/stores/favoritesStore');
-
+  it('reflects favorites + viewHistory (RQ cache) populated after mount', async () => {
     let ctx: any;
     render(
       <QueryClientProvider client={queryClient}>
@@ -75,17 +70,18 @@ describe('useFavorites store sync (native cold-start regression)', () => {
     expect(ctx.favorites).toHaveLength(0);
     expect(ctx.viewHistory).toHaveLength(0);
 
-    // Fill both sources AFTER the provider already rendered (the real cold-start
-    // sequence): favorites via the store, viewHistory via the RQ cache.
+    // Fill both RQ caches AFTER the provider already rendered (the real
+    // cold-start sequence): favorites + viewHistory both from persist/refetch.
     await act(async () => {
-      useFavoritesStore.setState({
-        favorites: [
+      queryClient.setQueryData(
+        queryKeys.favorites('user-1'),
+        [
           { id: 1, type: 'travel', title: 'Fav 1', url: '/travels/1', addedAt: 1 },
           { id: 2, type: 'travel', title: 'Fav 2', url: '/travels/2', addedAt: 2 },
           { id: 3, type: 'travel', title: 'Fav 3', url: '/travels/3', addedAt: 3 },
           { id: 4, type: 'travel', title: 'Fav 4', url: '/travels/4', addedAt: 4 },
         ],
-      });
+      );
       queryClient.setQueryData(
         queryKeys.viewHistory('user-1'),
         Array.from({ length: 20 }, (_, i) => ({

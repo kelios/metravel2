@@ -9,6 +9,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { useFavorites } from '@/context/FavoritesContext'
 import { FavoritesProvider } from '@/context/FavoritesProvider'
 import { AuthProvider } from '@/context/AuthContext'
+import { setActiveQueryClient } from '@/api/activeQueryClient'
 
 const mockUseAuth = jest.fn()
 
@@ -107,10 +108,13 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
     const { Platform } = require('react-native')
     Platform.OS = 'web'
 
-    // Reset the shared Zustand store between tests (module singleton persists)
-    const { useFavoritesStore } = require('@/stores/favoritesStore')
-    useFavoritesStore.setState({ favorites: [], _inFlight: new Set(), _fetched: false, _userId: null })
+    // favorites живут в RQ-кэше (#994): чистим кэш и делаем его активным, чтобы
+    // мутации (getActiveQueryClient) и чтение (QueryClientProvider) совпадали.
+    mockQueryClient.clear()
+    setActiveQueryClient(mockQueryClient)
   })
+
+  afterEach(() => setActiveQueryClient(null))
 
   it('should add favorite locally without server sync', async () => {
     mockAsyncStorage.getItem.mockResolvedValue(null)
@@ -139,7 +143,8 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
     })
 
     expect(getByTestId('error').props.children).toBe('')
-    expect(mockAsyncStorage.setItem).toHaveBeenCalled()
+    // Персист теперь через persistQueryClient (throttled, out-of-band), а не
+    // прямой AsyncStorage.setItem в мутации — отдельно не проверяем (#994).
   })
 
   it('should remove favorite locally without server sync', async () => {

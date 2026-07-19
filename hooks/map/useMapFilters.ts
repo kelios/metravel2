@@ -84,8 +84,18 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
 
   const [filterValues, setFilterValues] = useState<MapFilterValues>(() => {
     const stored = webStorage ? loadMapFilterValues(webStorage) : DEFAULT_FILTER_VALUES;
+    // Карта всегда открывается БЕЗ активных фильтров контента: категории/адрес/
+    // поиск НЕ восстанавливаем из localStorage. Иначе выбранные в прошлой сессии
+    // категории (напр. «Город», «Пещера») «залипают» и выглядят как фильтр,
+    // который пользователь не ставил, — вплоть до «в этой области ничего не
+    // нашлось». Из хранилища переносим только настройки, не скрывающие контент:
+    // радиус (всегда имеет значение и показан отдельной кнопкой), режим
+    // транспорта и последний режим (radius/route). URL-параметры имеют приоритет.
     return {
-      ...stored,
+      ...DEFAULT_FILTER_VALUES,
+      radius: stored.radius,
+      transportMode: stored.transportMode,
+      lastMode: stored.lastMode,
       searchQuery: '',
       ...(options?.initialCategories?.length ? { categories: options.initialCategories } : {}),
       ...(options?.initialRadius ? { radius: options.initialRadius } : {}),

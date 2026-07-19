@@ -72,7 +72,11 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
             accessibilityLabel={i18nT('map:components.MapPage.ActiveFiltersBar.ubrat_filtr_value1_0e9ad7b7', { value1: f.label })}
             onPress={() => onRemoveFilter(f.key)}
             title={i18nT('map:components.MapPage.ActiveFiltersBar.ubrat_value1_9f2821a9', { value1: f.label })}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+            style={({ pressed }) => [
+              styles.chip,
+              variant === 'floating' && styles.chipFloating,
+              pressed && styles.chipPressed,
+            ]}
           >
             <Text style={styles.chipText} numberOfLines={1}>{f.label}</Text>
             <Feather name="x" size={12} color={colors.brandText} />
@@ -94,6 +98,21 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
     </View>
   );
 });
+
+// «Фрост»-тень проекта (тот же паттерн, что у тулбар-кнопок карты в
+// MapMobileTopOverlay.styles.ts) — чтобы floating-чип читался поверх пёстрых
+// тайлов как непрозрачная плашка, а не полупрозрачная подсветка.
+const shadowWeb = {
+  boxShadow: '0 2px 10px rgba(15,23,42,0.12)',
+} as const;
+
+const shadowNative = {
+  shadowColor: '#0f172a',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.12,
+  shadowRadius: 6,
+  elevation: 4,
+} as const;
 
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
@@ -136,12 +155,21 @@ const getStyles = (colors: ThemedColors) =>
       paddingVertical: 4,
       borderRadius: 999,
       backgroundColor: colors.brandSoft ?? colors.brandLight,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderWidth: 1,
       borderColor: colors.brand,
       ...(Platform.OS === 'web' ? ({
         cursor: 'pointer',
         transition: 'opacity 0.12s ease, transform 0.12s ease',
       } as any) : null),
+    },
+    // Поверх карты чип обязан быть НЕПРОЗРАЧНЫМ: brandSoft (~10% оранжевого)
+    // тонет в пёстрых тайлах. Даём тот же surface + «фрост»-тень, что у
+    // тулбар-кнопок карты. В панели фильтров (variant='panel') этот стиль НЕ
+    // применяется — там brandSoft-заливка на surface-панели читается корректно
+    // и лишняя тень внутри панели не нужна.
+    chipFloating: {
+      backgroundColor: colors.surface,
+      ...(Platform.OS === 'web' ? shadowWeb : shadowNative),
     },
     chipPressed: {
       opacity: 0.65,

@@ -20,7 +20,7 @@ import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Т�
 import { useResponsive } from '@/hooks/useResponsive';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { normalizeUpsertFilterDictionaries } from '@/api/filterDictionaries';
-import { parseTravelStatusDateParts, useTravelStatusStore } from '@/stores/travelStatusStore';
+import { parseTravelStatusDateParts, useTravelStatus, setTravelStatus } from '@/stores/travelStatusStore';
 import { useAuthStore } from '@/stores/authStore';
 import { translate as i18nT } from '@/i18n'
 
@@ -65,7 +65,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                                                                  }) => {
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const userId = useAuthStore((state) => state.userId);
-    const { getStatus, setStatus } = useTravelStatusStore();
+    const travelStatusEntries = useTravelStatus();
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
     const isLoading = !formData || !filters;
@@ -108,7 +108,9 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     }, [formData, handleFieldChange]);
 
     const form: any = formData;
-    const currentCalendarStatus = form?.id ? getStatus(form.id) : undefined;
+    const currentCalendarStatus = form?.id
+        ? travelStatusEntries.find((e) => String(e.id) === String(form.id))
+        : undefined;
 
     useEffect(() => {
         if (!formData?.id) return;
@@ -157,7 +159,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
         const normalized = value.trim();
         handleFieldChange('visitedDate', normalized);
         if (!form?.id || !parseTravelStatusDateParts(normalized)) return;
-        void setStatus(
+        void setTravelStatus(
             {
                 id: form.id,
                 type: 'travel',
@@ -179,7 +181,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             },
             userId
         );
-    }, [form?.id, form?.name, form?.slug, form?.travel_image_thumb_url, form?.travel_image_thumb_small_url, form?.year, form?.month, handleFieldChange, setStatus, travelDataOld, userId]);
+    }, [form?.id, form?.name, form?.slug, form?.travel_image_thumb_url, form?.travel_image_thumb_small_url, form?.year, form?.month, handleFieldChange, travelDataOld, userId]);
 
     if (isLoading) {
         return (

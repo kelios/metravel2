@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Quest default cover</title>
+  <desc id="desc">Default cover image for quests without uploaded artwork.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#154f6f"/>
+      <stop offset="0.55" stop-color="#2f8d86"/>
+      <stop offset="1" stop-color="#f2b85b"/>
+    </linearGradient>
+    <linearGradient id="land" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#173f36"/>
+      <stop offset="1" stop-color="#476b3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#sky)"/>
+  <circle cx="930" cy="150" r="72" fill="#ffe3a3" opacity="0.95"/>
+  <path d="M0 436 C170 350 292 386 430 314 C594 229 730 360 850 300 C995 228 1086 295 1200 238 L1200 630 L0 630 Z" fill="#123d4d" opacity="0.82"/>
+  <path d="M0 498 C190 430 300 470 460 410 C642 341 770 444 940 378 C1052 335 1130 364 1200 330 L1200 630 L0 630 Z" fill="url(#land)"/>
+  <path d="M185 505 L310 318 L435 505 Z" fill="#f5f0dd" opacity="0.92"/>
+  <path d="M310 318 L435 505 L337 505 Z" fill="#dbe8d4" opacity="0.9"/>
+  <path d="M683 220 L771 305 L861 220 L861 514 L683 514 Z" fill="none" stroke="#f8f3df" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" opacity="0.96"/>
+  <circle cx="683" cy="220" r="42" fill="#f8f3df"/>
+  <circle cx="861" cy="220" r="42" fill="#f8f3df"/>
+  <circle cx="771" cy="305" r="42" fill="#f8f3df"/>
+  <rect x="116" y="538" width="968" height="14" rx="7" fill="#f8f3df" opacity="0.45"/>
+</svg>

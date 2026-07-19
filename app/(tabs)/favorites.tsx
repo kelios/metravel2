@@ -31,7 +31,7 @@ export default function FavoritesScreen() {
     const canonical = buildCanonicalUrl('/favorites');
     const { width } = useResponsive();
     const { isAuthenticated, authReady } = useAuth();
-    const { favorites, removeFavorite, clearFavorites } = useFavorites() as any;
+    const { favorites, removeFavorite, clearFavorites, ensureServerData } = useFavorites() as any;
     const colors = useThemedColors();
     const [isLoading, setIsLoading] = useState(true);
 
@@ -93,6 +93,17 @@ export default function FavoritesScreen() {
         const timer = setTimeout(() => setIsLoading(false), 300);
         return () => clearTimeout(timer);
     }, [favorites]);
+
+    // #994: favorites мигрированы на React Query. Раньше их наполнял boot
+    // loadServerCached (мирор); теперь экран сам лениво догружает серверный
+    // список (ensureFavoritesServerData дедуплит по staleTime). persist из #1015
+    // отдаёт кэш прошлой сессии сразу, этот фетч обновляет его.
+    useEffect(() => {
+        if (!authReady || !isAuthenticated || typeof ensureServerData !== 'function') return;
+        ensureServerData('favorites').catch(() => {
+            // пустой список — валидный fallback, ошибку не эскалируем
+        });
+    }, [authReady, isAuthenticated, ensureServerData]);
 
     const handleClearAll = useCallback(async () => {
         try {

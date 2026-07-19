@@ -1339,7 +1339,7 @@
     },
     "components/MapPage/Map/PlacePopupCard/index.tsx": {
       "styleCast": 2,
-      "logicCast": 14,
+      "logicCast": 15,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
