@@ -13,24 +13,24 @@
   ],
   "totals": {
     "styleCast": 1401,
-    "logicCast": 1260,
+    "logicCast": 1213,
     "tsIgnore": 49,
     "tsExpectError": 3,
     "eslintDisable": 29
   },
   "domains": {
     "app": {
-      "styleCast": 33,
-      "logicCast": 75,
+      "styleCast": 25,
+      "logicCast": 50,
       "tsIgnore": 0,
-      "tsExpectError": 1,
+      "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components": {
-      "styleCast": 1263,
-      "logicCast": 1064,
+      "styleCast": 1271,
+      "logicCast": 1042,
       "tsIgnore": 49,
-      "tsExpectError": 2,
+      "tsExpectError": 3,
       "eslintDisable": 17
     },
     "context": {
@@ -112,13 +112,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "app/(tabs)/calendar.tsx": {
-      "styleCast": 0,
-      "logicCast": 3,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "app/(tabs)/cookies.tsx": {
       "styleCast": 2,
       "logicCast": 6,
@@ -147,13 +140,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "app/(tabs)/history.tsx": {
-      "styleCast": 6,
-      "logicCast": 4,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "app/(tabs)/index.tsx": {
       "styleCast": 2,
       "logicCast": 0,
@@ -168,25 +154,11 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "app/(tabs)/messages.tsx": {
-      "styleCast": 2,
-      "logicCast": 1,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "app/(tabs)/privacy.tsx": {
       "styleCast": 1,
       "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "app/(tabs)/profile.tsx": {
-      "styleCast": 0,
-      "logicCast": 12,
-      "tsIgnore": 0,
-      "tsExpectError": 1,
       "eslintDisable": 0
     },
     "app/(tabs)/quests/[city]/[questId].tsx": {
@@ -203,23 +175,9 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "app/(tabs)/roulette.tsx": {
-      "styleCast": 0,
-      "logicCast": 1,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "app/(tabs)/search.tsx": {
       "styleCast": 2,
       "logicCast": 2,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "app/(tabs)/settings.tsx": {
-      "styleCast": 0,
-      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -1939,8 +1897,57 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
+    "components/screens/calendar/CalendarScreen.tsx": {
+      "styleCast": 0,
+      "logicCast": 3,
+      "tsIgnore": 0,
+      "tsExpectError": 0,
+      "eslintDisable": 0
+    },
+    "components/screens/history/HistoryScreen.tsx": {
+      "styleCast": 6,
+      "logicCast": 4,
+      "tsIgnore": 0,
+      "tsExpectError": 0,
+      "eslintDisable": 0
+    },
+    "components/screens/messages/messagesScreen.styles.ts": {
+      "styleCast": 2,
+      "logicCast": 0,
+      "tsIgnore": 0,
+      "tsExpectError": 0,
+      "eslintDisable": 0
+    },
+    "components/screens/messages/MessagesScreen.tsx": {
+      "styleCast": 0,
+      "logicCast": 1,
+      "tsIgnore": 0,
+      "tsExpectError": 0,
+      "eslintDisable": 0
+    },
+    "components/screens/profile/ProfileScreen.tsx": {
+      "styleCast": 0,
+      "logicCast": 12,
+      "tsIgnore": 0,
+      "tsExpectError": 0,
+      "eslintDisable": 0
+    },
+    "components/screens/profile/ProfileTravelListView.tsx": {
+      "styleCast": 0,
+      "logicCast": 0,
+      "tsIgnore": 0,
+      "tsExpectError": 1,
+      "eslintDisable": 0
+    },
     "components/screens/profile/PublicProfileHeader.tsx": {
       "styleCast": 2,
+      "logicCast": 1,
+      "tsIgnore": 0,
+      "tsExpectError": 0,
+      "eslintDisable": 0
+    },
+    "components/screens/roulette/RouletteScreen.tsx": {
+      "styleCast": 0,
       "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
@@ -1949,6 +1956,13 @@
     "components/screens/settings/settings.styles.ts": {
       "styleCast": 6,
       "logicCast": 0,
+      "tsIgnore": 0,
+      "tsExpectError": 0,
+      "eslintDisable": 0
+    },
+    "components/screens/settings/SettingsScreen.tsx": {
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2368,7 +2382,7 @@
     },
     "components/travel/FiltersUpsertComponent.tsx": {
       "styleCast": 1,
-      "logicCast": 36,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2761,13 +2775,6 @@
     "components/travel/travelWizardStepPublish.styles.ts": {
       "styleCast": 6,
       "logicCast": 0,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/travel/TravelWizardStepPublish.tsx": {
-      "styleCast": 0,
-      "logicCast": 13,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -3262,12 +3269,19 @@
       "tsExpectError": 0,
       "eslintDisable": 1
     },
-    "hooks/useMapScreenController.ts": {
+    "hooks/map/useMapUrlAnchors.ts": {
       "styleCast": 0,
       "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 2
+    },
+    "hooks/useMapScreenController.ts": {
+      "styleCast": 0,
+      "logicCast": 0,
+      "tsIgnore": 0,
+      "tsExpectError": 0,
+      "eslintDisable": 0
     },
     "hooks/usePushNotifications.native.ts": {
       "styleCast": 0,

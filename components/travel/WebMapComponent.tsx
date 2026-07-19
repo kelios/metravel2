@@ -12,6 +12,7 @@ import { fetchReverseGeocode } from '@/api/geoQueries';
 import { bigDataCloudReverse } from '@/api/external/bigdatacloud';
 import { buildLeafletPopupCss, createWebMapStyles } from '@/components/travel/WebMapComponent.styles';
 import WebMapMarkerPopup from '@/components/travel/WebMapMarkerPopup';
+import { getOsmTileUrl, OSM_PROXY_ATTRIBUTION, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
 import {
     CenterOnActive,
     FitBounds,
@@ -631,7 +632,7 @@ const WebMapComponent = ({
                                 }}
                                 style={mapHeightStyle(isWideLayout)}
                             >
-                                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                <TileLayer url={getOsmTileUrl()} attribution={OSM_PROXY_ATTRIBUTION} maxZoom={OSM_PROXY_MAX_ZOOM} />
                                 <MapClickHandler addMarker={addMarker} useMapEventsHook={useMapEvents} />
                                 <FitBounds
                                     markers={localMarkers}
@@ -661,7 +662,11 @@ const WebMapComponent = ({
                                             },
                                         }}
                                     >
-                                        <Popup>
+                                        <Popup
+                                            className="metravel-place-popup"
+                                            closeButton={false}
+                                            autoPan
+                                        >
                                             <WebMapMarkerPopup
                                                 marker={marker}
                                                 markerIndex={originalIdx}
@@ -669,6 +674,7 @@ const WebMapComponent = ({
                                                 colors={colors}
                                                 onEdit={handleEditMarker}
                                                 onRemove={handleMarkerRemove}
+                                                onClose={() => mapRef.current?.closePopup?.()}
                                             />
                                         </Popup>
                                     </Marker>

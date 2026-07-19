@@ -2,7 +2,7 @@ import React from 'react'
 
 import { useMapInstance } from '@/components/MapPage/Map/useMapInstance'
 import { useMapApi } from '@/components/MapPage/Map/useMapApi'
-import { WEB_MAP_BASE_LAYERS } from '@/config/mapWebLayers'
+import { WEB_MAP_BASE_LAYERS, getOsmTileUrl, OSM_PROXY_ATTRIBUTION } from '@/config/mapWebLayers'
 import type { MapUiApi } from '@/types/mapUi'
 import type { ImportedPoint } from '@/types/userPoints'
 import { isWebAutomation } from '@/utils/isWebAutomation'
@@ -164,12 +164,12 @@ export function useUserPointsMapWebController({
     // навсегда исчерпался бы и карта осталась без тайлов до полного ремаунта.
     baseLayerFallbackIndexRef.current = 0
 
-    const fallbackUrls = [
-      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
-      'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-      'https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png',
-    ]
+    // Fallback остаётся на едином tile-прокси (#989): прямой обход на
+    // {s}.tile.openstreetmap.org/.fr/.de нарушал OSM Tile Usage Policy и миновал
+    // nginx tile-cache/limit_req. На transient-ошибке прокси один раз
+    // переприкрепляем тот же провайдерский слой; постоянный отказ прокси — зона
+    // бэкенда (#807), а не прямой OSM.
+    const fallbackUrls = [getOsmTileUrl()]
 
     const attachedLayerRef = { current: null as any }
 
@@ -195,7 +195,7 @@ export function useUserPointsMapWebController({
             title: i18nT('map:components.UserPoints.useUserPointsMapWebController.openstreetmap_fallback_d7f00f7a'),
             kind: 'tile',
             url: nextUrl,
-            attribution: '&copy; OpenStreetMap contributors',
+            attribution: OSM_PROXY_ATTRIBUTION,
             defaultEnabled: true,
           } as any
 

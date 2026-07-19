@@ -19,6 +19,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import { useResponsive } from '@/hooks/useResponsive';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { normalizeUpsertFilterDictionaries } from '@/api/filterDictionaries';
 import { parseTravelStatusDateParts, useTravelStatusStore } from '@/stores/travelStatusStore';
 import { useAuthStore } from '@/stores/authStore';
 import { translate as i18nT } from '@/i18n'
@@ -26,60 +27,6 @@ import { translate as i18nT } from '@/i18n'
 
 const MultiSelectFieldAny: any = MultiSelectField;
 
-
-function normalizeTravelCategoriesLocal(raw: any): Array<{ id: string; name: string }> {
-    if (!Array.isArray(raw)) return [];
-    return raw
-        .map((item, idx) => {
-            if (item && typeof item === 'object') {
-                const id = (item as any).id ?? (item as any).value ?? (item as any).category_id ?? (item as any).pk ?? idx;
-                const name =
-                    (item as any).name ??
-                    (item as any).name_ru ??
-                    (item as any).title_ru ??
-                    (item as any).title ??
-                    (item as any).text ??
-                    String(id);
-                return { id: String(id), name: String(name) };
-            }
-            return { id: String(idx), name: String(item) };
-        })
-        .filter(Boolean);
-}
-
-function normalizeIdNameList(raw: any): Array<{ id: string; name: string }> {
-    if (!Array.isArray(raw)) return [];
-    return raw
-        .map((item, idx) => {
-            if (item && typeof item === 'object') {
-                const id = (item as any).id ?? (item as any).value ?? (item as any).pk ?? idx;
-                const name = (item as any).name ?? (item as any).title ?? (item as any).text ?? String(id);
-                return { id: String(id), name: String(name) };
-            }
-            return { id: String(idx), name: String(item) };
-        })
-        .filter(Boolean);
-}
-
-function normalizeCountriesLocal(raw: any): Array<{ country_id: string; title_ru: string; title_en?: string }> {
-    if (!Array.isArray(raw)) return [];
-    return raw
-        .map((item, idx) => {
-            if (item && typeof item === 'object') {
-                const id = (item as any).country_id ?? (item as any).id ?? (item as any).pk ?? idx;
-                const titleRu = (item as any).title_ru ?? (item as any).name_ru ?? (item as any).name ?? String(id);
-                const titleEn = (item as any).title_en ?? (item as any).name_en;
-                const normalized: any = {
-                    country_id: String(id),
-                    title_ru: String(titleRu),
-                };
-                if (titleEn != null) normalized.title_en = String(titleEn);
-                return normalized;
-            }
-            return { country_id: String(idx), title_ru: String(item) };
-        })
-        .filter(Boolean);
-}
 
 interface FiltersComponentProps {
     filters: TravelFilters | null;
@@ -125,50 +72,18 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
 
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const normalizedInput: any = useMemo(() => {
-        if (!filters) return {};
-        const resolvedFilters: any = filters as any;
-        const maybeNormalized =
-            (resolvedFilters as any)?.data?.filters ?? (resolvedFilters as any)?.data ?? resolvedFilters;
-        return maybeNormalized ?? {};
-    }, [filters]);
-
-    // Memoize raw data access
-    const rawData = useMemo(
-        () => ({
-            categories:
-                normalizedInput.categories ??
-                (normalizedInput as any).categoriesTravel ??
-                (normalizedInput as any).categories_travel ??
-                [],
-            transports: normalizedInput.transports ?? (normalizedInput as any).transportsTravel ?? [],
-            complexity: normalizedInput.complexity ?? (normalizedInput as any).complexityTravel ?? [],
-            companions: normalizedInput.companions ?? (normalizedInput as any).companionsTravel ?? [],
-            overnights:
-                normalizedInput.over_nights_stay ??
-                (normalizedInput as any).overNightsStay ??
-                (normalizedInput as any).overnights ??
-                [],
-            month: normalizedInput.month ?? (normalizedInput as any).months ?? [],
-            countries: normalizedInput.countries || [],
-        }),
-        [normalizedInput]
-    );
-
-    // Memoize normalized lists
-    const resolvedCategories = useMemo(
-        () => normalizeTravelCategoriesLocal(rawData.categories),
-        [rawData.categories]
-    );
-    const resolvedTransports = useMemo(() => normalizeIdNameList(rawData.transports), [rawData.transports]);
-    const resolvedComplexity = useMemo(() => normalizeIdNameList(rawData.complexity), [rawData.complexity]);
-    const resolvedCompanions = useMemo(() => normalizeIdNameList(rawData.companions), [rawData.companions]);
-    const resolvedOvernights = useMemo(() => normalizeIdNameList(rawData.overnights), [rawData.overnights]);
-    const resolvedMonth = useMemo(() => normalizeIdNameList(rawData.month), [rawData.month]);
-    const resolvedCountries = useMemo(
-        () => normalizeCountriesLocal(rawData.countries),
-        [rawData.countries]
-    );
+    // Справочники приходят уже типизированными (TravelFilters), но нормализатор
+    // из api-слоя дополнительно раскрывает возможные обёртки ответа и alias-ключи
+    // бэка, канонизируя id к строкам под MultiSelectField/TravelFormData.
+    const {
+        categories: resolvedCategories,
+        transports: resolvedTransports,
+        complexity: resolvedComplexity,
+        companions: resolvedCompanions,
+        over_nights_stay: resolvedOvernights,
+        month: resolvedMonth,
+        countries: resolvedCountries,
+    } = useMemo(() => normalizeUpsertFilterDictionaries(filters), [filters]);
 
     // Keep a ref to the latest formData so the callback stays stable.
     const formDataRef = useRef(formData);

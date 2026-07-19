@@ -1,6 +1,5 @@
 import { memo, useEffect, useMemo, useRef } from 'react'
 import {
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -11,6 +10,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import Button from '@/components/ui/Button'
 import {
   useMyGamificationProgress,
   useUserGamificationProgress,
@@ -85,19 +85,16 @@ function ActivityProgressionSection({
             {i18nT('achievements:components.achievements.ActivityProgressionSection.uroven_rastet_za_marshruty_chtenie_poezdki_i_14628b3a')}</Text>
         </View>
         {onOpenAwards ? (
-          <Pressable
+          <Button
+            variant="tonal"
             onPress={onOpenAwards}
-            accessibilityRole="button"
+            label={i18nT('achievements:components.achievements.ActivityProgressionSection.nagrady_69c61772')}
             accessibilityLabel={i18nT('achievements:components.achievements.ActivityProgressionSection.otkryt_vse_nagrady_6272585c')}
-            style={({ pressed }) => [
-              styles.awardsButton,
-              pressed && { opacity: 0.78 },
-            ]}
-          >
-            <Feather name="award" size={14} color={colors.primaryDark} />
-            <Text style={styles.awardsButtonText}>{i18nT('achievements:components.achievements.ActivityProgressionSection.nagrady_69c61772')}</Text>
-            <Feather name="chevron-right" size={14} color={colors.primaryDark} />
-          </Pressable>
+            icon={<Feather name="award" size={14} color={colors.primaryDark} />}
+            trailingIcon={<Feather name="chevron-right" size={14} color={colors.primaryDark} />}
+            style={styles.awardsButton}
+            labelStyle={styles.awardsButtonText}
+          />
         ) : null}
       </View>
 
@@ -142,20 +139,14 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       color: colors.textMuted,
       lineHeight: 18,
     },
+    // Компактный pill поверх canonical Button (variant="tonal" даёт фон/цвет текста).
     awardsButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-      paddingHorizontal: 8,
-      paddingVertical: 6,
+      paddingHorizontal: DESIGN_TOKENS.spacing.xs,
       borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.backgroundTertiary,
     },
     awardsButtonText: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       fontWeight: '700',
-      color: colors.primaryText,
     },
     lines: { gap: DESIGN_TOKENS.spacing.md },
   })

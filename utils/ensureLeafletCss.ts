@@ -2,6 +2,8 @@
 // /vendor/*.css files are not served — e.g. prod returns the SPA 404 HTML for
 // /vendor/leaflet.css, so the browser refuses the stylesheet and Leaflet popups
 // render unstyled/mispositioned. CSP `style-src` already allows unpkg.com.
+import { getOsmTileUrl } from '@/config/mapWebLayers'
+
 const LEAFLET_CSS_CDN = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
 const MARKERCLUSTER_CSS_CDN = 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css'
 
@@ -102,10 +104,23 @@ function ensureTilePreconnect(): void {
   const id = 'metravel-tile-preconnect'
   if (document.getElementById(id)) return
 
+  // Preconnect к реальному origin tile-прокси (#989), а не к прямому OSM.
+  // На проде getOsmTileUrl() отдаёт same-origin путь (`/proxy/tiles/...`) —
+  // preconnect не нужен (origin уже установлен). На localhost/Metro URL
+  // абсолютный (публичный прод) — тогда preconnect к его origin ускоряет тайлы.
+  let tileOrigin: string | null = null
+  try {
+    const url = getOsmTileUrl()
+    if (/^https?:\/\//i.test(url)) tileOrigin = new URL(url).origin
+  } catch {
+    tileOrigin = null
+  }
+  if (!tileOrigin) return
+
   const link = document.createElement('link')
   link.id = id
   link.rel = 'preconnect'
-  link.href = 'https://tile.openstreetmap.org'
+  link.href = tileOrigin
   link.crossOrigin = 'anonymous'
   document.head.appendChild(link)
 }

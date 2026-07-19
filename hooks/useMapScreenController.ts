@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
-import { useLocalSearchParams, usePathname } from 'expo-router';
+import { usePathname } from 'expo-router';
 
 import { useRouteStore } from '@/stores/routeStore';
 import type { Point as MapPoint } from '@/components/MapPage/Map/types';
-import type { MapMovePayload } from '@/components/MapPage/Map/types';
 import type { MapUiApi } from '@/types/mapUi';
 import type { TravelCoords } from '@/types/types';
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
@@ -14,7 +13,6 @@ import { buildCanonicalUrl } from '@/utils/seo';
 import { mapCategoryNamesToIds, isCategoryFilterUnresolved } from '@/utils/filterQuery';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
 import { METRICS } from '@/constants/layout';
-import { createCollator } from '@/i18n';
 import { parseWebViewJsonObject, toFiniteCoordinate } from '@/utils/webViewBridge';
 
 // Модульные хуки для карты
@@ -24,49 +22,17 @@ import { useMapDataController } from '@/hooks/map/useMapDataController';
 import { useMapPanelState, useMapResponsive } from '@/hooks/map/useMapPanelState';
 import { useRouteController } from '@/hooks/map/useRouteController';
 import { useMapOverlays } from '@/hooks/map/useMapOverlays';
-import {
-  FiltersPanelComponent,
-  FiltersProviderComponent,
-  preloadMapFiltersPanel,
-} from '@/hooks/map/mapFiltersPanelLoader';
+import { useMapUrlAnchors } from '@/hooks/map/useMapUrlAnchors';
+import { useSearchThisArea } from '@/hooks/map/useSearchThisArea';
+import { useMapFiltersPanelProps } from '@/hooks/map/useMapFiltersPanelProps';
+import { preloadMapFiltersPanel } from '@/hooks/map/mapFiltersPanelLoader';
 
 // Lazy-load filters panel components — only needed when the user opens the filters drawer
 /**
  * Главный контроллер экрана карты (facade pattern).
  * Объединяет специализированные контроллеры и предоставляет единый API для компонента.
  */
-const parseUrlCoordinate = (value: unknown): number | null => {
-  if (typeof value !== 'string') return null;
-  const parsed = Number(value.replace(',', '.').trim());
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-const getFirstParamText = (value: unknown): string => {
-  const raw = Array.isArray(value) ? value[0] : value;
-  return typeof raw === 'string' ? raw.trim() : '';
-};
-
-// F-49 — approximate great-circle distance in km between two lat/lng points.
-// Used only to decide whether the map center moved far enough from the active
-// query anchor to surface the "Search this area" affordance, so a cheap
-// haversine is plenty (no need for the full CoordinateConverter on this path).
-const EARTH_RADIUS_KM = 6371;
-const distanceKm = (
-  a: { latitude: number; longitude: number },
-  b: { latitude: number; longitude: number },
-): number => {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(b.latitude - a.latitude);
-  const dLng = toRad(b.longitude - a.longitude);
-  const lat1 = toRad(a.latitude);
-  const lat2 = toRad(b.latitude);
-  const h =
-    Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
-  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
-};
-
 export function useMapScreenController() {
-  const categoryCollator = useMemo(() => createCollator(), []);
   // Map API reference
   const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
   const handleMapUiApiReady = useCallback((api: MapUiApi | null) => {
@@ -88,100 +54,15 @@ export function useMapScreenController() {
   // anchors are intentionally separate and can never become a route origin.
   const userLocation = currentLocation;
 
-  // F-49 — "Search this area" (Google/Organic-Maps style).
-  // searchAreaCenter — explicit anchor chosen by tapping the floating button;
-  // when set it takes priority over userLocation as the nearby-query anchor.
-  // mapCenter — the latest center reported by the map on pan/zoom (debounced),
-  // used only to decide whether the affordance should appear.
-  const [searchAreaCenter, setSearchAreaCenter] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number } | null>(
-    null
-  );
-  // settledCenter — where the map came to rest after OUR OWN motion (auto-fit,
-  // flyTo, recenter). It is deliberately NOT the query anchor: radius-mode
-  // fitBounds reserves room for the bottom sheet with asymmetric padding, so the
-  // resting center sits well below the circle center (~36px ≈ 26km at r=50km on
-  // mobile). Measuring drift against the anchor therefore reported a huge "move"
-  // on the very first frame and pinned the affordance on screen forever, and each
-  // tap dragged the search area south of what the user was actually looking at.
-  // The baseline is the resting view, so drift now means "the user panned away".
-  const [settledCenter, setSettledCenter] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
+  // isFollowingUser is owned by the controller (centering). The F-49 "search
+  // this area" viewport state lives in useSearchThisArea (declared after route +
+  // filters so it can read mode/radius); a user gesture resets following via the
+  // onUserInitiatedMove callback wired into that hook below.
   const [isFollowingUser, setIsFollowingUser] = useState(false);
-  const handleMapMove = useCallback((center: MapMovePayload) => {
-    if (!Number.isFinite(center.latitude) || !Number.isFinite(center.longitude)) return;
-    setMapCenter({ latitude: center.latitude, longitude: center.longitude });
-    if (center.userInitiated) {
-      setIsFollowingUser(false);
-      return;
-    }
-    // Programmatic settle (Map.web/native only flag gestures as userInitiated):
-    // this is the new reference view for the drift check.
-    setSettledCenter({ latitude: center.latitude, longitude: center.longitude });
-  }, []);
 
-  // URL params → initial filter values
-  const params = useLocalSearchParams<{
-    categories?: string;
-    radius?: string;
-    lat?: string;
-    lng?: string;
-    placeId?: string;
-    placeTitle?: string;
-    placeAddress?: string;
-    placeCategory?: string;
-    placeTravelUrl?: string;
-    placeImageUrl?: string;
-  }>();
-  const initialCategories = useMemo(
-    () => (params.categories ? params.categories.split(',').map((s) => s.trim()).filter(Boolean) : undefined),
-    // mount-only: captures the initial URL param; later filter changes are owned by useMapFilters
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-  // mount-only: initial radius from URL; subsequent radius is owned by useMapFilters
-  const initialRadius = useMemo(() => params.radius ?? undefined, []);  // eslint-disable-line react-hooks/exhaustive-deps
-  const urlCoordinates = useMemo(() => {
-    const lat = parseUrlCoordinate(params.lat);
-    const lng = parseUrlCoordinate(params.lng);
-    if (lat == null || lng == null) return null;
-    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
-    return { latitude: lat, longitude: lng };
-  }, [params.lat, params.lng]);
-
-  const urlSelectedPlace = useMemo<MapPoint | null>(() => {
-    if (!urlCoordinates) return null;
-    const title = getFirstParamText(params.placeTitle);
-    const address = getFirstParamText(params.placeAddress);
-    const category = getFirstParamText(params.placeCategory) || getFirstParamText(params.categories);
-    const id = getFirstParamText(params.placeId) || `url-${urlCoordinates.latitude},${urlCoordinates.longitude}`;
-    const coord = `${urlCoordinates.latitude},${urlCoordinates.longitude}`;
-
-    if (!title && !address && !category) return null;
-
-    return {
-      id,
-      coord,
-      address: address || title || category || coord,
-      categoryName: category || undefined,
-      urlTravel: getFirstParamText(params.placeTravelUrl) || undefined,
-      travelImageThumbUrl: getFirstParamText(params.placeImageUrl) || undefined,
-    };
-  }, [
-    params.categories,
-    params.placeAddress,
-    params.placeCategory,
-    params.placeId,
-    params.placeImageUrl,
-    params.placeTitle,
-    params.placeTravelUrl,
-    urlCoordinates,
-  ]);
+  // URL anchors → initial filter values + deep-linked coordinates/place.
+  const { initialCategories, initialRadius, urlCoordinates, urlSelectedPlace } =
+    useMapUrlAnchors();
 
   // #207 — mobile bottom card for a tapped single marker (maps.me-style).
   // On mobile-web the Leaflet popup over the marker is suppressed and the
@@ -343,6 +224,22 @@ export function useMapScreenController() {
     return focusPlaceRef.current?.(item);
   }, []);
 
+  // F-49 — "Search this area" viewport state. Declared here (after route +
+  // filters) so it can read the active mode/radius; a user gesture resets the
+  // controller-owned follow flag via onUserInitiatedMove.
+  const onUserInitiatedMove = useCallback(() => setIsFollowingUser(false), []);
+  const {
+    searchAreaCenter,
+    setSearchAreaCenter,
+    canSearchThisArea,
+    handleMapMove,
+    handleSearchThisArea,
+  } = useSearchThisArea({
+    mode,
+    radius: filterValues.radius,
+    onUserInitiatedMove,
+  });
+
   // Data Controller
   // F-49 — an explicit "Search this area" pick (searchAreaCenter) wins over every
   // implicit anchor, including the initial URL coordinates: tapping the button is a
@@ -351,37 +248,6 @@ export function useMapScreenController() {
   const queryCoordinates = useMemo(() => {
     return searchAreaCenter ?? urlCoordinates ?? userLocation ?? coordinates;
   }, [searchAreaCenter, urlCoordinates, userLocation, coordinates]);
-
-  // F-49 — threshold for "significant move": the map center must drift away from
-  // the resting view by more than ~30% of the active search radius (clamped to a
-  // 1.5–25 km sane band so tiny/huge radii still feel right). Below that the
-  // existing results already cover the viewport, so we hide the button.
-  //
-  // The reference is settledCenter (where our own auto-fit/flyTo left the map),
-  // NOT the query anchor: fitBounds intentionally offsets the resting center from
-  // the anchor to keep the radius circle clear of the bottom sheet, and that
-  // offset is not a user pan. Until the map reports its first settle we have no
-  // baseline, so there is nothing to have drifted from.
-  const canSearchThisArea = useMemo(() => {
-    if (mode !== 'radius') return false;
-    if (!mapCenter || !settledCenter) return false;
-    const radiusKm = Number(filterValues.radius) || 30;
-    const thresholdKm = Math.min(25, Math.max(1.5, radiusKm * 0.3));
-    return distanceKm(settledCenter, mapCenter) > thresholdKm;
-  }, [mode, mapCenter, settledCenter, filterValues.radius]);
-
-  const handleSearchThisArea = useCallback(() => {
-    setMapCenter((center) => {
-      if (center) {
-        setSearchAreaCenter({ latitude: center.latitude, longitude: center.longitude });
-        // The panned-to view IS the view the user asked to search: adopt it as the
-        // baseline right away so the affordance retracts on tap even when the
-        // re-anchored fit lands on the same view and reports no fresh settle.
-        setSettledCenter({ latitude: center.latitude, longitude: center.longitude });
-      }
-      return center;
-    });
-  }, []);
 
   const dataController = useMapDataController({
     coordinates: queryCoordinates,
@@ -471,36 +337,6 @@ export function useMapScreenController() {
     resetOverlays,
   } = useMapOverlays(mapUiApi);
 
-  const resolvedCategoryTravelAddressOptions = useMemo(() => {
-    const apiOptions = Array.isArray(filters.categoryTravelAddress)
-      ? filters.categoryTravelAddress
-          .filter((c) => c && c.name)
-          .map((c) => ({
-            id: c.id,
-            name: String(c.name || '').trim(),
-          }))
-          .filter((c) => c.name)
-      : [];
-
-    if (apiOptions.length > 0) return apiOptions;
-
-    const fallbackNames = new Set<string>();
-    (Array.isArray(allTravelsData) ? allTravelsData : []).forEach((travel) => {
-      String(travel?.categoryName || '')
-        .split(',')
-        .map((entry) => entry.trim())
-        .filter(Boolean)
-        .forEach((entry) => fallbackNames.add(entry));
-    });
-
-    return Array.from(fallbackNames)
-      .sort((a, b) => categoryCollator.compare(a, b))
-      .map((name) => ({
-        id: name,
-        name,
-      }));
-  }, [allTravelsData, categoryCollator, filters.categoryTravelAddress]);
-
   // Reset filters, route and map overlays.
   // #213 — сброс должен возвращать карту к дефолтным слоям: гасим включённые
   // оверлеи (спутник/погода/природа), иначе Esri-слой остаётся поверх OSM.
@@ -512,7 +348,7 @@ export function useMapScreenController() {
     // Atomic: clear route + set mode in one store update to avoid intermediate
     // render where mode='route' but fullRouteCoords=[] (disables travel query).
     useRouteStore.getState().clearRouteAndSetMode('radius');
-  }, [resetFiltersBase, resetOverlays]);
+  }, [resetFiltersBase, resetOverlays, setSearchAreaCenter]);
 
   // «Показать всё»: сбросить фильтры/область поиска/маршрут и подогнать карту под
   // ВСЕ загруженные точки (fit ко всем маркерам). Служит и явной кнопкой сброса,
@@ -548,7 +384,7 @@ export function useMapScreenController() {
     } catch {
       // noop
     }
-  }, [mapUiApi, refreshLocation, userLocation]);
+  }, [mapUiApi, refreshLocation, userLocation, setSearchAreaCenter]);
 
   const startManualRouteFromLocationState = useCallback(() => {
     setIsFollowingUser(false);
@@ -702,161 +538,55 @@ export function useMapScreenController() {
     ]
   );
 
-  // Filters panel props (FiltersProvider pattern).
-  //
-  // Stabilization: the FiltersProvider needs a single flat context object, but
-  // rebuilding that whole object on every routing-state change cascaded invalidations
-  // (mapComponent, mobile layout, helpers). We split it into independent memoized
-  // slices with narrow deps — changing one slice (e.g. route metrics) no longer
-  // reconstructs the others (filter values / overlay / list-actions). The final
-  // flat `contextValue` is composed from those stable slices.
-
-  // Slice 1 — filter option lists + selected values (changes only on filter edits).
-  const filterOptionsSlice = useMemo(
-    () => ({
-      categories: filters.categories
-        .filter((c) => c && c.name)
-        .map((c) => ({ id: c.id, name: String(c.name || '').trim() }))
-        .filter((c) => c.name),
-      categoryTravelAddress: resolvedCategoryTravelAddressOptions,
-      radius: filters.radius.map((r) => ({ id: r.id, name: r.name })),
-      address: filters.address,
-    }),
-    [filters.categories, filters.radius, filters.address, resolvedCategoryTravelAddressOptions]
-  );
-
-  const filtersValuesSlice = useMemo(
-    () => ({
-      filters: filterOptionsSlice,
-      filterValue: filterValues,
-      onFilterChange: handleFilterChangeForPanel,
-      resetFilters,
-    }),
-    [filterOptionsSlice, filterValues, handleFilterChangeForPanel, resetFilters]
-  );
-
-  // Slice 2 — overlay layer state (changes only on overlay toggles).
-  const overlaySlice = useMemo(
-    () => ({
-      overlayOptions,
-      enabledOverlays,
-      onOverlayToggle: handleOverlayToggle,
-      onResetOverlays: resetOverlays,
-    }),
-    [overlayOptions, enabledOverlays, handleOverlayToggle, resetOverlays]
-  );
-
-  const onBuildRoute = useCallback(() => {
-    try {
-      useRouteStore.getState().forceRebuild();
-    } catch {
-      // noop
-    }
-  }, []);
-
-  // Slice 3 — routing state + actions (changes on route building / mode switches).
-  const routingSlice = useMemo(
-    () => ({
-      mode,
-      setMode,
-      transportMode,
-      setTransportMode,
-      startAddress,
-      endAddress,
-      routeDistance,
-      routeDuration,
-      routeElevationGain,
-      routeElevationLoss,
-      routePoints: routeStorePoints,
-      onRemoveRoutePoint,
-      onClearRoute: handleClearRoute,
-      swapStartEnd,
-      routeHintDismissed: false,
-      onAddressSelect: handleAddressSelect,
-      onAddressClear: handleAddressClear,
-      routingLoading,
-      routingError,
-      onBuildRoute,
-    }),
-    [
-      mode,
-      setMode,
-      transportMode,
-      setTransportMode,
-      startAddress,
-      endAddress,
-      routeDistance,
-      routeDuration,
-      routeElevationGain,
-      routeElevationLoss,
-      routeStorePoints,
-      onRemoveRoutePoint,
-      handleClearRoute,
-      swapStartEnd,
-      handleAddressSelect,
-      handleAddressClear,
-      routingLoading,
-      routingError,
-      onBuildRoute,
-    ]
-  );
-
-  // Slice 4 — list/data + map-api + panel actions (changes on data refresh / api ready).
-  const listActionsSlice = useMemo(
-    () => ({
-      travelsData: allTravelsData,
-      filteredTravelsData: travelsData,
-      // Серверный счётчик результатов (учитывает where.query, BE #695) — для бейджа
-      // «На карте подходит», чтобы он показывал полный total, а не длину загруженной
-      // страницы (≤30).
-      resultsTotal: travelsCount,
-      isMobile,
-      mapUiApi,
-      closeMenu: closeRightPanel,
-      userLocation,
-      onPlaceSelect: buildRouteToStable,
-      onPlaceFocus: focusPlaceStable,
-      onOpenList: selectTravelsTab,
-      // #211 — карта/список грузятся или фильтры дебаунсятся: не показывать
-      // empty-state «Ничего не нашлось», пока идёт запрос (иначе мигает при
-      // смене вкладок/режимов и при первичной загрузке).
-      isBusy: loading || isFetching || isDebouncingFilters,
-      hideTopControls: false,
-      hideFooterCta: false,
-      hideFooterReset: !isMobile,
-    }),
-    [
-      allTravelsData,
-      travelsData,
-      travelsCount,
-      isMobile,
-      mapUiApi,
-      closeRightPanel,
-      userLocation,
-      buildRouteToStable,
-      focusPlaceStable,
-      selectTravelsTab,
-      loading,
-      isFetching,
-      isDebouncingFilters,
-    ]
-  );
-
-  const filtersPanelProps = useMemo(() => {
-    const contextValue = {
-      ...filtersValuesSlice,
-      ...overlaySlice,
-      ...routingSlice,
-      ...listActionsSlice,
-    };
-
-    return {
-      Component: FiltersProviderComponent,
-      contextValue,
-      props: contextValue,
-      Panel: FiltersPanelComponent,
-    };
-  }, [filtersValuesSlice, overlaySlice, routingSlice, listActionsSlice]);
+  // Filters panel props (FiltersProvider pattern) — assembled from independent
+  // memoized slices in useMapFiltersPanelProps. The controller re-exposes the
+  // stable slices for narrow subscriptions in the screen.
+  const {
+    filtersValuesSlice,
+    overlaySlice,
+    routingSlice,
+    filtersPanelProps,
+  } = useMapFiltersPanelProps({
+    filters,
+    filterValues,
+    handleFilterChangeForPanel,
+    resetFilters,
+    allTravelsData,
+    overlayOptions,
+    enabledOverlays,
+    handleOverlayToggle,
+    resetOverlays,
+    mode,
+    setMode,
+    transportMode,
+    setTransportMode,
+    startAddress,
+    endAddress,
+    routeDistance,
+    routeDuration,
+    routeElevationGain,
+    routeElevationLoss,
+    routeStorePoints,
+    onRemoveRoutePoint,
+    handleClearRoute,
+    swapStartEnd,
+    handleAddressSelect,
+    handleAddressClear,
+    routingLoading,
+    routingError,
+    travelsData,
+    travelsCount,
+    isMobile,
+    mapUiApi,
+    closeRightPanel,
+    userLocation,
+    buildRouteToStable,
+    focusPlaceStable,
+    selectTravelsTab,
+    loading,
+    isFetching,
+    isDebouncingFilters,
+  });
 
   return useMemo(() => ({
     // SEO

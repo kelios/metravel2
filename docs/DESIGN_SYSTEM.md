@@ -64,3 +64,49 @@ Decision:
 - New icon/glyph props should use `primaryDark`, not `primary`, unless the icon
   sits on a dark surface where the themed runtime color already provides enough
   contrast.
+
+## Intentional exceptions to the canonical `ui/Button`
+
+Status: accepted, 2026-07-19.
+
+`components/ui/Button.tsx` is the canonical button primitive. It exposes only
+**semantic** variant colors (`primary`, `secondary`, `ghost`, `danger`,
+`outline`, `soft`, `danger-outline`) and a single icon slot (`icon` +
+`iconPosition`). This is by design: the primitive intentionally does not carry
+per-brand colors outside the semantic palette, and does not carry transient
+self-toggling states. New buttons should use the primitive unless they are
+listed below as a documented exception.
+
+### `components/travel/ShareButtons.tsx`
+
+Status: accepted exception, task #1013 (FE-BTN-1).
+
+`ShareButtons` stays a context-specific component and is **not** migrated to
+`ui/Button`. Rationale, grounded in the current implementation:
+
+- **Per-brand icon color, not a semantic variant.** Each share action paints its
+  `Feather` icon with a brand-specific color drawn from a `palette` `useMemo`
+  (`export` → warning/accent, `telegram` → accent, `vk` → info, `whatsapp` →
+  success) on a shared neutral surface. These are brand affordances, not the
+  semantic role colors the canonical `Button` exposes, so they fall outside the
+  primitive's palette by design.
+- **Transient success toggle.** The copy action carries an ephemeral "copied"
+  state (`copied` flag + a timer that clears it after ~2s), swapping the tile to
+  the `buttonCopied` style (`colors.successSoft` background) and rendering a
+  `Feather name="check"` glyph. The canonical `Button` deliberately has no
+  self-toggling success state.
+- **Multi-mode composition.** The component renders in two layouts — a `sticky`
+  icon-only round variant and a grouped icon+label variant with sections
+  (including a dedicated PDF-export group) — plus a collapsed mode on mobile and
+  a lazily loaded PDF-export bridge. This layout/state machinery is specific to
+  the share affordance and is not something the single-shape primitive models.
+
+Because these requirements sit outside the canonical `Button`'s semantic,
+single-icon, stateless contract, `ShareButtons` is kept as a deliberate
+exception rather than forced onto the primitive. If the primitive later grows a
+brand-color or transient-state contract, revisit this entry.
+
+New exceptions should be added here with the same shape — component path, the
+specific contract it needs that the primitive does not provide, and the task
+reference — so that "why isn't this a `ui/Button`?" always has a documented
+answer.

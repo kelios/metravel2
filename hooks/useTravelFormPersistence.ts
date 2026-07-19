@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
 import isEqual from 'fast-deep-equal';
 import { type QueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/api/queryKeys';
 import { saveFormData } from '@/api/misc';
 import { ApiError } from '@/api/client';
 import { TravelFormData, MarkerData } from '@/types/types';
@@ -39,146 +38,23 @@ import {
   confirmRichTextLossIfNeeded,
   type RichTextSnapshot,
 } from '@/utils/travelTextLossGuard';
+import { mergeGalleryPreserveCurrentCaptions } from '@/utils/galleryEntryModel';
+import {
+  invalidateTravelCollections,
+  invalidateTravelDetails,
+} from '@/utils/travelQueryInvalidation';
+import { useAutosaveErrorToast } from '@/hooks/useAutosaveErrorToast';
 import { translate as i18nT } from '@/i18n'
 
 
 type ToastAwareError = Error & { toastShown?: boolean };
 const DEFAULT_MARKER_SERIALIZER_FALLBACK_IMAGE = '/og-default.png';
 
-// При затяжном отказе автосейва (протухшая сессия, флаки-сеть) onError зовётся
-// каждый цикл дебаунса. Показываем тост «Ошибка автосохранения» не чаще раза в
-// этот интервал, чтобы он не мигал/не залипал. Троттл сбрасывается после успешного
-// сохранения, поэтому первая ошибка после успеха всплывает сразу.
-const AUTOSAVE_ERROR_TOAST_THROTTLE_MS = 30000;
-
 type MonitoringWindow = Window & {
   Sentry?: {
     captureException: (error: unknown, context?: Record<string, unknown>) => void;
   };
 };
-
-type GalleryEntry = string | Record<string, unknown>;
-
-const getGalleryEntryId = (item: GalleryEntry | null | undefined) => {
-  if (!item || typeof item !== 'object') return null;
-  const rawId = item.id;
-  if (rawId == null || String(rawId).trim().length === 0) return null;
-  return String(rawId);
-};
-
-const getGalleryEntryUrl = (item: GalleryEntry | null | undefined) => {
-  if (typeof item === 'string') return item.trim();
-  if (!item || typeof item !== 'object') return '';
-  return typeof item.url === 'string' ? item.url.trim() : '';
-};
-
-const getGalleryEntryCaption = (item: GalleryEntry | null | undefined) => {
-  if (!item || typeof item !== 'object') return undefined;
-  return typeof item.caption === 'string' ? item.caption : undefined;
-};
-
-const buildGalleryEntryMap = (gallery: unknown) => {
-  const byId = new Map<string, GalleryEntry>();
-  const byUrl = new Map<string, GalleryEntry>();
-  if (!Array.isArray(gallery)) return { byId, byUrl };
-
-  gallery.forEach((item) => {
-    if (typeof item !== 'string' && (typeof item !== 'object' || item == null)) return;
-    const entry = item as GalleryEntry;
-    const id = getGalleryEntryId(entry);
-    const url = getGalleryEntryUrl(entry);
-    if (id) byId.set(id, entry);
-    if (url) byUrl.set(url, entry);
-  });
-
-  return { byId, byUrl };
-};
-
-const findMatchingGalleryEntry = (
-  item: GalleryEntry,
-  map: ReturnType<typeof buildGalleryEntryMap>,
-) => {
-  const id = getGalleryEntryId(item);
-  if (id && map.byId.has(id)) return map.byId.get(id);
-
-  const url = getGalleryEntryUrl(item);
-  if (url && map.byUrl.has(url)) return map.byUrl.get(url);
-
-  return undefined;
-};
-
-function mergeGalleryPreserveCurrentCaptions(
-  savedGallery: unknown,
-  currentGallery: unknown,
-  sourceGallery?: unknown,
-) {
-  if (!Array.isArray(savedGallery)) return savedGallery;
-
-  const currentMap = buildGalleryEntryMap(currentGallery);
-  const sourceMap = buildGalleryEntryMap(sourceGallery);
-
-  return savedGallery.map((item) => {
-    if (!item || typeof item !== 'object') return item;
-
-    const savedEntry = item as Record<string, unknown>;
-    const currentEntry = findMatchingGalleryEntry(savedEntry, currentMap);
-    const currentCaption = getGalleryEntryCaption(currentEntry);
-    if (currentCaption == null) return item;
-
-    const savedCaption = getGalleryEntryCaption(savedEntry);
-    if (savedCaption === currentCaption) return item;
-
-    const sourceEntry = findMatchingGalleryEntry(savedEntry, sourceMap);
-    const sourceCaption = getGalleryEntryCaption(sourceEntry);
-    const savedCaptionMissing = savedCaption == null || savedCaption.trim().length === 0;
-    const currentChangedAfterSaveStarted = sourceCaption !== currentCaption;
-    const currentWasCleared = currentCaption.trim().length === 0;
-
-    if (!savedCaptionMissing && !currentChangedAfterSaveStarted && !currentWasCleared) {
-      return item;
-    }
-
-    return {
-      ...savedEntry,
-      caption: currentCaption.slice(0, 500),
-    };
-  });
-}
-
-async function invalidateTravelCollections(
-  queryClient: QueryClient | null | undefined,
-  userId: string | null,
-) {
-  if (!queryClient?.invalidateQueries) return;
-
-  await queryClient.invalidateQueries({ queryKey: queryKeys.travels(), refetchType: 'all' });
-
-  if (!userId) return;
-
-  await queryClient.invalidateQueries({ queryKey: queryKeys.myTravelsCount(userId), refetchType: 'all' });
-  await queryClient.invalidateQueries({ queryKey: queryKeys.exportMyTravelsCount(userId), refetchType: 'all' });
-}
-
-async function invalidateTravelDetails(
-  queryClient: QueryClient | null | undefined,
-  ...travelKeys: Array<string | number | null | undefined>
-) {
-  if (!queryClient?.invalidateQueries) return;
-
-  const uniqueKeys = Array.from(
-    new Set(
-      travelKeys
-        .map((key) => (key == null ? '' : String(key).trim()))
-        .filter(Boolean),
-    ),
-  );
-
-  await Promise.all(
-    uniqueKeys.map((key) =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.travel(Number.isFinite(Number(key)) ? Number(key) : key) }),
-    ),
-  );
-}
 
 interface UseTravelFormPersistenceParams {
   formState: ReturnType<typeof useFormState<TravelFormData>>;
@@ -248,8 +124,11 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   // пересоздавался на каждый тик статуса автосейва.
   const autosaveCancelPendingRef = useRef<(() => void) | null>(null);
 
-  // Время последнего показанного тоста ошибки автосейва (троттлинг UI, см. константу).
-  const lastAutosaveErrorToastAtRef = useRef(0);
+  // Троттлинг пользовательского тоста «Ошибка автосохранения» (см. хук).
+  const {
+    notify: notifyAutosaveError,
+    reset: resetAutosaveErrorToastThrottle,
+  } = useAutosaveErrorToast(showToast);
 
   // Хвостовой сейв: если во время in-flight ручного сохранения приходит ещё один
   // вызов с dataOverride, мы дедуплицируем (возвращаем текущий промис), но НЕ теряем
@@ -554,12 +433,12 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       if (!mountedRef.current) return;
 
       // Успешный сейв снимает троттл: следующая ошибка (уже нового «эпизода») покажется сразу.
-      lastAutosaveErrorToastAtRef.current = 0;
+      resetAutosaveErrorToastThrottle();
 
       // После первого автосейва создаётся id — остаёмся в мастере и просто подставляем новые данные.
       applySavedData(savedData, formDataRef.current, { preserveEditingState: true });
     },
-    [applySavedData, formDataRef, mountedRef]
+    [applySavedData, formDataRef, mountedRef, resetAutosaveErrorToastThrottle]
   );
 
   const handleSaveError = useCallback(
@@ -607,13 +486,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
 
       // Троттлим только пользовательский тост (логирование/Sentry выше — на каждый отказ,
       // чтобы мониторинг не терял события). При затяжном отказе тост не мигает.
-      const now = Date.now();
-      if (now - lastAutosaveErrorToastAtRef.current >= AUTOSAVE_ERROR_TOAST_THROTTLE_MS) {
-        lastAutosaveErrorToastAtRef.current = now;
-        showToast(i18nT('shared:hooks.useTravelFormPersistence.oshibka_avtosohraneniya_0fb98f16'), 'error');
-      }
+      notifyAutosaveError();
     },
-    [showToast, stableTravelId, formDataRef, mountedRef, suppressAutosaveErrorToastRef]
+    [notifyAutosaveError, stableTravelId, formDataRef, mountedRef, suppressAutosaveErrorToastRef]
   );
 
   const autosave = useImprovedAutoSave(formState.data, initialFormData, {

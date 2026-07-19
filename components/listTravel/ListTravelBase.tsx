@@ -1,37 +1,29 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Alert,
   Platform,
 } from 'react-native'
-import { showToastMessage } from '@/utils/toast'
-import { queryKeys } from '@/api/queryKeys'
 import { usePathname, useRouter } from 'expo-router'
 import { useRoute } from 'expo-router'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import RenderTravelItem from './RenderTravelItem'
 import ListTravelTopContent from './parts/ListTravelTopContent'
 import ListTravelLayout from './parts/ListTravelLayout'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
 import StaleContentBanner from '@/components/ui/StaleContentBanner'
-import { fetchAllFiltersOptimized } from '@/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useHydrationReady } from '@/hooks/useHydrationReady'
 import type { Travel } from '@/types/types'
 import { SEARCH_DEBOUNCE } from './utils/listTravelConstants'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
+import { useListTravelFilterOptions, useListTravelFacets } from './hooks/useListTravelFilterData'
+import { useListTravelDelete } from './hooks/useListTravelDelete'
 import { useListTravelExport } from './hooks/useListTravelExport'
 import { useListTravelInitialFilter } from './hooks/useListTravelInitialFilter'
-import { buildFacetCounts, buildTravelFilterGroups } from './utils/filterGroups'
-import { fetchTravelFacets } from '@/api/travelListQueries'
+import { buildTravelFilterGroups } from './utils/filterGroups'
 import {
   buildActiveConditionChips,
   buildEmptyStateMessage,
-  describeTravelDeleteError,
-  isTravelAlreadyDeletedError,
-  normalizeFilterOptions,
-  removeTravelFromInfiniteTravelsCache,
 } from './ListTravelBase.helpers'
 import type { ActiveConditionChip } from './ListTravelBase.helpers'
 import { useRecommendationsVisibility } from './hooks/useRecommendationsVisibility'
@@ -55,7 +47,6 @@ import { useListTravelViewportState } from './hooks/useListTravelViewportState'
 import ListTravelOwnUserGate, {
   getListTravelOwnUserGateMode,
 } from './parts/ListTravelOwnUserGate'
-import { translate as i18nT } from '@/i18n'
 import type { ListTravelBaseProps } from './ListTravelBase.types'
 
 
@@ -121,8 +112,6 @@ function ListTravelBase({ catalogIntro, primaryAction }: ListTravelBaseProps = {
         setIsRecommendationsVisible: handleRecommendationsVisibilityChange,
     } = useRecommendationsVisibility();
 
-    const queryClient = useQueryClient();
-
     /* Auth flags: используем AuthContext, который уже учитывает наличие токена */
     const { userId, isSuperuser: isSuper, isAuthenticated, authReady } = useAuth();
 
@@ -138,11 +127,8 @@ function ListTravelBase({ catalogIntro, primaryAction }: ListTravelBaseProps = {
     }, [normalizedSearchParam]);
 
     const lastEndReachedAtRef = useRef<number>(0);
-    const deleteInFlightRef = useRef<number | null>(null);
 
     /* UI / dialogs */
-    const [deleteId, setDelete] = useState<number | null>(null);
-    const [deleteError, setDeleteError] = useState<string | null>(null);
     const [showFilters, setShowFilters] = useState(false);
     const flatListRef = useRef<any>(null);
 
@@ -157,19 +143,11 @@ function ListTravelBase({ catalogIntro, primaryAction }: ListTravelBaseProps = {
 
     /* Filters options - оптимизированный запрос с кэшированием */
     const {
-      data: rawOptions,
-      isLoading: filterOptionsLoading,
-      isError: hasFilterOptionsQueryError,
-      refetch: refetchFilterOptions,
-    } = useQuery({
-        queryKey: queryKeys.filterOptions(),
-        queryFn: ({ signal }) => fetchAllFiltersOptimized({ signal }),
-        enabled: shouldFetchFilterOptions,
-        staleTime: 10 * 60 * 1000,
-    });
-
-    const options = useMemo(() => normalizeFilterOptions(rawOptions), [rawOptions]);
-    const hasFilterOptionsError = hasFilterOptionsQueryError && !rawOptions;
+      options,
+      filterOptionsLoading,
+      hasFilterOptionsError,
+      refetchFilterOptions,
+    } = useListTravelFilterOptions(shouldFetchFilterOptions);
 
     const {
         filter,
@@ -223,24 +201,11 @@ function ListTravelBase({ catalogIntro, primaryAction }: ListTravelBaseProps = {
       window.history.replaceState(window.history.state, '', nextPath);
     }, [debSearch, filter.sort, pathname]);
 
-    const {
-      data: facetsData,
-    } = useQuery({
-      queryKey: queryKeys.travelFacets(debSearch, queryParams),
-      queryFn: ({ signal }) => fetchTravelFacets(debSearch, queryParams, { signal }),
-      // Facets feed only the filter-sheet counters and consume debSearch+queryParams,
-      // not filterOptions — so don't gate them on `!!options` (that serialized
-      // facets behind the filterOptions request). They still wait for the same
-      // shouldFetchFilterOptions condition (the sheet being relevant), and the
-      // query key updates if options later remap textual categories → refetch.
+    const facetCounts = useListTravelFacets({
       enabled: shouldFetchFilterOptions,
-      staleTime: 30 * 1000,
+      search: debSearch,
+      queryParams,
     });
-
-    const facetCounts = useMemo(
-      () => buildFacetCounts(facetsData?.facets),
-      [facetsData?.facets]
-    );
 
     const isQueryEnabled = useMemo(
       () => (isMeTravel || isExport ? !!userId : true),
@@ -322,73 +287,14 @@ function ListTravelBase({ catalogIntro, primaryAction }: ListTravelBaseProps = {
         isListTravelFallbackStageExhausted(fallbackQueryBroad) &&
         !!fallbackStepSearchless,
     });
-    /* Delete */
-    const handleDelete = useCallback(
-      async (explicitId?: number) => {
-        const targetId = explicitId ?? deleteId;
-        if (!targetId) return;
-        if (deleteInFlightRef.current === targetId) return;
-        deleteInFlightRef.current = targetId;
-        try {
-          const { deleteTravel } = await import('@/api/travelsApi');
-          await deleteTravel(String(targetId));
-          removeTravelFromInfiniteTravelsCache(queryClient, targetId);
-          setDelete(null);
-          // Сбрасываем guard ТОЛЬКО после инвалидации: иначе повторный handleDelete(sameId)
-          // в окне до завершения invalidate пройдёт и запустит второй deleteTravel (→ 404).
-          await queryClient.invalidateQueries({ queryKey: queryKeys.travels() });
-          deleteInFlightRef.current = null;
-          void showToastMessage({
-            type: 'success',
-            text1: i18nT('travel:components.listTravel.ListTravelBase.puteshestvie_udaleno_58ad42fe'),
-          });
-        } catch (error) {
-          if (isTravelAlreadyDeletedError(error)) {
-            removeTravelFromInfiniteTravelsCache(queryClient, targetId);
-            setDelete(null);
-            await queryClient.invalidateQueries({ queryKey: queryKeys.travels() });
-            deleteInFlightRef.current = null;
-            return;
-          }
-
-          deleteInFlightRef.current = null;
-          const { errorMessage, errorDetails } = describeTravelDeleteError(error);
-
-          if (Platform.OS === 'web') {
-            // Показываем ошибку в диалоге; он остаётся открытым чтобы пользователь мог попробовать снова
-            setDeleteError(`${errorMessage}. ${errorDetails}`);
-          } else {
-            // Для мобильных используем Alert из react-native
-            Alert.alert(errorMessage, errorDetails);
-          }
-          // Не закрываем диалог при ошибке, чтобы пользователь мог попробовать снова
-        }
-      },
-      [deleteId, queryClient]
-    );
-
-    const handleDeletePress = useCallback((id: number) => {
-      setDeleteError(null);
-      setDelete(id);
-    }, []);
-
-    // Подтверждение удаления — на native через Alert, на web — через ConfirmDialog (см. JSX ниже)
-    useEffect(() => {
-        if (!deleteId || Platform.OS === 'web') return;
-
-        Alert.alert(i18nT('travel:components.listTravel.ListTravelBase.udalit_puteshestvie_b9ed27f5'), i18nT('travel:components.listTravel.ListTravelBase.eto_deystvie_nelzya_otmenit_dd4f9ae8'), [
-            {
-                text: i18nT('travel:components.listTravel.ListTravelBase.otmena_b3f645ff'),
-                style: 'cancel',
-                onPress: () => setDelete(null),
-            },
-            {
-                text: i18nT('travel:components.listTravel.ListTravelBase.udalit_39199478'),
-                style: 'destructive',
-                onPress: () => handleDelete(),
-            },
-        ]);
-    }, [deleteId, handleDelete]);
+    /* Delete flow (state + race-guarded mutation + native confirm) lives in the hook. */
+    const {
+      deleteId,
+      deleteError,
+      requestDelete: handleDeletePress,
+      confirmDelete,
+      cancelDelete,
+    } = useListTravelDelete();
 
     const exportState = useListTravelExport(travels, { ownerName: userId });
     const {
@@ -730,8 +636,8 @@ function ListTravelBase({ catalogIntro, primaryAction }: ListTravelBaseProps = {
       rootStyle={[styles.root, usesOverlaySidebar ? styles.rootMobile : undefined]}
       deleteId={deleteId}
       deleteError={deleteError}
-      onConfirmDelete={() => handleDelete(deleteId ?? undefined)}
-      onCloseDelete={() => { setDelete(null); setDeleteError(null); }}
+      onConfirmDelete={confirmDelete}
+      onCloseDelete={cancelDelete}
       sidebar={{
         isMobile: usesOverlaySidebar,
         filterGroups,

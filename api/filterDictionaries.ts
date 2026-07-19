@@ -3,6 +3,7 @@ import type {
   FilterDictionaries,
   FilterDictionaryOption,
   FilterSortingOption,
+  TravelFilters,
 } from '@/types/types';
 
 const asRecord = (value: unknown, label: string): Record<string, unknown> => {
@@ -89,3 +90,93 @@ export const normalizeFilterCountries = (payload: unknown): FilterCountryOption[
       title_ru: asNonEmptyString(item.title_ru, `${label}.title_ru`),
     };
   });
+
+/**
+ * Raw dictionaries payload accepted by the upsert wizard surface: an
+ * already-normalized `TravelFilters`, a `{ data: { filters } }` / `{ data }`
+ * wrapper, or a raw backend object using alias keys.
+ */
+export type UpsertFilterDictionariesInput =
+  | TravelFilters
+  | Record<string, unknown>
+  | null
+  | undefined;
+
+const asPlainRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+
+// Upsert wizard binds dictionary options to `MultiSelectField`, whose selection is
+// persisted as `string[]` in `TravelFormData`. Option ids are therefore canonicalized
+// to strings here, unlike the strict number-id `normalizeFilterDictionaries` that feeds
+// the search/list filters.
+const toStringOptions = (value: unknown): TravelFilters['categories'] => {
+  if (!Array.isArray(value)) return [];
+  return value.map((item, index) => {
+    const rec = asPlainRecord(item);
+    if (rec) {
+      const id = rec.id ?? rec.value ?? rec.category_id ?? rec.pk ?? index;
+      const name =
+        rec.name ?? rec.name_ru ?? rec.title_ru ?? rec.title ?? rec.text ?? String(id);
+      return { id: String(id), name: String(name) };
+    }
+    return { id: String(index), name: String(item) };
+  });
+};
+
+const toCountryOptions = (value: unknown): TravelFilters['countries'] => {
+  if (!Array.isArray(value)) return [];
+  return value.map((item, index) => {
+    const rec = asPlainRecord(item);
+    if (rec) {
+      const id = rec.country_id ?? rec.id ?? rec.pk ?? index;
+      const titleRu = rec.title_ru ?? rec.name_ru ?? rec.name ?? rec.title ?? String(id);
+      return { country_id: String(id), title_ru: String(titleRu) };
+    }
+    return { country_id: String(index), title_ru: String(item) };
+  });
+};
+
+const resolveDictionariesSource = (input: unknown): Record<string, unknown> => {
+  const root = asPlainRecord(input);
+  if (!root) return {};
+  const data = asPlainRecord(root.data);
+  if (data) {
+    const nested = asPlainRecord(data.filters);
+    return nested ?? data;
+  }
+  return root;
+};
+
+const pickAlias = (source: Record<string, unknown>, keys: string[]): unknown => {
+  for (const key of keys) {
+    const value = source[key];
+    if (value !== undefined && value !== null) return value;
+  }
+  return undefined;
+};
+
+/**
+ * Normalize the upsert-wizard filter dictionaries into a guaranteed `TravelFilters`
+ * (string ids). Accepts wrapped responses and backend alias keys; malformed data
+ * degrades to empty lists instead of throwing so the wizard never hard-fails.
+ */
+export const normalizeUpsertFilterDictionaries = (
+  input: UpsertFilterDictionariesInput,
+): TravelFilters => {
+  const source = resolveDictionariesSource(input);
+  return {
+    categories: toStringOptions(
+      pickAlias(source, ['categories', 'categoriesTravel', 'categories_travel']),
+    ),
+    transports: toStringOptions(pickAlias(source, ['transports', 'transportsTravel'])),
+    complexity: toStringOptions(pickAlias(source, ['complexity', 'complexityTravel'])),
+    companions: toStringOptions(pickAlias(source, ['companions', 'companionsTravel'])),
+    over_nights_stay: toStringOptions(
+      pickAlias(source, ['over_nights_stay', 'overNightsStay', 'overnights']),
+    ),
+    month: toStringOptions(pickAlias(source, ['month', 'months'])),
+    countries: toCountryOptions(source.countries),
+  };
+};

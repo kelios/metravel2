@@ -30,6 +30,7 @@ import {
     NAVIGATION_ACTION_LABELS,
 } from '@/components/navigation/navigationActionMeta';
 import { createQuestFullMapStyles } from './questFullMapStyles';
+import { MapCanvas, type MapCanvasEngine } from '@/components/MapPage/Map/MapCanvas';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -40,17 +41,6 @@ const QUEST_NAV_PROVIDERS: Array<{ app: QuestMapApp; kind: 'google' | 'organic' 
     { app: 'yandex', kind: 'yandex' },
     { app: 'osm', kind: 'osm' },
 ];
-
-type Mods = {
-    L: any;
-    MapContainer: any;
-    TileLayer: any;
-    Marker: any;
-    Polyline: any;
-    Popup: any;
-    FeatureGroup: any;
-    useMap: () => any;
-};
 
 const formatRouteDistance = (meters: number) => {
     if (!Number.isFinite(meters) || meters <= 0) return null;
@@ -178,7 +168,7 @@ function QuestFullMap({
     /** Кольцевой квест (тег `loop`): маршрут замыкается сегментом «финиш → старт». */
     closeLoop?: boolean;
 }) {
-    const [mods, setMods] = useState<Mods | null>(null);
+    const [engine, setEngine] = useState<MapCanvasEngine | null>(null);
     const [exportMenuVisible, setExportMenuVisible] = useState(false);
     const [fullscreenVisible, setFullscreenVisible] = useState(false);
     const mapDivRef = useRef<HTMLDivElement | null>(null);
@@ -223,16 +213,7 @@ function QuestFullMap({
                 const { loadLeafletRuntime } = await import('@/utils/loadLeafletRuntime');
                 const { L, RL } = await loadLeafletRuntime();
                 if (cancelled) return;
-                setMods({
-                    L,
-                    MapContainer: RL.MapContainer,
-                    TileLayer: RL.TileLayer,
-                    Marker: RL.Marker,
-                    Polyline: RL.Polyline,
-                    Popup: RL.Popup,
-                    FeatureGroup: RL.FeatureGroup,
-                    useMap: RL.useMap,
-                });
+                setEngine({ L, RL });
             } catch (error) {
                 console.error('Error loading map modules:', error);
             }
@@ -400,7 +381,7 @@ function QuestFullMap({
             'application/geo+json'
         );
 
-    if (!mods || points.length === 0) {
+    if (!engine || points.length === 0) {
         return (
             <View style={[styles.wrap, { height }]}>
                 <Text style={styles.loadingText}>{i18nT('quests:components.quests.QuestFullMap.zagruzka_karty_a7d37b43')}</Text>
@@ -408,7 +389,8 @@ function QuestFullMap({
         );
     }
 
-    const { L, MapContainer, TileLayer, Marker, Polyline, Popup, FeatureGroup, useMap } = mods;
+    const { L, RL } = engine;
+    const { Marker, Polyline, Popup, FeatureGroup, useMap } = RL;
 
     // Безопасное подгоняние границ
     const FitBounds: React.FC<{ fitKey: string }> = ({ fitKey }) => {
@@ -622,21 +604,19 @@ function QuestFullMap({
             </Modal>
 
             <View ref={mapDivRef as any} style={styles.mapBox} {...{ 'data-quest-map': 'true' } as any}>
-                <MapContainer
+                <MapCanvas
+                    engine={engine}
                     bounds={bounds}
-                    style={styles.map}
+                    mapStyle={styles.map as React.CSSProperties}
                     scrollWheelZoom={false}
                     zoomControl={Platform.OS === 'web'}
                     dragging={Platform.OS === 'web'}
                     touchZoom={true}
                     doubleClickZoom={false}
                 >
+                    {() => (<>
                     <FitBounds fitKey={pointsKey} />
                     <PanToActive index={activeStepIndex} />
-                    <TileLayer
-                        attribution="&copy; OpenStreetMap"
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
 
                     {routeLinePositions.length >= 2 && (
                         <>
@@ -723,7 +703,8 @@ function QuestFullMap({
                             </Marker>
                         ))}
                     </FeatureGroup>
-                </MapContainer>
+                    </>)}
+                </MapCanvas>
             </View>
 
             {/* Mobile touch hints */}

@@ -49,6 +49,15 @@ export const queryKeys = {
       : (['user-profile', id, suffix] as const)),
   userCountryProgress: (userId: string | number | null | undefined) =>
     ['user-country-progress', userId] as const,
+  // Пользовательские коллекции серверного стейта (FE-ARCH D1 #994).
+  // Scoped по userId для identity-isolation: гость (null) ↔ userA ↔ userB
+  // не делят кэш; смена пользователя = другой ключ, а не «протекающие» данные.
+  favorites: (userId: string | null) => ['favorites', userId] as const,
+  recommendations: (userId: string | null) => ['recommendations', userId] as const,
+  viewHistory: (userId: string | null) => ['view-history', userId] as const,
+  travelStatus: (userId: string | null) => ['travel-status', userId] as const,
+  travelStatusAuthored: (userId: string | null) =>
+    ['travel-status', userId, 'authored'] as const,
   questBundle: (slug: string | null | undefined) => ['quest-bundle', slug] as const,
   quests: () => ['quests'] as const,
   questDetail: (questId: number | undefined) => ['quest', questId] as const,

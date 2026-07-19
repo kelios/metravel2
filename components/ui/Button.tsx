@@ -16,7 +16,8 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 // soft = tonal (primarySoft bg + primaryText); danger-outline = красная рамка+текст, прозрачный фон
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'soft' | 'danger-outline';
+// tonal = нейтральный серый фон (backgroundTertiary) + primaryText, для второстепенных pill-кнопок
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'soft' | 'danger-outline' | 'tonal';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps {
@@ -26,6 +27,8 @@ export interface ButtonProps {
   size?: ButtonSize;
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
+  /** Замыкающая иконка справа от label. Рендерится одновременно с leading `icon`. */
+  trailingIcon?: React.ReactNode;
   /** Иконочная кнопка: рендерит только icon (label уходит в accessibilityLabel), квадрат 44/48. */
   iconOnly?: boolean;
   disabled?: boolean;
@@ -56,6 +59,7 @@ const ButtonComponent = forwardRef<View, ButtonProps>(({
   size = 'md',
   icon,
   iconPosition = 'left',
+  trailingIcon,
   iconOnly = false,
   disabled = false,
   loading = false,
@@ -126,6 +130,7 @@ const ButtonComponent = forwardRef<View, ButtonProps>(({
           </Text>
         )}
         {!loading && !iconOnly && icon && iconPosition === 'right' ? <View style={styles.icon}>{icon}</View> : null}
+        {!loading && !iconOnly && trailingIcon ? <View style={styles.trailingIcon}>{trailingIcon}</View> : null}
       </View>
     </Pressable>
   );
@@ -156,7 +161,8 @@ const staticStyles = StyleSheet.create({
     }),
   },
   visualShell: {
-    borderRadius: radii.md,
+    // borderRadius задаётся в `base` (radii.md по умолчанию); здесь не дублируем,
+    // чтобы caller мог переопределить радиус через `style` (напр. pill).
     ...Platform.select({
       web: {
         backgroundImage: 'none',
@@ -171,6 +177,9 @@ const staticStyles = StyleSheet.create({
   },
   icon: {
     marginRight: spacing.xs,
+  },
+  trailingIcon: {
+    marginLeft: spacing.xs,
   },
   label: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
@@ -196,6 +205,7 @@ const getForegroundColor = (variant: ButtonVariant, colors: ThemedColors): strin
     case 'outline':
       return colors.text;
     case 'soft':
+    case 'tonal':
       return colors.primaryText;
     case 'danger-outline':
       return colors.danger;
@@ -282,6 +292,10 @@ const getVariantStyles = (colors: ThemedColors): Record<ButtonVariant, ViewStyle
       backgroundColor: colors.primarySoft,
       borderColor: 'transparent',
     },
+    tonal: {
+      backgroundColor: colors.backgroundTertiary,
+      borderColor: 'transparent',
+    },
     'danger-outline': {
       backgroundColor: 'transparent',
       borderColor: colors.danger,
@@ -332,6 +346,12 @@ const getVariantHoverStyles = (colors: ThemedColors): Record<ButtonVariant, View
     },
     soft: {
       backgroundColor: colors.primaryLight,
+      ...Platform.select({
+        web: {},
+      }),
+    },
+    tonal: {
+      backgroundColor: colors.mutedBackground,
       ...Platform.select({
         web: {},
       }),
@@ -397,6 +417,9 @@ const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, Vi
       }),
     },
     soft: {
+      transform: [{ scale: 0.99 }],
+    },
+    tonal: {
       transform: [{ scale: 0.99 }],
     },
     'danger-outline': {

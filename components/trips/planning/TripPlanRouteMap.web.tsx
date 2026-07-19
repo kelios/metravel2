@@ -14,6 +14,7 @@ import {
 } from '@/components/trips/planning/tripPlanFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
+import { MapCanvas } from '@/components/MapPage/Map/MapCanvas';
 import { buildDropMarkerHtml } from '@/utils/markerSvg';
 import { translate as i18nT } from '@/i18n'
 
@@ -180,8 +181,6 @@ export default function TripPlanRouteMap({
     );
   }
 
-  const MapContainer = RL.MapContainer as any;
-  const TileLayer = RL.TileLayer as any;
   const Marker = RL.Marker as any;
   const Popup = RL.Popup as any;
   const Polyline = RL.Polyline as any;
@@ -219,14 +218,15 @@ export default function TripPlanRouteMap({
       </View>
 
       <div style={styles.mapShell as React.CSSProperties}>
-        <MapContainer
+        <MapCanvas
+          engine={{ L, RL }}
           center={center}
           zoom={trackPositions.length ? 10 : 5}
           keyboard={false}
-          key={mapKeyRef.current}
-          style={styles.map as React.CSSProperties}
+          containerKey={mapKeyRef.current}
+          mapStyle={styles.map as React.CSSProperties}
         >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          {() => (<>
           <ClickToAdd
             disabled={readonly}
             onAddPointFromMap={onAddPointFromMap}
@@ -272,7 +272,8 @@ export default function TripPlanRouteMap({
               </Marker>
             );
           })}
-        </MapContainer>
+          </>)}
+        </MapCanvas>
       </div>
     </View>
   );

@@ -88,6 +88,15 @@ export const buildLeafletPopupCss = (colors: any) => `
       width: 320px !important;
       max-width: calc(100vw - 60px) !important;
     }
+    /* PlacePopupCard (FE-MAP M4): cap the popup height so expanding «Ещё» scrolls the
+       caption/actions INSIDE the popup instead of growing it off-screen. Mirrors the
+       main map's .metravel-place-popup rule, injected here for the wizard page. */
+    .metravel-webmap .metravel-place-popup .leaflet-popup-content {
+      max-height: calc(100dvh - 120px) !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      overscroll-behavior: contain !important;
+    }
     @media (max-width: 640px) {
       .metravel-webmap .leaflet-popup-content {
         width: min(300px, calc(100vw - 40px)) !important;

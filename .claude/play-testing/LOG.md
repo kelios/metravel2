@@ -18,7 +18,7 @@
 | 8    | 2026-07-16 | ✅          |            | TCT: uploads done; post-reset TCT: 12/12 uploads submitted; Pack Boneclaw IV: 13/13 done (100%); App Testers: 1 install/test, stopped before Play review | Evidence: `.claude/play-testing/evidence/2026-07-16/`; 110 moons; Putik/Jurisprudence retested |
 | 9    | 2026-07-17 | ✅          | `com.nadeemgs.testerscommunity` 37 → 38 | Pack Boneclaw IV: 13/13 done (100%); TCT: MVG/HealthMate/Damas reuploads submitted, partner proofs accepted; GridArt/Bigpic partner proofs accepted; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-17/`; TCT home: `You're all caught up!`; no crash-buffer hits |
 | 10   | 2026-07-18 | ✅          | none | Pack Boneclaw IV: 12/12 done (100%); TCT: 10 completed today, 2 pending states audited; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-18/`; bugs/risks logged: GridArt 404/waiting partner, Rocky list/detail status mismatch, own app opens dev launcher |
-| 11   | 2026-07-19 |             |            |                      | |
+| 11   | 2026-07-19 | ✅          | none checked | Pack Boneclaw IV: 12/12 done (100%); TCT: 7 completed today, 5 pending partner/review waits; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-19/`; 3+ minute interactive testing used for each TC task app; bugs/improvements logged |
 | 12   | 2026-07-20 |             |            |                      | |
 | 13   | 2026-07-21 |             |            |                      | |
 | 14   | 2026-07-22 |             |            |                      | |
@@ -83,3 +83,27 @@
 - NadeemGS TestersCommunity `com.nadeemgs.testerscommunity`: opened home/profile/My Apps; wallet `20/0`; `My Apps` showed `No apps uploaded yet`; no required action found.
 - Own app check: `by.metravel.app/.MainActivity` opens Expo `Development Build` launcher instead of the production MeTravel UI. Treat this as an Android installation/state risk before using this installed package as proof.
 - Crash check: `adb logcat -d -b crash` filtered for all tested/community packages returned no relevant crash entries.
+
+### 2026-07-19 — Daily pass
+
+- Device: Pixel 10 Pro `61020DLCH0086L`, USB/adb authorized.
+- TestersCommunity Pack Boneclaw IV: completed all 12 daily tasks. Final task screen showed `100%, YOUR MISSION`, `Open & test apps today (12/12 done)`, `Daily Progress Complete!`, `All tasks complete!`.
+- Per user instruction, assigned TC apps were tested with 3+ minute interactive sessions, not passive opens. Retested weak attempts instead of counting them:
+  - BareMacros: opened `ADD CUSTOM MEAL`, tested custom grams/per serving form. Improvement: first-run guidance/examples for custom meal entry could be clearer.
+  - PraEx: answered and advanced through driving quiz questions up to later quiz screens. Improvement: long answer options are dense on mobile.
+  - Putik: tested employee login screen with neutral credentials and password visibility. Bug/blocker: no demo/guest/tester access; closed testers cannot reach the attendance/employee flow. Additional UX issue: field focus was easy to mis-hit and test password text appended into the email field during input.
+  - Smart Bill POS: navigated Dashboard/Inventory/Billing/Khata/Settings and reached inventory item state. Improvement: ad banner sits close to operational POS tabs; target/item flows need clearer confirmation.
+  - Kitchen Match & Merge: first attempt only reached level map, so it was not counted; retested Level 1 with active board interactions. Improvement: start/menu ad is prominent and easy to hit accidentally.
+  - Ball Sort - Zen: started a level and performed tube moves. Improvement: add a short tutorial/rules hint before the first puzzle.
+  - Kolorino: opened `По номерам`, colored a drawing to 24%. Improvement: selected-number zones could be highlighted more strongly for first-time users.
+  - `運の社`: opened fortune/oracle flows and captured a result. Improvement: add a language toggle or short English description if international testers are expected.
+  - Call Of Poker: first attempt stopped at mode/tutorial screens, so it was not counted; retested Memory Game until the card grid and score were visible. Improvement: tutorial continue arrow/CTA is not obvious enough.
+  - Denkleşelim: opened room and `Harcama Ekle` expense form. Improvement: keyboard can cover lower form actions; add better scrolling/focus handling around amount/category/save.
+  - First Time Daddy: first attempt returned to TestersCommunity before 3 minutes, so it was not counted; retested 3+ minutes inside the app across Home/Weekly/Guide/Journal/content. Improvement: clarify privacy/local-only status for Journal entries.
+  - Priority dz: opened main mode and interacted through level/progression screens. Improvement: bottom ad remains close to level/navigation area; optional language hint could help non-Arabic testers.
+- TCT: final Tests list showed `5 pending • 7 completed today`.
+  - Loam - Moto Day 4 partner proof was visually checked before action: proof opened MeTravel web/article usage, so it was acceptable evidence.
+  - Remaining visible pending states were already `MY UPLOAD Pending` with `PARTNER Waiting`: Libera Day 7, Insta saver Day 6, Damas Go Day 5, GridArt Day 11, Rocky Decodes Calories Day 11. No upload/replace controls were available, so no re-upload was attempted.
+- App Testers `com.nadeemgs.apptesters`: inspected current `Test Apps` list. No safe mandatory proof action was found; no Play Store reviews/ratings were performed.
+- NadeemGS TestersCommunity `com.nadeemgs.testerscommunity`: inspected current `Test Apps` list and wallet state; no mandatory proof action was found.
+- Crash check: `adb logcat -d -b crash` filtered for tested/community packages returned no relevant crash entries.
