@@ -18,7 +18,7 @@ import { translate as i18nT } from '@/i18n'
 
 const COLLAPSED_KEY = 'personalization_collapsed';
 const PREVIEW_CARD_WIDTH = 208;
-const PREVIEW_CARD_GAP = 16;
+const PREVIEW_CARD_GAP = 12;
 
 interface PersonalizedRecommendationsProps {
     forceVisible?: boolean;
@@ -494,9 +494,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontWeight: '700',
         color: colors.primaryText,
     },
+    // Зазор задаёт рельса, как в WeeklyHighlights: у TabTravelCard нет внешних отступов
+    // (обёртка UnifiedTravelCard с фиксированной width гасит margin).
     previewRow: {
         flexDirection: 'row',
         alignItems: 'stretch',
+        gap: PREVIEW_CARD_GAP,
         paddingHorizontal: 4,
         paddingVertical: 4,
         overflow: 'hidden',

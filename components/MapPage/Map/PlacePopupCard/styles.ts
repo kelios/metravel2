@@ -8,6 +8,24 @@ import {
   SPACING,
 } from './constants';
 
+// Web-only CSS line clamp — единый каст вместо копий в каждом text-стиле.
+const webLineClamp = (lines: number, extra?: Record<string, unknown>) =>
+  Platform.OS === 'web'
+    ? ({
+        display: '-webkit-box',
+        WebkitLineClamp: lines,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+        ...extra,
+      } as any)
+    : null;
+
+// Моноширинный стек для координат (web-only CSS font list).
+const MONO_FONT_FAMILY =
+  Platform.OS === 'web'
+    ? ('ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any)
+    : undefined;
+
 export const getStyles = (
   colors: ThemedColors,
   bp: BreakpointKey,
@@ -60,14 +78,14 @@ export const getStyles = (
       position: 'relative',
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       overflow: 'hidden',
-      // Photo is pinned and dominant, but narrow mobile needs enough fixed
-      // room below it for title, coordinates, and the first action row.
+      // Hero-caption mode: the place info is drawn ON the photo, so there is no
+      // scroll region below — the hero simply absorbs every pixel the pinned
+      // footer doesn't need. minHeight keeps a usable photo on short viewports.
       ...(Platform.OS === 'web'
         ? ({
-            flexGrow: 0,
-            flexShrink: 0,
+            flexGrow: 1,
+            flexShrink: 1,
             flexBasis: bottomSheetHeroBasis,
-            maxHeight: bottomSheetHeroBasis,
             minHeight: bottomSheetHeroMinHeight,
           } as any)
         : null),
@@ -200,6 +218,98 @@ export const getStyles = (
       top: 10,
       left: 10,
       zIndex: 7,
+    },
+    // Bottom-card hero caption: place info drawn ON the photo over a static dark
+    // gradient (not live blur — mobile GPU rule), so the sheet below the hero only
+    // hosts status + actions and never needs a scroll region. White-on-scrim text
+    // is theme-invariant by design (photo backdrop, both themes).
+    heroCaption: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 6,
+    },
+    heroCaptionGradient: {
+      paddingHorizontal: horizontalPadding,
+      // Tall top padding = the transparent run of the gradient, so the frost
+      // fades in above the first text line instead of cutting a hard edge.
+      paddingTop: 30,
+      paddingBottom: 10,
+      gap: 5,
+    },
+    heroCaptionChipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: 6,
+    },
+    heroCaptionChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      minHeight: 24,
+      maxWidth: '100%',
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: 'rgba(15,23,42,0.55)',
+    },
+    heroCaptionChipText: {
+      fontSize: fs.small - 1,
+      fontWeight: '600',
+      color: colors.textOnDark,
+      flexShrink: 1,
+    },
+    heroCaptionTitle: {
+      fontSize: fs.title,
+      fontWeight: '800',
+      color: colors.textOnDark,
+      lineHeight: fs.title * 1.22,
+      ...webLineClamp(2, { textShadow: '0 1px 8px rgba(15,23,42,0.45)' }),
+    },
+    heroCaptionSubtitle: {
+      fontSize: fs.small,
+      color: 'rgba(255,255,255,0.86)',
+      lineHeight: fs.small * 1.3,
+      ...webLineClamp(1),
+    },
+    heroCaptionCoordRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      minHeight: 30,
+      marginTop: 1,
+    },
+    heroCaptionCoordText: {
+      fontSize: fs.coord,
+      fontWeight: '500',
+      color: 'rgba(255,255,255,0.92)',
+      flexShrink: 1,
+      minWidth: 0,
+      fontFamily: MONO_FONT_FAMILY,
+    },
+    heroCaptionIconBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+      backgroundColor: 'rgba(15,23,42,0.45)',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'rgba(255,255,255,0.32)',
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+    },
+    heroCaptionShareBtn: {
+      marginLeft: 'auto',
+    },
+    // Hero-caption mode moves the ⤢ expand affordance to the photo's top-right
+    // corner (the caption owns the bottom edge). `bottom:'auto'` clears the base
+    // offset on both RN and RN-Web.
+    imageExpandButtonTop: {
+      top: compactLayout ? 8 : 10,
+      bottom: 'auto',
     },
     closeButton: {
       position: 'absolute',
@@ -426,27 +536,13 @@ export const getStyles = (
       color: colors.text,
       lineHeight: (bottomCardLayout ? fs.title - 1 : splitLayout ? fs.title + 1 : fs.title) * 1.24,
       letterSpacing: 0,
-      ...(Platform.OS === 'web'
-        ? ({
-            display: '-webkit-box',
-            WebkitLineClamp: bottomCardLayout ? 2 : splitLayout ? 2 : bp === 'narrow' ? 3 : 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          } as any)
-        : null),
+      ...webLineClamp(bottomCardLayout ? 2 : splitLayout ? 2 : bp === 'narrow' ? 3 : 2),
     },
     subtitleText: {
       fontSize: bottomCardLayout ? fs.small - 1 : compactLayout ? fs.small - 1 : splitLayout ? fs.small + 1 : fs.small,
       color: colors.textMuted,
       lineHeight: (bottomCardLayout ? fs.small - 1 : compactLayout ? fs.small - 1 : splitLayout ? fs.small + 1 : fs.small) * 1.35,
-      ...(Platform.OS === 'web'
-        ? ({
-            display: '-webkit-box',
-            WebkitLineClamp: bottomCardLayout ? 1 : splitLayout ? 2 : 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          } as any)
-        : null),
+      ...webLineClamp(bottomCardLayout ? 1 : splitLayout ? 2 : 2),
     },
     categoryText: {
       fontSize: compactLayout ? fs.small - 1 : fs.small,
@@ -498,10 +594,7 @@ export const getStyles = (
       color: bottomCardLayout ? colors.textMuted : colors.text,
       flex: 1,
       minWidth: 0,
-      fontFamily:
-        Platform.OS === 'web'
-          ? ('ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any)
-          : undefined,
+      fontFamily: MONO_FONT_FAMILY,
     },
     actionsStack: {
       gap: bottomCardLayout ? 8 : splitLayout ? 8 : 10,

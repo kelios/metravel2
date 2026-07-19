@@ -23,17 +23,14 @@ import { translate as i18nT } from '@/i18n'
 
 const IS_WEB = Platform.OS === 'web'
 const SWIPE_CLOSE_THRESHOLD_PX = 64
-// Native bottom sheet: vertical budget the caption/actions block needs below the
-// hero, so the hero can take the rest without forcing a scroll on tall content.
-// Dropped from 460 → 380 after the «Статус поездки» row was removed (♥ + status are
-// now compact icons in the hero corner), reclaiming a full row for the photo.
-// #844 — Android QA showed 380 still pushed «Сохранить»/«Навигация» into the scroll
-// zone on the travel-details «Места рядом» card. Recomputed against the real footer
-// (coord row + 50px action bubbles + gaps): bumped to 414, which shrinks the hero
-// ~10% (348 → 314 on a 390×844 screen) and reserves enough for the full action row
-// without a mandatory scroll. The native action stack is tightened in parallel
-// (PlacePopupCard/styles.ts), so the default card fits.
-const NATIVE_CONTENT_RESERVE = 414
+// Native bottom sheet: vertical budget the block below the hero needs, so the
+// hero can take the rest without forcing a scroll on tall content.
+// Hero-caption relayout: title/address/chips/coordinates moved ONTO the photo
+// (PlacePopupCard hero caption), so below the hero only the status row + the
+// 4-icon action row remain. Recomputed: handle row ~44 + footer paddings ~18 +
+// status row ~44 + divider ~9 + action row (44 bubble + label) ~73 + body pad
+// ~12 ≈ 200; 224 keeps slack for the future inline rating row (#986).
+const NATIVE_CONTENT_RESERVE = 224
 
 type MapPlaceBottomCardProps = {
   /** Selected single marker; when null the card is not rendered. */
@@ -101,11 +98,13 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   const nativeSheetMaxHeight = Math.round(
     Math.max(360, viewportHeight - bottomChromeInset - nativeSheetTopInset - 12),
   )
+  // 0.56 (was 0.52): with the caption drawn on the photo the hero is the whole
+  // upper card, matching the ~70%-of-card contract now that the text rows are gone.
   const nativeHeroHeight = IS_WEB
     ? undefined
     : Math.max(
         180,
-        Math.min(Math.round(viewportHeight * 0.52), nativeSheetMaxHeight - NATIVE_CONTENT_RESERVE),
+        Math.min(Math.round(viewportHeight * 0.56), nativeSheetMaxHeight - NATIVE_CONTENT_RESERVE),
       )
 
   const PopupComponent = useMemo(

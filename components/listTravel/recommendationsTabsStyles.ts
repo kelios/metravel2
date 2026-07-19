@@ -83,13 +83,16 @@ export const createRecommendationsTabsStyles = (
     borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
   },
   collapsedSpacer: { height: TAB_CONTENT_HEIGHT },
-  tabPane: { minHeight: TAB_CONTENT_HEIGHT, flex: 1 },
+  // Без flex:1: у родителя высота auto, поэтому flex-basis 0 зажимал пане ровно
+  // в minHeight, а контент вкладок с собственной шапкой (favorites/history)
+  // вылезал за низ и срезался overflow:hidden контейнера. minHeight резервирует
+  // место (без CLS), рост — по контенту.
+  tabPane: { minHeight: TAB_CONTENT_HEIGHT },
   tabPaneMobileWebExpanded: Platform.select({
     web: { height: 'auto', flex: 0, overflow: 'visible' } as any,
     default: {},
   }),
   tabPaneScroll: {
-    flex: 1,
     ...(Platform.select({ web: { width: '100%', overflowX: 'visible', overflowY: 'visible' } as any, default: {} }) as any),
   },
   tabPaneContent: {
@@ -289,10 +292,7 @@ export const createRecommendationsTabsStyles = (
     width: 220,
     flexShrink: 0,
   },
-  // layout="horizontal" cards inject marginRight for non-shelf rails; the shelf
-  // rail spaces items with `gap`, so neutralise the trailing margin here.
   shelfCard: {
     width: 220,
-    marginRight: 0,
   },
 });

@@ -147,10 +147,12 @@ function TabTravelCard({
 }
 
 const createStyles = (template: ReturnType<typeof createTabCardTemplate>) => StyleSheet.create({
+  // Внешних отступов у карточки нет: UnifiedTravelCard оборачивает её во View с
+  // фиксированной width, внутри которого margin не влияет на соседей. Зазоры
+  // между карточками задаёт родительская рельса (gap), как в «Подборке месяца».
   container: {
     ...template.container,
     flexShrink: 0,
-    marginRight: 16,
     ...Platform.select({
       web: {
         cursor: 'pointer',
@@ -162,7 +164,6 @@ const createStyles = (template: ReturnType<typeof createTabCardTemplate>) => Sty
   containerGrid: {
     ...template.container,
     width: '100%',
-    marginRight: 0,
     ...Platform.select({
       web: {
         cursor: 'pointer',

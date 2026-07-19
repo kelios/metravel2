@@ -387,7 +387,11 @@ const RightColumn: React.FC<RightColumnProps> = (
     )
 
     const ListHeader = useMemo(() => {
-      const desktopHeight =
+      // minHeight, а не height+overflow:hidden: вкладки с собственной шапкой
+      // («Хочу поехать»/«История» — заголовок, счётчик, «Смотреть все») выше
+      // резерва 376px, и фиксированная высота срезала низ карточек. Резерв под
+      // плейсхолдер/CLS сохраняется, рост — по контенту активной вкладки.
+      const desktopMinHeight =
         Platform.OS === 'web' && !isMobile ? RECOMMENDATIONS_TOTAL_HEIGHT : undefined
 
       return (
@@ -402,7 +406,7 @@ const RightColumn: React.FC<RightColumnProps> = (
               showRecommendations
                 ? {
                     marginBottom: 24,
-                    ...(desktopHeight ? { height: desktopHeight, overflow: 'hidden' } : {}),
+                    ...(desktopMinHeight ? { minHeight: desktopMinHeight } : {}),
                   }
                 : { height: 0, overflow: 'hidden' }
             }

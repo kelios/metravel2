@@ -660,9 +660,11 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     }
     expect(popupVisible).toBeTruthy();
 
-    // Smoke check: popup should contain at least one link (details or card).
-    const anyLink = popupLocator.locator('a').first();
-    await expect(anyLink).toBeVisible({ timeout: 10_000 });
+    // Smoke check: popup should expose at least one actionable control. Since the
+    // picker-sheet redesign the card renders Pressables (no <a> anchors), so assert
+    // on the card-action affordance instead of an anchor tag.
+    const anyAction = popupLocator.locator('[data-card-action="true"], [role="button"]').first();
+    await expect(anyAction).toBeVisible({ timeout: 10_000 });
   });
 
   test('desktop: popup action opens the related travel details', async ({ page }) => {

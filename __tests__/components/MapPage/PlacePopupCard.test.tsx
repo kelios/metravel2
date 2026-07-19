@@ -711,9 +711,11 @@ describe('PlacePopupCard', () => {
       );
     });
 
+    // Hero-caption layout: the photo has no max-height cap anymore — it absorbs
+    // the space freed by moving the title/coords onto the photo (flexGrow:1).
     const hero = tree.root.findAll((node: any) => {
       const style = StyleSheet.flatten(node.props?.style);
-      return style?.flexBasis === '58%' && style?.maxHeight === '58%' && style?.minHeight === '46%';
+      return style?.flexBasis === '58%' && style?.flexGrow === 1 && style?.minHeight === '46%';
     })[0];
 
     expect(hero).toBeTruthy();

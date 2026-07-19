@@ -396,11 +396,12 @@ const RecommendationsTabs = memo(
       // Раньше на вебе рендерился только «превью» из влезших карточек — остальные
       // не существовали в DOM и были недостижимы (ни скролла, ни стрелок).
       // CardRail отдаёт всю коллекцию и сам показывает стрелки на десктопе.
-      // gap=0: горизонтальные отступы уже заданы marginRight у TabTravelCard.
+      // gap=12 — как у превью «Подборки месяца»: у карточки нет своих внешних
+      // отступов (обёртка UnifiedTravelCard с фиксированной width гасит margin).
       return (
         <CardRail
           testID={activeRailTestID}
-          gap={0}
+          gap={12}
           contentPaddingHorizontal={4}
           contentPaddingVertical={6}
         >

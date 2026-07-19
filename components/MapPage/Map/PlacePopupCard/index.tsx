@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
@@ -18,6 +19,14 @@ import { usePopupActions } from './usePopupActions';
 import { getPlacePopupCoordinate, getPlacePopupSubtitle } from './placePopupModel';
 import { translate as i18nT } from '@/i18n'
 
+// Static dark frost for the hero caption (no live backdrop blur on mobile —
+// recomposites the map region, CLAUDE.md arch #2). Theme-invariant over photos.
+const CAPTION_GRADIENT_COLORS = [
+  'rgba(15,23,42,0)',
+  'rgba(15,23,42,0.55)',
+  'rgba(15,23,42,0.9)',
+] as const;
+const CAPTION_GRADIENT_LOCATIONS = [0, 0.45, 1] as const;
 
 type Props = {
   title: string;
@@ -269,6 +278,12 @@ const PlacePopupCard: React.FC<Props> = ({
   // action row. The desktop Leaflet popup (isBottomCardLayout === false) keeps its own
   // inline layout otherwise.
   const useBottomCardChrome = isBottomCardLayout;
+  // Bottom-card hero caption: title/address/chips/coordinates are drawn ON the
+  // photo (gradient scrim), so the region below the hero holds only the status
+  // row + action row and the whole card fits without scrolling. Applies to the
+  // mobile web sheet, the native bottom card and the >560 tablet card; the
+  // desktop Leaflet popup and the fullscreen mobile overlay keep topInfoSlot.
+  const useHeroCaption = useBottomCardChrome && !!imageUrl;
   // Route the secondary navigation (Google/Apple/Organic/Waze/Яндекс/OSM) into the
   // ActionListSheet (a selectable list modal) on EVERY surface — mobile (native bottom
   // card + fullscreen overlay) AND the desktop Leaflet popup. The old desktop path
@@ -430,6 +445,123 @@ const PlacePopupCard: React.FC<Props> = ({
     useCompactLayout,
   ]);
 
+  // Caption drawn on the hero photo (bottom-card layouts). It is a SIBLING of the
+  // hero pressable, not a child: the web hero uses capture-phase handlers to open
+  // the fullscreen viewer, and nesting the copy/share buttons inside would make
+  // every tap on them also open the photo. On native, `box-none` containers let
+  // taps on plain text fall through to the hero (photo opens), while the buttons
+  // keep their own presses.
+  const heroCaptionSlot = useMemo(() => {
+    if (!useHeroCaption) return null;
+    const hasChips = !!categoryLabel || isDrivingLoading || hasDrivingInfo;
+    return (
+      <View style={styles.heroCaption} pointerEvents="box-none">
+        <LinearGradient
+          colors={CAPTION_GRADIENT_COLORS as unknown as [string, string, ...string[]]}
+          locations={CAPTION_GRADIENT_LOCATIONS as unknown as [number, number, ...number[]]}
+          style={styles.heroCaptionGradient}
+          pointerEvents="box-none"
+        >
+          {hasChips ? (
+            <View style={styles.heroCaptionChipsRow} pointerEvents="box-none">
+              {!!categoryLabel && (
+                <View style={styles.heroCaptionChip}>
+                  <Feather name="tag" size={11} color={colors.textOnDark} />
+                  <Text style={styles.heroCaptionChipText} numberOfLines={1}>
+                    {categoryLabel}
+                  </Text>
+                </View>
+              )}
+              {(isDrivingLoading || hasDrivingInfo) && (
+                <View testID="popup-driving-info" style={styles.heroCaptionChip}>
+                  <Feather name="navigation" size={11} color={colors.textOnDark} />
+                  {isDrivingLoading ? (
+                    <ActivityIndicator size="small" color={colors.textOnDark} />
+                  ) : (
+                    <Text style={styles.heroCaptionChipText} numberOfLines={1}>
+                      {drivingText}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
+          ) : null}
+
+          <Text style={styles.heroCaptionTitle} numberOfLines={2}>
+            {title}
+          </Text>
+
+          {!!displaySubtitle && (
+            <Text style={styles.heroCaptionSubtitle} numberOfLines={1}>
+              {displaySubtitle}
+            </Text>
+          )}
+
+          {(hasCoord || showTitleShare) ? (
+            <View style={styles.heroCaptionCoordRow} pointerEvents="box-none">
+              {hasCoord ? (
+                <>
+                  <Feather
+                    name="map-pin"
+                    size={12}
+                    color={colors.textOnDark}
+                    style={{ flexShrink: 0 }}
+                  />
+                  <Text style={styles.heroCaptionCoordText} numberOfLines={1} selectable>
+                    {displayCoord}
+                  </Text>
+                  {onCopyCoord ? (
+                    <CardActionPressable
+                      accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.index.skopirovat_koordinaty_662a5c44')}
+                      onPress={() => void onCopyCoord()}
+                      title={popupTooltips.copyCoords}
+                      enableWebClickFallback
+                      style={({ pressed }) => [styles.heroCaptionIconBtn, pressed && styles.iconActionBtnPressed]}
+                    >
+                      <Feather name="copy" size={13} color={colors.textOnDark} />
+                    </CardActionPressable>
+                  ) : null}
+                </>
+              ) : null}
+              {showTitleShare && onShareTelegram ? (
+                <CardActionPressable
+                  accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.index.podelitsya_v_telegram_a5cf0cdd')}
+                  onPress={onShareTelegram}
+                  title={popupTooltips.shareTelegram}
+                  enableWebClickFallback
+                  style={({ pressed }) => [
+                    styles.heroCaptionIconBtn,
+                    styles.heroCaptionShareBtn,
+                    pressed && styles.iconActionBtnPressed,
+                  ]}
+                >
+                  <Feather name="send" size={13} color={colors.textOnDark} />
+                </CardActionPressable>
+              ) : null}
+            </View>
+          ) : null}
+        </LinearGradient>
+      </View>
+    );
+  }, [
+    useHeroCaption,
+    categoryLabel,
+    isDrivingLoading,
+    hasDrivingInfo,
+    drivingText,
+    title,
+    displaySubtitle,
+    hasCoord,
+    displayCoord,
+    onCopyCoord,
+    showTitleShare,
+    onShareTelegram,
+    popupTooltips.copyCoords,
+    popupTooltips.shareTelegram,
+    styles,
+    colors.textOnDark,
+  ]);
+
   // Desktop Leaflet popup keeps this as a hero overlay. Bottom cards render the
   // same stack inline in the footer so trip statuses stay visible as text.
   const relatedTravelActionStack = useMemo(() => {
@@ -484,7 +616,8 @@ const PlacePopupCard: React.FC<Props> = ({
 
   const footerSlot = useMemo(() => (
     <View style={styles.footerStack}>
-      {hasCoord && (
+      {/* Hero-caption mode shows coordinates (with copy) on the photo itself. */}
+      {hasCoord && !useHeroCaption && (
         <View style={styles.coordRow}>
           <Feather name="map-pin" size={13} color={colors.textMuted} style={{ flexShrink: 0 } as any} />
           <Text style={styles.coordText} numberOfLines={1} selectable>{displayCoord}</Text>
@@ -743,6 +876,7 @@ const PlacePopupCard: React.FC<Props> = ({
     displayCoord,
     extraActions,
     hasCoord,
+    useHeroCaption,
     isAdding,
     isBottomCardLayout,
     isSaved,
@@ -864,7 +998,11 @@ const PlacePopupCard: React.FC<Props> = ({
               onTouchEnd={handleOpenFullscreen}
               style={{
                 position: 'absolute',
-                bottom: useCompactLayout ? 8 : 10,
+                // Hero-caption mode: the caption owns the photo's bottom edge, so
+                // the ⤢ affordance moves to the free top-right corner.
+                ...(useHeroCaption
+                  ? { top: useCompactLayout ? 8 : 10 }
+                  : { bottom: useCompactLayout ? 8 : 10 }),
                 right: useCompactLayout ? 8 : 10,
                 width: useCompactLayout ? 30 : 34,
                 height: useCompactLayout ? 30 : 34,
@@ -898,6 +1036,7 @@ const PlacePopupCard: React.FC<Props> = ({
               pointerEvents="none"
               style={[
                 styles.imageExpandButton,
+                useHeroCaption && styles.imageExpandButtonTop,
                 hovered && styles.imageExpandButtonHovered,
                 pressed && styles.imageExpandButtonPressed,
               ]}
@@ -932,17 +1071,23 @@ const PlacePopupCard: React.FC<Props> = ({
           <View style={styles.splitHero}>
             {relatedTravelOverlays}
             {heroImage}
+            {heroCaptionSlot}
             {heroActionOverlay}
             {closeControl}
           </View>
-          <View
-            style={styles.splitScroll}
-            {...({ 'data-card-action': 'true' } as any)}
-          >
-            <View style={styles.splitContentPadding}>
-              {topInfoSlot}
+          {/* Hero-caption mode: the info lives on the photo, no scroll region —
+              the hero (flex:1) absorbs the freed space. Legacy fallback keeps the
+              scrollable caption for callers without the bottom-card chrome. */}
+          {useHeroCaption ? null : (
+            <View
+              style={styles.splitScroll}
+              {...({ 'data-card-action': 'true' } as any)}
+            >
+              <View style={styles.splitContentPadding}>
+                {topInfoSlot}
+              </View>
             </View>
-          </View>
+          )}
           {/* Action bar pinned below the scroll: on content-rich points the info
               above overflows and scrolls, but ♥ / «Был/Хочу/Планирую» / навигация
               stay anchored here so they never slide under the bottom dock. */}
@@ -1060,17 +1205,23 @@ const PlacePopupCard: React.FC<Props> = ({
         {closeControl}
         <View style={[styles.topSection, useSplitLayout && styles.topSectionSplit]}>
           {heroImage}
+          {heroCaptionSlot}
           {heroActionOverlay}
 
-          <View
-            style={[
-              styles.contentContainer,
-              useSplitLayout && styles.contentContainerSplit,
-              reserveInlineCloseSpace ? { paddingRight: 58 } : null,
-            ]}
-          >
-            {topInfoSlot}
-          </View>
+          {/* Hero-caption mode (native bottom card / >560 tablet card): the info
+              is on the photo; the hero stays the only flow child so the absolute
+              caption aligns with its bottom edge. */}
+          {useHeroCaption ? null : (
+            <View
+              style={[
+                styles.contentContainer,
+                useSplitLayout && styles.contentContainerSplit,
+                reserveInlineCloseSpace ? { paddingRight: 58 } : null,
+              ]}
+            >
+              {topInfoSlot}
+            </View>
+          )}
         </View>
 
         <View style={styles.footerContainer}>
