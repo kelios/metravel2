@@ -1,5 +1,17 @@
 import { render, screen, waitFor, act } from '@testing-library/react';
+import { Platform } from 'react-native';
 import WebMapComponent from '@/components/travel/WebMapComponent';
+
+// #992 — wizard-карта теперь на общем MapCanvas, у которого web-гейт по
+// Platform.OS; RN-preset в jest дефолтит 'ios' — эмулируем web-окружение
+// (компонент web-only), как в mapCanvasEngine.test.tsx.
+const originalPlatformOS = Platform.OS;
+beforeAll(() => {
+  (Platform as any).OS = 'web';
+});
+afterAll(() => {
+  (Platform as any).OS = originalPlatformOS;
+});
 
 jest.mock('@/utils/pendingImageFiles', () => ({
   registerPendingImageFile: jest.fn(),
@@ -54,12 +66,17 @@ jest.mock('react-leaflet', () => {
     TileLayer: Dummy,
     Marker: Dummy,
     Popup: Dummy,
-    useMap: jest.fn(() => ({
-      fitBounds: jest.fn(),
-      setView: jest.fn(),
-      closePopup: jest.fn(),
-      getZoom: jest.fn(() => 13),
-    })),
+    // Стабильный инстанс, как в реальном react-leaflet (один map на контейнер):
+    // новый объект на каждый вызов зацикливал onMapRef→setMapCreatedNonce→рендер.
+    useMap: (() => {
+      const stableMap = {
+        fitBounds: jest.fn(),
+        setView: jest.fn(),
+        closePopup: jest.fn(),
+        getZoom: jest.fn(() => 13),
+      };
+      return jest.fn(() => stableMap);
+    })(),
     useMapEvents: jest.fn((handlers: any) => {
       lastMapEvents = handlers;
       return {};

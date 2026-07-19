@@ -12,7 +12,8 @@ import { fetchReverseGeocode } from '@/api/geoQueries';
 import { bigDataCloudReverse } from '@/api/external/bigdatacloud';
 import { buildLeafletPopupCss, createWebMapStyles } from '@/components/travel/WebMapComponent.styles';
 import WebMapMarkerPopup from '@/components/travel/WebMapMarkerPopup';
-import { getOsmTileUrl, OSM_PROXY_ATTRIBUTION, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
+// #992 — общий web-движок карты: MapContainer + единый OSM tile-провайдер.
+import MapCanvas from '@/components/MapPage/Map/MapCanvas';
 import {
     CenterOnActive,
     FitBounds,
@@ -133,6 +134,13 @@ const WebMapComponent = ({
     const reactId = useId();
     const mapInstanceKeyRef = useRef<string>(`leaflet-map-${reactId.replace(/:/g, '')}`);
     const [mapCreatedNonce, setMapCreatedNonce] = useState(0);
+    // #992 — стабильный колбэк для MapCanvas.onMapRef: lifecycle-эффект движка
+    // зависит от него, инлайн-стрелка перезапускала бы эффект каждый рендер.
+    const handleMapRef = useCallback((map: any) => {
+        if (!map || mapRef.current === map) return;
+        mapRef.current = map;
+        setMapCreatedNonce((n) => n + 1);
+    }, []);
 
     useEffect(() => {
         const map = mapRef.current;
@@ -586,8 +594,6 @@ const WebMapComponent = ({
         return <div style={loadingStyle(colors)}>{i18nT('travel:components.travel.WebMapComponent.zagruzka_karty_c6c52f38')}</div>;
     }
 
-    const MapContainer: any = (rl as any).MapContainer;
-    const TileLayer: any = (rl as any).TileLayer;
     const Marker: any = (rl as any).Marker;
     const Popup: any = (rl as any).Popup;
     const useMap: any = (rl as any).useMap;
@@ -620,19 +626,23 @@ const WebMapComponent = ({
                                 </button>
                             )}
 
-                            <MapContainer
+                            {/* #992 — wizard-карта на общем web-движке MapCanvas: MapContainer +
+                                единый tile-провайдер живут в движке; экран отдаёт свой уже
+                                загруженный engine (собственный loader/loading-UX сохранён) и
+                                предметных детей через render-prop. Собственный invalidateSize-
+                                эффект экрана (mapCreatedNonce/isWideLayout/isExpanded) сохранён —
+                                resizeTrigger движка не используется, чтобы не дублировать. */}
+                            <MapCanvas
                                 center={[51.505, -0.09]}
                                 zoom={13}
                                 keyboard={false}
-                                key={mapInstanceKeyRef.current}
-                                ref={(map: any) => {
-                                    if (!map || mapRef.current === map) return;
-                                    mapRef.current = map;
-                                    setMapCreatedNonce((n) => n + 1);
-                                }}
-                                style={mapHeightStyle(isWideLayout)}
+                                containerKey={mapInstanceKeyRef.current}
+                                engine={{ L: L as any, RL: rl as any }}
+                                onMapRef={handleMapRef}
+                                mapStyle={mapHeightStyle(isWideLayout)}
                             >
-                                <TileLayer url={getOsmTileUrl()} attribution={OSM_PROXY_ATTRIBUTION} maxZoom={OSM_PROXY_MAX_ZOOM} />
+                              {() => (
+                                <>
                                 <MapClickHandler addMarker={addMarker} useMapEventsHook={useMapEvents} />
                                 <FitBounds
                                     markers={localMarkers}
@@ -679,7 +689,9 @@ const WebMapComponent = ({
                                         </Popup>
                                     </Marker>
                                 ))}
-                            </MapContainer>
+                                </>
+                              )}
+                            </MapCanvas>
 
                         </div>
                     </div>
