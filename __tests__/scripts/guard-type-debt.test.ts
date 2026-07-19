@@ -18,22 +18,33 @@ const {
 } = require('@/scripts/guard-type-debt')
 
 describe('guard-type-debt', () => {
-  it('counts real TypeScript casts and suppression directives', () => {
+  it('splits as-any casts into styleCast (noise) and logicCast (risk)', () => {
     const counts = countTypeDebt(`
       const typed = source as any
       const array = source as any[]
+      const styled = ({ display: 'grid', cursor: 'pointer' }) as any
+      const weight = { fontWeight: token.weight as any }
       // the words "as any" in a comment are not a cast
       // @ts-ignore -- legacy bridge
       // @ts-expect-error -- intentional incompatible fixture
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    `, 'components/example.ts')
+    `, 'components/example.tsx')
 
     expect(counts).toEqual({
-      asAny: 2,
+      styleCast: 2,
+      logicCast: 2,
       tsIgnore: 1,
       tsExpectError: 1,
       eslintDisable: 1,
     })
+  })
+
+  it('classifies every cast in a *.styles.ts file as styleCast', () => {
+    const counts = countTypeDebt(
+      'export const s = anything as any\n',
+      'components/Thing.styles.ts',
+    )
+    expect(counts).toMatchObject({ styleCast: 1, logicCast: 0 })
   })
 
   it('groups debt by production domain and file', () => {
@@ -45,8 +56,8 @@ describe('guard-type-debt', () => {
 
       const scan = scanTypeDebt(root)
 
-      expect(scan.totals).toMatchObject({ asAny: 1, tsIgnore: 1 })
-      expect(scan.domains.components.asAny).toBe(1)
+      expect(scan.totals).toMatchObject({ logicCast: 1, tsIgnore: 1 })
+      expect(scan.domains.components.logicCast).toBe(1)
       expect(scan.domains.hooks.tsIgnore).toBe(1)
       expect(scan.files['__tests__/ignored.test.ts']).toBeUndefined()
     } finally {
@@ -65,8 +76,8 @@ describe('guard-type-debt', () => {
       const violations = compareToBaseline(scanTypeDebt(root), baseline)
 
       expect(violations).toEqual(expect.arrayContaining([
-        expect.objectContaining({ scope: 'domain', name: 'components', metric: 'asAny' }),
-        expect.objectContaining({ scope: 'file', name: 'components/Card.tsx', metric: 'asAny' }),
+        expect.objectContaining({ scope: 'domain', name: 'components', metric: 'logicCast' }),
+        expect.objectContaining({ scope: 'file', name: 'components/Card.tsx', metric: 'logicCast' }),
       ]))
     } finally {
       removeDir(root)
@@ -105,7 +116,7 @@ describe('guard-type-debt', () => {
         '--baseline', baselinePath,
       ])
       expect(fail.status).toBe(1)
-      expect(fail.stderr).toContain('metric=asAny')
+      expect(fail.stderr).toContain('metric=logicCast')
     } finally {
       removeDir(root)
     }

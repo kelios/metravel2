@@ -4,7 +4,9 @@ const fs = require('node:fs')
 const path = require('node:path')
 const ts = require('typescript')
 
-const CONTRACT_VERSION = 1
+// v2: `asAny` разделён на styleCast (безвредные RN-Web style-касты) и logicCast
+// (риск — DTO/логика). Форма baseline изменилась → contractVersion bump. (FE-ARCH T1)
+const CONTRACT_VERSION = 2
 const SCAN_DIRS = Object.freeze([
   'api',
   'app',
@@ -17,14 +19,55 @@ const SCAN_DIRS = Object.freeze([
   'utils',
 ])
 const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx'])
-const METRICS = Object.freeze(['asAny', 'tsIgnore', 'tsExpectError', 'eslintDisable'])
+const METRICS = Object.freeze(['styleCast', 'logicCast', 'tsIgnore', 'tsExpectError', 'eslintDisable'])
 
 const emptyCounts = () => ({
-  asAny: 0,
+  styleCast: 0,
+  logicCast: 0,
   tsIgnore: 0,
   tsExpectError: 0,
   eslintDisable: 0,
 })
+
+// Файлы-стили целиком в style-контексте.
+const STYLE_FILE_PATTERN = /(?:\.styles|Styles)\.tsx?$/
+
+// `x as any`, стоящий в style-контексте, — шум (RN-Web не типизирует web-CSS
+// свойства). Признаём styleCast по строке каста: вендорный префикс, обращение к
+// styles/StyleSheet/style=, либо CSS-свойство в форме ключа объекта (`prop:`) —
+// форма ключа отсекает логические совпадения (`filter(`, переменную `position`).
+const STYLE_VENDOR_PATTERN = /\b(?:Webkit|Moz|ms)[A-Z][A-Za-z]*/
+const STYLE_CONTEXT_PATTERN = /\bstyle\s*=\s*\{|\bstyles?\s*[.:]|\bStyleSheet\b|ContainerStyle\b|\bcontentContainerStyle\b|\bsrOnly\b|\bvisuallyHidden\b/
+const STYLE_CSS_KEY_PATTERN = new RegExp(
+  '\\b(?:' + [
+    'cursor', 'userSelect', 'pointerEvents', 'whiteSpace', 'textOverflow',
+    'wordBreak', 'wordWrap', 'overflowX', 'overflowY', 'overflow', 'overflowWrap',
+    'boxShadow', 'boxSizing', 'transitionProperty', 'transitionDuration',
+    'transitionTimingFunction', 'transitionDelay', 'transition', 'transformOrigin',
+    'transformStyle', 'transform', 'willChange', 'backdropFilter', 'filter',
+    'appearance', 'objectFit', 'objectPosition', 'scrollBehavior', 'scrollSnapType',
+    'scrollSnapAlign', 'touchAction', 'gridTemplateColumns', 'gridTemplateRows',
+    'gridTemplateAreas', 'gridColumn', 'gridRow', 'gridAutoFlow', 'gridAutoRows',
+    'gridAutoColumns', 'gridGap', 'rowGap', 'columnGap', 'gap', 'display', 'position',
+    'flexBasis', 'flexGrow', 'flexShrink', 'flexDirection', 'flexWrap', 'flex',
+    'maxWidth', 'minWidth', 'maxHeight', 'minHeight', 'width', 'height',
+    'fontWeight', 'fontSize', 'fontFamily', 'fontStyle', 'lineHeight', 'letterSpacing',
+    'inset', 'clipPath', 'maskImage', 'mixBlendMode', 'backgroundClip',
+    'textFillColor', 'textDecorationLine', 'textDecorationStyle', 'textDecoration',
+    'lineClamp', 'fontVariantNumeric', 'fontVariant', 'fontFeatureSettings',
+    'animationName', 'animationDuration', 'animation', 'outlineStyle', 'outlineWidth',
+    'outlineColor', 'outlineOffset', 'outline', 'zIndex', 'aspectRatio',
+    'verticalAlign', 'visibility', 'resize', 'perspective', 'isolation',
+  ].join('|') + ')\\s*:',
+)
+
+// hintText — полный текст каста (`X as any`), включая многострочные style-объекты,
+// чтобы CSS-ключи внутри `({ display:'grid', ... }) as any` попадали в styleCast.
+const isStyleCast = (hintText, filePath) =>
+  STYLE_FILE_PATTERN.test(filePath) ||
+  STYLE_VENDOR_PATTERN.test(hintText) ||
+  STYLE_CONTEXT_PATTERN.test(hintText) ||
+  STYLE_CSS_KEY_PATTERN.test(hintText)
 
 const addCounts = (target, counts) => {
   for (const metric of METRICS) target[metric] += counts[metric]
@@ -42,15 +85,18 @@ const getScriptKind = (filePath) => {
 
 const countMatches = (content, pattern) => [...String(content).matchAll(pattern)].length
 
-const countTypeDebt = (content, filePath = 'source.ts') => {
+const countTypeDebt = (content, filePath = 'source.ts', logicSink = null) => {
+  const source = String(content)
   const sourceFile = ts.createSourceFile(
     filePath,
-    String(content),
+    source,
     ts.ScriptTarget.Latest,
     true,
     getScriptKind(filePath),
   )
-  let asAny = 0
+  const lines = source.split('\n')
+  let styleCast = 0
+  let logicCast = 0
 
   const typeContainsAny = (typeNode) => {
     let containsAny = false
@@ -67,14 +113,24 @@ const countTypeDebt = (content, filePath = 'source.ts') => {
 
   const visit = (node) => {
     if (ts.isAsExpression(node) && typeContainsAny(node.type)) {
-      asAny += 1
+      const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile))
+      // Строка каста несёт ключ свойства (`fontWeight: x as any`), текст узла —
+      // тело многострочного style-объекта (`({ display:'grid', ... }) as any`).
+      const hintText = `${lines[line] ?? ''}\n${node.getText(sourceFile)}`
+      if (isStyleCast(hintText, filePath)) {
+        styleCast += 1
+      } else {
+        logicCast += 1
+        if (logicSink) logicSink.push({ file: filePath, line: line + 1, code: (lines[line] ?? '').trim() })
+      }
     }
     ts.forEachChild(node, visit)
   }
   visit(sourceFile)
 
   return {
-    asAny,
+    styleCast,
+    logicCast,
     tsIgnore: countMatches(content, /@ts-ignore\b/g),
     tsExpectError: countMatches(content, /@ts-expect-error\b/g),
     eslintDisable: countMatches(content, /eslint-disable(?:-next-line|-line)?\b/g),

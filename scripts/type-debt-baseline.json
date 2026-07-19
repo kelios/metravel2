@@ -1,5 +1,5 @@
 {
-  "contractVersion": 1,
+  "contractVersion": 2,
   "scope": [
     "api",
     "app",
@@ -12,50 +12,58 @@
     "utils"
   ],
   "totals": {
-    "asAny": 2680,
-    "tsIgnore": 53,
+    "styleCast": 1401,
+    "logicCast": 1260,
+    "tsIgnore": 49,
     "tsExpectError": 3,
     "eslintDisable": 29
   },
   "domains": {
     "app": {
-      "asAny": 108,
+      "styleCast": 33,
+      "logicCast": 75,
       "tsIgnore": 0,
       "tsExpectError": 1,
       "eslintDisable": 1
     },
     "components": {
-      "asAny": 2346,
-      "tsIgnore": 53,
+      "styleCast": 1263,
+      "logicCast": 1064,
+      "tsIgnore": 49,
       "tsExpectError": 2,
       "eslintDisable": 17
     },
     "context": {
-      "asAny": 6,
+      "styleCast": 0,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 2
     },
     "hooks": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 6
     },
     "screens": {
-      "asAny": 111,
+      "styleCast": 104,
+      "logicCast": 7,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "services": {
-      "asAny": 9,
+      "styleCast": 0,
+      "logicCast": 9,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils": {
-      "asAny": 98,
+      "styleCast": 1,
+      "logicCast": 97,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 2
@@ -63,3049 +71,3536 @@
   },
   "files": {
     "app/_layout.tsx": {
-      "asAny": 7,
+      "styleCast": 2,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/about.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/accountconfirmation.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "app/(tabs)/article/[id].tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/article/[id].web.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/articles.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/calendar.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/cookies.tsx": {
-      "asAny": 8,
+      "styleCast": 2,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/export.native.tsx": {
-      "asAny": 5,
+      "styleCast": 0,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/export.tsx": {
-      "asAny": 6,
+      "styleCast": 0,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/favorites.tsx": {
-      "asAny": 8,
+      "styleCast": 4,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/history.tsx": {
-      "asAny": 10,
+      "styleCast": 6,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/index.tsx": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/map.web.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/messages.tsx": {
-      "asAny": 3,
+      "styleCast": 2,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/privacy.tsx": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/profile.tsx": {
-      "asAny": 12,
+      "styleCast": 0,
+      "logicCast": 12,
       "tsIgnore": 0,
       "tsExpectError": 1,
       "eslintDisable": 0
     },
     "app/(tabs)/quests/[city]/[questId].tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/quests/map.tsx": {
-      "asAny": 3,
+      "styleCast": 2,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/roulette.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/search.tsx": {
-      "asAny": 4,
+      "styleCast": 2,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/settings.tsx": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/travelsby.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/(tabs)/user/[id].tsx": {
-      "asAny": 8,
+      "styleCast": 1,
+      "logicCast": 7,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/app.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/contact.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/privacy-settings.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "app/security-journal.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/about/AboutIntroCard.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/about/CategoriesShowcase.tsx": {
-      "asAny": 5,
+      "styleCast": 4,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/about/HeroBanner.tsx": {
-      "asAny": 5,
+      "styleCast": 3,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/about/StatsBanner.tsx": {
-      "asAny": 4,
+      "styleCast": 3,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/achievements/AwardsHub.tsx": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components/achievements/ShareBadgeSheet.tsx": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components/affiliate/AffiliateOffers.tsx": {
-      "asAny": 4,
+      "styleCast": 3,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/ArticleActivationCtaSection.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/ArticleEditor.ios.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/ArticleEditor.web.effects.ts": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/ArticleEditor.web.modules.ts": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/ArticleEditor.web.parts.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/ArticleEditor.web.styles.ts": {
-      "asAny": 6,
+      "styleCast": 6,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/ArticleEditor.web.surfaceEffects.ts": {
-      "asAny": 5,
+      "styleCast": 0,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/ArticleEditor.web.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/articleEditorConfig.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/articleEditorLifecycleHelpers.ts": {
-      "asAny": 8,
+      "styleCast": 0,
+      "logicCast": 8,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/articleEditorMediaHelpers.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/articleEditorUiHelpers.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/ArticleListItem.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/QuillEditor.web.tsx": {
-      "asAny": 14,
+      "styleCast": 0,
+      "logicCast": 14,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/article/SafeHtml.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/auth/GoogleSignInButton.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/auth/GoogleSignInButton.web.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/auth/LoginForm.tsx": {
-      "asAny": 8,
+      "styleCast": 4,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/auth/RegistrationForm.tsx": {
-      "asAny": 4,
+      "styleCast": 1,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/calendar/MiniCalendar.tsx": {
-      "asAny": 4,
+      "styleCast": 3,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components/common/ContributionBanner.tsx": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/common/EmailSubscriptionForm.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/export/BookSettingsModal.parts.tsx": {
-      "asAny": 19,
+      "styleCast": 16,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/export/BookSettingsModal.tsx": {
-      "asAny": 9,
+      "styleCast": 4,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/export/GalleryLayoutSelector.tsx": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/export/LayoutCard.tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/export/PresetSelector.tsx": {
-      "asAny": 11,
+      "styleCast": 10,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/export/ThemePreview.tsx": {
-      "asAny": 5,
+      "styleCast": 5,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/filters/CategoryChips.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/forms/NumberInputComponent.tsx": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 3,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/forms/SearchAutocomplete.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/forms/SimpleMultiSelect.tsx": {
-      "asAny": 9,
+      "styleCast": 6,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/Home.tsx": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/HomeAppPromoSection.tsx": {
-      "asAny": 5,
+      "styleCast": 1,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/HomeFAQSection.tsx": {
-      "asAny": 7,
+      "styleCast": 4,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/HomeFinalCTA.tsx": {
-      "asAny": 8,
+      "styleCast": 1,
+      "logicCast": 7,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/HomeHero.tsx": {
-      "asAny": 5,
+      "styleCast": 0,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/HomeHeroBookLayout.tsx": {
-      "asAny": 13,
+      "styleCast": 1,
+      "logicCast": 12,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/HomeHeroMoodRail.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/HomeHeroPopularSection.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/HomeHeroSearchBar.tsx": {
-      "asAny": 4,
+      "styleCast": 1,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/homeHeroStyles/bookWidgetStyles.ts": {
-      "asAny": 24,
+      "styleCast": 24,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/homeHeroStyles/ctaStyles.ts": {
-      "asAny": 28,
+      "styleCast": 28,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/homeHeroStyles/shellStyles.ts": {
-      "asAny": 11,
+      "styleCast": 11,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/homeHeroStyles/sliderMediaStyles.ts": {
-      "asAny": 18,
+      "styleCast": 18,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/homeHeroStyles/sliderNavStyles.ts": {
-      "asAny": 10,
+      "styleCast": 10,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/homeHeroStyles/sliderSectionStyles.ts": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/homeHeroStyles/typographyStyles.ts": {
-      "asAny": 17,
+      "styleCast": 17,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/HomeHowItWorks.tsx": {
-      "asAny": 15,
+      "styleCast": 6,
+      "logicCast": 9,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/HomeInspirationSection.tsx": {
-      "asAny": 6,
+      "styleCast": 0,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/HomeInspirationSections.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/homeInspirationStyles.ts": {
-      "asAny": 34,
+      "styleCast": 34,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/HomePageSkeleton.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/HomeQuestsPromoSection.tsx": {
-      "asAny": 5,
+      "styleCast": 1,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/hooks/useWeatherWidgetModel.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/useHomeHeroSlider.ts": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/home/WeatherWidget.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/AccountMenu.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/AppProviders.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/AppProvidersDeferredRuntime.tsx": {
-      "asAny": 8,
+      "styleCast": 0,
+      "logicCast": 8,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/BelarusOutlineIcon.tsx": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components/layout/BottomDock.tsx": {
-      "asAny": 16,
+      "styleCast": 11,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/ConsentBanner.tsx": {
-      "asAny": 13,
+      "styleCast": 7,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/CustomHeader.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/customHeaderAccountLazy.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/CustomHeaderDesktopAccountSection.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/CustomHeaderDesktopAccountShell.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/customHeaderLazy.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/CustomHeaderMobileAccountSection.tsx": {
-      "asAny": 7,
+      "styleCast": 1,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/customHeaderMobileLazy.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/CustomHeaderMobileMenu.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/customHeaderNavModel.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/customHeaderStyles.ts": {
-      "asAny": 22,
+      "styleCast": 22,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/FooterDesktop.tsx": {
-      "asAny": 19,
+      "styleCast": 8,
+      "logicCast": 11,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/HeaderContextBar.tsx": {
-      "asAny": 7,
+      "styleCast": 0,
+      "logicCast": 7,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/headerStyles.ts": {
-      "asAny": 8,
+      "styleCast": 8,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/Logo.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/NavigationIcon.tsx": {
-      "asAny": 6,
+      "styleCast": 5,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/ResponsiveStack.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/ResponsiveText.tsx": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/RootWebDeferredChrome.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/SkipLinks.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 2,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/ThemeToggle.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 2,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/WebAppRuntimeEffects.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/layout/WelcomeBanner.tsx": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/legal/LegalPage.tsx": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/filters/FilterOptionItem.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/filters/modernFiltersStyles/containerHeaderStyles.ts": {
-      "asAny": 21,
+      "styleCast": 21,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/filters/modernFiltersStyles/extraFiltersStyles.ts": {
-      "asAny": 7,
+      "styleCast": 7,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/filters/modernFiltersStyles/footerStyles.ts": {
-      "asAny": 10,
+      "styleCast": 10,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/filters/modernFiltersStyles/groupStyles.ts": {
-      "asAny": 9,
+      "styleCast": 9,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/filters/modernFiltersStyles/optionStyles.ts": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/filters/modernFiltersStyles/sortStyles.ts": {
-      "asAny": 10,
+      "styleCast": 10,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/filters/modernFiltersStyles/toolbarStyles.ts": {
-      "asAny": 5,
+      "styleCast": 5,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/filters/SortOptionItem.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/hooks/useListTravelData.ts": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/hooks/useListTravelFilters.ts": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/ListCatalogToolbar.tsx": {
-      "asAny": 8,
+      "styleCast": 2,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/ListTravelBase.styles.ts": {
-      "asAny": 8,
+      "styleCast": 8,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/ListTravelBase.tsx": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 3
     },
     "components/listTravel/ListTravelExportControls.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/listTravelStyles.secondary.ts": {
-      "asAny": 11,
+      "styleCast": 10,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/listTravelStyles.ts": {
-      "asAny": 24,
+      "styleCast": 24,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/ModernFilters.tsx": {
-      "asAny": 7,
+      "styleCast": 1,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/recommendationsCardTemplate.ts": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/RecommendationsTabs.tsx": {
-      "asAny": 21,
+      "styleCast": 0,
+      "logicCast": 21,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/recommendationsTabsStyles.ts": {
-      "asAny": 25,
+      "styleCast": 25,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/RightColumn.tsx": {
-      "asAny": 7,
+      "styleCast": 4,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/rightColumnModel.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/SearchPageSkeleton.tsx": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/SelectedTravelOrderCard.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/SidebarFilters.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/TabTravelCard.tsx": {
-      "asAny": 3,
+      "styleCast": 2,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/TravelListItem.tsx": {
-      "asAny": 14,
+      "styleCast": 4,
+      "logicCast": 10,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/TravelListItemEngagementMetrics.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/travelListItemHelpers.ts": {
-      "asAny": 5,
+      "styleCast": 0,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/TravelListItemSelectableOverlay.tsx": {
-      "asAny": 5,
+      "styleCast": 3,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/travelListItemStyles.ts": {
-      "asAny": 15,
+      "styleCast": 15,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/useRightColumnStyles.ts": {
-      "asAny": 11,
+      "styleCast": 11,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/useTravelListItemNavigation.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/listTravel/utils/listTravelHelpers.ts": {
-      "asAny": 13,
+      "styleCast": 0,
+      "logicCast": 13,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/mainPage/StickySearchBar.tsx": {
-      "asAny": 11,
+      "styleCast": 2,
+      "logicCast": 9,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/map-core/MapMarkerLayer.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/map-core/useElevation.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components/map-core/useMapLifecycle.ts": {
-      "asAny": 9,
+      "styleCast": 0,
+      "logicCast": 9,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 2
     },
     "components/map-core/useMapRouting.ts": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components/map/EditMarkerModal.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/map/MarkersListComponent.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/ActiveFiltersBar.tsx": {
-      "asAny": 6,
+      "styleCast": 6,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/AddressSearch.tsx": {
-      "asAny": 5,
+      "styleCast": 2,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/CollapsibleSection.tsx": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components/MapPage/filtersPanelStyles/cardStyles.ts": {
-      "asAny": 6,
+      "styleCast": 6,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/filtersPanelStyles/chipsStyles.ts": {
-      "asAny": 6,
+      "styleCast": 6,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/filtersPanelStyles/footerStyles.ts": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/filtersPanelStyles/lightRouteStyles.ts": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/filtersPanelStyles/mapControlsStyles.ts": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/filtersPanelStyles/routeStyles.ts": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/filtersPanelStyles/statusStyles.ts": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map.ios.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map.web.tsx": {
-      "asAny": 18,
+      "styleCast": 2,
+      "logicCast": 16,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/ClusterLayer.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/createMapPopupComponent.tsx": {
-      "asAny": 7,
+      "styleCast": 0,
+      "logicCast": 7,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/MapLayers.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/MapLogicComponent.tsx": {
-      "asAny": 21,
+      "styleCast": 0,
+      "logicCast": 21,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/MapRoute.tsx": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/MapWebCanvas.tsx": {
-      "asAny": 16,
+      "styleCast": 5,
+      "logicCast": 11,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/mapWebGeometry.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/MarkerClusterGroup.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/MarkerPopup.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/PlacePopupCard/FullscreenImageViewer.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/PlacePopupCard/FullscreenPopupOverlay.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/PlacePopupCard/index.tsx": {
-      "asAny": 16,
+      "styleCast": 2,
+      "logicCast": 14,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/PlacePopupCard/styles.ts": {
-      "asAny": 27,
+      "styleCast": 26,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/PlacePopupCard/usePopupDomGuard.ts": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/styles.ts": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/useMapApi.ts": {
-      "asAny": 7,
+      "styleCast": 0,
+      "logicCast": 7,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/useMapCleanup.ts": {
-      "asAny": 5,
+      "styleCast": 0,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/useMapPopupAutoPan.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/useMapUserLocation.ts": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/useMapWebLayoutEffects.ts": {
-      "asAny": 10,
+      "styleCast": 0,
+      "logicCast": 10,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/Map/useRouteBuilding.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapBottomSheet.web.tsx": {
-      "asAny": 9,
+      "styleCast": 6,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapCanvas.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapErrorBoundary.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapLegend.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapLoadingBar.tsx": {
-      "asAny": 4,
+      "styleCast": 3,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapMobile/MapEmptyStateToast.tsx": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapMobile/MapMobileTopOverlay.styles.ts": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapMobileLayout.styles.ts": {
-      "asAny": 21,
+      "styleCast": 21,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapMobileLayout.tsx": {
-      "asAny": 5,
+      "styleCast": 2,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapOfflineIndicator.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapOnboarding.tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapPageSkeleton.tsx": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapPanel.tsx": {
-      "asAny": 3,
+      "styleCast": 2,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapPanelHeader.tsx": {
-      "asAny": 5,
+      "styleCast": 0,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapPlaceBottomCard.tsx": {
-      "asAny": 11,
+      "styleCast": 9,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapScreenParts/MapScreenDesktop.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapScreenParts/MapScreenError.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapScreenParts/shared.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/MapSearchInput.tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/RouteBuilder.tsx": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/RoutingMachine.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components/MapPage/RoutingStatus.tsx": {
-      "asAny": 5,
+      "styleCast": 1,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/SegmentedControl.tsx": {
-      "asAny": 5,
+      "styleCast": 2,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/TravelListPanel.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/TravelListPanel/styles.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/TravelListPanel/useWebVirtualization.ts": {
-      "asAny": 8,
+      "styleCast": 0,
+      "logicCast": 8,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components/MapPage/TravelMap.native.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/TravelMap.web.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/useFiltersPanelModel.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/useRouting.ts": {
-      "asAny": 6,
+      "styleCast": 0,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/MapPage/WeatherLegend.web.tsx": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/messages/ChatView.tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/messages/MessageBubble.tsx": {
-      "asAny": 4,
+      "styleCast": 2,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/messages/NewConversationPicker.tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/messages/ThreadList.tsx": {
-      "asAny": 9,
+      "styleCast": 7,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/navigation/OpenInMapsSheet.tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/navigation/PointNavigationMenu.tsx": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/places/PlaceListCard.tsx": {
-      "asAny": 7,
+      "styleCast": 7,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/profile/ContactRequestsInbox.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/profile/PersonalStatusSummary.tsx": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/profile/ProfileCollectionHeader.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/profile/ProfileCompleteness.tsx": {
-      "asAny": 5,
+      "styleCast": 5,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/profile/ProfileHeader.tsx": {
-      "asAny": 6,
+      "styleCast": 5,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/profile/ProfileHeaderQuickActions.tsx": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/profile/ProfileMenu.tsx": {
-      "asAny": 4,
+      "styleCast": 2,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/profile/ProfileQuickActions.tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/profile/ProfileStatPills.tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/profile/ProfileTravelEngagementSection.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/QuestConsentGate.tsx": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/QuestForCityCard.tsx": {
-      "asAny": 4,
+      "styleCast": 1,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/QuestFullMap.tsx": {
-      "asAny": 11,
+      "styleCast": 2,
+      "logicCast": 9,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components/quests/QuestPointNavigator.native.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/QuestReviewSection.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/questWizardHelpers.ts": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/questWizardMedia.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 2,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/questWizardSections.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/questWizardStepCard.tsx": {
-      "asAny": 3,
+      "styleCast": 2,
+      "logicCast": 1,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/questWizardStyles/answerStyles.ts": {
-      "asAny": 7,
+      "styleCast": 7,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/questWizardStyles/cardStyles.ts": {
-      "asAny": 6,
+      "styleCast": 6,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/questWizardStyles/excursionsStyles.ts": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/questWizardStyles/headerStyles.ts": {
-      "asAny": 5,
+      "styleCast": 5,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/questWizardStyles/mediaStyles.ts": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/questWizardStyles/navControlStyles.ts": {
-      "asAny": 6,
+      "styleCast": 6,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/questWizardStyles/shellStyles.ts": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/questWizardStyles/stepsNavStyles.ts": {
-      "asAny": 8,
+      "styleCast": 8,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/TravelsForQuestSection.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/quests/useQuestRouteGeometry.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/roulette/styles.ts": {
-      "asAny": 5,
+      "styleCast": 5,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/screens/calendar/calendarScreen.parts.tsx": {
-      "asAny": 5,
+      "styleCast": 2,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/screens/calendar/calendarScreen.styles.ts": {
-      "asAny": 12,
+      "styleCast": 12,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/screens/profile/PublicProfileHeader.tsx": {
-      "asAny": 4,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/screens/profile/PublicProfileTravelsTab.tsx": {
-      "asAny": 1,
+      "styleCast": 2,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/screens/settings/settings.styles.ts": {
-      "asAny": 6,
+      "styleCast": 6,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/seo/BreadcrumbsJsonLd.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/settings/ProfileSection.tsx": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/settings/StravaSettingsSection.tsx": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/AuthorCard.tsx": {
-      "asAny": 12,
+      "styleCast": 5,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/CommentForm.tsx": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components/travel/CommentItem.tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/CommentsSection.styles.ts": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/compactSideBar/parts/AuthorBlock.tsx": {
-      "asAny": 9,
+      "styleCast": 5,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/compactSideBar/parts/NavRow.tsx": {
-      "asAny": 5,
+      "styleCast": 1,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/compactSideBar/parts/WeatherPlaceholder.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/compactSideBar/styles.ts": {
-      "asAny": 25,
+      "styleCast": 20,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/CompactSideBarTravel.tsx": {
-      "asAny": 14,
+      "styleCast": 0,
+      "logicCast": 14,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/ContentUpsertSection.tsx": {
-      "asAny": 6,
+      "styleCast": 0,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/contentUpsertStyles.ts": {
-      "asAny": 8,
+      "styleCast": 8,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/CTASection.tsx": {
-      "asAny": 5,
+      "styleCast": 2,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/hooks/travelDetailsContainerViewModel.ts": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/hooks/useTravelDetailsMapSectionContentModel.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/hooks/useTravelDetailsMapSectionHintsModel.ts": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/hooks/useTravelDetailsMapSectionModel.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/AffiliateSection.tsx": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/ExcursionsSection.tsx": {
-      "asAny": 5,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/LazyYouTubeSection.native.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/LazyYouTubeSection.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/LazyYouTubeSection.web.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/QuestForCitySection.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/RouteElevationProfile.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/TravelDetailsContentSection.tsx": {
-      "asAny": 8,
+      "styleCast": 1,
+      "logicCast": 7,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/TravelDetailsFooterSection.tsx": {
-      "asAny": 4,
+      "styleCast": 1,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/TravelDetailsSidebarSection.tsx": {
-      "asAny": 8,
+      "styleCast": 0,
+      "logicCast": 8,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/TravelPointsBlock.tsx": {
-      "asAny": 6,
+      "styleCast": 0,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/TravelRegisterCtaSection.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/TravelRouteMapBlock.native.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/TravelRouteMapBlock.tsx": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/TravelWeatherBlock.native.tsx": {
-      "asAny": 6,
+      "styleCast": 2,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/sections/TravelWeatherBlock.tsx": {
-      "asAny": 10,
+      "styleCast": 6,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/styles/travelDetailsHeroMediaStyles.ts": {
-      "asAny": 19,
+      "styleCast": 19,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/styles/travelDetailsLayoutStyles.ts": {
-      "asAny": 18,
+      "styleCast": 18,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/styles/travelDetailsMiscStyles.ts": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/styles/travelDetailsNavStyles.ts": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/styles/travelDetailsSectionHeaderStyles.ts": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelAuthorQuickLink.tsx": {
-      "asAny": 8,
+      "styleCast": 2,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelDetailsContainer.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelDetailsCriticalShell.tsx": {
-      "asAny": 7,
+      "styleCast": 2,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/travelDetailsCriticalShellModel.ts": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelDetailsDeferred.native.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelDetailsDeferred.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelDetailsHero.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelDetailsHeroStyles.ts": {
-      "asAny": 22,
+      "styleCast": 22,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelDetailsIcons.tsx": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelDetailsLoadingFallback.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelDetailsOptimizedLCPHero.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelDetailsShellStyles.ts": {
-      "asAny": 17,
+      "styleCast": 17,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelDetailsSkeletonOverlay.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelDetailsStyleFragments.ts": {
-      "asAny": 23,
+      "styleCast": 17,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelHeroInteractiveSlider.tsx": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelHeroInteractiveSlider.web.tsx": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelHeroQuickJumps.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/details/TravelStickyActions.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/FavoriteButton.tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/FiltersUpsertComponent.tsx": {
-      "asAny": 37,
+      "styleCast": 1,
+      "logicCast": 36,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/gallery/GalleryControls.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/gallery/GalleryGrid.tsx": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/gallery/ImageGallery.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/gallery/styles.ts": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/GallerySection.tsx": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/GroupedFiltersSection.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/hooks/usePointListAddPointModel.ts": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/hooks/usePointListExternalActionsModel.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/ImageGalleryComponent.ios.tsx": {
-      "asAny": 11,
+      "styleCast": 0,
+      "logicCast": 11,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/InstagramPublishPanel.tsx": {
-      "asAny": 4,
+      "styleCast": 2,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/LocationSearchInput.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/NavigationArrows.tsx": {
-      "asAny": 14,
+      "styleCast": 8,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/NearTravelList.tsx": {
-      "asAny": 17,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/travel/OptimizedFavoriteButton.tsx": {
-      "asAny": 6,
+      "styleCast": 15,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/PersonalizedRecommendations.tsx": {
-      "asAny": 18,
+      "styleCast": 6,
+      "logicCast": 11,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/PhotoUploadWithPreview.tsx": {
-      "asAny": 23,
+      "styleCast": 23,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/PointCard.tsx": {
-      "asAny": 5,
+      "styleCast": 1,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/PointList.styles.ts": {
-      "asAny": 52,
+      "styleCast": 52,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/PointList.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/PointListChrome.tsx": {
-      "asAny": 7,
+      "styleCast": 2,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/PointListRow.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/PopularTravelList.tsx": {
-      "asAny": 24,
+      "styleCast": 17,
+      "logicCast": 7,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/QuickFacts.tsx": {
-      "asAny": 12,
+      "styleCast": 4,
+      "logicCast": 8,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/RecentViews.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/RelatedTravelActionStack.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/sectionLinks.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/ShareButtons.tsx": {
-      "asAny": 16,
+      "styleCast": 9,
+      "logicCast": 7,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/ShareButtonsPdfExportBridge.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/Slider.web.tsx": {
-      "asAny": 8,
+      "styleCast": 2,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/sliderParts/Arrow.tsx": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/sliderParts/imageLoadCache.ts": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/sliderParts/Slide.tsx": {
-      "asAny": 3,
+      "styleCast": 2,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/sliderParts/SliderOverlays.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/sliderParts/styles.ts": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/sliderParts/useSliderCore.ts": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 2,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/sliderParts/useSliderPointerDrag.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/sliderParts/useSliderTrack.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/StableContent.tsx": {
-      "asAny": 5,
+      "styleCast": 0,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/stableContent/useRenderConfig.tsx": {
-      "asAny": 5,
+      "styleCast": 0,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 1,
       "eslintDisable": 0
     },
     "components/travel/stableContent/useWebEffects.ts": {
-      "asAny": 5,
+      "styleCast": 0,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/stepRoute/ManualPointPanel.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/stepRoute/styles.ts": {
-      "asAny": 5,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/travel/TelegramDiscussionSection.tsx": {
-      "asAny": 2,
+      "styleCast": 4,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/ToggleableMapSection.tsx": {
-      "asAny": 4,
+      "styleCast": 2,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelDescription.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelPreviewModal.tsx": {
-      "asAny": 20,
+      "styleCast": 2,
+      "logicCast": 18,
       "tsIgnore": 2,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelRatingSection.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelRouteFilesPanel.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelSectionsSheet.tsx": {
-      "asAny": 4,
+      "styleCast": 2,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelStatusButton.tsx": {
-      "asAny": 8,
+      "styleCast": 6,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelTmlRound.tsx": {
-      "asAny": 39,
+      "styleCast": 15,
+      "logicCast": 24,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelWizardHeader.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/travelWizardHeaderStyles.ts": {
-      "asAny": 4,
+      "styleCast": 4,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelWizardStepBasic.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelWizardStepDetails.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelWizardStepExtras.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelWizardStepMedia.tsx": {
-      "asAny": 4,
+      "styleCast": 2,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/travelWizardStepPublish.styles.ts": {
-      "asAny": 6,
+      "styleCast": 6,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelWizardStepPublish.tsx": {
-      "asAny": 13,
+      "styleCast": 0,
+      "logicCast": 13,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/TravelWizardStepRoute.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/UnifiedSlider.tsx": {
-      "asAny": 5,
+      "styleCast": 1,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/upsert/UpsertTravelView.tsx": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/utils/travelHelpers.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/ValidationFeedback.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/WebMapComponent.tsx": {
-      "asAny": 9,
+      "styleCast": 0,
+      "logicCast": 9,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/WebMapMarkerPopup.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/travel/WeeklyHighlights.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/trips/chat/TripChatPanel.tsx": {
-      "asAny": 5,
+      "styleCast": 5,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/trips/planning/CommunityRoutesCatalog.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/trips/planning/TripCreateForm.tsx": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/trips/planning/TripPlanRouteMap.web.tsx": {
-      "asAny": 5,
+      "styleCast": 0,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/trips/planning/TripReportForm.tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/trips/planning/TripSuggestPointForm.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/trips/PublicTripFilters.tsx": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/trips/PublicTripsCatalog.tsx": {
-      "asAny": 5,
+      "styleCast": 5,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/trips/TripApplyForm.tsx": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/ActionListSheet.tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/Button.tsx": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 5,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/CardActionPressable.tsx": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/CollapsibleBlock.tsx": {
-      "asAny": 9,
+      "styleCast": 7,
+      "logicCast": 2,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/ConfirmDialog.tsx": {
-      "asAny": 4,
-      "tsIgnore": 2,
+      "styleCast": 1,
+      "logicCast": 1,
+      "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/CustomImageRenderer.tsx": {
-      "asAny": 6,
+      "styleCast": 2,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/EmptyState.tsx": {
-      "asAny": 2,
+      "styleCast": 1,
+      "logicCast": 1,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/ErrorBoundary.tsx": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 2,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/ErrorDisplay.tsx": {
-      "asAny": 1,
-      "tsIgnore": 3,
+      "styleCast": 0,
+      "logicCast": 1,
+      "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/ExternalLink.tsx": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 1,
       "eslintDisable": 0
     },
     "components/ui/IconButton.tsx": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/ImageCardMedia.tsx": {
-      "asAny": 18,
+      "styleCast": 2,
+      "logicCast": 16,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/ImageCardMediaWebHelpers.tsx": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 2,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/NetworkStatus.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/OptimizedImage.tsx": {
-      "asAny": 25,
+      "styleCast": 2,
+      "logicCast": 23,
       "tsIgnore": 2,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/PaginationComponent.tsx": {
-      "asAny": 6,
+      "styleCast": 6,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/ProgressIndicator.tsx": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/SafetyNotice.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/ScrollToTopButton.tsx": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 3,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/ShimmerOverlay.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 6,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/SkeletonLoader.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/SortSelector.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/StaleContentBanner.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/StarRating.tsx": {
-      "asAny": 7,
+      "styleCast": 5,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/SubscribeButton.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/Themed.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/Toggle.tsx": {
-      "asAny": 4,
+      "styleCast": 2,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/Typography.tsx": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "components/ui/UnifiedTravelCard.tsx": {
-      "asAny": 26,
+      "styleCast": 18,
+      "logicCast": 8,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/UploadProgressBar.tsx": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/ui/YoutubeLinkComponent.tsx": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 1,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/ImportWizard.tsx": {
-      "asAny": 5,
+      "styleCast": 5,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/PointCard.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/PointFilters.tsx": {
-      "asAny": 3,
+      "styleCast": 3,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/PointsList.styles.ts": {
-      "asAny": 22,
+      "styleCast": 22,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/PointsList.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/PointsListGrid.tsx": {
-      "asAny": 8,
+      "styleCast": 2,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/PointsListHeader.tsx": {
-      "asAny": 10,
+      "styleCast": 10,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/PointsListManualModal.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/PointsListWebLazyScroll.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/usePointsDataModel.ts": {
-      "asAny": 8,
+      "styleCast": 0,
+      "logicCast": 8,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/usePointsExportKml.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/UserPointsMap.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/userPointsMapData.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/UserPointsMapPointMarker.web.tsx": {
-      "asAny": 5,
+      "styleCast": 0,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/UserPointsMapWebLayers.tsx": {
-      "asAny": 6,
+      "styleCast": 0,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/useUserPointsDriveInfo.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "components/UserPoints/useUserPointsMapWebController.ts": {
-      "asAny": 12,
+      "styleCast": 0,
+      "logicCast": 12,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "context/AuthContext.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "context/authContextBase.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "context/FavoritesContext.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "context/FavoritesProvider.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "context/MapFiltersContext.tsx": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "hooks/useMapScreenController.ts": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 2
     },
     "hooks/usePushNotifications.native.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 2
     },
     "hooks/useTdTrace.ts": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "hooks/useTravelFormData.ts": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "screens/tabs/map.styles.ts": {
-      "asAny": 25,
+      "styleCast": 25,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "screens/tabs/MapScreen.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "screens/tabs/PlacesScreen.styles.ts": {
-      "asAny": 19,
+      "styleCast": 19,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "screens/tabs/PlacesScreen.tsx": {
-      "asAny": 2,
+      "styleCast": 2,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "screens/tabs/QuestCard.tsx": {
-      "asAny": 3,
+      "styleCast": 1,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "screens/tabs/QuestsContentPanel.tsx": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "screens/tabs/QuestsScreen.styles.ts": {
-      "asAny": 56,
+      "styleCast": 56,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "screens/tabs/QuestsScreen.tsx": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "screens/tabs/QuestsSidebar.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "screens/tabs/UserPointsScreen.tsx": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "services/notifications.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "services/pdf-export/generators/v2/runtime/legacyGalleryLayouts.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "services/pdf-export/parsers/ContentParser.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "services/pdf-export/utils/htmlUtils.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/a11y.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/analytics.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/beforeunloadGuard.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/commentCacheHelpers.ts": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/contextualTips.ts": {
-      "asAny": 15,
+      "styleCast": 0,
+      "logicCast": 15,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/index.ts": {
-      "asAny": 1,
+      "styleCast": 1,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/isWebAutomation.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/leafletFix.ts": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/loadLeafletRuntime.ts": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/mapSnapshot/domCapture.ts": {
-      "asAny": 5,
+      "styleCast": 0,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/mapSnapshot/leafletSnapshot.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/mapSnapshot/shared.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/mapWebOverlays/osmRoutesOverlay.ts": {
-      "asAny": 4,
+      "styleCast": 0,
+      "logicCast": 4,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/performance.ts": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/questAdapters.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/reactQueryConfig.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/rIC.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/routeExport/save.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/routeFileParser.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/routingApiKey.ts": {
-      "asAny": 3,
+      "styleCast": 0,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/runtimeConfigDiagnostics.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/serverSafeHtml.ts": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "utils/travelDetailsSecure.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/travelFormNormalization.ts": {
-      "asAny": 20,
+      "styleCast": 0,
+      "logicCast": 20,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/travelMedia.ts": {
-      "asAny": 0,
+      "styleCast": 0,
+      "logicCast": 0,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
     },
     "utils/travelPointsExport.ts": {
-      "asAny": 6,
+      "styleCast": 0,
+      "logicCast": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/travelRouteDownload.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/userPointsCategories.ts": {
-      "asAny": 9,
+      "styleCast": 0,
+      "logicCast": 9,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/webImageUpload.ts": {
-      "asAny": 2,
+      "styleCast": 0,
+      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
     },
     "utils/webVitalsMonitoring.ts": {
-      "asAny": 1,
+      "styleCast": 0,
+      "logicCast": 1,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0

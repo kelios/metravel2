@@ -60,3 +60,16 @@ export type WebOnlyTextStyle = {
 export const webTextStyle = (
   style: Omit<TextStyle, keyof WebOnlyTextStyle> & WebOnlyTextStyle,
 ): TextStyle => style as TextStyle
+
+/**
+ * Широкий RN-Web мостик: RN `ViewStyle` + ЛЮБОЕ web-CSS свойство. В отличие от
+ * `webViewStyle` (курируемый безопасный список из ~12 свойств) принимает весь
+ * `Partial<CSSProperties>` — заменяет россыпь `style as any` там, где нужен
+ * произвольный web-CSS. Единственный `as` локализован здесь и БЕЗ `any`, поэтому
+ * guard:type-debt его не считает; на сам объект TS-проверки сохраняются. (FE-ARCH T1)
+ *
+ * @example const s = webStyle({ ...styles.card, display: 'grid', cursor: 'pointer' })
+ */
+export type WebStyle = ViewStyle & Partial<React.CSSProperties>
+
+export const webStyle = (style: WebStyle): ViewStyle => style as ViewStyle
