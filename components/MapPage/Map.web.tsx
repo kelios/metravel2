@@ -168,8 +168,24 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // zoomend (freeze on zoom). The ref is updated by MapLogicComponent's
   // syncZoomFromMap via the `setMapZoom` prop below.
   const mapZoomRef = useRef<number>(DEFAULT_ZOOM)
+  const wrapperRef = useRef<View | null>(null)
   const setMapZoom = useCallback((zoom: number) => {
-    if (Number.isFinite(zoom)) mapZoomRef.current = zoom
+    if (!Number.isFinite(zoom)) return
+
+    mapZoomRef.current = zoom
+    const wrapperNode = wrapperRef.current as unknown as {
+      setAttribute?: (name: string, value: string) => void
+    } | null
+    wrapperNode?.setAttribute?.('data-map-zoom', String(zoom))
+  }, [])
+
+  useEffect(() => {
+    if (!IS_WEB) return
+
+    const wrapperNode = wrapperRef.current as unknown as {
+      setAttribute?: (name: string, value: string) => void
+    } | null
+    wrapperNode?.setAttribute?.('data-map-zoom', String(mapZoomRef.current))
   }, [])
 
   const markerByCoordRef = useRef<Map<string, any>>(new Map())
@@ -179,7 +195,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // `onMapBackgroundTap` and dismiss the freshly-selected place card. We ignore
   // background taps within this window after a marker/cluster tap.
   const lastMarkerTapAtRef = useRef(0)
-  const wrapperRef = useRef<View | null>(null)
 
   const colors = useThemedColors()
   const themeContextValue = useTheme()

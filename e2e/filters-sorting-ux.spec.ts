@@ -158,8 +158,12 @@ test.describe('@smoke Filters and sorting — deterministic catalog integration'
     const requests = await openCatalog(page);
 
     const mountains = page.getByRole('checkbox', { name: 'Горы', exact: true });
+    const expandCategories = page.getByRole('button', { name: /^Развернуть Категории$/i });
+    await expect(mountains.or(expandCategories).first()).toBeVisible({
+      timeout: FILTER_TIMEOUT_MS,
+    });
     if (!(await mountains.isVisible())) {
-      await page.getByRole('button', { name: /^Развернуть Категории$/i }).click();
+      await expandCategories.click();
     }
     await expect(mountains).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     await mountains.click();

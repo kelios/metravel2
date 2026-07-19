@@ -448,6 +448,33 @@ describe('ListTravel Integration Tests', () => {
     });
   });
 
+  it('uses the parent viewport hint on the first lazy web render', async () => {
+    (global as any).__mockResponsive = {
+      width: 0,
+      height: 0,
+      isSmallPhone: true,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => false,
+      isAtMost: () => true,
+      isBetween: () => false,
+    };
+
+    renderWithProviders(<ListTravel initialViewportWidth={1440} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('filter-scrollview')).toBeTruthy();
+    });
+  });
+
   it('hides sidebar filters on mobile', () => {
     (global as any).__mockResponsive = {
       width: 375,

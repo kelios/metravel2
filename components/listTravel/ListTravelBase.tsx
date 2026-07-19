@@ -52,10 +52,10 @@ import type { ListTravelBaseProps } from './ListTravelBase.types'
 
 const EMPTY_FALLBACK_STEPS: ReturnType<typeof buildListTravelFallbackSteps> = [];
 
-function ListTravelBase({ catalogIntro, primaryAction }: ListTravelBaseProps = {}) {
+function ListTravelBase({ catalogIntro, initialViewportWidth, primaryAction }: ListTravelBaseProps = {}) {
     const colors = useThemedColors();
     const hydrationReady = useHydrationReady();
-    const { viewportState, width } = useListTravelViewportState();
+    const { viewportState, width } = useListTravelViewportState(initialViewportWidth);
     const route = useRoute();
     const pathname = usePathname();
     const router = useRouter();

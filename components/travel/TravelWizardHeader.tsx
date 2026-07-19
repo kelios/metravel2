@@ -466,7 +466,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         // Компактная мобильная шапка: 3 ряда вместо 5.
         // Ряд 1: [←] Заголовок · [сохранить] · [⋯]  Ряд 2: прогресс  Ряд 3: мета+статус · [Далее →]
         return (
-            <View style={[styles.headerWrapper, styles.headerWrapperMobile]}>
+            <View testID="travel-wizard-header" style={[styles.headerWrapper, styles.headerWrapperMobile]}>
                 <View style={styles.mobileTopRow}>
                     {BackButtonIcon}
                     <Text style={styles.headerTitleMobileInline} numberOfLines={1}>
@@ -503,7 +503,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     }
 
     return (
-        <View style={styles.headerWrapper}>
+        <View testID="travel-wizard-header" style={styles.headerWrapper}>
             <View style={styles.titleRow}>
                 <View style={styles.titleColumn}>
                     <Text style={styles.headerTitle} numberOfLines={1}>

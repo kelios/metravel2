@@ -1,4 +1,4 @@
-import { memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, Suspense, useCallback, useMemo } from 'react'
 import { StyleSheet, View, Platform } from 'react-native'
 import { usePathname, useRouter } from 'expo-router'
 import { useIsFocused } from 'expo-router'
@@ -14,6 +14,7 @@ import SearchPageSkeleton from '@/components/listTravel/SearchPageSkeleton'
 import ListTravel from '@/components/listTravel/ListTravelRoute'
 import { trackContentCreateCtaClicked } from '@/utils/growthFunnelAnalytics'
 import { translate as i18nT } from '@/i18n'
+import { useResponsiveWidth } from '@/hooks/useResponsive'
 
 
 function SearchScreen() {
@@ -22,13 +23,9 @@ function SearchScreen() {
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const { isAuthenticated } = useAuth()
+  const viewportWidth = useResponsiveWidth()
   const pageHeading = i18nT('seoStatic:search.heading')
-  const [canRenderList, setCanRenderList] = useState(Platform.OS !== 'web')
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    setCanRenderList(true)
-  }, [])
+  const canRenderList = Platform.OS !== 'web' || viewportWidth > 0
 
   const handleCreateTravelPress = useCallback(() => {
     trackContentCreateCtaClicked({
@@ -112,7 +109,10 @@ function SearchScreen() {
         >
           {canRenderList ? (
             <Suspense fallback={<SearchPageSkeleton />}>
-              <ListTravel primaryAction={createTravelAction} />
+              <ListTravel
+                initialViewportWidth={Platform.OS === 'web' ? viewportWidth : undefined}
+                primaryAction={createTravelAction}
+              />
             </Suspense>
           ) : (
             <SearchPageSkeleton />

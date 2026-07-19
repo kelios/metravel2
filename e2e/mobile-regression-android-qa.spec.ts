@@ -150,18 +150,19 @@ test.describe('@mobile BUG-CLASS-2: header ≤20% viewport height', () => {
 
     await gotoWithRetry(page, '/travel/new');
 
-    // Measure the actual top context header. The wizard progress bar is part of
-    // the form body, below the page title/subtitle, so it is not header chrome.
-    const contextHeader = page.getByTestId('header-context-bar').first();
-    await expect(contextHeader).toBeVisible({ timeout: 30_000 });
+    // The global HeaderContextBar is intentionally hidden on wizard routes; the
+    // wizard owns its compact header and progress controls.
+    await expect(page.getByTestId('header-context-bar')).toHaveCount(0);
+    const wizardHeader = page.getByTestId('travel-wizard-header').first();
+    await expect(wizardHeader).toBeVisible({ timeout: 30_000 });
 
-    const headerBox = await contextHeader.boundingBox();
+    const headerBox = await wizardHeader.boundingBox();
     expect(headerBox, 'wizard context header must have a bounding box').not.toBeNull();
     const viewportHeight = MOBILE_VIEWPORT.height;
     const maxHeaderPx = viewportHeight * MAX_HEADER_RATIO;
     expect(
-      headerBox!.y + headerBox!.height,
-      `Wizard context header bottom must be within top ${MAX_HEADER_RATIO * 100}% of viewport`
+      headerBox!.height,
+      `Wizard header height must not exceed ${MAX_HEADER_RATIO * 100}% of viewport`
     ).toBeLessThanOrEqual(maxHeaderPx);
   });
 });

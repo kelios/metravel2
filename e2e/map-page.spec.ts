@@ -530,6 +530,24 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await page.goto('/map', { waitUntil: 'domcontentloaded', timeout: 120_000 });
     await waitForMapUi(page, 90_000);
 
+    const mapWrapper = page.getByTestId('map-leaflet-wrapper');
+    await expect
+      .poll(async () => Number(await mapWrapper.getAttribute('data-map-zoom')), { timeout: 30_000 })
+      .toBeGreaterThan(0);
+
+    // Radius-mode initialization may legitimately start as close as zoom 14,
+    // where a cluster click can spiderfy without changing zoom. Move out first
+    // so this scenario deterministically exercises the zoom-to-area branch.
+    const zoomOut = page.getByRole('button', { name: 'Отдалить карту', exact: true });
+    await expect(zoomOut).toBeVisible({ timeout: 30_000 });
+    for (let index = 0; index < 2; index += 1) {
+      const zoomBeforeStep = Number(await mapWrapper.getAttribute('data-map-zoom'));
+      await zoomOut.click();
+      await expect
+        .poll(async () => Number(await mapWrapper.getAttribute('data-map-zoom')), { timeout: 10_000 })
+        .toBeLessThan(zoomBeforeStep);
+    }
+
     // Wait for clusters to render.
     const clusterIcons = page.locator('.metravel-cluster-icon');
     await expect.poll(() => clusterIcons.count(), { timeout: 30_000 }).toBeGreaterThan(0);
@@ -543,22 +561,15 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     const clusterIcon = clusterIcons.nth(targetClusterIndex);
     await expect(clusterIcon).toBeVisible({ timeout: 60_000 });
 
-    const markerIcon = page.locator('.metravel-pin-marker');
-    const markerCountBefore = await markerIcon.count().catch(() => 0);
+    const zoomBefore = Number(await mapWrapper.getAttribute('data-map-zoom'));
 
-    // Click the cluster - app should fitBounds + switch into expanded markers rendering.
+    // Cluster expansion is a map-level zoom contract. The exact number of pin DOM
+    // nodes is timing-dependent because Leaflet reclusters them during animation.
     await clusterIcon.click({ force: true });
 
     await expect
-      .poll(async () => {
-        const count = await markerIcon.count().catch(() => 0);
-        return { count };
-      }, { timeout: 30_000 })
-      .toMatchObject({ count: expect.any(Number) });
-
-    await expect
-      .poll(async () => await markerIcon.count().catch(() => 0), { timeout: 30_000 })
-      .toBeGreaterThan(markerCountBefore);
+      .poll(async () => Number(await mapWrapper.getAttribute('data-map-zoom')), { timeout: 30_000 })
+      .toBeGreaterThan(zoomBefore);
   });
 
   test('mobile: cluster tap keeps map interactive', async ({ page }) => {
@@ -1157,6 +1168,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
   test('mobile: close button collapses panel back to compact preview', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 720 });
+    // Keep this transition test independent from live markers: a concurrently
+    // selected place intentionally replaces the compact preview with the place
+    // card and would turn an unrelated API/map event into a false failure.
+    await installMobileFiltersPanelMocks(page, []);
 
     await gotoMapWithRecovery(page);
 
@@ -1172,34 +1187,12 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     // asserted visibility above.
     await close.click({ force: true });
 
-    await expect
-      .poll(
-        async () => {
-          const closeVisible = await page
-            .getByTestId('map-mobile-sheet-close')
-            .isVisible()
-            .catch(() => false)
-
-          if (closeVisible) {
-            await page
-              .getByTestId('map-mobile-sheet-close')
-              .click({ force: true })
-              .catch(() => null)
-          }
-
-          const sheetVisible = await page
-            .getByRole('dialog', { name: 'Панель карты' })
-            .isVisible()
-            .catch(() => false)
-          const compactVisible = await getMobilePanelEntry(page)
-            .isVisible()
-            .catch(() => false)
-
-          return !closeVisible && !sheetVisible && compactVisible
-        },
-        { timeout: 20_000 },
-      )
-      .toBe(true)
+    // A single close action must complete the transition. Re-clicking the
+    // still-visible button during the closing animation can toggle the sheet
+    // back open and makes this assertion race with the animation itself.
+    await expect(page.getByRole('dialog', { name: 'Панель карты' })).toBeHidden({ timeout: 20_000 });
+    await expect(close).toBeHidden({ timeout: 20_000 });
+    await expect(getMobilePanelEntry(page)).toBeVisible({ timeout: 20_000 });
   });
 
   test('mobile: double click on compact preview entry does not cause panel flicker (stays open)', async ({ page }) => {

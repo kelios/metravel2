@@ -196,23 +196,15 @@ test.describe('@smoke #701 map text search is server-side', () => {
       .first();
     await expect(entry).toBeVisible({ timeout: 60_000 });
     await entry.click();
+    await expect(page.getByRole('dialog', { name: 'Панель карты' })).toBeVisible({ timeout: 30_000 });
 
     // Reach the filters body (search input lives there).
-    await expect
-      .poll(
-        async () => {
-          if (await page.getByTestId('filters-block-main').isVisible().catch(() => false)) return true;
-          const openFilters = page
-            .locator('[data-testid="travel-list-open-filters"], [data-testid="empty-open-filters"]')
-            .first();
-          if (await openFilters.isVisible().catch(() => false)) {
-            await openFilters.click({ force: true }).catch(() => null);
-          }
-          return page.getByTestId('filters-block-main').isVisible().catch(() => false);
-        },
-        { timeout: 30_000 },
-      )
-      .toBe(true);
+    const openFilters = page
+      .locator('[data-testid="travel-list-open-filters"], [data-testid="empty-open-filters"]')
+      .first();
+    await expect(openFilters).toBeVisible({ timeout: 30_000 });
+    await openFilters.click();
+    await expect(page.getByTestId('filters-block-main')).toBeVisible({ timeout: 30_000 });
 
     const search = page.getByTestId('map-search-input');
     await expect(search).toBeVisible({ timeout: 20_000 });
