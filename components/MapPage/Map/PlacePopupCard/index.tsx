@@ -264,17 +264,17 @@ const PlacePopupCard: React.FC<Props> = ({
   }, []);
 
   // Bottom-card chrome (mobile web sheet + native bottom card share ONE contract, per
-  // docs/features/map.md §Mobile parity contract): navigation opens in a separate
-  // ActionListSheet modal, ♥ + trip status live in the hero corner, the save chip
-  // reads «Сохранить/Сохранено», and a divider precedes the action row. The desktop
-  // Leaflet popup (isBottomCardLayout === false) keeps its own inline layout untouched.
+  // docs/features/map.md §Mobile parity contract): ♥ + trip status live in the hero
+  // corner, the save chip reads «Сохранить/Сохранено», and a divider precedes the
+  // action row. The desktop Leaflet popup (isBottomCardLayout === false) keeps its own
+  // inline layout otherwise.
   const useBottomCardChrome = isBottomCardLayout;
   // Route the secondary navigation (Google/Apple/Organic/Waze/Яндекс/OSM) into the
-  // ActionListSheet on EVERY mobile surface — the native bottom card AND the mobile
-  // web fullscreen overlay — so mobile web matches the device (compact card, nav in a
-  // sheet) instead of an always-expanded inline grid. Desktop (Leaflet popup /
-  // popupSplit) keeps its inline toggle-expand grid untouched.
-  const useNavSheet = useBottomCardChrome || useFullscreenMobileOverlay;
+  // ActionListSheet (a selectable list modal) on EVERY surface — mobile (native bottom
+  // card + fullscreen overlay) AND the desktop Leaflet popup. The old desktop path
+  // expanded an inline grid inside the height-capped popup, which pushed the card into
+  // an awkward internal scroll; a picker list is cleaner and consistent across surfaces.
+  const useNavSheet = true;
 
   const toggleNav = useCallback(() => {
     if (useNavSheet) {
@@ -672,10 +672,11 @@ const PlacePopupCard: React.FC<Props> = ({
                     <Text style={styles.iconActionLabel} numberOfLines={1}>{i18nT('map:components.MapPage.Map.PlacePopupCard.index.navigatsiya_b55f1991')}</Text>
                     {/* #FIX-3 — on the native bottom card the indicator is already in the
                         bubble (more-horizontal); a second chevron in the label row stole
-                        width and clipped «Навигация» → «Навигац…». Keep the trailing
-                        chevron only for the web popup. */}
+                        width and clipped «Навигация» → «Навигац…». On the web popup the
+                        toggle now opens the ActionListSheet picker (not an inline grid),
+                        so show the same «⋯» menu affordance instead of a chevron. */}
                     {isBottomCardLayout ? null : (
-                      <Feather name={navExpanded ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
+                      <Feather name="more-horizontal" size={13} color={colors.textMuted} />
                     )}
                   </View>
                 </CardActionPressable>
@@ -1017,6 +1018,15 @@ const PlacePopupCard: React.FC<Props> = ({
             colors={colors}
           />
         )}
+
+        {useNavSheet && navSheetActions.length > 0 ? (
+          <ActionListSheet
+            visible={navSheetVisible}
+            onClose={closeNavSheet}
+            title={i18nT('map:components.MapPage.Map.PlacePopupCard.index.navigatsiya_i_deystviya_0965c43c')}
+            actions={navSheetActions}
+          />
+        ) : null}
       </>
     );
   }

@@ -382,7 +382,10 @@ describe('PlacePopupCard', () => {
     fullscreenSpy.mockRestore();
   });
 
-  it('renders the fallback Google action and expands secondary navigation chips', () => {
+  it('renders the fallback Google action and opens navigation options in the picker sheet', () => {
+    // The «Навигация» toggle now opens the ActionListSheet picker (a selectable list)
+    // on every surface — including the desktop popup — instead of expanding an inline
+    // grid that pushed the height-capped card into an awkward internal scroll.
     let tree: any;
 
     renderer.act(() => {
@@ -407,17 +410,17 @@ describe('PlacePopupCard', () => {
       tree.root.findAll((node: any) => node.props?.children === label);
 
     expect(findLabel('Google Maps').length).toBeGreaterThan(0);
-    expect(findLabel('Google').length).toBe(0);
-    expect(findLabel('Organic').length).toBe(0);
 
     const googleAction = tree.root.findByProps({ accessibilityLabel: 'Открыть точку в Google Maps' });
     expect(googleAction).toBeTruthy();
 
-    const moreAction = tree.root.findByProps({ accessibilityLabel: 'Показать способы навигации' });
+    // Toggle carries the sheet-open affordance (not the old inline show/hide label).
+    const moreAction = tree.root.findByProps({ accessibilityLabel: 'Открыть способы навигации' });
     renderer.act(() => {
       moreAction.props.onPress();
     });
 
+    // The picker sheet lists every navigator to choose from.
     expect(findLabel('Organic').length).toBeGreaterThan(0);
     expect(findLabel('Apple').length).toBeGreaterThan(0);
     expect(findLabel('Waze').length).toBeGreaterThan(0);
