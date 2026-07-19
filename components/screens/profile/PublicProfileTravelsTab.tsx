@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus';
+import Button from '@/components/ui/Button';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import type { Travel } from '@/types/types';
 import { translate as i18nT } from '@/i18n'
@@ -84,16 +84,16 @@ export function PublicProfileTravelsTab({
       </View>
 
       {total > travels.length ? (
-        <Pressable
-          style={[styles.viewAllButton, globalFocusStyles.focusable]}
+        <Button
+          label={i18nT('profile:components.screens.profile.PublicProfileTravelsTab.pokazat_esche_4dc205b6')}
           onPress={onLoadMore}
-          accessibilityRole="button"
+          variant="secondary"
+          size="sm"
+          icon={<Feather name="chevron-down" size={16} color={colors.primaryDark} />}
+          iconPosition="right"
           accessibilityLabel={i18nT('profile:components.screens.profile.PublicProfileTravelsTab.pokazat_esche_puteshestviya_avtora_e98ba901')}
-          {...Platform.select({ web: { cursor: 'pointer' } })}
-        >
-          <Text style={styles.viewAllButtonText}>{i18nT('profile:components.screens.profile.PublicProfileTravelsTab.pokazat_esche_4dc205b6')}</Text>
-          <Feather name="chevron-down" size={16} color={colors.primaryDark} />
-        </Pressable>
+          style={styles.viewAllButton}
+        />
       ) : null}
     </View>
   );
@@ -130,17 +130,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     viewAllButton: {
       marginTop: 16,
       alignSelf: 'flex-start',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.primarySoft,
-    },
-    viewAllButtonText: {
-      fontSize: 14,
-      fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-      color: colors.primaryText,
     },
   });

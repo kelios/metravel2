@@ -1,10 +1,10 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Pressable, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Platform, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import Feather from '@expo/vector-icons/Feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { globalFocusStyles } from '@/styles/globalFocus';
+import Button from '@/components/ui/Button';
 import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
@@ -230,16 +230,14 @@ export default function PublicUserProfileScreen() {
               ? i18nT('auth:app.tabs.user.id.nekorrektnyy_id_polzovatelya_ebab8a55')
               : (error as any)?.message || String(error || i18nT('profile:app.tabs.user.id.loadError'))}
           </Text>
-          <Pressable
-            style={[styles.backButton, globalFocusStyles.focusable]}
+          <Button
+            label={i18nT('auth:app.tabs.user.id.nazad_84ede616')}
             onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('auth:app.tabs.user.id.nazad_84ede616')}
-            {...Platform.select({ web: { cursor: 'pointer' } })}
-          >
-            <Feather name="arrow-left" size={16} color={colors.primaryDark} />
-            <Text style={styles.backButtonText}>{i18nT('auth:app.tabs.user.id.nazad_84ede616')}</Text>
-          </Pressable>
+            variant="secondary"
+            size="sm"
+            icon={<Feather name="arrow-left" size={16} color={colors.primaryDark} />}
+            style={styles.backButton}
+          />
         </View>
       </SafeAreaView>
     );
@@ -365,17 +363,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     backButton: {
       marginTop: 6,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: 12,
-      backgroundColor: colors.primarySoft,
-    },
-    backButtonText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: colors.primaryText,
     },
   });

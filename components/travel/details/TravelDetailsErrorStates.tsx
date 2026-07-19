@@ -1,6 +1,7 @@
 import React from 'react'
-import { Text, TouchableOpacity, View } from 'react-native'
+import { Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import Button from '@/components/ui/Button'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -27,14 +28,12 @@ export function MissingParamError({ styles, seoBlock, onGoHome }: MissingParamEr
         <View style={styles.errorContainer} role="alert">
           <Text style={styles.errorTitle}>{i18nT('travel:components.travel.details.TravelDetailsErrorStates.puteshestvie_ne_naydeno_9fd534f7')}</Text>
           <Text style={styles.errorText}>{i18nT('travel:components.travel.details.TravelDetailsErrorStates.v_ssylke_otsutstvuet_identifikator_puteshest_c0021f5b')}</Text>
-          <TouchableOpacity
+          <Button
             onPress={onGoHome}
-            style={styles.errorButton}
-            accessibilityRole="button"
+            variant="primary"
+            label={i18nT('travel:components.travel.details.TravelDetailsErrorStates.na_glavnuyu_c35a9aeb')}
             accessibilityLabel={i18nT('travel:components.travel.details.TravelDetailsErrorStates.na_glavnuyu_c35a9aeb')}
-          >
-            <Text style={styles.errorButtonText}>{i18nT('travel:components.travel.details.TravelDetailsErrorStates.na_glavnuyu_c35a9aeb')}</Text>
-          </TouchableOpacity>
+          />
         </View>
       </SafeAreaView>
     </>
@@ -81,39 +80,26 @@ export function LoadError({ styles, seoBlock, errorMessage, onRetry, onGoHome }:
           <Text style={styles.errorTitle}>{title}</Text>
           <Text style={styles.errorText}>{text}</Text>
           {!notFound && (
-            <TouchableOpacity
+            <Button
               onPress={onRetry}
-              style={styles.errorButton}
-              accessibilityRole="button"
+              variant="primary"
+              label={i18nT('travel:components.travel.details.TravelDetailsErrorStates.povtorit_5acae0b1')}
               accessibilityLabel={i18nT('travel:components.travel.details.TravelDetailsErrorStates.povtorit_5acae0b1')}
-            >
-              <Text style={styles.errorButtonText}>{i18nT('travel:components.travel.details.TravelDetailsErrorStates.povtorit_5acae0b1')}</Text>
-            </TouchableOpacity>
+            />
           )}
-          <TouchableOpacity
+          <Button
             onPress={onGoHome}
-            style={notFound ? styles.errorButton : secondaryButtonStyle}
-            accessibilityRole="button"
+            variant={notFound ? 'primary' : 'ghost'}
+            style={notFound ? undefined : errorGoHomeButtonStyle}
+            label={i18nT('travel:components.travel.details.TravelDetailsErrorStates.na_glavnuyu_c35a9aeb')}
             accessibilityLabel={i18nT('travel:components.travel.details.TravelDetailsErrorStates.na_glavnuyu_c35a9aeb')}
-          >
-            <Text style={notFound ? styles.errorButtonText : secondaryButtonTextStyle}>
-              {i18nT('travel:components.travel.details.TravelDetailsErrorStates.na_glavnuyu_c35a9aeb')}</Text>
-          </TouchableOpacity>
+          />
         </View>
       </SafeAreaView>
     </>
   )
 }
 
-const secondaryButtonStyle = {
+const errorGoHomeButtonStyle = {
   marginTop: 12,
-  paddingHorizontal: 24,
-  paddingVertical: 10,
 } as const
-
-const secondaryButtonTextStyle = {
-  fontSize: 16,
-  fontWeight: '600' as const,
-  textDecorationLine: 'underline' as const,
-  opacity: 0.8,
-}

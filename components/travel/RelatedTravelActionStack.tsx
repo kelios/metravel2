@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { queryKeys } from '@/api/queryKeys'
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries'
-import OptimizedFavoriteButton from '@/components/travel/OptimizedFavoriteButton'
+import FavoriteButton from '@/components/travel/FavoriteButton'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { resolveRelatedTravelRef } from '@/utils/relatedTravel'
 import { translate as i18nT } from '@/i18n'
@@ -87,7 +87,8 @@ export default function RelatedTravelActionStack({
           } as any)
         : null)}
     >
-      <OptimizedFavoriteButton
+      <FavoriteButton
+        variant="overlay"
         id={resolvedTravelId}
         type="travel"
         title={travelTitle}

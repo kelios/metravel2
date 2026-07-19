@@ -363,7 +363,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       backgroundColor: 'rgba(0,0,0,0.55)',
     },
     viewsOverlayText: {
-      color: '#fff',
+      color: colors.textOnDark,
       fontSize: META_TEXT_FONT_SIZE,
       lineHeight: META_TEXT_LINE_HEIGHT,
       fontWeight: '600',
@@ -382,7 +382,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       maxWidth: 160,
     },
     authorOverlayText: {
-      color: '#fff',
+      color: colors.textOnDark,
       fontSize: META_TEXT_FONT_SIZE,
       lineHeight: META_TEXT_LINE_HEIGHT,
       fontWeight: '600',

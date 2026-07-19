@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import Button from '@/components/ui/Button';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { openExternalUrl } from '@/utils/externalLinks';
@@ -135,31 +136,6 @@ export default function ErrorDisplay({
       gap: 8,
       alignItems: 'center',
     },
-    button: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderRadius: 8,
-      gap: 8,
-      minHeight: 44,
-    },
-    primaryButton: {
-      backgroundColor: colors.primary,
-    },
-    secondaryButton: {
-      backgroundColor: 'transparent',
-      borderWidth: 1,
-      borderColor: colors.primary,
-    },
-    buttonText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.textOnPrimary,
-    },
-    secondaryButtonText: {
-      color: colors.primaryText,
-    },
     dismissButton: {
       padding: 8,
       minWidth: 44,
@@ -194,50 +170,27 @@ export default function ErrorDisplay({
         {/* Действия */}
         <View style={styles.actions}>
           {onRetry && (
-            <Pressable
-              style={[styles.button, styles.primaryButton]}
+            <Button
+              variant="primary"
+              size="sm"
               onPress={onRetry}
-              accessibilityRole="button"
+              label={isNetworkError ? i18nT('errors:components.ui.ErrorDisplay.povtorit_8f1eacea') : i18nT('errors:components.ui.ErrorDisplay.poprobovat_snova_ec1a8f2c')}
               accessibilityLabel={isNetworkError ? i18nT('errors:components.ui.ErrorDisplay.povtorit_popytku_podklyucheniya_12e00eec') : i18nT('errors:components.ui.ErrorDisplay.poprobovat_snova_ec1a8f2c')}
-              {...Platform.select({
-                web: {
-                  cursor: 'pointer',
-                  // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
-                  ':hover': {
-                    opacity: 0.9,
-                  },
-                },
-              })}
-            >
-              <Feather name={isNetworkError ? 'wifi' : 'refresh-cw'} size={16} color={colors.textOnPrimary} />
-              <Text style={styles.buttonText}>
-                {isNetworkError ? i18nT('errors:components.ui.ErrorDisplay.povtorit_8f1eacea') : i18nT('errors:components.ui.ErrorDisplay.poprobovat_snova_ec1a8f2c')}
-              </Text>
-            </Pressable>
+              icon={<Feather name={isNetworkError ? 'wifi' : 'refresh-cw'} size={16} color={colors.textOnPrimary} />}
+            />
           )}
 
           {showContact && (
-            <Pressable
-              style={[styles.button, styles.secondaryButton]}
+            <Button
+              variant="outline"
+              size="sm"
               onPress={() => {
                 void openExternalUrl(SUPPORT_URL)
               }}
-              accessibilityRole="button"
+              label={i18nT('errors:components.ui.ErrorDisplay.svyazatsya_s_podderzhkoy_55a4272f')}
               accessibilityLabel={i18nT('errors:components.ui.ErrorDisplay.svyazatsya_s_podderzhkoy_55a4272f')}
-              {...Platform.select({
-                web: {
-                  cursor: 'pointer',
-                  // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
-                  ':hover': {
-                    opacity: 0.8,
-                  },
-                },
-              })}
-            >
-              <Feather name="mail" size={16} color={colors.primaryDark} />
-              <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-                {i18nT('errors:components.ui.ErrorDisplay.svyazatsya_s_podderzhkoy_55a4272f')}</Text>
-            </Pressable>
+              icon={<Feather name="mail" size={16} color={colors.primary} />}
+            />
           )}
 
           {onDismiss && (

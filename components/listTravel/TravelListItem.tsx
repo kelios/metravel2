@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { router } from 'expo-router'
 
 import type { Travel } from '@/types/types'
-import OptimizedFavoriteButton from '@/components/travel/OptimizedFavoriteButton'
+import FavoriteButton from '@/components/travel/FavoriteButton'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers'
 import { routes } from '@/utils/routes'
@@ -377,7 +377,8 @@ function TravelListItem({
         onMouseDown: (e: any) => e.stopPropagation(),
       })}
     >
-      <OptimizedFavoriteButton
+      <FavoriteButton
+        variant="overlay"
         id={id}
         type="travel"
         title={title}
@@ -513,7 +514,7 @@ function TravelListItem({
   const showViewsOverlay = views > 0 && !selectable
   const viewsOverlaySlot = showViewsOverlay ? (
     <View style={styles.viewsOverlayBadge} testID="views-overlay" pointerEvents="none">
-      <Feather name="eye" size={VIEW_ICON_SIZE + 2} color="#fff" />
+      <Feather name="eye" size={VIEW_ICON_SIZE + 2} color={colors.textOnDark} />
       <Text style={styles.viewsOverlayText} numberOfLines={1}>
         {viewsFormatted}
       </Text>
@@ -526,7 +527,7 @@ function TravelListItem({
   const showAuthorOverlay = compactMeta && hasAuthorMeta && !selectable
   const authorOverlaySlot = showAuthorOverlay ? (
     <View style={styles.authorOverlayBadge} testID="author-overlay" pointerEvents="none">
-      <Feather name="user" size={VIEW_ICON_SIZE + 2} color="#fff" />
+      <Feather name="user" size={VIEW_ICON_SIZE + 2} color={colors.textOnDark} />
       <Text style={styles.authorOverlayText} numberOfLines={1}>
         {authorDisplayName}
       </Text>

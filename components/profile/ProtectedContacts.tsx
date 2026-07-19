@@ -1,9 +1,10 @@
 import { useMemo, useState, useCallback } from 'react';
-import { View, Text, Pressable, Platform, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, Platform, StyleSheet } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import Button from '@/components/ui/Button';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { confirmAction } from '@/utils/confirmAction';
 import { showToast } from '@/utils/toast';
@@ -111,23 +112,16 @@ export default function ProtectedContacts({
             </Text>
 
             {access === 'none' ? (
-                <Pressable
-                    style={[styles.requestButton, globalFocusStyles.focusable]}
+                <Button
+                    label={i18nT('profile:components.profile.ProtectedContacts.zaprosit_kontakty_17ae693d')}
                     onPress={handleRequest}
-                    disabled={requesting}
-                    accessibilityRole="button"
+                    variant="outline"
+                    size="sm"
+                    loading={requesting}
+                    icon={<Feather name="user-plus" size={16} color={colors.primaryDark} />}
                     accessibilityLabel={i18nT('profile:components.profile.ProtectedContacts.zaprosit_kontakty_17ae693d')}
-                    {...Platform.select({ web: { cursor: 'pointer' } })}
-                >
-                    {requesting ? (
-                        <ActivityIndicator size="small" color={colors.primaryDark} />
-                    ) : (
-                        <>
-                            <Feather name="user-plus" size={16} color={colors.primaryDark} />
-                            <Text style={styles.requestButtonText}>{i18nT('profile:components.profile.ProtectedContacts.zaprosit_kontakty_17ae693d')}</Text>
-                        </>
-                    )}
-                </Pressable>
+                    style={styles.requestButton}
+                />
             ) : (
                 <View style={styles.pendingBadge}>
                     <Feather name="clock" size={14} color={colors.warning} />
@@ -162,20 +156,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
         gateTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
         gateMeta: { fontSize: 12, color: colors.textMuted, lineHeight: 17 },
         requestButton: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            paddingVertical: 10,
-            paddingHorizontal: 14,
-            borderRadius: DESIGN_TOKENS.radii.sm,
-            borderWidth: 1,
-            borderColor: colors.primary,
-            backgroundColor: colors.surface,
-            minHeight: 40,
             alignSelf: 'flex-start',
         },
-        requestButtonText: { fontSize: 14, fontWeight: '600', color: colors.primaryText },
         pendingBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
         pendingText: { fontSize: 13, fontWeight: '600', color: colors.warning },
     });

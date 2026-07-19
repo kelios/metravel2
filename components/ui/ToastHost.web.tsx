@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Feather from '@expo/vector-icons/Feather';
 
 import { WEB_TOAST_EVENT_NAME } from '@/utils/toast.web';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -13,11 +14,12 @@ type ToastPayload = {
   position?: 'top' | 'bottom';
 };
 
-const ICON_MAP: Record<ToastType, string> = {
-  success: '✓',
-  error: '✕',
-  info: 'ℹ',
-  warning: '⚠',
+// Canonical Feather glyphs (project icon standard) instead of raw Unicode symbols.
+const ICON_MAP: Record<ToastType, React.ComponentProps<typeof Feather>['name']> = {
+  success: 'check',
+  error: 'x',
+  info: 'info',
+  warning: 'alert-triangle',
 };
 
 const ACCENT_COLORS: Record<ToastType, string> = {
@@ -132,7 +134,9 @@ export default function ToastHost() {
   return (
     <div style={containerStyle} aria-live="polite" role="status">
       <div style={cardStyle}>
-        <div style={iconStyle} aria-hidden="true">{icon}</div>
+        <div style={iconStyle} aria-hidden="true">
+          <Feather name={icon} size={13} color={DESIGN_TOKENS.colors.textOnDark} />
+        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           {payload.text1 ? (
             <div style={{ fontWeight: 600, fontSize: 14 }}>{payload.text1}</div>

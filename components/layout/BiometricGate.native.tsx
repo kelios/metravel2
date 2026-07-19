@@ -4,9 +4,10 @@
 // Web has a no-op sibling (BiometricGate.web.tsx) so the lock never blocks web.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
+import Button from '@/components/ui/Button';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useBiometricAuth } from '@/hooks/useBiometricAuth';
 import { useAuth } from '@/context/AuthContext';
@@ -72,21 +73,22 @@ export default function BiometricGate() {
         {isPrompting ? (
           <ActivityIndicator color={colors.primaryDark} style={styles.spinner} />
         ) : (
-          <Pressable style={styles.primaryButton} onPress={() => void runAuth()}>
-            <Feather name="unlock" size={18} color={colors.textOnPrimary} />
-            <Text style={styles.primaryButtonText}>{i18nT('navigation:components.layout.BiometricGate.razblokirovat_f1634eec')}</Text>
-          </Pressable>
+          <Button
+            label={i18nT('navigation:components.layout.BiometricGate.razblokirovat_f1634eec')}
+            onPress={() => void runAuth()}
+            variant="primary"
+            icon={<Feather name="unlock" size={18} color={colors.textOnPrimary} />}
+            style={styles.primaryButton}
+          />
         )}
 
         {phase === 'failed' ? (
-          <Pressable
+          <Button
+            label={i18nT('navigation:components.layout.BiometricGate.vyyti_iz_akkaunta_22641000')}
+            onPress={() => void logout()}
+            variant="ghost"
             style={styles.secondaryButton}
-            onPress={() => {
-              void logout();
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>{i18nT('navigation:components.layout.BiometricGate.vyyti_iz_akkaunta_22641000')}</Text>
-          </Pressable>
+          />
         ) : null}
       </View>
     </View>
@@ -129,27 +131,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     primaryButton: {
       marginTop: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 20,
-      paddingVertical: 12,
-      borderRadius: 14,
-      backgroundColor: colors.primary,
-    },
-    primaryButtonText: {
-      color: colors.textOnPrimary,
-      fontWeight: '800',
-      fontSize: 16,
     },
     secondaryButton: {
       marginTop: 4,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-    },
-    secondaryButtonText: {
-      color: colors.textMuted,
-      fontWeight: '600',
-      fontSize: 14,
     },
   });

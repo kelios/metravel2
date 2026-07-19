@@ -79,6 +79,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   // AND-15: Upload progress tracking
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadCurrent, setUploadCurrent] = useState(0);
@@ -110,6 +111,20 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
     lastReportedUrlsRef.current = signature;
     onChange(items);
   }, [images, onChange]);
+
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const present = new Set(images.map((img) => img.id));
+      let changed = false;
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (present.has(id)) next.add(id);
+        else changed = true;
+      });
+      return changed ? next : prev;
+    });
+  }, [images]);
 
   const handleUploadImages = useCallback(
     async (assets: ImagePicker.ImagePickerAsset[]) => {
@@ -286,6 +301,68 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
     setDialogVisible(true);
   };
 
+  const handleToggleSelect = useCallback((imageId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(imageId)) next.delete(imageId);
+      else next.add(imageId);
+      return next;
+    });
+  }, []);
+
+  const handleToggleSelectAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      if (images.length > 0 && images.every((img) => prev.has(img.id))) {
+        return new Set();
+      }
+      return new Set(images.map((img) => img.id));
+    });
+  }, [images]);
+
+  const deleteImageById = useCallback(
+    async (imageId: string) => {
+      const imageToDelete = images.find((img) => img.id === imageId);
+      if (imageToDelete && isBackendImageId(imageToDelete.id)) {
+        await deleteImage(imageToDelete.id);
+      }
+      setImages((prev) => prev.filter((img) => img.id !== imageId));
+    },
+    [images, isBackendImageId],
+  );
+
+  const performDeleteSelected = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    try {
+      for (const id of ids) {
+        await deleteImageById(id);
+      }
+    } catch (error) {
+      Alert.alert(
+        i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
+        i18nT('travel:components.travel.ImageGalleryComponent.deleteFailed'),
+      );
+      console.error('Error deleting images:', error);
+    } finally {
+      setSelectedIds(new Set());
+    }
+  }, [deleteImageById, selectedIds]);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    Alert.alert(
+      i18nT('travel:components.travel.ImageGalleryComponent.batchDeleteTitle'),
+      i18nT('travel:components.travel.ImageGalleryComponent.batchDeleteMessage', { value1: selectedIds.size }),
+      [
+        { text: i18nT('travel:components.travel.ImageGalleryComponent.otmena_03c4d548'), style: 'cancel' },
+        {
+          text: i18nT('travel:components.travel.ImageGalleryComponent.udalit_4f0a77b6'),
+          style: 'destructive',
+          onPress: () => { void performDeleteSelected(); },
+        },
+      ],
+    );
+  }, [performDeleteSelected, selectedIds.size]);
+
   const handleMoveImage = useCallback((imageId: string, direction: -1 | 1) => {
     setImages((prev) => {
       const fromIndex = prev.findIndex((img) => img.id === imageId);
@@ -363,6 +440,40 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
         </View>
       )}
 
+      {images.length > 0 && !isInitialLoading ? (
+        <View style={styles.batchActionsRow}>
+          <TouchableOpacity
+            onPress={handleToggleSelectAll}
+            style={[styles.batchActionButton, { borderColor: colors.border, backgroundColor: colors.surfaceMuted }]}
+            testID="gallery-ios.select-all"
+          >
+            <Feather
+              name={images.every((img) => selectedIds.has(img.id)) ? 'square' : 'check-square'}
+              size={16}
+              color={colors.text}
+            />
+            <Text style={[styles.batchActionButtonText, { color: colors.text }]}>
+              {images.every((img) => selectedIds.has(img.id))
+                ? i18nT('travel:components.travel.ImageGalleryComponent.deselectAll')
+                : i18nT('travel:components.travel.ImageGalleryComponent.selectAll')}
+            </Text>
+          </TouchableOpacity>
+
+          {selectedIds.size > 0 ? (
+            <TouchableOpacity
+              onPress={handleDeleteSelected}
+              style={[styles.batchActionButton, { borderColor: colors.danger, backgroundColor: colors.dangerSoft }]}
+              testID="gallery-ios.delete-selected"
+            >
+              <Feather name="trash-2" size={16} color={colors.danger} />
+              <Text style={[styles.batchActionButtonText, { color: colors.danger }]}>
+                {i18nT('travel:components.travel.ImageGalleryComponent.deleteSelected', { value1: selectedIds.size })}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
+
       {isInitialLoading ? (
         <View style={styles.loader}>
           <ShimmerOverlay />
@@ -370,7 +481,10 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       ) : images.length > 0 ? (
         <View style={styles.galleryGrid}>
           {images.map((image, index) => (
-            <View key={`${image.id}:${image.url}:${index}`} style={styles.imageCard}>
+            <View
+              key={`${image.id}:${image.url}:${index}`}
+              style={[styles.imageCard, selectedIds.has(image.id) && { borderWidth: 2, borderColor: colors.primary }]}
+            >
               <View style={[styles.imageFrame, { backgroundColor: colors.surfaceMuted }]}>
                 {loading[index] ? (
                   <ShimmerOverlay />
@@ -384,6 +498,17 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
                     alt={`Gallery image ${index + 1}`}
                     style={styles.image}
                   />
+                  <TouchableOpacity
+                    onPress={() => handleToggleSelect(image.id)}
+                    style={[
+                      styles.selectCheckbox,
+                      { backgroundColor: selectedIds.has(image.id) ? colors.primary : colors.overlay },
+                    ]}
+                    testID={`gallery-ios.select:${image.id}`}
+                    accessibilityLabel={i18nT('travel:components.travel.ImageGalleryComponent.selectPhoto')}
+                  >
+                    <Feather name="check" size={20} color={selectedIds.has(image.id) ? colors.textInverse : 'transparent'} />
+                  </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleDeleteImage(image.id)}
                     style={[styles.deleteButton, { backgroundColor: colors.danger }]}
@@ -492,6 +617,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: DESIGN_TOKENS.spacing.md,
     marginBottom: DESIGN_TOKENS.spacing.lg,
+  },
+  batchActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    marginBottom: DESIGN_TOKENS.spacing.md,
+  },
+  batchActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    borderWidth: 1,
+    minHeight: 44,
+  },
+  batchActionButtonText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '600',
+  },
+  selectCheckbox: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   addButton: {
     flex: 1,

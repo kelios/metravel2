@@ -123,7 +123,7 @@ export default function SelectedTravelOrderCard({
       boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
       fontSize: '11px',
       fontWeight: 700,
-      color: '#fff',
+      color: colors.textOnPrimary,
       lineHeight: '1',
     };
     const controlsStyle: React.CSSProperties = {
@@ -164,7 +164,7 @@ export default function SelectedTravelOrderCard({
       borderBottomRightRadius: '11px',
       backgroundColor: 'rgba(0, 0, 0, 0.55)',
       backdropFilter: 'blur(8px)',
-      color: '#fff',
+      color: colors.textOnDark,
       fontSize: '12px',
       fontWeight: 600,
       lineHeight: '1.3',

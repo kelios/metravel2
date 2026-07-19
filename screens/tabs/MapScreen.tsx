@@ -124,11 +124,34 @@ export default function MapScreen() {
 
   const [geoBannerDismissed, setGeoBannerDismissed] = useState(false)
   const [shouldLoadOnboarding, setShouldLoadOnboarding] = useState(false)
+  // Первый вход показывает оверлеи ПО ОДНОМУ, а не стопкой поверх карты. Онбординг
+  // и cookie-баннер публикуют своё состояние в DOM (`data-map-onboarding-open` /
+  // `data-consent-banner-open`); пока открыт любой из них, гео-баннер не
+  // показываем. Приоритет: cookie (юридически важнее) → онбординг → гео-баннер.
+  const [blockingOverlayOpen, setBlockingOverlayOpen] = useState(false)
+  useEffect(() => {
+    if (!isWeb || typeof document === 'undefined') return
+    const body = document.body
+    if (!body) return
+    const read = () =>
+      setBlockingOverlayOpen(
+        body.getAttribute('data-map-onboarding-open') === 'true' ||
+          body.getAttribute('data-consent-banner-open') === 'true',
+      )
+    read()
+    const observer = new MutationObserver(read)
+    observer.observe(body, {
+      attributes: true,
+      attributeFilter: ['data-map-onboarding-open', 'data-consent-banner-open'],
+    })
+    return () => observer.disconnect()
+  }, [isWeb])
   const dismissGeoBanner = useCallback(() => setGeoBannerDismissed(true), [])
   const isMobileRouteMode = isMobile && routingSlice.mode === 'route'
   const showGeoBanner = Boolean(
     !geoBannerDismissed &&
       !isMobileRouteMode &&
+      !blockingOverlayOpen &&
       ['cached', 'denied', 'unavailable', 'error'].includes(locationState.status),
   )
 
@@ -145,11 +168,14 @@ export default function MapScreen() {
     }
   }, [isMobile, isWeb])
 
+  // Возрождать закрытый баннер разрешено ТОЛЬКО когда геолокация реально
+  // получена (`current`): тогда, если она позже деградирует до denied/error,
+  // пользователь снова увидит свежий статус. Раньше сюда входил и транзиентный
+  // `loading`, который случается при каждом ретрае гео (в т.ч. при переоткрытии
+  // данных карты) → однажды закрытый баннер воскресал сам собой. `loading`
+  // убран: закрытие держится, пока состояние не станет по-настоящему валидным.
   useEffect(() => {
-    if (
-      (locationState.status === 'loading' || locationState.status === 'current') &&
-      geoBannerDismissed
-    ) {
+    if (locationState.status === 'current' && geoBannerDismissed) {
       setGeoBannerDismissed(false)
     }
   }, [geoBannerDismissed, locationState.status])

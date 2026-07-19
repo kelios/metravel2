@@ -24,8 +24,8 @@ describe('ConfirmDialog', () => {
     const { getByText } = render(<ConfirmDialog {...defaultProps} />)
     expect(getByText('Подтверждение')).toBeTruthy()
     expect(getByText('Вы уверены, что хотите продолжить?')).toBeTruthy()
-    expect(getByText('УДАЛИТЬ')).toBeTruthy()
-    expect(getByText('ОТМЕНА')).toBeTruthy()
+    expect(getByText('Удалить')).toBeTruthy()
+    expect(getByText('Отмена')).toBeTruthy()
   })
 
   it('renders with custom props', () => {
@@ -40,21 +40,21 @@ describe('ConfirmDialog', () => {
     )
     expect(getByText('Custom Title')).toBeTruthy()
     expect(getByText('Custom message')).toBeTruthy()
-    expect(getByText('CONFIRM')).toBeTruthy()
-    expect(getByText('CANCEL')).toBeTruthy()
+    expect(getByText('Confirm')).toBeTruthy()
+    expect(getByText('Cancel')).toBeTruthy()
   })
 
   it('calls onClose when cancel is pressed', () => {
     const onClose = jest.fn()
     const { getByText } = render(<ConfirmDialog {...defaultProps} onClose={onClose} />)
-    fireEvent.press(getByText('ОТМЕНА'))
+    fireEvent.press(getByText('Отмена'))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('calls onConfirm when confirm is pressed', () => {
     const onConfirm = jest.fn()
     const { getByText } = render(<ConfirmDialog {...defaultProps} onConfirm={onConfirm} />)
-    fireEvent.press(getByText('УДАЛИТЬ'))
+    fireEvent.press(getByText('Удалить'))
     expect(onConfirm).toHaveBeenCalledTimes(1)
   })
 

@@ -14,6 +14,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { normalizeAvatarUrl } from '@/utils/mediaUrl'
 import { routes } from '@/utils/routes'
+import Button from '@/components/ui/Button'
 import SubscribeButton from '@/components/ui/SubscribeButton'
 import { getTravelLabel } from '@/utils/pluralize'
 import { useUserAchievements } from '@/hooks/useAchievementsApi'
@@ -299,38 +300,26 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                 )}
 
                 {!isOwnTravel && (
-                  <Pressable
-                    onPress={handleWriteToAuthor}
-                    accessibilityRole="button"
+                  <Button
+                    variant="soft"
+                    size={isMobile ? 'md' : 'sm'}
+                    iconOnly={isMobile}
+                    icon={<Feather name="mail" size={15} color={colors.primaryText} />}
+                    label={i18nT('travel:components.travel.AuthorCard.napisat_85d7a13d')}
                     accessibilityLabel={i18nT('travel:components.travel.AuthorCard.napisat_avtoru_value1_94fdaf86', { value1: userName ? ` ${userName}` : '' })}
-                    style={({ pressed }) => [
-                      styles.actionButton,
-                      isMobile && styles.actionButtonIconOnly,
-                      styles.actionButtonAccent,
-                      pressed && styles.actionButtonPressed,
-                    ]}
-                  >
-                    <Feather name="mail" size={15} color={colors.primaryDark} />
-                    {!isMobile && <Text style={styles.actionButtonAccentText}>{i18nT('travel:components.travel.AuthorCard.napisat_85d7a13d')}</Text>}
-                  </Pressable>
+                    onPress={handleWriteToAuthor}
+                  />
                 )}
 
-                <Pressable
-                  onPress={handleViewAuthorTravels}
-                  accessibilityRole="button"
+                <Button
+                  variant="secondary"
+                  size={isMobile ? 'md' : 'sm'}
+                  iconOnly={isMobile}
+                  icon={<Feather name="map" size={15} color={colors.text} />}
+                  label={i18nT('travel:components.travel.AuthorCard.vse_puteshestviya_12f54fe6')}
                   accessibilityLabel={i18nT('travel:components.travel.AuthorCard.vse_puteshestviya_avtora_c1a08fb2')}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    isMobile && styles.actionButtonIconOnly,
-                    pressed && styles.actionButtonPressed,
-                  ]}
-                >
-                  <Feather name="map" size={15} color={colors.textSecondary} />
-                  {!isMobile && (
-                    <Text style={styles.actionButtonText} numberOfLines={1}>
-                      {i18nT('travel:components.travel.AuthorCard.vse_puteshestviya_12f54fe6')}</Text>
-                  )}
-                </Pressable>
+                  onPress={handleViewAuthorTravels}
+                />
               </View>
             )}
 
@@ -526,48 +515,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
-    },
-    actionButtonIconOnly: {
-      width: 44,
-      height: 44,
-      paddingHorizontal: 0,
-      paddingVertical: 0,
-    },
-    actionButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      minWidth: 0,
-      flexShrink: 1,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer' as any,
-          transition: 'all 0.15s ease' as any,
-          ':hover': { backgroundColor: colors.backgroundSecondary, borderColor: colors.border } as any,
-        },
-      }),
-    },
-    actionButtonAccent: {
-      backgroundColor: colors.primarySoft,
-    },
-    actionButtonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
-    actionButtonText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      fontWeight: '600',
-      letterSpacing: -0.2,
-      color: colors.textSecondary,
-    },
-    actionButtonAccentText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      fontWeight: '700',
-      color: colors.primaryText,
     },
   })
 

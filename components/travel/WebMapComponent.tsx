@@ -509,6 +509,41 @@ const WebMapComponent = ({
         [debouncedMarkersChange, localMarkers, onMarkerEditSave]
     );
 
+    const handleReorder = useCallback(
+        (fromIndex: number, toIndex: number) => {
+            const current = localMarkers;
+            if (
+                fromIndex === toIndex ||
+                fromIndex < 0 ||
+                toIndex < 0 ||
+                fromIndex >= current.length ||
+                toIndex >= current.length
+            ) {
+                return;
+            }
+            const updated = [...current];
+            const [moved] = updated.splice(fromIndex, 1);
+            updated.splice(toIndex, 0, moved);
+
+            debouncedMarkersChange(updated);
+            // Тот же путь персиста, что и правка точки (onMarkerEditSave),
+            // чтобы новый порядок сохранился на backend.
+            void onMarkerEditSave?.(updated);
+
+            // Держим активную/редактируемую точку на том же маркере после сдвига.
+            const remap = (prev: number | null): number | null => {
+                if (prev == null) return prev;
+                if (prev === fromIndex) return toIndex;
+                if (fromIndex < prev && toIndex >= prev) return prev - 1;
+                if (fromIndex > prev && toIndex <= prev) return prev + 1;
+                return prev;
+            };
+            setActiveIndex((prev) => remap(prev));
+            setEditingIndex((prev) => remap(prev));
+        },
+        [localMarkers, debouncedMarkersChange, onMarkerEditSave],
+    );
+
     const handleImageUpload = (index: number, imageUrl: string) => {
         const updated = [...localMarkers];
         updated[index] = { ...updated[index], image: imageUrl };
@@ -662,6 +697,7 @@ const WebMapComponent = ({
                                 activeIndex={activeIndex}
                                 setActiveIndex={setActiveIndex}
                                 onAddMarkerFromPhoto={handleAddMarkerFromPhoto}
+                                onReorder={handleReorder}
                             />
                         </div>
                     ) : isExpanded ? (
@@ -678,6 +714,7 @@ const WebMapComponent = ({
                                 activeIndex={activeIndex}
                                 setActiveIndex={setActiveIndex}
                                 onAddMarkerFromPhoto={handleAddMarkerFromPhoto}
+                                onReorder={handleReorder}
                             />
                         </div>
                     ) : null}

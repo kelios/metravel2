@@ -4,6 +4,7 @@ import { StyleSheet, Platform, View, Text } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { formatViewCount } from '@/components/travel/utils/travelHelpers';
 import { translate as i18nT } from '@/i18n';
@@ -81,13 +82,13 @@ function TabTravelCard({
     if (views <= 0) return null;
     return (
       <View style={styles.viewsBadge} testID={`${resolvedTestID}-views`} pointerEvents="none">
-        <Feather name="eye" size={VIEW_ICON_SIZE} color="#fff" />
+        <Feather name="eye" size={VIEW_ICON_SIZE} color={colors.textOnDark} />
         <Text style={styles.viewsBadgeText} numberOfLines={1}>
           {formatViewCount(views)}
         </Text>
       </View>
     );
-  }, [resolvedTestID, styles.viewsBadge, styles.viewsBadgeText, views]);
+  }, [resolvedTestID, styles.viewsBadge, styles.viewsBadgeText, views, colors.textOnDark]);
 
   const contentSlot = useMemo(() => {
     return (
@@ -208,7 +209,7 @@ const createStyles = (template: ReturnType<typeof createTabCardTemplate>) => Sty
   },
 
   viewsBadgeText: {
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.textOnDark,
     fontSize: Platform.OS === 'web' ? 12 : 11,
     lineHeight: Platform.OS === 'web' ? 16 : 14,
     fontWeight: '600',

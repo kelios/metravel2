@@ -18,6 +18,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { ApiError } from '@/api/client';
 import { useRareAwardCatalog, useGrantRareAward } from '@/hooks/useAchievementsApi';
+import Button from '@/components/ui/Button';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -82,16 +83,15 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
 
   return (
     <>
-      <Pressable
-        style={[styles.button, style]}
+      <Button
+        variant="soft"
+        label={i18nT('achievements:components.achievements.AdminGrantRareAward.vydat_redkuyu_nagradu_87c77704')}
+        icon={<Feather name="star" size={16} color={colors.primaryText} />}
         onPress={() => setOpen(true)}
-        accessibilityRole="button"
         accessibilityLabel={i18nT('achievements:components.achievements.AdminGrantRareAward.vydat_redkuyu_nagradu_87c77704')}
         testID={testID}
-      >
-        <Feather name="star" size={16} color={colors.primaryDark} />
-        <Text style={styles.buttonLabel}>{i18nT('achievements:components.achievements.AdminGrantRareAward.vydat_redkuyu_nagradu_87c77704')}</Text>
-      </Pressable>
+        style={style}
+      />
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
         <Pressable style={styles.backdrop} onPress={close} accessibilityLabel={i18nT('achievements:components.achievements.AdminGrantRareAward.zakryt_a6eb2fe6')}>
@@ -114,9 +114,11 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
               <View style={styles.successBox}>
                 <Feather name="check-circle" size={40} color={colors.success} />
                 <Text style={styles.successText}>{i18nT('achievements:components.achievements.AdminGrantRareAward.nagrada_vydana_df1ef785')}</Text>
-                <Pressable style={styles.primaryBtn} onPress={close}>
-                  <Text style={styles.primaryBtnText}>{i18nT('achievements:components.achievements.AdminGrantRareAward.gotovo_811a4b03')}</Text>
-                </Pressable>
+                <Button
+                  variant="primary"
+                  label={i18nT('achievements:components.achievements.AdminGrantRareAward.gotovo_811a4b03')}
+                  onPress={close}
+                />
               </View>
             ) : isLoading || !catalog ? (
               <View style={styles.loading}>
@@ -170,20 +172,14 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
                   <Text style={styles.errorText}>{errorMessage(grant.error)}</Text>
                 ) : null}
 
-                <Pressable
-                  style={[styles.primaryBtn, !canSubmit && styles.primaryBtnDisabled]}
+                <Button
+                  variant="primary"
+                  label={i18nT('achievements:components.achievements.AdminGrantRareAward.vydat_nagradu_68779ada')}
                   onPress={submit}
                   disabled={!canSubmit}
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: !canSubmit }}
-                  accessibilityLabel={i18nT('achievements:components.achievements.AdminGrantRareAward.vydat_nagradu_68779ada')}
-                >
-                  {grant.isPending ? (
-                    <ActivityIndicator color={colors.textOnPrimary} />
-                  ) : (
-                    <Text style={styles.primaryBtnText}>{i18nT('achievements:components.achievements.AdminGrantRareAward.vydat_nagradu_68779ada')}</Text>
-                  )}
-                </Pressable>
+                  loading={grant.isPending}
+                  style={styles.submitCta}
+                />
                 <View style={styles.footerSpace} />
               </ScrollView>
             )}
@@ -196,16 +192,6 @@ function AdminGrantRareAward({ recipientId, recipientName, testID, style }: Prop
 
 const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
-    button: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderRadius: 12,
-      backgroundColor: colors.primarySoft,
-    },
-    buttonLabel: { color: colors.primaryText, fontSize: 14, fontWeight: '700' },
     backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
     sheet: {
       backgroundColor: colors.background,
@@ -273,16 +259,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       color: colors.danger,
     },
-    primaryBtn: {
-      marginTop: DESIGN_TOKENS.spacing.md,
-      paddingVertical: 14,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    primaryBtnDisabled: { opacity: 0.5 },
-    primaryBtnText: { color: colors.textOnPrimary, fontSize: 15, fontWeight: '800' },
+    submitCta: { marginTop: DESIGN_TOKENS.spacing.md },
     successBox: { alignItems: 'center', gap: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.xl },
     successText: { fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '800', color: colors.text },
     footerSpace: { height: DESIGN_TOKENS.spacing.xxl },

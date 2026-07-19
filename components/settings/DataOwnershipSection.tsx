@@ -52,33 +52,27 @@ export default function DataOwnershipSection() {
 
             <View style={styles.divider} />
 
-            <Pressable
-                style={[styles.dangerButton, globalFocusStyles.focusable]}
+            <Button
+                variant="danger-outline"
+                fullWidth
                 onPress={deleteMessages}
+                loading={isDeletingMessages}
                 disabled={isDeletingMessages}
-                accessibilityRole="button"
+                label={i18nT('profile:components.settings.DataOwnershipSection.udalit_perepisku_eb5f6cf8')}
                 accessibilityLabel={i18nT('profile:components.settings.DataOwnershipSection.udalit_perepisku_eb5f6cf8')}
-                {...Platform.select({ web: { cursor: 'pointer' } })}
-            >
-                <Feather name="message-square" size={18} color={colors.danger} />
-                <Text style={styles.dangerButtonText}>
-                    {isDeletingMessages ? i18nT('profile:components.settings.DataOwnershipSection.udalyaem_77fa19fc') : i18nT('profile:components.settings.DataOwnershipSection.udalit_perepisku_eb5f6cf8')}
-                </Text>
-            </Pressable>
+                icon={<Feather name="message-square" size={18} color={colors.danger} />}
+            />
 
-            <Pressable
-                style={[styles.dangerButton, globalFocusStyles.focusable]}
+            <Button
+                variant="danger-outline"
+                fullWidth
                 onPress={deleteRoutes}
+                loading={isDeletingRoutes}
                 disabled={isDeletingRoutes}
-                accessibilityRole="button"
+                label={i18nT('profile:components.settings.DataOwnershipSection.udalit_marshruty_f569fb47')}
                 accessibilityLabel={i18nT('profile:components.settings.DataOwnershipSection.udalit_marshruty_f569fb47')}
-                {...Platform.select({ web: { cursor: 'pointer' } })}
-            >
-                <Feather name="navigation" size={18} color={colors.danger} />
-                <Text style={styles.dangerButtonText}>
-                    {isDeletingRoutes ? i18nT('profile:components.settings.DataOwnershipSection.udalyaem_77fa19fc') : i18nT('profile:components.settings.DataOwnershipSection.udalit_marshruty_f569fb47')}
-                </Text>
-            </Pressable>
+                icon={<Feather name="navigation" size={18} color={colors.danger} />}
+            />
 
             <Pressable
                 style={[styles.subtleButton, globalFocusStyles.focusable]}
@@ -120,18 +114,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
         cardTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
         cardMeta: { marginTop: 2, fontSize: 12, color: colors.textMuted },
         divider: { height: 1, backgroundColor: colors.border, marginVertical: 2 },
-        dangerButton: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            paddingVertical: 12,
-            borderRadius: DESIGN_TOKENS.radii.sm,
-            borderWidth: 1,
-            borderColor: colors.danger,
-            backgroundColor: colors.surface,
-        },
-        dangerButtonText: { fontSize: 14, fontWeight: '700', color: colors.danger },
         subtleButton: {
             flexDirection: 'row',
             alignItems: 'center',

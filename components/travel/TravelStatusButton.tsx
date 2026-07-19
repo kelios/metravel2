@@ -60,7 +60,7 @@ type Props = {
   travelYear?: string
   travelMonth?: string | string[]
   travelMonthName?: string
-  /** Компактный режим: иконка + короткий видимый статус, стиль как у OptimizedFavoriteButton */
+  /** Компактный режим: иконка + короткий видимый статус, стиль как у FavoriteButton variant="overlay" */
   compact?: boolean
   idleLabel?: string
   style?: StyleProp<ViewStyle>

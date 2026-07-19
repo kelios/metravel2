@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { translate as i18nT } from '@/i18n'
 
@@ -20,6 +20,10 @@ export type GalleryControlsStyles = {
   batchProgressText: any
   errorBanner: any
   errorBannerText: any
+  batchActionsRow: any
+  batchActionButton: any
+  batchDeleteButton: any
+  batchActionButtonText: any
 }
 
 export const GalleryControls: React.FC<{
@@ -32,6 +36,11 @@ export const GalleryControls: React.FC<{
   inputProps: any
   batchUploadProgress: { current: number; total: number } | null
   hasErrors: boolean
+  selectableCount: number
+  selectedCount: number
+  allSelected: boolean
+  onToggleSelectAll: () => void
+  onDeleteSelected: () => void
 }> = ({
   styles,
   colors,
@@ -42,6 +51,11 @@ export const GalleryControls: React.FC<{
   inputProps,
   batchUploadProgress,
   hasErrors,
+  selectableCount,
+  selectedCount,
+  allSelected,
+  onToggleSelectAll,
+  onDeleteSelected,
 }) => {
   return (
     <>
@@ -56,6 +70,42 @@ export const GalleryControls: React.FC<{
           {maxImages}
         </Text>
       </View>
+
+      {selectableCount > 0 ? (
+        <View style={styles.batchActionsRow}>
+          <Pressable
+            onPress={onToggleSelectAll}
+            style={styles.batchActionButton}
+            accessibilityRole="button"
+            testID="gallery-select-all-button"
+          >
+            <Feather
+              name={allSelected ? 'square' : 'check-square'}
+              size={16}
+              color={colors.text}
+            />
+            <Text style={[styles.batchActionButtonText, { color: colors.text }]}>
+              {allSelected
+                ? i18nT('travel:components.travel.gallery.GalleryControls.deselectAll')
+                : i18nT('travel:components.travel.gallery.GalleryControls.selectAll')}
+            </Text>
+          </Pressable>
+
+          {selectedCount > 0 ? (
+            <Pressable
+              onPress={onDeleteSelected}
+              style={[styles.batchActionButton, styles.batchDeleteButton]}
+              accessibilityRole="button"
+              testID="gallery-delete-selected-button"
+            >
+              <Feather name="trash-2" size={16} color={colors.danger} />
+              <Text style={[styles.batchActionButtonText, { color: colors.danger }]}>
+                {i18nT('travel:components.travel.gallery.GalleryControls.deleteSelected', { value1: selectedCount })}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       <div
         {...(dropzone.rootProps as any)}

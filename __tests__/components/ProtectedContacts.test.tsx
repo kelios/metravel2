@@ -1,7 +1,12 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
 
 jest.mock('@/constants/designSystem', () => ({
-  DESIGN_TOKENS: { radii: { sm: 8, md: 12, lg: 16, pill: 999 } },
+  DESIGN_TOKENS: {
+    radii: { sm: 8, md: 12, lg: 16, pill: 999 },
+    spacing: { xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24 },
+    typography: { sizes: { md: 15 } },
+    shadows: { light: 'none', medium: 'none', heavy: 'none', hover: 'none' },
+  },
 }))
 
 const mockOpenExternalUrl = jest.fn()

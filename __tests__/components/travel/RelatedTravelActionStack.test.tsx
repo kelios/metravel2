@@ -9,7 +9,7 @@ const mockStatusButton = jest.fn((props: any) => React.createElement('status-but
 const mockFetchTravel = jest.fn()
 const mockFetchTravelBySlug = jest.fn()
 
-jest.mock('@/components/travel/OptimizedFavoriteButton', () => ({
+jest.mock('@/components/travel/FavoriteButton', () => ({
   __esModule: true,
   default: (props: any) => mockFavoriteButton(props),
 }))

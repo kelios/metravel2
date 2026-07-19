@@ -4,6 +4,7 @@ import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native
 import * as ImagePicker from 'expo-image-picker';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
 import { usePhotoUpload, chooseFallbackUrl } from '@/hooks/usePhotoUpload';
@@ -204,14 +205,15 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   // Native (iOS/Android)
   return (
     <View style={styles.container}>
-      <Pressable style={[styles.uploadButton, disabled && styles.uploadButtonDisabled]} onPress={pickImageFromGallery} disabled={loading || disabled}>
-        {loading ? <ActivityIndicator color={colors.textOnPrimary} /> : (
-          <>
-            <Feather name="upload-cloud" size={16} color={colors.textOnPrimary} />
-            <Text style={styles.uploadButtonText}>{currentDisplayUrl ? i18nT('travel:components.travel.PhotoUploadWithPreview.zamenit_foto_b3cc1485') : i18nT('travel:components.travel.PhotoUploadWithPreview.zagruzit_foto_9cd3d4f7')}</Text>
-          </>
-        )}
-      </Pressable>
+      <Button
+        variant="primary"
+        fullWidth
+        onPress={pickImageFromGallery}
+        disabled={disabled}
+        loading={loading}
+        icon={<Feather name="upload-cloud" size={16} color={colors.textOnPrimary} />}
+        label={currentDisplayUrl ? i18nT('travel:components.travel.PhotoUploadWithPreview.zamenit_foto_b3cc1485') : i18nT('travel:components.travel.PhotoUploadWithPreview.zagruzit_foto_9cd3d4f7')}
+      />
       {currentDisplayUrl ? (
         <View style={styles.nativePreviewContainer}>
           <ImageCardMedia src={currentDisplayUrl} fit="contain" blurBackground loading="lazy" priority="low" style={styles.nativePreviewImage as any} />
@@ -283,13 +285,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>): any => ({
     borderRadius: DESIGN_TOKENS.radii.sm, borderWidth: 1, borderColor: colors.successLight,
   },
   successText: { fontSize: 12, color: colors.success, flex: 1 },
-  uploadButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: DESIGN_TOKENS.spacing.xs,
-    backgroundColor: colors.primary, padding: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md, minHeight: 44,
-  },
-  uploadButtonDisabled: { opacity: 0.5 },
-  uploadButtonText: { color: colors.textOnPrimary, fontSize: 14, fontWeight: '600' },
   nativePreviewContainer: {
     marginTop: DESIGN_TOKENS.spacing.md, borderRadius: DESIGN_TOKENS.radii.md,
     overflow: 'hidden', borderWidth: 1, borderColor: colors.border,

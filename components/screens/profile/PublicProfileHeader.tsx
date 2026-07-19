@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Image, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Image, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -12,7 +12,7 @@ import UserSafetyMenu from '@/components/profile/UserSafetyMenu';
 import ProtectedContacts from '@/components/profile/ProtectedContacts';
 import SafetyNotice from '@/components/ui/SafetyNotice';
 import PeerBadgeGiveButton from '@/components/achievements/PeerBadgeGiveButton';
-import { globalFocusStyles } from '@/styles/globalFocus';
+import Button from '@/components/ui/Button';
 import type { UserProfileDto } from '@/api/user';
 import type { PeerBadgeReceived, UserRank } from '@/api/achievements';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
@@ -175,16 +175,14 @@ export function PublicProfileHeader({
       <View style={styles.actionsRow}>
         <SubscribeButton targetUserId={userId} size="sm" />
         {!isOwnProfile ? (
-          <Pressable
-            style={[styles.secondaryButton, globalFocusStyles.focusable]}
+          <Button
+            label={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_6e0d896e')}
             onPress={onWriteMessage}
-            accessibilityRole="button"
+            variant="secondary"
+            size="sm"
+            icon={<Feather name="mail" size={16} color={colors.primaryDark} />}
             accessibilityLabel={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_value1_1156a332', { value1: fullName || i18nT('profile:components.screens.profile.PublicProfileHeader.defaultUserReference') })}
-            {...Platform.select({ web: { cursor: 'pointer' } })}
-          >
-            <Feather name="mail" size={16} color={colors.primaryDark} />
-            <Text style={styles.secondaryButtonText}>{i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_6e0d896e')}</Text>
-          </Pressable>
+          />
         ) : null}
         {!isOwnProfile ? (
           <PeerBadgeGiveButton target="user" recipientId={userId} received={peerReceived} />
@@ -350,21 +348,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       marginTop: DESIGN_TOKENS.spacing.md,
       gap: DESIGN_TOKENS.spacing.xs,
       paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    },
-    secondaryButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-      paddingVertical: 10,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.primarySoft,
-      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-    },
-    secondaryButtonText: {
-      color: colors.primaryText,
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     },
     safetyNotice: {
       marginHorizontal: DESIGN_TOKENS.spacing.md,

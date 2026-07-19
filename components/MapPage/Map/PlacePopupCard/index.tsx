@@ -339,10 +339,12 @@ const PlacePopupCard: React.FC<Props> = ({
       : primaryAction?.label;
 
   // #FIX-3 — «Мои точки» is an ambiguous noun (reads as "view", but the chip ADDS the
-  // point). On the bottom card (mobile web + native) show the verb «Сохранить» /
-  // «Сохранено» (the bookmark/✓ icon already conveys save vs saved). Keeps the #334
-  // add/un-save toggle. Desktop Leaflet popup keeps the existing `compactLabel`.
-  const saveChipLabel = useBottomCardChrome ? (isSaved ? i18nT('map:components.MapPage.Map.PlacePopupCard.index.sohraneno_c49c48f6') : i18nT('map:components.MapPage.Map.PlacePopupCard.index.sohranit_e0638622')) : compactLabel;
+  // point). Use the verb «Сохранить» / «Сохранено» EVERYWHERE (bottom card + desktop
+  // Leaflet popup) so the same action reads identically across surfaces (#1011).
+  // The bookmark/✓ icon already conveys save vs saved; keeps the #334 add/un-save toggle.
+  const saveChipLabel = isSaved
+    ? i18nT('map:components.MapPage.Map.PlacePopupCard.index.sohraneno_c49c48f6')
+    : i18nT('map:components.MapPage.Map.PlacePopupCard.index.sohranit_e0638622');
 
   // #FIX-3 — «Поделиться» is a share action surfaced as a small right-aligned icon in
   // the title row on the native bottom card (NOT in the action row, which must stay at

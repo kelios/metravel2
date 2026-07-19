@@ -9,6 +9,16 @@ import { useStyles } from './markersListStyles';
 import EditMarkerModal from './EditMarkerModal';
 import { translate as i18nT } from '@/i18n'
 
+// Кастомный MIME-тип, которым помечается drag-and-drop переупорядочивания точки.
+// Позволяет отличить reorder-перетаскивание строки от дропа фото-файла (EXIF→новая точка):
+// у фото-дропа dataTransfer.types содержит 'Files', у reorder — этот тип.
+const MARKER_DND_TYPE = 'application/x-marker-index';
+
+const isMarkerIndexDrag = (e: React.DragEvent): boolean => {
+    const types = e.dataTransfer?.types;
+    if (!types) return false;
+    return Array.from(types).includes(MARKER_DND_TYPE);
+};
 
 interface MarkersListComponentProps {
     markers: MarkerData[];
@@ -22,6 +32,7 @@ interface MarkersListComponentProps {
     activeIndex?: number | null;
     setActiveIndex?: (index: number | null) => void;
     onAddMarkerFromPhoto?: (file: File) => void | Promise<void>;
+    onReorder?: (fromIndex: number, toIndex: number) => void;
 }
 const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                                                markers,
@@ -35,11 +46,15 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                                                activeIndex,
                                                                setActiveIndex,
                                                                onAddMarkerFromPhoto,
+                                                               onReorder,
                                                            }) => {
     const colors = useThemedColors();
     const styles = useStyles(colors);
     const [search, setSearch] = useState('');
     const [isDragOver, setIsDragOver] = useState(false);
+    // Индексы (в РЕАЛЬНОМ массиве markers) для reorder-перетаскивания строки.
+    const [dragIndex, setDragIndex] = useState<number | null>(null);
+    const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
     const dragDepthRef = useRef(0);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const onRemove = useCallback((index: number) => handleMarkerRemove(index), [handleMarkerRemove]);
@@ -61,6 +76,55 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                 }),
         [markers, search, searchQuery],
     );
+
+    // Reorder разрешён только без активного поиска: при фильтрации порядок и индексы
+    // видимого списка не совпадают с реальным массивом markers, поэтому надёжнее
+    // блокировать перетаскивание, чем угадывать целевую позицию (грабля индексов фильтра).
+    const canReorder = Boolean(onReorder) && !searchQuery;
+
+    const handleRowDragStart = useCallback(
+        (e: React.DragEvent<HTMLDivElement>, realIndex: number) => {
+            if (!canReorder) return;
+            e.dataTransfer.setData(MARKER_DND_TYPE, String(realIndex));
+            e.dataTransfer.effectAllowed = 'move';
+            setDragIndex(realIndex);
+        },
+        [canReorder],
+    );
+
+    const handleRowDragOver = useCallback(
+        (e: React.DragEvent<HTMLDivElement>, realIndex: number) => {
+            // Фото-дроп (dataTransfer.files) не помечен нашим типом — не перехватываем,
+            // пусть всплывёт к контейнерным обработчикам EXIF-дропа.
+            if (!isMarkerIndexDrag(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            setDragOverIndex((prev) => (prev === realIndex ? prev : realIndex));
+        },
+        [],
+    );
+
+    const handleRowDrop = useCallback(
+        (e: React.DragEvent<HTMLDivElement>, realIndex: number) => {
+            if (!isMarkerIndexDrag(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const raw = e.dataTransfer.getData(MARKER_DND_TYPE);
+            const from = Number(raw);
+            setDragIndex(null);
+            setDragOverIndex(null);
+            if (Number.isFinite(from) && from !== realIndex) {
+                onReorder?.(from, realIndex);
+            }
+        },
+        [onReorder],
+    );
+
+    const handleRowDragEnd = useCallback(() => {
+        setDragIndex(null);
+        setDragOverIndex(null);
+    }, []);
 
     useEffect(() => {
         if (typeof document === 'undefined') return;
@@ -118,6 +182,8 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     const handleDragOver = useCallback(
         (e: React.DragEvent<HTMLDivElement>) => {
             if (!onAddMarkerFromPhoto) return;
+            // reorder-перетаскивание строки не должно триггерить фото-оверлей
+            if (isMarkerIndexDrag(e)) return;
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
         },
@@ -127,6 +193,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     const handleDragEnter = useCallback(
         (e: React.DragEvent<HTMLDivElement>) => {
             if (!onAddMarkerFromPhoto) return;
+            if (isMarkerIndexDrag(e)) return;
             e.preventDefault();
             dragDepthRef.current += 1;
             setIsDragOver(true);
@@ -137,6 +204,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     const handleDragLeave = useCallback(
         (e: React.DragEvent<HTMLDivElement>) => {
             if (!onAddMarkerFromPhoto) return;
+            if (isMarkerIndexDrag(e)) return;
             e.preventDefault();
             dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
             if (dragDepthRef.current === 0) setIsDragOver(false);
@@ -147,6 +215,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     const handleDrop = useCallback(
         async (e: React.DragEvent<HTMLDivElement>) => {
             if (!onAddMarkerFromPhoto) return;
+            if (isMarkerIndexDrag(e)) return;
             e.preventDefault();
             dragDepthRef.current = 0;
             setIsDragOver(false);
@@ -298,18 +367,40 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
 
                         const isActive = activeIndex === index;
 
+                        const isDragging = dragIndex === index;
+                        const isDragTarget = dragOverIndex === index && dragIndex !== index;
+
                         return (
                             <div
                                 key={index}
                                 id={`marker-${index}`}
+                                draggable={canReorder}
+                                onDragStart={canReorder ? (e) => handleRowDragStart(e, index) : undefined}
+                                onDragOver={canReorder ? (e) => handleRowDragOver(e, index) : undefined}
+                                onDrop={canReorder ? (e) => handleRowDrop(e, index) : undefined}
+                                onDragEnd={canReorder ? handleRowDragEnd : undefined}
                                 style={{
                                     ...(styles.markerItem as React.CSSProperties),
                                     ...(isEditing ? (styles.editingItem as React.CSSProperties) : {}),
                                     ...(isActive ? (styles.activeItem as React.CSSProperties) : {}),
+                                    ...(isDragTarget ? (styles.markerItemDragOver as React.CSSProperties) : {}),
+                                    ...(isDragging ? (styles.markerItemDragging as React.CSSProperties) : {}),
                                 }}
                                 onClick={() => setActiveIndex?.(index)}
                             >
                                 <div style={styles.row}>
+                                    {canReorder ? (
+                                        <div
+                                            style={styles.dragHandle as React.CSSProperties}
+                                            aria-label={i18nT('map:components.map.MarkersListComponent.peretaschite_chtoby_izmenit_poryadok_2d9f4b6a')}
+                                            title={i18nT('map:components.map.MarkersListComponent.peretaschite_chtoby_izmenit_poryadok_2d9f4b6a')}
+                                        >
+                                            <div style={styles.dragHandleDots as React.CSSProperties} aria-hidden="true">
+                                                <Feather name="more-vertical" size={16} color={colors.textMuted} />
+                                                <Feather name="more-vertical" size={16} color={colors.textMuted} />
+                                            </div>
+                                        </div>
+                                    ) : null}
                                     <div style={styles.indexBadge}>{index + 1}</div>
                                     <div style={styles.thumbnailWrapper}>
                                         {hasImage ? (

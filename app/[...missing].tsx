@@ -1,8 +1,9 @@
-import { Link, Stack, router } from 'expo-router'
-import { Platform, Pressable, StyleSheet } from 'react-native'
+import { Stack, router } from 'expo-router'
+import { Platform, StyleSheet } from 'react-native'
 import { useMemo } from 'react'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
+import Button from '@/components/ui/Button'
 import { Text, View } from '@/components/ui/Themed'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -29,15 +30,17 @@ export default function NotFoundScreen() {
         <Text style={styles.subtitle}>
           {i18nT('shared:app.missing.pohozhe_vy_pereshli_po_nevernoy_ssylke_ili_s_3d66babf')}</Text>
 
-        <Link href="/" asChild>
-          <Pressable style={styles.primaryButton} accessibilityRole="button">
-            <Text style={styles.primaryButtonText}>{i18nT('shared:app.missing.na_glavnuyu_58d8ad67')}</Text>
-          </Pressable>
-        </Link>
+        <Button
+          variant="primary"
+          label={i18nT('shared:app.missing.na_glavnuyu_58d8ad67')}
+          style={styles.ctaButton}
+          onPress={() => router.replace('/')}
+        />
 
-        <Pressable
-          style={styles.secondaryButton}
-          accessibilityRole="button"
+        <Button
+          variant="ghost"
+          label={i18nT('shared:app.missing.nazad_50acffff')}
+          style={styles.ctaButtonSecondary}
           onPress={() => {
             if (Platform.OS === 'web') {
               router.replace('/')
@@ -45,9 +48,7 @@ export default function NotFoundScreen() {
             }
             router.back()
           }}
-        >
-          <Text style={styles.secondaryButtonText}>{i18nT('shared:app.missing.nazad_50acffff')}</Text>
-        </Pressable>
+        />
       </View>
     </>
   )
@@ -74,36 +75,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     textAlign: 'center',
     maxWidth: 420,
   },
-  primaryButton: {
+  ctaButton: {
     marginTop: DESIGN_TOKENS.spacing.lg,
-    backgroundColor: colors.primary,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
-    paddingVertical: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
     minWidth: 200,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  primaryButtonText: {
-    color: colors.textOnPrimary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  secondaryButton: {
+  ctaButtonSecondary: {
     marginTop: DESIGN_TOKENS.spacing.sm,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
-    paddingVertical: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
     minWidth: 200,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  secondaryButtonText: {
-    color: colors.primaryText,
-    fontSize: 16,
-    fontWeight: '600',
   },
 })

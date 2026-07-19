@@ -1,7 +1,7 @@
 import { Platform, StyleSheet } from 'react-native'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
 
-import OptimizedFavoriteButton from '@/components/travel/OptimizedFavoriteButton'
+import FavoriteButton from '@/components/travel/FavoriteButton'
 import { showToast } from '@/utils/toast'
 
 const mockUseAuth = jest.fn()
@@ -24,7 +24,7 @@ jest.mock('@/utils/toast', () => ({
   showToast: jest.fn(),
 }))
 
-describe('OptimizedFavoriteButton', () => {
+describe('FavoriteButton (overlay variant)', () => {
   const originalPlatform = Platform.OS
   const originalDocumentDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'document')
 
@@ -61,7 +61,8 @@ describe('OptimizedFavoriteButton', () => {
 
   it('marks the web hit area as a card action for clickable-card containment', () => {
     render(
-      <OptimizedFavoriteButton
+      <FavoriteButton
+        variant="overlay"
         id={42}
         type="travel"
         title="Test travel"
@@ -74,7 +75,8 @@ describe('OptimizedFavoriteButton', () => {
 
   it('keeps the web hit area at the 44px accessibility minimum', () => {
     render(
-      <OptimizedFavoriteButton
+      <FavoriteButton
+        variant="overlay"
         id={42}
         type="travel"
         title="Test travel"
@@ -101,7 +103,8 @@ describe('OptimizedFavoriteButton', () => {
     })
 
     render(
-      <OptimizedFavoriteButton
+      <FavoriteButton
+        variant="overlay"
         id={514}
         type="travel"
         title="Random travel"
@@ -143,7 +146,8 @@ describe('OptimizedFavoriteButton', () => {
     })
 
     render(
-      <OptimizedFavoriteButton
+      <FavoriteButton
+        variant="overlay"
         id={514}
         type="travel"
         title="Random travel"

@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { forwardRef, memo, useMemo } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -15,7 +15,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
+// soft = tonal (primarySoft bg + primaryText); danger-outline = красная рамка+текст, прозрачный фон
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'soft' | 'danger-outline';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps {
@@ -25,10 +26,13 @@ export interface ButtonProps {
   size?: ButtonSize;
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
+  /** Иконочная кнопка: рендерит только icon (label уходит в accessibilityLabel), квадрат 44/48. */
+  iconOnly?: boolean;
   disabled?: boolean;
   loading?: boolean;
   fullWidth?: boolean;
   accessibilityLabel?: string;
+  accessibilityHint?: string;
   testID?: string;
   style?: StyleProp<ViewStyle>;
   labelStyle?: StyleProp<TextStyle>;
@@ -45,36 +49,43 @@ const getBoxShadows = (colors: ThemedColors) => {
   return themed.boxShadows ?? DESIGN_TOKENS.shadows;
 };
 
-const ButtonComponent = ({
+const ButtonComponent = forwardRef<View, ButtonProps>(({
   label,
   onPress,
   variant = 'primary',
   size = 'md',
   icon,
   iconPosition = 'left',
+  iconOnly = false,
   disabled = false,
   loading = false,
   fullWidth = false,
   accessibilityLabel,
+  accessibilityHint,
   testID,
   style,
   labelStyle,
   labelNumberOfLines = 1,
   hoverStyle,
   pressedStyle,
-}: ButtonProps) => {
+}, ref) => {
   const colors = useThemedColors();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const styles = staticStyles;
   const variantStyles = useMemo(() => getVariantStyles(colors), [colors]);
   const variantHoverStyles = useMemo(() => getVariantHoverStyles(colors), [colors]);
   const variantPressedStyles = useMemo(() => getVariantPressedStyles(colors), [colors]);
   const isDisabled = disabled || loading;
 
+  // Цвет текста/иконки-спиннера по варианту (единый источник для label и ActivityIndicator)
+  const foreground = getForegroundColor(variant, colors);
+
   return (
     <Pressable
+      ref={ref}
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       accessibilityLabel={accessibilityLabel || label}
+      accessibilityHint={accessibilityHint}
       testID={testID}
       disabled={isDisabled}
       onPress={onPress}
@@ -83,6 +94,7 @@ const ButtonComponent = ({
         styles.base,
         globalFocusStyles.focusable, // ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
         sizeStyles[size],
+        iconOnly && styles.iconOnly,
         style,
         variantStyles[variant],
         fullWidth && styles.fullWidth,
@@ -98,33 +110,32 @@ const ButtonComponent = ({
         {loading && (
           <ActivityIndicator
             size="small"
-            color={
-              variant === 'secondary' || variant === 'ghost' || variant === 'outline'
-                ? colors.primary
-                : colors.textOnPrimary
-            }
-            style={styles.icon}
+            color={foreground}
+            style={iconOnly ? undefined : styles.icon}
           />
         )}
-        {!loading && icon && iconPosition === 'left' ? <View style={styles.icon}>{icon}</View> : null}
-        <Text
-          style={[
-            styles.label,
-            variant === 'secondary' || variant === 'ghost' || variant === 'outline' ? styles.labelSecondary : styles.labelPrimary,
-            variant === 'danger' && styles.labelDanger,
-            labelStyle,
-          ]}
-          numberOfLines={labelNumberOfLines}
-        >
-          {label}
-        </Text>
-        {!loading && icon && iconPosition === 'right' ? <View style={styles.icon}>{icon}</View> : null}
+        {!loading && icon && (iconOnly || iconPosition === 'left')
+          ? <View style={iconOnly ? undefined : styles.icon}>{icon}</View>
+          : null}
+        {!iconOnly && (
+          <Text
+            style={[styles.label, { color: foreground }, labelStyle]}
+            numberOfLines={labelNumberOfLines}
+          >
+            {label}
+          </Text>
+        )}
+        {!loading && !iconOnly && icon && iconPosition === 'right' ? <View style={styles.icon}>{icon}</View> : null}
       </View>
     </Pressable>
   );
-};
+});
 
-const getStyles = (colors: ThemedColors) => StyleSheet.create({
+ButtonComponent.displayName = 'Button';
+
+// Стили визуального «шелла» кнопки не зависят от темы — цвет текста/иконки
+// применяется инлайном через getForegroundColor(), а фон/бордер — через variantStyles.
+const staticStyles = StyleSheet.create({
   base: {
     borderRadius: radii.md,
     borderWidth: 1,
@@ -165,14 +176,9 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
   },
-  labelPrimary: {
-    color: colors.textOnPrimary,
-  },
-  labelSecondary: {
-    color: colors.text,
-  },
-  labelDanger: {
-    color: colors.textOnPrimary,
+  iconOnly: {
+    paddingHorizontal: spacing.sm,
+    minWidth: Platform.OS === 'android' ? 48 : 44,
   },
   disabled: {
     opacity: 0.5,
@@ -181,6 +187,24 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     width: '100%',
   },
 });
+
+// Цвет переднего плана (label + spinner) по варианту.
+const getForegroundColor = (variant: ButtonVariant, colors: ThemedColors): string => {
+  switch (variant) {
+    case 'secondary':
+    case 'ghost':
+    case 'outline':
+      return colors.text;
+    case 'soft':
+      return colors.primaryText;
+    case 'danger-outline':
+      return colors.danger;
+    case 'primary':
+    case 'danger':
+    default:
+      return colors.textOnPrimary;
+  }
+};
 
 const sizeStyles: Record<ButtonSize, ViewStyle> = {
   sm: {
@@ -254,6 +278,15 @@ const getVariantStyles = (colors: ThemedColors): Record<ButtonVariant, ViewStyle
       borderColor: colors.primary,
       borderWidth: 2,
     },
+    soft: {
+      backgroundColor: colors.primarySoft,
+      borderColor: 'transparent',
+    },
+    'danger-outline': {
+      backgroundColor: 'transparent',
+      borderColor: colors.danger,
+      borderWidth: 2,
+    },
   };
 };
 
@@ -293,6 +326,18 @@ const getVariantHoverStyles = (colors: ThemedColors): Record<ButtonVariant, View
     },
     outline: {
       backgroundColor: colors.primarySoft,
+      ...Platform.select({
+        web: {},
+      }),
+    },
+    soft: {
+      backgroundColor: colors.primaryLight,
+      ...Platform.select({
+        web: {},
+      }),
+    },
+    'danger-outline': {
+      backgroundColor: colors.dangerLight,
       ...Platform.select({
         web: {},
       }),
@@ -350,6 +395,12 @@ const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, Vi
           transform: 'translateY(0)',
         },
       }),
+    },
+    soft: {
+      transform: [{ scale: 0.99 }],
+    },
+    'danger-outline': {
+      transform: [{ scale: 0.99 }],
     },
   };
 };

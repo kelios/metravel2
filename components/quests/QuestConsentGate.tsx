@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { Link } from 'expo-router'
 
+import Button from '@/components/ui/Button'
 import ConsentCheckbox from '@/components/legal/ConsentCheckbox'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -71,16 +72,15 @@ export default function QuestConsentGate({ title, coverUrl, onAccept, testID, ra
             {i18nT('quests:components.quests.QuestConsentGate.pravila_soobschestva_ffacfe0c')}</Link>
         </View>
 
-        <Pressable
+        <Button
+          variant="primary"
+          fullWidth
+          label={i18nT('quests:components.quests.QuestConsentGate.nachat_kvest_d3b974ac')}
           onPress={handleStart}
           disabled={!checked}
-          style={[styles.startButton, !checked && styles.startButtonDisabled]}
           testID="quest-consent-start"
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !checked }}
-        >
-          <Text style={styles.startButtonText}>{i18nT('quests:components.quests.QuestConsentGate.nachat_kvest_d3b974ac')}</Text>
-        </Pressable>
+          style={styles.buttonSpacingTop}
+        />
       </View>
     </ScrollView>
   )
@@ -136,19 +136,7 @@ const createStyles = (colors: Colors) =>
     linkSep: {
       color: colors.textMuted,
     },
-    startButton: {
+    buttonSpacingTop: {
       marginTop: 4,
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderRadius: 12,
-      backgroundColor: colors.primary,
-    },
-    startButtonDisabled: {
-      opacity: 0.45,
-    },
-    startButtonText: {
-      color: colors.textOnPrimary,
-      fontWeight: '800',
-      fontSize: 15,
     },
   })

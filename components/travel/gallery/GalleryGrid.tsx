@@ -25,6 +25,8 @@ export const GalleryGrid: React.FC<{
   onImageError: (stableKey: string, url: string) => void
   onImageLoad: (stableKey: string) => void
   onCaptionChange: (stableKey: string, caption: string) => void
+  selectedKeys: Set<string>
+  onToggleSelect: (stableKey: string) => void
   DeleteAction: React.ComponentType<{
     onActivate: () => void
     style?: DeleteActionStyle
@@ -42,6 +44,8 @@ export const GalleryGrid: React.FC<{
   onImageError,
   onImageLoad,
   onCaptionChange,
+  selectedKeys,
+  onToggleSelect,
   DeleteAction,
 }) => {
   if (isInitialLoading) {
@@ -74,6 +78,8 @@ export const GalleryGrid: React.FC<{
     <View style={styles.galleryGrid}>
       {images.map((image, index) => {
         const stableKey = image.stableKey ?? image.id
+        const isSelected = selectedKeys.has(stableKey)
+        const isSelectable = !image.isUploading
         const canMoveLeft = index > 0 && !image.isUploading
         const canMoveRight = index < images.length - 1 && !image.isUploading
         const moveButtonColor = colors.textInverse
@@ -100,8 +106,26 @@ export const GalleryGrid: React.FC<{
         )
 
         return (
-          <View key={stableKey} style={styles.imageWrapper} testID="gallery-image">
+          <View
+            key={stableKey}
+            style={[styles.imageWrapper, isSelected && styles.imageWrapperSelected]}
+            testID="gallery-image"
+          >
             <View style={styles.imageFrame}>
+              {isSelectable ? (
+                <DeleteAction
+                  onActivate={() => onToggleSelect(stableKey)}
+                  style={[styles.selectCheckbox, isSelected && styles.selectCheckboxActive]}
+                  testID="gallery-select-checkbox"
+                  accessibilityLabel={i18nT('travel:components.travel.gallery.GalleryGrid.selectPhoto')}
+                >
+                  <Feather
+                    name="check"
+                    size={20}
+                    color={isSelected ? colors.textInverse : 'transparent'}
+                  />
+                </DeleteAction>
+              ) : null}
               {image.isUploading ? (
                 <View style={styles.uploadingImageContainer}>
                 <ShimmerOverlay />

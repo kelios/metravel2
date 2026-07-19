@@ -6,6 +6,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import Button from '@/components/ui/Button';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -140,51 +141,6 @@ export default function ProfileCollectionHeader({
           fontSize: 13,
           color: colors.textMuted,
         },
-        clearButton: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 6,
-          paddingHorizontal: 12,
-          paddingVertical: 10,
-          borderRadius: DESIGN_TOKENS.radii.md,
-          borderWidth: 1,
-          borderColor: colors.danger,
-          backgroundColor: colors.surface,
-          minHeight: 40,
-        },
-        clearButtonCompact: {
-          width: 40,
-          height: 40,
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: DESIGN_TOKENS.radii.md,
-          borderWidth: 1,
-          borderColor: colors.danger,
-          backgroundColor: colors.surface,
-        },
-        clearButtonText: {
-          fontSize: 14,
-          fontWeight: '600',
-          color: colors.danger,
-        },
-        backToProfileButton: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 8,
-          paddingHorizontal: 12,
-          paddingVertical: 10,
-          borderRadius: DESIGN_TOKENS.radii.md,
-          borderWidth: 1,
-          borderColor: colors.borderLight,
-          backgroundColor: colors.surface,
-          minHeight: 40,
-        },
-        backToProfileButtonText: {
-          fontSize: 14,
-          fontWeight: '600',
-          color: colors.primaryText,
-        },
       }),
     [colors, dense, stackOnPhone]
   );
@@ -248,28 +204,25 @@ export default function ProfileCollectionHeader({
         </View>
 
         <View style={styles.headerActions}>
-          <Pressable
-            style={[styles.backToProfileButton, globalFocusStyles.focusable]}
+          <Button
+            label={i18nT('profile:components.profile.ProfileCollectionHeader.nazad_1a2cc10a')}
             onPress={onBackPress}
-            accessibilityRole="button"
+            variant="secondary"
+            size="sm"
+            icon={<Feather name="arrow-left" size={16} color={colors.primaryDark} />}
             accessibilityLabel={backAccessibilityLabel}
-            {...Platform.select({ web: { cursor: 'pointer' } })}
-          >
-            <Feather name="arrow-left" size={16} color={colors.primaryDark} />
-            <Text style={styles.backToProfileButtonText}>{i18nT('profile:components.profile.ProfileCollectionHeader.nazad_1a2cc10a')}</Text>
-          </Pressable>
+          />
 
           {showClearButton && typeof onClearPress === 'function' && (
-            <Pressable
-              style={[compactClear ? styles.clearButtonCompact : styles.clearButton, globalFocusStyles.focusable]}
+            <Button
+              label={clearButtonText}
               onPress={onClearPress}
-              accessibilityRole="button"
+              variant="danger-outline"
+              size={compactClear ? 'md' : 'sm'}
+              iconOnly={compactClear}
+              icon={<Feather name="trash-2" size={16} color={colors.danger} />}
               accessibilityLabel={clearAccessibilityLabel}
-              {...Platform.select({ web: { cursor: 'pointer' } })}
-            >
-              <Feather name="trash-2" size={16} color={colors.danger} />
-              {!compactClear && <Text style={styles.clearButtonText}>{clearButtonText}</Text>}
-            </Pressable>
+            />
           )}
         </View>
       </View>

@@ -649,7 +649,11 @@ export const getStyles = (
         bottom: isMobile ? undefined : 20,
         left: isMobile ? 10 : 16,
         right: isMobile ? 10 : undefined,
-        maxWidth: isMobile ? undefined : 420,
+        // Desktop: в режиме маршрута рядом с сообщением встают ДВЕ кнопки
+        // («Разрешить» + «Указать старт») и текст «Геолокация недоступна»
+        // усекался до «Геолокация недо…». 520 даёт запас, чтобы статус читался
+        // целиком; вне режима маршрута баннер всё равно ужимается по контенту.
+        maxWidth: isMobile ? undefined : 520,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,

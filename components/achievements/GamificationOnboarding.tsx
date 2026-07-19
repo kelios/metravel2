@@ -14,6 +14,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useMyAchievements } from '@/hooks/useAchievementsApi';
 import { useMyPlaceFirstBadges } from '@/hooks/useGamification';
+import Button from '@/components/ui/Button';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -87,14 +88,14 @@ function GamificationOnboarding({ testID, style }: Props) {
         <Step icon="flag" text={i18nT('achievements:components.achievements.GamificationOnboarding.proydite_kvest_prokachayte_tropu_50d14dcf')} colors={colors} />
       </View>
 
-      <Pressable
-        style={styles.cta}
+      <Button
+        variant="primary"
+        size="sm"
+        label={i18nT('achievements:components.achievements.GamificationOnboarding.ponyatno_6f4db72e')}
         onPress={dismiss}
-        accessibilityRole="button"
         accessibilityLabel={i18nT('achievements:components.achievements.GamificationOnboarding.ponyatno_kak_poluchit_pervyy_beydzh_122e7a5c')}
-      >
-        <Text style={styles.ctaText}>{i18nT('achievements:components.achievements.GamificationOnboarding.ponyatno_6f4db72e')}</Text>
-      </Pressable>
+        style={styles.cta}
+      />
     </View>
   );
 }
@@ -163,16 +164,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     cta: {
       alignSelf: 'flex-start',
-      backgroundColor: colors.primary,
-      borderRadius: 999,
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-      paddingVertical: DESIGN_TOKENS.spacing.sm,
       marginTop: 2,
-    },
-    ctaText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      fontWeight: '800',
-      color: colors.textOnPrimary,
     },
   });
 

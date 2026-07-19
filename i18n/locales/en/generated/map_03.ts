@@ -151,6 +151,7 @@ export const mapGenerated3 = {
   "components.map.EditMarkerModal.etu_tochku_054e1134": "this point",
   "components.map.MarkersListComponent.bez_adresa_d9cfb4f0": "No address",
   "components.map.MarkersListComponent.kategorii_vybrany_5cae87f4": "Categories selected",
+  "components.map.MarkersListComponent.peretaschite_chtoby_izmenit_poryadok_2d9f4b6a": "Drag to reorder",
   "hooks.map.useOfflineTileDownload.oblast_karty_72ba6f3a": "Map area",
   "screens.tabs.MapScreen.marshrut_na_karte_62253936": "Route on the map",
   "screens.tabs.PlacesScreen_helpers.dlya_pervoy_poezdki_d662bb10": "For the first trip",

@@ -132,6 +132,8 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   const [dialogVisible, setDialogVisible] = useState(false)
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [batchUploadProgress, setBatchUploadProgress] = useState<{ current: number; total: number } | null>(null)
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set())
+  const [batchDeleteVisible, setBatchDeleteVisible] = useState(false)
 
   const retryRef = useRef(new Set<string>())
   const lastReportedUrlsRef = useRef<string>('')
@@ -144,6 +146,37 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   const reorderAbortRef = useRef<AbortController | null>(null)
 
   const hasErrors = useMemo(() => images.some((img) => img.error), [images])
+
+  const selectableKeys = useMemo(
+    () => images.filter((img) => !img.isUploading).map((img) => img.stableKey ?? img.id),
+    [images],
+  )
+  const allSelected = useMemo(
+    () => selectableKeys.length > 0 && selectableKeys.every((key) => selectedKeys.has(key)),
+    [selectableKeys, selectedKeys],
+  )
+  const selectedKeysRef = useRef<Set<string>>(selectedKeys)
+  useEffect(() => {
+    selectedKeysRef.current = selectedKeys
+  }, [selectedKeys])
+
+  const handleToggleSelect = useCallback((stableKey: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(stableKey)) next.delete(stableKey)
+      else next.add(stableKey)
+      return next
+    })
+  }, [])
+
+  const handleToggleSelectAll = useCallback(() => {
+    setSelectedKeys((prev) => {
+      if (selectableKeys.length > 0 && selectableKeys.every((key) => prev.has(key))) {
+        return new Set()
+      }
+      return new Set(selectableKeys)
+    })
+  }, [selectableKeys])
 
   const reportGalleryItems = useCallback(
     (nextImages: GalleryItem[]) => {
@@ -300,6 +333,22 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   useEffect(() => {
     reportGalleryItems(images)
   }, [images, reportGalleryItems])
+
+  // Убираем из выделения ключи, которых больше нет в галерее (удалены/заменены),
+  // чтобы счётчик «выбрано» и «выбрать все» не рассинхронизировались.
+  useEffect(() => {
+    setSelectedKeys((prev) => {
+      if (prev.size === 0) return prev
+      const present = new Set(images.map((img) => img.stableKey ?? img.id))
+      let changed = false
+      const next = new Set<string>()
+      prev.forEach((key) => {
+        if (present.has(key)) next.add(key)
+        else changed = true
+      })
+      return changed ? next : prev
+    })
+  }, [images])
 
   const handleUploadImages = useCallback(
     async (files: File[]) => {
@@ -655,6 +704,20 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     await deleteByStableKey(key)
   }
 
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedKeysRef.current.size === 0) return
+    setBatchDeleteVisible(true)
+  }, [])
+
+  const confirmDeleteSelected = useCallback(async () => {
+    const keys = Array.from(selectedKeysRef.current)
+    for (const key of keys) {
+      await deleteByStableKey(key)
+    }
+    setSelectedKeys(new Set())
+    setBatchDeleteVisible(false)
+  }, [deleteByStableKey])
+
   const dropzoneProps = dropzoneRootProps()
 
   return (
@@ -670,6 +733,11 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
           inputProps={getInputProps()}
           batchUploadProgress={batchUploadProgress}
           hasErrors={hasErrors}
+          selectableCount={selectableKeys.length}
+          selectedCount={selectedKeys.size}
+          allSelected={allSelected}
+          onToggleSelectAll={handleToggleSelectAll}
+          onDeleteSelected={handleDeleteSelected}
         />
       ) : null}
 
@@ -683,6 +751,8 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
         onImageError={handleImageError}
         onImageLoad={handleImageLoad}
         onCaptionChange={handleCaptionChange}
+        selectedKeys={selectedKeys}
+        onToggleSelect={handleToggleSelect}
         DeleteAction={DeleteActionComponent}
       />
 
@@ -700,6 +770,18 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
         cancelText={i18nT('travel:components.travel.gallery.ImageGallery.otmena_b86a2b90')}
         confirmTestID="confirm-delete"
         cancelTestID="cancel-delete"
+      />
+
+      <ConfirmDialog
+        visible={batchDeleteVisible}
+        onClose={() => setBatchDeleteVisible(false)}
+        onConfirm={confirmDeleteSelected}
+        title={i18nT('travel:components.travel.gallery.ImageGallery.batchDeleteTitle')}
+        message={i18nT('travel:components.travel.gallery.ImageGallery.batchDeleteMessage', { value1: selectedKeys.size })}
+        confirmText={i18nT('travel:components.travel.gallery.ImageGallery.udalit_7c7423a6')}
+        cancelText={i18nT('travel:components.travel.gallery.ImageGallery.otmena_b86a2b90')}
+        confirmTestID="confirm-batch-delete"
+        cancelTestID="cancel-batch-delete"
       />
     </View>
   )

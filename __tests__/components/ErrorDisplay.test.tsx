@@ -19,6 +19,22 @@ jest.mock('@expo/vector-icons', () => ({
   },
 }));
 
+// Mock canonical Button so this suite doesn't depend on the design-token internals
+// of ui/Button; keeps label/icon/onPress observable for the assertions below.
+jest.mock('@/components/ui/Button', () => ({
+  __esModule: true,
+  default: ({ label, icon, onPress, accessibilityLabel, testID }: any) => {
+    const React = require('react');
+    const { Pressable, Text } = require('react-native');
+    return React.createElement(
+      Pressable,
+      { onPress, accessibilityRole: 'button', accessibilityLabel, testID },
+      icon ?? null,
+      React.createElement(Text, null, label),
+    );
+  },
+}));
+
 // Mock design system
 jest.mock('@/constants/designSystem', () => ({
   DESIGN_TOKENS: {

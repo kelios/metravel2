@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
+import Button from '@/components/ui/Button';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { isOrphanedMessageThread, type MessageThread } from '@/api/messages';
 import { translate as i18nT } from '@/i18n'
@@ -308,14 +309,12 @@ function ThreadList({
             <View style={styles.center}>
                 <Feather name="alert-circle" size={48} color={colors.textMuted} />
                 <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{error}</Text>
-                <Pressable
-                    style={[styles.retryButton, { backgroundColor: colors.primary }]}
+                <Button
+                    label={i18nT('messages:components.messages.ThreadList.povtorit_d1eae179')}
                     onPress={onRefresh}
-                    accessibilityRole="button"
-                    accessibilityLabel={i18nT('messages:components.messages.ThreadList.povtorit_d1eae179')}
-                >
-                    <Text style={styles.retryButtonText}>{i18nT('messages:components.messages.ThreadList.povtorit_d1eae179')}</Text>
-                </Pressable>
+                    variant="primary"
+                    style={styles.retryButton}
+                />
             </View>
         );
     }
@@ -330,15 +329,13 @@ function ThreadList({
                     <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                         {i18nT('messages:components.messages.ThreadList.napishite_avtoru_puteshestviya_chtoby_nachat_81bd050e')}</Text>
                     {onNewConversation && (
-                        <Pressable
-                            style={[styles.newConversationButton, { backgroundColor: colors.primary }]}
+                        <Button
+                            label={i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a')}
                             onPress={onNewConversation}
-                            accessibilityRole="button"
-                            accessibilityLabel={i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a')}
-                        >
-                            <Feather name="edit" size={16} color={colors.textInverse} />
-                            <Text style={styles.newConversationButtonText}>{i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a')}</Text>
-                        </Pressable>
+                            variant="primary"
+                            icon={<Feather name="edit" size={16} color={colors.textOnPrimary} />}
+                            style={styles.newConversationButton}
+                        />
                     )}
                 </View>
             </View>
@@ -376,7 +373,7 @@ function ThreadList({
     );
 }
 
-const createStyles = (colors: ThemedColors) =>
+const createStyles = (_colors: ThemedColors) =>
     StyleSheet.create({
         list: {
             paddingVertical: DESIGN_TOKENS.spacing.sm,
@@ -487,28 +484,9 @@ const createStyles = (colors: ThemedColors) =>
         },
         retryButton: {
             marginTop: DESIGN_TOKENS.spacing.md,
-            paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-            paddingVertical: DESIGN_TOKENS.spacing.sm,
-            borderRadius: DESIGN_TOKENS.radii.md,
-        },
-        retryButtonText: {
-            color: colors.textInverse,
-            fontSize: DESIGN_TOKENS.typography.sizes.sm,
-            fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
         },
         newConversationButton: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: DESIGN_TOKENS.spacing.xs,
             marginTop: DESIGN_TOKENS.spacing.lg,
-            paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-            paddingVertical: DESIGN_TOKENS.spacing.sm,
-            borderRadius: DESIGN_TOKENS.radii.md,
-        },
-        newConversationButtonText: {
-            color: colors.textInverse,
-            fontSize: DESIGN_TOKENS.typography.sizes.sm,
-            fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
         },
         newConversationRow: {
             flexDirection: 'row',

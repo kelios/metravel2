@@ -1,7 +1,8 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { Travel } from '@/types/types';
+import Button from '@/components/ui/Button';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { normalizeExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
@@ -47,23 +48,15 @@ function TelegramDiscussionSection({ travel }: TelegramDiscussionSectionProps) {
       <Text style={styles.title}>{i18nT('travel:components.travel.TelegramDiscussionSection.obsuzhdenie_marshruta_v_telegram_a7792961')}</Text>
       <Text style={styles.subtitle}>
         {i18nT('travel:components.travel.TelegramDiscussionSection.zadayte_vopros_ili_podelites_vpechatleniyami_15f6b1d4')}{travelName ? ` «${travelName}»` : ''} {i18nT('travel:components.travel.TelegramDiscussionSection.v_nashem_telegram_kanale_d0dc2fd7')}</Text>
-      <Pressable
+      <Button
         onPress={handleOpen}
         disabled={!hasUrl}
-        style={({ pressed }) => [
-          styles.button,
-          !hasUrl && styles.buttonDisabled,
-          pressed && hasUrl && styles.buttonPressed,
-        ]}
-        accessibilityRole="button"
+        variant="outline"
+        icon={<Feather name="send" size={18} color={hasUrl ? colors.primary : colors.textMuted} />}
         accessibilityLabel={hasUrl ? i18nT('travel:components.travel.TelegramDiscussionSection.otkryt_obsuzhdenie_v_telegram_ac2c9644') : i18nT('travel:components.travel.TelegramDiscussionSection.skoro_zdes_budet_obsuzhdenie_v_telegram_325d7065')}
         accessibilityHint={hasUrl ? i18nT('travel:components.travel.TelegramDiscussionSection.otkroetsya_vneshnee_prilozhenie_ili_vkladka_f07c5d42') : undefined}
-      >
-        <Feather name="send" size={18} color={hasUrl ? colors.primary : colors.textMuted} />
-        <Text style={styles.buttonText}>
-          {hasUrl ? i18nT('travel:components.travel.TelegramDiscussionSection.otkryt_chat_v_telegram_64956452') : i18nT('travel:components.travel.TelegramDiscussionSection.skoro_zdes_budet_chat_v_telegram_98a61847')}
-        </Text>
-      </Pressable>
+        label={hasUrl ? i18nT('travel:components.travel.TelegramDiscussionSection.otkryt_chat_v_telegram_64956452') : i18nT('travel:components.travel.TelegramDiscussionSection.skoro_zdes_budet_chat_v_telegram_98a61847')}
+      />
       {/* P1-9: Admin hint only in dev mode */}
       {!hasUrl && __DEV__ && (
         <Text style={styles.helperText}>
@@ -95,43 +88,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.textSecondary,
     lineHeight: 22,
     marginBottom: 16,
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
-    paddingVertical: 12,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    backgroundColor: colors.surface,
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        transition: 'background-color 0.2s ease, border-color 0.2s ease',
-      } as any,
-    }),
-  },
-  buttonPressed: {
-    backgroundColor: colors.primarySoft,
-    transform: [{ scale: 0.98 }],
-  },
-  buttonDisabled: {
-    borderColor: colors.borderLight,
-    backgroundColor: colors.backgroundSecondary,
-    ...Platform.select({
-      web: {
-        cursor: 'not-allowed',
-      } as any,
-    }),
-  },
-  buttonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.primaryText,
   },
   helperText: {
     marginTop: DESIGN_TOKENS.spacing.sm,

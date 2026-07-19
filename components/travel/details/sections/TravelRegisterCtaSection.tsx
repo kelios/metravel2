@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react'
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Platform, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 
+import Button from '@/components/ui/Button'
 import { useAuth } from '@/context/AuthContext'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useTrackedImpression } from '@/hooks/useTrackedImpression'
@@ -88,17 +89,13 @@ export const TravelRegisterCtaSection: React.FC<TravelRegisterCtaSectionProps> =
         {heading}
       </Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
-      <Pressable
+      <Button
+        label={ctaLabel}
         onPress={handlePress}
-        accessibilityRole="button"
+        variant="primary"
         accessibilityLabel={ctaLabel}
-        style={({ pressed }) => [
-          styles.button,
-          { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
-        ]}
-      >
-        <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>{ctaLabel}</Text>
-      </Pressable>
+        style={styles.button}
+      />
     </View>
   )
 }
@@ -125,13 +122,6 @@ const styles = StyleSheet.create({
   },
   button: {
     alignSelf: 'flex-start',
-    paddingVertical: 11,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  buttonText: {
-    fontSize: 15,
-    fontWeight: '700',
   },
 })
 

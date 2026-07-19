@@ -151,6 +151,7 @@ export const mapGenerated3 = {
   "components.map.EditMarkerModal.etu_tochku_054e1134": "гэтую кропку",
   "components.map.MarkersListComponent.bez_adresa_d9cfb4f0": "Без адрасу",
   "components.map.MarkersListComponent.kategorii_vybrany_5cae87f4": "Катэгорыі выбраны",
+  "components.map.MarkersListComponent.peretaschite_chtoby_izmenit_poryadok_2d9f4b6a": "Перацягніце, каб змяніць парадак",
   "hooks.map.useOfflineTileDownload.oblast_karty_72ba6f3a": "Галіна карты",
   "screens.tabs.MapScreen.marshrut_na_karte_62253936": "Маршрут на мапе",
   "screens.tabs.PlacesScreen_helpers.dlya_pervoy_poezdki_d662bb10": "Для першай паездкі",

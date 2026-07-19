@@ -25,6 +25,12 @@ export function useFocusTrap(
     }
 
     const container = containerRef.current;
+    // Defensive: on non-DOM web renderers (RN test renderer, some SSR paths) the
+    // container ref may resolve to a host instance without DOM query APIs.
+    if (typeof container.querySelectorAll !== 'function') {
+      return;
+    }
+
     const focusableElements = container.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
     );

@@ -354,7 +354,12 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
 
     const group = L.markerClusterGroup({
       chunkedLoading: true,
-      maxClusterRadius: 60,
+      // 80 = дефолт Leaflet.markercluster. Прежние 60 давали больше мелких
+      // кластеров, чьи крупные бабблы (размер растёт со счётчиком) визуально
+      // наезжали друг на друга при плотной кластеризации (радиус 100 км) —
+      // соседние числа сливались. 80 объединяет близкие маркеры в один кластер,
+      // убирая overlap, без переухода в один гигантский кластер.
+      maxClusterRadius: 80,
       iconCreateFunction,
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,

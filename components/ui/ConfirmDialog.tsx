@@ -1,10 +1,10 @@
 import React, { useRef, useEffect, useMemo } from 'react';
 import { Dialog, Portal } from '@/ui/paper';
-import { Text, StyleSheet, TouchableOpacity, Platform, View } from 'react-native';
+import { Text, StyleSheet, Platform, View } from 'react-native';
+import Button from '@/components/ui/Button';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useResponsive } from '@/hooks/useResponsive';
 import { translate as i18nT } from '@/i18n'
 import { webAccessibilityProps } from '@/utils/webProps'
@@ -79,6 +79,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <View style={styles.webPortalRoot}>
                 <View style={styles.webBackdrop}>
                     <View
+                        ref={dialogRef as unknown as React.Ref<View>}
                         style={[
                             styles.dialog,
                             {
@@ -120,36 +121,23 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         </Text>
 
                         <View style={[styles.actionContainer, isMobile && styles.actionContainerMobile]}>
-                            <TouchableOpacity
+                            <Button
+                                ref={cancelButtonRef as unknown as React.Ref<View>}
+                                variant="ghost"
+                                label={cancelText}
                                 onPress={onClose}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                style={[styles.cancelButtonContainer, globalFocusStyles.focusable]}
+                                fullWidth={isMobile}
                                 testID={cancelTestID}
-                                accessibilityRole="button"
                                 accessibilityLabel={cancelText}
-                                {...Platform.select({
-                                    web: {
-                                        ref: cancelButtonRef as any,
-                                        ...webAccessibilityProps({ tabIndex: 0 }),
-                                    },
-                                })}
-                            >
-                                <Text style={styles.cancelButton}>{cancelText.toUpperCase()}</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
+                            />
+                            <Button
+                                variant="danger"
+                                label={confirmText}
                                 onPress={onConfirm}
-                                style={[styles.deleteButtonContainer, globalFocusStyles.focusable]}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                fullWidth={isMobile}
                                 testID={confirmTestID}
-                                accessibilityRole="button"
                                 accessibilityLabel={confirmText}
-                                {...Platform.select({
-                                    web: webAccessibilityProps({ tabIndex: 0 }),
-                                })}
-                            >
-                                <Text style={styles.deleteButton}>{confirmText.toUpperCase()}</Text>
-                            </TouchableOpacity>
+                            />
                         </View>
                     </View>
                 </View>
@@ -217,39 +205,23 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     </Text>
                 </Dialog.Content>
                 <Dialog.Actions style={[styles.actionContainer, isMobile && styles.actionContainerMobile]}>
-                    <TouchableOpacity 
-                        onPress={onClose} 
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        style={[
-                            styles.cancelButtonContainer,
-                            globalFocusStyles.focusable,
-                        ]}
-                        accessibilityRole="button"
+                    <Button
+                        ref={cancelButtonRef as unknown as React.Ref<View>}
+                        variant="ghost"
+                        label={cancelText}
+                        onPress={onClose}
+                        fullWidth={isMobile}
+                        testID={cancelTestID}
                         accessibilityLabel={cancelText}
-                        {...Platform.select({
-                            web: {
-                                ref: cancelButtonRef as any,
-                                ...webAccessibilityProps({ tabIndex: 0 }),
-                            },
-                        })}
-                    >
-                        <Text style={styles.cancelButton}>{cancelText.toUpperCase()}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
+                    />
+                    <Button
+                        variant="danger"
+                        label={confirmText}
                         onPress={onConfirm}
-                        style={[
-                            styles.deleteButtonContainer,
-                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                        ]}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        accessibilityRole="button"
+                        fullWidth={isMobile}
+                        testID={confirmTestID}
                         accessibilityLabel={confirmText}
-                        {...Platform.select({
-                            web: webAccessibilityProps({ tabIndex: 0 }),
-                        })}
-                    >
-                        <Text style={styles.deleteButton}>{confirmText.toUpperCase()}</Text>
-                    </TouchableOpacity>
+                    />
                 </Dialog.Actions>
             </Dialog>
         </Portal>
@@ -308,62 +280,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexDirection: 'column',
         width: '100%',
         gap: 8,
-    },
-    cancelButtonContainer: {
-        minWidth: Platform.OS === 'android' ? 48 : 44,
-        minHeight: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 touch target
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: DESIGN_TOKENS.radii.md,
-        ...Platform.select({
-            web: {
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                cursor: 'pointer',
-                // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
-                ':hover': {
-                    backgroundColor: colors.primaryLight,
-                },
-            },
-        }),
-    },
-    cancelButton: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: colors.textMuted,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    deleteButtonContainer: {
-        backgroundColor: colors.danger,
-        borderRadius: DESIGN_TOKENS.radii.md,
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        minWidth: Platform.OS === 'android' ? 48 : 44,
-        minHeight: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 touch target
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...DESIGN_TOKENS.shadowsNative.light,
-        ...Platform.select({
-            web: {
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                cursor: 'pointer',
-                boxShadow: DESIGN_TOKENS.shadows.light,
-                // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
-                ':hover': {
-                    backgroundColor: colors.dangerDark,
-                    transform: 'translateY(-1px)',
-                    boxShadow: DESIGN_TOKENS.shadows.medium,
-                },
-            },
-        }),
-    },
-    deleteButton: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.textOnPrimary,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
     },
 });

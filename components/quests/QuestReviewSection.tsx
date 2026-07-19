@@ -1,6 +1,7 @@
 import { memo, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Platform, StyleSheet, Text, TextInput, View } from 'react-native'
 
+import Button from '@/components/ui/Button'
 import StarRating from '@/components/ui/StarRating'
 import { type QuestRating } from '@/api/questRating'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
@@ -143,16 +144,16 @@ function QuestReviewSection({
         />
       </View>
 
-      <Pressable
+      <Button
+        variant="primary"
+        label={i18nT('quests:components.quests.QuestReviewSection.otpravit_otzyv_fe6d43a0')}
         onPress={handleSubmit}
-        disabled={!canSubmit || isSubmitting}
-        style={[styles.submitButton, (!canSubmit || isSubmitting) && styles.submitButtonDisabled]}
-        accessibilityRole="button"
+        disabled={!canSubmit}
+        loading={isSubmitting}
         accessibilityLabel={i18nT('quests:components.quests.QuestReviewSection.otpravit_otzyv_fe6d43a0')}
         testID={`${testID}-submit`}
-      >
-        <Text style={styles.submitButtonText}>{isSubmitting ? i18nT('quests:components.quests.QuestReviewSection.otpravlyaem_46246aeb') : i18nT('quests:components.quests.QuestReviewSection.otpravit_otzyv_fe6d43a0')}</Text>
-      </Pressable>
+        style={styles.submitButton}
+      />
     </View>
   )
 }
@@ -204,18 +205,6 @@ const createStyles = (colors: any) =>
     },
     submitButton: {
       alignSelf: 'flex-start',
-      paddingHorizontal: 18,
-      paddingVertical: 12,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      backgroundColor: colors.primary,
-    },
-    submitButtonDisabled: {
-      opacity: 0.5,
-    },
-    submitButtonText: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.textOnPrimary,
     },
     successBox: {
       paddingVertical: 16,

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 
+import Button from '@/components/ui/Button'
 import { useThemedColors } from '@/hooks/useTheme'
 import { selectPlural, translate as i18nT } from '@/i18n'
 
@@ -38,35 +39,34 @@ export default function QuestGuestGate({
       <Text style={styles.lead}>
         {i18nT('quests:components.quests.QuestGuestGate.ty_proshel_ca229b47')}{passedCount} {pluralPoints(passedCount)} {i18nT('quests:components.quests.QuestGuestGate.zdorovo_chtoby_prodolzhit_kvest_sohranit_rez_1b7311fc')}</Text>
 
-      <Pressable
+      <Button
+        variant="primary"
+        fullWidth
+        label={i18nT('quests:components.quests.QuestGuestGate.voyti_5f893cd8')}
         onPress={onLogin}
-        style={styles.primaryButton}
         testID="quest-guest-gate-login"
-        accessibilityRole="button"
         accessibilityLabel={i18nT('quests:components.quests.QuestGuestGate.voyti_chtoby_sohranit_progress_kvesta_a58fb69a')}
-      >
-        <Text style={styles.primaryButtonText}>{i18nT('quests:components.quests.QuestGuestGate.voyti_5f893cd8')}</Text>
-      </Pressable>
+        style={styles.buttonSpacingTop}
+      />
 
-      <Pressable
+      <Button
+        variant="outline"
+        fullWidth
+        label={i18nT('quests:components.quests.QuestGuestGate.zaregistrirovatsya_84006714')}
         onPress={onRegister}
-        style={styles.secondaryButton}
         testID="quest-guest-gate-register"
-        accessibilityRole="button"
         accessibilityLabel={i18nT('quests:components.quests.QuestGuestGate.zaregistrirovatsya_chtoby_sohranit_progress__5164906b')}
-      >
-        <Text style={styles.secondaryButtonText}>{i18nT('quests:components.quests.QuestGuestGate.zaregistrirovatsya_84006714')}</Text>
-      </Pressable>
+      />
 
-      <Pressable
+      <Button
+        variant="ghost"
+        fullWidth
+        size="sm"
+        label={i18nT('quests:components.quests.QuestGuestGate.vernutsya_k_proydennym_tochkam_ac57c14e')}
         onPress={onDismiss}
-        style={styles.dismissButton}
         testID="quest-guest-gate-dismiss"
-        accessibilityRole="button"
         accessibilityLabel={i18nT('quests:components.quests.QuestGuestGate.vernutsya_k_proydennym_tochkam_kvesta_8320b119')}
-      >
-        <Text style={styles.dismissButtonText}>{i18nT('quests:components.quests.QuestGuestGate.vernutsya_k_proydennym_tochkam_ac57c14e')}</Text>
-      </Pressable>
+      />
     </View>
   )
 }
@@ -104,37 +104,7 @@ const createStyles = (colors: Colors) =>
       fontSize: 15,
       lineHeight: 22,
     },
-    primaryButton: {
+    buttonSpacingTop: {
       marginTop: 4,
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderRadius: 12,
-      backgroundColor: colors.primary,
-    },
-    primaryButtonText: {
-      color: colors.textOnPrimary,
-      fontWeight: '800',
-      fontSize: 15,
-    },
-    secondaryButton: {
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.primary,
-    },
-    secondaryButtonText: {
-      color: colors.primaryText,
-      fontWeight: '800',
-      fontSize: 15,
-    },
-    dismissButton: {
-      alignItems: 'center',
-      paddingVertical: 8,
-    },
-    dismissButtonText: {
-      color: colors.textMuted,
-      fontWeight: '600',
-      fontSize: 13,
     },
   })

@@ -1,7 +1,8 @@
 import { Stack, router } from 'expo-router'
 import { useMemo } from 'react'
-import { Pressable, StyleSheet } from 'react-native'
+import { StyleSheet } from 'react-native'
 
+import Button from '@/components/ui/Button'
 import { Text, View } from '@/components/ui/Themed'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -29,17 +30,19 @@ export default function ErrorScreen({ error, retry }: ErrorScreenProps) {
 
         <Text style={styles.subtitle}>{message}</Text>
 
-        <Pressable style={styles.primaryButton} accessibilityRole="button" onPress={retry}>
-          <Text style={styles.primaryButtonText}>{i18nT('errors:app.error.poprobovat_snova_86f28e83')}</Text>
-        </Pressable>
+        <Button
+          variant="primary"
+          label={i18nT('errors:app.error.poprobovat_snova_86f28e83')}
+          onPress={retry}
+          style={styles.ctaButton}
+        />
 
-        <Pressable
-          style={styles.secondaryButton}
-          accessibilityRole="button"
+        <Button
+          variant="ghost"
+          label={i18nT('errors:app.error.na_glavnuyu_cdb90635')}
           onPress={() => router.replace('/')}
-        >
-          <Text style={styles.secondaryButtonText}>{i18nT('errors:app.error.na_glavnuyu_cdb90635')}</Text>
-        </Pressable>
+          style={styles.ctaButtonSecondary}
+        />
 
       </View>
     </>
@@ -67,36 +70,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     textAlign: 'center',
     maxWidth: 520,
   },
-  primaryButton: {
+  ctaButton: {
     marginTop: DESIGN_TOKENS.spacing.lg,
-    backgroundColor: colors.primary,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
-    paddingVertical: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
     minWidth: 220,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  primaryButtonText: {
-    color: colors.textOnPrimary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  secondaryButton: {
+  ctaButtonSecondary: {
     marginTop: DESIGN_TOKENS.spacing.sm,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
-    paddingVertical: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
     minWidth: 220,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  secondaryButtonText: {
-    color: colors.primaryText,
-    fontSize: 16,
-    fontWeight: '600',
   },
 })

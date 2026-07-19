@@ -115,7 +115,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: colors.primary,
     },
     exportBarCountBadgeText: {
-      color: '#fff',
+      color: colors.textOnPrimary,
       fontSize: 13,
       fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
     },
@@ -386,7 +386,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     selectedOrderIndex: {
       minWidth: 10,
       textAlign: 'center',
-      color: '#fff',
+      color: colors.textOnPrimary,
       fontSize: 11,
       fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
     },
@@ -408,7 +408,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       }),
     },
     selectedOrderOverlayTitle: {
-      color: '#fff',
+      color: colors.textOnDark,
       fontSize: 12,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
       lineHeight: 16,

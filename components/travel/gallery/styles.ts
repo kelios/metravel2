@@ -55,6 +55,39 @@ export const createGalleryStyles = (
       gap: DESIGN_TOKENS.spacing.md,
       justifyContent: 'flex-start',
     },
+    batchActionsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.sm,
+      marginBottom: DESIGN_TOKENS.spacing.md,
+    },
+    batchActionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+      paddingVertical: DESIGN_TOKENS.spacing.xs,
+      paddingHorizontal: DESIGN_TOKENS.spacing.md,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.backgroundSecondary,
+      minHeight: 44,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        },
+      }),
+    },
+    batchDeleteButton: {
+      borderColor: colors.danger,
+      backgroundColor: colors.dangerSoft,
+    },
+    batchActionButtonText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      fontWeight: '600',
+    },
     imageWrapper: {
       flexBasis: '32%',
       maxWidth: '32%',
@@ -85,6 +118,37 @@ export const createGalleryStyles = (
           elevation: 3,
         },
       }),
+    },
+    imageWrapperSelected: {
+      borderColor: colors.primary,
+      borderWidth: 2,
+    },
+    selectCheckbox: {
+      position: 'absolute',
+      top: 8,
+      left: 8,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 9999,
+      elevation: 9999,
+      backgroundColor: colors.overlay,
+      borderWidth: 2,
+      borderColor: colors.textOnDark,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          ...(isMobileWeb ? createMobileWebStaticFrostStyle(colors.overlay) : null),
+        },
+      }),
+    },
+    selectCheckboxActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
     },
     imageFrame: {
       width: '100%',

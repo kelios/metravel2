@@ -41,22 +41,10 @@ export function useWeatherWidgetModel({
         if (!primaryAddress && !normalizedCountryName) {
             return primaryCoord ? i18nT('home:components.home.hooks.useWeatherWidgetModel.tochke_marshruta_50fd9f66') : '';
         }
-        // Адрес приходит из reverse-геокода (specific→general): «POI, улица,
-        // населённый пункт, страна». В заголовке погоды нужен именно населённый
-        // пункт — самая общая часть перед страной, — а не весь шумный хвост с
-        // POI и улицей (UI-review #5).
-        const addressParts = primaryAddress.split(',').map((part) => part.trim()).filter(Boolean)
-        let body = addressParts
-        if (
-            normalizedCountryName &&
-            body.length > 0 &&
-            body[body.length - 1].toLowerCase() === normalizedCountryName.toLowerCase()
-        ) {
-            body = body.slice(0, -1)
-        }
-        const settlement = body.length > 0 ? body[body.length - 1] : ''
-        const locationParts = [settlement, normalizedCountryName].filter(Boolean)
-        return locationParts.join(', ')
+        const addressParts = primaryAddress.split(',').map((part) => part.trim());
+        const locationParts = addressParts.slice(0, 3).filter(Boolean);
+        if (normalizedCountryName) locationParts.push(normalizedCountryName);
+        return locationParts.join(', ');
     }, [normalizedCountryName, primaryAddress, primaryCoord]);
 
     const settle = useCallback(() => {

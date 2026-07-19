@@ -12,6 +12,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import Button from '@/components/ui/Button';
 import { appendPlainTextToHtml, plainTextToHtml } from '@/utils/htmlUtils';
+import { uploadImage } from '@/api/misc';
 import { useWebSpeechDictation } from '@/hooks/useWebSpeechDictation';
 import { showToast } from '@/utils/toast';
 import { createContentUpsertStyles } from './contentUpsertStyles';
@@ -239,9 +240,75 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         }
     }, [appendToDescription, readUriAsText]);
 
+    const insertPastedImage = useCallback(async (
+        fileForForm: Blob | { uri: string; name: string; type: string },
+    ) => {
+        const form = new FormData();
+        // web File — это Blob; native {uri,name,type} принимается RN-FormData в рантайме.
+        form.append('file', fileForForm as unknown as Blob);
+        form.append('collection', 'description');
+        if (formData.id != null) form.append('id', String(formData.id));
+        const res = await uploadImage(form);
+        const url = (res?.url ?? (res as { data?: { url?: string } })?.data?.url) ?? null;
+        if (!url) throw new Error('no url in upload response');
+        const base = descriptionHtmlRef.current;
+        const next = `${base}<p><img src="${url}" alt="" /></p>`;
+        descriptionHtmlRef.current = next;
+        handleChange('description', next);
+        await showToast({
+            type: 'success',
+            text1: i18nT('travel:components.travel.ContentUpsertSection.imagePastedTitle'),
+            text2: i18nT('travel:components.travel.ContentUpsertSection.iz_bufera_obmena_acc66fc3'),
+        });
+    }, [formData.id, handleChange]);
+
     const pasteDescriptionText = useCallback(async () => {
         setIsPastingDescriptionText(true);
         try {
+            // 1) Сначала пытаемся вставить КАРТИНКУ из буфера (скриншот и т.п.).
+            if (Platform.OS === 'web') {
+                type WebClipboardItem = { types: string[]; getType: (type: string) => Promise<Blob> };
+                type WebClipboard = { read?: () => Promise<WebClipboardItem[]> };
+                const navClipboard = (typeof navigator !== 'undefined'
+                    ? (navigator as unknown as { clipboard?: WebClipboard }).clipboard
+                    : null);
+                if (navClipboard?.read) {
+                    try {
+                        const items = await navClipboard.read();
+                        for (const item of items) {
+                            const imgType: string | undefined = (item.types || []).find((t: string) => t.startsWith('image/'));
+                            if (imgType) {
+                                const blob = await item.getType(imgType);
+                                const ext = (imgType.split('/')[1] || 'png').replace('jpeg', 'jpg');
+                                const file = new File([blob], `pasted-${Date.now()}.${ext}`, { type: blob.type || imgType });
+                                await insertPastedImage(file);
+                                return;
+                            }
+                        }
+                    } catch {
+                        // нет прав/картинки — падаем на текстовую вставку ниже
+                    }
+                }
+            } else {
+                try {
+                    const hasImage = await Clipboard.hasImageAsync?.();
+                    if (hasImage) {
+                        const img = await Clipboard.getImageAsync({ format: 'png' });
+                        const dataUri = img?.data ?? '';
+                        if (dataUri) {
+                            const base64 = dataUri.includes(',') ? dataUri.split(',')[1] : dataUri;
+                            const fileUri = `${FileSystem.cacheDirectory ?? ''}pasted-${Date.now()}.png`;
+                            await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+                            await insertPastedImage({ uri: fileUri, name: 'pasted.png', type: 'image/png' });
+                            return;
+                        }
+                    }
+                } catch {
+                    // не удалось получить картинку — текстовая вставка ниже
+                }
+            }
+
+            // 2) Иначе — вставляем текст (прежнее поведение).
             const text = await Clipboard.getStringAsync();
             const cleaned = String(text ?? '').trim();
             if (!cleaned) {
@@ -263,7 +330,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         } finally {
             setIsPastingDescriptionText(false);
         }
-    }, [appendToDescription]);
+    }, [appendToDescription, insertPastedImage]);
 
     // Получить ошибку для поля (показываем только если поле было "тронуто")
     const getError = useCallback((field: string) => {

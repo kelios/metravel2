@@ -280,6 +280,23 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
     }
   }, [mobileWebCoachmark, shouldSuspendAutoOpen])
 
+  // Публикуем факт открытого онбординга тем же DOM-сигналом, что и cookie-баннер
+  // (`data-consent-banner-open`): MapScreen прячет гео-баннер, пока модалка висит,
+  // чтобы на первом входе оверлеи показывались по одному, а не стопкой. Web-only.
+  useEffect(() => {
+    if (!IS_WEB || typeof document === 'undefined') return
+    const body = document.body
+    if (!body) return
+    if (visible) {
+      body.setAttribute('data-map-onboarding-open', 'true')
+    } else {
+      body.removeAttribute('data-map-onboarding-open')
+    }
+    return () => {
+      body.removeAttribute('data-map-onboarding-open')
+    }
+  }, [visible])
+
   // Re-measure target when step changes
   useEffect(() => {
     if (!visible) return

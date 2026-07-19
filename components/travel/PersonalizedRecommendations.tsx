@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
+import Button from '@/components/ui/Button';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { useVisibleCardCount } from '@/hooks/useVisibleCardCount';
@@ -15,7 +16,6 @@ import { translate as i18nT } from '@/i18n'
 
 
 const COLLAPSED_KEY = 'personalization_collapsed';
-const ARROW_ICON_STYLE = { marginLeft: 6 } as const;
 const PREVIEW_CARD_WIDTH = 208;
 const PREVIEW_CARD_GAP = 16;
 
@@ -219,14 +219,15 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                                     {i18nT('travel:components.travel.PersonalizedRecommendations.voydite_chtoby_poluchat_personalnye_rekomend_55bff68d')}</Text>
                             </View>
                         </View>
-                        <Pressable 
-                            style={[styles.loginButton, !isMobile && styles.loginButtonInline]}
+                        <Button
+                            variant="outline"
                             onPress={handleLoginPress}
-                            android_ripple={{ color: colors.primarySoft }}
-                        >
-                            <Text style={styles.loginButtonText}>{i18nT('travel:components.travel.PersonalizedRecommendations.voyti_ili_zaregistrirovatsya_6e6efcab')}</Text>
-                            <Feather name="arrow-right" size={18} color={colors.primaryDark} style={ARROW_ICON_STYLE as any} />
-                        </Pressable>
+                            label={i18nT('travel:components.travel.PersonalizedRecommendations.voyti_ili_zaregistrirovatsya_6e6efcab')}
+                            icon={<Feather name="arrow-right" size={18} color={colors.primaryDark} />}
+                            iconPosition="right"
+                            labelStyle={styles.loginButtonText}
+                            style={[styles.loginButton, !isMobile && styles.loginButtonInline]}
+                        />
                     </View>
                 </View>
         );
@@ -656,23 +657,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         maxWidth: 520,
     },
     loginButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: colors.primary,
-        borderRadius: 12,
-        paddingVertical: 10,
-        paddingHorizontal: 18,
         alignSelf: 'flex-start',
         marginTop: 12,
-        ...Platform.select({
-            web: {
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-            },
-        }),
     },
     loginButtonInline: {
         marginLeft: 16,

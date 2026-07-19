@@ -227,6 +227,13 @@ export function MapCanvas({
               testID="map-geo-retry"
               onPress={retryLocation}
               accessibilityRole="button"
+              // Явный label: у Pressable с вложенным Text доступное имя на web не
+              // выводилось (кнопка «Разрешить» читалась как безымянная).
+              accessibilityLabel={
+                locationState.status === 'denied'
+                  ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_b419aad0')
+                  : i18nT('map:components.MapPage.MapCanvas.povtorit_66ddcbbc')
+              }
               style={({ pressed }) => [
                 styles.geoBannerActionPrimary,
                 pressed && PRESSED_OPACITY_06,

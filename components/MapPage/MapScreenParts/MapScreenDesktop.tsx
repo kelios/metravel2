@@ -427,6 +427,11 @@ export function MapScreenDesktopOverlays({
               colors={themedColors as ThemedColors}
               top={16 + 44 + 8}
               right={16}
+              // MapMobilePopover фиксирует ширину карточки по `minWidth` (width:
+              // minWidth), поэтому без него карточка садилась на дефолтные 200px и
+              // «Топографическая»/«Показать всё на карте» рвались посреди слова.
+              // 280px хватает строке-тумблеру (лейбл + Switch) на одну строку.
+              minWidth={280}
               maxWidth={320}
               mapUiApi={mapUiApi}
               overlayOptions={overlayOptions}
