@@ -1,5 +1,8 @@
+import React from 'react'
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
 import { Pressable, View } from 'react-native'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { setActiveQueryClient } from '@/api/activeQueryClient'
 
 // IMPORTANT: setup.ts globally mocks FavoritesContext. We explicitly unmock it here
 // to test the real provider + lazy server fetching behavior.
@@ -23,12 +26,20 @@ jest.mock('@/api/travelsFavorites', () => ({
 }))
 
 describe('FavoritesContext lazy server fetching', () => {
+  let queryClient: QueryClient
+
   beforeEach(() => {
     jest.clearAllMocks()
 
     const auth = require('@/context/AuthContext')
     auth.useAuth.mockReturnValue({ isAuthenticated: true, userId: '1' })
+
+    // viewHistory ensureServerData ходит через активный RQ-клиент (#994).
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    setActiveQueryClient(queryClient)
   })
+
+  afterEach(() => setActiveQueryClient(null))
 
   it('does not call backend fetches on mount; only when ensureServerData is called', async () => {
     const { useFavorites } = require('@/context/FavoritesContext')
@@ -46,9 +57,11 @@ describe('FavoritesContext lazy server fetching', () => {
     }
 
     const { getByTestId } = render(
-      <FavoritesProvider>
-        <Harness />
-      </FavoritesProvider>
+      <QueryClientProvider client={queryClient}>
+        <FavoritesProvider>
+          <Harness />
+        </FavoritesProvider>
+      </QueryClientProvider>
     )
 
     // No auto-fetch on mount

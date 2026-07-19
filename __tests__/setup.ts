@@ -598,14 +598,12 @@ jest.mock('@/context/FavoritesContext', () => {
   const stub = {
     favorites: [],
     viewHistory: [],
-    recommended: [],
     addFavorite: jest.fn(),
     removeFavorite: jest.fn(),
     isFavorite: jest.fn(() => false),
     addToHistory: jest.fn(),
     clearHistory: jest.fn(),
     clearFavorites: jest.fn(),
-    getRecommendations: jest.fn(() => []),
     ensureServerData: jest.fn(),
   }
   const FavoritesContext = React.createContext(stub)

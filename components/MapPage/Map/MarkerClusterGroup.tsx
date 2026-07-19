@@ -473,7 +473,12 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
           maxWidth: rawPopupOptions.maxWidth ?? 320,
           minWidth: rawPopupOptions.minWidth ?? 200,
           autoPan: rawPopupOptions.autoPan ?? true,
-          closeButton: rawPopupOptions.closeButton ?? true,
+          // The popup content (PlacePopupCard) draws its OWN themed close ✕
+          // (top-right, z-index 12). Leaflet's built-in `.leaflet-popup-close-button`
+          // (z-index 30) would stack a second raw ✕ over it — the "double cross"
+          // artifact. Default OFF so only the card's close shows; callers can still
+          // opt back in via popupProps.closeButton.
+          closeButton: rawPopupOptions.closeButton ?? false,
         }
         if (rawPopupOptions.keepInView !== undefined) {
           popupOptions.keepInView = rawPopupOptions.keepInView

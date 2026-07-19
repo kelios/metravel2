@@ -88,58 +88,6 @@ jest.mock('@/stores/favoritesStore', () => ({
   ),
 }));
 
-jest.mock('@/stores/viewHistoryStore', () => ({
-  useViewHistoryStore: Object.assign(
-    (selector?: any) => {
-      const s = {
-        viewHistory: [],
-        addToHistory: jest.fn(),
-        clearHistory: jest.fn(async () => {}),
-        resetFetchState: jest.fn(),
-        loadServerCached: jest.fn(),
-        loadLocal: jest.fn(),
-        ensureServerData: jest.fn(async () => {}),
-      };
-      return selector ? selector(s) : s;
-    },
-    {
-      getState: () => ({
-        viewHistory: [],
-        addToHistory: jest.fn(async () => {}),
-        clearHistory: jest.fn(async () => {}),
-        resetFetchState: jest.fn(),
-        loadServerCached: jest.fn(),
-        loadLocal: jest.fn(),
-        ensureServerData: jest.fn(async () => {}),
-      }),
-    }
-  ),
-}));
-
-jest.mock('@/stores/recommendationsStore', () => ({
-  useRecommendationsStore: Object.assign(
-    (selector?: any) => {
-      const s = {
-        recommended: [],
-        getRecommendations: jest.fn(() => []),
-        resetFetchState: jest.fn(),
-        loadServerCached: jest.fn(),
-        ensureServerData: jest.fn(async () => {}),
-      };
-      return selector ? selector(s) : s;
-    },
-    {
-      getState: () => ({
-        recommended: [],
-        getRecommendations: jest.fn(() => []),
-        resetFetchState: jest.fn(),
-        loadServerCached: jest.fn(),
-        ensureServerData: jest.fn(async () => {}),
-      }),
-    }
-  ),
-}));
-
 // ────────────────────────────────────────────────────────────────────
 
 describe('Context module exports (prod-build regression)', () => {

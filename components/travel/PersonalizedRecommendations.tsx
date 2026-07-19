@@ -2,6 +2,7 @@ import { useMemo, memo, useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useFavorites } from '@/context/FavoritesContext';
+import { useRecommendedTravels } from '@/hooks/useRecommendedTravels';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,7 +28,8 @@ interface PersonalizedRecommendationsProps {
 }
 
 function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHeader = true, onlyRecommendations = false }: PersonalizedRecommendationsProps) {
-    const { favorites, viewHistory, recommended } = useFavorites();
+    const { favorites, viewHistory } = useFavorites();
+    const recommended = useRecommendedTravels();
     const { isAuthenticated } = useAuth();
     const router = useRouter();
     const { width } = useWindowDimensions();

@@ -1,28 +1,27 @@
 import { createContext, useContext, useMemo } from 'react';
-import { useFavoritesStore, type FavoriteItem } from '@/stores/favoritesStore';
-import { useViewHistoryStore, type ViewHistoryItem } from '@/stores/viewHistoryStore';
-import { useRecommendationsStore } from '@/stores/recommendationsStore';
+import { useFavoritesData, type FavoriteItem } from '@/hooks/useFavoritesData';
+import { useViewHistory, type ViewHistoryItem } from '@/hooks/useViewHistory';
 
-export type { FavoriteItem } from '@/stores/favoritesStore';
-export type { ViewHistoryItem } from '@/stores/viewHistoryStore';
+export type { FavoriteItem } from '@/hooks/useFavoritesData';
+export type { ViewHistoryItem } from '@/hooks/useViewHistory';
 
 export interface FavoritesContextType {
   favorites: FavoriteItem[];
   viewHistory: ViewHistoryItem[];
-  recommended: FavoriteItem[];
   isFavorite: (id: number | string, type: FavoriteItem['type']) => boolean;
   addFavorite: (item: Omit<FavoriteItem, 'addedAt'>) => Promise<void>;
   removeFavorite: (id: number | string, type?: FavoriteItem['type']) => Promise<void>;
   addToHistory: (item: Omit<ViewHistoryItem, 'viewedAt'>) => Promise<void>;
   clearHistory?: () => Promise<void>;
   clearFavorites?: () => Promise<void>;
-  getRecommendations: () => FavoriteItem[];
-  ensureServerData?: (kind: 'favorites' | 'history' | 'recommendations' | 'all') => Promise<void>;
+  // 'recommendations' больше не серверный стор: рекомендации на React Query
+  // (hooks/useRecommendedTravels). ensureServerData оставлен для favorites/history
+  // (ленивый догруз с сервера), пока они не мигрированы.
+  ensureServerData?: (kind: 'favorites' | 'history' | 'all') => Promise<void>;
 }
 
 // Actions/bootstrap supplied by the provider. Data slices (favorites/viewHistory/
-// recommended/isFavorite) are read directly from the Zustand stores inside
-// useFavorites() — see below.
+// isFavorite) are read directly from the Zustand stores inside useFavorites().
 export type FavoritesActionsContextType = Pick<
   FavoritesContextType,
   | 'addFavorite'
@@ -30,12 +29,10 @@ export type FavoritesActionsContextType = Pick<
   | 'addToHistory'
   | 'clearHistory'
   | 'clearFavorites'
-  | 'getRecommendations'
   | 'ensureServerData'
 >;
 
 const noopAsync = async () => {};
-const noopRecommendations = () => [] as FavoriteItem[];
 
 export const createFavoritesActionsFallbackValue = (): FavoritesActionsContextType => ({
   addFavorite: noopAsync,
@@ -43,7 +40,6 @@ export const createFavoritesActionsFallbackValue = (): FavoritesActionsContextTy
   addToHistory: noopAsync,
   clearHistory: noopAsync,
   clearFavorites: noopAsync,
-  getRecommendations: noopRecommendations,
   ensureServerData: noopAsync,
 });
 
@@ -68,18 +64,16 @@ export const useFavorites = (): FavoritesContextType => {
     throw new Error('useFavorites must be used within a FavoritesProvider');
   }
 
-  const favorites = useFavoritesStore((s) => s.favorites);
-  const viewHistory = useViewHistoryStore((s) => s.viewHistory);
-  const recommended = useRecommendationsStore((s) => s.recommended);
+  const favorites = useFavoritesData();
+  const viewHistory = useViewHistory();
 
   return useMemo<FavoritesContextType>(
     () => ({
       favorites,
       viewHistory,
-      recommended,
-      isFavorite: (id, type) => useFavoritesStore.getState().isFavorite(id, type),
+      isFavorite: (id, type) => favorites.some((f) => f.id === id && f.type === type),
       ...actions,
     }),
-    [favorites, viewHistory, recommended, actions]
+    [favorites, viewHistory, actions]
   );
 };

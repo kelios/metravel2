@@ -1,5 +1,8 @@
+import { QueryClient } from '@tanstack/react-query'
 import { installQaDebug } from '@/utils/qaDebug'
 import { resetAuthStoreForTests, useAuthStore } from '@/stores/authStore'
+import { queryKeys } from '@/api/queryKeys'
+import { setActiveQueryClient } from '@/api/activeQueryClient'
 
 (globalThis as { __DEV__?: boolean }).__DEV__ = true
 
@@ -13,12 +16,6 @@ jest.mock('@/stores/favoritesStore', () => ({
   },
 }))
 
-jest.mock('@/stores/viewHistoryStore', () => ({
-  useViewHistoryStore: {
-    getState: () => ({ viewHistory: ['travel-1', 'travel-2'] }),
-  },
-}))
-
 describe('qaDebug', () => {
   let infoSpy: jest.SpyInstance
 
@@ -26,10 +23,16 @@ describe('qaDebug', () => {
     resetAuthStoreForTests()
     delete (globalThis as { __QA__?: () => void }).__QA__
     infoSpy = jest.spyOn(console, 'info').mockImplementation(() => undefined)
+
+    // history теперь читается из RQ-кэша (#994): сидируем 2 записи для user 104.
+    const qc = new QueryClient()
+    qc.setQueryData(queryKeys.viewHistory('104'), ['travel-1', 'travel-2'])
+    setActiveQueryClient(qc)
   })
 
   afterEach(() => {
     infoSpy.mockRestore()
+    setActiveQueryClient(null)
   })
 
   it('waits for authReady before logging route state', () => {

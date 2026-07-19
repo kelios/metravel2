@@ -167,17 +167,8 @@ export default function AppProvidersDeferredRuntime({
       if (cancelled) return;
 
       try {
-        const [
-          authStore,
-          favoritesStore,
-          viewHistoryStore,
-          recommendationsStore,
-          travelStatusStore,
-        ] = await Promise.all([
+        const [authStore, travelStatusStore] = await Promise.all([
           import('@/stores/authStore'),
-          import('@/stores/favoritesStore'),
-          import('@/stores/viewHistoryStore'),
-          import('@/stores/recommendationsStore'),
           import('@/stores/travelStatusStore'),
         ]);
 
@@ -188,24 +179,13 @@ export default function AppProvidersDeferredRuntime({
         if (favoritesBootstrapKeyRef.current === bootstrapKey) return;
         favoritesBootstrapKeyRef.current = bootstrapKey;
 
-        const fav = favoritesStore.useFavoritesStore.getState();
-        const hist = viewHistoryStore.useViewHistoryStore.getState();
-        const rec = recommendationsStore.useRecommendationsStore.getState();
-        const travelStatus = travelStatusStore.useTravelStatusStore.getState();
-
-        if (authState.isAuthenticated && authState.userId) {
-          fav.resetFetchState(authState.userId);
-          hist.resetFetchState(authState.userId);
-          rec.resetFetchState(authState.userId);
-          void fav.loadServerCached(authState.userId);
-          void hist.loadServerCached(authState.userId);
-          void rec.loadServerCached(authState.userId);
-          return;
+        // favorites/recommendations/viewHistory больше не грузятся здесь: React
+        // Query + persistQueryClient (#994/#1015) держат кэш и офлайн сами.
+        // Остаётся только travelStatus (гость), пока он на Zustand.
+        if (!authState.isAuthenticated || !authState.userId) {
+          const travelStatus = travelStatusStore.useTravelStatusStore.getState();
+          void travelStatus.loadLocal(authState.userId);
         }
-
-        void fav.loadLocal(authState.userId);
-        void hist.loadLocal(authState.userId);
-        void travelStatus.loadLocal(authState.userId);
       } catch {
         favoritesBootstrapKeyRef.current = null;
       }

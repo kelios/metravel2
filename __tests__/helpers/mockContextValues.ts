@@ -54,14 +54,12 @@ export const createFavoritesValue = ({
 } = {}): FavoritesContextValue => ({
   favorites,
   viewHistory,
-  recommended: [],
   isFavorite: jest.fn(),
   addFavorite: jest.fn().mockResolvedValue(undefined),
   removeFavorite: jest.fn().mockResolvedValue(undefined),
   addToHistory: jest.fn().mockResolvedValue(undefined),
   clearHistory: jest.fn().mockResolvedValue(undefined),
   clearFavorites: jest.fn().mockResolvedValue(undefined),
-  getRecommendations: jest.fn(() => []),
   ensureServerData: jest.fn().mockResolvedValue(undefined),
   ...overrides,
 });

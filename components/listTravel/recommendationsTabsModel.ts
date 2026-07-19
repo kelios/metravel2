@@ -38,10 +38,11 @@ export function getRecommendationsTabsConfig(params: {
   ]
 }
 
-export function getRecommendationsEnsureServerDataKey(activeTab: TabType) {
+export function getRecommendationsEnsureServerDataKey(activeTab: TabType): 'favorites' | 'history' | null {
   if (activeTab === 'favorites') return 'favorites'
   if (activeTab === 'history') return 'history'
-  if (activeTab === 'recommendations') return 'recommendations'
+  // 'recommendations' больше не требует ручного догруза: hooks/useRecommendedTravels
+  // (React Query) сам стартует, когда монтируется PersonalizedRecommendations.
   return null
 }
 

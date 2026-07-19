@@ -4,8 +4,10 @@
 // компонентов (раньше для этого приходилось вставлять временный console.log + reload).
 // Также ставит globalThis.__QA__() для ручного дампа из dev-консоли.
 import { useAuthStore } from '@/stores/authStore'
-import { useFavoritesStore } from '@/stores/favoritesStore'
-import { useViewHistoryStore } from '@/stores/viewHistoryStore'
+import { getActiveQueryClient } from '@/api/activeQueryClient'
+import { queryKeys } from '@/api/queryKeys'
+import type { FavoriteItem } from '@/hooks/useFavoritesData'
+import type { ViewHistoryItem } from '@/hooks/useViewHistory'
 import { API_BASE_URL } from '@/api/apiConfig'
 
 let currentRoute = ''
@@ -23,8 +25,12 @@ export function dumpQaState(route: string, reason: 'route' | 'manual' = 'route')
         authReady: auth.authReady,
         isAuthenticated: auth.isAuthenticated,
         userId: auth.userId,
-        favorites: useFavoritesStore.getState().favorites.length,
-        history: useViewHistoryStore.getState().viewHistory.length,
+        favorites: (getActiveQueryClient()?.getQueryData<FavoriteItem[]>(
+          queryKeys.favorites(auth.userId ?? null),
+        ) ?? []).length,
+        history: (getActiveQueryClient()?.getQueryData<ViewHistoryItem[]>(
+          queryKeys.viewHistory(auth.userId ?? null),
+        ) ?? []).length,
         apiUrl: API_BASE_URL,
       }),
     )

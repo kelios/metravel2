@@ -25,7 +25,7 @@ import { formatRelativeTime } from '@/utils/relativeTime';
 import { pluralizeRu } from '@/utils/pluralize';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
 import ContributionBanner from '@/components/common/ContributionBanner';
-import { useViewHistoryStore, type ViewHistoryItem } from '@/stores/viewHistoryStore';
+import { refreshViewHistory, type ViewHistoryItem } from '@/hooks/useViewHistory';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -56,13 +56,10 @@ export default function HistoryScreen() {
 
         setRefreshing(true);
         try {
+            // Гостю обновлять нечего: список живёт в RQ-кэше + persist (#994).
             if (isAuthenticated && userId) {
-                useViewHistoryStore.getState().resetFetchState(userId);
-                await useViewHistoryStore.getState().refreshFromServer(userId);
-                return;
+                await refreshViewHistory(userId);
             }
-
-            await useViewHistoryStore.getState().loadLocal(userId ?? null);
         } finally {
             setRefreshing(false);
         }

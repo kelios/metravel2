@@ -3,10 +3,17 @@ jest.unmock('@/context/FavoritesProvider');
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
+import { QueryClient } from '@tanstack/react-query';
 import type { FavoriteItem, ViewHistoryItem } from '@/context/FavoritesContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '@/context/AuthContext';
 import { FavoritesProvider } from '@/context/FavoritesProvider';
+import { queryKeys } from '@/api/queryKeys';
+import { setActiveQueryClient } from '@/api/activeQueryClient';
+
+// viewHistory теперь читается из React Query (#994), поэтому провайдеру нужен
+// QueryClient в дереве. Мок AuthProvider ниже оборачивает детей в него.
+const mockQueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 const mockToastShow = jest.fn();
 
@@ -41,10 +48,15 @@ const mockAuthContext = {
   register: jest.fn(),
 };
 
-jest.mock('@/context/AuthContext', () => ({
-  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useAuth: () => mockAuthContext,
-}));
+jest.mock('@/context/AuthContext', () => {
+  const { QueryClientProvider } = require('@tanstack/react-query');
+  return {
+    AuthProvider: ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={mockQueryClient}>{children}</QueryClientProvider>
+    ),
+    useAuth: () => mockAuthContext,
+  };
+});
 
 const { useFavorites } = jest.requireActual('@/context/FavoritesContext');
 
@@ -62,9 +74,9 @@ const seedFavorites = async (items: FavoriteItem[], userId: string | null = null
   await AsyncStorage.setItem(key, JSON.stringify(items));
 };
 
+// viewHistory теперь живёт в RQ-кэше, а не в AsyncStorage: сидируем прямо в кэш.
 const seedHistory = async (items: ViewHistoryItem[], userId: string | null = null) => {
-  const key = userId ? `metravel_view_history_${userId}` : 'metravel_view_history';
-  await AsyncStorage.setItem(key, JSON.stringify(items));
+  mockQueryClient.setQueryData(queryKeys.viewHistory(userId), items);
 };
 
 describe('FavoritesContext', () => {
@@ -74,13 +86,11 @@ describe('FavoritesContext', () => {
     mockAuthContext.isAuthenticated = false;
     mockAuthContext.userId = null;
 
-    // Reset Zustand store state between tests
+    // Reset Zustand favorites store + RQ cache (viewHistory) between tests
     const { useFavoritesStore } = require('@/stores/favoritesStore');
-    const { useViewHistoryStore } = require('@/stores/viewHistoryStore');
-    const { useRecommendationsStore } = require('@/stores/recommendationsStore');
     useFavoritesStore.setState({ favorites: [], _inFlight: new Set(), _fetched: false, _userId: null });
-    useViewHistoryStore.setState({ viewHistory: [], _fetched: false, _userId: null });
-    useRecommendationsStore.setState({ recommended: [], _fetched: false, _userId: null });
+    mockQueryClient.clear();
+    setActiveQueryClient(mockQueryClient);
   });
 
   it('clears favorites (guest/local)', async () => {
@@ -450,47 +460,9 @@ describe('FavoritesContext', () => {
     });
   });
 
-  it('gets recommendations based on favorites', async () => {
-    const mockFavorites: FavoriteItem[] = [
-      {
-        id: '1',
-        type: 'travel',
-        title: 'Travel 1',
-        url: '/travels/1',
-        addedAt: Date.now() - 2000,
-        country: 'Belarus',
-      },
-      {
-        id: '2',
-        type: 'travel',
-        title: 'Travel 2',
-        url: '/travels/2',
-        addedAt: Date.now() - 1000,
-        country: 'Poland',
-      },
-    ];
-
-    await seedFavorites(mockFavorites);
-    jest.clearAllMocks();
-
-    let contextValue: any;
-
-    render(
-      <AuthProvider>
-        <FavoritesProvider>
-          <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
-        </FavoritesProvider>
-      </AuthProvider>
-    );
-
-    await waitFor(() => {
-      const recommendations = contextValue.getRecommendations();
-      expect(recommendations).toHaveLength(2);
-      // Should be sorted by addedAt descending (newest first)
-      expect(recommendations[0].id).toBe('2');
-      expect(recommendations[1].id).toBe('1');
-    });
-  });
+  // NB: guest «recommendations = favorites sorted by addedAt» удалено вместе с
+  // recommendationsStore (#994). Рекомендации теперь только для авторизованных
+  // (hooks/useRecommendedTravels, React Query); гостю UI показывает [].
 
   it('uses user-specific storage key when authenticated', async () => {
     mockAuthContext.isAuthenticated = true;
@@ -506,11 +478,11 @@ describe('FavoritesContext', () => {
 
     await waitFor(() => {
       const getItemCalls = (AsyncStorage.getItem as jest.Mock).mock.calls.map((c: any[]) => c[0]);
+      // viewHistory и recommendations больше не читают серверный AsyncStorage-мирор:
+      // мигрированы на React Query + persistQueryClient (#994). Остаётся favorites.
       expect(getItemCalls).toEqual(
         expect.arrayContaining([
           'metravel_favorites_server_user123',
-          'metravel_view_history_server_user123',
-          'metravel_recommendations_server_user123',
         ])
       );
     });

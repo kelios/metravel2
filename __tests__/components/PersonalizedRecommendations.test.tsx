@@ -6,7 +6,6 @@ import type { FavoriteItem, ViewHistoryItem } from '@/context/FavoritesContext'
 const mockFavorites: FavoriteItem[] = []
 const mockViewHistory: ViewHistoryItem[] = []
 const mockRecommended: FavoriteItem[] = []
-const mockGetRecommendations = jest.fn<FavoriteItem[], []>(() => [])
 let mockIsAuthenticated = false
 const mockPush = jest.fn()
 
@@ -14,9 +13,12 @@ jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => ({
     favorites: mockFavorites,
     viewHistory: mockViewHistory,
-    recommended: mockRecommended,
-    getRecommendations: mockGetRecommendations,
   }),
+}))
+
+// recommended теперь приходит из React Query hook, а не из useFavorites (#994).
+jest.mock('@/hooks/useRecommendedTravels', () => ({
+  useRecommendedTravels: () => mockRecommended,
 }))
 
 jest.mock('@/context/AuthContext', () => ({
@@ -52,7 +54,6 @@ describe('PersonalizedRecommendations', () => {
     mockFavorites.length = 0
     mockViewHistory.length = 0
     mockRecommended.length = 0
-    mockGetRecommendations.mockReturnValue([])
     mockIsAuthenticated = false
     mockPush.mockClear()
   })
@@ -107,7 +108,6 @@ describe('PersonalizedRecommendations', () => {
       addedAt: Date.now(),
     }
     mockFavorites.push(testFavorite)
-    mockGetRecommendations.mockReturnValue([testFavorite])
     
     const { findByText, findByLabelText, findByTestId } = render(<PersonalizedRecommendations />)
 
@@ -145,7 +145,6 @@ describe('PersonalizedRecommendations', () => {
       addedAt: Date.now(),
     }
     mockFavorites.push(testFavorite)
-    mockGetRecommendations.mockReturnValue([testFavorite])
     
     const { findByLabelText } = render(<PersonalizedRecommendations />)
     const item = await findByLabelText(/Test Travel/)

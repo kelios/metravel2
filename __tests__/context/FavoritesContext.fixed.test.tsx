@@ -5,11 +5,16 @@ import React from 'react'
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native'
 import { View, Text, Pressable } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { QueryClient } from '@tanstack/react-query'
 import { useFavorites } from '@/context/FavoritesContext'
 import { FavoritesProvider } from '@/context/FavoritesProvider'
 import { AuthProvider } from '@/context/AuthContext'
 
 const mockUseAuth = jest.fn()
+
+// useFavorites → useViewHistory (useQuery) требует QueryClient в дереве (#994);
+// мок AuthProvider оборачивает детей в него.
+const mockQueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
 jest.mock('@/api/travelsFavorites', () => ({
   markTravelAsFavorite: jest.fn(async () => null),
@@ -45,10 +50,15 @@ jest.mock('react-native', () => {
   }
 })
 
-jest.mock('@/context/AuthContext', () => ({
-  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
-  useAuth: () => mockUseAuth(),
-}))
+jest.mock('@/context/AuthContext', () => {
+  const { QueryClientProvider } = require('@tanstack/react-query')
+  return {
+    AuthProvider: ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={mockQueryClient}>{children}</QueryClientProvider>
+    ),
+    useAuth: () => mockUseAuth(),
+  }
+})
 
 const TestComponent = () => {
   const { addFavorite, removeFavorite, isFavorite, favorites } = useFavorites()

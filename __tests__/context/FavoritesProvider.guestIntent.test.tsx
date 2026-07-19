@@ -58,11 +58,7 @@ describe('FavoritesProvider guest intent restore', () => {
     mockAuthContext.userId = null;
 
     const { useFavoritesStore } = require('@/stores/favoritesStore');
-    const { useViewHistoryStore } = require('@/stores/viewHistoryStore');
-    const { useRecommendationsStore } = require('@/stores/recommendationsStore');
     useFavoritesStore.setState({ favorites: [], _inFlight: new Set(), _fetched: false, _userId: null });
-    useViewHistoryStore.setState({ viewHistory: [], _fetched: false, _userId: null });
-    useRecommendationsStore.setState({ recommended: [], _fetched: false, _userId: null });
   });
 
   it('completes the pending guest favorite after auth and fires favorite_add once', async () => {

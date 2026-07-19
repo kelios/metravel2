@@ -1,14 +1,17 @@
-// Regression: useFavorites() must reflect the live Zustand stores, not a stale
-// provider context value. On native cold start the store was populated (4/20)
-// while the provider's memoized context value reported empty arrays, so the
-// mobile Favorites/History shelves never rendered. The hook now reads slices
-// straight from the stores (mirrors useAuth → useAuthStore).
+// Regression: useFavorites() must reflect live server-state, not a stale memoized
+// provider value. On native cold start favorites were populated (4/20) while the
+// provider reported empty arrays, so the mobile shelves never rendered. The hook
+// reads favorites straight from the Zustand store and viewHistory from the React
+// Query cache (#994) — both update the context live after mount.
 jest.unmock('@/context/FavoritesContext');
 jest.unmock('@/context/FavoritesProvider');
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FavoritesProvider } from '@/context/FavoritesProvider';
+import { queryKeys } from '@/api/queryKeys';
+import { setActiveQueryClient } from '@/api/activeQueryClient';
 
 jest.mock('@/api/user', () => ({
   fetchUserFavoriteTravels: jest.fn(async () => []),
@@ -39,6 +42,8 @@ const Probe: React.FC<{ onContext: (ctx: any) => void }> = ({ onContext }) => {
   return null;
 };
 
+let queryClient: QueryClient;
+
 describe('useFavorites store sync (native cold-start regression)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -46,30 +51,32 @@ describe('useFavorites store sync (native cold-start regression)', () => {
     mockAuthContext.userId = 'user-1';
 
     const { useFavoritesStore } = require('@/stores/favoritesStore');
-    const { useViewHistoryStore } = require('@/stores/viewHistoryStore');
-    const { useRecommendationsStore } = require('@/stores/recommendationsStore');
     useFavoritesStore.setState({ favorites: [], _inFlight: new Set(), _fetched: false, _userId: null });
-    useViewHistoryStore.setState({ viewHistory: [], _fetched: false, _userId: null });
-    useRecommendationsStore.setState({ recommended: [], _fetched: false, _userId: null });
+
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    setActiveQueryClient(queryClient);
   });
 
-  it('reflects favorites/viewHistory populated in the store after mount', async () => {
+  afterEach(() => setActiveQueryClient(null));
+
+  it('reflects favorites (store) and viewHistory (RQ cache) populated after mount', async () => {
     const { useFavoritesStore } = require('@/stores/favoritesStore');
-    const { useViewHistoryStore } = require('@/stores/viewHistoryStore');
 
     let ctx: any;
     render(
-      <FavoritesProvider>
-        <Probe onContext={(c) => { ctx = c; }} />
-      </FavoritesProvider>
+      <QueryClientProvider client={queryClient}>
+        <FavoritesProvider>
+          <Probe onContext={(c) => { ctx = c; }} />
+        </FavoritesProvider>
+      </QueryClientProvider>
     );
 
     await waitFor(() => expect(ctx).toBeDefined());
     expect(ctx.favorites).toHaveLength(0);
     expect(ctx.viewHistory).toHaveLength(0);
 
-    // Simulate the store being filled by refreshFromServer/loadServerCached
-    // AFTER the provider already rendered (the real cold-start sequence).
+    // Fill both sources AFTER the provider already rendered (the real cold-start
+    // sequence): favorites via the store, viewHistory via the RQ cache.
     await act(async () => {
       useFavoritesStore.setState({
         favorites: [
@@ -79,15 +86,16 @@ describe('useFavorites store sync (native cold-start regression)', () => {
           { id: 4, type: 'travel', title: 'Fav 4', url: '/travels/4', addedAt: 4 },
         ],
       });
-      useViewHistoryStore.setState({
-        viewHistory: Array.from({ length: 20 }, (_, i) => ({
+      queryClient.setQueryData(
+        queryKeys.viewHistory('user-1'),
+        Array.from({ length: 20 }, (_, i) => ({
           id: 100 + i,
           type: 'travel' as const,
           title: `Hist ${i}`,
           url: `/travels/${100 + i}`,
           viewedAt: i,
         })),
-      });
+      );
     });
 
     await waitFor(() => {
@@ -95,7 +103,6 @@ describe('useFavorites store sync (native cold-start regression)', () => {
       expect(ctx.viewHistory).toHaveLength(20);
     });
 
-    // isFavorite resolves against the live store too.
     expect(ctx.isFavorite(1, 'travel')).toBe(true);
     expect(ctx.isFavorite(999, 'travel')).toBe(false);
   });
