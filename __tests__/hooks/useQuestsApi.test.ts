@@ -102,7 +102,18 @@ const API_PROGRESS = {
 
 describe('useQuestsApi hooks', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    [
+      mockFetchQuestsList,
+      mockFetchQuestByQuestId,
+      mockFetchQuestCities,
+      mockFetchOrCreateProgress,
+      mockUpdateProgress,
+      mockDeleteProgress,
+    ].forEach((mock) => mock.mockReset());
+
+    // useQuestBundle may request the list both for a missing-cover fallback and
+    // for non-blocking tag enrichment. Keep every unconfigured call thenable.
+    mockFetchQuestsList.mockResolvedValue([]);
   });
 
   // ===================== useQuestsList =====================

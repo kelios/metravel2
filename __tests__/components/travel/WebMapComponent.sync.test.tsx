@@ -38,6 +38,11 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
   };
 });
 
+// Popup behavior has dedicated coverage. Keeping it out of this marker-sync
+// suite avoids rendering React Native popup primitives through a DOM-only
+// react-leaflet stub, which produces irrelevant unknown-prop warnings.
+jest.mock('@/components/travel/WebMapMarkerPopup', () => () => null);
+
 let lastMapEvents: any = null;
 
 jest.mock('react-leaflet', () => {

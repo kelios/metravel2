@@ -26,10 +26,6 @@ jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ width: 1200, isPhone: false, isLargePhone: false }),
 }));
 
-jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => ({ width: 1200, isPhone: false, isLargePhone: false }),
-}));
-
 jest.mock('@expo/vector-icons', () => ({
   FontAwesome5: ({ name, ...props }: any) => {
     const React = require('react');
@@ -105,7 +101,10 @@ describe('AboutScreen', () => {
     fireEvent.press(instaButton);
 
     await waitFor(() => {
-      expect(mockOpenExternalUrl).toHaveBeenCalledWith('https://instagram.com/metravelby', expect.any(Object));
+      expect(mockOpenExternalUrl).toHaveBeenCalledWith(
+        'https://www.instagram.com/metravelby/',
+        expect.any(Object),
+      );
     });
   });
 });
