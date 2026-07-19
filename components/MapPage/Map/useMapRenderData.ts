@@ -34,6 +34,14 @@ type UseMapRenderDataArgs = {
   leafletRuntimeReady: boolean;
   mapClusterFilters?: MapClustersFilters;
   categoryFilterUnresolved: boolean;
+  /**
+   * Freeze the server-cluster refetch (keeps the last data, no new query) while a
+   * marker popup is open. A marker tap flies/zooms the map → viewport bbox/zoom
+   * change → cluster refetch → marker REMOUNT → the just-opened popup is destroyed
+   * ("opens then instantly closes"). Freezing keeps the tapped marker mounted; the
+   * clusters catch up to the settled viewport once the popup closes.
+   */
+  freezeServerClusters?: boolean;
 };
 
 export function useMapRenderData({
@@ -54,6 +62,7 @@ export function useMapRenderData({
   leafletRuntimeReady,
   mapClusterFilters,
   categoryFilterUnresolved,
+  freezeServerClusters = false,
 }: UseMapRenderDataArgs) {
   const coordinatesLatLng = useMemo(
     () => ({ lat: safeCoordinates.latitude, lng: safeCoordinates.longitude }),
@@ -130,7 +139,12 @@ export function useMapRenderData({
     bbox: viewportSnapshot.bbox,
     zoom: viewportSnapshot.zoom,
     filters: mapClusterFilters,
-    enabled: mode === 'radius' && !pointsOnly && canRenderMap,
+    // While a popup is open we freeze the query (enabled=false). react-query keeps
+    // the last data (placeholderData), so `serverClusters` stays referentially
+    // stable → ClusterLayer does not remount markers → the open popup survives the
+    // marker-tap fly/zoom. On popupclose the query re-enables and catches up to the
+    // settled viewport.
+    enabled: mode === 'radius' && !pointsOnly && canRenderMap && !freezeServerClusters,
   });
   const serverClusterRenderData = useMemo(
     () => buildServerClusterRenderData(serverClusterQuery.data),

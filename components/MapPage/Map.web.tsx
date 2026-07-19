@@ -161,6 +161,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const [errors, setErrors] = useState<any>({ routing: false })
   const [disableFitBounds] = useState(false)
   const [mapInstance, setMapInstance] = useState<any>(null)
+  // True while a Leaflet marker popup is open. Freezes the server-cluster refetch
+  // (useMapClusters) for the duration: a marker tap flies/zooms the map, which
+  // would otherwise change the viewport bbox/zoom → refetch clusters → REMOUNT the
+  // markers → destroy the just-opened popup ("opens then instantly closes"). Keeping
+  // the cluster data stable while a popup is open keeps its marker mounted. Clusters
+  // catch up to the settled viewport on popupclose.
+  const [isPopupOpen, setIsPopupOpen] = useState(false)
 
   // Current Leaflet zoom kept in a ref (not state): it is only read as a fallback
   // inside imperative marker/cluster tap handlers when `map.getZoom()` is
@@ -279,6 +286,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     leafletRuntimeReady: Boolean(L && rl),
     mapClusterFilters,
     categoryFilterUnresolved,
+    freezeServerClusters: isPopupOpen,
   })
   const travelMarkerOpacity = mode === 'route' ? 0.7 : 1
 
@@ -552,6 +560,31 @@ const MapPageComponent: React.FC<Props> = (props) => {
       } catch {
         ignoreOptionalMapRuntimeError()
       }
+    }
+  }, [mapInstance])
+
+  // Track Leaflet popup open/close to freeze the server-cluster refetch while a
+  // popup is open (see `isPopupOpen`). Guarded on IS_WEB; native uses the bottom
+  // card (React state), which no marker remount can destroy, so this is web-only.
+  useEffect(() => {
+    if (!IS_WEB) return
+    const map = mapInstance
+    if (!map || typeof map.on !== 'function') return
+
+    const onPopupOpen = () => setIsPopupOpen(true)
+    const onPopupClose = () => setIsPopupOpen(false)
+
+    map.on('popupopen', onPopupOpen)
+    map.on('popupclose', onPopupClose)
+    return () => {
+      try {
+        map.off?.('popupopen', onPopupOpen)
+        map.off?.('popupclose', onPopupClose)
+      } catch {
+        ignoreOptionalMapRuntimeError()
+      }
+      // Never leave the freeze latched after the map instance is torn down.
+      setIsPopupOpen(false)
     }
   }, [mapInstance])
 
