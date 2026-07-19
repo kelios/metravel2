@@ -1,5 +1,6 @@
 import { LONG_TIMEOUT } from '@/api/apiConfig';
 import { apiClient } from '@/api/client';
+import { unwrapList as unwrapEnvelopeList } from '@/api/clientResponse';
 import { mapRank, type RankSummaryDto, type UserRank } from '@/api/achievements';
 import { normalizeAvatarUrl } from '@/utils/mediaUrl';
 
@@ -262,26 +263,19 @@ type MaybePaginated<T> =
     | undefined;
 
 const unwrapList = <T>(payload: MaybePaginated<T>): T[] => {
-    if (!payload) return [];
-    if (Array.isArray(payload)) return payload;
-
-    const rec = payload as Record<string, unknown>;
-    const data = rec.data;
-    if (Array.isArray(data)) return data as T[];
-    if (data && typeof data === 'object') {
-        const dataRec = data as Record<string, unknown>;
-        if (Array.isArray(dataRec.results)) return dataRec.results as T[];
-        if (Array.isArray(dataRec.data)) return dataRec.data as T[];
+    // user-эндпоинты исторически иногда вкладывают список в {data:{results|data}};
+    // разворачиваем этот вложенный случай, всё остальное (array | {items|results|data})
+    // отдаём общему шеллу api/clientResponse. (FE-ARCH D2)
+    const rec =
+        payload && typeof payload === 'object' && !Array.isArray(payload)
+            ? (payload as Record<string, unknown>)
+            : null;
+    const data = rec?.data;
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const nested = unwrapEnvelopeList<T>(data);
+        if (nested.length) return nested;
     }
-
-    if (Array.isArray(rec.results)) return rec.results as T[];
-
-    if (__DEV__) {
-        console.warn('[unwrapList] non-empty payload did not match any known list shape', {
-            keys: Object.keys(rec),
-        });
-    }
-    return [];
+    return unwrapEnvelopeList<T>(payload);
 };
 
 const buildQueryString = (query: Record<string, string | number | undefined>): string => {

@@ -1,5 +1,6 @@
 import { apiClient } from '@/api/client';
 import { ApiError } from '@/api/clientErrors';
+import { unwrapList } from '@/api/clientResponse';
 import { translate as i18nT } from '@/i18n';
 
 export type StravaConnectionStatus =
@@ -232,13 +233,7 @@ export const normalizeStravaActivities = (
   query: StravaActivitiesQuery = {},
 ): StravaActivitiesResponse => {
   const source = isObject(payload) ? payload : {};
-  const rows = Array.isArray(source.results)
-    ? source.results
-    : Array.isArray(source.data)
-      ? source.data
-      : Array.isArray(payload)
-        ? payload
-        : [];
+  const rows = unwrapList(payload);
   const data = rows
     .map((item) => normalizeActivity(item))
     .filter((item): item is StravaActivitySummary => Boolean(item));

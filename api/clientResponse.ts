@@ -7,6 +7,51 @@ import { translate as i18nT } from '@/i18n';
 import { getApiErrorMessage, getErrorTextField } from '@/utils/errorHelpers';
 import { devError } from '@/utils/logger';
 
+/**
+ * Единый разбор envelope-ответов бэка. Формы видели разные:
+ * bare array | `{results}` (DRF) | `{data}` | `{items}`. Раньше это переизобретали
+ * независимо в каждом доменном api, и расхождения (`.items` учитывался в одном
+ * файле, но не в другом) при смене формы бэком приводили к «пустым спискам».
+ * Держим ОДНУ точку эволюции контракта пагинации здесь. (FE-ARCH D2)
+ *
+ * NB: намеренно НЕ покрывает `api/travelQueryShared.unwrapTravelsList`
+ * (hydration-sensitive travel, отдельный per-shape приоритет count/total),
+ * `api/map.normalizeTravelsForMapPayload` (keyed `TravelsForMap` + non-envelope
+ * fallback опирается на null-vs-array).
+ */
+const asEnvelopeRecord = (value: unknown): Record<string, unknown> | null =>
+    value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : null;
+
+const coerceCount = (value: unknown, fallback: number): number => {
+    const n = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(n) ? n : fallback;
+};
+
+/** Достаёт массив элементов из bare-array или конверта `{items|results|data}`. */
+export const unwrapList = <T = unknown>(payload: unknown): T[] => {
+    if (Array.isArray(payload)) return payload as T[];
+    const rec = asEnvelopeRecord(payload);
+    if (!rec) return [];
+    if (Array.isArray(rec.items)) return rec.items as T[];
+    if (Array.isArray(rec.results)) return rec.results as T[];
+    if (Array.isArray(rec.data)) return rec.data as T[];
+    return [];
+};
+
+/** Как `unwrapList`, но с total из `total`→`count`→длины списка. */
+export const unwrapPaginated = <T = unknown>(
+    payload: unknown,
+): { items: T[]; total: number } => {
+    const items = unwrapList<T>(payload);
+    const rec = asEnvelopeRecord(payload);
+    const total = rec
+        ? coerceCount(rec.total, coerceCount(rec.count, items.length))
+        : items.length;
+    return { items, total };
+};
+
 export const parseErrorBody = (text: string): unknown => {
     try {
         return JSON.parse(text);

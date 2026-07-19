@@ -3,6 +3,7 @@ import { API_BASE_URL, DEFAULT_TIMEOUT, TOKEN_KEY } from '@/api/apiConfig';
 import { getSecureItem } from '@/utils/secureStorage';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { safeJsonParse } from '@/utils/safeJsonParse';
+import { unwrapList } from '@/api/clientResponse';
 import { getApiRequestCredentials, shouldUseStoredAuthToken } from '@/utils/authPlatform';
 import { normalizeProfileName, resolveProfileFullName } from '@/utils/profileName';
 import { translate as i18nT } from '@/i18n';
@@ -237,14 +238,8 @@ type RawAvailableUsers =
     | null
     | undefined;
 
-const normalizeAvailableUsers = (raw: RawAvailableUsers): MessagingUser[] => {
-    if (Array.isArray(raw)) return raw;
-    if (raw && typeof raw === 'object') {
-        if (Array.isArray(raw.results)) return raw.results;
-        if (Array.isArray(raw.data)) return raw.data;
-    }
-    return [];
-};
+const normalizeAvailableUsers = (raw: RawAvailableUsers): MessagingUser[] =>
+    unwrapList<MessagingUser>(raw);
 
 export const fetchAvailableUsers = async (): Promise<MessagingUser[]> => {
     const raw = await messagingFetch<RawAvailableUsers>('/message-threads/available-users/');

@@ -1,6 +1,7 @@
 // src/api/quests.ts
 // API модуль для работы с квестами через бэкенд
 import { apiClient, ApiError } from '@/api/client';
+import { unwrapList } from '@/api/clientResponse';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { retry } from '@/utils/retry';
 import {
@@ -362,7 +363,7 @@ async function fetchAllPages<T>(path: string, maxPages = 20): Promise<T[]> {
             out.push(...res);
             break;
         }
-        out.push(...(res?.data ?? res?.results ?? []));
+        out.push(...unwrapList<T>(res));
         const next = res?.next_page_url ?? res?.next ?? null;
         const match = typeof next === 'string' ? next.match(/[?&]page=(\d+)/) : null;
         if (!match) break;

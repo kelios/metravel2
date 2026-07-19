@@ -1,6 +1,7 @@
 import { Article } from '@/types/types';
 import { devError } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
+import { unwrapList } from '@/api/clientResponse';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { Platform } from 'react-native';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
@@ -187,13 +188,7 @@ const fetchArticleFallbackCandidates = async (
   if (!res.ok) return [];
 
   const payload = await safeJsonParse<unknown>(res, []);
-  if (Array.isArray(payload)) return payload as Article[];
-
-  const source = asRecord(payload);
-  if (Array.isArray(source.data)) return source.data as Article[];
-  if (Array.isArray(source.results)) return source.results as Article[];
-  if (Array.isArray(source.items)) return source.items as Article[];
-  return [];
+  return unwrapList<Article>(payload);
 };
 
 const findArticleBySlugFallback = async (

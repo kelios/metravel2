@@ -11,6 +11,7 @@
 // Production contract verified by board #919; mock fallback is development-only.
 
 import { apiClient, ApiError } from '@/api/client';
+import { unwrapList } from '@/api/clientResponse';
 import { resolveDevMockFlag } from '@/utils/devMockFlags';
 import { devWarn } from '@/utils/logger';
 import { translate as i18nT } from '@/i18n';
@@ -204,7 +205,7 @@ interface TripNotificationDto {
 // ── Хелперы маппинга ────────────────────────────────────────────────────────
 
 const unwrap = <T>(res: Paginated<T> | T[] | null | undefined): T[] =>
-  Array.isArray(res) ? res : (res?.results ?? []);
+  unwrapList<T>(res);
 
 const toNum = (v: number | string | null | undefined): number => {
   const n = typeof v === 'string' ? Number(v) : v;
