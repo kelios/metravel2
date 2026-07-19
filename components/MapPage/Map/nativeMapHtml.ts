@@ -2,8 +2,12 @@ import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import { getActiveOverlayLayers, getThemedBaseAttribution, getThemedBaseMaxZoom } from '@/config/mapWebLayers';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { getActiveLocaleDefinition, translate as i18nT } from '@/i18n';
-import { LEAFLET_CSS, LEAFLET_JS } from '@/utils/leafletInlineAsset';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
+import {
+  buildInvalidateSchedulerScript,
+  buildLeafletWebViewHtml,
+  ESCAPE_HTML_FN_SCRIPT,
+} from '@/components/map-core/leafletWebViewHtml';
 import { buildBirdMarkerHtml } from './mapMarkerStyles';
 
 const DEFAULT_LAT = 53.8828449;
@@ -37,19 +41,9 @@ export const buildNativeMapHtml = ({
 }: {
   themeColors: ThemedColors;
   markerShadowColor: string;
-}) => `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>${LEAFLET_CSS}</style>
-      <script>${LEAFLET_JS}</script>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; }
-        #map { width: 100%; height: 100%; }
-        .leaflet-popup-content-wrapper { background-color: ${themeColors.surface}; border-radius: 8px; padding: 0; }
+}) =>
+  buildLeafletWebViewHtml({
+    headStyles: `        .leaflet-popup-content-wrapper { background-color: ${themeColors.surface}; border-radius: 8px; padding: 0; }
         .leaflet-popup-content { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; }
         .popup-text { padding: 12px; font-size: 13px; line-height: 1.45; }
         .popup-title {
@@ -74,13 +68,8 @@ export const buildNativeMapHtml = ({
           font-weight: 700;
           font-size: 14px;
           line-height: 1;
-        }
-      </style>
-    </head>
-    <body>
-      <div id="map"></div>
-      <script>
-        const MAP_LANGUAGE = ${serializeForInlineScript(getActiveLocaleDefinition().geocoderLanguage)};
+        }`,
+    bodyScript: `        const MAP_LANGUAGE = ${serializeForInlineScript(getActiveLocaleDefinition().geocoderLanguage)};
         // zoomControl: false — встроенные кнопки +/− Leaflet (верхний левый угол)
         // перекрывали номерной/стартовый маркер маршрута. Зум доступен через
         // плавающие нативные контролы (__metravelMapZoomIn/Out).
@@ -254,29 +243,11 @@ export const buildNativeMapHtml = ({
           keepBuffer: 1
         }).addTo(map);
 
-        function __metravelInvalidateMapSize(stage) {
-          try {
-            map.invalidateSize({ animate: false, pan: false });
-          } catch (e) {
-            try { map.invalidateSize(); } catch (err) {}
-          }
-        }
-
-        window.__metravelScheduleInvalidate = function(stage) {
-          try {
-            __metravelInvalidateMapSize(stage);
-            [80, 240, 600].forEach(function(delay) {
-              setTimeout(function() { __metravelInvalidateMapSize(stage); }, delay);
-            });
-          } catch (e) {}
-        };
-
-        window.__metravelScheduleInvalidate('init');
-        window.addEventListener('resize', function() { window.__metravelScheduleInvalidate('resize'); });
-        window.addEventListener('orientationchange', function() { window.__metravelScheduleInvalidate('orientationchange'); });
-        document.addEventListener('visibilitychange', function() {
-          if (!document.hidden) window.__metravelScheduleInvalidate('visibilitychange');
-        });
+${buildInvalidateSchedulerScript({
+  schedulerName: '__metravelScheduleInvalidate',
+  helperName: '__metravelInvalidateMapSize',
+  mode: 'window-prop',
+})}
 
         const markersLayer = L.layerGroup().addTo(map);
         const clustersLayer = L.layerGroup().addTo(map);
@@ -357,14 +328,7 @@ export const buildNativeMapHtml = ({
 
         // Экранируем значения точек перед вставкой в HTML popup: поля приходят с бэка
         // и могут содержать <, >, ", ' и & — без эскейпа это XSS в WebView (#113).
-        function escapeHtml(value) {
-          return String(value == null ? '' : value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-        }
+${ESCAPE_HTML_FN_SCRIPT}
 
         window.__metravelRenderPoints = function(payload) {
           try {
@@ -792,8 +756,5 @@ export const buildNativeMapHtml = ({
         if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'READY' }));
         }
-        setTimeout(function() { __metravelPostViewport('MAP_VIEWPORT'); }, 0);
-      </script>
-    </body>
-    </html>
-  `;
+        setTimeout(function() { __metravelPostViewport('MAP_VIEWPORT'); }, 0);`,
+  });

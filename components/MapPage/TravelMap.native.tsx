@@ -9,7 +9,7 @@ import { DESIGN_COLORS } from '@/constants/designSystem'
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { getSiteBaseUrl } from '@/utils/seo'
-import { LEAFLET_JS, LEAFLET_CSS } from '@/utils/leafletInlineAsset'
+import { buildTravelMapNativeHtml } from './Map/travelMapNativeHtml'
 import { normalizePoint } from '@/components/map-core/types'
 import MapPlaceBottomCard from '@/components/MapPage/MapPlaceBottomCard'
 import ToastHost from '@/components/ui/ToastHost'
@@ -21,7 +21,6 @@ import {
   isValidLatLng,
   parseCoordString,
 } from './Map/travelMapGeometry'
-import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers'
 
 interface TravelMapProps {
   travelData: any[]
@@ -148,180 +147,28 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const loaderOverlay = useMemo(() => withAlpha(colors.surface, 0.8), [colors.surface])
   const routeColor = DESIGN_COLORS.routeLine
 
-  const htmlContent = useMemo(() => {
-    const points = JSON.stringify(safeTravelData)
-    const routes = JSON.stringify(normalizedRouteLines)
-    const highlightCoord = highlightedPoint?.coord ? JSON.stringify(highlightedPoint.coord) : 'null'
-
-    return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>${LEAFLET_CSS}</style>
-      <script>${LEAFLET_JS}</script>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; }
-        #map { width: 100%; height: 100%; }
-        .leaflet-popup-content-wrapper { background-color: ${colors.surface}; border-radius: 8px; padding: 0; }
-        .leaflet-popup-content { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; }
-        .metravel-marker { background: transparent; border: 0; }
-      </style>
-    </head>
-    <body>
-      <div id="map"></div>
-      <script>
-        const map = L.map('map', { zoomControl: true }).setView([${center[0]}, ${center[1]}], ${initialZoom});
-        L.tileLayer('${getOsmNativeTileUrl()}', {
-          attribution: '© OpenStreetMap',
-          maxZoom: ${OSM_PROXY_MAX_ZOOM}
-        }).addTo(map);
-
-        const points = ${points};
-        const routes = ${routes};
-        const highlightCoord = ${highlightCoord};
-        const initialZoom = ${initialZoom};
-        const bounds = L.latLngBounds();
-        let boundsPointCount = 0;
-
-        function sendOpenUrl(rawUrl) {
-          try {
-            if (!rawUrl) return;
-            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'OPEN_URL', url: rawUrl }));
-            }
-          } catch {}
-        }
-        function sendPointSelect(coord) {
-          try {
-            if (!coord) return;
-            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'POINT_SELECT', coord: coord }));
-            }
-          } catch {}
-        }
-        function sendClearSelectedPoint() {
-          try {
-            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'CLEAR_SELECTED_POINT' }));
-            }
-          } catch {}
-        }
-
-        map.on('click', function() {
-          sendClearSelectedPoint();
-        });
-
-        routes.forEach(function(route) {
-          if (!route || !Array.isArray(route.coords) || route.coords.length < 2) return;
-          const latlngs = route.coords.map(function(c) { return [c[0], c[1]]; });
-          L.polyline(latlngs, { color: route.color || '${routeColor}', weight: 4, opacity: 0.85 }).addTo(map);
-          latlngs.forEach(function(ll) { bounds.extend(ll); boundsPointCount++; });
-        });
-
-        // #843 — shared brand «bird» divIcon (same source as web/native /map). Inline
-        // HTML renders reliably in Android WebView (SVG data-URI markers can render
-        // invisible). Size/anchor match useLeafletIcons so the bird tip sits on the coord.
-        const markerIcon = L.divIcon({
-          className: 'metravel-marker',
-          html: ${JSON.stringify(BIRD_MARKER_HTML)},
-          iconSize: [48, 58],
-          iconAnchor: [24, 54],
-          popupAnchor: [0, -46]
-        });
-
-        let highlightedMarker = null;
-
-        points.forEach(function(point) {
-          if (!point.coord) return;
-          const parts = point.coord.split(',').map(function(s) { return Number(String(s).trim()); });
-          const lat = parts[0];
-          const lng = parts[1];
-          if (!isFinite(lat) || !isFinite(lng)) return;
-
-          const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(map);
-          marker.on('click', function(e) {
-            try {
-              if (e && e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
-              map.setView([lat, lng], Math.max(map.getZoom(), 14), { animate: true });
-              sendPointSelect(point.coord);
-            } catch {}
-          });
-
-          if (highlightCoord && point.coord === highlightCoord) {
-            highlightedMarker = marker;
-            marker.setZIndexOffset(1000);
-          }
-          bounds.extend([lat, lng]);
-          boundsPointCount++;
-        });
-
-        // Подгоняем карту под все точки/линии маршрута. invalidateSize ПЕРЕД fitBounds —
-        // иначе на первом кадре/при раскрытии секции контейнер ещё нулевого размера и
-        // zoom считается неверно (часть маркеров уходит за край экрана).
-        function fitMap(animate) {
-          try {
-            map.invalidateSize(false);
-          } catch (e) {}
-          if (highlightedMarker) {
-            try {
-              map.setView(highlightedMarker.getLatLng(), 14, { animate: !!animate });
-              return;
-            } catch (e) {}
-          }
-          if (boundsPointCount === 1) {
-            // Одиночная точка: fitBounds дал бы нулевую рамку — центрируем с разумным зумом.
-            try {
-              map.setView(bounds.getCenter(), initialZoom, { animate: !!animate });
-              return;
-            } catch (e) {}
-          }
-          if (bounds.isValid()) {
-            try {
-              map.fitBounds(bounds.pad(0.15), { padding: [40, 40], maxZoom: 15, animate: !!animate });
-            } catch (e) {}
-          }
-        }
-
-        // whenReady гарантирует, что Leaflet знает размер контейнера. rAF + повтор через 250ms —
-        // подстраховка для медленного Android WebView, где первый кадр приходит с размером 0.
-        map.whenReady(function() {
-          if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(function() { fitMap(false); });
-          } else {
-            fitMap(false);
-          }
-          setTimeout(function() { fitMap(false); }, 250);
-        });
-
-        // Повторный fit по запросу из RN (раскрытие ToggleableMap / resize контейнера).
-        function handleResizeMessage(event) {
-          try {
-            var data = event && event.data;
-            if (typeof data !== 'string') return;
-            var parsed = JSON.parse(data);
-            if (parsed && parsed.type === 'RESIZE') {
-              fitMap(true);
-            }
-          } catch (e) {}
-        }
-        document.addEventListener('message', handleResizeMessage);
-        window.addEventListener('message', handleResizeMessage);
-      </script>
-    </body>
-    </html>
-    `
-  }, [
-    safeTravelData,
-    normalizedRouteLines,
-    highlightedPoint,
-    center,
-    initialZoom,
-    colors,
-    routeColor,
-  ])
+  const htmlContent = useMemo(
+    () =>
+      buildTravelMapNativeHtml({
+        points: safeTravelData,
+        routes: normalizedRouteLines,
+        highlightCoord: highlightedPoint?.coord ?? null,
+        center,
+        initialZoom,
+        surfaceColor: colors.surface,
+        routeColor,
+        birdMarkerHtml: BIRD_MARKER_HTML,
+      }),
+    [
+      safeTravelData,
+      normalizedRouteLines,
+      highlightedPoint,
+      center,
+      initialZoom,
+      colors,
+      routeColor,
+    ],
+  )
 
   const containerStyle = useMemo(
     () => ({ height: mapHeight, borderRadius: mapBorderRadius }),

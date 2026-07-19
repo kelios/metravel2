@@ -26,6 +26,18 @@ export {
 // C2.2: Shared popup CSS (Leaflet popup chrome)
 export { getPopupCss } from './mapPopupStyles';
 
+// #990: Unified native WebView Leaflet HTML skeleton + invalidate scheduler
+export {
+  buildLeafletWebViewHtml,
+  buildInvalidateSchedulerScript,
+  LEAFLET_WEBVIEW_RESET_CSS,
+  ESCAPE_HTML_FN_SCRIPT,
+} from './leafletWebViewHtml';
+export type {
+  LeafletWebViewHtmlOptions,
+  InvalidateSchedulerOptions,
+} from './leafletWebViewHtml';
+
 // C2.3: Shared Leaflet lifecycle
 export { useMapLifecycle, hasMapPane } from './useMapLifecycle';
 export type { UseMapLifecycleOptions, UseMapLifecycleReturn } from './useMapLifecycle';

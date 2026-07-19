@@ -2,8 +2,11 @@ import { DESIGN_COLORS } from '@/constants/designSystem';
 import { getOsmNativeTileUrl, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n';
-import { LEAFLET_JS, LEAFLET_CSS } from '@/utils/leafletInlineAsset';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
+import {
+  buildInvalidateSchedulerScript,
+  buildLeafletWebViewHtml,
+} from '@/components/map-core/leafletWebViewHtml';
 import { QUEST_MAP_PNG_RENDERER_SCRIPT } from './questNativeMapPng';
 import type { GroupedQuestPoint, QuestStepPoint } from './questMapPoints';
 import type { QuestMapApp } from './questWizardHelpers';
@@ -24,19 +27,9 @@ export const buildQuestNativeMapHtml = ({
     colors: ThemedColors;
     interactive: boolean;
     questNavProviders: ReadonlyArray<{ app: QuestMapApp; label: string }>;
-}) => `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>${LEAFLET_CSS}</style>
-      <script>${LEAFLET_JS}</script>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; }
-        #map { width: 100%; height: 100%; }
-        .leaflet-overlay-pane { z-index: 450 !important; }
+}) =>
+    buildLeafletWebViewHtml({
+        headStyles: `        .leaflet-overlay-pane { z-index: 450 !important; }
         .leaflet-marker-pane { z-index: 650 !important; }
         .qmark {
           background: transparent !important;
@@ -44,13 +37,8 @@ export const buildQuestNativeMapHtml = ({
           display: block !important;
           visibility: visible !important;
         }
-        .qmark > div { transform: translateZ(0); }
-      </style>
-    </head>
-    <body>
-      <div id="map"></div>
-      <script>
-        function isValidLatLng(point) {
+        .qmark > div { transform: translateZ(0); }`,
+        bodyScript: `        function isValidLatLng(point) {
           return Array.isArray(point) &&
             point.length >= 2 &&
             Number.isFinite(point[0]) &&
@@ -195,22 +183,12 @@ export const buildQuestNativeMapHtml = ({
           }));
         });
 
-        function refreshMapLayout(stage) {
-          try {
-            map.invalidateSize({ animate: false, pan: false });
-          } catch (e) {
-            try { map.invalidateSize(); } catch (err) {}
-          }
-        }
-
-        function scheduleMapRefresh(stage) {
-          try {
-            refreshMapLayout(stage);
-            [80, 240, 600].forEach(function(delay) {
-              setTimeout(function() { refreshMapLayout(stage); }, delay);
-            });
-          } catch (e) {}
-        }
+${buildInvalidateSchedulerScript({
+    schedulerName: 'scheduleMapRefresh',
+    helperName: 'refreshMapLayout',
+    mode: 'function-decl',
+    emitRegistration: false,
+})}
 
         function visibleMarkerCount() {
           var nodes = document.querySelectorAll('.leaflet-marker-icon.qmark, .qmark.leaflet-marker-icon');
@@ -348,9 +326,6 @@ ${QUEST_MAP_PNG_RENDERER_SCRIPT}
         }
         window.setTimeout(function () { postMapStatus('ready'); }, 250);
         window.setTimeout(function () { postMapStatus('settled'); }, 1000);
-        window.setTimeout(function () { postMapStatus('final'); }, 1600);
-      </script>
-    </body>
-    </html>
-  `;
+        window.setTimeout(function () { postMapStatus('final'); }, 1600);`,
+    });
 

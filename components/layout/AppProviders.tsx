@@ -7,6 +7,7 @@ import { FavoritesContext, createFavoritesFallbackValue } from '@/context/Favori
 import { FavoritesProvider } from '@/context/FavoritesProvider';
 import ThemedPaperProvider from '@/components/ui/ThemedPaperProvider';
 import { LocaleProvider } from '@/i18n/LocaleProvider';
+import { setupQueryPersistence } from '@/utils/queryPersist';
 
 interface AppProvidersProps {
   queryClient: any;
@@ -53,6 +54,12 @@ export default function AppProviders({
   const [deferredRuntimeActivationReason, setDeferredRuntimeActivationReason] = useState<'interaction' | 'fallback'>('fallback');
   const fallbackAuth = useMemo(() => createAuthFallbackValue(), []);
   const fallbackFavorites = useMemo(() => createFavoritesFallbackValue(), []);
+
+  // #1015: подключаем persist офлайн-доменов RQ поверх смонтированного клиента.
+  // Идемпотентно (WeakSet-гвард внутри), restore асинхронный и не блокирует boot.
+  useEffect(() => {
+    if (queryClient) setupQueryPersistence(queryClient);
+  }, [queryClient]);
   const shouldLoadDeferredRuntime =
     Platform.OS === 'web' && (deferAuthProvider || deferFavoritesProvider);
 
