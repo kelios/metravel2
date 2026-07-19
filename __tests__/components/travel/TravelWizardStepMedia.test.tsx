@@ -237,8 +237,8 @@ describe('TravelWizardStepMedia', () => {
     fireEvent.press(getByText('Удалить обложку'));
 
     // ConfirmDialog uppercases the confirm button
-    await waitFor(() => expect(getByText('УДАЛИТЬ')).toBeTruthy());
-    fireEvent.press(getByText('УДАЛИТЬ'));
+    await waitFor(() => expect(getByText('Удалить')).toBeTruthy());
+    fireEvent.press(getByText('Удалить'));
 
     await waitFor(() => expect(mockDeleteTravelMainImage).toHaveBeenCalledWith('42'));
 
@@ -289,8 +289,8 @@ describe('TravelWizardStepMedia', () => {
     expect(mockMountSpy).toHaveBeenCalledTimes(1);
 
     fireEvent.press(getByText('Удалить обложку'));
-    await waitFor(() => expect(getByText('УДАЛИТЬ')).toBeTruthy());
-    fireEvent.press(getByText('УДАЛИТЬ'));
+    await waitFor(() => expect(getByText('Удалить')).toBeTruthy());
+    fireEvent.press(getByText('Удалить'));
 
     await waitFor(() => expect(mockDeleteTravelMainImage).toHaveBeenCalledWith('42'));
     // Deletion must reset the uploader via a key change (fresh mount).
