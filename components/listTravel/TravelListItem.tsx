@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { router } from 'expo-router'
 
 import type { Travel } from '@/types/types'
-import OptimizedFavoriteButton from '@/components/travel/OptimizedFavoriteButton'
+import FavoriteButton from '@/components/travel/FavoriteButton'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers'
 import { routes } from '@/utils/routes'
@@ -377,7 +377,8 @@ function TravelListItem({
         onMouseDown: (e: any) => e.stopPropagation(),
       })}
     >
-      <OptimizedFavoriteButton
+      <FavoriteButton
+        variant="overlay"
         id={id}
         type="travel"
         title={title}

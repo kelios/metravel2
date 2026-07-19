@@ -2031,7 +2031,7 @@
       "eslintDisable": 0
     },
     "components/travel/FavoriteButton.tsx": {
-      "asAny": 3,
+      "asAny": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
@@ -2116,12 +2116,6 @@
     },
     "components/travel/NearTravelList.tsx": {
       "asAny": 17,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/travel/OptimizedFavoriteButton.tsx": {
-      "asAny": 6,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0
