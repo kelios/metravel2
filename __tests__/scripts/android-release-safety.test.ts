@@ -8,6 +8,10 @@ const {
   normalizeTrack,
   parseArgs,
 } = require('../../scripts/android-play-release');
+const {
+  getFacebookBuildConfig,
+  readAndroidResource,
+} = require('../../scripts/android-gradle-build');
 
 const ROOT = path.resolve(__dirname, '../..');
 
@@ -87,7 +91,46 @@ describe('Android release safety contract', () => {
       'utf8'
     );
     expect(gradleRunner).toContain("NODE_ENV: 'production'");
+    expect(gradleRunner).toContain('LOCAL_ENV_PATH');
     expect(gradleRunner).toContain('PROD_ENV_PATH');
-    expect(gradleRunner).toContain("[task, '--no-parallel', '--max-workers=2']");
+    expect(gradleRunner).toContain(
+      "[task, '--no-daemon', '--no-parallel', '--max-workers=2']"
+    );
+    expect(gradleRunner).toContain("[task, '--no-daemon']");
+    expect(gradleRunner).toContain('verifyFacebookAndroidResources');
+  });
+
+  it('fails closed when native Facebook Login credentials are incomplete', () => {
+    expect(() =>
+      getFacebookBuildConfig({
+        EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED: 'true',
+        EXPO_PUBLIC_META_APP_ID: '0',
+      })
+    ).toThrow('Facebook Login is enabled');
+
+    expect(
+      getFacebookBuildConfig({
+        EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED: 'true',
+        EXPO_PUBLIC_META_APP_ID: '123456789',
+        META_FACEBOOK_CLIENT_TOKEN: 'client-token',
+      })
+    ).toEqual({
+      enabled: true,
+      appId: '123456789',
+      clientToken: 'client-token',
+    });
+  });
+
+  it('reads generated Android resource values without logging credentials', () => {
+    const xml = `
+      <resources>
+        <string name="facebook_app_id" translatable="false">123456789</string>
+        <bool name="facebook_auto_init_enabled">true</bool>
+      </resources>
+    `;
+
+    expect(readAndroidResource(xml, 'string', 'facebook_app_id')).toBe('123456789');
+    expect(readAndroidResource(xml, 'bool', 'facebook_auto_init_enabled')).toBe('true');
+    expect(readAndroidResource(xml, 'string', 'missing')).toBe('');
   });
 });
