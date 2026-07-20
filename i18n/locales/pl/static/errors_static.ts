@@ -61,6 +61,7 @@ export const errorsStaticResources = {
   "api.messages.deletedUser": "Użytkownik zdalny",
   "api.messages.userFallback": "Użytkownik",
   "api.messages.authRequired": "Aby wysyłać wiadomości musisz być zalogowany.",
+  "api.messages.threadUnavailable": "Rozmowa jest niedostępna: rozmówca został usunięty. Wysyłanie wiadomości jest wyłączone.",
   "api.misc.authRequired": "Użytkownik nie jest autoryzowany",
   "api.misc.titleRequired": "Tytuł jest wymagany",
   "api.misc.titleTooShort": "Nazwa musi zawierać co najmniej 3 znaki",

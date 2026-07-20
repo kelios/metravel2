@@ -61,6 +61,7 @@ export const errorsStaticResources = {
   "api.messages.deletedUser": "Выдалены карыстальнік",
   "api.messages.userFallback": "Карыстальнік",
   "api.messages.authRequired": "Для адпраўкі паведамленняў неабходна аўтарызавацца",
+  "api.messages.threadUnavailable": "Дыялог недаступны: суразмоўца выдалены. Адпраўка паведамленняў адключана.",
   "api.misc.authRequired": "Карыстальнік не аўтарызаваны",
   "api.misc.titleRequired": "Назва абавязковая для запаўнення",
   "api.misc.titleTooShort": "Назва павінна змяшчаць мінімум 3 сімвала",

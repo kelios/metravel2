@@ -447,6 +447,17 @@ select:focus-visible {
   }
 }
 
+/* Messages chat composer (mobile web): the global dock is hidden on /messages, so
+   the composer sits at the very viewport bottom. Reserve safe-area + extra space
+   so the input and send button stay above browser bottom chrome / gesture bars
+   (in-app browsers overlay the bottom edge of the page). */
+@media (max-width: 1023px) {
+  [data-testid="message-composer"],
+  [data-testid="message-composer-disabled"] {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
 /*
  * Bottom dock height reservation.
  * Use var(--mt-dock-h) in padding-bottom of any scroll container or

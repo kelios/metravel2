@@ -1,4 +1,4 @@
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import ChatView from '@/components/messages/ChatView';
 import type { Message } from '@/api/messages';
@@ -103,6 +103,51 @@ describe('ChatView', () => {
             <ChatView {...defaultProps} messages={[]} loading={true} />
         );
         expect(queryByText('Привет!')).toBeNull();
+    });
+
+    // Неудачная отправка не должна молча съедать сообщение: текст возвращается
+    // в поле ввода, а переданная ошибка отображается над композером.
+    it('restores the input text when onSend reports failure', async () => {
+        const onSend = jest.fn().mockResolvedValue(false);
+        const { getByLabelText } = render(<ChatView {...defaultProps} onSend={onSend} />);
+        const input = getByLabelText('Поле ввода сообщения');
+
+        fireEvent.changeText(input, 'Не ушло');
+        fireEvent.press(getByLabelText('Отправить сообщение'));
+
+        expect(onSend).toHaveBeenCalledWith('Не ушло');
+        await waitFor(() => expect(input.props.value).toBe('Не ушло'));
+    });
+
+    it('keeps the input cleared when onSend succeeds', async () => {
+        const onSend = jest.fn().mockResolvedValue(true);
+        const { getByLabelText } = render(<ChatView {...defaultProps} onSend={onSend} />);
+        const input = getByLabelText('Поле ввода сообщения');
+
+        fireEvent.changeText(input, 'Ушло');
+        fireEvent.press(getByLabelText('Отправить сообщение'));
+
+        await waitFor(() => expect(onSend).toHaveBeenCalled());
+        expect(input.props.value).toBe('');
+    });
+
+    it('renders send error above the composer', () => {
+        const { getByTestId, getByText } = render(
+            <ChatView {...defaultProps} sendError="Ошибка отправки сообщения" />
+        );
+        expect(getByTestId('message-send-error')).toBeTruthy();
+        expect(getByText('Ошибка отправки сообщения')).toBeTruthy();
+    });
+
+    it('replaces the composer with a notice when composerDisabledReason is set', () => {
+        const reason = 'Диалог недоступен: собеседник удалён. Отправка сообщений отключена.';
+        const { getByTestId, getByText, queryByLabelText } = render(
+            <ChatView {...defaultProps} composerDisabledReason={reason} />
+        );
+        expect(getByTestId('message-composer-disabled')).toBeTruthy();
+        expect(getByText(reason)).toBeTruthy();
+        expect(queryByLabelText('Поле ввода сообщения')).toBeNull();
+        expect(queryByLabelText('Отправить сообщение')).toBeNull();
     });
 
     it('renders date separators between different days', () => {

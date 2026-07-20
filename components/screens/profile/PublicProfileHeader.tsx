@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Image, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import { useResponsive } from '@/hooks/useResponsive';
+import IconButton from '@/components/ui/IconButton';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
@@ -69,6 +71,10 @@ export function PublicProfileHeader({
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [defaultCoverFailed, setDefaultCoverFailed] = useState(false);
+  const { isPhone, isLargePhone } = useResponsive();
+  // Мобильная шапка: вторичные действия («Написать», «Наградить») — иконками,
+  // чтобы ряд действий занимал одну строку, а не три (правка по UX-ревью 20.07).
+  const compactActions = isPhone || isLargePhone;
 
   const displayName = fullName || i18nT('profile:components.screens.profile.PublicProfileHeader.defaultUserName');
   const rating = profile.participant_rating;
@@ -175,17 +181,31 @@ export function PublicProfileHeader({
       <View style={styles.actionsRow}>
         <SubscribeButton targetUserId={userId} size="sm" />
         {!isOwnProfile ? (
-          <Button
-            label={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_6e0d896e')}
-            onPress={onWriteMessage}
-            variant="secondary"
-            size="sm"
-            icon={<Feather name="mail" size={16} color={colors.primaryDark} />}
-            accessibilityLabel={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_value1_1156a332', { value1: fullName || i18nT('profile:components.screens.profile.PublicProfileHeader.defaultUserReference') })}
-          />
+          compactActions ? (
+            <IconButton
+              icon={<Feather name="mail" size={18} color={colors.primaryDark} />}
+              label={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_value1_1156a332', { value1: fullName || i18nT('profile:components.screens.profile.PublicProfileHeader.defaultUserReference') })}
+              onPress={onWriteMessage}
+              testID="public-profile-write-message"
+            />
+          ) : (
+            <Button
+              label={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_6e0d896e')}
+              onPress={onWriteMessage}
+              variant="secondary"
+              size="sm"
+              icon={<Feather name="mail" size={16} color={colors.primaryDark} />}
+              accessibilityLabel={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_value1_1156a332', { value1: fullName || i18nT('profile:components.screens.profile.PublicProfileHeader.defaultUserReference') })}
+            />
+          )
         ) : null}
         {!isOwnProfile ? (
-          <PeerBadgeGiveButton target="user" recipientId={userId} received={peerReceived} />
+          <PeerBadgeGiveButton
+            target="user"
+            recipientId={userId}
+            received={peerReceived}
+            iconOnly={compactActions}
+          />
         ) : null}
       </View>
 

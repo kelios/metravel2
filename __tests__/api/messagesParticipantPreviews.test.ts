@@ -2,6 +2,7 @@ import {
     collectLegacyPeerIds,
     collectParticipantPreviews,
     getParticipantPreviewDisplayName,
+    isDeadOrphanedMessageThread,
     isOrphanedMessageThread,
     threadHasParticipantPreviews,
     type MessageThread,
@@ -118,6 +119,40 @@ describe('participant_previews mapping (#708)', () => {
         it('keeps normal and virtual conversations out of the orphan fallback', () => {
             expect(isOrphanedMessageThread(thread({ participants: [1, 2] }), 1)).toBe(false);
             expect(isOrphanedMessageThread(thread({ id: -1, participants: [1] }), 1)).toBe(false);
+        });
+    });
+
+    // Пустые «диалоги с самим собой» — мусор от прежнего self-send бага;
+    // они скрываются из списка. Осиротевший тред с историей остаётся видимым.
+    describe('isDeadOrphanedMessageThread', () => {
+        it('hides an orphaned thread without any messages', () => {
+            expect(
+                isDeadOrphanedMessageThread(
+                    thread({ participants: [1], last_message_created_at: null, unread_count: 0 }),
+                    1,
+                ),
+            ).toBe(true);
+        });
+
+        it('keeps an orphaned thread that has message history', () => {
+            expect(
+                isDeadOrphanedMessageThread(
+                    thread({ participants: [1], last_message_created_at: '2026-07-01T10:00:00Z' }),
+                    1,
+                ),
+            ).toBe(false);
+        });
+
+        it('keeps an orphaned thread with unread messages', () => {
+            expect(
+                isDeadOrphanedMessageThread(thread({ participants: [1], unread_count: 2 }), 1),
+            ).toBe(false);
+        });
+
+        it('never hides normal or virtual conversations', () => {
+            expect(isDeadOrphanedMessageThread(thread({ participants: [1, 2] }), 1)).toBe(false);
+            expect(isDeadOrphanedMessageThread(thread({ id: -1, participants: [1] }), 1)).toBe(false);
+            expect(isDeadOrphanedMessageThread(null, 1)).toBe(false);
         });
     });
 });

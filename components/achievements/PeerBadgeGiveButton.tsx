@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/authStore';
 import type { PeerBadgeReceived, PeerBadgeTarget } from '@/api/achievements';
 import PeerBadgePickerSheet from '@/components/achievements/PeerBadgePickerSheet';
 import Button from '@/components/ui/Button';
+import IconButton from '@/components/ui/IconButton';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -19,6 +20,8 @@ interface Props {
   pickerTitle?: string;
   testID?: string;
   style?: StyleProp<ViewStyle>;
+  /** Компактный режим для тесных мест (мобильная шапка профиля): только иконка. */
+  iconOnly?: boolean;
 }
 
 function PeerBadgeGiveButton({
@@ -30,6 +33,7 @@ function PeerBadgeGiveButton({
   pickerTitle,
   testID,
   style,
+  iconOnly = false,
 }: Props) {
   const colors = useThemedColors();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -42,15 +46,25 @@ function PeerBadgeGiveButton({
 
   return (
     <>
-      <Button
-        variant="soft"
-        label={text}
-        icon={<Feather name="award" size={16} color={colors.primaryText} />}
-        onPress={() => setOpen(true)}
-        accessibilityLabel={text}
-        testID={testID}
-        style={style}
-      />
+      {iconOnly ? (
+        <IconButton
+          icon={<Feather name="award" size={18} color={colors.primaryText} />}
+          label={text}
+          onPress={() => setOpen(true)}
+          testID={testID}
+          style={style}
+        />
+      ) : (
+        <Button
+          variant="soft"
+          label={text}
+          icon={<Feather name="award" size={16} color={colors.primaryText} />}
+          onPress={() => setOpen(true)}
+          accessibilityLabel={text}
+          testID={testID}
+          style={style}
+        />
+      )}
 
       <PeerBadgePickerSheet
         visible={open}

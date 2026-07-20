@@ -18,12 +18,15 @@ import {
 // Mock the low-level dependencies used by messagingFetch
 jest.mock('@/utils/fetchWithTimeout');
 jest.mock('@/utils/secureStorage');
+jest.mock('@/utils/csrf');
 
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getSecureItem } from '@/utils/secureStorage';
+import { getCsrfHeader } from '@/utils/csrf';
 
 const mockedFetch = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;
 const mockedGetSecureItem = getSecureItem as jest.MockedFunction<typeof getSecureItem>;
+const mockedGetCsrfHeader = getCsrfHeader as jest.MockedFunction<typeof getCsrfHeader>;
 
 // Helper: create a mock Response
 function mockResponse(body: any, status = 200): Response {
@@ -42,6 +45,7 @@ describe('Messages API', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockedGetSecureItem.mockResolvedValue('test-token');
+        mockedGetCsrfHeader.mockReturnValue({});
     });
 
     describe('fetchMessageThreads', () => {
@@ -317,6 +321,44 @@ describe('Messages API', () => {
             mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Unauthorized' }, 401));
 
             await expect(fetchMessageThreads()).rejects.toMatchObject({ status: 401 });
+        });
+    });
+
+    // Регресс: web ходит с cookie-сессией, Django требует X-CSRFToken на unsafe-
+    // методах — без заголовка POST/DELETE отвечали 403 и отправка молча падала.
+    describe('CSRF header forwarding (web cookie session)', () => {
+        it('sends X-CSRFToken from getCsrfHeader on message POST', async () => {
+            mockedGetCsrfHeader.mockReturnValue({ 'X-CSRFToken': 'csrf-123' });
+            const payload = { participants: [2], text: 'Hello!' };
+            mockedFetch.mockResolvedValueOnce(mockResponse(payload, 201));
+
+            await sendMessage(payload);
+
+            expect(mockedFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/messages/'),
+                expect.objectContaining({
+                    method: 'POST',
+                    headers: expect.objectContaining({ 'X-CSRFToken': 'csrf-123' }),
+                }),
+                expect.any(Number),
+            );
+        });
+
+        it('sends X-CSRFToken on mark-read POST', async () => {
+            mockedGetCsrfHeader.mockReturnValue({ 'X-CSRFToken': 'csrf-456' });
+            mockedFetch.mockResolvedValueOnce(
+                mockResponse({ thread_id: 7, last_read_message_id: null, unread_count: 0 }, 200),
+            );
+
+            await markThreadRead(7);
+
+            expect(mockedFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/message-threads/7/mark-read/'),
+                expect.objectContaining({
+                    headers: expect.objectContaining({ 'X-CSRFToken': 'csrf-456' }),
+                }),
+                expect.any(Number),
+            );
         });
     });
 

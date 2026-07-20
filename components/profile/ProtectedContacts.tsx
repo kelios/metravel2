@@ -105,11 +105,13 @@ export default function ProtectedContacts({
                 <Feather name="lock" size={16} color={colors.textMuted} />
                 <Text style={styles.gateTitle}>{i18nT('profile:components.profile.ProtectedContacts.kontakty_skryty_b9711aeb')}</Text>
             </View>
-            <Text style={styles.gateMeta}>
-                {access === 'pending'
-                    ? i18nT('profile:components.profile.ProtectedContacts.zapros_na_raskrytie_kontaktov_otpravlen_i_oz_6d521f08')
-                    : i18nT('profile:components.profile.ProtectedContacts.kontakty_etogo_polzovatelya_vidny_posle_odob_73a72cb1')}
-            </Text>
+            {/* При pending пояснение не дублируем: бейдж «Заявка отправлена» ниже
+                уже несёт статус — карточка короче на две строки. */}
+            {access === 'none' ? (
+                <Text style={styles.gateMeta}>
+                    {i18nT('profile:components.profile.ProtectedContacts.kontakty_etogo_polzovatelya_vidny_posle_odob_73a72cb1')}
+                </Text>
+            ) : null}
 
             {access === 'none' ? (
                 <Button
