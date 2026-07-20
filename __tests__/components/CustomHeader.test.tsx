@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, act } from '@testing-library/react-native';
+import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CustomHeader from '@/components/layout/CustomHeader';
@@ -337,6 +337,24 @@ describe('CustomHeader', () => {
 
             // secondary nav items (e.g. Instagram article link) render under Навигация
             expect(utils.getByLabelText('Travel-блогеры Беларуси')).toBeTruthy();
+        });
+
+        it('unmounts the mobile modal before navigating to privacy', async () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const utils = renderHeader();
+
+            fireEvent.press(utils.getByTestId('mobile-menu-open'));
+            expect(utils.getByTestId('mobile-menu-panel')).toBeTruthy();
+
+            mockPush.mockImplementationOnce(() => {
+                expect(utils.queryByTestId('mobile-menu-panel')).toBeNull();
+            });
+            fireEvent.press(utils.getByText('Политика конфиденциальности'));
+
+            await waitFor(() => {
+                expect(mockPush).toHaveBeenCalledWith('/privacy');
+            });
+            expect(utils.queryByTestId('mobile-menu-panel')).toBeNull();
         });
 
         it('does not crash when mobile navigation and document configs are unavailable', () => {

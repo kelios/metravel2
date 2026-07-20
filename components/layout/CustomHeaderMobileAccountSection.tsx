@@ -36,6 +36,7 @@ const useCustomHeaderMobileMenuController = ({ logout }: { logout: () => Promise
   const router = useRouter();
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const mobileMenuOpenedAtRef = useRef(0);
+  const pendingMenuActionRef = useRef<null | (() => void | Promise<void>)>(null);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || !mobileMenuVisible) return;
@@ -50,57 +51,90 @@ const useCustomHeaderMobileMenuController = ({ logout }: { logout: () => Promise
     return () => window.removeEventListener('keydown', handleEscape);
   }, [mobileMenuVisible]);
 
+  useEffect(() => {
+    if (mobileMenuVisible) return;
+
+    const pendingAction = pendingMenuActionRef.current;
+    if (!pendingAction) return;
+
+    pendingMenuActionRef.current = null;
+    void pendingAction();
+  }, [mobileMenuVisible]);
+
   const closeMenu = useCallback(() => {
+    pendingMenuActionRef.current = null;
     setMobileMenuVisible(false);
   }, []);
 
   const closeMenuSafely = useCallback(() => {
     const sinceOpen = Date.now() - mobileMenuOpenedAtRef.current;
     if (!isUnitTestEnv() && sinceOpen < 250) return;
+    pendingMenuActionRef.current = null;
     setMobileMenuVisible(false);
   }, []);
 
   const openMobileMenu = useCallback(() => {
+    pendingMenuActionRef.current = null;
     mobileMenuOpenedAtRef.current = Date.now();
     setMobileMenuVisible(true);
   }, []);
 
-  const handleUserAction = useCallback(
-    (path: string, extraAction?: () => void) => {
-      extraAction?.();
-      router.push(path as any);
+  const runAfterMenuClose = useCallback(
+    (action: () => void | Promise<void>) => {
+      if (!mobileMenuVisible) {
+        void action();
+        return;
+      }
+
+      // On Android a React Native Modal owns a separate full-screen window.
+      // Navigating first can leave the previous header's invisible window alive
+      // above the destination route, where it intercepts every touch. Commit the
+      // closed state first; the effect above runs the action after the Modal is gone.
+      if (pendingMenuActionRef.current) return;
+      pendingMenuActionRef.current = action;
       setMobileMenuVisible(false);
     },
-    [router],
+    [mobileMenuVisible],
+  );
+
+  const handleUserAction = useCallback(
+    (path: string, extraAction?: () => void) => {
+      runAfterMenuClose(() => {
+        extraAction?.();
+        router.push(path as any);
+      });
+    },
+    [router, runAfterMenuClose],
   );
 
   const handleNavPress = useCallback(
     (path: string, external?: boolean) => {
-      if (external) {
-        if (Platform.OS === 'web') {
-          openExternalUrlInNewTab(path);
-        } else {
-          openExternalUrl(path);
+      runAfterMenuClose(() => {
+        if (external) {
+          if (Platform.OS === 'web') {
+            openExternalUrlInNewTab(path);
+          } else {
+            openExternalUrl(path);
+          }
+          return;
         }
-        setMobileMenuVisible(false);
-        return;
-      }
 
-      router.push(path as any);
-      setMobileMenuVisible(false);
+        router.push(path as any);
+      });
     },
-    [router],
+    [router, runAfterMenuClose],
   );
 
   const handleMyTravels = useCallback(() => {
     handleUserAction('/metravel');
   }, [handleUserAction]);
 
-  const handleLogout = useCallback(async () => {
-    await logout();
-    setMobileMenuVisible(false);
-    router.push('/');
-  }, [logout, router]);
+  const handleLogout = useCallback(() => {
+    runAfterMenuClose(async () => {
+      await logout();
+      router.push('/');
+    });
+  }, [logout, router, runAfterMenuClose]);
 
   return {
     closeMenu,
