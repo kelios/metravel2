@@ -482,21 +482,35 @@ describe('stripHtml', () => {
     expect(stripHtml(long, 100).length).toBe(100);
   });
 
-  it('truncates on a word boundary without cutting mid-word', () => {
+  it('truncates on a word boundary, drops the dangling preposition and appends an ellipsis', () => {
     const text = 'Прогулка по старому городу с чистыми улицами и уютными кафе повсюду';
     const out = stripHtml(text, 30);
     expect(out.length).toBeLessThanOrEqual(30);
-    // Ends on a whole word — no dangling partial token like "с чист"
-    expect(text.startsWith(out)).toBe(true);
-    expect(out.endsWith(' ')).toBe(false);
-    expect(out).toBe('Прогулка по старому городу с');
+    // Ends on a meaningful word — no dangling "с" and no mid-word cut
+    expect(out).toBe('Прогулка по старому городу…');
   });
 
-  it('drops trailing punctuation/dashes after the word cut', () => {
+  it('drops trailing punctuation/dashes after the word cut and appends an ellipsis', () => {
     const text = 'Озеро глубиной 11,5 м — оно самое глубокое в регионе бесспорно';
     const out = stripHtml(text, 24);
-    expect(out).toBe('Озеро глубиной 11,5 м');
+    expect(out).toBe('Озеро глубиной 11,5 м…');
     expect(/[\s,;:–—-]$/.test(out)).toBe(false);
+  });
+
+  it('prefers a complete sentence over an ellipsis when one ends late in the window', () => {
+    const text =
+      'Закшувек — бирюзовый карьер в Кракове с пляжем и понтонами. Вода прозрачная почти весь сезон, вход бесплатный, но народу много.';
+    const out = stripHtml(text, 80);
+    expect(out).toBe('Закшувек — бирюзовый карьер в Кракове с пляжем и понтонами.');
+    expect(out.endsWith('.')).toBe(true);
+    expect(out.includes('…')).toBe(false);
+  });
+
+  it('never ends a truncated snippet on a connective', () => {
+    const text = 'Пляж с золотым песком и шезлонгами и зонтиками и кабинками для переодевания везде';
+    const out = stripHtml(text, 30);
+    expect(/\s(?:и|с|в|на)…$/.test(out)).toBe(false);
+    expect(out.endsWith('…')).toBe(true);
   });
 
   it('returns full text unchanged when shorter than maxLength', () => {
