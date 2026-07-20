@@ -137,6 +137,10 @@ deploy_prod() {
       echo "❌ Refusing to publish the quest fallback through a symlink"
       exit 1
     fi
+    if [ -e "\$quest_cover_target" ] && [ ! -f "\$quest_cover_target" ]; then
+      echo "❌ Refusing to replace a non-file quest fallback target"
+      exit 1
+    fi
     mkdir -p "\$quest_cover_dir"
     quest_cover_tmp=\$(mktemp "\$quest_cover_dir/.quest-default-cover.svg.XXXXXX")
     cp "\$quest_cover_source" "\$quest_cover_tmp"
