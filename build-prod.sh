@@ -118,6 +118,34 @@ deploy_prod() {
     # Purge leftovers from a prior interrupted/manual deploy before the swap.
     rroot '/app/static/dist.new /app/static/dist.old /app/static/dist.old-* /app/static/dist.old.stale-*'
 
+    # Nginx serves /static/* from the shared static root, while the web export
+    # lives one level deeper in static/dist. Publish the canonical quest
+    # fallback at its backend-owned URL before swapping the web build.
+    quest_cover_repo_path=static/quests/quest-default-cover.svg
+    quest_cover_source=dist/$ENV/static/quests/quest-default-cover.svg
+    quest_cover_dir=static/quests
+    quest_cover_target=static/quests/quest-default-cover.svg
+    if git ls-files --error-unmatch -- "\$quest_cover_repo_path" >/dev/null 2>&1; then
+      echo "❌ Refusing to overwrite Git-tracked path: \$quest_cover_repo_path"
+      exit 1
+    fi
+    if [ ! -s "\$quest_cover_source" ]; then
+      echo "❌ Quest fallback cover is missing or empty: \$quest_cover_source"
+      exit 1
+    fi
+    if [ -L "\$quest_cover_dir" ] || [ -L "\$quest_cover_target" ]; then
+      echo "❌ Refusing to publish the quest fallback through a symlink"
+      exit 1
+    fi
+    mkdir -p "\$quest_cover_dir"
+    quest_cover_tmp=\$(mktemp "\$quest_cover_dir/.quest-default-cover.svg.XXXXXX")
+    cp "\$quest_cover_source" "\$quest_cover_tmp"
+    mv -f "\$quest_cover_tmp" "\$quest_cover_target"
+    if ! cmp -s "\$quest_cover_source" "\$quest_cover_target"; then
+      echo "❌ Published quest fallback does not match the deploy artifact"
+      exit 1
+    fi
+
     mv dist/$ENV static/dist.new
 
     rollback_dir=static/dist.old

@@ -9,7 +9,10 @@
 
 - Frontend release automation may mutate only its documented untracked
   runtime/static targets, such as `static/dist`, `static/dist.new`, and
-  `static/dist.bak`.
+  `static/dist.bak`. The one shared fallback asset published outside that
+  atomic web tree is `static/quests/quest-default-cover.svg`; the deploy writes
+  it through a temporary sibling and refuses to touch it if Git tracks the
+  target path or if the directory/target is a symlink.
 - Before an authorized server write, inspect the backend checkout with
   `git status --short` and classify every intended path using
   `git ls-files --error-unmatch -- <repo-relative-path>`. Never patch, overwrite, copy, move,
@@ -65,7 +68,7 @@ npm run build:web:prod
 
 - Accepts env argument: `dev`, `preprod`, `prod` (default: `prod`).
 - Pipeline: applies `.env.<env>` -> builds `dist/<env>` -> runs SEO/public post-processing -> deploys to server.
-- The script is the normal production deploy path on machines with working `rsync`. It runs the canonical build and static SEO guards, uploads `dist/`, atomically swaps `static/dist`, overlays missing old Expo chunks for open tabs, restarts `app` + `nginx`, and runs post-deploy SEO checks.
+- The script is the normal production deploy path on machines with working `rsync`. It runs the canonical build and static SEO guards, uploads `dist/`, publishes the canonical quest fallback at `/static/quests/quest-default-cover.svg`, atomically swaps `static/dist`, overlays missing old Expo chunks for open tabs, restarts `app` + `nginx`, and runs post-deploy SEO checks.
 - Its server writes are limited to the documented untracked static targets. It
   must stop rather than modify or clean a Git-tracked backend path.
 - Build without deploy:

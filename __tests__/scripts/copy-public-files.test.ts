@@ -37,4 +37,29 @@ describe('copy-public-files', () => {
       removeDir(buildDir);
     }
   });
+
+  it('publishes the quest cover from the deploy artifact at the shared static URL', () => {
+    const scriptPath = path.resolve(process.cwd(), 'build-prod.sh');
+    const source = fs.readFileSync(scriptPath, 'utf8');
+
+    expect(source).toContain(
+      'quest_cover_source=dist/$ENV/static/quests/quest-default-cover.svg',
+    );
+    expect(source).toContain(
+      'quest_cover_target=static/quests/quest-default-cover.svg',
+    );
+    expect(source).toContain(
+      'git ls-files --error-unmatch -- "\\$quest_cover_repo_path"',
+    );
+    expect(source).toContain(
+      'mv -f "\\$quest_cover_tmp" "\\$quest_cover_target"',
+    );
+    expect(source).toContain(
+      'cmp -s "\\$quest_cover_source" "\\$quest_cover_target"',
+    );
+
+    expect(source.indexOf('quest_cover_source=')).toBeLessThan(
+      source.indexOf('mv dist/$ENV static/dist.new'),
+    );
+  });
 });
