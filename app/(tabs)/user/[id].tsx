@@ -165,14 +165,15 @@ export default function PublicUserProfileScreen() {
 
   const handleChangeTab = useCallback((tab: ProfileTabKey) => setActiveTab(tab), []);
 
+  // Таб «Уровень» без счётчика: badgesCount на нём читался как «Уровень 13»
+  // и противоречил рангу в шапке («Ур.5»). Число достижений остаётся в пилюле.
   const tabCounts = useMemo<Partial<Record<ProfileTabKey, number>>>(
     () => ({
       travels: authorTravelsTotal,
       subscribers: subscribersCount,
       subscriptions: subscriptionsCount,
-      overview: badgesCount,
     }),
-    [authorTravelsTotal, badgesCount, subscribersCount, subscriptionsCount]
+    [authorTravelsTotal, subscribersCount, subscriptionsCount]
   );
 
   const statPills = useMemo<ProfileStatPill[]>(() => {

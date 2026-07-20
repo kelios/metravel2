@@ -189,13 +189,15 @@ export function PublicProfileHeader({
         ) : null}
       </View>
 
-      <ProtectedContacts
-        socials={socials}
-        isOwnProfile={isOwnProfile}
-        contactsHidden={profile.contacts_hidden}
-        contactAccess={profile.contact_access}
-        targetUserId={userId}
-      />
+      <View style={styles.contactsSection}>
+        <ProtectedContacts
+          socials={socials}
+          isOwnProfile={isOwnProfile}
+          contactsHidden={profile.contacts_hidden}
+          contactAccess={profile.contact_access}
+          targetUserId={userId}
+        />
+      </View>
 
       {!isOwnProfile && socials.length > 0 ? (
         <SafetyNotice storageKey="profile-contact-exchange" style={styles.safetyNotice} />
@@ -347,6 +349,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexWrap: 'wrap',
       marginTop: DESIGN_TOKENS.spacing.md,
       gap: DESIGN_TOKENS.spacing.xs,
+      paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    },
+    // Контакты не full-bleed: карточка «Контакты скрыты»/чипы соцсетей раньше
+    // прижимались к краям экрана (без бокового отступа, в отличие от соседей).
+    // Вертикальный отступ живёт внутри ProtectedContacts — пустой гейт не
+    // оставляет лишнего зазора.
+    contactsSection: {
       paddingHorizontal: DESIGN_TOKENS.spacing.md,
     },
     safetyNotice: {

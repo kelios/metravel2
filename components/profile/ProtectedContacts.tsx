@@ -134,7 +134,7 @@ export default function ProtectedContacts({
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     StyleSheet.create({
-        socialsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+        socialsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: DESIGN_TOKENS.spacing.sm },
         socialChip: {
             paddingHorizontal: 12,
             paddingVertical: 8,
@@ -147,17 +147,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
         gateCard: {
             gap: 8,
             padding: 12,
+            marginTop: DESIGN_TOKENS.spacing.sm,
             borderRadius: DESIGN_TOKENS.radii.md,
             borderWidth: 1,
             borderColor: colors.border,
             backgroundColor: colors.surfaceMuted,
         },
         gateHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-        gateTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
+        gateTitle: { flexShrink: 1, fontSize: 14, fontWeight: '700', color: colors.text },
         gateMeta: { fontSize: 12, color: colors.textMuted, lineHeight: 17 },
         requestButton: {
             alignSelf: 'flex-start',
         },
         pendingBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
-        pendingText: { fontSize: 13, fontWeight: '600', color: colors.warning },
+        pendingText: { flexShrink: 1, fontSize: 13, fontWeight: '600', color: colors.warning },
     });
