@@ -40,6 +40,14 @@ const MarkerPopup: React.FC<MarkerPopupProps> = ({
     | Record<string, (e: any) => void>
     | undefined
 
+  // PlacePopupCard draws its OWN themed close ✕ (top-right, over the hero photo).
+  // Leaflet's built-in `.leaflet-popup-close-button` would stack a second raw ✕
+  // over it — the "double cross" artifact (#1019). Mirror the imperative
+  // MarkerClusterGroup path (`closeButton ?? false`): default the native close
+  // button OFF so only the card's ✕ shows; callers can still opt back in via
+  // popupProps.closeButton.
+  const closeButton = popupProps?.closeButton ?? false
+
   const eventHandlers = useMemo(
     () => {
       const handleOpen = (e: any) => {
@@ -61,7 +69,7 @@ const MarkerPopup: React.FC<MarkerPopupProps> = ({
   )
 
   return (
-    <Popup {...(popupProps || {})} eventHandlers={eventHandlers}>
+    <Popup {...(popupProps || {})} closeButton={closeButton} eventHandlers={eventHandlers}>
       {opened ? (
         <PopupContentWithClose
           point={point}
