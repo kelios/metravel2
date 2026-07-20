@@ -111,14 +111,39 @@ function stripHtml(html, maxLength = 160) {
     .replace(/\s+/g, ' ')
     .trim();
   if (plain.length <= maxLength) return plain;
-  // Truncate on a word boundary: cut back to the last space within the limit
-  // so the meta description ends on a whole word, then drop any trailing
-  // punctuation/dashes. Falls back to the hard cut when there is no space
-  // (single very long token).
-  const cut = plain.slice(0, maxLength);
+  // Prefer ending on a complete sentence when one finishes late enough in the
+  // window — a full sentence reads better in the SERP than an ellipsis.
+  const window = plain.slice(0, maxLength);
+  const sentenceEnd = Math.max(
+    window.lastIndexOf('. '),
+    window.lastIndexOf('! '),
+    window.lastIndexOf('? '),
+  );
+  if (sentenceEnd >= Math.floor(maxLength * 0.6)) return window.slice(0, sentenceEnd + 1);
+  // Otherwise cut on a word boundary (reserving one char for the ellipsis),
+  // drop dangling connectives («…с пляжем и») and finish with «…» so the
+  // snippet visibly continues instead of stopping mid-phrase. Falls back to
+  // the hard cut when there is no space (single very long token).
+  const cut = plain.slice(0, maxLength - 1);
   const lastSpace = cut.lastIndexOf(' ');
   const onWord = lastSpace > 0 ? cut.slice(0, lastSpace) : cut;
-  return onWord.replace(/[\s,;:–—-]+$/, '') || cut;
+  return finishTruncatedSnippet(onWord) || `${cut}…`;
+}
+
+// Connectives/prepositions that must not dangle at the end of a truncated
+// snippet — «Пляж с золотым песком и…» reads worse than «Пляж с золотым песком…».
+const DANGLING_WORD_RE =
+  /\s+(?:и|а|но|или|же|как|что|в|во|на|с|со|у|о|об|обо|к|ко|по|за|из|изо|от|до|над|под|при|про|для|без|перед|через|the|a|an|of|in|on|at|to|and|or)$/i;
+
+/** Trim trailing punctuation and dangling connectives, then append «…». */
+function finishTruncatedSnippet(cutText) {
+  let out = String(cutText || '').replace(/[\s,;:.–—-]+$/g, '');
+  let prev;
+  do {
+    prev = out;
+    out = out.replace(DANGLING_WORD_RE, '').replace(/[\s,;:–—-]+$/g, '');
+  } while (out !== prev);
+  return out ? `${out}…` : '';
 }
 
 function toAbsoluteUrl(input) {
@@ -271,7 +296,15 @@ function clampDescriptionForAttr(plain, maxEncoded = 160) {
       hi = mid - 1;
     }
   }
-  return text.slice(0, lo).trimEnd();
+  const hard = text.slice(0, lo).trimEnd();
+  // The binary search lands mid-word; back off to a word boundary and finish
+  // with «…» (1 encoded char) so the clamped description reads as truncated
+  // rather than broken. Keep the hard cut for space-less single tokens.
+  const lastSpace = hard.lastIndexOf(' ');
+  const base = lastSpace >= Math.floor(hard.length * 0.6) ? hard.slice(0, lastSpace) : hard;
+  const finished = finishTruncatedSnippet(base);
+  if (finished && escapeAttr(finished).length <= maxEncoded) return finished;
+  return hard;
 }
 
 function buildTravelSeoDescription(travel, detailDescription) {
@@ -287,7 +320,7 @@ function buildTravelSeoDescription(travel, detailDescription) {
   if (primary.length >= 80) return clampDescriptionForAttr(primary, 160);
 
   if (primary) {
-    const combined = `${primary.replace(/[.!?\s]+$/g, '')}. ${contextual}`.replace(/\s+/g, ' ').trim();
+    const combined = `${primary.replace(/[.!?…\s]+$/g, '')}. ${contextual}`.replace(/\s+/g, ' ').trim();
     return clampDescriptionForAttr(combined, 160);
   }
 
