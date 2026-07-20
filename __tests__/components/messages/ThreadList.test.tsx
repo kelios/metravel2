@@ -1,5 +1,5 @@
 import { render, fireEvent } from '@testing-library/react-native';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, StyleSheet } from 'react-native';
 import ThreadList from '@/components/messages/ThreadList';
 import type { MessageThread } from '@/api/messages';
 
@@ -127,6 +127,23 @@ describe('ThreadList', () => {
         );
 
         expect(getByLabelText('Удалить диалог с Иван Петров')).toBeTruthy();
+    });
+
+    it('does not clip the delete tooltip at the web thread-card boundary', () => {
+        const originalPlatform = Platform.OS;
+        Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+
+        try {
+            const { getByTestId } = render(
+                <ThreadList {...defaultProps} onDeleteThread={jest.fn()} />
+            );
+
+            expect(StyleSheet.flatten(getByTestId('thread-item-1').props.style)).toMatchObject({
+                overflow: 'visible',
+            });
+        } finally {
+            Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+        }
     });
 
     it('renders the web confirmation and confirms thread deletion', () => {

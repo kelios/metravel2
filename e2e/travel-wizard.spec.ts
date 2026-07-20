@@ -812,6 +812,48 @@ test.describe('Создание путешествия - Полный flow', () 
         // Можем выбрать категории здесь
       }
 
+      const visitedDatesSent: string[] = [];
+      const recordVisitedDate = (request: import('@playwright/test').Request) => {
+        if (!request.url().includes('/travels/upsert/') || request.method() !== 'PUT') return;
+        try {
+          const payload = request.postDataJSON() as { visitedDate?: unknown };
+          if (typeof payload.visitedDate === 'string') visitedDatesSent.push(payload.visitedDate);
+        } catch {
+          // Ignore unrelated requests without a JSON body.
+        }
+      };
+      page.on('request', recordVisitedDate);
+
+      const exactDateInput = page.getByTestId('travel-visited-date-input');
+      await expect(exactDateInput).toBeVisible();
+      await exactDateInput.fill('26.07.2026');
+      await expect(exactDateInput).toHaveValue('26.07.2026');
+
+      // The user can select just the year and replace it without opening the calendar.
+      await exactDateInput.evaluate((element) => {
+        const input = element as HTMLInputElement;
+        input.focus();
+        input.setSelectionRange(6, 10);
+      });
+      await page.keyboard.type('2025');
+      await expect(exactDateInput).toHaveValue('26.07.2025');
+      await expect(page.getByTestId('travel-visited-date-picker')).toHaveValue('2025-07-26');
+
+      await expect
+        .poll(() => visitedDatesSent.at(-1), { timeout: 15_000 })
+        .toBe('2025-07-26');
+
+      const picker = page.getByTestId('travel-visited-date-picker');
+      await picker.evaluate((element) => {
+        Object.defineProperty(element, 'showPicker', {
+          configurable: true,
+          value: () => element.setAttribute('data-picker-opened', 'true'),
+        });
+      });
+      await page.getByTestId('travel-visited-date-calendar-button').click();
+      await expect(picker).toHaveAttribute('data-picker-opened', 'true');
+      page.off('request', recordVisitedDate);
+
       // Переход дальше
       await clickNext(page);
     });

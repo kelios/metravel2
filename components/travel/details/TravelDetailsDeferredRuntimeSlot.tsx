@@ -12,6 +12,7 @@ type TravelDetailsDeferredRuntimeSlotProps = {
   forceOpenKey: string | null
   isMobile: boolean
   scrollY?: any
+  settledScrollOffsetY?: number
   scrollToMapSection: () => void
   travel: any
   viewportHeight?: number
@@ -23,6 +24,7 @@ export default function TravelDetailsDeferredRuntimeSlot({
   forceOpenKey,
   isMobile,
   scrollY,
+  settledScrollOffsetY,
   scrollToMapSection,
   travel,
   viewportHeight,
@@ -37,6 +39,7 @@ export default function TravelDetailsDeferredRuntimeSlot({
         anchors={anchors}
         forceOpenKey={forceOpenKey}
         scrollY={scrollY}
+        settledScrollOffsetY={settledScrollOffsetY}
         scrollToMapSection={scrollToMapSection}
         viewportHeight={viewportHeight}
       />

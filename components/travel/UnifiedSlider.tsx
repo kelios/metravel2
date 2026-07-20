@@ -31,9 +31,12 @@ import { findSliderNode } from './sliderParts/domNodes';
 import SliderOverlays from './sliderParts/SliderOverlays';
 import { useSliderWebInput } from './sliderParts/useSliderWebInput';
 import Slide from './sliderParts/Slide';
+import { useNativeSliderGesture } from './sliderParts/useNativeSliderGesture';
 import {
   buildNativeLoopData,
   getNativeLoopPageOffset,
+  NATIVE_SLIDER_MOBILE_RENDER_WINDOW,
+  NATIVE_SLIDER_WIDE_RENDER_WINDOW,
   shouldEnableNativeLoop,
   toNativeLoopRawIndex,
   toNativeLoopRealIndex,
@@ -381,33 +384,31 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     },
   });
 
-  // Momentum scroll end (native only)
-  const onMomentumScrollEnd = useCallback(
-    (e: any) => {
-      const offsetX = e?.nativeEvent?.contentOffset?.x ?? 0;
-      if (loopEnabled) {
-        const liveWidth = containerWRef.current || containerW || 1;
-        const rawIndex = Math.round(offsetX / liveWidth);
-        const n = images.length;
-        if (rawIndex <= 0) {
-          // Clone of the last image — jump to the real last slide.
-          listRef.current?.scrollToOffset({ offset: n * liveWidth, animated: false });
-          setActiveIndex(n - 1);
-          return;
-        }
-        if (rawIndex >= n + 1) {
-          // Clone of the first image — jump to the real first slide.
-          listRef.current?.scrollToOffset({ offset: liveWidth, animated: false });
-          setActiveIndex(0);
-          return;
-        }
-        setActiveIndex(toRealIndex(rawIndex));
-        return;
-      }
-      setActiveIndexFromOffset(offsetX);
-    },
-    [setActiveIndexFromOffset, loopEnabled, containerWRef, containerW, images.length, setActiveIndex, toRealIndex]
-  );
+  const {
+    onMomentumScrollEnd,
+    onNativeScrollBeginDrag,
+    onNativeScrollEndDrag,
+    onNativeTouchCancel,
+    onNativeTouchEnd,
+    onNativeTouchStart,
+  } = useNativeSliderGesture({
+    containerW,
+    containerWRef,
+    dismissSwipeHint,
+    enablePrefetch,
+    imagesLength: images.length,
+    indexRef,
+    listRef,
+    loopEnabled,
+    pauseAutoplay,
+    reduceMotion,
+    resumeAutoplay,
+    scrollTo,
+    setActiveIndex,
+    setActiveIndexFromOffset,
+    toRawIndex,
+    toRealIndex,
+  });
 
   // Web scroll handler
   const handleScroll = useCallback(
@@ -480,27 +481,6 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     [containerW, containerWRef]
   );
 
-  // Viewability (native only)
-  const setActiveIndexRef = useRef(setActiveIndex);
-  setActiveIndexRef.current = setActiveIndex;
-  const toRealIndexRef = useRef(toRealIndex);
-  toRealIndexRef.current = toRealIndex;
-
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
-      const first = viewableItems.find((v) => v.index != null);
-      if (first && typeof first.index === 'number') {
-        const realIdx = toRealIndexRef.current(first.index);
-        if (indexRef.current !== realIdx) setActiveIndexRef.current(realIdx);
-      }
-    }
-  ).current;
-
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 90,
-    minimumViewTime: 80,
-  }).current;
-
   // Render item for native FlatList.
   // NOTE: deps intentionally exclude `currentIndex`. Reading it through
   // `indexRef.current` keeps the renderItem identity stable across swipes, so the
@@ -514,6 +494,10 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
       const realIndex = toRealIndex(index);
       const uri = uriMap[realIndex] ?? item.url;
       const activeIdx = indexRef.current;
+      const directDistance = Math.abs(realIndex - activeIdx);
+      const indexDistance = images.length > 1
+        ? Math.min(directDistance, images.length - directDistance)
+        : directDistance;
       // Fabric fix: wrap each slide in a View with explicit page dimensions.
       // Without this intermediate sized container, off-screen-mounted slides in
       // the horizontal paging FlatList don't receive a correct layout pass when
@@ -537,8 +521,9 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
             onFirstImageLoad={onFirstImageLoad}
             onImagePress={onImagePress}
             firstImagePreloaded={firstImagePreloaded}
-            preloadPriority={Math.abs(realIndex - activeIdx) <= Math.max(1, nativePreloadCount)}
-            prepareBlur={Math.abs(realIndex - activeIdx) <= 1}
+            preloadPriority={indexDistance <= Math.max(1, nativePreloadCount)}
+            isAdjacent={indexDistance === 1}
+            prepareBlur={indexDistance <= 1}
             contentAspectRatio={contentAspectRatio ?? aspectRatio}
           />
         </View>
@@ -635,6 +620,8 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           keyExtractor={keyExtractor}
           horizontal
           pagingEnabled
+          snapToInterval={containerW}
+          snapToAlignment="start"
           showsHorizontalScrollIndicator={false}
           onScroll={onScroll}
           scrollEventThrottle={16}
@@ -644,27 +631,38 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           alwaysBounceVertical={false}
           renderItem={renderItemNative}
           extraData={currentIndex}
-          initialNumToRender={isTestEnv ? loopData.length : Math.min(loopData.length, isMobile ? 5 : 7)}
-          windowSize={isTestEnv ? loopData.length : isMobile ? 5 : 7}
-          maxToRenderPerBatch={isTestEnv ? loopData.length : isMobile ? 5 : 7}
+          // Keep only current ±1 mounted on mobile. The next two pages are still
+          // warmed through ExpoImage.prefetch, without retaining five pairs of
+          // sharp/blur bitmaps while the user scrolls the article vertically.
+          initialNumToRender={isTestEnv ? loopData.length : Math.min(
+            loopData.length,
+            isMobile ? NATIVE_SLIDER_MOBILE_RENDER_WINDOW : NATIVE_SLIDER_WIDE_RENDER_WINDOW,
+          )}
+          windowSize={isTestEnv
+            ? loopData.length
+            : isMobile
+              ? NATIVE_SLIDER_MOBILE_RENDER_WINDOW
+              : NATIVE_SLIDER_WIDE_RENDER_WINDOW}
+          maxToRenderPerBatch={isTestEnv
+            ? loopData.length
+            : isMobile
+              ? NATIVE_SLIDER_MOBILE_RENDER_WINDOW
+              : NATIVE_SLIDER_WIDE_RENDER_WINDOW}
           disableVirtualization={isTestEnv}
-          maintainVisibleContentPosition={Platform.OS === 'ios' ? undefined : { minIndexForVisible: 0 }}
           disableIntervalMomentum
           getItemLayout={getItemLayout}
           bounces={false}
-          decelerationRate={Platform.OS === 'ios' ? 'fast' : 0.98}
+          decelerationRate="fast"
           removeClippedSubviews={true}
           updateCellsBatchingPeriod={isTestEnv ? 0 : 16}
           initialScrollIndex={isTestEnv ? undefined : toRawIndex(indexRef.current || 0)}
           onScrollToIndexFailed={onScrollToIndexFailed}
-          onScrollBeginDrag={() => {
-            pauseAutoplay();
-            dismissSwipeHint();
-          }}
-          onScrollEndDrag={resumeAutoplay}
+          onScrollBeginDrag={onNativeScrollBeginDrag}
+          onScrollEndDrag={onNativeScrollEndDrag}
+          onTouchStart={onNativeTouchStart}
+          onTouchEnd={onNativeTouchEnd}
+          onTouchCancel={onNativeTouchCancel}
           onMomentumScrollEnd={onMomentumScrollEnd}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={viewabilityConfig}
         />
       </View>
     );

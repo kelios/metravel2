@@ -9,10 +9,16 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    desktopPage: {
+        flex: 1,
+        ...(Platform.OS === 'web'
+            ? { minHeight: '70vh' as any, width: '100%' }
+            : {}),
+    },
     desktopContainer: {
         flex: 1,
         ...(Platform.OS === 'web'
-            ? { minHeight: '70vh' as any, maxWidth: 1000, width: '100%', alignSelf: 'center' as any, paddingVertical: DESIGN_TOKENS.spacing.md }
+            ? { maxWidth: 1000, width: '100%', alignSelf: 'center' as any, paddingVertical: DESIGN_TOKENS.spacing.md }
             : {}),
     },
     desktopInner: {

@@ -10,14 +10,27 @@ import React from 'react'
 import { act, fireEvent, render } from '@testing-library/react-native'
 
 const mockQueueAnalyticsEvent = jest.fn()
+const mockQuestExcursionsInline = jest.fn(() => null)
+let mockQuestWizardResponsiveModel = {
+  screenW: 390,
+  screenH: 844,
+  isMobile: true,
+  compactNav: true,
+  compactDesktopLayout: false,
+  useWideInlineLayout: false,
+  useWideExcursionsSidebar: false,
+}
 jest.mock('@/utils/analytics', () => ({
   queueAnalyticsEvent: (...args: any[]) => mockQueueAnalyticsEvent(...args),
+}))
+jest.mock('@/components/quests/hooks/useQuestWizardResponsiveModel', () => ({
+  useQuestWizardResponsiveModel: () => mockQuestWizardResponsiveModel,
 }))
 
 // Тяжёлые под-секции визарда — карта/экскурсии/финал/офлайн — не нужны для гейта.
 jest.mock('@/components/quests/questWizardSections', () => ({
   QuestDesktopMapPanel: () => null,
-  QuestExcursionsInline: () => null,
+  QuestExcursionsInline: (props: any) => mockQuestExcursionsInline(props),
   QuestExcursionsSidebar: () => null,
   QuestFinalePanel: () => null,
   QuestNativeAffiliateSection: () => null,
@@ -66,6 +79,15 @@ const finale = { story: 'Финал', video: undefined, poster: undefined } as a
 describe('QuestWizard guest gate', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockQuestWizardResponsiveModel = {
+      screenW: 390,
+      screenH: 844,
+      isMobile: true,
+      compactNav: true,
+      compactDesktopLayout: false,
+      useWideInlineLayout: false,
+      useWideExcursionsSidebar: false,
+    }
   })
 
   it('fires quest_start for guests and shows the soft gate after 2 points', async () => {
@@ -134,5 +156,39 @@ describe('QuestWizard guest gate', () => {
     expect(onGuestLogin).toHaveBeenCalled()
     fireEvent.press(getByTestId('quest-guest-gate-register'))
     expect(onGuestRegister).toHaveBeenCalled()
+  })
+
+  it('uses the shared Belkraj excursions section for a native quest', () => {
+    mockQuestWizardResponsiveModel = {
+      ...mockQuestWizardResponsiveModel,
+      screenW: 1200,
+      isMobile: false,
+      compactNav: false,
+      useWideInlineLayout: true,
+      useWideExcursionsSidebar: true,
+    }
+    const city = {
+      id: 'minsk',
+      name: 'Минск',
+      lat: 53.9,
+      lng: 27.56,
+      countryCode: 'BY',
+    }
+
+    render(
+      <QuestWizard
+        title="Тест-квест"
+        steps={steps}
+        finale={finale}
+        intro={intro}
+        storageKey="native_belkraj_quest"
+        questId="test-quest"
+        city={city}
+      />,
+    )
+
+    expect(mockQuestExcursionsInline).toHaveBeenCalledWith(
+      expect.objectContaining({ city, title: 'Тест-квест' }),
+    )
   })
 })

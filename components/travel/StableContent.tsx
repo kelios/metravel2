@@ -147,6 +147,9 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
             renderers={renderers}
             // Android: selectable-текст перехватывает тапы — onPress вложенных <a> не срабатывает (RN #22811)
             defaultTextProps={{ selectable: Platform.OS === 'ios' }}
+            // Quill safe_html may contain empty inline spans. Without this RNRH
+            // can paint a ghost first line and leave only marker `1.` on it.
+            enableExperimentalGhostLinesPrevention
             renderersProps={renderersProps as any}
             baseStyle={baseStyle as any}
             tagsStyles={tagsStyles as any}

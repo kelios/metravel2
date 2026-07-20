@@ -7,6 +7,7 @@ type DeferredSectionsComponentType = React.ComponentType<{
   forceOpenKey: string | null
   anchors: AnchorsMap
   scrollY?: any
+  settledScrollOffsetY?: number
   viewportHeight?: number
   scrollToMapSection: () => void
 }>

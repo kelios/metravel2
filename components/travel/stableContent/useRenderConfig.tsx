@@ -148,7 +148,11 @@ export function useStableContentRenderConfig({
         paddingLeft: DESIGN_TOKENS.spacing.xl,
       },
       li: {
-        marginVertical: DESIGN_TOKENS.spacing.xs,
+        // RNRH renders the marker beside the <li> block. A top margin on that
+        // inner block moves only its text down, leaving the first marker above
+        // the first line. Keep the vertical rhythm below each item instead.
+        marginTop: 0,
+        marginBottom: DESIGN_TOKENS.spacing.xs,
         lineHeight: Math.round(baseFontSize * 1.6),
       },
       figure: {

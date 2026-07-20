@@ -243,19 +243,11 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
         testID="travel-description"
       >
         {noBox ? (
-          Platform.OS === 'web' ? (
-            <View style={[styles.scrollArea, styles.scrollContent]}>{inner}</View>
-          ) : (
-            <ScrollView
-              style={styles.scrollArea}
-              contentContainerStyle={styles.scrollContent}
-              scrollEventThrottle={16}
-              showsVerticalScrollIndicator
-              keyboardShouldPersistTaps="handled"
-            >
-              {inner}
-            </ScrollView>
-          )
+          // Travel details already owns the vertical ScrollView. A second,
+          // unconstrained native ScrollView here competes for every gesture and
+          // makes a long article feel viscous even though it has no independent
+          // scroll range. Keep the content in the parent's single scroll chain.
+          <View style={[styles.scrollArea, styles.scrollContent]}>{inner}</View>
         ) : (
           <View style={[styles.fixedHeightBlock, { height: pageHeight }]}>
             <ScrollView

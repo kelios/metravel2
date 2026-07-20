@@ -466,19 +466,24 @@ function MessagesScreenContent() {
     // Desktop: двухпанельный интерфейс
     if (isDesktop) {
         return (
-            <View style={[styles.desktopContainer, { backgroundColor: colors.background }]}>
-                {seoBlock}
-                <View style={[styles.desktopInner, { borderColor: colors.borderLight }]}>
-                    {sidebar}
-                    <View style={[styles.chatArea, { borderColor: colors.borderLight }]}>
-                        {showPicker ? (
-                            <NewConversationPicker
-                                users={users}
-                                loading={false}
-                                onSelectUser={handlePickUser}
-                                onClose={handlePickerClose}
-                            />
-                        ) : chatPanel ?? emptyChat}
+            <View
+                testID="messages-page-background"
+                style={[styles.desktopPage, { backgroundColor: colors.background }]}
+            >
+                <View testID="messages-desktop-shell" style={styles.desktopContainer}>
+                    {seoBlock}
+                    <View style={[styles.desktopInner, { borderColor: colors.borderLight }]}>
+                        {sidebar}
+                        <View style={[styles.chatArea, { borderColor: colors.borderLight }]}>
+                            {showPicker ? (
+                                <NewConversationPicker
+                                    users={users}
+                                    loading={false}
+                                    onSelectUser={handlePickUser}
+                                    onClose={handlePickerClose}
+                                />
+                            ) : chatPanel ?? emptyChat}
+                        </View>
                     </View>
                 </View>
             </View>

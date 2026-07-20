@@ -524,7 +524,12 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
                       testID={`gallery-ios.move-left:${image.id}`}
                       accessibilityLabel={i18nT('travel:components.travel.ImageGalleryComponent.peremestit_foto_levee_4a235bb8')}
                     >
-                      <Feather name="arrow-left" size={15} color={index === 0 ? colors.textMuted : colors.textInverse} />
+                      <Feather
+                        name="arrow-left"
+                        size={15}
+                        color={index === 0 ? colors.textMuted : colors.textOnDark}
+                        testID={`gallery-ios.move-left-icon:${image.id}`}
+                      />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => handleMoveImage(image.id, 1)}
@@ -537,7 +542,12 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
                       testID={`gallery-ios.move-right:${image.id}`}
                       accessibilityLabel={i18nT('travel:components.travel.ImageGalleryComponent.peremestit_foto_pravee_85b5a0ad')}
                     >
-                      <Feather name="arrow-right" size={15} color={index === images.length - 1 ? colors.textMuted : colors.textInverse} />
+                      <Feather
+                        name="arrow-right"
+                        size={15}
+                        color={index === images.length - 1 ? colors.textMuted : colors.textOnDark}
+                        testID={`gallery-ios.move-right-icon:${image.id}`}
+                      />
                     </TouchableOpacity>
                   </View>
                   </>

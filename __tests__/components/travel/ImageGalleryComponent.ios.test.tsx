@@ -2,6 +2,8 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 
 import ImageGalleryComponentIOS from '@/components/travel/ImageGalleryComponent';
 import { uploadImage, deleteImage } from '@/api/misc';
+import { ThemeContext } from '@/hooks/useTheme';
+import { MODERN_MATTE_PALETTE_DARK } from '@/constants/modernMattePalette';
 
 jest.mock('expo-image-picker', () => {
   return {
@@ -137,5 +139,29 @@ describe('ImageGalleryComponent.ios', () => {
     await waitFor(() => {
       expect(onChange).toHaveBeenLastCalledWith([]);
     });
+  });
+
+  it('uses the media-overlay text token for active move arrows in dark theme', () => {
+    const { getByTestId } = render(
+      <ThemeContext.Provider
+        value={{ theme: 'dark', isDark: true, setTheme: jest.fn(), toggleTheme: jest.fn() }}
+      >
+        <ImageGalleryComponentIOS
+          collection="gallery"
+          idTravel="123"
+          initialImages={[
+            { id: '1', url: '/uploads/first.jpg' },
+            { id: '2', url: '/uploads/second.jpg' },
+          ]}
+        />
+      </ThemeContext.Provider>
+    );
+
+    expect(getByTestId('gallery-ios.move-right-icon:1').props.color).toBe(
+      MODERN_MATTE_PALETTE_DARK.textOnDark,
+    );
+    expect(getByTestId('gallery-ios.move-left-icon:2').props.color).toBe(
+      MODERN_MATTE_PALETTE_DARK.textOnDark,
+    );
   });
 });

@@ -82,7 +82,23 @@ describe('MapCanvas engine (#992)', () => {
     expect(lastContainerProps?.scrollWheelZoom).toBe(false)
     expect(lastContainerProps?.zoomControl).toBe(true)
     // center/zoom не заданы → не форвардятся (остаётся дефолт Leaflet / bounds).
-    expect(lastContainerProps?.center).toBeUndefined()
+    expect(lastContainerProps).not.toHaveProperty('center')
+    expect(lastContainerProps).not.toHaveProperty('zoom')
+    expect(lastContainerProps).not.toHaveProperty('dragging')
+    expect(lastContainerProps).not.toHaveProperty('touchZoom')
+    expect(lastContainerProps).not.toHaveProperty('doubleClickZoom')
+  })
+
+  it('preserves Leaflet interaction defaults when no options are supplied', () => {
+    render(<MapCanvas engine={makeEngine()} center={[53.9, 27.56]} zoom={10} />)
+
+    expect(lastContainerProps).not.toHaveProperty('zoomControl')
+    expect(lastContainerProps).not.toHaveProperty('dragging')
+    expect(lastContainerProps).not.toHaveProperty('scrollWheelZoom')
+    expect(lastContainerProps).not.toHaveProperty('touchZoom')
+    expect(lastContainerProps).not.toHaveProperty('doubleClickZoom')
+    expect(lastContainerProps).not.toHaveProperty('keyboard')
+    expect(lastContainerProps).not.toHaveProperty('tap')
   })
 
   it('renders the fallback instead of a map on native', () => {

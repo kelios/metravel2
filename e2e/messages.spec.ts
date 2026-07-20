@@ -46,6 +46,72 @@ test.describe('Messages — deterministic user flows', () => {
     await assertNoHorizontalScroll(page);
   });
 
+  test('desktop dark theme fills the viewport and keeps delete tooltip visible', async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.addInitScript(() => window.localStorage.setItem('theme', 'dark'));
+    await openAuthenticatedMessages(page);
+
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    const pageBackground = page.getByTestId('messages-page-background');
+    const desktopShell = page.getByTestId('messages-desktop-shell');
+    const card = page.getByTestId('thread-item-10');
+    const deleteButton = page.getByLabel('Удалить диалог с Алексей Петров');
+    await expect(pageBackground).toBeVisible({ timeout: 20_000 });
+    await expect(desktopShell).toBeVisible();
+    await expect(card).toBeVisible({ timeout: 20_000 });
+    await expect(deleteButton).toBeVisible();
+    const [pageBackgroundBox, desktopShellBox, cardBoxBeforeHover, themeBackgrounds] = await Promise.all([
+      pageBackground.boundingBox(),
+      desktopShell.boundingBox(),
+      card.boundingBox(),
+      pageBackground.evaluate((element) => ({
+        page: getComputedStyle(element).backgroundColor,
+        html: getComputedStyle(document.documentElement).backgroundColor,
+      })),
+    ]);
+
+    expect(pageBackgroundBox).not.toBeNull();
+    expect(desktopShellBox).not.toBeNull();
+    expect(pageBackgroundBox!.x).toBeLessThanOrEqual(1);
+    expect(pageBackgroundBox!.width).toBeGreaterThanOrEqual(1599);
+    expect(desktopShellBox!.width).toBeLessThanOrEqual(1000);
+    expect(Math.abs(desktopShellBox!.x - (1600 - desktopShellBox!.width) / 2)).toBeLessThanOrEqual(1);
+    expect(themeBackgrounds.page).toBe(themeBackgrounds.html);
+    expect(themeBackgrounds.page).not.toBe('rgb(255, 255, 255)');
+    await assertNoHorizontalScroll(page);
+
+    const hoverConsoleErrors: string[] = [];
+    page.on('pageerror', (error) => hoverConsoleErrors.push(error.message));
+    page.on('console', (message) => {
+      if (message.type() === 'error') hoverConsoleErrors.push(message.text());
+    });
+    await deleteButton.hover();
+
+    const tooltip = page.getByText('Удалить диалог с Алексей Петров', { exact: true });
+    await expect(tooltip).toBeVisible();
+    const [cardBoxAfterHover, tooltipBox, cardOverflow] = await Promise.all([
+      card.boundingBox(),
+      tooltip.boundingBox(),
+      card.evaluate((element) => getComputedStyle(element).overflow),
+    ]);
+
+    expect(cardBoxBeforeHover).not.toBeNull();
+    expect(cardBoxAfterHover).toEqual(cardBoxBeforeHover);
+    expect(tooltipBox).not.toBeNull();
+    expect(cardOverflow).toBe('visible');
+    expect(tooltipBox!.y).toBeGreaterThanOrEqual(cardBoxAfterHover!.y);
+    expect(tooltipBox!.y + tooltipBox!.height).toBeLessThanOrEqual(900);
+    expect(tooltipBox!.y + tooltipBox!.height).toBeLessThanOrEqual(
+      cardBoxAfterHover!.y + cardBoxAfterHover!.height,
+    );
+    expect(hoverConsoleErrors).toEqual([]);
+
+    await testInfo.attach('messages-dark-theme-and-delete-tooltip', {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
+  });
+
   test('existing-user deep link opens chat and sending clears the composer', async ({ page }) => {
     const tracker = await openAuthenticatedMessages(page, '/messages?userId=2');
 
@@ -85,6 +151,11 @@ test.describe('Messages — deterministic user flows', () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await openAuthenticatedMessages(page);
 
+    const lightThemeBackgrounds = await page.getByTestId('messages-page-background').evaluate((element) => ({
+      page: getComputedStyle(element).backgroundColor,
+      html: getComputedStyle(document.documentElement).backgroundColor,
+    }));
+    expect(lightThemeBackgrounds.page).toBe(lightThemeBackgrounds.html);
     const search = page.getByLabel('Поиск диалогов');
     await expect(search).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('Выберите диалог или начните новый')).toBeVisible();

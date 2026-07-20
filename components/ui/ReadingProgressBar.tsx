@@ -1,5 +1,5 @@
 // ✅ МИГРАЦИЯ: Прогресс-бар чтения с поддержкой useThemedColors
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, Animated, Platform } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -15,56 +15,15 @@ function ReadingProgressBar({
   viewportHeight,
 }: ReadingProgressBarProps) {
   const colors = useThemedColors();
-  const progressAnim = useRef(new Animated.Value(0)).current;
-  const lastScrollValue = useRef(0);
-  const animationFrameId = useRef<number | null>(null);
-
-  // ✅ МИГРАЦИЯ: Мемоизация стилей
   const styles = useMemo(() => createStyles(colors), [colors]);
-
-  useEffect(() => {
-    const listener = scrollY.addListener(({ value }) => {
-      // Debounce scroll events to improve performance
-      if (Math.abs(value - lastScrollValue.current) < 3) {
-        return;
-      }
-      lastScrollValue.current = value;
-      
-      // Cancel previous animation frame to prevent layout thrashing
-      if (animationFrameId.current) {
-        cancelAnimationFrame(animationFrameId.current);
-      }
-      
-      animationFrameId.current = requestAnimationFrame(() => {
-        const scrollableHeight = contentHeight - viewportHeight;
-        if (scrollableHeight <= 0) {
-          progressAnim.setValue(0);
-          return;
-        }
-        
-        const progress = Math.min(Math.max(value / scrollableHeight, 0), 1);
-        // On web the CSS `transition: transform` already smooths the bar, so
-        // set the value directly and avoid a second JS-driven Animated.timing
-        // running on every scroll frame. Native keeps the timing animation.
-        if (Platform.OS === 'web') {
-          progressAnim.setValue(progress);
-        } else {
-          Animated.timing(progressAnim, {
-            toValue: progress,
-            duration: 100,
-            useNativeDriver: false,
-          }).start();
-        }
-      });
-    });
-
-    return () => {
-      scrollY.removeListener(listener);
-      if (animationFrameId.current) {
-        cancelAnimationFrame(animationFrameId.current);
-      }
-    };
-  }, [scrollY, contentHeight, viewportHeight, progressAnim]);
+  const progressAnim = useMemo(
+    () => scrollY.interpolate({
+      inputRange: [0, Math.max(1, contentHeight - viewportHeight)],
+      outputRange: [0, 1],
+      extrapolate: 'clamp',
+    }),
+    [contentHeight, scrollY, viewportHeight],
+  );
 
   return (
     <View style={styles.container}>

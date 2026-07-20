@@ -3,7 +3,7 @@
  */
 
 import { act, renderHook } from '@testing-library/react-native'
-import { Platform } from 'react-native'
+import { Animated, InteractionManager, Platform } from 'react-native'
 
 import { useTravelDeferredSectionsModel } from '@/components/travel/details/hooks/useTravelDeferredSectionsModel'
 
@@ -130,5 +130,38 @@ describe('useTravelDeferredSectionsModel', () => {
     expect(result.current.shouldLoadComments).toBe(true)
     expect(result.current.shouldLoadMap).toBe(false)
     expect(result.current.shouldLoadFooter).toBe(false)
+  })
+
+  it('uses settled native offsets without subscribing JS to every scroll frame', () => {
+    Platform.OS = 'android'
+    const interactionSpy = jest
+      .spyOn(InteractionManager, 'runAfterInteractions')
+      .mockImplementation((callback: any) => {
+        callback()
+        return { cancel: jest.fn() } as any
+      })
+    const scrollY = new Animated.Value(0)
+    const addListenerSpy = jest.spyOn(scrollY, 'addListener')
+
+    const { result, rerender } = renderHook(
+      ({ settledScrollOffsetY }) => useTravelDeferredSectionsModel({
+        travelId: 1,
+        scrollY,
+        settledScrollOffsetY,
+        viewportHeight: 800,
+      }),
+      { initialProps: { settledScrollOffsetY: 0 } },
+    )
+
+    expect(addListenerSpy).not.toHaveBeenCalled()
+    expect(result.current.shouldLoadMap).toBe(false)
+
+    act(() => {
+      rerender({ settledScrollOffsetY: 300 })
+    })
+
+    expect(addListenerSpy).not.toHaveBeenCalled()
+    expect(result.current.shouldLoadMap).toBe(true)
+    interactionSpy.mockRestore()
   })
 })

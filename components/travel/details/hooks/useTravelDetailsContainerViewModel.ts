@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Animated, DeviceEventEmitter, Platform } from 'react-native'
 
 import { buildTravelSectionLinks } from '@/components/travel/sectionLinks'
@@ -62,6 +62,7 @@ export function useTravelDetailsContainerViewModel({
     contentType: 'travel',
     contentId: travel?.id ?? slug,
   })
+  const [nativeSettledScrollOffsetY, setNativeSettledScrollOffsetY] = useState(0)
 
   const headKey = useMemo(
     () => getTravelDetailsHeadKey(slug, travel?.id),
@@ -125,10 +126,25 @@ export function useTravelDetailsContainerViewModel({
     () =>
       Animated.event(
         [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-        { useNativeDriver: false, listener: trackScrollDepth }
+        {
+          useNativeDriver: Platform.OS !== 'web',
+          // Web has no native animation driver, so keep its existing throttled
+          // analytics listener. Native reports depth only when a gesture settles
+          // (returned separately below) instead of crossing JS on every frame.
+          ...(Platform.OS === 'web' ? { listener: trackScrollDepth } : {}),
+        }
       ),
     [scrollY, trackScrollDepth]
   )
+
+  const nativeScrollDepthHandler = useCallback((event: any) => {
+    if (Platform.OS === 'web') return
+    const offsetY = event?.nativeEvent?.contentOffset?.y
+    if (Number.isFinite(offsetY)) {
+      setNativeSettledScrollOffsetY((current) => current === offsetY ? current : offsetY)
+    }
+    trackScrollDepth(event)
+  }, [trackScrollDepth])
 
   const wrapperStyle = useMemo(
     () =>
@@ -161,6 +177,8 @@ export function useTravelDetailsContainerViewModel({
     handleFirstImageLoad,
     headKey,
     scrollEventHandler,
+    nativeScrollDepthHandler: Platform.OS === 'web' ? undefined : nativeScrollDepthHandler,
+    nativeSettledScrollOffsetY,
     scrollToComments,
     scrollToMapSection,
     scrollToWithMenuClose,

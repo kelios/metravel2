@@ -82,7 +82,7 @@ export const GalleryGrid: React.FC<{
         const isSelectable = !image.isUploading
         const canMoveLeft = index > 0 && !image.isUploading
         const canMoveRight = index < images.length - 1 && !image.isUploading
-        const moveButtonColor = colors.textInverse
+        const moveButtonColor = colors.textOnDark
         const disabledMoveButtonColor = colors.textMuted
         const renderMoveControls = () => (
           <View style={styles.moveControls}>
@@ -92,7 +92,12 @@ export const GalleryGrid: React.FC<{
               testID="gallery-move-left-button"
               accessibilityLabel={i18nT('travel:components.travel.gallery.GalleryGrid.peremestit_foto_levee_80430f4e')}
             >
-              <Feather name="arrow-left" size={16} color={canMoveLeft ? moveButtonColor : disabledMoveButtonColor} />
+              <Feather
+                name="arrow-left"
+                size={16}
+                color={canMoveLeft ? moveButtonColor : disabledMoveButtonColor}
+                testID="gallery-move-left-icon"
+              />
             </DeleteAction>
             <DeleteAction
               onActivate={() => canMoveRight && onMove(stableKey, 1)}
@@ -100,7 +105,12 @@ export const GalleryGrid: React.FC<{
               testID="gallery-move-right-button"
               accessibilityLabel={i18nT('travel:components.travel.gallery.GalleryGrid.peremestit_foto_pravee_b568179e')}
             >
-              <Feather name="arrow-right" size={16} color={canMoveRight ? moveButtonColor : disabledMoveButtonColor} />
+              <Feather
+                name="arrow-right"
+                size={16}
+                color={canMoveRight ? moveButtonColor : disabledMoveButtonColor}
+                testID="gallery-move-right-icon"
+              />
             </DeleteAction>
           </View>
         )

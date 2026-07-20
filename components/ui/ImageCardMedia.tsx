@@ -35,6 +35,8 @@ type Props = {
   blurBackground?: boolean;
   /** Native-only: downscaled source for the blurred backdrop layer (cheaper decode). */
   blurSrc?: string | null;
+  /** Native-only: keep the sharp layer hidden until its blur backdrop is ready. */
+  synchronizeNativeBlurReveal?: boolean;
   blurRadius?: number;
   blurOnly?: boolean;
   quality?: number;
@@ -92,6 +94,7 @@ function ImageCardMedia({
   fit = 'contain',
   blurBackground = true,
   blurSrc,
+  synchronizeNativeBlurReveal = false,
   blurRadius = 16,
   blurOnly = false,
   quality = 60,
@@ -634,6 +637,7 @@ function ImageCardMedia({
             blurSource={
               Platform.OS !== 'web' && blurSrc ? { uri: blurSrc } : undefined
             }
+            synchronizeBlurReveal={synchronizeNativeBlurReveal}
             blurBackgroundRadius={blurRadius}
             blurOnly={blurOnly}
               borderRadius={borderRadius}

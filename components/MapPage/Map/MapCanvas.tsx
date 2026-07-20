@@ -211,21 +211,21 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   return (
     <MapContainer
       key={containerKey}
-      center={center}
-      zoom={zoom}
-      bounds={bounds}
-      maxZoom={maxZoom}
-      id={id}
-      zoomControl={zoomControl}
-      dragging={dragging}
-      scrollWheelZoom={scrollWheelZoom}
-      touchZoom={touchZoom}
-      doubleClickZoom={doubleClickZoom}
-      keyboard={keyboard}
-      tap={tap}
-      preferCanvas={preferCanvas}
-      style={mapStyle}
-      whenReady={whenReady}
+      {...(center !== undefined ? { center } : {})}
+      {...(zoom !== undefined ? { zoom } : {})}
+      {...(bounds !== undefined ? { bounds } : {})}
+      {...(maxZoom !== undefined ? { maxZoom } : {})}
+      {...(id !== undefined ? { id } : {})}
+      {...(zoomControl !== undefined ? { zoomControl } : {})}
+      {...(dragging !== undefined ? { dragging } : {})}
+      {...(scrollWheelZoom !== undefined ? { scrollWheelZoom } : {})}
+      {...(touchZoom !== undefined ? { touchZoom } : {})}
+      {...(doubleClickZoom !== undefined ? { doubleClickZoom } : {})}
+      {...(keyboard !== undefined ? { keyboard } : {})}
+      {...(tap !== undefined ? { tap } : {})}
+      {...(preferCanvas !== undefined ? { preferCanvas } : {})}
+      {...(mapStyle !== undefined ? { style: mapStyle } : {})}
+      {...(whenReady !== undefined ? { whenReady } : {})}
     >
       <TileLayer
         url={getOsmTileUrl()}

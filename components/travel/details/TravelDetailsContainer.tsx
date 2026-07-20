@@ -203,6 +203,8 @@ export default function TravelDetailsContainer() {
     handleFirstImageLoad,
     headKey,
     scrollEventHandler,
+    nativeScrollDepthHandler,
+    nativeSettledScrollOffsetY,
     scrollToComments,
     scrollToMapSection,
     scrollToWithMenuClose,
@@ -275,6 +277,7 @@ export default function TravelDetailsContainer() {
         forceOpenKey={forceOpenKey}
         deferredChromeReady={deferredChromeReady}
         scrollY={scrollY}
+        settledScrollOffsetY={nativeSettledScrollOffsetY}
         scrollToMapSection={scrollToMapSection}
         viewportHeight={viewportHeight}
       />
@@ -284,6 +287,7 @@ export default function TravelDetailsContainer() {
     deferredChromeReady,
     forceOpenKey,
     isMobile,
+    nativeSettledScrollOffsetY,
     scrollY,
     scrollToMapSection,
     travel,
@@ -369,6 +373,7 @@ export default function TravelDetailsContainer() {
         scrollRef={scrollRef as React.RefObject<any>}
         scrollViewStyle={scrollViewStyle}
         scrollEventHandler={scrollEventHandler}
+        nativeScrollDepthHandler={nativeScrollDepthHandler}
         handleContentSizeChange={handleContentSizeChange}
         handleLayout={handleLayout}
         contentHorizontalPadding={contentHorizontalPadding}

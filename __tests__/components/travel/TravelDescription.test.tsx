@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native'
+import { ScrollView, StyleSheet } from 'react-native'
 import { render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
@@ -86,6 +86,16 @@ describe('TravelDescription', () => {
     })
     expect(requestAnimationFrame).not.toHaveBeenCalled()
     expect(requestIdleCallback).not.toHaveBeenCalled()
+  })
+
+  it('keeps noBox native content in the parent scroll chain', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true })
+
+    const { UNSAFE_queryAllByType } = render(
+      <TravelDescription htmlContent="<p>Описание</p>" noBox />
+    )
+
+    expect(UNSAFE_queryAllByType(ScrollView)).toHaveLength(0)
   })
 
   it('reserves height and keeps idle gate for heavy web descriptions', () => {

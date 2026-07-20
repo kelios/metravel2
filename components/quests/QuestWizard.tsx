@@ -469,7 +469,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                 )}
 
                 {/* Экскурсии рядом — в основном потоке, когда нет отдельной правой колонки */}
-                {!useWideExcursionsSidebar && (!showFinaleOnly) && currentStep && city && Platform.OS === 'web' && (
+                {(Platform.OS !== 'web' || !useWideExcursionsSidebar) && (!showFinaleOnly) && currentStep && city && (
                     <QuestExcursionsInline
                         colors={colors}
                         styles={styles}

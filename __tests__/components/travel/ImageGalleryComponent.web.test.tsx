@@ -8,7 +8,13 @@ import {
   createGalleryStyles,
   createMobileWebStaticFrostStyle,
 } from '@/components/travel/gallery/styles';
-import { MODERN_MATTE_PALETTE, MODERN_MATTE_SHADOWS, MODERN_MATTE_BOX_SHADOWS } from '@/constants/modernMattePalette';
+import { ThemeContext } from '@/hooks/useTheme';
+import {
+  MODERN_MATTE_BOX_SHADOWS,
+  MODERN_MATTE_PALETTE,
+  MODERN_MATTE_PALETTE_DARK,
+  MODERN_MATTE_SHADOWS,
+} from '@/constants/modernMattePalette';
 
 jest.mock('@/components/ui/OptimizedImage', () => {
   const React = require('react');
@@ -486,6 +492,31 @@ describe('ImageGalleryComponent.web', () => {
     expect(moveButton.minWidth).toBeGreaterThanOrEqual(44);
     expect(moveButton.minHeight).toBeGreaterThanOrEqual(44);
     expect(moveButton.borderWidth).toBeGreaterThanOrEqual(2);
+  });
+
+  it('uses the media-overlay text token for active move arrows in dark theme', () => {
+    const { getAllByTestId } = renderSafe(
+      <ThemeContext.Provider
+        value={{ theme: 'dark', isDark: true, setTheme: jest.fn(), toggleTheme: jest.fn() }}
+      >
+        <ImageGalleryComponent
+          collection="gallery"
+          idTravel="42"
+          initialImages={[
+            { id: '1', url: 'https://example.com/first.jpg' },
+            { id: '2', url: 'https://example.com/second.jpg' },
+          ]}
+          maxImages={10}
+        />
+      </ThemeContext.Provider>,
+    );
+
+    const activeRightIcon = getAllByTestId('gallery-move-right-icon')[0];
+    const activeLeftIcon = getAllByTestId('gallery-move-left-icon')[1];
+
+    expect(activeRightIcon.props.color).toBe(MODERN_MATTE_PALETTE_DARK.textOnDark);
+    expect(activeLeftIcon.props.color).toBe(MODERN_MATTE_PALETTE_DARK.textOnDark);
+    expect(activeRightIcon.props.color).not.toBe(MODERN_MATTE_PALETTE_DARK.textInverse);
   });
 
   it('returns a supported flat static-frost style for mobile web buttons', () => {

@@ -2,6 +2,7 @@ import { act, fireEvent, render, type RenderAPI } from '@testing-library/react-n
 import { Platform } from 'react-native'
 import Slider, { type SliderImage } from '@/components/travel/Slider'
 import { computeSliderHeight } from '@/components/travel/sliderParts/utils'
+import { NATIVE_SLIDER_MOBILE_RENDER_WINDOW } from '@/components/travel/sliderParts/nativeLoop'
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ left: 0, right: 0, top: 0, bottom: 0 }),
@@ -356,10 +357,65 @@ describe('Slider', () => {
     expect(list.props.nestedScrollEnabled).toBe(true)
     expect(list.props.directionalLockEnabled).toBe(true)
     expect(list.props.disableIntervalMomentum).toBe(true)
-    expect(list.props.initialNumToRender).toBeGreaterThanOrEqual(5)
-    expect(list.props.windowSize).toBeGreaterThanOrEqual(5)
-    expect(list.props.maxToRenderPerBatch).toBeGreaterThanOrEqual(5)
+    expect(list.props.decelerationRate).toBe('fast')
+    expect(list.props.snapToInterval).toBeGreaterThan(0)
+    expect(list.props.snapToAlignment).toBe('start')
+    expect(list.props.maintainVisibleContentPosition).toBeUndefined()
+    expect(list.props.onViewableItemsChanged).toBeUndefined()
+    // Jest intentionally mounts all slides to make their media nodes testable;
+    // the exported production contract keeps Android to current ±1.
+    expect(list.props.initialNumToRender).toBe(images.length)
+    expect(list.props.windowSize).toBe(images.length)
+    expect(list.props.maxToRenderPerBatch).toBe(images.length)
+    expect(NATIVE_SLIDER_MOBILE_RENDER_WINDOW).toBe(3)
     expect(list.props.updateCellsBatchingPeriod).toBeLessThanOrEqual(16)
+
+    act(() => {
+      list.props.onTouchStart({ nativeEvent: { changedTouches: [{ pageX: 300 }] } })
+      list.props.onScrollEndDrag({
+        nativeEvent: { contentOffset: { x: 0 }, velocity: { x: 0.8 } },
+      })
+      list.props.onTouchEnd({ nativeEvent: { changedTouches: [{ pageX: 220 }] } })
+    })
+    expect(getByTestId('slider-native-list')).toBeTruthy()
+    expect(getByTestId('slider-slide-surface-1').props.renderToHardwareTextureAndroid).toBe(true)
+  })
+
+  it('prioritizes the adjacent native slide and reveals it only after its blur backdrop is ready', async () => {
+    ;(Platform as any).OS = 'android'
+    ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 800 })
+
+    const { getByTestId } = render(
+      <Slider
+        images={[portraitImage, landscapeImage, portraitImage2]}
+        showArrows={false}
+        showDots
+        autoPlay={false}
+        preloadCount={1}
+        blurBackground
+      />
+    )
+
+    const adjacentImage = getByTestId('slider-image-1')
+    const adjacentBackdrop = getByTestId('slider-image-1-blur-background')
+    const readOpacity = (style: unknown) => {
+      const entries = (Array.isArray(style) ? style.flat(Infinity) : [style])
+        .filter((entry): entry is Record<string, unknown> => !!entry && typeof entry === 'object')
+      return Object.assign({}, ...entries).opacity
+    }
+
+    expect(adjacentImage.props.priority).toBe('high')
+    expect(adjacentBackdrop.props.priority).toBe('high')
+    expect(adjacentBackdrop.props.blurRadius).toBe(0)
+    expect(readOpacity(adjacentImage.props.style)).toBe(0)
+
+    act(() => {
+      adjacentBackdrop.props.onLoad?.()
+    })
+
+    expect(readOpacity(getByTestId('slider-image-1').props.style)).toBe(1)
+    expect(getByTestId('slider-slide-surface-0').props.renderToHardwareTextureAndroid).toBe(true)
+    expect(getByTestId('slider-slide-surface-1').props.renderToHardwareTextureAndroid).toBe(false)
   })
 
   it('calls onFirstImageLoad callback when first image loads', async () => {

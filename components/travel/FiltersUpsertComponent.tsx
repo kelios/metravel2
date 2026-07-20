@@ -14,6 +14,7 @@ import ButtonBase from '@/components/ui/Button';
 import MultiSelectField from '@/components/forms/MultiSelectField';
 import CheckboxComponent from '@/components/forms/CheckboxComponent';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
+import TravelVisitedDateInput from '@/components/travel/TravelVisitedDateInput';
 import { TravelFormData, TravelFilters, Travel } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
@@ -384,41 +385,18 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
 
     function renderVisitedDateInput() {
         const value = String(form.visitedDate ?? '');
-        const isInvalid = value.length > 0 && !parseTravelStatusDateParts(value);
 
         return (
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>{i18nT('travel:components.travel.FiltersUpsertComponent.data_kogda_byl_a_3d68a928')}</Text>
-                {Platform.OS === 'web' ? (
-                    <input
-                        type="date"
-                        value={parseTravelStatusDateParts(value) ? value : ''}
-                        onChange={(event) => handleVisitedDateChange(event.target.value)}
-                        aria-label={i18nT('travel:components.travel.FiltersUpsertComponent.data_kogda_byl_v_puteshestvii_ceab8b37')}
-                        style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            fontSize: 15,
-                            borderRadius: 8,
-                            border: `1px solid ${isInvalid ? colors.danger : 'var(--color-border)'}`,
-                            backgroundColor: 'var(--color-background)',
-                            color: 'var(--color-text)',
-                            outline: 'none',
-                            boxSizing: 'border-box',
-                        } as React.CSSProperties}
-                    />
-                ) : (
-                    <TextInput
-                        style={[styles.input, isInvalid && styles.inputInvalid]}
-                        value={value}
-                        onChangeText={handleVisitedDateChange}
-                        placeholder={i18nT('travel:components.travel.FiltersUpsertComponent.gggg_mm_dd_ab72b205')}
-                        placeholderTextColor={colors.textMuted}
-                        keyboardType="numbers-and-punctuation"
-                        maxLength={10}
-                        accessibilityLabel={i18nT('travel:components.travel.FiltersUpsertComponent.data_kogda_byl_v_puteshestvii_ceab8b37')}
-                    />
-                )}
+                <TravelVisitedDateInput
+                    value={value}
+                    onChange={handleVisitedDateChange}
+                    placeholder={i18nT('travel:components.travel.TravelVisitedDateInput.placeholder')}
+                    accessibilityLabel={i18nT('travel:components.travel.FiltersUpsertComponent.data_kogda_byl_v_puteshestvii_ceab8b37')}
+                    calendarLabel={i18nT('travel:components.travel.TravelVisitedDateInput.openCalendar')}
+                    invalidDateMessage={i18nT('travel:components.travel.TravelVisitedDateInput.invalidDate')}
+                />
                 <Text style={styles.fieldHint}>
                     {i18nT('travel:components.travel.FiltersUpsertComponent.esli_tochnaya_data_ne_ukazana_kalendar_otnes_80347012')}</Text>
             </View>
@@ -463,9 +441,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderRadius: DESIGN_TOKENS.radii.sm,
         backgroundColor: colors.surface, // ✅ ДИЗАЙН: Динамический цвет фона
         color: colors.text, // ✅ ДИЗАЙН: Динамический цвет текста
-    },
-    inputInvalid: {
-        borderColor: colors.danger,
     },
     label: {
         fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,

@@ -1,5 +1,8 @@
 import type { SliderImage } from './types';
 
+export const NATIVE_SLIDER_MOBILE_RENDER_WINDOW = 3;
+export const NATIVE_SLIDER_WIDE_RENDER_WINDOW = 5;
+
 export const shouldEnableNativeLoop = ({
   isWeb,
   isTestEnv,

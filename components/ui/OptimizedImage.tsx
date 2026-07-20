@@ -116,6 +116,8 @@ interface OptimizedImageProps {
    * time. Falls back to the main source when omitted.
    */
   blurSource?: { uri: string };
+  /** Keep the native sharp layer hidden until the blur backdrop has decoded. */
+  synchronizeBlurReveal?: boolean;
   blurBackgroundRadius?: number;
   blurOnly?: boolean;
   aspectRatio?: number;
@@ -176,6 +178,7 @@ function OptimizedImage({
   contentFit = 'cover',
   blurBackground = false,
   blurSource,
+  synchronizeBlurReveal = false,
   blurBackgroundRadius = 16,
   blurOnly = false,
   aspectRatio,
@@ -288,6 +291,17 @@ function OptimizedImage({
     validSource &&
     !webBlobOrDataUri &&
     !shouldDisableNetwork;
+
+  const blurUriKey = useMemo(() => {
+    if (!blurSource?.uri) return uriKey;
+    return String(blurSource.uri).trim();
+  }, [blurSource, uriKey]);
+  const blurLoadKey = `${resetKey}|${blurUriKey}`;
+  const [loadedBlurKey, setLoadedBlurKey] = useState<string | null>(null);
+  const shouldSynchronizeBlurReveal =
+    synchronizeBlurReveal && shouldRenderBlurBackground;
+  const isBlurRevealReady =
+    !shouldSynchronizeBlurReveal || loadedBlurKey === blurLoadKey;
 
   const handleLoad = () => {
     if (!mountedRef.current) return;
@@ -424,7 +438,14 @@ function OptimizedImage({
             transition={0}
             style={StyleSheet.absoluteFill}
             cachePolicy={cachePolicy}
-            blurRadius={blurBackgroundRadius}
+            // A caller-provided blurSource is already a small, server-blurred
+            // variant. Avoid Android's expensive live blur while scrolling.
+            blurRadius={blurSource ? 0 : blurBackgroundRadius}
+            placeholder={resolvedPlaceholder}
+            priority={priority}
+            onLoad={() => setLoadedBlurKey(blurLoadKey)}
+            onError={() => setLoadedBlurKey(blurLoadKey)}
+            testID={imageProps?.testID ? `${imageProps.testID}-blur-background` : undefined}
             {...(Platform.OS === 'web' && {
               // @ts-ignore - web-specific props
               alt: '',
@@ -447,6 +468,7 @@ function OptimizedImage({
           source={activeSource as any}
           contentFit={contentFit}
           placeholder={resolvedPlaceholder}
+          priority={priority}
           transition={transition}
           onLoad={handleLoad}
           onError={handleError}
@@ -454,6 +476,7 @@ function OptimizedImage({
             styles.image,
             {
               borderRadius,
+              opacity: isBlurRevealReady ? 1 : 0,
             },
             // Native Fabric: a percentage-only height lets ExpoImage's contentFit
             // impose the bitmap's intrinsic aspect ratio, inflating fixed-height
@@ -571,7 +594,11 @@ export async function prefetchImage(uri: string): Promise<void> {
   const fn = (ExpoImage as any)?.prefetch;
   if (typeof fn === 'function') {
     try {
-      await fn(uri);
+      // Slider neighbour warming should make the network read cheap without
+      // retaining several decoded, full-screen bitmaps. Keeping those in the
+      // shared memory cache evicts the current hero/body textures and Android
+      // re-uploads a bitmap on every vertical-scroll frame.
+      await fn(uri, Platform.OS === 'web' ? undefined : 'disk');
     } catch (error) {
       prefetchedImageUris.delete(uri);
       throw error;

@@ -14,6 +14,8 @@ import { buildLeafletPopupCss, createWebMapStyles } from '@/components/travel/We
 import WebMapMarkerPopup from '@/components/travel/WebMapMarkerPopup';
 // #992 — общий web-движок карты: MapContainer + единый OSM tile-провайдер.
 import MapCanvas from '@/components/MapPage/Map/MapCanvas';
+import MapControls from '@/components/MapPage/Map/MapControls';
+import type { LatLng } from '@/types/coordinates';
 import {
     CenterOnActive,
     FitBounds,
@@ -134,6 +136,7 @@ const WebMapComponent = ({
     const reactId = useId();
     const mapInstanceKeyRef = useRef<string>(`leaflet-map-${reactId.replace(/:/g, '')}`);
     const [mapCreatedNonce, setMapCreatedNonce] = useState(0);
+    const [userLocation, setUserLocation] = useState<LatLng | null>(null);
     // #992 — стабильный колбэк для MapCanvas.onMapRef: lifecycle-эффект движка
     // зависит от него, инлайн-стрелка перезапускала бы эффект каждый рендер.
     const handleMapRef = useCallback((map: any) => {
@@ -141,6 +144,50 @@ const WebMapComponent = ({
         mapRef.current = map;
         setMapCreatedNonce((n) => n + 1);
     }, []);
+
+    const centerOnLocation = useCallback((location: LatLng) => {
+        const map = mapRef.current;
+        if (!map) return;
+        const currentZoom = Number(map.getZoom?.());
+        const targetZoom = Number.isFinite(currentZoom) ? Math.max(currentZoom, 15) : 15;
+        map.setView?.([location.lat, location.lng], targetZoom, { animate: true });
+    }, []);
+
+    const handleCenterUserLocation = useCallback(() => {
+        if (userLocation) {
+            centerOnLocation(userLocation);
+            return;
+        }
+
+        if (typeof navigator === 'undefined' || !navigator.geolocation) {
+            void showToastMessage({
+                type: 'error',
+                text1: i18nT('map:hooks.map.useMapCoordinates.ne_udalos_opredelit_mestopolozhenie_ad63da94'),
+            });
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const location = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                };
+                setUserLocation(location);
+                centerOnLocation(location);
+            },
+            () => {
+                void showToastMessage({
+                    type: 'error',
+                    text1: i18nT('map:hooks.map.useMapCoordinates.ne_udalos_opredelit_mestopolozhenie_ad63da94'),
+                });
+            },
+            { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 },
+        );
+    }, [centerOnLocation, userLocation]);
+
+    const handleZoomIn = useCallback(() => mapRef.current?.zoomIn?.(), []);
+    const handleZoomOut = useCallback(() => mapRef.current?.zoomOut?.(), []);
 
     useEffect(() => {
         const map = mapRef.current;
@@ -635,6 +682,7 @@ const WebMapComponent = ({
                             <MapCanvas
                                 center={[51.505, -0.09]}
                                 zoom={13}
+                                zoomControl={false}
                                 keyboard={false}
                                 containerKey={mapInstanceKeyRef.current}
                                 engine={{ L: L as any, RL: rl as any }}
@@ -692,6 +740,15 @@ const WebMapComponent = ({
                                 </>
                               )}
                             </MapCanvas>
+                            <MapControls
+                                userLocation={userLocation}
+                                onCenterUserLocation={handleCenterUserLocation}
+                                onZoomIn={handleZoomIn}
+                                onZoomOut={handleZoomOut}
+                                alignLeft
+                                topOffset={16}
+                                zIndex={1000}
+                            />
 
                         </div>
                     </div>

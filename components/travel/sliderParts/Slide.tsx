@@ -1,6 +1,9 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Text, TouchableOpacity, View } from 'react-native';
-import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
+import { Platform, Text, View } from 'react-native';
+import ImageCardMedia, {
+  isIOSSafariUserAgent,
+  prefetchImage,
+} from '@/components/ui/ImageCardMedia';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { getMediaLqipUrl } from '@/utils/travelMediaVariants';
 import type { SliderImage } from './types';
@@ -153,6 +156,7 @@ const Slide = memo(function Slide({
   const slideLoadReportedRef = useRef(false);
   const fallbackTriedRef = useRef(false);
   const loadedStateRef = useRef(isLoaded);
+  const nativePressStartRef = useRef<{ x: number; y: number } | null>(null);
   const shouldPreloadAhead = !!preloadPriority && !isActive && !isFirstSlide;
   const shouldEagerLoad =
     isFirstSlide || isActive || isAdjacent || shouldPreloadAhead;
@@ -181,6 +185,11 @@ const Slide = memo(function Slide({
       width: 360,
       quality: 35,
       fit: 'cover',
+      // Pre-blur the tiny backdrop in the image proxy. Android otherwise runs
+      // a live RenderEffect while the whole hero moves inside the article
+      // ScrollView, repeatedly uploading the bitmap and making vertical scroll
+      // visibly crawl on image-heavy travels.
+      blur: 8,
     }) ?? resolvedUri;
   }, [shouldBlur, resolvedUri]);
   const mediaLqipUrl = useMemo(() => getMediaLqipUrl(item.media), [item.media]);
@@ -198,6 +207,11 @@ const Slide = memo(function Slide({
   useEffect(() => {
     loadedStateRef.current = isLoaded;
   }, [isLoaded]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' || !nativeBlurSrc || !shouldEagerLoad) return;
+    void prefetchImage(nativeBlurSrc).catch(() => undefined);
+  }, [nativeBlurSrc, shouldEagerLoad]);
 
   // When skipImage is true and firstImagePreloaded is true, immediately report load
   // This ensures the slider upgrade happens even though we skip rendering the image
@@ -291,6 +305,29 @@ const Slide = memo(function Slide({
   const handlePress = useCallback(() => {
     onImagePress?.(index);
   }, [onImagePress, index]);
+  const handleNativePressTouchStart = useCallback((event: any) => {
+    const nativeEvent = event?.nativeEvent ?? {};
+    const pageX = nativeEvent.pageX ?? nativeEvent.changedTouches?.[0]?.pageX;
+    const pageY = nativeEvent.pageY ?? nativeEvent.changedTouches?.[0]?.pageY;
+    nativePressStartRef.current = Number.isFinite(pageX) && Number.isFinite(pageY)
+      ? { x: pageX, y: pageY }
+      : null;
+  }, []);
+  const handleNativePressTouchEnd = useCallback((event: any) => {
+    const start = nativePressStartRef.current;
+    nativePressStartRef.current = null;
+    const nativeEvent = event?.nativeEvent ?? {};
+    const pageX = nativeEvent.pageX ?? nativeEvent.changedTouches?.[0]?.pageX;
+    const pageY = nativeEvent.pageY ?? nativeEvent.changedTouches?.[0]?.pageY;
+    if (
+      start &&
+      Number.isFinite(pageX) &&
+      Number.isFinite(pageY) &&
+      Math.hypot(pageX - start.x, pageY - start.y) <= 10
+    ) {
+      handlePress();
+    }
+  }, [handlePress]);
   const hasRenderableUri = resolvedUri.length > 0;
   const caption = typeof item.caption === 'string' ? item.caption.trim() : '';
   const accessibilityLabel = caption
@@ -299,6 +336,8 @@ const Slide = memo(function Slide({
 
   const slideContent = (
     <View
+      testID={`slider-slide-surface-${index}`}
+      renderToHardwareTextureAndroid={Platform.OS === 'android' && isActive}
       style={[
         styles.slide,
         { width: containerW, height: slideHeight },
@@ -343,6 +382,7 @@ const Slide = memo(function Slide({
             blurBackground={effectiveBlurBackground}
             blurSrc={nativeBlurSrc}
             blurRadius={12}
+            synchronizeNativeBlurReveal={shouldBlur && Platform.OS !== 'web'}
             placeholderSrc={mediaLqipUrl}
             priority={mainPriority as any}
             prefetch={Platform.OS === 'web' ? shouldPreloadAhead : false}
@@ -395,9 +435,15 @@ const Slide = memo(function Slide({
 
   if (onImagePress && Platform.OS !== 'web') {
     return (
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={handlePress}
+      <View
+        testID={`slider-native-press-surface-${index}`}
+        onTouchStart={handleNativePressTouchStart}
+        onTouchEnd={handleNativePressTouchEnd}
+        onTouchCancel={() => {
+          nativePressStartRef.current = null;
+        }}
+        onAccessibilityTap={handlePress}
+        accessible
         style={{ width: '100%', height: '100%' }}
         accessibilityRole="button"
         accessibilityLabel={caption
@@ -405,7 +451,7 @@ const Slide = memo(function Slide({
           : i18nT('travel:components.travel.sliderParts.Slide.otkryt_foto_value1_na_ves_ekran_13b3899b', { value1: index + 1 })}
       >
         {slideContent}
-      </TouchableOpacity>
+      </View>
     );
   }
 

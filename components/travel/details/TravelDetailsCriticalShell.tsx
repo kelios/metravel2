@@ -71,6 +71,7 @@ type TravelDetailsCriticalShellProps = {
   scrollRef: React.RefObject<ScrollView | null>;
   scrollViewStyle: StyleProp<ViewStyle>;
   scrollEventHandler: ScrollViewProps['onScroll'];
+  nativeScrollDepthHandler?: ScrollViewProps['onMomentumScrollEnd'];
   handleContentSizeChange: (width: number, height: number) => void;
   handleLayout: (event: LayoutChangeEvent) => void;
   contentHorizontalPadding: number;
@@ -102,6 +103,7 @@ export default function TravelDetailsCriticalShell({
   scrollRef,
   scrollViewStyle,
   scrollEventHandler,
+  nativeScrollDepthHandler,
   handleContentSizeChange,
   handleLayout,
   contentHorizontalPadding,
@@ -308,13 +310,15 @@ export default function TravelDetailsCriticalShell({
             />
           )}
 
-          <ScrollView
+          <Animated.ScrollView
             testID="travel-details-scroll"
             {...(Platform.OS === 'web' ? ({ 'data-testid': 'travel-details-scroll' } as any) : null)}
             ref={scrollRef as any}
             contentContainerStyle={scrollContentStyle}
             keyboardShouldPersistTaps="handled"
             onScroll={scrollEventHandler}
+            onScrollEndDrag={nativeScrollDepthHandler}
+            onMomentumScrollEnd={nativeScrollDepthHandler}
             scrollEventThrottle={Platform.OS === 'web' ? 64 : 48}
             style={scrollViewStyle}
             nestedScrollEnabled
@@ -365,7 +369,7 @@ export default function TravelDetailsCriticalShell({
                 </View>
               </View>
             )}
-          </ScrollView>
+          </Animated.ScrollView>
         </View>
       </SafeAreaView>
     </View>

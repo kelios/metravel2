@@ -62,6 +62,7 @@ export const TravelDeferredSections: React.FC<{
   forceOpenKey: string | null
   anchors: AnchorsMap
   scrollToMapSection: () => void
+  settledScrollOffsetY?: number
 }> = memo(({
   travel,
   isMobile,

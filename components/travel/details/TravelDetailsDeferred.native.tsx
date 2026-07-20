@@ -42,6 +42,7 @@ export const TravelDeferredSections: React.FC<{
   forceOpenKey: string | null
   anchors: AnchorsMap
   scrollY?: Animated.Value
+  settledScrollOffsetY?: number
   viewportHeight?: number
   scrollToMapSection: () => void
 }> = memo(({
@@ -50,6 +51,7 @@ export const TravelDeferredSections: React.FC<{
   forceOpenKey,
   anchors,
   scrollY = new Animated.Value(0),
+  settledScrollOffsetY,
   viewportHeight = 0,
   scrollToMapSection,
 }) => {
@@ -70,6 +72,7 @@ export const TravelDeferredSections: React.FC<{
   } = useTravelDeferredSectionsModel({
     travelId: travel?.id,
     scrollY,
+    settledScrollOffsetY,
     viewportHeight,
   })
 

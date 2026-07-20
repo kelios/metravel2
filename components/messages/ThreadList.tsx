@@ -164,6 +164,7 @@ function ThreadList({
             return (
                 <View>
                     <View
+                        testID={`thread-item-${item.id}`}
                         style={[
                             styles.threadItem,
                             { backgroundColor: isSelected ? colors.primarySoft : colors.surface, borderColor: isSelected ? colors.primary : colors.borderLight },
@@ -225,6 +226,7 @@ function ThreadList({
                                 style={styles.threadDeleteButton}
                                 onPress={() => handleDeletePress(item.id)}
                                 showTooltip={Platform.OS === 'web'}
+                                tooltipPlacement="left"
                             />
                         </View>
                     )}
@@ -385,7 +387,10 @@ const createStyles = (_colors: ThemedColors) =>
             marginBottom: DESIGN_TOKENS.spacing.xs,
             borderRadius: DESIGN_TOKENS.radii.md,
             borderWidth: 1,
-            overflow: 'hidden',
+            // IconButton renders its web tooltip outside the 74px row. Keeping
+            // native clipping preserves rounded touch/ripple visuals, while web
+            // must let the hover label escape the card boundary.
+            overflow: Platform.OS === 'web' ? 'visible' : 'hidden',
         },
         threadMainAction: {
             flex: 1,

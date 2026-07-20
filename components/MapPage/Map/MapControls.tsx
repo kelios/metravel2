@@ -18,6 +18,8 @@ interface MapControlsProps {
   onZoomOut?: () => void
   alignLeft?: boolean
   bottomOffset?: number
+  topOffset?: number
+  zIndex?: number
 }
 
 const MOBILE_WEB_TOP_GAP = 16
@@ -112,6 +114,8 @@ const MapControls: React.FC<MapControlsProps> = ({
   onZoomOut,
   alignLeft = false,
   bottomOffset: _bottomOffset,
+  topOffset,
+  zIndex = 40,
 }) => {
   const colors = useThemedColors()
   const { width } = useWindowDimensions()
@@ -124,7 +128,11 @@ const MapControls: React.FC<MapControlsProps> = ({
       // alignLeft means the cluster sits next to the left panel's collapse toggle,
       // so on web it drops below that toggle band; right-aligned/native keep 16.
       top:
-        Platform.OS === 'web'
+        topOffset !== undefined
+          ? Platform.OS === 'web'
+            ? (`calc(${topOffset}px + env(safe-area-inset-top, 0px))` as const)
+            : topOffset
+          : Platform.OS === 'web'
           ? (`calc(${shouldAlignLeft ? DESKTOP_TOP_GAP : MOBILE_WEB_TOP_GAP}px + env(safe-area-inset-top, 0px))` as const)
           : MOBILE_WEB_TOP_GAP,
       ...(Platform.OS === 'web'
@@ -138,12 +146,12 @@ const MapControls: React.FC<MapControlsProps> = ({
         : shouldAlignLeft
           ? { left: MOBILE_WEB_SIDE_GAP }
           : { right: MOBILE_WEB_SIDE_GAP }),
-      zIndex: 40,
+      zIndex,
       display: 'flex',
       flexDirection: 'column' as const,
       gap: `${CONTROL_GROUP_GAP}px`,
     }),
-    [shouldAlignLeft],
+    [shouldAlignLeft, topOffset, zIndex],
   )
 
   const zoomGroupStyle = useMemo(

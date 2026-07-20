@@ -61,6 +61,15 @@ jest.mock('react-leaflet', () => {
   const React = require('react');
   const DummyContainer = ({ children }: any) => <div data-testid="map">{children}</div>;
   const Dummy = ({ children }: any) => <div>{children}</div>;
+  const stableMap = {
+    fitBounds: jest.fn(),
+    setView: jest.fn(),
+    closePopup: jest.fn(),
+    getZoom: jest.fn(() => 13),
+    zoomIn: jest.fn(),
+    zoomOut: jest.fn(),
+  };
+  (globalThis as any).__webMapTestMap = stableMap;
   return {
     MapContainer: DummyContainer,
     TileLayer: Dummy,
@@ -68,15 +77,7 @@ jest.mock('react-leaflet', () => {
     Popup: Dummy,
     // Стабильный инстанс, как в реальном react-leaflet (один map на контейнер):
     // новый объект на каждый вызов зацикливал onMapRef→setMapCreatedNonce→рендер.
-    useMap: (() => {
-      const stableMap = {
-        fitBounds: jest.fn(),
-        setView: jest.fn(),
-        closePopup: jest.fn(),
-        getZoom: jest.fn(() => 13),
-      };
-      return jest.fn(() => stableMap);
-    })(),
+    useMap: jest.fn(() => stableMap),
     useMapEvents: jest.fn((handlers: any) => {
       lastMapEvents = handlers;
       return {};
@@ -178,6 +179,38 @@ describe('WebMapComponent marker sync', () => {
     expect(listRoot?.style.position).toBe('');
     expect(listRoot?.style.maxHeight).toBe('');
     expect(listRoot?.style.overflow).toBe('hidden');
+  });
+
+  it('exposes working locate and zoom controls on the wizard map', async () => {
+    const getCurrentPosition = jest.fn((onSuccess: PositionCallback) => {
+      onSuccess({
+        coords: { latitude: 52.2297, longitude: 21.0122 },
+      } as GeolocationPosition);
+    });
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: { getCurrentPosition },
+    });
+
+    render(<WebMapComponent {...baseProps} />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Загрузка карты…')).toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Приблизить карту' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Отдалить карту' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Определить моё местоположение' }));
+
+    const map = (globalThis as any).__webMapTestMap;
+    expect(map.zoomIn).toHaveBeenCalledTimes(1);
+    expect(map.zoomOut).toHaveBeenCalledTimes(1);
+    expect(getCurrentPosition).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function),
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 },
+    );
+    expect(map.setView).toHaveBeenCalledWith([52.2297, 21.0122], 15, { animate: true });
   });
 
   it('updates marker preview when marker props change without length change', async () => {

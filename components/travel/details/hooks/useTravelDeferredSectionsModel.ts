@@ -159,12 +159,14 @@ const NATIVE_SCROLL_GATE_STEP_MIN = 480
 type UseTravelDeferredSectionsModelArgs = {
   travelId?: number
   scrollY?: Animated.Value
+  settledScrollOffsetY?: number
   viewportHeight?: number
 }
 
 export function useTravelDeferredSectionsModel({
   travelId,
   scrollY,
+  settledScrollOffsetY,
   viewportHeight = 0,
 }: UseTravelDeferredSectionsModelArgs) {
   // On web the heavy travel tree (incl. the Leaflet map) must not mount in the same
@@ -253,11 +255,6 @@ export function useTravelDeferredSectionsModel({
   useEffect(() => {
     if (Platform.OS === 'web') return
     if (!canRenderHeavy) return
-    if (!scrollY) {
-      NATIVE_SCROLL_GATED_SECTIONS.forEach((sectionKey) => markSectionLoaded(sectionKey))
-      return
-    }
-
     const step = Math.max(NATIVE_SCROLL_GATE_STEP_MIN, viewportHeight * 0.75)
     const evaluate = (offsetY: number) => {
       NATIVE_SCROLL_GATED_SECTIONS.forEach((sectionKey, index) => {
@@ -266,10 +263,19 @@ export function useTravelDeferredSectionsModel({
       })
     }
 
+    if (Number.isFinite(settledScrollOffsetY)) {
+      evaluate(settledScrollOffsetY as number)
+      return
+    }
+    if (!scrollY) {
+      NATIVE_SCROLL_GATED_SECTIONS.forEach((sectionKey) => markSectionLoaded(sectionKey))
+      return
+    }
+
     evaluate((scrollY as unknown as { __getValue?: () => number }).__getValue?.() ?? 0)
     const id = scrollY.addListener(({ value }) => evaluate(value))
     return () => scrollY.removeListener(id)
-  }, [canRenderHeavy, markSectionLoaded, scrollY, viewportHeight])
+  }, [canRenderHeavy, markSectionLoaded, scrollY, settledScrollOffsetY, viewportHeight])
 
   useEffect(() => {
     if (Platform.OS !== 'web') return

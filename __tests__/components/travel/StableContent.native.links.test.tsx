@@ -79,6 +79,19 @@ describe('StableContent (native) links', () => {
     expect(props.defaultTextProps?.selectable).toBe(false);
   });
 
+  it('android: первый маркер списка выровнен с первой строкой текста', () => {
+    setPlatformOs('android');
+    renderNative();
+
+    const props = renderHTMLProps[renderHTMLProps.length - 1];
+    expect(props.tagsStyles?.li).toMatchObject({
+      marginTop: 0,
+      marginBottom: 8,
+    });
+    expect(props.tagsStyles?.li?.marginVertical).toBeUndefined();
+    expect(props.enableExperimentalGhostLinesPrevention).toBe(true);
+  });
+
   it('android: onPress внутренней ссылки ведёт через router.push внутри приложения', () => {
     setPlatformOs('android');
     renderNative();

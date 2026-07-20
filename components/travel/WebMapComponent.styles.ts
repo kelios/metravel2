@@ -32,6 +32,7 @@ export const createWebMapStyles = (colors: any) => ({
         paddingRight: '6px',
     },
     mapCard: {
+        position: 'relative' as const,
         border: `1px solid ${colors.border}`,
         borderRadius: `${DESIGN_TOKENS.radii.md}px`,
         overflow: 'hidden' as const,

@@ -1,19 +1,35 @@
 import { test, expect } from './fixtures';
 import { mockFakeAuthApis } from './helpers/auth';
-import { gotoWithRetry } from './helpers/navigation';
+import { assertNoHorizontalScroll, gotoWithRetry } from './helpers/navigation';
 
 test.describe('Gallery: delete broken image (404)', () => {
-  test('shows delete UI for 404 image and removes card after confirm', async ({ page, baseURL }) => {
+  test('keeps dark-theme reorder arrows visible and removes a broken card', async ({ page, baseURL }, testInfo) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
     const base = (baseURL || '').replace(/\/+$/, '');
     const brokenId = 3796;
     const brokenUrl = `${base}/gallery/${brokenId}/conversions/404.jpg`;
+    const validId = 3797;
+    const validUrl = `${base}/gallery/${validId}/conversions/ok.svg`;
     const savedTravelId = 4242;
-    let currentGallery: any[] = [{ id: brokenId, url: brokenUrl }];
+    let currentGallery: any[] = [
+      { id: brokenId, url: brokenUrl },
+      { id: validId, url: validUrl },
+    ];
+    const unexpectedConsoleErrors: string[] = [];
+
+    page.on('pageerror', (error) => unexpectedConsoleErrors.push(error.message));
+    page.on('console', (message) => {
+      if (message.type() !== 'error') return;
+      const text = message.text();
+      if (/3796|404\.jpg|failed to load resource.*404/i.test(text)) return;
+      unexpectedConsoleErrors.push(text);
+    });
 
     // Seed consent + auth + a draft that contains a broken gallery image.
     await page.addInitScript(
-      ({ brokenUrl, brokenId }) => {
+      ({ brokenUrl, brokenId, validUrl, validId }) => {
         try {
+          window.localStorage.setItem('theme', 'dark');
           window.localStorage.setItem(
             'metravel_consent_v1',
             JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
@@ -37,7 +53,10 @@ test.describe('Gallery: delete broken image (404)', () => {
               data: {
                 name: 'E2E draft with broken gallery',
                 description: '',
-                gallery: [{ id: brokenId, url: brokenUrl }],
+                gallery: [
+                  { id: brokenId, url: brokenUrl },
+                  { id: validId, url: validUrl },
+                ],
                 publish: false,
                 moderation: false,
               },
@@ -48,13 +67,57 @@ test.describe('Gallery: delete broken image (404)', () => {
           // ignore
         }
       },
-      { brokenUrl, brokenId }
+      { brokenUrl, brokenId, validUrl, validId }
     );
 
     // Ensure the image request fails fast with 404.
     await page.route('**/gallery/3796/conversions/404.jpg**', async (route) => {
       await route.fulfill({ status: 404, body: '' });
     });
+    await page.route('**/gallery/3797/conversions/ok.svg**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/svg+xml',
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"><rect width="600" height="600" fill="#8fb5a5"/></svg>',
+      });
+    });
+
+    await page.route('**/api/gallery/reorder/**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ gallery: currentGallery }),
+      });
+    });
+
+    const filterPayload = {
+      categories: [{ id: 1, name: 'Город' }],
+      transports: [{ id: 1, name: 'Авто' }],
+      companions: [{ id: 1, name: 'Соло' }],
+      complexity: [{ id: 1, name: 'Легко' }],
+      month: [{ id: 1, name: 'Январь' }],
+      over_nights_stay: [{ id: 1, name: 'Отель' }],
+      categoryTravelAddress: [{ id: 1, name: 'Место' }],
+      sortings: [],
+    };
+    for (const pattern of ['**/api/getFiltersTravel/**', '**/getFiltersTravel/**']) {
+      await page.route(pattern, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(filterPayload),
+        });
+      });
+    }
+    for (const pattern of ['**/api/countries/**', '**/countries/**', '**/countriesforsearch/**']) {
+      await page.route(pattern, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([{ country_id: 643, title_ru: 'Россия' }]),
+        });
+      });
+    }
 
     // Ensure delete API behaves like "already deleted" (404 should be treated as success).
     const deletePatterns = [
@@ -246,6 +309,51 @@ test.describe('Gallery: delete broken image (404)', () => {
     const galleryCounter = page.getByText(/Загружено\s+\d+\s+из\s+\d+/i).first();
     await expect(galleryCounter).toBeVisible({ timeout: 30_000 });
 
+    const firstActiveRightButton = page.getByTestId('gallery-move-right-button').first();
+    const firstActiveRightIcon = page.getByTestId('gallery-move-right-icon').first();
+    const secondActiveLeftIcon = page.getByTestId('gallery-move-left-icon').nth(1);
+    await expect(firstActiveRightButton).toBeVisible({ timeout: 30_000 });
+    await expect(firstActiveRightIcon).toBeVisible();
+    await expect(secondActiveLeftIcon).toBeVisible();
+
+    const readArrowColors = async () => firstActiveRightIcon.evaluate((element) => {
+      const rootStyles = getComputedStyle(document.documentElement);
+      const probe = document.createElement('span');
+      probe.style.color = rootStyles.getPropertyValue('--color-textOnDark').trim();
+      document.body.appendChild(probe);
+      const expected = getComputedStyle(probe).color;
+      probe.remove();
+      return {
+        actual: getComputedStyle(element).color,
+        expected,
+      };
+    });
+
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    expect(await readArrowColors()).toEqual({ actual: 'rgb(255, 255, 255)', expected: 'rgb(255, 255, 255)' });
+    expect(await secondActiveLeftIcon.evaluate((element) => getComputedStyle(element).color)).toBe('rgb(255, 255, 255)');
+    await assertNoHorizontalScroll(page);
+
+    await firstActiveRightButton.scrollIntoViewIfNeeded();
+    await testInfo.attach('travel-gallery-dark-arrows-desktop', {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await firstActiveRightButton.scrollIntoViewIfNeeded();
+    expect(await readArrowColors()).toEqual({ actual: 'rgb(255, 255, 255)', expected: 'rgb(255, 255, 255)' });
+    await assertNoHorizontalScroll(page);
+    await testInfo.attach('travel-gallery-dark-arrows-mobile', {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await page.getByTestId('gallery-move-right-button').first().click();
+    await page.getByTestId('gallery-move-left-button').nth(1).click();
+    await expect(page.getByTestId('gallery-move-right-button').first()).toBeVisible();
+
     // Wait for error state to appear
     const errorText = page.getByText('Ошибка загрузки', { exact: true }).first();
     await expect(errorText).toBeVisible({ timeout: 30_000 });
@@ -276,5 +384,7 @@ test.describe('Gallery: delete broken image (404)', () => {
         return await zeroCount.isVisible().catch(() => false);
       }, { timeout: 15000 })
       .toBeTruthy();
+
+    expect(unexpectedConsoleErrors).toEqual([]);
   });
 });
