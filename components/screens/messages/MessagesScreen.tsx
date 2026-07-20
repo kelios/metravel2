@@ -7,7 +7,7 @@ import { useIsFocused } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { useThreads, useThreadMessages, useSendMessage, useDeleteMessage, useDeleteThread, useAvailableUsers, useMarkThreadRead } from '@/hooks/useMessages';
-import { fetchThreadByUser } from '@/api/messages';
+import { fetchThreadByUser, isDeadOrphanedMessageThread } from '@/api/messages';
 import type { MessageThread } from '@/api/messages';
 import ThreadList from '@/components/messages/ThreadList';
 import ChatView from '@/components/messages/ChatView';
@@ -89,7 +89,7 @@ function MessagesScreenContent() {
     const { messages, loading: messagesLoading, refresh: refreshMessages, hasMore, loadMore, optimisticRemove } = useThreadMessages(
         selectedThread?.id ?? null, isFocused
     );
-    const { send, sending } = useSendMessage();
+    const { send, sending, error: sendError } = useSendMessage();
     const { remove: removeMessage } = useDeleteMessage();
     const { remove: removeThread } = useDeleteThread();
     const { mark: markRead } = useMarkThreadRead();
@@ -101,6 +101,20 @@ function MessagesScreenContent() {
         userId,
         users,
     });
+
+    // Пустые осиротевшие треды (собеседника нет, сообщений нет) — мусор от старого
+    // self-send бага; из списка диалогов их прячем. Треды с историей остаются.
+    const visibleThreads = useMemo(() => {
+        const uid = userId != null ? Number(userId) : null;
+        return threads.filter((thread) => !isDeadOrphanedMessageThread(thread, uid));
+    }, [threads, userId]);
+
+    // Если собеседника в треде нет (осиротевший тред или вырожденный диплинк «на
+    // себя»), отправлять некому — композер отключается с пояснением.
+    const composerDisabledReason = useMemo(() => {
+        if (!selectedThread || otherUserId != null) return null;
+        return i18nT('errorsStatic:api.messages.threadUnavailable');
+    }, [selectedThread, otherUserId]);
 
     // Диплинк: открыть диалог с конкретным пользователем
     useEffect(() => {
@@ -280,13 +294,16 @@ function MessagesScreenContent() {
     );
 
     const handleSend = useCallback(
-        async (text: string) => {
-            if (!selectedThread || !userId) return;
+        async (text: string): Promise<boolean> => {
+            if (!selectedThread || !userId) return false;
             const currentUserIdNum = Number(userId);
             const otherIds = selectedThread.participants.filter((id) => id !== currentUserIdNum);
-            const participants = otherIds.length > 0 ? otherIds : selectedThread.participants;
+            // Осиротевший тред (собеседника нет): раньше fallback на все participants
+            // отправлял сообщение самому себе — бэкенд плодил пустые «диалоги с собой»,
+            // а сообщение пропадало. Такие треды композер не показывают, но страхуемся.
+            if (otherIds.length === 0) return false;
 
-            const ok = await send(participants, text);
+            const ok = await send(otherIds, text);
             if (ok) {
                 if (selectedThread.id === -1) {
                     // Virtual thread: resolve to the real thread created by the backend
@@ -310,6 +327,7 @@ function MessagesScreenContent() {
                     refreshMessages();
                 }
             }
+            return ok;
         },
         [selectedThread, userId, send, refreshMessages, refreshThreads]
     );
@@ -398,7 +416,7 @@ function MessagesScreenContent() {
                 />
             ) : (
                 <ThreadList
-                    threads={threads}
+                    threads={visibleThreads}
                     loading={threadsLoading || initialLoading}
                     error={threadsError}
                     currentUserId={userId}
@@ -432,6 +450,8 @@ function MessagesScreenContent() {
             onDeleteMessage={handleDeleteMessage}
             onDeleteThread={selectedThread.id >= 0 ? () => handleDeleteThread(selectedThread.id) : undefined}
             reserveBottomDock={false}
+            sendError={sendError}
+            composerDisabledReason={composerDisabledReason}
         />
     ) : null;
 

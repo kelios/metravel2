@@ -303,7 +303,9 @@ const getStyles = (colors: ThemedColors) =>
       gap: 12,
       paddingVertical: 14,
     },
-    menuRowText: { fontSize: 15, fontWeight: '600', color: colors.text },
+    // flexShrink/flex у текстов в row-контейнерах обязателен: на Android без него
+    // Text жёстко усекается без переноса («Мошенничеств», «Друго» в причинах жалобы).
+    menuRowText: { flexShrink: 1, fontSize: 15, fontWeight: '600', color: colors.text },
     menuRowTextMuted: { color: colors.textMuted },
     menuRowTextPrimary: { color: colors.primaryText },
     hint: { fontSize: 12, color: colors.textMuted, lineHeight: 16, marginTop: 4 },
@@ -327,7 +329,7 @@ const getStyles = (colors: ThemedColors) =>
       marginBottom: 6,
     },
     reasonRowSelected: { borderColor: colors.primary, backgroundColor: colors.surfaceMuted },
-    reasonText: { fontSize: 14, color: colors.text },
+    reasonText: { flex: 1, fontSize: 14, color: colors.text },
     reasonTextSelected: { color: colors.primaryText, fontWeight: '600' },
     commentInput: {
       borderWidth: 1,

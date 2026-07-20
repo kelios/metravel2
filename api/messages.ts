@@ -5,6 +5,7 @@ import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { unwrapList } from '@/api/clientResponse';
 import { getApiRequestCredentials, shouldUseStoredAuthToken } from '@/utils/authPlatform';
+import { getCsrfHeader } from '@/utils/csrf';
 import { normalizeProfileName, resolveProfileFullName } from '@/utils/profileName';
 import { translate as i18nT } from '@/i18n';
 
@@ -37,6 +38,9 @@ async function messagingFetch<T>(
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Token ${token}` } : {}),
+        // Web ходит с cookie-сессией: Django требует X-CSRFToken на unsafe-методах,
+        // иначе POST/DELETE отвечают 403 (отправка/прочтение/удаление молча падали).
+        ...getCsrfHeader(),
         ...options.headers,
     };
 
@@ -102,6 +106,19 @@ export const isOrphanedMessageThread = (
 ): boolean => {
     if (!thread || currentUserId == null || thread.id < 0) return false;
     return !thread.participants.some((participantId) => participantId !== currentUserId);
+};
+
+// Пустой осиротевший тред: собеседника нет и не было ни одного сообщения. Такие
+// строки — мусор от прежнего self-send бага (отправка в осиротевший тред создавала
+// на бэке новый диалог только с самим собой); в списке диалогов их не показываем.
+// Осиротевший тред С историей остаётся видимым (read-only переписка с удалённым
+// пользователем).
+export const isDeadOrphanedMessageThread = (
+    thread: MessageThread | null | undefined,
+    currentUserId: number | null,
+): boolean => {
+    if (!isOrphanedMessageThread(thread, currentUserId) || !thread) return false;
+    return !thread.last_message_created_at && (thread.unread_count ?? 0) === 0;
 };
 
 export type ParticipantPreviewInfo = { name: string | null; avatar: string | null };

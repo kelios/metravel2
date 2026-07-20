@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { ApiError } from '@/api/client';
 import {
     fetchMessageThreads,
     fetchMessages,
@@ -267,7 +268,13 @@ export function useSendMessage() {
             return true;
         } catch (e: unknown) {
             devError('useSendMessage error:', e);
-            if (mountedRef.current) setError(getErrorMessage(e, i18nT('messages:hooks.useMessages.oshibka_otpravki_soobscheniya_b06f59fd')));
+            if (mountedRef.current) {
+                const fallback = i18nT('messages:hooks.useMessages.oshibka_otpravki_soobscheniya_b06f59fd');
+                // ApiError.message — сырой текст бэкенда (англ. detail вроде «CSRF
+                // Failed…»); пользователю показываем локализованный текст. Обычный
+                // Error (например, локализованный 401 из sendMessage) показываем как есть.
+                setError(e instanceof ApiError ? fallback : getErrorMessage(e, fallback));
+            }
             return false;
         } finally {
             if (mountedRef.current) setSending(false);

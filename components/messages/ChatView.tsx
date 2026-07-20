@@ -102,7 +102,9 @@ interface ChatViewProps {
   otherUserName: string
   otherUserAvatar?: string | null
   otherUserId?: number | null
-  onSend: (text: string) => void
+  // Возврат false означает «отправка не удалась»: ChatView вернёт текст в поле
+  // ввода, чтобы сообщение не терялось молча.
+  onSend: (text: string) => void | boolean | Promise<void | boolean>
   onBack: () => void
   onLoadMore?: () => void
   hasMore?: boolean
@@ -110,6 +112,11 @@ interface ChatViewProps {
   onDeleteMessage?: (messageId: number) => void
   onDeleteThread?: () => void
   reserveBottomDock?: boolean
+  // Текст последней ошибки отправки — показывается над композером.
+  sendError?: string | null
+  // Причина недоступности композера (осиротевший тред): вместо поля ввода
+  // рендерится уведомление, отправка невозможна.
+  composerDisabledReason?: string | null
 }
 
 function ChatView({
@@ -128,6 +135,8 @@ function ChatView({
   onDeleteMessage,
   onDeleteThread,
   reserveBottomDock = true,
+  sendError,
+  composerDisabledReason,
 }: ChatViewProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -174,8 +183,14 @@ function ChatView({
     const now = Date.now()
     if (now - lastSentAtRef.current < SEND_COOLDOWN_MS) return
     lastSentAtRef.current = now
-    onSend(trimmed)
     setText('')
+    // Поле очищаем оптимистично, но при неудаче возвращаем текст обратно
+    // (если пользователь ещё не начал набирать новое сообщение).
+    void Promise.resolve(onSend(trimmed)).then((ok) => {
+      if (ok === false) {
+        setText((current) => (current.length > 0 ? current : trimmed))
+      }
+    })
   }, [text, onSend, sending])
 
   const handleKeyPress = useCallback(
@@ -266,17 +281,40 @@ function ChatView({
         />
       )}
 
-      <ChatComposer
-        styles={styles}
-        colors={colors}
-        text={text}
-        onChangeText={setText}
-        onSend={handleSend}
-        onKeyPress={handleKeyPress}
-        canSend={canSend}
-        sending={sending}
-        bottomInset={composerBottomInset}
-      />
+      {sendError ? (
+        <Text
+          style={styles.sendError}
+          accessibilityLiveRegion="polite"
+          testID="message-send-error"
+        >
+          {sendError}
+        </Text>
+      ) : null}
+
+      {composerDisabledReason ? (
+        <View
+          testID="message-composer-disabled"
+          style={[
+            styles.inputContainer,
+            styles.composerDisabled,
+            { paddingBottom: composerBottomInset > 0 ? composerBottomInset : DESIGN_TOKENS.spacing.sm },
+          ]}
+        >
+          <Text style={styles.composerDisabledText}>{composerDisabledReason}</Text>
+        </View>
+      ) : (
+        <ChatComposer
+          styles={styles}
+          colors={colors}
+          text={text}
+          onChangeText={setText}
+          onSend={handleSend}
+          onKeyPress={handleKeyPress}
+          canSend={canSend}
+          sending={sending}
+          bottomInset={composerBottomInset}
+        />
+      )}
     </KeyboardAvoidingView>
   )
 }
@@ -497,6 +535,23 @@ const createStyles = (colors: ThemedColors) =>
       gap: DESIGN_TOKENS.spacing.xs,
       backgroundColor: colors.surface,
       borderColor: colors.borderLight,
+    },
+    sendError: {
+      paddingHorizontal: DESIGN_TOKENS.spacing.md,
+      paddingVertical: DESIGN_TOKENS.spacing.xs,
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      color: colors.danger,
+      backgroundColor: colors.dangerSoft,
+    },
+    composerDisabled: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    composerDisabledText: {
+      flex: 1,
+      textAlign: 'center',
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      color: colors.textMuted,
     },
     input: {
       flex: 1,
