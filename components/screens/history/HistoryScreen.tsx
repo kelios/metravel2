@@ -60,6 +60,8 @@ export default function HistoryScreen() {
             if (isAuthenticated && userId) {
                 await refreshViewHistory(userId);
             }
+        } catch {
+            // React Query сохраняет предыдущий кэш; экран остаётся рабочим офлайн.
         } finally {
             setRefreshing(false);
         }

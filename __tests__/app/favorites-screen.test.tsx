@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react-native';
+import { FlashList } from '@shopify/flash-list';
 
 import FavoritesScreen from '@/app/(tabs)/favorites';
 
@@ -7,6 +8,7 @@ const mockUseAuth = jest.fn();
 const mockUseFavorites = jest.fn();
 const mockPush = jest.fn();
 const mockBack = jest.fn();
+const mockRefreshFavoritesFromServer = jest.fn();
 
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -14,6 +16,10 @@ jest.mock('@/context/AuthContext', () => ({
 
 jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => mockUseFavorites(),
+}));
+
+jest.mock('@/hooks/useFavoritesData', () => ({
+  refreshFavoritesFromServer: (...args: unknown[]) => mockRefreshFavoritesFromServer(...args),
 }));
 
 jest.mock('expo-router', () => ({
@@ -54,8 +60,9 @@ describe('FavoritesScreen', () => {
     jest.useFakeTimers();
     mockPush.mockClear();
     mockBack.mockClear();
+    mockRefreshFavoritesFromServer.mockReset();
 
-    mockUseAuth.mockReturnValue({ isAuthenticated: true, authReady: true });
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, authReady: true, userId: '104' });
     mockUseFavorites.mockReturnValue({
       favorites: [],
       removeFavorite: jest.fn(),
@@ -106,5 +113,29 @@ describe('FavoritesScreen', () => {
     fireEvent.press(utils.getByText('Назад'));
 
     expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs the real server refresh for native pull-to-refresh', async () => {
+    mockUseFavorites.mockReturnValue({
+      favorites: [
+        { id: 1, type: 'travel', title: 'T1', url: '/travels/1', imageUrl: null, city: null, countryName: 'Belarus' },
+      ],
+      removeFavorite: jest.fn(),
+      clearFavorites: jest.fn(),
+    });
+    mockRefreshFavoritesFromServer.mockRejectedValueOnce(new Error('offline'));
+
+    const utils = render(<FavoritesScreen />);
+    await act(async () => {
+      jest.advanceTimersByTime(350);
+    });
+
+    const list = utils.UNSAFE_getByType(FlashList);
+    await act(async () => {
+      await list.props.onRefresh();
+    });
+
+    expect(mockRefreshFavoritesFromServer).toHaveBeenCalledWith('104');
+    expect(utils.UNSAFE_getByType(FlashList).props.refreshing).toBe(false);
   });
 });

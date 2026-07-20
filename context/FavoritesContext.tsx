@@ -16,12 +16,12 @@ export interface FavoritesContextType {
   clearFavorites?: () => Promise<void>;
   // 'recommendations' больше не серверный стор: рекомендации на React Query
   // (hooks/useRecommendedTravels). ensureServerData оставлен для favorites/history
-  // (ленивый догруз с сервера), пока они не мигрированы.
+  // как совместимый фасад ленивого серверного обновления.
   ensureServerData?: (kind: 'favorites' | 'history' | 'all') => Promise<void>;
 }
 
 // Actions/bootstrap supplied by the provider. Data slices (favorites/viewHistory/
-// isFavorite) are read directly from the Zustand stores inside useFavorites().
+// isFavorite) are read directly from the React Query cache inside useFavorites().
 export type FavoritesActionsContextType = Pick<
   FavoritesContextType,
   | 'addFavorite'
@@ -54,10 +54,9 @@ export const FavoritesContext: ReturnType<
   createContext<FavoritesActionsContextType | undefined>(undefined);
 globalForFavoritesContext.__metravelFavoritesContext = FavoritesContext;
 
-// Data is read straight from the stores (mirrors useAuth → useAuthStore) so
-// consumers always reflect the live store regardless of provider re-render
-// timing or duplicated-bundle context identity. The provider only supplies
-// auth-bound action callbacks + bootstrap.
+// Data is read straight from React Query, so consumers reflect live cache updates
+// regardless of provider re-render timing or duplicated-bundle context identity.
+// The provider only supplies auth-bound action callbacks + bootstrap.
 export const useFavorites = (): FavoritesContextType => {
   const actions = useContext(FavoritesContext);
   if (!actions) {

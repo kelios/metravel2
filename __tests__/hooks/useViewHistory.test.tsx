@@ -21,6 +21,7 @@ import {
   addViewHistoryItem,
   clearViewHistory,
   ensureViewHistoryServerData,
+  refreshViewHistory,
   viewHistoryQueryFn,
   mergeHistoryItems,
   type ViewHistoryItem,
@@ -153,6 +154,13 @@ describe('ensureViewHistoryServerData', () => {
   it('is a no-op for guests', async () => {
     await ensureViewHistoryServerData(null);
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('force refreshes even when the query is still fresh', async () => {
+    mockFetch.mockResolvedValue([] as any);
+    await ensureViewHistoryServerData('user-1');
+    await refreshViewHistory('user-1');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });
 

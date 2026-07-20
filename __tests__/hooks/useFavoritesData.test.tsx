@@ -26,6 +26,7 @@ import {
   clearFavorites,
   isFavoriteInCache,
   ensureFavoritesServerData,
+  refreshFavoritesFromServer,
   type FavoriteItem,
 } from '@/hooks/useFavoritesData';
 import { markTravelAsFavorite, unmarkTravelAsFavorite } from '@/api/travelsFavorites';
@@ -59,6 +60,9 @@ afterEach(() => setActiveQueryClient(null));
 
 describe('addFavorite (authenticated travel)', () => {
   it('marks via the server endpoint, optimistically adds, then syncs from server', async () => {
+    qc.setQueryData(queryKeys.favorites('104'), [
+      { id: 'article-1', type: 'article', title: 'Guide', url: '/article/1', addedAt: 1 } as FavoriteItem,
+    ]);
     mockFetch.mockResolvedValueOnce([serverDto(514)] as any);
 
     await addFavorite(
@@ -69,6 +73,7 @@ describe('addFavorite (authenticated travel)', () => {
     expect(mockMark).toHaveBeenCalledWith(514);
     expect(mockFetch).toHaveBeenCalledWith('104');
     expect(isFavoriteInCache('104', 514, 'travel')).toBe(true);
+    expect(isFavoriteInCache('104', 'article-1', 'article')).toBe(true);
   });
 
   it('rolls back the optimistic add when the server mark fails', async () => {
@@ -142,6 +147,22 @@ describe('guest favorites (no protected server calls)', () => {
     expect(mockMark).not.toHaveBeenCalled();
     expect(isFavoriteInCache('104', 'a-1', 'article')).toBe(true);
   });
+
+  it('removes one authenticated article locally without refreshing away the others', async () => {
+    qc.setQueryData(queryKeys.favorites('104'), [
+      { id: 1, type: 'travel', title: 'Trip', url: '/travels/1', addedAt: 1 } as FavoriteItem,
+      { id: 'a-1', type: 'article', title: 'First', url: '/article/a-1', addedAt: 2 } as FavoriteItem,
+      { id: 'a-2', type: 'article', title: 'Second', url: '/article/a-2', addedAt: 3 } as FavoriteItem,
+    ]);
+
+    await removeFavorite('a-1', 'article', { isAuthenticated: true, userId: '104' });
+
+    expect(mockUnmark).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(isFavoriteInCache('104', 'a-1', 'article')).toBe(false);
+    expect(isFavoriteInCache('104', 'a-2', 'article')).toBe(true);
+    expect(isFavoriteInCache('104', 1, 'travel')).toBe(true);
+  });
 });
 
 describe('identity-isolation + clear', () => {
@@ -152,6 +173,31 @@ describe('identity-isolation + clear', () => {
     expect(isFavoriteInCache('user-1', 1, 'travel')).toBe(true);
     expect(isFavoriteInCache(null, 1, 'travel')).toBe(false);
     expect(isFavoriteInCache('user-2', 1, 'travel')).toBe(false);
+  });
+
+  it('does not dedupe the same item across different user identities', async () => {
+    let resolveFirstMark: (() => void) | undefined;
+    mockMark
+      .mockImplementationOnce(() => new Promise((resolve) => {
+        resolveFirstMark = () => resolve({} as any);
+      }))
+      .mockResolvedValueOnce({} as any);
+    mockFetch.mockResolvedValue([] as any);
+
+    const first = addFavorite(
+      { id: 7, type: 'travel', title: 'Same', url: '/travels/7' },
+      { isAuthenticated: true, userId: 'user-1' },
+    );
+    const second = addFavorite(
+      { id: 7, type: 'travel', title: 'Same', url: '/travels/7' },
+      { isAuthenticated: true, userId: 'user-2' },
+    );
+
+    await second;
+    expect(mockMark).toHaveBeenCalledTimes(2);
+
+    resolveFirstMark?.();
+    await first;
   });
 
   it('clearFavorites: auth calls server clear then empties cache', async () => {
@@ -185,6 +231,13 @@ describe('ensureFavoritesServerData', () => {
   it('is a no-op for guests', async () => {
     await ensureFavoritesServerData(null);
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('force refreshes even when the query is still fresh', async () => {
+    mockFetch.mockResolvedValue([serverDto(1)] as any);
+    await ensureFavoritesServerData('user-1');
+    await refreshFavoritesFromServer('user-1');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -24,13 +24,14 @@ import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader'
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { translate as i18nT } from '@/i18n'
+import { refreshFavoritesFromServer } from '@/hooks/useFavoritesData';
 
 
 export default function FavoritesScreen() {
     const router = useRouter();
     const canonical = buildCanonicalUrl('/favorites');
     const { width } = useResponsive();
-    const { isAuthenticated, authReady } = useAuth();
+    const { isAuthenticated, authReady, userId } = useAuth();
     const { favorites, removeFavorite, clearFavorites, ensureServerData } = useFavorites() as any;
     const colors = useThemedColors();
     const [isLoading, setIsLoading] = useState(true);
@@ -38,10 +39,18 @@ export default function FavoritesScreen() {
     // AND-14: Pull-to-Refresh
     const [refreshing, setRefreshing] = useState(false);
     const onRefresh = useCallback(async () => {
+        if (refreshing) return;
         setRefreshing(true);
-        // Favorites come from context/store — trigger a short delay to simulate refresh
-        setTimeout(() => setRefreshing(false), 500);
-    }, []);
+        try {
+            if (isAuthenticated && userId) {
+                await refreshFavoritesFromServer(userId);
+            }
+        } catch {
+            // React Query сохраняет предыдущий кэш; экран остаётся рабочим офлайн.
+        } finally {
+            setRefreshing(false);
+        }
+    }, [isAuthenticated, refreshing, userId]);
 
     const handleBackToProfile = useCallback(() => {
         router.back();

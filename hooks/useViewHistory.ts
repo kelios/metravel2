@@ -142,5 +142,9 @@ export async function ensureViewHistoryServerData(userId: string | null): Promis
 export async function refreshViewHistory(userId: string | null): Promise<void> {
   const client = getActiveQueryClient();
   if (!client || !userId) return;
-  await client.refetchQueries({ queryKey: queryKeys.viewHistory(userId) });
+  await client.fetchQuery({
+    queryKey: queryKeys.viewHistory(userId),
+    queryFn: viewHistoryQueryFn(userId),
+    staleTime: 0,
+  });
 }

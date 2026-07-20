@@ -30,8 +30,14 @@ type Auth = { isAuthenticated: boolean; userId: string | null };
 
 const EMPTY: FavoriteItem[] = [];
 
-// Дедуп конкурентных тапов по одному айтему (перенесено из стора без изменений).
+// Дедуп конкурентных тапов по одному айтему внутри одной auth identity.
 const inFlightKeys = new Set<string>();
+
+const getInFlightKey = (
+  userId: string | null,
+  type: FavoriteItem['type'],
+  id: number | string,
+): string => `${userId ?? 'guest'}:${type}:${String(id)}`;
 
 const readFavorites = (userId: string | null): FavoriteItem[] =>
   getActiveQueryClient()?.getQueryData<FavoriteItem[]>(queryKeys.favorites(userId)) ?? [];
@@ -52,17 +58,30 @@ const toFavoriteItems = (dto: unknown): FavoriteItem[] =>
   }));
 
 /**
- * queryFn избранного: авторизованному — серверный список travel-избранного
- * (replace, как старый refreshFromServer), гостю — текущий локальный кэш.
+ * Сервер владеет только travel-избранным. Article favorites остаются локальными
+ * и поэтому должны переживать любой server refresh того же user-scoped ключа.
+ */
+export const mergeServerTravelFavorites = (
+  current: FavoriteItem[],
+  serverTravels: FavoriteItem[],
+): FavoriteItem[] => [
+  ...serverTravels,
+  ...current.filter((item) => item.type === 'article'),
+];
+
+/**
+ * queryFn избранного: авторизованному — актуальный серверный список travel
+ * плюс сохранённые локальные article favorites; гостю — текущий локальный кэш.
  */
 export const favoritesQueryFn =
   (userId: string | null) => async (): Promise<FavoriteItem[]> => {
     if (!userId) return readFavorites(null);
-    return toFavoriteItems(await fetchUserFavoriteTravels(userId));
+    const serverTravels = toFavoriteItems(await fetchUserFavoriteTravels(userId));
+    return mergeServerTravelFavorites(readFavorites(userId), serverTravels);
   };
 
 /** Форс-рефетч серверного избранного (best-effort sync после мутации / refresh). */
-const refreshFavoritesFromServer = async (userId: string | null): Promise<void> => {
+export const refreshFavoritesFromServer = async (userId: string | null): Promise<void> => {
   const client = getActiveQueryClient();
   if (!client || !userId) return;
   await client.fetchQuery({
@@ -105,7 +124,7 @@ export async function ensureFavoritesServerData(userId: string | null): Promise<
 }
 
 export async function addFavorite(item: Omit<FavoriteItem, 'addedAt'>, { userId }: Auth): Promise<void> {
-  const inflightKey = `${item.type}:${String(item.id)}`;
+  const inflightKey = getInFlightKey(userId, item.type, item.id);
   if (inFlightKeys.has(inflightKey)) return;
   inFlightKeys.add(inflightKey);
 
@@ -159,7 +178,7 @@ export async function removeFavorite(
   type: FavoriteItem['type'] = 'travel',
   { userId }: Auth,
 ): Promise<void> {
-  const inflightKey = `${type}:${String(id)}`;
+  const inflightKey = getInFlightKey(userId, type, id);
   if (inFlightKeys.has(inflightKey)) return;
   inFlightKeys.add(inflightKey);
 
@@ -167,21 +186,21 @@ export async function removeFavorite(
     const before = readFavorites(userId);
     writeFavorites(userId, before.filter((f) => !(f.id === id && f.type === type)));
 
-    try {
-      if (type === 'travel') {
+    if (type === 'travel') {
+      try {
         await unmarkTravelAsFavorite(id);
+      } catch (error) {
+        writeFavorites(userId, before);
+        inFlightKeys.delete(inflightKey);
+        throw error;
       }
-    } catch (error) {
-      writeFavorites(userId, before);
-      inFlightKeys.delete(inflightKey);
-      throw error;
-    }
 
-    // Best-effort sync: удаление уже прошло на сервере, сбой рефетча не откатывает.
-    try {
-      await refreshFavoritesFromServer(userId);
-    } catch {
-      // ignore — оптимистичное состояние уже отражает удаление
+      // Best-effort sync: удаление уже прошло на сервере, сбой рефетча не откатывает.
+      try {
+        await refreshFavoritesFromServer(userId);
+      } catch {
+        // ignore — оптимистичное состояние уже отражает удаление
+      }
     }
     inFlightKeys.delete(inflightKey);
     return;
