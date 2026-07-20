@@ -1,53 +1,10 @@
 // TabLayout.tsx — кастомный header + полный офф таббара
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import { Platform, View, Animated } from 'react-native';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import { Platform, View } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
 import CustomHeader from '@/components/layout/CustomHeader';
 import { isQuestDetailHeaderPath, shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
-
-// Defensive lazy imports: fallback to empty component if module resolution fails
-const EmptyFallback = () => null;
-const safeLazy = <T extends React.ComponentType<any>>(
-  loader: () => Promise<{ default: T }>,
-  name?: string
-) => React.lazy(() =>
-  // Metro async-require may return a bare thenable (no .catch) for sync-available modules
-  Promise.resolve(loader()).catch((err) => {
-    if (__DEV__) console.error(`[safeLazy] Failed to load ${name || 'component'}:`, err);
-    return { default: EmptyFallback as unknown as T };
-  })
-);
-
-const ScrollToTopButtonLazy = safeLazy(() => import('@/components/ui/ScrollToTopButton'), 'ScrollToTopButton');
-
-const GlobalScrollToTop = React.memo(function GlobalScrollToTop() {
-    const pathname = usePathname();
-    const scrollY = useRef(new Animated.Value(0)).current;
-    const [mounted, setMounted] = useState(false);
-    const isTravelDetailsRoute =
-      typeof pathname === 'string' && pathname.startsWith('/travels/');
-
-    useEffect(() => {
-        if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-        if (isTravelDetailsRoute) return;
-        setMounted(true);
-        const handler = () => scrollY.setValue(window.scrollY);
-        window.addEventListener('scroll', handler, { passive: true });
-        return () => window.removeEventListener('scroll', handler);
-    }, [isTravelDetailsRoute, scrollY]);
-
-    const isTravelUpsert =
-      pathname === '/travel/new' || (typeof pathname === 'string' && /^\/travel\/[^/]+$/.test(pathname));
-
-    if (Platform.OS !== 'web' || !mounted || isTravelUpsert || isTravelDetailsRoute) return null;
-
-    return (
-        <React.Suspense fallback={null}>
-            <ScrollToTopButtonLazy scrollY={scrollY} threshold={400} />
-        </React.Suspense>
-    );
-});
 
 const HEADER_MOBILE_BREAKPOINT = 768;
 type HeaderVariant = 'mobile-bar' | 'mobile-nobar' | 'desktop-bar' | 'desktop-nobar';
@@ -267,7 +224,6 @@ export default function TabLayout() {
                 <Tabs.Screen name="profile" options={profileOptions} />
                 <Tabs.Screen name="accountconfirmation" options={HIDDEN_NOHREF} />
             </Tabs>
-            <GlobalScrollToTop />
         </>
     );
 }

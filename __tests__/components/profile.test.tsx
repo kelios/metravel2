@@ -341,13 +341,13 @@ describe('ProfileScreen', () => {
 
     // Счётчики во вкладках
     await waitFor(() => {
-      expect(getByLabelText('Мои маршруты: 3')).toBeTruthy();
+      expect(getByLabelText('Маршруты: 3')).toBeTruthy();
       expect(getByLabelText('Подписчики')).toBeTruthy();
       expect(getByLabelText('Подписки')).toBeTruthy();
       expect(getByLabelText('Хочу поехать: 2')).toBeTruthy();
       expect(getByLabelText('Недавно смотрел: 5')).toBeTruthy();
     });
-    expect(getAllByLabelText('Мои маршруты: 3')).toHaveLength(1);
+    expect(getAllByLabelText('Маршруты: 3')).toHaveLength(1);
     expect(getAllByLabelText('Хочу поехать: 2')).toHaveLength(1);
     expect(getAllByLabelText('Недавно смотрел: 5')).toHaveLength(1);
 
@@ -396,7 +396,7 @@ describe('ProfileScreen', () => {
 
     const { findByLabelText, findByText, queryByText } = renderProfile();
 
-    fireEvent.press(await findByLabelText('Мои маршруты: 2'));
+    fireEvent.press(await findByLabelText('Маршруты: 2'));
 
     expect(await findByText('Опубликованный Алтай')).toBeTruthy();
     expect(await findByText('Черновик Кавказа')).toBeTruthy();
@@ -414,7 +414,7 @@ describe('ProfileScreen', () => {
       expect(queryByText('Черновик Кавказа')).toBeNull();
     });
 
-    fireEvent.press(await findByLabelText('Мои маршруты: 2'));
+    fireEvent.press(await findByLabelText('Маршруты: 2'));
     expect(await findByLabelText('Открыть маршрут «Черновик Кавказа»')).toBeTruthy();
   });
 
@@ -468,7 +468,7 @@ describe('ProfileScreen', () => {
     const { getByLabelText, findByLabelText } = renderProfile();
 
     // По умолчанию активна вкладка "Уровень"; переключаемся на "Маршруты"
-    fireEvent.press(await findByLabelText('Мои маршруты: 3'));
+    fireEvent.press(await findByLabelText('Маршруты: 3'));
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
 
     fireEvent.press(getByLabelText('Хочу поехать: 1'));

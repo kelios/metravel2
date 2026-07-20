@@ -647,8 +647,12 @@ const createStyles = (
     },
     fallbackFavButton: {
       alignSelf: 'flex-start',
-      padding: 8,
+      width: 44,
+      height: 44,
+      padding: 0,
       borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
       borderWidth: 1,
       borderColor: 'rgba(255, 255, 255, 0.3)',

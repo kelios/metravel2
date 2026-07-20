@@ -129,7 +129,7 @@ export const TravelDetailsContentSection: React.FC<{
 
               <TravelDescription title={travel.name} htmlContent={descriptionContent.html} serverSanitized={descriptionContent.serverSanitized} noBox />
 
-              {/* P2-3: Кнопка «Назад к началу» удалена — глобальный ScrollToTopButton достаточен */}
+              {/* Кнопки «наверх» нет намеренно (#1023): навигацию покрывают sticky-табы секций */}
             </View>
           </CollapsibleSection>
         </View>

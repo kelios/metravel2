@@ -10,6 +10,9 @@ export const common = {
   'language.system': "As in the system",
   'language.systemDescription': "Use device language if supported",
   'language.headerLabel': "Change language",
+  'language.quickPickerTitle': 'Language',
+  'language.quickPickerHint': 'Switch the interface before you start',
+  'language.quickPickerOptionA11y': 'Switch interface to {{value1}}',
   'rail.scrollPrev': "Scroll back",
   'rail.scrollNext': "Scroll forward",
 } as const

@@ -10,6 +10,9 @@ export const common = {
   'language.system': "Jak w systemie",
   'language.systemDescription': "Użyj języka urządzenia, jeśli jest obsługiwany",
   'language.headerLabel': "Zmień język",
+  'language.quickPickerTitle': 'Język / Language',
+  'language.quickPickerHint': 'Przełącz interfejs przed startem',
+  'language.quickPickerOptionA11y': 'Przełącz interfejs na {{value1}}',
   'rail.scrollPrev': "Przewiń w tył",
   'rail.scrollNext': "Przewiń w przód",
 } as const

@@ -249,7 +249,7 @@ export default function CustomHeaderMobileMenu({
 
           <ScrollView
             style={styles.modalNavContainer}
-            contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+            contentContainerStyle={{ paddingBottom: Math.max(48, insets.bottom + 32) }}
             keyboardShouldPersistTaps="handled"
           >
             <Text style={styles.modalSectionTitle}>{i18nT('navigation:components.layout.CustomHeaderMobileMenu.akkaunt_39bf2f02')}</Text>

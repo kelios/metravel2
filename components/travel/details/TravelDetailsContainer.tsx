@@ -308,7 +308,6 @@ export default function TravelDetailsContainer() {
             screenWidth={screenWidth}
             sectionLinks={sectionLinks}
             onNavigate={scrollToWithMenuClose}
-            scrollViewRef={scrollRef as React.RefObject<any>}
             criticalChromeReady={criticalChromeReady}
             scrollToComments={scrollToComments}
           />
@@ -321,7 +320,6 @@ export default function TravelDetailsContainer() {
     deferredScrollState,
     isMobile,
     screenWidth,
-    scrollRef,
     scrollToComments,
     scrollToWithMenuClose,
     sectionLinks,

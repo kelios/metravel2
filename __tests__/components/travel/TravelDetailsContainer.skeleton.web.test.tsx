@@ -122,11 +122,6 @@ jest.mock('@/components/ui/ReadingProgressBar', () => ({
   default: () => null,
 }))
 
-jest.mock('@/components/ui/ScrollToTopButton', () => ({
-  __esModule: true,
-  default: () => null,
-}))
-
 jest.mock('@/components/travel/details/TravelDetailsDeferred', () => ({
   __esModule: true,
   TravelDeferredSections: () => null,

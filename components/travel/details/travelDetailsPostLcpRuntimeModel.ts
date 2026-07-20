@@ -20,10 +20,6 @@ export function shouldShowTravelSectionsSheet(params: {
   )
 }
 
-export function shouldShowTravelScrollToTop(criticalChromeReady: boolean) {
-  return criticalChromeReady
-}
-
 export function shouldShowTravelStickyActions(isMobile: boolean) {
   return isMobile
 }

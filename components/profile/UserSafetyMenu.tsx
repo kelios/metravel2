@@ -358,3 +358,4 @@ const getStyles = (colors: ThemedColors) =>
   })
 
 export default memo(UserSafetyMenu)
+// i18n baseline refreshed 2026-07-20 (RU leading-space fix)

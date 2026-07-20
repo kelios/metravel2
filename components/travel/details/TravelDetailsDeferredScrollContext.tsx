@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from 'react'
 
 // #565: scroll-derived state changes on every scroll frame. Keep it scoped to
-// scroll-only chrome (progress, section sheet, scroll-to-top, sticky actions) so
+// scroll-only chrome (progress, section sheet, sticky actions) so
 // the heavy post-LCP runtime with map/comments does not consume this context.
 export type TravelDetailsDeferredScrollState = {
   activeSection: string | null

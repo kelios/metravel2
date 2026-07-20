@@ -14,15 +14,6 @@ jest.mock('@/components/travel/details/TravelDetailsDeferred', () => {
   }
 })
 
-jest.mock('@/components/ui/ScrollToTopButton', () => ({
-  __esModule: true,
-  default: () => {
-    const React = require('react')
-    const { Text } = require('react-native')
-    return React.createElement(Text, { testID: 'scroll-to-top-button' }, 'top')
-  },
-}))
-
 jest.mock('@/components/ui/ReadingProgressBar', () => ({
   __esModule: true,
   default: () => {
@@ -65,7 +56,6 @@ describe('TravelDetailsPostLcpRuntime', () => {
     expect(await screen.findByTestId('travel-deferred-sections')).toBeTruthy()
     expect(screen.queryByTestId('reading-progress-bar')).toBeNull()
     expect(screen.queryByTestId('travel-sections-sheet-wrapper')).toBeNull()
-    expect(screen.queryByTestId('scroll-to-top-button')).toBeNull()
     expect(screen.queryByTestId('travel-sticky-actions')).toBeNull()
   })
 
@@ -85,7 +75,6 @@ describe('TravelDetailsPostLcpRuntime', () => {
           screenWidth={390}
           sectionLinks={[{ key: 'map', label: 'Карта', icon: 'map' } as any]}
           onNavigate={jest.fn()}
-          scrollViewRef={{ current: null }}
           criticalChromeReady={true}
           scrollToComments={jest.fn()}
         />
@@ -94,7 +83,6 @@ describe('TravelDetailsPostLcpRuntime', () => {
 
     expect(screen.getByTestId('reading-progress-bar')).toBeTruthy()
     expect(screen.getByTestId('travel-sections-sheet-wrapper')).toBeTruthy()
-    expect(screen.getByTestId('scroll-to-top-button')).toBeTruthy()
     expect(await screen.findByTestId('travel-sticky-actions')).toBeTruthy()
   })
 })

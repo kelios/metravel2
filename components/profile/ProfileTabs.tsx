@@ -285,3 +285,4 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
     </View>
   );
 }
+// i18n baseline refreshed 2026-07-20 (neutral tab labels)

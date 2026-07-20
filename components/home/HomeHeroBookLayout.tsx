@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 import Button from '@/components/ui/Button'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import type { ThemedColors } from '@/hooks/useTheme'
+import HomeLanguageQuickPicker from './HomeLanguageQuickPicker'
 import HomeHeroSearchBar from './HomeHeroSearchBar'
 import type { QuickFilterParams } from './homeHeroShared'
 import { translate as i18nT } from '@/i18n'
@@ -592,6 +593,8 @@ export default function HomeHeroBookLayout({
                   onSubmit={onSearchSubmit}
                   useBookPaperColors={withBookFrame}
                 />
+
+                <HomeLanguageQuickPicker />
 
                 <View testID="home-hero-cta-row" style={styles.buttonsContainer}>
                   <Button

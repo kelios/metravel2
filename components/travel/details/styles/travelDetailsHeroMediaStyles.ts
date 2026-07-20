@@ -103,15 +103,15 @@ export const createTravelDetailsHeroMediaStyles = (colors: ThemedColors) => ({
         } as any)
       : {}),
   },
-  // TD-02: На мобайле кнопка расширяется до pill с текстом
+  // Mobile hero renders only the icon here, so keep the visible control circular.
   heroFavoriteBtnMobile: {
-    width: 'auto' as any,
-    height: 'auto' as any,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
     flexDirection: 'row' as any,
-    gap: 6,
+    gap: 0,
     minWidth: 44,
     minHeight: 44,
   },

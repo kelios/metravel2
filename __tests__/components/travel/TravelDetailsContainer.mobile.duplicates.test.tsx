@@ -137,11 +137,6 @@ jest.mock('@/components/ui/ReadingProgressBar', () => ({
   default: () => null,
 }));
 
-jest.mock('@/components/ui/ScrollToTopButton', () => ({
-  __esModule: true,
-  default: () => null,
-}));
-
 jest.mock('@/components/travel/Slider', () => ({
   __esModule: true,
   default: () => null,

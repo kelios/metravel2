@@ -737,7 +737,7 @@ const createStyles = (
   } as any,
   moreListContent: {
     gap: 4,
-    paddingBottom: 4,
+    paddingBottom: Math.max(16, safeBottomPadding + 16),
   } as any,
   moreItem: {
     paddingVertical: 12,

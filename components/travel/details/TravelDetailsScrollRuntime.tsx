@@ -3,9 +3,7 @@ import { Platform, View } from 'react-native'
 
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import ReadingProgressBar from '@/components/ui/ReadingProgressBar'
-import ScrollToTopButton from '@/components/ui/ScrollToTopButton'
 import TravelSectionsSheet from '@/components/travel/TravelSectionsSheet'
-import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 
@@ -14,7 +12,6 @@ import { useTravelDetailsDeferredScroll } from './TravelDetailsDeferredScrollCon
 import { getTravelDetailsShellStyles } from './TravelDetailsShellStyles'
 import {
   shouldShowTravelReadingProgress,
-  shouldShowTravelScrollToTop,
   shouldShowTravelSectionsSheet,
   shouldShowTravelStickyActions,
 } from './travelDetailsPostLcpRuntimeModel'
@@ -25,7 +22,6 @@ type TravelDetailsScrollRuntimeProps = {
   onNavigate: (key: string) => void
   screenWidth: number
   scrollToComments: () => void
-  scrollViewRef: React.RefObject<any>
   sectionLinks: TravelSectionLink[]
   travel: Travel
 }
@@ -40,14 +36,12 @@ function TravelDetailsScrollRuntime({
   onNavigate,
   screenWidth,
   scrollToComments,
-  scrollViewRef,
   sectionLinks,
   travel,
 }: TravelDetailsScrollRuntimeProps) {
   const { activeSection, contentHeight, scrollY, viewportHeight } =
     useTravelDetailsDeferredScroll()
   const themedColors = useThemedColors()
-  const insets = useSafeAreaInsetsSafe()
   const styles = useMemo(() => getTravelDetailsShellStyles(themedColors), [themedColors])
 
   const showReadingProgress = shouldShowTravelReadingProgress({
@@ -60,10 +54,7 @@ function TravelDetailsScrollRuntime({
     screenWidth,
     sectionLinks,
   })
-  const showScrollToTop = shouldShowTravelScrollToTop(criticalChromeReady)
   const showStickyActions = shouldShowTravelStickyActions(isMobile)
-  const scrollToTopBottomOffset =
-    showStickyActions && Platform.OS !== 'web' ? insets.bottom + 56 : 0
 
   return (
     <>
@@ -84,15 +75,6 @@ function TravelDetailsScrollRuntime({
             testID="travel-sections-sheet-wrapper"
           />
         </View>
-      )}
-
-      {showScrollToTop && (
-        <ScrollToTopButton
-          scrollViewRef={scrollViewRef}
-          scrollY={scrollY}
-          threshold={300}
-          bottomOffset={scrollToTopBottomOffset}
-        />
       )}
 
       {showStickyActions && (

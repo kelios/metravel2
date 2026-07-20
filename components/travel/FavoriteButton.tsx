@@ -359,8 +359,12 @@ const getStyles = (_colors: ThemedColors, isMobileWeb: boolean) => StyleSheet.cr
         alignSelf: 'flex-start',
     },
     overlayButton: {
-        padding: 8,
+        width: 44,
+        height: 44,
+        padding: 0,
         borderRadius: 999,
+        alignItems: 'center',
+        justifyContent: 'center',
         // Mobile web: static frost (opaque-ish bg) instead of a live backdrop-filter, which
         // re-rasterizes scrolling list content behind each card and tanks mobile GPU.
         backgroundColor: isMobileWeb ? 'rgba(0, 0, 0, 0.6)' : 'rgba(0, 0, 0, 0.4)',
