@@ -172,6 +172,8 @@ const QUESTS = [
     { questId: 'vilnius-cinema', dir: 'vilniusCinema', city: 'Вильнюс', mood: 'city', finaleId: 132 },
     { questId: 'riga-cinema', dir: 'rigaCinema', city: 'Рига', mood: 'city', finaleId: 133 },
     { questId: 'tallinn-cinema', dir: 'tallinnCinema', city: 'Таллин', mood: 'city', finaleId: 134 },
+    { questId: 'lodz-murals', dir: 'lodzMurals', city: 'Лодзь', mood: 'city', finaleId: 135 },
+    { questId: 'gniezno-white-eagle', dir: 'gnieznoWhiteEagle', city: 'Гнезно', mood: 'epic', finaleId: 136 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

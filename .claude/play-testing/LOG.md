@@ -19,7 +19,7 @@
 | 9    | 2026-07-17 | ✅          | `com.nadeemgs.testerscommunity` 37 → 38 | Pack Boneclaw IV: 13/13 done (100%); TCT: MVG/HealthMate/Damas reuploads submitted, partner proofs accepted; GridArt/Bigpic partner proofs accepted; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-17/`; TCT home: `You're all caught up!`; no crash-buffer hits |
 | 10   | 2026-07-18 | ✅          | none | Pack Boneclaw IV: 12/12 done (100%); TCT: 10 completed today, 2 pending states audited; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-18/`; bugs/risks logged: GridArt 404/waiting partner, Rocky list/detail status mismatch, own app opens dev launcher |
 | 11   | 2026-07-19 | ✅          | none checked | Pack Boneclaw IV: 12/12 done (100%); TCT: 7 completed today, 5 pending partner/review waits; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-19/`; 3+ minute interactive testing used for each TC task app; bugs/improvements logged |
-| 12   | 2026-07-20 |             |            |                      | |
+| 12   | 2026-07-20 | ✅          | none checked | Pack Boneclaw IV: 11/11 done (100%); TCT: 4 pending uploads, 8 completed today; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-20/`; 3+ minute interactive testing used for each TC task app; bugs/improvements logged; no crash-buffer hits |
 | 13   | 2026-07-21 |             |            |                      | |
 | 14   | 2026-07-22 |             |            |                      | |
 
@@ -107,3 +107,24 @@
 - App Testers `com.nadeemgs.apptesters`: inspected current `Test Apps` list. No safe mandatory proof action was found; no Play Store reviews/ratings were performed.
 - NadeemGS TestersCommunity `com.nadeemgs.testerscommunity`: inspected current `Test Apps` list and wallet state; no mandatory proof action was found.
 - Crash check: `adb logcat -d -b crash` filtered for tested/community packages returned no relevant crash entries.
+
+### 2026-07-20 — Daily pass
+
+- Device: Pixel 10 Pro `61020DLCH0086L`, USB/adb authorized.
+- TestersCommunity Pack Boneclaw IV: completed all 11 daily tasks. Final screen showed `100%, YOUR MISSION`, `Open & test apps today (11/11 done)`, `Daily Progress Complete!`, `All tasks complete!`.
+- Per user instruction, every assigned TC app was tested with a 3+ minute interactive session and visual proof inspection before completion. Weak/incorrect screens were not counted:
+  - Putik: retested directly in `com.baihaqi.putik`; login form/password toggle checked without submitting credentials. Bug/blocker: no demo/guest/tester access, so closed testers cannot reach the employee/attendance flow. Prior wrong screenshots/system password/Translate popups were not used as proof.
+  - Priority dz: played through Arabic level/progression screens. Improvement: bottom ad remains close to level/navigation controls; optional language hint could help non-Arabic testers.
+  - Kolorino: TC `Start Testing` routed to Google Play despite the package being installed, so the app was launched via exact activity; opened `По номерам` and colored a drawing. Improvement: selected-number areas could be highlighted more clearly.
+  - First Time Daddy: tested Home/Weekly/Guide/Journal and Week 14 content. Improvement: Journal should clarify privacy/local-only/sync behavior because entries are sensitive.
+  - `運の社`: tested omikuji/dice/oracle flows and captured a result screen. Improvement: add a language toggle or short English description for international testers.
+  - BareMacros: used quick macro buttons, Meals/Search, Track/date controls; final proof showed updated kcal and P/C/F totals. Improvement: floating Search button overlaps lower content on the test device.
+  - Ball Sort - Zen: started a puzzle and performed tube moves for 208 seconds. Improvement: add a short first-level rules hint before the puzzle.
+  - Call Of Poker: entered Memory Game, flipped cards for 220 seconds, and captured score/progress. Improvement: tutorial continue arrow is not obvious; negative Memory/Hero points need explanation.
+  - Kitchen Match & Merge: opened Level 1 and performed board swaps for 184 seconds; final proof showed `6/22` and `27 Moves`. Improvement/bug risk: an install ad appears on the start screen and is close enough to be easy to hit by mistake.
+  - Denkleşelim: opened room `test`, added neutral expense `QA_test` for `₺5,00`, and verified total changed to `₺15,00`. Improvement: numeric keyboard can cover lower form actions/categories until dismissed.
+  - PraEx: answered Portuguese driving quiz questions from 1/25 to 9/25 over 207 seconds. Improvement: long answer options are dense on mobile and hard to scan quickly.
+- TCT (`com.theneerajsec.theclosedtest`): Tests screen showed `4 pending • 8 completed today`; visible pending items were School Master App Day 8, Libera Day 8, Insta saver Day 7, and Rocky Decodes Calories Day 12. Each showed `MY UPLOAD Pending` and `PARTNER Waiting`; no `Upload`, `Replace`, `Remove`, or `Submit` control was available, so no blind re-upload was attempted.
+- App Testers `com.nadeemgs.apptesters`: opened home/test list; no rate modal at inspection time and no mandatory proof action found.
+- NadeemGS TestersCommunity `com.nadeemgs.testerscommunity`: opened home/test list; no mandatory proof action found. No Play Store review/rating was performed.
+- Crash check: `adb logcat -d -b crash` filtered for the 11 tested packages returned no relevant crash entries.
