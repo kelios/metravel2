@@ -153,8 +153,12 @@ function normalizeTrack(track) {
 }
 
 async function snapshotProtectedTracks(accessToken, packageName, editId) {
+  return snapshotTracks(accessToken, packageName, editId, PROTECTED_TRACKS)
+}
+
+async function snapshotTracks(accessToken, packageName, editId, tracks) {
   const entries = await Promise.all(
-    PROTECTED_TRACKS.map(async (track) => [
+    tracks.map(async (track) => [
       track,
       normalizeTrack(await getTrack(accessToken, packageName, editId, track)),
     ])
@@ -163,9 +167,13 @@ async function snapshotProtectedTracks(accessToken, packageName, editId) {
 }
 
 function assertProtectedTracksUnchanged(before, after) {
-  for (const track of PROTECTED_TRACKS) {
+  assertTracksUnchanged(before, after, PROTECTED_TRACKS, 'protected')
+}
+
+function assertTracksUnchanged(before, after, tracks, label = 'immutable') {
+  for (const track of tracks) {
     if (JSON.stringify(before[track]) !== JSON.stringify(after[track])) {
-      fail(`protected Google Play track changed inside the edit: ${track}`)
+      fail(`${label} Google Play track changed inside the edit: ${track}`)
     }
   }
 }
@@ -191,18 +199,22 @@ async function uploadBundle(accessToken, packageName, editId, aabPath) {
   })
 }
 
-async function setProductionRelease(accessToken, packageName, editId, versionCode) {
+async function setTrackRelease(accessToken, packageName, editId, track, versionCode) {
   return googleRequest(
     accessToken,
-    editUrl(packageName, `/${encodeURIComponent(editId)}/tracks/production`),
+    editUrl(packageName, `/${encodeURIComponent(editId)}/tracks/${encodeURIComponent(track)}`),
     {
       method: 'PUT',
       body: JSON.stringify({
-        track: 'production',
+        track,
         releases: [{ status: 'completed', versionCodes: [String(versionCode)] }],
       }),
     }
   )
+}
+
+async function setProductionRelease(accessToken, packageName, editId, versionCode) {
+  return setTrackRelease(accessToken, packageName, editId, 'production', versionCode)
 }
 
 async function validateEdit(accessToken, packageName, editId) {
@@ -410,11 +422,24 @@ if (require.main === module) {
 
 module.exports = {
   PROTECTED_TRACKS,
+  acquireLock,
   assertProtectedTracksUnchanged,
+  assertTracksUnchanged,
   base64Url,
+  commitEdit,
   createServiceAccountAssertion,
+  getAccessToken,
+  getTrack,
+  loadServiceAccount,
   maxVersionCodeFromTracks,
   normalizeTrack,
   parseArgs,
   readAppContract,
+  releaseLock,
+  runStatus,
+  setTrackRelease,
+  snapshotTracks,
+  uploadBundle,
+  validateEdit,
+  withTemporaryEdit,
 }

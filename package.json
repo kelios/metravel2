@@ -133,6 +133,8 @@
     "android:build:prod": "./scripts/android-build.sh production",
     "android:submit:latest": "./scripts/android-submit.sh",
     "android:submit:production": "./scripts/android-submit.sh --commit",
+    "android:submit:testing:latest": "./scripts/android-submit-testing.sh",
+    "android:submit:testing": "./scripts/android-submit-testing.sh --commit",
     "build:all:dev": "npm run android:build:dev && npm run ios:build:dev",
     "build:all:preview": "npm run android:build:preview && npm run ios:build:preview",
     "build:all:prod": "npm run android:build:prod && npm run ios:build:prod",

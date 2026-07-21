@@ -210,6 +210,9 @@ Android release contract:
   locally signed Gradle AAB and the project-owned Google Play API client.
 - `alpha`, `internal`, `beta`, tester/country settings and the active closed test
   are protected from this production release path.
+- A separate owner-authorized testing path may update exactly `alpha` and
+  `internal` together after its dry-run; it keeps `production`, `beta`, testers,
+  and countries immutable. See `docs/ANDROID_OWNER_GUIDE.md`.
 
 ### iOS (inactive)
 

@@ -12,6 +12,12 @@ const {
   getFacebookBuildConfig,
   readAndroidResource,
 } = require('../../scripts/android-gradle-build');
+const {
+  IMMUTABLE_TRACKS,
+  TESTING_TRACKS,
+  assertTestingTracksUpdated,
+  parseTestingArgs,
+} = require('../../scripts/android-play-testing-release');
 
 const ROOT = path.resolve(__dirname, '../..');
 
@@ -37,6 +43,48 @@ describe('Android release safety contract', () => {
       'unsupported argument: --track'
     );
     expect(() => parseArgs(['upload-production', '--aab'])).toThrow('--aab requires a path');
+  });
+
+  it('allows only the explicit closed/internal testing release pair', () => {
+    expect(TESTING_TRACKS).toEqual(['alpha', 'internal']);
+    expect(IMMUTABLE_TRACKS).toEqual(['production', 'beta']);
+    expect(
+      parseTestingArgs(['upload-testing', '--aab', 'candidate.aab', '--commit'])
+    ).toMatchObject({
+      command: 'upload-testing',
+      aab: 'candidate.aab',
+      commit: true,
+    });
+    expect(() =>
+      parseTestingArgs(['upload-testing', '--track', 'beta'])
+    ).toThrow('unsupported argument: --track');
+  });
+
+  it('requires both testing tracks to contain the requested completed release', () => {
+    const valid = {
+      alpha: normalizeTrack({
+        track: 'alpha',
+        releases: [{ status: 'completed', versionCodes: ['15'] }],
+      }),
+      internal: normalizeTrack({
+        track: 'internal',
+        releases: [{ status: 'completed', versionCodes: ['15'] }],
+      }),
+    };
+
+    expect(() => assertTestingTracksUpdated(valid, 15)).not.toThrow();
+    expect(() =>
+      assertTestingTracksUpdated(
+        {
+          ...valid,
+          internal: normalizeTrack({
+            track: 'internal',
+            releases: [{ status: 'completed', versionCodes: ['14'] }],
+          }),
+        },
+        15
+      )
+    ).toThrow('testing Google Play track was not updated as requested: internal');
   });
 
   it('detects any change to a protected track snapshot', () => {

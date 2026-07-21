@@ -106,6 +106,10 @@ testers и countries защищены.
 - [ ] Dry-run `npm run android:submit:latest` прошёл validate и удалил временный
       edit; commit выполняется только `npm run android:submit:production`.
 - [ ] Результат Android submit проверен в Play, а не только по exit code CLI.
+- [ ] Если владелец отдельно запросил обновление closed/internal testing,
+      использованы только `android:submit:testing:latest` →
+      `android:submit:testing`; после commit подтверждены `alpha`/`internal`, а
+      `production`/`beta`, тестировщики и страны не изменились.
 
 ## Post-deploy
 
