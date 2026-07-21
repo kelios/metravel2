@@ -60,7 +60,7 @@ describe('ProfileTabs mobile layout', () => {
     expect(getByText('Подписки')).toBeTruthy();
     expect(subscribersLabel.props.numberOfLines).toBe(1);
 
-    const firstTabStyle = StyleSheet.flatten(getByLabelText('Мои маршруты: 3').props.style);
+    const firstTabStyle = StyleSheet.flatten(getByLabelText('Маршруты: 3').props.style);
     expect(firstTabStyle.minHeight).toBeGreaterThanOrEqual(44);
     expect(firstTabStyle.flex).toBe(1);
     expect(firstTabStyle.minWidth).toBe(0);

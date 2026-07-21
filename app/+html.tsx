@@ -391,10 +391,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
     <head>
 	      <meta charSet="utf-8" />
 	      <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-	      {/* maximum-scale=1: случайный pinch/double-tap зум застревал (overflow-x:clip
-	          не даёт странице «дотянуться» до краёв) и обрезал контент с обеих сторон
-	          на mobile web — паритет с Android-приложением, где зума UI нет. */}
-	      <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no" />
+	      <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
 	      <meta id="app-theme-color" name="theme-color" content={DESIGN_COLORS.themeColorLight} />
       <meta name="color-scheme" content="light dark" />
       {/* No static <title> here: React Helmet bakes a per-page title (data-rh="true")

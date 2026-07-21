@@ -602,6 +602,39 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(openExternalUrl).toHaveBeenCalledWith('https://www.facebook.com/existing-post');
   });
 
+  it('treats a publish timeout as pending instead of a failure', async () => {
+    const timeoutError = new Error('Превышено время ожидания (100000ms)');
+    timeoutError.name = 'TimeoutError';
+    ;(publishTravelToFacebook as jest.Mock).mockRejectedValueOnce(timeoutError);
+    const { findByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    const publishButton = await findByText('Опубликовать в Facebook');
+    await act(async () => {
+      fireEvent.press(publishButton);
+    });
+
+    expect(await findByText('MeTravel: Пост, возможно, ещё публикуется')).toBeTruthy();
+    // Повторно слать нельзя — это внешняя публикация, дубль необратим.
+    expect(publishTravelToFacebook).toHaveBeenCalledTimes(1);
+    expect(showToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'info',
+        text1: 'Публикация занимает больше времени, чем обычно',
+      }),
+    );
+  });
+
   it('guards Facebook publish until the travel has been saved', async () => {
     const { findByText } = render(
       <TravelWizardStepPublish

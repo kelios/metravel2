@@ -38,4 +38,13 @@ describe('critical head fallback', () => {
 
     expect(source).toContain("isProduction ? 'max-image-preview:large' : 'noindex,nofollow'")
   })
+
+  it('keeps browser zoom available in the web viewport contract', () => {
+    const filePath = path.resolve(process.cwd(), 'app/+html.tsx')
+    const source = fs.readFileSync(filePath, 'utf8')
+
+    expect(source).toContain('viewport-fit=cover,maximum-scale=5')
+    expect(source).not.toContain('user-scalable=no')
+    expect(source).not.toContain('maximum-scale=1')
+  })
 })

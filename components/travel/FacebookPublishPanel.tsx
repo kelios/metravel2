@@ -12,6 +12,7 @@ export type FacebookPublishUiState =
   | 'publishing'
   | 'published'
   | 'already_published'
+  | 'pending'
   | 'not_connected'
   | 'error'
 
@@ -51,6 +52,8 @@ const getStatusLabel = (state: FacebookPublishUiState, connected: boolean): stri
       return i18nT('travel:components.travel.FacebookPublishPanel.statusPublished')
     case 'already_published':
       return i18nT('travel:components.travel.FacebookPublishPanel.statusAlreadyPublished')
+    case 'pending':
+      return i18nT('travel:components.travel.FacebookPublishPanel.statusPending')
     case 'not_connected':
       return i18nT('travel:components.travel.FacebookPublishPanel.statusNotConnected')
     case 'error':

@@ -3,6 +3,7 @@ import {
   FACEBOOK_PUBLISH_PHOTO_MAX_COUNT,
   fetchFacebookOAuthStartUrl,
   fetchFacebookPublishStatus,
+  getFacebookPublishTimeout,
   publishTravelToFacebook,
 } from '@/api/facebookPublish'
 
@@ -60,7 +61,7 @@ describe('facebookPublish API adapter', () => {
         method: 'POST',
         body: JSON.stringify({ travelId: 640, message: 'Facebook message' }),
       },
-      30000,
+      getFacebookPublishTimeout(0),
     )
     const requestBody = JSON.parse((apiClient.request as jest.Mock).mock.calls[0][1].body)
     expect(requestBody).not.toHaveProperty('pageId')
@@ -90,7 +91,7 @@ describe('facebookPublish API adapter', () => {
           ],
         }),
       },
-      30000,
+      getFacebookPublishTimeout(2),
     )
     const requestBody = JSON.parse((apiClient.request as jest.Mock).mock.calls[0][1].body)
     expect(requestBody).not.toHaveProperty('pageId')
@@ -108,5 +109,12 @@ describe('facebookPublish API adapter', () => {
       `at most ${FACEBOOK_PUBLISH_PHOTO_MAX_COUNT} photos`,
     )
     expect(apiClient.request).not.toHaveBeenCalled()
+  })
+
+  it('gives the server more time per uploaded photo, capped', () => {
+    // Раньше 10 фото не укладывались в общий 30s: пост уходил, фронт падал.
+    expect(getFacebookPublishTimeout(0)).toBe(60000)
+    expect(getFacebookPublishTimeout(FACEBOOK_PUBLISH_PHOTO_MAX_COUNT)).toBeGreaterThan(120000)
+    expect(getFacebookPublishTimeout(100)).toBe(240000)
   })
 })

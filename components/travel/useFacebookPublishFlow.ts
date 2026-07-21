@@ -5,7 +5,7 @@ import type { TravelFormData } from '@/types/types';
 import { devError } from '@/utils/logger';
 import { showToastMessage } from '@/utils/toast';
 import { openExternalUrl } from '@/utils/externalLinks';
-import { ApiError } from '@/api/client';
+import { ApiError, isTimeoutError } from '@/api/client';
 import {
     fetchFacebookOAuthStartUrl,
     fetchFacebookPublishStatus,
@@ -267,6 +267,18 @@ export function useFacebookPublishFlow({
                 ),
             });
         } catch (error) {
+            // Таймаут ≠ провал: сервер часто дописывает пост в Facebook уже
+            // после обрыва ожидания. Повторную отправку не делаем — это
+            // внешняя необратимая публикация, дублировать её нельзя.
+            if (isTimeoutError(error)) {
+                setFacebookState('pending');
+                void showToastMessage({
+                    type: 'info',
+                    text1: i18nT('travel:components.travel.FacebookPublishPanel.pendingToast'),
+                    text2: i18nT('travel:components.travel.FacebookPublishPanel.pendingHint'),
+                });
+                return;
+            }
             const notConnected = error instanceof ApiError && error.status === 409;
             setFacebookState(notConnected ? 'not_connected' : 'error');
             if (notConnected) {

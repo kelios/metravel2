@@ -23,6 +23,20 @@ export type FacebookPublishResult = {
   duplicate?: boolean
 }
 
+// Сервер грузит каждое фото в Facebook по очереди, поэтому 10 фото легко
+// выходят за общий 30-секундный таймаут: пост уходит, а фронт показывает
+// ошибку. Таймаут растим по числу фото.
+const FACEBOOK_PUBLISH_BASE_TIMEOUT = 60000
+const FACEBOOK_PUBLISH_TIMEOUT_PER_PHOTO = 20000
+const FACEBOOK_PUBLISH_MAX_TIMEOUT = 240000
+
+export const getFacebookPublishTimeout = (photoCount: number): number =>
+  Math.min(
+    FACEBOOK_PUBLISH_MAX_TIMEOUT,
+    FACEBOOK_PUBLISH_BASE_TIMEOUT +
+      Math.max(0, photoCount) * FACEBOOK_PUBLISH_TIMEOUT_PER_PHOTO,
+  )
+
 export type FacebookPublishPhoto = {
   id?: number | string
   url: string
@@ -80,6 +94,6 @@ export const publishTravelToFacebook = async (
         ...(selectedPhotos.length > 0 ? { photos: selectedPhotos } : null),
       }),
     },
-    30000,
+    getFacebookPublishTimeout(selectedPhotos.length),
   )
 }
