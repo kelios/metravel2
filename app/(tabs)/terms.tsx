@@ -9,17 +9,19 @@ export default function TermsScreen() {
       seoTitle={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_metravel_a107cf93')}
       seoDescription={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_metravel_usloviya_860ebcea')}
       pageTitle={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_13d561c9')}
-      effectiveDate="20.06.2026"
-      draftNotice
+      effectiveDate="21.07.2026"
       intro={[
         i18nT('legal:app.tabs.terms.nastoyaschee_polzovatelskoe_soglashenie_regu_15e5e27a'),
+        i18nT('legal:app.tabs.terms.relatedDocuments'),
       ]}
       sections={[
         {
           heading: i18nT('legal:app.tabs.terms.1_akkaunt_978a3a7c'),
           paragraphs: [
             i18nT('legal:app.tabs.terms.dlya_chasti_funktsiy_trebuetsya_registratsiy_40a945b7'),
+            i18nT('legal:app.tabs.terms.minimumAge'),
             i18nT('legal:app.tabs.terms.vy_nesete_otvetstvennost_za_deystviya_sovers_86ded067'),
+            i18nT('legal:app.tabs.terms.accountDeletion'),
           ],
         },
         {
@@ -28,6 +30,7 @@ export default function TermsScreen() {
             i18nT('legal:app.tabs.terms.publikuya_materialy_teksty_fotografii_marshr_2e0c0e2a'),
             i18nT('legal:app.tabs.terms.vy_predostavlyaete_servisu_neisklyuchitelnoe_988417e0'),
             i18nT('legal:app.tabs.terms.zaprescheno_publikovat_nezakonnye_oskorbitel_bbb53e2a'),
+            i18nT('legal:app.tabs.terms.contentComplaints'),
           ],
         },
         {
@@ -54,6 +57,14 @@ export default function TermsScreen() {
           heading: i18nT('legal:app.tabs.terms.6_izmeneniya_2e26ccb0'),
           paragraphs: [
             i18nT('legal:app.tabs.terms.usloviya_soglasheniya_mogut_obnovlyatsya_pro_ed813383'),
+            i18nT('legal:app.tabs.terms.changesNotice'),
+          ],
+        },
+        {
+          heading: i18nT('legal:app.tabs.terms.governingLawHeading'),
+          paragraphs: [
+            i18nT('legal:app.tabs.terms.governingLaw'),
+            i18nT('legal:app.tabs.terms.disputeResolution'),
           ],
         },
         {

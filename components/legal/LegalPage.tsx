@@ -24,8 +24,6 @@ interface LegalPageProps {
   effectiveDate?: string
   intro?: string[]
   sections: LegalSection[]
-  /** Пометка о том, что финальные формулировки на юр-проверке (owner). */
-  draftNotice?: boolean
 }
 
 const hiddenWebHeadingStyle = {
@@ -53,7 +51,6 @@ export default function LegalPage({
   effectiveDate,
   intro,
   sections,
-  draftNotice,
 }: LegalPageProps) {
   const pathname = usePathname()
   const isFocused = useIsFocused()
@@ -84,13 +81,6 @@ export default function LegalPage({
 
         {effectiveDate ? (
           <Text style={styles.paragraph}>{i18nT('shared:components.legal.LegalPage.data_vstupleniya_v_silu_32c18af2')}{effectiveDate}</Text>
-        ) : null}
-
-        {draftNotice ? (
-          <View style={styles.draftBox}>
-            <Text style={styles.draftText}>
-              {i18nT('shared:components.legal.LegalPage.predvaritelnaya_redaktsiya_finalnye_formulir_3bfab7e3')}</Text>
-          </View>
         ) : null}
 
         {intro?.map((paragraph, index) => (
@@ -144,19 +134,5 @@ const createStyles = (colors: Colors) =>
       lineHeight: 20,
       color: colors.textMuted,
       marginBottom: 8,
-    },
-    draftBox: {
-      marginTop: 4,
-      marginBottom: 12,
-      padding: 12,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.warning,
-      backgroundColor: colors.surfaceMuted,
-    },
-    draftText: {
-      fontSize: 13,
-      lineHeight: 18,
-      color: colors.text,
     },
   })

@@ -10,6 +10,7 @@ import {
 import { CustomRendererProps } from "react-native-render-html";
 import { useResponsive } from '@/hooks/useResponsive';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { useRichMediaVisibility } from '@/components/ui/richMediaViewport';
 import { optimizeImageUrl } from '@/utils/imageProxy';
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
@@ -163,14 +164,27 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
     );
   }, [src, boxWidth, boxHeight]);
 
+  // Дальние от вьюпорта фото тела статьи не монтируем: на native у expo-image нет
+  // lazy-загрузки по вьюпорту, поэтому все 90+ картинок статьи декодируются сразу,
+  // вытесняют друг друга из bitmap-кэша и Android грузит текстуры на каждом кадре
+  // скролла (#1035). Рамка остаётся той же высоты — сдвига вёрстки нет.
+  const { ref: frameRef, visible: isNearViewport, onLayout: handleFrameLayout } =
+    useRichMediaVisibility(boxHeight);
+  const shouldRenderMedia = Platform.OS === 'web' || isNearViewport;
+
   if (!raw || isSmallIcon) return null;
 
   const alt = tnode.attributes?.alt || i18nT('sharedStatic:image.travelAlt');
   const isPressable = Boolean(onPressImage && src);
 
   const imageContent = (
-    <View style={{ width: boxWidth, height: boxHeight, position: 'relative' }}>
-      {!imageLoaded && !err && (
+    <View
+      ref={frameRef}
+      onLayout={handleFrameLayout}
+      collapsable={false}
+      style={{ width: boxWidth, height: boxHeight, position: 'relative' }}
+    >
+      {(!shouldRenderMedia || !imageLoaded) && !err && (
         <View
           style={[
             StyleSheet.absoluteFillObject,
@@ -183,20 +197,27 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
         </View>
       )}
 
-      <ImageCardMedia
-        src={displaySrc}
-        alt={alt}
-        fit="contain"
-        blurBackground
-        allowCriticalWebBlur
-        blurRadius={16}
-        priority={Platform.OS === 'web' ? 'low' : 'normal'}
-        loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
-        transition={Platform.OS === 'web' ? undefined : 120}
-        style={[StyleSheet.absoluteFillObject, styles.image]}
-        onLoad={() => { setImageLoaded(true); }}
-        onError={() => { setErr(true); }}
-      />
+      {shouldRenderMedia && (
+        <ImageCardMedia
+          src={displaySrc}
+          alt={alt}
+          fit="contain"
+          blurBackground
+          allowCriticalWebBlur
+          blurRadius={16}
+          // Native: подложка блюра берёт тот же файл (лишнего запроса нет), но
+          // декодируется в 128px — FastBlur крутится по 16 тыс. пикселей вместо
+          // 0.8 млн, и вторая полноразмерная битмапа на каждое фото не создаётся.
+          blurSrc={Platform.OS === 'web' ? undefined : displaySrc}
+          blurDecodeSize={128}
+          priority={Platform.OS === 'web' ? 'low' : 'normal'}
+          loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
+          transition={Platform.OS === 'web' ? undefined : 120}
+          style={[StyleSheet.absoluteFillObject, styles.image]}
+          onLoad={() => { setImageLoaded(true); }}
+          onError={() => { setErr(true); }}
+        />
+      )}
 
       {err && (
         <View

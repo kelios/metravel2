@@ -115,7 +115,7 @@ interface OptimizedImageProps {
    * fewer pixels) instead of re-decoding the full-resolution photo a second
    * time. Falls back to the main source when omitted.
    */
-  blurSource?: { uri: string };
+  blurSource?: { uri: string; width?: number; height?: number };
   /** Keep the native sharp layer hidden until the blur backdrop has decoded. */
   synchronizeBlurReveal?: boolean;
   blurBackgroundRadius?: number;

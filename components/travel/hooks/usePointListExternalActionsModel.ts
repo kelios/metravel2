@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 
 import { openExternalUrl } from '@/utils/externalLinks';
+import { showToast } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -20,6 +21,8 @@ export function usePointListExternalActionsModel({
   buildMapUrl: (coordStr: string) => string;
   openExternal: (url: string) => void | Promise<void>;
 }) {
+  // Копирование — «немое» действие: без тоста непонятно, сработал ли тап.
+  // Тексты берём те же, что у карточки точки на карте, чтобы фидбек был единым.
   const onCopy = useCallback(async (coordStr: string) => {
     try {
       if (Platform.OS === 'web' && (navigator as any)?.clipboard) {
@@ -27,8 +30,19 @@ export function usePointListExternalActionsModel({
       } else {
         await Clipboard.setStringAsync(coordStr);
       }
+      void showToast({
+        type: 'success',
+        text1: i18nT('map:components.UserPoints.UserPointsMapPointMarker.koordinaty_skopirovany_9794ecb0'),
+        text2: coordStr,
+        position: 'bottom',
+        visibilityTime: 2000,
+      });
     } catch {
-      return;
+      void showToast({
+        type: 'error',
+        text1: i18nT('map:components.UserPoints.UserPointsMapPointMarker.ne_udalos_skopirovat_koordinaty_251cf34d'),
+        position: 'bottom',
+      });
     }
   }, []);
 

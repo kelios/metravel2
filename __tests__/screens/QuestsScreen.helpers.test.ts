@@ -89,7 +89,7 @@ describe('QuestsScreen helpers', () => {
   });
 
   it('uses a single nearby distance threshold', () => {
-    expect(DEFAULT_NEARBY_RADIUS_KM).toBe(10);
+    expect(DEFAULT_NEARBY_RADIUS_KM).toBe(30);
   });
 
   describe('isKidsQuest', () => {

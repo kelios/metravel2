@@ -25,6 +25,7 @@ import { LoadError, MissingParamError } from '@/components/travel/details/Travel
 import TravelDetailsLoadingFallback from '@/components/travel/details/TravelDetailsLoadingFallback'
 import TravelDetailsSeoBlock from '@/components/travel/details/TravelDetailsSeoBlock'
 import StaleContentBanner from '@/components/ui/StaleContentBanner'
+import { RichMediaViewportProvider } from '@/components/ui/richMediaViewport'
 import { useTravelDetailsContainerViewModel } from '@/components/travel/details/hooks/useTravelDetailsContainerViewModel'
 import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync'
 import type { Travel } from '@/types/types'
@@ -362,37 +363,39 @@ export default function TravelDetailsContainer() {
         showSkipToContentLink={showSkipToContentLink}
       />
 
-      <TravelDetailsCriticalShell
-        travel={travel}
-        isMobile={isMobile}
-        screenWidth={screenWidth}
-        wrapperStyle={wrapperStyle}
-        styles={styles}
-        skeletonPhase={skeletonPhase}
-        skeletonFallback={SKELETON_FALLBACK}
-        scrollRef={scrollRef as React.RefObject<any>}
-        scrollViewStyle={scrollViewStyle}
-        scrollEventHandler={scrollEventHandler}
-        nativeScrollDepthHandler={nativeScrollDepthHandler}
-        handleContentSizeChange={handleContentSizeChange}
-        handleLayout={handleLayout}
-        contentHorizontalPadding={contentHorizontalPadding}
-        anchors={anchors}
-        onFirstImageLoad={handleFirstImageLoad}
-        sectionLinks={sectionLinks}
-        onQuickJump={scrollToWithMenuClose}
-        deferHeroExtras={!heroEnhancersReady}
-        forceOpenKey={forceOpenKey}
-        activeSection={activeSection}
-        closeMenu={closeMenu}
-        onNavigate={scrollToWithMenuClose}
-        menuWidthNum={menuWidthNum}
-        animatedX={animatedX}
-        sideMenuPlatformStyles={sideMenuPlatformStyles}
-        mainAriaLabel={mainAriaLabel}
-        topNotice={topNotice}
-        deferredContent={deferredRuntime}
-      />
+      <RichMediaViewportProvider scrollY={scrollY}>
+        <TravelDetailsCriticalShell
+          travel={travel}
+          isMobile={isMobile}
+          screenWidth={screenWidth}
+          wrapperStyle={wrapperStyle}
+          styles={styles}
+          skeletonPhase={skeletonPhase}
+          skeletonFallback={SKELETON_FALLBACK}
+          scrollRef={scrollRef as React.RefObject<any>}
+          scrollViewStyle={scrollViewStyle}
+          scrollEventHandler={scrollEventHandler}
+          nativeScrollDepthHandler={nativeScrollDepthHandler}
+          handleContentSizeChange={handleContentSizeChange}
+          handleLayout={handleLayout}
+          contentHorizontalPadding={contentHorizontalPadding}
+          anchors={anchors}
+          onFirstImageLoad={handleFirstImageLoad}
+          sectionLinks={sectionLinks}
+          onQuickJump={scrollToWithMenuClose}
+          deferHeroExtras={!heroEnhancersReady}
+          forceOpenKey={forceOpenKey}
+          activeSection={activeSection}
+          closeMenu={closeMenu}
+          onNavigate={scrollToWithMenuClose}
+          menuWidthNum={menuWidthNum}
+          animatedX={animatedX}
+          sideMenuPlatformStyles={sideMenuPlatformStyles}
+          mainAriaLabel={mainAriaLabel}
+          topNotice={topNotice}
+          deferredContent={deferredRuntime}
+        />
+      </RichMediaViewportProvider>
     </>
   )
 }

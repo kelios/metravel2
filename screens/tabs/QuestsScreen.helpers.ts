@@ -70,8 +70,10 @@ export const getQuestCountryName = (code: string): string => {
 // единственный ближайший город, из-за чего по умолчанию был виден лишь 1 город).
 export const STORAGE_SELECTED_CITY = 'quests_selected_city_v2';
 // «Поблизости» остаётся единым продуктовым порогом, без пользовательского
-// селектора и окружности радиуса на карте.
-export const DEFAULT_NEARBY_RADIUS_KM = 10;
+// селектора и окружности радиуса на карте. 10 км резали город пополам (из
+// Кракова было видно 6 квестов из 9 городских), поэтому берём радиус
+// агломерации + ближней вылазки на день.
+export const DEFAULT_NEARBY_RADIUS_KM = 30;
 export const NEARBY_ID = '__nearby__';
 export const KIDS_FILTER_ID = '__kids__';
 

@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { useWebKeyboardInset } from '@/hooks/useWebKeyboardInset'
 import MessageBubble from '@/components/messages/MessageBubble'
 import IconButton from '@/components/ui/IconButton'
 import SafetyNotice from '@/components/ui/SafetyNotice'
@@ -158,15 +159,24 @@ function ChatView({
       hide.remove()
     }
   }, [])
+  // Mobile web: the soft keyboard does NOT shrink the layout viewport, so the
+  // composer stays pinned under it — the real overlap comes from visualViewport.
+  const webKeyboardInset = useWebKeyboardInset()
   // At rest the global tab bar (BottomDock, an absolute overlay) covers the bottom,
   // so reserve its height + home-indicator inset. On Android (no working KAV here)
   // lift the composer above the keyboard by its real height while it is open; iOS
   // uses KeyboardAvoidingView behavior='padding' so it must NOT add that height.
-  // Web positions its footer separately → no reserve.
+  // Web has no dock reserve here → only the keyboard overlap, if any.
+  //
+  // Android caveat: RN reports the keyboard height as `imeInsets.bottom -
+  // systemBars.bottom` (ReactRootView.checkForKeyboardEvents), i.e. WITHOUT the
+  // navigation-bar inset, while under edge-to-edge our root view spans behind that
+  // bar. Lifting by the reported height alone leaves the composer overlapped by
+  // exactly the nav-bar height, so add insets.bottom back.
   const composerBottomInset = IS_WEB
-    ? 0
+    ? (webKeyboardInset > 0 ? webKeyboardInset + DESIGN_TOKENS.spacing.xs : 0)
     : !IS_IOS && keyboardHeight > 0
-      ? keyboardHeight + DESIGN_TOKENS.spacing.xs
+      ? keyboardHeight + insets.bottom + DESIGN_TOKENS.spacing.xs
       : (reserveBottomDock ? DOCK_CONTENT_HEIGHT : 0) + insets.bottom + DESIGN_TOKENS.spacing.sm
 
   const [text, setText] = useState('')
@@ -238,10 +248,10 @@ function ChatView({
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      // Android uses adjustResize (app.json softwareKeyboardLayoutMode: 'resize'):
-      // the window already shrinks under the keyboard, so KAV must do NOTHING here —
-      // a second 'height'/'padding' resize double-shrinks the layout and pushes the
-      // composer off-screen. iOS does not auto-resize, so it keeps 'padding' + offset.
+      // On Android KAV must do NOTHING here: under edge-to-edge the window does not
+      // shrink for the IME, and the composer is lifted manually via
+      // composerBottomInset above — a 'height'/'padding' behavior on top of that
+      // double-shifts the layout. iOS does not auto-resize, so it keeps 'padding' + offset.
       behavior={IS_IOS ? 'padding' : undefined}
       keyboardVerticalOffset={IS_IOS ? 90 : 0}
     >

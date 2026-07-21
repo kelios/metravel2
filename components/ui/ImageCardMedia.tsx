@@ -35,6 +35,12 @@ type Props = {
   blurBackground?: boolean;
   /** Native-only: downscaled source for the blurred backdrop layer (cheaper decode). */
   blurSrc?: string | null;
+  /**
+   * Native-only: decode the blur backdrop at this pixel size (Glide `override`).
+   * Lets a backdrop reuse the sharp photo's URL — no extra request — while still
+   * blurring a tiny bitmap instead of a second full-resolution copy.
+   */
+  blurDecodeSize?: number;
   /** Native-only: keep the sharp layer hidden until its blur backdrop is ready. */
   synchronizeNativeBlurReveal?: boolean;
   blurRadius?: number;
@@ -94,6 +100,7 @@ function ImageCardMedia({
   fit = 'contain',
   blurBackground = true,
   blurSrc,
+  blurDecodeSize,
   synchronizeNativeBlurReveal = false,
   blurRadius = 16,
   blurOnly = false,
@@ -635,7 +642,11 @@ function ImageCardMedia({
             contentFit={contentFit}
             blurBackground={Platform.OS === 'web' ? false : blurBackground}
             blurSource={
-              Platform.OS !== 'web' && blurSrc ? { uri: blurSrc } : undefined
+              Platform.OS !== 'web' && blurSrc
+                ? blurDecodeSize && blurDecodeSize > 0
+                  ? { uri: blurSrc, width: blurDecodeSize, height: blurDecodeSize }
+                  : { uri: blurSrc }
+                : undefined
             }
             synchronizeBlurReveal={synchronizeNativeBlurReveal}
             blurBackgroundRadius={blurRadius}

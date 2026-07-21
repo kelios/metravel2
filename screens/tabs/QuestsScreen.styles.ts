@@ -109,6 +109,10 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             ...Platform.select({
                 web: {
                     backgroundColor: colors.surface,
+                    // Чип-подсказка кнопки действия выходит за пределы шапки —
+                    // без своего слоя её перекрыл бы список городов.
+                    position: 'relative',
+                    zIndex: 5,
                 } as any,
             }),
         },
@@ -211,9 +215,13 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         actionBtnTextSecondary: {
             color: colors.text,
         },
-        // Desktop-web hover-раскрывающаяся пилюля действия: по умолчанию квадратная
-        // icon-only, при наведении подпись плавно выезжает справа от иконки.
+        // Desktop-web пилюля действия: всегда квадратная icon-only, подпись при
+        // наведении показывается ОТДЕЛЬНЫМ абсолютным чипом под кнопкой.
+        // Инлайновое раскрытие подписи меняло ширину пилюли, последняя кнопка
+        // ряда переносилась на вторую строку, уезжала из-под курсора → hover
+        // сбрасывался и кнопка «дёргалась» в бесконечном цикле.
         sidebarActionPill: {
+            position: 'relative',
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
@@ -235,22 +243,43 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             backgroundColor: colors.brand,
             borderColor: colors.brand,
         },
+        // Подсказка-чип под кнопкой: абсолютная и pointerEvents=none, поэтому
+        // никак не влияет на раскладку ряда действий и не ловит курсор.
         sidebarActionPillLabelWrap: {
+            position: 'absolute',
+            top: '100%',
+            marginTop: spacing.xxs,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xxs,
+            borderRadius: CONTROL_RADIUS,
+            backgroundColor: colors.backgroundSecondary,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            maxWidth: 220,
             overflow: 'hidden',
             ...Platform.select({
                 web: {
-                    maxWidth: 0,
                     opacity: 0,
-                    transition: 'max-width 0.25s ease, opacity 0.2s ease, margin-left 0.25s ease',
+                    transform: 'translateY(-4px)',
+                    transition: 'opacity 0.18s ease, transform 0.18s ease',
+                    zIndex: 30,
                 } as any,
             }),
+        },
+        // Сторона привязки задаётся отдельными модификаторами (без сброса в
+        // 'auto'): у правых кнопок ряда чип прижимается правым краем, иначе он
+        // уезжает за границу сайдбара с overflowX: hidden и обрезается.
+        sidebarActionPillLabelWrapStart: {
+            left: 0,
+        },
+        sidebarActionPillLabelWrapEnd: {
+            right: 0,
         },
         sidebarActionPillLabelWrapOpen: {
             ...Platform.select({
                 web: {
-                    maxWidth: 180,
                     opacity: 1,
-                    marginLeft: spacing.xs,
+                    transform: 'translateY(0)',
                 } as any,
             }),
         },
@@ -261,9 +290,6 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             ...Platform.select({
                 web: { whiteSpace: 'nowrap' } as any,
             }),
-        },
-        sidebarActionPillLabelActive: {
-            color: colors.textOnPrimary,
         },
 
         /* ---- City List (Premium, spacious) ---- */

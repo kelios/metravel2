@@ -24,11 +24,14 @@ type SidebarActionButtonProps = {
     accessibilityLabel: string;
     accessibilityState?: Record<string, boolean>;
     testID?: string;
+    labelAlign?: 'start' | 'end';
 };
 
 // Иконка-действие в шапке сайдбара. На мобильном — квадратная icon-only кнопка
-// (подпись только в accessibilityLabel/title). На вебе — пилюля, которая по
-// наведению плавно раскрывается и показывает текстовую подпись рядом с иконкой.
+// (подпись только в accessibilityLabel/title). На вебе — та же квадратная
+// кнопка, а подпись при наведении всплывает отдельным чипом ПОД ней: чип
+// абсолютный и не трогает раскладку ряда, поэтому кнопка не меняет размер и не
+// может уехать из-под курсора (иначе hover сбрасывался бы и кнопка дёргалась).
 function SidebarActionButton({
     styles,
     colors,
@@ -41,6 +44,7 @@ function SidebarActionButton({
     accessibilityLabel,
     accessibilityState,
     testID,
+    labelAlign = 'start',
 }: SidebarActionButtonProps) {
     const [hovered, setHovered] = useState(false);
     const iconColor = active ? colors.textOnPrimary : colors.text;
@@ -84,11 +88,17 @@ function SidebarActionButton({
             testID={testID}
         >
             <NavigationIcon name={icon} size={18} color={iconColor} />
-            <View style={[styles.sidebarActionPillLabelWrap, isOpen && styles.sidebarActionPillLabelWrapOpen]}>
-                <Text
-                    numberOfLines={1}
-                    style={[styles.sidebarActionPillLabel, active && styles.sidebarActionPillLabelActive]}
-                >
+            <View
+                pointerEvents="none"
+                style={[
+                    styles.sidebarActionPillLabelWrap,
+                    labelAlign === 'end'
+                        ? styles.sidebarActionPillLabelWrapEnd
+                        : styles.sidebarActionPillLabelWrapStart,
+                    isOpen && styles.sidebarActionPillLabelWrapOpen,
+                ]}
+            >
+                <Text numberOfLines={1} style={styles.sidebarActionPillLabel}>
                     {label}
                 </Text>
             </View>
@@ -218,6 +228,7 @@ export default function QuestsSidebar({
                         accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.veloA11y', { value1: pluralizeQuest(cityQuestCountById[bikeFilterId] || 0) })}
                         accessibilityState={{ selected: isBikeSelected }}
                         testID="quests-sidebar-bike-button"
+                        labelAlign="end"
                     />
                     <SidebarActionButton
                         styles={styles}
@@ -230,6 +241,7 @@ export default function QuestsSidebar({
                         accessibilityLabel={toggleAllLabel}
                         accessibilityState={{ expanded: !areAllCountryGroupsCollapsed, disabled: !hasCountryGroups }}
                         testID="quests-sidebar-toggle-all-countries"
+                        labelAlign="end"
                     />
                 </View>
             </View>

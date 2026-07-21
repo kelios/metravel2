@@ -10,8 +10,7 @@ export default function DisclaimerScreen() {
       seoTitle={t('legal:app.tabs.disclaimer.otkaz_ot_otvetstvennosti_metravel_afb39844')}
       seoDescription={t('legal:app.tabs.disclaimer.otkaz_ot_otvetstvennosti_metravel_informatsi_5a2b8e74')}
       pageTitle={t('legal:app.tabs.disclaimer.otkaz_ot_otvetstvennosti_3706532b')}
-      effectiveDate="17.07.2026"
-      draftNotice
+      effectiveDate="21.07.2026"
       intro={[
         t('legal:app.tabs.disclaimer.metravel_nekommercheskiy_proekt_dlya_obmena__096f27a4'),
       ]}

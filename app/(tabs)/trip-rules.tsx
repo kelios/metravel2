@@ -9,8 +9,7 @@ export default function TripRulesScreen() {
       seoTitle={i18nT('trips:app.tabs.trip_rules.pravila_uchastiya_v_poezdkah_metravel_8cf61361')}
       seoDescription={i18nT('trips:app.tabs.trip_rules.pravila_uchastiya_v_sovmestnyh_poezdkah_metr_ab16b279')}
       pageTitle={i18nT('trips:app.tabs.trip_rules.pravila_uchastiya_v_poezdkah_30927e21')}
-      effectiveDate="20.06.2026"
-      draftNotice
+      effectiveDate="21.07.2026"
       intro={[
         i18nT('trips:app.tabs.trip_rules.eti_pravila_primenyayutsya_k_sovmestnym_poez_b36fb6ab'),
       ]}

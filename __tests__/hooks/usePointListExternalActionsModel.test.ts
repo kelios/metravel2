@@ -16,6 +16,11 @@ jest.mock('expo-clipboard', () => ({
   setStringAsync: (...args: any[]) => mockClipboardSetStringAsync(...args),
 }));
 
+const mockShowToast = jest.fn();
+jest.mock('@/utils/toast', () => ({
+  showToast: (...args: any[]) => mockShowToast(...args),
+}));
+
 describe('usePointListExternalActionsModel', () => {
   const originalPlatformOS = Platform.OS;
   const originalNavigator = global.navigator;
@@ -24,6 +29,7 @@ describe('usePointListExternalActionsModel', () => {
     mockOpenExternal.mockReset();
     mockOpenExternalUrl.mockReset();
     mockClipboardSetStringAsync.mockReset();
+    mockShowToast.mockReset();
     (Platform as any).OS = originalPlatformOS;
     Object.defineProperty(global, 'navigator', {
       value: originalNavigator,
@@ -64,6 +70,36 @@ describe('usePointListExternalActionsModel', () => {
 
     expect(writeText).toHaveBeenCalledWith('53.9,27.56');
     expect(mockClipboardSetStringAsync).not.toHaveBeenCalled();
+    // Без тоста копирование выглядит как «ничего не произошло».
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'success', text2: '53.9,27.56' })
+    );
+  });
+
+  it('reports a failed copy with an error toast', async () => {
+    (Platform as any).OS = 'web';
+    const writeText = jest.fn().mockRejectedValue(new Error('denied'));
+    Object.defineProperty(global, 'navigator', {
+      value: { clipboard: { writeText } },
+      configurable: true,
+      writable: true,
+    });
+
+    const { result } = renderHook(() =>
+      usePointListExternalActionsModel({
+        baseUrl: 'https://example.com/travel',
+        buildMapUrl: (coord: string) => `map:${coord}`,
+        openExternal: mockOpenExternal,
+      })
+    );
+
+    await act(async () => {
+      await result.current.onCopy('53.9,27.56');
+    });
+
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'error' })
+    );
   });
 
   it('falls back to web telegram share url on web', async () => {
