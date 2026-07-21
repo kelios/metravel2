@@ -1,3 +1,4 @@
+import type React from 'react'
 import type { StyleProp, ViewStyle } from 'react-native'
 import type Feather from '@expo/vector-icons/Feather'
 import type { PlaceRating } from '@/utils/placesCatalog'
@@ -55,4 +56,6 @@ export type PlaceListCardProps = {
   /** External rating (2GIS/TripAdvisor/…). When present, a gold rating pill is
    *  shown over the top-left of the photo. Ignored in popup-aligned layout. */
   rating?: PlaceRating | null
+  /** Interactive rating row rendered in the card body (own MeTravel rating). */
+  ratingSlot?: React.ReactNode
 }

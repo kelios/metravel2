@@ -59,6 +59,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   isFavorite = false,
   onToggleFavorite,
   rating = null,
+  ratingSlot = null,
 }) => {
   const colors = useThemedColors();
   const showTitleInContent = titleLayout === 'content';
@@ -275,6 +276,8 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
             compact={compact}
             styles={styles}
           />
+
+          {ratingSlot ? <View style={styles.ratingSlot}>{ratingSlot}</View> : null}
 
           {showInlineRelatedTravelActions && relatedTravelUrl ? (
             <View style={styles.inlineRelatedTravelActions}>
@@ -657,6 +660,13 @@ const createStyles = (
       borderWidth: 1,
       borderColor: 'rgba(255, 255, 255, 0.3)',
       ...Platform.select({ web: { cursor: 'pointer' as any } }),
+    },
+    // Own MeTravel rating row: sits between the meta chips and the action row,
+    // so the score/stars read as part of the place info, not as another action.
+    ratingSlot: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 2,
     },
     inlineRelatedTravelActions: {
       alignItems: 'flex-start',

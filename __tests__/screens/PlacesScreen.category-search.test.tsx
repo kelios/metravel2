@@ -201,7 +201,7 @@ describe('PlacesScreen category search', () => {
         lat: '53.9',
         lng: '27.56',
         radius: '5',
-        categories: 'Парковка',
+        focusPlace: '1',
         placeId: 'place-1',
         placeTitle: 'Парковка у озера',
         placeAddress: 'Минск, Беларусь',
@@ -212,6 +212,10 @@ describe('PlacesScreen category search', () => {
     })
 
     mockPush.mockClear()
+    // Карточка называет МЕСТО (головной сегмент адреса), а не статью, из которой
+    // точка пришла: иначе все точки одного путешествия выглядят одинаково.
+    expect(within(placeCard).getByText('Минск')).toBeTruthy()
+    expect(within(placeCard).queryByText('Парковка у озера')).toBeNull()
     expect(within(placeCard).getByText('На карте')).toBeTruthy()
     fireEvent.press(within(placeCard).getByLabelText('Открыть место на карте'))
 
@@ -221,7 +225,7 @@ describe('PlacesScreen category search', () => {
         lat: '53.9',
         lng: '27.56',
         radius: '5',
-        categories: 'Парковка',
+        focusPlace: '1',
         placeId: 'place-1',
         placeTitle: 'Парковка у озера',
         placeAddress: 'Минск, Беларусь',

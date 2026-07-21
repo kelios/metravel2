@@ -438,9 +438,15 @@ function OptimizedImage({
             transition={0}
             style={StyleSheet.absoluteFill}
             cachePolicy={cachePolicy}
-            // A caller-provided blurSource is already a small, server-blurred
-            // variant. Avoid Android's expensive live blur while scrolling.
-            blurRadius={blurSource ? 0 : blurBackgroundRadius}
+            // A caller-provided blurSource is a small downscaled variant, but it is
+            // NOT pre-blurred: the image proxy silently ignores the `blur` query
+            // param (verified — identical bytes for blur absent / 8 / 40). Zeroing
+            // the radius here left the Android hero backdrop as a plain upscaled
+            // copy of the photo with fully readable detail instead of a blur.
+            // Blur it on device instead. The radius stays the caller's value —
+            // if it reads too weak/strong on a real device, tune it at the call
+            // site (slider hero passes blurRadius={12}), not here.
+            blurRadius={blurBackgroundRadius}
             placeholder={resolvedPlaceholder}
             priority={priority}
             onLoad={() => setLoadedBlurKey(blurLoadKey)}

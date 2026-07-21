@@ -185,11 +185,12 @@ const Slide = memo(function Slide({
       width: 360,
       quality: 35,
       fit: 'cover',
-      // Pre-blur the tiny backdrop in the image proxy. Android otherwise runs
-      // a live RenderEffect while the whole hero moves inside the article
-      // ScrollView, repeatedly uploading the bitmap and making vertical scroll
-      // visibly crawl on image-heavy travels.
-      blur: 8,
+      // No `blur` param here: the image proxy silently ignores it (verified —
+      // identical bytes for blur absent / 8 / 40), so asking for a server blur
+      // only produced an unblurred upscaled copy. The backdrop is blurred on
+      // device in OptimizedImage; keeping the variant small (~360px) is what
+      // keeps that cheap. If the proxy ever learns `blur`, re-add it here AND
+      // drop the device-side radius, otherwise the backdrop is blurred twice.
     }) ?? resolvedUri;
   }, [shouldBlur, resolvedUri]);
   const mediaLqipUrl = useMemo(() => getMediaLqipUrl(item.media), [item.media]);

@@ -22,6 +22,9 @@ export interface MapUrlAnchors {
   initialRadius: string | undefined;
   urlCoordinates: { latitude: number; longitude: number } | null;
   urlSelectedPlace: MapPoint | null;
+  /** `focusPlace=1` — the caller (e.g. /places «На карте») wants the map to zoom
+   *  onto the deep-linked point and surface it, not just center the area. */
+  shouldFocusUrlPlace: boolean;
 }
 
 export function useMapUrlAnchors(): MapUrlAnchors {
@@ -37,6 +40,7 @@ export function useMapUrlAnchors(): MapUrlAnchors {
     placeCategory?: string;
     placeTravelUrl?: string;
     placeImageUrl?: string;
+    focusPlace?: string;
   }>();
 
   const initialCategories = useMemo(
@@ -85,5 +89,13 @@ export function useMapUrlAnchors(): MapUrlAnchors {
     urlCoordinates,
   ]);
 
-  return { initialCategories, initialRadius, urlCoordinates, urlSelectedPlace };
+  const shouldFocusUrlPlace = getFirstParamText(params.focusPlace) === '1';
+
+  return {
+    initialCategories,
+    initialRadius,
+    urlCoordinates,
+    urlSelectedPlace,
+    shouldFocusUrlPlace,
+  };
 }

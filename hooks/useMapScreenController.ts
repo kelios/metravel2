@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import { usePathname } from 'expo-router';
 
@@ -31,7 +31,7 @@ export function useMapScreenController() {
   // URL anchors → initial filter values + deep-linked coordinates/place.
   // Остаётся на экране: initialCategories/initialRadius нужны useMapFilters,
   // а якоря координат/места уходят параметрами в поведенческое ядро.
-  const { initialCategories, initialRadius, urlCoordinates, urlSelectedPlace } =
+  const { initialCategories, initialRadius, urlCoordinates, urlSelectedPlace, shouldFocusUrlPlace } =
     useMapUrlAnchors();
 
   // Filters
@@ -148,6 +148,31 @@ export function useMapScreenController() {
     urlCoordinates,
     urlSelectedPlace,
   });
+
+  // Приход с /places по кнопке «На карте» (`focusPlace=1`): мало просто
+  // отцентрировать область — пользователь должен ВИДЕТЬ, какая именно точка
+  // открыта. Поэтому один раз после готовности карты и первой загрузки маркеров
+  // открываем вкладку «Места» и фокусируем точку (зум 16 + попап на web,
+  // нижняя карточка места на mobile — оба пути внутри focusPlaceStable).
+  const urlPlaceFocusedRef = useRef(false);
+  useEffect(() => {
+    if (urlPlaceFocusedRef.current) return;
+    if (!shouldFocusUrlPlace || !urlSelectedPlace) return;
+    if (!mapReady || !mapUiApi) return;
+    if (loading) return;
+
+    urlPlaceFocusedRef.current = true;
+    selectTravelsTab();
+    focusPlaceStable(urlSelectedPlace as never);
+  }, [
+    focusPlaceStable,
+    loading,
+    mapReady,
+    mapUiApi,
+    selectTravelsTab,
+    shouldFocusUrlPlace,
+    urlSelectedPlace,
+  ]);
 
   // Счётчик мест в боковом меню: показываем общее число (backend total), а не
   // длину загруженной страницы. Текстовый поиск теперь серверный (where.query,

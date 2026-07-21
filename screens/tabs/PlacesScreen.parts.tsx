@@ -21,7 +21,9 @@ import {
   buildYandexMapsUrl,
   buildYandexNaviUrl,
 } from '@/components/MapPage/Map/mapLinks'
+import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
 import PlaceListCard from '@/components/places/PlaceListCard'
+import PlaceRatingSection from '@/components/places/PlaceRatingSection'
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
 import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle'
 import { type ThemedColors } from '@/hooks/useTheme'
@@ -62,7 +64,18 @@ export const PlaceCard = React.memo(function PlaceCard({
       : undefined
   const imageUrl = place.travelImageLandscapeUrl || place.imageUrl || place.travelImageThumbUrl || null
   const relatedTravelUrl = normalizeRelatedTravelRoute(place.urlTravel)
-  const addressBadge = place.address && place.address !== place.country ? place.address : null
+  // The card must name the PLACE, not the article it came from: `place.title` is
+  // the travel/article title (identical across every point of one trip, e.g. три
+  // карточки «Наш Вьетнам»). The clean POI name lives in the head segment of the
+  // reverse-geocoded address — same split the map list/popup already uses, so
+  // /places and /map never diverge. The article stays reachable via «Статья».
+  const placeName = React.useMemo(
+    () => buildPlaceTitleParts({ address: place.address }),
+    [place.address],
+  )
+  const cardTitle = placeName.title || place.title
+  const addressBadge =
+    placeName.subtitle && placeName.subtitle !== place.country ? placeName.subtitle : null
   const mapActions = React.useMemo(() => {
     const coord = String(place.coord ?? '').trim()
     if (!coord) return []
@@ -133,6 +146,11 @@ export const PlaceCard = React.memo(function PlaceCard({
   // ─── Popup-parity actions (mirror the map PlacePopupCard) ───
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const authReady = useAuthStore((s) => s.authReady)
+
+  // Оценка места — авторизованное действие. Гостю показываем строку рейтинга
+  // только когда у места уже есть оценки (иначе на каждой карточке висели бы
+  // пустые звёзды, которые всё равно нельзя нажать).
+  const showRating = isAuthenticated || (place.rating?.value ?? 0) > 0
 
   const normalizedCoord = React.useMemo(() => {
     const parts = String(place.coord ?? '')
@@ -239,7 +257,7 @@ export const PlaceCard = React.memo(function PlaceCard({
   return (
     <View style={[styles.card, containerStyle]}>
       <PlaceListCard
-        title={place.title}
+        title={cardTitle}
         imageUrl={imageUrl}
         categoryLabel={place.category}
         coord={place.coord}
@@ -248,6 +266,19 @@ export const PlaceCard = React.memo(function PlaceCard({
           ...(addressBadge ? [addressBadge] : []),
           ...(place.country ? [place.country] : []),
         ]}
+        ratingSlot={
+          showRating ? (
+            <PlaceRatingSection
+              placeId={place.id}
+              initialRating={place.rating?.value ?? null}
+              initialCount={place.rating?.count ?? 0}
+              compact
+              // Агрегат уже в ответе каталога — не дёргаем GET на каждую карточку.
+              autoFetch={false}
+              testID={`places-rating-${place.id}`}
+            />
+          ) : null
+        }
         relatedTravelUrl={relatedTravelUrl}
         relatedTravelCountry={place.country}
         onCardPress={() => onOpenMap(place)}

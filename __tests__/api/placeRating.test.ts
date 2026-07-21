@@ -30,7 +30,7 @@ describe('placeRating API', () => {
   it('POSTs a rating to /places/{id}/rating/ and returns the aggregate', async () => {
     mockedPost.mockResolvedValueOnce(aggregate)
     const res = await ratePlace({ placeId: '1039', rating: 5 })
-    expect(mockedPost).toHaveBeenCalledWith('/places/1039/rating/', { rating: 5 })
+    expect(mockedPost).toHaveBeenCalledWith('/places/1039/rating/', { rating: 5, value: 5 })
     expect(res).toEqual(aggregate)
   })
 
@@ -43,7 +43,16 @@ describe('placeRating API', () => {
   it('URL-encodes the place id in the path', async () => {
     mockedPost.mockResolvedValueOnce(aggregate)
     await ratePlace({ placeId: 'a/b 1', rating: 3 })
-    expect(mockedPost).toHaveBeenCalledWith('/places/a%2Fb%201/rating/', { rating: 3 })
+    expect(mockedPost).toHaveBeenCalledWith('/places/a%2Fb%201/rating/', { rating: 3, value: 3 })
+  })
+
+  it('normalizes the #986 field names ({value,count,userValue}) to the FE shape', async () => {
+    mockedGet.mockResolvedValueOnce({ value: 4.2, count: 7, userValue: 4 })
+    await expect(getPlaceRating(1039)).resolves.toEqual({
+      rating: 4.2,
+      rating_count: 7,
+      user_rating: 4,
+    })
   })
 
   it('GETs the aggregate + user rating from /places/{id}/rating/', async () => {

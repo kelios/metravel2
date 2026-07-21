@@ -406,7 +406,12 @@ describe('Slider', () => {
 
     expect(adjacentImage.props.priority).toBe('high')
     expect(adjacentBackdrop.props.priority).toBe('high')
-    expect(adjacentBackdrop.props.blurRadius).toBe(0)
+    // The backdrop must be blurred ON DEVICE. It used to be 0 here on the
+    // assumption that the image proxy pre-blurred the small variant, but the
+    // proxy silently ignores the `blur` query param (identical bytes for blur
+    // absent / 8 / 40), so the Android hero showed an unblurred upscaled copy
+    // of the photo with readable detail instead of a frosted backdrop.
+    expect(adjacentBackdrop.props.blurRadius).toBeGreaterThan(0)
     expect(readOpacity(adjacentImage.props.style)).toBe(0)
 
     act(() => {

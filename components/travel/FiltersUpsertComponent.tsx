@@ -3,7 +3,6 @@ import {
     View,
     Text,
     TextInput,
-    ScrollView,
     StyleSheet,
     ActivityIndicator,
     Platform,
@@ -193,12 +192,13 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
         );
     }
 
+    // Компонент всегда встраивается в уже скроллящийся шаг мастера
+    // (TravelWizardStepExtras). Собственный вертикальный ScrollView на native
+    // перехватывал жест родителя и растягивался на minHeight 100%, из-за чего
+    // поля ниже категорий (год, точная дата, участники, дни, бюджет) были
+    // недостижимы на Android. Скроллом владеет родитель.
     return (
-        <ScrollView
-            contentContainerStyle={{ flexGrow: 1 }}
-            style={[styles.container, isMobile && { minHeight: '100%' }]}
-            keyboardShouldPersistTaps="handled"
-        >
+        <View style={styles.container}>
             {onClose && isMobile && (
                 <ButtonBase
                     label={i18nT('travel:components.travel.FiltersUpsertComponent.x_c2692853')}
@@ -355,7 +355,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     {renderNumericInput(i18nT('travel:components.travel.FiltersUpsertComponent.byudzhet_rub_3eae045b'), 'budget')}
                 </>
             )}
-        </ScrollView>
+        </View>
     );
 
     // Поле, принимающее только цифры
@@ -409,7 +409,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     container: {
         padding: DESIGN_TOKENS.spacing.lg,
         backgroundColor: colors.surface, // ✅ ДИЗАЙН: Динамический цвет фона
-        flex: 1,
+        width: '100%',
     },
     loaderContainer: {
         flex: 1,

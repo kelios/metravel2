@@ -12,6 +12,13 @@ type Props = {
   initialCount?: number;
   initialUserRating?: number | null;
   compact?: boolean;
+  /**
+   * Тянуть ли агрегат/свою оценку отдельным GET. В списках (каталог /places)
+   * выключаем: агрегат уже пришёл в ответе каталога, а по GET на карточку это
+   * был бы отдельный запрос на КАЖДОЕ место страницы. Своя оценка там появится
+   * после первого POST (ответ эндпоинта содержит актуальные значения).
+   */
+  autoFetch?: boolean;
   testID?: string;
 };
 
@@ -26,6 +33,7 @@ function PlaceRatingSection({
   initialCount = 0,
   initialUserRating,
   compact = false,
+  autoFetch = true,
   testID = 'place-rating-section',
 }: Props) {
   const colors = useThemedColors();
@@ -44,7 +52,7 @@ function PlaceRatingSection({
     initialRating,
     initialCount,
     initialUserRating,
-    enabled: placeId != null,
+    enabled: autoFetch && placeId != null,
   });
 
   if (compact) {

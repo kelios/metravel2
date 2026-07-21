@@ -218,7 +218,11 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
         lat: String(place.latNumber),
         lng: String(place.lngNumber),
         radius: MAP_FOCUS_RADIUS_KM,
-        categories: place.category,
+        // NB: no `categories` here. Passing the place category as a filter used
+        // to leave the map EMPTY («Ничего не нашлось») whenever the category name
+        // did not map to a filter id — including the point the user just opened.
+        // The map opens unfiltered and focuses the point instead (`focusPlace=1`).
+        focusPlace: '1',
         placeId: place.id,
         placeTitle: place.title,
         placeAddress: place.address || place.country || place.title,
