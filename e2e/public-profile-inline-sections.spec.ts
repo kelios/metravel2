@@ -109,7 +109,7 @@ test.describe('Public profile inline sections', () => {
     await expect(page.getByText('Анна Путешественница', { exact: true })).toBeVisible();
     expect(page.url()).toBe(profileUrl);
 
-    const routesTab = page.getByRole('tab', { name: 'Мои маршруты: 13', exact: true });
+    const routesTab = page.getByRole('tab', { name: 'Маршруты: 13', exact: true });
     await expect(routesTab).toBeVisible();
     await routesTab.click();
     await expect(page.getByRole('button', { name: 'Показать ещё путешествия автора' })).toBeVisible();

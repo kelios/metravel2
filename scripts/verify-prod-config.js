@@ -10,7 +10,8 @@
 // Checks (against the built dist dir):
 //   1. Analytics is NOT the disabled stub (i.e. EXPO_PUBLIC_METRIKA_ID/GA4 were
 //      present at build time).
-//   2. The Yandex Metrika id from .env.prod is actually present in index.html.
+//   2. The Yandex Metrika id and GA4 id from .env.prod are actually present in
+//      index.html (the stub check alone misses a build that lost only one id).
 //   3. No dev/LAN config leaked into the app bundle (192.168.* — the signature
 //      of EXPO_PUBLIC_API_URL=http://192.168.x.x / IS_LOCAL_API builds).
 //
@@ -78,6 +79,20 @@ if (metrikaId) {
   console.warn('[verify-prod-config] WARN: EXPO_PUBLIC_METRIKA_ID not set in .env.prod — skipping id check')
 }
 
+// 2b) The configured GA4 id must actually be in the shipped HTML. The stub
+// check above only fires when BOTH ids are missing (utils/analyticsInlineScript.ts
+// emits the disabled stub only without Metrika AND GA), so a build that has
+// Metrika but lost EXPO_PUBLIC_GOOGLE_GA4 ships silently without GA — this is
+// exactly the 2026-06-27/28 incident (GA sessions = 0 for two days on prod).
+const gaId = envProdVar('EXPO_PUBLIC_GOOGLE_GA4')
+if (gaId) {
+  if (!html.includes(gaId)) {
+    errors.push(`expected GA4 id ${gaId} (.env.prod) not found in index.html`)
+  }
+} else {
+  console.warn('[verify-prod-config] WARN: EXPO_PUBLIC_GOOGLE_GA4 not set in .env.prod — skipping id check')
+}
+
 // 3) No LAN/dev API must leak into the app bundle. The bug signature is a
 // private-range IP used as a URL (e.g. EXPO_PUBLIC_API_URL=http://192.168.50.36).
 // Match only private IPs inside an http(s):// URL — NOT bare "192.168." string
@@ -121,5 +136,5 @@ if (errors.length) {
 
 console.log(
   `[verify-prod-config] OK: ${path.relative(repoRoot, distDir)} verified ` +
-    `(analytics enabled${metrikaId ? `, metrika ${metrikaId} present` : ''}, no LAN/dev leak)`
+    `(analytics enabled${metrikaId ? `, metrika ${metrikaId} present` : ''}${gaId ? `, GA4 ${gaId} present` : ''}, no LAN/dev leak)`
 )

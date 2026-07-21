@@ -192,7 +192,7 @@ test.describe('Travel detail page — map popup close @smoke', () => {
     }
   })
 
-  test('desktop: leaflet popup opens and closes via close button', async ({ page }) => {
+  test('desktop: leaflet popup opens and closes via the popup card action', async ({ page }) => {
     await preacceptCookies(page)
     await installTileMock(page)
 
@@ -205,10 +205,11 @@ test.describe('Travel detail page — map popup close @smoke', () => {
     const popup = await openDesktopPopup(page)
     await expect(popup).toBeVisible({ timeout: 20_000 })
 
-    // Close via Leaflet's built-in close button
-    const leafletClose = page.locator('.leaflet-popup-close-button')
-    await expect(leafletClose).toBeVisible({ timeout: 5_000 })
-    await leafletClose.click()
+    // The shared popup card owns the accessible close action; Leaflet's raw
+    // close button is intentionally disabled to avoid rendering two controls.
+    const popupClose = popup.getByRole('button', { name: 'Закрыть попап' })
+    await expect(popupClose).toBeVisible({ timeout: 5_000 })
+    await popupClose.click()
 
     // Popup should disappear
     await expect(popup).not.toBeVisible({ timeout: 5_000 })
