@@ -64,6 +64,10 @@ interface UseTravelFormPersistenceParams {
   userId: string | null;
   isAuthenticated: boolean;
   hasAccess: boolean;
+  // Форма уже наполнена серверными данными этой поездки (или это новая поездка).
+  // Пока false — автосейв запрещён: у существующей записи он ушёл бы с пустой
+  // формой, а upsert full-replace стёр бы статью (инцидент 2026-07-21, travel 641).
+  isFormHydrated: boolean;
   isManualSaveInFlight: boolean;
   setIsManualSaveInFlight: (value: boolean) => void;
   setMarkers: (markers: MarkerData[]) => void;
@@ -97,6 +101,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     userId,
     isAuthenticated,
     hasAccess,
+    isFormHydrated,
     isManualSaveInFlight,
     setIsManualSaveInFlight,
     setMarkers,
@@ -507,6 +512,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     enabled:
       isAuthenticated &&
       hasAccess &&
+      // Гидратация формы — обязательное условие: до неё formState.data это пустой
+      // getEmptyFormData(id), и любой автосейв стёр бы существующую статью.
+      isFormHydrated &&
       !isManualSaveInFlight &&
       !formState.data.moderation &&
       !formState.data.publish,

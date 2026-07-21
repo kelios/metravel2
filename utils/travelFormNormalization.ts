@@ -254,6 +254,51 @@ export function isDraftPlaceholder(value: unknown): boolean {
     return value.trim() === DRAFT_PLACEHOLDER_PREFIX;
 }
 
+// Редактируемые пользователем поля контента. Серверные echo-поля (gallery, media,
+// title/url, thumbs, счётчики) сюда НЕ входят: они приходят из ответа upsert и
+// остаются заполненными даже у полностью пустой формы.
+const EDITABLE_CONTENT_TEXT_FIELDS: Array<keyof TravelFormData> = [
+    'name', 'description', 'plus', 'minus', 'recommendation',
+    'youtube_link', 'year', 'budget', 'number_days', 'number_peoples',
+];
+const EDITABLE_CONTENT_LIST_FIELDS: Array<keyof TravelFormData> = [
+    'categories', 'transports', 'month', 'complexity', 'companions',
+    'over_nights_stay', 'countries', 'cities', 'coordsMeTravel',
+];
+
+const isBlankContentString = (value: unknown): boolean => {
+    if (value == null) return true;
+    if (typeof value !== 'string') return false;
+    const trimmed = value.trim();
+    return trimmed.length === 0
+        || trimmed === DRAFT_PLACEHOLDER_PREFIX
+        || trimmed.startsWith(DRAFT_NAME_PREFIX);
+};
+
+/**
+ * True, когда в payload не осталось НИ ОДНОГО редактируемого поля контента —
+ * форма равна `getEmptyFormData` (в т.ч. после подстановки draft-плейсхолдеров).
+ *
+ * Инцидент 2026-07-21 (travel 641): автосейв ушёл с непрогидратированной пустой
+ * формой, у которой уже был id, а `PUT /travels/upsert/` — full-replace, поэтому
+ * опубликованная статья потеряла текст, точки и все фильтры. Такой payload не
+ * несёт данных ни в одном сценарии, поэтому у существующей записи его блокируем.
+ */
+export function isBlankTravelContent(data: TravelFormData): boolean {
+    const record = data as unknown as Record<string, unknown>;
+
+    const hasText = EDITABLE_CONTENT_TEXT_FIELDS.some((field) => !isBlankContentString(record[field as string]));
+    if (hasText) return false;
+
+    const hasList = EDITABLE_CONTENT_LIST_FIELDS.some((field) => {
+        const value = record[field as string];
+        return Array.isArray(value) && value.length > 0;
+    });
+    if (hasList) return false;
+
+    return true;
+}
+
 // --- Helpers for applySavedData: keep local value when server returns empty/nil ---
 
 type KeepMode = 'emptyString' | 'nil' | 'emptyArray' | 'nilArray' | 'missingImageUrl';

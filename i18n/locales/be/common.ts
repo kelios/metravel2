@@ -10,9 +10,6 @@ export const common = {
   'language.system': "Як у сістэме",
   'language.systemDescription': "Выкарыстоўваць мову прылады, калі яна падтрымліваецца",
   'language.headerLabel': "Змяніць мову",
-  'language.quickPickerTitle': 'Мова / Language',
-  'language.quickPickerHint': 'Пераключыце інтэрфейс перад пачаткам',
-  'language.quickPickerOptionA11y': 'Пераключыць інтэрфейс на {{value1}}',
   'rail.scrollPrev': "Пракруціць назад",
   'rail.scrollNext': "Пракруціць наперад",
 } as const

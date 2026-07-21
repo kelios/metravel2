@@ -63,6 +63,7 @@ export const errorsStaticResources = {
   "api.messages.authRequired": "Для відправки повідомлень необхідно авторизуватись",
   "api.messages.threadUnavailable": "Діалог недоступний: співрозмовника видалено. Надсилання повідомлень вимкнено.",
   "api.misc.authRequired": "Користувач не авторизований",
+  "api.misc.blankPayloadBlocked": "Збереження скасовано: форма порожня, дані подорожі не завантажилися. Оновіть сторінку — збереження порожньої форми стерло б статтю.",
   "api.misc.titleRequired": "Назва обов'язково для заповнення",
   "api.misc.titleTooShort": "Назва має містити мінімум 3 символи",
   "api.misc.titleTooLong": "Назва надто довга (максимум 200 символів)",

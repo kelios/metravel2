@@ -15,6 +15,7 @@ import { validateReadyForModeration } from '@/utils/travelWizardValidation';
 import { hasUsableAuthCredential, shouldUseStoredAuthToken } from '@/utils/authPlatform';
 import { translate as i18nT } from '@/i18n';
 import { normalizeFilterCountries, normalizeFilterDictionaries } from '@/api/filterDictionaries';
+import { isBlankTravelContent } from '@/utils/travelFormNormalization';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
@@ -113,6 +114,20 @@ export const saveFormData = async (
     }
     if (trimmedName.length > 200) {
       throw new Error(i18nT('errorsStatic:api.misc.titleTooLong'));
+    }
+
+    // 🛡 Анти-обнуление: `PUT /travels/upsert/` — full-replace, поэтому пустой payload
+    // у СУЩЕСТВУЮЩЕЙ записи стирает текст, точки и все m2m (инцидент 2026-07-21,
+    // travel 641: автосейв ушёл с непрогидратированной формой, у которой уже был id).
+    // Такой запрос не несёт данных ни в одном сценарии — блокируем до отправки.
+    // Создание нового travel (id отсутствует) продолжает автосейвиться пустым черновиком.
+    if (data?.id != null && String(data.id).trim() !== '' && isBlankTravelContent(data)) {
+      const blankPayloadError = new Error(i18nT('errorsStatic:api.misc.blankPayloadBlocked'));
+      console.error('[saveFormData] Blank payload blocked for existing travel', {
+        travelId: String(data.id),
+        intent,
+      });
+      throw blankPayloadError;
     }
 
     // ✅ FIX: Валидация массивов (предотвращение отправки невалидных данных)

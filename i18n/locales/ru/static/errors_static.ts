@@ -63,6 +63,7 @@ export const errorsStaticResources = {
   "api.messages.authRequired": "Для отправки сообщений необходимо авторизоваться",
   "api.messages.threadUnavailable": "Диалог недоступен: собеседник удалён. Отправка сообщений отключена.",
   "api.misc.authRequired": "Пользователь не авторизован",
+  "api.misc.blankPayloadBlocked": "Сохранение отменено: форма пуста, данные путешествия не загрузились. Обновите страницу — сохранение пустой формы стёрло бы статью.",
   "api.misc.titleRequired": "Название обязательно для заполнения",
   "api.misc.titleTooShort": "Название должно содержать минимум 3 символа",
   "api.misc.titleTooLong": "Название слишком длинное (максимум 200 символов)",

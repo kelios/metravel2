@@ -51,6 +51,10 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  // Форма наполнена данными этой поездки: у новой — сразу, у существующей — только
+  // после успешного formState.reset(finalData) из loadTravelData. Пока false, автосейв
+  // запрещён (иначе пустая форма затёрла бы статью — инцидент 2026-07-21, travel 641).
+  const [isFormHydrated, setIsFormHydrated] = useState(isNew);
   const [loadError, setLoadError] = useState<{ status: number; message: string } | null>(null);
   const [isManualSaveInFlight, setIsManualSaveInFlight] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
@@ -126,6 +130,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     userId,
     isAuthenticated,
     hasAccess,
+    isFormHydrated,
     isManualSaveInFlight,
     setIsManualSaveInFlight,
     setMarkers,
@@ -190,6 +195,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         setTravelDataOld(travelData);
         formState.reset(finalData);
         setMarkers(markersFromData);
+        // Данные поездки в форме — с этого момента автосейв безопасен.
+        setIsFormHydrated(true);
 
         // Серверный baseline rich-text полей для guard'а «анти-потеря текста».
         serverTextBaselineRef.current = {

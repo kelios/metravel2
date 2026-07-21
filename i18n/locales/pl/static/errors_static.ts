@@ -63,6 +63,7 @@ export const errorsStaticResources = {
   "api.messages.authRequired": "Aby wysyłać wiadomości musisz być zalogowany.",
   "api.messages.threadUnavailable": "Rozmowa jest niedostępna: rozmówca został usunięty. Wysyłanie wiadomości jest wyłączone.",
   "api.misc.authRequired": "Użytkownik nie jest autoryzowany",
+  "api.misc.blankPayloadBlocked": "Zapis anulowany: formularz jest pusty, dane podróży się nie wczytały. Odśwież stronę — zapisanie pustego formularza usunęłoby artykuł.",
   "api.misc.titleRequired": "Tytuł jest wymagany",
   "api.misc.titleTooShort": "Nazwa musi zawierać co najmniej 3 znaki",
   "api.misc.titleTooLong": "Tytuł jest za długi (maksymalnie 200 znaków)",

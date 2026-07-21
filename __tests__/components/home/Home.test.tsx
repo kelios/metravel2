@@ -11,11 +11,6 @@ jest.mock('@/utils/analytics', () => ({
   sendAnalyticsEvent: jest.fn(),
   queueAnalyticsEvent: jest.fn(),
 }));
-jest.mock('@/components/home/HomeLanguageQuickPicker', () => {
-  return function MockHomeLanguageQuickPicker() {
-    return null;
-  };
-});
 
 // Mock lazy loaded components
 jest.mock('@/components/home/HomeInspirationSection', () => {

@@ -32,11 +32,6 @@ jest.mock('@/utils/externalLinks', () => ({
   openExternalUrl: jest.fn(),
   openExternalUrlInNewTab: jest.fn(),
 }))
-jest.mock('@/components/home/HomeLanguageQuickPicker', () => {
-  return function MockHomeLanguageQuickPicker() {
-    return null
-  }
-})
 jest.mock('@/components/ui/ImageCardMedia', () => ({
   __esModule: true,
   default: (props: any) => mockImageCardMedia(props),
