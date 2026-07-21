@@ -67,15 +67,18 @@ test.describe('Messages — deterministic user flows', () => {
       pageBackground.evaluate((element) => ({
         page: getComputedStyle(element).backgroundColor,
         html: getComputedStyle(document.documentElement).backgroundColor,
+        layoutViewportWidth: document.documentElement.clientWidth,
       })),
     ]);
 
     expect(pageBackgroundBox).not.toBeNull();
     expect(desktopShellBox).not.toBeNull();
     expect(pageBackgroundBox!.x).toBeLessThanOrEqual(1);
-    expect(pageBackgroundBox!.width).toBeGreaterThanOrEqual(1599);
+    expect(Math.abs(pageBackgroundBox!.width - themeBackgrounds.layoutViewportWidth)).toBeLessThanOrEqual(1);
     expect(desktopShellBox!.width).toBeLessThanOrEqual(1000);
-    expect(Math.abs(desktopShellBox!.x - (1600 - desktopShellBox!.width) / 2)).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(desktopShellBox!.x - (themeBackgrounds.layoutViewportWidth - desktopShellBox!.width) / 2),
+    ).toBeLessThanOrEqual(1);
     expect(themeBackgrounds.page).toBe(themeBackgrounds.html);
     expect(themeBackgrounds.page).not.toBe('rgb(255, 255, 255)');
     await assertNoHorizontalScroll(page);
