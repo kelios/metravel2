@@ -5,6 +5,7 @@ import {
   ensureRequiredDraftFields,
   normalizeDraftPlaceholders,
   isDraftPlaceholder,
+  isBlankTravelContent,
   keepCurrentField,
   normalizeNullableStrings,
   normalizeMarkersForSave,
@@ -15,6 +16,7 @@ import {
   mergeOverridePreservingUserInput,
   DRAFT_PLACEHOLDER_PREFIX,
 } from '@/utils/travelFormNormalization';
+import { getEmptyFormData } from '@/utils/travelFormUtils';
 
 describe('travelFormNormalization', () => {
   describe('isLocalPreviewUrl', () => {
@@ -464,6 +466,51 @@ describe('travelFormNormalization', () => {
       const data = { slug: 's', travel_image_thumb_url: 'img', travel_image_thumb_small_url: 'sm' };
       const result = filterAllowedKeys(data, []);
       expect(result).toEqual(data);
+    });
+  });
+
+  describe('isBlankTravelContent', () => {
+    const empty = () => getEmptyFormData('641');
+
+    it('flags a freshly emptied form (getEmptyFormData) as blank', () => {
+      expect(isBlankTravelContent(empty())).toBe(true);
+    });
+
+    it('flags a form filled only with draft placeholders as blank', () => {
+      const data = {
+        ...empty(),
+        name: `${DRAFT_PLACEHOLDER_PREFIX}name__-x5zfsb`,
+        description: DRAFT_PLACEHOLDER_PREFIX,
+        plus: DRAFT_PLACEHOLDER_PREFIX,
+        minus: DRAFT_PLACEHOLDER_PREFIX,
+        recommendation: DRAFT_PLACEHOLDER_PREFIX,
+      } as any;
+      expect(isBlankTravelContent(data)).toBe(true);
+    });
+
+    it('does NOT flag a form with real description text', () => {
+      const data = { ...empty(), description: '<p>Замок Болчув…</p>' } as any;
+      expect(isBlankTravelContent(data)).toBe(false);
+    });
+
+    it('does NOT flag a form that only has route points', () => {
+      const data = { ...empty(), coordsMeTravel: [{ id: 1, lat: 50.8, lng: 15.9 }] } as any;
+      expect(isBlankTravelContent(data)).toBe(false);
+    });
+
+    it('does NOT flag a form that only has filter selections', () => {
+      const data = { ...empty(), categories: [2] } as any;
+      expect(isBlankTravelContent(data)).toBe(false);
+    });
+
+    it('ignores server echo fields (gallery/title) — they do not count as content', () => {
+      const data = {
+        ...empty(),
+        gallery: [{ id: 1, url: 'x' }],
+        title: 'Замок Болчув',
+        travel_image_thumb_url: 'https://metravel.by/x.webp',
+      } as any;
+      expect(isBlankTravelContent(data)).toBe(true);
     });
   });
 
