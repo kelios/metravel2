@@ -20,7 +20,7 @@
 | 10   | 2026-07-18 | ✅          | none | Pack Boneclaw IV: 12/12 done (100%); TCT: 10 completed today, 2 pending states audited; App Testers/NadeemGS TC checked | Evidence: `.claude/play-testing/evidence/2026-07-18/`; bugs/risks logged: GridArt 404/waiting partner, Rocky list/detail status mismatch, own app opens dev launcher |
 | 11   | 2026-07-19 | ✅          | none checked | Pack Boneclaw IV: 12/12 done (100%); TCT: 7 completed today, 5 pending partner/review waits; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-19/`; 3+ minute interactive testing used for each TC task app; bugs/improvements logged |
 | 12   | 2026-07-20 | ✅          | none checked | Pack Boneclaw IV: 11/11 done (100%); TCT: 4 pending uploads, 8 completed today; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-20/`; 3+ minute interactive testing used for each TC task app; bugs/improvements logged; no crash-buffer hits |
-| 13   | 2026-07-21 |             |            |                      | |
+| 13   | 2026-07-21 | ✅          | snapshot refreshed: `com.kitchenmatch.game` 2→3, `com.kolorino.kolorino` 2→6, `com.unnoyashiro` 2→3, `by.metravel.app` 8→15; Priority dz Play listing checked: no Update button | Pack Boneclaw IV: 11/11 done (100%); TCT: visible tests Done/Done; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-21/`; 3+ minute interactive testing used for each TC task app; chat note: Priority dz developer asked to update, but Play showed only `Играть`; no crash-buffer hits |
 | 14   | 2026-07-22 |             |            |                      | |
 
 ## Найденные задания / инциденты
@@ -128,3 +128,27 @@
 - App Testers `com.nadeemgs.apptesters`: opened home/test list; no rate modal at inspection time and no mandatory proof action found.
 - NadeemGS TestersCommunity `com.nadeemgs.testerscommunity`: opened home/test list; no mandatory proof action found. No Play Store review/rating was performed.
 - Crash check: `adb logcat -d -b crash` filtered for the 11 tested packages returned no relevant crash entries.
+
+### 2026-07-21 — Daily pass
+
+- Device: Pixel 10 Pro `61020DLCH0086L`, USB/adb authorized.
+- TestersCommunity Pack Boneclaw IV: completed all 11 daily tasks. Final screen showed `100%, YOUR MISSION`, `Open & test apps today (11/11 done)`, `Daily Progress Complete!`, `All tasks complete!`.
+- Per user instruction, every assigned TC app was tested with a 3+ minute interactive session and visual proof inspection before feedback/completion. Incorrect/weak attempts were not counted:
+  - BareMacros: used quick macro buttons, Track/Meals/Search/Manage and verified updated kcal/P/C/F totals. Improvement: floating Search button overlaps lower content on this device.
+  - PraEx: answered Portuguese driving quiz questions through question 4/25. Improvement: long answer options are dense on mobile and the next step after a wrong answer should be clearer.
+  - First Time Daddy: tested Home/Weekly/Guide/Journal and Week-by-week content. Improvement: clarify Journal privacy/local-storage/sync behavior because entries are sensitive.
+  - Kitchen Match & Merge: played Level 1 after a weak first attempt, reached visible `3/22` progress and `31 Moves`. Improvement/risk: bottom install ad is too close to gameplay and easy to tap by mistake.
+  - Kolorino: opened `По номерам`, selected a drawing, used palette numbers and colored zones to 1%. Improvement: selected-number zones could be highlighted more clearly for first-time users.
+  - Denkleşelim: tested room summary, expense history and settlement flow for 3+ minutes; corrected a bad TestersCommunity screenshot and kept only the in-app room proof. Improvement: action icons need labels/tooltips because add-member and add-expense are easy to confuse.
+  - Call Of Poker: retested after an invalid first tap loop, played Memory Game and flipped cards for 3+ minutes. Improvement: negative Memory Bonus/Hero Points need explanation for new players.
+  - `運の社`: used omikuji/dice/oracle flows and captured a fortune result. Improvement: add English hint or language toggle for international testers.
+  - Priority dz: played the road-priority level for 3+ minutes. Bug/risk: first tap on `10` returned to TestersCommunity once before gameplay; on retry it worked. Improvements: clearer feedback/progress after taps, language hint, and safer ad placement away from controls.
+  - Ball Sort - Zen: solved a puzzle over a 192-second corrected session and reached `LEVEL 005 COMPLETE`. Improvement: show a clear level/move counter during play so progress is easier to verify.
+  - Putik: tested login form, password visibility and validation for 196 seconds. Blocker: no demo/guest/test account is provided, so closed testers cannot reach attendance or employee-data flows.
+- MeTravel Android smoke: `by.metravel.app` opened production UI, navigated routes/map/quests/profile/more for 191 seconds with no data changes. Improvement: profile tab row clips the right-side tab label on Pixel 10 Pro (`Под...` visible).
+- Messages/community audit:
+  - TestersCommunity notification was a positive `Perfect Day`/100% completion credit, not a reject.
+  - Chat Room contained thank-you messages and one actionable note from the Priority dz developer asking testers to update. Play Store listing for `com.kouba.carprioritydz` was checked and showed `Играть`, not `Обновить`, so no update was installed.
+  - TCT visible tests showed `MY UPLOAD Done` and `PARTNER Done` for visible campaigns; no pending wrong-proof replacement control was available.
+  - App Testers and NadeemGS TestersCommunity showed catalog/profile screens only; no mandatory proof/review action was found, and no Play review/rating was performed.
+- Crash check: `adb logcat -d -b crash` filtered for tested/community packages returned no relevant crash entries.
