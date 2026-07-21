@@ -195,7 +195,12 @@ const PointCard = React.memo(function PointCard({
               style={StyleSheet.absoluteFill}
             />
           ) : (
-            <View style={[styles.noImage, { minHeight: imageHeight }]} />
+            <View style={[styles.noImage, { minHeight: imageHeight }]}>
+              <Feather name="image" size={28} color={cardMutedColor} />
+              <Text style={[styles.noImageText, { color: cardMutedColor }]} numberOfLines={1}>
+                {i18nT('travel:components.travel.PointCard.net_foto_tochki_placeholder')}
+              </Text>
+            </View>
           )}
 
           {showActions && (

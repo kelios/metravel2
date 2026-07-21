@@ -299,6 +299,11 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     justifyContent: 'center',
     position: 'relative',
     minHeight: 240,
+    gap: 8,
+  },
+  noImageText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   actionsWrap: {
     position: 'absolute',

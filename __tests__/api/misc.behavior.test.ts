@@ -10,6 +10,7 @@ import {
   subscribeEmail,
 } from '@/api/misc'
 import type { TravelFormData } from '@/types/types'
+import { getEmptyFormData } from '@/utils/travelFormUtils'
 
 const mockGetSecureItem = jest.fn()
 const mockFetchWithTimeout = jest.fn()
@@ -184,6 +185,32 @@ describe('api/misc', () => {
     } as any
 
     await expect(saveFormData(payload, undefined, { autosave: true })).resolves.toBeDefined()
+    expect(mockApiClientRequest).toHaveBeenCalled()
+  })
+
+  it('saveFormData blocks a blank payload for an EXISTING travel (anti-wipe, travel 641)', async () => {
+    mockGetSecureItem.mockResolvedValue('token')
+
+    // Непрогидратированная пустая форма с уже присвоенным id — то, что улетело
+    // автосейвом и стёрло опубликованную статью 641.
+    const blankExisting = {
+      ...getEmptyFormData('641'),
+      // серверные echo-поля заполнены, но контента нет
+      gallery: [{ id: 1, url: 'https://metravel.by/x.webp' }],
+      title: 'Замок Болчув',
+    } as any
+
+    await expect(saveFormData(blankExisting)).rejects.toThrow()
+    await expect(saveFormData(blankExisting, undefined, { autosave: true })).rejects.toThrow()
+    expect(mockApiClientRequest).not.toHaveBeenCalled()
+  })
+
+  it('saveFormData allows a blank payload for a NEW travel (id is null)', async () => {
+    mockGetSecureItem.mockResolvedValue('token')
+    mockApiClientRequest.mockResolvedValue({ ...baseForm, id: 7 })
+
+    const blankNew = { ...getEmptyFormData(null) } as any
+    await expect(saveFormData(blankNew, undefined, { autosave: true })).resolves.toBeDefined()
     expect(mockApiClientRequest).toHaveBeenCalled()
   })
 

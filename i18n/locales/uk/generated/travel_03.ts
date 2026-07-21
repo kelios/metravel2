@@ -134,6 +134,7 @@ export const travelGenerated3 = {
   "components.travel.PointCard.otkryt_v_navigatore_c8c53ed9": "Відкрити в навігаторі",
   "components.travel.PointCard.podelitsya_ee0ad34e": "Поділитися",
   "components.travel.PointCard.podelitsya_v_telegram_7a0e6aac": "Поділитися у Telegram",
+  "components.travel.PointCard.net_foto_tochki_placeholder": "Фото поки немає",
   "components.travel.PointCard.skopirovat_koordinaty_ef85ad09": "Скопіювати координати",
   "components.travel.PointCard.tg_58c2e64e": "TG",
   "components.travel.PointListCardRenderer.sohranit_fef12e13": "Зберегти",
