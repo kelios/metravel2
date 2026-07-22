@@ -28,6 +28,7 @@ import {
 import { createStyles } from '@/components/travel/travelWizardStepPublish.styles';
 import type { TravelWizardStepPublishProps } from '@/components/travel/TravelWizardStepPublish.types';
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
+import WizardStepFooter from '@/components/travel/upsert/WizardStepFooter';
 import { translate as i18nT } from '@/i18n';
 
 const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
@@ -247,6 +248,23 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     )}
                     </View>
                 </ScrollView>
+
+                <WizardStepFooter
+                    onBack={onGoBack}
+                    onPrimary={handlePrimaryAction}
+                    primaryLabel={
+                        isSaving
+                            ? i18nT('travel:components.travel.TravelWizardStepPublish.sohranenie_6ac62247')
+                            : primaryOverrideLabel ??
+                              (pendingModeration
+                                  ? i18nT('travel:components.travel.TravelWizardStepPublish.otpravleno_na_moderatsiyu_6f9b87dd')
+                                  : status === 'draft'
+                                  ? i18nT('travel:components.travel.TravelWizardStepPublish.sohranit_chernovik_7d6023b4')
+                                  : i18nT('travel:components.travel.TravelWizardStepPublish.otpravit_na_moderatsiyu_55154a94'))
+                    }
+                    primaryDisabled={pendingModeration || isSaving}
+                    primaryTestID="primary-button"
+                />
 
                 <ConfirmDialog
                     visible={rejectConfirmVisible}

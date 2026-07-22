@@ -14,10 +14,13 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
     },
+    // #1038 — шапка мастера обязана укладываться в ≤20% вьюпорта на телефоне.
+    // Ряд с иконками остаётся 44px (тач-таргеты), поэтому ужимаем только
+    // вертикальные зазоры: нижний паддинг и отступы прогресс-бара/мета-ряда.
     headerWrapperMobile: {
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-        paddingTop: DESIGN_TOKENS.spacing.xs,
-        paddingBottom: DESIGN_TOKENS.spacing.xs,
+        paddingTop: DESIGN_TOKENS.spacing.xxs,
+        paddingBottom: DESIGN_TOKENS.spacing.xxs,
     },
     topNavRow: {
         flexDirection: 'row',
@@ -58,7 +61,7 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         color: colors.text,
     },
     mobileMetaActionRow: {
-        marginTop: DESIGN_TOKENS.spacing.xs,
+        marginTop: DESIGN_TOKENS.spacing.xxs,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -299,6 +302,9 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
     },
     tipToggleTextActive: {
         color: colors.primaryText,
+    },
+    progressBarTrackMobile: {
+        marginTop: DESIGN_TOKENS.spacing.xxs,
     },
     progressBarTrack: {
         marginTop: DESIGN_TOKENS.spacing.xs,

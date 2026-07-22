@@ -353,7 +353,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
 
     const ProgressBar = (
         <View
-            style={styles.progressBarTrack}
+            style={[styles.progressBarTrack, isMobile && styles.progressBarTrackMobile]}
             accessibilityRole="progressbar"
             accessibilityLabel={progressA11yLabel}
             accessibilityValue={{
@@ -480,13 +480,16 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
 
                 {ProgressBar}
 
+                {/* #1038 — основное действие («Далее»/«Сохранить черновик») переехало
+                    в липкий нижний футер (WizardStepFooter): в шапке оно занимало
+                    целый ряд и выталкивало хром за проектный лимит «шапка ≤20%
+                    вьюпорта», а на телефоне ещё и находилось вне зоны большого пальца. */}
                 <View style={styles.mobileMetaActionRow}>
                     <View style={styles.mobileMetaLeft}>
                         {StepMetaText}
                         {ErrorBadge}
                         {AutosaveText}
                     </View>
-                    {PrimaryAction}
                 </View>
                 {StepMenuPanel}
 

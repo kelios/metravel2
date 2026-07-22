@@ -42,7 +42,7 @@ const Fallback = () => {
 export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
   const styles = useTravelDetailsStyles();
   const colors = useThemedColors();
-  const { embedUrl, handlePreviewPress, id, mounted } = useYoutubeEmbedModel(url);
+  const { embedUrl, handlePreviewPress, id, mounted, nativeSource } = useYoutubeEmbedModel(url);
 
   if (!id) return null;
 
@@ -98,7 +98,9 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
     <Suspense fallback={<Fallback />}>
       <View style={styles.videoContainer}>
         <WebViewComponent
-          source={{ uri: embedUrl ?? `https://www.youtube.com/embed/${id}` }}
+          // Только html+baseUrl: прямой uri на /embed/ даёт «Ошибка 153»
+          // (эмбед без Referer). См. useYoutubeEmbedModel.
+          source={nativeSource ?? undefined}
           style={{ flex: 1 }}
           mediaPlaybackRequiresUserAction={false}
           allowsInlineMediaPlayback

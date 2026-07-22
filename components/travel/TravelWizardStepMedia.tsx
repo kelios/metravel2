@@ -27,6 +27,7 @@ import type { Travel, TravelFormData } from '@/types/types';
 import { showToastMessage } from '@/utils/toast';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
+import WizardStepFooter from '@/components/travel/upsert/WizardStepFooter';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -621,6 +622,11 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                         <VideoSection styles={styles} value={youtubeLink} onChange={handleYoutubeChange} />
                     </View>
                 </ScrollView>
+                <WizardStepFooter
+                    onBack={onBack}
+                    onPrimary={onNext}
+                    primaryLabel={stepMeta?.nextLabel ?? i18nT('travel:components.travel.TravelWizardStepMedia.defaultNext')}
+                />
 
                 <ConfirmDialog
                     visible={isDeleteDialogOpen}

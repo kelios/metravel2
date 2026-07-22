@@ -12,6 +12,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import { useResponsive } from '@/hooks/useResponsive';
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
+import WizardStepFooter from '@/components/travel/upsert/WizardStepFooter';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -264,6 +265,11 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                         </GroupedFiltersSection>
                     </View>
                 </ScrollView>
+                <WizardStepFooter
+                    onBack={onBack}
+                    onPrimary={onNext}
+                    primaryLabel={stepMeta?.nextLabel ?? i18nT('travel:components.travel.TravelWizardStepExtras.defaultNext')}
+                />
             </KeyboardAvoidingView>
         </SafeAreaView>
     );

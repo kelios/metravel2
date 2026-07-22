@@ -54,6 +54,7 @@ import {
 import { ManualPointPanel } from './stepRoute/ManualPointPanel'
 import { RouteCoachmark } from './stepRoute/RouteCoachmark'
 import { RouteMapCard } from './stepRoute/RouteMapCard'
+import WizardStepFooter from '@/components/travel/upsert/WizardStepFooter'
 import { createStyles } from './stepRoute/styles'
 import type { TravelWizardStepRouteProps } from './stepRoute/types'
 import { translate as i18nT } from '@/i18n'
@@ -648,6 +649,11 @@ function TravelWizardStepRoute({
             />
           </View>
         </ScrollView>
+        <WizardStepFooter
+          onBack={onBack}
+          onPrimary={onNext}
+          primaryLabel={stepMeta?.nextLabel ?? getDefaultNextLabel()}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   )

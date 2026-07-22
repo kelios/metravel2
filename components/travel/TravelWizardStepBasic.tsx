@@ -19,6 +19,7 @@ import { showToastMessage } from '@/utils/toast';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { buildQuickDraftRoute } from '@/utils/travelQuickDraftNavigation';
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
+import WizardStepFooter from '@/components/travel/upsert/WizardStepFooter';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -277,6 +278,11 @@ function TravelWizardStepBasic({
             </Animated.View>
           </ScrollView>
         </View>
+
+        <WizardStepFooter
+          onPrimary={onGoNext}
+          primaryLabel={stepMeta?.nextLabel ?? i18nT('travel:components.travel.TravelWizardStepBasic.default.nextLabel')}
+        />
 
         <Snackbar visible={snackbarVisible} onDismiss={onDismissSnackbar}>
           {snackbarMessage}

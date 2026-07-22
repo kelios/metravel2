@@ -10,6 +10,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
+import WizardStepFooter from '@/components/travel/upsert/WizardStepFooter';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -254,6 +255,11 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
 
                     </View>
                 </ScrollView>
+                <WizardStepFooter
+                    onBack={onBack}
+                    onPrimary={onNext}
+                    primaryLabel={stepMeta?.nextLabel ?? i18nT('travel:components.travel.TravelWizardStepDetails.defaultNext')}
+                />
             </KeyboardAvoidingView>
         </SafeAreaView>
     );

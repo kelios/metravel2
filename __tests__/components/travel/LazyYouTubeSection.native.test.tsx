@@ -40,9 +40,14 @@ describe('LazyYouTube native', () => {
     })
 
     const webView = screen.getByTestId('travel-youtube-webview')
-    expect(webView.props.source).toEqual({
-      uri: 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1',
-    })
+    // Прямой uri на /embed/ грузится как документ верхнего уровня — YouTube
+    // отвечает «Ошибка 153» (эмбед без Referer). Поэтому только html+baseUrl.
+    expect(webView.props.source.uri).toBeUndefined()
+    expect(webView.props.source.baseUrl).toBe('https://metravel.by')
+    expect(webView.props.source.html).toContain(
+      'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1&enablejsapi=1&origin=https%3A%2F%2Fmetravel.by'
+    )
+    expect(webView.props.source.html).toContain('allowfullscreen')
     expect(webView.props.javaScriptEnabled).toBe(true)
     expect(webView.props.domStorageEnabled).toBe(true)
     expect(webView.props.mediaPlaybackRequiresUserAction).toBe(false)
