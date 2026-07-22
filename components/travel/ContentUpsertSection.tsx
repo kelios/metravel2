@@ -16,6 +16,7 @@ import { uploadImage } from '@/api/misc';
 import { useWebSpeechDictation } from '@/hooks/useWebSpeechDictation';
 import { showToast } from '@/utils/toast';
 import { createContentUpsertStyles } from './contentUpsertStyles';
+import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
 import { getFormatLocale, translate as i18nT, translatePlural } from '@/i18n'
 
 
@@ -568,7 +569,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                 <SafeAreaView style={styles.modalSafeArea}>
                                     <KeyboardAvoidingView
                                         style={styles.modalKeyboardAvoiding}
-                                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                                        behavior={WIZARD_KEYBOARD_BEHAVIOR}
                                         enabled={Platform.OS !== 'web'}
                                     >
                                     <View style={styles.modalShell}>

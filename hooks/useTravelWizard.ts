@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Platform, Alert, BackHandler } from 'react-native';
+import { Platform, BackHandler } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useNavigation, useLocalSearchParams } from 'expo-router';
 import { trackWizardEvent } from '@/utils/analytics';
@@ -186,6 +186,14 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   const hasRestoredRef = useRef(false);
   const isLeavingRef = useRef(false);
 
+  // Диалог выхода из мастера с несохранёнными изменениями. Раньше здесь был
+  // Alert.alert — он НЕ работает на web (кнопка выхода была мертва). Теперь это
+  // кроссплатформенный state-driven диалог, который рендерит оболочка
+  // (UpsertTravelView → WizardExitDialog).
+  const [exitPrompt, setExitPrompt] = useState<{ canSave: boolean } | null>(null);
+  const [isExitSaving, setIsExitSaving] = useState(false);
+  const pendingExitRef = useRef<{ onDiscard: () => void; onSavedAndLeave?: () => void } | null>(null);
+
   const normalizeStep = useCallback(
     (value: unknown) => {
       const num = typeof value === 'number' ? value : Number(value);
@@ -340,69 +348,62 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     });
   }, [currentStep]);
 
+  const closeExitPrompt = useCallback(() => {
+    exitGuardPromptVisibleRef.current = false;
+    pendingExitRef.current = null;
+    setExitPrompt(null);
+    setIsExitSaving(false);
+  }, []);
+
   const confirmLeaveWizard = useCallback(
     async (onDiscard: () => void, onSavedAndLeave?: () => void) => {
       if (exitGuardPromptVisibleRef.current) return;
-      exitGuardPromptVisibleRef.current = true;
-
-      const reset = () => {
-        exitGuardPromptVisibleRef.current = false;
-      };
 
       if (!hasUnsavedChanges) {
-        reset();
         void clearPersistedStep();
         onDiscard();
         return;
       }
 
-      Alert.alert(
-        i18nT('shared:hooks.useTravelWizard.est_nesohranennye_izmeneniya_4cb67f79'),
-        canSave
-          ? i18nT('shared:hooks.useTravelWizard.sohranit_chernovik_pered_vyhodom_d0ff2d3c')
-          : i18nT('shared:hooks.useTravelWizard.seychas_sohranit_nelzya_net_interneta_ili_id_55c139ab'),
-        [
-          {
-            text: i18nT('shared:hooks.useTravelWizard.ostatsya_e14e72fc'),
-            style: 'cancel',
-            onPress: reset,
-          },
-          ...(canSave
-            ? [
-                {
-                  text: i18nT('shared:hooks.useTravelWizard.sohranit_i_vyyti_d514b94e'),
-                  onPress: async () => {
-                    try {
-                      await onSave();
-                      reset();
-                      onSavedAndLeave?.();
-                    } catch (e: unknown) {
-                      reset();
-                      await showToastMessage({
-                        type: 'error',
-                        text1: i18nT('shared:hooks.useTravelWizard.ne_udalos_sohranit_d5966e16'),
-                        text2: getErrorMessage(e, i18nT('shared:hooks.useTravelWizard.poprobuyte_esche_raz_1dda501f')),
-                      });
-                    }
-                  },
-                },
-              ]
-            : []),
-          {
-            text: i18nT('shared:hooks.useTravelWizard.vyyti_bez_sohraneniya_cd5cbc49'),
-            style: 'destructive',
-            onPress: () => {
-              reset();
-              void clearPersistedStep();
-              onDiscard();
-            },
-          },
-        ],
-        { cancelable: true, onDismiss: reset }
-      );
+      // Есть несохранённые изменения — открываем кроссплатформенный диалог.
+      exitGuardPromptVisibleRef.current = true;
+      pendingExitRef.current = { onDiscard, onSavedAndLeave };
+      setExitPrompt({ canSave });
     },
-    [hasUnsavedChanges, canSave, onSave, clearPersistedStep]
+    [hasUnsavedChanges, canSave, clearPersistedStep]
   );
+
+  // «Остаться» — просто закрыть диалог.
+  const handleExitStay = useCallback(() => {
+    closeExitPrompt();
+  }, [closeExitPrompt]);
+
+  // «Выйти без сохранения» — сбросить черновик шага и покинуть мастер.
+  const handleExitDiscard = useCallback(() => {
+    const pending = pendingExitRef.current;
+    closeExitPrompt();
+    void clearPersistedStep();
+    pending?.onDiscard();
+  }, [closeExitPrompt, clearPersistedStep]);
+
+  // «Сохранить и выйти» — сохранить, затем покинуть; при ошибке оставить диалог.
+  const handleExitSaveAndLeave = useCallback(async () => {
+    const pending = pendingExitRef.current;
+    if (!pending) return;
+    setIsExitSaving(true);
+    try {
+      await onSave();
+      closeExitPrompt();
+      pending.onSavedAndLeave?.();
+    } catch (e: unknown) {
+      setIsExitSaving(false);
+      await showToastMessage({
+        type: 'error',
+        text1: i18nT('shared:hooks.useTravelWizard.ne_udalos_sohranit_d5966e16'),
+        text2: getErrorMessage(e, i18nT('shared:hooks.useTravelWizard.poprobuyte_esche_raz_1dda501f')),
+      });
+    }
+  }, [onSave, closeExitPrompt]);
 
   // Leaves the wizard screen entirely (e.g. back to search/list).
   // Used by the visible back/close control on step 1 and by Android hardware back.
@@ -493,6 +494,11 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     handleFinishWizard,
     confirmLeaveWizard,
     clearPersistedStep,
+    exitPrompt,
+    isExitSaving,
+    handleExitStay,
+    handleExitDiscard,
+    handleExitSaveAndLeave,
   }), [
     currentStep,
     totalSteps,
@@ -508,5 +514,10 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     handleFinishWizard,
     confirmLeaveWizard,
     clearPersistedStep,
+    exitPrompt,
+    isExitSaving,
+    handleExitStay,
+    handleExitDiscard,
+    handleExitSaveAndLeave,
   ]);
 }

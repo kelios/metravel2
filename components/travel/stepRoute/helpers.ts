@@ -6,11 +6,12 @@ import { getMapGeocoderLanguage } from '@/utils/mapLocale'
 import { translate as i18nT } from '@/i18n'
 
 import type { ManualPointState } from './types'
+import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard'
 
 export const MAP_COACHMARK_STORAGE_KEY = 'travelWizardRouteMapCoachmarkDismissed'
 export const ROUTE_MARKERS_ANCHOR_ID = 'markers-list-root'
 export const ROUTE_COUNTRIES_ANCHOR_ID = 'travelwizard-route-countries'
-export const KEYBOARD_BEHAVIOR = Platform.OS === 'ios' ? 'padding' : 'height'
+export const KEYBOARD_BEHAVIOR = WIZARD_KEYBOARD_BEHAVIOR
 export const getDefaultTitle = () => i18nT('travel:components.travel.stepRoute.helpers.defaultTitle')
 export const getDefaultNextLabel = () => i18nT('travel:components.travel.stepRoute.helpers.defaultNextLabel')
 export const EMPTY_MANUAL_POINT: ManualPointState = {

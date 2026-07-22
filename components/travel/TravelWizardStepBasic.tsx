@@ -18,6 +18,7 @@ import { hasToastBeenShown } from '@/utils/errorHelpers';
 import { showToastMessage } from '@/utils/toast';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { buildQuickDraftRoute } from '@/utils/travelQuickDraftNavigation';
+import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -57,7 +58,7 @@ interface TravelWizardStepBasicProps {
 
 const EMPTY_ERRORS: string[] = [];
 const MIN_DRAFT_NAME_LENGTH = 3;
-const KEYBOARD_BEHAVIOR = Platform.OS === 'ios' ? 'padding' : 'height';
+const KEYBOARD_BEHAVIOR = WIZARD_KEYBOARD_BEHAVIOR;
 
 const getProgressPercent = (progress: number) => {
   const clampedProgress = Math.min(Math.max(progress, 0), 1);

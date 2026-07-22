@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import DraftRecoveryDialog from '@/components/travel/DraftRecoveryDialog';
 import TravelPreviewModal from '@/components/travel/TravelPreviewModal';
 import type { UpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
+import WizardExitDialog from '@/components/travel/upsert/WizardExitDialog';
 import WizardSkeleton from '@/components/travel/upsert/WizardSkeleton';
 import WizardStepRouter, {
   type CommonStepProps,
@@ -511,6 +512,15 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
         onRecover={controller.draftRecovery.recoverDraft}
         onDiscard={controller.draftRecovery.dismissDraft}
         isRecovering={controller.draftRecovery.isRecovering}
+      />
+
+      <WizardExitDialog
+        visible={!!wizard.exitPrompt}
+        canSave={wizard.exitPrompt?.canSave ?? false}
+        isSaving={wizard.isExitSaving}
+        onStay={wizard.handleExitStay}
+        onDiscard={wizard.handleExitDiscard}
+        onSaveAndLeave={wizard.handleExitSaveAndLeave}
       />
 
       <OfflineBanner colors={colors} isVisible={isOffline} />

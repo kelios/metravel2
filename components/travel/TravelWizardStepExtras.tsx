@@ -11,6 +11,7 @@ import { TravelFormData, Travel, type TravelFilters } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import { useResponsive } from '@/hooks/useResponsive';
+import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -167,7 +168,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
         <SafeAreaView style={styles.safeContainer}>
             <KeyboardAvoidingView
                 style={styles.keyboardAvoid}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={WIZARD_KEYBOARD_BEHAVIOR}
                 keyboardVerticalOffset={0}
             >
                 <TravelWizardHeader

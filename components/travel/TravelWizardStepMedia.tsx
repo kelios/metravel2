@@ -26,6 +26,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import type { Travel, TravelFormData } from '@/types/types';
 import { showToastMessage } from '@/utils/toast';
 import { validateStep } from '@/utils/travelWizardValidation';
+import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -559,7 +560,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
         <SafeAreaView style={styles.safeContainer}>
             <KeyboardAvoidingView
                 style={styles.keyboardAvoid}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={WIZARD_KEYBOARD_BEHAVIOR}
                 keyboardVerticalOffset={0}
             >
                 <TravelWizardHeader

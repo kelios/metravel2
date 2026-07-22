@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import {
     KeyboardAvoidingView,
-    Platform,
     ScrollView,
     Text,
     View,
@@ -28,6 +27,7 @@ import {
 } from '@/utils/instagramPublish';
 import { createStyles } from '@/components/travel/travelWizardStepPublish.styles';
 import type { TravelWizardStepPublishProps } from '@/components/travel/TravelWizardStepPublish.types';
+import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
 import { translate as i18nT } from '@/i18n';
 
 const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
@@ -118,7 +118,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         <SafeAreaView style={styles.safeContainer}>
             <KeyboardAvoidingView
                 style={styles.keyboardAvoid}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={WIZARD_KEYBOARD_BEHAVIOR}
                 keyboardVerticalOffset={0}
             >
                 <TravelWizardHeader
