@@ -1,5 +1,6 @@
 import type { ArticleEditorVariant } from './articleEditor.types';
 import { getNativeToolbarMarkup } from './articleEditorConfig';
+import { QUILL_JS, QUILL_SNOW_CSS } from '@/utils/quillInlineAsset';
 
 type NativeEditorHtmlParams = {
   borderColor: string;
@@ -36,7 +37,7 @@ export function buildArticleEditorNativeHtml({
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+  <style>${QUILL_SNOW_CSS}</style>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -90,7 +91,7 @@ export function buildArticleEditorNativeHtml({
     <div id="editor"></div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+  <script>${QUILL_JS}</script>
   <script>
     var INITIAL_PLACEHOLDER = ${placeholder};
     var INITIAL_CONTENT = ${initialContent};
@@ -160,7 +161,7 @@ export function buildArticleEditorNativeHtml({
       }, 150);
     });
 
-    window.addEventListener('message', function(e) {
+    function handleHostMessage(e) {
       try {
         var data = JSON.parse(e.data);
 
@@ -201,7 +202,14 @@ export function buildArticleEditorNativeHtml({
       } catch (err) {
         console.error('Error processing message:', err);
       }
-    });
+    }
+
+    // ВАЖНО: RN доставляет webViewRef.postMessage() на Android в document, а на
+    // iOS — в window. Раньше слушатель висел только на window, поэтому на Android
+    // НИ ОДНА команда из RN не доходила: вставка фото, undo/redo, якорь и внешняя
+    // подстановка контента были мертвы. Слушаем оба источника (как в native-картах).
+    document.addEventListener('message', handleHostMessage);
+    window.addEventListener('message', handleHostMessage);
 
     window.ReactNativeWebView.postMessage(JSON.stringify({
       type: 'ready'

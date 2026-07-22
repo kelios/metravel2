@@ -61,6 +61,15 @@ const patchLeafletInstance = (instance: any) => {
     instance.Map.prototype.getPane = function safeGetPane(name?: string) {
       const pane = originalGetPane.call(this, name)
       if (pane) return pane
+      // Живая карта (дефолтные panes на месте): отсутствие кастомного pane —
+      // валидный ответ для get-or-create идиомы (RouteLineLayer/MapRoute зовут
+      // createPane только когда getPane вернул пусто). Фолбэк на _mapPane здесь
+      // подменял ответ самим map-pane: createPane не вызывался, и стили
+      // route-pane (z-index + pointer-events:none) прилетали на map-pane,
+      // после чего попапы переставали ловить клики (крестик не закрывал).
+      if (this._panes && this._panes.mapPane) return undefined
+      // Умершая/пересоздаваемая карта: Leaflet-внутренности зовут
+      // getPane().appendChild() без null-check — отдаём безопасный узел.
       if (this._mapPane) return this._mapPane
       if (this._container && typeof this._container.appendChild === 'function') return this._container
       return document.createElement('div')

@@ -338,13 +338,20 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       </View>
 
       {/* WebView с Quill редактором */}
-      <View style={styles.editorContainer}>
+      <View style={[styles.editorContainer, variant === 'compact' && styles.editorContainerCompact]}>
         <WebView
           ref={webViewRef}
           source={webViewSource}
           onMessage={handleMessage}
-          style={[styles.webView, { backgroundColor: colors.surface }]}
+          style={[
+            styles.webView,
+            variant === 'compact' && styles.webViewCompact,
+            { backgroundColor: colors.surface },
+          ]}
           scrollEnabled={true}
+          // Редактор вложен в вертикальный ScrollView шага: без этого Android
+          // отдаёт жест внешнему скроллу и текст внутри редактора не прокрутить.
+          nestedScrollEnabled
           bounces={false}
           showsVerticalScrollIndicator={true}
           keyboardDisplayRequiresUserAction={false}
@@ -419,6 +426,11 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   );
 };
 
+// Минимальная высота области ввода: полноразмерный редактор описания и
+// компактный (плюсы/минусы/рекомендации на шаге 4 мастера).
+const EDITOR_MIN_HEIGHT = 320;
+const EDITOR_MIN_HEIGHT_COMPACT = 220;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -441,11 +453,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: DESIGN_TOKENS.spacing.xs,
   },
+  // Редактор часто живёт в карточке АВТО-высоты внутри вертикального ScrollView
+  // (шаг 4 мастера: «Плюсы»/«Минусы»/«Рекомендации»). Там `flex: 1` разрешается
+  // в 0 — редактор схлопывался в невидимую полоску и не принимал ввод вообще.
+  // Поэтому задаём реальную минимальную высоту, а flex оставляем для случаев,
+  // когда родитель высоту всё-таки задаёт (полноэкранная модалка описания).
   editorContainer: {
     flex: 1,
+    minHeight: EDITOR_MIN_HEIGHT,
   },
   webView: {
     flex: 1,
+    minHeight: EDITOR_MIN_HEIGHT,
+  },
+  editorContainerCompact: {
+    minHeight: EDITOR_MIN_HEIGHT_COMPACT,
+  },
+  webViewCompact: {
+    minHeight: EDITOR_MIN_HEIGHT_COMPACT,
   },
   loading: {
     position: 'absolute',
