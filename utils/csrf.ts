@@ -6,7 +6,10 @@ import { Platform } from 'react-native';
  * cookie `csrftoken` обратно заголовком `X-CSRFToken`, иначе бэк отвечает
  * 403 `{"detail":"CSRF Failed: CSRF token missing."}` (ломает логин и любые POST).
  *
- * Только web: native ходит по Token-auth без cookie, слать нечего.
+ * Только web: native шлёт header-токен, csrftoken ему взять неоткуда. Но
+ * cookie бэк ставит и native-клиенту, поэтому native-запрос БЕЗ заголовка
+ * `Authorization` бэк аутентифицирует по cookie и валит на CSRF — публичные
+ * POST на native обязаны подписываться токеном (см. publicPostInit в api/misc.ts).
  * Guard остаётся, пока бэк-фикс (CSRF-exempt auth / убрать SessionAuth) не
  * верифицирован на проде и не покрыт регресс-тестом.
  */

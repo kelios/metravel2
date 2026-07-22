@@ -12,6 +12,7 @@ import {
 import type { TravelFormData } from '@/types/types'
 import { getEmptyFormData } from '@/utils/travelFormUtils'
 
+let mockIsWebPlatform = false
 const mockGetSecureItem = jest.fn()
 const mockFetchWithTimeout = jest.fn()
 const mockSafeJsonParse = jest.fn()
@@ -28,6 +29,16 @@ const mockApiClientDelete = jest.fn()
 
 jest.mock('@/utils/secureStorage', () => ({
   getSecureItem: (...args: any[]) => mockGetSecureItem(...args),
+}))
+
+// Платформа задаётся тестом: web ходит по cookie-авторизации, native — по
+// header-токену, и публичные POST обязаны различать это (см. publicPostInit).
+jest.mock('@/utils/authPlatform', () => ({
+  usesWebCookieAuth: () => mockIsWebPlatform,
+  shouldUseStoredAuthToken: () => !mockIsWebPlatform,
+  hasUsableAuthCredential: (token: string | null) => mockIsWebPlatform || Boolean(token),
+  getApiRequestCredentials: (skipAuth = false) =>
+    mockIsWebPlatform ? { credentials: skipAuth ? 'omit' : 'include' } : {},
 }))
 
 jest.mock('@/utils/fetchWithTimeout', () => ({
@@ -102,6 +113,7 @@ const baseForm = ({
 describe('api/misc', () => {
   beforeEach(() => {
     jest.resetAllMocks()
+    mockIsWebPlatform = false
     mockSanitizeInput.mockImplementation((...args: any[]) => args[0])
     mockSanitizeRichText.mockImplementation((...args: any[]) => args[0])
     mockGetCsrfHeader.mockReturnValue({ 'X-CSRFToken': 'test-csrf-token' })
@@ -488,6 +500,7 @@ describe('api/misc', () => {
   })
 
   it('sendFeedback omits browser credentials so a stale session cookie cannot trigger CSRF failure', async () => {
+    mockIsWebPlatform = true
     mockSanitizeInput.mockImplementation((v: string) => v.trim())
     mockGetCsrfHeader.mockReturnValueOnce({})
     mockFetchWithTimeout.mockResolvedValue({ ok: true })
@@ -515,6 +528,35 @@ describe('api/misc', () => {
 
     await sendAIMessage('hello')
     expect(mockFetchWithTimeout.mock.calls[0][1].headers['X-CSRFToken']).toBe('test-csrf-token')
+  })
+
+  it('subscribeEmail signs the public POST with the native header token (Android CSRF 403 regression)', async () => {
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockGetSecureItem.mockResolvedValue('native-token')
+    mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 201 })
+    mockSafeJsonParse.mockResolvedValue({ ok: true, status: 'created' })
+
+    await subscribeEmail('a@b.com', 'home')
+
+    const [, init] = mockFetchWithTimeout.mock.calls[0]
+    // Без Authorization бэк аутентифицирует native по cookie-токену и требует
+    // CSRF, которого на native нет: 403 "CSRF Failed: CSRF token missing".
+    expect(init.headers.Authorization).toBe('Token native-token')
+    expect(init.credentials).toBeUndefined()
+  })
+
+  it('subscribeEmail on web relies on cookie-less credentials instead of a header token', async () => {
+    mockIsWebPlatform = true
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 201 })
+    mockSafeJsonParse.mockResolvedValue({ ok: true, status: 'created' })
+
+    await subscribeEmail('a@b.com', 'home')
+
+    const [, init] = mockFetchWithTimeout.mock.calls[0]
+    expect(init.credentials).toBe('omit')
+    expect(init.headers.Authorization).toBeUndefined()
+    expect(mockGetSecureItem).not.toHaveBeenCalled()
   })
 
   it('sendFeedback prefers field-specific validation errors when present', async () => {

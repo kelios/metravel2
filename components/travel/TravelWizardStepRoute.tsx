@@ -347,6 +347,56 @@ function TravelWizardStepRoute({
     scheduleAddPointSave(updatedMarkers, nextCountryIds)
   }, [countries, markersRef, onCountrySelect, scheduleAddPointSave, selectedCountryIds, updateMarkers])
 
+  // Общий путь создания точки: обратный геокод → страна → адрес → добавление в
+  // маршрут → автосохранение. Используется и ручным вводом координат, и тапом по
+  // native-карте (#1040), чтобы результат был идентичным на всех поверхностях.
+  const addPointAtCoords = useCallback(
+    async (lat: number, lng: number, image: string | null = null) => {
+      let derivedCountryId: string | null = null
+      let address = ''
+
+      try {
+        const data = await reverseGeocode(lat, lng)
+        const { name: countryName, code: countryCode } = getReverseGeocodeCountry(data)
+        if (countryName || countryCode) {
+          const matchedId = matchCountryId(countryName || '', countries || [], countryCode)
+          if (matchedId != null) derivedCountryId = String(matchedId)
+        }
+
+        address = buildAddressFromGeocode(
+          data,
+          { lat, lng },
+          getMatchedCountry(derivedCountryId, countries),
+        )
+      } catch {
+        address = `${lat}, ${lng}`
+      }
+
+      const updatedMarkers = [
+        ...(markersRef.current || []),
+        {
+          id: null,
+          lat,
+          lng,
+          address,
+          categories: [],
+          image,
+          country: derivedCountryId ? Number(derivedCountryId) : null,
+        },
+      ]
+
+      let nextCountryIds = selectedCountryIds
+      if (derivedCountryId && !selectedCountryIds.includes(derivedCountryId)) {
+        onCountrySelect(derivedCountryId)
+        nextCountryIds = [...selectedCountryIds, derivedCountryId]
+      }
+
+      updateMarkers(updatedMarkers)
+      scheduleAddPointSave(updatedMarkers, nextCountryIds)
+    },
+    [countries, markersRef, onCountrySelect, scheduleAddPointSave, selectedCountryIds, updateMarkers],
+  )
+
   const handleAddManualPoint = useCallback(async () => {
     const parsedFromPair = parseCoordsPair(manualPointState.coords)
     const lat = parsedFromPair?.lat ?? parseCoordinate(manualPointState.lat)
@@ -361,63 +411,40 @@ function TravelWizardStepRoute({
       return
     }
 
-    let derivedCountryId: string | null = null
-    let address = ''
-
-    try {
-      const data = await reverseGeocode(lat, lng)
-      const { name: countryName, code: countryCode } = getReverseGeocodeCountry(data)
-      if (countryName || countryCode) {
-        const matchedId = matchCountryId(countryName || '', countries || [], countryCode)
-        if (matchedId != null) derivedCountryId = String(matchedId)
-      }
-
-      address = buildAddressFromGeocode(
-        data,
-        { lat, lng },
-        getMatchedCountry(derivedCountryId, countries),
-      )
-    } catch {
-      address = `${lat}, ${lng}`
-    }
-
-    const updatedMarkers = [
-      ...(markersRef.current || []),
-      {
-        id: null,
-        lat,
-        lng,
-        address,
-        categories: [],
-        image: manualPointState.photoPreviewUrl,
-        country: derivedCountryId ? Number(derivedCountryId) : null,
-      },
-    ]
-
-    let nextCountryIds = selectedCountryIds
-    if (derivedCountryId && !selectedCountryIds.includes(derivedCountryId)) {
-      onCountrySelect(derivedCountryId)
-      nextCountryIds = [...selectedCountryIds, derivedCountryId]
-    }
-
-    updateMarkers(updatedMarkers)
+    await addPointAtCoords(lat, lng, manualPointState.photoPreviewUrl)
     resetManualPoint({ preservePendingPhoto: Boolean(manualPointState.photoPreviewUrl) })
     setManualPointVisible(false)
-    scheduleAddPointSave(updatedMarkers, nextCountryIds)
   }, [
-    countries,
+    addPointAtCoords,
     manualPointState.coords,
     manualPointState.lat,
     manualPointState.lng,
     manualPointState.photoPreviewUrl,
-    markersRef,
-    onCountrySelect,
     resetManualPoint,
-    scheduleAddPointSave,
-    selectedCountryIds,
     setManualPointVisible,
-    updateMarkers,
   ])
+
+  // Тап по native-карте — создать точку в этих координатах.
+  const handleMapPointAdd = useCallback(
+    (lat: number, lng: number) => {
+      if (!isValidCoordinate(lat, lng)) return
+      void addPointAtCoords(lat, lng, null)
+    },
+    [addPointAtCoords],
+  )
+
+  // Перетаскивание маркера на native-карте — обновить координаты точки и сохранить.
+  const handleMapPointMove = useCallback(
+    (index: number, lat: number, lng: number) => {
+      if (!isValidCoordinate(lat, lng)) return
+      const current = markersRef.current || []
+      if (index < 0 || index >= current.length) return
+      const next = current.map((marker, i) => (i === index ? { ...marker, lat, lng } : marker))
+      updateMarkers(next)
+      void handleMarkerEditSave(next)
+    },
+    [handleMarkerEditSave, markersRef, updateMarkers],
+  )
 
   const handleManualPhotoPick = useCallback(() => {
     if (Platform.OS !== 'web') return
@@ -616,6 +643,8 @@ function TravelWizardStepRoute({
               onPhotoMarkerReady={handlePhotoMarkerReady}
               onMarkerEditSave={handleMarkerEditSave}
               onMarkerAdded={handleMarkerAdded}
+              onMapPointAdd={handleMapPointAdd}
+              onMapPointMove={handleMapPointMove}
             />
           </View>
         </ScrollView>

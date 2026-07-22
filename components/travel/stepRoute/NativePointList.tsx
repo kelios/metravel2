@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from 'react'
-import { Alert, Pressable, Text, TextInput, View } from 'react-native'
+import React, { useCallback } from 'react'
+import { Alert, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors } from '@/hooks/useTheme'
@@ -12,6 +12,9 @@ type NativePointListProps = {
   // как на web: удаление/переупорядочивание/переименование точки не теряются при
   // перезагрузке до автосейва.
   onChange: (markers: MarkerData[]) => void
+  // #1040 — открыть полный редактор точки (адрес/категории/фото). Редактор один
+  // и тот же для кнопки «Изменить» здесь и для тапа по маркеру на карте.
+  onRequestEdit: (index: number) => void
 }
 
 const HIT = { top: 6, bottom: 6, left: 6, right: 6 }
@@ -23,10 +26,9 @@ const HIT = { top: 6, bottom: 6, left: 6, right: 6 }
 export const NativePointList = React.memo(function NativePointList({
   markers,
   onChange,
+  onRequestEdit,
 }: NativePointListProps) {
   const colors = useThemedColors()
-  const [editingIndex, setEditingIndex] = useState<number | null>(null)
-  const [draftAddress, setDraftAddress] = useState('')
 
   const move = useCallback(
     (index: number, dir: -1 | 1) => {
@@ -58,25 +60,6 @@ export const NativePointList = React.memo(function NativePointList({
       )
     },
     [markers, onChange],
-  )
-
-  const startEdit = useCallback(
-    (index: number) => {
-      setEditingIndex(index)
-      setDraftAddress(markers[index]?.address ?? '')
-    },
-    [markers],
-  )
-
-  const commitEdit = useCallback(
-    (index: number) => {
-      setEditingIndex(null)
-      const value = draftAddress.trim()
-      if ((markers[index]?.address ?? '') === value) return
-      const next = markers.map((m, i) => (i === index ? { ...m, address: value } : m))
-      onChange(next)
-    },
-    [draftAddress, markers, onChange],
   )
 
   if (!markers.length) return null
@@ -143,31 +126,10 @@ export const NativePointList = React.memo(function NativePointList({
               <Text style={{ color: colors.textOnPrimary, fontSize: 12, fontWeight: '700' }}>{index + 1}</Text>
             </View>
 
-            {editingIndex === index ? (
-              <TextInput
-                value={draftAddress}
-                onChangeText={setDraftAddress}
-                onBlur={() => commitEdit(index)}
-                onSubmitEditing={() => commitEdit(index)}
-                autoFocus
-                placeholder={i18nT('travel:components.travel.stepRoute.NativePointList.editAddressPlaceholder')}
-                placeholderTextColor={colors.textMuted}
-                style={{
-                  flex: 1,
-                  minHeight: 40,
-                  color: colors.text,
-                  borderBottomWidth: 1,
-                  borderBottomColor: colors.primary,
-                  paddingVertical: 4,
-                }}
-                accessibilityLabel={i18nT('travel:components.travel.stepRoute.NativePointList.editAddressPlaceholder')}
-              />
-            ) : (
-              <Text style={{ flex: 1, color: colors.text, fontSize: 14 }} numberOfLines={2}>
-                {m.address?.trim() ||
-                  `${i18nT('travel:components.travel.stepRoute.NativePointList.pointFallback')} ${index + 1}`}
-              </Text>
-            )}
+            <Text style={{ flex: 1, color: colors.text, fontSize: 14 }} numberOfLines={2}>
+              {m.address?.trim() ||
+                `${i18nT('travel:components.travel.stepRoute.NativePointList.pointFallback')} ${index + 1}`}
+            </Text>
           </View>
 
           <Text style={{ color: colors.textMuted, fontSize: 12 }}>
@@ -190,7 +152,7 @@ export const NativePointList = React.memo(function NativePointList({
             {iconBtn(
               'edit-2',
               i18nT('travel:components.travel.stepRoute.NativePointList.edit'),
-              () => startEdit(index),
+              () => onRequestEdit(index),
             )}
             <View style={{ flex: 1 }} />
             {iconBtn(

@@ -1,11 +1,6 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native'
-import { useIsFocused } from 'expo-router'
 
 import UpsertTravelRoute from '@/components/travel/upsert/UpsertTravelRoute'
-
-jest.mock('expo-router', () => ({
-  useIsFocused: jest.fn(),
-}))
 
 let mockUpsertImportShouldFail = false
 
@@ -24,26 +19,23 @@ jest.mock('@/components/travel/UpsertTravel', () => {
   }
 })
 
-const useIsFocusedMock = useIsFocused as jest.Mock
-
 describe('native UpsertTravelRoute', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockUpsertImportShouldFail = false
   })
 
-  it('does not mount the wizard when route is not focused', () => {
-    useIsFocusedMock.mockReturnValue(false)
-
+  // #1039 — раньше native-ветка делала `if (!isFocused) return null`, из-за чего
+  // форма мастера размонтировалась при потере фокуса экрана и терялся весь
+  // введённый, но ещё не сохранённый стейт. Контракт выровнен с web: форма
+  // остаётся смонтированной всегда.
+  it('keeps the wizard mounted regardless of navigation focus', () => {
     const { queryByText } = render(<UpsertTravelRoute />)
 
-    expect(queryByText('Загрузка...')).toBeNull()
-    expect(queryByText('UpsertTravel loaded')).toBeNull()
+    expect(queryByText('UpsertTravel loaded')).toBeTruthy()
   })
 
-  it('loads the wizard behind a Suspense boundary when focused', async () => {
-    useIsFocusedMock.mockReturnValue(true)
-
+  it('loads the wizard behind an error boundary', async () => {
     const { queryByText } = render(<UpsertTravelRoute />)
 
     await waitFor(() => {
@@ -53,7 +45,6 @@ describe('native UpsertTravelRoute', () => {
   })
 
   it('shows a recoverable error instead of hanging when the wizard fails to load', async () => {
-    useIsFocusedMock.mockReturnValue(true)
     mockUpsertImportShouldFail = true
 
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})

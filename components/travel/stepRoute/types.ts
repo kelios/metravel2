@@ -88,4 +88,8 @@ export interface RouteMapCardProps {
   onPhotoMarkerReady: (payload: { markers: MarkerData[]; derivedCountryId: number | null }) => void;
   onMarkerEditSave: (markers: MarkerData[]) => void;
   onMarkerAdded: (payload: { markers: MarkerData[]; derivedCountryId: number | null }) => void;
+  /** #1040 — тап по native-карте: создать точку в этих координатах. */
+  onMapPointAdd: (lat: number, lng: number) => void;
+  /** #1040 — перетаскивание маркера на native-карте: обновить координаты точки. */
+  onMapPointMove: (index: number, lat: number, lng: number) => void;
 }

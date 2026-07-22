@@ -12,7 +12,11 @@ import { ApiError } from '@/api/client';
 import { Platform } from 'react-native';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import { validateReadyForModeration } from '@/utils/travelWizardValidation';
-import { hasUsableAuthCredential, shouldUseStoredAuthToken } from '@/utils/authPlatform';
+import {
+  getApiRequestCredentials,
+  hasUsableAuthCredential,
+  shouldUseStoredAuthToken,
+} from '@/utils/authPlatform';
 import { translate as i18nT } from '@/i18n';
 import { normalizeFilterCountries, normalizeFilterDictionaries } from '@/api/filterDictionaries';
 import { isBlankTravelContent } from '@/utils/travelFormNormalization';
@@ -66,6 +70,29 @@ const requireAuthCredential = async (): Promise<void> => {
   if (!hasUsableAuthCredential(token)) {
     throw new Error(i18nT('errorsStatic:api.misc.authRequired'));
   }
+};
+
+/**
+ * Init для публичных (AllowAny) POST — подписка, обратная связь, AI-чат.
+ * Такой запрос всё равно проходит DRF-аутентификацию (throttle дергает
+ * `request.user`), а `CookieTokenAuthentication` при cookie-токене требует CSRF
+ * на unsafe-методах. Web возвращает `csrftoken` заголовком и вдобавок не шлёт
+ * cookie вовсе, а native вернуть cookie-токен нечем — оттуда 403
+ * `{"detail":"CSRF Failed: CSRF token missing."}` (подписка на Android).
+ * Поэтому native подписывает публичный запрос своим header-токеном: бэк уходит
+ * в ветку `if (auth)` без CSRF-проверки.
+ */
+const publicPostInit = async (): Promise<RequestInit> => {
+  const token = shouldUseStoredAuthToken() ? await getSecureItem('userToken') : null;
+  return {
+    method: 'POST',
+    ...getApiRequestCredentials(true),
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Token ${token}` } : {}),
+      ...getCsrfHeader(),
+    },
+  };
 };
 
 const slugifySafe = (value?: string): string => {
@@ -564,10 +591,7 @@ export const sendFeedback = async (
 
   try {
     const res = await fetchWithTimeout(SEND_FEEDBACK, {
-      method: 'POST',
-      // Public endpoint: do not send a stale session cookie without csrftoken.
-      credentials: 'omit',
-      headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
+      ...(await publicPostInit()),
       body: JSON.stringify({
         name: sanitizedName,
         email: sanitizedEmail,
@@ -629,8 +653,7 @@ export const subscribeEmail = async (
     const res = await fetchWithTimeout(
       SUBSCRIBE_EMAIL,
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
+        ...(await publicPostInit()),
         body: JSON.stringify({
           email: sanitizedEmail,
           source,
@@ -679,8 +702,7 @@ export const sendAIMessage = async (inputText: string) => {
 
   try {
     const response = await fetchWithTimeout(SEND_AI_QUESTION, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
+      ...(await publicPostInit()),
       body: JSON.stringify({ message: inputText.trim() }),
     }, LONG_TIMEOUT);
     

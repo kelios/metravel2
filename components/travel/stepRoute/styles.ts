@@ -276,24 +276,6 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     color: colors.textMuted,
     fontWeight: '600',
   },
-  nativeMapPlaceholder: {
-    padding: DESIGN_TOKENS.spacing.lg,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  nativeMapTitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 6,
-  },
-  nativeMapBody: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.textMuted,
-    lineHeight: 18,
-  },
 })
 
 export type Styles = ReturnType<typeof createStyles>

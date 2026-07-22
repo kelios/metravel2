@@ -58,6 +58,10 @@ function WizardExitDialog({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [visible, onStay]);
 
+  // Скрытый диалог не монтируем вообще (после всех хуков — порядок хуков стабилен).
+  // Иначе Paper Dialog держал бы в дереве всю разметку на каждом рендере мастера.
+  if (!visible) return null;
+
   // На мобильном кнопки идут колонкой во всю ширину (порядок: основное действие
   // сверху), на десктопе — в ряд справа. Кнопки рендерятся напрямую в контейнере
   // действий без лишней вложенной View, иначе Paper Dialog.Actions ломает раскладку.
@@ -119,7 +123,7 @@ function WizardExitDialog({
     })();
     const body = typeof document !== 'undefined' ? document.body : null;
 
-    const content = visible ? (
+    const content = (
       <View style={styles.webPortalRoot}>
         <View style={styles.webBackdrop}>
           <View
@@ -148,7 +152,7 @@ function WizardExitDialog({
           </View>
         </View>
       </View>
-    ) : null;
+    );
 
     const isJest = !!process.env.JEST_WORKER_ID;
     if (portal && body && !isJest) {
