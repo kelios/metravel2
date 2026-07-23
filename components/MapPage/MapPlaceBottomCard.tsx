@@ -180,9 +180,11 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       onPanResponderRelease: (_evt, gesture) => {
         if (gesture.dy > SWIPE_CLOSE_THRESHOLD_PX) handleClose()
       },
-      onPanResponderTerminate: (_evt, gesture) => {
-        if (gesture.dy > SWIPE_CLOSE_THRESHOLD_PX) handleClose()
-      },
+      // A terminated responder can still have native touch events in flight.
+      // Unmounting the sheet here lets the tail of the same gesture land on the
+      // map/travel UI underneath and may open an unrelated route. Only a clean
+      // release is allowed to dismiss the card.
+      onPanResponderTerminate: () => undefined,
     })
   }, [handleClose])
   const nativeSwipeHandlers = nativeSwipeResponder?.panHandlers ?? null

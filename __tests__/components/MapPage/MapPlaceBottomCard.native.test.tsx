@@ -163,6 +163,10 @@ describe('MapPlaceBottomCard native layout', () => {
     expect(responderConfig.onPanResponderTerminationRequest()).toBe(false)
     expect(responderConfig.onShouldBlockNativeResponder()).toBe(true)
     renderer.act(() => {
+      responderConfig.onPanResponderTerminate({}, { dy: 120, dx: 1 })
+    })
+    expect(onClose).not.toHaveBeenCalled()
+    renderer.act(() => {
       responderConfig.onPanResponderRelease({}, { dy: 65, dx: 1 })
     })
     expect(onClose).toHaveBeenCalledTimes(1)
