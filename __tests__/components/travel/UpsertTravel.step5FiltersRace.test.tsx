@@ -48,6 +48,7 @@ jest.mock('@/components/travel/TravelWizardHeader', () => {
 jest.mock('@/components/travel/ValidationFeedback', () => {
   return {
     __esModule: true,
+    CollapsibleValidationSummary: () => null,
     ValidationSummary: () => null,
   };
 });

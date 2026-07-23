@@ -426,7 +426,7 @@ describe('PhotoUploadWithPreview', () => {
             const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
             
             // Component should render without errors
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
         it('should handle upload without idTravel (preview only mode)', async () => {
@@ -439,7 +439,7 @@ describe('PhotoUploadWithPreview', () => {
                 />
             );
 
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
             // In preview mode, upload should not be called to server
             expect(mockUploadImage).not.toHaveBeenCalled();
         });
@@ -452,7 +452,7 @@ describe('PhotoUploadWithPreview', () => {
             );
             
             // Component should render with custom max size
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
         it('should show error for oversized files', async () => {
@@ -461,14 +461,14 @@ describe('PhotoUploadWithPreview', () => {
             );
 
             // Error handling is internal, component should still render
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
         it('should validate file type', () => {
             const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
             
             // Type validation happens internally
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
     });
 
@@ -483,8 +483,8 @@ describe('PhotoUploadWithPreview', () => {
                 />
             );
 
-            // When oldImage is provided, button shows "Заменить фото"
-            expect(getByText('Заменить фото')).toBeTruthy();
+            // Native keeps the explicit gallery/camera choices when replacing an image.
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
             // Remove button should be present
             expect(getByText('Удалить')).toBeTruthy();
         });
@@ -500,7 +500,7 @@ describe('PhotoUploadWithPreview', () => {
             );
 
             // Component renders with replace button when image exists
-            expect(getByText('Заменить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
         it('web: falls back to blob preview when remote image fails to load', async () => {
@@ -584,7 +584,7 @@ describe('PhotoUploadWithPreview', () => {
         it('should show preview immediately after file selection', async () => {
             const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
             
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
         it('should call onPreviewChange callback when preview changes', () => {
@@ -596,13 +596,13 @@ describe('PhotoUploadWithPreview', () => {
                 />
             );
 
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
         it('should maintain preview when switching between files', () => {
             const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
             
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
     });
 
@@ -612,13 +612,13 @@ describe('PhotoUploadWithPreview', () => {
 
             const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
             
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
         it('should clear error when new file is selected', async () => {
             const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
             
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
         it('should handle network errors gracefully', async () => {
@@ -626,7 +626,7 @@ describe('PhotoUploadWithPreview', () => {
 
             const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
             
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
     });
 
@@ -636,7 +636,7 @@ describe('PhotoUploadWithPreview', () => {
                 <PhotoUploadWithPreview {...defaultProps} disabled={true} />
             );
 
-            const button = getByText('Загрузить фото');
+            const button = getByText('Выбрать из галереи');
             expect(button).toBeTruthy();
         });
 
@@ -649,8 +649,8 @@ describe('PhotoUploadWithPreview', () => {
                 />
             );
 
-            // When disabled with oldImage, shows "Заменить фото" but no remove button
-            expect(getByText('Заменить фото')).toBeTruthy();
+            // Disabled native controls keep their normal labels but do not expose removal.
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
             // Remove button should not be present when disabled
             expect(queryByText('Удалить')).toBeNull();
         });
@@ -664,13 +664,13 @@ describe('PhotoUploadWithPreview', () => {
 
             const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
             
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
         it('should update progress percentage during upload', async () => {
             const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
             
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
     });
 

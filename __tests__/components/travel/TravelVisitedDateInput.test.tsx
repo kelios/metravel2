@@ -8,11 +8,11 @@ import TravelVisitedDateInput, {
     parseVisitedDateDraft,
 } from '@/components/travel/TravelVisitedDateInput';
 
-const openAndroidDatePicker = jest.fn();
+const mockOpenAndroidDatePicker = jest.fn();
 
 jest.mock('@react-native-community/datetimepicker', () => ({
     DateTimePickerAndroid: {
-        open: (options: unknown) => openAndroidDatePicker(options),
+        open: (options: unknown) => mockOpenAndroidDatePicker(options),
     },
 }), { virtual: true });
 
@@ -36,7 +36,7 @@ describe('TravelVisitedDateInput', () => {
 
     afterEach(() => {
         Object.defineProperty(Platform, 'OS', { value: originalPlatform, configurable: true });
-        openAndroidDatePicker.mockReset();
+        mockOpenAndroidDatePicker.mockReset();
     });
 
     it('formats the stored ISO date for direct day, month and year editing', () => {
@@ -90,8 +90,8 @@ describe('TravelVisitedDateInput', () => {
 
         fireEvent.press(calendarButton);
 
-        expect(openAndroidDatePicker).toHaveBeenCalledTimes(1);
-        const options = openAndroidDatePicker.mock.calls[0][0] as {
+        expect(mockOpenAndroidDatePicker).toHaveBeenCalledTimes(1);
+        const options = mockOpenAndroidDatePicker.mock.calls[0][0] as {
             value: Date;
             onChange: (event: { type: string }, date?: Date) => void;
         };
