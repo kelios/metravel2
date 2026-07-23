@@ -1,6 +1,7 @@
 // src/api/quests.ts
 // API модуль для работы с квестами через бэкенд
 import { apiClient, ApiError } from '@/api/client';
+import { LONG_TIMEOUT } from '@/api/apiConfig';
 import { unwrapList } from '@/api/clientResponse';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { retry } from '@/utils/retry';
@@ -464,7 +465,9 @@ export async function fetchQuestsByCity(cityId: number): Promise<ApiQuestBundle>
 export async function fetchQuestByQuestId(questId: string): Promise<ApiQuestBundle> {
     try {
         const bundle = await retry(
-            () => apiClient.get<ApiQuestBundle>(`/quests/by-quest-id/${questId}/`),
+            // Quest bundles include the intro, all steps and finale media. Do not
+            // abort a valid cold response at the generic 10 s API deadline.
+            () => apiClient.get<ApiQuestBundle>(`/quests/by-quest-id/${questId}/`, LONG_TIMEOUT),
             {
                 maxAttempts: 2,
                 delay: 300,
