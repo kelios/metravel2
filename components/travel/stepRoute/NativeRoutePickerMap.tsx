@@ -183,7 +183,7 @@ export const NativeRoutePickerMap = React.memo(function NativeRoutePickerMap({
         />
       </View>
 
-      <View style={styles.footer}>
+      <View style={styles.footer} testID="travel-wizard.step-route.native-map-footer">
         <Text style={[styles.hint, { color: colors.textMuted }]}>
           {i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.hint')}
         </Text>
@@ -238,20 +238,22 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'stretch',
     gap: DESIGN_TOKENS.spacing.sm,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     paddingVertical: DESIGN_TOKENS.spacing.sm,
   },
   hint: {
-    flex: 1,
+    width: '100%',
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     lineHeight: 18,
   },
   locationButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'stretch',
+    justifyContent: 'center',
     gap: DESIGN_TOKENS.spacing.xs,
     minHeight: DESIGN_TOKENS.touchTarget.minHeight,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
