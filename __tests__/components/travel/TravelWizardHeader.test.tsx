@@ -1,5 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { Modal, StyleSheet } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 
@@ -99,7 +99,7 @@ describe('TravelWizardHeader', () => {
     };
     const onStepSelect = jest.fn();
 
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByLabelText, queryByLabelText, UNSAFE_getAllByType } = render(
       <TravelWizardHeader
         title="Основная информация"
         subtitle="Название и описание путешествия"
@@ -112,15 +112,21 @@ describe('TravelWizardHeader', () => {
 
     fireEvent.press(getByTestId('travel-wizard-step-select'));
 
-    expect(getByTestId('travel-wizard-step-select-menu')).toBeTruthy();
-    expect(getByText('Шаг 5 из 6')).toBeTruthy();
-    expect(getByText('дополнительные параметры')).toBeTruthy();
+    const stepFive = getByLabelText('Перейти к шагу 5: дополнительные параметры');
+    expect(stepFive).toBeTruthy();
 
-    fireEvent.press(getByTestId('travel-wizard-step-select-option-5'));
+    const openModal = UNSAFE_getAllByType(Modal).find((modal) => modal.props.visible);
+    expect(openModal).toBeTruthy();
+    fireEvent(openModal!, 'requestClose');
+    expect(queryByLabelText('Перейти к шагу 5: дополнительные параметры')).toBeNull();
+
+    fireEvent.press(getByTestId('travel-wizard-step-select'));
+
+    fireEvent.press(getByLabelText('Перейти к шагу 5: дополнительные параметры'));
 
     expect(onStepSelect).toHaveBeenCalledTimes(1);
     expect(onStepSelect).toHaveBeenCalledWith(5);
-    expect(queryByTestId('travel-wizard-step-select-menu')).toBeNull();
+    expect(queryByLabelText('Перейти к шагу 5: дополнительные параметры')).toBeNull();
   });
 
   it('exposes a visible Save button in the toolbar (no menu needed) that calls onSave', () => {

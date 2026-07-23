@@ -6,6 +6,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { createWizardHeaderStyles } from './travelWizardHeaderStyles';
 import { selectPlural, translate as i18nT } from '@/i18n'
+import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet';
 
 
 type TravelWizardHeaderProps = {
@@ -193,6 +194,28 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         }
     }, [currentStep, onStepSelect]);
 
+    const mobileMenuActions = useMemo<ActionListSheetItem[]>(
+        () => menuItems.map((item) => ({
+            key: item.key,
+            icon: item.icon,
+            label: item.label,
+            accessibilityLabel: item.label,
+            onPress: () => handleMenuItemPress(item),
+        })),
+        [handleMenuItemPress, menuItems],
+    );
+
+    const mobileStepActions = useMemo<ActionListSheetItem[]>(
+        () => stepOptions.map((step) => ({
+            key: `step-${step}`,
+            icon: step === currentStep ? 'check-circle' : 'circle',
+            label: `${i18nT('travel:components.travel.TravelWizardHeader.shag_6e830528')}${step}${i18nT('travel:components.travel.TravelWizardHeader.iz_28d07309')}${totalSteps} · ${getStepLabel(step)}`,
+            accessibilityLabel: i18nT('travel:components.travel.TravelWizardHeader.pereyti_k_shagu_value1_value2_01355266', { value1: step, value2: getStepLabel(step) }),
+            onPress: () => handleStepOptionPress(step),
+        })),
+        [currentStep, handleStepOptionPress, stepOptions, totalSteps],
+    );
+
     const MoreMenuTrigger = menuItems.length > 0 ? (
         <Pressable
             onPress={handleMoreMenuToggle}
@@ -328,7 +351,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         )
     ) : null;
 
-    const MoreMenuPanel = isMenuOpen && menuItems.length > 0 ? (
+    const MoreMenuPanel = !isMobile && isMenuOpen && menuItems.length > 0 ? (
         <View style={styles.menuPanel} accessibilityRole="menu">
             {menuItems.map((item) => (
                 <Pressable
@@ -406,7 +429,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         </Text>
     );
 
-    const StepMenuPanel = isStepMenuOpen && canSelectStep ? (
+    const StepMenuPanel = !isMobile && isStepMenuOpen && canSelectStep ? (
         <View style={styles.stepSelectPanel} accessibilityRole="menu" testID="travel-wizard-step-select-menu">
             {stepOptions.map((step) => {
                 const isActive = step === currentStep;
@@ -466,42 +489,55 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         // Компактная мобильная шапка: 3 ряда вместо 5.
         // Ряд 1: [←] Заголовок · [сохранить] · [⋯]  Ряд 2: прогресс  Ряд 3: мета+статус · [Далее →]
         return (
-            <View testID="travel-wizard-header" style={[styles.headerWrapper, styles.headerWrapperMobile]}>
-                <View style={styles.mobileTopRow}>
-                    {BackButtonIcon}
-                    <Text style={styles.headerTitleMobileInline} numberOfLines={1}>
-                        {title}
-                    </Text>
-                    {SaveButton}
-                    {MoreMenuTrigger}
-                </View>
-
-                {MoreMenuPanel}
-
-                {ProgressBar}
-
-                {/* #1038 — основное действие («Далее»/«Сохранить черновик») переехало
-                    в липкий нижний футер (WizardStepFooter): в шапке оно занимало
-                    целый ряд и выталкивало хром за проектный лимит «шапка ≤20%
-                    вьюпорта», а на телефоне ещё и находилось вне зоны большого пальца. */}
-                <View style={styles.mobileMetaActionRow}>
-                    <View style={styles.mobileMetaLeft}>
-                        {StepMetaText}
-                        {ErrorBadge}
-                        {AutosaveText}
+            <>
+                <View testID="travel-wizard-header" style={[styles.headerWrapper, styles.headerWrapperMobile]}>
+                    <View style={styles.mobileTopRow}>
+                        {BackButtonIcon}
+                        <Text style={styles.headerTitleMobileInline} numberOfLines={1}>
+                            {title}
+                        </Text>
+                        {SaveButton}
+                        {MoreMenuTrigger}
                     </View>
-                </View>
-                {StepMenuPanel}
 
-                {hasTip && isTipOpen ? (
-                    <View style={styles.tipPanel}>
-                        <Text style={styles.tipPanelTitle}>{resolvedTipTitle}</Text>
-                        <Text style={styles.tipPanelBody}>{tipBody}</Text>
+                    {ProgressBar}
+
+                    {/* #1038 — основное действие («Далее»/«Сохранить черновик») переехало
+                        в липкий нижний футер (WizardStepFooter): в шапке оно занимало
+                        целый ряд и выталкивало хром за проектный лимит «шапка ≤20%
+                        вьюпорта», а на телефоне ещё и находилось вне зоны большого пальца. */}
+                    <View style={styles.mobileMetaActionRow}>
+                        <View style={styles.mobileMetaLeft}>
+                            {StepMetaText}
+                            {ErrorBadge}
+                            {AutosaveText}
+                        </View>
                     </View>
-                ) : null}
 
-                {extraBelowProgress}
-            </View>
+                    {hasTip && isTipOpen ? (
+                        <View style={styles.tipPanel}>
+                            <Text style={styles.tipPanelTitle}>{resolvedTipTitle}</Text>
+                            <Text style={styles.tipPanelBody}>{tipBody}</Text>
+                        </View>
+                    ) : null}
+
+                    {extraBelowProgress}
+                </View>
+                <ActionListSheet
+                    visible={isMenuOpen && mobileMenuActions.length > 0}
+                    onClose={() => setIsMenuOpen(false)}
+                    title={i18nT('travel:components.travel.TravelWizardHeader.otkryt_menyu_deystviy_3e1e61d9')}
+                    actions={mobileMenuActions}
+                    bottomOffset={0}
+                />
+                <ActionListSheet
+                    visible={isStepMenuOpen && canSelectStep}
+                    onClose={() => setIsStepMenuOpen(false)}
+                    title={i18nT('travel:components.travel.TravelWizardHeader.vybrat_shag_seychas_value1_cda7d950', { value1: stepMetaLabel })}
+                    actions={mobileStepActions}
+                    bottomOffset={0}
+                />
+            </>
         );
     }
 
