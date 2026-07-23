@@ -327,12 +327,17 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   // header / map stay visible above it. A grabber + ✕ header row hosts swipe-down-to
   // close; the body is a content-driven ScrollView fallback for tall content.
   return (
-    <View style={styles.nativeRoot} testID="map-place-bottom-card" pointerEvents="box-none">
+    <View style={styles.nativeRoot} testID="map-place-bottom-card" pointerEvents="auto">
       <Pressable
         testID="map-place-bottom-card-backdrop"
         accessibilityLabel={i18nT('map:components.MapPage.MapPlaceBottomCard.zakryt_kartochku_mesta_e4d7f18c')}
         accessibilityRole="button"
         onPress={handleClose}
+        // Android WebView + RNGH can finish the native touch without RN's
+        // synthetic Pressability release. The raw touch-end callback mirrors
+        // the close button's native fallback; closedRef de-duplicates it when
+        // onPress is emitted too.
+        onTouchEnd={handleClose}
         style={styles.nativeBackdrop}
       />
       <View style={[styles.nativePanel, { maxHeight: nativeSheetMaxHeight, marginBottom: nativePanelMargin }]}>

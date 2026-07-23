@@ -163,6 +163,7 @@ describe('Map.ios Component', () => {
 
     const html = getWebViewHtml(rendered);
     expect(html).toContain("marker.on('click'");
+    expect(html).toContain('L.DomEvent.stopPropagation(event)');
     expect(html).toContain("type: 'SELECT_PLACE'");
     expect(html).toContain('index: pointIndex');
     expect(html).toContain('id: point.id == null ? null : String(point.id)');
@@ -185,6 +186,29 @@ describe('Map.ios Component', () => {
     });
 
     expect(onMarkerSelect).toHaveBeenCalledWith(mockTravel.travelAddress.data[1]);
+  });
+
+  it('routes an empty-map tap to the native background-dismiss callback', () => {
+    const onMapBackgroundTap = jest.fn();
+    const onMapClick = jest.fn();
+    const rendered = render(
+      <Map
+        travel={mockTravel}
+        coordinates={mockCoordinates}
+        onMapBackgroundTap={onMapBackgroundTap}
+        onMapClick={onMapClick}
+      />
+    );
+
+    const webView = getWebView(rendered);
+    act(() => {
+      webView.props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: 'MAP_CLICK', lat: 53.91, lng: 27.57 }) },
+      });
+    });
+
+    expect(onMapBackgroundTap).toHaveBeenCalledTimes(1);
+    expect(onMapClick).toHaveBeenCalledWith(27.57, 53.91);
   });
 
   it('should expose native map controls through the WebView bridge', () => {

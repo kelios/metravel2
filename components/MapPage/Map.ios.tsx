@@ -77,6 +77,8 @@ interface TravelProps {
   fullRouteCoords?: [number, number][];
   mode?: 'radius' | 'route';
   onMapClick?: (lng: number, lat: number) => void;
+  /** Dismiss transient mobile chrome when the user taps empty map space. */
+  onMapBackgroundTap?: () => void;
   /**
    * F-46 — фич-парити с mobile-web: тап по travel-маркеру отдаёт выбранную точку
    * в RN, чтобы экран показал нижнюю карточку (MapPlaceBottomCard) вместо/вместе
@@ -139,6 +141,7 @@ const Map: React.FC<TravelProps> = ({
   fullRouteCoords = [],
   mode = 'radius',
   onMapClick,
+  onMapBackgroundTap,
   onMarkerSelect,
   onMapMove,
   mapClusterFilters,
@@ -605,6 +608,7 @@ const Map: React.FC<TravelProps> = ({
               return;
             }
             if (message.type === 'MAP_CLICK') {
+              onMapBackgroundTap?.();
               onMapClick?.(message.longitude, message.latitude);
               return;
             }

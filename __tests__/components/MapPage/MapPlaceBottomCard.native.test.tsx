@@ -93,6 +93,7 @@ describe('MapPlaceBottomCard native layout', () => {
     expect(rootStyle.justifyContent).toBe('flex-end')
     expect(rootStyle.top).toBe(0)
     expect(rootStyle.bottom).toBe(0)
+    expect(root.props.pointerEvents).toBe('auto')
     expect(rootStyle.zIndex).toBeGreaterThan(18)
     expect(rootStyle.elevation).toBe(rootStyle.zIndex)
 
@@ -101,8 +102,10 @@ describe('MapPlaceBottomCard native layout', () => {
     const backdropStyle = StyleSheet.flatten(backdrop.props.style)
     expect(backdropStyle.backgroundColor).toBe('rgba(15, 23, 42, 0.18)')
     renderer.act(() => {
+      backdrop.props.onTouchEnd()
       backdrop.props.onPress()
     })
+    // Raw touch-end + Pressability release are one physical gesture.
     expect(onClose).toHaveBeenCalledTimes(1)
 
     // Panel caps at nativeSheetMaxHeight and clears the bottom chrome.

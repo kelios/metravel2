@@ -190,6 +190,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                     setRouteDistance={setRouteDistance}
                     setFullRouteCoords={setFullRouteCoords}
                     onMapClick={onMapClick}
+                    onMapBackgroundTap={onMapBackgroundTap}
                     onMarkerSelect={onMarkerSelect}
                     onMapMove={onMapMove}
                     onMapUiApiReady={onMapUiApiReady}

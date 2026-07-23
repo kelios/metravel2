@@ -82,11 +82,12 @@ export const buildNativeMapHtml = ({
         }).setView([${DEFAULT_LAT}, ${DEFAULT_LNG}], 10);
         map.__userCenter = [${DEFAULT_LAT}, ${DEFAULT_LNG}];
         // Текущий режим карты ('radius' | 'route'); обновляется при каждом рендере точек.
-        // В route-режиме тап по карте отправляется в RN для добавления точки маршрута (#111).
+        // Every empty-map tap reaches RN so transient native chrome (notably the
+        // selected-place card above Android WebView) can close. In route mode
+        // the same event also adds the next route point in the controller.
         window.__metravelMapMode = 'radius';
         map.on('click', function(e) {
           try {
-            if (window.__metravelMapMode !== 'route') return;
             if (!e || !e.latlng) return;
             if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
               window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -403,8 +404,12 @@ ${ESCAPE_HTML_FN_SCRIPT}
               // Шлём стабильные id/coord + индекс как fallback: при server clusters
               // массив points может пересоздаться между zoom/re-render, и один индекс
               // уже недостаточно надёжен для открытия карточки.
-              marker.on('click', function() {
+              marker.on('click', function(event) {
                 try {
+                  // Leaflet bubbles marker clicks to the map. Without stopping
+                  // that event RN receives SELECT_PLACE followed by MAP_CLICK
+                  // and immediately dismisses the card it has just opened.
+                  if (event && L && L.DomEvent) L.DomEvent.stopPropagation(event);
                   if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({
                       type: 'SELECT_PLACE',
