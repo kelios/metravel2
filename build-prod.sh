@@ -107,100 +107,112 @@ deploy_prod() {
     ./dist/ \
     "sx3@178.172.137.129:/home/sx3/metravel/dist/"
 
-  ssh sx3@178.172.137.129 "set -e
-    cd /home/sx3/metravel
-    mkdir -p static
-    # static/ is bind-mounted into the app container at /app/static. Swap dirs
-    # (dist.new/dist.old) get created by the container user (uid 1984) or an
-    # out-of-band op, so they end up owned by a uid the host user (sx3) cannot
-    # unlink — a plain host 'rm -rf' silently fails and stale dist.old(.stale-*)
-    # dirs pile up (past manual-recovery need). Route every destructive removal
-    # through root inside the container; mv/rename still works on the host
-    # (write on static/ is enough for a rename within it).
-    app_ctr=\$(docker ps --format '{{.Names}}' | grep -E '^metravel[-_]app[-_]1\$' | head -1)
-    if [ -z \"\$app_ctr\" ]; then
-      echo \"⚠️ app container not found; stale-dir cleanup falls back to host rm (may lack permissions)\"
-    fi
-    rroot() { # rm -rf the given paths as root in the container; never abort
-      if [ -n \"\$app_ctr\" ]; then
-        docker exec -u 0 \"\$app_ctr\" sh -c \"rm -rf \$1\" || true
-      else
-        rm -rf \$1 2>/dev/null || true
-      fi
-    }
+  # Send the remote program as literal stdin. Embedding it in a local
+  # double-quoted argument strips nested quotes and turns punctuation inside
+  # diagnostics into remote shell syntax before bash can parse the program.
+  ssh sx3@178.172.137.129 bash -s -- \
+    "$ENV" \
+    "$EXPO_OVERLAY_RETENTION_DAYS" \
+    "$EXPO_OVERLAY_HELPER_B64" <<'REMOTE_DEPLOY_SCRIPT'
+set -e
 
-    # Purge leftovers from a prior interrupted/manual deploy before the swap.
-    rroot '/app/static/dist.new /app/static/dist.old /app/static/dist.old-* /app/static/dist.old.stale-*'
+ENV="$1"
+EXPO_OVERLAY_RETENTION_DAYS="$2"
+EXPO_OVERLAY_HELPER_B64="$3"
 
-    # Nginx serves /static/* from the shared static root, while the web export
-    # lives one level deeper in static/dist. Publish the canonical quest
-    # fallback at its backend-owned URL before swapping the web build.
-    quest_cover_repo_path=static/quests/quest-default-cover.svg
-    quest_cover_source=dist/$ENV/static/quests/quest-default-cover.svg
-    quest_cover_dir=static/quests
-    quest_cover_target=static/quests/quest-default-cover.svg
-    if git ls-files --error-unmatch -- "\$quest_cover_repo_path" >/dev/null 2>&1; then
-      echo "❌ Refusing to overwrite Git-tracked path: \$quest_cover_repo_path"
-      exit 1
-    fi
-    if [ ! -s "\$quest_cover_source" ]; then
-      echo "❌ Quest fallback cover is missing or empty: \$quest_cover_source"
-      exit 1
-    fi
-    if [ -L "\$quest_cover_dir" ] || [ -L "\$quest_cover_target" ]; then
-      echo "❌ Refusing to publish the quest fallback through a symlink"
-      exit 1
-    fi
-    if [ -e "\$quest_cover_target" ] && [ ! -f "\$quest_cover_target" ]; then
-      echo "❌ Refusing to replace a non-file quest fallback target"
-      exit 1
-    fi
-    mkdir -p "\$quest_cover_dir"
-    quest_cover_tmp=\$(mktemp "\$quest_cover_dir/.quest-default-cover.svg.XXXXXX")
-    cp "\$quest_cover_source" "\$quest_cover_tmp"
-    mv -f "\$quest_cover_tmp" "\$quest_cover_target"
-    if ! cmp -s "\$quest_cover_source" "\$quest_cover_target"; then
-      echo "❌ Published quest fallback does not match the deploy artifact"
-      exit 1
-    fi
+cd /home/sx3/metravel
+mkdir -p static
+# static/ is bind-mounted into the app container at /app/static. Swap dirs
+# (dist.new/dist.old) get created by the container user (uid 1984) or an
+# out-of-band op, so they end up owned by a uid the host user (sx3) cannot
+# unlink — a plain host 'rm -rf' silently fails and stale dist.old(.stale-*)
+# dirs pile up (past manual-recovery need). Route every destructive removal
+# through root inside the container; mv/rename still works on the host
+# (write on static/ is enough for a rename within it).
+app_ctr=$(docker ps --format '{{.Names}}' | grep -E '^metravel[-_]app[-_]1$' | head -1)
+if [ -z "$app_ctr" ]; then
+  echo "⚠️ app container not found; stale-dir cleanup falls back to host rm (may lack permissions)"
+fi
+rroot() { # rm -rf the given paths as root in the container; never abort
+  if [ -n "$app_ctr" ]; then
+    docker exec -u 0 "$app_ctr" sh -c "rm -rf $1" || true
+  else
+    rm -rf $1 2>/dev/null || true
+  fi
+}
 
-    mv dist/$ENV static/dist.new
+# Purge leftovers from a prior interrupted/manual deploy before the swap.
+rroot '/app/static/dist.new /app/static/dist.old /app/static/dist.old-* /app/static/dist.old.stale-*'
 
-    # Keep previous hashed Expo JS/CSS assets for a bounded overlap window.
-    # This prevents "Requiring unknown module" crashes for active browser tabs
-    # that still execute older runtime chunks during a fresh deploy.
-    # Backfill while the previous release is still live; the new HTML and its
-    # static tree are exposed together only by the directory swap below.
-    if [ -d static/dist/_expo/static ]; then
-      mkdir -p static/dist.new/_expo/static
-      printf '%s' '$EXPO_OVERLAY_HELPER_B64' | base64 -d | bash -s -- \
-        static/dist.new/_expo/static \
-        static/dist/_expo/static \
-        '$EXPO_OVERLAY_RETENTION_DAYS'
-    fi
+# Nginx serves /static/* from the shared static root, while the web export
+# lives one level deeper in static/dist. Publish the canonical quest
+# fallback at its backend-owned URL before swapping the web build.
+quest_cover_repo_path=static/quests/quest-default-cover.svg
+quest_cover_source=dist/$ENV/static/quests/quest-default-cover.svg
+quest_cover_dir=static/quests
+quest_cover_target=static/quests/quest-default-cover.svg
+if git ls-files --error-unmatch -- "$quest_cover_repo_path" >/dev/null 2>&1; then
+  echo "❌ Refusing to overwrite Git-tracked path: $quest_cover_repo_path"
+  exit 1
+fi
+if [ ! -s "$quest_cover_source" ]; then
+  echo "❌ Quest fallback cover is missing or empty: $quest_cover_source"
+  exit 1
+fi
+if [ -L "$quest_cover_dir" ] || [ -L "$quest_cover_target" ]; then
+  echo "❌ Refusing to publish the quest fallback through a symlink"
+  exit 1
+fi
+if [ -e "$quest_cover_target" ] && [ ! -f "$quest_cover_target" ]; then
+  echo "❌ Refusing to replace a non-file quest fallback target"
+  exit 1
+fi
+mkdir -p "$quest_cover_dir"
+quest_cover_tmp=$(mktemp "$quest_cover_dir/.quest-default-cover.svg.XXXXXX")
+cp "$quest_cover_source" "$quest_cover_tmp"
+mv -f "$quest_cover_tmp" "$quest_cover_target"
+if ! cmp -s "$quest_cover_source" "$quest_cover_target"; then
+  echo "❌ Published quest fallback does not match the deploy artifact"
+  exit 1
+fi
 
-    rollback_dir=static/dist.old
-    rollback_moved=0
-    if [ -d static/dist ]; then
-      mv static/dist \"\$rollback_dir\"
-      rollback_moved=1
-    fi
-    if ! mv static/dist.new static/dist; then
-      echo "❌ Failed to publish the staged frontend; restoring previous static tree"
-      if [ \"\$rollback_moved\" = 1 ] && [ ! -e static/dist ] && [ -d \"\$rollback_dir\" ]; then
-        mv \"\$rollback_dir\" static/dist
-      fi
-      exit 1
-    fi
-    # Drop the rollback copy as root (may be owned by another uid).
-    rroot '/app/static/dist.old'
-    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
-      docker compose -f docker-compose-prod.app.yaml restart app nginx
-    else
-      docker-compose -f docker-compose-prod.app.yaml restart nginx
-    fi
-    rm -rf dist
-  "
+mv dist/$ENV static/dist.new
+
+# Keep previous hashed Expo JS/CSS assets for a bounded overlap window.
+# This prevents "Requiring unknown module" crashes for active browser tabs
+# that still execute older runtime chunks during a fresh deploy.
+# Backfill while the previous release is still live; the new HTML and its
+# static tree are exposed together only by the directory swap below.
+if [ -d static/dist/_expo/static ]; then
+  mkdir -p static/dist.new/_expo/static
+  printf '%s' "$EXPO_OVERLAY_HELPER_B64" | base64 -d | bash -s -- \
+    static/dist.new/_expo/static \
+    static/dist/_expo/static \
+    "$EXPO_OVERLAY_RETENTION_DAYS"
+fi
+
+rollback_dir=static/dist.old
+rollback_moved=0
+if [ -d static/dist ]; then
+  mv static/dist "$rollback_dir"
+  rollback_moved=1
+fi
+if ! mv static/dist.new static/dist; then
+  echo "❌ Failed to publish the staged frontend; restoring previous static tree"
+  if [ "$rollback_moved" = 1 ] && [ ! -e static/dist ] && [ -d "$rollback_dir" ]; then
+    mv "$rollback_dir" static/dist
+  fi
+  exit 1
+fi
+# Drop the rollback copy as root (may be owned by another uid).
+rroot '/app/static/dist.old'
+if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+  docker compose -f docker-compose-prod.app.yaml restart app nginx
+else
+  docker-compose -f docker-compose-prod.app.yaml restart nginx
+fi
+rm -rf dist
+REMOTE_DEPLOY_SCRIPT
 
   rm -rf dist
 }

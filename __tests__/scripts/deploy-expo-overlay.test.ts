@@ -89,7 +89,7 @@ describe('normal deploy Expo overlay retention', () => {
       ).toBe(false)
       expect(fs.readFileSync(freshButOld, 'utf8')).toBe('fresh payload')
     } finally {
-      removeDir(fixture.root)
+      removeDir(fixture)
     }
   })
 
@@ -199,7 +199,32 @@ describe('normal deploy Expo overlay retention', () => {
     )
     expect(source).not.toContain('scripts/fix-prod.sh')
     expect(
-      source.indexOf("printf '%s' '$EXPO_OVERLAY_HELPER_B64'"),
+      source.indexOf("printf '%s' \"$EXPO_OVERLAY_HELPER_B64\""),
     ).toBeLessThan(source.indexOf('mv static/dist.new static/dist'))
+  })
+
+  it('keeps the canonical remote deploy payload valid bash', () => {
+    const source = fs.readFileSync(
+      path.resolve(process.cwd(), 'build-prod.sh'),
+      'utf8',
+    )
+    const match = source.match(
+      /<<'REMOTE_DEPLOY_SCRIPT'\n([\s\S]*?)\nREMOTE_DEPLOY_SCRIPT/,
+    )
+
+    expect(match).not.toBeNull()
+
+    const fixture = makeTempDir('metravel-remote-deploy-script-')
+    const remoteScriptPath = path.join(fixture, 'remote-deploy.sh')
+
+    try {
+      fs.writeFileSync(remoteScriptPath, match?.[1] ?? '', 'utf8')
+      const result = runCli('bash', ['-n', remoteScriptPath])
+
+      expect(result.status).toBe(0)
+      expect(result.stderr).toBe('')
+    } finally {
+      removeDir(fixture.root)
+    }
   })
 })

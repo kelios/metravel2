@@ -49,13 +49,13 @@ describe('copy-public-files', () => {
       'quest_cover_target=static/quests/quest-default-cover.svg',
     );
     expect(source).toContain(
-      'git ls-files --error-unmatch -- "\\$quest_cover_repo_path"',
+      'git ls-files --error-unmatch -- "$quest_cover_repo_path"',
     );
     expect(source).toContain(
-      'mv -f "\\$quest_cover_tmp" "\\$quest_cover_target"',
+      'mv -f "$quest_cover_tmp" "$quest_cover_target"',
     );
     expect(source).toContain(
-      'cmp -s "\\$quest_cover_source" "\\$quest_cover_target"',
+      'cmp -s "$quest_cover_source" "$quest_cover_target"',
     );
 
     expect(source.indexOf('quest_cover_source=')).toBeLessThan(
