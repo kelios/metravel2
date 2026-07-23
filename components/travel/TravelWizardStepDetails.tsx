@@ -144,7 +144,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     }, [formData]);
 
     return (
-        <SafeAreaView style={styles.safeContainer}>
+        <SafeAreaView style={styles.safeContainer} edges={['left', 'right', 'bottom']}>
             <KeyboardAvoidingView
                 style={styles.keyboardAvoid}
                 behavior={WIZARD_KEYBOARD_BEHAVIOR}

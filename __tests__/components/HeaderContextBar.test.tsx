@@ -197,6 +197,47 @@ describe('HeaderContextBar', () => {
     expect(mockRequestToggleMapPanel).not.toHaveBeenCalled();
   });
 
+  it('renders a compact clickable breadcrumb trail for the mobile travel wizard', () => {
+    (usePathname as jest.Mock).mockReturnValue('/travel/42');
+    (global as any).__mockResponsive = {
+      width: 390,
+      height: 844,
+      isSmallPhone: false,
+      isPhone: true,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: true,
+      isLandscape: false,
+      orientation: 'portrait',
+      breakpoints: {},
+      isAtLeast: () => false,
+      isAtMost: () => true,
+      isBetween: () => false,
+    };
+
+    useBreadcrumbModel.mockReturnValue({
+      showBreadcrumbs: true,
+      pageContextTitle: 'Мои путешествия',
+      currentTitle: 'Редактировать путешествие',
+      backToPath: '/metravel',
+      items: [
+        { path: '/metravel', label: 'Мои путешествия' },
+        { path: '/travel/42', label: 'Редактировать путешествие' },
+      ],
+    });
+
+    const { getByTestId, getByText } = renderWithClient(<HeaderContextBar />);
+
+    expect(getByTestId('travel-upsert-breadcrumbs')).toBeTruthy();
+    expect(getByText('Редактировать путешествие')).toBeTruthy();
+
+    fireEvent.press(getByText('Мои путешествия'));
+    expect(mockPush).toHaveBeenCalledWith('/metravel');
+  });
+
   it('should not render sections menu button on mobile non-travel pages', () => {
     (usePathname as jest.Mock).mockReturnValue('/');
     (global as any).__mockResponsive = {

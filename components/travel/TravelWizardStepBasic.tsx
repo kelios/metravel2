@@ -191,7 +191,7 @@ function TravelWizardStepBasic({
   }, [formData.name, onManualSave, redirectDelayMs, router]);
 
   return (
-    <SafeAreaView style={styles.safeContainer}>
+    <SafeAreaView style={styles.safeContainer} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={KEYBOARD_BEHAVIOR}

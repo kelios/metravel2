@@ -446,6 +446,26 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       };
     }
 
+    const isTravelUpsert = parts[0] === 'travel' && parts.length === 2;
+    if (isTravelUpsert) {
+      const currentLabel = parts[1] === 'new'
+        ? pageTranslations.new
+        : i18nT('travel:components.travel.UpsertTravel.redaktirovat_puteshestvie_de5a1d0f');
+      const items: BreadcrumbModelItem[] = [
+        { label: pageTranslations.travel, path: '/metravel' },
+        { label: currentLabel, path: p },
+      ];
+
+      return {
+        items,
+        depth: items.length + 1,
+        currentTitle: currentLabel,
+        pageContextTitle: pageTranslations.travel,
+        backToPath: '/metravel',
+        showBreadcrumbs: true,
+      };
+    }
+
     const isTravelDetailsWithReturn =
       p.startsWith('/travels/') && typeof normalizedReturnToParam === 'string' && !!normalizedReturnToParam.trim();
     if (isTravelDetailsWithReturn) {

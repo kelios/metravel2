@@ -150,9 +150,10 @@ test.describe('@mobile BUG-CLASS-2: header ≤20% viewport height', () => {
 
     await gotoWithRetry(page, '/travel/new');
 
-    // The global HeaderContextBar is intentionally hidden on wizard routes; the
-    // wizard owns its compact header and progress controls.
-    await expect(page.getByTestId('header-context-bar')).toHaveCount(0);
+    // Mobile web and Android expose the same compact create/edit breadcrumb row
+    // above the wizard's own step/progress controls.
+    await expect(page.getByTestId('header-context-bar')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('travel-upsert-breadcrumbs')).toBeVisible();
     const wizardHeader = page.getByTestId('travel-wizard-header').first();
     await expect(wizardHeader).toBeVisible({ timeout: 30_000 });
 

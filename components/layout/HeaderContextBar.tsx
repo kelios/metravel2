@@ -4,7 +4,7 @@
 // ✅ ДОСТУПНОСТЬ: Улучшены ARIA атрибуты и keyboard navigation
 
 import React, { useMemo } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { usePathname, useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -21,6 +21,7 @@ import {
   resolveHeaderContextBarAction,
   resolveHeaderContextBarIsMobile,
 } from './headerContextBarModel';
+import { isTravelUpsertHeaderPath } from './customHeaderModel';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { BOTTOM_DOCK_ITEM_DEFS } from './bottomDockModel';
 import { translate as i18nT } from '@/i18n'
@@ -91,6 +92,23 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const model = useBreadcrumbModelSafe();
 
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const navigateTo = (path: string, replace = false) => {
+    const href = path as any;
+    if (replace) {
+      router.replace(href);
+      return;
+    }
+    router.push(href);
+  };
+  const breadcrumbNavigationProps = Platform.OS === 'web'
+    ? ({
+        role: 'navigation',
+        'aria-label': i18nT('navigation:components.layout.HeaderContextBar.breadcrumb_a3361b51'),
+      } as any)
+    : {};
+  const currentPageProps = Platform.OS === 'web'
+    ? ({ 'aria-current': 'page' } as any)
+    : {};
 
   const handleBackPress = () => {
     // #573: prefer real navigation history so «Назад» returns to the screen the
@@ -103,11 +121,11 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
     }
 
     if (model.backToPath) {
-      router.replace(model.backToPath as any);
+      navigateTo(model.backToPath, true);
       return;
     }
 
-    router.replace('/' as any);
+    navigateTo('/', true);
   };
 
   const containerStyle = useMemo(() => {
@@ -122,6 +140,83 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
     if (isTopLevelTab && mobileAction === 'none') {
       return <BreadcrumbsJsonLd model={model} pathname={pathname} />;
     }
+
+    if (isTravelUpsertHeaderPath(pathname) && model.showBreadcrumbs) {
+      return (
+        <>
+          <BreadcrumbsJsonLd model={model} pathname={pathname} />
+          <View
+            testID={testID ?? 'header-context-bar'}
+            style={containerStyle}
+            accessibilityLabel={i18nT('navigation:components.layout.HeaderContextBar.breadcrumb_a3361b51')}
+            {...breadcrumbNavigationProps}
+          >
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.mobileCrumbRow}
+              style={styles.mobileCrumbScroll}
+              testID="travel-upsert-breadcrumbs"
+            >
+              <Pressable
+                onPress={() => navigateTo('/')}
+                accessibilityRole="button"
+                accessibilityLabel={i18nT('navigation:components.layout.HeaderContextBar.pereyti_na_glavnuyu_7e7e6f6f')}
+                style={({ pressed }) => [
+                  styles.mobileCrumbHome,
+                  pressed && styles.crumbItemPressed,
+                  globalFocusStyles.focusable,
+                ]}
+              >
+                <Feather name="home" size={15} color={colors.textMuted} />
+              </Pressable>
+
+              {model.items.map((item, idx) => {
+                const isLast = idx === model.items.length - 1;
+                return (
+                  <React.Fragment key={`${item.path}-${idx}`}>
+                    <Feather
+                      name="chevron-right"
+                      size={15}
+                      color={colors.textMuted}
+                      style={styles.mobileCrumbSeparator}
+                    />
+                    <Pressable
+                      onPress={() => {
+                        if (!isLast) navigateTo(item.path);
+                      }}
+                      disabled={isLast}
+                      accessibilityRole="button"
+                      accessibilityLabel={isLast
+                        ? i18nT('navigation:components.layout.HeaderContextBar.tekuschaya_stranitsa_value1_fcf33568', { value1: item.label })
+                        : i18nT('navigation:components.layout.HeaderContextBar.pereyti_na_value1_b32e0679', { value1: item.label })}
+                      {...(isLast ? currentPageProps : {})}
+                      style={({ pressed }) => [
+                        styles.mobileCrumbItem,
+                        isLast && styles.mobileCrumbItemLast,
+                        pressed && !isLast && styles.crumbItemPressed,
+                        globalFocusStyles.focusable,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.mobileCrumbLabel,
+                          isLast && styles.mobileCrumbLabelLast,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  </React.Fragment>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </>
+      );
+    }
+
     return (
       <>
         <BreadcrumbsJsonLd model={model} pathname={pathname} />
@@ -174,12 +269,12 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
       <View
         testID={testID ?? 'header-context-bar'}
         style={containerStyle}
-        {...(Platform.OS === 'web' ? ({ role: 'navigation', 'aria-label': i18nT('navigation:components.layout.HeaderContextBar.breadcrumb_a3361b51') } as any) : {})}
+        {...breadcrumbNavigationProps}
       >
         {model.showBreadcrumbs ? (
           <View style={styles.crumbRow}>
             <Pressable
-              onPress={() => router.push('/' as any)}
+              onPress={() => navigateTo('/')}
               accessibilityRole="button"
               accessibilityLabel={i18nT('navigation:components.layout.HeaderContextBar.pereyti_na_glavnuyu_7e7e6f6f')}
               style={({ pressed }) => [styles.crumbItem, pressed && styles.crumbItemPressed, globalFocusStyles.focusable]}
@@ -196,14 +291,12 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
                   <Pressable
                     onPress={() => {
                       if (isLast) return;
-                      router.push(item.path as any);
+                      navigateTo(item.path);
                     }}
                     disabled={isLast}
                     accessibilityRole="button"
                     accessibilityLabel={isLast ? i18nT('navigation:components.layout.HeaderContextBar.tekuschaya_stranitsa_value1_fcf33568', { value1: item.label }) : i18nT('navigation:components.layout.HeaderContextBar.pereyti_na_value1_b32e0679', { value1: item.label })}
-                    {...(Platform.OS === 'web' && isLast
-                      ? ({ 'aria-current': 'page' } as any)
-                      : {})}
+                    {...(isLast ? currentPageProps : {})}
                     style={({ pressed }) => [
                       styles.crumbItem,
                       isLast && styles.crumbItemLast,
@@ -323,6 +416,49 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
   mobileRightSpacer: {
     width: 40,
     height: 40,
+  },
+  mobileCrumbScroll: {
+    flexGrow: 0,
+  },
+  mobileCrumbRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: DESIGN_TOKENS.spacing.sm,
+  },
+  mobileCrumbHome: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: CONTROL_RADIUS,
+  },
+  mobileCrumbSeparator: {
+    marginHorizontal: DESIGN_TOKENS.spacing.xxs,
+  },
+  mobileCrumbItem: {
+    minHeight: 44,
+    maxWidth: 240,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: CONTROL_RADIUS,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'transparent',
+  },
+  mobileCrumbItemLast: {
+    backgroundColor: colors.backgroundSecondary,
+    borderColor: colors.borderLight,
+  },
+  mobileCrumbLabel: {
+    flexShrink: 1,
+    fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  mobileCrumbLabelLast: {
+    color: colors.text,
+    fontWeight: '700',
   },
   mobileSectionsButton: {
     width: 40,

@@ -52,6 +52,13 @@ describe('shouldShowHeaderContextBar (web)', () => {
     it('keeps the context bar hidden on travel detail (own nav)', () => {
       expect(shouldShowHeaderContextBar('/travels/some-slug', false)).toBe(false);
     });
+
+    it.each(['/travel/new', '/travel/42'])(
+      'keeps the wizard breadcrumb row hidden on desktop for %s',
+      (path) => {
+        expect(shouldShowHeaderContextBar(path, false)).toBe(false);
+      },
+    );
   });
 
   describe('mobile', () => {
@@ -73,5 +80,31 @@ describe('shouldShowHeaderContextBar (web)', () => {
     it('hides the bar on the map route', () => {
       expect(shouldShowHeaderContextBar('/map', true)).toBe(false);
     });
+
+    it.each(['/travel/new', '/travel/42'])(
+      'shows wizard breadcrumbs on mobile web for %s',
+      (path) => {
+        expect(shouldShowHeaderContextBar(path, true)).toBe(true);
+      },
+    );
   });
+});
+
+describe('shouldShowHeaderContextBar (native)', () => {
+  const prevOS = Platform.OS;
+
+  beforeAll(() => {
+    (Platform.OS as any) = 'android';
+  });
+
+  afterAll(() => {
+    (Platform.OS as any) = prevOS;
+  });
+
+  it.each(['/travel/new', '/travel/42'])(
+    'shows wizard breadcrumbs on Android for %s',
+    (path) => {
+      expect(shouldShowHeaderContextBar(path, true)).toBe(true);
+    },
+  );
 });

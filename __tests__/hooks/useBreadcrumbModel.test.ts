@@ -130,6 +130,27 @@ describe('useBreadcrumbModel', () => {
     ]);
   });
 
+  it.each([
+    ['/travel/new', 'Новое путешествие'],
+    ['/travel/42', 'Редактировать путешествие'],
+  ])('builds a stable create/edit breadcrumb trail for %s', async (pathname, currentLabel) => {
+    usePathname.mockReturnValue(pathname);
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.showBreadcrumbs).toBe(true);
+    });
+
+    expect(result.current.backToPath).toBe('/metravel');
+    expect(result.current.currentTitle).toBe(currentLabel);
+    expect(result.current.items).toEqual([
+      { label: 'Мои путешествия', path: '/metravel' },
+      { label: currentLabel, path: pathname },
+    ]);
+  });
+
   it('should build breadcrumbs for single-level profile page', async () => {
     usePathname.mockReturnValue('/profile');
     useLocalSearchParams.mockReturnValue({});

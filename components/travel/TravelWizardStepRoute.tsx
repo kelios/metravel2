@@ -509,7 +509,7 @@ function TravelWizardStepRoute({
   }, [setManualPhotoCoordinates, setManualPhotoPreview])
 
   return (
-    <SafeAreaView style={styles.safeContainer}>
+    <SafeAreaView style={styles.safeContainer} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={KEYBOARD_BEHAVIOR}

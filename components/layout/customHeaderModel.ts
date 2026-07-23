@@ -24,6 +24,9 @@ const ACTIVE_PATH_PREFIXES = ['/search', '/travelsby', '/export', '/map', '/plac
 export const isQuestDetailHeaderPath = (pathname: string) =>
   /^\/quests\/[^/]+\/[^/]+\/?$/.test(pathname || '')
 
+export const isTravelUpsertHeaderPath = (pathname: string) =>
+  pathname === '/travel/new' || /^\/travel\/[^/]+\/?$/.test(pathname || '')
+
 export const getHeaderActivePath = (pathname: string) => {
   if (pathname === '/' || pathname === '/index') return '/'
   if (pathname.startsWith('/travels/') || pathname.startsWith('/travel/')) return ''
@@ -62,12 +65,12 @@ export const shouldShowHeaderContextBar = (pathname: string, isMobile: boolean) 
   const isTravelDetailRoute = pathname.startsWith('/travels/')
   const isMapRoute = pathname === '/map' || pathname.startsWith('/map/')
   const isUserPointsRoute = pathname === '/userpoints'
-  // /travel/new и /travel/{id} — визард с собственной шапкой (TravelWizardHeader).
-  // Глобальный контекст-бар дублирует её навигацию и оставляет пустую полосу.
-  // Прячем на ВСЕХ платформах (web mobile/desktop + native), иначе на мобильном
-  // вебе над шапкой мастера висит лишний ряд «Новое путешествие», съедая ~85px.
-  const isTravelUpsertRoute = pathname.startsWith('/travel/')
-  if (isTravelUpsertRoute) return false
+  // Create/edit keeps desktop compact because TravelWizardHeader already owns
+  // the wide-screen navigation. On mobile web and native the context row is the
+  // breadcrumb trail requested for the wizard and must stay visible.
+  if (isTravelUpsertHeaderPath(pathname)) {
+    return Platform.OS !== 'web' || isMobile
+  }
 
   if (Platform.OS !== 'web') {
     return true
