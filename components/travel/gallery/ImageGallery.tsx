@@ -121,7 +121,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   const colors = useThemedColors()
   const { width: viewportWidth } = useWindowDimensions()
   const queryClient = useContext(QueryClientContext)
-  const isMobileWeb = Platform.OS === 'web' && viewportWidth <= 767
+  const isMobileWeb = Platform.OS === 'web' && viewportWidth > 0 && viewportWidth <= 767
   const styles = useMemo(
     () => createGalleryStyles(colors, isMobileWeb),
     [colors, isMobileWeb],
@@ -144,6 +144,8 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   const reorderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const loadTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const reorderAbortRef = useRef<AbortController | null>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   const hasErrors = useMemo(() => images.some((img) => img.error), [images])
 
@@ -488,7 +490,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: WEB_GALLERY_DROPZONE_ACCEPT,
     multiple: true,
-    disabled: Platform.OS !== 'web',
+    disabled: Platform.OS !== 'web' || isMobileWeb,
     onDrop: (acceptedFiles, fileRejections) => {
       const rejections = Array.isArray(fileRejections) ? fileRejections : []
 
@@ -504,6 +506,14 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
       }
     },
   })
+
+  const handleMobileFilesSelected = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.currentTarget.files ?? [])
+    event.currentTarget.value = ''
+    if (files.length > 0) {
+      void handleUploadImages(files)
+    }
+  }, [handleUploadImages])
 
   const dropzoneRootProps = useCallback(() => {
     const props = getRootProps()
@@ -729,8 +739,12 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
           imagesCount={images.length}
           maxImages={maxImages}
           isDragActive={isDragActive}
+          isMobileWeb={isMobileWeb}
           dropzone={dropzoneProps}
           inputProps={getInputProps()}
+          galleryInputRef={galleryInputRef}
+          cameraInputRef={cameraInputRef}
+          onMobileFilesSelected={handleMobileFilesSelected}
           batchUploadProgress={batchUploadProgress}
           hasErrors={hasErrors}
           selectableCount={selectableKeys.length}
@@ -745,6 +759,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
         styles={styles}
         colors={colors}
         isInitialLoading={isInitialLoading}
+        isMobileWeb={isMobileWeb}
         images={images}
         onDelete={handleDeleteImage}
         onMove={handleMoveImage}

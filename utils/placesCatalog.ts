@@ -26,6 +26,7 @@ export type PlaceRating = {
 
 export type CatalogPlace = TravelCoords & {
   id: string
+  relatedTravelId?: number | null
   title: string
   category: string
   categoryId: number | null
@@ -53,7 +54,7 @@ export type PlacesCatalogPage = {
 
 type RawCatalogCategory = { id?: unknown; name?: unknown }
 type RawCatalogCountry = { code?: unknown; name?: unknown }
-type RawCatalogTravel = { url?: unknown; slug?: unknown }
+type RawCatalogTravel = { id?: unknown; url?: unknown; slug?: unknown }
 type RawCatalogImage = { thumb_url?: unknown; landscape_url?: unknown }
 
 type RawCatalogItem = {
@@ -66,6 +67,8 @@ type RawCatalogItem = {
   lat?: unknown
   lng?: unknown
   search_text?: unknown
+  travel_id?: unknown
+  urlTravel?: unknown
   travel?: RawCatalogTravel | null
   image?: RawCatalogImage | null
   // Rating enrichment (optional; present once the backend ships it). Both the
@@ -135,6 +138,11 @@ const parseFacetId = (value: unknown): number | null => {
     return Number.isFinite(parsed) ? parsed : null
   }
   return null
+}
+
+const parsePositiveInteger = (value: unknown): number | null => {
+  const parsed = parseFacetId(value)
+  return parsed != null && Number.isInteger(parsed) && parsed > 0 ? parsed : null
 }
 
 const parseFacetCount = (value: unknown): number => {
@@ -272,7 +280,13 @@ const mapCatalogItem = (raw: unknown): CatalogPlace | null => {
   const categoryId = parseFacetId(item.category?.id)
   const country = normalizeText(item.country?.name, i18nT('shared:utils.placesCatalog.strana_ne_ukazana_2418b87a'))
   const countryCode = normalizeText(item.country?.code)
-  const urlTravel = normalizeText(item.travel?.url)
+  const relatedTravelId =
+    parsePositiveInteger(item.travel_id) ?? parsePositiveInteger(item.travel?.id)
+  const travelSlug = normalizeText(item.travel?.slug)
+  const urlTravel =
+    normalizeText(item.urlTravel) ||
+    normalizeText(item.travel?.url) ||
+    (travelSlug ? `/travels/${encodeURIComponent(travelSlug)}` : '')
   const thumbUrl = normalizeImageUrl(item.image?.thumb_url)
   const landscapeUrl = normalizeImageUrl(item.image?.landscape_url)
   const title = normalizeText(item.title, address || i18nT('map:utils.placesCatalog.mesto_bez_nazvaniya_d8d437b0'))
@@ -280,6 +294,7 @@ const mapCatalogItem = (raw: unknown): CatalogPlace | null => {
 
   return {
     id,
+    relatedTravelId,
     title,
     category,
     categoryId,

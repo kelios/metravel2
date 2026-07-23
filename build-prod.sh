@@ -89,6 +89,8 @@ build_env() {
 
 deploy_prod() {
   local ENV="$1"
+  local expo_overlay_helper_b64
+  expo_overlay_helper_b64="$(base64 < scripts/deploy-expo-overlay.sh | tr -d '\n')"
   rsync -avzhe "ssh" --delete \
     ./dist/ \
     "sx3@178.172.137.129:/home/sx3/metravel/dist/"
@@ -152,23 +154,28 @@ deploy_prod() {
 
     mv dist/$ENV static/dist.new
 
+    # Keep recent previous hashed Expo JS/CSS for the supported overlap window.
+    # This prevents "Requiring unknown module" crashes for active browser tabs
+    # that still execute older runtime chunks during a fresh deploy. Stage the
+    # overlay before touching the live tree; the helper never overwrites the new
+    # payload and excludes previous assets older than the retention window.
+    retention_days='${EXPO_OVERLAY_RETENTION_DAYS}'
+    printf '%s' '${expo_overlay_helper_b64}' | base64 -d | bash -s -- static/dist static/dist.new \"\$retention_days\"
+
     rollback_dir=static/dist.old
+    rollback_moved=0
     if [ -d static/dist ]; then
       mv static/dist \"\$rollback_dir\"
-    fi
-    # Keep previous hashed Expo static assets for a short overlap window.
-    # This prevents "Requiring unknown module" crashes for active browser tabs
-    # that still execute older runtime chunks during a fresh deploy.
-    if [ -d \"\$rollback_dir/_expo/static\" ]; then
-      mkdir -p static/dist.new/_expo/static
-      # IMPORTANT: never overwrite new build artifacts with old ones.
-      # We only backfill files that are missing in the new build so existing
-      # tabs can finish loading legacy chunks while fresh navigations keep
-      # using the current release.
-      rsync -a --ignore-existing \"\$rollback_dir/_expo/static/\" static/dist.new/_expo/static/
+      rollback_moved=1
     fi
     # HTML shell still switches atomically to the new build below.
-    mv static/dist.new static/dist
+    if ! mv static/dist.new static/dist; then
+      if [ \"\$rollback_moved\" = 1 ] && [ ! -e static/dist ] && [ -d \"\$rollback_dir\" ]; then
+        mv \"\$rollback_dir\" static/dist
+      fi
+      echo '❌ Failed to publish the new static tree; previous tree restored' >&2
+      exit 1
+    fi
     # Drop the rollback copy as root (may be owned by another uid).
     rroot '/app/static/dist.old'
     if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
@@ -184,6 +191,12 @@ deploy_prod() {
 
 ENV="${1:-prod}"
 DEPLOY="${DEPLOY:-1}"
+EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"
+
+if [[ ! "$EXPO_OVERLAY_RETENTION_DAYS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "❌ EXPO_OVERLAY_RETENTION_DAYS must be a positive integer"
+  exit 1
+fi
 
 echo "🔁 Старт сборки..."
 install_deps

@@ -126,6 +126,20 @@ Create flow синхронизирует выданный backend ID в route pa
 успешного save. Draft recovery не заменяет server save и не является
 подтверждением publish/moderation.
 
+### Media upload contract
+
+- Desktop web сохраняет drag-and-drop и выбор файлов для обложки и галереи.
+- Mobile web и Android используют touch-first действия в одном порядке:
+  «Выбрать из галереи», затем «Сделать фото»; drag-and-drop copy и большая
+  desktop dropzone на этих поверхностях не показываются.
+- Mobile web gallery input использует `accept="image/*"`, camera input —
+  `accept="image/*"` и `capture="environment"`; Android использует
+  `expo-image-picker` с gallery/camera permission paths.
+- Нормативные состояния: idle, selecting/cancelled, uploading/progress,
+  success, permission denied, validation/upload error и existing image/remove.
+- Multipart upload contract не меняется: `file`, `collection`, `id`; gallery
+  maxImages, delete и reorder сохраняют существующие API shapes.
+
 ## Data/API ownership
 
 Server state хранится в React Query и использует централизованные query keys.

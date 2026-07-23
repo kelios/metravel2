@@ -1,6 +1,6 @@
 // E5: Refactored — state/logic extracted to usePhotoUpload hook
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, ActivityIndicator, Pressable, View, Text, useWindowDimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -29,6 +29,7 @@ export { chooseFallbackUrl };
 // useDropzone — web-only хук (DOM): выносим в отдельный компонент, чтобы на native
 // он не вызывался вовсе (вызов на Android валит рендер шага «Медиа» визарда).
 type WebDropzoneViewProps = {
+  isMobileWeb: boolean;
   disabled: boolean;
   placeholder: string;
   maxSizeMB: number;
@@ -48,10 +49,14 @@ type WebDropzoneViewProps = {
 };
 
 const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
+  isMobileWeb,
   disabled, placeholder, maxSizeMB, colors, styles,
   loading, uploadProgress, error, uploadMessage, hasValidImage, currentDisplayUrl,
   validateFile, handleUploadImage, handleRemovePress, handleImageLoadCheck, handleImageError,
 }) => {
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
   // react-dropzone — DOM-only пакет: require лениво внутри web-only компонента,
   // чтобы он не вычислялся в native-рантайме (на Android top-level import валит
   // рендер шага «Медиа» визарда — F-24). WebDropzoneView рендерится только на web.
@@ -76,8 +81,110 @@ const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
     accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp', '.heic', '.heif'] },
     maxSize: maxSizeMB * 1024 * 1024,
     multiple: false,
-    disabled,
+    disabled: disabled || isMobileWeb,
   });
+
+  const handleTouchFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    if (!file || disabled) return;
+    await handleUploadImage(file);
+  };
+
+  if (isMobileWeb) {
+    return (
+      <View style={styles.container as any}>
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          disabled={disabled || loading}
+          data-testid="photo-upload-web-gallery-input"
+          style={{ display: 'none' }}
+          onChange={handleTouchFileChange}
+        />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          disabled={disabled || loading}
+          data-testid="photo-upload-web-camera-input"
+          style={{ display: 'none' }}
+          onChange={handleTouchFileChange}
+        />
+        <View style={styles.webMobileActions as any}>
+          <View style={styles.webMobileAction as any}>
+            <Button
+              variant="primary"
+              fullWidth
+              onPress={() => galleryInputRef.current?.click()}
+              disabled={disabled}
+              loading={loading}
+              icon={<Feather name="image" size={16} color={colors.textOnPrimary} />}
+              label={i18nT('travel:components.travel.ImageGalleryComponent.vybrat_iz_galerei_fbf8b2e6')}
+              testID="photo-upload-web-gallery-button"
+            />
+          </View>
+          <View style={styles.webMobileAction as any}>
+            <Button
+              variant="outline"
+              fullWidth
+              onPress={() => cameraInputRef.current?.click()}
+              disabled={disabled || loading}
+              icon={<Feather name="camera" size={16} color={colors.text} />}
+              label={i18nT('travel:components.travel.ImageGalleryComponent.sdelat_foto_79fec14d')}
+              testID="photo-upload-web-camera-button"
+            />
+          </View>
+        </View>
+        {loading ? (
+          <View style={styles.loadingContainer as any}>
+            <ActivityIndicator size="large" color={colors.primaryDark} />
+            {uploadProgress > 0 && (
+              <View style={styles.progressContainer as any}>
+                <View style={[styles.progressBar as any, { width: `${uploadProgress}%` } as any] as any} />
+                <Text style={styles.progressText as any}>{uploadProgress}%</Text>
+              </View>
+            )}
+          </View>
+        ) : hasValidImage ? (
+          <View style={styles.previewContainer as any}>
+            <img src={currentDisplayUrl} alt="" aria-hidden referrerPolicy="no-referrer" style={styles.previewBlur as any} />
+            <img
+              src={currentDisplayUrl}
+              alt={i18nT('travel:components.travel.PhotoUploadWithPreview.predprosmotr_cd9c2eff')}
+              referrerPolicy="no-referrer"
+              style={styles.previewImage as any}
+              onLoad={(event) => handleImageLoadCheck(event.currentTarget as HTMLImageElement)}
+              onError={handleImageError}
+            />
+            {!disabled && (
+              <Pressable style={styles.removeButton as any} onPress={handleRemovePress} accessibilityLabel={i18nT('travel:components.travel.PhotoUploadWithPreview.udalit_izobrazhenie_0c6f4255')}>
+                <Feather name="x" size={18} color={colors.textOnPrimary} />
+              </Pressable>
+            )}
+          </View>
+        ) : (
+          <Text style={styles.webMobileHint as any}>
+            {i18nT('travel:components.travel.gallery.mobileAddHint')}
+          </Text>
+        )}
+        {error && !currentDisplayUrl && (
+          <View style={styles.errorContainer as any}>
+            <Feather name="alert-circle" size={14} color={colors.danger} />
+            <Text style={styles.errorText as any}>{error}</Text>
+          </View>
+        )}
+        {uploadMessage && !error && (
+          <View style={styles.successContainer as any}>
+            <Feather name="check-circle" size={14} color={colors.success} />
+            <Text style={styles.successText as any}>{uploadMessage}</Text>
+          </View>
+        )}
+      </View>
+    );
+  }
 
   const { onBeforeInput, ...rootProps } = getRootProps();
   void onBeforeInput;
@@ -145,6 +252,8 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   disabled = false, placeholder = i18nT('travel:components.travel.PhotoUploadWithPreview.peretaschite_syuda_izobrazhenie_2109990b'), maxSizeMB = 10,
 }) => {
   const colors = useThemedColors();
+  const { width: viewportWidth } = useWindowDimensions();
+  const isMobileWeb = Platform.OS === 'web' && viewportWidth > 0 && viewportWidth <= 767;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [pickerError, setPickerError] = useState<string | null>(null);
 
@@ -221,6 +330,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   if (Platform.OS === 'web') {
     return (
       <WebDropzoneView
+        isMobileWeb={isMobileWeb}
         disabled={disabled}
         placeholder={placeholder}
         maxSizeMB={maxSizeMB}
@@ -353,6 +463,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>): any => ({
   nativeRemoveText: { fontSize: 13, color: colors.danger, fontWeight: '500' },
   nativeActions: { gap: DESIGN_TOKENS.spacing.sm },
   nativeAction: { width: '100%' },
+  webMobileActions: { width: '100%', gap: DESIGN_TOKENS.spacing.sm, marginBottom: DESIGN_TOKENS.spacing.md },
+  webMobileAction: { width: '100%', minHeight: 44 },
+  webMobileHint: {
+    color: colors.textMuted,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    textAlign: 'center',
+    marginVertical: DESIGN_TOKENS.spacing.md,
+  },
 });
 
 export default React.memo(PhotoUploadWithPreview);

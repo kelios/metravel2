@@ -102,6 +102,26 @@ describe('RelatedTravelActionStack', () => {
     )
   })
 
+  it('uses an explicit catalog id without resolving a slug-only route', async () => {
+    renderWithQuery(
+      <RelatedTravelActionStack
+        relatedTravelUrl="/travels/ourvietnam"
+        relatedTravelId={129}
+        fallbackTitle="Вьетнам"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockStatusButton).toHaveBeenCalled()
+    })
+
+    expect(mockFetchTravel).not.toHaveBeenCalled()
+    expect(mockFetchTravelBySlug).not.toHaveBeenCalled()
+    expect(mockStatusButton.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ travelId: 129, travelTitle: 'Вьетнам' }),
+    )
+  })
+
   it('resolves slug routes before rendering actions', async () => {
     mockFetchTravelBySlug.mockResolvedValue({
       id: 77,

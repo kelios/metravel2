@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 
 import { useUpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
 
@@ -314,6 +314,56 @@ describe('useUpsertTravelController', () => {
 
     expect(handleManualSave).toHaveBeenCalledTimes(1);
     expect(clearDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it('recovers a new-travel draft without a stale server id and restores route points', async () => {
+    const recoveredMarkers = [
+      {
+        id: null,
+        lat: 53.9,
+        lng: 27.5667,
+        country: 1,
+        address: 'Минск',
+        categories: [2],
+        image: null,
+      },
+    ];
+    const recoverDraft = jest.fn(async () => ({
+      ...baseForm.formData,
+      id: '714',
+      name: 'Локальный маршрут',
+      coordsMeTravel: recoveredMarkers,
+    }));
+    const setFormData = jest.fn();
+    const setMarkers = jest.fn();
+
+    mockUseDraftRecovery.mockReturnValue({
+      hasPendingDraft: true,
+      draftTimestamp: Date.now(),
+      isRecovering: false,
+      recoverDraft,
+      dismissDraft: jest.fn(async () => undefined),
+      saveDraft: jest.fn(),
+      clearDraft: jest.fn(async () => undefined),
+    });
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      setFormData,
+      setMarkers,
+    });
+
+    const { result } = renderHook(() => useUpsertTravelController());
+
+    await act(async () => {
+      await result.current.draftRecovery.recoverDraft();
+    });
+
+    expect(setFormData).toHaveBeenCalledWith(expect.objectContaining({
+      id: null,
+      name: 'Локальный маршрут',
+      coordsMeTravel: recoveredMarkers,
+    }));
+    expect(setMarkers).toHaveBeenCalledWith(recoveredMarkers);
   });
 
   it('reflects the server id in the URL after the first save of a new travel (F-09)', () => {

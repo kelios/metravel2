@@ -54,6 +54,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   titleNumberOfLines = 2,
   popupAligned = false,
   relatedTravelUrl,
+  relatedTravelId,
   relatedTravelCountry,
   relatedTravelCity,
   isFavorite = false,
@@ -142,6 +143,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   const favoriteAffordance = relatedTravelUrl && !showInlineRelatedTravelActions ? (
     <RelatedTravelActionStack
       relatedTravelUrl={relatedTravelUrl}
+      relatedTravelId={relatedTravelId}
       fallbackTitle={title}
       fallbackImageUrl={imageUrl}
       fallbackCountry={relatedTravelCountry}
@@ -284,6 +286,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
               <Text style={styles.inlineSectionLabel}>{i18nT('map:components.places.PlaceListCard.status_poezdki_718acbe9')}</Text>
               <RelatedTravelActionStack
                 relatedTravelUrl={relatedTravelUrl}
+                relatedTravelId={relatedTravelId}
                 fallbackTitle={title}
                 fallbackImageUrl={imageUrl}
                 fallbackCountry={relatedTravelCountry}

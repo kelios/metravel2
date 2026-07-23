@@ -103,20 +103,24 @@ export default function QuestCard({
     const cardHeight = isPhone ? 238 : Math.round((cardWidth / 380) * 260);
     const showOverlayMeta = !isPhone;
 
-    // Native: ImageCardMedia ресайзит URL только в web-ветке, поэтому expo-image
-    // тянул оригинал обложки полного размера. Просим у прокси вариант под размер
-    // карточки с учётом плотности экрана (кап ×2 — дальше разницы не видно).
+    // Pick one bounded proxy variant for both the sharp image and the shared blur.
+    // This avoids a second backdrop request and prevents a ~420px DPR1 card from
+    // falling through to the old 1024px candidate.
     const coverSrc = useMemo(() => {
-        if (Platform.OS === 'web' || !imageUrl) return imageUrl;
-        const dpr = Math.min(PixelRatio.get() || 2, 2);
+        if (!imageUrl) return imageUrl;
+        const dpr = Math.min(PixelRatio.get() || (Platform.OS === 'web' ? 1 : 2), 2);
+        const requestedWidth = Math.max(1, Math.round(cardWidth * dpr));
+        const responsiveWidths = [320, 480, 640, 800, 1024, 1280];
+        const targetWidth =
+            responsiveWidths.find((candidate) => candidate >= requestedWidth) ??
+            responsiveWidths[responsiveWidths.length - 1];
         return optimizeImageUrl(imageUrl, {
-            width: Math.round(cardWidth * dpr),
-            height: Math.round(cardHeight * dpr),
+            width: targetWidth,
             quality: 60,
             format: 'auto',
-            fit: 'cover',
+            fit: 'contain',
         }) ?? imageUrl;
-    }, [imageUrl, cardWidth, cardHeight]);
+    }, [imageUrl, cardWidth]);
 
     return (
         <View
@@ -167,11 +171,14 @@ export default function QuestCard({
                         alt={quest.title}
                         width={cardWidth}
                         height={cardHeight}
-                        fit="cover"
-                        blurBackground={false}
+                        fit="contain"
+                        blurBackground
                         style={StyleSheet.absoluteFill}
-                        loading="eager"
+                        loading={isAboveTheFold ? 'eager' : 'lazy'}
                         priority={isAboveTheFold ? 'high' : 'low'}
+                        optimizeWeb={false}
+                        allowCriticalWebBlur
+                        allowSafariWebLazy={!isAboveTheFold}
                         onLoad={handleImageLoad}
                         showImmediately={imageLoaded}
                     />

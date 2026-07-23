@@ -272,6 +272,7 @@ export const travelGenerated2 = {
   "components.travel.gallery.GalleryGrid.peretaschite_fayly_ili_nazhmite_na_zonu_vysh_beb2acf5": "Przeciągnij i upuść pliki lub kliknij obszar powyżej",
   "components.travel.gallery.GalleryGrid.udalit_d2e753de": "Usuń",
   "components.travel.gallery.GalleryGrid.zagruzka_048d94b8": "Ładowanie...",
+  "components.travel.gallery.mobileAddHint": "Naciśnij przycisk powyżej, aby dodać zdjęcia",
   "components.travel.gallery.ImageGallery.etot_fayl_ne_udalos_dobavit_v_galereyu_3f2fef5f": "Nie można dodać tego pliku do galerii.",
   "components.travel.gallery.ImageGallery.etot_format_poka_ne_zagruzhaetsya_v_veb_gale_588b2eb4": "Ten format nie został jeszcze załadowany do galerii internetowej. Użyj JPG, PNG, WEBP, GIF lub HEIC.",
   "components.travel.gallery.ImageGallery.fayl_ne_vybran_5fd5f77a": "Nie wybrano pliku",

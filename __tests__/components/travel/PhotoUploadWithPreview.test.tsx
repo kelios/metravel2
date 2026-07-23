@@ -2,6 +2,7 @@ import { render, waitFor, act } from '@testing-library/react-native';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { uploadImage } from '@/api/misc';
 import { Platform } from 'react-native';
+import * as ReactNative from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 const ORIGINAL_PLATFORM_OS = Platform.OS;
@@ -104,6 +105,37 @@ describe('PhotoUploadWithPreview', () => {
                 expect.objectContaining({ mediaTypes: ['images'] }),
             );
             await waitFor(() => expect(mockUploadImage).toHaveBeenCalledTimes(1));
+        });
+
+        it('mobile web: renders touch-first gallery and camera inputs without drag copy', () => {
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+            const dimensionsSpy = jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
+                width: 390,
+                height: 844,
+                scale: 1,
+                fontScale: 1,
+            });
+
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        placeholder="Перетащите фото точки маршрута"
+                    />
+                );
+
+                expect(screen.getByTestId('photo-upload-web-gallery-button')).toBeTruthy();
+                expect(screen.getByTestId('photo-upload-web-camera-button')).toBeTruthy();
+                expect(screen.getByText('Нажмите кнопку выше, чтобы добавить фотографии')).toBeTruthy();
+                expect(screen.queryByText('Перетащите фото точки маршрута')).toBeNull();
+
+                const inputs = screen.UNSAFE_getAllByType('input' as any);
+                expect(inputs).toHaveLength(2);
+                expect(inputs.every((input: any) => input.props.accept === 'image/*')).toBe(true);
+                expect(inputs.find((input: any) => input.props.capture === 'environment')).toBeTruthy();
+            } finally {
+                dimensionsSpy.mockRestore();
+            }
         });
 
         it('native: surfaces denied camera permission without opening the camera', async () => {

@@ -272,6 +272,7 @@ export const travelGenerated2 = {
   "components.travel.gallery.GalleryGrid.peretaschite_fayly_ili_nazhmite_na_zonu_vysh_beb2acf5": "Перетащите файлы или нажмите на зону выше",
   "components.travel.gallery.GalleryGrid.udalit_d2e753de": "Удалить",
   "components.travel.gallery.GalleryGrid.zagruzka_048d94b8": "Загрузка...",
+  "components.travel.gallery.mobileAddHint": "Нажмите кнопку выше, чтобы добавить фотографии",
   "components.travel.gallery.ImageGallery.etot_fayl_ne_udalos_dobavit_v_galereyu_3f2fef5f": "Этот файл не удалось добавить в галерею.",
   "components.travel.gallery.ImageGallery.etot_format_poka_ne_zagruzhaetsya_v_veb_gale_588b2eb4": "Этот формат пока не загружается в веб-галерею. Используйте JPG, PNG, WEBP, GIF или HEIC.",
   "components.travel.gallery.ImageGallery.fayl_ne_vybran_5fd5f77a": "Файл не выбран",

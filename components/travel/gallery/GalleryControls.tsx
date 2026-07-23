@@ -1,6 +1,7 @@
 import React from 'react'
 import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+import Button from '@/components/ui/Button'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -24,6 +25,8 @@ export type GalleryControlsStyles = {
   batchActionButton: any
   batchDeleteButton: any
   batchActionButtonText: any
+  mobileActions: any
+  mobileAction: any
 }
 
 export const GalleryControls: React.FC<{
@@ -32,8 +35,12 @@ export const GalleryControls: React.FC<{
   imagesCount: number
   maxImages: number
   isDragActive: boolean
+  isMobileWeb: boolean
   dropzone: { rootProps: any; tabIndex?: 0 | -1 }
   inputProps: any
+  galleryInputRef: React.RefObject<HTMLInputElement | null>
+  cameraInputRef: React.RefObject<HTMLInputElement | null>
+  onMobileFilesSelected: (event: React.ChangeEvent<HTMLInputElement>) => void
   batchUploadProgress: { current: number; total: number } | null
   hasErrors: boolean
   selectableCount: number
@@ -47,8 +54,12 @@ export const GalleryControls: React.FC<{
   imagesCount,
   maxImages,
   isDragActive,
+  isMobileWeb,
   dropzone,
   inputProps,
+  galleryInputRef,
+  cameraInputRef,
+  onMobileFilesSelected,
   batchUploadProgress,
   hasErrors,
   selectableCount,
@@ -107,27 +118,72 @@ export const GalleryControls: React.FC<{
         </View>
       ) : null}
 
-      <div
-        {...(dropzone.rootProps as any)}
-        tabIndex={dropzone.tabIndex}
-        style={{ width: '100%', display: 'flex' }}
-      >
-        <input {...inputProps} />
-        <View
-          style={[
-            styles.dropzone,
-            isDragActive && styles.activeDropzone,
-            {
-              backgroundColor: colors.backgroundSecondary,
-              borderColor: colors.primary,
-            },
-          ]}
+      {isMobileWeb ? (
+        imagesCount < maxImages ? (
+          <View style={styles.mobileActions}>
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              data-testid="gallery-mobile-gallery-input"
+              style={{ display: 'none' }}
+              onChange={onMobileFilesSelected}
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              data-testid="gallery-mobile-camera-input"
+              style={{ display: 'none' }}
+              onChange={onMobileFilesSelected}
+            />
+            <View style={styles.mobileAction}>
+              <Button
+                variant="primary"
+                fullWidth
+                onPress={() => galleryInputRef.current?.click()}
+                icon={<Feather name="image" size={18} color={colors.textOnPrimary} />}
+                label={i18nT('travel:components.travel.ImageGalleryComponent.vybrat_iz_galerei_fbf8b2e6')}
+                testID="gallery-mobile-gallery-button"
+              />
+            </View>
+            <View style={styles.mobileAction}>
+              <Button
+                variant="outline"
+                fullWidth
+                onPress={() => cameraInputRef.current?.click()}
+                icon={<Feather name="camera" size={18} color={colors.text} />}
+                label={i18nT('travel:components.travel.ImageGalleryComponent.sdelat_foto_79fec14d')}
+                testID="gallery-mobile-camera-button"
+              />
+            </View>
+          </View>
+        ) : null
+      ) : (
+        <div
+          {...(dropzone.rootProps as any)}
+          tabIndex={dropzone.tabIndex}
+          style={{ width: '100%', display: 'flex' }}
         >
-          <Text style={[styles.dropzoneText, { color: colors.textMuted }]}>
-            {isDragActive ? i18nT('travel:components.travel.gallery.GalleryControls.otpustite_fayly_5db5ec62') : i18nT('travel:components.travel.gallery.GalleryControls.peretaschite_syuda_izobrazheniya_261e6560')}
-          </Text>
-        </View>
-      </div>
+          <input {...inputProps} />
+          <View
+            style={[
+              styles.dropzone,
+              isDragActive && styles.activeDropzone,
+              {
+                backgroundColor: colors.backgroundSecondary,
+                borderColor: colors.primary,
+              },
+            ]}
+          >
+            <Text style={[styles.dropzoneText, { color: colors.textMuted }]}>
+              {isDragActive ? i18nT('travel:components.travel.gallery.GalleryControls.otpustite_fayly_5db5ec62') : i18nT('travel:components.travel.gallery.GalleryControls.peretaschite_syuda_izobrazheniya_261e6560')}
+            </Text>
+          </View>
+        </div>
+      )}
 
       {batchUploadProgress && (
         <View

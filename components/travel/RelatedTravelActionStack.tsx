@@ -12,6 +12,7 @@ import { translate as i18nT } from '@/i18n'
 
 type Props = {
   relatedTravelUrl?: string | null
+  relatedTravelId?: number | null
   fallbackTitle: string
   fallbackImageUrl?: string | null
   fallbackCountry?: string | null
@@ -37,6 +38,7 @@ const stopWebCardEvent = (event?: {
 
 export default function RelatedTravelActionStack({
   relatedTravelUrl,
+  relatedTravelId,
   fallbackTitle,
   fallbackImageUrl,
   fallbackCountry,
@@ -44,7 +46,23 @@ export default function RelatedTravelActionStack({
   variant = 'overlay',
   style,
 }: Props) {
-  const travelRef = useMemo(() => resolveRelatedTravelRef(relatedTravelUrl), [relatedTravelUrl])
+  const travelRef = useMemo(() => {
+    const parsedRef = resolveRelatedTravelRef(relatedTravelUrl)
+    const explicitId =
+      typeof relatedTravelId === 'number' &&
+      Number.isInteger(relatedTravelId) &&
+      relatedTravelId > 0
+        ? relatedTravelId
+        : null
+
+    if (!explicitId) return parsedRef
+
+    return {
+      route: parsedRef?.route || `/travels/${explicitId}`,
+      id: explicitId,
+      slug: parsedRef?.slug,
+    }
+  }, [relatedTravelId, relatedTravelUrl])
 
   // For id-based URLs we already have everything the buttons need (id + fallbacks),
   // so the request is only required to resolve a slug into a numeric id. Keeping it

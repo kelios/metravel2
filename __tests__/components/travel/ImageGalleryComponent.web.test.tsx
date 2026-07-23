@@ -1,5 +1,6 @@
 import React from 'react';
 import { Platform, Image, StyleSheet } from 'react-native';
+import * as ReactNative from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { QueryClientContext } from '@tanstack/react-query';
 
@@ -53,11 +54,12 @@ jest.mock('expo-image-picker', () => ({
 }));
 
 jest.mock('react-dropzone', () => {
-  const dropMock = { rootProps: {}, tabIndex: undefined, onDrop: (_files: any) => {}, accept: undefined };
+  const dropMock = { rootProps: {}, tabIndex: undefined, onDrop: (_files: any) => {}, accept: undefined, disabled: false };
   return {
     useDropzone: (opts: any) => {
       dropMock.onDrop = opts.onDrop;
       dropMock.accept = opts.accept;
+      dropMock.disabled = opts.disabled;
       return {
         getRootProps: () => ({ tabIndex: -1 }),
         getInputProps: () => ({ accept: opts.accept, multiple: opts.multiple }),
@@ -285,6 +287,37 @@ describe('ImageGalleryComponent.web', () => {
 
     const images = await findAllByTestId('gallery-image');
     expect(images.length).toBeGreaterThan(0);
+  });
+
+  it('mobile web uses touch-first gallery and camera controls without a dropzone', () => {
+    const dimensionsSpy = jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
+      width: 390,
+      height: 844,
+      scale: 1,
+      fontScale: 1,
+    });
+
+    try {
+      const screen = renderSafe(
+        <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
+      );
+
+      expect(screen.getByTestId('gallery-mobile-gallery-button')).toBeTruthy();
+      expect(screen.getByTestId('gallery-mobile-camera-button')).toBeTruthy();
+      expect(screen.getByText('Нажмите кнопку выше, чтобы добавить фотографии')).toBeTruthy();
+      expect(screen.queryByText('Перетащите сюда изображения')).toBeNull();
+
+      const inputs = screen.UNSAFE_getAllByType('input' as any);
+      expect(inputs).toHaveLength(2);
+      expect(inputs.every((input: any) => input.props.accept === 'image/*')).toBe(true);
+      expect(inputs.find((input: any) => input.props.multiple === true)).toBeTruthy();
+      expect(inputs.find((input: any) => input.props.capture === 'environment')).toBeTruthy();
+
+      const { __dropMock } = jest.requireMock('react-dropzone') as any;
+      expect(__dropMock.disabled).toBe(true);
+    } finally {
+      dimensionsSpy.mockRestore();
+    }
   });
 
   it('compresses oversized web gallery files instead of rejecting them before upload', async () => {

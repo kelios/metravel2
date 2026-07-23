@@ -46,6 +46,7 @@ describe('mapPlacesCatalogResponse', () => {
     expect(place.lngNumber).toBeCloseTo(12.7546903)
     expect(place.coord).toBe('50.1871828,12.7546903')
     expect(place.urlTravel).toBe('/travels/karlovy-vary')
+    expect(place.relatedTravelId).toBe(158)
     expect(place.travelImageThumbUrl).toContain('thumb_400_wp.webp')
     expect(place.searchText).toBe('hrad loket чехия замок')
   })
@@ -67,6 +68,48 @@ describe('mapPlacesCatalogResponse', () => {
   it('falls back to results length when count is missing', () => {
     const page = mapPlacesCatalogResponse(rawResponse({ count: undefined }))
     expect(page.count).toBe(1)
+  })
+
+  it('prefers top-level catalog travel identity and canonical URL', () => {
+    const page = mapPlacesCatalogResponse(
+      rawResponse({
+        results: [
+          rawItem({
+            travel_id: 129,
+            urlTravel: 'https://metravel.by/travels/ourvietnam?id=129',
+            travel: { id: 158, slug: 'legacy', url: '/travels/legacy' },
+          }),
+        ],
+      }),
+    )
+
+    expect(page.places[0]).toEqual(
+      expect.objectContaining({
+        relatedTravelId: 129,
+        urlTravel: 'https://metravel.by/travels/ourvietnam?id=129',
+      }),
+    )
+  })
+
+  it('falls back to nested id and slug while rejecting malformed ids', () => {
+    const page = mapPlacesCatalogResponse(
+      rawResponse({
+        results: [
+          rawItem({
+            travel_id: 'bad',
+            urlTravel: null,
+            travel: { id: '77', slug: 'polish-camino', url: null },
+          }),
+        ],
+      }),
+    )
+
+    expect(page.places[0]).toEqual(
+      expect.objectContaining({
+        relatedTravelId: 77,
+        urlTravel: '/travels/polish-camino',
+      }),
+    )
   })
 
   it('upgrades http image urls to https for remote hosts', () => {

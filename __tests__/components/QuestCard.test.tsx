@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Platform } from 'react-native';
+import { PixelRatio, Platform } from 'react-native';
 
 import QuestCard from '@/screens/tabs/QuestCard';
 import { createTestQueryClient } from '@/__tests__/helpers/testQueryClient';
@@ -112,10 +112,13 @@ describe('QuestCard', () => {
                 src: 'https://cdn.example.com/quest.jpg',
                 width: 340,
                 height: 238,
-                fit: 'cover',
-                blurBackground: false,
-                loading: 'eager',
+                fit: 'contain',
+                blurBackground: true,
+                loading: 'lazy',
                 priority: 'low',
+                optimizeWeb: false,
+                allowCriticalWebBlur: true,
+                allowSafariWebLazy: true,
             }),
         );
         expect(getByTestId('quest-card-pioneer-krakow-dragon')).toBeTruthy();
@@ -190,11 +193,60 @@ describe('QuestCard', () => {
             const src = String(mockImageCardMedia.mock.calls[0]?.[0]?.src);
             expect(src).toContain('https://metravel.by/quest-cover/quests/1/main/abc.png?');
             expect(src).toContain('w=');
-            expect(src).toContain('h=');
             expect(src).toContain('q=60');
-            expect(src).toContain('fit=cover');
+            expect(src).toContain('fit=contain');
         } finally {
             process.env.EXPO_PUBLIC_API_URL = prevApiUrl;
+        }
+    });
+
+    it('keeps only the first two covers eager and high-priority', () => {
+        for (const index of [0, 1, 2]) {
+            mockImageCardMedia.mockClear();
+            renderWithQueryClient(
+                <QuestCard
+                    styles={styles}
+                    cardWidth={420}
+                    cityId="krakow"
+                    quest={makeQuest({ id: `quest-${index}` })}
+                    index={index}
+                />,
+            );
+
+            expect(mockImageCardMedia.mock.calls[0]?.[0]).toEqual(
+                expect.objectContaining({
+                    loading: index < 2 ? 'eager' : 'lazy',
+                    priority: index < 2 ? 'high' : 'low',
+                    allowSafariWebLazy: index >= 2,
+                }),
+            );
+        }
+    });
+
+    it('uses a 480px web cover candidate for a 420px DPR1 card', () => {
+        const pixelRatioSpy = jest.spyOn(PixelRatio, 'get').mockReturnValue(1);
+        const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;
+        process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by';
+
+        try {
+            renderWithQueryClient(
+                <QuestCard
+                    styles={styles}
+                    cardWidth={420}
+                    cityId="krakow"
+                    quest={makeQuest({
+                        cover: 'https://metravel.by/quest-cover/quests/1/main/abc.png',
+                    })}
+                    index={2}
+                />,
+            );
+
+            const src = String(mockImageCardMedia.mock.calls[0]?.[0]?.src);
+            expect(src).toContain('w=480');
+            expect(src).not.toContain('w=1024');
+        } finally {
+            process.env.EXPO_PUBLIC_API_URL = prevApiUrl;
+            pixelRatioSpy.mockRestore();
         }
     });
 

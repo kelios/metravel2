@@ -79,6 +79,8 @@ type Props = {
   preserveOptimizedWebSrc?: boolean;
   /** Skip web URL resizing when the upstream optimizer returns padded contain canvases. */
   optimizeWeb?: boolean;
+  /** Preserve browser-native lazy loading on iOS Safari for bounded catalog media. */
+  allowSafariWebLazy?: boolean;
   /**
    * Web-only responsive source prepared by a caller that already owns the image
    * variant contract, for example backend media manifest entries.
@@ -126,6 +128,7 @@ function ImageCardMedia({
   contentAspectRatio,
   preserveOptimizedWebSrc = false,
   optimizeWeb = true,
+  allowSafariWebLazy = false,
   webResponsiveSource,
 }: Props) {
   const isJest =
@@ -176,8 +179,8 @@ function ImageCardMedia({
   const resolvedLoading = useMemo(() => {
     if (Platform.OS !== 'web') return loading;
     if (loading !== 'lazy') return loading;
-    return isSafariWeb ? 'eager' : loading;
-  }, [isSafariWeb, loading]);
+    return isSafariWeb && !allowSafariWebLazy ? 'eager' : loading;
+  }, [allowSafariWebLazy, isSafariWeb, loading]);
 
   // Stabilize width/height for image optimization to prevent URL changes on scroll
   // Only update when change is significant (>50px) to avoid re-fetching images
@@ -581,7 +584,11 @@ function ImageCardMedia({
               height={typeof height === 'number' ? height : 300}
               borderRadius={resolvedBorderRadius}
               fit={fit}
-              useCssBackdrop={allowCriticalWebBlur && !revealOnLoadOnly}
+              useCssBackdrop={
+                allowCriticalWebBlur &&
+                !revealOnLoadOnly &&
+                resolvedLoading !== 'lazy'
+              }
               visible={shouldShowWebBlurBackdrop}
               contentBox={webBackdropContentBox}
             />

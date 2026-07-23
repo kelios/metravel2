@@ -280,6 +280,7 @@ export const PlaceCard = React.memo(function PlaceCard({
           ) : null
         }
         relatedTravelUrl={relatedTravelUrl}
+        relatedTravelId={place.relatedTravelId}
         relatedTravelCountry={place.country}
         onCardPress={() => onOpenMap(place)}
         onMediaPress={() => onOpenMap(place)}

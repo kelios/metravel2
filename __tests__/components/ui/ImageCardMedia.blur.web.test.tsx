@@ -124,6 +124,58 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainImage.props.sizes).toBe('320px')
   })
 
+  it('keeps catalog media lazy on iPhone Safari when explicitly bounded', () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://metravel.by/quest-cover/quests/1/main/cover.jpg?w=480"
+          width={420}
+          height={260}
+          blurBackground
+          fit="contain"
+          loading="lazy"
+          optimizeWeb={false}
+          allowCriticalWebBlur
+          allowSafariWebLazy
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(mainImage).toBeTruthy()
+    expect(mainImage.props.loading).toBe('lazy')
+    expect(mainImage.props.src).toContain('w=480')
+    expect(mainImage.props.srcSet).toBeUndefined()
+
+    const blurImage = tree!.root.findAll((node: any) => {
+      return node?.type === 'img' && node?.props?.['data-blur-backdrop'] === 'true'
+    })[0]
+    const cssBlurLayer = tree!.root.findAll((node: any) => {
+      return node?.type === 'div' && node?.props?.['data-blur-backdrop'] === 'true'
+    })[0]
+
+    expect(blurImage).toBeTruthy()
+    expect(blurImage.props.loading).toBe('lazy')
+    expect(blurImage.props.src).toBe(mainImage.props.src)
+    expect(cssBlurLayer).toBeUndefined()
+  })
+
   it('uses a full-width sizes fallback for iPhone Safari auto-width cards', () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       value:
@@ -430,14 +482,20 @@ describe('ImageCardMedia blur background (web)', () => {
       if (node?.props?.['aria-hidden'] === true) return false
       return String(node?.props?.style?.objectFit || '') === 'contain'
     })[0]
-    const blurLayer = tree!.root.findAll((node: any) => {
-      return node?.props?.['data-blur-backdrop'] === 'true'
+    const blurImage = tree!.root.findAll((node: any) => {
+      return node?.type === 'img' && node?.props?.['data-blur-backdrop'] === 'true'
+    })[0]
+    const cssBlurLayer = tree!.root.findAll((node: any) => {
+      return node?.type === 'div' && node?.props?.['data-blur-backdrop'] === 'true'
     })[0]
 
     expect(mainImage).toBeTruthy()
     expect(mainImage.props.src).toBe(src)
     expect(mainImage.props.srcSet).toBeUndefined()
-    expect(String(blurLayer.props.style?.backgroundImage || '')).toContain(src)
+    expect(blurImage).toBeTruthy()
+    expect(blurImage.props.loading).toBe('lazy')
+    expect(blurImage.props.src).toBe(src)
+    expect(cssBlurLayer).toBeUndefined()
   })
 
   it('uses an image blur backdrop for quest covers in the mobile Safari reveal-on-load path', () => {

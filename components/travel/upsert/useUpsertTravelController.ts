@@ -96,7 +96,7 @@ export function useUpsertTravelController(): UpsertTravelController {
   });
 
   const { saveDraft, clearDraft, recoverDraft } = draft;
-  const { setFormData, handleManualSave, getFormData } = form;
+  const { setFormData, setMarkers, handleManualSave, getFormData } = form;
 
   const saveAndClearDraft = useCallback<ManualSave>(
     async (dataOverride, options) => {
@@ -173,9 +173,17 @@ export function useUpsertTravelController(): UpsertTravelController {
   const recoverAndApplyDraft = useCallback(async () => {
     const recoveredData = await recoverDraft();
     if (recoveredData) {
-      setFormData(recoveredData);
+      const dataForCurrentRoute = isNew && normalizeTravelId(recoveredData.id) != null
+        ? { ...recoveredData, id: null }
+        : recoveredData;
+      const recoveredMarkers = Array.isArray(dataForCurrentRoute.coordsMeTravel)
+        ? dataForCurrentRoute.coordsMeTravel
+        : [];
+
+      setFormData(dataForCurrentRoute);
+      setMarkers(recoveredMarkers);
     }
-  }, [recoverDraft, setFormData]);
+  }, [isNew, recoverDraft, setFormData, setMarkers]);
 
   const draftRecovery = useMemo(
     () => ({

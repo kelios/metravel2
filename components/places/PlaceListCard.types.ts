@@ -49,6 +49,7 @@ export type PlaceListCardProps = {
   titleNumberOfLines?: number
   popupAligned?: boolean
   relatedTravelUrl?: string | null
+  relatedTravelId?: number | null
   relatedTravelCountry?: string | null
   relatedTravelCity?: string | null
   isFavorite?: boolean

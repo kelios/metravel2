@@ -19,6 +19,7 @@ export const GalleryGrid: React.FC<{
   styles: GalleryStyles
   colors: ThemedColors
   isInitialLoading: boolean
+  isMobileWeb: boolean
   images: GalleryItem[]
   onDelete: (stableKey: string) => void
   onMove: (stableKey: string, direction: -1 | 1) => void
@@ -38,6 +39,7 @@ export const GalleryGrid: React.FC<{
   styles,
   colors,
   isInitialLoading,
+  isMobileWeb,
   images,
   onDelete,
   onMove,
@@ -69,7 +71,9 @@ export const GalleryGrid: React.FC<{
         <Text style={[styles.noImagesText, { color: colors.textMuted }]}>
           {i18nT('travel:components.travel.gallery.GalleryGrid.net_zagruzhennyh_izobrazheniy_d6199483')}</Text>
         <Text style={[styles.emptyGalleryHint, { color: colors.textMuted }]}>
-          {i18nT('travel:components.travel.gallery.GalleryGrid.peretaschite_fayly_ili_nazhmite_na_zonu_vysh_beb2acf5')}</Text>
+          {isMobileWeb
+            ? i18nT('travel:components.travel.gallery.mobileAddHint')
+            : i18nT('travel:components.travel.gallery.GalleryGrid.peretaschite_fayly_ili_nazhmite_na_zonu_vysh_beb2acf5')}</Text>
       </View>
     )
   }
