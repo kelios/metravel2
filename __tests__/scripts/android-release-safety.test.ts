@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
 const {
@@ -9,9 +10,17 @@ const {
   parseArgs,
 } = require('../../scripts/android-play-release');
 const {
+  createBuildEnvironment,
   getFacebookBuildConfig,
   readAndroidResource,
 } = require('../../scripts/android-gradle-build');
+const {
+  loadAndroidReleaseEnvironment,
+} = require('../../scripts/android-release-secrets');
+const {
+  javaVersionSupported,
+  nodeVersionSupported,
+} = require('../../scripts/android-release-agent');
 const {
   IMMUTABLE_TRACKS,
   TESTING_TRACKS,
@@ -131,8 +140,16 @@ describe('Android release safety contract', () => {
     expect(gradle).toContain('METRAVEL_ANDROID_KEYSTORE_PATH');
 
     const buildScript = fs.readFileSync(path.join(ROOT, 'scripts/android-build.sh'), 'utf8');
-    expect(buildScript).toContain('metravel-android-upload-store-password');
-    expect(buildScript).not.toMatch(/METRAVEL_ANDROID_KEYSTORE_PASSWORD=["'][^$]/);
+    expect(buildScript).toContain('android-release-agent.js');
+
+    const secretLoader = fs.readFileSync(
+      path.join(ROOT, 'scripts/android-release-secrets.js'),
+      'utf8'
+    );
+    expect(secretLoader).toContain('metravel-android-upload-store-password');
+    expect(secretLoader).not.toMatch(
+      /METRAVEL_ANDROID_KEYSTORE_PASSWORD:\s*["'][^"']+["']/
+    );
 
     const gradleRunner = fs.readFileSync(
       path.join(ROOT, 'scripts/android-gradle-build.js'),
@@ -146,6 +163,80 @@ describe('Android release safety contract', () => {
     );
     expect(gradleRunner).toContain("[task, '--no-daemon']");
     expect(gradleRunner).toContain('verifyFacebookAndroidResources');
+  });
+
+  it('loads a portable release bundle without macOS Keychain', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-android-secrets-'));
+    const secrets = path.join(root, '.secrets');
+    fs.mkdirSync(secrets);
+    fs.writeFileSync(path.join(secrets, 'upload.jks'), 'fixture');
+    fs.writeFileSync(
+      path.join(secrets, 'android.env'),
+      'EXPO_PUBLIC_API_URL=https://example.test\n'
+    );
+    fs.writeFileSync(path.join(secrets, 'play.json'), '{}');
+    fs.writeFileSync(
+      path.join(secrets, 'metravel-android-release.json'),
+      JSON.stringify({
+        version: 1,
+        keystorePath: '.secrets/upload.jks',
+        keystorePassword: 'fixture-store-password',
+        keyAlias: 'metravel-upload',
+        keyPassword: 'fixture-key-password',
+        productionEnvPath: '.secrets/android.env',
+        serviceAccountPath: '.secrets/play.json',
+      })
+    );
+
+    try {
+      const environment = loadAndroidReleaseEnvironment({
+        rootDir: root,
+        environment: {},
+        allowKeychain: false,
+      });
+      expect(environment).toMatchObject({
+        METRAVEL_ANDROID_KEYSTORE_PATH: path.join(secrets, 'upload.jks'),
+        METRAVEL_ANDROID_KEYSTORE_PASSWORD: 'fixture-store-password',
+        METRAVEL_ANDROID_KEY_ALIAS: 'metravel-upload',
+        METRAVEL_ANDROID_KEY_PASSWORD: 'fixture-key-password',
+        METRAVEL_ANDROID_PROD_ENV_PATH: path.join(secrets, 'android.env'),
+        GOOGLE_PLAY_SERVICE_ACCOUNT_PATH: path.join(secrets, 'play.json'),
+      });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('uses the portable production environment when configured', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-android-env-'));
+    const productionEnv = path.join(root, 'android.env');
+    fs.writeFileSync(
+      productionEnv,
+      'EXPO_PUBLIC_API_URL=https://portable.example.test\n'
+    );
+    try {
+      expect(
+        createBuildEnvironment('production', {
+          METRAVEL_ANDROID_PROD_ENV_PATH: productionEnv,
+        })
+      ).toMatchObject({
+        EXPO_PUBLIC_API_URL: 'https://portable.example.test',
+        NODE_ENV: 'production',
+        EXPO_ENV: 'prod',
+      });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts the pinned Node line and supported local JDKs', () => {
+    expect(nodeVersionSupported('22.13.1')).toBe(true);
+    expect(nodeVersionSupported('22.18.0')).toBe(true);
+    expect(nodeVersionSupported('20.19.4')).toBe(false);
+    expect(javaVersionSupported(17)).toBe(true);
+    expect(javaVersionSupported(21)).toBe(true);
+    expect(javaVersionSupported(11)).toBe(false);
+    expect(javaVersionSupported(22)).toBe(false);
   });
 
   it('fails closed when native Facebook Login credentials are incomplete', () => {

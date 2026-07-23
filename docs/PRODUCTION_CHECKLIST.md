@@ -95,6 +95,8 @@ testers и countries защищены.
 `package.json`.
 
 - [ ] Android target, version/build number и store track подтверждены.
+- [ ] `npm run android:release:doctor` подтвердил JDK/Android SDK, portable
+      `.secrets` signing bundle и production environment без вывода значений.
 - [ ] Android target — `production`; `alpha`, `internal`, `beta`, testers,
       countries и текущий closed test не меняются.
 - [ ] Перед Android store build пройден локальный USB device flow, если он входит

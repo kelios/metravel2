@@ -230,6 +230,7 @@ npm run ios:submit:latest
 
 ```bash
 npm run android:prebuild
+npm run android:release:doctor      # cross-platform tools + secret bundle check
 npm run android:build:prod
 npm run android:submit:latest       # validate temporary production edit, no commit
 npm run android:submit:production   # commit production edit
@@ -246,5 +247,12 @@ See `PRODUCTION_CHECKLIST.md`.
 - Keep Android upload-keystore credentials in the local secret store as the four
   `METRAVEL_ANDROID_KEYSTORE_*` variables. Keep the Google Play service-account
   key gitignored; never print either credential set.
-- On the primary macOS release host, `android-build.sh` may load the two passwords
-  from the documented macOS Keychain services; it never prints them.
+- Canonical portable secret bundle (copy the same paths to another workstation):
+  `.secrets/metravel-android-release.json`,
+  `.secrets/metravel-android-upload.jks`,
+  `.secrets/metravel-android-prod.env`, and
+  `.secrets/google-play-service-account.json`. Generate it on an already working
+  authorized Mac with `npm run android:release:export-secrets`; values are never
+  printed and every file remains ignored by Git.
+- macOS Keychain is only a legacy source for creating the bundle. A new
+  macOS/Windows/Linux workstation builds from copied `.secrets` without Keychain.

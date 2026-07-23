@@ -8,6 +8,11 @@ const ROOT_DIR = path.resolve(__dirname, '..')
 const ANDROID_DIR = path.join(ROOT_DIR, 'android')
 const LOCAL_ENV_PATH = path.join(ROOT_DIR, '.env')
 const PROD_ENV_PATH = path.join(ROOT_DIR, '.env.prod')
+const PORTABLE_PROD_ENV_PATH = path.join(
+  ROOT_DIR,
+  '.secrets',
+  'metravel-android-prod.env',
+)
 
 function parseEnvFile(filePath) {
   const variables = {}
@@ -41,12 +46,20 @@ function createBuildEnvironment(mode, environment = process.env) {
   }
 
   if (mode === 'production') {
-    if (!fs.existsSync(PROD_ENV_PATH)) {
-      throw new Error('.env.prod is required for a production AAB')
+    const configuredProdEnvPath = environment.METRAVEL_ANDROID_PROD_ENV_PATH
+    const productionEnvPath = configuredProdEnvPath
+      ? path.resolve(ROOT_DIR, configuredProdEnvPath)
+      : fs.existsSync(PROD_ENV_PATH)
+        ? PROD_ENV_PATH
+        : PORTABLE_PROD_ENV_PATH
+    if (!fs.existsSync(productionEnvPath)) {
+      throw new Error(
+        '.env.prod or .secrets/metravel-android-prod.env is required for a production AAB',
+      )
     }
     buildEnvironment = {
       ...buildEnvironment,
-      ...parseEnvFile(PROD_ENV_PATH),
+      ...parseEnvFile(productionEnvPath),
       NODE_ENV: 'production',
       EXPO_ENV: 'prod',
       EXPO_NO_INTERACTIVE: '1',

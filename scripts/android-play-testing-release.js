@@ -20,12 +20,8 @@ const {
   validateEdit,
   withTemporaryEdit,
 } = require('./android-play-release')
+const { resolveServiceAccountPath } = require('./android-release-secrets')
 
-const ROOT_DIR = path.resolve(__dirname, '..')
-const DEFAULT_SERVICE_ACCOUNT_PATH = path.join(
-  ROOT_DIR,
-  'google-play-service-account.json'
-)
 const TESTING_TRACKS = Object.freeze(['alpha', 'internal'])
 const IMMUTABLE_TRACKS = Object.freeze(['production', 'beta'])
 
@@ -39,8 +35,7 @@ function parseTestingArgs(argv) {
     command,
     commit: false,
     aab: null,
-    serviceAccount:
-      process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_PATH || DEFAULT_SERVICE_ACCOUNT_PATH,
+    serviceAccount: resolveServiceAccountPath(),
   }
 
   for (let index = 0; index < rest.length; index += 1) {

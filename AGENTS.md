@@ -67,6 +67,9 @@
 - `$metravel-code-reviewer` - focused code review diff'а, поиск рисков, rule violations, validation gaps и остаточных проблем перед handoff.
 - `$metravel-security-reviewer` - evidence-backed frontend security review: XSS/sanitization, unsafe URLs/redirects, secrets/tokens, WebView/deep links и production dependencies; read-only без явного запроса на fixes.
 - `$metravel-devops-agent` - подготовка, запуск и проверка deploy на dev/preprod/prod с preflight, secret hygiene и post-deploy validation.
+- `$metravel-android-portable-builder` - переносимая локальная Android-сборка на
+  macOS/Windows/Linux из gitignored `.secrets` bundle без ручной настройки
+  Keychain и без EAS; build-only, Play tracks не меняет.
 - `$metravel-google-play-operator` - локальная Android production AAB-сборка и
   production-only Google Play API без EAS; closed-testing tracks и настройки
   защищены от изменений.
@@ -136,6 +139,9 @@
   `--platform all` command. Android production artifacts are built locally by
   `npm run android:build:prod`; store operations use the project Google Play API
   script. Re-enabling Android EAS requires a new explicit user decision.
+- На новом компьютере production signing и Android production env берутся из
+  переносимого `.secrets` bundle через `npm run android:release:doctor` и
+  `npm run android:build:prod`; ручная настройка macOS Keychain не требуется.
 - Current standing release authorization permits the agent to prepare and run the
   local Android production build/Production submit when an Android release is the
   active task. This never authorizes changing `alpha`, `internal`, `beta`, tester

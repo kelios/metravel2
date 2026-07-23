@@ -60,6 +60,9 @@ iOS/iPadOS-приложения пока нет; iOS не входит в QA/Don
 - `$metravel-code-reviewer`: используй для focused review diff'а, поиска рисков, rule violations, validation gaps и остаточных проблем перед handoff или approve.
 - `$metravel-security-reviewer`: используй для frontend security review по XSS/sanitization, URLs/redirects, secrets/tokens, WebView/deep links и production dependencies; review остаётся read-only без явного запроса на fix.
 - `$metravel-devops-agent`: используй для подготовки, запуска и проверки deploy на `dev`, `preprod` или `prod`, включая preflight, secret hygiene, server-path safety, approved deploy-command selection, rollback/recovery и post-deploy validation.
+- `$metravel-android-portable-builder`: используй для build-only Android APK/AAB
+  на новом или другом компьютере, диагностики JDK/Android SDK и загрузки
+  gitignored portable `.secrets` bundle без Keychain/EAS.
 - `$metravel-google-play-operator`: локальная Android production AAB-сборка и
   production-only Play API без EAS; `alpha`/`internal`/`beta` и closed-testing
   настройки защищены.
@@ -102,8 +105,8 @@ iOS/iPadOS-приложения пока нет; iOS не входит в QA/Don
 | Обычная разработка, bugfix, refactor | `$metravel-domain-router` для доменного scope, затем профильный доменный субагент (`$metravel-travel-expert`, `$metravel-map-expert`, `$metravel-profile-expert`, `$metravel-achievements-expert`, `$metravel-quest-expert`) и `$metravel-feature-builder`; добавь `$metravel-ui-guardrails`, `$metravel-hook-builder`, `$metravel-refactor-surgeon` или `$metravel-test-writer` только по затронутой области | `$metravel-codex-orchestrator` для широкого/неясного scope; `$metravel-agent-workflow` для раздельных BA/architect/QA/reviewer стадий. |
 | Статьи и article media | `$metravel-article-editor-agent` | Добавь orchestrator для bulk/high-risk правок, publish/unpublish серий или связанных SEO/API/UI проверок. |
 | Новый квест или полная переработка quest content | `$metravel-quest-writer`; после отдельного подтверждения творческого текста добавь `$metravel-quest-geo-verifier`, а `$metravel-quest-expert` только для data/migration/code scope | Добавь orchestrator для нескольких городов, production publication или связанного media/code workflow. |
-| Mobile web/Android | `$metravel-mobile-tester` для парной read-only QA, `$metravel-android-developer` для platform fixes; `$metravel-play-campaign-tester` только для reciprocity campaign | `$metravel-agent-workflow` для reproduce -> fix -> retest -> review или web + Android scope. Store actions — только explicit request через `$metravel-google-play-operator`/DevOps. |
-| Google Play release | `$metravel-google-play-operator` + `$metravel-release-checks` | Build/submit/promotion требуют явного exact target; `production` не выводится из общего слова «релиз». |
+| Mobile web/Android | `$metravel-mobile-tester` для парной read-only QA, `$metravel-android-developer` для platform fixes; `$metravel-play-campaign-tester` только для reciprocity campaign | `$metravel-agent-workflow` для reproduce -> fix -> retest -> review или web + Android scope. Переносимая build-only сборка — `$metravel-android-portable-builder`; store actions — только explicit request через `$metravel-google-play-operator`/DevOps. |
+| Google Play release | build-only на любом workstation — `$metravel-android-portable-builder`; submit/track — `$metravel-google-play-operator` + `$metravel-release-checks` | Build/submit/promotion требуют явного exact target; `production` не выводится из общего слова «релиз». |
 | SEO/index operations | `$metravel-seo-index-operator` | Добавь `$metravel-growth-analyst` для месячной стратегии; `$metravel-article-editor-agent` или `$metravel-feature-builder` только когда из аудита следует content/code change. |
 | Production smoke | `$metravel-production-smoke` | `$metravel-devops-agent` нужен только для deploy/rollback; `$metravel-backend-diagnostician` — для подтвержденных API/backend failures. |
 
@@ -117,7 +120,8 @@ Claude-конфигурация остаётся историческим ист
 | --- | --- |
 | `android-expert`, `android-native-audit`, `android-qa-sweep` | `$metravel-android-developer` + `$metravel-mobile-tester` |
 | `ios-expert` | неактивный legacy-route; `$metravel-ios-developer` только после явного возврата iOS в scope |
-| `android-builder`, `android-publisher`, `android-release` | `$metravel-google-play-operator` + `$metravel-release-checks`; web/server deploy остаётся у `$metravel-devops-agent` |
+| `android-builder` | `$metravel-android-portable-builder`; Play submit/track передаётся `$metravel-google-play-operator` + `$metravel-release-checks` |
+| `android-publisher`, `android-release` | `$metravel-google-play-operator` + `$metravel-release-checks`; web/server deploy остаётся у `$metravel-devops-agent` |
 | `play-tester`, `play-update-watcher` | `$metravel-play-campaign-tester`; общий operational state пока живёт в `.claude/play-testing/` без дублирования |
 | `metravel-design-audit`, `metravel-design-system`, `review-uiux` | `$metravel-design-auditor` для read-only evidence, `$metravel-ui-guardrails` для implementation contract, `$metravel-browser-reviewer` для fix/reverify |
 | `metravel-page-new`, `metravel-screen-redesign` | `$metravel-domain-router` + `$metravel-feature-builder` + `$metravel-ui-guardrails` |
@@ -248,7 +252,10 @@ Validation: <expected checks/evidence>.
     Неполная проверка остаётся в `review`/`testing`; `blocked_by` используется только когда новая hard dependency не позволяет начать или продолжить работу.
 22. `$metravel-production-smoke` выполняет read-only smoke `metravel.by` после deploy или при аварийной проверке.
 23. `$metravel-system-architect` в review mode проверяет findings, diff, проверки, known risks и соответствие правилам, когда нужен архитектурный review.
-24. `$metravel-google-play-operator` выполняет только явно запрошенный Android store build/submit/track step и подтверждает фактический track/versionCode.
+24. `$metravel-android-portable-builder` выполняет явно запрошенную локальную
+    build-only сборку из `.secrets`; `$metravel-google-play-operator` выполняет
+    только явно запрошенный Android store submit/track step и подтверждает
+    фактический track/versionCode.
 25. `$metravel-devops-agent` готовит и выполняет deploy/build/release только при явном запросе на deploy/release, с environment gate, preflight и post-deploy validation.
 
 Стандартный bug loop:
@@ -276,7 +283,9 @@ Validation: <expected checks/evidence>.
   route допустим только по явному запросу пользователя.
 - Android Developer не меняет release/build configs (`app.json`, `eas.json`, `plugins/**`, `scripts/**`) без явного запроса, никогда не запускает Android EAS/cloud build/submit и не заявляет Android-ready без local-build device evidence. Local production release передаётся Google Play Operator.
 - iOS Developer не участвует в обычном workflow до явного возврата iOS в scope.
-- Google Play Operator использует только local Gradle + production-only Play API;
+- Portable Android Builder использует cross-platform Node/Gradle entrypoint и
+  gitignored `.secrets`, не меняя Play. Google Play Operator использует только
+  local Gradle + production-only Play API;
   `alpha`, `internal`, `beta`, testers и countries не меняет.
 - Programmer не начинает реализацию без bug report, feature brief или явного user request.
 - Refactor Surgeon не меняет бизнес-логику и не делает редизайн; только behavior-preserving extraction.

@@ -32,8 +32,9 @@ Read first:
 - Package: `by.metravel.app`.
 - Use project-owned npm wrappers; Android build is local Gradle and Play upload is
   `scripts/android-play-release.js`.
-- `app.json` is the version source. Release signing must use the four
-  `METRAVEL_ANDROID_KEYSTORE_*` variables and must never fall back to debug key.
+- `app.json` is the version source. Release signing loads the portable
+  gitignored `.secrets/metravel-android-release.json` bundle (or the four
+  `METRAVEL_ANDROID_KEYSTORE_*` overrides) and must never fall back to debug key.
 - Only `production` is writable. Dry-run validates and deletes the edit; actual
   commit requires the explicit production wrapper.
 - Never print service-account JSON, keystore passwords, private keys, access
@@ -41,7 +42,7 @@ Read first:
 
 ## Workflow
 
-1. Preflight: confirm `main`, inspect `git status --short`, check the exclusive operation gate, verify local signing/service-account presence without exposing values, and record target `production`.
+1. Preflight: confirm `main`, inspect `git status --short`, check the exclusive operation gate, run `npm run android:release:doctor`, verify local signing/service-account presence without exposing values, and record target `production`.
 2. Before a release build, require the documented release checks and successful local USB Android smoke for the changed native scope.
 3. Run `npm run android:build:prod` and verify the local AAB metadata/upload certificate.
 4. Run `npm run android:submit:latest`; it must validate and delete the temporary production edit without commit.

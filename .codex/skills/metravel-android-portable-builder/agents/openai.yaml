@@ -1,0 +1,4 @@
+interface:
+  display_name: "MeTravel Portable Android Builder"
+  short_description: "Build signed Android AABs on any workstation"
+  default_prompt: "Use $metravel-android-portable-builder to verify the copied .secrets bundle, prepare the local Android toolchain, and build a signed production AAB without EAS."

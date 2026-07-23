@@ -4,9 +4,10 @@ const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 
+const { resolveServiceAccountPath } = require('./android-release-secrets')
+
 const ROOT_DIR = path.resolve(__dirname, '..')
 const APP_CONFIG_PATH = path.join(ROOT_DIR, 'app.json')
-const DEFAULT_SERVICE_ACCOUNT_PATH = path.join(ROOT_DIR, 'google-play-service-account.json')
 const API_ROOT = 'https://androidpublisher.googleapis.com/androidpublisher/v3/applications'
 const UPLOAD_ROOT = 'https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications'
 const TOKEN_URL = 'https://oauth2.googleapis.com/token'
@@ -282,8 +283,7 @@ function parseArgs(argv) {
     command,
     commit: false,
     aab: null,
-    serviceAccount:
-      process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_PATH || DEFAULT_SERVICE_ACCOUNT_PATH,
+    serviceAccount: resolveServiceAccountPath(),
   }
   for (let index = 0; index < rest.length; index += 1) {
     const value = rest[index]
