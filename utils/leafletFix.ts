@@ -61,15 +61,31 @@ const patchLeafletInstance = (instance: any) => {
     instance.Map.prototype.getPane = function safeGetPane(name?: string) {
       const pane = originalGetPane.call(this, name)
       if (pane) return pane
-      // Живая карта (дефолтные panes на месте): отсутствие кастомного pane —
-      // валидный ответ для get-or-create идиомы (RouteLineLayer/MapRoute зовут
-      // createPane только когда getPane вернул пусто). Фолбэк на _mapPane здесь
-      // подменял ответ самим map-pane: createPane не вызывался, и стили
-      // route-pane (z-index + pointer-events:none) прилетали на map-pane,
-      // после чего попапы переставали ловить клики (крестик не закрывал).
-      if (this._panes && this._panes.mapPane) return undefined
+      // Leaflet-внутренности без null-check вызывают
+      // getPane(name).appendChild(). На Safari при remount кастомный pane может
+      // ещё не существовать, хотя карта уже живая. Создаём его синхронно:
+      // get-or-create вызовы всё равно получат отдельный pane и не применят
+      // pointer-events/z-index кастомного слоя к общему mapPane.
+      if (
+        this._panes?.mapPane &&
+        typeof name === 'string' &&
+        name &&
+        typeof this.createPane === 'function'
+      ) {
+        try {
+          const createdPane = this.createPane(name)
+          if (createdPane) return createdPane
+        } catch {
+          // Продолжаем к безопасному fallback ниже.
+        }
+      }
       // Умершая/пересоздаваемая карта: Leaflet-внутренности зовут
       // getPane().appendChild() без null-check — отдаём безопасный узел.
+      // Для отсутствующего именованного pane на живой карте не возвращаем
+      // mapPane: route-слои могут назначить ему pointer-events:none.
+      if (this._panes?.mapPane && typeof name === 'string' && name) {
+        return document.createElement('div')
+      }
       if (this._mapPane) return this._mapPane
       if (this._container && typeof this._container.appendChild === 'function') return this._container
       return document.createElement('div')

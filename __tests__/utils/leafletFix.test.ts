@@ -18,6 +18,12 @@ const makeLiveMap = (L: any) => {
   map._mapPane = mapPane
   map._panes = { mapPane }
   map._container = document.createElement('div')
+  map.createPane = jest.fn((name: string) => {
+    const pane = document.createElement('div')
+    map._panes[name] = pane
+    mapPane.appendChild(pane)
+    return pane
+  })
   return { map, mapPane }
 }
 
@@ -33,17 +39,33 @@ describe('applyLeafletFix / safeGetPane', () => {
     ;(globalThis as any).L = originalGlobalL
   })
 
-  it('на живой карте возвращает undefined для отсутствующего кастомного pane (get-or-create должен звать createPane)', () => {
+  it('на живой карте синхронно создаёт отсутствующий кастомный pane', () => {
     const L = makeLeafletInstance()
     applyLeafletFix(L)
     const { map, mapPane } = makeLiveMap(L)
 
     const result = map.getPane('metravelRoutePane')
 
-    // Регрессия «попап не закрывается»: раньше фолбэк отдавал сам map-pane,
-    // RouteLineLayer не создавал свой pane и вешал pointer-events:none на map-pane.
-    expect(result).toBeUndefined()
+    expect(map.createPane).toHaveBeenCalledWith('metravelRoutePane')
+    expect(result).toBe(map._panes.metravelRoutePane)
+    expect(result.parentElement).toBe(mapPane)
+    expect(() => result.appendChild(document.createElement('div'))).not.toThrow()
     expect(result).not.toBe(mapPane)
+  })
+
+  it('при ошибке createPane возвращает безопасный узел, но не общий mapPane', () => {
+    const L = makeLeafletInstance()
+    applyLeafletFix(L)
+    const { map, mapPane } = makeLiveMap(L)
+    map.createPane.mockImplementation(() => {
+      throw new Error('pane race')
+    })
+
+    const result = map.getPane('metravelUserLocationPane')
+
+    expect(result).toBeInstanceOf(HTMLElement)
+    expect(result).not.toBe(mapPane)
+    expect(typeof result.appendChild).toBe('function')
   })
 
   it('на живой карте существующий pane возвращается как есть', () => {
