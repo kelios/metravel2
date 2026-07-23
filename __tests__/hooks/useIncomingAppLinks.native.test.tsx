@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react-native';
 
 const mockPush = jest.fn();
 const mockRemove = jest.fn();
-let rootNavigationState: { key?: string } | undefined = { key: 'root' };
+let mockRootNavigationState: { key?: string } | undefined = { key: 'root' };
 let urlListener: ((event: unknown) => void) | undefined;
 
 const mockAddListener = jest.fn(
@@ -12,19 +12,26 @@ const mockAddListener = jest.fn(
   },
 );
 
-jest.mock('expo', () => ({
-  requireNativeModule: () => ({ addListener: mockAddListener }),
-}));
-
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
-  useRootNavigationState: () => rootNavigationState,
+  useRootNavigationState: () => mockRootNavigationState,
 }));
 
-import {
+const expoGlobal = globalThis as typeof globalThis & {
+  expo?: { modules?: Record<string, unknown> };
+};
+expoGlobal.expo = {
+  ...expoGlobal.expo,
+  modules: {
+    ...expoGlobal.expo?.modules,
+    ExpoLinking: { addListener: mockAddListener },
+  },
+};
+
+const {
   normalizeIncomingAppLink,
   useIncomingAppLinks,
-} from '@/hooks/useIncomingAppLinks.native';
+} = require('@/hooks/useIncomingAppLinks.native') as typeof import('@/hooks/useIncomingAppLinks.native');
 
 describe('normalizeIncomingAppLink', () => {
   it.each([
@@ -56,7 +63,7 @@ describe('normalizeIncomingAppLink', () => {
 describe('useIncomingAppLinks', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    rootNavigationState = { key: 'root' };
+    mockRootNavigationState = { key: 'root' };
     urlListener = undefined;
   });
 
@@ -89,7 +96,7 @@ describe('useIncomingAppLinks', () => {
   });
 
   it('keeps the latest warm link pending until root navigation is ready', () => {
-    rootNavigationState = undefined;
+    mockRootNavigationState = undefined;
     const { rerender } = renderHook(() => useIncomingAppLinks());
 
     act(() => {
@@ -98,7 +105,7 @@ describe('useIncomingAppLinks', () => {
     });
     expect(mockPush).not.toHaveBeenCalled();
 
-    rootNavigationState = { key: 'root' };
+    mockRootNavigationState = { key: 'root' };
     rerender({});
 
     expect(mockPush).toHaveBeenCalledTimes(1);

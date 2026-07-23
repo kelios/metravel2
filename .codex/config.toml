@@ -1,3 +1,12 @@
 approval_policy = "never"
-
 sandbox_mode = "danger-full-access"
+
+[mcp_servers.metravel-task-board]
+command = "sh"
+args = [
+    "-c",
+    "set -a; . /Users/juliasavran/Sites/metravel2/metravel2/.secrets/metravel-task-board.env; set +a; exec python3 -m tools.mcp_server",
+]
+
+[mcp_servers.metravel-task-board.env]
+PYTHONPATH = "/Users/juliasavran/Sites/metravel2/metravel-backend"

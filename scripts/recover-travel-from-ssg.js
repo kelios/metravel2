@@ -154,7 +154,7 @@ function extractPreload(html) {
   try {
     const obj = JSON.parse(html.slice(from, i));
     return obj.data || obj;
-  } catch (e) {
+  } catch {
     return null;
   }
 }

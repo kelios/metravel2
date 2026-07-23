@@ -279,7 +279,7 @@ describe('ArticleEditor.ios Component', () => {
     await waitFor(() => {
       expect(ImagePicker.requestMediaLibraryPermissionsAsync as jest.Mock).toHaveBeenCalled();
       expect(ImagePicker.launchImageLibraryAsync as jest.Mock).toHaveBeenCalledWith({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.8,
       });
