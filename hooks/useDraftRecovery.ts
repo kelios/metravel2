@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import isEqual from 'fast-deep-equal';
 import type { TravelFormData } from '@/types/types';
@@ -56,7 +56,7 @@ const DRAFT_ID_LIST_FIELDS = [
 ] as const;
 
 const isTransientLocalUrl = (value: string): boolean =>
-  value.startsWith('blob:') || value.startsWith('data:');
+  /^(blob:|data:|file:|content:|ph:|assets-library:)/i.test(value);
 
 function comparableText(value: unknown): string | undefined {
   if (value == null) return undefined;
@@ -182,6 +182,7 @@ interface DraftRecoveryState {
   hasPendingDraft: boolean;
   draftTimestamp: number | null;
   isRecovering: boolean;
+  storageError: Error | null;
 }
 
 interface UseDraftRecoveryOptions {
@@ -206,6 +207,10 @@ interface UseDraftRecoveryReturn {
   clearDraft: () => Promise<void>;
   /** Loading state during recovery */
   isRecovering: boolean;
+  /** Last local draft write failure; cleared only after a successful draft write. */
+  storageError: Error | null;
+  /** Persist the newest queued snapshot immediately. False means storage rejected the write. */
+  flushDraft: () => Promise<boolean>;
 }
 
 /**
@@ -219,9 +224,13 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     hasPendingDraft: false,
     draftTimestamp: null,
     isRecovering: false,
+    storageError: null,
   });
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
+  const writeQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const flushPromiseRef = useRef<Promise<boolean> | null>(null);
   const comparedDraftKeyRef = useRef<string | null>(null);
   const prevDraftKeyRef = useRef<string | null>(null);
   const pendingDraftDataRef = useRef<TravelFormData | null>(null);
@@ -249,11 +258,12 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
         if (cancelled) return;
         if (!storedDraft) {
           comparedDraftKeyRef.current = draftKey;
-          setState({
+          setState(prev => ({
+            ...prev,
             hasPendingDraft: false,
             draftTimestamp: null,
             isRecovering: false,
-          });
+          }));
           return;
         }
 
@@ -275,19 +285,21 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
                 if (areDraftsEquivalent(stripUndefinedDeep(parsed.data), stripUndefinedDeep(currentData))) {
                   await removeStorageItem(draftKey);
                   if (cancelled) return;
-                  setState({
+                  setState(prev => ({
+                    ...prev,
                     hasPendingDraft: false,
                     draftTimestamp: null,
                     isRecovering: false,
-                  });
+                  }));
                   return;
                 }
               }
-              setState({
+              setState(prev => ({
+                ...prev,
                 hasPendingDraft: true,
                 draftTimestamp: parsed.timestamp,
                 isRecovering: false,
-              });
+              }));
             } else {
               // Draft is too old, remove it
               await removeStorageItem(draftKey);
@@ -306,44 +318,95 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     };
   }, [draftKey, enabled, currentData]);
 
+  const persistDraft = useCallback((data: TravelFormData): Promise<boolean> => {
+    if (!enabled || !draftKey) return Promise.resolve(true);
+    const draftData = {
+      data: stripUndefinedDeep(data),
+      timestamp: Date.now(),
+    };
+
+    const write = writeQueueRef.current.then(async () => {
+      try {
+        await setStorageItem(draftKey, JSON.stringify(draftData));
+        if (mountedRef.current) {
+          setState(prev => prev.storageError ? { ...prev, storageError: null } : prev);
+        }
+        return true;
+      } catch (error) {
+        const storageError = error instanceof Error ? error : new Error('Draft storage write failed');
+        if (mountedRef.current) {
+          setState(prev => ({ ...prev, storageError }));
+        }
+        console.warn('Failed to save draft:', error);
+        return false;
+      }
+    });
+
+    // Serialize writes so an older AsyncStorage completion cannot overwrite a
+    // newer snapshot or clear the newer snapshot's error state.
+    writeQueueRef.current = write.then(() => undefined);
+    return write;
+  }, [draftKey, enabled]);
+
   // Save draft with debouncing
   const saveDraft = useCallback((data: TravelFormData) => {
     if (!enabled || !draftKey) return;
     pendingDraftDataRef.current = data;
+
+    // The active flush loop will observe and persist this newer snapshot before
+    // resolving its caller (for example, the expired-session login CTA).
+    if (flushPromiseRef.current) return;
 
     // Clear previous timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
-    debounceTimerRef.current = setTimeout(async () => {
-      try {
-        const draftData = {
-          data: stripUndefinedDeep(data),
-          timestamp: Date.now(),
-        };
-        await setStorageItem(draftKey, JSON.stringify(draftData));
-      } catch (error) {
-        console.warn('Failed to save draft:', error);
-      }
+    debounceTimerRef.current = setTimeout(() => {
+      debounceTimerRef.current = null;
+      void persistDraft(data).then((saved) => {
+        if (saved && pendingDraftDataRef.current === data) {
+          pendingDraftDataRef.current = null;
+        }
+      });
     }, DRAFT_DEBOUNCE_MS);
-  }, [draftKey, enabled]);
+  }, [draftKey, enabled, persistDraft]);
 
-  const flushDraft = useCallback(async () => {
-    if (!enabled || !draftKey) return;
-    if (Platform.OS !== 'web') return;
-    if (!pendingDraftDataRef.current) return;
+  const flushDraft = useCallback((): Promise<boolean> => {
+    if (!enabled || !draftKey) return Promise.resolve(true);
+    if (flushPromiseRef.current) return flushPromiseRef.current;
 
-    try {
-      const draftData = {
-        data: stripUndefinedDeep(pendingDraftDataRef.current),
-        timestamp: Date.now(),
-      };
-      await setStorageItem(draftKey, JSON.stringify(draftData));
-    } catch (error) {
-      console.warn('Failed to flush draft:', error);
-    }
-  }, [draftKey, enabled]);
+    const drain = (async () => {
+      while (true) {
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+          debounceTimerRef.current = null;
+        }
+
+        const pendingDraft = pendingDraftDataRef.current;
+        if (!pendingDraft) {
+          await writeQueueRef.current;
+          return true;
+        }
+
+        const saved = await persistDraft(pendingDraft);
+        if (!saved) return false;
+
+        if (pendingDraftDataRef.current === pendingDraft) {
+          pendingDraftDataRef.current = null;
+          return true;
+        }
+        // An edit arrived during the await; keep draining until the newest
+        // snapshot itself has been written successfully.
+      }
+    })();
+
+    flushPromiseRef.current = drain;
+    void drain.finally(() => {
+      if (flushPromiseRef.current === drain) flushPromiseRef.current = null;
+    });
+    return drain;
+  }, [draftKey, enabled, persistDraft]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -362,6 +425,16 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     };
   }, [enabled, flushDraft]);
 
+  useEffect(() => {
+    if (!enabled || Platform.OS === 'web') return;
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'background' || nextState === 'inactive') {
+        void flushDraft();
+      }
+    });
+    return () => subscription.remove();
+  }, [enabled, flushDraft]);
+
   // Recover draft
   const recoverDraft = useCallback(async (): Promise<TravelFormData | null> => {
     if (!enabled || !draftKey || !state.hasPendingDraft) return null;
@@ -373,11 +446,12 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
       if (storedDraft) {
         const parsed = JSON.parse(storedDraft);
         if (parsed && parsed.data && parsed.timestamp) {
-          setState({
+          setState(prev => ({
+            ...prev,
             hasPendingDraft: false,
             draftTimestamp: null,
             isRecovering: false,
-          });
+          }));
           return parsed.data as TravelFormData;
         }
       }
@@ -393,12 +467,14 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
   const dismissDraft = useCallback(async () => {
     if (!draftKey) return;
     try {
+      await writeQueueRef.current;
       await removeStorageItem(draftKey);
-      setState({
+      setState(prev => ({
+        ...prev,
         hasPendingDraft: false,
         draftTimestamp: null,
         isRecovering: false,
-      });
+      }));
     } catch (error) {
       console.warn('Failed to dismiss draft:', error);
     }
@@ -413,12 +489,14 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     pendingDraftDataRef.current = null;
     if (!draftKey) return;
     try {
+      await writeQueueRef.current;
       await removeStorageItem(draftKey);
-      setState({
+      setState(prev => ({
+        ...prev,
         hasPendingDraft: false,
         draftTimestamp: null,
         isRecovering: false,
-      });
+      }));
     } catch (error) {
       console.warn('Failed to clear draft:', error);
     }
@@ -438,7 +516,8 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
         debounceTimerRef.current = null;
       }
       pendingDraftDataRef.current = null;
-      void removeStorageItem(prevKey);
+      const pendingWrites = writeQueueRef.current;
+      void pendingWrites.then(() => removeStorageItem(prevKey));
     }
     prevDraftKeyRef.current = draftKey;
   }, [draftKey]);
@@ -446,6 +525,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      mountedRef.current = false;
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
@@ -458,9 +538,11 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     recoverDraft,
     dismissDraft,
     saveDraft,
+    flushDraft,
     clearDraft,
     isRecovering: state.isRecovering,
-  }), [state.hasPendingDraft, state.draftTimestamp, recoverDraft, dismissDraft, saveDraft, clearDraft, state.isRecovering]);
+    storageError: state.storageError,
+  }), [state.hasPendingDraft, state.draftTimestamp, recoverDraft, dismissDraft, saveDraft, flushDraft, clearDraft, state.isRecovering, state.storageError]);
 }
 
 // Storage abstraction for cross-platform support
@@ -477,11 +559,7 @@ async function getStorageItem(key: string): Promise<string | null> {
 
 async function setStorageItem(key: string, value: string): Promise<void> {
   if (Platform.OS === 'web') {
-    try {
-      localStorage.setItem(key, value);
-    } catch {
-      // localStorage might be full or disabled
-    }
+    localStorage.setItem(key, value);
     return;
   }
   return AsyncStorage.setItem(key, value);

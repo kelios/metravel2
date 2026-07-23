@@ -151,6 +151,13 @@ export function useStableContentRenderConfig({
         // RNRH renders the marker beside the <li> block. A top margin on that
         // inner block moves only its text down, leaving the first marker above
         // the first line. Keep the vertical rhythm below each item instead.
+        // The same marker/content row must also constrain this inner block to
+        // the width left after the marker. Without an explicit shrink/max-width
+        // contract Android can lay text out at the pre-marker width and clip the
+        // trailing word instead of wrapping it onto the next line (#1046).
+        flexShrink: 1,
+        minWidth: 0,
+        maxWidth: '100%',
         marginTop: 0,
         marginBottom: DESIGN_TOKENS.spacing.xs,
         lineHeight: Math.round(baseFontSize * 1.6),

@@ -259,6 +259,8 @@ export const sharedGenerated1 = {
   "components.forms.SimpleMultiSelect.vyberite_e8f53759": "Виберіть...",
   "components.forms.SimpleMultiSelect.vybrano_12c5cecd": "Вибрано:",
   "components.forms.SimpleMultiSelect.zakryt_2edf8c7d": "Закрити",
+  "components.forms.SimpleMultiSelect.removeSelected": "Видалити {{value1}} з вибраних",
+  "components.forms.SimpleMultiSelect.clearSearch": "Очистити пошук",
   "components.forms.TextInputComponent.vvedite_value1_e4ccf293": "Введіть {{value1}}",
   "components.iframe.InstagramEmbed.instagram_post_a443d081": "Instagram post",
   "components.iframe.InstagramEmbed.instagram_post_b5e6adbd": "Instagram post",

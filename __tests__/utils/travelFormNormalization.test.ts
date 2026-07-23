@@ -444,6 +444,15 @@ describe('travelFormNormalization', () => {
       expect(sanitizeCoverUrl('data:image/png;base64,abc')).toBeNull();
     });
 
+    it.each([
+      'file:///data/user/0/by.metravel.app/cache/cover.jpg',
+      'content://media/external/images/media/42',
+      'ph://native-photo-id',
+    ])('returns null for native local preview %s', (uri) => {
+      expect(isLocalPreviewUrl(uri)).toBe(true);
+      expect(sanitizeCoverUrl(uri)).toBeNull();
+    });
+
     it('returns the URL for server URLs', () => {
       expect(sanitizeCoverUrl('https://cdn.com/cover.jpg')).toBe('https://cdn.com/cover.jpg');
     });

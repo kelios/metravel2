@@ -26,6 +26,8 @@ interface CollapsibleBlockProps {
   headerActions?: React.ReactNode;
   compactMode?: boolean;
   minHeight?: number;
+  showExpandHint?: boolean;
+  unmountWhenCollapsed?: boolean;
 }
 
 const spacing = DESIGN_TOKENS.spacing;
@@ -48,6 +50,8 @@ function CollapsibleBlock({
   headerActions,
   compactMode = false,
   minHeight = 0,
+  showExpandHint = true,
+  unmountWhenCollapsed = false,
 }: CollapsibleBlockProps) {
   const colors = useThemedColors();
 
@@ -146,7 +150,7 @@ function CollapsibleBlock({
     headerCompact: {
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.xs,
-      minHeight: 40,
+      minHeight: Platform.OS === 'android' ? 48 : 44,
     },
     headerLeft: {
       flexDirection: 'row',
@@ -156,6 +160,7 @@ function CollapsibleBlock({
       paddingVertical: spacing.xs,
       paddingHorizontal: spacing.xs,
       borderRadius: radii.sm,
+      minHeight: Platform.OS === 'android' ? 48 : 44,
       ...Platform.select({
         web: {
           transition: 'background-color 0.2s ease',
@@ -202,13 +207,13 @@ function CollapsibleBlock({
       gap: spacing.xs,
     },
     actionButton: {
-      width: 32,
-      height: 32,
+      width: Platform.OS === 'android' ? 48 : 44,
+      height: Platform.OS === 'android' ? 48 : 44,
       borderRadius: radii.sm,
       justifyContent: 'center',
       alignItems: 'center',
-      minWidth: 32,
-      minHeight: 32,
+      minWidth: Platform.OS === 'android' ? 48 : 44,
+      minHeight: Platform.OS === 'android' ? 48 : 44,
       ...Platform.select({
         web: {
           transition: 'background-color 0.2s ease',
@@ -240,7 +245,7 @@ function CollapsibleBlock({
       paddingHorizontal: spacing.sm,
       borderRadius: radii.sm,
       backgroundColor: colors.primarySoft,
-      minHeight: 32,
+      minHeight: Platform.OS === 'android' ? 48 : 44,
       ...Platform.select({
         web: {
           cursor: 'pointer',
@@ -300,6 +305,7 @@ function CollapsibleBlock({
           disabled={!collapsible}
           accessibilityRole={collapsible ? 'button' : undefined}
           accessibilityLabel={collapsible ? `${isExpanded ? i18nT('shared:components.ui.CollapsibleBlock.svernut_87bd01e3') : i18nT('shared:components.ui.CollapsibleBlock.razvernut_86ab35d3')}: ${title}` : title}
+          accessibilityState={collapsible ? { expanded: isExpanded } : undefined}
           {...Platform.select({
             web: {
               cursor: collapsible ? 'pointer' : 'default',
@@ -322,7 +328,7 @@ function CollapsibleBlock({
               <Text style={styles.description} numberOfLines={1}>{description}</Text>
             )}
             {/* ✅ UX УЛУЧШЕНИЕ: Индикатор что блок можно развернуть */}
-            {collapsible && !isExpanded && (
+            {showExpandHint && collapsible && !isExpanded && (
               <Text style={styles.expandHint} numberOfLines={1}>
                 {i18nT('shared:components.ui.CollapsibleBlock.nazhmite_chtoby_razvernut_3dc19c66')}</Text>
             )}
@@ -337,6 +343,7 @@ function CollapsibleBlock({
               onPress={handleToggle}
               style={styles.actionButton}
               accessibilityLabel={isExpanded ? i18nT('shared:components.ui.CollapsibleBlock.svernut_blok_ed41ac29') : i18nT('shared:components.ui.CollapsibleBlock.razvernut_blok_0acd6f55')}
+              accessibilityState={{ expanded: isExpanded }}
               hitSlop={8}
               {...Platform.select({
                 web: {
@@ -382,7 +389,7 @@ function CollapsibleBlock({
       </View>
 
       {/* Содержимое блока с анимацией */}
-      <Animated.View
+      {isExpanded || !unmountWhenCollapsed ? <Animated.View
         style={[
           styles.content,
           Platform.OS === 'web'
@@ -393,6 +400,8 @@ function CollapsibleBlock({
                 transition: 'max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1)',
                 willChange: 'max-height',
               } as any)
+            : unmountWhenCollapsed
+              ? { overflow: 'hidden' }
             : {
                 maxHeight: heightInterpolated,
                 overflow: 'hidden',
@@ -403,7 +412,7 @@ function CollapsibleBlock({
         <View ref={contentRef} style={styles.contentInner}>
           {children}
         </View>
-      </Animated.View>
+      </Animated.View> : null}
     </Animated.View>
   );
 }

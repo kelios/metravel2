@@ -1,5 +1,5 @@
 // E5: Refactored — state/logic extracted to usePhotoUpload hook
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Feather from '@expo/vector-icons/Feather';
@@ -7,7 +7,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
-import { usePhotoUpload, chooseFallbackUrl } from '@/hooks/usePhotoUpload';
+import { usePhotoUpload, chooseFallbackUrl, type NativeUploadFile } from '@/hooks/usePhotoUpload';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -146,6 +146,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [pickerError, setPickerError] = useState<string | null>(null);
 
   const {
     loading, uploadProgress, error, uploadMessage,
@@ -161,21 +162,59 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     };
   }, [loading, onUploadStateChange]);
 
+  const uploadPickedAsset = useCallback(async (asset: ImagePicker.ImagePickerAsset) => {
+    if (!asset.uri) return;
+    const file: NativeUploadFile = {
+      uri: asset.uri,
+      name: asset.fileName || 'photo.jpg',
+      type: asset.mimeType || 'image/jpeg',
+      size: asset.fileSize,
+    };
+    await handleUploadImage(file);
+  }, [handleUploadImage]);
+
   const pickImageFromGallery = async () => {
     if (disabled) return;
     if (Platform.OS === 'web') return;
     try {
+      setPickerError(null);
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setPickerError(i18nT('travel:components.travel.ImageGalleryComponent.galleryPermissionMessage'));
+        return;
+      }
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         quality: 0.8,
         exif: false,
       });
       if (result.canceled) return;
       const asset = result.assets?.[0];
-      if (!asset?.uri) return;
-      await handleUploadImage({ uri: asset.uri, name: asset.fileName || 'photo.jpg', type: asset.mimeType || 'image/jpeg' });
+      if (asset) await uploadPickedAsset(asset);
     } catch {
-      // Ошибка выбора отобразится через error-состояние usePhotoUpload при загрузке.
+      setPickerError(i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675'));
+    }
+  };
+
+  const takePhoto = async () => {
+    if (disabled || Platform.OS === 'web') return;
+    try {
+      setPickerError(null);
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setPickerError(i18nT('travel:components.travel.ImageGalleryComponent.cameraPermissionMessage'));
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        exif: false,
+      });
+      if (result.canceled) return;
+      const asset = result.assets?.[0];
+      if (asset) await uploadPickedAsset(asset);
+    } catch {
+      setPickerError(i18nT('travel:components.travel.ImageGalleryComponent.takePhotoFailed'));
     }
   };
 
@@ -205,15 +244,31 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   // Native (iOS/Android)
   return (
     <View style={styles.container}>
-      <Button
-        variant="primary"
-        fullWidth
-        onPress={pickImageFromGallery}
-        disabled={disabled}
-        loading={loading}
-        icon={<Feather name="upload-cloud" size={16} color={colors.textOnPrimary} />}
-        label={currentDisplayUrl ? i18nT('travel:components.travel.PhotoUploadWithPreview.zamenit_foto_b3cc1485') : i18nT('travel:components.travel.PhotoUploadWithPreview.zagruzit_foto_9cd3d4f7')}
-      />
+      <View style={styles.nativeActions}>
+        <View style={styles.nativeAction}>
+          <Button
+            variant="primary"
+            fullWidth
+            onPress={pickImageFromGallery}
+            disabled={disabled}
+            loading={loading}
+            icon={<Feather name="image" size={16} color={colors.textOnPrimary} />}
+            label={i18nT('travel:components.travel.ImageGalleryComponent.vybrat_iz_galerei_fbf8b2e6')}
+            testID="photo-upload-gallery-button"
+          />
+        </View>
+        <View style={styles.nativeAction}>
+          <Button
+            variant="outline"
+            fullWidth
+            onPress={takePhoto}
+            disabled={disabled || loading}
+            icon={<Feather name="camera" size={16} color={colors.text} />}
+            label={i18nT('travel:components.travel.ImageGalleryComponent.sdelat_foto_79fec14d')}
+            testID="photo-upload-camera-button"
+          />
+        </View>
+      </View>
       {currentDisplayUrl ? (
         <View style={styles.nativePreviewContainer}>
           <ImageCardMedia src={currentDisplayUrl} fit="contain" blurBackground loading="lazy" priority="low" style={styles.nativePreviewImage as any} />
@@ -225,8 +280,8 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
           )}
         </View>
       ) : null}
-      {error && (
-        <View style={styles.errorContainer}><Feather name="alert-circle" size={14} color={colors.danger} /><Text style={styles.errorText}>{error}</Text></View>
+      {(error || pickerError) && (
+        <View style={styles.errorContainer}><Feather name="alert-circle" size={14} color={colors.danger} /><Text style={styles.errorText}>{error || pickerError}</Text></View>
       )}
       {uploadMessage && !error && (
         <View style={styles.successContainer}><Feather name="check-circle" size={14} color={colors.success} /><Text style={styles.successText}>{uploadMessage}</Text></View>
@@ -293,9 +348,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>): any => ({
   nativeRemoveButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     padding: DESIGN_TOKENS.spacing.sm, backgroundColor: colors.surface,
-    borderTopWidth: 1, borderTopColor: colors.border,
+    borderTopWidth: 1, borderTopColor: colors.border, minHeight: Platform.OS === 'android' ? 48 : 44,
   },
   nativeRemoveText: { fontSize: 13, color: colors.danger, fontWeight: '500' },
+  nativeActions: { gap: DESIGN_TOKENS.spacing.sm },
+  nativeAction: { width: '100%' },
 });
 
 export default React.memo(PhotoUploadWithPreview);

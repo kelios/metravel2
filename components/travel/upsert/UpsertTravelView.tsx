@@ -1,21 +1,22 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
-import NetInfo from '@react-native-community/netinfo';
 import { useRouter } from 'expo-router';
 
+import { getErrorStatus } from '@/api/parsers/apiResponseParser';
 import DraftRecoveryDialog from '@/components/travel/DraftRecoveryDialog';
 import TravelPreviewModal from '@/components/travel/TravelPreviewModal';
 import type { UpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
 import WizardExitDialog from '@/components/travel/upsert/WizardExitDialog';
 import WizardSkeleton from '@/components/travel/upsert/WizardSkeleton';
+import Button from '@/components/ui/Button';
+import EmptyState from '@/components/ui/EmptyState';
 import WizardStepRouter, {
   type CommonStepProps,
   type StepNavigationProps,
 } from '@/components/travel/upsert/WizardStepRouter';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useTravelPreview } from '@/hooks/useTravelPreview';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
@@ -32,12 +33,6 @@ type Styles = ReturnType<typeof createStyles>;
 
 interface UpsertTravelViewProps {
   controller: UpsertTravelController;
-}
-
-interface ResponsiveFlags {
-  isDesktop: boolean;
-  isTablet: boolean;
-  isMobile: boolean;
 }
 
 interface WizardStateProps {
@@ -62,6 +57,7 @@ interface EmptyStateProps {
   actions?: EmptyStateAction[];
   testID: string;
   accessibilityLabel: string;
+  variant?: 'default' | 'error';
 }
 
 const OfflineBanner = ({ colors, isVisible }: { colors: Colors; isVisible: boolean }) => {
@@ -96,6 +92,48 @@ const OfflineBanner = ({ colors, isVisible }: { colors: Colors; isVisible: boole
   );
 };
 
+const SafetyBanner = ({
+  colors,
+  icon,
+  message,
+  tone,
+  action,
+}: {
+  colors: Colors;
+  icon: React.ComponentProps<typeof Feather>['name'];
+  message: string;
+  tone: 'warning' | 'danger';
+  action?: { label: string; onPress: () => void };
+}) => {
+  const isDanger = tone === 'danger';
+  const foreground = isDanger ? colors.dangerDark : colors.warningDark;
+  return (
+    <View
+      style={[
+        stylesStatic.safetyBanner,
+        {
+          backgroundColor: isDanger ? colors.dangerSoft : colors.warningSoft,
+          borderColor: isDanger ? colors.dangerLight : colors.warningLight,
+        },
+      ]}
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+    >
+      <Feather name={icon} size={18} color={foreground} />
+      <Text style={[stylesStatic.safetyText, { color: foreground }]}>{message}</Text>
+      {action ? (
+        <Button
+          label={action.label}
+          accessibilityLabel={action.label}
+          variant={isDanger ? 'danger-outline' : 'outline'}
+          size="sm"
+          onPress={action.onPress}
+        />
+      ) : null}
+    </View>
+  );
+};
+
 const EmptyStateScreen = ({
   styles,
   icon,
@@ -105,34 +143,27 @@ const EmptyStateScreen = ({
   actions = [],
   testID,
   accessibilityLabel,
+  variant = 'default',
 }: EmptyStateProps) => (
   <SafeAreaView style={styles.container} testID={testID} accessibilityLabel={accessibilityLabel}>
-    <View style={styles.centeredScreen}>
-      <Feather name={icon} size={48} color={iconColor} style={styles.iconSpacing} />
-      <Text style={styles.errorTitle}>{title}</Text>
-      <Text style={styles.errorText}>{text}</Text>
-
-      {actions.length > 0 && (
-        <View style={styles.actionRow}>
-          {actions.map((action) => {
-            const isPrimary = action.variant !== 'secondary';
-            return (
-              <Pressable
-                key={action.label}
-                onPress={action.onPress}
-                style={isPrimary ? styles.actionPrimary : styles.actionSecondary}
-                accessibilityRole="button"
-                accessibilityLabel={action.accessibilityLabel}
-              >
-                <Text style={isPrimary ? styles.actionPrimaryText : styles.actionSecondaryText}>
-                  {action.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
-    </View>
+    <EmptyState
+      icon={icon}
+      iconSize={48}
+      iconColor={iconColor}
+      title={title}
+      description={text}
+      variant={variant}
+      action={actions[0] ? {
+        label: actions[0].label,
+        accessibilityLabel: actions[0].accessibilityLabel,
+        onPress: actions[0].onPress,
+      } : undefined}
+      secondaryAction={actions[1] ? {
+        label: actions[1].label,
+        accessibilityLabel: actions[1].accessibilityLabel,
+        onPress: actions[1].onPress,
+      } : undefined}
+    />
   </SafeAreaView>
 );
 
@@ -265,6 +296,7 @@ const LoadErrorState = ({
       actions={actions}
       testID="travel-upsert.load-error"
       accessibilityLabel={i18nT('travel:components.travel.upsert.UpsertTravelView.oshibka_zagruzki_puteshestviya_a6e2e4bd')}
+      variant={presentation.iconTone === 'danger' ? 'error' : 'default'}
     />
   );
 };
@@ -297,6 +329,7 @@ const AccessDeniedState = ({ colors, styles, router }: WizardStateProps) => {
       actions={actions}
       testID="travel-upsert.no-access"
       accessibilityLabel={i18nT('travel:components.travel.upsert.UpsertTravelView.net_dostupa_k_redaktirovaniyu_736d7f48')}
+      variant="error"
     />
   );
 };
@@ -363,51 +396,14 @@ const AuthRequiredState = ({ colors, styles, router }: WizardStateProps) => {
   );
 };
 
-function useOfflineStatus() {
-  const [isOffline, setIsOffline] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    const apply = (state: { isConnected?: boolean | null; isInternetReachable?: boolean | null }) => {
-      if (!active) return;
-      const nextIsOffline = state.isConnected === false || state.isInternetReachable === false;
-      setIsOffline((current) => (current === nextIsOffline ? current : nextIsOffline));
-    };
-
-    // Первичный снимок: addEventListener на части платформ дёргает callback только при смене
-    // состояния, поэтому без fetch() баннер не покажется, если форма открыта уже без сети.
-    void NetInfo.fetch().then(apply);
-    const unsubscribe = NetInfo.addEventListener(apply);
-
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, []);
-
-  return isOffline;
-}
-
-function useResponsiveFlags(): ResponsiveFlags {
-  const { isDesktop, isTablet, isMobile } = useResponsive();
-  return useMemo(
-    () => ({ isDesktop, isTablet, isMobile }),
-    [isDesktop, isMobile, isTablet],
-  );
-}
-
 export default function UpsertTravelView({ controller }: UpsertTravelViewProps) {
   const router = useRouter();
   const previewState = useTravelPreview();
-  const responsive = useResponsiveFlags();
-  const isOffline = useOfflineStatus();
+  const isOffline = !controller.autosave.isOnline;
   const { colors, wizard } = controller;
   const hasTrackedRouteCreateStartedRef = useRef(false);
 
-  const styles = useMemo(
-    () => createStyles(colors, responsive),
-    [colors, responsive],
-  );
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     if (hasTrackedRouteCreateStartedRef.current) return;
@@ -440,6 +436,16 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
 
     router.push(path as any);
   }, [controller.formData?.id, router]);
+
+  const handleSessionLogin = useCallback(async () => {
+    const draftSaved = await controller.draftRecovery.flushDraft();
+    if (!draftSaved) return;
+    const id = controller.formData?.id;
+    const redirect = id ? `/travel/${encodeURIComponent(String(id))}` : '/travel/new';
+    router.push(buildLoginHref({ redirect, intent: 'edit-travel' }) as any);
+  }, [controller.draftRecovery, controller.formData?.id, router]);
+
+  const isSessionExpired = getErrorStatus(controller.autosave.error) === 401;
 
   const commonStepProps = useMemo<CommonStepProps>(
     () => ({
@@ -524,6 +530,26 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
       />
 
       <OfflineBanner colors={colors} isVisible={isOffline} />
+      {controller.draftRecovery.localSaveError ? (
+        <SafetyBanner
+          colors={colors}
+          icon="hard-drive"
+          tone="warning"
+          message={i18nT('travel:components.travel.upsert.UpsertTravelView.localDraftSaveFailed')}
+        />
+      ) : null}
+      {isSessionExpired ? (
+        <SafetyBanner
+          colors={colors}
+          icon="log-in"
+          tone="danger"
+          message={i18nT('travel:components.travel.upsert.UpsertTravelView.sessiya_istekla_voydite_v_akkaunt_chtoby_pro_00f92c37')}
+          action={{
+            label: i18nT('travel:components.travel.upsert.UpsertTravelView.voyti_c3df4ff8'),
+            onPress: handleSessionLogin,
+          }}
+        />
+      ) : null}
 
       <WizardStepRouter
         controller={controller}
@@ -549,20 +575,38 @@ const stylesStatic = StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: '500',
   },
+  safetyBanner: {
+    minHeight: 48,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    borderBottomWidth: 1,
+  },
+  safetyText: {
+    flex: 1,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '600',
+  },
 });
 
-const createStyles = (colors: Colors, responsive: ResponsiveFlags) =>
+const createStyles = (colors: Colors) =>
   StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
     },
+    // Экраны пустых/ошибочных состояний (LoadError/AccessDenied/AuthRequired) и
+    // fallback WizardStepRouter. maxWidth 480 + alignSelf center корректны и на
+    // мобильном (ширина всё равно < 480), поэтому responsive-параметр не нужен.
     centeredScreen: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
       padding: DESIGN_TOKENS.spacing.xl,
-      maxWidth: responsive.isDesktop ? 480 : '100%',
+      maxWidth: 480,
       alignSelf: 'center',
       width: '100%',
     },
@@ -583,10 +627,10 @@ const createStyles = (colors: Colors, responsive: ResponsiveFlags) =>
       lineHeight: 24,
     },
     actionRow: {
-      flexDirection: responsive.isMobile ? 'column' : 'row',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: DESIGN_TOKENS.spacing.sm,
       marginTop: DESIGN_TOKENS.spacing.lg,
-      width: responsive.isMobile ? '100%' : undefined,
       justifyContent: 'center',
     },
     actionPrimary: {

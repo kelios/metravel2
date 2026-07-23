@@ -24,8 +24,13 @@
 Эффект в `components/travel/upsert/useUpsertTravelController.ts`:
 `form.formData` изменился **И** `formState.isDirty` **И** `hasUserInteracted`
 **И** автосейв не в статусе `saving`/`saved` → `saveDraft(formData)` (дебаунс 2с).
-На web дополнительно `flushDraft` по `pagehide`/`visibilitychange` — мгновенная запись
-последнего pending-снапшота при уходе со страницы.
+На web дополнительно `flushDraft` по `pagehide`/`visibilitychange`, а на native — по
+`AppState` `inactive`/`background`: последний pending-снапшот пишется немедленно при
+уходе со страницы или сворачивании приложения. Ошибка записи не скрывается: хук
+держит `storageError`, а визард показывает постоянное предупреждение до следующей
+успешной локальной записи. Записи сериализованы, поэтому старый async write не может
+перезаписать новый; переход по CTA повторной авторизации сначала дожидается
+`flushDraft` и остаётся в редакторе, если локальное хранилище отклонило запись.
 
 Ловушки (обе реальные, обе — источники «фантомных» черновиков):
 - `isDirty` — это **структурный** deep-equal с baseline формы. Программные мутации
@@ -77,8 +82,9 @@ upsert-ответ → `applySavedData`), поэтому полный deep-equal 
 - Точки `coordsMeTravel`: `lat/lng` (число, округление 1e-6), `address`, `categories`.
   **Без `id`** (меняется при rehydrate) и **без `image`** (blob-превью не переживает
   reload; фото точки едет отдельным upload-пайплайном).
-- Галерея: `id`, иначе URL без origin; `blob:`/`data:` игнорируются; отсортировано.
-- Обложка `travel_image_thumb_url`: URL без origin; `blob:`/`data:` → отсутствует.
+- Галерея: `id`, иначе URL без origin; transient preview URI (`blob:`, `data:`,
+  `file:`, `content:`, `ph:`, `assets-library:`) игнорируются; отсортировано.
+- Обложка `travel_image_thumb_url`: URL без origin; transient preview URI → отсутствует.
 - `visa` (bool). **Игнорируются**: `id, slug, updated_at, publish, moderation`,
   счётчики и любые эхо-поля сервера — черновик не переносит серверные статусы.
 

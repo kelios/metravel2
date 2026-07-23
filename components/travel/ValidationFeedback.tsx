@@ -34,22 +34,29 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({
   
   let status: 'error' | 'warning' | 'success' = 'success';
   let message = '';
+  const characterNoun = (count: number) => selectLocalizedPlural(
+    count,
+    i18nT('travel:common.characterNoun_one'),
+    i18nT('travel:common.characterNoun_few'),
+    i18nT('travel:common.characterNoun_many'),
+    i18nT('travel:common.characterNoun_other'),
+  );
   
   if (hasMin && current < min) {
     status = 'error';
-    message = i18nT('travel:components.travel.ValidationFeedback.minimum', { value1: current, value2: min });
+    message = i18nT('travel:components.travel.ValidationFeedback.minimum', { value1: current, value2: min, value3: characterNoun(min) });
   } else if (hasMax && current > max) {
     status = 'error';
-    message = i18nT('travel:components.travel.ValidationFeedback.limitExceeded', { value1: current, value2: max });
+    message = i18nT('travel:components.travel.ValidationFeedback.limitExceeded', { value1: current, value2: max, value3: characterNoun(max) });
   } else if (hasMax) {
-    message = i18nT('travel:components.travel.ValidationFeedback.withMaximum', { value1: current, value2: max });
+    message = i18nT('travel:components.travel.ValidationFeedback.withMaximum', { value1: current, value2: max, value3: characterNoun(max) });
     if (current > max * 0.9) {
       status = 'warning';
     }
   } else if (hasMin) {
-    message = i18nT('travel:components.travel.ValidationFeedback.characterCount', { value1: current });
+    message = i18nT('travel:components.travel.ValidationFeedback.characterCount', { value1: current, value2: characterNoun(current) });
   } else {
-    message = i18nT('travel:components.travel.ValidationFeedback.characterCount', { value1: current });
+    message = i18nT('travel:components.travel.ValidationFeedback.characterCount', { value1: current, value2: characterNoun(current) });
   }
 
   const getColor = () => {

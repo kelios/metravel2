@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
     KeyboardAvoidingView,
     ScrollView,
@@ -20,6 +20,7 @@ import InstagramPublishPanel from '@/components/travel/InstagramPublishPanel';
 import FacebookPublishPanel from '@/components/travel/FacebookPublishPanel';
 import PublishModerationAdminPanel from '@/components/travel/PublishModerationAdminPanel';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import Button from '@/components/ui/Button';
 import PublishStatusSummaryPanel from '@/components/travel/PublishStatusSummaryPanel';
 import {
     INSTAGRAM_CAPTION_MAX_LENGTH,
@@ -30,6 +31,8 @@ import type { TravelWizardStepPublishProps } from '@/components/travel/TravelWiz
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
 import WizardStepFooter from '@/components/travel/upsert/WizardStepFooter';
 import { translate as i18nT } from '@/i18n';
+import { shareTravel } from '@/utils/shareTravel';
+import Feather from '@expo/vector-icons/Feather';
 
 const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     currentStep,
@@ -107,6 +110,16 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         defaultMessage: instagram.editableInstagramCaption,
     });
 
+    const shareId = formData.slug || formData.id;
+    const canShare = Boolean(shareId && formData.publish);
+    const handleShare = useCallback(() => {
+        if (!canShare || !shareId) return;
+        void shareTravel({
+            id: shareId,
+            title: String(formData.name || ''),
+        });
+    }, [canShare, formData.name, shareId]);
+
     const readinessNote = (
         <View style={styles.readinessNote}>
             <Text style={styles.readinessNoteText}>
@@ -160,6 +173,18 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 >
                     <View style={styles.contentInner}>
                     {isMobile ? readinessNote : null}
+                    {canShare ? (
+                        <Button
+                            label={i18nT('travel:components.travel.details.sections.TravelDetailsFooterSection.podelitsya_marshrutom_18019d80')}
+                            accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsFooterSection.podelitsya_marshrutom_18019d80')}
+                            variant="outline"
+                            fullWidth
+                            icon={<Feather name="share-2" size={16} color={colors.text} />}
+                            onPress={handleShare}
+                            testID="travel-publish-share-button"
+                            style={styles.shareButton}
+                        />
+                    ) : null}
                     <PublishStatusSummaryPanel
                         colors={colors}
                         styles={styles}

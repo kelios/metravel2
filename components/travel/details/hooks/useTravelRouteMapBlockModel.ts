@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { translate as i18nT } from '@/i18n'
+import { splitRouteLineSegments } from '@/utils/routeFileParser'
 
 
 export function useTravelRouteMapBlockModel({
@@ -21,13 +22,19 @@ export function useTravelRouteMapBlockModel({
 
   const routeLines = useMemo(
     () =>
-      routePreviewItems.map((item) => ({
-        color: item.color,
-        coords: (item.preview?.linePoints ?? []).map((point: any) => {
-          const [latStr, lngStr] = String(point.coord ?? '').replace(/;/g, ',').split(',')
-          return [Number(latStr), Number(lngStr)] as [number, number]
-        }),
-      })),
+      routePreviewItems.flatMap((item) =>
+        // One polyline per teleport-free segment so stitched jumps (e.g. <wpt>
+        // fragments merged into the track) never draw a straight connector.
+        splitRouteLineSegments(item.preview?.linePoints ?? [])
+          .filter((segment) => segment.length >= 2)
+          .map((segment) => ({
+            color: item.color,
+            coords: segment.map((point: any) => {
+              const [latStr, lngStr] = String(point.coord ?? '').replace(/;/g, ',').split(',')
+              return [Number(latStr), Number(lngStr)] as [number, number]
+            }),
+          }))
+      ),
     [routePreviewItems]
   )
 

@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { useDraftRecovery } from '@/hooks/useDraftRecovery';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
@@ -51,6 +51,7 @@ describe('useDraftRecovery', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    jest.restoreAllMocks();
   });
 
   afterAll(() => {
@@ -611,5 +612,104 @@ describe('useDraftRecovery', () => {
       expect(stored).toBeTruthy();
       expect(JSON.parse(stored as string).data).toEqual({ name: 'draft-on-hide' });
     });
+  });
+
+  it('flushes the latest pending draft when Android moves to background', async () => {
+    setPlatformOs('android');
+    let appStateListener: ((state: string) => void) | undefined;
+    const remove = jest.fn();
+    jest.spyOn(AppState, 'addEventListener').mockImplementation((event, listener: any) => {
+      if (event === 'change') appStateListener = listener;
+      return { remove } as any;
+    });
+
+    const { result, unmount } = renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: { name: 'server-data' } as any,
+      }),
+    );
+
+    act(() => result.current.saveDraft({ name: 'native-background-draft' } as any));
+    await act(async () => {
+      appStateListener?.('background');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      draftKey,
+      expect.stringContaining('native-background-draft'),
+    );
+    unmount();
+    expect(remove).toHaveBeenCalled();
+  });
+
+  it('exposes local persistence failure until a later draft write succeeds', async () => {
+    jest.useFakeTimers();
+    AsyncStorage.setItem.mockRejectedValueOnce(new Error('storage full'));
+    const { result } = renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: { name: 'server-data' } as any,
+      }),
+    );
+
+    act(() => result.current.saveDraft({ name: 'first edit' } as any));
+    await act(async () => {
+      jest.advanceTimersByTime(2100);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.storageError?.message).toBe('storage full');
+
+    act(() => result.current.saveDraft({ name: 'second edit' } as any));
+    await act(async () => {
+      jest.advanceTimersByTime(2100);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.storageError).toBeNull();
+  });
+
+  it('serializes overlapping flushes so the newest draft is written last', async () => {
+    let resolveFirstWrite: (() => void) | undefined;
+    AsyncStorage.setItem.mockImplementationOnce(
+      () => new Promise<void>((resolve) => {
+        resolveFirstWrite = resolve;
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: { name: 'server-data' } as any,
+      }),
+    );
+
+    act(() => result.current.saveDraft({ name: 'first pending edit' } as any));
+    let firstFlush!: Promise<boolean>;
+    act(() => {
+      firstFlush = result.current.flushDraft();
+    });
+    await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1));
+
+    act(() => result.current.saveDraft({ name: 'newest pending edit' } as any));
+    expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveFirstWrite?.();
+      await firstFlush;
+    });
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledTimes(2);
+    expect(AsyncStorage.setItem.mock.calls[0][1]).toContain('first pending edit');
+    expect(AsyncStorage.setItem.mock.calls[1][1]).toContain('newest pending edit');
   });
 });

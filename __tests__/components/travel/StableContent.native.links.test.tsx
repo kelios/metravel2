@@ -56,13 +56,15 @@ describe('StableContent (native) links', () => {
     jest.clearAllMocks();
   });
 
-  const renderNative = () => {
+  const renderNative = (
+    html = '<p>См. <a href="https://metravel.by/travels/test">рядом</a></p>'
+  ) => {
     const StableContent = require('@/components/travel/StableContent').default;
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(
         <StableContent
-          html={'<p>См. <a href="https://metravel.by/travels/test">рядом</a></p>'}
+          html={html}
           contentWidth={360}
         />
       );
@@ -90,6 +92,26 @@ describe('StableContent (native) links', () => {
     });
     expect(props.tagsStyles?.li?.marginVertical).toBeUndefined();
     expect(props.enableExperimentalGhostLinesPrevention).toBe(true);
+  });
+
+  it('android: длинный пункт списка ограничен доступной шириной и переносится после маркера', () => {
+    setPlatformOs('android');
+    renderNative([
+      '<ol>',
+      '<li><strong>Длина маршрута:</strong> около 100 км</li>',
+      '<li><strong>Высшая точка:</strong> гора Броккен (1 142 м)</li>',
+      '</ol>',
+    ].join(''));
+
+    const props = renderHTMLProps[renderHTMLProps.length - 1];
+    expect(props.source.html).toContain('около 100 км');
+    expect(props.source.html).toContain('гора Броккен (1 142 м)');
+    expect(props.tagsStyles?.li).toMatchObject({
+      flexShrink: 1,
+      minWidth: 0,
+      maxWidth: '100%',
+    });
+    expect(props.renderersProps?.ol?.enableDynamicMarkerBoxWidth).toBe(true);
   });
 
   it('android: onPress внутренней ссылки ведёт через router.push внутри приложения', () => {

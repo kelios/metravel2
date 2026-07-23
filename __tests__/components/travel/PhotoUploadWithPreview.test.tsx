@@ -2,6 +2,7 @@ import { render, waitFor, act } from '@testing-library/react-native';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { uploadImage } from '@/api/misc';
 import { Platform } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 
 const ORIGINAL_PLATFORM_OS = Platform.OS;
 
@@ -74,7 +75,49 @@ describe('PhotoUploadWithPreview', () => {
     describe('Rendering', () => {
         it('should render upload button on native platforms', () => {
             const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
+            expect(getByText('Сделать фото')).toBeTruthy();
+        });
+
+        it('native: opens the camera and uploads the returned asset with file size', async () => {
+            Object.defineProperty(Platform, 'OS', { value: 'android' });
+            (ImagePicker.requestCameraPermissionsAsync as jest.Mock).mockResolvedValueOnce({ granted: true });
+            (ImagePicker.launchCameraAsync as jest.Mock).mockResolvedValueOnce({
+                canceled: false,
+                assets: [{
+                    uri: 'file:///cache/camera.jpg',
+                    fileName: 'camera.jpg',
+                    mimeType: 'image/jpeg',
+                    fileSize: 2048,
+                }],
+            });
+            mockUploadImage.mockResolvedValueOnce({ url: 'https://cdn.example/camera.jpg' } as any);
+
+            const screen = render(<PhotoUploadWithPreview {...defaultProps} />);
+            await act(async () => {
+                screen.getByTestId('photo-upload-camera-button').props.onPress();
+                await Promise.resolve();
+                await Promise.resolve();
+            });
+
+            expect(ImagePicker.launchCameraAsync).toHaveBeenCalledWith(
+                expect.objectContaining({ mediaTypes: ['images'] }),
+            );
+            await waitFor(() => expect(mockUploadImage).toHaveBeenCalledTimes(1));
+        });
+
+        it('native: surfaces denied camera permission without opening the camera', async () => {
+            Object.defineProperty(Platform, 'OS', { value: 'android' });
+            (ImagePicker.requestCameraPermissionsAsync as jest.Mock).mockResolvedValueOnce({ granted: false });
+            const screen = render(<PhotoUploadWithPreview {...defaultProps} />);
+
+            await act(async () => {
+                screen.getByTestId('photo-upload-camera-button').props.onPress();
+                await Promise.resolve();
+            });
+
+            expect(screen.getByText('Требуется доступ к камере')).toBeTruthy();
+            expect(ImagePicker.launchCameraAsync).not.toHaveBeenCalled();
         });
 
         it('should display placeholder text when provided', () => {
@@ -237,7 +280,7 @@ describe('PhotoUploadWithPreview', () => {
 
             // Simulate upload would happen here in real scenario
             // For now, verify the component renders
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
         it('web: calls uploadImage on first drop when idTravel is provided (regression for "preview only, no /upload")', async () => {

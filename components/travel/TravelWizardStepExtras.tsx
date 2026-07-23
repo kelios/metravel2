@@ -5,7 +5,7 @@ import { KeyboardAvoidingView, Platform, View, Text, StyleSheet, ScrollView, fin
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import GroupedFiltersSection from '@/components/travel/GroupedFiltersSection';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
-import { ValidationSummary } from '@/components/travel/ValidationFeedback';
+import { CollapsibleValidationSummary, ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { TravelFormData, Travel, type TravelFilters } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -193,14 +193,23 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                     onPreview={onPreview}
                     onOpenPublic={onOpenPublic}
                 />
-                {!isMobile && validation.warnings.length > 0 && (
+                {validation.warnings.length > 0 && (
                     <View style={styles.validationSummaryWrapper}>
-                        <ValidationSummary
-                            errorCount={validation.errors.length}
-                            warningCount={validation.warnings.length}
-                            errorMessages={validation.errors.map(e => e.message)}
-                            warningMessages={validation.warnings.map(w => w.message)}
-                        />
+                        {isMobile ? (
+                            <CollapsibleValidationSummary
+                                errorCount={validation.errors.length}
+                                warningCount={validation.warnings.length}
+                                errorMessages={validation.errors.map(e => e.message)}
+                                warningMessages={validation.warnings.map(w => w.message)}
+                            />
+                        ) : (
+                            <ValidationSummary
+                                errorCount={validation.errors.length}
+                                warningCount={validation.warnings.length}
+                                errorMessages={validation.errors.map(e => e.message)}
+                                warningMessages={validation.warnings.map(w => w.message)}
+                            />
+                        )}
                     </View>
                 )}
                 <ScrollView

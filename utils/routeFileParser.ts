@@ -2,13 +2,21 @@ import type { ParsedRoutePoint, ParsedRoutePreview, RouteElevationSample } from 
 
 const EARTH_RADIUS_M = 6371000;
 
-// Consecutive track points farther apart than this are treated as a recording
-// gap / teleport (e.g. separate <trkseg> stitched into one line) rather than a
-// real leg. Counting them inflates distance and elevation gain (the Модынь GPX
-// renders 410 km / +10213 m for what is a short walk), so the leg is skipped.
-// Kept high so sparse-but-legitimate route waypoints are not dropped — only
-// cross-region jumps between stitched segments are filtered out.
-const MAX_LEG_METERS = 20000;
+// A "teleport" leg is a jump between two consecutive line points that is far
+// larger than the route's own typical step — a recording gap (stitched <trkseg>),
+// or, more commonly, <wpt> POIs that the backend preview stitches into the track
+// line in document order (waypoints come before <trk>, so the merged line draws
+// straight connectors from the sparse POIs into the real track — the Harzer
+// Hexenstieg GPX shows a straight "triangle" plus a 52 km connector). Counting
+// such legs inflates distance/elevation and paints phantom straight lines.
+//
+// The threshold is median-aware instead of a fixed cap: a leg is a teleport when
+// it exceeds both an absolute floor AND a large multiple of the median leg. This
+// self-calibrates — for a dense track (median ~metres) even a few-km jump is a
+// teleport, while a genuinely sparse planned route (median ~km) keeps its legs
+// because none of them is an outlier relative to the rest.
+const MIN_TELEPORT_METERS = 3000;
+const TELEPORT_MEDIAN_FACTOR = 12;
 
 const toCoord = (lat: number, lng: number): string | null => {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
@@ -44,9 +52,33 @@ const distanceMeters = (a: { lat: number; lng: number }, b: { lat: number; lng: 
   return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)));
 };
 
+const medianOf = (values: number[]): number => {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = sorted.length >> 1;
+  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+};
+
+// Distance (in metres) above which a leg between two consecutive line points is
+// treated as a teleport rather than travelled distance. See MIN_TELEPORT_METERS.
+const teleportThresholdMeters = (linePoints: ParsedRoutePoint[]): number => {
+  const legs: number[] = [];
+  let prevCoord = parseCoordPair(linePoints[0]?.coord ?? '');
+  for (let i = 1; i < linePoints.length; i += 1) {
+    const currentCoord = parseCoordPair(linePoints[i].coord);
+    if (currentCoord && prevCoord) {
+      legs.push(distanceMeters(prevCoord, currentCoord));
+    }
+    if (currentCoord) prevCoord = currentCoord;
+  }
+  if (legs.length === 0) return MIN_TELEPORT_METERS;
+  return Math.max(MIN_TELEPORT_METERS, TELEPORT_MEDIAN_FACTOR * medianOf(legs));
+};
+
 export const calculateRouteDistanceKm = (linePoints: ParsedRoutePoint[]): number => {
   if (!Array.isArray(linePoints) || linePoints.length < 2) return 0;
 
+  const teleportMeters = teleportThresholdMeters(linePoints);
   let totalDistanceM = 0;
   let prevCoord = parseCoordPair(linePoints[0].coord);
 
@@ -54,7 +86,7 @@ export const calculateRouteDistanceKm = (linePoints: ParsedRoutePoint[]): number
     const currentCoord = parseCoordPair(linePoints[i].coord);
     if (currentCoord && prevCoord) {
       const legMeters = distanceMeters(prevCoord, currentCoord);
-      if (legMeters <= MAX_LEG_METERS) {
+      if (legMeters <= teleportMeters) {
         totalDistanceM += legMeters;
       }
     }
@@ -64,9 +96,37 @@ export const calculateRouteDistanceKm = (linePoints: ParsedRoutePoint[]): number
   return totalDistanceM / 1000;
 };
 
+// Split a line into contiguous segments, breaking wherever a teleport leg sits.
+// Waypoints stitched into a track become one-point fragments (each isolated by a
+// teleport on both sides) and can be dropped by callers that keep only real legs.
+export const splitRouteLineSegments = (linePoints: ParsedRoutePoint[]): ParsedRoutePoint[][] => {
+  if (!Array.isArray(linePoints) || linePoints.length === 0) return [];
+
+  const teleportMeters = teleportThresholdMeters(linePoints);
+  const segments: ParsedRoutePoint[][] = [];
+  let current: ParsedRoutePoint[] = [];
+  let prevCoord: { lat: number; lng: number } | null = null;
+
+  for (let i = 0; i < linePoints.length; i += 1) {
+    const point = linePoints[i];
+    const currentCoord = parseCoordPair(point.coord);
+    if (!currentCoord) continue;
+    if (prevCoord && distanceMeters(prevCoord, currentCoord) > teleportMeters) {
+      if (current.length > 0) segments.push(current);
+      current = [];
+    }
+    current.push(point);
+    prevCoord = currentCoord;
+  }
+  if (current.length > 0) segments.push(current);
+
+  return segments;
+};
+
 const buildElevationProfile = (linePoints: ParsedRoutePoint[]): RouteElevationSample[] => {
   if (!Array.isArray(linePoints) || linePoints.length < 2) return [];
 
+  const teleportMeters = teleportThresholdMeters(linePoints);
   let totalDistanceM = 0;
   let prevCoord = parseCoordPair(linePoints[0].coord);
   const profile: RouteElevationSample[] = [];
@@ -77,7 +137,7 @@ const buildElevationProfile = (linePoints: ParsedRoutePoint[]): RouteElevationSa
     const currentCoord = parseCoordPair(current.coord);
     if (currentCoord && prevCoord) {
       const legMeters = distanceMeters(prevCoord, currentCoord);
-      if (legMeters <= MAX_LEG_METERS) {
+      if (legMeters <= teleportMeters) {
         totalDistanceM += legMeters;
       } else {
         pendingGap = true;
@@ -347,3 +407,29 @@ export const parseRouteFilePreview = (text: string, ext?: string): ParsedRoutePr
 
 export const parseRouteFileToPoints = (text: string, ext?: string): ParsedRoutePoint[] =>
   parseRouteFilePreview(text, ext).linePoints;
+
+// Drop teleport-isolated fragments (typically <wpt> POIs the backend preview
+// stitches ahead of the real track) and rebuild the elevation profile from the
+// cleaned line so distance/elevation are measured on the track alone. A preview
+// with no teleport is returned untouched, so the common single-track case pays
+// nothing. Line points carry elevation, so the profile is rebuilt without any
+// re-download of the source file.
+export const sanitizeRoutePreview = (preview: ParsedRoutePreview): ParsedRoutePreview => {
+  const linePoints = Array.isArray(preview?.linePoints) ? preview.linePoints : [];
+  if (linePoints.length < 2) return preview;
+
+  const segments = splitRouteLineSegments(linePoints);
+  const totalPoints = segments.reduce((sum, segment) => sum + segment.length, 0);
+  // No teleport: a single segment covering every point — leave the preview as-is.
+  if (segments.length <= 1 && totalPoints === linePoints.length) return preview;
+
+  const cleaned = segments.filter((segment) => segment.length >= 2).flat();
+  // Never degrade a preview to unusable; keep the original if nothing real remains.
+  if (cleaned.length < 2) return preview;
+
+  return {
+    ...preview,
+    linePoints: cleaned,
+    elevationProfile: buildElevationProfile(cleaned),
+  };
+};

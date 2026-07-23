@@ -18,11 +18,13 @@ interface EmptyStateProps {
   action?: {
     label: string;
     onPress: () => void;
+    accessibilityLabel?: string;
     style?: StyleProp<ViewStyle>;
   };
   secondaryAction?: {
     label: string;
     onPress: () => void;
+    accessibilityLabel?: string;
   };
   iconSize?: number;
   iconColor?: string;
@@ -119,7 +121,7 @@ function EmptyState({
             variant="primary"
             size="md"
             style={[styles.actionButton, action.style]}
-            accessibilityLabel={action.label}
+            accessibilityLabel={action.accessibilityLabel ?? action.label}
           />
         )}
         {secondaryAction && (
@@ -129,7 +131,7 @@ function EmptyState({
             variant="ghost"
             size="md"
             style={[styles.secondaryActionButton, { backgroundColor: colors.primarySoft }]}
-            accessibilityLabel={secondaryAction.label}
+            accessibilityLabel={secondaryAction.accessibilityLabel ?? secondaryAction.label}
           />
         )}
       </View>

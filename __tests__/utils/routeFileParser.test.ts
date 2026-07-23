@@ -1,4 +1,32 @@
-import { calculateRouteDistanceKm, parseRouteFilePreview, parseRouteFilePreviews } from '@/utils/routeFileParser';
+import {
+  calculateRouteDistanceKm,
+  parseRouteFilePreview,
+  parseRouteFilePreviews,
+  sanitizeRoutePreview,
+  splitRouteLineSegments,
+} from '@/utils/routeFileParser';
+
+// A handful of far-apart waypoints (no elevation) stitched ahead of a short dense
+// track (with elevation) — the shape the backend preview produces when it merges
+// <wpt> POIs into the <trk> line, which paints straight connectors on the map.
+const buildContaminatedPreview = () => {
+  const waypoints = [
+    { coord: '53.0000,10.0000' },
+    { coord: '53.2000,10.5000' },
+    { coord: '52.5000,11.0000' },
+  ];
+  const track = Array.from({ length: 12 }, (_, i) => ({
+    coord: `52.1000,${(23.7 + i * 0.001).toFixed(4)}`,
+    elevation: 100 + i * 5,
+  }));
+  const linePoints = [...waypoints, ...track];
+  return {
+    linePoints,
+    // Server-style profile whose distances are offset by the phantom waypoint legs.
+    elevationProfile: track.map((point, i) => ({ distanceKm: 100 + i * 0.07, elevationM: point.elevation })),
+    trackFirstCoord: track[0].coord,
+  };
+};
 
 describe('routeFileParser', () => {
   it('keeps non-consecutive duplicate coordinates and preserves elevation values', () => {
@@ -75,6 +103,51 @@ describe('routeFileParser', () => {
     expect(parsed.elevationProfile[2].gapBefore).toBe(true);
     expect(parsed.elevationProfile[0].gapBefore).toBeUndefined();
     expect(parsed.elevationProfile[3].gapBefore).toBeUndefined();
+  });
+
+  it('isolates teleport-stitched waypoints into single-point segments', () => {
+    const { linePoints, trackFirstCoord } = buildContaminatedPreview();
+    const segments = splitRouteLineSegments(linePoints);
+
+    // Three lone waypoints + one contiguous track.
+    expect(segments).toHaveLength(4);
+    expect(segments.slice(0, 3).every((segment) => segment.length === 1)).toBe(true);
+    const track = segments[segments.length - 1];
+    expect(track).toHaveLength(12);
+    expect(track[0].coord).toBe(trackFirstCoord);
+  });
+
+  it('sanitizes a contaminated preview down to the real track and rebuilds the profile', () => {
+    const { linePoints, trackFirstCoord } = buildContaminatedPreview();
+    const preview = {
+      linePoints,
+      elevationProfile: buildContaminatedPreview().elevationProfile,
+    };
+    const sanitized = sanitizeRoutePreview(preview as any);
+
+    // Waypoint fragments dropped; only the 12-point track survives.
+    expect(sanitized.linePoints).toHaveLength(12);
+    expect(sanitized.linePoints[0].coord).toBe(trackFirstCoord);
+    // Profile rebuilt from the clean line: distances start at the track, not
+    // offset by the phantom waypoint legs.
+    expect(sanitized.elevationProfile[0].distanceKm).toBe(0);
+    expect(sanitized.elevationProfile).toHaveLength(12);
+    // Distance reflects the short track (< 1 km), not the cross-region jumps.
+    expect(calculateRouteDistanceKm(sanitized.linePoints)).toBeLessThan(1);
+  });
+
+  it('leaves a clean single-track preview untouched (same reference)', () => {
+    const preview = parseRouteFilePreview(
+      `<?xml version="1.0" encoding="UTF-8"?>
+<gpx><trk><trkseg>
+  <trkpt lat="52.1000" lon="23.7000"><ele>100</ele></trkpt>
+  <trkpt lat="52.1010" lon="23.7010"><ele>110</ele></trkpt>
+  <trkpt lat="52.1020" lon="23.7020"><ele>120</ele></trkpt>
+</trkseg></trk></gpx>`,
+      'gpx',
+    );
+
+    expect(sanitizeRoutePreview(preview)).toBe(preview);
   });
 
   it('splits GPX with multiple tracks into separate previews', () => {

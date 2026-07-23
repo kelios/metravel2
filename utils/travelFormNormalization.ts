@@ -40,13 +40,13 @@ export function getDraftNamePlaceholder(): string {
 }
 
 /**
- * Проверяет, является ли значение локальным превью (blob: или data:)
+ * Проверяет, является ли значение локальным превью web/native.
  */
 export function isLocalPreviewUrl(value: unknown): boolean {
     if (typeof value !== 'string') return false;
     const trimmed = value.trim();
     if (!trimmed) return false;
-    return /^(blob:|data:)/i.test(trimmed);
+    return /^(blob:|data:|file:|content:|ph:|assets-library:)/i.test(trimmed);
 }
 
 /**

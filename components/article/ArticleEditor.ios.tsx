@@ -237,7 +237,8 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        // expo-image-picker 57: MediaTypeOptions устарел, современный API — массив MediaType.
+        mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.8,
       });

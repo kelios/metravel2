@@ -50,6 +50,8 @@ export interface UpsertTravelController {
     isRecovering: boolean;
     recoverDraft: () => Promise<void>;
     dismissDraft: () => Promise<void>;
+    flushDraft: () => Promise<boolean>;
+    localSaveError: Error | null;
   };
 }
 
@@ -182,12 +184,16 @@ export function useUpsertTravelController(): UpsertTravelController {
       isRecovering: draft.isRecovering,
       recoverDraft: recoverAndApplyDraft,
       dismissDraft: draft.dismissDraft,
+      flushDraft: draft.flushDraft,
+      localSaveError: draft.storageError,
     }),
     [
       draft.hasPendingDraft,
       draft.draftTimestamp,
       draft.isRecovering,
       draft.dismissDraft,
+      draft.flushDraft,
+      draft.storageError,
       recoverAndApplyDraft,
     ]
   );

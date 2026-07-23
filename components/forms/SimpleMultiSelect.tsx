@@ -7,6 +7,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
 
+const compactControlHitSlop = Platform.OS === 'android' ? 17 : 15;
 
 type MultiSelectValue = string | number;
 type MultiSelectItem = Record<string, unknown>;
@@ -152,13 +153,22 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   // ✅ Убираем useCallback для рендер-функций, которые используют colors
   const renderSelectedChip = ({ item }: { item: MultiSelectItem }) => (
     <View style={[styles.chip, { backgroundColor: colors.primary }]}>
-      <Text style={[styles.chipText, { color: colors.textOnPrimary }]} numberOfLines={1}>
-        {getItemLabel(item)}
-      </Text>
+      <Pressable
+        testID={`simple-multiselect.selected-chip.${normalizeValue(getItemValue(item))}`}
+        onPress={handleOpen}
+        style={styles.chipOpenArea}
+        accessible={false}
+      >
+        <Text style={[styles.chipText, { color: colors.textOnPrimary }]} numberOfLines={1}>
+          {getItemLabel(item)}
+        </Text>
+      </Pressable>
       <Pressable
         onPress={() => handleRemoveItem(getItemValue(item))}
-        hitSlop={8}
+        hitSlop={compactControlHitSlop}
         style={styles.chipRemove}
+        accessibilityRole="button"
+        accessibilityLabel={i18nT('shared:components.forms.SimpleMultiSelect.removeSelected', { value1: getItemLabel(item) })}
       >
         <Feather name="x" size={14} color={colors.textOnPrimary} />
       </Pressable>
@@ -180,6 +190,8 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
           pressed && { backgroundColor: colors.primaryLight },
         ]}
         onPress={() => handleToggleItem(item)}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: isSelected }}
       >
         <View style={[styles.checkbox, { borderColor: colors.border }]}>
           {isSelected && (
@@ -201,12 +213,9 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
 
   return (
     <>
-      <Pressable
+      <View
+        testID="simple-multiselect.trigger"
         style={[styles.trigger, style, disabled && styles.triggerDisabled]}
-        onPress={handleOpen}
-        disabled={disabled}
-        accessibilityRole="button"
-        accessibilityLabel={i18nT('shared:components.forms.SimpleMultiSelect.otkryt_vybor_1a60a3a2')}
       >
         <View style={styles.triggerContent}>
           {selectedItems.length > 0 ? (
@@ -218,18 +227,44 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
               {...({ estimatedItemSize: 36 } as any)}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipsContainer}
+              ListFooterComponentStyle={styles.selectedFieldFooter}
+              ListFooterComponent={(
+                <Pressable
+                  testID="simple-multiselect.selected-open-area"
+                  style={styles.selectedFieldOpenArea}
+                  onPress={handleOpen}
+                  disabled={disabled}
+                  accessible={false}
+                />
+              )}
               drawDistance={600}
             />
           ) : (
-            <Text style={styles.placeholder}>{placeholder}</Text>
+            <Pressable
+              style={styles.emptyOpenArea}
+              onPress={handleOpen}
+              disabled={disabled}
+              accessible={false}
+            >
+              <Text style={styles.placeholder}>{placeholder}</Text>
+            </Pressable>
           )}
         </View>
-        <Feather
-          name={isOpen ? 'chevron-up' : 'chevron-down'}
-          size={20}
-          color={colors.textMuted}
-        />
-      </Pressable>
+        <Pressable
+          testID="simple-multiselect.open-button"
+          style={styles.openButton}
+          onPress={handleOpen}
+          disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel={i18nT('shared:components.forms.SimpleMultiSelect.otkryt_vybor_1a60a3a2')}
+        >
+          <Feather
+            name={isOpen ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color={colors.textMuted}
+          />
+        </Pressable>
+      </View>
 
       <Modal
         visible={isOpen}
@@ -251,7 +286,12 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
               <Text style={styles.modalTitle}>
                 {i18nT('shared:components.forms.SimpleMultiSelect.vybrano_12c5cecd')}{selectedItems.length}
               </Text>
-              <Pressable onPress={handleClose} hitSlop={8}>
+              <Pressable
+                onPress={handleClose}
+                hitSlop={compactControlHitSlop}
+                accessibilityRole="button"
+                accessibilityLabel={i18nT('shared:components.forms.SimpleMultiSelect.zakryt_2edf8c7d')}
+              >
                 <Feather name="x" size={24} color={colors.text} />
               </Pressable>
             </View>
@@ -268,7 +308,12 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
                   autoFocus
                 />
                 {searchQuery.length > 0 && (
-                  <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                  <Pressable
+                    onPress={() => setSearchQuery('')}
+                    hitSlop={compactControlHitSlop}
+                    accessibilityRole="button"
+                    accessibilityLabel={i18nT('shared:components.forms.SimpleMultiSelect.clearSearch')}
+                  >
                     <Feather name="x-circle" size={18} color={colors.textMuted} />
                   </Pressable>
                 )}
@@ -315,6 +360,8 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
               <Pressable
                 style={styles.doneButton}
                 onPress={handleClose}
+                accessibilityRole="button"
+                accessibilityLabel={i18nT('shared:components.forms.SimpleMultiSelect.gotovo_c5a2436b')}
               >
                 <Text style={styles.doneButtonText}>{i18nT('shared:components.forms.SimpleMultiSelect.gotovo_c5a2436b')}</Text>
               </Pressable>
@@ -329,7 +376,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
 
 const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   trigger: {
-    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+    minHeight: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -337,7 +384,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     borderColor: colors.border,
     borderRadius: DESIGN_TOKENS.radii.md,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: 0,
     backgroundColor: colors.surface,
     ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
   },
@@ -350,6 +397,16 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     flex: 1,
     marginRight: DESIGN_TOKENS.spacing.sm,
   },
+  emptyOpenArea: {
+    minHeight: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight,
+    justifyContent: 'center',
+  },
+  openButton: {
+    width: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minWidth,
+    height: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   placeholder: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: colors.textMuted,
@@ -357,6 +414,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
   },
   chipsContainer: {
     gap: DESIGN_TOKENS.spacing.xs,
+    flexGrow: 1,
   },
   chip: {
     flexDirection: 'row',
@@ -364,7 +422,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     backgroundColor: colors.primary,
     borderRadius: DESIGN_TOKENS.radii.pill,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    paddingVertical: 6,
+    paddingVertical: 0,
     marginRight: DESIGN_TOKENS.spacing.xs,
     gap: 6,
   },
@@ -374,8 +432,23 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     color: colors.textOnPrimary,
     maxWidth: 150,
   },
+  chipOpenArea: {
+    minHeight: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight,
+    justifyContent: 'center',
+  },
   chipRemove: {
     padding: 2,
+  },
+  selectedFieldOpenArea: {
+    flexGrow: 1,
+    width: '100%',
+    minWidth: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minWidth,
+    minHeight: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight,
+  },
+  selectedFieldFooter: {
+    flexGrow: 1,
+    minWidth: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minWidth,
+    minHeight: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight,
   },
   modalOverlay: {
     flex: 1,
@@ -480,6 +553,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     borderRadius: DESIGN_TOKENS.radii.md,
     marginBottom: 2,
     gap: DESIGN_TOKENS.spacing.md,
+    minHeight: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight,
   },
   checkbox: {
     width: 20,

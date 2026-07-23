@@ -1,7 +1,13 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
+import { Platform, StyleSheet } from 'react-native'
 import SimpleMultiSelect from '@/components/forms/SimpleMultiSelect'
 
 describe('SimpleMultiSelect', () => {
+  const originalPlatform = Platform.OS
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: originalPlatform, configurable: true })
+  })
   const dataNumericIds = [
     { id: 1, name: 'Арка' },
     { id: 2, name: 'Аэропорт' },
@@ -11,6 +17,65 @@ describe('SimpleMultiSelect', () => {
     { id: '1', name: 'Арка' },
     { id: '2', name: 'Аэропорт' },
   ]
+
+  it('uses 48dp Android targets and checkbox semantics in the native branch', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true })
+    const screen = render(
+      <SimpleMultiSelect
+        data={dataNumericIds}
+        value={[1]}
+        onChange={jest.fn()}
+        labelField="name"
+        valueField="id"
+      />
+    )
+
+    const trigger = screen.getByTestId('simple-multiselect.trigger')
+    expect(StyleSheet.flatten(trigger.props.style).minHeight).toBe(48)
+    fireEvent.press(screen.getByLabelText('Открыть выбор'))
+
+    const item = screen.getByTestId('simple-multiselect.item.1')
+    expect(StyleSheet.flatten(item.props.style).minHeight).toBe(48)
+    expect(item.props.accessibilityRole).toBe('checkbox')
+    expect(item.props.accessibilityState).toEqual({ checked: true })
+  })
+
+  it('opens from the selected chip body without invoking its remove control', () => {
+    const onChange = jest.fn()
+    const screen = render(
+      <SimpleMultiSelect
+        data={dataNumericIds}
+        value={[1]}
+        onChange={onChange}
+        labelField="name"
+        valueField="id"
+      />
+    )
+
+    fireEvent.press(screen.getByTestId('simple-multiselect.selected-chip.1'))
+
+    expect(screen.getByText('Выбрано: 1')).toBeTruthy()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('opens from the remaining selected field area and the explicit chevron control', () => {
+    const props = {
+      data: dataNumericIds,
+      value: [1],
+      onChange: jest.fn(),
+      labelField: 'name',
+      valueField: 'id',
+    }
+    let screen = render(<SimpleMultiSelect {...props} />)
+
+    fireEvent.press(screen.getByTestId('simple-multiselect.selected-open-area'))
+    expect(screen.getByText('Выбрано: 1')).toBeTruthy()
+
+    screen.unmount()
+    screen = render(<SimpleMultiSelect {...props} />)
+    fireEvent.press(screen.getByTestId('simple-multiselect.open-button'))
+    expect(screen.getByText('Выбрано: 1')).toBeTruthy()
+  })
 
   it('treats string value as selected when item id is number', () => {
     const onChange = jest.fn()

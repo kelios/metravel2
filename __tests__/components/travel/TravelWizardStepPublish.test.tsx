@@ -27,6 +27,9 @@ jest.mock('expo-clipboard', () => ({
 jest.mock('@/utils/externalLinks', () => ({
   openExternalUrl: jest.fn().mockResolvedValue(true),
 }));
+jest.mock('@/utils/shareTravel', () => ({
+  shareTravel: jest.fn().mockResolvedValue(true),
+}));
 jest.mock('@/api/instagramPublish', () => ({
   publishTravelToInstagram: jest
     .fn()
@@ -61,6 +64,7 @@ import {
   publishTravelToFacebook,
 } from '@/api/facebookPublish';
 import { ApiError } from '@/api/client';
+import { shareTravel } from '@/utils/shareTravel';
 
 const baseFormData: TravelFormData = {
   id: '640',
@@ -134,6 +138,44 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     expect(getByText('Готовность к публикации')).toBeTruthy();
+  });
+
+  it('opens generic share with the saved public travel slug', async () => {
+    const screen = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={{ ...baseFormData, publish: true }}
+        setFormData={jest.fn()}
+        isSuperAdmin={false}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('travel-publish-share-button'));
+    });
+
+    expect(shareTravel).toHaveBeenCalledWith({ id: 'test', title: 'Test travel' });
+  });
+
+  it('does not expose sharing for a private draft', () => {
+    const screen = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={{ ...baseFormData, publish: false }}
+        setFormData={jest.fn()}
+        isSuperAdmin={false}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId('travel-publish-share-button')).toBeNull();
   });
 
   it('sets publish=true and moderation=false when sending to moderation (user flow)', async () => {

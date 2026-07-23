@@ -140,7 +140,7 @@ function TravelWizardStepBasic({
   const shouldShowDesktopValidationSummary =
     !isCompactLayout && (hasSubmitAttemptErrors || (hasEditedForm && hasValidationErrors));
   const shouldShowMobileValidationSummary =
-    isCompactLayout && hasSubmitAttemptErrors && hasValidationErrors;
+    isCompactLayout && (hasSubmitAttemptErrors || hasEditedForm) && hasValidationErrors;
 
   const setEditedFormData = useCallback<React.Dispatch<React.SetStateAction<TravelFormData>>>(
     (nextFormData) => {

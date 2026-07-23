@@ -18,6 +18,7 @@ import { useMarkerImageUpload } from '@/hooks/useMarkerImageUpload';
 import { useTravelFormPersistence } from '@/hooks/useTravelFormPersistence';
 import { type RichTextSnapshot } from '@/utils/travelTextLossGuard';
 import { translate as i18nT } from '@/i18n'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 
 interface UseTravelFormDataOptions {
@@ -33,6 +34,8 @@ interface UseTravelFormDataOptions {
 export function useTravelFormData(options: UseTravelFormDataOptions) {
   const { travelId, isNew, userId, isSuperAdmin, isAuthenticated, authReady, onAuthRequired } = options;
   const router = useRouter();
+  const networkStatus = useNetworkStatus();
+  const isOnline = networkStatus.isConnected && networkStatus.isInternetReachable !== false;
   const queryClient = useContext(QueryClientContext);
   const stableTravelId = useMemo(() => {
     if (isNew) return null;
@@ -131,6 +134,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     isAuthenticated,
     hasAccess,
     isFormHydrated,
+    isOnline,
     isManualSaveInFlight,
     setIsManualSaveInFlight,
     setMarkers,

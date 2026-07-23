@@ -154,6 +154,9 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
         fontWeight: '600',
         color: colors.text,
     },
+    shareButton: {
+        marginTop: DESIGN_TOKENS.spacing.sm,
+    },
     checklistCard: {},
     checklistHeader: {
         flexDirection: 'row',

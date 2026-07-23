@@ -250,6 +250,35 @@ export const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo
         flexDirection: 'row' as const,
         marginLeft: '-9px',
     },
+    // #1040 — колонка ↑/↓ рядом с ручкой перетаскивания. HTML5 drag не работает
+    // по тачу (mobile web), поэтому кнопки — единственный способ поменять порядок
+    // точек на телефоне; на десктопе они дублируют drag и никому не мешают.
+    reorderColumn: {
+        display: 'flex',
+        flexDirection: 'column' as const,
+        alignItems: 'center',
+        justifyContent: 'center',
+        alignSelf: 'stretch',
+        flexShrink: 0,
+        gap: '2px',
+    },
+    reorderButton: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '32px',
+        height: '22px',
+        padding: 0,
+        border: 'none',
+        borderRadius: '6px',
+        background: 'transparent',
+        color: colors.textMuted,
+        cursor: 'pointer',
+    },
+    reorderButtonDisabled: {
+        opacity: 0.3,
+        cursor: 'default',
+    },
     editingItem: {
         border: `1px solid ${colors.borderAccent}`,
         boxShadow: `0 0 0 3px ${colors.primarySoft}`,

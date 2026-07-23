@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import CollapsibleBlock from '@/components/ui/CollapsibleBlock';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { translate as i18nT } from '@/i18n'
 
 
 interface FilterGroup {
@@ -36,10 +36,6 @@ const GroupedFiltersSection: React.FC<GroupedFiltersSectionProps> = ({
 
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const toggleExpanded = () => {
-        setIsExpanded(prev => !prev);
-    };
-
     const progressText = useMemo(() => {
         if (filledCount !== undefined && totalCount !== undefined && totalCount > 0) {
             return `${filledCount}/${totalCount}`;
@@ -48,110 +44,31 @@ const GroupedFiltersSection: React.FC<GroupedFiltersSectionProps> = ({
     }, [filledCount, totalCount]);
 
     return (
-        <View style={styles.container}>
-            <Pressable
-                style={({ pressed }) => [
-                    styles.header,
-                    pressed && styles.headerPressed,
-                ]}
-                onPress={toggleExpanded}
-                accessibilityRole="button"
-                accessibilityLabel={i18nT('travel:components.travel.GroupedFiltersSection.value1_sektsiyu_value2_0db12b61', { value1: isExpanded ? i18nT('travel:common.collapse') : i18nT('travel:common.expand'), value2: group.title })}
-                accessibilityState={{ expanded: isExpanded }}
-                {...Platform.select({ web: { cursor: 'pointer' } })}
-            >
-                <View style={styles.headerLeft}>
-                    <View style={styles.iconWrapper}>
-                        <Feather name={group.iconName} size={18} color={colors.primaryDark} />
-                    </View>
-                    <View style={styles.headerTextColumn}>
-                        <View style={styles.titleRow}>
-                            <Text style={styles.headerTitle}>{group.title}</Text>
-                            {progressText && (
-                                <View style={styles.progressBadge}>
-                                    <Text style={styles.progressText}>{progressText}</Text>
-                                </View>
-                            )}
-                        </View>
-                        {group.description && !isExpanded && (
-                            <Text style={styles.headerDescription} numberOfLines={1}>
-                                {group.description}
-                            </Text>
-                        )}
-                    </View>
+        <CollapsibleBlock
+            id={`travel-filter-group-${group.id}`}
+            title={group.title}
+            description={!isExpanded ? group.description : undefined}
+            icon={group.iconName}
+            expanded={isExpanded}
+            onToggle={setIsExpanded}
+            hasCloseButton={false}
+            showExpandHint={false}
+            unmountWhenCollapsed
+            headerActions={progressText ? (
+                <View style={styles.progressBadge}>
+                    <Text style={styles.progressText}>{progressText}</Text>
                 </View>
-                <Feather
-                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={20}
-                    color={colors.textMuted}
-                />
-            </Pressable>
-
-            {isExpanded && (
-                <View style={styles.content}>
-                    {group.description && (
-                        <Text style={styles.contentDescription}>{group.description}</Text>
-                    )}
-                    {children}
-                </View>
-            )}
-        </View>
+            ) : undefined}
+        >
+            {group.description ? (
+                <Text style={styles.contentDescription}>{group.description}</Text>
+            ) : null}
+            {children}
+        </CollapsibleBlock>
     );
 };
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-    container: {
-        marginBottom: DESIGN_TOKENS.spacing.md,
-        backgroundColor: colors.surface,
-        borderRadius: DESIGN_TOKENS.radii.md,
-        borderWidth: 1,
-        borderColor: colors.border,
-        overflow: 'hidden',
-        ...(Platform.OS === 'web'
-            ? ({ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } as any)
-            : {}),
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: DESIGN_TOKENS.spacing.md,
-        minHeight: 60,
-    },
-    headerPressed: {
-        backgroundColor: colors.surfaceMuted,
-        opacity: 0.9,
-    },
-    headerLeft: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: DESIGN_TOKENS.spacing.sm,
-        minWidth: 0,
-    },
-    iconWrapper: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: colors.primarySoft,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    headerTextColumn: {
-        flex: 1,
-        minWidth: 0,
-    },
-    titleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: DESIGN_TOKENS.spacing.xs,
-        marginBottom: 2,
-    },
-    headerTitle: {
-        fontSize: DESIGN_TOKENS.typography.sizes.md,
-        fontWeight: '700',
-        color: colors.text,
-    },
     progressBadge: {
         paddingHorizontal: 8,
         paddingVertical: 2,
@@ -162,17 +79,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '700',
         color: colors.primaryText,
-    },
-    headerDescription: {
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: colors.textMuted,
-        lineHeight: 16,
-    },
-    content: {
-        padding: DESIGN_TOKENS.spacing.md,
-        paddingTop: 0,
-        borderTopWidth: 1,
-        borderTopColor: colors.borderLight,
     },
     contentDescription: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,

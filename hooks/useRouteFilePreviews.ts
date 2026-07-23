@@ -5,7 +5,7 @@ import { DESIGN_COLORS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useTravelRouteFiles } from '@/hooks/useTravelRouteFiles'
 import { downloadTravelRouteFileBlob } from '@/api/travelRoutes'
-import { parseRouteFilePreviews } from '@/utils/routeFileParser'
+import { parseRouteFilePreviews, sanitizeRoutePreview } from '@/utils/routeFileParser'
 import { isWebAutomation } from '@/utils/isWebAutomation'
 import type { ParsedRoutePreview, TravelRouteFile } from '@/types/travelRoutes'
 import { translate as i18nT } from '@/i18n'
@@ -156,7 +156,7 @@ export function useRouteFilePreviews({
             // download+parse path only on old deployments that don't ship a preview.
             const serverPreview =
               (file.preview?.linePoints?.length ?? 0) >= 2 ? file.preview : null
-            const previews = serverPreview
+            const rawPreviews = serverPreview
               ? [serverPreview]
               : await (async () => {
                   const downloaded = await downloadTravelRouteFileBlob(travelId, file.id)
@@ -164,6 +164,9 @@ export function useRouteFilePreviews({
                   return parseRouteFilePreviews(downloaded.text, ext)
                 })()
             if (!active) return [] as RoutePreviewItem[]
+            // Strip teleport-stitched <wpt> fragments (straight lines + inflated
+            // distance) the backend preview can carry; no-op for clean tracks.
+            const previews = rawPreviews.map(sanitizeRoutePreview)
             const validPreviews = previews.filter((preview) => (preview?.linePoints?.length ?? 0) >= 2)
             if (validPreviews.length === 0) return [] as RoutePreviewItem[]
 

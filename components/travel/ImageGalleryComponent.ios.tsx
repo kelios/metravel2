@@ -241,7 +241,8 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        // expo-image-picker 57: MediaTypeOptions устарел, современный API — массив MediaType.
+        mediaTypes: ['images'],
         allowsMultipleSelection: true,
         quality: 0.8,
         exif: false,

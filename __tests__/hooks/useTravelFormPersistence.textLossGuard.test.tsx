@@ -126,6 +126,8 @@ function setupPersistence(opts: {
     userId: '1',
     isAuthenticated: true,
     hasAccess: true,
+    isFormHydrated: true,
+    isOnline: true,
     isManualSaveInFlight: false,
     setIsManualSaveInFlight: jest.fn(),
     setMarkers: jest.fn(),

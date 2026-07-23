@@ -1,4 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native';
+import { Modal } from 'react-native';
 
 import DraftRecoveryDialog from '@/components/travel/DraftRecoveryDialog';
 
@@ -54,5 +55,21 @@ describe('DraftRecoveryDialog', () => {
 
     expect(onDiscard).toHaveBeenCalledTimes(1);
     expect(onRecover).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not discard the only local draft on Android hardware Back', () => {
+    const onDiscard = jest.fn();
+    const screen = render(
+      <DraftRecoveryDialog
+        visible
+        draftTimestamp={Date.now() - 60_000}
+        onRecover={jest.fn()}
+        onDiscard={onDiscard}
+      />,
+    );
+
+    screen.UNSAFE_getByType(Modal).props.onRequestClose();
+
+    expect(onDiscard).not.toHaveBeenCalled();
   });
 });

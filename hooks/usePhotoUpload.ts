@@ -11,6 +11,13 @@ import { translate as i18nT } from '@/i18n'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
 
+export type NativeUploadFile = {
+  uri: string;
+  name: string;
+  type: string;
+  size?: number;
+};
+
 const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
 
 const buildApiPrefixedUrl = (url: string): string | null => {
@@ -63,7 +70,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   const remoteRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ignoredOldImageRef = useRef<string | null>(null);
   const lastNotifiedPreviewRef = useRef<string | null>(null);
-  const pendingUploadRef = useRef<File | { uri: string; name: string; type: string } | null>(null);
+  const pendingUploadRef = useRef<File | NativeUploadFile | null>(null);
   const blobUrlsRef = useRef<Set<string>>(new Set());
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevOldImageRef = useRef<string | null | undefined>(undefined);
@@ -212,16 +219,18 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     onPreviewChange?.(nextValue);
   }, [previewUrl, imageUri, onPreviewChange]);
 
-  const validateFile = useCallback((file: File | { uri: string; name: string; type: string; size?: number }): string | null => {
+  const validateFile = useCallback((file: File | NativeUploadFile): string | null => {
     const maxSize = maxSizeMB * 1024 * 1024;
-    if (Platform.OS === 'web' && file instanceof File) {
-      if (file.size > maxSize) return i18nT('shared:hooks.usePhotoUpload.fayl_slishkom_bolshoy_maksimalnyy_razmer_val_4f239ac1', { value1: maxSizeMB });
-      if (!ALLOWED_TYPES.includes(file.type)) return i18nT('shared:hooks.usePhotoUpload.nepodderzhivaemyy_format_razresheny_jpg_png__f81e3a7b');
+    if (typeof file.size === 'number' && file.size > maxSize) {
+      return i18nT('shared:hooks.usePhotoUpload.fayl_slishkom_bolshoy_maksimalnyy_razmer_val_4f239ac1', { value1: maxSizeMB });
+    }
+    if (file.type && !ALLOWED_TYPES.includes(file.type.toLowerCase())) {
+      return i18nT('shared:hooks.usePhotoUpload.nepodderzhivaemyy_format_razresheny_jpg_png__f81e3a7b');
     }
     return null;
   }, [maxSizeMB]);
 
-  const handleUploadImage = useCallback(async (file: File | { uri: string; name: string; type: string }) => {
+  const handleUploadImage = useCallback(async (file: File | NativeUploadFile) => {
     try {
       setError(null); setUploadMessage(null); setUploadProgress(0); setHasTriedFallback(false);
       const uploadableFile =

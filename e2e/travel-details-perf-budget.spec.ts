@@ -25,8 +25,12 @@
  *   PERF_LCP_MAX_MS=2500  PERF_TBT_MAX_MS=300  PERF_CLS_MAX=0.10
  */
 
-import { test, expect } from '@playwright/test';
-import { preacceptCookies } from './helpers/navigation';
+import { test, expect, type Page } from '@playwright/test';
+import {
+  FALLBACK_TRAVEL_SLUG,
+  mockFallbackTravelDetails,
+  preacceptCookies,
+} from './helpers/navigation';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -61,13 +65,37 @@ const REQUEST_BUDGET_HOSTS = new Set(
     .filter(Boolean)
 );
 
-// A known travel page slug for direct navigation (avoids SPA transition overhead).
+// The default fixture keeps API/media availability out of the regression signal.
+// PERF_TRAVEL_SLUG remains an explicit opt-in for live-data diagnostics.
 const TRAVEL_SLUG =
   process.env.PERF_TRAVEL_SLUG ||
-  'czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina';
+  FALLBACK_TRAVEL_SLUG;
 
 function travelUrl(slug: string): string {
   return `/travels/${slug}`;
+}
+
+async function openTravelDetailsForPerf(
+  page: Page,
+  waitUntil: 'load' | 'domcontentloaded' = 'load'
+) {
+  await mockFallbackTravelDetails(page);
+  await page.goto(travelUrl(TRAVEL_SLUG), {
+    waitUntil,
+    timeout: 60_000,
+  });
+
+  const detailsRoot = page.locator('[data-testid="travel-details-page"]').first();
+  const hero = page.locator('[data-testid="travel-details-hero"]').first();
+
+  await expect(
+    detailsRoot,
+    'performance metrics require the rendered travel-details page, not an API/load error state'
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(
+    hero,
+    'performance metrics require the rendered travel-details hero'
+  ).toBeVisible({ timeout: 30_000 });
 }
 
 /** Inject PerformanceObserver collectors before page load. */
@@ -391,19 +419,9 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
 
     const tracker = createNetworkTracker(page);
 
-    // Direct navigation to travel page (simulates real user landing from search/link)
-    await page.goto(travelUrl(TRAVEL_SLUG), {
-      waitUntil: 'load',
-      timeout: 60_000,
-    });
-
-    // Wait for travel content to render
-    await Promise.race([
-      page.waitForSelector('[data-testid="travel-details-page"]', { timeout: 30_000 }),
-      page.waitForSelector('[data-testid="travel-details-hero"]', { timeout: 30_000 }),
-    ]).catch(() => {
-      // Page may still be loading; continue to collect metrics
-    });
+    // Direct navigation to a deterministic travel page. An unavailable backend
+    // must fail this rendering contract instead of being measured as a late LCP.
+    await openTravelDetailsForPerf(page);
 
     const metrics = await collectMetrics(page);
     const network = tracker.getStats();
@@ -487,10 +505,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
 
     const tracker = createNetworkTracker(page);
 
-    await page.goto(travelUrl(TRAVEL_SLUG), {
-      waitUntil: 'load',
-      timeout: 60_000,
-    });
+    await openTravelDetailsForPerf(page);
 
     // Wait for content and deferred sections
     await page.waitForLoadState('networkidle').catch(() => null);
@@ -546,10 +561,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
     await page.setViewportSize({ width: 1440, height: 900 });
     await preacceptCookies(page);
 
-    await page.goto(travelUrl(TRAVEL_SLUG), {
-      waitUntil: 'load',
-      timeout: 60_000,
-    });
+    await openTravelDetailsForPerf(page);
 
     await page.waitForLoadState('networkidle').catch(() => null);
 
@@ -638,10 +650,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
       }
     });
 
-    await page.goto(travelUrl(TRAVEL_SLUG), {
-      waitUntil: 'domcontentloaded',
-      timeout: 60_000,
-    });
+    await openTravelDetailsForPerf(page, 'domcontentloaded');
 
     // Check that entry script has fetchPriority="high"
     const entryScriptOptimized = await page.evaluate(() => {
@@ -690,15 +699,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, mobile)'
     await page.setViewportSize({ width: 375, height: 667 });
     await injectPerfObservers(page);
 
-    await page.goto(travelUrl(TRAVEL_SLUG), {
-      waitUntil: 'load',
-      timeout: 60_000,
-    });
-
-    await Promise.race([
-      page.waitForSelector('[data-testid="travel-details-page"]', { timeout: 30_000 }),
-      page.waitForSelector('[data-testid="travel-details-hero"]', { timeout: 30_000 }),
-    ]).catch(() => {});
+    await openTravelDetailsForPerf(page);
 
     const metrics = await collectMetrics(page);
     const layoutShiftDebug = await collectLayoutShiftDebug(page);

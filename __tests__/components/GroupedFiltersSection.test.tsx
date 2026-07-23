@@ -49,7 +49,7 @@ describe('GroupedFiltersSection', () => {
     });
 
     it('toggles expansion on press', () => {
-        const { getByText, queryByText } = render(
+        const { getByLabelText, getByText, queryByText } = render(
             <GroupedFiltersSection group={mockGroup}>
                 <Text>Child content</Text>
             </GroupedFiltersSection>
@@ -59,14 +59,13 @@ describe('GroupedFiltersSection', () => {
         expect(queryByText('Child content')).toBeNull();
 
         // Press to expand
-        const header = getByText('Test Group');
-        fireEvent.press(header.parent!);
+        fireEvent.press(getByLabelText('Развернуть: Test Group'));
 
         // Now expanded
         expect(getByText('Child content')).toBeTruthy();
 
         // Press to collapse
-        fireEvent.press(header.parent!);
+        fireEvent.press(getByLabelText('Свернуть: Test Group'));
 
         // Collapsed again
         expect(queryByText('Child content')).toBeNull();
@@ -113,4 +112,3 @@ describe('GroupedFiltersSection', () => {
         expect(getByText('Test description')).toBeTruthy();
     });
 });
-

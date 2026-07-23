@@ -20,6 +20,16 @@ type WebDateInput = HTMLInputElement & {
     showPicker?: () => void;
 };
 
+type NativeDatePickerModule = {
+    DateTimePickerAndroid: {
+        open: (options: {
+            value: Date;
+            mode: 'date';
+            onChange: (event: { type?: string }, selectedDate?: Date) => void;
+        }) => void;
+    };
+};
+
 export const formatVisitedDateForEditing = (value: string): string => {
     const parts = parseTravelStatusDateParts(value);
     if (!parts) return value;
@@ -99,14 +109,39 @@ const TravelVisitedDateInput: React.FC<TravelVisitedDateInputProps> = ({
     }, [onChange]);
 
     const openCalendar = useCallback(() => {
-        const picker = pickerRef.current;
-        if (!picker) return;
-        if (typeof picker.showPicker === 'function') {
-            picker.showPicker();
+        if (Platform.OS === 'android') {
+            const parsed = parseTravelStatusDateParts(value);
+            const initialDate = parsed
+                ? new Date(parsed.year, parsed.month - 1, parsed.day)
+                : new Date();
+            const { DateTimePickerAndroid } = require('@react-native-community/datetimepicker') as NativeDatePickerModule;
+            DateTimePickerAndroid.open({
+                value: initialDate,
+                mode: 'date',
+                onChange: (event, selectedDate) => {
+                    if (event.type === 'dismissed' || !selectedDate) return;
+                    const nextValue = [
+                        String(selectedDate.getFullYear()).padStart(4, '0'),
+                        String(selectedDate.getMonth() + 1).padStart(2, '0'),
+                        String(selectedDate.getDate()).padStart(2, '0'),
+                    ].join('-');
+                    setDraft(formatVisitedDateForEditing(nextValue));
+                    setShowInvalidState(false);
+                    onChange(nextValue);
+                },
+            });
             return;
         }
-        picker.click();
-    }, []);
+
+        // iOS is not an active application surface yet; keep the shared native
+        // component safe instead of invoking the Android-only picker API there.
+        if (Platform.OS !== 'web') return;
+
+        const picker = pickerRef.current;
+        if (!picker) return;
+        if (typeof picker.showPicker === 'function') picker.showPicker();
+        else picker.click();
+    }, [onChange, value]);
 
     return (
         <View>
@@ -123,19 +158,23 @@ const TravelVisitedDateInput: React.FC<TravelVisitedDateInputProps> = ({
                     accessibilityLabel={accessibilityLabel}
                     aria-invalid={showInvalidState}
                     testID="travel-visited-date-input"
-                    style={[styles.input, Platform.OS === 'web' && styles.inputWithCalendar]}
+                    style={[
+                        styles.input,
+                        (Platform.OS === 'web' || Platform.OS === 'android') && styles.inputWithCalendar,
+                    ]}
                 />
+                {Platform.OS === 'web' || Platform.OS === 'android' ? (
+                    <IconButton
+                        icon={<Feather name="calendar" size={18} color={colors.text} />}
+                        label={calendarLabel}
+                        onPress={openCalendar}
+                        size="sm"
+                        style={styles.calendarButton}
+                        testID="travel-visited-date-calendar-button"
+                        tooltipPlacement="left"
+                    />
+                ) : null}
                 {Platform.OS === 'web' ? (
-                    <>
-                        <IconButton
-                            icon={<Feather name="calendar" size={18} color={colors.text} />}
-                            label={calendarLabel}
-                            onPress={openCalendar}
-                            size="sm"
-                            style={styles.calendarButton}
-                            testID="travel-visited-date-calendar-button"
-                            tooltipPlacement="left"
-                        />
                         <input
                             ref={pickerRef}
                             type="date"
@@ -146,7 +185,6 @@ const TravelVisitedDateInput: React.FC<TravelVisitedDateInputProps> = ({
                             data-testid="travel-visited-date-picker"
                             style={hiddenPickerStyle}
                         />
-                    </>
                 ) : null}
             </View>
             {showInvalidState ? (
@@ -171,7 +209,7 @@ const hiddenPickerStyle: React.CSSProperties = {
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     field: {
         position: 'relative',
-        minHeight: 44,
+        minHeight: Platform.OS === 'android' ? 48 : 44,
         borderWidth: 1,
         borderColor: colors.border,
         borderRadius: DESIGN_TOKENS.radii.sm,
@@ -182,7 +220,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderColor: colors.danger,
     },
     input: {
-        minHeight: 42,
+        minHeight: Platform.OS === 'android' ? 48 : 42,
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
         paddingVertical: DESIGN_TOKENS.spacing.sm,
         color: colors.text,
@@ -193,8 +231,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     calendarButton: {
         position: 'absolute',
-        right: 3,
-        top: 3,
+        right: Platform.OS === 'android' ? 0 : 3,
+        top: Platform.OS === 'android' ? 0 : 3,
+        width: Platform.OS === 'android' ? 48 : 36,
+        height: Platform.OS === 'android' ? 48 : 36,
+        minWidth: Platform.OS === 'android' ? 48 : 36,
+        minHeight: Platform.OS === 'android' ? 48 : 36,
         marginHorizontal: 0,
         backgroundColor: colors.surface,
         shadowOpacity: 0,

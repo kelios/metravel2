@@ -32,6 +32,9 @@ jest.mock('@/api/travelRoutes', () => ({
 
 jest.mock('@/utils/routeFileParser', () => ({
   parseRouteFilePreviews: jest.fn(() => []),
+  // Identity for these clean-track fixtures; the real fn only strips teleport
+  // fragments, which none of these previews contain.
+  sanitizeRoutePreview: jest.fn((preview) => preview),
 }))
 
 const { useTravelRouteFiles } = jest.requireMock('@/hooks/useTravelRouteFiles') as {

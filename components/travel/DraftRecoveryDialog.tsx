@@ -54,7 +54,8 @@ export function DraftRecoveryDialog({
       transparent
       animationType="fade"
       statusBarTranslucent
-      onRequestClose={onDiscard}
+      // Android hardware Back must not silently delete the only recoverable copy.
+      onRequestClose={() => undefined}
     >
       <View style={styles.overlay}>
         <View

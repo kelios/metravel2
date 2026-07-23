@@ -1,10 +1,12 @@
 import { Fragment } from 'react';
 
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useIncomingAppLinks } from '@/hooks/useIncomingAppLinks.native';
 import BiometricGate from '@/components/layout/BiometricGate';
 import OnboardingScreen from '@/components/onboarding/OnboardingScreen';
 
 export default function NativeAppRuntime() {
+  useIncomingAppLinks();
   usePushNotifications({
     autoRequest: false,
   });

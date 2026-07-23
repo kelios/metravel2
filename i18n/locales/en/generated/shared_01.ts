@@ -259,6 +259,8 @@ export const sharedGenerated1 = {
   "components.forms.SimpleMultiSelect.vyberite_e8f53759": "Select...",
   "components.forms.SimpleMultiSelect.vybrano_12c5cecd": "Selected:",
   "components.forms.SimpleMultiSelect.zakryt_2edf8c7d": "Close",
+  "components.forms.SimpleMultiSelect.removeSelected": "Remove {{value1}} from selected",
+  "components.forms.SimpleMultiSelect.clearSearch": "Clear search",
   "components.forms.TextInputComponent.vvedite_value1_e4ccf293": "Enter {{value1}}",
   "components.iframe.InstagramEmbed.instagram_post_a443d081": "Instagram post",
   "components.iframe.InstagramEmbed.instagram_post_b5e6adbd": "Instagram post",

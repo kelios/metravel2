@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import isEqual from 'fast-deep-equal';
-import { Platform } from 'react-native';
 
 interface UseImprovedAutoSaveOptions<T> {
   debounce?: number;
@@ -12,6 +11,7 @@ interface UseImprovedAutoSaveOptions<T> {
   retryDelay?: number;
   enableRetry?: boolean;
   enabled?: boolean;
+  isOnline?: boolean;
 }
 
 type AutosaveStatus = 'idle' | 'debouncing' | 'saving' | 'saved' | 'error';
@@ -67,6 +67,7 @@ export function useImprovedAutoSave<T>(
     retryDelay = 1000,
     enableRetry = true,
     enabled = true,
+    isOnline: networkIsOnline = true,
   } = options;
 
   const [state, setState] = useState<AutosaveState>({
@@ -74,7 +75,7 @@ export function useImprovedAutoSave<T>(
     lastSaved: null,
     error: null,
     retryCount: 0,
-    isOnline: true,
+    isOnline: networkIsOnline,
   });
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -82,7 +83,8 @@ export function useImprovedAutoSave<T>(
   const mountedRef = useRef(true);
   const lastSavedDataRef = useRef<T>(originalData);
   const latestDataRef = useRef<T>(data);
-  const isOnlineRef = useRef<boolean>(true);
+  const isOnlineRef = useRef<boolean>(networkIsOnline);
+  const blockingErrorStatusRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const onlineResaveRef = useRef<(() => void) | null>(null);
 
@@ -102,38 +104,18 @@ export function useImprovedAutoSave<T>(
     }
   }, []);
 
-  // Network status monitoring
+  // Network status is supplied by the screen-level cross-platform source.
+  // This keeps the banner and autosave on the exact same connectivity snapshot.
   useEffect(() => {
-    const handleOnline = () => {
-      isOnlineRef.current = true;
-      // ✅ FIX: Проверка монтирования перед setState
-      if (mountedRef.current) {
-        setState(prev => ({ ...prev, isOnline: true }));
-      }
-      // Вернулись в онлайн — если автосейв откладывался из-за оффлайна и есть
-      // несохранённые изменения, перепланируем сохранение.
-      onlineResaveRef.current?.();
-    };
-    const handleOffline = () => {
-      isOnlineRef.current = false;
-      // ✅ FIX: Проверка монтирования перед setState
-      if (mountedRef.current) {
-        setState(prev => ({ ...prev, isOnline: false }));
-      }
-    };
-
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.addEventListener('online', handleOnline);
-      window.addEventListener('offline', handleOffline);
+    const wasOnline = isOnlineRef.current;
+    isOnlineRef.current = networkIsOnline;
+    if (mountedRef.current) {
+      setState(prev => prev.isOnline === networkIsOnline
+        ? prev
+        : { ...prev, isOnline: networkIsOnline });
     }
-
-    return () => {
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-      }
-    };
-  }, []);
+    if (!wasOnline && networkIsOnline) onlineResaveRef.current?.();
+  }, [networkIsOnline]);
 
   // Main cleanup on unmount
   useEffect(() => {
@@ -186,6 +168,7 @@ export function useImprovedAutoSave<T>(
       // которые приходят только в ответе сервера.
       lastSavedDataRef.current = dataToSave;
       latestDataRef.current = dataToSave;
+      blockingErrorStatusRef.current = null;
 
       // ✅ FIX: Проверка монтирования перед setState
       if (mountedRef.current) {
@@ -249,6 +232,12 @@ export function useImprovedAutoSave<T>(
       }
 
       // Final error state
+      const finalStatus = getErrorStatus(saveError);
+      if (finalStatus === 401) {
+        // Keep an expired-session failure latched until an explicit retry/new mount.
+        // Editing must not hide the login CTA or create a stream of new 401 writes.
+        blockingErrorStatusRef.current = finalStatus;
+      }
       // ✅ FIX: Проверка монтирования перед setState
       if (mountedRef.current) {
         setState(prev => ({
@@ -271,6 +260,7 @@ export function useImprovedAutoSave<T>(
     onlineResaveRef.current = () => {
       if (!enabled) return;
       if (!mountedRef.current) return;
+      if (blockingErrorStatusRef.current === 401) return;
       if (isEqual(latestDataRef.current, lastSavedDataRef.current)) return;
       if (timeoutRef.current || retryTimeoutRef.current) return;
 
@@ -309,6 +299,13 @@ export function useImprovedAutoSave<T>(
     // Запоминаем последние наблюдаемые данные.
     latestDataRef.current = data;
 
+    // An expired session is terminal for background autosave. Preserve the visible
+    // error/CTA and the latest local snapshot until the user authenticates again.
+    if (blockingErrorStatusRef.current === 401) {
+      cleanup();
+      return;
+    }
+
     // Сбрасываем предыдущий таймер, если он был.
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -337,6 +334,7 @@ export function useImprovedAutoSave<T>(
     }
 
     timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
       if (!mountedRef.current) return;
 
       // Если к моменту срабатывания таймера данные уже совпадают с последним сохранённым,
@@ -366,7 +364,7 @@ export function useImprovedAutoSave<T>(
         timeoutRef.current = null;
       }
     };
-  }, [data, debounce, performSave, onStart, enabled, cleanup]); // Removed hasDataChanged from dependencies
+  }, [data, debounce, performSave, onStart, enabled, cleanup, networkIsOnline]); // Removed hasDataChanged from dependencies
 
   // Manual save function
   const saveNow = useCallback(async (): Promise<T> => {
@@ -379,12 +377,14 @@ export function useImprovedAutoSave<T>(
     }
 
     cleanup();
+    blockingErrorStatusRef.current = null;
     return performSave(data);
   }, [data, performSave, cleanup, state.isOnline, enabled]);
 
   // Reset to original data
   const resetToOriginal = useCallback(() => {
     cleanup();
+    blockingErrorStatusRef.current = null;
     lastSavedDataRef.current = originalData;
     // ✅ FIX: Проверка монтирования перед setState
     if (mountedRef.current) {
@@ -400,6 +400,7 @@ export function useImprovedAutoSave<T>(
 
   // Clear error
   const clearError = useCallback(() => {
+    blockingErrorStatusRef.current = null;
     // ✅ FIX: Проверка монтирования перед setState
     if (mountedRef.current) {
       setState(prev => ({ ...prev, error: null, status: 'idle' }));
@@ -414,6 +415,7 @@ export function useImprovedAutoSave<T>(
     if (state.status !== 'error' || !state.error) {
       throw new Error('No failed save to retry');
     }
+    blockingErrorStatusRef.current = null;
     return performSave(data);
   }, [state.status, state.error, data, performSave, enabled]);
 

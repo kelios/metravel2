@@ -390,15 +390,51 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                             >
                                 <div style={styles.row}>
                                     {canReorder ? (
-                                        <div
-                                            style={styles.dragHandle as React.CSSProperties}
-                                            aria-label={i18nT('map:components.map.MarkersListComponent.peretaschite_chtoby_izmenit_poryadok_2d9f4b6a')}
-                                            title={i18nT('map:components.map.MarkersListComponent.peretaschite_chtoby_izmenit_poryadok_2d9f4b6a')}
-                                        >
-                                            <div style={styles.dragHandleDots as React.CSSProperties} aria-hidden="true">
-                                                <Feather name="more-vertical" size={16} color={colors.textMuted} />
-                                                <Feather name="more-vertical" size={16} color={colors.textMuted} />
+                                        <div style={styles.reorderColumn as React.CSSProperties}>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (index > 0) onReorder?.(index, index - 1);
+                                                }}
+                                                disabled={index === 0}
+                                                data-card-action="true"
+                                                aria-label={i18nT('map:components.map.MarkersListComponent.peremestit_vyshe')}
+                                                title={i18nT('map:components.map.MarkersListComponent.peremestit_vyshe')}
+                                                style={{
+                                                    ...(styles.reorderButton as React.CSSProperties),
+                                                    ...(index === 0 ? (styles.reorderButtonDisabled as React.CSSProperties) : {}),
+                                                }}
+                                            >
+                                                <Feather name="chevron-up" size={18} color={colors.textMuted} />
+                                            </button>
+                                            <div
+                                                style={styles.dragHandle as React.CSSProperties}
+                                                aria-label={i18nT('map:components.map.MarkersListComponent.peretaschite_chtoby_izmenit_poryadok_2d9f4b6a')}
+                                                title={i18nT('map:components.map.MarkersListComponent.peretaschite_chtoby_izmenit_poryadok_2d9f4b6a')}
+                                            >
+                                                <div style={styles.dragHandleDots as React.CSSProperties} aria-hidden="true">
+                                                    <Feather name="more-vertical" size={16} color={colors.textMuted} />
+                                                    <Feather name="more-vertical" size={16} color={colors.textMuted} />
+                                                </div>
                                             </div>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (index < markers.length - 1) onReorder?.(index, index + 1);
+                                                }}
+                                                disabled={index === markers.length - 1}
+                                                data-card-action="true"
+                                                aria-label={i18nT('map:components.map.MarkersListComponent.peremestit_nizhe')}
+                                                title={i18nT('map:components.map.MarkersListComponent.peremestit_nizhe')}
+                                                style={{
+                                                    ...(styles.reorderButton as React.CSSProperties),
+                                                    ...(index === markers.length - 1 ? (styles.reorderButtonDisabled as React.CSSProperties) : {}),
+                                                }}
+                                            >
+                                                <Feather name="chevron-down" size={18} color={colors.textMuted} />
+                                            </button>
                                         </div>
                                     ) : null}
                                     <div style={styles.indexBadge}>{index + 1}</div>

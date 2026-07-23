@@ -68,6 +68,7 @@ interface UseTravelFormPersistenceParams {
   // Пока false — автосейв запрещён: у существующей записи он ушёл бы с пустой
   // формой, а upsert full-replace стёр бы статью (инцидент 2026-07-21, travel 641).
   isFormHydrated: boolean;
+  isOnline: boolean;
   isManualSaveInFlight: boolean;
   setIsManualSaveInFlight: (value: boolean) => void;
   setMarkers: (markers: MarkerData[]) => void;
@@ -102,6 +103,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
     isAuthenticated,
     hasAccess,
     isFormHydrated,
+    isOnline,
     isManualSaveInFlight,
     setIsManualSaveInFlight,
     setMarkers,
@@ -518,6 +520,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       !isManualSaveInFlight &&
       !formState.data.moderation &&
       !formState.data.publish,
+    isOnline,
   });
 
   const handleManualSave = useCallback(async (

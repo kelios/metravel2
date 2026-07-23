@@ -112,7 +112,9 @@ export function useNetworkStatus(): NetworkStatus {
       NetInfo.fetch().then((state: NetInfoStateLike) => {
         if (cancelled) return;
         setNetworkStatus({
-          isConnected: state.isConnected ?? false,
+          // NetInfo reports null while connectivity is still being resolved.
+          // Only an explicit false is offline; unknown stays provisionally online.
+          isConnected: state.isConnected !== false,
           isInternetReachable: state.isInternetReachable ?? null,
           type: state.type ?? null,
         });
@@ -122,7 +124,7 @@ export function useNetworkStatus(): NetworkStatus {
       const unsubscribe = NetInfo.addEventListener((state: NetInfoStateLike) => {
         if (cancelled) return;
         setNetworkStatus({
-          isConnected: state.isConnected ?? false,
+          isConnected: state.isConnected !== false,
           isInternetReachable: state.isInternetReachable ?? null,
           type: state.type ?? null,
         });

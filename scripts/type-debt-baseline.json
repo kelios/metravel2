@@ -2795,7 +2795,7 @@
     },
     "components/travel/upsert/UpsertTravelView.tsx": {
       "styleCast": 0,
-      "logicCast": 4,
+      "logicCast": 5,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0

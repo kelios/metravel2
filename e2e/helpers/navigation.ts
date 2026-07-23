@@ -87,6 +87,8 @@ export async function mockFallbackTravelDetails(page: Page): Promise<void> {
 
     const url = request.url();
     if (
+      url.includes(`/api/travels/resolve-slug/${FALLBACK_TRAVEL_SLUG}/`) ||
+      url.includes(`/travels/resolve-slug/${FALLBACK_TRAVEL_SLUG}/`) ||
       url.includes(`/api/travels/by-slug/${FALLBACK_TRAVEL_SLUG}/`) ||
       url.includes(`/travels/by-slug/${FALLBACK_TRAVEL_SLUG}/`) ||
       url.includes(`/api/travels/${FALLBACK_TRAVEL_ID}/`)
@@ -102,6 +104,8 @@ export async function mockFallbackTravelDetails(page: Page): Promise<void> {
     await route.continue();
   };
 
+  await page.route('**/api/travels/resolve-slug/**', routeHandler);
+  await page.route('**/travels/resolve-slug/**', routeHandler);
   await page.route('**/api/travels/by-slug/**', routeHandler);
   await page.route('**/travels/by-slug/**', routeHandler);
   await page.route(`**/api/travels/${FALLBACK_TRAVEL_ID}/`, routeHandler);
