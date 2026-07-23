@@ -1,5 +1,5 @@
 import React from 'react'
-import { Platform, StyleSheet } from 'react-native'
+import { PanResponder, Platform, StyleSheet } from 'react-native'
 
 const renderer = require('react-test-renderer')
 const originalUseWindowDimensions = require('react-native').useWindowDimensions
@@ -11,6 +11,14 @@ require('react-native').useWindowDimensions = jest.fn(() => ({
 }))
 
 const mockCreatePopupArgs: any[] = []
+const mockPanResponderConfigs: any[] = []
+const originalPanResponderCreate = PanResponder.create.bind(PanResponder)
+const panResponderCreateSpy = jest
+  .spyOn(PanResponder, 'create')
+  .mockImplementation((config: any) => {
+    mockPanResponderConfigs.push(config)
+    return originalPanResponderCreate(config)
+  })
 
 jest.mock('@/components/MapPage/Map/createMapPopupComponent', () => ({
   __esModule: true,
@@ -56,20 +64,23 @@ describe('MapPlaceBottomCard native layout', () => {
   afterAll(() => {
     ;(Platform as any).OS = originalPlatform
     require('react-native').useWindowDimensions = originalUseWindowDimensions
+    panResponderCreateSpy.mockRestore()
   })
 
   beforeEach(() => {
     mockCreatePopupArgs.length = 0
+    mockPanResponderConfigs.length = 0
   })
 
   it('renders a bottom-anchored content-sized sheet over a soft backdrop', () => {
+    const onClose = jest.fn()
     let tree: any
     renderer.act(() => {
       tree = renderer.create(
         <MapPlaceBottomCard
           point={point}
           userLocation={null}
-          onClose={jest.fn()}
+          onClose={onClose}
           bottomInset={72}
           topInset={116}
         />,
@@ -82,11 +93,17 @@ describe('MapPlaceBottomCard native layout', () => {
     expect(rootStyle.justifyContent).toBe('flex-end')
     expect(rootStyle.top).toBe(0)
     expect(rootStyle.bottom).toBe(0)
+    expect(rootStyle.zIndex).toBeGreaterThan(18)
+    expect(rootStyle.elevation).toBe(rootStyle.zIndex)
 
     // Backdrop closes on tap and uses the exact soft scrim color.
     const backdrop = tree.root.findByProps({ testID: 'map-place-bottom-card-backdrop' })
     const backdropStyle = StyleSheet.flatten(backdrop.props.style)
     expect(backdropStyle.backgroundColor).toBe('rgba(15, 23, 42, 0.18)')
+    renderer.act(() => {
+      backdrop.props.onPress()
+    })
+    expect(onClose).toHaveBeenCalledTimes(1)
 
     // Panel caps at nativeSheetMaxHeight and clears the bottom chrome.
     // bottomChromeInset = 72 + safe.bottom(8) = 80
@@ -121,5 +138,30 @@ describe('MapPlaceBottomCard native layout', () => {
     expect(scrolls.length).toBe(1)
     const contentStyle = StyleSheet.flatten(scrolls[0].props.contentContainerStyle)
     expect(contentStyle.paddingBottom).toBe(12)
+  })
+
+  it('captures a downward handle drag before native children and keeps the responder', () => {
+    const onClose = jest.fn()
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <MapPlaceBottomCard
+          point={point}
+          userLocation={null}
+          onClose={onClose}
+        />,
+      )
+    })
+
+    expect(tree.root.findByProps({ testID: 'map-place-bottom-card' })).toBeTruthy()
+    const responderConfig = mockPanResponderConfigs.at(-1)
+    expect(responderConfig.onMoveShouldSetPanResponderCapture).toEqual(expect.any(Function))
+    expect(responderConfig.onMoveShouldSetPanResponderCapture({}, { dy: 12, dx: 1 })).toBe(true)
+    expect(responderConfig.onPanResponderTerminationRequest()).toBe(false)
+    expect(responderConfig.onShouldBlockNativeResponder()).toBe(true)
+    renderer.act(() => {
+      responderConfig.onPanResponderRelease({}, { dy: 65, dx: 1 })
+    })
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

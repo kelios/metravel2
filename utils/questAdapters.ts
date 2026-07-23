@@ -37,6 +37,18 @@ const optionalText = (value: unknown): string | undefined => {
     return trimmed || undefined;
 };
 
+/**
+ * Quest copy is plain text, so React Native does not decode HTML character
+ * references. Some persisted quest texts use numeric entities for newlines;
+ * decode only those entities and leave all other markup-like text untouched.
+ */
+const normalizeQuestText = (value: unknown): string => {
+    if (typeof value !== 'string') return '';
+    return value
+        .replace(/&#(?:0*13|x0*d);&#(?:0*10|x0*a);/gi, '\n')
+        .replace(/&#(?:0*10|0*13|x0*a|x0*d);/gi, '\n');
+};
+
 function adaptPoiInfo(apiStep: ApiQuestStep): QuestStep['poiInfo'] {
     const raw = apiStep.poi_info;
     if (!raw) return null;
@@ -308,9 +320,9 @@ export function adaptStep(apiStep: ApiQuestStep): QuestStep {
         id: String(apiStep.step_id ?? apiStep.id),
         title: apiStep.title,
         location: apiStep.location,
-        story: apiStep.story,
-        task: apiStep.task,
-        hint: apiStep.hint || undefined,
+        story: normalizeQuestText(apiStep.story),
+        task: normalizeQuestText(apiStep.task),
+        hint: apiStep.hint ? normalizeQuestText(apiStep.hint) : undefined,
         answer: buildAnswerChecker(answerType, answerValue),
         answerDisplay: buildAnswerDisplay(answerType, answerValue),
         lat: coordNum(apiStep.lat),

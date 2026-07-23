@@ -171,6 +171,26 @@ describe('questAdapters', () => {
       expect(result.answer('Дракон')).toBe(true);
     });
 
+    it('decodes numeric newline entities in visible quest copy only', () => {
+      const result = adaptStep({
+        id: 101,
+        step_id: 'intro',
+        title: 'Как пройти квест?',
+        location: 'Начало приключения',
+        story: 'Первый абзац.&#10;&#10;Второй абзац с &amp; внутри.',
+        task: 'Шаг один.&#xA;Шаг два.',
+        hint: 'Смотри вверх.&#13;&#10;Не спеши.',
+        lat: 50.054,
+        lng: 19.935,
+        maps_url: 'https://maps.google.com',
+        answer_pattern: { type: 'any', value: '' },
+      });
+
+      expect(result.story).toBe('Первый абзац.\n\nВторой абзац с &amp; внутри.');
+      expect(result.task).toBe('Шаг один.\nШаг два.');
+      expect(result.hint).toBe('Смотри вверх.\nНе спеши.');
+    });
+
     it('does not throw when answer_pattern.value is a number (regression: quest with 0 steps)', () => {
       const apiStep = {
         id: 9,

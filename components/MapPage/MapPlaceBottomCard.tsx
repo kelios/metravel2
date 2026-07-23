@@ -23,6 +23,11 @@ import { translate as i18nT } from '@/i18n'
 
 const IS_WEB = Platform.OS === 'web'
 const SWIPE_CLOSE_THRESHOLD_PX = 64
+// Android renders elevated descendants (map FABs / WebView controls) above a
+// later sibling unless the sibling establishes its own native Z plane.  The
+// place-card root must own that plane so its backdrop receives taps and every
+// map control stays below the hero while the card is open.
+const NATIVE_CARD_OVERLAY_ELEVATION = 32
 // Native bottom sheet: vertical budget the block below the hero needs, so the
 // hero can take the rest without forcing a scroll on tall content.
 // Hero-caption relayout: title/address/chips/coordinates moved ONTO the photo
@@ -165,6 +170,13 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
     return PanResponder.create({
       onMoveShouldSetPanResponder: (_evt, gesture) =>
         gesture.dy > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+      // Capture before a neighbouring Pressable/ScrollView becomes responder.
+      // Without the capture callback Android can keep the gesture in the child
+      // native view and the handle never sees release/terminate.
+      onMoveShouldSetPanResponderCapture: (_evt, gesture) =>
+        gesture.dy > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
       onPanResponderRelease: (_evt, gesture) => {
         if (gesture.dy > SWIPE_CLOSE_THRESHOLD_PX) handleClose()
       },
@@ -368,6 +380,8 @@ const getStyles = (colors: ThemedColors) =>
     nativeRoot: {
       ...StyleSheet.absoluteFillObject,
       justifyContent: 'flex-end',
+      zIndex: NATIVE_CARD_OVERLAY_ELEVATION,
+      elevation: NATIVE_CARD_OVERLAY_ELEVATION,
     },
     nativeBackdrop: {
       ...StyleSheet.absoluteFillObject,
