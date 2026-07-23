@@ -152,6 +152,39 @@ describe('normal deploy Expo overlay retention', () => {
     }
   })
 
+  it('uses deployment time for fresh assets so the next deploy retains them', () => {
+    const fixture = makeFixture()
+    const firstRelease = path.join(fixture.root, 'first-release')
+    const secondRelease = path.join(fixture.root, 'second-release')
+    const cachedChunk = writeFile(
+      firstRelease,
+      'js/web/current-cached.js',
+      'cached current release',
+    )
+
+    try {
+      ageFile(cachedChunk, 16)
+
+      runOverlay(firstRelease, fixture.previous)
+
+      expect(fs.statSync(cachedChunk).mtimeMs).toBeGreaterThan(
+        Date.now() - 60_000,
+      )
+
+      writeFile(secondRelease, 'js/web/next-release.js', 'next release')
+      runOverlay(secondRelease, firstRelease)
+
+      expect(
+        fs.readFileSync(
+          path.join(secondRelease, 'js/web/current-cached.js'),
+          'utf8',
+        ),
+      ).toBe('cached current release')
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
   it('wires the tested helper into the canonical deploy before the static swap', () => {
     const source = fs.readFileSync(
       path.resolve(process.cwd(), 'build-prod.sh'),

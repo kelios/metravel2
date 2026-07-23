@@ -18,6 +18,19 @@ if [[ ! "$retention_days" =~ ^[0-9]+$ ]]; then
 fi
 
 mkdir -p "$fresh_root"
+
+# Retention age is the age of a deployed generation, not the source mtime of a
+# cached build artifact. Expo can reuse hashed chunks without rewriting them,
+# so a file shipped by the current payload may otherwise look older than the
+# retention window and disappear on the very next deploy while an open tab is
+# still using it. Stamp every current JS/CSS asset at publish time before the
+# previous generation is overlaid; cp -p then carries that generation age
+# through the supported overlap window.
+find "$fresh_root" \
+  -type f \
+  \( -name '*.js' -o -name '*.css' \) \
+  -exec touch -- {} +
+
 [[ -d "$previous_root" ]] || exit 0
 
 previous_prefix="${previous_root%/}/"
