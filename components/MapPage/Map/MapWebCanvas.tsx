@@ -234,35 +234,6 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
 }) => {
   const { MapContainer, Marker, Popup, Tooltip, Circle, TileLayer, useMap, useMapEvents } = rl
   const Polyline = (rl as any)?.Polyline as any
-  const Pane = (rl as any)?.Pane as any
-  const [userLocationPaneReady, setUserLocationPaneReady] = React.useState(false)
-
-  React.useEffect(() => {
-    setUserLocationPaneReady(false)
-  }, [mapInstance])
-
-  React.useEffect(() => {
-    if (typeof Pane !== 'function' || !mapInstance?.getPane) return
-
-    let cancelled = false
-    const markPaneReady = () => {
-      if (cancelled) return
-      try {
-        const pane = mapInstance.getPane('metravelUserLocationPane')
-        if (pane) {
-          setUserLocationPaneReady(true)
-        }
-      } catch {
-        // noop
-      }
-    }
-
-    const frameId = requestAnimationFrame(markPaneReady)
-    return () => {
-      cancelled = true
-      cancelAnimationFrame(frameId)
-    }
-  }, [Pane, mapInstance])
 
   if (!canRenderMap || !hasValidReactLeafletHooks) return null
 
@@ -284,13 +255,6 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
       tap={false}
       touchZoom
     >
-      {typeof Pane === 'function' && mapInstance ? (
-        <>
-          <Pane name="metravelRoutePane" style={{ zIndex: 590, pointerEvents: 'none' } as any} />
-          <Pane name="metravelUserLocationPane" style={{ zIndex: 520, pointerEvents: 'none' } as any} />
-        </>
-      ) : null}
-
       <MapLayers
         TileLayer={TileLayer}
         Circle={Circle}
@@ -301,7 +265,6 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
         radiusInMeters={radiusInMeters}
         userLocation={userLocationLatLng}
         userLocationIcon={customIcons?.userLocation}
-        userLocationPaneName={userLocationPaneReady ? 'metravelUserLocationPane' : undefined}
         mapInstance={mapInstance}
       />
 
@@ -343,7 +306,6 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
         ) : typeof Polyline === 'function' ? (
           <Polyline
             positions={routeLineLatLngObjects as any}
-            pane="metravelRoutePane"
             pathOptions={{
               color: (colors as any).primary || DESIGN_TOKENS.colors.primary,
               weight: 6,
