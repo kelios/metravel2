@@ -649,6 +649,7 @@ describe('useDraftRecovery', () => {
 
   it('exposes local persistence failure until a later draft write succeeds', async () => {
     jest.useFakeTimers();
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     AsyncStorage.setItem.mockRejectedValueOnce(new Error('storage full'));
     const { result } = renderHook(() =>
       useDraftRecovery({
@@ -666,6 +667,7 @@ describe('useDraftRecovery', () => {
       await Promise.resolve();
     });
     expect(result.current.storageError?.message).toBe('storage full');
+    expect(consoleWarnSpy).toHaveBeenCalledWith('Failed to save draft:', expect.any(Error));
 
     act(() => result.current.saveDraft({ name: 'second edit' } as any));
     await act(async () => {

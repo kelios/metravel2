@@ -120,6 +120,10 @@ describe('api/misc', () => {
     ;(global as any).File = class FakeFile {}
   })
 
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
   it('saveFormData requires auth and propagates non-ok responses', async () => {
     mockGetSecureItem.mockResolvedValue(null)
     await expect(saveFormData(baseForm)).rejects.toThrow('Пользователь не авторизован')
@@ -202,6 +206,7 @@ describe('api/misc', () => {
 
   it('saveFormData blocks a blank payload for an EXISTING travel (anti-wipe, travel 641)', async () => {
     mockGetSecureItem.mockResolvedValue('token')
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined)
 
     // Непрогидратированная пустая форма с уже присвоенным id — то, что улетело
     // автосейвом и стёрло опубликованную статью 641.
@@ -214,6 +219,10 @@ describe('api/misc', () => {
 
     await expect(saveFormData(blankExisting)).rejects.toThrow()
     await expect(saveFormData(blankExisting, undefined, { autosave: true })).rejects.toThrow()
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      '[saveFormData] Blank payload blocked for existing travel',
+      { travelId: '641', intent: 'autosave' },
+    )
     expect(mockApiClientRequest).not.toHaveBeenCalled()
   })
 

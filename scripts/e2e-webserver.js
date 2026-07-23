@@ -16,6 +16,11 @@ if (Object.prototype.hasOwnProperty.call(process.env, 'FORCE_COLOR')) {
 const distIndex = path.join(rootDir, 'dist', 'index.html');
 const distJsDir = path.join(rootDir, 'dist', '_expo', 'static', 'js', 'web');
 const distMetaPath = path.join(rootDir, 'dist', '.e2e-build-meta.json');
+const requiredStaticRoutePaths = [
+  path.join(rootDir, 'dist', 'search.html'),
+  path.join(rootDir, 'dist', 'travelsby.html'),
+  path.join(rootDir, 'dist', 'travels', '[param].html'),
+];
 const envPath = path.join(rootDir, '.env');
 const e2ePublicFlagLine = 'EXPO_PUBLIC_E2E=true';
 const BENIGN_EXPO_EXPORT_SHUTDOWN_WARNING =
@@ -79,6 +84,50 @@ function hasEntryBundleSync() {
     return !!files.find((f) => f.startsWith('entry-') && f.endsWith('.js'));
   } catch {
     return false;
+  }
+}
+
+function hasRequiredStaticRoutesSync() {
+  return requiredStaticRoutePaths.every((filePath) => fs.existsSync(filePath));
+}
+
+function waitForProcessExit(child, timeoutMs) {
+  if (!child || child.exitCode != null || child.signalCode != null) {
+    return Promise.resolve(true);
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (exited) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      child.off('exit', onExit);
+      resolve(exited);
+    };
+    const onExit = () => finish(true);
+    const timer = setTimeout(() => finish(false), timeoutMs);
+
+    child.once('exit', onExit);
+    if (child.exitCode != null || child.signalCode != null) {
+      finish(true);
+    }
+  });
+}
+
+function assertStableE2EBuild() {
+  const missing = [
+    ...(fs.existsSync(distIndex) ? [] : [distIndex]),
+    ...(hasEntryBundleSync() ? [] : [distJsDir]),
+    ...requiredStaticRoutePaths.filter((filePath) => !fs.existsSync(filePath)),
+  ];
+
+  if (missing.length > 0) {
+    throw new Error(
+      `[e2e-webserver] Web export is incomplete after build shutdown. Missing: ${missing
+        .map((filePath) => path.relative(rootDir, filePath))
+        .join(', ')}`
+    );
   }
 }
 
@@ -284,6 +333,7 @@ function getGitBuildStamp(cwd) {
 
 async function main() {
   const buildTimeoutMs = Number(process.env.E2E_BUILD_TIMEOUT_MS || '540000'); // 9 minutes
+  const buildExitGraceMs = Number(process.env.E2E_BUILD_EXIT_GRACE_MS || '15000');
   const e2eWebPort = Number(process.env.E2E_WEB_PORT || '8085');
   const e2eApiBase = `http://127.0.0.1:${e2eWebPort}`;
   const forceRebuild = String(process.env.E2E_FORCE_REBUILD || '') === '1';
@@ -311,6 +361,7 @@ async function main() {
     !forceRebuild &&
     fs.existsSync(distIndex) &&
     hasEntryBundleSync() &&
+    hasRequiredStaticRoutesSync() &&
     existingMeta &&
     existingMeta.expoPublic &&
     existingMeta.expoPublic.EXPO_PUBLIC_E2E === buildMeta.expoPublic.EXPO_PUBLIC_E2E &&
@@ -396,10 +447,22 @@ async function main() {
     try {
       await waitForFile(distIndex, buildTimeoutMs);
       await waitForEntryBundle(buildTimeoutMs);
+      for (const requiredRoutePath of requiredStaticRoutePaths) {
+        await waitForFile(requiredRoutePath, buildTimeoutMs);
+      }
+
+      const exitedWithoutInterruption = await waitForProcessExit(build, buildExitGraceMs);
+      if (!exitedWithoutInterruption) {
+        killProcessTree(build);
+        await waitForProcessExit(build, 7000);
+      }
       await sleep(500);
+      assertStableE2EBuild();
       writeJson(distMetaPath, buildMeta);
     } finally {
-      killProcessTree(build);
+      if (build.exitCode == null && build.signalCode == null) {
+        killProcessTree(build);
+      }
       try {
         if (originalEnvFile != null) {
           fs.writeFileSync(envPath, originalEnvFile, 'utf8');
@@ -428,7 +491,15 @@ async function main() {
   server.on('exit', (code) => process.exit(typeof code === 'number' ? code : 0));
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  assertStableE2EBuild,
+  hasRequiredStaticRoutesSync,
+  waitForProcessExit,
+};
