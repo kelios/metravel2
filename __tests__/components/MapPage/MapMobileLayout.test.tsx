@@ -344,6 +344,9 @@ describe('MapMobileLayout', () => {
       )
 
       expect(screen.getByTestId('map-place-bottom-card')).toBeTruthy()
+      expect(
+        StyleSheet.flatten(screen.getByTestId('map-mobile-layout').props.style).elevation,
+      ).toBe(32)
       expect(mockMapPlaceBottomCard.mock.calls.at(-1)?.[0]?.userLocation).toBeNull()
       expect(hardwareBackHandler?.()).toBe(true)
       expect(clearSelectedPlace).toHaveBeenCalledTimes(1)

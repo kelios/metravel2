@@ -83,6 +83,19 @@ export const getMapMobileLayoutStyles = (
           } as any)
         : null),
     },
+    // Android WebView owns a native drawing surface. Elevating only the card
+    // child is not enough because children cannot escape their parent's native
+    // stacking plane: the transparent backdrop remains behind the WebView and
+    // map taps win. Lift the whole mobile chrome while a place card is open so
+    // backdrop, panel and gestures share one plane above the map host.
+    selectedPlaceOverlayRoot: {
+      ...(Platform.OS === 'web'
+        ? null
+        : {
+            zIndex: 32,
+            elevation: 32,
+          }),
+    },
     mapContainer: {
       flex: 1,
       minHeight: 240,

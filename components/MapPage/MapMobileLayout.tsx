@@ -778,7 +778,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     // be an absoluteFill ReactViewGroup over the map and would swallow the
     // ACTION_DOWN before it reached the WebView sibling below.
     <View
-      style={[styles.container, styles.overlayRoot]}
+      style={[
+        styles.container,
+        styles.overlayRoot,
+        hasSelectedPlace && styles.selectedPlaceOverlayRoot,
+      ]}
       testID="map-mobile-layout"
       {...({ pointerEvents: 'box-none' } as any)}
       {...(isActiveWebRoute ? ({ 'data-active': 'true' } as any) : null)}
