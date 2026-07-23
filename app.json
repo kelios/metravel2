@@ -114,6 +114,7 @@
       "expo-sharing",
       "expo-web-browser",
       "./plugins/withAndroidShortcuts",
+      "./plugins/withAndroidReleaseSafety",
       [
         "expo-notifications",
         {

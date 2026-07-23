@@ -17,10 +17,15 @@ jest.mock('expo-router', () => ({
   useRootNavigationState: () => mockRootNavigationState,
 }));
 
-const expoGlobal = ((globalThis as any).expo ??= {});
-expoGlobal.modules = {
-  ...(expoGlobal.modules ?? {}),
-  ExpoLinking: { addListener: mockAddListener },
+const expoGlobal = globalThis as typeof globalThis & {
+  expo?: { modules?: Record<string, unknown> };
+};
+expoGlobal.expo = {
+  ...expoGlobal.expo,
+  modules: {
+    ...expoGlobal.expo?.modules,
+    ExpoLinking: { addListener: mockAddListener },
+  },
 };
 
 const {

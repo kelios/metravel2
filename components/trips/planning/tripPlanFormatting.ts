@@ -208,8 +208,8 @@ export function formatTripDisplayDate(value: string): string {
 
 /** «11 июля 2026 г.» / с временем «11 июля 2026 г., 08:00». */
 export function formatTripDateTime(dateIso: string, time: string | null): string {
-  const d = new Date(dateIso);
-  if (Number.isNaN(d.getTime())) return dateIso;
+  const d = parseTripIsoDate(dateIso);
+  if (!d) return dateIso;
   const base = formatDate(d, { day: 'numeric', month: 'long', year: 'numeric' });
   return time ? `${base}, ${time}` : base;
 }
