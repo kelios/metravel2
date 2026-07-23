@@ -87,6 +87,30 @@ export async function mockFallbackTravelDetails(page: Page): Promise<void> {
 
     const url = request.url();
     if (
+      url.includes('/api/travels/popular/') ||
+      url.includes('/travels/popular/')
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({}),
+      });
+      return;
+    }
+
+    if (
+      url.includes(`/api/travels/${FALLBACK_TRAVEL_ID}/near/`) ||
+      url.includes(`/travels/${FALLBACK_TRAVEL_ID}/near/`)
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+      return;
+    }
+
+    if (
       url.includes(`/api/travels/resolve-slug/${FALLBACK_TRAVEL_SLUG}/`) ||
       url.includes(`/travels/resolve-slug/${FALLBACK_TRAVEL_SLUG}/`) ||
       url.includes(`/api/travels/by-slug/${FALLBACK_TRAVEL_SLUG}/`) ||
@@ -109,6 +133,10 @@ export async function mockFallbackTravelDetails(page: Page): Promise<void> {
   await page.route('**/api/travels/by-slug/**', routeHandler);
   await page.route('**/travels/by-slug/**', routeHandler);
   await page.route(`**/api/travels/${FALLBACK_TRAVEL_ID}/`, routeHandler);
+  await page.route('**/api/travels/popular/**', routeHandler);
+  await page.route('**/travels/popular/**', routeHandler);
+  await page.route(`**/api/travels/${FALLBACK_TRAVEL_ID}/near/**`, routeHandler);
+  await page.route(`**/travels/${FALLBACK_TRAVEL_ID}/near/**`, routeHandler);
 }
 
 export async function openFallbackTravelDetails(page: Page): Promise<boolean> {

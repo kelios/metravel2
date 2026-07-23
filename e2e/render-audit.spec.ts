@@ -39,6 +39,7 @@ async function installClsAfterRenderMeter(page: any) {
     (window as any).__e2eClsAudit = {
       phase: 'total',
       clsAfterRender: 0,
+      entriesAfterRender: [],
       finalized: false,
     };
 
@@ -48,7 +49,20 @@ async function installClsAfterRenderMeter(page: any) {
           const s = (window as any).__e2eClsAudit;
           if (!s || s.finalized) return;
           if (!entry || entry.hadRecentInput || typeof entry.value !== 'number') continue;
-          if (s.phase === 'afterRender') s.clsAfterRender += entry.value;
+          if (s.phase === 'afterRender') {
+            s.clsAfterRender += entry.value;
+            const sources = Array.isArray(entry.sources)
+              ? entry.sources.map((source: any) => {
+                  const node = source?.node as Element | null;
+                  if (!node || !node.tagName) return 'unknown';
+                  const tag = node.tagName.toLowerCase();
+                  const testId = node.getAttribute?.('data-testid');
+                  const aria = node.getAttribute?.('aria-label');
+                  return `${tag}${testId ? `[data-testid="${testId}"]` : ''}${aria ? `[aria-label="${aria}"]` : ''}`;
+                })
+              : [];
+            s.entriesAfterRender.push({ value: entry.value, sources });
+          }
         }
       });
       obs.observe({ type: 'layout-shift', buffered: true } as any);
@@ -64,18 +78,27 @@ async function startClsAfterRenderPhase(page: any) {
     if (!s) return;
     s.phase = 'afterRender';
     s.clsAfterRender = 0;
+    s.entriesAfterRender = [];
   }).catch(() => null);
 }
 
-async function finalizeClsAfterRender(page: any): Promise<number> {
+type ClsAfterRenderAudit = {
+  value: number;
+  entries: Array<{ value: number; sources: string[] }>;
+};
+
+async function finalizeClsAfterRender(page: any): Promise<ClsAfterRenderAudit> {
   return page
     .evaluate(() => {
     const s = (window as any).__e2eClsAudit;
-    if (!s) return 0;
+    if (!s) return { value: 0, entries: [] };
     s.finalized = true;
-    return typeof s.clsAfterRender === 'number' ? s.clsAfterRender : 0;
+    return {
+      value: typeof s.clsAfterRender === 'number' ? s.clsAfterRender : 0,
+      entries: Array.isArray(s.entriesAfterRender) ? s.entriesAfterRender : [],
+    };
     })
-    .catch(() => 0);
+    .catch(() => ({ value: 0, entries: [] }));
 }
 
 test.describe('@perf Render audit: main and travel details (responsive + perf)', () => {
@@ -144,7 +167,10 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
       await startClsAfterRenderPhase(page);
       await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
       const cls = await finalizeClsAfterRender(page);
-      expect(cls, `CLS after render too high on main (${vp.name})`).toBeLessThanOrEqual(0.05);
+      expect(
+        cls.value,
+        `CLS after render too high on main (${vp.name}); entries=${JSON.stringify(cls.entries)}`,
+      ).toBeLessThanOrEqual(0.05);
 
       // Basic interaction: type and clear search.
       await search.fill('тест');
@@ -216,7 +242,10 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
       await startClsAfterRenderPhase(page);
       await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
       const cls = await finalizeClsAfterRender(page);
-      expect(cls, `CLS after render too high on travel details (${vp.name})`).toBeLessThanOrEqual(0.05);
+      expect(
+        cls.value,
+        `CLS after render too high on travel details (${vp.name}); entries=${JSON.stringify(cls.entries)}`,
+      ).toBeLessThanOrEqual(0.05);
 
       // Performance smoke: first meaningful interaction should be possible.
       // There is a FAB on mobile labeled "Открыть меню разделов".

@@ -100,6 +100,54 @@ async function waitForReady(page: any, selector: string) {
   await page.waitForLoadState('networkidle').catch(() => null)
 }
 
+async function installDeterministicSearchApi(page: any, target: PageTarget) {
+  if (target.key !== 'SEARCH') return
+
+  const fulfillJson = (route: any, body: unknown) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    })
+
+  await page.route('**/getFiltersTravel/**', (route: any) =>
+    fulfillJson(route, {
+      categories: [],
+      categoryTravelAddress: [],
+      companions: [],
+      complexity: [],
+      month: [],
+      over_nights_stay: [],
+      sortings: [],
+      transports: [],
+    }),
+  )
+  await page.route('**/countriesforsearch/**', (route: any) => fulfillJson(route, []))
+
+  const fulfillTravelCatalog = async (route: any) => {
+    const request = route.request()
+    if (request.method() !== 'GET') {
+      await route.fallback()
+      return
+    }
+
+    const pathname = new URL(request.url()).pathname
+    if (pathname.endsWith('/travels/facets/')) {
+      await fulfillJson(route, { total: 0, facets: {} })
+      return
+    }
+    if (pathname.endsWith('/api/travels/') || pathname === '/travels/') {
+      await fulfillJson(route, { data: [], total: 0 })
+      return
+    }
+
+    await route.fallback()
+  }
+
+  await page.route('**/api/travels/**', fulfillTravelCatalog)
+  await page.route('**/travels/**', fulfillTravelCatalog)
+}
+
 for (const target of PAGES) {
   test.describe(`@perf ${target.name} — Performance Budget (prod build)`, () => {
     test.describe.configure({ mode: 'serial' })
@@ -107,6 +155,7 @@ for (const target of PAGES) {
     test(`${target.name}: Core Web Vitals within budget (desktop)`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 })
       await injectPerfObservers(page)
+      await installDeterministicSearchApi(page, target)
 
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector)
@@ -160,6 +209,7 @@ for (const target of PAGES) {
     test(`${target.name}: Network transfer budget (JS/total/requests)`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 })
       await injectPerfObservers(page)
+      await installDeterministicSearchApi(page, target)
 
       const tracker = createNetworkTracker(page, {
         ignoreBudgetRequest: (url) => shouldIgnoreBudgetRequest(target, url),
