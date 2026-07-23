@@ -119,6 +119,19 @@ describe('Native compatibility governance (docs/NATIVE_COMPAT_RULES.md)', () => 
       path.join(ROOT, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'),
       'utf8',
     );
+    const appGradle = fs.readFileSync(path.join(ROOT, 'android', 'app', 'build.gradle'), 'utf8');
+    const releaseSafetyPlugin = fs.readFileSync(
+      path.join(ROOT, 'plugins', 'withAndroidReleaseSafety.js'),
+      'utf8',
+    );
+    const androidProperties = fs.readFileSync(
+      path.join(ROOT, 'android', 'gradle.properties'),
+      'utf8',
+    );
+    const androidStyles = fs.readFileSync(
+      path.join(ROOT, 'android', 'app', 'src', 'main', 'res', 'values', 'styles.xml'),
+      'utf8',
+    );
     const layout = fs.readFileSync(path.join(ROOT, 'app', '_layout.tsx'), 'utf8');
     const nativeRuntime = fs.readFileSync(
       path.join(ROOT, 'components', 'layout', 'NativeAppRuntime.native.tsx'),
@@ -128,6 +141,13 @@ describe('Native compatibility governance (docs/NATIVE_COMPAT_RULES.md)', () => 
     expect(appConfig.expo?.orientation).toBe('default');
     expect(manifest).not.toContain('android:screenOrientation=');
     expect(manifest).toContain('android:resizeableActivity="true"');
+    expect(androidProperties).toMatch(/^edgeToEdgeEnabled=true$/m);
+    expect(appGradle).toContain('com.google.android.material:material:1.14.0');
+    expect(releaseSafetyPlugin).toContain('com.google.android.material:material:1.14.0');
+    expect(releaseSafetyPlugin).toContain("name: 'android:statusBarColor'");
+    expect(releaseSafetyPlugin).toContain("name: 'android:navigationBarColor'");
+    expect(androidStyles).not.toContain('android:statusBarColor');
+    expect(androidStyles).not.toContain('android:navigationBarColor');
     expect(layout).not.toMatch(/<RNStatusBar[\s\S]{0,220}\b(backgroundColor|translucent)=/);
     expect(nativeRuntime).not.toContain('setBackgroundColorAsync');
   });
