@@ -22,6 +22,7 @@
 | 12   | 2026-07-20 | ✅          | none checked | Pack Boneclaw IV: 11/11 done (100%); TCT: 4 pending uploads, 8 completed today; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-20/`; 3+ minute interactive testing used for each TC task app; bugs/improvements logged; no crash-buffer hits |
 | 13   | 2026-07-21 | ✅          | snapshot refreshed: `com.kitchenmatch.game` 2→3, `com.kolorino.kolorino` 2→6, `com.unnoyashiro` 2→3, `by.metravel.app` 8→15; Priority dz Play listing checked: no Update button | Pack Boneclaw IV: 11/11 done (100%); TCT: visible tests Done/Done; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-21/`; 3+ minute interactive testing used for each TC task app; chat note: Priority dz developer asked to update, but Play showed only `Играть`; no crash-buffer hits |
 | 14   | 2026-07-22 | ✅          | snapshot refreshed: `com.baremacros.app` 1→10, `com.kitchenmatch.game` 3→6, `com.kolorino.kolorino` 6→7, `com.ja.callofpoker` 69000→71000 | Pack Boneclaw IV: 11/11 done (100%); TCT: one partner MeTravel proof accepted; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-22/`; linked 30+ second task sessions recovered the stale `0/11` mission state; all target versionCodes match snapshot; no target-package crash-buffer hits |
+| 15   | 2026-07-23 | ✅          | none; installed versionCodes match snapshot for today's 10 assigned packages | Pack Boneclaw IV: Day 13/16, 10/10 done (100%); TCT visible tests Done/Done; App Testers/NadeemGS TC inspected | Evidence: `.claude/play-testing/evidence/2026-07-23/`; each TC task had real 3+ minute app usage plus linked 30+ second TestersCommunity completion where needed; final proof shows `ALL DONE`; no target-package crash-buffer hits |
 
 ## Найденные задания / инциденты
 
@@ -186,3 +187,26 @@
 - Re-linked every remaining assignment to its already completed 3+ minute direct test, verified the exact foreground package, exercised a meaningful saved/core state, met the linked timer, and submitted app-specific feedback. Final Pack Details showed `ALL DONE`, `Open & test apps today (11/11 done)`, `Daily Progress Complete!`, and `All tasks complete!`.
 - Final assigned apps: Putik, PraEx, BareMacros, Kitchen Match & Merge, First Time Daddy, Kolorino, Denkleşelim, Ball Sort - Zen, Call Of Poker, Priority dz, and `運の社`.
 - Final version audit matched `.claude/play-testing/versions.json` for all 11 packages. Target-package crash mentions: 0. One unrelated `com.android.commands.uiautomator` tooling crash occurred during repeated UI dumps and is not an app crash.
+
+### 2026-07-23 — Daily pass
+
+- Device: Pixel 10 Pro `61020DLCH0086L`, USB/adb authorized.
+- TestersCommunity Pack Boneclaw IV: completed Day 13/16. Final Pack Details showed `100%`, `ALL DONE`, `Open & test apps today (10/10 done)`, `Daily Progress Complete!`, and `All tasks complete!`.
+- Per user instruction, assigned apps were tested as real app sessions, not just opened. Each app had exact foreground verification, 3+ minutes of meaningful in-app use, visual proof, and TestersCommunity linked 30+ second completion where the task list required it:
+  - BareMacros: tested Track, quick macro buttons, meals/search/manage areas. Improvement: quick-start/lower controls remain visually dense on the Pixel 10 Pro.
+  - Kitchen Match & Merge: rejected a weak level-map proof internally, then retested Level 1 board with visible `0/22` target and moves. Improvement/risk: gameplay/start flow still needs clearer separation from ad/install controls.
+  - Kolorino: opened coloring canvas and applied visible color strokes; foreground stayed `com.kolorino.kolorino`. Improvement: selected/active coloring mode could be clearer for first-time users.
+  - Denkleşelim: tested room settings, currency, notification options and room navigation. Improvement: action/settings icons need labels because they are easy to confuse.
+  - Priority dz: tested road-priority gameplay/progression in Arabic UI. Improvement: clearer progress/feedback and a language hint would help international testers.
+  - Ball Sort - Zen: performed tube moves in the puzzle board. Improvement: add a visible level/move counter or first-level hint.
+  - Call Of Poker: tested mode/menu flow after a full session; linked completion required a final 30+ second reopen. Improvement: first mode CTA and mode transition should be clearer.
+  - First Time Daddy: tested Home, Weekly, Guide and Journal screens. Improvement: Journal privacy/local-storage/sync behavior should be clearer because entries are sensitive.
+  - `運の社`: tested fortune/oracle result flow and captured an omikuji result. Improvement: add an English hint or language toggle for non-Japanese testers.
+  - PraEx: answered driving quiz questions through visible question `06/25`. Improvement: long Portuguese answer choices remain dense on mobile.
+- Community audit:
+  - The Closed Test: visible campaigns showed `MY UPLOAD Done` and `PARTNER Done`; no pending replacement action found.
+  - App Testers `com.nadeemgs.apptesters`: catalog/profile screens inspected; no mandatory proof/review action found.
+  - NadeemGS TestersCommunity `com.nadeemgs.testerscommunity`: catalog/profile screens inspected; no mandatory proof/review action found.
+  - No Play reviews/ratings, purchases, messages, account changes, uninstall/reinstall, or ad actions were performed.
+- Version audit: today's assigned packages matched `.claude/play-testing/versions.json`: BareMacros 10, Kitchen 6, Kolorino 7, Denkleşelim 11, Priority dz 4, Ball Sort 2, Call Of Poker 71000, First Time Daddy 1, `運の社` 3, PraEx 4.
+- Crash check: `adb logcat -d -b crash` filtered for the 10 tested packages and `com.testerscommunity` returned no target-package crash entries.
