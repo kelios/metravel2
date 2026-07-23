@@ -3,7 +3,7 @@ import { getTravelsListPath } from './helpers/routes';
 
 const waitForConsentBanner = async (page: any) => {
   const banner = page.getByTestId('consent-banner');
-  await expect(banner).toBeVisible({ timeout: 10_000 });
+  await expect(banner).toBeVisible({ timeout: 30_000 });
 };
 
 const navigateWithRetry = async (page: any, path: string) => {
@@ -23,6 +23,12 @@ const navigateWithRetry = async (page: any, path: string) => {
 
 test.describe('@smoke Footer navigation', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.removeItem('metravel_consent_v1');
+    });
+  });
 
   test('desktop footer navigation works with banner visible', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });

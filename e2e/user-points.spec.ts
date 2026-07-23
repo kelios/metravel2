@@ -27,7 +27,7 @@ async function openUserPoints(page: any): Promise<void> {
   }
 
   await expect(
-    page.getByTestId('userpoints-screen').first().or(page.locator('.leaflet-container').first()),
+    page.getByTestId('userpoints-screen').or(page.locator('.leaflet-container')).first(),
   ).toBeVisible({ timeout: 30_000 });
 }
 

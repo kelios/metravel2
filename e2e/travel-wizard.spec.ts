@@ -800,11 +800,11 @@ test.describe('Создание путешествия - Полный flow', () 
 
       // Проверяем группировку
       await expect(page.locator('text=Дополнительные параметры').first()).toBeVisible();
-      const additionalSectionToggle = page
-        .getByRole('button', { name: 'Свернуть секцию Дополнительные параметры' })
-        .or(page.getByRole('button', { name: 'Развернуть секцию Дополнительные параметры' }));
-      await expect(additionalSectionToggle.first()).toBeVisible();
-      await expect(additionalSectionToggle.first()).toContainText(/\d+\/10/); // Счетчик секции N/10
+      const additionalSectionToggle = page.getByRole('button', {
+        name: /^(?:Свернуть|Развернуть): Дополнительные параметры$/,
+      });
+      await expect(additionalSectionToggle).toBeVisible();
+      await expect(page.getByText(/^\d+\/10$/)).toBeVisible();
 
       // Выбираем категории (если группа открыта)
       const categoriesLabel = page.locator('text=Категории путешествий');

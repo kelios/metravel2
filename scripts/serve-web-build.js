@@ -166,6 +166,23 @@ const proxyPaths = ['/api/', '/api', '/travel-image/', '/address-image/', '/ques
 // and we prefer test stability over aggressively failing long requests.
 const proxyTimeoutMs = Number(process.env.E2E_API_PROXY_TIMEOUT_MS || '60000')
 const proxyDebug = String(process.env.E2E_API_PROXY_DEBUG || '').toLowerCase() === 'true'
+const expectedUnavailableUpstreamCodes = new Set([
+  'EAI_AGAIN',
+  'ECONNREFUSED',
+  'EHOSTDOWN',
+  'ENETDOWN',
+  'ENETUNREACH',
+  'ETIMEDOUT',
+])
+
+const isExpectedProxyTransportFailure = (error) => {
+  const message = error && error.message ? error.message : String(error || '')
+  return (
+    expectedUnavailableUpstreamCodes.has(error && error.code) ||
+    message.includes('Proxy timeout after') ||
+    message.includes('socket hang up')
+  )
+}
 
 // Keep proxy agents bounded to avoid socket/file-descriptor exhaustion in long E2E runs.
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 50, maxFreeSockets: 10 })
@@ -293,7 +310,7 @@ const proxyRequest = (req, res, target) => {
             if (clientClosed) return
             if (res.headersSent || res.writableEnded) return
             const message = error && error.message ? error.message : String(error)
-            if (!isShuttingDown && proxyDebug) {
+            if (!isShuttingDown && proxyDebug && !isExpectedProxyTransportFailure(error)) {
               console.warn(`[Proxy] Upstream response error: ${message}`)
             }
             res.statusCode = 502
@@ -370,15 +387,18 @@ const proxyRequest = (req, res, target) => {
       if (res.headersSent || res.writableEnded) return
 
       const message = error && error.message ? error.message : String(error)
-      // Timeouts and client aborts are expected sometimes in E2E (background requests, navigations).
-      // Don't spam logs for these.
+      // A missing local/dev API is a supported guest-E2E state. The proxy still
+      // returns 502/504 so assertions see the failure; avoid duplicating it as
+      // noisy server stderr unless explicit proxy debugging is enabled.
       const isTimeout = typeof message === 'string' && message.includes('Proxy timeout after')
-      const isSocketHangUp =
-        (error && (error.code === 'ECONNRESET' || error.code === 'EPIPE')) ||
-        (typeof message === 'string' && message.includes('socket hang up'))
+      const isExpectedTransportFailure =
+        isExpectedProxyTransportFailure(error) ||
+        (error && (error.code === 'ECONNRESET' || error.code === 'EPIPE'))
 
-      if (!isTimeout && !isSocketHangUp && !isShuttingDown) {
+      if (!isExpectedTransportFailure && !isShuttingDown) {
         console.error('❌ API proxy error:', message)
+      } else if (proxyDebug && !isShuttingDown) {
+        console.warn(`[Proxy] Upstream unavailable for ${req.url || '/'}: ${message}`)
       }
 
       res.statusCode = isTimeout ? 504 : 502
@@ -495,31 +515,35 @@ const server = http.createServer((req, res) => {
   }
 })
 
-server.on('error', (error) => {
-  console.error('❌ Failed to start web server:', error)
-  process.exit(1)
-})
-
-server.listen(port, host, () => {
-  console.log(`✅ Web build server running at http://${host}:${port}`)
-})
-
 const shutdown = () => {
   isShuttingDown = true
   server.close(() => process.exit(0))
 }
 
-process.on('SIGINT', shutdown)
-process.on('SIGTERM', shutdown)
+if (require.main === module) {
+  server.on('error', (error) => {
+    console.error('❌ Failed to start web server:', error)
+    process.exit(1)
+  })
 
-// Keep the server alive during long e2e runs even if an unexpected async error slips through.
-// Prefer logging over crashing to avoid cascading `ERR_CONNECTION_REFUSED` test failures.
-process.on('uncaughtException', (err) => {
-  if (isShuttingDown) return
-  console.error('❌ Uncaught exception in web build server:', err)
-})
+  server.listen(port, host, () => {
+    console.log(`✅ Web build server running at http://${host}:${port}`)
+  })
 
-process.on('unhandledRejection', (reason) => {
-  if (isShuttingDown) return
-  console.error('❌ Unhandled rejection in web build server:', reason)
-})
+  process.on('SIGINT', shutdown)
+  process.on('SIGTERM', shutdown)
+
+  // Keep the server alive during long e2e runs even if an unexpected async error slips through.
+  // Prefer logging over crashing to avoid cascading `ERR_CONNECTION_REFUSED` test failures.
+  process.on('uncaughtException', (err) => {
+    if (isShuttingDown) return
+    console.error('❌ Uncaught exception in web build server:', err)
+  })
+
+  process.on('unhandledRejection', (reason) => {
+    if (isShuttingDown) return
+    console.error('❌ Unhandled rejection in web build server:', reason)
+  })
+}
+
+module.exports = { isExpectedProxyTransportFailure }
