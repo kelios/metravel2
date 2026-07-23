@@ -89,7 +89,7 @@ describe('normal deploy Expo overlay retention', () => {
       ).toBe(false)
       expect(fs.readFileSync(freshButOld, 'utf8')).toBe('fresh payload')
     } finally {
-      removeDir(fixture)
+      removeDir(fixture.root)
     }
   })
 
@@ -224,7 +224,7 @@ describe('normal deploy Expo overlay retention', () => {
       expect(result.status).toBe(0)
       expect(result.stderr).toBe('')
     } finally {
-      removeDir(fixture.root)
+      removeDir(fixture)
     }
   })
 })
