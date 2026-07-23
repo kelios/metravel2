@@ -26,8 +26,8 @@ jest.mock('@/utils/contextualTips', () => ({
 }));
 
 let mockResponsiveState = {
-    isPhone: false,
-    isLargePhone: false,
+    isHydrated: true,
+    isMobile: false,
 };
 
 jest.mock('@/hooks/useResponsive', () => ({
@@ -220,8 +220,8 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockResponsiveState = {
-            isPhone: false,
-            isLargePhone: false,
+            isHydrated: true,
+            isMobile: false,
         };
         (useRouter as jest.Mock).mockReturnValue(mockRouter);
     });
@@ -456,8 +456,8 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
 
         it('должен показать collapsible mobile summary после submit-attempt', () => {
             mockResponsiveState = {
-                isPhone: true,
-                isLargePhone: false,
+                isHydrated: true,
+                isMobile: true,
             };
 
             const { getByText, queryByText } = render(
@@ -473,8 +473,8 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
 
         it('не должен показывать mobile summary до submit-attempt', () => {
             mockResponsiveState = {
-                isPhone: true,
-                isLargePhone: false,
+                isHydrated: true,
+                isMobile: true,
             };
 
             const { queryByText } = render(<TravelWizardStepBasic {...defaultProps} />);

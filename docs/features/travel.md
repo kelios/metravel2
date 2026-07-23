@@ -122,6 +122,24 @@ runtime-проверка должна различать свежий backend re
 5. `TravelWizardStepExtras.tsx`;
 6. `TravelWizardStepPublish.tsx`.
 
+### Media upload contract
+
+- Desktop web сохраняет drag-and-drop как дополнительный способ загрузки
+  обложки и фотографий галереи; выбор через системный file picker остаётся
+  доступным по нажатию.
+- Mobile web и Android используют touch-first действия в одинаковом порядке:
+  `Выбрать из галереи`, затем `Сделать фото`. На мобильных поверхностях не
+  показываются desktop-инструкции про перетаскивание файлов и большая dropzone.
+- Mobile web camera action использует системный image input с
+  `capture="environment"`; Android использует `expo-image-picker` и штатные
+  media-library/camera permissions. Отмена picker не считается ошибкой.
+- Нормативные состояния: idle, selecting/cancelled, uploading/progress,
+  success, permission denied, validation/upload error, existing image/remove.
+  Подписи, ошибки и accessibility labels локализуются в RU/BE/UK/PL/EN.
+- Upload data contract не зависит от платформы: реальный файл отправляется в
+  текущий multipart `uploadImage` flow с `file`, `collection` и `id`; preview
+  или mock не подменяет серверную загрузку после появления travel/point id.
+
 Create flow синхронизирует выданный backend ID в route params после первого
 успешного save. Draft recovery не заменяет server save и не является
 подтверждением publish/moderation.

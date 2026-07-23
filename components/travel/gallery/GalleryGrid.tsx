@@ -19,7 +19,6 @@ export const GalleryGrid: React.FC<{
   styles: GalleryStyles
   colors: ThemedColors
   isInitialLoading: boolean
-  isMobileWeb: boolean
   images: GalleryItem[]
   onDelete: (stableKey: string) => void
   onMove: (stableKey: string, direction: -1 | 1) => void
@@ -28,6 +27,7 @@ export const GalleryGrid: React.FC<{
   onCaptionChange: (stableKey: string, caption: string) => void
   selectedKeys: Set<string>
   onToggleSelect: (stableKey: string) => void
+  isMobileWeb: boolean
   DeleteAction: React.ComponentType<{
     onActivate: () => void
     style?: DeleteActionStyle
@@ -39,7 +39,6 @@ export const GalleryGrid: React.FC<{
   styles,
   colors,
   isInitialLoading,
-  isMobileWeb,
   images,
   onDelete,
   onMove,
@@ -48,6 +47,7 @@ export const GalleryGrid: React.FC<{
   onCaptionChange,
   selectedKeys,
   onToggleSelect,
+  isMobileWeb,
   DeleteAction,
 }) => {
   if (isInitialLoading) {
@@ -72,8 +72,9 @@ export const GalleryGrid: React.FC<{
           {i18nT('travel:components.travel.gallery.GalleryGrid.net_zagruzhennyh_izobrazheniy_d6199483')}</Text>
         <Text style={[styles.emptyGalleryHint, { color: colors.textMuted }]}>
           {isMobileWeb
-            ? i18nT('travel:components.travel.gallery.mobileAddHint')
-            : i18nT('travel:components.travel.gallery.GalleryGrid.peretaschite_fayly_ili_nazhmite_na_zonu_vysh_beb2acf5')}</Text>
+            ? i18nT('travel:components.travel.gallery.GalleryGrid.mobileAddHint')
+            : i18nT('travel:components.travel.gallery.GalleryGrid.peretaschite_fayly_ili_nazhmite_na_zonu_vysh_beb2acf5')}
+        </Text>
       </View>
     )
   }

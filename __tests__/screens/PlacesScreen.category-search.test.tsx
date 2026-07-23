@@ -61,6 +61,7 @@ const mockedFetchPlacesCatalog = fetchPlacesCatalog as jest.MockedFunction<typeo
 
 const makePlace = (over: Partial<PlacesCatalogPage['places'][number]>): PlacesCatalogPage['places'][number] => ({
   id: 'place-x',
+  travelId: null,
   title: 'Место',
   category: 'Замок',
   categoryId: 43,

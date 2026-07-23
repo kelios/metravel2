@@ -319,15 +319,13 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
             disabled={!isReady}
             size="sm"
           />
-          {variant === 'default' && (
-            <UiIconButton
-              icon={isUploading ? <ActivityIndicator size="small" color={colors.primaryDark} /> : <Feather name="image" size={20} color={isReady ? colors.text : colors.textMuted} />}
-              onPress={handleImagePick}
-              label={i18nT('shared:components.article.ArticleEditor.dobavit_izobrazhenie_1bb89664')}
-              disabled={!isReady || isUploading}
-              size="sm"
-            />
-          )}
+          <UiIconButton
+            icon={isUploading ? <ActivityIndicator size="small" color={colors.primaryDark} /> : <Feather name="image" size={20} color={isReady ? colors.text : colors.textMuted} />}
+            onPress={handleImagePick}
+            label={i18nT('shared:components.article.ArticleEditor.dobavit_izobrazhenie_1bb89664')}
+            disabled={!isReady || isUploading}
+            size="sm"
+          />
           <UiIconButton
             icon={<Feather name="bookmark" size={20} color={isReady ? colors.text : colors.textMuted} />}
             onPress={handleInsertAnchor}

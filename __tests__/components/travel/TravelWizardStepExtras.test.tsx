@@ -82,7 +82,7 @@ jest.mock('@/hooks/useTheme', () => {
 })
 
 jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => ({ isPhone: false, isLargePhone: false }),
+  useResponsive: () => ({ isHydrated: true, isMobile: false }),
 }))
 
 jest.mock('react-native-safe-area-context', () => ({

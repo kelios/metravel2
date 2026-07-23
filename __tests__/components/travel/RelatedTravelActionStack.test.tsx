@@ -6,7 +6,6 @@ import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionSta
 
 const mockFavoriteButton = jest.fn((props: any) => React.createElement('favorite-button', props))
 const mockStatusButton = jest.fn((props: any) => React.createElement('status-button', props))
-const mockFetchTravel = jest.fn()
 const mockFetchTravelBySlug = jest.fn()
 
 jest.mock('@/components/travel/FavoriteButton', () => ({
@@ -20,7 +19,6 @@ jest.mock('@/components/travel/TravelStatusButton', () => ({
 }))
 
 jest.mock('@/api/travelDetailsQueries', () => ({
-  fetchTravel: (...args: any[]) => mockFetchTravel(...args),
   fetchTravelBySlug: (...args: any[]) => mockFetchTravelBySlug(...args),
 }))
 
@@ -46,7 +44,6 @@ describe('RelatedTravelActionStack', () => {
   beforeEach(() => {
     mockFavoriteButton.mockClear()
     mockStatusButton.mockClear()
-    mockFetchTravel.mockReset()
     mockFetchTravelBySlug.mockReset()
   })
 
@@ -65,7 +62,6 @@ describe('RelatedTravelActionStack', () => {
     })
 
     // id is known from the route, so no per-card travel-detail request is made
-    expect(mockFetchTravel).not.toHaveBeenCalled()
     expect(mockFetchTravelBySlug).not.toHaveBeenCalled()
     expect(mockFavoriteButton.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({
@@ -87,25 +83,6 @@ describe('RelatedTravelActionStack', () => {
     renderWithQuery(
       <RelatedTravelActionStack
         relatedTravelUrl="https://metravel.by/travels/ourvietnam?id=129"
-        fallbackTitle="Вьетнам"
-      />,
-    )
-
-    await waitFor(() => {
-      expect(mockStatusButton).toHaveBeenCalled()
-    })
-
-    expect(mockFetchTravel).not.toHaveBeenCalled()
-    expect(mockFetchTravelBySlug).not.toHaveBeenCalled()
-    expect(mockStatusButton.mock.calls.at(-1)?.[0]).toEqual(
-      expect.objectContaining({ travelId: 129, travelTitle: 'Вьетнам' }),
-    )
-  })
-
-  it('uses an explicit catalog id without resolving a slug-only route', async () => {
-    renderWithQuery(
-      <RelatedTravelActionStack
-        relatedTravelUrl="/travels/ourvietnam"
         relatedTravelId={129}
         fallbackTitle="Вьетнам"
       />,
@@ -115,10 +92,37 @@ describe('RelatedTravelActionStack', () => {
       expect(mockStatusButton).toHaveBeenCalled()
     })
 
-    expect(mockFetchTravel).not.toHaveBeenCalled()
     expect(mockFetchTravelBySlug).not.toHaveBeenCalled()
+    expect(mockFavoriteButton.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        id: 129,
+        url: '/travels/ourvietnam?id=129',
+      }),
+    )
     expect(mockStatusButton.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({ travelId: 129, travelTitle: 'Вьетнам' }),
+    )
+  })
+
+  it('uses a catalog travel id with a canonical slug route without resolving the slug', async () => {
+    renderWithQuery(
+      <RelatedTravelActionStack
+        relatedTravelUrl="/travels/polish-camino"
+        relatedTravelId={77}
+        fallbackTitle="Камино"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockStatusButton).toHaveBeenCalled()
+    })
+
+    expect(mockFetchTravelBySlug).not.toHaveBeenCalled()
+    expect(mockFavoriteButton.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        id: 77,
+        url: '/travels/polish-camino',
+      }),
     )
   })
 
@@ -156,6 +160,56 @@ describe('RelatedTravelActionStack', () => {
     )
   })
 
+  it('ignores a malformed explicit id and keeps the slug-only fallback', async () => {
+    mockFetchTravelBySlug.mockResolvedValue({
+      id: 77,
+      name: 'Польское Камино',
+      url: '/travels/polish-camino',
+    })
+
+    renderWithQuery(
+      <RelatedTravelActionStack
+        relatedTravelUrl="/travels/polish-camino"
+        relatedTravelId={Number.NaN}
+        fallbackTitle="Камино"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockStatusButton).toHaveBeenCalled()
+    })
+
+    expect(mockFetchTravelBySlug).toHaveBeenCalledTimes(1)
+    expect(mockFetchTravelBySlug.mock.calls[0]?.[0]).toBe('polish-camino')
+  })
+
+  it('deduplicates concurrent slug-only fallbacks for the same travel identity', async () => {
+    mockFetchTravelBySlug.mockResolvedValue({
+      id: 77,
+      name: 'Польское Камино',
+      url: '/travels/polish-camino',
+    })
+
+    renderWithQuery(
+      <>
+        <RelatedTravelActionStack
+          relatedTravelUrl="/travels/polish-camino"
+          fallbackTitle="Камино, точка 1"
+        />
+        <RelatedTravelActionStack
+          relatedTravelUrl="/travels/polish-camino"
+          fallbackTitle="Камино, точка 2"
+        />
+      </>,
+    )
+
+    await waitFor(() => {
+      expect(mockStatusButton.mock.calls.length).toBeGreaterThanOrEqual(2)
+    })
+
+    expect(mockFetchTravelBySlug).toHaveBeenCalledTimes(1)
+  })
+
   it('renders inline status as an explicit travel-state action', async () => {
     renderWithQuery(
       <RelatedTravelActionStack
@@ -186,7 +240,6 @@ describe('RelatedTravelActionStack', () => {
     )
 
     expect(view.toJSON()).toBeNull()
-    expect(mockFetchTravel).not.toHaveBeenCalled()
     expect(mockFetchTravelBySlug).not.toHaveBeenCalled()
     expect(mockFavoriteButton).not.toHaveBeenCalled()
     expect(mockStatusButton).not.toHaveBeenCalled()

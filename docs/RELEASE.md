@@ -68,13 +68,8 @@ npm run build:web:prod
 
 - Accepts env argument: `dev`, `preprod`, `prod` (default: `prod`).
 - Pipeline: applies `.env.<env>` -> builds `dist/<env>` -> runs SEO/public post-processing -> deploys to server.
-- The script is the normal production deploy path on machines with working `rsync`. It runs the canonical build and static SEO guards, uploads `dist/`, publishes the canonical quest fallback at `/static/quests/quest-default-cover.svg`, atomically swaps `static/dist`, overlays missing recent Expo chunks for open tabs, restarts `app` + `nginx`, and runs post-deploy SEO checks.
-- The normal deploy keeps missing prior-generation Expo JS/CSS for
-  `EXPO_OVERLAY_RETENTION_DAYS` (default: 14 days). The fresh payload always
-  wins, including when its own mtime is old; previous assets older than the
-  window are not copied forward. This overlap is the supported open-tab and
-  rollback window for hashed browser assets. `scripts/fix-prod.sh` remains an
-  emergency-only path and is not the normal retention mechanism.
+- The script is the normal production deploy path on machines with working `rsync`. It runs the canonical build and static SEO guards, uploads `dist/`, publishes the canonical quest fallback at `/static/quests/quest-default-cover.svg`, atomically swaps `static/dist`, retains a bounded overlap of old Expo assets for open tabs, restarts `app` + `nginx`, and runs post-deploy SEO checks.
+- Expo overlap retention is owned by this normal path. The fresh payload is staged first and always wins path collisions; missing `.js` and `.css` files from the live release are backfilled without clobbering only while their mtime is at most `EXPO_OVERLAY_RETENTION_DAYS` (default `14`). Older overlay generations are therefore pruned from the next static tree, while files shipped by the fresh payload remain even if their source mtime is old. Nested asset paths and unusual filenames are preserved, empty historical directories are not copied, and the staged HTML/static tree is exposed together by the directory swap.
 - Its server writes are limited to the documented untracked static targets. It
   must stop rather than modify or clean a Git-tracked backend path.
 - Build without deploy:
@@ -145,8 +140,9 @@ unavailable and the reason is recorded in the handoff.
 
 The script acquires a remote deploy lock, can rebuild `dist/prod`, verifies the prod artifact config,
 uploads static assets, performs an in-container atomic swap, overlays missing old Expo chunks, restarts
-nginx, validates live chunks/config, and fails closed on wrong prod config. Do not replace the normal
-`./build-prod.sh prod` or Windows/Codex wrapper flow with custom `rsync`, `scp`, or SSH deploy commands.
+nginx, validates live chunks/config, and fails closed on wrong prod config. It remains emergency-only;
+the canonical 14-day retention policy belongs to `./build-prod.sh prod`. Do not replace the normal
+deploy or Windows/Codex wrapper flow with `scripts/fix-prod.sh`, custom `rsync`, `scp`, or SSH commands.
 
 ## Post-deploy SEO check
 

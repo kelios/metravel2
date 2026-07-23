@@ -575,6 +575,7 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
         const delta = quill.clipboard.convert({ html: next })
         quill.setContents(delta, 'silent')
       } else {
+        quill.setText?.('', 'silent')
         quill.clipboard?.dangerouslyPasteHTML?.(0, next, 'silent')
       }
       if (sel) {

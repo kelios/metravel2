@@ -87,7 +87,7 @@ function TravelWizardStepRoute({
 }: TravelWizardStepRouteProps) {
   const colors = useThemedColors()
   const router = useRouter()
-  const { isPhone, isLargePhone } = useResponsive()
+  const { isHydrated, isMobile } = useResponsive()
   const markersRef = useLatestRef(markers)
   const isMountedRef = useRef(true)
   const quickDraftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -130,7 +130,7 @@ function TravelWizardStepRoute({
     setPhotoPreview: setManualPhotoPreview,
   } = useManualPointForm()
   const hasPoints = markers.length > 0
-  const isCompactLayout = isPhone || isLargePhone
+  const isCompactLayout = isHydrated && isMobile
   const styles = useMemo(() => createStyles(colors), [colors])
   const progressPercent = getProgressPercent(progress)
   const { isVisible: isCoachmarkVisible, dismiss: dismissCoachmark } = useRouteCoachmark(hasPoints)

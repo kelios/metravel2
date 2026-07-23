@@ -26,7 +26,8 @@ export type PlaceRating = {
 
 export type CatalogPlace = TravelCoords & {
   id: string
-  relatedTravelId?: number | null
+  travelId: number | null
+  relatedTravelId: number | null
   title: string
   category: string
   categoryId: number | null
@@ -59,6 +60,8 @@ type RawCatalogImage = { thumb_url?: unknown; landscape_url?: unknown }
 
 type RawCatalogItem = {
   id?: unknown
+  travel_id?: unknown
+  urlTravel?: unknown
   title?: unknown
   address?: unknown
   category?: RawCatalogCategory | null
@@ -67,8 +70,6 @@ type RawCatalogItem = {
   lat?: unknown
   lng?: unknown
   search_text?: unknown
-  travel_id?: unknown
-  urlTravel?: unknown
   travel?: RawCatalogTravel | null
   image?: RawCatalogImage | null
   // Rating enrichment (optional; present once the backend ships it). Both the
@@ -140,14 +141,30 @@ const parseFacetId = (value: unknown): number | null => {
   return null
 }
 
-const parsePositiveInteger = (value: unknown): number | null => {
-  const parsed = parseFacetId(value)
-  return parsed != null && Number.isInteger(parsed) && parsed > 0 ? parsed : null
-}
-
 const parseFacetCount = (value: unknown): number => {
   const parsed = parseFacetId(value)
   return parsed != null && parsed >= 0 ? parsed : 0
+}
+
+const parseTravelId = (value: unknown): number | null => {
+  const parsed = parseFacetId(value)
+  return parsed != null && Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null
+}
+
+const buildRelatedTravelUrl = (
+  item: RawCatalogItem,
+  travelId: number | null,
+): string => {
+  const topLevelUrl = normalizeText(item.urlTravel)
+  if (topLevelUrl) return topLevelUrl
+
+  const nestedUrl = normalizeText(item.travel?.url)
+  if (nestedUrl) return nestedUrl
+
+  const nestedSlug = normalizeText(item.travel?.slug)
+  if (nestedSlug) return `/travels/${encodeURIComponent(nestedSlug)}`
+
+  return travelId != null ? `/travels/${travelId}` : ''
 }
 
 const readCoordinates = (
@@ -280,13 +297,8 @@ const mapCatalogItem = (raw: unknown): CatalogPlace | null => {
   const categoryId = parseFacetId(item.category?.id)
   const country = normalizeText(item.country?.name, i18nT('shared:utils.placesCatalog.strana_ne_ukazana_2418b87a'))
   const countryCode = normalizeText(item.country?.code)
-  const relatedTravelId =
-    parsePositiveInteger(item.travel_id) ?? parsePositiveInteger(item.travel?.id)
-  const travelSlug = normalizeText(item.travel?.slug)
-  const urlTravel =
-    normalizeText(item.urlTravel) ||
-    normalizeText(item.travel?.url) ||
-    (travelSlug ? `/travels/${encodeURIComponent(travelSlug)}` : '')
+  const travelId = parseTravelId(item.travel_id) ?? parseTravelId(item.travel?.id)
+  const urlTravel = buildRelatedTravelUrl(item, travelId)
   const thumbUrl = normalizeImageUrl(item.image?.thumb_url)
   const landscapeUrl = normalizeImageUrl(item.image?.landscape_url)
   const title = normalizeText(item.title, address || i18nT('map:utils.placesCatalog.mesto_bez_nazvaniya_d8d437b0'))
@@ -294,7 +306,8 @@ const mapCatalogItem = (raw: unknown): CatalogPlace | null => {
 
   return {
     id,
-    relatedTravelId,
+    travelId,
+    relatedTravelId: travelId,
     title,
     category,
     categoryId,

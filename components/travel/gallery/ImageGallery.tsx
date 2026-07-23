@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef, useMemo, useContext } 
 import {
   View,
   Platform,
-  useWindowDimensions,
 } from 'react-native'
 import { useDropzone, type FileRejection } from 'react-dropzone'
 import { QueryClientContext } from '@tanstack/react-query'
@@ -13,6 +12,7 @@ import { ApiError } from '@/api/client'
 import { devError } from '@/utils/logger'
 import { queryKeys } from '@/queryKeys'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useResponsiveWidth } from '@/hooks/useResponsive'
 import { validateImageFile } from '@/utils/aiValidation'
 import { HeicConversionError, prepareWebImageFileForUpload } from '@/utils/webImageUpload'
 
@@ -119,9 +119,9 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   onChange,
 }) => {
   const colors = useThemedColors()
-  const { width: viewportWidth } = useWindowDimensions()
+  const viewportWidth = useResponsiveWidth()
   const queryClient = useContext(QueryClientContext)
-  const isMobileWeb = Platform.OS === 'web' && viewportWidth > 0 && viewportWidth <= 767
+  const isMobileWeb = Platform.OS === 'web' && viewportWidth <= 767
   const styles = useMemo(
     () => createGalleryStyles(colors, isMobileWeb),
     [colors, isMobileWeb],
@@ -144,8 +144,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   const reorderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const loadTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const reorderAbortRef = useRef<AbortController | null>(null)
-  const galleryInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement | null>(null)
 
   const hasErrors = useMemo(() => images.some((img) => img.error), [images])
 
@@ -487,10 +486,13 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     [collection, idTravel, maxImages, validateUploadFile],
   )
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, open: openFilePicker } = useDropzone({
     accept: WEB_GALLERY_DROPZONE_ACCEPT,
     multiple: true,
-    disabled: Platform.OS !== 'web' || isMobileWeb,
+    disabled: Platform.OS !== 'web',
+    noClick: isMobileWeb,
+    noKeyboard: isMobileWeb,
+    noDrag: isMobileWeb,
     onDrop: (acceptedFiles, fileRejections) => {
       const rejections = Array.isArray(fileRejections) ? fileRejections : []
 
@@ -507,13 +509,16 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     },
   })
 
-  const handleMobileFilesSelected = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.currentTarget.files ?? [])
-    event.currentTarget.value = ''
-    if (files.length > 0) {
-      void handleUploadImages(files)
-    }
-  }, [handleUploadImages])
+  const handleCameraInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.currentTarget.files ?? [])
+      event.currentTarget.value = ''
+      if (files.length > 0) {
+        void handleUploadImages(files)
+      }
+    },
+    [handleUploadImages],
+  )
 
   const dropzoneRootProps = useCallback(() => {
     const props = getRootProps()
@@ -733,33 +738,46 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   return (
     <View style={styles.container}>
       {Platform.OS === 'web' ? (
-        <GalleryControls
-          styles={styles}
-          colors={colors}
-          imagesCount={images.length}
-          maxImages={maxImages}
-          isDragActive={isDragActive}
-          isMobileWeb={isMobileWeb}
-          dropzone={dropzoneProps}
-          inputProps={getInputProps()}
-          galleryInputRef={galleryInputRef}
-          cameraInputRef={cameraInputRef}
-          onMobileFilesSelected={handleMobileFilesSelected}
-          batchUploadProgress={batchUploadProgress}
-          hasErrors={hasErrors}
-          selectableCount={selectableKeys.length}
-          selectedCount={selectedKeys.size}
-          allSelected={allSelected}
-          onToggleSelectAll={handleToggleSelectAll}
-          onDeleteSelected={handleDeleteSelected}
-        />
+        <>
+          {isMobileWeb ? (
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleCameraInputChange}
+              disabled={batchUploadProgress !== null || images.length >= maxImages}
+              data-testid="gallery-mobile-camera-input"
+              style={{ display: 'none' }}
+            />
+          ) : null}
+          <GalleryControls
+            styles={styles}
+            colors={colors}
+            imagesCount={images.length}
+            maxImages={maxImages}
+            isMobileWeb={isMobileWeb}
+            isDragActive={isDragActive}
+            isUploading={batchUploadProgress !== null}
+            dropzone={dropzoneProps}
+            inputProps={getInputProps()}
+            batchUploadProgress={batchUploadProgress}
+            hasErrors={hasErrors}
+            selectableCount={selectableKeys.length}
+            selectedCount={selectedKeys.size}
+            allSelected={allSelected}
+            onSelectFromGallery={openFilePicker}
+            onTakePhoto={() => cameraInputRef.current?.click()}
+            onToggleSelectAll={handleToggleSelectAll}
+            onDeleteSelected={handleDeleteSelected}
+          />
+        </>
       ) : null}
 
       <GalleryGrid
         styles={styles}
         colors={colors}
         isInitialLoading={isInitialLoading}
-        isMobileWeb={isMobileWeb}
         images={images}
         onDelete={handleDeleteImage}
         onMove={handleMoveImage}
@@ -768,6 +786,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
         onCaptionChange={handleCaptionChange}
         selectedKeys={selectedKeys}
         onToggleSelect={handleToggleSelect}
+        isMobileWeb={isMobileWeb}
         DeleteAction={DeleteActionComponent}
       />
 

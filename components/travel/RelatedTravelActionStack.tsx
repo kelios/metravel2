@@ -3,7 +3,7 @@ import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'reac
 import { useQuery } from '@tanstack/react-query'
 
 import { queryKeys } from '@/api/queryKeys'
-import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries'
+import { fetchTravelBySlug } from '@/api/travelDetailsQueries'
 import FavoriteButton from '@/components/travel/FavoriteButton'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { resolveRelatedTravelRef } from '@/utils/relatedTravel'
@@ -47,21 +47,16 @@ export default function RelatedTravelActionStack({
   style,
 }: Props) {
   const travelRef = useMemo(() => {
-    const parsedRef = resolveRelatedTravelRef(relatedTravelUrl)
+    const urlRef = resolveRelatedTravelRef(relatedTravelUrl)
     const explicitId =
       typeof relatedTravelId === 'number' &&
-      Number.isInteger(relatedTravelId) &&
+      Number.isSafeInteger(relatedTravelId) &&
       relatedTravelId > 0
         ? relatedTravelId
         : null
 
-    if (!explicitId) return parsedRef
-
-    return {
-      route: parsedRef?.route || `/travels/${explicitId}`,
-      id: explicitId,
-      slug: parsedRef?.slug,
-    }
+    if (urlRef) return explicitId != null ? { ...urlRef, id: explicitId } : urlRef
+    return explicitId != null ? { route: `/travels/${explicitId}`, id: explicitId } : null
   }, [relatedTravelId, relatedTravelUrl])
 
   // For id-based URLs we already have everything the buttons need (id + fallbacks),
@@ -73,9 +68,7 @@ export default function RelatedTravelActionStack({
   const { data: relatedTravel } = useQuery({
     queryKey: travelRef ? queryKeys.travel(travelRef.id ?? travelRef.slug ?? 'related') : ['travel', 'related', 'missing'],
     queryFn: ({ signal }) => {
-      if (!travelRef) return null
-      if (travelRef.id) return fetchTravel(travelRef.id, { signal })
-      if (travelRef.slug) return fetchTravelBySlug(travelRef.slug, { signal })
+      if (!travelRef?.id && travelRef?.slug) return fetchTravelBySlug(travelRef.slug, { signal })
       return null
     },
     enabled: needsFetch,

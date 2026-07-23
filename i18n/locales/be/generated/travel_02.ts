@@ -267,6 +267,7 @@ export const travelGenerated2 = {
   "components.travel.gallery.GalleryControls.zagruzka_aefa6291": "Загрузка",
   "components.travel.gallery.GalleryGrid.izobrazhenie_galerei_value1_57b84c61": "Выява галерэі {{value1}}",
   "components.travel.gallery.GalleryGrid.net_zagruzhennyh_izobrazheniy_d6199483": "Няма загружаных малюнкаў",
+  "components.travel.gallery.GalleryGrid.mobileAddHint": "Выкарыстайце кнопкі вышэй, каб выбраць або зрабіць фота",
   "components.travel.gallery.GalleryGrid.peremestit_foto_levee_80430f4e": "Перамясціць фота лявей",
   "components.travel.gallery.GalleryGrid.peremestit_foto_pravee_b568179e": "Перамясціць фота правей",
   "components.travel.gallery.GalleryGrid.peretaschite_fayly_ili_nazhmite_na_zonu_vysh_beb2acf5": "Перацягнеце файлы або націсніце на зону вышэй",

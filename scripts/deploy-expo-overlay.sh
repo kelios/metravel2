@@ -3,50 +3,43 @@
 set -Eeuo pipefail
 IFS=$'\n\t'
 
-previous_root="${1:-}"
-fresh_root="${2:-}"
-retention_days="${3:-${EXPO_OVERLAY_RETENTION_DAYS:-14}}"
+fresh_root="${1:-}"
+previous_root="${2:-}"
+retention_days="${3:-14}"
 
-if [[ -z "$previous_root" || -z "$fresh_root" ]]; then
-  echo "usage: deploy-expo-overlay.sh <previous-root> <fresh-root> [retention-days]" >&2
+if [[ -z "$fresh_root" || -z "$previous_root" ]]; then
+  echo "Usage: deploy-expo-overlay.sh <fresh-static-root> <previous-static-root> [retention-days]" >&2
   exit 2
 fi
 
-if [[ ! "$retention_days" =~ ^[1-9][0-9]*$ ]]; then
-  echo "EXPO_OVERLAY_RETENTION_DAYS must be a positive integer" >&2
+if [[ ! "$retention_days" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: retention-days must be a non-negative integer" >&2
   exit 2
 fi
 
-previous_static="$previous_root/_expo/static"
-fresh_static="$fresh_root/_expo/static"
+mkdir -p "$fresh_root"
+[[ -d "$previous_root" ]] || exit 0
 
-if [[ ! -d "$previous_static" ]]; then
-  exit 0
-fi
+previous_prefix="${previous_root%/}/"
 
-mkdir -p "$fresh_static"
+# Only hashed JS/CSS assets can be requested by an already-open HTML shell.
+# The fresh payload is staged first, so skipping every existing destination
+# makes the current release authoritative even when an old file has the same
+# relative path. NUL-delimited find output keeps nested and unusual filenames
+# safe, while the mtime filter prevents expired generations entering the stage.
+find "$previous_root" \
+  -type f \
+  \( -name '*.js' -o -name '*.css' \) \
+  ! -mtime "+$retention_days" \
+  -print0 |
+  while IFS= read -r -d '' previous_file; do
+    relative_path="${previous_file#"$previous_prefix"}"
+    fresh_file="$fresh_root/$relative_path"
 
-overlay_manifest="$(mktemp "${TMPDIR:-/tmp}/metravel-expo-overlay.XXXXXX")"
-trap 'rm -f "$overlay_manifest"' EXIT
+    if [[ -e "$fresh_file" || -L "$fresh_file" ]]; then
+      continue
+    fi
 
-find "$previous_static" -type f \
-  \( \( -path '*/js/*' -name '*.js' \) -o \( -path '*/css/*' -name '*.css' \) \) \
-  ! -mtime +"$retention_days" -print0 > "$overlay_manifest"
-
-# Keep only recent hashed JS/CSS that are missing from the fresh payload. The
-# NUL-delimited loop is intentional: Expo chunk paths may contain whitespace or
-# shell metacharacters, and no prior-generation file may overwrite a new build.
-while IFS= read -r -d '' previous_file; do
-  relative_path="${previous_file#"$previous_root"/}"
-  fresh_file="$fresh_root/$relative_path"
-
-  if [[ -e "$fresh_file" || -L "$fresh_file" ]]; then
-    continue
-  fi
-
-  mkdir -p "${fresh_file%/*}"
-  cp -pn "$previous_file" "$fresh_file"
-done < "$overlay_manifest"
-
-# Do not reproduce empty directories from an expired/empty prior generation.
-find "$fresh_static" -type d -empty -delete 2>/dev/null || true
+    mkdir -p "$(dirname "$fresh_file")"
+    cp -p "$previous_file" "$fresh_file"
+  done

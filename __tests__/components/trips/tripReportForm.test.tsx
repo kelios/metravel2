@@ -54,6 +54,7 @@ const placesPage: PlacesCatalogPage = {
   places: [
     {
       id: '42',
+      travelId: null,
       title: 'Несвижский замок',
       category: 'Замок',
       categoryId: 7,

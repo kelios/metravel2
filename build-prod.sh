@@ -89,8 +89,20 @@ build_env() {
 
 deploy_prod() {
   local ENV="$1"
-  local expo_overlay_helper_b64
-  expo_overlay_helper_b64="$(base64 < scripts/deploy-expo-overlay.sh | tr -d '\n')"
+  local EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"
+  local EXPO_OVERLAY_HELPER="scripts/deploy-expo-overlay.sh"
+  local EXPO_OVERLAY_HELPER_B64
+
+  if [[ ! "$EXPO_OVERLAY_RETENTION_DAYS" =~ ^[0-9]+$ ]]; then
+    echo "❌ EXPO_OVERLAY_RETENTION_DAYS must be a non-negative integer"
+    return 1
+  fi
+  if [[ ! -f "$EXPO_OVERLAY_HELPER" ]]; then
+    echo "❌ Expo overlay helper is missing: $EXPO_OVERLAY_HELPER"
+    return 1
+  fi
+  EXPO_OVERLAY_HELPER_B64="$(base64 < "$EXPO_OVERLAY_HELPER" | tr -d '\n')"
+
   rsync -avzhe "ssh" --delete \
     ./dist/ \
     "sx3@178.172.137.129:/home/sx3/metravel/dist/"
@@ -154,13 +166,18 @@ deploy_prod() {
 
     mv dist/$ENV static/dist.new
 
-    # Keep recent previous hashed Expo JS/CSS for the supported overlap window.
+    # Keep previous hashed Expo JS/CSS assets for a bounded overlap window.
     # This prevents "Requiring unknown module" crashes for active browser tabs
-    # that still execute older runtime chunks during a fresh deploy. Stage the
-    # overlay before touching the live tree; the helper never overwrites the new
-    # payload and excludes previous assets older than the retention window.
-    retention_days='${EXPO_OVERLAY_RETENTION_DAYS}'
-    printf '%s' '${expo_overlay_helper_b64}' | base64 -d | bash -s -- static/dist static/dist.new \"\$retention_days\"
+    # that still execute older runtime chunks during a fresh deploy.
+    # Backfill while the previous release is still live; the new HTML and its
+    # static tree are exposed together only by the directory swap below.
+    if [ -d static/dist/_expo/static ]; then
+      mkdir -p static/dist.new/_expo/static
+      printf '%s' '$EXPO_OVERLAY_HELPER_B64' | base64 -d | bash -s -- \
+        static/dist.new/_expo/static \
+        static/dist/_expo/static \
+        '$EXPO_OVERLAY_RETENTION_DAYS'
+    fi
 
     rollback_dir=static/dist.old
     rollback_moved=0
@@ -168,12 +185,11 @@ deploy_prod() {
       mv static/dist \"\$rollback_dir\"
       rollback_moved=1
     fi
-    # HTML shell still switches atomically to the new build below.
     if ! mv static/dist.new static/dist; then
+      echo "❌ Failed to publish the staged frontend; restoring previous static tree"
       if [ \"\$rollback_moved\" = 1 ] && [ ! -e static/dist ] && [ -d \"\$rollback_dir\" ]; then
         mv \"\$rollback_dir\" static/dist
       fi
-      echo '❌ Failed to publish the new static tree; previous tree restored' >&2
       exit 1
     fi
     # Drop the rollback copy as root (may be owned by another uid).
@@ -191,12 +207,6 @@ deploy_prod() {
 
 ENV="${1:-prod}"
 DEPLOY="${DEPLOY:-1}"
-EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"
-
-if [[ ! "$EXPO_OVERLAY_RETENTION_DAYS" =~ ^[1-9][0-9]*$ ]]; then
-  echo "❌ EXPO_OVERLAY_RETENTION_DAYS must be a positive integer"
-  exit 1
-fi
 
 echo "🔁 Старт сборки..."
 install_deps

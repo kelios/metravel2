@@ -292,14 +292,13 @@ export const createGalleryStyles = (
     dropzoneText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
     },
-    mobileActions: {
+    mobileUploadActions: {
       width: '100%',
       gap: DESIGN_TOKENS.spacing.sm,
-      marginBottom: DESIGN_TOKENS.spacing.xl,
+      marginBottom: DESIGN_TOKENS.spacing.lg,
     },
-    mobileAction: {
+    mobileUploadAction: {
       width: '100%',
-      minHeight: 44,
     },
     emptyGalleryContainer: {
       paddingVertical: DESIGN_TOKENS.spacing.xxl * 2,

@@ -1,4 +1,5 @@
 import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize'
+import { hasQuillRenderableContent } from './articleEditorQuillHelpers'
 
 type Selection = { index: number; length: number }
 
@@ -134,14 +135,13 @@ export const syncInitialQuillContent = ({
   const editor = quillRef.current?.getEditor?.()
   if (!editor) return
 
-  const text = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : ''
-  const isEditorEmpty = text.replace(/\s+/g, '').length === 0
-  if (!isEditorEmpty) return
+  if (hasQuillRenderableContent(editor)) return
 
   const prevSanitized = refs.lastSanitizedForceSyncRef.current
   const clean = prevSanitized?.raw === next ? prevSanitized.clean : sanitizeArticleEditorHtml(next)
   refs.lastSanitizedForceSyncRef.current = { raw: next, clean }
 
+  editor.setText?.('', 'silent')
   editor.clipboard?.dangerouslyPasteHTML?.(0, clean, 'silent')
   editor.setSelection?.(0, 0, 'silent')
   refs.lastForceSyncedContentRef.current = next

@@ -33,8 +33,8 @@ jest.mock('@/hooks/useTheme', () => ({
 
 jest.mock('@/hooks/useResponsive', () => ({
     useResponsive: () => ({
-        isPhone: false,
-        isLargePhone: false,
+        isHydrated: true,
+        isMobile: false,
     }),
 }));
 

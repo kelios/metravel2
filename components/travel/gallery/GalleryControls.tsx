@@ -15,6 +15,8 @@ export type GalleryControlsStyles = {
   dropzone: any
   activeDropzone: any
   dropzoneText: any
+  mobileUploadActions: any
+  mobileUploadAction: any
   batchProgressContainer: any
   batchProgressBar: any
   batchProgressFill: any
@@ -25,8 +27,6 @@ export type GalleryControlsStyles = {
   batchActionButton: any
   batchDeleteButton: any
   batchActionButtonText: any
-  mobileActions: any
-  mobileAction: any
 }
 
 export const GalleryControls: React.FC<{
@@ -34,18 +34,18 @@ export const GalleryControls: React.FC<{
   colors: any
   imagesCount: number
   maxImages: number
-  isDragActive: boolean
   isMobileWeb: boolean
+  isDragActive: boolean
+  isUploading: boolean
   dropzone: { rootProps: any; tabIndex?: 0 | -1 }
   inputProps: any
-  galleryInputRef: React.RefObject<HTMLInputElement | null>
-  cameraInputRef: React.RefObject<HTMLInputElement | null>
-  onMobileFilesSelected: (event: React.ChangeEvent<HTMLInputElement>) => void
   batchUploadProgress: { current: number; total: number } | null
   hasErrors: boolean
   selectableCount: number
   selectedCount: number
   allSelected: boolean
+  onSelectFromGallery: () => void
+  onTakePhoto: () => void
   onToggleSelectAll: () => void
   onDeleteSelected: () => void
 }> = ({
@@ -53,18 +53,18 @@ export const GalleryControls: React.FC<{
   colors,
   imagesCount,
   maxImages,
-  isDragActive,
   isMobileWeb,
+  isDragActive,
+  isUploading,
   dropzone,
   inputProps,
-  galleryInputRef,
-  cameraInputRef,
-  onMobileFilesSelected,
   batchUploadProgress,
   hasErrors,
   selectableCount,
   selectedCount,
   allSelected,
+  onSelectFromGallery,
+  onTakePhoto,
   onToggleSelectAll,
   onDeleteSelected,
 }) => {
@@ -120,46 +120,36 @@ export const GalleryControls: React.FC<{
 
       {isMobileWeb ? (
         imagesCount < maxImages ? (
-          <View style={styles.mobileActions}>
-            <input
-              ref={galleryInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              data-testid="gallery-mobile-gallery-input"
-              style={{ display: 'none' }}
-              onChange={onMobileFilesSelected}
-            />
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              data-testid="gallery-mobile-camera-input"
-              style={{ display: 'none' }}
-              onChange={onMobileFilesSelected}
-            />
-            <View style={styles.mobileAction}>
-              <Button
-                variant="primary"
-                fullWidth
-                onPress={() => galleryInputRef.current?.click()}
-                icon={<Feather name="image" size={18} color={colors.textOnPrimary} />}
-                label={i18nT('travel:components.travel.ImageGalleryComponent.vybrat_iz_galerei_fbf8b2e6')}
-                testID="gallery-mobile-gallery-button"
-              />
+          <>
+            <input {...inputProps} />
+            <View style={styles.mobileUploadActions}>
+              <View style={styles.mobileUploadAction}>
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onPress={onSelectFromGallery}
+                  disabled={isUploading}
+                  loading={isUploading}
+                  icon={<Feather name="image" size={18} color={colors.textOnPrimary} />}
+                  label={i18nT('travel:components.travel.ImageGalleryComponent.vybrat_iz_galerei_fbf8b2e6')}
+                  labelNumberOfLines={2}
+                  testID="gallery-mobile-pick"
+                />
+              </View>
+              <View style={styles.mobileUploadAction}>
+                <Button
+                  variant="outline"
+                  fullWidth
+                  onPress={onTakePhoto}
+                  disabled={isUploading}
+                  icon={<Feather name="camera" size={18} color={colors.text} />}
+                  label={i18nT('travel:components.travel.ImageGalleryComponent.sdelat_foto_79fec14d')}
+                  labelNumberOfLines={2}
+                  testID="gallery-mobile-camera"
+                />
+              </View>
             </View>
-            <View style={styles.mobileAction}>
-              <Button
-                variant="outline"
-                fullWidth
-                onPress={() => cameraInputRef.current?.click()}
-                icon={<Feather name="camera" size={18} color={colors.text} />}
-                label={i18nT('travel:components.travel.ImageGalleryComponent.sdelat_foto_79fec14d')}
-                testID="gallery-mobile-camera-button"
-              />
-            </View>
-          </View>
+          </>
         ) : null
       ) : (
         <div

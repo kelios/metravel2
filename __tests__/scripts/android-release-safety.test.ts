@@ -1,6 +1,7 @@
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
+
+import { makeTempDir, removeDir } from './cli-test-utils';
 
 const {
   PROTECTED_TRACKS,
@@ -166,7 +167,7 @@ describe('Android release safety contract', () => {
   });
 
   it('loads a portable release bundle without macOS Keychain', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-android-secrets-'));
+    const root = makeTempDir('metravel-android-secrets-');
     const secrets = path.join(root, '.secrets');
     fs.mkdirSync(secrets);
     fs.writeFileSync(path.join(secrets, 'upload.jks'), 'fixture');
@@ -203,12 +204,12 @@ describe('Android release safety contract', () => {
         GOOGLE_PLAY_SERVICE_ACCOUNT_PATH: path.join(secrets, 'play.json'),
       });
     } finally {
-      fs.rmSync(root, { recursive: true, force: true });
+      removeDir(root);
     }
   });
 
   it('uses the portable production environment when configured', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-android-env-'));
+    const root = makeTempDir('metravel-android-env-');
     const productionEnv = path.join(root, 'android.env');
     fs.writeFileSync(
       productionEnv,
@@ -225,7 +226,7 @@ describe('Android release safety contract', () => {
         EXPO_ENV: 'prod',
       });
     } finally {
-      fs.rmSync(root, { recursive: true, force: true });
+      removeDir(root);
     }
   });
 

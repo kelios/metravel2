@@ -462,8 +462,8 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
 }) => {
     const colors = useThemedColors();
     const insets = useSafeAreaInsets();
-    const { isPhone, isLargePhone } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
+    const { isHydrated, isMobile: isMobileViewport } = useResponsive();
+    const isMobile = isHydrated && isMobileViewport;
     const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
     // На native нижний таб-бар (BottomDock) — фиксированный оверлей высотой
     // tabBarHeight + safe-area-inset-bottom, поэтому к статическому отступу

@@ -61,8 +61,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createContentUpsertStyles(colors), [colors]);
 
-    const { isPhone, isLargePhone } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
+    const { isHydrated, isMobile: isMobileViewport } = useResponsive();
+    const isMobile = isHydrated && isMobileViewport;
     const { width: viewportWidth } = useWindowDimensions();
     const isCompactFullscreenHeader = viewportWidth < 390;
 
@@ -630,7 +630,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                             <View style={styles.modalEditorCard}>
                                                 <Suspense fallback={<View style={{ padding: 20 }}><Text>{i18nT('travel:components.travel.ContentUpsertSection.zagruzka_redaktora_d5683e4b')}</Text></View>}>
                                                     <ArticleEditor
-                                                        key={`description-fullscreen-${idTravelStr ?? 'new'}`}
+                                                        key="description-fullscreen"
                                                         label={title}
                                                         content={content ?? ''}
                                                         onChange={(value) => {
@@ -665,7 +665,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                         </>
                     ) : (
                         <ArticleEditor
-                            key={`${title}-${idTravelStr ?? 'new'}`}
+                            key={key ?? title}
                             label={title}
                             content={content ?? ''}
                             onChange={(value) => {

@@ -15,8 +15,12 @@ jest.mock('@/screens/tabs/QuestCard', () => {
     const React = require('react');
     const { Text } = require('react-native');
 
-    return function MockQuestCard({ cityId, quest }: { cityId: string; quest: { id: string; title: string } }) {
-        return React.createElement(Text, { testID: `quest-card-${quest.id}`, accessibilityLabel: cityId }, quest.title);
+    return function MockQuestCard({ cityId, quest, index }: { cityId: string; quest: { id: string; title: string }; index?: number }) {
+        return React.createElement(Text, {
+            testID: `quest-card-${quest.id}`,
+            accessibilityLabel: cityId,
+            accessibilityHint: String(index),
+        }, quest.title);
     };
 });
 
@@ -390,7 +394,7 @@ describe('QuestsContentPanel', () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
         const LazyQuestMap = jest.fn(() => null);
-        const quests = Array.from({ length: 2 }, (_, index) => makeQuest(index));
+        const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
 
         const { getByTestId, queryByTestId } = render(
             <QuestsContentPanel
@@ -425,8 +429,10 @@ describe('QuestsContentPanel', () => {
         );
 
         expect(queryByTestId('quests-virtualized-list')).toBeNull();
-        expect(getByTestId('quest-card-quest-0')).toBeTruthy();
-        expect(getByTestId('quest-card-quest-1')).toBeTruthy();
+        expect(getByTestId('quest-card-quest-0').props.accessibilityHint).toBe('0');
+        expect(getByTestId('quest-card-quest-1').props.accessibilityHint).toBe('1');
+        expect(getByTestId('quest-card-quest-2').props.accessibilityHint).toBe('2');
+        expect(getByTestId('quest-card-quest-53').props.accessibilityHint).toBe('53');
     });
 
     it('exposes the mobile nearby CTA and geolocation message in list mode', () => {

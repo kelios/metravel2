@@ -19,14 +19,30 @@ jest.mock('react', () => {
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection'
 import type { TravelFormData } from '@/types/types'
 
+let mockArticleEditorInstanceSequence = 0
+
 // Stub the lazy ArticleEditor so the derived UI around it renders synchronously.
-jest.mock('@/components/article/ArticleEditor', () => ({
-  __esModule: true,
-  default: (props: any) => {
+jest.mock('@/components/article/ArticleEditor', () => {
+  const MockArticleEditor = (props: any) => {
+    const React = require('react')
     const { Text } = require('react-native')
-    return <Text testID={`editor-${props.label}`}>{`editor:${props.label}`}</Text>
-  },
-}))
+    const instanceRef = React.useRef<number | null>(null)
+    if (instanceRef.current === null) {
+      mockArticleEditorInstanceSequence += 1
+      instanceRef.current = mockArticleEditorInstanceSequence
+    }
+    return (
+      <Text
+        testID={`editor-${props.label}`}
+        accessibilityHint={`instance-${instanceRef.current}`}
+      >
+        {`editor:${props.label}`}
+      </Text>
+    )
+  }
+
+  return { __esModule: true, default: MockArticleEditor }
+})
 
 jest.mock('@/components/forms/TextInputComponent', () => (props: any) => {
   const { View, Text, TextInput } = require('react-native')
@@ -70,7 +86,7 @@ jest.mock('@/hooks/useTheme', () => {
 })
 
 jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: jest.fn(() => ({ isPhone: false, isLargePhone: false })),
+  useResponsive: jest.fn(() => ({ isHydrated: true, isMobile: false })),
 }))
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -131,7 +147,7 @@ const renderSection = (override: Partial<TravelFormData> = {}) =>
 describe('ContentUpsertSection — derived display logic', () => {
   afterEach(() => {
     const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
-    useResponsive.mockReturnValue({ isPhone: false, isLargePhone: false })
+    useResponsive.mockReturnValue({ isHydrated: true, isMobile: false })
   })
 
   it('prompts for a minimum description when empty', () => {
@@ -215,7 +231,7 @@ describe('ContentUpsertSection — derived display logic', () => {
 
   it('preserves a trailing space in the focused Android description until the next word is typed', () => {
     const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
-    useResponsive.mockReturnValue({ isPhone: true, isLargePhone: false })
+    useResponsive.mockReturnValue({ isHydrated: true, isMobile: true })
 
     const Harness = () => {
       const [formData, setFormData] = React.useState<TravelFormData>({
@@ -239,7 +255,7 @@ describe('ContentUpsertSection — derived display logic', () => {
 
   it('syncs the latest edit content after the focused Android description blurs', () => {
     const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
-    useResponsive.mockReturnValue({ isPhone: true, isLargePhone: false })
+    useResponsive.mockReturnValue({ isHydrated: true, isMobile: true })
     const setFormData = jest.fn()
 
     const { getByTestId, rerender } = render(
@@ -267,5 +283,30 @@ describe('ContentUpsertSection — derived display logic', () => {
 
     expect(getByTestId('travel-wizard.basic.description.mobile-input').props.value)
       .toBe('Внешнее обновление')
+  })
+
+  it('keeps the fullscreen editor mounted when a new travel receives its server id', () => {
+    const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
+    useResponsive.mockReturnValue({ isHydrated: true, isMobile: true })
+    const setFormData = jest.fn()
+
+    const { getByLabelText, getByTestId, rerender } = render(
+      <ContentUpsertSection
+        formData={{ ...baseFormData, id: null as any }}
+        setFormData={setFormData}
+      />,
+    )
+
+    fireEvent.press(getByLabelText('Открыть расширенный редактор описания'))
+    const firstInstance = getByTestId('editor-Описание').props.accessibilityHint
+
+    rerender(
+      <ContentUpsertSection
+        formData={{ ...baseFormData, id: '999' }}
+        setFormData={setFormData}
+      />,
+    )
+
+    expect(getByTestId('editor-Описание').props.accessibilityHint).toBe(firstInstance)
   })
 })

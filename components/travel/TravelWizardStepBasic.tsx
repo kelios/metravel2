@@ -113,7 +113,7 @@ function TravelWizardStepBasic({
 }: TravelWizardStepBasicProps) {
   const colors = useThemedColors();
   const router = useRouter();
-  const { isPhone, isLargePhone } = useResponsive();
+  const { isHydrated, isMobile } = useResponsive();
   const { hasEditedForm, markFormEdited } = useFirstEditFlag();
   const { animatedStyle: stepAnimatedStyle } = useStepTransition({
     duration: 350,
@@ -122,7 +122,7 @@ function TravelWizardStepBasic({
   });
 
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const isCompactLayout = isPhone || isLargePhone;
+  const isCompactLayout = isHydrated && isMobile;
   const progressPercent = getProgressPercent(progress);
 
   const validation = useMemo(() => validateStep(1, formData), [formData]);

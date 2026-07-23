@@ -155,6 +155,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const lastForceSyncedContentRef = useRef<string>('');
     const lastSanitizedForceSyncRef = useRef<{ raw: string; clean: string } | null>(null);
     const pendingDroppedImageRef = useRef<File | null>(null);
+    const pendingUploadedImageRef = useRef<{
+        url: string;
+        dimensions?: { width: number; height: number } | null;
+    } | null>(null);
     const processingPendingDroppedImageRef = useRef(false);
     const fireChangeRef = useRef<(val: string, selection?: { index: number; length: number } | null, markUserEdited?: boolean) => void>(() => {});
     const openImagePickerRef = useRef<() => void>(() => {});
@@ -195,6 +199,19 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const handleQuillRef = useCallback(
         (node: any) => {
             quillRef.current = node;
+
+            const pendingImage = pendingUploadedImageRef.current;
+            const editor = node?.getEditor?.();
+            if (pendingImage && editor) {
+                pendingUploadedImageRef.current = null;
+                const inserted = insertImageIntoEditor({
+                    editor,
+                    url: pendingImage.url,
+                    dimensions: pendingImage.dimensions,
+                    fireChange: fireChangeRef.current,
+                });
+                if (!inserted) pendingUploadedImageRef.current = pendingImage;
+            }
 
             if (editorRef) {
                 if (typeof editorRef === 'function') editorRef(node);
@@ -455,13 +472,17 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, []);
 
     const insertImage = useCallback((url: string, dimensions?: { width: number; height: number } | null) => {
-        insertImageIntoEditor({
+        const inserted = insertImageIntoEditor({
             editor: quillRef.current?.getEditor?.(),
             url,
             dimensions,
             fireChange,
         });
-    }, [fireChange]);
+        if (!inserted) {
+            pendingUploadedImageRef.current = { url, dimensions };
+            requestQuillLoad();
+        }
+    }, [fireChange, requestQuillLoad]);
 
     const openPreview = useCallback(async () => {
         trackArticleEditorPreviewClicked({

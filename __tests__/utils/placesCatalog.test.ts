@@ -37,6 +37,7 @@ describe('mapPlacesCatalogResponse', () => {
 
     const [place] = page.places
     expect(place.id).toBe('1039')
+    expect(place.travelId).toBe(158)
     expect(place.title).toBe('Hrad Loket')
     expect(place.category).toBe('Замок')
     expect(place.categoryId).toBe(43)
@@ -49,6 +50,80 @@ describe('mapPlacesCatalogResponse', () => {
     expect(place.relatedTravelId).toBe(158)
     expect(place.travelImageThumbUrl).toContain('thumb_400_wp.webp')
     expect(place.searchText).toBe('hrad loket чехия замок')
+  })
+
+  it('prefers top-level travel identity and canonical url from the catalog contract', () => {
+    const page = mapPlacesCatalogResponse(
+      rawResponse({
+        results: [
+          rawItem({
+            travel_id: 435,
+            urlTravel: '/travels/krakow?id=435',
+            travel: { id: 158, slug: 'legacy-slug', url: '/travels/legacy-slug' },
+          }),
+        ],
+      }),
+    )
+
+    expect(page.places[0]).toEqual(
+      expect.objectContaining({
+        travelId: 435,
+        urlTravel: '/travels/krakow?id=435',
+      }),
+    )
+  })
+
+  it('falls back to nested travel id and url for legacy payloads', () => {
+    const page = mapPlacesCatalogResponse(rawResponse())
+
+    expect(page.places[0]).toEqual(
+      expect.objectContaining({
+        travelId: 158,
+        urlTravel: '/travels/karlovy-vary',
+      }),
+    )
+  })
+
+  it('builds a canonical route from a nested slug when no travel url is available', () => {
+    const page = mapPlacesCatalogResponse(
+      rawResponse({
+        results: [
+          rawItem({
+            travel_id: null,
+            urlTravel: null,
+            travel: { slug: 'polish camino' },
+          }),
+        ],
+      }),
+    )
+
+    expect(page.places[0]).toEqual(
+      expect.objectContaining({
+        travelId: null,
+        urlTravel: '/travels/polish%20camino',
+      }),
+    )
+  })
+
+  it('ignores malformed top-level ids and reuses a valid nested identity', () => {
+    const page = mapPlacesCatalogResponse(
+      rawResponse({
+        results: [
+          rawItem({
+            travel_id: '435x',
+            urlTravel: '',
+            travel: { id: '158', slug: 'karlovy-vary' },
+          }),
+        ],
+      }),
+    )
+
+    expect(page.places[0]).toEqual(
+      expect.objectContaining({
+        travelId: 158,
+        urlTravel: '/travels/karlovy-vary',
+      }),
+    )
   })
 
   it('reads facets from the response', () => {

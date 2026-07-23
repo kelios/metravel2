@@ -1,94 +1,172 @@
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
-import { spawnSync } from 'child_process'
 
-const repoRoot = process.cwd()
-const helperPath = path.join(repoRoot, 'scripts/deploy-expo-overlay.sh')
+import { makeTempDir, removeDir, runCli } from './cli-test-utils'
 
-const writeFile = (filePath: string, content: string, ageDays = 0) => {
+const helperPath = path.resolve(process.cwd(), 'scripts/deploy-expo-overlay.sh')
+
+function makeFixture(): { root: string; fresh: string; previous: string } {
+  const root = makeTempDir('metravel-expo-overlay-')
+  const fresh = path.join(root, 'fresh')
+  const previous = path.join(root, 'previous')
+  fs.mkdirSync(fresh, { recursive: true })
+  fs.mkdirSync(previous, { recursive: true })
+  return { root, fresh, previous }
+}
+
+function writeFile(
+  root: string,
+  relativePath: string,
+  content: string,
+): string {
+  const filePath = path.join(root, relativePath)
   fs.mkdirSync(path.dirname(filePath), { recursive: true })
   fs.writeFileSync(filePath, content)
-  const timestamp = new Date(Date.now() - ageDays * 24 * 60 * 60 * 1000)
+  return filePath
+}
+
+function ageFile(filePath: string, days: number): void {
+  const timestamp = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
   fs.utimesSync(filePath, timestamp, timestamp)
 }
 
-describe('deploy-expo-overlay', () => {
-  let tempRoot: string
+function runOverlay(fresh: string, previous: string, days = 14): void {
+  const result = runCli(
+    'bash',
+    [helperPath, fresh, previous, String(days)],
+  )
 
-  beforeEach(() => {
-    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-expo-overlay-'))
+  if (result.status !== 0) {
+    throw new Error(
+      `overlay helper failed (${result.status}): ${result.stderr || result.stdout}`,
+    )
+  }
+}
+
+describe('normal deploy Expo overlay retention', () => {
+  it('backfills recent JS/CSS but excludes expired and unrelated files', () => {
+    const fixture = makeFixture()
+
+    try {
+      writeFile(fixture.previous, 'js/web/legacy.js', 'legacy js')
+      writeFile(fixture.previous, 'css/legacy.css', 'legacy css')
+      const expiredJs = writeFile(
+        fixture.previous,
+        'js/web/expired.js',
+        'expired js',
+      )
+      const expiredCss = writeFile(
+        fixture.previous,
+        'css/expired.css',
+        'expired css',
+      )
+      writeFile(fixture.previous, 'js/web/legacy.js.map', 'source map')
+      const freshButOld = writeFile(
+        fixture.fresh,
+        'js/web/current-stale-mtime.js',
+        'fresh payload',
+      )
+      ageFile(expiredJs, 16)
+      ageFile(expiredCss, 16)
+      ageFile(freshButOld, 16)
+
+      runOverlay(fixture.fresh, fixture.previous)
+
+      expect(
+        fs.readFileSync(path.join(fixture.fresh, 'js/web/legacy.js'), 'utf8'),
+      ).toBe('legacy js')
+      expect(
+        fs.readFileSync(path.join(fixture.fresh, 'css/legacy.css'), 'utf8'),
+      ).toBe('legacy css')
+      expect(fs.existsSync(path.join(fixture.fresh, 'js/web/expired.js'))).toBe(
+        false,
+      )
+      expect(fs.existsSync(path.join(fixture.fresh, 'css/expired.css'))).toBe(
+        false,
+      )
+      expect(
+        fs.existsSync(path.join(fixture.fresh, 'js/web/legacy.js.map')),
+      ).toBe(false)
+      expect(fs.readFileSync(freshButOld, 'utf8')).toBe('fresh payload')
+    } finally {
+      removeDir(fixture.root)
+    }
   })
 
-  afterEach(() => {
-    fs.rmSync(tempRoot, { recursive: true, force: true })
+  it('preserves nested paths with spaces and special characters', () => {
+    const fixture = makeFixture()
+    const jsPath = "js/web/nested dir/legacy [chunk] $value; #1's.js"
+    const cssPath = 'css/themes/(old) theme + contrast & print.css'
+
+    try {
+      writeFile(fixture.previous, jsPath, 'nested js')
+      writeFile(fixture.previous, cssPath, 'nested css')
+
+      runOverlay(fixture.fresh, fixture.previous)
+
+      expect(fs.readFileSync(path.join(fixture.fresh, jsPath), 'utf8')).toBe(
+        'nested js',
+      )
+      expect(fs.readFileSync(path.join(fixture.fresh, cssPath), 'utf8')).toBe(
+        'nested css',
+      )
+    } finally {
+      removeDir(fixture.root)
+    }
   })
 
-  it('retains recent JS/CSS without clobbering the fresh payload', () => {
-    const previous = path.join(tempRoot, 'previous')
-    const fresh = path.join(tempRoot, 'fresh')
-    const recentJs = '_expo/static/js/web/nested/with spaces/[draft] #1.js'
-    const recentCss = '_expo/static/css/web/theme (legacy).css'
-    const expiredJs = '_expo/static/js/web/expired.js'
-    const expiredCss = '_expo/static/css/web/expired.css'
-    const collision = '_expo/static/js/web/current.js'
-    const staleFresh = '_expo/static/css/web/current-stale-mtime.css'
+  it('does not import empty previous-release directories', () => {
+    const fixture = makeFixture()
+    const oldEmptyDir = path.join(fixture.previous, 'js/web/empty old dir')
+    const freshEmptyDir = path.join(fixture.fresh, 'css/empty fresh dir')
 
-    writeFile(path.join(previous, recentJs), 'recent-js', 2)
-    writeFile(path.join(previous, recentCss), 'recent-css', 13)
-    writeFile(path.join(previous, expiredJs), 'expired-js', 20)
-    writeFile(path.join(previous, expiredCss), 'expired-css', 20)
-    writeFile(path.join(previous, collision), 'old-collision', 1)
-    writeFile(path.join(previous, '_expo/static/fonts/ignored.woff2'), 'font', 1)
-    fs.mkdirSync(path.join(previous, '_expo/static/js/web/empty generation'), {
-      recursive: true,
-    })
+    try {
+      fs.mkdirSync(oldEmptyDir, { recursive: true })
+      fs.mkdirSync(freshEmptyDir, { recursive: true })
 
-    writeFile(path.join(fresh, collision), 'fresh-collision', 30)
-    writeFile(path.join(fresh, staleFresh), 'fresh-stale-mtime', 30)
+      runOverlay(fixture.fresh, fixture.previous)
 
-    const result = spawnSync('bash', [helperPath, previous, fresh, '14'], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-    })
+      expect(
+        fs.existsSync(path.join(fixture.fresh, 'js/web/empty old dir')),
+      ).toBe(false)
+      expect(fs.existsSync(freshEmptyDir)).toBe(true)
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
 
-    expect(result.status).toBe(0)
-    expect(fs.readFileSync(path.join(fresh, recentJs), 'utf8')).toBe('recent-js')
-    expect(fs.readFileSync(path.join(fresh, recentCss), 'utf8')).toBe('recent-css')
-    expect(fs.existsSync(path.join(fresh, expiredJs))).toBe(false)
-    expect(fs.existsSync(path.join(fresh, expiredCss))).toBe(false)
-    expect(fs.readFileSync(path.join(fresh, collision), 'utf8')).toBe('fresh-collision')
-    expect(fs.readFileSync(path.join(fresh, staleFresh), 'utf8')).toBe(
-      'fresh-stale-mtime',
+  it('keeps the fresh payload on a path collision', () => {
+    const fixture = makeFixture()
+    const relativePath = 'js/web/index-collision.js'
+    const freshFile = writeFile(fixture.fresh, relativePath, 'current release')
+
+    try {
+      writeFile(fixture.previous, relativePath, 'previous release')
+      ageFile(freshFile, 16)
+
+      runOverlay(fixture.fresh, fixture.previous)
+
+      expect(fs.readFileSync(freshFile, 'utf8')).toBe('current release')
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
+  it('wires the tested helper into the canonical deploy before the static swap', () => {
+    const source = fs.readFileSync(
+      path.resolve(process.cwd(), 'build-prod.sh'),
+      'utf8',
     )
-    expect(fs.existsSync(path.join(fresh, '_expo/static/fonts/ignored.woff2'))).toBe(
-      false,
+
+    expect(source).toContain(
+      'EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"',
     )
+    expect(source).toContain(
+      'EXPO_OVERLAY_HELPER="scripts/deploy-expo-overlay.sh"',
+    )
+    expect(source).not.toContain('scripts/fix-prod.sh')
     expect(
-      fs.existsSync(path.join(fresh, '_expo/static/js/web/empty generation')),
-    ).toBe(false)
-  })
-
-  it('rejects an invalid retention window', () => {
-    const result = spawnSync('bash', [helperPath, tempRoot, tempRoot, '0'], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-    })
-
-    expect(result.status).toBe(2)
-    expect(result.stderr).toContain(
-      'EXPO_OVERLAY_RETENTION_DAYS must be a positive integer',
-    )
-  })
-
-  it('wires the helper into the canonical deploy before the atomic swap', () => {
-    const source = fs.readFileSync(path.join(repoRoot, 'build-prod.sh'), 'utf8')
-
-    expect(source).toContain('EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"')
-    expect(source).toContain('scripts/deploy-expo-overlay.sh')
-    expect(source).toContain("base64 -d | bash -s -- static/dist static/dist.new")
-    expect(source.indexOf('base64 -d | bash -s -- static/dist static/dist.new')).toBeLessThan(
-      source.indexOf('rollback_dir=static/dist.old'),
-    )
+      source.indexOf("printf '%s' '$EXPO_OVERLAY_HELPER_B64'"),
+    ).toBeLessThan(source.indexOf('mv static/dist.new static/dist'))
   })
 })

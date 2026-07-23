@@ -35,8 +35,8 @@ export const WizardStepFooter = React.memo(function WizardStepFooter({
   primaryDisabled = false,
   primaryTestID,
 }: WizardStepFooterProps) {
-  const { isPhone, isLargePhone, isTablet } = useResponsive()
-  const isMobile = isPhone || isLargePhone || isTablet
+  const { isHydrated, isMobile: isMobileViewport, isTablet } = useResponsive()
+  const isMobile = (isHydrated && isMobileViewport) || isTablet
   const colors = useThemedColors()
   const insets = useSafeAreaInsetsSafe()
 

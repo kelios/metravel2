@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
 import { uploadImage } from '@/api/misc';
+import { openWebImagePicker } from '@/components/article/articleEditorMediaHelpers';
+import { ensureQuillContent } from '@/components/article/articleEditorQuillHelpers';
 
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ isAuthenticated: true }),
@@ -30,6 +32,7 @@ jest.mock('@/components/article/QuillEditor.web', () => {
     __esModule: true,
     default: React.forwardRef((props: any, ref: any) => {
       ;(globalThis as any).__quillProps__ = props;
+      ;(globalThis as any).__quillReactRef__ = ref;
 
       const readSelection = () => {
         const sel = (globalThis as any).__quillSelection__;
@@ -83,7 +86,9 @@ jest.mock('@/components/article/QuillEditor.web', () => {
       }, [props.value]);
 
       React.useImperativeHandle(ref, () => ({
-        getEditor: () => editorRef.current,
+        getEditor: () => (globalThis as any).__quillEditorAvailable__ === false
+          ? null
+          : editorRef.current,
       }));
 
       return React.createElement(View, {
@@ -105,6 +110,51 @@ describe('ArticleEditor.web link', () => {
     ;(globalThis as any).__quillSelection__ = null;
     ;(globalThis as any).__quillProps__ = null;
     ;(globalThis as any).__quillEditor__ = null;
+    ;(globalThis as any).__quillEditorAvailable__ = true;
+    ;(globalThis as any).__quillReactRef__ = null;
+  });
+
+  it('keeps the Safari file input attached until the picker returns', () => {
+    const input = document.createElement('input');
+    const clickSpy = jest.spyOn(input, 'click').mockImplementation(() => undefined);
+    const file = new File(['binary-image'], 'photo.png', { type: 'image/png' });
+    const onFile = jest.fn();
+
+    openWebImagePicker({
+      hasWindow: true,
+      createInput: () => input,
+      onFile,
+    });
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(document.body.contains(input)).toBe(true);
+
+    Object.defineProperty(input, 'files', { configurable: true, value: [file] });
+    input.dispatchEvent(new Event('change'));
+
+    expect(onFile).toHaveBeenCalledWith(file);
+    expect(document.body.contains(input)).toBe(false);
+  });
+
+  it('does not paste rich HTML again when an image is already the editor content', () => {
+    const dangerouslyPasteHTML = jest.fn();
+    const remountQuill = jest.fn();
+    const editor = {
+      getText: jest.fn(() => '\n'),
+      root: { innerHTML: '<p><img src="https://example.com/photo.jpg" /></p>' },
+      update: jest.fn(),
+      scroll: { update: jest.fn() },
+      clipboard: { dangerouslyPasteHTML },
+    };
+
+    ensureQuillContent({
+      editor,
+      html: '<p><img src="https://example.com/photo.jpg" /></p>',
+      remountQuill,
+    });
+
+    expect(dangerouslyPasteHTML).not.toHaveBeenCalled();
+    expect(remountQuill).not.toHaveBeenCalled();
   });
 
   it('applies link to selected text using stored selection (custom link modal)', async () => {
@@ -226,6 +276,67 @@ describe('ArticleEditor.web link', () => {
       expect(uploadImage as jest.Mock).toHaveBeenCalledTimes(1);
       expect(editor.insertEmbed).toHaveBeenCalledWith(0, 'image', 'https://example.com/uploaded.jpg', 'user');
     });
+
+    createElementSpy.mockRestore();
+  });
+
+  it('queues an uploaded image while Quill remounts and inserts it into the next editor instance', async () => {
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
+    const onChange = jest.fn();
+    let resolveUpload: ((value: unknown) => void) | null = null;
+    (uploadImage as jest.Mock).mockImplementationOnce(
+      () => new Promise((resolve) => {
+        resolveUpload = resolve;
+      }),
+    );
+    const file = new File(['binary-image'], 'photo.png', { type: 'image/png' });
+    const inputMock: any = {
+      type: '',
+      accept: '',
+      files: [file],
+      onchange: null,
+      click: jest.fn(() => inputMock.onchange?.()),
+    };
+    const realCreateElement = window.document.createElement.bind(window.document);
+    const createElementSpy = jest
+      .spyOn(window.document, 'createElement')
+      .mockImplementation(((tagName: string) => {
+        if (String(tagName).toLowerCase() === 'input') return inputMock;
+        return realCreateElement(tagName);
+      }) as any);
+
+    const { getByLabelText, getByTestId } = render(
+      <ArticleEditor content="hello" onChange={onChange} onManualSave={jest.fn()} />,
+    );
+
+    await waitFor(() => expect(getByTestId('quill-mock')).toBeTruthy());
+    const editor = (globalThis as any).__quillEditor__;
+    const refCallback = (globalThis as any).__quillReactRef__;
+    const imageHandler = (globalThis as any).__quillProps__?.modules?.toolbar?.handlers?.image;
+
+    ;(globalThis as any).__quillEditorAvailable__ = false;
+    refCallback(null);
+    imageHandler.call({ quill: editor }, true);
+
+    await waitFor(() => expect(uploadImage as jest.Mock).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      resolveUpload?.({ url: 'https://example.com/uploaded.jpg' });
+    });
+    await waitFor(() => expect(getByLabelText('Сохранить путешествие')).toBeTruthy());
+    expect(editor.insertEmbed).not.toHaveBeenCalled();
+
+    ;(globalThis as any).__quillEditorAvailable__ = true;
+    refCallback({ getEditor: () => editor });
+
+    await waitFor(() => {
+      expect(editor.insertEmbed).toHaveBeenCalledWith(
+        0,
+        'image',
+        'https://example.com/uploaded.jpg',
+        'user',
+      );
+    });
+    expect(editor.insertEmbed).toHaveBeenCalledTimes(1);
 
     createElementSpy.mockRestore();
   });

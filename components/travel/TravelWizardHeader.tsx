@@ -91,8 +91,8 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     onOpenPublic,
 }) => {
     const colors = useThemedColors();
-    const { isPhone, isLargePhone } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
+    const { isHydrated, isMobile: isMobileViewport } = useResponsive();
+    const isMobile = isHydrated && isMobileViewport;
     const clamped = Math.min(Math.max(progressPercent, 0), 100);
     
     // Keep progress neutral; validation errors are announced and shown separately.

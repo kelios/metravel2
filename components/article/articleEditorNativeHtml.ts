@@ -167,6 +167,7 @@ export function buildArticleEditorNativeHtml({
 
         if (data.type === 'set-content') {
           var selection = quill.getSelection();
+          quill.setText('', 'silent');
           quill.clipboard.dangerouslyPasteHTML(0, data.html, 'api');
 
           if (selection) {

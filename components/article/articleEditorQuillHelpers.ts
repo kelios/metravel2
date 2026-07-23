@@ -14,6 +14,16 @@ type FireChange = (
   markUserEdited?: boolean,
 ) => void
 
+export const hasQuillRenderableContent = (editor: any): boolean => {
+  if (!editor) return false
+
+  const text = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : ''
+  if (text.replace(/\s+/g, '').length > 0) return true
+
+  const html = String(editor.root?.innerHTML ?? '')
+  return /<(?:img|iframe|video|audio|source|figure|table|hr)\b/i.test(html) || /\sid\s*=/i.test(html)
+}
+
 export const resolveEditorSelection = (
   editor: any,
   lastSelection: ArticleEditorSelection | null,
@@ -316,11 +326,10 @@ export const ensureQuillContent = ({
   const nextHtml = typeof html === 'string' ? html : ''
   if (nextHtml.trim().length === 0) return
 
-  const text = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : ''
-  const isEditorEmpty = text.replace(/\s+/g, '').length === 0
-  if (!isEditorEmpty) return
+  if (hasQuillRenderableContent(editor)) return
 
   try {
+    editor.setText?.('', 'silent')
     editor.clipboard?.dangerouslyPasteHTML?.(0, nextHtml, 'silent')
     editor.setSelection?.(0, 0, 'silent')
   } catch {

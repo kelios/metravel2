@@ -472,6 +472,7 @@ describe('ImageCardMedia blur background (web)', () => {
           loading="lazy"
           priority="normal"
           allowCriticalWebBlur
+          allowSafariWebLazy
           optimizeWeb={false}
         />
       )

@@ -29,6 +29,16 @@ describe('buildArticleEditorNativeHtml', () => {
     expect(html).toContain('Quill')
   })
 
+  it('replaces native editor content before applying an external HTML sync', () => {
+    const html = build('compact')
+
+    const clearIndex = html.indexOf("quill.setText('', 'silent');")
+    const pasteIndex = html.indexOf("quill.clipboard.dangerouslyPasteHTML(0, data.html, 'api');")
+
+    expect(clearIndex).toBeGreaterThan(-1)
+    expect(pasteIndex).toBeGreaterThan(clearIndex)
+  })
+
   // Регрессия: RN доставляет postMessage на Android в document, а слушатель
   // висел только на window — ни одна команда из RN не доходила.
   it('listens for host messages on both document and window', () => {

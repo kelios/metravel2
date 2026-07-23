@@ -4,8 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 
 let mockResponsiveState = {
-  isPhone: false,
-  isLargePhone: false,
+  isHydrated: true,
+  isMobile: false,
 };
 
 jest.mock('@/hooks/useTheme', () => ({
@@ -33,8 +33,8 @@ jest.mock('@/hooks/useResponsive', () => ({
 describe('TravelWizardHeader', () => {
   beforeEach(() => {
     mockResponsiveState = {
-      isPhone: false,
-      isLargePhone: false,
+      isHydrated: true,
+      isMobile: false,
     };
   });
 
@@ -64,8 +64,8 @@ describe('TravelWizardHeader', () => {
 
   it('keeps the mobile save button at a 44px touch target', () => {
     mockResponsiveState = {
-      isPhone: true,
-      isLargePhone: false,
+      isHydrated: true,
+      isMobile: true,
     };
 
     const { getByTestId } = render(
@@ -94,8 +94,8 @@ describe('TravelWizardHeader', () => {
 
   it('lets mobile users jump directly to another wizard step from the step selector', () => {
     mockResponsiveState = {
-      isPhone: true,
-      isLargePhone: false,
+      isHydrated: true,
+      isMobile: true,
     };
     const onStepSelect = jest.fn();
 

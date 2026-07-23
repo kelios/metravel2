@@ -60,8 +60,8 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     onOpenPublic,
 }) => {
     const colors = useThemedColors();
-    const { isPhone, isLargePhone } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
+    const { isHydrated, isMobile: isMobileViewport } = useResponsive();
+    const isMobile = isHydrated && isMobileViewport;
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
 

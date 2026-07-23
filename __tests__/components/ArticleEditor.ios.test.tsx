@@ -117,8 +117,8 @@ describe('ArticleEditor.ios Component', () => {
     expect(buttons.length).toBeGreaterThanOrEqual(3);
   });
 
-  it('should not render image picker button for compact variant', () => {
-    const { getAllByRole } = render(
+  it('should render image picker button for compact variant', () => {
+    const { getByLabelText } = render(
       <ArticleEditor
         content=""
         onChange={mockOnChange}
@@ -126,8 +126,7 @@ describe('ArticleEditor.ios Component', () => {
       />
     );
 
-    const buttons = getAllByRole('button');
-    expect(buttons.length).toBeGreaterThanOrEqual(2);
+    expect(getByLabelText('Добавить изображение')).toBeTruthy();
   });
 
   it('should handle content changes from WebView with debouncing', async () => {

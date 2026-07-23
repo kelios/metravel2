@@ -267,6 +267,7 @@ export const travelGenerated2 = {
   "components.travel.gallery.GalleryControls.zagruzka_aefa6291": "Loading",
   "components.travel.gallery.GalleryGrid.izobrazhenie_galerei_value1_57b84c61": "Gallery image {{value1}}",
   "components.travel.gallery.GalleryGrid.net_zagruzhennyh_izobrazheniy_d6199483": "No images loaded",
+  "components.travel.gallery.GalleryGrid.mobileAddHint": "Use the buttons above to select or take a photo",
   "components.travel.gallery.GalleryGrid.peremestit_foto_levee_80430f4e": "Move photo to the left",
   "components.travel.gallery.GalleryGrid.peremestit_foto_pravee_b568179e": "Move photo to the right",
   "components.travel.gallery.GalleryGrid.peretaschite_fayly_ili_nazhmite_na_zonu_vysh_beb2acf5": "Drag and drop files or click on the area above",

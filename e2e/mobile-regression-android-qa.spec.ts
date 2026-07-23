@@ -30,6 +30,11 @@ import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
 import { getTravelsListPath } from './helpers/routes';
 
 const MOBILE_VIEWPORT = { width: 390, height: 844 };
+const SMALL_PHONE_VIEWPORT = { width: 320, height: 568 };
+const ONE_PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nJ8AAAAASUVORK5CYII=',
+  'base64',
+);
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -165,6 +170,110 @@ test.describe('@mobile BUG-CLASS-2: header ≤20% viewport height', () => {
       headerBox!.height,
       `Wizard header height must not exceed ${MAX_HEADER_RATIO * 100}% of viewport`
     ).toBeLessThanOrEqual(maxHeaderPx);
+  });
+
+  test('travel wizard keeps the step footer visible on a small phone', async ({ page }) => {
+    await page.setViewportSize(SMALL_PHONE_VIEWPORT);
+    await preacceptCookies(page);
+    await ensureAuthedStorageFallback(page);
+    await mockFakeAuthApis(page);
+
+    await gotoWithRetry(page, '/travel/new');
+
+    const wizardRoot = page.getByTestId('travel-upsert.root');
+    const wizardHeader = page.getByTestId('travel-wizard-header').first();
+    const stepFooter = page.getByTestId('travel-wizard.step-footer');
+    const primaryAction = page.getByTestId('travel-wizard.step-footer.primary');
+
+    await expect(wizardRoot).toBeVisible({ timeout: 30_000 });
+    await expect(stepFooter).toBeVisible();
+    await expect(primaryAction).toBeVisible();
+    await expect(page.getByTestId('footer-dock-wrapper')).toHaveCount(0);
+
+    const [rootBox, headerBox, footerBox, primaryBox] = await Promise.all([
+      wizardRoot.boundingBox(),
+      wizardHeader.boundingBox(),
+      stepFooter.boundingBox(),
+      primaryAction.boundingBox(),
+    ]);
+
+    expect(rootBox).not.toBeNull();
+    expect(headerBox).not.toBeNull();
+    expect(footerBox).not.toBeNull();
+    expect(primaryBox).not.toBeNull();
+    expect(headerBox!.height).toBeLessThanOrEqual(SMALL_PHONE_VIEWPORT.height * MAX_HEADER_RATIO);
+    expect(footerBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
+    expect(primaryBox!.y + primaryBox!.height).toBeLessThanOrEqual(rootBox!.y + rootBox!.height);
+
+    const documentHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+    expect(documentHeight).toBeLessThanOrEqual(SMALL_PHONE_VIEWPORT.height);
+  });
+
+  test('travel advanced editor keeps an inserted photo when a new draft receives its id', async ({ page }) => {
+    await setMobileViewport(page);
+    await ensureAuthedStorageFallback(page);
+    await mockFakeAuthApis(page);
+
+    await page.route('**/api/getFiltersTravel/**', route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        categories: [],
+        categoryTravelAddress: [],
+        companions: [],
+        complexity: [],
+        month: [],
+        over_nights_stay: [],
+        sortings: [],
+        transports: [],
+      }),
+    }));
+    await page.route('**/api/countriesforsearch/**', route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: '[]',
+    }));
+    await page.route('**/api/travels/upsert/**', route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 1001, name: '', description: '' }),
+    }));
+    await page.route('**/api/upload', async route => {
+      await new Promise(resolve => setTimeout(resolve, 600));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ url: `${new URL(page.url()).origin}/editor-upload.png` }),
+      });
+    });
+    await page.route('**/editor-upload.png', route => route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: ONE_PIXEL_PNG,
+    }));
+
+    await gotoWithRetry(page, '/travel/new');
+    await page.getByRole('button', { name: 'Открыть расширенный редактор описания' }).click();
+
+    const editorDialog = page.getByRole('dialog');
+    const imageButton = editorDialog.getByRole('button', { name: 'Изображение' });
+    await expect(imageButton).toBeVisible({ timeout: 30_000 });
+
+    const chooserPromise = page.waitForEvent('filechooser');
+    await imageButton.click();
+    const chooser = await chooserPromise;
+    await chooser.setFiles({
+      name: 'editor-photo.png',
+      mimeType: 'image/png',
+      buffer: ONE_PIXEL_PNG,
+    });
+
+    const insertedImages = editorDialog.locator('.ql-editor img');
+    const insertedImage = insertedImages.first();
+    await expect(insertedImage).toBeVisible({ timeout: 30_000 });
+    await expect(insertedImages).toHaveCount(1);
+    await expect(editorDialog).toBeVisible();
+    await expect(page.locator('input[type="file"][aria-hidden="true"]')).toHaveCount(0);
   });
 });
 

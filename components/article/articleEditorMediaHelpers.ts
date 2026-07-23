@@ -81,8 +81,8 @@ export const insertImageIntoEditor = ({
   url: string
   dimensions?: { width: number; height: number } | null
   fireChange: FireChange
-}) => {
-  if (!editor) return
+}): boolean => {
+  if (!editor) return false
 
   const range = editor.getSelection() || { index: editor.getLength(), length: 0 }
   const width = Number(dimensions?.width ?? 0)
@@ -101,6 +101,7 @@ export const insertImageIntoEditor = ({
 
   editor.setSelection(range.index + 1, 0, 'silent')
   fireChange(editor.root.innerHTML, { index: range.index + 1, length: 0 })
+  return true
 }
 
 export const uploadImageAndInsert = async ({
@@ -214,11 +215,40 @@ export const openWebImagePicker = ({
   const input = createInput()
   input.type = 'file'
   input.accept = 'image/*'
+  input.multiple = false
+
+  // iOS Safari may suspend the page while the system photo picker is open.
+  // A detached input can be collected before Safari dispatches `change`, so
+  // keep it in the DOM for the lifetime of the picker and remove it afterwards.
+  if (input.style) {
+    input.style.position = 'fixed'
+    input.style.width = '1px'
+    input.style.height = '1px'
+    input.style.opacity = '0'
+    input.style.pointerEvents = 'none'
+  }
+  input.tabIndex = -1
+  input.setAttribute?.('aria-hidden', 'true')
+
+  const cleanup = () => {
+    input.removeEventListener?.('cancel', cleanup)
+    input.remove?.()
+  }
+
   input.onchange = () => {
     const file = input.files?.[0]
+    cleanup()
     if (file) onFile(file)
   }
-  input.click()
+  input.addEventListener?.('cancel', cleanup, { once: true })
+  input.ownerDocument?.body?.appendChild(input)
+
+  try {
+    input.click()
+  } catch (error) {
+    cleanup()
+    throw error
+  }
 }
 
 export const hasSurfaceDraggedFiles = (event: any) => {

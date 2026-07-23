@@ -56,6 +56,22 @@ describe('ImageGalleryComponent.ios', () => {
     jest.clearAllMocks();
   });
 
+  it('renders touch-first gallery and camera actions without drag-and-drop copy', () => {
+    const screen = render(
+      <ImageGalleryComponentIOS
+        collection="gallery"
+        idTravel="123"
+        initialImages={[]}
+      />
+    );
+
+    expect(screen.getByTestId('gallery-ios.pick')).toBeTruthy();
+    expect(screen.getByText('Выбрать из галереи')).toBeTruthy();
+    expect(screen.getByTestId('gallery-ios.camera')).toBeTruthy();
+    expect(screen.getByText('Сделать фото')).toBeTruthy();
+    expect(screen.queryByText(/Перетащ/)).toBeNull();
+  });
+
   it('calls onChange after uploading images', async () => {
     (uploadImage as jest.Mock).mockResolvedValue({ id: 101, url: '/uploads/a.jpg' });
 

@@ -1,8 +1,7 @@
-import { render, waitFor, act } from '@testing-library/react-native';
+import { render, waitFor, act, fireEvent } from '@testing-library/react-native';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { uploadImage } from '@/api/misc';
 import { Platform } from 'react-native';
-import * as ReactNative from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 const ORIGINAL_PLATFORM_OS = Platform.OS;
@@ -17,13 +16,18 @@ jest.mock('heic-to', () => ({
     heicTo: jest.fn(async () => new Blob([new Uint8Array([9, 8, 7])], { type: 'image/jpeg' })),
 }));
 let lastOnDrop: any = null;
+let mockOpenPicker = jest.fn();
+let lastDropzoneOptions: any = null;
 jest.mock('react-dropzone', () => ({
     useDropzone: jest.fn((opts: any) => {
         lastOnDrop = opts?.onDrop;
+        lastDropzoneOptions = opts;
+        mockOpenPicker = jest.fn();
         return {
             getRootProps: jest.fn(() => ({})),
             getInputProps: jest.fn(() => ({})),
             isDragActive: false,
+            open: mockOpenPicker,
         };
     }),
 }));
@@ -59,6 +63,8 @@ describe('PhotoUploadWithPreview', () => {
         jest.clearAllMocks();
         mockUploadImage.mockReset();
         lastOnDrop = null;
+        mockOpenPicker = jest.fn();
+        lastDropzoneOptions = null;
 
         // Some tests temporarily override Platform.OS; ensure it is reset to avoid cross-test leaks.
         Object.defineProperty(Platform, 'OS', { value: ORIGINAL_PLATFORM_OS });
@@ -107,37 +113,6 @@ describe('PhotoUploadWithPreview', () => {
             await waitFor(() => expect(mockUploadImage).toHaveBeenCalledTimes(1));
         });
 
-        it('mobile web: renders touch-first gallery and camera inputs without drag copy', () => {
-            Object.defineProperty(Platform, 'OS', { value: 'web' });
-            const dimensionsSpy = jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
-                width: 390,
-                height: 844,
-                scale: 1,
-                fontScale: 1,
-            });
-
-            try {
-                const screen = render(
-                    <PhotoUploadWithPreview
-                        {...defaultProps}
-                        placeholder="Перетащите фото точки маршрута"
-                    />
-                );
-
-                expect(screen.getByTestId('photo-upload-web-gallery-button')).toBeTruthy();
-                expect(screen.getByTestId('photo-upload-web-camera-button')).toBeTruthy();
-                expect(screen.getByText('Нажмите кнопку выше, чтобы добавить фотографии')).toBeTruthy();
-                expect(screen.queryByText('Перетащите фото точки маршрута')).toBeNull();
-
-                const inputs = screen.UNSAFE_getAllByType('input' as any);
-                expect(inputs).toHaveLength(2);
-                expect(inputs.every((input: any) => input.props.accept === 'image/*')).toBe(true);
-                expect(inputs.find((input: any) => input.props.capture === 'environment')).toBeTruthy();
-            } finally {
-                dimensionsSpy.mockRestore();
-            }
-        });
-
         it('native: surfaces denied camera permission without opening the camera', async () => {
             Object.defineProperty(Platform, 'OS', { value: 'android' });
             (ImagePicker.requestCameraPermissionsAsync as jest.Mock).mockResolvedValueOnce({ granted: false });
@@ -155,13 +130,50 @@ describe('PhotoUploadWithPreview', () => {
         it('should display placeholder text when provided', () => {
             const customPlaceholder = 'Перетащите фото точки маршрута';
             Object.defineProperty(Platform, 'OS', { value: 'web' });
-            const screen = render(
-                <PhotoUploadWithPreview
-                    {...defaultProps}
-                    placeholder={customPlaceholder}
-                />
-            );
-            expect(screen.getByText(customPlaceholder)).toBeTruthy();
+            const dimensionsSpy = jest
+                .spyOn(require('@/hooks/useResponsive'), 'useResponsiveWidth')
+                .mockReturnValue(1280);
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        placeholder={customPlaceholder}
+                    />
+                );
+                expect(screen.getByText(customPlaceholder)).toBeTruthy();
+            } finally {
+                dimensionsSpy.mockRestore();
+            }
+        });
+
+        it('web mobile: replaces the dropzone with gallery and camera actions', () => {
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+            const dimensionsSpy = jest
+                .spyOn(require('@/hooks/useResponsive'), 'useResponsiveWidth')
+                .mockReturnValue(390);
+
+            try {
+                const screen = render(<PhotoUploadWithPreview {...defaultProps} />);
+
+                expect(screen.getByText('Выбрать из галереи')).toBeTruthy();
+                expect(screen.getByText('Сделать фото')).toBeTruthy();
+                expect(screen.queryByText('Перетащите сюда изображение')).toBeNull();
+                expect(lastDropzoneOptions).toEqual(expect.objectContaining({
+                    noClick: true,
+                    noKeyboard: true,
+                    noDrag: true,
+                }));
+
+                fireEvent.press(screen.getByTestId('photo-upload-mobile-gallery-button'));
+                expect(mockOpenPicker).toHaveBeenCalledTimes(1);
+
+                const cameraInput = screen
+                    .UNSAFE_getAllByType('input' as any)
+                    .find((input: any) => input.props.capture === 'environment');
+                expect(cameraInput?.props.accept).toBe('image/*');
+            } finally {
+                dimensionsSpy.mockRestore();
+            }
         });
 
         it('should show existing image when oldImage is provided', async () => {

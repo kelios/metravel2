@@ -342,7 +342,7 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
   const loading = fit === 'contain' ? 'lazy' : 'eager';
   const fetchPriority = fit === 'contain' ? 'low' : 'auto';
 
-  const targetOpacity = visible ? '1' : '0';
+  const targetOpacity = visible ? '0.95' : '0';
 
   return (
     <img
@@ -374,7 +374,7 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
         borderRadius,
         transform: `translate(-50%, -50%) scale(${backdropScale})`,
         filter: backdropFilter,
-        opacity: 0,
+        opacity: visible ? 0.95 : 0,
         contain: 'paint',
         willChange: 'transform, opacity',
         backfaceVisibility: 'hidden',

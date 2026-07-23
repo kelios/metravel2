@@ -11,6 +11,7 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import * as ImagePicker from 'expo-image-picker';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { uploadImage, deleteImage } from '@/api/misc';
@@ -419,25 +420,30 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
 
       {images.length < maxImages && (
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
+          <Button
             onPress={handlePickImages}
-            style={[styles.addButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+            variant="primary"
+            fullWidth
             disabled={isUploading}
+            loading={isUploading}
             testID="gallery-ios.pick"
-          >
-            <Feather name="image" size={18} color={colors.textInverse} />
-            <Text style={[styles.addButtonText, { color: colors.textInverse }]}>{i18nT('travel:components.travel.ImageGalleryComponent.vybrat_iz_galerei_fbf8b2e6')}</Text>
-          </TouchableOpacity>
+            accessibilityLabel={i18nT('travel:components.travel.ImageGalleryComponent.vybrat_iz_galerei_fbf8b2e6')}
+            icon={<Feather name="image" size={18} color={colors.textOnPrimary} />}
+            label={i18nT('travel:components.travel.ImageGalleryComponent.vybrat_iz_galerei_fbf8b2e6')}
+            labelNumberOfLines={2}
+          />
 
-          <TouchableOpacity
+          <Button
             onPress={handleTakePhoto}
-            style={[styles.addButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+            variant="outline"
+            fullWidth
             disabled={isUploading}
             testID="gallery-ios.camera"
-          >
-            <Feather name="camera" size={18} color={colors.textInverse} />
-            <Text style={[styles.addButtonText, { color: colors.textInverse }]}>{i18nT('travel:components.travel.ImageGalleryComponent.sdelat_foto_79fec14d')}</Text>
-          </TouchableOpacity>
+            accessibilityLabel={i18nT('travel:components.travel.ImageGalleryComponent.sdelat_foto_79fec14d')}
+            icon={<Feather name="camera" size={18} color={colors.text} />}
+            label={i18nT('travel:components.travel.ImageGalleryComponent.sdelat_foto_79fec14d')}
+            labelNumberOfLines={2}
+          />
         </View>
       )}
 
@@ -496,7 +502,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
                     fit="contain"
                     blurBackground
                     loading="lazy"
-                    alt={`Gallery image ${index + 1}`}
+                    alt={i18nT('travel:components.travel.gallery.GalleryGrid.izobrazhenie_galerei_value1_57b84c61', { value1: index + 1 })}
                     style={styles.image}
                   />
                   <TouchableOpacity
@@ -625,7 +631,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   buttonContainer: {
-    flexDirection: 'row',
     gap: DESIGN_TOKENS.spacing.md,
     marginBottom: DESIGN_TOKENS.spacing.lg,
   },
@@ -661,20 +666,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#fff',
-  },
-  addButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: DESIGN_TOKENS.spacing.md,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-  },
-  addButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   galleryGrid: {
     flexDirection: 'row',

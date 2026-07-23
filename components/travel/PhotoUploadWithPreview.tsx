@@ -1,12 +1,13 @@
 // E5: Refactored — state/logic extracted to usePhotoUpload hook
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, ActivityIndicator, Pressable, View, Text, useWindowDimensions } from 'react-native';
+import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsiveWidth } from '@/hooks/useResponsive';
 import { usePhotoUpload, chooseFallbackUrl, type NativeUploadFile } from '@/hooks/usePhotoUpload';
 import { translate as i18nT } from '@/i18n'
 
@@ -29,8 +30,8 @@ export { chooseFallbackUrl };
 // useDropzone — web-only хук (DOM): выносим в отдельный компонент, чтобы на native
 // он не вызывался вовсе (вызов на Android валит рендер шага «Медиа» визарда).
 type WebDropzoneViewProps = {
-  isMobileWeb: boolean;
   disabled: boolean;
+  isMobileWeb: boolean;
   placeholder: string;
   maxSizeMB: number;
   colors: ReturnType<typeof useThemedColors>;
@@ -49,19 +50,23 @@ type WebDropzoneViewProps = {
 };
 
 const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
-  isMobileWeb,
-  disabled, placeholder, maxSizeMB, colors, styles,
+  disabled, isMobileWeb, placeholder, maxSizeMB, colors, styles,
   loading, uploadProgress, error, uploadMessage, hasValidImage, currentDisplayUrl,
   validateFile, handleUploadImage, handleRemovePress, handleImageLoadCheck, handleImageError,
 }) => {
-  const galleryInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-
   // react-dropzone — DOM-only пакет: require лениво внутри web-only компонента,
   // чтобы он не вычислялся в native-рантайме (на Android top-level import валит
   // рендер шага «Медиа» визарда — F-24). WebDropzoneView рендерится только на web.
   const { useDropzone } = require('react-dropzone') as typeof import('react-dropzone');
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const uploadWebFile = useCallback(async (file?: File) => {
+    if (disabled || !file) return;
+    const validationError = validateFile(file);
+    if (validationError) return;
+    await handleUploadImage(file);
+  }, [disabled, handleUploadImage, validateFile]);
+
+  const { getRootProps, getInputProps, isDragActive, open: openFilePicker } = useDropzone({
     onDrop: async (acceptedFiles, rejectedFiles) => {
       if (disabled) return;
       if (rejectedFiles.length > 0) {
@@ -71,62 +76,84 @@ const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
         if (rejection.errors.some(e => e.code === 'file-invalid-type')) return;
         return;
       }
-      const file = acceptedFiles[0];
-      if (file) {
-        const validationError = validateFile(file);
-        if (validationError) return;
-        await handleUploadImage(file);
-      }
+      await uploadWebFile(acceptedFiles[0]);
     },
     accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp', '.heic', '.heif'] },
     maxSize: maxSizeMB * 1024 * 1024,
     multiple: false,
-    disabled: disabled || isMobileWeb,
+    disabled,
+    noClick: isMobileWeb,
+    noKeyboard: isMobileWeb,
+    noDrag: isMobileWeb,
   });
 
-  const handleTouchFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCameraInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = '';
-    if (!file || disabled) return;
-    await handleUploadImage(file);
-  };
+    void uploadWebFile(file);
+  }, [uploadWebFile]);
+
+  const { onBeforeInput, ...rootProps } = getRootProps();
+  void onBeforeInput;
+
+  const preview = hasValidImage ? (
+    <View style={[styles.previewContainer, isMobileWeb && styles.mobileWebState]}>
+      <img src={currentDisplayUrl} alt="" aria-hidden referrerPolicy="no-referrer" style={styles.previewBlur} />
+      <img
+        src={currentDisplayUrl} alt={i18nT('travel:components.travel.PhotoUploadWithPreview.predprosmotr_cd9c2eff')} referrerPolicy="no-referrer"
+        style={styles.previewImage}
+        onLoad={(e) => handleImageLoadCheck(e.currentTarget as HTMLImageElement)}
+        onError={() => handleImageError()}
+      />
+      {!disabled && (
+        <Pressable style={styles.removeButton} onPress={handleRemovePress} accessibilityLabel={i18nT('travel:components.travel.PhotoUploadWithPreview.udalit_izobrazhenie_0c6f4255')}>
+          <Feather name="x" size={18} color={colors.textOnPrimary} />
+        </Pressable>
+      )}
+    </View>
+  ) : null;
+
+  const loadingState = loading ? (
+    <View style={[styles.loadingContainer, isMobileWeb && styles.mobileWebState]}>
+      <ActivityIndicator size="large" color={colors.primaryDark} />
+      {uploadProgress > 0 && (
+        <View style={styles.progressContainer}>
+          <View style={[styles.progressBar, { width: `${uploadProgress}%` }]} />
+          <Text style={styles.progressText}>{uploadProgress}%</Text>
+        </View>
+      )}
+    </View>
+  ) : null;
 
   if (isMobileWeb) {
     return (
-      <View style={styles.container as any}>
-        <input
-          ref={galleryInputRef}
-          type="file"
-          accept="image/*"
-          disabled={disabled || loading}
-          data-testid="photo-upload-web-gallery-input"
-          style={{ display: 'none' }}
-          onChange={handleTouchFileChange}
-        />
+      <View style={styles.container}>
+        <input {...getInputProps()} data-testid="photo-upload-mobile-gallery-input" />
         <input
           ref={cameraInputRef}
           type="file"
           accept="image/*"
           capture="environment"
+          onChange={handleCameraInputChange}
           disabled={disabled || loading}
-          data-testid="photo-upload-web-camera-input"
+          data-testid="photo-upload-mobile-camera-input"
           style={{ display: 'none' }}
-          onChange={handleTouchFileChange}
         />
-        <View style={styles.webMobileActions as any}>
-          <View style={styles.webMobileAction as any}>
+        <View style={styles.nativeActions}>
+          <View style={styles.nativeAction}>
             <Button
               variant="primary"
               fullWidth
-              onPress={() => galleryInputRef.current?.click()}
+              onPress={openFilePicker}
               disabled={disabled}
               loading={loading}
               icon={<Feather name="image" size={16} color={colors.textOnPrimary} />}
               label={i18nT('travel:components.travel.ImageGalleryComponent.vybrat_iz_galerei_fbf8b2e6')}
-              testID="photo-upload-web-gallery-button"
+              labelNumberOfLines={2}
+              testID="photo-upload-mobile-gallery-button"
             />
           </View>
-          <View style={styles.webMobileAction as any}>
+          <View style={styles.nativeAction}>
             <Button
               variant="outline"
               fullWidth
@@ -134,112 +161,57 @@ const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
               disabled={disabled || loading}
               icon={<Feather name="camera" size={16} color={colors.text} />}
               label={i18nT('travel:components.travel.ImageGalleryComponent.sdelat_foto_79fec14d')}
-              testID="photo-upload-web-camera-button"
+              labelNumberOfLines={2}
+              testID="photo-upload-mobile-camera-button"
             />
           </View>
         </View>
-        {loading ? (
-          <View style={styles.loadingContainer as any}>
-            <ActivityIndicator size="large" color={colors.primaryDark} />
-            {uploadProgress > 0 && (
-              <View style={styles.progressContainer as any}>
-                <View style={[styles.progressBar as any, { width: `${uploadProgress}%` } as any] as any} />
-                <Text style={styles.progressText as any}>{uploadProgress}%</Text>
-              </View>
-            )}
-          </View>
-        ) : hasValidImage ? (
-          <View style={styles.previewContainer as any}>
-            <img src={currentDisplayUrl} alt="" aria-hidden referrerPolicy="no-referrer" style={styles.previewBlur as any} />
-            <img
-              src={currentDisplayUrl}
-              alt={i18nT('travel:components.travel.PhotoUploadWithPreview.predprosmotr_cd9c2eff')}
-              referrerPolicy="no-referrer"
-              style={styles.previewImage as any}
-              onLoad={(event) => handleImageLoadCheck(event.currentTarget as HTMLImageElement)}
-              onError={handleImageError}
-            />
-            {!disabled && (
-              <Pressable style={styles.removeButton as any} onPress={handleRemovePress} accessibilityLabel={i18nT('travel:components.travel.PhotoUploadWithPreview.udalit_izobrazhenie_0c6f4255')}>
-                <Feather name="x" size={18} color={colors.textOnPrimary} />
-              </Pressable>
-            )}
-          </View>
-        ) : (
-          <Text style={styles.webMobileHint as any}>
-            {i18nT('travel:components.travel.gallery.mobileAddHint')}
-          </Text>
-        )}
+        {loadingState || preview}
         {error && !currentDisplayUrl && (
-          <View style={styles.errorContainer as any}>
+          <View style={styles.errorContainer}>
             <Feather name="alert-circle" size={14} color={colors.danger} />
-            <Text style={styles.errorText as any}>{error}</Text>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
         {uploadMessage && !error && (
-          <View style={styles.successContainer as any}>
+          <View style={styles.successContainer}>
             <Feather name="check-circle" size={14} color={colors.success} />
-            <Text style={styles.successText as any}>{uploadMessage}</Text>
+            <Text style={styles.successText}>{uploadMessage}</Text>
           </View>
         )}
       </View>
     );
   }
 
-  const { onBeforeInput, ...rootProps } = getRootProps();
-  void onBeforeInput;
   return (
-    <View style={styles.container as any}>
+    <View style={styles.container}>
       <div {...rootProps} style={{
-        ...(styles.dropzone as any),
-        ...(isDragActive ? (styles.dropzoneActive as any) : {}),
-        ...(disabled ? (styles.dropzoneDisabled as any) : {}),
+        ...styles.dropzone,
+        ...(isDragActive ? styles.dropzoneActive : {}),
+        ...(disabled ? styles.dropzoneDisabled : {}),
       }}>
         <input {...getInputProps()} />
-        {loading ? (
-          <View style={styles.loadingContainer as any}>
-            <ActivityIndicator size="large" color={colors.primaryDark} />
-            {uploadProgress > 0 && (
-              <View style={styles.progressContainer as any}>
-                <View style={[styles.progressBar as any, { width: `${uploadProgress}%` } as any] as any} />
-                <Text style={styles.progressText as any}>{uploadProgress}%</Text>
-              </View>
-            )}
-          </View>
-        ) : hasValidImage ? (
-          <View style={styles.previewContainer as any}>
-            <img src={currentDisplayUrl} alt="" aria-hidden referrerPolicy="no-referrer" style={styles.previewBlur as any} />
-            <img
-              src={currentDisplayUrl} alt={i18nT('travel:components.travel.PhotoUploadWithPreview.predprosmotr_cd9c2eff')} referrerPolicy="no-referrer"
-              style={styles.previewImage as any}
-              onLoad={(e) => handleImageLoadCheck(e.currentTarget as HTMLImageElement)}
-              onError={() => handleImageError()}
-            />
-            {!disabled && (
-              <Pressable style={styles.removeButton as any} onPress={handleRemovePress} accessibilityLabel={i18nT('travel:components.travel.PhotoUploadWithPreview.udalit_izobrazhenie_0c6f4255')}>
-                <Feather name="x" size={18} color={colors.textOnPrimary} />
-              </Pressable>
-            )}
-          </View>
+        {loading ? loadingState : hasValidImage ? (
+          preview
         ) : (
-          <View style={styles.placeholderContainer as any}>
+          <View style={styles.placeholderContainer}>
             <Feather name="upload-cloud" size={40} color={colors.primaryDark} />
-            <Text style={styles.placeholderText as any}>{placeholder}</Text>
-            <Text style={styles.placeholderSubtext as any}>{i18nT('travel:components.travel.PhotoUploadWithPreview.ili_nazhmite_dlya_vybora_fayla_8e7a14a9')}</Text>
-            <Text style={styles.placeholderHint as any}>{i18nT('travel:components.travel.PhotoUploadWithPreview.maks_razmer_3c63e70c')}{maxSizeMB}{i18nT('travel:components.travel.PhotoUploadWithPreview.mb_18863aeb')}</Text>
+            <Text style={styles.placeholderText}>{placeholder}</Text>
+            <Text style={styles.placeholderSubtext}>{i18nT('travel:components.travel.PhotoUploadWithPreview.ili_nazhmite_dlya_vybora_fayla_8e7a14a9')}</Text>
+            <Text style={styles.placeholderHint}>{i18nT('travel:components.travel.PhotoUploadWithPreview.maks_razmer_3c63e70c')}{maxSizeMB}{i18nT('travel:components.travel.PhotoUploadWithPreview.mb_18863aeb')}</Text>
           </View>
         )}
       </div>
       {error && !currentDisplayUrl && (
-        <View style={styles.errorContainer as any}>
+        <View style={styles.errorContainer}>
           <Feather name="alert-circle" size={14} color={colors.danger} />
-          <Text style={styles.errorText as any}>{error}</Text>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
       {uploadMessage && !error && (
-        <View style={styles.successContainer as any}>
+        <View style={styles.successContainer}>
           <Feather name="check-circle" size={14} color={colors.success} />
-          <Text style={styles.successText as any}>{uploadMessage}</Text>
+          <Text style={styles.successText}>{uploadMessage}</Text>
         </View>
       )}
     </View>
@@ -252,8 +224,8 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   disabled = false, placeholder = i18nT('travel:components.travel.PhotoUploadWithPreview.peretaschite_syuda_izobrazhenie_2109990b'), maxSizeMB = 10,
 }) => {
   const colors = useThemedColors();
-  const { width: viewportWidth } = useWindowDimensions();
-  const isMobileWeb = Platform.OS === 'web' && viewportWidth > 0 && viewportWidth <= 767;
+  const viewportWidth = useResponsiveWidth();
+  const isMobileWeb = Platform.OS === 'web' && viewportWidth <= 767;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [pickerError, setPickerError] = useState<string | null>(null);
 
@@ -330,8 +302,8 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   if (Platform.OS === 'web') {
     return (
       <WebDropzoneView
-        isMobileWeb={isMobileWeb}
         disabled={disabled}
+        isMobileWeb={isMobileWeb}
         placeholder={placeholder}
         maxSizeMB={maxSizeMB}
         colors={colors}
@@ -364,6 +336,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
             loading={loading}
             icon={<Feather name="image" size={16} color={colors.textOnPrimary} />}
             label={i18nT('travel:components.travel.ImageGalleryComponent.vybrat_iz_galerei_fbf8b2e6')}
+            labelNumberOfLines={2}
             testID="photo-upload-gallery-button"
           />
         </View>
@@ -375,13 +348,14 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
             disabled={disabled || loading}
             icon={<Feather name="camera" size={16} color={colors.text} />}
             label={i18nT('travel:components.travel.ImageGalleryComponent.sdelat_foto_79fec14d')}
+            labelNumberOfLines={2}
             testID="photo-upload-camera-button"
           />
         </View>
       </View>
       {currentDisplayUrl ? (
         <View style={styles.nativePreviewContainer}>
-          <ImageCardMedia src={currentDisplayUrl} fit="contain" blurBackground loading="lazy" priority="low" style={styles.nativePreviewImage as any} />
+          <ImageCardMedia src={currentDisplayUrl} fit="contain" blurBackground loading="lazy" priority="low" style={styles.nativePreviewImage} />
           {!disabled && (
             <Pressable style={styles.nativeRemoveButton} onPress={handleRemovePress}>
               <Feather name="trash-2" size={14} color={colors.danger} />
@@ -463,14 +437,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>): any => ({
   nativeRemoveText: { fontSize: 13, color: colors.danger, fontWeight: '500' },
   nativeActions: { gap: DESIGN_TOKENS.spacing.sm },
   nativeAction: { width: '100%' },
-  webMobileActions: { width: '100%', gap: DESIGN_TOKENS.spacing.sm, marginBottom: DESIGN_TOKENS.spacing.md },
-  webMobileAction: { width: '100%', minHeight: 44 },
-  webMobileHint: {
-    color: colors.textMuted,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    textAlign: 'center',
-    marginVertical: DESIGN_TOKENS.spacing.md,
-  },
+  mobileWebState: { marginTop: DESIGN_TOKENS.spacing.md },
 });
 
 export default React.memo(PhotoUploadWithPreview);

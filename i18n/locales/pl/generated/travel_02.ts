@@ -267,6 +267,7 @@ export const travelGenerated2 = {
   "components.travel.gallery.GalleryControls.zagruzka_aefa6291": "Ładowanie",
   "components.travel.gallery.GalleryGrid.izobrazhenie_galerei_value1_57b84c61": "Obraz z galerii {{value1}}",
   "components.travel.gallery.GalleryGrid.net_zagruzhennyh_izobrazheniy_d6199483": "Brak załadowanych obrazów",
+  "components.travel.gallery.GalleryGrid.mobileAddHint": "Użyj przycisków powyżej, aby wybrać lub zrobić zdjęcie",
   "components.travel.gallery.GalleryGrid.peremestit_foto_levee_80430f4e": "Przesuń zdjęcie w lewo",
   "components.travel.gallery.GalleryGrid.peremestit_foto_pravee_b568179e": "Przesuń zdjęcie w prawo",
   "components.travel.gallery.GalleryGrid.peretaschite_fayly_ili_nazhmite_na_zonu_vysh_beb2acf5": "Przeciągnij i upuść pliki lub kliknij obszar powyżej",
